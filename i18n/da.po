@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-09-29 00:26+0200\n"
-"PO-Revision-Date: 2009-09-29 00:41+0200\n"
+"POT-Creation-Date: 2009-10-26 19:40+0100\n"
+"PO-Revision-Date: 2009-10-26 20:52+0100\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -50,6 +50,502 @@ msgid ""
 msgstr ""
 "    aliaser %s:\n"
 "\n"
+
+msgid ""
+"Some commands allow the user to specify a date, e.g.:\n"
+"\n"
+"- backout, commit, import, tag: Specify the commit date.\n"
+"- log, revert, update: Select revision(s) by date.\n"
+"\n"
+"Many date formats are valid. Here are some examples::\n"
+"\n"
+"  \"Wed Dec 6 13:18:29 2006\" (local timezone assumed)\n"
+"  \"Dec 6 13:18 -0600\" (year assumed, time offset provided)\n"
+"  \"Dec 6 13:18 UTC\" (UTC and GMT are aliases for +0000)\n"
+"  \"Dec 6\" (midnight)\n"
+"  \"13:18\" (today assumed)\n"
+"  \"3:39\" (3:39AM assumed)\n"
+"  \"3:39pm\" (15:39)\n"
+"  \"2006-12-06 13:18:29\" (ISO 8601 format)\n"
+"  \"2006-12-6 13:18\"\n"
+"  \"2006-12-6\"\n"
+"  \"12-6\"\n"
+"  \"12/6\"\n"
+"  \"12/6/6\" (Dec 6 2006)\n"
+"\n"
+"Lastly, there is Mercurial's internal format::\n"
+"\n"
+"  \"1165432709 0\" (Wed Dec 6 13:18:29 2006 UTC)\n"
+"\n"
+"This is the internal representation format for dates. unixtime is the\n"
+"number of seconds since the epoch (1970-01-01 00:00 UTC). offset is\n"
+"the offset of the local timezone, in seconds west of UTC (negative if\n"
+"the timezone is east of UTC).\n"
+"\n"
+"The log command also accepts date ranges::\n"
+"\n"
+"  \"<{datetime}\" - at or before a given date/time\n"
+"  \">{datetime}\" - on or after a given date/time\n"
+"  \"{datetime} to {datetime}\" - a date range, inclusive\n"
+"  \"-{days}\" - within a given number of days of today\n"
+msgstr ""
+"Nogle kommandoer tillader brugeren at specificere en dato, f.eks.:\n"
+"\n"
+"- backout, commit, import, tag: specificer commit-datoen.\n"
+"- log, revert, update: vælg revisioner efter dato.\n"
+"\n"
+"Der er mange gyldige datoformater. Her er nogle eksempler::\n"
+"\n"
+"  \"Wed Dec 6 13:18:29 2006\" (antager lokal tidszone)\n"
+"  \"Dec 6 13:18 -0600\" (antager år, tidszone er angivet)\n"
+"  \"Dec 6 13:18 UTC\" (UTC og GMT er aliaser for +0000)\n"
+"  \"Dec 6\" (midnat)\n"
+"  \"13:18\" (antager dags dato)\n"
+"  \"3:39\"\n"
+"  \"3:39pm\" (15:39)\n"
+"  \"2006-12-06 13:18:29\" (ISO 8601 format)\n"
+"  \"2006-12-6 13:18\"\n"
+"  \"2006-12-6\"\n"
+"  \"12-6\"\n"
+"  \"12/6\"\n"
+"  \"12/6/6\" (6. dec. 2006)\n"
+"\n"
+"Endelig er der Mercurials interne format::\n"
+"\n"
+"  \"1165432709 0\" (Ons 6. dec. 13:18:29 2006 UTC)\n"
+"\n"
+"Dette er den interne repræsentation af datoer. unixtime er\n"
+"antallet af sekunder siden begyndelsen af epoken (1970-01-01 00:00\n"
+"UTC). offset er den lokale tidszone, angivet i antal sekunder vest\n"
+"for UTC (negativ hvis tidszonen er øst for UTC).\n"
+"\n"
+"Kommandoen log accepterer også datointervaller::\n"
+"\n"
+"  \"<{date}\" - på eller før den angivne dato/tidspunkt\n"
+"  \">{date}\" - på eller efter den angivne dato/tidspunkt\n"
+"  \"{date} to {date}\" - et datointerval, inklusiv endepunkterne\n"
+"  \"-{days}\" - indenfor et angivet antal dage, fra dags dato\n"
+
+msgid ""
+"Mercurial's default format for showing changes between two versions of\n"
+"a file is compatible with the unified format of GNU diff, which can be\n"
+"used by GNU patch and many other standard tools.\n"
+"\n"
+"While this standard format is often enough, it does not encode the\n"
+"following information:\n"
+"\n"
+"- executable status and other permission bits\n"
+"- copy or rename information\n"
+"- changes in binary files\n"
+"- creation or deletion of empty files\n"
+"\n"
+"Mercurial also supports the extended diff format from the git VCS\n"
+"which addresses these limitations. The git diff format is not produced\n"
+"by default because a few widespread tools still do not understand this\n"
+"format.\n"
+"\n"
+"This means that when generating diffs from a Mercurial repository\n"
+"(e.g. with \"hg export\"), you should be careful about things like file\n"
+"copies and renames or other things mentioned above, because when\n"
+"applying a standard diff to a different repository, this extra\n"
+"information is lost. Mercurial's internal operations (like push and\n"
+"pull) are not affected by this, because they use an internal binary\n"
+"format for communicating changes.\n"
+"\n"
+"To make Mercurial produce the git extended diff format, use the --git\n"
+"option available for many commands, or set 'git = True' in the [diff]\n"
+"section of your hgrc. You do not need to set this option when\n"
+"importing diffs in this format or using them in the mq extension.\n"
+msgstr ""
+
+msgid ""
+"HG\n"
+"    Path to the 'hg' executable, automatically passed when running\n"
+"    hooks, extensions or external tools. If unset or empty, this is\n"
+"    the hg executable's name if it's frozen, or an executable named\n"
+"    'hg' (with %PATHEXT% [defaulting to COM/EXE/BAT/CMD] extensions on\n"
+"    Windows) is searched.\n"
+"\n"
+"HGEDITOR\n"
+"    This is the name of the editor to run when committing. See EDITOR.\n"
+"\n"
+"    (deprecated, use .hgrc)\n"
+"\n"
+"HGENCODING\n"
+"    This overrides the default locale setting detected by Mercurial.\n"
+"    This setting is used to convert data including usernames,\n"
+"    changeset descriptions, tag names, and branches. This setting can\n"
+"    be overridden with the --encoding command-line option.\n"
+"\n"
+"HGENCODINGMODE\n"
+"    This sets Mercurial's behavior for handling unknown characters\n"
+"    while transcoding user input. The default is \"strict\", which\n"
+"    causes Mercurial to abort if it can't map a character. Other\n"
+"    settings include \"replace\", which replaces unknown characters, and\n"
+"    \"ignore\", which drops them. This setting can be overridden with\n"
+"    the --encodingmode command-line option.\n"
+"\n"
+"HGMERGE\n"
+"    An executable to use for resolving merge conflicts. The program\n"
+"    will be executed with three arguments: local file, remote file,\n"
+"    ancestor file.\n"
+"\n"
+"    (deprecated, use .hgrc)\n"
+"\n"
+"HGRCPATH\n"
+"    A list of files or directories to search for hgrc files. Item\n"
+"    separator is \":\" on Unix, \";\" on Windows. If HGRCPATH is not set,\n"
+"    platform default search path is used. If empty, only the .hg/hgrc\n"
+"    from the current repository is read.\n"
+"\n"
+"    For each element in HGRCPATH:\n"
+"\n"
+"    - if it's a directory, all files ending with .rc are added\n"
+"    - otherwise, the file itself will be added\n"
+"\n"
+"HGUSER\n"
+"    This is the string used as the author of a commit. If not set,\n"
+"    available values will be considered in this order:\n"
+"\n"
+"    - HGUSER (deprecated)\n"
+"    - hgrc files from the HGRCPATH\n"
+"    - EMAIL\n"
+"    - interactive prompt\n"
+"    - LOGNAME (with '@hostname' appended)\n"
+"\n"
+"    (deprecated, use .hgrc)\n"
+"\n"
+"EMAIL\n"
+"    May be used as the author of a commit; see HGUSER.\n"
+"\n"
+"LOGNAME\n"
+"    May be used as the author of a commit; see HGUSER.\n"
+"\n"
+"VISUAL\n"
+"    This is the name of the editor to use when committing. See EDITOR.\n"
+"\n"
+"EDITOR\n"
+"    Sometimes Mercurial needs to open a text file in an editor for a\n"
+"    user to modify, for example when writing commit messages. The\n"
+"    editor it uses is determined by looking at the environment\n"
+"    variables HGEDITOR, VISUAL and EDITOR, in that order. The first\n"
+"    non-empty one is chosen. If all of them are empty, the editor\n"
+"    defaults to 'vi'.\n"
+"\n"
+"PYTHONPATH\n"
+"    This is used by Python to find imported modules and may need to be\n"
+"    set appropriately if this Mercurial is not installed system-wide.\n"
+msgstr ""
+
+msgid ""
+"Mercurial has the ability to add new features through the use of\n"
+"extensions. Extensions may add new commands, add options to\n"
+"existing commands, change the default behavior of commands, or\n"
+"implement hooks.\n"
+"\n"
+"Extensions are not loaded by default for a variety of reasons:\n"
+"they can increase startup overhead; they may be meant for advanced\n"
+"usage only; they may provide potentially dangerous abilities (such\n"
+"as letting you destroy or modify history); they might not be ready\n"
+"for prime time; or they may alter some usual behaviors of stock\n"
+"Mercurial. It is thus up to the user to activate extensions as\n"
+"needed.\n"
+"\n"
+"To enable the \"foo\" extension, either shipped with Mercurial or in\n"
+"the Python search path, create an entry for it in your hgrc, like\n"
+"this::\n"
+"\n"
+"  [extensions]\n"
+"  foo =\n"
+"\n"
+"You may also specify the full path to an extension::\n"
+"\n"
+"  [extensions]\n"
+"  myfeature = ~/.hgext/myfeature.py\n"
+"\n"
+"To explicitly disable an extension enabled in an hgrc of broader\n"
+"scope, prepend its path with !::\n"
+"\n"
+"  [extensions]\n"
+"  # disabling extension bar residing in /path/to/extension/bar.py\n"
+"  hgext.bar = !/path/to/extension/bar.py\n"
+"  # ditto, but no path was supplied for extension baz\n"
+"  hgext.baz = !\n"
+msgstr ""
+
+msgid ""
+"When Mercurial accepts more than one revision, they may be specified\n"
+"individually, or provided as a topologically continuous range,\n"
+"separated by the \":\" character.\n"
+"\n"
+"The syntax of range notation is [BEGIN]:[END], where BEGIN and END are\n"
+"revision identifiers. Both BEGIN and END are optional. If BEGIN is not\n"
+"specified, it defaults to revision number 0. If END is not specified,\n"
+"it defaults to the tip. The range \":\" thus means \"all revisions\".\n"
+"\n"
+"If BEGIN is greater than END, revisions are treated in reverse order.\n"
+"\n"
+"A range acts as a closed interval. This means that a range of 3:5\n"
+"gives 3, 4 and 5. Similarly, a range of 9:6 gives 9, 8, 7, and 6.\n"
+msgstr ""
+
+msgid ""
+"Mercurial accepts several notations for identifying one or more files\n"
+"at a time.\n"
+"\n"
+"By default, Mercurial treats filenames as shell-style extended glob\n"
+"patterns.\n"
+"\n"
+"Alternate pattern notations must be specified explicitly.\n"
+"\n"
+"To use a plain path name without any pattern matching, start it with\n"
+"``path:``. These path names must completely match starting at the\n"
+"current repository root.\n"
+"\n"
+"To use an extended glob, start a name with ``glob:``. Globs are rooted\n"
+"at the current directory; a glob such as ``*.c`` will only match files\n"
+"in the current directory ending with ``.c``.\n"
+"\n"
+"The supported glob syntax extensions are ``**`` to match any string\n"
+"across path separators and ``{a,b}`` to mean \"a or b\".\n"
+"\n"
+"To use a Perl/Python regular expression, start a name with ``re:``.\n"
+"Regexp pattern matching is anchored at the root of the repository.\n"
+"\n"
+"Plain examples::\n"
+"\n"
+"  path:foo/bar   a name bar in a directory named foo in the root\n"
+"                 of the repository\n"
+"  path:path:name a file or directory named \"path:name\"\n"
+"\n"
+"Glob examples::\n"
+"\n"
+"  glob:*.c       any name ending in \".c\" in the current directory\n"
+"  *.c            any name ending in \".c\" in the current directory\n"
+"  **.c           any name ending in \".c\" in any subdirectory of the\n"
+"                 current directory including itself.\n"
+"  foo/*.c        any name ending in \".c\" in the directory foo\n"
+"  foo/**.c       any name ending in \".c\" in any subdirectory of foo\n"
+"                 including itself.\n"
+"\n"
+"Regexp examples::\n"
+"\n"
+"  re:.*\\.c$      any name ending in \".c\", anywhere in the repository\n"
+msgstr ""
+
+msgid ""
+"Mercurial supports several ways to specify individual revisions.\n"
+"\n"
+"A plain integer is treated as a revision number. Negative integers are\n"
+"treated as sequential offsets from the tip, with -1 denoting the tip,\n"
+"-2 denoting the revision prior to the tip, and so forth.\n"
+"\n"
+"A 40-digit hexadecimal string is treated as a unique revision\n"
+"identifier.\n"
+"\n"
+"A hexadecimal string less than 40 characters long is treated as a\n"
+"unique revision identifier and is referred to as a short-form\n"
+"identifier. A short-form identifier is only valid if it is the prefix\n"
+"of exactly one full-length identifier.\n"
+"\n"
+"Any other string is treated as a tag or branch name. A tag name is a\n"
+"symbolic name associated with a revision identifier. A branch name\n"
+"denotes the tipmost revision of that branch. Tag and branch names must\n"
+"not contain the \":\" character.\n"
+"\n"
+"The reserved name \"tip\" is a special tag that always identifies the\n"
+"most recent revision.\n"
+"\n"
+"The reserved name \"null\" indicates the null revision. This is the\n"
+"revision of an empty repository, and the parent of revision 0.\n"
+"\n"
+"The reserved name \".\" indicates the working directory parent. If no\n"
+"working directory is checked out, it is equivalent to null. If an\n"
+"uncommitted merge is in progress, \".\" is the revision of the first\n"
+"parent.\n"
+msgstr ""
+
+msgid ""
+"Mercurial allows you to customize output of commands through\n"
+"templates. You can either pass in a template from the command\n"
+"line, via the --template option, or select an existing\n"
+"template-style (--style).\n"
+"\n"
+"You can customize output for any \"log-like\" command: log,\n"
+"outgoing, incoming, tip, parents, heads and glog.\n"
+"\n"
+"Three styles are packaged with Mercurial: default (the style used\n"
+"when no explicit preference is passed), compact and changelog.\n"
+"Usage::\n"
+"\n"
+"    $ hg log -r1 --style changelog\n"
+"\n"
+"A template is a piece of text, with markup to invoke variable\n"
+"expansion::\n"
+"\n"
+"    $ hg log -r1 --template \"{node}\\n\"\n"
+"    b56ce7b07c52de7d5fd79fb89701ea538af65746\n"
+"\n"
+"Strings in curly braces are called keywords. The availability of\n"
+"keywords depends on the exact context of the templater. These\n"
+"keywords are usually available for templating a log-like command:\n"
+"\n"
+":author:    String. The unmodified author of the changeset.\n"
+":branches:  String. The name of the branch on which the changeset\n"
+"            was committed. Will be empty if the branch name was\n"
+"            default.\n"
+":date:      Date information. The date when the changeset was\n"
+"            committed.\n"
+":desc:      String. The text of the changeset description.\n"
+":diffstat:  String. Statistics of changes with the following\n"
+"            format: \"modified files: +added/-removed lines\"\n"
+":files:     List of strings. All files modified, added, or removed\n"
+"            by this changeset.\n"
+":file_adds: List of strings. Files added by this changeset.\n"
+":file_mods: List of strings. Files modified by this changeset.\n"
+":file_dels: List of strings. Files removed by this changeset.\n"
+":node:      String. The changeset identification hash, as a\n"
+"            40-character hexadecimal string.\n"
+":parents:   List of strings. The parents of the changeset.\n"
+":rev:       Integer. The repository-local changeset revision\n"
+"            number.\n"
+":tags:      List of strings. Any tags associated with the\n"
+"            changeset.\n"
+":latesttag: String. Most recent global tag in the ancestors of this\n"
+"            changeset.\n"
+":latesttagdistance: Integer. Longest path to the latest tag.\n"
+"\n"
+"The \"date\" keyword does not produce human-readable output. If you\n"
+"want to use a date in your output, you can use a filter to process\n"
+"it. Filters are functions which return a string based on the input\n"
+"variable. You can also use a chain of filters to get the desired\n"
+"output::\n"
+"\n"
+"   $ hg tip --template \"{date|isodate}\\n\"\n"
+"   2008-08-21 18:22 +0000\n"
+"\n"
+"List of filters:\n"
+"\n"
+":addbreaks:   Any text. Add an XHTML \"<br />\" tag before the end of\n"
+"              every line except the last.\n"
+":age:         Date. Returns a human-readable date/time difference\n"
+"              between the given date/time and the current\n"
+"              date/time.\n"
+":basename:    Any text. Treats the text as a path, and returns the\n"
+"              last component of the path after splitting by the\n"
+"              path separator (ignoring trailing separators). For\n"
+"              example, \"foo/bar/baz\" becomes \"baz\" and \"foo/bar//\"\n"
+"              becomes \"bar\".\n"
+":stripdir:    Treat the text as path and strip a directory level,\n"
+"              if possible. For example, \"foo\" and \"foo/bar\" becomes\n"
+"              \"foo\".\n"
+":date:        Date. Returns a date in a Unix date format, including\n"
+"              the timezone: \"Mon Sep 04 15:13:13 2006 0700\".\n"
+":domain:      Any text. Finds the first string that looks like an\n"
+"              email address, and extracts just the domain\n"
+"              component. Example: 'User <user@example.com>' becomes\n"
+"              'example.com'.\n"
+":email:       Any text. Extracts the first string that looks like\n"
+"              an email address. Example: 'User <user@example.com>'\n"
+"              becomes 'user@example.com'.\n"
+":escape:      Any text. Replaces the special XML/XHTML characters\n"
+"              \"&\", \"<\" and \">\" with XML entities.\n"
+":fill68:      Any text. Wraps the text to fit in 68 columns.\n"
+":fill76:      Any text. Wraps the text to fit in 76 columns.\n"
+":firstline:   Any text. Returns the first line of text.\n"
+":nonempty:    Any text. Returns '(none)' if the string is empty.\n"
+":hgdate:      Date. Returns the date as a pair of numbers:\n"
+"              \"1157407993 25200\" (Unix timestamp, timezone offset).\n"
+":isodate:     Date. Returns the date in ISO 8601 format:\n"
+"              \"2009-08-18 13:00 +0200\".\n"
+":isodatesec:  Date. Returns the date in ISO 8601 format, including\n"
+"              seconds: \"2009-08-18 13:00:13 +0200\". See also the\n"
+"              rfc3339date filter.\n"
+":localdate:   Date. Converts a date to local date.\n"
+":obfuscate:   Any text. Returns the input text rendered as a\n"
+"              sequence of XML entities.\n"
+":person:      Any text. Returns the text before an email address.\n"
+":rfc822date:  Date. Returns a date using the same format used in\n"
+"              email headers: \"Tue, 18 Aug 2009 13:00:13 +0200\".\n"
+":rfc3339date: Date. Returns a date using the Internet date format\n"
+"              specified in RFC 3339: \"2009-08-18T13:00:13+02:00\".\n"
+":short:       Changeset hash. Returns the short form of a changeset\n"
+"              hash, i.e. a 12-byte hexadecimal string.\n"
+":shortdate:   Date. Returns a date like \"2006-09-18\".\n"
+":strip:       Any text. Strips all leading and trailing whitespace.\n"
+":tabindent:   Any text. Returns the text, with every line except\n"
+"              the first starting with a tab character.\n"
+":urlescape:   Any text. Escapes all \"special\" characters. For\n"
+"              example, \"foo bar\" becomes \"foo%20bar\".\n"
+":user:        Any text. Returns the user portion of an email\n"
+"              address.\n"
+msgstr ""
+
+msgid ""
+"Valid URLs are of the form::\n"
+"\n"
+"  local/filesystem/path[#revision]\n"
+"  file://local/filesystem/path[#revision]\n"
+"  http://[user[:pass]@]host[:port]/[path][#revision]\n"
+"  https://[user[:pass]@]host[:port]/[path][#revision]\n"
+"  ssh://[user[:pass]@]host[:port]/[path][#revision]\n"
+"\n"
+"Paths in the local filesystem can either point to Mercurial\n"
+"repositories or to bundle files (as created by 'hg bundle' or 'hg\n"
+"incoming --bundle').\n"
+"\n"
+"An optional identifier after # indicates a particular branch, tag, or\n"
+"changeset to use from the remote repository. See also 'hg help\n"
+"revisions'.\n"
+"\n"
+"Some features, such as pushing to http:// and https:// URLs are only\n"
+"possible if the feature is explicitly enabled on the remote Mercurial\n"
+"server.\n"
+"\n"
+"Some notes about using SSH with Mercurial:\n"
+"\n"
+"- SSH requires an accessible shell account on the destination machine\n"
+"  and a copy of hg in the remote path or specified with as remotecmd.\n"
+"- path is relative to the remote user's home directory by default. Use\n"
+"  an extra slash at the start of a path to specify an absolute path::\n"
+"\n"
+"    ssh://example.com//tmp/repository\n"
+"\n"
+"- Mercurial doesn't use its own compression via SSH; the right thing\n"
+"  to do is to configure it in your ~/.ssh/config, e.g.::\n"
+"\n"
+"    Host *.mylocalnetwork.example.com\n"
+"      Compression no\n"
+"    Host *\n"
+"      Compression yes\n"
+"\n"
+"  Alternatively specify \"ssh -C\" as your ssh command in your hgrc or\n"
+"  with the --ssh command line option.\n"
+"\n"
+"These URLs can all be stored in your hgrc with path aliases under the\n"
+"[paths] section like so::\n"
+"\n"
+"  [paths]\n"
+"  alias1 = URL1\n"
+"  alias2 = URL2\n"
+"  ...\n"
+"\n"
+"You can then use the alias for any command that uses a URL (for\n"
+"example 'hg pull alias1' would pull from the 'alias1' path).\n"
+"\n"
+"Two path aliases are special because they are used as defaults when\n"
+"you do not provide the URL to a command:\n"
+"\n"
+"default:\n"
+"  When you create a repository with hg clone, the clone command saves\n"
+"  the location of the source repository as the new repository's\n"
+"  'default' path. This is then used when you omit path from push- and\n"
+"  pull-like commands (including incoming and outgoing).\n"
+"\n"
+"default-push:\n"
+"  The push command will look for a path named 'default-push', and\n"
+"  prefer it over 'default' if both are defined.\n"
+msgstr ""
 
 msgid ""
 "hooks for controlling repository access\n"
@@ -100,37 +596,13 @@ msgid ""
 msgstr ""
 
 #, python-format
-msgid "acl: %s not enabled\n"
-msgstr "acl: %s er ikke slået til\n"
-
-#, python-format
-msgid "acl: %s enabled, %d entries for user %s\n"
-msgstr "acl: %s slået til, %d optegnelser for bruger %s\n"
-
-#, python-format
 msgid "config error - hook type \"%s\" cannot stop incoming changesets"
 msgstr ""
 "konfigurationsfejl - hook type \"%s\" kan ikke stoppe indgående ændringer"
 
 #, python-format
-msgid "acl: changes have source \"%s\" - skipping\n"
-msgstr "acl: ændringer har kilde \"%s\" - springer over\n"
-
-#, python-format
-msgid "acl: user %s denied on %s\n"
-msgstr "acl: bruger %s nægtet adgang til %s\n"
-
-#, python-format
 msgid "acl: access denied for changeset %s"
 msgstr "acl: adgang nægtet til ændring %s"
-
-#, python-format
-msgid "acl: user %s not allowed on %s\n"
-msgstr "acl: bruger %s ikke tilladt på %s\n"
-
-#, python-format
-msgid "acl: allowing changeset %s\n"
-msgstr "acl: tillader ændring %s\n"
 
 msgid ""
 "track a line of development with movable markers\n"
@@ -521,10 +993,6 @@ msgstr ""
 "    bruges .hgchurn i arbejdskatalogets rod, hvis denne findes.\n"
 "    "
 
-#, python-format
-msgid "assuming %i character terminal\n"
-msgstr "antager %i-tegn terminal\n"
-
 msgid "count rate for the specified revision or range"
 msgstr "lav statistik for de specificerede revisioner"
 
@@ -598,12 +1066,12 @@ msgstr ""
 msgid "when to colorize (always, auto, or never)"
 msgstr "hvornår der skal farvelægges (altid, automatisk eller aldrig)"
 
-msgid "don't colorize output"
-msgstr "farvelæg ikke output"
+msgid "don't colorize output (DEPRECATED)"
+msgstr "farvelæg ikke output (FORÆLDET)"
 
 #, python-format
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
-msgstr ""
+msgstr "ignorerer ukendt farve/effekt %r (konfigureret i color.%s)\n"
 
 msgid "import revisions from foreign VCS repositories into Mercurial"
 msgstr "importer revisioner fra fremmede VCS depoter ind i Mercurial"
@@ -735,22 +1203,7 @@ msgid ""
 "    converted, and that any directory reorganization in the CVS\n"
 "    sandbox is ignored.\n"
 "\n"
-"    Because CVS does not have changesets, it is necessary to collect\n"
-"    individual commits to CVS and merge them into changesets. CVS\n"
-"    source uses its internal changeset merging code by default but can\n"
-"    be configured to call the external 'cvsps' program by setting::\n"
-"\n"
-"      --config convert.cvsps='cvsps -A -u --cvs-direct -q'\n"
-"\n"
-"    This option is deprecated and will be removed in Mercurial 1.4.\n"
-"\n"
 "    The options shown are the defaults.\n"
-"\n"
-"    Internal cvsps is selected by setting ::\n"
-"\n"
-"      --config convert.cvsps=builtin\n"
-"\n"
-"    and has a few more configurable options:\n"
 "\n"
 "    --config convert.cvsps.cache=True         (boolean)\n"
 "        Set to False to disable remote log caching, for testing and\n"
@@ -771,9 +1224,10 @@ msgid ""
 "        add the most recent revision on the branch indicated in the\n"
 "        regex as the second parent of the changeset.\n"
 "\n"
-"    The hgext/convert/cvsps wrapper script allows the builtin\n"
+"    An additional \"debugcvsps\" Mercurial command allows the builtin\n"
 "    changeset merging code to be run without doing a conversion. Its\n"
-"    parameters and output are similar to that of cvsps 2.1.\n"
+"    parameters and output are similar to that of cvsps 2.1. Please see\n"
+"    the command help for more details.\n"
 "\n"
 "    Subversion Source\n"
 "    -----------------\n"
@@ -936,10 +1390,6 @@ msgid "cannot find required \"%s\" tool"
 msgstr "kan ikke finde påkrævet værktøj \"%s\""
 
 #, python-format
-msgid "running: %s\n"
-msgstr "kører: %s\n"
-
-#, python-format
 msgid "%s error:\n"
 msgstr "%s fejl:\n"
 
@@ -1017,19 +1467,9 @@ msgstr "mere end end sorteringsmetode angivet"
 msgid "--sourcesort is not supported by this data source"
 msgstr "--sourcesort er ikke supporteret at denne datakilde"
 
-msgid ""
-"warning: support for external cvsps is deprecated and will be removed in "
-"Mercurial 1.4\n"
-msgstr ""
-"advarsel: support for ekstern cvsps er forældet og vil blive fjernet i "
-"Mercurial 1.4\n"
-
 #, python-format
-msgid "revision %s is not a patchset number or date"
+msgid "revision %s is not a patchset number"
 msgstr ""
-
-msgid "using builtin cvsps\n"
-msgstr "bruger indbygget cvsps\n"
 
 #, python-format
 msgid "connecting to %s\n"
@@ -1075,10 +1515,6 @@ msgstr "fejl ved læsning af mellemlager: %r\n"
 msgid "running %s\n"
 msgstr "kører %s\n"
 
-#, python-format
-msgid "prefix=%r directory=%r root=%r\n"
-msgstr "præfiks=%r katalog=%r rod=%r\n"
-
 msgid "RCS file must be followed by working file"
 msgstr "RCS-fil skal efterfølges af en arbejdsfil"
 
@@ -1090,10 +1526,6 @@ msgstr "forventede et revisionsnummer"
 
 msgid "revision must be followed by date line"
 msgstr "revision skal efterfølges af datolinje"
-
-#, python-format
-msgid "found synthetic revision in %s: %r\n"
-msgstr "fandt syntetisk revision i %s: %r\n"
 
 #, python-format
 msgid "writing cvs log cache %s\n"
@@ -1123,14 +1555,10 @@ msgstr "%d ændringer\n"
 
 #, python-format
 msgid "darcs version 2.1 or newer needed (found %r)"
-msgstr ""
+msgstr "kræver darcs version 2.1 eller nyere (fandt %r)"
 
 msgid "Python ElementTree module is not available"
 msgstr "Python ElementTree modulet er ikke tilstede"
-
-#, python-format
-msgid "cleaning up %s\n"
-msgstr "rydder op %s\n"
 
 msgid "internal calling inconsistency"
 msgstr "intern kaldeinkonsistens"
@@ -1166,22 +1594,6 @@ msgid ""
 msgstr ""
 
 #, python-format
-msgid "applying revision %s...\n"
-msgstr "anvender revision %s...\n"
-
-#, python-format
-msgid "computing changeset between %s and %s...\n"
-msgstr "beregner ændringer mellem %s og %s...\n"
-
-#, python-format
-msgid "obtaining revision %s...\n"
-msgstr "henter revision %s...\n"
-
-#, python-format
-msgid "analyzing revision %s...\n"
-msgstr "analyserer revision %s...\n"
-
-#, python-format
 msgid "could not parse cat-log of %s"
 msgstr "kan ikke parse cat-log af %s"
 
@@ -1192,12 +1604,6 @@ msgstr "%s er ikke et lokalt Mercurial depot"
 #, python-format
 msgid "initializing destination %s repository\n"
 msgstr "initialiserer mål %s depot\n"
-
-msgid "run hg sink pre-conversion action\n"
-msgstr ""
-
-msgid "run hg sink post-conversion action\n"
-msgstr ""
 
 #, python-format
 msgid "pulling from %s into %s\n"
@@ -1217,12 +1623,6 @@ msgstr "%s er ikke en gyldig startrevision"
 msgid "ignoring: %s\n"
 msgstr "ignorerer: %s\n"
 
-msgid "run hg source pre-conversion action\n"
-msgstr ""
-
-msgid "run hg source post-conversion action\n"
-msgstr ""
-
 #, python-format
 msgid "%s does not look like a monotone repo"
 msgstr "%s ser ikke ud som et monotone depot"
@@ -1236,6 +1636,9 @@ msgstr "læser p4 views\n"
 
 msgid "collecting p4 changelists\n"
 msgstr "samler p4 changelists\n"
+
+msgid "Mercurial failed to run itself, check hg executable is in PATH"
+msgstr "Mercurial kunne ikke køre sig selv, kontroller om hg er i PATH"
 
 msgid "Subversion python bindings could not be loaded"
 msgstr "Subversion python bindingerne kunne ikke indlæses"
@@ -1287,67 +1690,20 @@ msgid "no tags found at revision %d\n"
 msgstr "ingen mærkater fundet ved revision %d\n"
 
 #, python-format
-msgid "ignoring foreign branch %r\n"
-msgstr "ignorerer fremmed gren %r\n"
-
-#, python-format
 msgid "%s not found up to revision %d"
 msgstr "%s blev ikke fundet op til revision %d"
 
 #, python-format
-msgid "branch renamed from %s to %s at %d\n"
-msgstr "gren omdøbt fra %s til %s ved %d\n"
-
-#, python-format
-msgid "reparent to %s\n"
-msgstr ""
-
-#, python-format
-msgid "copied to %s from %s@%s\n"
-msgstr "kopieret til %s fra %s@%s\n"
-
-#, python-format
-msgid "gone from %s\n"
-msgstr "væk fra %s\n"
-
-#, python-format
-msgid "entry %s\n"
-msgstr ""
-
-#, python-format
-msgid "unknown path in revision %d: %s\n"
-msgstr "ukendt sti i revision %d: %s\n"
-
-#, python-format
-msgid "mark %s came from %s:%d\n"
-msgstr ""
-
-#, python-format
-msgid "parsing revision %d (%d changes)\n"
-msgstr "parser revision %d (%d ændringer)\n"
-
-#, python-format
 msgid "found parent of branch %s at %d: %s\n"
 msgstr "fandt forælder til gren %s ved %d: %s\n"
-
-msgid "no copyfrom path, don't know what to do.\n"
-msgstr ""
 
 #, python-format
 msgid "fetching revision log for \"%s\" from %d to %d\n"
 msgstr "henter revisionslog for \"%s\" fra %d til %d\n"
 
 #, python-format
-msgid "revision %d has no entries\n"
-msgstr "revision %d har ikke nogen indgange\n"
-
-#, python-format
 msgid "svn: branch has no revision %s"
 msgstr "svn: gren har ikke nogen revision %s"
-
-#, python-format
-msgid "%r is not under %r, ignoring\n"
-msgstr "%r ikke under %r, ignorerer\n"
 
 #, python-format
 msgid "initializing svn repo %r\n"
@@ -1364,7 +1720,7 @@ msgid "unable to cope with svn output"
 msgstr "kan ikke håndtere svn output"
 
 msgid "XXX TAGS NOT IMPLEMENTED YET\n"
-msgstr ""
+msgstr "XXX MÆRKATER ER IKKE IMPLEMENTERET ENDNU\n"
 
 msgid ""
 "command to allow external programs to compare revisions\n"
@@ -1413,14 +1769,6 @@ msgstr "laver øjebliksbillede af %d filer fra arbejdskataloget\n"
 
 msgid "cannot specify --rev and --change at the same time"
 msgstr "kan ikke angive --rev og --change på samme tid"
-
-#, python-format
-msgid "running %r in %s\n"
-msgstr "kører %r i %s\n"
-
-#, python-format
-msgid "file changed while diffing. Overwriting: %s (src: %s)\n"
-msgstr ""
 
 msgid "cleaning up temp directory\n"
 msgstr "rydder midlertidigt katalog op\n"
@@ -1741,12 +2089,6 @@ msgstr "hgcia: sender opdatering til %s\n"
 msgid "email.from must be defined when sending by email"
 msgstr "email.from skal være defineret ved afsendelse af email"
 
-msgid "cia: no user specified"
-msgstr "cia: ingen bruger angivet"
-
-msgid "cia: no project specified"
-msgstr "cia: intet project angivet"
-
 msgid ""
 "browse the repository in a graphical way\n"
 "\n"
@@ -1787,13 +2129,13 @@ msgid "cat a specific revision"
 msgstr "udskriv en bestemt revision"
 
 msgid "cat-file: type or revision not supplied\n"
-msgstr ""
+msgstr "cat-file: ingen type eller revision angivet\n"
 
 msgid "aborting hg cat-file only understands commits\n"
-msgstr ""
+msgstr "afbryder: hg cat-file forstår kun deponeringer\n"
 
 msgid "parse given revisions"
-msgstr ""
+msgstr "fortolk de givne revisioner"
 
 msgid "print revisions"
 msgstr "udskriv revisioner"
@@ -1838,22 +2180,22 @@ msgid "hg debug-merge-base REV REV"
 msgstr "hg debug-merge-base REV REV"
 
 msgid "ignored"
-msgstr "Ignoreret"
+msgstr "ignoreret"
 
 msgid "hg debug-rev-parse REV"
 msgstr "hg debug-rev-parse REV"
 
 msgid "header"
-msgstr ""
+msgstr "header"
 
 msgid "topo-order"
-msgstr "topologisk ordning"
+msgstr "topo-order"
 
 msgid "parents"
 msgstr "forældre"
 
 msgid "max-count"
-msgstr ""
+msgstr "max-count"
 
 msgid "hg debug-rev-list [OPTION]... REV..."
 msgstr "hg debug-rev-list [TILVALG]... REV..."
@@ -1923,9 +2265,6 @@ msgstr "hg inserve [TILVALG]..."
 msgid "(found dead inotify server socket; removing it)\n"
 msgstr "(fandt død inotify server sokkel; fjerner den)\n"
 
-msgid "(starting inotify server)\n"
-msgstr "(starter inotify server)\n"
-
 #, python-format
 msgid "could not start inotify server: %s\n"
 msgstr "kunne ikke starte inotify server: %s\n"
@@ -1933,9 +2272,6 @@ msgstr "kunne ikke starte inotify server: %s\n"
 #, python-format
 msgid "could not talk to new inotify server: %s\n"
 msgstr "kunne ikke snakke med ny inotify server: %s\n"
-
-msgid "(inotify server not running)\n"
-msgstr "(inotify server kører ikke)\n"
 
 #, python-format
 msgid "failed to contact inotify server: %s\n"
@@ -1957,10 +2293,10 @@ msgstr "dette system ser ikke ud til at understøtte inotify"
 
 #, python-format
 msgid "*** the current per-user limit on the number of inotify watches is %s\n"
-msgstr ""
+msgstr "*** den nuværende grænse pr bruger for antallet af inotify overvågninger er %s\n"
 
 msgid "*** this limit is too low to watch every directory in this repository\n"
-msgstr ""
+msgstr "*** denne grænse er for lille til at overvåge alle biblioteker i dette depot\n"
 
 msgid "*** counting directories: "
 msgstr "*** tæller kataloger: "
@@ -1971,23 +2307,23 @@ msgstr "fandt %d\n"
 
 #, python-format
 msgid "*** to raise the limit from %d to %d (run as root):\n"
-msgstr ""
+msgstr "*** for at hæve grænsen fra %d til %d (kør som root):\n"
 
 #, python-format
 msgid "***  echo %d > %s\n"
-msgstr ""
+msgstr "***  echo %d > %s\n"
 
 #, python-format
 msgid "cannot watch %s until inotify watch limit is raised"
-msgstr ""
+msgstr "kan ikke overvåge %s før inotify overvågningsgrænsen er hævet"
 
 #, python-format
 msgid "inotify service not available: %s"
-msgstr ""
+msgstr "inotify service er ikke tilgængelig: %s"
 
 #, python-format
 msgid "watching %r\n"
-msgstr "overvåget %r\n"
+msgstr "overvåger %r\n"
 
 #, python-format
 msgid "watching directories under %r\n"
@@ -2214,14 +2550,6 @@ msgid ""
 "\tkeywords expanded\n"
 msgstr ""
 
-#, python-format
-msgid ""
-"\n"
-"removing temporary repository %s\n"
-msgstr ""
-"\n"
-"fjerner midlertidigt depot %s\n"
-
 msgid ""
 "expand keywords in the working directory\n"
 "\n"
@@ -2244,15 +2572,13 @@ msgid ""
 "    See \"hg help keyword\" on how to construct patterns both for\n"
 "    inclusion and exclusion of files.\n"
 "\n"
-"    Use -u/--untracked to list untracked files as well.\n"
-"\n"
-"    With -a/--all and -v/--verbose the codes used to show the status\n"
+"    With -A/--all and -v/--verbose the codes used to show the status\n"
 "    of files are::\n"
 "\n"
 "      K = keyword expansion candidate\n"
-"      k = keyword expansion candidate (untracked)\n"
+"      k = keyword expansion candidate (not tracked)\n"
 "      I = ignored\n"
-"      i = ignored (untracked)\n"
+"      i = ignored (not tracked)\n"
 "    "
 msgstr ""
 
@@ -2284,8 +2610,14 @@ msgstr "vis keyword status for alle filer"
 msgid "show files excluded from expansion"
 msgstr "vis filer ekskluderet fra ekspansion"
 
-msgid "additionally show untracked files"
-msgstr "vis også ikke-fulgte filer"
+msgid "only show unknown (not tracked) files"
+msgstr "vis kun ukendte (ikke-fulgte) filer"
+
+msgid "show keyword status flags of all files (DEPRECATED)"
+msgstr "vis keyword status for alle filer (FORÆLDET)"
+
+msgid "only show untracked files (DEPRECATED)"
+msgstr "vis kun ikke-fulgte filer (FORÆLDET)"
 
 msgid "hg kwfiles [OPTION]... [FILE]..."
 msgstr "hg kwfiles [TILVALG]... [FIL]..."
@@ -2353,10 +2685,6 @@ msgstr ""
 
 #, python-format
 msgid "invalid character in guard %r: %r"
-msgstr ""
-
-#, python-format
-msgid "active guards: %s\n"
 msgstr ""
 
 #, python-format
@@ -2504,7 +2832,7 @@ msgstr "rettelsen \"%s\" er tvetydigt:\n"
 
 #, python-format
 msgid "patch %s not in series"
-msgstr ""
+msgstr "rettelsen %s er ikke i serien"
 
 msgid "(working directory not at a head)\n"
 msgstr "(arbejdskatalog er ikke ved et hoved)\n"
@@ -2518,11 +2846,11 @@ msgstr ""
 
 #, python-format
 msgid "qpush: %s is already at the top\n"
-msgstr ""
+msgstr "qpush: %s er allerede ved toppen\n"
 
 #, python-format
 msgid "guarded by %r"
-msgstr ""
+msgstr "beskyttet af %r"
 
 msgid "no matching guards"
 msgstr ""
@@ -2542,7 +2870,7 @@ msgstr "rydder op i arbejdskataloget..."
 
 #, python-format
 msgid "errors during apply, please fix and refresh %s\n"
-msgstr ""
+msgstr "der opstod fejl ved anvendelsen, ret dem venligst og genopfrisk %s\n"
 
 #, python-format
 msgid "now at: %s\n"
@@ -2560,11 +2888,11 @@ msgid "qpop: %s is already at the top\n"
 msgstr "qpop: %s er allerede ved toppen\n"
 
 msgid "qpop: forcing dirstate update\n"
-msgstr ""
+msgstr "qpop: gennemtvinger opdatering af dirstate\n"
 
 #, python-format
 msgid "trying to pop unknown node %s"
-msgstr ""
+msgstr "prøver at fjerne ukendt knude %s"
 
 msgid "popping would remove a revision not managed by this patch queue"
 msgstr ""
@@ -2580,7 +2908,7 @@ msgid "patch queue now empty\n"
 msgstr "køen af rettelser er nu tom\n"
 
 msgid "cannot refresh a revision with children"
-msgstr ""
+msgstr "kan ikke genopfriske en revision som har børn"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
@@ -2588,7 +2916,7 @@ msgid ""
 msgstr ""
 
 msgid "patch queue directory already exists"
-msgstr ""
+msgstr "rettelsesdepotet findes allerede"
 
 #, python-format
 msgid "patch %s is not in series file"
@@ -2613,7 +2941,7 @@ msgid "saved queue repository parents: %s %s\n"
 msgstr ""
 
 msgid "queue directory updating\n"
-msgstr ""
+msgstr "opdaterer rettelsesdepotet\n"
 
 msgid "Unable to load queue repository\n"
 msgstr ""
@@ -2622,13 +2950,13 @@ msgid "save: no patches applied, exiting\n"
 msgstr ""
 
 msgid "status is already saved\n"
-msgstr ""
+msgstr "status er allerede gemt\n"
 
 msgid "hg patches saved state"
 msgstr ""
 
 msgid "repo commit failed\n"
-msgstr ""
+msgstr "deponering fejlede\n"
 
 #, python-format
 msgid "patch %s is already in the series file"
@@ -2650,7 +2978,7 @@ msgstr "revision %d er allerede håndteret"
 
 #, python-format
 msgid "revision %d is not the parent of the queue"
-msgstr ""
+msgstr "revision %d er ikke forfaren til køen"
 
 #, python-format
 msgid "revision %d has unmanaged children"
@@ -2662,7 +2990,7 @@ msgstr "kan ikke importere sammenføjningsrevision %d"
 
 #, python-format
 msgid "revision %d is not the parent of %d"
-msgstr ""
+msgstr "revision %d er ikke forældren til %d"
 
 msgid "-e is incompatible with import from -"
 msgstr "-e er ikke kompatibelt med importering fra -"
@@ -2800,13 +3128,13 @@ msgid "cloning patch repository\n"
 msgstr "kloner depotet til rettelser\n"
 
 msgid "stripping applied patches from destination repository\n"
-msgstr ""
+msgstr "stripper anvendte rettelser fra destinationsdepotet\n"
 
 msgid "updating destination repository\n"
-msgstr ""
+msgstr "opdaterer destinationsdepotet\n"
 
 msgid "commit changes in the queue repository"
-msgstr ""
+msgstr "deponerer ændringer i kødepotet"
 
 msgid "print the entire series file"
 msgstr "udskriver hele series filen"
@@ -2929,18 +3257,18 @@ msgstr "Der er ikke anvendt nogen rettelser"
 
 #, python-format
 msgid "Skipping already folded patch %s"
-msgstr ""
+msgstr "Springer allerede foldet rettelse %s over"
 
 #, python-format
 msgid "qfold cannot fold already applied patch %s"
-msgstr ""
+msgstr "qfold kan ikke folde allerede anvendt rettelse %s"
 
 #, python-format
 msgid "Error folding patch %s"
-msgstr ""
+msgstr "Fejl ved foldning af rettelse %s"
 
 msgid "push or pop patches until named patch is at top of stack"
-msgstr ""
+msgstr "tilføj eller fjern rettelser indtil den navngivne rettelser er på toppen af stakken"
 
 msgid ""
 "set or print guards for a patch\n"
@@ -2971,7 +3299,7 @@ msgid "no patch named %s"
 msgstr "ingen patch ved navn %s"
 
 msgid "print the header of the topmost or specified patch"
-msgstr ""
+msgstr "udskriv hovedet af den øverste eller den angivne rettelse"
 
 msgid ""
 "push the next patch onto the stack\n"
@@ -3166,7 +3494,7 @@ msgid "cannot import over an applied patch"
 msgstr "kan ikke importere henover en anvendt rettelse"
 
 msgid "print first line of patch header"
-msgstr ""
+msgstr "udskriv første linie i rettelsens hoved"
 
 msgid "show only the last patch"
 msgstr "vis kun den sidste rettelse"
@@ -3196,7 +3524,7 @@ msgid "hg qdiff [OPTION]... [FILE]..."
 msgstr "hg qdiff [TILVALG]... [FIL]..."
 
 msgid "keep patch file"
-msgstr ""
+msgstr "behold rettelsesfil"
 
 msgid "stop managing a revision (DEPRECATED)"
 msgstr ""
@@ -3205,10 +3533,10 @@ msgid "hg qdelete [-k] [-r REV]... [PATCH]..."
 msgstr "hg qdelete [-k] [-r REV]... [RETTELSE]..."
 
 msgid "edit patch header"
-msgstr ""
+msgstr "rediger rettelsens hoved"
 
 msgid "keep folded patch files"
-msgstr ""
+msgstr "behold foldede rettelsesfiler"
 
 msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
 msgstr "hg qfold [-e] [-k] [-m TEKST] [-l FIL] RETTELSE..."
@@ -3232,7 +3560,7 @@ msgid "hg qheader [PATCH]"
 msgstr "hg qheader [RETTELSE]"
 
 msgid "import file in patch directory"
-msgstr ""
+msgstr "importer en fil i rettelsesbiblioteket"
 
 msgid "name of patch file"
 msgstr "navn på rettelse"
@@ -3259,7 +3587,7 @@ msgid "hg qinit [-c]"
 msgstr "hg qinit [-c]"
 
 msgid "import uncommitted changes into patch"
-msgstr ""
+msgstr "importer ikke-deponerede ændringer ind i rettelse"
 
 msgid "add \"From: <current user>\" to patch"
 msgstr "tilføj \"From: <aktuel bruger>\" til rettelsen"
@@ -3288,8 +3616,8 @@ msgstr "fjern alle rettelser"
 msgid "queue name to pop"
 msgstr ""
 
-msgid "forget any local changes"
-msgstr "glem eventuelle lokale ændringer"
+msgid "forget any local changes to patched files"
+msgstr "glem eventuelle lokale ændringer i de rettede filer"
 
 msgid "hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]"
 msgstr "hg qpop [-a] [-n NAVN] [-f] [RETTELSE | INDEKS]"
@@ -3313,13 +3641,13 @@ msgid "hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]"
 msgstr "hg qpush [-f] [-l] [-a] [-m] [-n NAVN] [RETTELSE | INDEKS]"
 
 msgid "refresh only files already in the patch and specified files"
-msgstr ""
+msgstr "genopfrisk kun filer som allerede findes i rettelsen og angivne filer"
 
 msgid "add/update author field in patch with current user"
-msgstr ""
+msgstr "tilføj/opdater forfatterfeltet i rettelsen med den aktuelle bruger"
 
 msgid "add/update author field in patch with given user"
-msgstr ""
+msgstr "tilføj/opdater forfatterfeltet i rettelsen med den angivne bruger"
 
 msgid "add/update date field in patch with current date"
 msgstr "tilføj/opdater datofeltet i rettelsen med den aktuelle dato"
@@ -3352,7 +3680,7 @@ msgid "clear queue status file"
 msgstr ""
 
 msgid "force copy"
-msgstr ""
+msgstr "gennemtving kopiering"
 
 msgid "hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]"
 msgstr "hg qsave [-m TEKST] [-l FIL] [-c] [-n NAVN] [-e] [-f]"
@@ -3373,7 +3701,7 @@ msgid "hg qselect [OPTION]... [GUARD]..."
 msgstr "hg qselect [TILVALG]... [VAGT]..."
 
 msgid "print patches not in series"
-msgstr ""
+msgstr "udskriv rettelser som ikke er i serien"
 
 msgid "hg qseries [-ms]"
 msgstr "hg qseries [-ms]"
@@ -3445,6 +3773,7 @@ msgid ""
 "  sources = serve        # notify if source of incoming changes in this "
 "list\n"
 "                         # (serve == ssh or http, push, pull, bundle)\n"
+"  merge = False          # send notification for merges (default True)\n"
 "  [email]\n"
 "  from = user@host.com   # email address to send as if none given\n"
 "  [web]\n"
@@ -3483,22 +3812,18 @@ msgid ""
 "\n"
 "diffs (truncated from %d to %d lines):\n"
 "\n"
-msgstr ""
+msgstr "\nændringer (afkortet fra %d til %d linier):\n\n"
 
 #, python-format
 msgid ""
 "\n"
 "diffs (%d lines):\n"
 "\n"
-msgstr ""
+msgstr "\nændringer (%d linier):\n\n"
 
 #, python-format
-msgid "notify: no subscribers to repository %s\n"
-msgstr "notify: ingen abonnementer til depot %s\n"
-
-#, python-format
-msgid "notify: changes have source \"%s\" - skipping\n"
-msgstr "notify: ændringer har kilde \"%s\" - springer over\n"
+msgid "notify: suppressing notification for merge %d:%s\n"
+msgstr "notify: udelader notifikation for sammenføjning %d:%s\n"
 
 msgid ""
 "browse command output with an external pager\n"
@@ -3620,11 +3945,15 @@ msgid ""
 "hgrc(5) for details.\n"
 msgstr ""
 
+#, python-format
+msgid "%sPlease enter a valid value"
+msgstr "%sAngiv venligst en gyldig værdi."
+
 msgid "Please enter a valid value.\n"
 msgstr "Angiv venligst en gyldig værdi.\n"
 
 msgid "does the diffstat above look okay? "
-msgstr ""
+msgstr "ser det ovenstående diffstat okay ud? "
 
 msgid "diffstat rejected"
 msgstr "diffstat afvist"
@@ -3697,16 +4026,16 @@ msgid ""
 "\n"
 "Write the introductory message for the patch series.\n"
 "\n"
-msgstr ""
+msgstr "\nSkriv introduktionsbeskeden for rettelsesserien.\n\n"
 
 #, python-format
 msgid ""
 "This patch series consists of %d patches.\n"
 "\n"
-msgstr ""
+msgstr "Denne rettelsesserie består af %d rettelser.\n\n"
 
 msgid "Final summary:\n"
-msgstr ""
+msgstr "Endeligt sammendrag:\n"
 
 msgid "Displaying "
 msgstr "Viser "
@@ -3733,46 +4062,46 @@ msgid "add diffstat output to messages"
 msgstr "tilføj diffstat resultat til beskeder"
 
 msgid "use the given date as the sending date"
-msgstr ""
+msgstr "brug den givne dato som afsendelsesdatoen"
 
 msgid "use the given file as the series description"
-msgstr ""
+msgstr "brug den givne fil som seriens beskrivelse"
 
 msgid "email address of sender"
 msgstr ""
 
 msgid "print messages that would be sent"
-msgstr ""
+msgstr "udskriv beskeder som ville være blevet sendt"
 
 msgid "write messages to mbox file instead of sending them"
-msgstr ""
+msgstr "skriv beskeder til mbox-fil i stedet for at sende dem"
 
 msgid "subject of first message (intro or single patch)"
-msgstr ""
+msgstr "emne for den første besked (intro eller en enkelt rettelse)"
 
 msgid "message identifier to reply to"
-msgstr ""
+msgstr "message identifier der skal svares på"
 
 msgid "flags to add in subject prefixes"
-msgstr ""
+msgstr "flag som skal tilføjes i emne-præfixer"
 
 msgid "email addresses of recipients"
 msgstr ""
 
 msgid "omit hg patch header"
-msgstr ""
+msgstr "undlad hg rettelseshoved"
 
 msgid "send changes not found in the target repository"
-msgstr ""
+msgstr "send ændringer som ikke findes i måldepotet"
 
 msgid "send changes not in target as a binary bundle"
-msgstr ""
+msgstr "send de ændringer målet mangler som et binært bundt"
 
 msgid "name of the bundle attachment file"
-msgstr ""
+msgstr "navn på det vedhæftede bundt"
 
 msgid "a revision to send"
-msgstr ""
+msgstr "en revision der skal sendes"
 
 msgid "run even when remote repository is unrelated (with -b/--bundle)"
 msgstr "kør selv hvis fjerndepotet er urelateret (med -b/--bundle)"
@@ -3781,7 +4110,7 @@ msgid "a base changeset to specify instead of a destination (with -b/--bundle)"
 msgstr ""
 
 msgid "send an introduction email for a single patch"
-msgstr ""
+msgstr "send en introduktionsmail for en enkelt rettelse"
 
 msgid "hg email [OPTION]... [DEST]..."
 msgstr "hg email [TILVALG]... [MÅL]..."
@@ -3858,9 +4187,6 @@ msgid ""
 "http://mercurial.selenic.com/wiki/RebaseExtension\n"
 msgstr ""
 
-msgid "first revision, do not change ancestor\n"
-msgstr ""
-
 msgid ""
 "move changeset (and descendants) to a different branch\n"
 "\n"
@@ -3904,32 +4230,7 @@ msgstr ""
 msgid "%d revisions have been skipped\n"
 msgstr "sprang %d revisioner over\n"
 
-msgid " set parents\n"
-msgstr ""
-
-#, python-format
-msgid "rebasing %d:%s\n"
-msgstr ""
-
-#, python-format
-msgid " future parents are %d and %d\n"
-msgstr ""
-
-#, python-format
-msgid " update to %d:%s\n"
-msgstr " opdater til %d:%s\n"
-
-msgid " already in target\n"
-msgstr ""
-
-#, python-format
-msgid " merge against %d:%s\n"
-msgstr ""
-
 msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
-msgstr ""
-
-msgid "resuming interrupted rebase\n"
 msgstr ""
 
 #, python-format
@@ -3937,25 +4238,7 @@ msgid "no changes, revision %d skipped\n"
 msgstr ""
 
 #, python-format
-msgid "next revision set to %s\n"
-msgstr ""
-
-#, python-format
 msgid "cannot use revision %d as base, result would have 3 parents"
-msgstr ""
-
-#, python-format
-msgid "revision %d is an mq patch (%s), finalize it.\n"
-msgstr ""
-
-#, python-format
-msgid "import mq patch %d (%s)\n"
-msgstr ""
-
-msgid "rebase status stored\n"
-msgstr ""
-
-msgid "rebase status resumed\n"
 msgstr ""
 
 msgid "no rebase in progress"
@@ -3970,26 +4253,13 @@ msgstr ""
 msgid "cannot rebase onto an applied mq patch"
 msgstr ""
 
-msgid "cannot rebase an ancestor"
-msgstr ""
+msgid "source is ancestor of destination"
+msgstr "kilden er forfader til destination"
 
-msgid "cannot rebase a descendant"
-msgstr ""
-
-msgid "already working on current\n"
-msgstr ""
-
-msgid "already working on the current branch\n"
-msgstr ""
-
-#, python-format
-msgid "rebase onto %d starting from %d\n"
-msgstr ""
+msgid "source is descendant of destination"
+msgstr "kilden nedstammer fra destinationen"
 
 msgid "unable to collapse, there is more than one external parent"
-msgstr ""
-
-msgid "--update and --rebase are not compatible, ignoring the update flag\n"
 msgstr ""
 
 msgid "rebase working directory to branch head"
@@ -4004,13 +4274,13 @@ msgstr ""
 msgid "rebase onto a given revision"
 msgstr ""
 
-msgid "collapse the rebased revisions"
+msgid "collapse the rebased changesets"
 msgstr ""
 
-msgid "keep original revisions"
-msgstr ""
+msgid "keep original changesets"
+msgstr "behold de originale ændringer"
 
-msgid "keep original branches"
+msgid "keep original branch names"
 msgstr ""
 
 msgid "continue an interrupted rebase"
@@ -4125,19 +4395,8 @@ msgstr ""
 msgid "no changes to record\n"
 msgstr ""
 
-#, python-format
-msgid "backup %r as %r\n"
-msgstr "sikkerhedskopier %r som %r\n"
-
-msgid "applying patch\n"
-msgstr "tilføjer rettelse\n"
-
 msgid "patch failed to apply"
 msgstr "rettelse kunne ikke tilføjes"
-
-#, python-format
-msgid "restoring %r to %r\n"
-msgstr "gendanner %r som %r\n"
 
 msgid "hg record [OPTION]... [FILE]..."
 msgstr "hg record [TILVALG]... [FIL]..."
@@ -4351,10 +4610,6 @@ msgstr ""
 msgid "[win32mbcs] cannot activate on this platform.\n"
 msgstr ""
 
-#, python-format
-msgid "[win32mbcs] activated with encoding: %s\n"
-msgstr ""
-
 msgid ""
 "perform automatic newline conversion\n"
 "\n"
@@ -4461,15 +4716,15 @@ msgstr "integritetstjek fejlede på %s:%d"
 
 #, python-format
 msgid "%s: not a Mercurial bundle file"
-msgstr "%s er ikke en Mercurial bundle fil"
+msgstr "%s er ikke et Mercurial bundt"
 
 #, python-format
 msgid "%s: unknown bundle version"
-msgstr "%s: ukendt bundle version"
+msgstr "%s: bundtet har ukendt version"
 
 #, python-format
 msgid "%s: unknown bundle compression type"
-msgstr "%s: ukendt bundle kompressionstype"
+msgstr "%s: bundet har ukendt kompressionstype"
 
 msgid "cannot create new bundle repository"
 msgstr ""
@@ -4959,10 +5214,6 @@ msgid "incompatible arguments"
 msgstr "inkompatible argumenter"
 
 #, python-format
-msgid "cannot find executable: %s"
-msgstr "kan ikke finde program: %s"
-
-#, python-format
 msgid "failed to execute %s"
 msgstr "kunne ikke køre %s"
 
@@ -5080,7 +5331,7 @@ msgid ""
 msgstr ""
 
 msgid "--base is incompatible with specifying a destination"
-msgstr ""
+msgstr "--base er inkompatibelt med at angive en destination"
 
 msgid "unknown bundle type specified with --type"
 msgstr ""
@@ -5816,14 +6067,6 @@ msgstr "anvender rettelse fra standardinddata\n"
 msgid "no diffs found"
 msgstr "fandt ingen ændringer"
 
-#, python-format
-msgid ""
-"message:\n"
-"%s\n"
-msgstr ""
-"meddelse:\n"
-"%s\n"
-
 msgid "not a Mercurial patch"
 msgstr "ikke en Mercurial patch"
 
@@ -6483,6 +6726,100 @@ msgstr ""
 "    "
 
 msgid ""
+"summarize working directory state\n"
+"\n"
+"    This generates a brief summary of the working directory state,\n"
+"    including parents, branch, commit status, and available updates.\n"
+"\n"
+"    With the --remote option, this will check the default paths for\n"
+"    incoming and outgoing changes. This can be time-consuming.\n"
+"    "
+msgstr ""
+
+msgid " (empty repository)"
+msgstr "(tomt depot)"
+
+msgid " (no revision checked out)"
+msgstr "(ingen revision hentet frem)"
+
+#, python-format
+msgid "parent: %d:%s %s\n"
+msgstr "forælder: %d:%s %s\n"
+
+#, python-format
+msgid "branch: %s\n"
+msgstr "gren: %s\n"
+
+#, python-format
+msgid "%d added"
+msgstr "%d tilføjet"
+
+#, python-format
+msgid "%d modified"
+msgstr "%d ændret"
+
+#, python-format
+msgid "%d removed"
+msgstr "%d fjernet"
+
+#, python-format
+msgid "%d deleted"
+msgstr "%d slettet"
+
+#, python-format
+msgid "%d ignored"
+msgstr "%d ignoreret"
+
+#, python-format
+msgid "%d unknown"
+msgstr "%d ukendt"
+
+#, python-format
+msgid "%d unresolved"
+msgstr "%d uløst"
+
+msgid " (merge)"
+msgstr " (sammenføj)"
+
+msgid " (new branch)"
+msgstr " (ny gren)"
+
+msgid " (clean)"
+msgstr " (ren)"
+
+msgid " (new branch head)"
+msgstr " (nyt hoved på gren)"
+
+#, python-format
+msgid "commit: %s\n"
+msgstr "deponer: %s\n"
+
+msgid "update: (current)\n"
+msgstr "opdater: (aktuel)\n"
+
+#, python-format
+msgid "update: %d new changesets (update)\n"
+msgstr "opdater: %d nye ændringer (update)\n"
+
+#, python-format
+msgid "update: %d new changesets, %d branch heads (merge)\n"
+msgstr "opdater: %d nye ændringer, %d grenhoveder (merge)\n"
+
+msgid "1 or more incoming"
+msgstr "1 eller flere indkomne"
+
+#, python-format
+msgid "%d outgoing"
+msgstr "%d udgående"
+
+#, python-format
+msgid "remote: %s\n"
+msgstr "fjernsystem: %s\n"
+
+msgid "remote: (synced)\n"
+msgstr "fjernsystem: (synkroniseret)\n"
+
+msgid ""
 "add one or more tags for the current or given revision\n"
 "\n"
 "    Name a particular revision using <name>.\n"
@@ -6672,8 +7009,8 @@ msgstr ""
 "gives INGEN GARANTI; ikke engang for SALGBARHED eller EGNETHED FOR\n"
 "NOGET BESTEMT FORMÅL.\n"
 
-msgid "repository root directory or symbolic path name"
-msgstr "depotrodfolder eller symbolsk stinavn"
+msgid "repository root directory or name of overlay bundle file"
+msgstr ""
 
 msgid "change working directory"
 msgstr "skift arbejdskatalog"
@@ -7247,6 +7584,9 @@ msgstr "vis ikke-betroede konfigurationsværdier"
 msgid "[-u] [NAME]..."
 msgstr "[-u] [NAVN]..."
 
+msgid "check for push and pull"
+msgstr ""
+
 msgid "show status of all files"
 msgstr "vis status på alle filer"
 
@@ -7323,36 +7663,6 @@ msgstr "blev ikke fundet i manifest"
 msgid "branch name not in UTF-8!"
 msgstr "grennavn er ikke i UTF-8!"
 
-#, python-format
-msgid "  searching for copies back to rev %d\n"
-msgstr "  søger efter kopier tilbage til revision %d\n"
-
-#, python-format
-msgid ""
-"  unmatched files in local:\n"
-"   %s\n"
-msgstr ""
-
-#, python-format
-msgid ""
-"  unmatched files in other:\n"
-"   %s\n"
-msgstr ""
-
-msgid "  all copies found (* = to merge, ! = divergent):\n"
-msgstr ""
-
-msgid "  checking for directory renames\n"
-msgstr "  undersøger katalogomdøbninger\n"
-
-#, python-format
-msgid "  dir %s -> %s\n"
-msgstr "  katalog %s -> %s\n"
-
-#, python-format
-msgid "  file %s -> %s\n"
-msgstr "  fil %s -> %s\n"
-
 msgid "working directory state appears damaged!"
 msgstr "arbejdskatalogtilstand virker beskadiget!"
 
@@ -7399,16 +7709,16 @@ msgid "abort: %s\n"
 msgstr "afbrudt: %s\n"
 
 #, python-format
+msgid "hg: %s\n"
+msgstr "hg: %s\n"
+
+#, python-format
 msgid ""
 "hg: command '%s' is ambiguous:\n"
 "    %s\n"
 msgstr ""
 "hg: kommandoen '%s' is tvetydig:\n"
 "    %s\n"
-
-#, python-format
-msgid "hg: %s\n"
-msgstr "hg: %s\n"
 
 #, python-format
 msgid "timed out waiting for lock held by %s"
@@ -7508,10 +7818,6 @@ msgid "alias '%s' resolves to ambiguous command '%s'\n"
 msgstr "alias '%s' oversætter til tvetydig kommando '%s'\n"
 
 #, python-format
-msgid "alias '%s' shadows command\n"
-msgstr "alias '%s' skygger for en kommando\n"
-
-#, python-format
 msgid "malformed --config option: %s"
 msgstr "misdannet --config tilvalg: %s"
 
@@ -7579,10 +7885,6 @@ msgid "tool %s requires a GUI\n"
 msgstr "værktøj %s kræver et GUI\n"
 
 #, python-format
-msgid "picked tool '%s' for %s (binary %s symlink %s)\n"
-msgstr "valgte værktøj '%s' til %s (binær %s symbolsk link %s)\n"
-
-#, python-format
 msgid ""
 " no tool found to merge %s\n"
 "keep (l)ocal or take (o)ther?"
@@ -7601,13 +7903,6 @@ msgstr "føjer %s og %s sammen til %s\n"
 #, python-format
 msgid "merging %s\n"
 msgstr "sammenføjer %s\n"
-
-#, python-format
-msgid "my %s other %s ancestor %s\n"
-msgstr "min %s anden %s forfar %s\n"
-
-msgid " premerge successful\n"
-msgstr "præ-sammenføjning succesfuld\n"
 
 #, python-format
 msgid ""
@@ -7633,554 +7928,32 @@ msgstr ""
 msgid "unknown bisect kind %s"
 msgstr ""
 
-msgid ""
-"\n"
-"    Mercurial has the ability to add new features through the use of\n"
-"    extensions. Extensions may add new commands, add options to\n"
-"    existing commands, change the default behavior of commands, or\n"
-"    implement hooks.\n"
-"\n"
-"    Extensions are not loaded by default for a variety of reasons:\n"
-"    they can increase startup overhead; they may be meant for advanced\n"
-"    usage only; they may provide potentially dangerous abilities (such\n"
-"    as letting you destroy or modify history); they might not be ready\n"
-"    for prime time; or they may alter some usual behaviors of stock\n"
-"    Mercurial. It is thus up to the user to activate extensions as\n"
-"    needed.\n"
-"\n"
-"    To enable the \"foo\" extension, either shipped with Mercurial or in\n"
-"    the Python search path, create an entry for it in your hgrc, like\n"
-"    this::\n"
-"\n"
-"      [extensions]\n"
-"      foo =\n"
-"\n"
-"    You may also specify the full path to an extension::\n"
-"\n"
-"      [extensions]\n"
-"      myfeature = ~/.hgext/myfeature.py\n"
-"\n"
-"    To explicitly disable an extension enabled in an hgrc of broader\n"
-"    scope, prepend its path with !::\n"
-"\n"
-"      [extensions]\n"
-"      # disabling extension bar residing in /path/to/extension/bar.py\n"
-"      hgext.bar = !/path/to/extension/bar.py\n"
-"      # ditto, but no path was supplied for extension baz\n"
-"      hgext.baz = !\n"
-"    "
-msgstr ""
-
 msgid "disabled extensions:"
 msgstr "deaktiverede udvidelser:"
 
 msgid "Date Formats"
 msgstr "Datoformater"
 
-msgid ""
-"\n"
-"    Some commands allow the user to specify a date, e.g.:\n"
-"\n"
-"    - backout, commit, import, tag: Specify the commit date.\n"
-"    - log, revert, update: Select revision(s) by date.\n"
-"\n"
-"    Many date formats are valid. Here are some examples::\n"
-"\n"
-"      \"Wed Dec 6 13:18:29 2006\" (local timezone assumed)\n"
-"      \"Dec 6 13:18 -0600\" (year assumed, time offset provided)\n"
-"      \"Dec 6 13:18 UTC\" (UTC and GMT are aliases for +0000)\n"
-"      \"Dec 6\" (midnight)\n"
-"      \"13:18\" (today assumed)\n"
-"      \"3:39\" (3:39AM assumed)\n"
-"      \"3:39pm\" (15:39)\n"
-"      \"2006-12-06 13:18:29\" (ISO 8601 format)\n"
-"      \"2006-12-6 13:18\"\n"
-"      \"2006-12-6\"\n"
-"      \"12-6\"\n"
-"      \"12/6\"\n"
-"      \"12/6/6\" (Dec 6 2006)\n"
-"\n"
-"    Lastly, there is Mercurial's internal format::\n"
-"\n"
-"      \"1165432709 0\" (Wed Dec 6 13:18:29 2006 UTC)\n"
-"\n"
-"    This is the internal representation format for dates. unixtime is\n"
-"    the number of seconds since the epoch (1970-01-01 00:00 UTC).\n"
-"    offset is the offset of the local timezone, in seconds west of UTC\n"
-"    (negative if the timezone is east of UTC).\n"
-"\n"
-"    The log command also accepts date ranges::\n"
-"\n"
-"      \"<{datetime}\" - at or before a given date/time\n"
-"      \">{datetime}\" - on or after a given date/time\n"
-"      \"{datetime} to {datetime}\" - a date range, inclusive\n"
-"      \"-{days}\" - within a given number of days of today\n"
-"    "
-msgstr ""
-"\n"
-"    Nogle kommandoer tillader brugeren at specificere en dato, f.eks.:\n"
-"\n"
-"    - backout, commit, import, tag: specificer commit-datoen.\n"
-"    - log, revert, update: vælg revisioner efter dato.\n"
-"\n"
-"    Der er mange gyldige datoformater. Her er nogle eksempler::\n"
-"\n"
-"      \"Wed Dec 6 13:18:29 2006\" (antager lokal tidszone)\n"
-"      \"Dec 6 13:18 -0600\" (antager år, tidszone er angivet)\n"
-"      \"Dec 6 13:18 UTC\" (UTC og GMT er aliaser for +0000)\n"
-"      \"Dec 6\" (midnat)\n"
-"      \"13:18\" (antager dags dato)\n"
-"      \"3:39\"\n"
-"      \"3:39pm\" (15:39)\n"
-"      \"2006-12-06 13:18:29\" (ISO 8601 format)\n"
-"      \"2006-12-6 13:18\"\n"
-"      \"2006-12-6\"\n"
-"      \"12-6\"\n"
-"      \"12/6\"\n"
-"      \"12/6/6\" (6. dec. 2006)\n"
-"\n"
-"    Endelig er der Mercurials interne format::\n"
-"\n"
-"      \"1165432709 0\" (Ons 6. dec. 13:18:29 2006 UTC)\n"
-"\n"
-"    Dette er den interne repræsentation af datoer. unixtime er\n"
-"    antallet af sekunder siden begyndelsen af epoken (1970-01-01 00:00\n"
-"    UTC). offset er den lokale tidszone, angivet i antal sekunder vest\n"
-"    for UTC (negativ hvis tidszonen er øst for UTC).\n"
-"\n"
-"    Kommandoen log accepterer også datointervaller::\n"
-"\n"
-"      \"<{date}\" - på eller før den angivne dato/tidspunkt\n"
-"      \">{date}\" - på eller efter den angivne dato/tidspunkt\n"
-"      \"{date} to {date}\" - et datointerval, inklusiv endepunkterne\n"
-"      \"-{days}\" - indenfor et angivet antal dage, fra dags dato\n"
-"    "
-
 msgid "File Name Patterns"
 msgstr "Mønstre for filnavne"
-
-msgid ""
-"\n"
-"    Mercurial accepts several notations for identifying one or more\n"
-"    files at a time.\n"
-"\n"
-"    By default, Mercurial treats filenames as shell-style extended\n"
-"    glob patterns.\n"
-"\n"
-"    Alternate pattern notations must be specified explicitly.\n"
-"\n"
-"    To use a plain path name without any pattern matching, start it\n"
-"    with \"path:\". These path names must completely match starting at\n"
-"    the current repository root.\n"
-"\n"
-"    To use an extended glob, start a name with \"glob:\". Globs are\n"
-"    rooted at the current directory; a glob such as \"``*.c``\" will\n"
-"    only match files in the current directory ending with \".c\".\n"
-"\n"
-"    The supported glob syntax extensions are \"``**``\" to match any\n"
-"    string across path separators and \"{a,b}\" to mean \"a or b\".\n"
-"\n"
-"    To use a Perl/Python regular expression, start a name with \"re:\".\n"
-"    Regexp pattern matching is anchored at the root of the repository.\n"
-"\n"
-"    Plain examples::\n"
-"\n"
-"      path:foo/bar   a name bar in a directory named foo in the root\n"
-"                     of the repository\n"
-"      path:path:name a file or directory named \"path:name\"\n"
-"\n"
-"    Glob examples::\n"
-"\n"
-"      glob:*.c       any name ending in \".c\" in the current directory\n"
-"      *.c            any name ending in \".c\" in the current directory\n"
-"      **.c           any name ending in \".c\" in any subdirectory of the\n"
-"                     current directory including itself.\n"
-"      foo/*.c        any name ending in \".c\" in the directory foo\n"
-"      foo/**.c       any name ending in \".c\" in any subdirectory of foo\n"
-"                     including itself.\n"
-"\n"
-"    Regexp examples::\n"
-"\n"
-"      re:.*\\.c$      any name ending in \".c\", anywhere in the repository\n"
-"\n"
-"    "
-msgstr ""
 
 msgid "Environment Variables"
 msgstr "Miljøvariable"
 
-msgid ""
-"\n"
-"HG\n"
-"    Path to the 'hg' executable, automatically passed when running\n"
-"    hooks, extensions or external tools. If unset or empty, this is\n"
-"    the hg executable's name if it's frozen, or an executable named\n"
-"    'hg' (with %PATHEXT% [defaulting to COM/EXE/BAT/CMD] extensions on\n"
-"    Windows) is searched.\n"
-"\n"
-"HGEDITOR\n"
-"    This is the name of the editor to run when committing. See EDITOR.\n"
-"\n"
-"    (deprecated, use .hgrc)\n"
-"\n"
-"HGENCODING\n"
-"    This overrides the default locale setting detected by Mercurial.\n"
-"    This setting is used to convert data including usernames,\n"
-"    changeset descriptions, tag names, and branches. This setting can\n"
-"    be overridden with the --encoding command-line option.\n"
-"\n"
-"HGENCODINGMODE\n"
-"    This sets Mercurial's behavior for handling unknown characters\n"
-"    while transcoding user input. The default is \"strict\", which\n"
-"    causes Mercurial to abort if it can't map a character. Other\n"
-"    settings include \"replace\", which replaces unknown characters, and\n"
-"    \"ignore\", which drops them. This setting can be overridden with\n"
-"    the --encodingmode command-line option.\n"
-"\n"
-"HGMERGE\n"
-"    An executable to use for resolving merge conflicts. The program\n"
-"    will be executed with three arguments: local file, remote file,\n"
-"    ancestor file.\n"
-"\n"
-"    (deprecated, use .hgrc)\n"
-"\n"
-"HGRCPATH\n"
-"    A list of files or directories to search for hgrc files. Item\n"
-"    separator is \":\" on Unix, \";\" on Windows. If HGRCPATH is not set,\n"
-"    platform default search path is used. If empty, only the .hg/hgrc\n"
-"    from the current repository is read.\n"
-"\n"
-"    For each element in HGRCPATH:\n"
-"\n"
-"    - if it's a directory, all files ending with .rc are added\n"
-"    - otherwise, the file itself will be added\n"
-"\n"
-"HGUSER\n"
-"    This is the string used as the author of a commit. If not set,\n"
-"    available values will be considered in this order:\n"
-"\n"
-"    - HGUSER (deprecated)\n"
-"    - hgrc files from the HGRCPATH\n"
-"    - EMAIL\n"
-"    - interactive prompt\n"
-"    - LOGNAME (with '@hostname' appended)\n"
-"\n"
-"    (deprecated, use .hgrc)\n"
-"\n"
-"EMAIL\n"
-"    May be used as the author of a commit; see HGUSER.\n"
-"\n"
-"LOGNAME\n"
-"    May be used as the author of a commit; see HGUSER.\n"
-"\n"
-"VISUAL\n"
-"    This is the name of the editor to use when committing. See EDITOR.\n"
-"\n"
-"EDITOR\n"
-"    Sometimes Mercurial needs to open a text file in an editor for a\n"
-"    user to modify, for example when writing commit messages. The\n"
-"    editor it uses is determined by looking at the environment\n"
-"    variables HGEDITOR, VISUAL and EDITOR, in that order. The first\n"
-"    non-empty one is chosen. If all of them are empty, the editor\n"
-"    defaults to 'vi'.\n"
-"\n"
-"PYTHONPATH\n"
-"    This is used by Python to find imported modules and may need to be\n"
-"    set appropriately if this Mercurial is not installed system-wide.\n"
-"    "
-msgstr ""
-
 msgid "Specifying Single Revisions"
 msgstr "Angivning af en enkelt revision"
-
-msgid ""
-"\n"
-"    Mercurial supports several ways to specify individual revisions.\n"
-"\n"
-"    A plain integer is treated as a revision number. Negative integers\n"
-"    are treated as sequential offsets from the tip, with -1 denoting\n"
-"    the tip, -2 denoting the revision prior to the tip, and so forth.\n"
-"\n"
-"    A 40-digit hexadecimal string is treated as a unique revision\n"
-"    identifier.\n"
-"\n"
-"    A hexadecimal string less than 40 characters long is treated as a\n"
-"    unique revision identifier and is referred to as a short-form\n"
-"    identifier. A short-form identifier is only valid if it is the\n"
-"    prefix of exactly one full-length identifier.\n"
-"\n"
-"    Any other string is treated as a tag or branch name. A tag name is\n"
-"    a symbolic name associated with a revision identifier. A branch\n"
-"    name denotes the tipmost revision of that branch. Tag and branch\n"
-"    names must not contain the \":\" character.\n"
-"\n"
-"    The reserved name \"tip\" is a special tag that always identifies\n"
-"    the most recent revision.\n"
-"\n"
-"    The reserved name \"null\" indicates the null revision. This is the\n"
-"    revision of an empty repository, and the parent of revision 0.\n"
-"\n"
-"    The reserved name \".\" indicates the working directory parent. If\n"
-"    no working directory is checked out, it is equivalent to null. If\n"
-"    an uncommitted merge is in progress, \".\" is the revision of the\n"
-"    first parent.\n"
-"    "
-msgstr ""
 
 msgid "Specifying Multiple Revisions"
 msgstr "Angivning af flere revisioner"
 
-msgid ""
-"\n"
-"    When Mercurial accepts more than one revision, they may be\n"
-"    specified individually, or provided as a topologically continuous\n"
-"    range, separated by the \":\" character.\n"
-"\n"
-"    The syntax of range notation is [BEGIN]:[END], where BEGIN and END\n"
-"    are revision identifiers. Both BEGIN and END are optional. If\n"
-"    BEGIN is not specified, it defaults to revision number 0. If END\n"
-"    is not specified, it defaults to the tip. The range \":\" thus means\n"
-"    \"all revisions\".\n"
-"\n"
-"    If BEGIN is greater than END, revisions are treated in reverse\n"
-"    order.\n"
-"\n"
-"    A range acts as a closed interval. This means that a range of 3:5\n"
-"    gives 3, 4 and 5. Similarly, a range of 9:6 gives 9, 8, 7, and 6.\n"
-"    "
-msgstr ""
-
 msgid "Diff Formats"
-msgstr ""
-
-msgid ""
-"\n"
-"    Mercurial's default format for showing changes between two\n"
-"    versions of a file is compatible with the unified format of GNU\n"
-"    diff, which can be used by GNU patch and many other standard\n"
-"    tools.\n"
-"\n"
-"    While this standard format is often enough, it does not encode the\n"
-"    following information:\n"
-"\n"
-"    - executable status and other permission bits\n"
-"    - copy or rename information\n"
-"    - changes in binary files\n"
-"    - creation or deletion of empty files\n"
-"\n"
-"    Mercurial also supports the extended diff format from the git VCS\n"
-"    which addresses these limitations. The git diff format is not\n"
-"    produced by default because a few widespread tools still do not\n"
-"    understand this format.\n"
-"\n"
-"    This means that when generating diffs from a Mercurial repository\n"
-"    (e.g. with \"hg export\"), you should be careful about things like\n"
-"    file copies and renames or other things mentioned above, because\n"
-"    when applying a standard diff to a different repository, this\n"
-"    extra information is lost. Mercurial's internal operations (like\n"
-"    push and pull) are not affected by this, because they use an\n"
-"    internal binary format for communicating changes.\n"
-"\n"
-"    To make Mercurial produce the git extended diff format, use the\n"
-"    --git option available for many commands, or set 'git = True' in\n"
-"    the [diff] section of your hgrc. You do not need to set this\n"
-"    option when importing diffs in this format or using them in the mq\n"
-"    extension.\n"
-"    "
 msgstr ""
 
 msgid "Template Usage"
 msgstr "Brug af skabeloner"
 
-msgid ""
-"\n"
-"    Mercurial allows you to customize output of commands through\n"
-"    templates. You can either pass in a template from the command\n"
-"    line, via the --template option, or select an existing\n"
-"    template-style (--style).\n"
-"\n"
-"    You can customize output for any \"log-like\" command: log,\n"
-"    outgoing, incoming, tip, parents, heads and glog.\n"
-"\n"
-"    Three styles are packaged with Mercurial: default (the style used\n"
-"    when no explicit preference is passed), compact and changelog.\n"
-"    Usage::\n"
-"\n"
-"        $ hg log -r1 --style changelog\n"
-"\n"
-"    A template is a piece of text, with markup to invoke variable\n"
-"    expansion::\n"
-"\n"
-"        $ hg log -r1 --template \"{node}\\n\"\n"
-"        b56ce7b07c52de7d5fd79fb89701ea538af65746\n"
-"\n"
-"    Strings in curly braces are called keywords. The availability of\n"
-"    keywords depends on the exact context of the templater. These\n"
-"    keywords are usually available for templating a log-like command:\n"
-"\n"
-"    :author:    String. The unmodified author of the changeset.\n"
-"    :branches:  String. The name of the branch on which the changeset\n"
-"                was committed. Will be empty if the branch name was\n"
-"                default.\n"
-"    :date:      Date information. The date when the changeset was\n"
-"                committed.\n"
-"    :desc:      String. The text of the changeset description.\n"
-"    :diffstat:  String. Statistics of changes with the following\n"
-"                format: \"modified files: +added/-removed lines\"\n"
-"    :files:     List of strings. All files modified, added, or removed\n"
-"                by this changeset.\n"
-"    :file_adds: List of strings. Files added by this changeset.\n"
-"    :file_mods: List of strings. Files modified by this changeset.\n"
-"    :file_dels: List of strings. Files removed by this changeset.\n"
-"    :node:      String. The changeset identification hash, as a\n"
-"                40-character hexadecimal string.\n"
-"    :parents:   List of strings. The parents of the changeset.\n"
-"    :rev:       Integer. The repository-local changeset revision\n"
-"                number.\n"
-"    :tags:      List of strings. Any tags associated with the\n"
-"                changeset.\n"
-"\n"
-"    The \"date\" keyword does not produce human-readable output. If you\n"
-"    want to use a date in your output, you can use a filter to process\n"
-"    it. Filters are functions which return a string based on the input\n"
-"    variable. You can also use a chain of filters to get the desired\n"
-"    output::\n"
-"\n"
-"       $ hg tip --template \"{date|isodate}\\n\"\n"
-"       2008-08-21 18:22 +0000\n"
-"\n"
-"    List of filters:\n"
-"\n"
-"    :addbreaks:   Any text. Add an XHTML \"<br />\" tag before the end of\n"
-"                  every line except the last.\n"
-"    :age:         Date. Returns a human-readable date/time difference\n"
-"                  between the given date/time and the current\n"
-"                  date/time.\n"
-"    :basename:    Any text. Treats the text as a path, and returns the\n"
-"                  last component of the path after splitting by the\n"
-"                  path separator (ignoring trailing separators). For\n"
-"                  example, \"foo/bar/baz\" becomes \"baz\" and \"foo/bar//"
-"\"\n"
-"                  becomes \"bar\".\n"
-"    :stripdir:    Treat the text as path and strip a directory level,\n"
-"                  if possible. For example, \"foo\" and \"foo/bar\" becomes\n"
-"                  \"foo\".\n"
-"    :date:        Date. Returns a date in a Unix date format, including\n"
-"                  the timezone: \"Mon Sep 04 15:13:13 2006 0700\".\n"
-"    :domain:      Any text. Finds the first string that looks like an\n"
-"                  email address, and extracts just the domain\n"
-"                  component. Example: 'User <user@example.com>' becomes\n"
-"                  'example.com'.\n"
-"    :email:       Any text. Extracts the first string that looks like\n"
-"                  an email address. Example: 'User <user@example.com>'\n"
-"                  becomes 'user@example.com'.\n"
-"    :escape:      Any text. Replaces the special XML/XHTML characters\n"
-"                  \"&\", \"<\" and \">\" with XML entities.\n"
-"    :fill68:      Any text. Wraps the text to fit in 68 columns.\n"
-"    :fill76:      Any text. Wraps the text to fit in 76 columns.\n"
-"    :firstline:   Any text. Returns the first line of text.\n"
-"    :nonempty:    Any text. Returns '(none)' if the string is empty.\n"
-"    :hgdate:      Date. Returns the date as a pair of numbers:\n"
-"                  \"1157407993 25200\" (Unix timestamp, timezone offset).\n"
-"    :isodate:     Date. Returns the date in ISO 8601 format:\n"
-"                  \"2009-08-18 13:00 +0200\".\n"
-"    :isodatesec:  Date. Returns the date in ISO 8601 format, including\n"
-"                  seconds: \"2009-08-18 13:00:13 +0200\". See also the\n"
-"                  rfc3339date filter.\n"
-"    :localdate:   Date. Converts a date to local date.\n"
-"    :obfuscate:   Any text. Returns the input text rendered as a\n"
-"                  sequence of XML entities.\n"
-"    :person:      Any text. Returns the text before an email address.\n"
-"    :rfc822date:  Date. Returns a date using the same format used in\n"
-"                  email headers: \"Tue, 18 Aug 2009 13:00:13 +0200\".\n"
-"    :rfc3339date: Date. Returns a date using the Internet date format\n"
-"                  specified in RFC 3339: \"2009-08-18T13:00:13+02:00\".\n"
-"    :short:       Changeset hash. Returns the short form of a changeset\n"
-"                  hash, i.e. a 12-byte hexadecimal string.\n"
-"    :shortdate:   Date. Returns a date like \"2006-09-18\".\n"
-"    :strip:       Any text. Strips all leading and trailing whitespace.\n"
-"    :tabindent:   Any text. Returns the text, with every line except\n"
-"                  the first starting with a tab character.\n"
-"    :urlescape:   Any text. Escapes all \"special\" characters. For\n"
-"                  example, \"foo bar\" becomes \"foo%20bar\".\n"
-"    :user:        Any text. Returns the user portion of an email\n"
-"                  address.\n"
-"    "
-msgstr ""
-
 msgid "URL Paths"
 msgstr "URL-stier"
-
-msgid ""
-"\n"
-"    Valid URLs are of the form::\n"
-"\n"
-"      local/filesystem/path[#revision]\n"
-"      file://local/filesystem/path[#revision]\n"
-"      http://[user[:pass]@]host[:port]/[path][#revision]\n"
-"      https://[user[:pass]@]host[:port]/[path][#revision]\n"
-"      ssh://[user[:pass]@]host[:port]/[path][#revision]\n"
-"\n"
-"    Paths in the local filesystem can either point to Mercurial\n"
-"    repositories or to bundle files (as created by 'hg bundle' or 'hg\n"
-"    incoming --bundle').\n"
-"\n"
-"    An optional identifier after # indicates a particular branch, tag,\n"
-"    or changeset to use from the remote repository. See also 'hg help\n"
-"    revisions'.\n"
-"\n"
-"    Some features, such as pushing to http:// and https:// URLs are\n"
-"    only possible if the feature is explicitly enabled on the remote\n"
-"    Mercurial server.\n"
-"\n"
-"    Some notes about using SSH with Mercurial:\n"
-"\n"
-"    - SSH requires an accessible shell account on the destination\n"
-"      machine and a copy of hg in the remote path or specified with as\n"
-"      remotecmd.\n"
-"    - path is relative to the remote user's home directory by default.\n"
-"      Use an extra slash at the start of a path to specify an absolute\n"
-"      path::\n"
-"\n"
-"        ssh://example.com//tmp/repository\n"
-"\n"
-"    - Mercurial doesn't use its own compression via SSH; the right\n"
-"      thing to do is to configure it in your ~/.ssh/config, e.g.::\n"
-"\n"
-"        Host *.mylocalnetwork.example.com\n"
-"          Compression no\n"
-"        Host *\n"
-"          Compression yes\n"
-"\n"
-"      Alternatively specify \"ssh -C\" as your ssh command in your hgrc\n"
-"      or with the --ssh command line option.\n"
-"\n"
-"    These URLs can all be stored in your hgrc with path aliases under\n"
-"    the [paths] section like so::\n"
-"\n"
-"      [paths]\n"
-"      alias1 = URL1\n"
-"      alias2 = URL2\n"
-"      ...\n"
-"\n"
-"    You can then use the alias for any command that uses a URL (for\n"
-"    example 'hg pull alias1' would pull from the 'alias1' path).\n"
-"\n"
-"    Two path aliases are special because they are used as defaults\n"
-"    when you do not provide the URL to a command:\n"
-"\n"
-"    default:\n"
-"      When you create a repository with hg clone, the clone command\n"
-"      saves the location of the source repository as the new\n"
-"      repository's 'default' path. This is then used when you omit\n"
-"      path from push- and pull-like commands (including incoming and\n"
-"      outgoing).\n"
-"\n"
-"    default-push:\n"
-"      The push command will look for a path named 'default-push', and\n"
-"      prefer it over 'default' if both are defined.\n"
-"    "
-msgstr ""
 
 msgid "Using additional features"
 msgstr "Brug af yderligere funktioner"
@@ -8214,31 +7987,24 @@ msgstr ""
 msgid "clone from remote to remote not supported"
 msgstr "kloning fra fjerndepot til fjerndepot er ikke understøttet"
 
-msgid "updated"
-msgstr "opdateret"
-
-msgid "merged"
-msgstr "sammenføjet"
-
-msgid "removed"
-msgstr "fjernet"
-
-msgid "unresolved"
-msgstr "uløst"
+#, python-format
+msgid "updating to branch %s\n"
+msgstr "opdaterer til gren %s\n"
 
 #, python-format
-msgid "%d files %s"
-msgstr "%d filer %s"
+msgid ""
+"%d files updated, %d files merged, %d files removed, %d files unresolved\n"
+msgstr ""
 
 msgid "use 'hg resolve' to retry unresolved file merges\n"
 msgstr "brug 'hg resolve' for at prøve at sammenføje uløste filer igen\n"
 
 msgid ""
-"use 'hg resolve' to retry unresolved file merges or 'hg up --clean' to "
+"use 'hg resolve' to retry unresolved file merges or 'hg update -C' to "
 "abandon\n"
 msgstr ""
-"brug 'hg resolve' for at prøve at sammenføje uløste filer igen eller 'hg up "
-"--clean' for at opgive\n"
+"brug 'hg resolve' for at prøve at sammenføje uløste filer igen eller 'hg up -"
+"C' for at opgive\n"
 
 msgid "(branch merge, don't forget to commit)\n"
 msgstr "(grensammenføjning, glem ikke at deponere)\n"
@@ -8312,31 +8078,11 @@ msgstr "forbindelsen blev uventet afsluttet"
 msgid "unsupported URL component: \"%s\""
 msgstr "ikke-understøttet URL-komponent: \"%s\""
 
-#, python-format
-msgid "using %s\n"
-msgstr "bruger %s\n"
-
-#, python-format
-msgid "capabilities: %s\n"
-msgstr "kapaciteter: %s\n"
-
 msgid "operation not supported over http"
 msgstr "operationen understøttes ikke over http"
 
-#, python-format
-msgid "sending %s command\n"
-msgstr "sender %s kommando\n"
-
-#, python-format
-msgid "sending %s bytes\n"
-msgstr "sender %s bytes\n"
-
 msgid "authorization failed"
 msgstr "autorisation fejlede"
-
-#, python-format
-msgid "http error while sending %s command\n"
-msgstr "http-fejl mens %s kommandoen blev sendt\n"
 
 msgid "http error, possibly caused by proxy setting"
 msgstr "http-fejl, skyldes muligvis proxy-indstillinger"
@@ -8344,10 +8090,6 @@ msgstr "http-fejl, skyldes muligvis proxy-indstillinger"
 #, python-format
 msgid "real URL is %s\n"
 msgstr "den rigtige URL er %s\n"
-
-#, python-format
-msgid "requested URL: '%s'\n"
-msgstr "forespurgt URL: '%s'\n"
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
@@ -8422,10 +8164,6 @@ msgstr "arbejdsbiblioteket har ukendt forældre '%s'!"
 msgid "unknown revision '%s'"
 msgstr "ukendt revision '%s'"
 
-#, python-format
-msgid "filtering %s through %s\n"
-msgstr "filtrerer %s gennem %s\n"
-
 msgid "journal already exists - run hg recover"
 msgstr "journalen eksisterer allerede -- kør hg recover"
 
@@ -8457,14 +8195,6 @@ msgstr "depot %s"
 #, python-format
 msgid "working directory of %s"
 msgstr "arbejdskatalog for %s"
-
-#, python-format
-msgid " %s: searching for copy revision for %s\n"
-msgstr ""
-
-#, python-format
-msgid " %s: copy %s:%s\n"
-msgstr ""
 
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr ""
@@ -8531,41 +8261,6 @@ msgstr "kopiering fejlede: %s er ikke en fil eller en symbolsk længe\n"
 msgid "searching for changes\n"
 msgstr "leder efter ændringer\n"
 
-#, python-format
-msgid "examining %s:%s\n"
-msgstr "undersøger %s:%s\n"
-
-msgid "branch already found\n"
-msgstr "gren er allerede fundet\n"
-
-#, python-format
-msgid "found incomplete branch %s:%s\n"
-msgstr "fandt ukomplet gren %s:%s\n"
-
-#, python-format
-msgid "found new changeset %s\n"
-msgstr "fandt ny ændring %s\n"
-
-#, python-format
-msgid "request %d: %s\n"
-msgstr "forespørgsel %d: %s\n"
-
-#, python-format
-msgid "received %s:%s\n"
-msgstr "modtog %s:%s\n"
-
-#, python-format
-msgid "narrowing %d:%d %s\n"
-msgstr "indskrænker %d:%d %s\n"
-
-#, python-format
-msgid "found new branch changeset %s\n"
-msgstr "fandt ny forgreningsændring %s\n"
-
-#, python-format
-msgid "narrowed branch search to %s:%s\n"
-msgstr "indskrænker forgreningssøgning til %s:%s\n"
-
 msgid "already have changeset "
 msgstr "har allerede ændringen "
 
@@ -8574,16 +8269,6 @@ msgstr "advarsel: depotet er urelateret\n"
 
 msgid "repository is unrelated"
 msgstr "depotet er urelateret"
-
-msgid "found new changesets starting at "
-msgstr "fandt nye ændringer startende ved "
-
-#, python-format
-msgid "%d total queries\n"
-msgstr "%d forespørgsler i alt\n"
-
-msgid "common changesets up to "
-msgstr "fælles ændringer op til "
 
 msgid "requesting all changes\n"
 msgstr "anmoder om alle ændringer\n"
@@ -8610,16 +8295,9 @@ msgstr ""
 msgid "%d changesets found\n"
 msgstr "fandt %d ændringer\n"
 
-msgid "list of changesets:\n"
-msgstr "liste af ændringer:\n"
-
 #, python-format
 msgid "empty or missing revlog for %s"
 msgstr "tom eller manglende revlog for %s"
-
-#, python-format
-msgid "add changeset %s\n"
-msgstr "tilføj ændring %s\n"
 
 msgid "adding changesets\n"
 msgstr "tilføjer ændringer\n"
@@ -8633,10 +8311,6 @@ msgstr "tilføjer manifester\n"
 msgid "adding file changes\n"
 msgstr "tilføjer filændringer\n"
 
-#, python-format
-msgid "adding %s revisions\n"
-msgstr "tilføjer %s ændringer\n"
-
 msgid "received file revlog group is empty"
 msgstr ""
 
@@ -8647,9 +8321,6 @@ msgstr " (%+d hoveder)"
 #, python-format
 msgid "added %d changesets with %d changes to %d files%s\n"
 msgstr "tilføjede %d ændringer med %d ændringer i %d filer%s\n"
-
-msgid "updating the branch cache\n"
-msgstr ""
 
 msgid "Unexpected response from remote server:"
 msgstr "Uventet svar fra fjernserver:"
@@ -8669,10 +8340,6 @@ msgstr ""
 #, python-format
 msgid "%d files to transfer, %s of data\n"
 msgstr "%d filer at overføre, %s data\n"
-
-#, python-format
-msgid "adding %s (%s)\n"
-msgstr "tilføjer %s (%s)\n"
 
 #, python-format
 msgid "transferred %s in %.1f seconds (%s/sec)\n"
@@ -8755,14 +8422,6 @@ msgid "resolving manifests\n"
 msgstr "løser manifester\n"
 
 #, python-format
-msgid " overwrite %s partial %s\n"
-msgstr ""
-
-#, python-format
-msgid " ancestor %s local %s remote %s\n"
-msgstr ""
-
-#, python-format
 msgid ""
 " local changed %s which remote deleted\n"
 "use (c)hanged version or (d)elete?"
@@ -8782,10 +8441,6 @@ msgstr ""
 
 msgid "&Deleted"
 msgstr ""
-
-#, python-format
-msgid "preserving %s for resolve of %s\n"
-msgstr "bevarer %s til løsning af %s\n"
 
 #, python-format
 msgid "update failed to remove %s: %s!\n"
@@ -8836,13 +8491,6 @@ msgstr "kan ikke oprette %s: destinationen findes allerede"
 #, python-format
 msgid "cannot create %s: unable to create destination directory"
 msgstr "kan ikke oprette %s: ikke i stand til at oprette biblioteket"
-
-#, python-format
-msgid "found patch at byte %d\n"
-msgstr ""
-
-msgid "patch generated by hg export\n"
-msgstr "rettelse genereret af hg export\n"
 
 #, python-format
 msgid "unable to find '%s' for patching\n"
@@ -8915,10 +8563,6 @@ msgid "Unsupported line endings type: %s"
 msgstr "Linieendelse %s understøttes ikke"
 
 #, python-format
-msgid "no valid hunks found; trying with %r instead\n"
-msgstr ""
-
-#, python-format
 msgid " %d files changed, %d insertions(+), %d deletions(-)\n"
 msgstr "%d filer ændret, %d indsættelser(+), %d sletninger(-)\n"
 
@@ -8929,13 +8573,6 @@ msgstr "afsluttede med status %d"
 #, python-format
 msgid "killed by signal %d"
 msgstr "dræbt af signal %d"
-
-#, python-format
-msgid "stopped by signal %d"
-msgstr "stoppet af signal %d"
-
-msgid "invalid exit code"
-msgstr "ugyldig returkode"
 
 #, python-format
 msgid "saving bundle to %s\n"
@@ -9008,11 +8645,11 @@ msgstr ""
 msgid "could not create remote repo"
 msgstr "kunne ikke oprette fjerndepot"
 
-msgid "remote: "
-msgstr "fjernsystem: "
-
 msgid "no suitable response from remote hg"
 msgstr "intet brugbart svar fra fjernsystemets hg"
+
+msgid "remote: "
+msgstr "fjernsystem: "
 
 #, python-format
 msgid "push refused: %s"
@@ -9030,17 +8667,6 @@ msgstr "kan ikke oprette nyt static-http depot"
 #, python-format
 msgid "invalid entry in fncache, line %s"
 msgstr ""
-
-msgid "scanning\n"
-msgstr "skanner\n"
-
-#, python-format
-msgid "%d files, %d bytes to transfer\n"
-msgstr "%d filer, skal overføre %d byte\n"
-
-#, python-format
-msgid "sending %s (%d bytes)\n"
-msgstr "sender %s (%d byte)\n"
 
 #, python-format
 msgid ""
@@ -9183,10 +8809,6 @@ msgstr "bruger:"
 #, python-format
 msgid "http auth: user %s, password %s\n"
 msgstr "http godkendelse: bruger %s, kodeord %s\n"
-
-#, python-format
-msgid "proxying through http://%s:%s\n"
-msgstr ""
 
 #, python-format
 msgid "command '%s' failed: %s"
@@ -9384,6 +9006,10 @@ msgstr "udpakket størrelse er %s, forventede %s"
 #, python-format
 msgid "unpacking %s"
 msgstr "udpakker %s"
+
+#, python-format
+msgid "warning: copy source of '%s' not in parents of %s"
+msgstr ""
 
 #, python-format
 msgid "empty or missing copy source revlog %s:%s"
