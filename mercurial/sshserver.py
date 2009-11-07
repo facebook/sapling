@@ -181,11 +181,9 @@ class sshserver(object):
         self.respond('')
 
         # write bundle data to temporary file because it can be big
-        tempname = fp = None
+        fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
+        fp = os.fdopen(fd, 'wb+')
         try:
-            fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
-            fp = os.fdopen(fd, 'wb+')
-
             count = int(self.fin.readline())
             while count:
                 fp.write(self.fin.read(count))
@@ -212,10 +210,8 @@ class sshserver(object):
                     self.lock.release()
                     self.lock = None
         finally:
-            if fp is not None:
-                fp.close()
-            if tempname is not None:
-                os.unlink(tempname)
+            fp.close()
+            os.unlink(tempname)
 
     def do_stream_out(self):
         try:
