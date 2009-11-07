@@ -94,9 +94,10 @@ def findliteralblocks(blocks):
             # correct for this here while we still have the original
             # information on the indentation of the subsequent literal
             # blocks available.
-            if blocks[i]['lines'][0].startswith('- '):
-                indent += 2
-                adjustment -= 2
+            m = _bulletre.match(blocks[i]['lines'][0])
+            if m:
+                indent += m.end()
+                adjustment -= m.end()
 
             # Mark the following indented blocks.
             while i+1 < len(blocks) and blocks[i+1]['indent'] > indent:
@@ -220,7 +221,9 @@ def formatblock(block, width):
                                                subsequent_indent=defindent))
     initindent = subindent = indent
     if block['type'] == 'bullet':
-        subindent = indent + '  '
+        m = _bulletre.match(block['lines'][0])
+        if m:
+            subindent = indent + m.end() * ' '
     elif block['type'] == 'field':
         m = _fieldre.match(block['lines'][0])
         if m:
