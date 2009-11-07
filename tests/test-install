@@ -1,3 +1,10 @@
 #!/bin/sh
 
+echo '% hg debuginstall'
 hg debuginstall
+
+echo '% hg debuginstall with no username'
+HGUSER= hg debuginstall
+
+# Happy End
+true

@@ -1029,15 +1029,12 @@ def debuginstall(ui):
 
     # check username
     ui.status(_("Checking username...\n"))
-    user = os.environ.get("HGUSER")
-    if user is None:
-        user = ui.config("ui", "username")
-    if user is None:
-        user = os.environ.get("EMAIL")
-    if not user:
-        ui.warn(" ")
-        ui.username()
+    try:
+        user = ui.username()
+    except util.Abort, e:
+        ui.write(" %s\n" % e)
         ui.write(_(" (specify a username in your .hgrc file)\n"))
+        problems += 1
 
     if not problems:
         ui.status(_("No problems detected\n"))
