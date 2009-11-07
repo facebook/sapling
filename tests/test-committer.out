@@ -22,7 +22,7 @@ user:        foo@bar.com
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     commit-1
 
-abort: Please specify a username.
+abort: no username supplied (see "hg help config")
 No username found, using user@host instead
 transaction abort!
 rollback completed
