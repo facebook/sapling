@@ -599,7 +599,7 @@ def clone(ui, source, dest=None, **opts):
     If the -U/--noupdate option is specified, the new clone will contain
     only a repository (.hg) and no working copy (the working copy parent
     will be the null changeset). Otherwise, clone will initially check
-    out (in order of precedence): ::
+    out (in order of precedence):
 
       a) the changeset, tag or branch specified with -u/--updaterev
       b) the changeset, tag or branch given with the first -r/--rev
@@ -3148,17 +3148,17 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     uncommitted changes:
 
     1. If neither -c/--check nor -C/--clean is specified, uncommitted
-    changes are merged into the requested changeset, and the merged result
-    is left uncommitted. Updating and merging will occur only if the
-    requested changeset is an ancestor or descendant of the parent
-    changeset. Otherwise, the update is aborted and the uncommitted changes
-    are preserved.
+       changes are merged into the requested changeset, and the merged result
+       is left uncommitted. Updating and merging will occur only if the
+       requested changeset is an ancestor or descendant of the parent
+       changeset. Otherwise, the update is aborted and the uncommitted changes
+       are preserved.
 
     2. With the -c/--check option, the update is aborted and the
-    uncommitted changes are preserved.
+       uncommitted changes are preserved.
 
     3. With the -C/--clean option, uncommitted changes are discarded and
-    the working directory is updated to the requested changeset.
+       the working directory is updated to the requested changeset.
 
     Use null as the changeset to remove the working directory (like 'hg
     clone -U').
