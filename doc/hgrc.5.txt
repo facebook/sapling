@@ -261,8 +261,8 @@ or if you only want to translate certain files::
 Use the [defaults] section to define command defaults, i.e. the
 default options/arguments to pass to the specified commands.
 
-The following example makes 'hg log' run in verbose mode, and 'hg
-status' show only the modified files, by default::
+The following example makes ``hg log`` run in verbose mode, and ``hg
+status`` show only the modified files, by default::
 
   [defaults]
   log = -v
@@ -491,7 +491,7 @@ Example ``.hg/hgrc``::
 
 Most hooks are run with environment variables set that give useful
 additional information. For each hook below, the environment
-variables it is passed are listed with names of the form "$HG_foo".
+variables it is passed are listed with names of the form ``$HG_foo``.
 
 ``changegroup``
   Run after a changegroup has been added via push, pull or unbundle.
@@ -646,7 +646,7 @@ command or with Mercurial Queues extension.
 
 ``eol``
     When set to 'strict' patch content and patched files end of lines
-    are preserved. When set to 'lf' or 'crlf', both files end of lines
+    are preserved. When set to ``lf`` or ``crlf``, both files end of lines
     are ignored when patching and the result line endings are
     normalized to either LF (Unix) or CRLF (Windows).
     Default: strict.
@@ -745,7 +745,7 @@ User interface controls.
 ``debug``
     Print debugging information. True or False. Default is False.
 ``editor``
-    The editor to use during a commit. Default is ``$EDITOR`` or "vi".
+    The editor to use during a commit. Default is ``$EDITOR`` or ``vi``.
 ``fallbackencoding``
     Encoding to try if it's not possible to decode the changelog using
     UTF-8. Default is ISO-8859-1.
@@ -777,12 +777,12 @@ For more information on configuring merge tools see the
 merge-tools_ section.
 
 ``patch``
-    command to use to apply patches. Look for 'gpatch' or 'patch' in
+    command to use to apply patches. Look for ``gpatch`` or ``patch`` in
     PATH if unset.
 ``quiet``
     Reduce the amount of output printed. True or False. Default is False.
 ``remotecmd``
-    remote command to use for clone/push/pull operations. Default is 'hg'.
+    remote command to use for clone/push/pull operations. Default is ``hg``.
 ``report_untrusted``
     Warn if a ``.hg/hgrc`` file is ignored due to not being owned by a
     trusted user or group. True or False. Default is True.
@@ -793,7 +793,7 @@ merge-tools_ section.
     backslash character (``\``)).
     Default is False.
 ``ssh``
-    command to use for SSH connections. Default is 'ssh'.
+    command to use for SSH connections. Default is ``ssh``.
 ``strict``
     Require exact command names, instead of allowing unambiguous
     abbreviations. True or False. Default is False.
@@ -813,7 +813,7 @@ merge-tools_ section.
     <fred@example.com>``. Default is ``$EMAIL`` or ``username@hostname``. If
     the username in hgrc is empty, it has to be specified manually or
     in a different hgrc file (e.g. ``$HOME/.hgrc``, if the admin set
-    "username =" in the system hgrc).
+    ``username =``  in the system hgrc).
 ``verbose``
     Increase the amount of output printed. True or False. Default is False.
 
@@ -844,7 +844,7 @@ Web interface configuration.
     push is not allowed. If the special value ``*``, any remote user can
     push, including unauthenticated users. Otherwise, the remote user
     must have been authenticated, and the authenticated user name must
-    be present in this list (separated by whitespace or ","). The
+    be present in this list (separated by whitespace or ``,``). The
     contents of the allow_push list are examined after the deny_push
     list.
 ``allow_read``
@@ -852,7 +852,7 @@ Web interface configuration.
     the contents of deny_read, this list determines whether to grant
     repository access to the user. If this list is not empty, and the
     user is unauthenticated or not present in the list (separated by
-    whitespace or ","), then access is denied for the user. If the
+    whitespace or ``,``), then access is denied for the user. If the
     list is empty or not set, then access is permitted to all users by
     default. Setting allow_read to the special value ``*`` is equivalent
     to it not being set (i.e. access is permitted to all users). The
@@ -873,13 +873,13 @@ Web interface configuration.
     push is not denied. If the special value ``*``, all remote users are
     denied push. Otherwise, unauthenticated users are all denied, and
     any authenticated user name present in this list (separated by
-    whitespace or ",") is also denied. The contents of the deny_push
+    whitespace or ``,``) is also denied. The contents of the deny_push
     list are examined before the allow_push list.
 ``deny_read``
     Whether to deny reading/viewing of the repository. If this list is
     not empty, unauthenticated users are all denied, and any
     authenticated user name present in this list (separated by
-    whitespace or ",") is also denied access to the repository. If set
+    whitespace or ``,``) is also denied access to the repository. If set
     to the special value ``*``, all remote users are denied access
     (rarely needed ;). If deny_read is empty or not set, the
     determination of repository access depends on the presence and
