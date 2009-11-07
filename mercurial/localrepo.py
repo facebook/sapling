@@ -1564,7 +1564,8 @@ class localrepository(repo.repository):
 
         if revs is None:
             # use the fast path, no race possible on push
-            cg = self._changegroup(common.keys(), 'push')
+            nodes = self.changelog.findmissing(common.keys())
+            cg = self._changegroup(nodes, 'push')
         else:
             cg = self.changegroupsubset(update, revs, 'push')
         return cg, remote_heads
@@ -1622,28 +1623,26 @@ class localrepository(repo.repository):
         the linkrev.
         """
 
+        # Set up some initial variables
+        # Make it easy to refer to self.changelog
+        cl = self.changelog
+        # msng is short for missing - compute the list of changesets in this
+        # changegroup.
+        if not bases:
+            bases = [nullid]
+        msng_cl_lst, bases, heads = cl.nodesbetween(bases, heads)
+
         if extranodes is None:
             # can we go through the fast path ?
             heads.sort()
             allheads = self.heads()
             allheads.sort()
             if heads == allheads:
-                common = []
-                # parents of bases are known from both sides
-                for n in bases:
-                    for p in self.changelog.parents(n):
-                        if p != nullid:
-                            common.append(p)
-                return self._changegroup(common, source)
+                return self._changegroup(msng_cl_lst, source)
 
+        # slow path
         self.hook('preoutgoing', throw=True, source=source)
 
-        # Set up some initial variables
-        # Make it easy to refer to self.changelog
-        cl = self.changelog
-        # msng is short for missing - compute the list of changesets in this
-        # changegroup.
-        msng_cl_lst, bases, heads = cl.nodesbetween(bases, heads)
         self.changegroupinfo(msng_cl_lst, source)
         # Some bases may turn out to be superfluous, and some heads may be
         # too.  nodesbetween will return the minimal set of bases and heads
@@ -1903,7 +1902,7 @@ class localrepository(repo.repository):
         # to avoid a race we use changegroupsubset() (issue1320)
         return self.changegroupsubset(basenodes, self.heads(), source)
 
-    def _changegroup(self, common, source):
+    def _changegroup(self, nodes, source):
         """Compute the changegroup of all nodes that we have that a recipient
         doesn't.  Return a chunkbuffer object whose read() method will return
         successive changegroup chunks.
@@ -1911,12 +1910,11 @@ class localrepository(repo.repository):
         This is much easier than the previous function as we can assume that
         the recipient has any changenode we aren't sending them.
 
-        common is the set of common nodes between remote and self"""
+        nodes is the set of nodes to send"""
 
         self.hook('preoutgoing', throw=True, source=source)
 
         cl = self.changelog
-        nodes = cl.findmissing(common)
         revset = set([cl.rev(n) for n in nodes])
         self.changegroupinfo(nodes, source)
 

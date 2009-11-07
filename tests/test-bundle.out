@@ -326,3 +326,23 @@ diff -r 836ac62537ab anotherfile
 -1
 -2
 -3
+====== bundle single branch
+adding a
+adding b
+adding b1
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+adding c
+created new head
+adding c1
+== bundling via incoming
+comparing with .
+searching for changes
+d2ae7f538514cd87c17547b0de4cea71fe1af9fb
+5ece8e77363e2b5269e27c66828b72da29e4341a
+== bundling
+searching for changes
+common changesets up to c0025332f9ed
+2 changesets found
+list of changesets:
+d2ae7f538514cd87c17547b0de4cea71fe1af9fb
+5ece8e77363e2b5269e27c66828b72da29e4341a

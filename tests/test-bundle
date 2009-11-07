@@ -146,4 +146,23 @@ cd b
 hg -R ../all.hg diff -r tip
 cd ..
 
+echo "====== bundle single branch"
+hg init branchy
+cd branchy
+echo a >a
+hg ci -Ama
+echo b >b
+hg ci -Amb
+echo b1 >b1
+hg ci -Amb1
+hg up 0
+echo c >c
+hg ci -Amc
+echo c1 >c1
+hg ci -Amc1
+hg clone -q .#tip part
+echo "== bundling via incoming"
+hg in -R part --bundle incoming.hg --template "{node}\n" .
+echo "== bundling"
+hg bundle bundle.hg part --debug
 
