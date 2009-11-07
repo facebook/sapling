@@ -740,7 +740,7 @@ User interface controls.
     Whether to prompt for a username when committing. If True, and
     neither ``$HGUSER`` nor ``$EMAIL`` has been specified, then the user will
     be prompted to enter a username. If no username is entered, the
-    default USER@HOST is used instead.
+    default ``USER@HOST`` is used instead.
     Default is False.
 ``debug``
     Print debugging information. True or False. Default is False.
@@ -809,8 +809,8 @@ merge-tools_ section.
     IOError or MemoryError). Default is False.
 ``username``
     The committer of a changeset created when running "commit".
-    Typically a person's name and email address, e.g. "Fred Widget
-    <fred@example.com>". Default is ``$EMAIL`` or username@hostname. If
+    Typically a person's name and email address, e.g. ``Fred Widget
+    <fred@example.com>``. Default is ``$EMAIL`` or ``username@hostname``. If
     the username in hgrc is empty, it has to be specified manually or
     in a different hgrc file (e.g. ``$HOME/.hgrc``, if the admin set
     "username =" in the system hgrc).
@@ -864,7 +864,7 @@ Web interface configuration.
 ``baseurl``
     Base URL to use when publishing URLs in other locations, so
     third-party tools like email notification hooks can construct
-    URLs. Example: "http://hgserver/repos/"
+    URLs. Example: ``http://hgserver/repos/``.
 ``contact``
     Name or email address of the person in charge of the repository.
     Defaults to ui.username or ``$EMAIL`` or "unknown" if unset or empty.
@@ -925,7 +925,7 @@ Web interface configuration.
     Base URL to use for static files. If unset, static files (e.g. the
     hgicon.png favicon) will be served by the CGI script itself. Use
     this setting to serve them directly with the HTTP server.
-    Example: "http://hgserver/static/"
+    Example: ``http://hgserver/static/``.
 ``stripes``
     How many lines a "zebra stripe" should span in multiline output.
     Default is 1; set to 0 to disable.
