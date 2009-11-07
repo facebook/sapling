@@ -452,9 +452,14 @@ class filectx(object):
         """
 
         actx = self.changectx().ancestor(fc2.changectx())
-        if self.path() in actx:
-            return actx[self.path()]
 
+        # the trivial case: changesets are unrelated, files must be too
+        if not actx:
+            return None
+
+        # the easy case: no (relevant) renames
+        if fc2.path() == self.path() and self.path() in actx:
+            return actx[self.path()]
         acache = {}
 
         # prime the ancestor cache for the working directory
