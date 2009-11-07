@@ -200,7 +200,12 @@ class hgsubrepo(object):
 
     def merge(self, state):
         self._get(state)
-        hg.merge(self._repo, state[1], remind=False)
+        cur = self._repo['.']
+        dst = self._repo[state[1]]
+        if dst.ancestor(cur) == cur:
+            hg.update(self._repo, state[1])
+        else:
+            hg.merge(self._repo, state[1], remind=False)
 
     def push(self, force):
         # push subrepos depth-first for coherent ordering
