@@ -14,25 +14,27 @@ import os, stat
 def relink(ui, repo, origin=None, **opts):
     """recreate hardlinks between two repositories
 
-    When repositories are cloned locally, their data files will be hardlinked
-    so that they only use the space of a single repository.
+    When repositories are cloned locally, their data files will be
+    hardlinked so that they only use the space of a single repository.
 
-    Unfortunately, subsequent pulls into either repository will break hardlinks
-    for any files touched by the new changesets, even if both repositories end
-    up pulling the same changes.
+    Unfortunately, subsequent pulls into either repository will break
+    hardlinks for any files touched by the new changesets, even if
+    both repositories end up pulling the same changes.
 
-    Similarly, passing --rev to "hg clone" will fail to use
-    any hardlinks, falling back to a complete copy of the source repository.
+    Similarly, passing --rev to "hg clone" will fail to use any
+    hardlinks, falling back to a complete copy of the source
+    repository.
 
-    This command lets you recreate those hardlinks and reclaim that wasted
-    space.
+    This command lets you recreate those hardlinks and reclaim that
+    wasted space.
 
-    This repository will be relinked to share space with ORIGIN, which must be
-    on the same local disk. If ORIGIN is omitted, looks for "default-relink",
-    then "default", in [paths].
+    This repository will be relinked to share space with ORIGIN, which
+    must be on the same local disk. If ORIGIN is omitted, looks for
+    "default-relink", then "default", in [paths].
 
-    Do not attempt any read operations on this repository while the command is
-    running. (Both repositories will be locked against writes.)
+    Do not attempt any read operations on this repository while the
+    command is running. (Both repositories will be locked against
+    writes.)
     """
     src = hg.repository(
         cmdutil.remoteui(repo, opts),
