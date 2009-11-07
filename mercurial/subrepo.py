@@ -27,7 +27,7 @@ def state(ctx):
     if '.hgsubstate' in ctx:
         try:
             for l in ctx['.hgsubstate'].data().splitlines():
-                revision, path = l.split()
+                revision, path = l.split(" ", 1)
                 rev[path] = revision
         except IOError, err:
             if err.errno != errno.ENOENT:
