@@ -87,9 +87,7 @@ SYNTAX
 ------
 
 A configuration file consists of sections, led by a ``[section]`` header
-and followed by ``name: value`` entries; ``name=value`` is also accepted.
-
-::
+and followed by ``name = value`` entries::
 
     [spam]
     eggs=ham
