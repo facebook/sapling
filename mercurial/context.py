@@ -451,6 +451,10 @@ class filectx(object):
         find the common ancestor file context, if any, of self, and fc2
         """
 
+        actx = self.changectx().ancestor(fc2.changectx())
+        if self.path() in actx:
+            return actx[self.path()]
+
         acache = {}
 
         # prime the ancestor cache for the working directory
