@@ -9,7 +9,7 @@
 from i18n import _
 from lock import release
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
-import lock, util, extensions, error
+import lock, util, extensions, error, encoding
 import merge as _merge
 import verify as _verify
 import errno, os, shutil
@@ -320,7 +320,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                     except error.RepoLookupError:
                         continue
                 bn = dest_repo[uprev].branch()
-                dest_repo.ui.status(_("updating to branch %s\n") % bn)
+                dest_repo.ui.status(_("updating to branch %s\n")
+                                    % encoding.tolocal(bn))
                 _update(dest_repo, uprev)
 
         return src_repo, dest_repo

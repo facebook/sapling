@@ -16,13 +16,13 @@ configuration files for Mercurial
    :class: htmlonly
 
 
-SYNOPSIS
+Synopsis
 --------
 
 The Mercurial system uses a set of configuration files to control
 aspects of its behavior.
 
-FILES
+Files
 -----
 
 Mercurial reads configuration data from several files, if they exist.
@@ -83,13 +83,11 @@ ones.
     a ``Mercurial.ini`` file or be a directory where ``*.rc`` files will
     be read.
 
-SYNTAX
+Syntax
 ------
 
 A configuration file consists of sections, led by a ``[section]`` header
-and followed by ``name: value`` entries; ``name=value`` is also accepted.
-
-::
+and followed by ``name = value`` entries::
 
     [spam]
     eggs=ham
@@ -110,7 +108,7 @@ A line with ``%unset name`` will remove ``name`` from the current
 section, if it has been set previously.
 
 
-SECTIONS
+Sections
 --------
 
 This section describes the different sections that may appear in a
@@ -935,17 +933,17 @@ Web interface configuration.
     Where to find the HTML templates. Default is install path.
 
 
-AUTHOR
+Author
 ------
 Bryan O'Sullivan <bos@serpentine.com>.
 
 Mercurial was written by Matt Mackall <mpm@selenic.com>.
 
-SEE ALSO
+See Also
 --------
 |hg(1)|_, |hgignore(5)|_
 
-COPYING
+Copying
 -------
 This manual page is copyright 2005 Bryan O'Sullivan.
 Mercurial is copyright 2005-2009 Matt Mackall.

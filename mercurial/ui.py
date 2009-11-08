@@ -186,7 +186,7 @@ class ui(object):
             except KeyError:
                 pass
         if not user:
-            raise util.Abort(_("Please specify a username."))
+            raise util.Abort(_('no username supplied (see "hg help config")'))
         if "\n" in user:
             raise util.Abort(_("username %s contains a newline\n") % repr(user))
         return user
