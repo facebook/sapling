@@ -1,32 +1,91 @@
+/*
+ * Styles for man pages, which suit with http://mercurial.selenic.com/
+ *
+ * Color scheme & layout are borrowed from
+ * http://mercurial.selenic.com/css/styles.css
+ *
+ * Some styles are from html4css1.css from Docutils, which is in the
+ * public domain.
+ */
 
 body {
+    margin: 0;
+    padding: 0;
     font-family: sans-serif;
-    /* adjustment for tt padding */
-    line-height: 140%;
+    color: #111;
 }
 
-tt, pre {
-    background-color: #EEE;
-    border: thin solid #CCC;
-    padding: 1px;
+.document {
+    position: relative;  /* be a top of absolute positioning */
+    margin: 1.5em 1.8em;
+    padding: 0;
+    line-height: 1.3;
 }
 
-pre {
-    padding: 0.25em;
+/* layout: toc to right */
+#contents {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 26%;
 }
 
-#contents tt, h2 tt {
-    background-color: inherit;
-    border: inherit;
+/* layout: others to left */
+h1.title, h2.subtitle, .section { width: 72%; }
+.section .section { width: auto; }
+table.docinfo { max-width: 72%; }
+
+/* headings */
+h1, h2, .topic-title, .admonition-title {
+    font-family: "MgOpen Cosmetica", "Lucida Sans Unicode", sans-serif;
+    font-weight: normal;
+}
+h1, h2, .topic-title, .admonition-title {
+    margin: 1em 0 0.5em;
+}
+h1.title { font-size: 300%; }
+h2.subtitle, h1 { font-size: 200%; }
+h2, .topic-title, .admonition-title { font-size: 140%; }
+
+/* override first/last margin */
+.first, h1.title, h2.subtitle { margin-top: 0 !important; }
+.last, .with-subtitle { margin-bottom: 0 !important; }
+
+blockquote, pre, dd .option-list, .field-list {
+    margin: 0.2em 0 1em 2em;
 }
 
-/* styles taken from html4css1.css from Docutils, which is in the
-   public domain */
+kbd, tt, pre { font-family: monospace; }
 
-/* used to remove borders from tables and images */
-.borderless, table.borderless td, table.borderless th {
-    border: 0;
+dt { font-weight: bold; }
+dd { margin-bottom: 0.5em; }
+
+th, td { padding: 0.1em 0.2em; border: 0 none; }
+th { font-weight: bold; text-align: left; }
+
+a:link, a:visited { text-decoration: underline; }
+a:hover, a:focus { text-decoration: none; }
+a:link { color: #00b5f1; }
+a:visited { color: #5c9caf; }
+a:link.toc-backref, a:visited.toc-backref {
+    text-decoration: none;
+    color: #111;  /* `inherit' not supported by IE6 */
 }
+
+div.admonition, div.attention, div.caution,
+div.danger, div.error, div.hint, div.important,
+div.note, div.tip, div.warning {
+    border-top: 1px #ccc solid;
+    border-bottom: 1px #ccc solid;
+    padding: 0.3em 1em;
+    margin: 1em;
+}
+
+
+/*
+ * The following styles are from docutils'.
+ * Please refine if necessary.
+ */
 
 table.borderless td, table.borderless th {
     /* Override padding for "table.docutils td" with "! important".
@@ -34,89 +93,22 @@ table.borderless td, table.borderless th {
     padding: 0 0.5em 0 0 ! important;
 }
 
-.first {
-    /* Override more specific margin styles with "! important". */
-    margin-top: 0 ! important;
-}
-
-.last, .with-subtitle {
-    margin-bottom: 0 ! important;
-}
-
 .hidden {
     display: none;
 }
 
-a.toc-backref {
-    text-decoration: none;
-    color: black;
-}
-
 blockquote.epigraph {
-    margin: 2em 5em;;
+    margin: 2em 5em;
 }
-
-dl.docutils dd {
-    margin-bottom: 0.5em;
-}
-
-/* Uncomment (and remove this text!) to get bold-faced definition list terms
-dl.docutils dt {
-    font-weight: bold;
-}
-*/
 
 div.abstract {
     margin: 2em 5em;
 }
 
-div.abstract p.topic-title {
-    font-weight: bold;
-    text-align: center;
-}
-
-div.admonition, div.attention, div.caution, div.danger, div.error,
-div.hint, div.important, div.note, div.tip, div.warning {
-    margin: 2em;
-    border: medium outset;
-    padding: 1em;
-}
-
-div.admonition p.admonition-title, div.hint p.admonition-title,
-div.important p.admonition-title, div.note p.admonition-title,
-div.tip p.admonition-title {
-    font-weight: bold;
-    font-family: sans-serif;
-}
-
-div.attention p.admonition-title, div.caution p.admonition-title,
-div.danger p.admonition-title, div.error p.admonition-title,
-div.warning p.admonition-title {
-    color: red;
-    font-weight: bold;
-    font-family: sans-serif;
-}
-
-/* Uncomment (and remove this text!) to get reduced vertical space in
-   compound paragraphs.
-div.compound .compound-first, div.compound .compound-middle {
-    margin-bottom: 0.5em;
-}
-
-div.compound .compound-last, div.compound .compound-middle {
-    margin-top: 0.5em;
-}
-*/
-
 div.dedication {
     margin: 2em 5em;
     text-align: center;
     font-style: italic;
-}
-
-div.dedication p.topic-title {
-    font-weight: bold;
-    font-style: normal;
 }
 
 div.figure {
@@ -174,21 +166,9 @@ div.system-message p.system-message-title {
     font-weight: bold;
 }
 
-div.topic {
-    margin: 2em;
-}
-
 h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
 h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
     margin-top: 0.4em;
-}
-
-h1.title {
-    text-align: center;
-}
-
-h2.subtitle {
-    text-align: center;
 }
 
 hr.docutils {
@@ -252,21 +232,6 @@ p.rubric {
     text-align: center;
 }
 
-p.sidebar-title {
-    font-family: sans-serif;
-    font-weight: bold;
-    font-size: larger;
-}
-
-p.sidebar-subtitle {
-    font-family: sans-serif;
-    font-weight: bold;
-}
-
-p.topic-title {
-    font-weight: bold;
-}
-
 pre.address {
     margin-bottom: 0;
     margin-top: 0;
@@ -315,32 +280,9 @@ table.citation {
     margin-left: 1px;
 }
 
-table.docinfo {
-    margin: 2em 4em;
-}
-
-table.docutils {
-    margin-top: 0.5em;
-    margin-bottom: 0.5em;
-}
-
 table.footnote {
     border-left: solid 1px black;
     margin-left: 1px;
-}
-
-table.docutils td, table.docutils th,
-table.docinfo td, table.docinfo th {
-    padding-left: 0.5em;
-    padding-right: 0.5em;
-    vertical-align: top;
-}
-
-table.docutils th.field-name, table.docinfo th.docinfo-name {
-    font-weight: bold;
-    text-align: left;
-    white-space: nowrap;
-    padding-left: 0;
 }
 
 h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
