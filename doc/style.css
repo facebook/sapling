@@ -47,6 +47,9 @@ h1.title { font-size: 300%; }
 h2.subtitle, h1 { font-size: 200%; }
 h2, .topic-title, .admonition-title { font-size: 140%; }
 
+/* subtitle starts with lowercase in man pages, but not in HTML */
+h2.subtitle:first-letter { text-transform: uppercase; }
+
 /* override first/last margin */
 .first, h1.title, h2.subtitle { margin-top: 0 !important; }
 .last, .with-subtitle { margin-bottom: 0 !important; }
