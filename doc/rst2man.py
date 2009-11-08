@@ -1048,6 +1048,7 @@ class Translator(nodes.NodeVisitor):
             raise nodes.SkipNode
         elif self.section_level == 1:
             self.body.append('.SH ')
+            node[:] = nodes.Text(node.astext().upper())
         else:
             self.body.append('.SS ')
 
