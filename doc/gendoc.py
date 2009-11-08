@@ -61,12 +61,12 @@ def show_doc(ui):
         ui.write("%s\n%s\n\n" % (s, '"' * encoding.colwidth(s)))
 
     # print options
-    section(_("OPTIONS"))
+    section(_("Options"))
     for optstr, desc in get_opts(globalopts):
         ui.write("%s\n    %s\n\n" % (optstr, desc))
 
     # print cmds
-    section(_("COMMANDS"))
+    section(_("Commands"))
     h = {}
     for c, attr in table.items():
         f = c.split("|")[0]
@@ -104,7 +104,7 @@ def show_doc(ui):
         for name in names:
             ui.write(".. _%s:\n" % name)
         ui.write("\n")
-        section(sec.upper())
+        section(sec)
         if callable(doc):
             doc = doc()
         ui.write(doc)
