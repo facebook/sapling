@@ -52,7 +52,14 @@ def submerge(repo, wctx, mctx, actx):
     sa = actx.substate
     sm = {}
 
+    def debug(s, msg, r=""):
+        if r:
+            r = "%s:%s" % r
+        repo.ui.debug(_("  subrepo %s: %s %s\n") % (s, msg, r))
+
     for s, l in s1.items():
+        if wctx.sub(s).dirty():
+            l = (l[0], l[1] + "+")
         a = sa.get(s, nullstate)
         if s in s2:
             r = s2[s]
@@ -60,6 +67,7 @@ def submerge(repo, wctx, mctx, actx):
                 sm[s] = l
                 continue
             elif l == a: # other side changed
+                debug(s, _("other changed, get"), r)
                 wctx.sub(s).get(r)
                 sm[s] = r
             elif l[0] != r[0]: # sources differ
@@ -68,27 +76,33 @@ def submerge(repo, wctx, mctx, actx):
                       'use (l)ocal source (%s) or (r)emote source (%s)?')
                       % (s, l[0], r[0]),
                       (_('&Local'), _('&Remote')), 0):
+                    debug(s, _("prompt changed, get"), r)
                     wctx.sub(s).get(r)
                     sm[s] = r
             elif l[1] == a[1]: # local side is unchanged
+                debug(s, _("other side changed, get"), r)
                 wctx.sub(s).get(r)
                 sm[s] = r
             else:
+                debug(s, _("both sides changed, merge with"), r)
                 wctx.sub(s).merge(r)
                 sm[s] = l
         elif l == a: # remote removed, local unchanged
+            debug(s, _("remote removed, remove"))
             wctx.sub(s).remove()
         else:
             if repo.ui.promptchoice(
                 _(' local changed subrepository %s which remote removed\n'
                   'use (c)hanged version or (d)elete?') % s,
                 (_('&Changed'), _('&Delete')), 0):
+                debug(s, _("prompt remove"))
                 wctx.sub(s).remove()
 
     for s, r in s2.items():
         if s in s1:
             continue
         elif s not in sa:
+            debug(s, _("remote added, get"), r)
             wctx.sub(s).get(r)
             sm[s] = r
         elif r != sa[s]:
@@ -96,6 +110,7 @@ def submerge(repo, wctx, mctx, actx):
                 _(' remote changed subrepository %s which local removed\n'
                   'use (c)hanged version or (d)elete?') % s,
                 (_('&Changed'), _('&Delete')), 0) == 0:
+                debug(s, _("prompt recreate"), r)
                 wctx.sub(s).get(r)
                 sm[s] = r
 
@@ -185,7 +200,12 @@ class hgsubrepo(object):
 
     def merge(self, state):
         self._get(state)
-        hg.merge(self._repo, state[1], remind=False)
+        cur = self._repo['.']
+        dst = self._repo[state[1]]
+        if dst.ancestor(cur) == cur:
+            hg.update(self._repo, state[1])
+        else:
+            hg.merge(self._repo, state[1], remind=False)
 
     def push(self, force):
         # push subrepos depth-first for coherent ordering
@@ -198,4 +218,3 @@ class hgsubrepo(object):
         dsturl = _abssource(self._repo, True)
         other = hg.repository(self._repo.ui, dsturl)
         self._repo.push(other, force)
-
