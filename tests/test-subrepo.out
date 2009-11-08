@@ -56,6 +56,9 @@ resolving manifests
  overwrite None partial False
  ancestor 1f14a2e2d3ec local f0d2028bf86d+ remote 1831e14459c4
  .hgsubstate: versions differ -> m
+subrepo merge f0d2028bf86d+ 1831e14459c4 1f14a2e2d3ec
+  subrepo t: other changed, get t:6747d179aa9a688023c4b0cad32e4c92bb7f34ad
+getting subrepo t
 resolving manifests
  overwrite True partial False
  ancestor 60ca1237c194+ local 60ca1237c194+ remote 6747d179aa9a
@@ -75,6 +78,9 @@ resolving manifests
  overwrite None partial False
  ancestor 1831e14459c4 local e45c8b14af55+ remote f94576341bcf
  .hgsubstate: versions differ -> m
+subrepo merge e45c8b14af55+ f94576341bcf 1831e14459c4
+  subrepo t: both sides changed, merge with t:7af322bc1198a32402fe903e0b7ebcfc5c9bf8f4
+merging subrepo t
   searching for copies back to rev 2
 resolving manifests
  overwrite None partial False
