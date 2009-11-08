@@ -163,7 +163,7 @@ This patch series consists of 1 patches.
 
 
 Writing [PATCH] charset=utf-8; content-transfer-encoding: base64 ...
-From quux Thu Jan  1 00:04:01 1970
+From quux Thu Jan 01 00:04:01 1970
 Content-Type: text/plain; charset="utf-8"
 MIME-Version: 1.0
 Content-Transfer-Encoding: base64
@@ -198,7 +198,7 @@ This patch series consists of 1 patches.
 
 
 Writing [PATCH] charset=utf-8; content-transfer-encoding: quoted-printable ...
-From quux Thu Jan  1 00:04:01 1970
+From quux Thu Jan 01 00:04:01 1970
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
@@ -249,7 +249,7 @@ This patch series consists of 1 patches.
 
 Writing [PATCH] charset=us-ascii; content-transfer-encoding: 8bit ...
 % md5sum of 8-bit output
-0920ef519c29b6a1742047ad9f203fc5  mboxfix
+9ea043d8fc43a71045114508baed144b  mboxfix
 % test diffstat for single patch
 This patch series consists of 1 patches.
 
@@ -1474,7 +1474,7 @@ This patch series consists of 1 patches.
 
 
 Writing [PATCH] test ...
-From quux Tue Jan  1 00:01:01 1980
+From quux Tue Jan 01 00:01:01 1980
 Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit

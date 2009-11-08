@@ -451,7 +451,10 @@ def patchbomb(ui, repo, *revs, **opts):
             ui.status(_('Writing '), subj, ' ...\n')
             fp = open(opts.get('mbox'), 'In-Reply-To' in m and 'ab+' or 'wb+')
             generator = email.Generator.Generator(fp, mangle_from_=True)
-            date = time.ctime(start_time[0])
+            # Should be time.asctime(), but Windows prints 2-characters day
+            # of month instead of one. Make them print the same thing.
+            date = time.strftime('%a %b %d %H:%M:%S %Y',
+                                 time.localtime(start_time[0]))
             fp.write('From %s %s\n' % (sender_addr, date))
             generator.flatten(m, 0)
             fp.write('\n\n')
