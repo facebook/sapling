@@ -1,5 +1,5 @@
 /*
- * Styles for man pages, which suit with http://mercurial.selenic.com/
+ * Styles for man pages, which match with http://mercurial.selenic.com/
  *
  * Color scheme & layout are borrowed from
  * http://mercurial.selenic.com/css/styles.css
@@ -72,7 +72,7 @@ a:link { color: #00b5f1; }
 a:visited { color: #5c9caf; }
 a:link.toc-backref, a:visited.toc-backref {
     text-decoration: none;
-    color: #111;  /* `inherit' not supported by IE6 */
+    color: #111;  /* `inherit' is not supported by IE6 */
 }
 
 div.admonition, div.attention, div.caution,
