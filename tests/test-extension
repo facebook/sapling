@@ -87,7 +87,7 @@ application = hgweb('.', 'test repo')
 wsgicgi.launch(application)
 EOF
 SCRIPT_NAME='/' SERVER_PORT='80' SERVER_NAME='localhost' python hgweb.cgi \
-    | grep '^[[:digit:]]) [[:alnum:] ]*$'  # ignores HTML output
+    | grep '^[0-9]) ' # ignores HTML output
 
 echo 'foo = !' >> $HGRCPATH
 echo 'bar = !' >> $HGRCPATH

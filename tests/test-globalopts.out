@@ -202,6 +202,7 @@ list of commands:
 
 additional help topics:
 
+ config       Configuration Files
  dates        Date Formats
  patterns     File Name Patterns
  environment  Environment Variables
@@ -270,6 +271,7 @@ list of commands:
 
 additional help topics:
 
+ config       Configuration Files
  dates        Date Formats
  patterns     File Name Patterns
  environment  Environment Variables

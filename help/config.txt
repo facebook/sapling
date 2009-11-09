@@ -1,0 +1,37 @@
+Mercurial reads configuration data from several files, if they exist.
+Below we list the most specific file first.
+
+On Windows, these configuration files are read:
+
+- ``<repo>\.hg\hgrc``
+- ``%USERPROFILE%\.hgrc``
+- ``%USERPROFILE%\Mercurial.ini``
+- ``%HOME%\.hgrc``
+- ``%HOME%\Mercurial.ini``
+- ``C:\Mercurial\Mercurial.ini``
+- ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial``
+- ``<install-dir>\Mercurial.ini``
+
+On Unix, these files are read:
+
+- ``<repo>/.hg/hgrc``
+- ``$HOME/.hgrc``
+- ``/etc/mercurial/hgrc``
+- ``/etc/mercurial/hgrc.d/*.rc``
+- ``<install-root>/etc/mercurial/hgrc``
+- ``<install-root>/etc/mercurial/hgrc.d/*.rc``
+
+The configuration files for Mercurial use a simple ini-file format. A
+configuration file consists of sections, led by a ``[section]`` header
+and followed by ``name = value`` entries::
+
+  [ui]
+  username = Firstname Lastname <firstname.lastname@example.net>
+  verbose = True
+
+This above entries will be referred to as ``ui.username`` and
+``ui.verbose``, respectively. Please see the hgrc man page for a full
+description of the possible configuration values:
+
+- on Unix-like systems: ``man hgrc``
+- online: http://www.selenic.com/mercurial/hgrc.5.html

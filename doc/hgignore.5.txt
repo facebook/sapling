@@ -11,14 +11,14 @@ syntax for Mercurial ignore files
 :Manual section: 5
 :Manual group:   Mercurial Manual
 
-SYNOPSIS
+Synopsis
 --------
 
 The Mercurial system uses a file called ``.hgignore`` in the root
 directory of a repository to control its behavior when it searches
 for files that it is not currently tracking.
 
-DESCRIPTION
+Description
 -----------
 
 The working directory of a Mercurial repository will often contain
@@ -45,7 +45,7 @@ of how to configure these files. Look for the "ignore" entry in the
 To control Mercurial's handling of files that it manages, see the
 |hg(1)|_ man page. Look for the ``-I`` and ``-X`` options.
 
-SYNTAX
+Syntax
 ------
 
 An ignore file is a plain text file consisting of a list of patterns,
@@ -75,7 +75,7 @@ the form ``*.c`` will match a file ending in ``.c`` in any directory,
 and a regexp pattern of the form ``\.c$`` will do the same. To root a
 regexp pattern, start it with ``^``.
 
-EXAMPLE
+Example
 -------
 
 Here is an example ignore file. ::
@@ -91,17 +91,17 @@ Here is an example ignore file. ::
   syntax: regexp
   ^\.pc/
 
-AUTHOR
+Author
 ------
 Vadim Gelfer <vadim.gelfer@gmail.com>
 
 Mercurial was written by Matt Mackall <mpm@selenic.com>.
 
-SEE ALSO
+See Also
 --------
 |hg(1)|_, |hgrc(5)|_
 
-COPYING
+Copying
 -------
 This manual page is copyright 2006 Vadim Gelfer.
 Mercurial is copyright 2005-2009 Matt Mackall.

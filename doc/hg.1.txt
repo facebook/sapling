@@ -16,16 +16,16 @@ Mercurial source code management system
    :class: htmlonly
 
 
-SYNOPSIS
+Synopsis
 --------
 **hg** *command* [*option*]... [*argument*]...
 
-DESCRIPTION
+Description
 -----------
 The **hg** command provides a command line interface to the Mercurial
 system.
 
-COMMAND ELEMENTS
+Command Elements
 ----------------
 
 files...
@@ -46,7 +46,7 @@ repository path
 
 .. include:: hg.1.gendoc.txt
 
-FILES
+Files
 -----
 
 ``.hgignore``
@@ -70,20 +70,20 @@ Some commands (e.g. revert) produce backup files ending in ``.orig``,
 if the ``.orig`` file already exists and is not tracked by Mercurial,
 it will be overwritten.
 
-BUGS
+Bugs
 ----
 Probably lots, please post them to the mailing list (see Resources_
 below) when you find them.
 
-SEE ALSO
+See Also
 --------
 |hgignore(5)|_, |hgrc(5)|_
 
-AUTHOR
+Author
 ------
 Written by Matt Mackall <mpm@selenic.com>
 
-RESOURCES
+Resources
 ---------
 Main Web Site: http://mercurial.selenic.com/
 
@@ -91,7 +91,7 @@ Source code repository: http://selenic.com/hg
 
 Mailing list: http://selenic.com/mailman/listinfo/mercurial
 
-COPYING
+Copying
 -------
 Copyright (C) 2005-2009 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General

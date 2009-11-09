@@ -95,6 +95,7 @@ list of commands:
 
 additional help topics:
 
+ config       Configuration Files
  dates        Date Formats
  patterns     File Name Patterns
  environment  Environment Variables
@@ -159,6 +160,7 @@ use "hg -v help" to show aliases and global options
 
 additional help topics:
 
+ config       Configuration Files
  dates        Date Formats
  patterns     File Name Patterns
  environment  Environment Variables

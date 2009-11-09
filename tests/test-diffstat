@@ -2,7 +2,7 @@
 
 hg init repo
 cd repo
-i=0; while [ "$i" -lt 213 ]; do echo a >> a; i=$(($i + 1)); done
+i=0; while [ "$i" -lt 213 ]; do echo a >> a; i=`expr $i + 1`; done
 hg add a
 
 echo '% wide diffstat'
