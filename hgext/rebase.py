@@ -27,17 +27,19 @@ def rebasemerge(repo, rev, first=False):
     oldancestor = ancestor.ancestor
 
     def newancestor(a, b, pfunc):
-        ancestor.ancestor = oldancestor
         if b == rev:
             return repo[rev].parents()[0].rev()
-        return ancestor.ancestor(a, b, pfunc)
+        return oldancestor(a, b, pfunc)
 
     if not first:
         ancestor.ancestor = newancestor
     else:
         repo.ui.debug("first revision, do not change ancestor\n")
-    stats = merge.update(repo, rev, True, True, False)
-    return stats
+    try:
+        stats = merge.update(repo, rev, True, True, False)
+        return stats
+    finally:
+        ancestor.ancestor = oldancestor
 
 def rebase(ui, repo, **opts):
     """move changeset (and descendants) to a different branch

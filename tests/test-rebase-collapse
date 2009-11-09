@@ -130,12 +130,7 @@ hg glog  --template '{rev}: {desc}\n'
 
 echo
 echo '% Rebase and collapse - E onto I'
-hg rebase -s 4 --collapse 
-
-echo '% Fix conflict and continue'
-echo 'Resolved merge' > E
-hg resolve -m E
-hg rebase -c 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 4 --collapse 2>&1 | sed 's/\(saving bundle to \).*/\1/'
 
 hg glog  --template '{rev}: {desc}\n'
 

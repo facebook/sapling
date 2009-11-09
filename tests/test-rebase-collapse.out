@@ -145,10 +145,6 @@ o  0: A
 
 % Rebase and collapse - E onto I
 merging E
-warning: conflicts during merge.
-merging E failed!
-abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
-% Fix conflict and continue
 saving bundle to 
 adding branch
 adding changesets
@@ -179,7 +175,7 @@ E
 G
 I
 Cat E:
-Resolved merge
+F
 
 @  5: F
 |
