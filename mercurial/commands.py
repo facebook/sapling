@@ -612,8 +612,8 @@ def clone(ui, source, dest=None, **opts):
     by listing each changeset (tag, or branch name) with -r/--rev.
     If -r/--rev is used, the cloned repository will contain only a subset
     of the changesets of the source repository. Only the set of changesets
-    defined by all -r/--rev options (including their direct and indirect
-    parent changesets) will be pulled into the destination repository.
+    defined by all -r/--rev options (including all their ancestors)
+    will be pulled into the destination repository.
     No subsequent changesets (including subsequent tags) will be present
     in the destination.
 
