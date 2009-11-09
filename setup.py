@@ -97,7 +97,7 @@ try:
 except ImportError:
     pass
 
-def runcmd(cmd):
+def runcmd(cmd, env):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, env=env)
     out, err = p.communicate()
@@ -127,7 +127,7 @@ if os.path.isdir('.hg'):
         # error 0xc0150004. See: http://bugs.python.org/issue3440
         env['SystemRoot'] = os.environ['SystemRoot']
     cmd = [sys.executable, 'hg', 'id', '-i', '-t']
-    l = runcmd(cmd).split()
+    l = runcmd(cmd, env).split()
     while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
         l.pop()
     if len(l) > 1: # tag found
@@ -137,7 +137,7 @@ if os.path.isdir('.hg'):
     elif len(l) == 1: # no tag found
         cmd = [sys.executable, 'hg', 'parents', '--template',
                '{latesttag}+{latesttagdistance}-']
-        version = runcmd(cmd) + l[0]
+        version = runcmd(cmd, env) + l[0]
     if version.endswith('+'):
         version += time.strftime('%Y%m%d')
 elif os.path.exists('.hg_archival.txt'):
