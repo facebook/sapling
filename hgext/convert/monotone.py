@@ -102,8 +102,13 @@ class monotone_source(converter_source, commandline):
     def mtngetcerts(self, rev):
         certs = {"author":"<missing>", "date":"<missing>",
             "changelog":"<missing>", "branch":"<missing>"}
-        cert_list = self.mtnrun("certs", rev).split('\n\n      key "')
-        for e in cert_list:
+        certlist = self.mtnrun("certs", rev)
+        # mtn < 0.45:
+        #   key "test@selenic.com"
+        # mtn >= 0.45:
+        #   key [ff58a7ffb771907c4ff68995eada1c4da068d328]
+        certlist = re.split('\n\n      key ["\[]', certlist)
+        for e in certlist:
             m = self.cert_re.match(e)
             if m:
                 name, value = m.groups()
