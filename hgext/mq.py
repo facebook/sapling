@@ -2090,7 +2090,8 @@ def guard(ui, repo, *args, **opts):
     With arguments, set guards for the named patch.
     NOTE: Specifying negative guards now requires '--'.
 
-    To set guards on another patch:
+    To set guards on another patch::
+
       hg qguard -- other.patch +2.6.17 -stable
     '''
     def status(idx):
@@ -2336,7 +2337,7 @@ def select(ui, repo, *args, **opts):
     qselect to tell mq which guards to use. A patch will be pushed if
     it has no guards or any positive guards match the currently
     selected guard, but will not be pushed if any negative guards
-    match the current guard. For example:
+    match the current guard. For example::
 
         qguard foo.patch -stable    (negative guard)
         qguard bar.patch +stable    (positive guard)
