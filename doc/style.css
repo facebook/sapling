@@ -12,7 +12,6 @@ body {
     margin: 0;
     padding: 0;
     font-family: sans-serif;
-    color: #111;
 }
 
 .document {
@@ -72,7 +71,7 @@ a:link { color: #00b5f1; }
 a:visited { color: #5c9caf; }
 a:link.toc-backref, a:visited.toc-backref {
     text-decoration: none;
-    color: #111;  /* `inherit' is not supported by IE6 */
+    color: inherit;  /* NOTE: `inherit' is not supported by IE6 */
 }
 
 div.admonition, div.attention, div.caution,
