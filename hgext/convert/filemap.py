@@ -10,11 +10,11 @@ from mercurial import util
 from common import SKIPREV, converter_source
 
 def rpairs(name):
-    yield '.', name
     e = len(name)
     while e != -1:
         yield name[:e], name[e+1:]
         e = name.rfind('/', 0, e)
+    yield '.', name
 
 class filemapper(object):
     '''Map and filter filenames when importing.
@@ -82,7 +82,7 @@ class filemapper(object):
             exc = self.lookup(name, self.exclude)[0]
         else:
             exc = ''
-        if not inc or exc:
+        if (not self.include and exc) or (len(inc) <= len(exc)):
             return None
         newpre, pre, suf = self.lookup(name, self.rename)
         if newpre:
