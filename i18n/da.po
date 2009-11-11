@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-11-10 20:42+0100\n"
-"PO-Revision-Date: 2009-11-11 00:39+0100\n"
+"PO-Revision-Date: 2009-11-11 22:54+0100\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -3704,33 +3704,33 @@ msgstr ""
 "    information."
 
 msgid "guards deactivated\n"
-msgstr ""
+msgstr "deaktiverede filtre\n"
 
 #, python-format
 msgid "number of unguarded, unapplied patches has changed from %d to %d\n"
-msgstr ""
+msgstr "antallet af ufiltrerede og ikke-anvendte rettelser har ændret sig fra %dtil %d\n"
 
 #, python-format
 msgid "number of guarded, applied patches has changed from %d to %d\n"
-msgstr ""
+msgstr "antallet af filtrerede og anvendte rettelser har ændret sig fra %d til %d\n"
 
 msgid "guards in series file:\n"
-msgstr ""
+msgstr "filtre i seriefilen:\n"
 
 msgid "no guards in series file\n"
-msgstr ""
+msgstr "ingen filtre i seriefilen\n"
 
 msgid "active guards:\n"
-msgstr ""
+msgstr "aktive filtre:\n"
 
 msgid "no active guards\n"
-msgstr ""
+msgstr "ingen aktive filtre\n"
 
 msgid "popping guarded patches\n"
-msgstr ""
+msgstr "fjerne filtrerede rettelser\n"
 
 msgid "reapplying unguarded patches\n"
-msgstr ""
+msgstr "anvender ufiltrerede rettelser\n"
 
 msgid ""
 "move applied patches into repository history\n"
@@ -3761,7 +3761,7 @@ msgstr "målet har mq rettelser anvendt"
 
 #, python-format
 msgid "mq status file refers to unknown node %s\n"
-msgstr ""
+msgstr "mq statusfilen refererer til en ukendt revision %s\n"
 
 #, python-format
 msgid "Tag %s overrides mq patch of the same name\n"
@@ -3825,10 +3825,10 @@ msgid "hg qgoto [OPTION]... PATCH"
 msgstr "hg qgoto [TILVALG]... RETTELSE"
 
 msgid "list all patches and guards"
-msgstr ""
+msgstr "vis alle rettelser og filtre"
 
 msgid "drop all guards"
-msgstr ""
+msgstr "drop alle filtre"
 
 msgid "hg qguard [-l] [-n] -- [PATCH] [+GUARD]... [-GUARD]..."
 msgstr "hg qguard [-l] [-n] -- [RETTELSE] [+VAGT]... [-VAGT]..."
@@ -3963,13 +3963,13 @@ msgid "hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]"
 msgstr "hg qsave [-m TEKST] [-l FIL] [-c] [-n NAVN] [-e] [-f]"
 
 msgid "disable all guards"
-msgstr ""
+msgstr "slå alle filtre fra"
 
 msgid "list all guards in series file"
-msgstr ""
+msgstr "vis alle filtre i seriefilen"
 
 msgid "pop to before first guarded applied patch"
-msgstr ""
+msgstr "fjern rettelser indtil før første filtrerede og anvendte rettelse"
 
 msgid "pop, then reapply patches"
 msgstr ""
@@ -3984,7 +3984,7 @@ msgid "hg qseries [-ms]"
 msgstr "hg qseries [-ms]"
 
 msgid "force removal with local changes"
-msgstr ""
+msgstr "gennemtving fjernelse af rettelse med lokale ændringer"
 
 msgid "bundle unrelated changesets"
 msgstr ""
@@ -4162,6 +4162,23 @@ msgid ""
 "  foo~1 = foo^1 = foo^ = first parent of foo\n"
 "  foo~2 = foo^1^1 = foo^^ = first parent of first parent of foo\n"
 msgstr ""
+"fortolk suffikser for at referere til forfader-revisioner\n"
+"\n"
+"Denne udvidelse lader dig bruge suffikser i stil med git for at\n"
+"referere til forfædrerne til en bestemt revision.\n"
+"\n"
+"For eksempel, hvis du har referere til en revision som \"foo\", så::\n"
+"\n"
+"  foo^N = N'te forældre til foo\n"
+"  foo^0 = foo\n"
+"  foo^1 = første forældre til foo\n"
+"  foo^2 = anden forældre til foo\n"
+"  foo^  = foo^1\n"
+"\n"
+"  foo~N = N'te første bedsteforældre til foo\n"
+"  foo~0 = foo\n"
+"  foo~1 = foo^1 = foo^ = første forældre til foo\n"
+"  foo~2 = foo^1^1 = foo^^ = første forældre til første forældre til foo\n"
 
 msgid ""
 "command to send changesets as (a series of) patch emails\n"
@@ -4303,7 +4320,7 @@ msgid "too many destinations"
 msgstr "for mange destinationer"
 
 msgid "use only one form to specify the revision"
-msgstr ""
+msgstr "brug un en form til at angive revisionen"
 
 msgid ""
 "\n"
@@ -4356,7 +4373,7 @@ msgid "use the given file as the series description"
 msgstr "brug den givne fil som seriens beskrivelse"
 
 msgid "email address of sender"
-msgstr ""
+msgstr "afsenderadresse"
 
 msgid "print messages that would be sent"
 msgstr "udskriv beskeder som ville være blevet sendt"
@@ -4374,7 +4391,7 @@ msgid "flags to add in subject prefixes"
 msgstr "flag som skal tilføjes i emne-præfixer"
 
 msgid "email addresses of recipients"
-msgstr ""
+msgstr "adresser på modtagere"
 
 msgid "omit hg patch header"
 msgstr "undlad hg rettelseshoved"
@@ -4474,6 +4491,13 @@ msgid ""
 "For more information:\n"
 "http://mercurial.selenic.com/wiki/RebaseExtension\n"
 msgstr ""
+"kommando til at flytte revisioner til en anden forfader\n"
+"\n"
+"Denne udvidelse lader dig omplante deponeringer i et eksisterende\n"
+"Mercurial depot.\n"
+"\n"
+"For mere information:\n"
+"http://mercurial.selenic.com/wiki/RebaseExtension\n"
 
 msgid ""
 "move changeset (and descendants) to a different branch\n"
@@ -4519,15 +4543,15 @@ msgid "%d revisions have been skipped\n"
 msgstr "sprang %d revisioner over\n"
 
 msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
-msgstr ""
+msgstr "ret uløste konflikter med hg resolve og kør så hg rebase --continue"
 
 #, python-format
 msgid "no changes, revision %d skipped\n"
-msgstr ""
+msgstr "ingen ændringer, revision %d sprunget over\n"
 
 #, python-format
 msgid "cannot use revision %d as base, result would have 3 parents"
-msgstr ""
+msgstr "kan ikke bruge revision %d som basis, resultatet ville få 3 forældre"
 
 msgid "no rebase in progress"
 msgstr ""
@@ -4569,7 +4593,7 @@ msgid "keep original changesets"
 msgstr "behold de originale ændringer"
 
 msgid "keep original branch names"
-msgstr ""
+msgstr "behold originale grennavne"
 
 msgid "continue an interrupted rebase"
 msgstr ""
@@ -4598,37 +4622,37 @@ msgid "%d hunks, %d lines changed\n"
 msgstr "%d stumper, %d linjer ændret\n"
 
 msgid "[Ynsfdaq?]"
-msgstr ""
+msgstr "[Jnsofai?]"
 
 msgid "&Yes, record this change"
-msgstr ""
+msgstr "&Ja, optag denne ændring"
 
 msgid "&No, skip this change"
-msgstr ""
+msgstr "&Nej, spring denne ændring over"
 
 msgid "&Skip remaining changes to this file"
-msgstr ""
+msgstr "&Spring tilbageværende ændringer over i denne fil"
 
 msgid "Record remaining changes to this &file"
-msgstr ""
+msgstr "&Optag tilbageværende ændringer i denne fil"
 
 msgid "&Done, skip remaining changes and files"
-msgstr ""
+msgstr "&Færdig, spring tilbageværende ændringer og filer over"
 
 msgid "Record &all changes to all remaining files"
-msgstr ""
+msgstr "Optag &alle ændringer i alle tilbageværende filer"
 
 msgid "&Quit, recording no changes"
-msgstr ""
+msgstr "Afbryd, optag &ingen ændringer"
 
 msgid "&?"
-msgstr ""
+msgstr "&?"
 
 msgid "y - record this change"
-msgstr ""
+msgstr "j - optag denne ændring"
 
 msgid "user quit"
-msgstr "user quit"
+msgstr "brugeren afbrød"
 
 #, python-format
 msgid "examine changes to %s?"
@@ -4638,7 +4662,7 @@ msgid " and "
 msgstr " og "
 
 msgid "y"
-msgstr ""
+msgstr "j"
 
 #, python-format
 msgid "record this change to %r?"
@@ -4673,15 +4697,37 @@ msgid ""
 "\n"
 "      ? - display help"
 msgstr ""
+"vælg ændringer interaktivt til deponering\n"
+"\n"
+"    Hvis en liste af filer er udeladt, så vil alle ændringer\n"
+"    rapporteret af \"hg status\" være kandidater til at blive optaget.\n"
+"\n"
+"    Se 'hg help dates' for en liste af gyldige formater til -d/--date.\n"
+"\n"
+"    Du vil blive spurgt om hvorvidt der skal optages ændringer for\n"
+"    hver ændret fil. For filer med flere ændringer spørges der til\n"
+"    hver ændring. For hvert spørgsmål er der følgende mulige svar::\n"
+"\n"
+"      j - optag denne ændring\n"
+"      n - spring denne ændring over\n"
+"\n"
+"      s - spring tilbageværende ændringer over i denne fil\n"
+"      o - optag tilbageværende ændringer i denne fil\n"
+"\n"
+"      f - færdig, spring tilbageværende ændringer og filer over\n"
+"      a - optag alle ændringer i alle tilbageværende filer\n"
+"      i - afbryd og optag ingen ændringer\n"
+"\n"
+"      ? - vis hjælp"
 
 msgid "'mq' extension not loaded"
-msgstr ""
+msgstr "'mq' udvidelsen er ikke indlæst"
 
 msgid "running non-interactively, use commit instead"
-msgstr ""
+msgstr "kører ikke interaktivt, brug commit i stedet"
 
 msgid "no changes to record\n"
-msgstr ""
+msgstr "ingen ændringer at optage\n"
 
 msgid "patch failed to apply"
 msgstr "rettelse kunne ikke tilføjes"
