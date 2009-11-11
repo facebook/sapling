@@ -200,6 +200,12 @@ class cmdalias(object):
             self.args = aliasargs(self.fn) + args
             if cmd not in commands.norepo.split(' '):
                 self.norepo = False
+            if self.help.startswith("hg " + cmd):
+                # drop prefix in old-style help lines so hg shows the alias
+                self.help = self.help[4 + len(cmd):]
+            self.__doc__ = _("alias for: hg %s\n\n%s") \
+                               % (definition, self.fn.__doc__)
+
         except error.UnknownCommand:
             def fn(ui, *args):
                 ui.warn(_("alias '%s' resolves to unknown command '%s'\n") \
