@@ -33,7 +33,7 @@ An untracked file is ignored if its path relative to the repository
 root directory, or any prefix path of that path, is matched against
 any pattern in ``.hgignore``.
 
-For example, say we have an an untracked file, ``file.c``, at
+For example, say we have an untracked file, ``file.c``, at
 ``a/b/file.c`` inside our repository. Mercurial will ignore ``file.c``
 if any pattern in ``.hgignore`` matches ``a/b/file.c``, ``a/b`` or ``a``.
 
