@@ -8,6 +8,7 @@ import sys
 import cPickle as pickle
 import tempfile
 import urllib
+import urllib2
 
 from mercurial import strutil, util, encoding
 from mercurial.i18n import _
@@ -136,7 +137,7 @@ class logstream(object):
 # Check to see if the given path is a local Subversion repo. Verify this by
 # looking for several svn-specific files and directories in the given
 # directory.
-def filecheck(path, proto):
+def filecheck(ui, path, proto):
     for x in ('locks', 'hooks', 'format', 'db', ):
         if not os.path.exists(os.path.join(path, x)):
             return False
@@ -145,15 +146,27 @@ def filecheck(path, proto):
 # Check to see if a given path is the root of an svn repo over http. We verify
 # this by requesting a version-controlled URL we know can't exist and looking
 # for the svn-specific "not found" XML.
-def httpcheck(path, proto):
-    return ('<m:human-readable errcode="160013">' in
-            urllib.urlopen('%s://%s/!svn/ver/0/.svn' % (proto, path)).read())
+def httpcheck(ui, path, proto):
+    try:
+        opener = urllib2.build_opener()
+        rsp = opener.open('%s://%s/!svn/ver/0/.svn' % (proto, path))
+        return '<m:human-readable errcode="160013">' in rsp.read()
+    except urllib2.HTTPError, inst:
+        if inst.code == 404:
+            return False
+        # Except for 404 we cannot know for sure this is not an svn repo
+        ui.warn(_('svn: cannot probe remote repository, assume it could be '
+                  'a subversion repository. Use --source if you know better.\n'))
+        return True
+    except:
+        # Could be urllib2.URLError if the URL is invalid or anything else.
+        return False
 
 protomap = {'http': httpcheck,
             'https': httpcheck,
             'file': filecheck,
             }
-def issvnurl(url):
+def issvnurl(ui, url):
     try:
         proto, path = url.split('://', 1)
         if proto == 'file':
@@ -165,7 +178,7 @@ def issvnurl(url):
         path = path.replace(os.sep, '/')
     check = protomap.get(proto, lambda p, p2: False)
     while '/' in path:
-        if check(path, proto):
+        if check(ui, path, proto):
             return True
         path = path.rsplit('/', 1)[0]
     return False
@@ -191,7 +204,7 @@ class svn_source(converter_source):
         if not (url.startswith('svn://') or url.startswith('svn+ssh://') or
                 (os.path.exists(url) and
                  os.path.exists(os.path.join(url, '.svn'))) or
-                issvnurl(url)):
+                issvnurl(ui, url)):
             raise NoRepo("%s does not look like a Subversion repo" % url)
 
         try:
