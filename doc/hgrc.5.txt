@@ -482,6 +482,8 @@ value or setting it to an empty string.
 Example ``.hg/hgrc``::
 
   [hooks]
+  # update working directory after adding changesets
+  changegroup.update = hg update
   # do not use the site-wide hook
   incoming =
   incoming.email = /my/email/hook
