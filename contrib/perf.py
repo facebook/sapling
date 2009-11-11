@@ -4,7 +4,7 @@
 from mercurial import cmdutil, match, commands
 import time, os, sys
 
-def timer(func):
+def timer(func, title=None):
     results = []
     begin = time.time()
     count = 0
@@ -21,6 +21,8 @@ def timer(func):
             break
         if cstop - begin > 10 and count >= 3:
             break
+    if title:
+        sys.stderr.write("! %s\n" % title)
     if r:
         sys.stderr.write("! result: %s\n" % r)
     m = min(results)
@@ -113,6 +115,23 @@ def perftemplating(ui, repo):
                                ' {author|person}: {desc|firstline}\n'))
     ui.popbuffer()
 
+def perfdiffwd(ui, repo):
+    """Profile diff of working directory changes"""
+    options = {
+        'w': 'ignore_all_space',
+        'b': 'ignore_space_change',
+        'B': 'ignore_blank_lines',
+        }
+
+    for diffopt in ('', 'w', 'b', 'B', 'wB'):
+        opts = dict((options[c], '1') for c in diffopt)
+        def d():
+            ui.pushbuffer()
+            commands.diff(ui, repo, **opts)
+            ui.popbuffer()
+        title = 'diffopts: %s' % (diffopt and ('-' + diffopt) or 'none')
+        timer(d, title)
+
 cmdtable = {
     'perflookup': (perflookup, []),
     'perfparents': (perfparents, []),
@@ -127,5 +146,6 @@ cmdtable = {
     'perfdirstatedirs': (perfdirstate, []),
     'perflog': (perflog, []),
     'perftemplating': (perftemplating, []),
+    'perfdiffwd': (perfdiffwd, []),
 }
 
