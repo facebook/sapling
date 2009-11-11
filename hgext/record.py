@@ -275,7 +275,8 @@ def filterpatch(ui, chunks):
         - ? (help)
         - q (quit)
 
-        else, input is returned to the caller.
+        Returns True/False and sets reps_all and resp_file as
+        appropriate.
         """
         if resp_all[0] is not None:
             return resp_all[0]
@@ -299,17 +300,17 @@ def filterpatch(ui, chunks):
                     if l: ui.write(l.strip(), '\n')
                 continue
             elif r == 0: # yes
-                ret = 'y'
+                ret = True
             elif r == 1: # no
-                ret = 'n'
+                ret = False
             elif r == 2: # Skip
-                ret = resp_file[0] = 'n'
+                ret = resp_file[0] = False
             elif r == 3: # file (Record remaining)
-                ret = resp_file[0] = 'y'
+                ret = resp_file[0] = True
             elif r == 4: # done, skip remaining
-                ret = resp_all[0] = 'n'
+                ret = resp_all[0] = False
             elif r == 5: # all
-                ret = resp_all[0] = 'y'
+                ret = resp_all[0] = True
             elif r == 6: # quit
                 raise util.Abort(_('user quit'))
             return ret
@@ -330,7 +331,7 @@ def filterpatch(ui, chunks):
                 chunk.pretty(ui)
             r = prompt(_('examine changes to %s?') %
                        _(' and ').join(map(repr, chunk.files())))
-            if r == _('y'):
+            if r:
                 applied[chunk.filename()] = [chunk]
                 if chunk.allhunks():
                     applied[chunk.filename()] += consumefile()
@@ -344,7 +345,7 @@ def filterpatch(ui, chunks):
                                       chunk.filename()) \
                            or  prompt(_('record change %d/%d to %r?') %
                                       (pos, total, chunk.filename()))
-            if r == _('y'):
+            if r:
                 if fixoffset:
                     chunk = copy.copy(chunk)
                     chunk.toline += fixoffset
