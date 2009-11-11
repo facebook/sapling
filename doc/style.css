@@ -83,6 +83,10 @@ div.note, div.tip, div.warning {
     margin: 1em;
 }
 
+div.note {
+    border-color: #fcc200;
+}
+
 
 /*
  * The following styles are from Docutils.
