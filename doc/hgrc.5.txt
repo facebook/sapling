@@ -146,8 +146,8 @@ the following format::
 
     <name>.<argument> = <value>
 
-where <name> is used to group arguments into authentication entries.
-Example::
+where ``<name>`` is used to group arguments into authentication
+entries. Example::
 
     foo.prefix = hg.intevation.org/mercurial
     foo.username = foo
@@ -203,10 +203,10 @@ For example, to match any file ending in ``.txt`` in the root
 directory only, use the pattern ``*.txt``. To match any file ending
 in ``.c`` anywhere in the repository, use the pattern ``**.c``.
 
-The filter command can start with a specifier, either "pipe:" or
-"tempfile:". If no specifier is given, "pipe:" is used by default.
+The filter command can start with a specifier, either ``pipe:`` or
+``tempfile:``. If no specifier is given, ``pipe:`` is used by default.
 
-A "pipe:" command must accept data on stdin and return the transformed
+A ``pipe:`` command must accept data on stdin and return the transformed
 data on stdout.
 
 Pipe example::
@@ -221,9 +221,9 @@ Pipe example::
   # can safely omit "pipe:", because it's the default)
   *.gz = gzip
 
-A "tempfile:" command is a template. The string INFILE is replaced
+A ``tempfile:`` command is a template. The string ``INFILE`` is replaced
 with the name of a temporary file that contains the data to be
-filtered by the command. The string OUTFILE is replaced with the name
+filtered by the command. The string ``OUTFILE`` is replaced with the name
 of an empty temporary file, where the filtered data must be written by
 the command.
 
@@ -256,7 +256,7 @@ or if you only want to translate certain files::
 
 (defaults are deprecated. Don't use them. Use aliases instead)
 
-Use the [defaults] section to define command defaults, i.e. the
+Use the ``[defaults]`` section to define command defaults, i.e. the
 default options/arguments to pass to the specified commands.
 
 The following example makes ``hg log`` run in verbose mode, and ``hg
@@ -306,12 +306,12 @@ Settings for extensions that send email messages.
     Optional. Comma-separated list of blind carbon copy recipients'
     email addresses. Cannot be set interactively.
 ``method``
-    Optional. Method to use to send email messages. If value is "smtp"
+    Optional. Method to use to send email messages. If value is ``smtp``
     (default), use SMTP (see the SMTP_ section for configuration).
     Otherwise, use as name of program to run that acts like sendmail
-    (takes "-f" option for sender, list of recipients on command line,
-    message on stdin). Normally, setting this to "sendmail" or
-    "/usr/sbin/sendmail" is enough to use sendmail to send messages.
+    (takes ``-f`` option for sender, list of recipients on command line,
+    message on stdin). Normally, setting this to ``sendmail`` or
+    ``/usr/sbin/sendmail`` is enough to use sendmail to send messages.
 ``charsets``
     Optional. Comma-separated list of character sets considered
     convenient for recipients. Addresses, headers, and parts not
@@ -590,7 +590,7 @@ The syntax for Python hooks is as follows::
 
 Python hooks are run within the Mercurial process. Each hook is
 called with at least three keyword arguments: a ui object (keyword
-"ui"), a repository object (keyword "repo"), and a "hooktype"
+``ui``), a repository object (keyword ``repo``), and a ``hooktype``
 keyword that tells what kind of hook is used. Arguments listed as
 environment variables above are passed as keyword arguments, with no
 ``HG_`` prefix, and names in lower case.
