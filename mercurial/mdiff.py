@@ -57,13 +57,13 @@ class diffopts(object):
 
 defaultopts = diffopts()
 
-def wsclean(opts, text):
+def wsclean(opts, text, blank=True):
     if opts.ignorews:
         text = re.sub('[ \t]+', '', text)
     elif opts.ignorewsamount:
         text = re.sub('[ \t]+', ' ', text)
         text = re.sub('[ \t]+\n', '\n', text)
-    if opts.ignoreblanklines:
+    if blank and opts.ignoreblanklines:
         text = re.sub('\n+', '', text)
     return text
 
@@ -183,6 +183,10 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
     # below finds the spaces between those matching sequences and translates
     # them into diff output.
     #
+    if opts.ignorews or opts.ignorewsamount:
+        t1 = wsclean(opts, t1, False)
+        t2 = wsclean(opts, t2, False)
+
     diff = bdiff.blocks(t1, t2)
     hunk = None
     for i, s1 in enumerate(diff):
@@ -208,7 +212,7 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
         if not old and not new:
             continue
 
-        if opts.ignorews or opts.ignorewsamount or opts.ignoreblanklines:
+        if opts.ignoreblanklines:
             if wsclean(opts, "".join(old)) == wsclean(opts, "".join(new)):
                 continue
 

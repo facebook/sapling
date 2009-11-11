@@ -58,9 +58,8 @@ diff -r 35fb829491c1 lines
  2
  3
  4
--hello world
+ hello world
 -goodbye world
-+hello  world
 +     goodbye world
  7
  8
