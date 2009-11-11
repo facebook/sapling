@@ -1,0 +1,67 @@
+#!/bin/sh
+
+# issues when status queries are issued when dirstate is dirty
+
+"$TESTDIR/hghave" inotify || exit 80
+
+echo "[extensions]" >> $HGRCPATH
+echo "inotify=" >> $HGRCPATH
+echo "fetch=" >> $HGRCPATH
+
+echo % issue1810: inotify and fetch
+mkdir test; cd test
+hg init
+
+echo foo > foo
+hg add
+hg ci -m foo
+
+cd ..
+
+hg clone test test2
+cd test2
+echo bar > bar
+hg add
+hg ci -m bar
+cd ../test
+echo spam > spam
+hg add
+hg ci -m spam
+cd ../test2
+hg st
+
+# abort, outstanding changes
+hg fetch -q
+hg st
+cd ..
+
+
+echo % issue1719: inotify and mq
+
+echo "mq=" >> $HGRCPATH
+
+hg init test-1719
+cd test-1719
+
+echo % inserve
+hg inserve -d --pid-file=hg.pid
+cat hg.pid >> "$DAEMON_PIDS"
+
+echo content > file
+hg add file
+
+hg qnew -f test.patch
+
+hg status
+hg qpop
+
+echo % st should not output anything
+hg status
+
+hg qpush
+
+echo % st should not output anything
+hg status
+
+hg qrefresh
+hg status

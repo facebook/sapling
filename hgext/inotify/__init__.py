@@ -46,7 +46,7 @@ def reposetup(ui, repo):
             files = match.files()
             if '.' in files:
                 files = []
-            if self._inotifyon and not ignored:
+            if self._inotifyon and not ignored and not self._dirty:
                 cli = client(ui, repo)
                 try:
                     result = cli.statusquery(files, match, False,
