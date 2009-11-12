@@ -237,7 +237,7 @@ class directory(object):
                 ret = d
         return ret
 
-    def walk(self, states):
+    def walk(self, states, visited=None):
         """
         yield (filename, status) pairs for items in the trees
         that have status in states.
@@ -247,10 +247,12 @@ class directory(object):
             if st in states:
                 yield join(self.path, file), st
         for dir in self.dirs.itervalues():
+            if visited is not None:
+                visited.add(dir.path)
             for e in dir.walk(states):
                 yield e
 
-    def lookup(self, states, path):
+    def lookup(self, states, path, visited):
         """
         yield root-relative filenames that match path, and whose
         status are in states:
@@ -272,16 +274,20 @@ class directory(object):
                 tree = tree.dirs[dir]
         except KeyError:
             # path is not tracked
+            visited.add(tree.path)
             return
 
         try:
             # if path is a directory, walk it
-            for file, st in tree.dirs[last].walk(states):
+            target = tree.dirs[last]
+            visited.add(target.path)
+            for file, st in target.walk(states, visited):
                 yield file
         except KeyError:
             try:
                 if tree.files[last] in states:
                     # path is a file
+                    visited.add(tree.path)
                     yield path
             except KeyError:
                 # path is not tracked
@@ -725,6 +731,7 @@ class server(pollable):
             # answer.
             self.repowatcher.handle_timeout()
 
+        visited = set()
         if not names:
             def genresult(states, tree):
                 for fn, state in tree.walk(states):
@@ -732,7 +739,7 @@ class server(pollable):
         else:
             def genresult(states, tree):
                 for fn in names:
-                    for f in tree.lookup(states, fn):
+                    for f in tree.lookup(states, fn, visited):
                         yield f
 
         return ['\0'.join(r) for r in [
@@ -746,6 +753,7 @@ class server(pollable):
                 or [],
             [],
             'c' in states and genresult('n', self.repowatcher.tree) or [],
+            visited
             ]]
 
     def answer_dbug_query(self):

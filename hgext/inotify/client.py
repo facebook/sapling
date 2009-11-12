@@ -150,7 +150,16 @@ class client(object):
                 if names:
                     return filter(match, names.split('\0'))
             return []
-        return map(readnames, resphdr)
+        results = map(readnames, resphdr[:-1])
+
+        if names:
+            nbytes = resphdr[-1]
+            vdirs = cs.read(nbytes)
+            if vdirs:
+                for vdir in vdirs.split('\0'):
+                    match.dir(vdir)
+
+        return results
 
     @start_server
     def debugquery(self):

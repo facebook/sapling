@@ -70,4 +70,14 @@ hg st
 
 HGMERGE=internal:local hg up
 hg st
+
+# Test for 1844: "hg ci folder" will not commit all changes beneath "folder"
+mkdir 1844
+echo a > 1844/foo
+hg add 1844
+hg ci -m 'working'
+
+echo b >> 1844/foo
+hg ci 1844 -m 'broken'
+
 kill `cat hg.pid`

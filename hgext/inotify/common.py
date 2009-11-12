@@ -24,16 +24,18 @@ import cStringIO, socket, struct
   1) send protocol version number
   2) send query type
   3) send struct.pack'ed headers describing the length of the content:
-      e.g. for STAT, receive 8 integers describing the length of the
-      8 \0-separated string lists ( one list for each lmar!?ic status type )
+      e.g. for STAT, receive 9 integers describing the length of the
+      9 \0-separated string lists to be read:
+       * one file list for each lmar!?ic status type
+       * one list containing the directories visited during lookup
 
 """
 
-version = 2
+version = 3
 
 resphdrfmts = {
-    'STAT': '>llllllll', # status requests
-    'DBUG': '>l'         # debugging queries
+    'STAT': '>lllllllll', # status requests
+    'DBUG': '>l'          # debugging queries
 }
 resphdrsizes = dict((k, struct.calcsize(v))
                     for k, v in resphdrfmts.iteritems())
