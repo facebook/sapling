@@ -355,6 +355,14 @@ _hg_cmd_qdelete()
     _hg_ext_mq_patchlist $qcmd
 }
 
+_hg_cmd_qfinish()
+{
+    if [[ "$prev" = @(-a|--applied) ]]; then
+	return
+    fi
+    _hg_ext_mq_patchlist qapplied
+}
+
 _hg_cmd_qsave()
 {
     if [[ "$prev" = @(-n|--name) ]]; then
