@@ -248,4 +248,18 @@ echo "pre-commit.test = python:`pwd`/testhooks.py:testhook" >> ../repo/.hg/hgrc
 cd ../repo
 hg commit
 
+cd ../../b
+echo '# make sure --traceback works on hook import failure'
+cat > importfail.py <<EOF
+import somebogusmodule
+# dereference something in the module to force demandimport to load it
+somebogusmodule.whatever
+EOF
+
+echo '[hooks]' > .hg/hgrc
+echo 'precommit.importfail = python:importfail.whatever' >> .hg/hgrc
+
+echo a >> a
+hg --traceback commit -Ama 2>&1 | grep '^\(exception\|Traceback\|ImportError\)'
+
 exit 0

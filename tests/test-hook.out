@@ -163,3 +163,11 @@ hooks.commit.auto=<function autohook>
 # test python hook configured with python:[file]:[hook] syntax
 hook works
 nothing changed
+# make sure --traceback works on hook import failure
+exception from first failed import attempt:
+Traceback (most recent call last):
+ImportError: No module named somebogusmodule
+exception from second failed import attempt:
+Traceback (most recent call last):
+ImportError: No module named hgext_importfail
+Traceback (most recent call last):

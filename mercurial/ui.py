@@ -15,7 +15,7 @@ _booleans = {'1': True, 'yes': True, 'true': True, 'on': True,
 class ui(object):
     def __init__(self, src=None):
         self._buffers = []
-        self.quiet = self.verbose = self.debugflag = self._traceback = False
+        self.quiet = self.verbose = self.debugflag = self.tracebackflag = False
         self._reportuntrusted = True
         self._ocfg = config.config() # overlay
         self._tcfg = config.config() # trusted
@@ -101,7 +101,7 @@ class ui(object):
         if self.verbose and self.quiet:
             self.quiet = self.verbose = False
         self._reportuntrusted = self.configbool("ui", "report_untrusted", True)
-        self._traceback = self.configbool('ui', 'traceback', False)
+        self.tracebackflag = self.configbool('ui', 'traceback', False)
 
         # update trust information
         self._trustusers.update(self.configlist('trusted', 'users'))
@@ -337,13 +337,16 @@ class ui(object):
 
         return t
 
-    def traceback(self):
+    def traceback(self, exc=None):
         '''print exception traceback if traceback printing enabled.
         only to call in exception handler. returns true if traceback
         printed.'''
-        if self._traceback:
-            traceback.print_exc()
-        return self._traceback
+        if self.tracebackflag:
+            if exc:
+                traceback.print_exception(exc[0], exc[1], exc[2])
+            else:
+                traceback.print_exc()
+        return self.tracebackflag
 
     def geteditor(self):
         '''return editor to use'''
