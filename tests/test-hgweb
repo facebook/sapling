@@ -7,8 +7,10 @@ mkdir da
 echo foo > da/foo
 echo foo > foo
 hg ci -Ambase
+
 hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
 cat hg.pid >> $DAEMON_PIDS
+
 echo % manifest
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/?style=raw')
 ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/da?style=raw')
@@ -29,6 +31,9 @@ echo % should give a 404 - file does not exist
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/bork?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/bork'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/bork?style=raw'
+
+echo % try bad style
+("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/file/tip/?style=foobar')
 
 echo % stop and restart
 "$TESTDIR/killdaemons.py"

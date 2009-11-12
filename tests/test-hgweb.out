@@ -148,8 +148,96 @@ bork@2ef0ac749a14: not found in manifest
 
 
 error: bork@2ef0ac749a14: not found in manifest
+% try bad style
+200 Script output follows
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+
+<title>test: 2ef0ac749a14 /</title>
+</head>
+<body>
+
+<div class="container">
+<div class="menu">
+<div class="logo">
+<a href="http://mercurial.selenic.com/">
+<img src="/static/hglogo.png" alt="mercurial" /></a>
+</div>
+<ul>
+<li><a href="/shortlog/2ef0ac749a14">log</a></li>
+<li><a href="/graph/2ef0ac749a14">graph</a></li>
+<li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
+</ul>
+<ul>
+<li><a href="/rev/2ef0ac749a14">changeset</a></li>
+<li class="active">browse</li>
+</ul>
+<ul>
+
+</ul>
+</div>
+
+<div class="main">
+<h2><a href="/">test</a></h2>
+<h3>directory / @ 0:2ef0ac749a14 <span class="tag">tip</span> </h3>
+
+<form class="search" action="/log">
+
+<p><input name="rev" id="search1" type="text" size="30" /></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
+</form>
+
+<table class="bigtable">
+<tr>
+  <th class="name">name</th>
+  <th class="size">size</th>
+  <th class="permissions">permissions</th>
+</tr>
+<tr class="fileline parity0">
+  <td class="name"><a href="/file/2ef0ac749a14/">[up]</a></td>
+  <td class="size"></td>
+  <td class="permissions">drwxr-xr-x</td>
+</tr>
+
+<tr class="fileline parity1">
+<td class="name">
+<a href="/file/2ef0ac749a14/da">
+<img src="/static/coal-folder.png" alt="dir."/> da/
+</a>
+<a href="/file/2ef0ac749a14/da/">
+
+</a>
+</td>
+<td class="size"></td>
+<td class="permissions">drwxr-xr-x</td>
+</tr>
+
+<tr class="fileline parity0">
+<td class="filename">
+<a href="/file/2ef0ac749a14/foo">
+<img src="/static/coal-file.png" alt="file"/> foo
+</a>
+</td>
+<td class="size">4</td>
+<td class="permissions">-rw-r--r--</td>
+</tr>
+</table>
+</div>
+</div>
+
+
+</body>
+</html>
+
 % stop and restart
-9 log lines written
+10 log lines written
 % static file
 200 Script output follows
 

@@ -237,14 +237,17 @@ class hgweb(object):
         # figure out which style to use
 
         vars = {}
-        style = self.config("web", "style", "paper")
-        if 'style' in req.form:
-            style = req.form['style'][0]
+        styles = (
+            req.form.get('style', [None])[0],
+            self.config('web', 'style'),
+            'paper',
+        )
+        style, mapfile = templater.stylemap(styles, self.templatepath)
+        if style == styles[0]:
             vars['style'] = style
 
         start = req.url[-1] == '?' and '&' or '?'
         sessionvars = webutil.sessionvars(vars, start)
-        mapfile = templater.stylemap(style, self.templatepath)
 
         if not self.reponame:
             self.reponame = (self.config("web", "name")

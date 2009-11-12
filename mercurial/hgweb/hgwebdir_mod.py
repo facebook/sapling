@@ -315,18 +315,21 @@ class hgwebdir(object):
             url += '/'
 
         vars = {}
-        style = self.style
-        if 'style' in req.form:
-            vars['style'] = style = req.form['style'][0]
+        styles = (
+            req.form.get('style', [None])[0],
+            config('web', 'style'),
+            'paper'
+        )
+        style, mapfile = templater.stylemap(styles)
+        if style == styles[0]:
+            vars['style'] = style
+        
         start = url[-1] == '?' and '&' or '?'
         sessionvars = webutil.sessionvars(vars, start)
-
         staticurl = config('web', 'staticurl') or url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
 
-        style = 'style' in req.form and req.form['style'][0] or self.style
-        mapfile = templater.stylemap(style)
         tmpl = templater.templater(mapfile,
                                    defaults={"header": header,
                                              "footer": footer,

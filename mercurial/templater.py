@@ -220,7 +220,7 @@ def templatepath(name=None):
 
     return normpaths
 
-def stylemap(style, paths=None):
+def stylemap(styles, paths=None):
     """Return path to mapfile for a given style.
 
     Searches mapfile in the following locations:
@@ -234,12 +234,20 @@ def stylemap(style, paths=None):
     elif isinstance(paths, str):
         paths = [paths]
 
-    locations = style and [os.path.join(style, "map"), "map-" + style] or []
-    locations.append("map")
-    for path in paths:
-        for location in locations:
-            mapfile = os.path.join(path, location)
-            if os.path.isfile(mapfile):
-                return mapfile
+    if isinstance(styles, str):
+        styles = [styles]
+
+    for style in styles:
+    	
+        if not style:
+            continue
+        locations = [os.path.join(style, 'map'), 'map-' + style]
+        locations.append('map')
+
+        for path in paths:
+            for location in locations:
+                mapfile = os.path.join(path, location)
+                if os.path.isfile(mapfile):
+                    return style, mapfile
 
     raise RuntimeError("No hgweb templates found in %r" % paths)
