@@ -50,10 +50,6 @@ list of commands:
  foo:
       yet another foo command
 
-enabled extensions:
-
- debugextension   only debugcommands
-
 global options:
  -R --repository      repository root directory or name of overlay bundle file
     --cwd             change working directory
@@ -79,10 +75,6 @@ list of commands:
       yet another debug command
  foo:
       yet another foo command
-
-enabled extensions:
-
- debugextension   only debugcommands
 
 global options:
  -R --repository      repository root directory or name of overlay bundle file

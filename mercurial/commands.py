@@ -1551,12 +1551,6 @@ def help_(ui, name=None, with_version=False):
             else:
                 ui.write(' %-*s   %s\n' % (m, f, util.wrap(h[f], m + 4)))
 
-        if name != 'shortlist':
-            exts, maxlength = extensions.enabled()
-            text = help.listexts(_('enabled extensions:'), exts, maxlength)
-            if text:
-                ui.write("\n%s\n" % minirst.format(text, textwidth))
-
         if not ui.quiet:
             addglobalopts(True)
 
@@ -1627,6 +1621,11 @@ def help_(ui, name=None, with_version=False):
             header = _('list of commands:\n\n')
 
         helplist(header)
+        if name != 'shortlist':
+            exts, maxlength = extensions.enabled()
+            text = help.listexts(_('enabled extensions:'), exts, maxlength)
+            if text:
+                ui.write("\n%s\n" % minirst.format(text, textwidth))
 
     # list all option lists
     opt_output = []

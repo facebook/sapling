@@ -50,10 +50,6 @@ list of commands:
  qunapplied   print the patches not yet applied
  strip        strip a revision and all its descendants from the repository
 
-enabled extensions:
-
- mq   manage a stack of patches
-
 use "hg -v help mq" to show aliases and global options
 adding a
 updating to branch default
