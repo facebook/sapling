@@ -164,7 +164,11 @@ class changectx(object):
         """
         return the ancestor context of self and c2
         """
-        n = self._repo.changelog.ancestor(self._node, c2._node)
+        # deal with workingctxs
+        n2 = c2._node
+        if n2 == None:
+            n2 = c2._parents[0]._node
+        n = self._repo.changelog.ancestor(self._node, n2)
         return changectx(self._repo, n)
 
     def walk(self, match):
