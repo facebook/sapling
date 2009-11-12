@@ -150,17 +150,18 @@ def httpcheck(ui, path, proto):
     try:
         opener = urllib2.build_opener()
         rsp = opener.open('%s://%s/!svn/ver/0/.svn' % (proto, path))
-        return '<m:human-readable errcode="160013">' in rsp.read()
+        data = rsp.read()        
     except urllib2.HTTPError, inst:
-        if inst.code == 404:
-            return False
-        # Except for 404 we cannot know for sure this is not an svn repo
-        ui.warn(_('svn: cannot probe remote repository, assume it could be '
-                  'a subversion repository. Use --source if you know better.\n'))
-        return True
+        if inst.code != 404:
+            # Except for 404 we cannot know for sure this is not an svn repo
+            ui.warn(_('svn: cannot probe remote repository, assume it could be '
+                      'a subversion repository. Use --source if you know better.\n'))
+            return True
+        data = inst.fp.read()
     except:
         # Could be urllib2.URLError if the URL is invalid or anything else.
         return False
+    return '<m:human-readable errcode="160013">' in data
 
 protomap = {'http': httpcheck,
             'https': httpcheck,
