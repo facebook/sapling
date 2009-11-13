@@ -240,14 +240,14 @@ def _parse(ui, args):
 
     if args:
         cmd, args = args[0], args[1:]
-        aliases, i = cmdutil.findcmd(cmd, commands.table,
+        aliases, entry = cmdutil.findcmd(cmd, commands.table,
                                      ui.config("ui", "strict"))
         cmd = aliases[0]
-        args = aliasargs(i[0]) + args
+        args = aliasargs(entry[0]) + args
         defaults = ui.config("defaults", cmd)
         if defaults:
             args = map(util.expandpath, shlex.split(defaults)) + args
-        c = list(i[1])
+        c = list(entry[1])
     else:
         cmd = None
         c = []
@@ -267,7 +267,7 @@ def _parse(ui, args):
         options[n] = cmdoptions[n]
         del cmdoptions[n]
 
-    return (cmd, cmd and i[0] or None, args, options, cmdoptions)
+    return (cmd, cmd and entry[0] or None, args, options, cmdoptions)
 
 def _parseconfig(ui, config):
     """parse the --config options from the command line"""
