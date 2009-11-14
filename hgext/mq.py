@@ -1129,7 +1129,7 @@ class queue(object):
             self.ui.write(_("no patches applied\n"))
             return
         qp = self.qparents(repo, top)
-        if opts.get('inverse'):
+        if opts.get('reverse'):
             node1, node2 = None, qp
         else:
             node1, node2 = qp, None

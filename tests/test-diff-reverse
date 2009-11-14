@@ -15,10 +15,10 @@ f
 EOF
 hg ci -m moda
 
-hg diff --inverse -r0 -r1
+hg diff --reverse -r0 -r1
 
 cat >> a <<EOF
 g
 h
 EOF
-hg diff --inverse --nodates
+hg diff --reverse --nodates

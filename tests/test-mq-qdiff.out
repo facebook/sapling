@@ -85,7 +85,7 @@ diff -r 35fb829491c1 lines
  1
  2
  3
-% qdiff --inverse
+% qdiff --reverse
 diff -r 35fb829491c1 lines
 --- a/lines
 +++ b/lines
