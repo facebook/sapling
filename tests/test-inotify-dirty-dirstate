@@ -11,6 +11,8 @@ echo "fetch=" >> $HGRCPATH
 echo % issue1810: inotify and fetch
 mkdir test; cd test
 hg init
+hg inserve -d --pid-file=../hg.pid
+cat ../hg.pid >> "$DAEMON_PIDS"
 
 echo foo > foo
 hg add
@@ -18,8 +20,10 @@ hg ci -m foo
 
 cd ..
 
-hg clone test test2
+hg --config "extensions.inotify=!" clone test test2
 cd test2
+hg inserve -d --pid-file=../hg2.pid
+cat ../hg2.pid >> "$DAEMON_PIDS"
 echo bar > bar
 hg add
 hg ci -m bar
@@ -44,8 +48,8 @@ hg init test-1719
 cd test-1719
 
 echo % inserve
-hg inserve -d --pid-file=hg.pid
-cat hg.pid >> "$DAEMON_PIDS"
+hg inserve -d --pid-file=../hg-test-1719.pid
+cat ../hg-test-1719.pid >> "$DAEMON_PIDS"
 
 echo content > file
 hg add file
