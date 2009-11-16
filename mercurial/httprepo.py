@@ -11,6 +11,7 @@ from i18n import _
 import repo, changegroup, statichttprepo, error, url, util
 import os, urllib, urllib2, urlparse, zlib, httplib
 import errno, socket
+import encoding
 
 def zgenerator(f):
     zd = zlib.decompressobj()
@@ -153,6 +154,10 @@ class httprepository(repo.repository):
             for branchpart in d.splitlines():
                 branchheads = branchpart.split(' ')
                 branchname = urllib.unquote(branchheads[0])
+                try:
+                    branchname.decode('utf-8', 'strict')
+                except UnicodeDecodeError:
+                    branchname = encoding.tolocal(branchname)
                 branchheads = [bin(x) for x in branchheads[1:]]
                 branchmap[branchname] = branchheads
             return branchmap
