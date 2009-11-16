@@ -175,6 +175,10 @@ hg diff > ../../import.diff
 hg revert --no-backup ../a
 hg import ../../import.diff
 hg st
+echo % import --no-commit should succeed
+hg import --no-commit ../../import.diff
+hg st
+hg revert --no-backup ../a
 
 echo % qunapplied
 hg qunapplied
