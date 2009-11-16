@@ -154,6 +154,9 @@ pushing to ../../k
 abort: source has mq patches applied
 % import should fail
 abort: cannot import over an applied patch
+% import --no-commit should succeed
+applying ../../import.diff
+M a
 % qunapplied
 test2.patch
 % qpush/qpop with index

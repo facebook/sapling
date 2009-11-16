@@ -2550,7 +2550,7 @@ def reposetup(ui, repo):
         repo.__class__ = mqrepo
 
 def mqimport(orig, ui, repo, *args, **kwargs):
-    if hasattr(repo, 'abort_if_wdir_patched'):
+    if hasattr(repo, 'abort_if_wdir_patched') and not kwargs.get('no_commit', False):
         repo.abort_if_wdir_patched(_('cannot import over an applied patch'),
                                    kwargs.get('force'))
     return orig(ui, repo, *args, **kwargs)
