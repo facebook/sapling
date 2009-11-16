@@ -537,6 +537,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
             has.update(repo.changelog.reachable(n))
         if revs:
             visit = list(revs)
+            has.difference_update(revs)
         else:
             visit = repo.changelog.heads()
         seen = {}
@@ -544,7 +545,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
             n = visit.pop(0)
             parents = [p for p in repo.changelog.parents(n) if p not in has]
             if len(parents) == 0:
-                o.insert(0, n)
+                if n not in has:
+                    o.append(n)
             else:
                 for p in parents:
                     if p not in seen:

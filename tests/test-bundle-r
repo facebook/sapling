@@ -75,6 +75,8 @@ hg -R test bundle --base 3 -r tip test-bundle-should-fail.hg
 
 # issue76 msg2163
 hg -R test bundle --base 3 -r 3 -r 3 test-bundle-cset-3.hg
+# issue1910
+hg -R test bundle --base 7 test-bundle-cset-7.hg
 
 hg clone test-2 test-9
 cd test-9
@@ -97,6 +99,11 @@ hg verify
 hg rollback
 hg unbundle ../test-bundle-branch2.hg
 echo % 6
+hg tip -q
+hg verify
+hg rollback
+hg unbundle ../test-bundle-cset-7.hg
+echo % 4
 hg tip -q
 hg verify
 

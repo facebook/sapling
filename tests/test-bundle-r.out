@@ -163,6 +163,7 @@ abort: repository default-push not found!
 6 changesets found
 1 changesets found
 1 changesets found
+4 changesets found
 updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 2
@@ -213,6 +214,19 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 3 files, 7 changesets, 6 total revisions
+rolling back last transaction
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 2 changes to 2 files
+(run 'hg update' to get a working copy)
+% 4
+4:836ac62537ab
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+2 files, 5 changesets, 5 total revisions
 warning: detected divergent renames of afile to:
  anotherfile
  adifferentfile
