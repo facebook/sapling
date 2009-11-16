@@ -2691,6 +2691,13 @@ msgstr ""
 "assumir que é um repositório remoto do Subversion. Use --source se "
 "necessário.\n"
 
+msgid ""
+"svn: cannot probe remote repository, assume it could be a subversion "
+"repository. Use --source-type if you know better.\n"
+msgstr ""
+"svn: não é possível sondar o repositório remoto; a conversão irá assumir que "
+"é um repositório remoto do Subversion. Use --source-type se necessário.\n"
+
 msgid "Subversion python bindings could not be loaded"
 msgstr "Os módulos Python para o Subversion não puderam ser carregados"
 
