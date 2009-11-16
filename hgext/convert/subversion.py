@@ -154,8 +154,9 @@ def httpcheck(ui, path, proto):
     except urllib2.HTTPError, inst:
         if inst.code != 404:
             # Except for 404 we cannot know for sure this is not an svn repo
-            ui.warn(_('svn: cannot probe remote repository, assume it could be '
-                      'a subversion repository. Use --source if you know better.\n'))
+            ui.warn(_('svn: cannot probe remote repository, assume it could '
+                      'be a subversion repository. Use --source-type if you '
+                      'know better.\n'))
             return True
         data = inst.fp.read()
     except:
