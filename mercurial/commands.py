@@ -2931,7 +2931,11 @@ def summary(ui, repo, **opts):
 
     branch = ctx.branch()
     bheads = repo.branchheads(branch)
-    ui.status(_('branch: %s\n') % branch)
+    m = _('branch: %s\n') % branch
+    if branch != 'default':
+        ui.write(m)
+    else:
+        ui.status(m)
 
     st = list(repo.status(unknown=True))[:7]
     ms = merge_.mergestate(repo)
