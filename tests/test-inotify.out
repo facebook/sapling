@@ -6,6 +6,9 @@ adding dir/bar/foo
 adding dir/x
 adding dir/y
 adding e
+updating to branch default
+8 files updated, 0 files merged, 0 files removed, 0 files unresolved
+M a
 % inserve
 ? hg.pid
 % clean

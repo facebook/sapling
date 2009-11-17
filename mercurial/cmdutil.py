@@ -571,7 +571,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         if parentfn:
             return parentfn(pid)
         else:
-            os._exit(0)
+            return
 
     if initfn:
         initfn()

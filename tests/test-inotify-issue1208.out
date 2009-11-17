@@ -1,5 +1,6 @@
 % fail
 abort: could not start server: File exists
+could not talk to new inotify server: No such file or directory
 abort: could not start server: File exists
 % inserve
 % status

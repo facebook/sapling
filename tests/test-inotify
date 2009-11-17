@@ -2,7 +2,8 @@
 
 "$TESTDIR/hghave" inotify || exit 80
 
-hg init
+hg init repo1
+cd repo1
 
 touch a b c d e
 mkdir dir
@@ -10,10 +11,18 @@ mkdir dir/bar
 touch dir/x dir/y dir/bar/foo
 
 hg ci -Am m
+cd ..
+hg clone repo1 repo2
 
 echo "[extensions]" >> $HGRCPATH
 echo "inotify=" >> $HGRCPATH
 
+cd repo2
+echo b >> a
+# check that daemon started automatically works correctly
+hg status
+
+cd ../repo1
 echo % inserve
 hg inserve -d --pid-file=hg.pid
 cat hg.pid >> "$DAEMON_PIDS"
