@@ -20,7 +20,11 @@ echo "inotify=" >> $HGRCPATH
 cd repo2
 echo b >> a
 # check that daemon started automatically works correctly
-hg status
+# and make sure that inotify.pidfile works
+hg --config "inotify.pidfile=../hg2.pid" status
+
+# make sure that pidfile worked. Output should be silent.
+kill `cat ../hg2.pid`
 
 cd ../repo1
 echo % inserve

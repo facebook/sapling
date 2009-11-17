@@ -849,9 +849,14 @@ def start(ui, dirstate, root, opts):
             finally:
                 self.master.shutdown()
 
-    runargs = None
     if 'inserve' not in sys.argv:
         runargs = [sys.argv[0], 'inserve', '-R', root]
+    else:
+        runargs = sys.argv[:]
+
+    pidfile = ui.config('inotify', 'pidfile')
+    if opts['daemon'] and pidfile is not None and 'pid-file' not in runargs:
+        runargs.append("--pid-file=%s" % pidfile)
 
     service = service()
     logfile = ui.config('inotify', 'log')
