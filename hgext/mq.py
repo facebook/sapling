@@ -1384,13 +1384,16 @@ class queue(object):
         def displayname(pfx, patchname):
             if summary:
                 ph = patchheader(self.join(patchname))
-                msg = ph.message
-                msg = msg and ': ' + msg[0] or ': '
+                msg = ph.message and ph.message[0] or ''
+                if self.ui.interactive():
+                    width = util.termwidth() - len(pfx) - len(patchname) - 2
+                    if width > 0:
+                        msg = util.ellipsis(msg, width)
+                    else:
+                        msg = ''
+                msg = "%s%s: %s" % (pfx, patchname, msg)
             else:
-                msg = ''
-            msg = "%s%s%s" % (pfx, patchname, msg)
-            if self.ui.interactive():
-                msg = util.ellipsis(msg, util.termwidth())
+                msg = pfx + patchname
             self.ui.write(msg + '\n')
 
         applied = set([p.name for p in self.applied])
