@@ -588,7 +588,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         initfn()
 
     if opts['pid_file']:
-        fp = open(opts['pid_file'], 'w')
+        fp = open(opts['pid_file'], 'a')
         fp.write(str(os.getpid()) + '\n')
         fp.close()
 

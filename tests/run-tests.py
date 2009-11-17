@@ -130,6 +130,8 @@ def parseargs():
         help="use pure Python code instead of C extensions")
     parser.add_option("-3", "--py3k-warnings", action="store_true",
         help="enable Py3k warnings on Python 2.6+")
+    parser.add_option("--inotify", action="store_true",
+        help="enable inotify extension when running tests")
 
     for option, default in defaults.items():
         defaults[option] = int(os.environ.get(*default))
@@ -457,6 +459,11 @@ def runone(options, test, skips, fails):
     hgrc.write('backout = -d "0 0"\n')
     hgrc.write('commit = -d "0 0"\n')
     hgrc.write('tag = -d "0 0"\n')
+    if options.inotify:
+        hgrc.write('[extensions]\n')
+        hgrc.write('inotify=\n')
+        hgrc.write('[inotify]\n')
+        hgrc.write('pidfile=%s\n' % DAEMON_PIDS)
     hgrc.close()
 
     err = os.path.join(TESTDIR, test+".err")
