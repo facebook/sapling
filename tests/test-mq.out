@@ -130,6 +130,8 @@ now at: test2.patch
 % qseries
 test.patch
 test2.patch
+0 A test.patch: f...
+1 A test2.patch: 
 popping test2.patch
 now at: test.patch
 0 A test.patch: foo bar

@@ -143,8 +143,10 @@ echo % pop/push -a in subdir
 hg qpop -a
 hg --traceback qpush -a
 
+# setting columns & interactive tests truncating (issue1912)
 echo % qseries
-hg qseries
+COLUMNS=4 hg qseries --config ui.interactive=true
+COLUMNS=20 hg qseries --config ui.interactive=true -vs
 hg qpop
 hg qseries -vs
 hg qpush
