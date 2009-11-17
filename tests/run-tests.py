@@ -293,7 +293,7 @@ def installhg(options):
     os.chdir(hgroot)
     cmd = ('%s setup.py %s clean --all'
            ' install --force --prefix="%s" --install-lib="%s"'
-           ' --install-scripts="%s" >%s 2>&1'
+           ' --install-scripts="%s" --home="" >%s 2>&1'
            % (sys.executable, pure, INST, PYTHONDIR, BINDIR, installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
