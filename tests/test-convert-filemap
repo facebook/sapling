@@ -16,9 +16,11 @@ cd source
 
 echo foo > foo
 echo baz > baz
-mkdir dir
+mkdir -p dir/subdir
 echo dir/file >> dir/file
 echo dir/file2 >> dir/file2
+echo dir/subdir/file3 >> dir/subdir/file3
+echo dir/subdir/file4 >> dir/subdir/file4
 hg ci -d '0 0' -qAm '0: add foo baz dir/'
 
 echo bar > bar
@@ -114,6 +116,8 @@ include foo
 include copied
 rename foo foo2
 rename copied copied2
+exclude dir/subdir
+include dir/subdir/file3
 EOF
 hg -q convert --filemap renames.fmap --datesort source renames.repo
 hg up -q -R renames.repo
