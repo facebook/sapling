@@ -173,10 +173,13 @@ class sshrepository(repo.repository):
             for branchpart in d.splitlines():
                 branchheads = branchpart.split(' ')
                 branchname = urllib.unquote(branchheads[0])
+                # Earlier servers (1.3.x) send branch names in (their) local
+                # charset. The best we can do is assume it's identical to our
+                # own local charset, in case it's not utf-8.
                 try:
-                    branchname.decode('utf-8', 'strict')
+                    branchname.decode('utf-8')
                 except UnicodeDecodeError:
-                    branchname = encoding.tolocal(branchname)
+                    branchname = encoding.fromlocal(branchname)
                 branchheads = [bin(x) for x in branchheads[1:]]
                 branchmap[branchname] = branchheads
             return branchmap

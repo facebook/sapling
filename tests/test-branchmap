@@ -21,3 +21,38 @@ hg --encoding utf-8 -R b push | sed "s/$HGPORT1/PORT/"
 hg -R a --encoding utf-8 log
 
 kill `cat hg.pid`
+
+
+# verify 7e7d56fe4833 (encoding fallback in branchmap to maintain compatibility with 1.3.x)
+
+cat <<EOF > oldhg
+import sys
+from mercurial import ui, hg, commands
+
+class StdoutWrapper(object):
+    def __init__(self, stdout):
+        self._file = stdout
+
+    def write(self, data):
+        if data == '47\n':
+            # latin1 encoding is one %xx (3 bytes) shorter
+            data = '44\n'
+        elif data.startswith('%C3%A6 '):
+            # translate to latin1 encoding
+            data = '%%E6 %s' % data[7:]
+        self._file.write(data)
+
+    def __getattr__(self, name):
+        return getattr(self._file, name)
+
+sys.stdout = StdoutWrapper(sys.stdout)
+sys.stderr = StdoutWrapper(sys.stderr)
+
+myui = ui.ui()
+repo = hg.repository(myui, 'a')
+commands.serve(myui, repo, stdio=True)
+EOF
+
+echo baz >> b/foo
+hg -R b ci -m baz
+hg push -R b -e 'python oldhg' ssh://dummy/ --encoding latin1
