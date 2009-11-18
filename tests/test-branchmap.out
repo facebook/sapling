@@ -34,3 +34,9 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     foo
 
+pushing to ssh://dummy/
+searching for changes
+remote: adding changesets
+remote: adding manifests
+remote: adding file changes
+remote: added 1 changesets with 1 changes to 1 files
