@@ -56,7 +56,7 @@ class hgweb(object):
 
     def refresh(self, request=None):
         if request:
-            self.ui.environ = request.environ
+            self.repo.ui.environ = request.env
         mtime = get_mtime(self.repo.root)
         if mtime != self.mtime:
             self.mtime = mtime
