@@ -2740,13 +2740,13 @@ def rollback(ui, repo):
     Transactions are used to encapsulate the effects of all commands
     that create new changesets or propagate existing changesets into a
     repository. For example, the following commands are transactional,
-    and their effects can be rolled back::
+    and their effects can be rolled back:
 
-      commit
-      import
-      pull
-      push (with this repository as destination)
-      unbundle
+    - commit
+    - import
+    - pull
+    - push (with this repository as destination)
+    - unbundle
 
     This command is not intended for use on public repositories. Once
     changes are visible for pull by other users, rolling a transaction
