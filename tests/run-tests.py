@@ -31,8 +31,10 @@
 #      ./run-tests.py -j2 --local test-s*
 #  7) parallel, coverage, temp install:
 #      ./run-tests.py -j2 -c test-s*          # currently broken
-#  8) parallel, coverage, local install
+#  8) parallel, coverage, local install:
 #      ./run-tests.py -j2 -c --local test-s*  # unsupported (and broken)
+#  9) parallel, custom tmp dir:
+#      ./run-tests.py -j2 --tmpdir /tmp/myhgtests
 #
 # (You could use any subset of the tests: test-s* happens to match
 # enough that it's worth doing parallel runs, few enough that it
@@ -639,6 +641,8 @@ def runchildren(options, tests):
             continue
         rfd, wfd = os.pipe()
         childopts = ['--child=%d' % wfd, '--port=%d' % (options.port + j * 3)]
+        childtmp = os.path.join(HGTMP, 'child%d' % j)
+        childopts += ['--tmpdir', childtmp]
         cmdline = [PYTHON, sys.argv[0]] + opts + childopts + job
         vlog(' '.join(cmdline))
         fps[os.spawnvp(os.P_NOWAIT, cmdline[0], cmdline)] = os.fdopen(rfd, 'r')
