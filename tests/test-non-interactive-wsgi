@@ -65,9 +65,9 @@ i(env, startrsp)
 print '---- ERRORS'
 print errors.getvalue()
 print '---- OS.ENVIRON wsgi variables'
-print [x for x in os.environ if x.startswith('wsgi')]
+print sorted([x for x in os.environ if x.startswith('wsgi')])
 print '---- request.ENVIRON wsgi variables'
-print [x for x in i.repo.ui.environ if x.startswith('wsgi')]
+print sorted([x for x in i.repo.ui.environ if x.startswith('wsgi')])
 EOF
 
 python request.py
