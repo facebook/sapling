@@ -601,9 +601,9 @@ def clone(ui, source, dest=None, **opts):
     will be the null changeset). Otherwise, clone will initially check
     out (in order of precedence):
 
-      a) the changeset, tag or branch specified with -u/--updaterev
-      b) the changeset, tag or branch given with the first -r/--rev
-      c) the head of the default branch
+    a) the changeset, tag or branch specified with -u/--updaterev
+    b) the changeset, tag or branch given with the first -r/--rev
+    c) the head of the default branch
 
     Use 'hg clone -u . src dst' to checkout the source repository's
     parent changeset (applicable for local source repositories only).
