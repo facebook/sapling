@@ -3386,7 +3386,7 @@ table = {
           ('u', 'updaterev', '',
            _('revision, tag or branch to check out')),
           ('r', 'rev', [],
-           _('a changeset you would like to have after cloning')),
+           _('clone only the specified revisions and ancestors')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
