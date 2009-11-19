@@ -54,7 +54,9 @@ class hgweb(object):
         return self.repo.ui.configlist(section, name, default,
                                        untrusted=untrusted)
 
-    def refresh(self):
+    def refresh(self, request=None):
+        if request:
+            self.ui.environ = request.environ
         mtime = get_mtime(self.repo.root)
         if mtime != self.mtime:
             self.mtime = mtime
@@ -80,7 +82,7 @@ class hgweb(object):
 
     def run_wsgi(self, req):
 
-        self.refresh()
+        self.refresh(req)
 
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME

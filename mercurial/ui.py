@@ -29,8 +29,11 @@ class ui(object):
             self._ocfg = src._ocfg.copy()
             self._trustusers = src._trustusers.copy()
             self._trustgroups = src._trustgroups.copy()
+            self.environ = src.environ
             self.fixconfig()
         else:
+            # shared read-only environment
+            self.environ = os.environ
             # we always trust global config files
             for f in util.rcpath():
                 self.readconfig(f, trust=True)
