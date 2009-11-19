@@ -13,9 +13,9 @@ output the current or given revision of files
     a format string. The formatting rules are the same as for the export
     command, with the following additions:
 
-      %s   basename of file being printed
-      %d   dirname of file being printed, or '.' if in repository root
-      %p   root-relative path name of file being printed
+    "%s"   basename of file being printed
+    "%d"   dirname of file being printed, or '.' if in repository root
+    "%p"   root-relative path name of file being printed
 
 options:
 

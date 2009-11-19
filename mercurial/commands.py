@@ -141,14 +141,14 @@ def archive(ui, repo, dest, **opts):
     directory; use -r/--rev to specify a different revision.
 
     To specify the type of archive to create, use -t/--type. Valid
-    types are::
+    types are:
 
-      "files" (default): a directory full of files
-      "tar": tar archive, uncompressed
-      "tbz2": tar archive, compressed using bzip2
-      "tgz": tar archive, compressed using gzip
-      "uzip": zip archive, uncompressed
-      "zip": zip archive, compressed using deflate
+    :``files``: a directory full of files (default)
+    :``tar``:   tar archive, uncompressed
+    :``tbz2``:  tar archive, compressed using bzip2
+    :``tgz``:   tar archive, compressed using gzip
+    :``uzip``:  zip archive, uncompressed
+    :``zip``:   zip archive, compressed using deflate
 
     The exact name of the destination archive or directory is given
     using a format string; see 'hg help export' for details.
@@ -561,11 +561,11 @@ def cat(ui, repo, file1, *pats, **opts):
 
     Output may be to a file, in which case the name of the file is
     given using a format string. The formatting rules are the same as
-    for the export command, with the following additions::
+    for the export command, with the following additions:
 
-      %s   basename of file being printed
-      %d   dirname of file being printed, or '.' if in repository root
-      %p   root-relative path name of file being printed
+    :``%s``: basename of file being printed
+    :``%d``: dirname of file being printed, or '.' if in repository root
+    :``%p``: root-relative path name of file being printed
     """
     ctx = repo[opts.get('rev')]
     err = 1
@@ -1140,16 +1140,16 @@ def export(ui, repo, *changesets, **opts):
     first parent only.
 
     Output may be to a file, in which case the name of the file is
-    given using a format string. The formatting rules are as follows::
+    given using a format string. The formatting rules are as follows:
 
-      %%   literal "%" character
-      %H   changeset hash (40 bytes of hexadecimal)
-      %N   number of patches being generated
-      %R   changeset revision number
-      %b   basename of the exporting repository
-      %h   short-form changeset hash (12 bytes of hexadecimal)
-      %n   zero-padded sequence number, starting at 1
-      %r   zero-padded changeset revision number
+    :``%%``: literal "%" character
+    :``%H``: changeset hash (40 bytes of hexadecimal)
+    :``%N``: number of patches being generated
+    :``%R``: changeset revision number
+    :``%b``: basename of the exporting repository
+    :``%h``: short-form changeset hash (12 bytes of hexadecimal)
+    :``%n``: zero-padded sequence number, starting at 1
+    :``%r``: zero-padded changeset revision number
 
     Without the -a/--text option, export will avoid generating diffs
     of files it detects as binary. With -a, export will generate a
