@@ -20,10 +20,10 @@ hg ci -m foo
 
 cd ..
 
-hg --config "extensions.inotify=!" clone test test2
-cd test2
-hg inserve -d --pid-file=../hg2.pid
+hg --config "inotify.pidfile=../hg2.pid" clone test test2
 cat ../hg2.pid >> "$DAEMON_PIDS"
+
+cd test2
 echo bar > bar
 hg add
 hg ci -m bar
