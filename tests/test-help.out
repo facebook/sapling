@@ -344,7 +344,7 @@ options:
  -c --change               change made by revision
  -a --text                 treat all files as text
  -g --git                  use git extended diff format
-    --nodates              don't include dates in diff headers
+    --nodates              omit dates from diff headers
  -p --show-function        show which function each change is in
     --reverse              produce a diff that undoes the changes
  -w --ignore-all-space     ignore white space when comparing lines

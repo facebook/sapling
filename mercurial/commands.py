@@ -3330,7 +3330,7 @@ logopts = [
 diffopts = [
     ('a', 'text', None, _('treat all files as text')),
     ('g', 'git', None, _('use git extended diff format')),
-    ('', 'nodates', None, _("don't include dates in diff headers"))
+    ('', 'nodates', None, _('omit dates from diff headers'))
 ]
 
 diffopts2 = [
@@ -3412,11 +3412,11 @@ table = {
     "bundle":
         (bundle,
          [('f', 'force', None,
-           _('run even when remote repository is unrelated')),
+           _('run even when the destination is unrelated')),
           ('r', 'rev', [],
-           _('a changeset up to which you would like to bundle')),
+           _('a changeset intended to be added to the destination')),
           ('', 'base', [],
-           _('a base changeset to specify instead of a destination')),
+           _('a base changeset assumed to be available at the destination')),
           ('a', 'all', None, _('bundle all changesets in the repository')),
           ('t', 'type', 'bzip2', _('bundle compression type to use')),
          ] + remoteopts,
@@ -3431,11 +3431,11 @@ table = {
     "^clone":
         (clone,
          [('U', 'noupdate', None,
-          _('the clone will only contain a repository (no working copy)')),
+          _('the clone will include an empty working copy (only a repository)')),
           ('u', 'updaterev', '',
            _('revision, tag or branch to check out')),
           ('r', 'rev', [],
-           _('clone only the specified revisions and ancestors')),
+           _('include the specified changeset')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
@@ -3562,11 +3562,11 @@ table = {
     "incoming|in":
         (incoming,
          [('f', 'force', None,
-           _('run even when remote repository is unrelated')),
+           _('run even if remote repository is unrelated')),
           ('n', 'newest-first', None, _('show newest record first')),
           ('', 'bundle', '', _('file to store the bundles into')),
           ('r', 'rev', [],
-           _('a specific remote revision up to which you would like to pull')),
+           _('a remote changeset intended to be added')),
          ] + logopts + remoteopts,
          _('[-p] [-n] [-M] [-f] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
@@ -3576,7 +3576,7 @@ table = {
          _('[-e CMD] [--remotecmd CMD] [DEST]')),
     "locate":
         (locate,
-         [('r', 'rev', '', _('search the repository as it stood at REV')),
+         [('r', 'rev', '', _('search the repository as it is in REV')),
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),
           ('f', 'fullpath', None,
@@ -3617,15 +3617,15 @@ table = {
     "outgoing|out":
         (outgoing,
          [('f', 'force', None,
-           _('run even when remote repository is unrelated')),
+           _('run even when the destination is unrelated')),
           ('r', 'rev', [],
-           _('a specific revision up to which you would like to push')),
+           _('a changeset intended to be included in the destination')),
           ('n', 'newest-first', None, _('show newest record first')),
          ] + logopts + remoteopts,
          _('[-M] [-p] [-n] [-f] [-r REV]... [DEST]')),
     "parents":
         (parents,
-         [('r', 'rev', '', _('show parents from the specified revision')),
+         [('r', 'rev', '', _('show parents of the specified revision')),
          ] + templateopts,
          _('[-r REV] [FILE]')),
     "paths": (paths, [], _('[NAME]')),
@@ -3636,14 +3636,14 @@ table = {
           ('f', 'force', None,
            _('run even when remote repository is unrelated')),
           ('r', 'rev', [],
-           _('a specific remote revision up to which you would like to pull')),
+           _('a remote changeset intended to be added')),
          ] + remoteopts,
          _('[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]')),
     "^push":
         (push,
          [('f', 'force', None, _('force push')),
           ('r', 'rev', [],
-           _('a specific revision up to which you would like to push')),
+           _('a changeset intended to be included in the destination')),
          ] + remoteopts,
          _('[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]')),
     "recover": (recover, []),
@@ -3674,7 +3674,7 @@ table = {
         (revert,
          [('a', 'all', None, _('revert all changes when no arguments given')),
           ('d', 'date', '', _('tipmost revision matching date')),
-          ('r', 'rev', '', _('revision to revert to')),
+          ('r', 'rev', '', _('revert to the specified revision')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
          ] + walkopts + dryrunopts,
          _('[OPTION]... [-r REV] [NAME]...')),

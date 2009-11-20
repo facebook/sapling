@@ -358,7 +358,7 @@ _hg_pat_opts=(
 _hg_diff_opts=(
   '(--text -a)'{-a,--text}'[treat all files as text]'
   '(--git -g)'{-g,--git}'[use git extended diff format]'
-  "--nodates[don't include dates in diff headers]")
+  "--nodates[omit dates from diff headers]")
 
 _hg_dryrun_opts=(
   '(--dry-run -n)'{-n,--dry-run}'[do not perform actions, just print output]')
