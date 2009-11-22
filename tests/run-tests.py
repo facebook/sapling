@@ -293,10 +293,18 @@ def installhg(options):
     script = os.path.realpath(sys.argv[0])
     hgroot = os.path.dirname(os.path.dirname(script))
     os.chdir(hgroot)
+    nohome = '--home=""'
+    if os.name == 'nt':
+        # The --home="" trick works only on OS where os.sep == '/'
+        # because of a distutils convert_path() fast-path. Avoid it at
+        # least on Windows for now, deal with .pydistutils.cfg bugs
+        # when they happen.
+        nohome = ''
     cmd = ('%s setup.py %s clean --all'
            ' install --force --prefix="%s" --install-lib="%s"'
-           ' --install-scripts="%s" --home="" >%s 2>&1'
-           % (sys.executable, pure, INST, PYTHONDIR, BINDIR, installerrs))
+           ' --install-scripts="%s" %s >%s 2>&1'
+           % (sys.executable, pure, INST, PYTHONDIR, BINDIR, nohome,
+              installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
         if not options.verbose:
