@@ -33,6 +33,10 @@ cat hg.pid >> "$DAEMON_PIDS"
 
 # let the daemon finish its stuff
 sleep 1
+
+echo % cannot start, already bound
+hg inserve
+
 # issue907
 hg status
 echo % clean

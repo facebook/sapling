@@ -691,9 +691,13 @@ class server(pollable):
             self.sock.bind(self.sockpath)
         except socket.error, err:
             if err[0] == errno.EADDRINUSE:
-                raise AlreadyStartedException(_('could not start server: %s')
-                                              % err[1])
+                raise AlreadyStartedException( _('cannot start: socket is '
+                                                 'already bound'))
             if err[0] == "AF_UNIX path too long":
+                if os.path.islink(self.sockpath) and \
+                        not os.path.exists(self.sockpath):
+                    raise util.Abort('inotify-server: cannot start: '
+                                    '.hg/inotify.sock is a broken symlink')
                 tempdir = tempfile.mkdtemp(prefix="hg-inotify-")
                 self.realsockpath = os.path.join(tempdir, "inotify.sock")
                 try:
@@ -706,8 +710,9 @@ class server(pollable):
                         pass
                     os.rmdir(tempdir)
                     if inst.errno == errno.EEXIST:
-                        raise AlreadyStartedException(_('could not start server: %s')
-                                                      % inst.strerror)
+                        raise AlreadyStartedException(_('cannot start: tried '
+                            'linking .hg/inotify.sock to a temporary socket but'
+                            ' .hg/inotify.sock already exists'))
                     raise
             else:
                 raise
@@ -841,7 +846,7 @@ def start(ui, dirstate, root, opts):
             try:
                 self.master = master(ui, dirstate, root, timeout)
             except AlreadyStartedException, inst:
-                raise util.Abort(str(inst))
+                raise util.Abort("inotify-server: %s" % inst)
 
         def run(self):
             try:

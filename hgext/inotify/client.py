@@ -27,8 +27,8 @@ def start_server(function):
             autostart = self.ui.configbool('inotify', 'autostart', True)
 
             if err[0] == errno.ECONNREFUSED:
-                self.ui.warn(_('(found dead inotify server socket; '
-                               'removing it)\n'))
+                self.ui.warn(_('inotify-client: found dead inotify server '
+                               'socket; removing it\n'))
                 os.unlink(os.path.join(self.root, '.hg', 'inotify.sock'))
             if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and autostart:
                 self.ui.debug('(starting inotify server)\n')
@@ -41,20 +41,20 @@ def start_server(function):
                         # inotify server while this one was starting.
                         self.ui.debug(str(inst))
                 except Exception, inst:
-                    self.ui.warn(_('could not start inotify server: '
-                                   '%s\n') % inst)
+                    self.ui.warn(_('inotify-client: could not start inotify '
+                                   'server: %s\n') % inst)
                 else:
                     try:
                         return function(self, *args)
                     except socket.error, err:
-                        self.ui.warn(_('could not talk to new inotify '
-                                       'server: %s\n') % err[-1])
+                        self.ui.warn(_('inotify-client: could not talk to new '
+                                       'inotify server: %s\n') % err[-1])
             elif err[0] in (errno.ECONNREFUSED, errno.ENOENT):
                 # silently ignore normal errors if autostart is False
                 self.ui.debug('(inotify server not running)\n')
             else:
-                self.ui.warn(_('failed to contact inotify server: %s\n')
-                         % err[-1])
+                self.ui.warn(_('inotify-client: failed to contact inotify '
+                               'server: %s\n') % err[-1])
 
         self.ui.traceback()
         raise QueryFailed('inotify query failed')
@@ -97,7 +97,8 @@ class client(object):
             version = ord(cs.read(1))
         except TypeError:
             # empty answer, assume the server crashed
-            self.ui.warn(_('received empty answer from inotify server'))
+            self.ui.warn(_('inotify-client: received empty answer from inotify '
+                           'server'))
             raise QueryFailed('server crashed')
 
         if version != common.version:

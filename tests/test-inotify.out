@@ -10,6 +10,8 @@ updating to branch default
 8 files updated, 0 files merged, 0 files removed, 0 files unresolved
 M a
 % inserve
+% cannot start, already bound
+abort: inotify-server: cannot start: socket is already bound
 ? hg.pid
 % clean
 C a
