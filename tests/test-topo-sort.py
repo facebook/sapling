@@ -1,6 +1,6 @@
-import random, sys
+import random, os, sys
 
-sys.path.append('../')
+sys.path.append(os.path.join(os.path.dirname(__file__), os.path.pardir))
 
 from hggit import toposort
 

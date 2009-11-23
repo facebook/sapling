@@ -1,7 +1,7 @@
-import sys, tempfile, unittest, shutil
+import os, sys, tempfile, unittest, shutil
 from mercurial import ui, hg, commands
 
-sys.path.append('../')
+sys.path.append(os.path.join(os.path.dirname(__file__), os.path.pardir))
 
 from hggit.git_handler import GitHandler
 
