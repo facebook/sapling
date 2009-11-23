@@ -57,7 +57,7 @@ git daemon --base-path="$(pwd)"\
  --detach --reuseaddr \
  --enable=receive-pack
 
-hg clone git://localhost/gitrepo hgrepo
+hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 cd hgrepo
 
 HGENCODING=utf-8 hg log --graph --debug

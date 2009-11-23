@@ -53,13 +53,13 @@ git daemon --base-path="$(pwd)"\
  --detach --reuseaddr
 
 echo % clone a tag
-hg clone -r alpha git://localhost/gitrepo hgrepo-a
+hg clone -r alpha git://localhost/gitrepo hgrepo-a | grep -v '^updating'
 cd hgrepo-a
 hg log --graph
 
 cd ..
 echo % clone a branch
-hg clone -r beta git://localhost/gitrepo hgrepo-b
+hg clone -r beta git://localhost/gitrepo hgrepo-b | grep -v '^updating'
 cd hgrepo-b
 hg log --graph
 

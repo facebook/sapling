@@ -8,7 +8,6 @@ Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressin
 Total 8 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 at: 0/2
-updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adds: d2/f2
 dels: d1/f2

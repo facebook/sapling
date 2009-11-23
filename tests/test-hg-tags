@@ -53,7 +53,7 @@ git daemon --base-path="$(pwd)"\
  --detach --reuseaddr \
  --enable=receive-pack
 
-hg clone git://localhost/gitrepo hgrepo
+hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 
 cd hgrepo
 hgtag alpha
@@ -67,7 +67,7 @@ echo % git should have the tag alpha
 git tag -l
 
 cd ..
-hg clone git://localhost/gitrepo hgrepo2
+hg clone git://localhost/gitrepo hgrepo2 | grep -v '^updating'
 cd hgrepo2
 hg log --graph
 

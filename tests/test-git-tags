@@ -58,7 +58,7 @@ git daemon --base-path="$(pwd)"\
  --pid-file=gitdaemon.pid \
  --detach --reuseaddr
 
-hg clone git://localhost/gitrepo hgrepo
+hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 
 cd hgrepo
 hg log --graph

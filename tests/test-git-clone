@@ -42,7 +42,7 @@ commit -m 'add beta'
 
 cd ..
 
-hg clone gitrepo hgrepo
+hg clone gitrepo hgrepo | grep -v '^updating'
 cd hgrepo
 hg log --graph
 

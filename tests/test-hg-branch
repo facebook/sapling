@@ -53,7 +53,7 @@ git daemon --base-path="$(pwd)"\
  --detach --reuseaddr \
  --enable=receive-pack
 
-hg clone git://localhost/gitrepo hgrepo
+hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 
 cd hgrepo
 hg mv alpha beta
@@ -67,7 +67,7 @@ hg push
 hg log --graph
 
 cd ..
-hg clone git://localhost/gitrepo hgrepo2
+hg clone git://localhost/gitrepo hgrepo2 | grep -v '^updating'
 cd hgrepo2
 hg log --graph
 
