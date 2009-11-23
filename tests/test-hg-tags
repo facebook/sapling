@@ -26,7 +26,7 @@ commit()
 {
     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-    git commit "$@" >/dev/null 2>/dev/null || echo "hg commit error"
+    git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
     count=`expr $count + 1`
 }
 hgtag()

@@ -1,12 +1,5 @@
 Initialized empty Git repository in gitrepo/.git/
 
-Commit 60fd61f initial
- 0 files changed, 0 insertions(+), 0 deletions(-)
- create mode 100644 d1/f1
- create mode 100644 d1/f2
-Commit a2e8665 rename
- 1 files changed, 0 insertions(+), 0 deletions(-)
- rename {d1 => d2}/f2 (100%)
 Initialized empty Git repository in gitrepo2/.git/
 
 importing Hg objects into Git
@@ -24,14 +17,14 @@ pushing to git://localhost/gitrepo2
 importing Hg objects into Git
 at: 0/2
 creating and sending data
-commit a2e8665d117167742ceb040f1669a73289d79ac8
+commit 7d84da95f2caf7a65833ae580fe5a08a0c3cb6b2
 Author: test <test@example.org>
-Date:   Mon Jan 1 00:00:00 2007 +0000
+Date:   Mon Jan 1 00:00:11 2007 +0000
 
     rename
 
-commit 60fd61fbaca983e6d0ee911668ef7547abbf720c
+commit 48e6424b6487f2a16e901f72fe52168b40278f5b
 Author: test <test@example.org>
-Date:   Mon Jan 1 00:00:00 2007 +0000
+Date:   Mon Jan 1 00:00:10 2007 +0000
 
     initial

@@ -53,7 +53,7 @@ echo delta > delta
 git add delta
 commit -m 'add delta'
 
-git merge branch1 branch2 | sed 's/\.{3}//'
+git merge branch1 branch2
 
 cd ..
 mkdir gitrepo2
