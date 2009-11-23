@@ -785,6 +785,7 @@ def main():
     os.environ['TZ'] = 'GMT'
     os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
     os.environ['CDPATH'] = ''
+    os.environ['COLUMNS'] = '80'
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
