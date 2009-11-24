@@ -16,6 +16,58 @@ HTTP_NOT_FOUND = 404
 HTTP_METHOD_NOT_ALLOWED = 405
 HTTP_SERVER_ERROR = 500
 
+# Hooks for hgweb permission checks; extensions can add hooks here. Each hook
+# is invoked like this: hook(hgweb, request, operation), where operation is
+# either read, pull or push. Hooks should either raise an ErrorResponse
+# exception, or just return.
+# It is possible to do both authentication and authorization through this.
+permhooks = []
+
+def checkauthz(hgweb, req, op):
+    '''Check permission for operation based on request data (including
+    authentication info). Return if op allowed, else raise an ErrorResponse
+    exception.'''
+
+    user = req.env.get('REMOTE_USER')
+
+    deny_read = hgweb.configlist('web', 'deny_read')
+    if deny_read and (not user or deny_read == ['*'] or user in deny_read):
+        raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
+
+    allow_read = hgweb.configlist('web', 'allow_read')
+    result = (not allow_read) or (allow_read == ['*'])
+    if not (result or user in allow_read):
+        raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
+
+    if op == 'pull' and not hgweb.allowpull:
+        raise ErrorResponse(HTTP_UNAUTHORIZED, 'pull not authorized')
+    elif op == 'pull' or op is None: # op is None for interface requests
+        return
+
+    # enforce that you can only push using POST requests
+    if req.env['REQUEST_METHOD'] != 'POST':
+        msg = 'push requires POST request'
+        raise ErrorResponse(HTTP_METHOD_NOT_ALLOWED, msg)
+
+    # require ssl by default for pushing, auth info cannot be sniffed
+    # and replayed
+    scheme = req.env.get('wsgi.url_scheme')
+    if hgweb.configbool('web', 'push_ssl', True) and scheme != 'https':
+        raise ErrorResponse(HTTP_OK, 'ssl required')
+
+    deny = hgweb.configlist('web', 'deny_push')
+    if deny and (not user or deny == ['*'] or user in deny):
+        raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
+
+    allow = hgweb.configlist('web', 'allow_push')
+    result = allow and (allow == ['*'] or user in allow)
+    if not result:
+        raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
+
+# Add the default permhook, which provides simple authorization.
+permhooks.append(checkauthz)
+
+
 class ErrorResponse(Exception):
     def __init__(self, code, message=None, headers=[]):
         Exception.__init__(self)

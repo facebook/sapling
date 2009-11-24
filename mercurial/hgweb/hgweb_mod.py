@@ -8,7 +8,7 @@
 
 import os
 from mercurial import ui, hg, hook, error, encoding, templater
-from common import get_mtime, ErrorResponse
+from common import get_mtime, ErrorResponse, permhooks
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from common import HTTP_UNAUTHORIZED, HTTP_METHOD_NOT_ALLOWED
 from request import wsgirequest
@@ -283,42 +283,5 @@ class hgweb(object):
         }
 
     def check_perm(self, req, op):
-        '''Check permission for operation based on request data (including
-        authentication info). Return if op allowed, else raise an ErrorResponse
-        exception.'''
-
-        user = req.env.get('REMOTE_USER')
-
-        deny_read = self.configlist('web', 'deny_read')
-        if deny_read and (not user or deny_read == ['*'] or user in deny_read):
-            raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
-
-        allow_read = self.configlist('web', 'allow_read')
-        result = (not allow_read) or (allow_read == ['*'])
-        if not (result or user in allow_read):
-            raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
-
-        if op == 'pull' and not self.allowpull:
-            raise ErrorResponse(HTTP_UNAUTHORIZED, 'pull not authorized')
-        elif op == 'pull' or op is None: # op is None for interface requests
-            return
-
-        # enforce that you can only push using POST requests
-        if req.env['REQUEST_METHOD'] != 'POST':
-            msg = 'push requires POST request'
-            raise ErrorResponse(HTTP_METHOD_NOT_ALLOWED, msg)
-
-        # require ssl by default for pushing, auth info cannot be sniffed
-        # and replayed
-        scheme = req.env.get('wsgi.url_scheme')
-        if self.configbool('web', 'push_ssl', True) and scheme != 'https':
-            raise ErrorResponse(HTTP_OK, 'ssl required')
-
-        deny = self.configlist('web', 'deny_push')
-        if deny and (not user or deny == ['*'] or user in deny):
-            raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
-
-        allow = self.configlist('web', 'allow_push')
-        result = allow and (allow == ['*'] or user in allow)
-        if not result:
-            raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
+        for hook in permhooks:
+            hook(self, req, op)

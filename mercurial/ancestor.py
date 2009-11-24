@@ -9,10 +9,11 @@ import heapq
 
 def ancestor(a, b, pfunc):
     """
-    return the least common ancestor of nodes a and b or None if there
-    is no such ancestor.
+    return a minimal-distance ancestor of nodes a and b, or None if there is no
+    such ancestor. Note that there can be several ancestors with the same
+    (minimal) distance, and the one returned is arbitrary.
 
-    pfunc must return a list of parent vertices
+    pfunc must return a list of parent vertices for a given vertex
     """
 
     if a == b:

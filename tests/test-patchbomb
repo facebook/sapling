@@ -12,8 +12,6 @@ fixheaders()
 echo "[extensions]" >> $HGRCPATH
 echo "patchbomb=" >> $HGRCPATH
 
-COLUMNS=80; export COLUMNS
-
 hg init t
 cd t
 echo a > a

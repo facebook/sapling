@@ -2017,7 +2017,6 @@ def log(ui, repo, *pats, **opts):
     else:
         endrev = len(repo)
     rcache = {}
-    ncache = {}
     def getrenamed(fn, rev):
         '''looks up all renames for a file (up to endrev) the first
         time the file is given. It indexes on the changerev and only
@@ -2025,15 +2024,11 @@ def log(ui, repo, *pats, **opts):
         Returns rename info for fn at changerev rev.'''
         if fn not in rcache:
             rcache[fn] = {}
-            ncache[fn] = {}
             fl = repo.file(fn)
             for i in fl:
-                node = fl.node(i)
                 lr = fl.linkrev(i)
-                renamed = fl.renamed(node)
+                renamed = fl.renamed(fl.node(i))
                 rcache[fn][lr] = renamed
-                if renamed:
-                    ncache[fn][node] = renamed
                 if lr >= endrev:
                     break
         if rev in rcache[fn]:
@@ -2041,12 +2036,10 @@ def log(ui, repo, *pats, **opts):
 
         # If linkrev != rev (i.e. rev not found in rcache) fallback to
         # filectx logic.
-
         try:
             return repo[rev][fn].renamed()
         except error.LookupError:
-            pass
-        return None
+            return None
 
     df = False
     if opts["date"]:
