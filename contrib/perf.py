@@ -103,9 +103,10 @@ def perfparents(ui, repo):
 def perflookup(ui, repo, rev):
     timer(lambda: len(repo.lookup(rev)))
 
-def perflog(ui, repo):
+def perflog(ui, repo, **opts):
     ui.pushbuffer()
-    timer(lambda: commands.log(ui, repo, rev=[], date='', user=''))
+    timer(lambda: commands.log(ui, repo, rev=[], date='', user='',
+                               copies=opts.get('rename')))
     ui.popbuffer()
 
 def perftemplating(ui, repo):
@@ -144,7 +145,8 @@ cmdtable = {
     'perftags': (perftags, []),
     'perfdirstate': (perfdirstate, []),
     'perfdirstatedirs': (perfdirstate, []),
-    'perflog': (perflog, []),
+    'perflog': (perflog,
+                [('', 'rename', False, 'ask log to follow renames')]),
     'perftemplating': (perftemplating, []),
     'perfdiffwd': (perfdiffwd, []),
 }
