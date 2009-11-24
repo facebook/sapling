@@ -270,15 +270,16 @@ def matchfiles(repo, files):
 
 def findrenames(repo, added, removed, threshold):
     '''find renamed files -- yields (before, after, score) tuples'''
+    copies = {}
     ctx = repo['.']
-    for a in added:
-        aa = repo.wread(a)
-        bestname, bestscore = None, threshold
-        for r in removed:
-            if r not in ctx:
-                continue
-            rr = ctx.filectx(r).data()
-
+    for r in removed:
+        if r not in ctx:
+            continue
+        fctx = ctx.filectx(r)
+        rr = fctx.data()
+        for a in added:
+            bestscore = copies.get(a, (None, threshold))[1]
+            aa = repo.wread(a)
             # bdiff.blocks() returns blocks of matching lines
             # count the number of bytes in each
             equal = 0
@@ -292,9 +293,10 @@ def findrenames(repo, added, removed, threshold):
             if lengths:
                 myscore = equal*2.0 / lengths
                 if myscore >= bestscore:
-                    bestname, bestscore = r, myscore
-        if bestname:
-            yield bestname, a, bestscore
+                    copies[a] = (r, myscore)
+    for dest, v in copies.iteritems():
+        source, score = v
+        yield source, dest, score
 
 def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     if dry_run is None:
