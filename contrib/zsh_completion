@@ -734,6 +734,11 @@ _hg_cmd_status() {
   '*:files:_files'
 }
 
+_hg_cmd_summary() {
+  _arguments -s -w : $_hg_global_opts \
+  '--remote[check for push and pull]'
+}
+
 _hg_cmd_tag() {
   _arguments -s -w : $_hg_global_opts \
   '(--local -l)'{-l,--local}'[make the tag local]' \
