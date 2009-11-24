@@ -777,7 +777,7 @@ def main():
 
     # Reset some environment variables to well-known values so that
     # the tests produce repeatable output.
-    os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
+    os.environ['LANG'] = os.environ['LC_ALL'] = os.environ['LANGUAGE'] = 'C'
     os.environ['TZ'] = 'GMT'
     os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
     os.environ['CDPATH'] = ''
