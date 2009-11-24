@@ -276,24 +276,28 @@ def findrenames(repo, added, removed, threshold):
         if r not in ctx:
             continue
         fctx = ctx.filectx(r)
-        rr = fctx.data()
-        for a in added:
-            bestscore = copies.get(a, (None, threshold))[1]
-            aa = repo.wread(a)
+        orig = fctx.data()
+
+        def score(text):
+            if not len(text):
+                return 0.0
             # bdiff.blocks() returns blocks of matching lines
             # count the number of bytes in each
             equal = 0
-            alines = mdiff.splitnewlines(aa)
-            matches = bdiff.blocks(aa, rr)
+            alines = mdiff.splitnewlines(text)
+            matches = bdiff.blocks(text, orig)
             for x1,x2,y1,y2 in matches:
                 for line in alines[x1:x2]:
                     equal += len(line)
 
-            lengths = len(aa) + len(rr)
-            if lengths:
-                myscore = equal*2.0 / lengths
-                if myscore >= bestscore:
-                    copies[a] = (r, myscore)
+            lengths = len(text) + len(orig)
+            return equal*2.0 / lengths
+
+        for a in added:
+            bestscore = copies.get(a, (None, threshold))[1]
+            myscore = score(repo.wread(a))
+            if myscore >= bestscore:
+                copies[a] = (r, myscore)
     for dest, v in copies.iteritems():
         source, score = v
         yield source, dest, score
