@@ -276,11 +276,15 @@ def findrenames(repo, added, removed, threshold):
         if r not in ctx:
             continue
         fctx = ctx.filectx(r)
-        orig = fctx.data()
 
         def score(text):
             if not len(text):
                 return 0.0
+            if not fctx.cmp(text):
+                return 1.0
+            if threshold == 1.0:
+                return 0.0
+            orig = fctx.data()
             # bdiff.blocks() returns blocks of matching lines
             # count the number of bytes in each
             equal = 0
