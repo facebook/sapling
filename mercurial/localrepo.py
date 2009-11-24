@@ -128,6 +128,12 @@ class localrepository(repo.repository):
             return context.workingctx(self)
         return context.changectx(self, changeid)
 
+    def __contains__(self, changeid):
+        try:
+            return bool(self.lookup(changeid))
+        except error.RepoLookupError:
+            return False
+
     def __nonzero__(self):
         return True
 
