@@ -270,31 +270,42 @@ def matchfiles(repo, files):
 
 def findrenames(repo, added, removed, threshold):
     '''find renamed files -- yields (before, after, score) tuples'''
+    copies = {}
     ctx = repo['.']
-    for a in added:
-        aa = repo.wread(a)
-        bestname, bestscore = None, threshold
-        for r in removed:
-            if r not in ctx:
-                continue
-            rr = ctx.filectx(r).data()
+    for r in removed:
+        if r not in ctx:
+            continue
+        fctx = ctx.filectx(r)
 
+        def score(text):
+            if not len(text):
+                return 0.0
+            if not fctx.cmp(text):
+                return 1.0
+            if threshold == 1.0:
+                return 0.0
+            orig = fctx.data()
             # bdiff.blocks() returns blocks of matching lines
             # count the number of bytes in each
             equal = 0
-            alines = mdiff.splitnewlines(aa)
-            matches = bdiff.blocks(aa, rr)
-            for x1,x2,y1,y2 in matches:
+            alines = mdiff.splitnewlines(text)
+            matches = bdiff.blocks(text, orig)
+            for x1, x2, y1, y2 in matches:
                 for line in alines[x1:x2]:
                     equal += len(line)
 
-            lengths = len(aa) + len(rr)
-            if lengths:
-                myscore = equal*2.0 / lengths
-                if myscore >= bestscore:
-                    bestname, bestscore = r, myscore
-        if bestname:
-            yield bestname, a, bestscore
+            lengths = len(text) + len(orig)
+            return equal * 2.0 / lengths
+
+        for a in added:
+            bestscore = copies.get(a, (None, threshold))[1]
+            myscore = score(repo.wread(a))
+            if myscore >= bestscore:
+                copies[a] = (r, myscore)
+
+    for dest, v in copies.iteritems():
+        source, score = v
+        yield source, dest, score
 
 def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     if dry_run is None:
