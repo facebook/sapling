@@ -825,6 +825,7 @@ class localrepository(repo.repository):
                                       extra, changes)
             if editor:
                 cctx._text = editor(self, cctx, subs)
+            edited = (text != cctx._text)
 
             # commit subs
             if subs:
@@ -844,7 +845,14 @@ class localrepository(repo.repository):
             msgfile.write(cctx._text.rstrip() + '\n')
             msgfile.close()
 
-            ret = self.commitctx(cctx, True)
+            try:
+                ret = self.commitctx(cctx, True)
+            except:
+                if edited:
+                    msgfn = self.pathto(msgfile.name[len(self.root)+1:])
+                    self.ui.write(
+                        _('note: commit message saved in %s\n') % msgfn)
+                raise
 
             # update dirstate and mergestate
             for f in changes[0] + changes[1]:
