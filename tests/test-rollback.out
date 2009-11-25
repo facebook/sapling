@@ -20,8 +20,17 @@ A a
 marked working directory as branch test
 rolling back last transaction
 default
+% Test issue 1635 (commit message saved)
+.hg/last-message.txt:
+test2
 % Test rollback of hg before issue 902 was fixed
 marked working directory as branch test
 rolling back last transaction
 Named branch could not be reset, current branch still is: test
 test
+% rollback by pretxncommit saves commit message (issue 1635)
+transaction abort!
+rollback completed
+abort: pretxncommit hook exited with status 1
+.hg/last-message.txt:
+precious commit message

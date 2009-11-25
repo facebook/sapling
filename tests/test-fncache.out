@@ -50,6 +50,7 @@ adding tst.d/foo
 .hg/data/tst.d.hg
 .hg/data/tst.d.hg/foo.i
 .hg/dirstate
+.hg/last-message.txt
 .hg/requires
 .hg/undo
 .hg/undo.branch
@@ -59,6 +60,7 @@ adding tst.d/Foo
 .hg
 .hg/00changelog.i
 .hg/dirstate
+.hg/last-message.txt
 .hg/requires
 .hg/store
 .hg/store/00changelog.i

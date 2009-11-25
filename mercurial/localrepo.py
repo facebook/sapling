@@ -835,6 +835,15 @@ class localrepository(repo.repository):
                     state[s] = (state[s][0], sr)
                 subrepo.writestate(self, state)
 
+            # Save commit message in case this transaction gets rolled back
+            # (e.g. by a pretxncommit hook).  (Save in text mode in case a
+            # Windows user wants to edit it with Notepad.  Normalize
+            # trailing whitespace so the file always looks the same --
+            # makes testing easier.)
+            msgfile = self.opener('last-message.txt', 'w')
+            msgfile.write(cctx._text.rstrip() + '\n')
+            msgfile.close()
+
             ret = self.commitctx(cctx, True)
 
             # update dirstate and mergestate
