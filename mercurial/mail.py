@@ -160,11 +160,7 @@ def headencode(ui, s, charsets=None, display=False):
         return str(email.Header.Header(s, cs))
     return s
 
-def addressencode(ui, address, charsets=None, display=False):
-    '''Turns address into RFC-2047 compliant header.'''
-    if display or not address:
-        return address or ''
-    name, addr = email.Utils.parseaddr(address)
+def _addressencode(ui, name, addr, charsets=None):
     name = headencode(ui, name, charsets)
     try:
         acc, dom = addr.split('@')
@@ -180,6 +176,26 @@ def addressencode(ui, address, charsets=None, display=False):
         except UnicodeDecodeError:
             raise util.Abort(_('invalid local address: %s') % addr)
     return email.Utils.formataddr((name, addr))
+
+def addressencode(ui, address, charsets=None, display=False):
+    '''Turns address into RFC-2047 compliant header.'''
+    if display or not address:
+        return address or ''
+    name, addr = email.Utils.parseaddr(address)
+    return _addressencode(ui, name, addr, charsets)
+
+def addrlistencode(ui, addrs, charsets=None, display=False):
+    '''Turns a list of addresses into a list of RFC-2047 compliant headers.
+    A single element of input list may contain multiple addresses, but output
+    always has one address per item'''
+    if display:
+        return [a.strip() for a in addrs if a.strip()]
+
+    result = []
+    for name, addr in email.Utils.getaddresses(addrs):
+        if name or addr:
+            result.append(_addressencode(ui, name, addr, charsets))
+    return result
 
 def mimeencode(ui, s, charsets=None, display=False):
     '''creates mime text object, encodes it if needed, and sets
