@@ -1,7 +1,7 @@
 % fail
-abort: could not start server: File exists
-could not talk to new inotify server: No such file or directory
-abort: could not start server: File exists
+abort: inotify-server: cannot start: .hg/inotify.sock is a broken symlink
+inotify-client: could not talk to new inotify server: No such file or directory
+abort: inotify-server: cannot start: .hg/inotify.sock is a broken symlink
 % inserve
 % status
 ? hg.pid

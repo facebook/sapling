@@ -48,6 +48,7 @@ class hgwebdir(object):
         self.conf = conf
         self.baseui = baseui
         self.lastrefresh = 0
+        self.motd = None
         self.refresh()
 
     def refresh(self):
@@ -72,7 +73,6 @@ class hgwebdir(object):
 
         encoding.encoding = self.ui.config('web', 'encoding',
                                            encoding.encoding)
-        self.motd = self.ui.config('web', 'motd')
         self.style = self.ui.config('web', 'style', 'paper')
         self.stripecount = self.ui.config('web', 'stripes', 1)
         if self.stripecount:

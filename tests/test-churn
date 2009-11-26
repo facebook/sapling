@@ -3,8 +3,6 @@
 echo "[extensions]" >> $HGRCPATH
 echo "churn=" >> $HGRCPATH
 
-COLUMNS=80; export COLUMNS
-
 echo % create test repository
 hg init repo
 cd repo
