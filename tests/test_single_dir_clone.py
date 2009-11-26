@@ -104,6 +104,35 @@ class TestSingleDir(test_util.TestBase):
         self.pushrevisions()
         self.assertTrue('adding_file' in self.svnls(''))
 
+    def test_push_single_dir_at_subdir(self):
+        repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
+                                            stupid=False,
+                                            layout='single',
+                                            subdir='trunk')
+        def filectxfn(repo, memctx, path):
+            return context.memfilectx(path=path,
+                                      data='contents of %s' % path,
+                                      islink=False,
+                                      isexec=False,
+                                      copied=False)
+        ctx = context.memctx(repo,
+                             (repo['tip'].node(), node.nullid),
+                             'automated test',
+                             ['bogus'],
+                             filectxfn,
+                             'an_author',
+                             '2009-10-19 18:49:30 -0500',
+                             {'branch': 'localhacking',})
+        n = repo.commitctx(ctx)
+        self.assertEqual(self.repo['tip']['bogus'].data(),
+                         'contents of bogus')
+        before = repo['tip'].hex()
+        hg.update(repo, self.repo['tip'].hex())
+        self.pushrevisions()
+        self.assertNotEqual(before, self.repo['tip'].hex())
+        self.assertEqual(self.repo['tip']['bogus'].data(),
+                         'contents of bogus')
+
     def test_push_single_dir_branch(self):
         # Tests local branches pushing to a single dir repo. Creates a fork at
         # tip. The default branch adds a file called default, while branch foo
@@ -150,4 +179,3 @@ class TestSingleDir(test_util.TestBase):
         self.pushrevisions()
         self.assertTrue('default' in self.svnls(''))
         self.assertEquals(len(self.repo.branchheads('default')), 1)
-
