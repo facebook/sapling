@@ -158,7 +158,7 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
         file_data[file] = base_data, new_data, action
 
     def svnpath(p):
-        return ('%s/%s' % (branch_path, p)).rstrip('/')
+        return ('%s/%s' % (branch_path, p)).strip('/')
 
     changeddirs = []
     for d, v1, v2 in extchanges:
@@ -181,7 +181,7 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
 
     new_target_files = [svnpath(f) for f in file_data]
     for tf, ntf in zip(file_data, new_target_files):
-        if tf in file_data:
+        if tf in file_data and tf != ntf:
             file_data[ntf] = file_data[tf]
             if tf in props:
                 props[ntf] = props[tf]
