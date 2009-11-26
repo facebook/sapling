@@ -9,6 +9,7 @@ Date = {date|utcdate}
 Header = {root}/{file},v {node|short} {date|utcdate} {author|user}
 Id = {file|basename},v {node|short} {date|utcdate} {author|user}
 RCSFile = {file|basename},v
+RCSfile = {file|basename},v
 Revision = {node|short}
 Source = {root}/{file},v
 $Author: test $
@@ -16,6 +17,7 @@ $Date: 2000/00/00 00:00:00 $
 $Header: /TMP/demo.txt,v xxxxxxxxxxxx 2000/00/00 00:00:00 test $
 $Id: demo.txt,v xxxxxxxxxxxx 2000/00/00 00:00:00 test $
 $RCSFile: demo.txt,v $
+$RCSfile: demo.txt,v $
 $Revision: xxxxxxxxxxxx $
 $Source: /TMP/demo.txt,v $
 [extensions]

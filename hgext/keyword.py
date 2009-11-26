@@ -111,7 +111,8 @@ class kwtemplater(object):
         'Revision': '{node|short}',
         'Author': '{author|user}',
         'Date': '{date|utcdate}',
-        'RCSFile': '{file|basename},v',
+        'RCSfile': '{file|basename},v',
+        'RCSFile': '{file|basename},v', # kept only for backwards compatibility
         'Source': '{root}/{file},v',
         'Id': '{file|basename},v {node|short} {date|utcdate} {author|user}',
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
