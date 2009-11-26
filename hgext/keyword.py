@@ -111,7 +111,8 @@ class kwtemplater(object):
         'Revision': '{node|short}',
         'Author': '{author|user}',
         'Date': '{date|utcdate}',
-        'RCSFile': '{file|basename},v',
+        'RCSfile': '{file|basename},v',
+        'RCSFile': '{file|basename},v', # kept only for backwards compatibility
         'Source': '{root}/{file},v',
         'Id': '{file|basename},v {node|short} {date|utcdate} {author|user}',
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
@@ -288,7 +289,7 @@ def demo(ui, repo, *args, **opts):
     '''
     def demoitems(section, items):
         ui.write('[%s]\n' % section)
-        for k, v in items:
+        for k, v in sorted(items):
             ui.write('%s = %s\n' % (k, v))
 
     msg = 'hg keyword config and expansion example'
@@ -336,7 +337,7 @@ def demo(ui, repo, *args, **opts):
     ui.write('[extensions]\n%s\n' % extension)
     demoitems('keyword', ui.configitems('keyword'))
     demoitems('keywordmaps', kwmaps.iteritems())
-    keywords = '$' + '$\n$'.join(kwmaps.keys()) + '$\n'
+    keywords = '$' + '$\n$'.join(sorted(kwmaps.keys())) + '$\n'
     repo.wopener(fn, 'w').write(keywords)
     repo.add([fn])
     path = repo.wjoin(fn)
