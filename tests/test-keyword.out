@@ -4,20 +4,20 @@ hgext.keyword =
 [keyword]
 demo.txt = 
 [keywordmaps]
-RCSFile = {file|basename},v
 Author = {author|user}
-Header = {root}/{file},v {node|short} {date|utcdate} {author|user}
-Source = {root}/{file},v
 Date = {date|utcdate}
+Header = {root}/{file},v {node|short} {date|utcdate} {author|user}
 Id = {file|basename},v {node|short} {date|utcdate} {author|user}
+RCSFile = {file|basename},v
 Revision = {node|short}
-$RCSFile: demo.txt,v $
+Source = {root}/{file},v
 $Author: test $
-$Header: /TMP/demo.txt,v xxxxxxxxxxxx 2000/00/00 00:00:00 test $
-$Source: /TMP/demo.txt,v $
 $Date: 2000/00/00 00:00:00 $
+$Header: /TMP/demo.txt,v xxxxxxxxxxxx 2000/00/00 00:00:00 test $
 $Id: demo.txt,v xxxxxxxxxxxx 2000/00/00 00:00:00 test $
+$RCSFile: demo.txt,v $
 $Revision: xxxxxxxxxxxx $
+$Source: /TMP/demo.txt,v $
 [extensions]
 hgext.keyword = 
 [keyword]
