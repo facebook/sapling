@@ -379,20 +379,21 @@ def patchbomb(ui, repo, *revs, **opts):
     else:
         msgs = getpatchmsgs(list(getpatches(revs)))
 
-    def getaddrs(opt, prpt, default = None):
-        addrs = opts.get(opt) or (ui.config('email', opt) or
-                                  ui.config('patchbomb', opt) or
-                                  prompt(ui, prpt, default)).split(',')
-        return [mail.addressencode(ui, a.strip(), _charsets, opts.get('test'))
-                for a in addrs if a.strip()]
+    def getaddrs(opt, prpt=None, default=None):
+        if opts.get(opt):
+            return mail.addrlistencode(ui, opts.get(opt), _charsets,
+                                       opts.get('test'))
+
+        addrs = (ui.config('email', opt) or
+                 ui.config('patchbomb', opt) or '')
+        if not addrs and prpt:
+            addrs = prompt(ui, prpt, default)
+
+        return mail.addrlistencode(ui, [addrs], _charsets, opts.get('test'))
 
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
-
-    bcc = opts.get('bcc') or (ui.config('email', 'bcc') or
-                          ui.config('patchbomb', 'bcc') or '').split(',')
-    bcc = [mail.addressencode(ui, a.strip(), _charsets, opts.get('test'))
-           for a in bcc if a.strip()]
+    bcc = getaddrs('bcc')
 
     ui.write('\n')
 
