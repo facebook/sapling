@@ -146,10 +146,10 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         if node2:
             dir2 = snapshot(ui, repo, modadd, node2, tmproot)[0]
         elif len(common) > 1:
-            #we only actually need to get the files to copy back to the working
-            #dir in this case (because the other cases are: diffing 2 revisions
-            #or single file -- in which case the file is already directly passed
-            #to the diff tool).
+            #we only actually need to get the files to copy back to
+            #the working dir in this case (because the other cases
+            #are: diffing 2 revisions or single file -- in which case
+            #the file is already directly passed to the diff tool).
             dir2, fns_and_mtime = snapshot(ui, repo, modadd, None, tmproot)
         else:
             # This lets the diff tool open the changed file directly
@@ -169,8 +169,9 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
                     dir1b = os.devnull
             dir2 = os.path.join(dir2root, dir2, common_file)
 
-        # Function to quote file/dir names in the argument string
-        # When not operating in 3-way mode, an empty string is returned for parent2
+        # Function to quote file/dir names in the argument string.
+        # When not operating in 3-way mode, an empty string is
+        # returned for parent2
         replace = dict(parent=dir1a, parent1=dir1a, parent2=dir1b, child=dir2)
         def quote(match):
             key = match.group()[1:]
@@ -257,13 +258,14 @@ def uisetup(ui):
             doc = _('''\
 use %(path)s to diff repository (or selected files)
 
-    Show differences between revisions for the specified files, using the
-    %(path)s program.
+    Show differences between revisions for the specified files, using
+    the %(path)s program.
 
-    When two revision arguments are given, then changes are shown between
-    those revisions. If only one revision is specified then that revision is
-    compared to the working directory, and, when no revisions are specified,
-    the working directory files are compared to its parent.\
+    When two revision arguments are given, then changes are shown
+    between those revisions. If only one revision is specified then
+    that revision is compared to the working directory, and, when no
+    revisions are specified, the working directory files are compared
+    to its parent.\
 ''') % dict(path=util.uirepr(path))
 
             # We must translate the docstring right away since it is
