@@ -43,7 +43,7 @@ fast (at least faster than having to compare the entire tree).
 
 from mercurial.i18n import _
 from mercurial.node import short, nullid
-from mercurial import cmdutil, util, commands
+from mercurial import cmdutil, util, commands, encoding
 import os, shlex, shutil, tempfile, re
 
 def snapshot(ui, repo, files, node, tmproot):
@@ -254,7 +254,7 @@ def uisetup(ui):
             '''use closure to save diff command to use'''
             def mydiff(ui, repo, *pats, **opts):
                 return dodiff(ui, repo, path, diffopts, pats, opts)
-            mydiff.__doc__ = _('''\
+            doc = _('''\
 use %(path)s to diff repository (or selected files)
 
     Show differences between revisions for the specified files, using the
@@ -265,6 +265,14 @@ use %(path)s to diff repository (or selected files)
     compared to the working directory, and, when no revisions are specified,
     the working directory files are compared to its parent.\
 ''') % dict(path=util.uirepr(path))
+
+            # We must translate the docstring right away since it is
+            # used as a format string. The string will unfortunately
+            # be translated again in commands.helpcmd and this will
+            # fail when the docstring contains non-ASCII characters.
+            # Decoding the string to a Unicode string here (using the
+            # right encoding) prevents that.
+            mydiff.__doc__ = doc.decode(encoding.encoding)
             return mydiff
         cmdtable[cmd] = (save(cmd, path, diffopts),
                          cmdtable['extdiff'][1][1:],
