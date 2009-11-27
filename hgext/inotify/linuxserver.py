@@ -250,7 +250,7 @@ class repowatcher(server.repowatcher, pollable):
             self.update_hgignore()
         try:
             st = self.stat(wpath)
-            if stat.S_ISREG(st[0]):
+            if stat.S_ISREG(st[0]) or stat.S_ISLNK(st[0]):
                 self.updatefile(wpath, st)
         except OSError:
             pass
