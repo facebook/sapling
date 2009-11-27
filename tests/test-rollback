@@ -22,7 +22,7 @@ hg branch
 
 echo '% Test issue 1635 (commit message saved)'
 echo '.hg/last-message.txt:'
-cat .hg/last-message.txt
+cat .hg/last-message.txt ; echo
 
 echo % Test rollback of hg before issue 902 was fixed
 hg commit -m "test3"
@@ -35,7 +35,7 @@ echo '% rollback by pretxncommit saves commit message (issue 1635)'
 echo a >> a
 hg --config hooks.pretxncommit=/bin/false commit -m"precious commit message"
 echo '.hg/last-message.txt:'
-cat .hg/last-message.txt
+cat .hg/last-message.txt ; echo
 
 echo '% same thing, but run $EDITOR'
 cat > $HGTMP/editor <<'__EOF__'

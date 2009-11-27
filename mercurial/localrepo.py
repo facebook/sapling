@@ -837,12 +837,10 @@ class localrepository(repo.repository):
                 subrepo.writestate(self, state)
 
             # Save commit message in case this transaction gets rolled back
-            # (e.g. by a pretxncommit hook).  (Save in text mode in case a
-            # Windows user wants to edit it with Notepad.  Normalize
-            # trailing whitespace so the file always looks the same --
-            # makes testing easier.)
-            msgfile = self.opener('last-message.txt', 'w')
-            msgfile.write(cctx._text.rstrip() + '\n')
+            # (e.g. by a pretxncommit hook).  Leave the content alone on
+            # the assumption that the user will use the same editor again.
+            msgfile = self.opener('last-message.txt', 'wb')
+            msgfile.write(cctx._text)
             msgfile.close()
 
             try:
