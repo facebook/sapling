@@ -112,7 +112,8 @@ class kwtemplater(object):
         'Author': '{author|user}',
         'Date': '{date|utcdate}',
         'RCSfile': '{file|basename},v',
-        'RCSFile': '{file|basename},v', # kept only for backwards compatibility
+        'RCSFile': '{file|basename},v', # kept for backwards compatibility
+                                        # with hg-keyword
         'Source': '{root}/{file},v',
         'Id': '{file|basename},v {node|short} {date|utcdate} {author|user}',
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
