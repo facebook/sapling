@@ -465,97 +465,12 @@ diff -r 000000000000 -r a4f92ed23982 foo
 % Overviews
 200 Script output follows
 
-<?xml version="1.0" encoding="ascii"?>
-<feed xmlns="http://127.0.0.1/2005/Atom">
- <id>http://127.0.0.1/</id>
- <link rel="self" href="http://127.0.0.1/atom-tags"/>
- <link rel="alternate" href="http://127.0.0.1/tags"/>
- <title>test: tags</title>
- <summary>test tag history</summary>
- <author><name>Mercurial SCM</name></author>
- <updated>1970-01-01T00:00:00+00:00</updated>
-
- <entry>
-  <title>1.0</title>
-  <link rel="alternate" href="http://127.0.0.1/rev/2ef0ac749a14"/>
-  <id>http://127.0.0.1/#tag-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id>
-  <updated>1970-01-01T00:00:00+00:00</updated>
-  <published>1970-01-01T00:00:00+00:00</published>
-  <content type="text">1.0</content>
- </entry>
-
-</feed>
+tip	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+1.0	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
 200 Script output follows
 
-<?xml version="1.0" encoding="ascii"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://127.0.0.1/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://127.0.0.1/1999/xhtml" xml:lang="en-US" lang="en-US">
-<head>
-<link rel="icon" href="/static/hgicon.png" type="image/png" />
-<meta name="robots" content="index, nofollow"/>
-<link rel="stylesheet" href="/static/style-gitweb.css" type="text/css" />
-
-
-<title>test: Branches</title>
-<link rel="alternate" type="application/atom+xml"
-   href="/atom-tags" title="Atom feed for test"/>
-<link rel="alternate" type="application/rss+xml"
-   href="/rss-tags" title="RSS feed for test"/>
-</head>
-<body>
-
-<div class="page_header">
-<a href="http://127.0.0.1/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / branches
-</div>
-
-<div class="page_nav">
-<a href="/summary?style=gitweb">summary</a> |
-<a href="/shortlog?style=gitweb">shortlog</a> |
-<a href="/log?style=gitweb">changelog</a> |
-<a href="/graph?style=gitweb">graph</a> |
-<a href="/tags?style=gitweb">tags</a> |
-branches |
-<a href="/file/1d22e65f027e?style=gitweb">files</a>
-<br/>
-</div>
-
-<div class="title">&nbsp;</div>
-<table cellspacing="0">
-
-<tr class="parity0">
-<td class="age"><i>1970-01-01</i></td>
-<td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td>
-<td class="open">stable</td>
-<td class="link">
-<a href="/changeset/1d22e65f027e?style=gitweb">changeset</a> |
-<a href="/log/1d22e65f027e?style=gitweb">changelog</a> |
-<a href="/file/1d22e65f027e?style=gitweb">files</a>
-</td>
-</tr>
-<tr class="parity1">
-<td class="age"><i>1970-01-01</i></td>
-<td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
-<td class="inactive">default</td>
-<td class="link">
-<a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> |
-<a href="/log/a4f92ed23982?style=gitweb">changelog</a> |
-<a href="/file/a4f92ed23982?style=gitweb">files</a>
-</td>
-</tr>
-</table>
-
-<div class="page_footer">
-<div class="page_footer_text">test</div>
-<div class="rss_logo">
-<a href="/rss-log">RSS</a>
-<a href="/atom-log">Atom</a>
-</div>
-<br />
-
-</div>
-</body>
-</html>
-
+stable	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe	open
+default	a4f92ed23982be056b9852de5dfe873eaac7f0de	inactive
 200 Script output follows
 
 <?xml version="1.0" encoding="ascii"?>

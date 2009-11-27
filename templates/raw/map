@@ -21,3 +21,7 @@ index = index.tmpl
 notfound = notfound.tmpl
 error = error.tmpl
 indexentry = '{url}\n'
+tags = '{entries%tagentry}'
+tagentry = '{tag}	{node}\n'
+branches = '{entries%branchentry}'
+branchentry = '{branch}	{node}	{status}\n'
