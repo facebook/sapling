@@ -1,0 +1,14 @@
+# ConfigParser format
+# Definitions of blacklists for run-tests.py
+#
+# Identify in config sections a list of tests you want to be skipped.
+# Section names are meant to be used as targets for run-tests.py --blacklist
+# option.
+# "test-" prefixes should be omitted from test names. Values are not used.
+#
+# e.g. if your file looks like:
+## [example]
+## hgrc =
+## help = "this string is not used"
+# then calling "run-tests.py --blacklist example" will exclude test-hgrc and
+# test-help from the list of tests to run.

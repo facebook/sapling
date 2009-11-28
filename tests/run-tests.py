@@ -41,6 +41,7 @@
 # completes fairly quickly, includes both shell and Python scripts, and
 # includes some scripts that run daemon processes.)
 
+from ConfigParser import ConfigParser
 import difflib
 import errno
 import optparse
@@ -132,6 +133,9 @@ def parseargs():
         help="enable Py3k warnings on Python 2.6+")
     parser.add_option("--inotify", action="store_true",
         help="enable inotify extension when running tests")
+    parser.add_option("--blacklist", action="append",
+        help="skip tests listed in the specified section of "
+             "the blacklist file")
 
     for option, default in defaults.items():
         defaults[option] = int(os.environ.get(*default))
@@ -197,6 +201,14 @@ def parseargs():
     if options.py3k_warnings:
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
             parser.error('--py3k-warnings can only be used on Python 2.6+')
+    if options.blacklist:
+        configparser = ConfigParser()
+        configparser.read("blacklist")
+        blacklist = dict()
+        for section in options.blacklist:
+            for (item, value) in configparser.items(section):
+                blacklist["test-" + item] = section
+        options.blacklist = blacklist
 
     return (options, args)
 
@@ -730,6 +742,13 @@ def runtests(options, tests):
         fails = []
 
         for test in tests:
+            if options.blacklist:
+                section = options.blacklist.get(test)
+                if section is not None:
+                    skips.append((test, "blacklisted (%s section)" % section))
+                    skipped += 1
+                    continue
+
             if options.retest and not os.path.exists(test + ".err"):
                 skipped += 1
                 continue
