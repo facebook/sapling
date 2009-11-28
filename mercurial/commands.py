@@ -470,9 +470,9 @@ def branches(ui, repo, active=False, closed=False):
                 elif hn not in repo.branchheads(tag, closed=False):
                     if not closed:
                         continue
-                    notice = ' (closed)'
+                    notice = _(' (closed)')
                 else:
-                    notice = ' (inactive)'
+                    notice = _(' (inactive)')
                 rev = str(node).rjust(31 - encoding.colwidth(encodedtag))
                 data = encodedtag, rev, hexfunc(hn), notice
                 ui.write("%s %s:%s%s\n" % data)
