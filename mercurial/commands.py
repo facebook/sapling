@@ -1161,6 +1161,7 @@ def export(ui, repo, *changesets, **opts):
     With the --switch-parent option, the diff will be against the
     second parent. It can be useful to review a merge.
     """
+    changesets += tuple(opts.get('rev', []))
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
     revs = cmdutil.revrange(repo, changesets)
@@ -3456,7 +3457,8 @@ table = {
     "^export":
         (export,
          [('o', 'output', '', _('print output to file with formatted name')),
-          ('', 'switch-parent', None, _('diff against the second parent'))
+          ('', 'switch-parent', None, _('diff against the second parent')),
+          ('r', 'rev', [], _('revisions to export')),
           ] + diffopts,
          _('[OPTION]... [-o OUTFILESPEC] REV...')),
     "^forget":
