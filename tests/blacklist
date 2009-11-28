@@ -12,3 +12,26 @@
 ## help = "this string is not used"
 # then calling "run-tests.py --blacklist example" will exclude test-hgrc and
 # test-help from the list of tests to run.
+
+[inotify-failures]
+# When --inotify is activated, help output and config changes:
+debugcomplete =
+empty =
+fncache =
+globalopts =
+help =
+hgrc =
+inherit-mode =
+qrecord =
+strict =
+
+# --inotify activates de facto the inotify extension. It does not play well
+# with inotify-specific tests, which activate/desactivate inotify at will:
+inotify =
+inotify-debuginotify =
+inotify-dirty-dirstate =
+inotify-issue1208 =
+inotify-issue1371 =
+inotify-issue1542 =
+inotify-issue1556 =
+inotify-lookup =
