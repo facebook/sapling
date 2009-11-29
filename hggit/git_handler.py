@@ -599,9 +599,10 @@ class GitHandler(object):
             return want
         f, commit = self.git.object_store.add_pack()
         try:
-            return client.fetch_pack(path, determine_wants, graphwalker, f.write, self.ui.status)
-        except HangupException:
-            raise hgutil.Abort("the remote end hung up unexpectedly")
+            try:
+                return client.fetch_pack(path, determine_wants, graphwalker, f.write, self.ui.status)
+            except HangupException:
+                raise hgutil.Abort("the remote end hung up unexpectedly")
         finally:
             commit()
 
