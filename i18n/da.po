@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2009-11-22 21:02+0100\n"
-"PO-Revision-Date: 2009-11-22 21:33+0100\n"
+"POT-Creation-Date: 2009-11-29 20:24+0100\n"
+"PO-Revision-Date: 2009-11-29 20:27+0100\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -1986,15 +1986,14 @@ msgstr "hg extdiff [TILVALG]... [FIL]..."
 msgid ""
 "use %(path)s to diff repository (or selected files)\n"
 "\n"
-"    Show differences between revisions for the specified files, using the\n"
-"    %(path)s program.\n"
+"    Show differences between revisions for the specified files, using\n"
+"    the %(path)s program.\n"
 "\n"
-"    When two revision arguments are given, then changes are shown between\n"
-"    those revisions. If only one revision is specified then that revision "
-"is\n"
-"    compared to the working directory, and, when no revisions are "
-"specified,\n"
-"    the working directory files are compared to its parent."
+"    When two revision arguments are given, then changes are shown\n"
+"    between those revisions. If only one revision is specified then\n"
+"    that revision is compared to the working directory, and, when no\n"
+"    revisions are specified, the working directory files are compared\n"
+"    to its parent."
 msgstr ""
 
 #, python-format
@@ -2454,23 +2453,23 @@ msgstr "navn på fil at skrive process ID til"
 msgid "hg inserve [OPTION]..."
 msgstr "hg inserve [TILVALG]..."
 
-msgid "(found dead inotify server socket; removing it)\n"
-msgstr "(fandt død inotify server sokkel; fjerner den)\n"
+msgid "inotify-client: found dead inotify server socket; removing it\n"
+msgstr "inotify-klient: fandt død inotify server sokkel; fjerner den\n"
 
 #, python-format
-msgid "could not start inotify server: %s\n"
-msgstr "kunne ikke starte inotify server: %s\n"
+msgid "inotify-client: could not start inotify server: %s\n"
+msgstr "inotify-klient: kunne ikke starte inotify server: %s\n"
 
 #, python-format
-msgid "could not talk to new inotify server: %s\n"
-msgstr "kunne ikke snakke med ny inotify server: %s\n"
+msgid "inotify-client: could not talk to new inotify server: %s\n"
+msgstr "inotify-klient: kunne ikke snakke med ny inotify server: %s\n"
 
 #, python-format
-msgid "failed to contact inotify server: %s\n"
-msgstr "kontakt med inotify server miskykkedes: %s\n"
+msgid "inotify-client: failed to contact inotify server: %s\n"
+msgstr "inotify-klient: kontakt med inotify server mislykkedes: %s\n"
 
-msgid "received empty answer from inotify server"
-msgstr "modtog tomt svar fra inotify server"
+msgid "inotify-client: received empty answer from inotify server"
+msgstr "inotify-klient: modtog tomt svar fra inotify server"
 
 #, python-format
 msgid "(inotify: received response from incompatible server version %d)\n"
@@ -2526,21 +2525,6 @@ msgid "watching directories under %r\n"
 msgstr "overvåger kataloger under %r\n"
 
 #, python-format
-msgid "status: %r %s -> %s\n"
-msgstr "status: %r %s -> %s\n"
-
-#, python-format
-msgid "%s dirstate reload\n"
-msgstr "%s genindlæsning af dirstate\n"
-
-#, python-format
-msgid "%s end dirstate reload\n"
-msgstr "%s genindlæsning af dirstate afsluttet\n"
-
-msgid "rescanning due to .hgignore change\n"
-msgstr "genskanner på grund af ændring af .hgignore\n"
-
-#, python-format
 msgid "%s event: created %s\n"
 msgstr "%s hændelse: oprettede %s\n"
 
@@ -2572,9 +2556,23 @@ msgstr "%s læser %d hændelser\n"
 msgid "%s hooking back up with %d bytes readable\n"
 msgstr ""
 
+msgid "finished setup\n"
+msgstr "afsluttede opsætning\n"
+
 #, python-format
-msgid "could not start server: %s"
-msgstr "kunne ikke starte server: %s"
+msgid "status: %r %s -> %s\n"
+msgstr "status: %r %s -> %s\n"
+
+msgid "rescanning due to .hgignore change\n"
+msgstr "genskanner på grund af ændring af .hgignore\n"
+
+msgid "cannot start: socket is already bound"
+msgstr ""
+
+msgid ""
+"cannot start: tried linking .hg/inotify.sock to a temporary socket but .hg/"
+"inotify.sock already exists"
+msgstr ""
 
 #, python-format
 msgid "answering query for %r\n"
@@ -2587,9 +2585,6 @@ msgstr "modtog forespørgsel fra inkompatibel klient version %d\n"
 #, python-format
 msgid "unrecognized query type: %s\n"
 msgstr "genkendte ikke forespørgselstype: %s\n"
-
-msgid "finished setup\n"
-msgstr "afsluttede opsætning\n"
 
 msgid ""
 "expand expressions into changelog and summaries\n"
@@ -8703,6 +8698,10 @@ msgstr "uløste sammenføjningskonflikter (se hg resolve)"
 #, python-format
 msgid "committing subrepository %s\n"
 msgstr "deponerer underdepot %s\n"
+
+#, python-format
+msgid "note: commit message saved in %s\n"
+msgstr "bemærk: deponeringsbesked er gemt i %s\n"
 
 #, python-format
 msgid "trouble committing %s!\n"
