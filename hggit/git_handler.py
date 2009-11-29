@@ -1,4 +1,4 @@
-import os, sys, math, urllib, re
+import os, math, urllib, re
 import toposort
 
 from dulwich.errors import HangupException
@@ -11,11 +11,6 @@ from hgext import bookmarks
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
 from mercurial import context, util as hgutil
-
-try:
-    from mercurial.error import RepoError
-except ImportError:
-    from mercurial.repo import RepoError
 
 
 class GitHandler(object):
