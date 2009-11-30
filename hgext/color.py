@@ -213,6 +213,16 @@ def colordiff(orig, ui, repo, *pats, **opts):
     finally:
         ui.write = oldwrite
 
+def colorchurn(orig, ui, repo, *pats, **opts):
+    '''run the churn command with colored output'''
+    if not opts.get('diffstat'):
+        return orig(ui, repo, *pats, **opts)
+    oldwrite = extensions.wrapfunction(ui, 'write', colordiffstat)
+    try:
+        orig(ui, repo, *pats, **opts)
+    finally:
+        ui.write = oldwrite
+
 _diff_prefixes = [('diff', 'diffline'),
                   ('copy', 'extended'),
                   ('rename', 'extended'),
@@ -259,7 +269,11 @@ def extsetup(ui):
 
     if mq and rec:
         _setupcmd(ui, 'qrecord', rec.cmdtable, colordiff, _diff_effects)
-
+    try:
+        churn = extensions.find('churn')
+        _setupcmd(ui, 'churn', churn.cmdtable, colorchurn, _diff_effects)
+    except KeyError:
+        churn = None
 
 def _setupcmd(ui, cmd, table, func, effectsmap):
     '''patch in command to command table and load effect map'''
