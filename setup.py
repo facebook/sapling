@@ -263,7 +263,16 @@ for root in ('templates', ):
             f = os.path.join(curdir, f)
             packagedata['mercurial'].append(f)
 
-datafiles = []
+datafiles = [
+    ('share/bash_completion.d', ['contrib/bash/hg']),
+    ('share/zsh/site-functions', ['contrib/zsh/_hg']),
+    ('share/mercurial/www', ['hgweb.cgi',
+                             'hgwebdir.cgi',
+                             'contrib/hgwebdir.fcgi',
+                             'contrib/hgwebdir.wsgi']),
+    ('share/mercurial/examples', ['contrib/sample.hgrc',
+                                  'contrib/mergetools.hgrc']),
+]
 
 setup(name='mercurial',
       version=version,
