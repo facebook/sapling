@@ -7390,6 +7390,12 @@ msgstr ""
 "    Use o comando 'hg update' para trocar para um ramo existente.\n"
 "    "
 
+msgid " (closed)"
+msgstr " (fechado)"
+
+msgid " (inactive)"
+msgstr " (inativo)"
+
 msgid ""
 "create a changegroup file\n"
 "\n"
@@ -9727,6 +9733,9 @@ msgstr "não atualiza para o alvo"
 msgid "[-gbsr] [-c CMD] [REV]"
 msgstr "[-gbsr] [-c CMD] [REV]"
 
+msgid "[-gbsr] [-U] [-c CMD] [REV]"
+msgstr "[-gbsr] [-U] [-c CMD] [REV]"
+
 msgid "set branch name even if it shadows an existing branch"
 msgstr "especifica nome do ramo mesmo se ocultar um ramo existente"
 
@@ -9745,6 +9754,9 @@ msgstr "mostra ramos normais e fechados"
 msgid "[-a]"
 msgstr "[-a]"
 
+msgid "[-ac]"
+msgstr "[-ac]"
+
 msgid "run even when remote repository is unrelated"
 msgstr "execute mesmo se o repositório remoto não for relacionado"
 
@@ -9762,6 +9774,9 @@ msgstr "tipo de compressão de bundle a ser usada"
 
 msgid "[-f] [-a] [-r REV]... [--base REV]... FILE [DEST]"
 msgstr "[-f] [-a] [-r REV]... [--base REV]... ARQUIVO [DEST]"
+
+msgid "[-f] [-t TYPE] [-a] [-r REV]... [--base REV]... FILE [DEST]"
+msgstr "[-f] [-t TIPO] [-a] [-r REV]... [--base REV]... ARQUIVO [DEST]"
 
 msgid "print output to file with formatted name"
 msgstr "imprime a saída para o arquivo com o nome formatado"
@@ -9902,6 +9917,9 @@ msgstr "mostra cabeças de ramo normais e fechadas"
 msgid "[-r STARTREV] [REV]..."
 msgstr "[-r REVINICIAL] [REV]..."
 
+msgid "[-ac] [-r STARTREV] [REV]..."
+msgstr "[-ac] [-r REVINICIAL] [REV]..."
+
 msgid "[TOPIC]"
 msgstr "[TÓPICO]"
 
@@ -10022,6 +10040,9 @@ msgstr "avalia revisões a serem mescladas (a mesclagem não é executada)"
 
 msgid "[-f] [[-r] REV]"
 msgstr "[-f] [[-r] REV]"
+
+msgid "[-P] [-f] [[-r] REV]"
+msgstr "[-P] [-f] [[-r] REV]"
 
 msgid "a specific revision up to which you would like to push"
 msgstr "uma revisão específica até a qual você gostaria de enviar"
@@ -10184,8 +10205,14 @@ msgstr "remove uma etiqueta"
 msgid "[-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
 msgstr "[-l] [-m TEXTO] [-d DATA] [-u USUÁRIO] [-r REV] NOME..."
 
+msgid "[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
+msgstr "[-f] [-l] [-m TEXTO] [-d DATA] [-u USUÁRIO] [-r REV] NOME..."
+
 msgid "[-p]"
 msgstr "[-p]"
+
+msgid "[-p] [-g]"
+msgstr "[-p] [-g]"
 
 msgid "update to new tip if changesets were unbundled"
 msgstr "atualiza para nova tip se revisões forem extraídas do bundle"
