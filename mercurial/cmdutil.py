@@ -755,7 +755,8 @@ class changeset_templater(changeset_printer):
                                      cache={
                                          'parent': '{rev}:{node|formatnode} ',
                                          'manifest': '{rev}:{node|formatnode}',
-                                         'filecopy': '{name} ({source})'})
+                                         'filecopy': '{name} ({source})',
+                                         'extra': '{key}={value|stringescape}'})
         # Cache mapping from rev to a tuple with tag date, tag
         # distance and tag name
         self._latesttagcache = {-1: (0, 0, 'null')}

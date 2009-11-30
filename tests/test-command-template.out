@@ -569,6 +569,33 @@ diffstat--debug: 1: +1/-0
 diffstat--debug: 1: +4/-0
 diffstat--debug: 1: +2/-0
 diffstat--debug: 1: +1/-0
+extras: branch=default
+extras: branch=default
+extras: branch=default
+extras: branch=default
+extras: branch=foo
+extras: branch=default
+extras: branch=default
+extras: branch=default
+extras: branch=default
+extras--verbose: branch=default
+extras--verbose: branch=default
+extras--verbose: branch=default
+extras--verbose: branch=default
+extras--verbose: branch=foo
+extras--verbose: branch=default
+extras--verbose: branch=default
+extras--verbose: branch=default
+extras--verbose: branch=default
+extras--debug: branch=default
+extras--debug: branch=default
+extras--debug: branch=default
+extras--debug: branch=default
+extras--debug: branch=foo
+extras--debug: branch=default
+extras--debug: branch=default
+extras--debug: branch=default
+extras--debug: branch=default
 # filters work
 
 hostname
