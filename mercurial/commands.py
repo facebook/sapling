@@ -2842,7 +2842,8 @@ def status(ui, repo, *pats, **opts):
 
     If one revision is given, it is used as the base revision.
     If two revisions are given, the differences between them are
-    shown.
+    shown. The --change option can also be used as a shortcut to list
+    the changed files of a revision from its first parent.
 
     The codes used to show the status of files are::
 
@@ -2856,7 +2857,18 @@ def status(ui, repo, *pats, **opts):
         = origin of the previous file listed as A (added)
     """
 
-    node1, node2 = cmdutil.revpair(repo, opts.get('rev'))
+    revs = opts.get('rev')
+    change = opts.get('change')
+
+    if revs and change:
+        msg = _('cannot specify --rev and --change at the same time')
+        raise util.Abort(msg)
+    elif change:
+        node2 = repo.lookup(change)
+        node1 = repo[node2].parents()[0].node()
+    else:
+        node1, node2 = cmdutil.revpair(repo, revs)
+
     cwd = (pats and repo.getcwd()) or ''
     end = opts.get('print0') and '\0' or '\n'
     copy = {}
@@ -3660,6 +3672,7 @@ table = {
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),
           ('', 'rev', [], _('show difference from revision')),
+          ('', 'change', '', _('list the changed files of a revision')),
          ] + walkopts,
          _('[OPTION]... [FILE]...')),
     "tag":

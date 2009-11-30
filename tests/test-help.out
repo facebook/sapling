@@ -270,7 +270,9 @@ show changed files in the working directory
     parent.
 
     If one revision is given, it is used as the base revision. If two
-    revisions are given, the differences between them are shown.
+    revisions are given, the differences between them are shown. The --change
+    option can also be used as a shortcut to list the changed files of a
+    revision from its first parent.
 
     The codes used to show the status of files are:
 
@@ -297,6 +299,7 @@ options:
  -C --copies     show source of copied files
  -0 --print0     end filenames with NUL, for use with xargs
     --rev        show difference from revision
+    --change     list the changed files of a revision
  -I --include    include names matching the given patterns
  -X --exclude    exclude names matching the given patterns
 

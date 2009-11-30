@@ -177,7 +177,7 @@ pull: update, force, rev, ssh, remotecmd
 push: force, rev, ssh, remotecmd
 remove: after, force, include, exclude
 serve: accesslog, daemon, daemon-pipefds, errorlog, port, address, prefix, name, webdir-conf, pid-file, stdio, templates, style, ipv6, certificate
-status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, include, exclude
+status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, change, include, exclude
 summary: remote
 update: clean, check, date, rev
 addremove: similarity, include, exclude, dry-run

@@ -91,4 +91,27 @@ assert "-qu" "-u"        0
 assert "-q" "-u"         1
 assert "-m" "-a"         1
 assert "-r" "-d"         1
+cd ..
 
+hg init repo4
+cd repo4
+touch modified removed deleted
+hg ci -q -A -m 'initial checkin' -d "1000000 0"
+touch added unknown
+hg add added
+hg remove removed
+rm deleted
+echo x > modified
+hg copy modified copied
+hg ci -m 'test checkin' -d "1000001 0"
+rm *
+touch unrelated
+hg ci -q -A -m 'unrelated checkin' -d "1000002 0"
+echo "hg status --change 1:"
+hg status --change 1
+echo "hg status --change 1 unrelated:"
+hg status --change 1 unrelated
+echo "hg status -C --change 1 added modified copied removed deleted:"
+hg status -C --change 1 added modified copied removed deleted
+echo "hg status -A --change 1"
+hg status -A --change 1
