@@ -592,9 +592,9 @@ def clone(ui, source, dest=None, **opts):
 
     See 'hg help urls' for valid source format details.
 
-    It is possible to specify an ssh:// URL as the destination, but no
+    It is possible to specify an ``ssh://`` URL as the destination, but no
     .hg/hgrc and working directory will be created on the remote side.
-    Please see 'hg help urls' for important details about ssh:// URLs.
+    Please see 'hg help urls' for important details about ``ssh://`` URLs.
 
     If the -U/--noupdate option is specified, the new clone will contain
     only a repository (.hg) and no working copy (the working copy parent
@@ -1939,7 +1939,7 @@ def init(ui, dest=".", **opts):
 
     If no directory is given, the current directory is used.
 
-    It is possible to specify an ssh:// URL as the destination.
+    It is possible to specify an ``ssh://`` URL as the destination.
     See 'hg help urls' for more information.
     """
     hg.repository(cmdutil.remoteui(ui, opts), dest, create=1)
@@ -2337,7 +2337,7 @@ def push(ui, repo, dest=None, **opts):
     If -r/--rev is used, the named revision and all its ancestors will
     be pushed to the remote repository.
 
-    Please see 'hg help urls' for important details about ssh://
+    Please see 'hg help urls' for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
     """
     dest, revs, checkout = hg.parseurl(
