@@ -35,8 +35,8 @@ For convenience, the extension adds these schemes by default::
   bb+ssh = ssh://hg@bitbucket.org/
   gcode = https://{1}.googlecode.com/hg/
 
-You can override the predefined scheme by defining new schemes with
-the same name.
+You can override a predefined scheme by defining a new scheme with the
+same name.
 """
 
 import re
