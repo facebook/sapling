@@ -48,6 +48,8 @@ sink_converters = [
 
 def convertsource(ui, path, type, rev):
     exceptions = []
+    if type and type not in [s[0] for s in source_converters]:
+        raise util.Abort(_('%s: invalid source repository type') % type)
     for name, source, sortmode in source_converters:
         try:
             if not type or name == type:
@@ -60,6 +62,8 @@ def convertsource(ui, path, type, rev):
     raise util.Abort(_('%s: missing or unsupported repository') % path)
 
 def convertsink(ui, path, type):
+    if type and type not in [s[0] for s in sink_converters]:
+        raise util.Abort(_('%s: invalid destination repository type') % type)
     for name, sink in sink_converters:
         try:
             if not type or name == type:
