@@ -8,6 +8,8 @@ INSTALL=install -c -m 644
 PYTHON=python
 RST2HTML=$(shell which rst2html 2> /dev/null || which rst2html.py)
 
+export LC_ALL=C
+
 all: man html
 
 man: $(MAN)
