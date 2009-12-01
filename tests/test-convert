@@ -50,3 +50,10 @@ mkdir emptydir
 # override $PATH to ensure p4 not visible; use $PYTHON in case we're
 # running from a devel copy, not a temp installation
 PATH=$BINDIR $PYTHON $BINDIR/hg convert emptydir 2>&1 | sed 's,file://.*/emptydir,.../emptydir,g'
+
+echo % convert with imaginary source type
+hg convert --source-type foo a a-foo
+echo % convert with imaginary sink type
+hg convert --dest-type foo a a-foo
+
+true

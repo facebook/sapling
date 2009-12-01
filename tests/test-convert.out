@@ -259,3 +259,8 @@ emptydir does not look like a GNU Arch repo
 emptydir does not look like a Bazaar repo
 cannot find required "p4" tool
 abort: emptydir: missing or unsupported repository
+% convert with imaginary source type
+initializing destination a-foo repository
+abort: foo: invalid source repository type
+% convert with imaginary sink type
+abort: foo: invalid destination repository type
