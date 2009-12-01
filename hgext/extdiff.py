@@ -253,7 +253,8 @@ def uisetup(ui):
         def save(cmd, path, diffopts):
             '''use closure to save diff command to use'''
             def mydiff(ui, repo, *pats, **opts):
-                return dodiff(ui, repo, path, diffopts, pats, opts)
+                return dodiff(ui, repo, path, diffopts + opts['option'],
+                              pats, opts)
             doc = _('''\
 use %(path)s to diff repository (or selected files)
 

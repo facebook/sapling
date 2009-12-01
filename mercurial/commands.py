@@ -470,9 +470,9 @@ def branches(ui, repo, active=False, closed=False):
                 elif hn not in repo.branchheads(tag, closed=False):
                     if not closed:
                         continue
-                    notice = ' (closed)'
+                    notice = _(' (closed)')
                 else:
-                    notice = ' (inactive)'
+                    notice = _(' (inactive)')
                 rev = str(node).rjust(31 - encoding.colwidth(encodedtag))
                 data = encodedtag, rev, hexfunc(hn), notice
                 ui.write("%s %s:%s%s\n" % data)
@@ -592,9 +592,9 @@ def clone(ui, source, dest=None, **opts):
 
     See 'hg help urls' for valid source format details.
 
-    It is possible to specify an ssh:// URL as the destination, but no
+    It is possible to specify an ``ssh://`` URL as the destination, but no
     .hg/hgrc and working directory will be created on the remote side.
-    Please see 'hg help urls' for important details about ssh:// URLs.
+    Please see 'hg help urls' for important details about ``ssh://`` URLs.
 
     If the -U/--noupdate option is specified, the new clone will contain
     only a repository (.hg) and no working copy (the working copy parent
@@ -1939,7 +1939,7 @@ def init(ui, dest=".", **opts):
 
     If no directory is given, the current directory is used.
 
-    It is possible to specify an ssh:// URL as the destination.
+    It is possible to specify an ``ssh://`` URL as the destination.
     See 'hg help urls' for more information.
     """
     hg.repository(cmdutil.remoteui(ui, opts), dest, create=1)
@@ -2337,7 +2337,7 @@ def push(ui, repo, dest=None, **opts):
     If -r/--rev is used, the named revision and all its ancestors will
     be pushed to the remote repository.
 
-    Please see 'hg help urls' for important details about ssh://
+    Please see 'hg help urls' for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
     """
     dest, revs, checkout = hg.parseurl(
@@ -3346,7 +3346,7 @@ table = {
           ('s', 'skip', False, _('skip testing changeset')),
           ('c', 'command', '', _('use command to check changeset state')),
           ('U', 'noupdate', False, _('do not update to target'))],
-         _("[-gbsr] [-c CMD] [REV]")),
+         _("[-gbsr] [-U] [-c CMD] [REV]")),
     "branch":
         (branch,
          [('f', 'force', None,
@@ -3359,7 +3359,7 @@ table = {
            _('show only branches that have unmerged heads')),
           ('c', 'closed', False,
            _('show normal and closed branches'))],
-         _('[-a]')),
+         _('[-ac]')),
     "bundle":
         (bundle,
          [('f', 'force', None,
@@ -3371,7 +3371,7 @@ table = {
           ('a', 'all', None, _('bundle all changesets in the repository')),
           ('t', 'type', 'bzip2', _('bundle compression type to use')),
          ] + remoteopts,
-         _('[-f] [-a] [-r REV]... [--base REV]... FILE [DEST]')),
+         _('[-f] [-t TYPE] [-a] [-r REV]... [--base REV]... FILE [DEST]')),
     "cat":
         (cat,
          [('o', 'output', '', _('print output to file with formatted name')),
@@ -3481,7 +3481,7 @@ table = {
           ('c', 'closed', False,
            _('show normal and closed branch heads')),
          ] + templateopts,
-         _('[-r STARTREV] [REV]...')),
+         _('[-ac] [-r STARTREV] [REV]...')),
     "help": (help_, [], _('[TOPIC]')),
     "identify|id":
         (identify,
@@ -3558,7 +3558,7 @@ table = {
           ('r', 'rev', '', _('revision to merge')),
           ('P', 'preview', None,
            _('review revisions to merge (no merge is performed)'))],
-         _('[-f] [[-r] REV]')),
+         _('[-P] [-f] [[-r] REV]')),
     "outgoing|out":
         (outgoing,
          [('f', 'force', None,
@@ -3678,14 +3678,14 @@ table = {
           # -l/--local is already there, commitopts cannot be used
           ('m', 'message', '', _('use <text> as commit message')),
          ] + commitopts2,
-         _('[-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...')),
+         _('[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...')),
     "tags": (tags, [], ''),
     "tip":
         (tip,
          [('p', 'patch', None, _('show patch')),
           ('g', 'git', None, _('use git extended diff format')),
          ] + templateopts,
-         _('[-p]')),
+         _('[-p] [-g]')),
     "unbundle":
         (unbundle,
          [('u', 'update', None,

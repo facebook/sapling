@@ -140,4 +140,21 @@ hg -R i ci -Am c
 hg -R i push h
 echo
 
+echo % check prepush logic with merged branches
+hg init j
+hg -R j branch a
+echo init > j/foo
+hg -R j ci -Am init
+hg clone j k
+echo a1 > j/foo
+hg -R j ci -m a1
+hg -R k branch b
+echo b > k/foo
+hg -R k ci -m b
+hg -R k up 0
+hg -R k merge b
+hg -R k ci -m merge
+hg -R k push -r a j
+echo
+
 exit 0

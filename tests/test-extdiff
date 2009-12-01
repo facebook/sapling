@@ -65,3 +65,9 @@ chmod +x differ.py
 hg extdiff -p `pwd`/differ.py # will change to /tmp/extdiff.TMP and populate directories a.TMP and a and start tool
 echo '% diff in working directory, after'
 hg diff --git
+
+echo
+echo % test extdiff with --option
+hg extdiff -p echo -o this -c 1
+hg falabala -o this -c 1
+echo

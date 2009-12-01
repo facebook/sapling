@@ -1505,7 +1505,7 @@ class localrepository(repo.repository):
                 if not rheads: # new branch requires --force
                     self.ui.warn(_("abort: push creates new"
                                    " remote branch '%s'!\n") %
-                                   self[updatelb[0]].branch())
+                                   self[lheads[0]].branch())
                 else:
                     self.ui.warn(_("abort: push creates new remote heads!\n"))
 
@@ -1548,11 +1548,7 @@ class localrepository(repo.repository):
                         else:
                             rheads = []
                         lheads = localhds[lh]
-                        updatelb = [upd for upd in update
-                                    if self[upd].branch() == lh]
-                        if not updatelb:
-                            continue
-                        if not checkbranch(lheads, rheads, updatelb):
+                        if not checkbranch(lheads, rheads, update):
                             return None, 0
                 else:
                     if not checkbranch(heads, remote_heads, update):

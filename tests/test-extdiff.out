@@ -68,3 +68,8 @@ new mode 100755
 -b
 +changed
 +edited
+
+% test extdiff with --option
+this a.8a5febb7f867/a a.34eed99112ab/a
+diffing this a.8a5febb7f867/a a.34eed99112ab/a
+
