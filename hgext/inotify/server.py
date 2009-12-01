@@ -482,5 +482,8 @@ def start(ui, dirstate, root, opts):
 
     service = service()
     logfile = ui.config('inotify', 'log')
+
+    appendpid = ui.configbool('inotify', 'appendpid', False)
+
     cmdutil.service(opts, initfn=service.init, runfn=service.run,
-                    logfile=logfile, runargs=runargs)
+                    logfile=logfile, runargs=runargs, appendpid=appendpid)

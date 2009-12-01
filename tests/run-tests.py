@@ -476,6 +476,7 @@ def runone(options, test, skips, fails):
         hgrc.write('inotify=\n')
         hgrc.write('[inotify]\n')
         hgrc.write('pidfile=%s\n' % DAEMON_PIDS)
+        hgrc.write('appendpid=True\n')
     hgrc.close()
 
     err = os.path.join(TESTDIR, test+".err")
