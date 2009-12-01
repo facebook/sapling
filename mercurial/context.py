@@ -433,11 +433,10 @@ class filectx(object):
         # sort by revision (per file) which is a topological order
         visit = []
         for f in files:
-            fn = [(n.rev(), n) for n in needed if n._path == f]
-            visit.extend(fn)
+            visit.extend(n for n in needed if n._path == f)
 
         hist = {}
-        for r, f in sorted(visit):
+        for f in sorted(visit, key=lambda x: x.rev()):
             curr = decorate(f.data(), f)
             for p in parents(f):
                 if p != nullid:
