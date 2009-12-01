@@ -1,0 +1,22 @@
+#!/bin/sh
+
+cat <<EOF >> $HGRCPATH
+[extensions]
+schemes=
+
+[schemes]
+l = http://localhost:$HGPORT/
+EOF
+
+hg init test
+cd test
+echo a > a
+hg ci -Am initial
+
+hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+cat hg.pid >> $DAEMON_PIDS
+
+hg incoming l://
+
+echo % errors
+cat errors.log
