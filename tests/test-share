@@ -1,0 +1,42 @@
+#!/bin/sh
+
+echo "[extensions]"      >> $HGRCPATH
+echo "share = "          >> $HGRCPATH
+
+echo % prepare repo1
+hg init repo1
+cd repo1
+echo a > a
+hg commit -A -m'init'
+
+echo % share it
+cd ..
+hg share repo1 repo2
+
+echo % contents of repo2/.hg
+cd repo2
+[ -d .hg/store ] \
+  && echo "fail: .hg/store should not exist" \
+  || echo "pass: .hg/store does not exist"
+cat .hg/sharedpath | sed "s:$HGTMP:*HGTMP*:"; echo
+
+echo % commit in shared clone
+echo a >> a
+hg commit -m'change in shared clone'
+
+echo % check original
+cd ../repo1
+hg log
+hg update
+cat a             # should be two lines of "a"
+
+echo % commit in original
+echo b > b
+hg commit -A -m'another file'
+
+echo % check in shared clone
+cd ../repo2
+hg log
+hg update
+cat b             # should exist with one "b"
+
