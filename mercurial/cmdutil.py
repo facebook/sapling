@@ -558,7 +558,7 @@ def copy(ui, repo, pats, opts, rename=False):
     return errors
 
 def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
-    runargs=None):
+    runargs=None, appendpid=False):
     '''Run a command as a service.'''
 
     if opts['daemon'] and not opts['daemon_pipefds']:
@@ -588,7 +588,8 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         initfn()
 
     if opts['pid_file']:
-        fp = open(opts['pid_file'], 'w')
+        mode = appendpid and 'a' or 'w'
+        fp = open(opts['pid_file'], mode)
         fp.write(str(os.getpid()) + '\n')
         fp.close()
 
