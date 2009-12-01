@@ -439,12 +439,11 @@ class filectx(object):
         for f in sorted(visit, key=lambda x: x.rev()):
             curr = decorate(f.data(), f)
             for p in parents(f):
-                if p != nullid:
-                    curr = pair(hist[p], curr)
-                    # trim the history of unneeded revs
-                    needed[p] -= 1
-                    if not needed[p]:
-                        del hist[p]
+                curr = pair(hist[p], curr)
+                # trim the history of unneeded revs
+                needed[p] -= 1
+                if not needed[p]:
+                    del hist[p]
             hist[f] = curr
 
         return zip(hist[f][0], hist[f][1].splitlines(True))
