@@ -255,7 +255,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 raise
 
             for f in src_repo.store.copylist():
-                src = os.path.join(src_repo.path, f)
+                src = os.path.join(src_repo.sharedpath, f)
                 dst = os.path.join(dest_path, f)
                 dstbase = os.path.dirname(dst)
                 if dstbase and not os.path.exists(dstbase):
