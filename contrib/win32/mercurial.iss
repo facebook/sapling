@@ -62,9 +62,9 @@ Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.html; DestDir: {app}\Docs
 Source: doc\style.css; DestDir: {app}\Docs
-Source: help\*.txt; DestDir: {app}\help
+Source: mercurial\help\*.txt; DestDir: {app}\help
 Source: locale\*.*; DestDir: {app}\locale; Flags: recursesubdirs createallsubdirs
-Source: templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
+Source: mercurial\templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
 Source: COPYING; DestDir: {app}; DestName: Copying.txt
 
