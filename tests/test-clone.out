@@ -29,7 +29,7 @@ updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 a
 
-% check that we drop the file:// from the path before
+% check that we drop the file: from the path before
 % writing the .hgrc
 updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved

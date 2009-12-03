@@ -44,10 +44,10 @@ cd a
 hg cat a
 
 echo
-echo % "check that we drop the file:// from the path before"
+echo % "check that we drop the file: from the path before"
 echo % "writing the .hgrc"
 cd ../..
-hg clone file://a e
+hg clone file:a e
 grep 'file:' e/.hg/hgrc
 
 echo

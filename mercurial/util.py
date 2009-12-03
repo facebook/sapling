@@ -1197,7 +1197,19 @@ def drop_scheme(scheme, path):
     if path.startswith(sc):
         path = path[len(sc):]
         if path.startswith('//'):
-            path = path[2:]
+            if scheme == 'file':
+                i = path.find('/', 2)
+                if i == -1:
+                    return ''
+                # On Windows, absolute paths are rooted at the current drive
+                # root. On POSIX they are rooted at the file system root.
+                if os.name == 'nt':
+                    droot = os.path.splitdrive(os.getcwd())[0] + '/'
+                    path = os.path.join(droot, path[i+1:])
+                else:
+                    path = path[i:]
+            else:
+                path = path[2:]
     return path
 
 def uirepr(s):
