@@ -44,7 +44,7 @@ if os.name == 'nt':
 
 # simplified version of distutils.ccompiler.CCompiler.has_function
 # that actually removes its temporary files.
-def has_function(cc, funcname):
+def hasfunction(cc, funcname):
     tmpdir = tempfile.mkdtemp(prefix='hg-install-')
     devnull = oldstderr = None
     try:
@@ -165,7 +165,7 @@ try:
 except ImportError:
     version = 'unknown'
 
-class build_mo(build):
+class hgbuildmo(build):
 
     description = "build translations (.mo files)"
 
@@ -195,7 +195,7 @@ class build_mo(build):
             self.mkpath(join('mercurial', modir))
             self.make_file([pofile], mobuildfile, spawn, (cmd,))
 
-# Insert build_mo first so that files in mercurial/locale/ are found
+# Insert hgbuildmo first so that files in mercurial/locale/ are found
 # when build_py is run next.
 build.sub_commands.insert(0, ('build_mo', None))
 
@@ -203,7 +203,7 @@ Distribution.pure = 0
 Distribution.global_options.append(('pure', None, "use pure (slow) Python "
                                     "code instead of C extensions"))
 
-class hg_build_py(build_py):
+class hgbuildpy(build_py):
 
     def finalize_options(self):
         build_py.finalize_options(self)
@@ -225,10 +225,10 @@ class hg_build_py(build_py):
             else:
                 yield module
 
-cmdclass = {'build_mo': build_mo,
-            'build_py': hg_build_py}
+cmdclass = {'build_mo': hgbuildmo,
+            'build_py': hgbuildpy}
 
-ext_modules=[
+extmodules = [
     Extension('mercurial.base85', ['mercurial/base85.c']),
     Extension('mercurial.bdiff', ['mercurial/bdiff.c']),
     Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c']),
@@ -244,8 +244,8 @@ if sys.platform == 'linux2' and os.uname()[2] > '2.6':
     # The inotify extension is only usable with Linux 2.6 kernels.
     # You also need a reasonably recent C library.
     cc = new_compiler()
-    if has_function(cc, 'inotify_add_watch'):
-        ext_modules.append(Extension('hgext.inotify.linux._inotify',
+    if hasfunction(cc, 'inotify_add_watch'):
+        extmodules.append(Extension('hgext.inotify.linux._inotify',
                                      ['hgext/inotify/linux/_inotify.c']))
         packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
 
@@ -274,7 +274,7 @@ setup(name='mercurial',
       license='GNU GPL',
       scripts=scripts,
       packages=packages,
-      ext_modules=ext_modules,
+      ext_modules=extmodules,
       data_files=datafiles,
       package_data=packagedata,
       cmdclass=cmdclass,
