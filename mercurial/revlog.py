@@ -1118,10 +1118,19 @@ class revlog(object):
     def ancestor(self, a, b):
         """calculate the least common ancestor of nodes a and b"""
 
+        # fast path, check if it is a descendant
+        a, b = self.rev(a), self.rev(b)
+        start, end = sorted((a, b))
+        for i in self.descendants(start):
+            if i == end:
+                return self.node(start)
+            elif i > end:
+                break
+
         def parents(rev):
             return [p for p in self.parentrevs(rev) if p != nullrev]
 
-        c = ancestor.ancestor(self.rev(a), self.rev(b), parents)
+        c = ancestor.ancestor(a, b, parents)
         if c is None:
             return nullid
 
