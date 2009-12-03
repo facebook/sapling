@@ -8382,7 +8382,7 @@ msgid "%.0f bytes"
 msgstr "%.0f bytes"
 
 msgid "cannot verify bundle or remote repos"
-msgstr ""
+msgstr "δεν είναι δυνατός ο έλεγχος σε bundles ή απομακρυσμένα αποθετήρια"
 
 msgid "interrupted"
 msgstr "διακόπηκε"
@@ -8397,7 +8397,7 @@ msgstr "το μέγεθος των δεδομένων διαφέρει κατά 
 
 #, python-format
 msgid "index contains %d extra bytes"
-msgstr ""
+msgstr "το ευρετήριο περιέχει %d έξτρα bytes"
 
 #, python-format
 msgid "warning: `%s' uses revlog format 1"
@@ -8421,15 +8421,15 @@ msgstr " (αναμενόταν %s)"
 
 #, python-format
 msgid "unknown parent 1 %s of %s"
-msgstr ""
+msgstr "άγνωστη γονική αλλαγή 1 %s της %s"
 
 #, python-format
 msgid "unknown parent 2 %s of %s"
-msgstr ""
+msgstr "άγνωστη γονική αλλαγή 2 %s της %s"
 
 #, python-format
 msgid "checking parents of %s"
-msgstr ""
+msgstr "έλεγχος γονικών αλλαγών της %s"
 
 #, python-format
 msgid "duplicate revision %d (%d)"
@@ -8505,6 +8505,7 @@ msgstr "εξαγωγή του %s"
 #, python-format
 msgid "warning: copy source of '%s' not in parents of %s"
 msgstr ""
+"προειδοποίηση: η πηγή '%s' της αντιγραφής δεν υπάρχει στις γονικές της %s"
 
 #, python-format
 msgid "empty or missing copy source revlog %s:%s"
@@ -8513,8 +8514,8 @@ msgstr "κενό ή μη έγκυρο revlog προέλευσης %s:%s"
 #, python-format
 msgid "warning: %s@%s: copy source revision is nullid %s:%s\n"
 msgstr ""
-"προειδοποίηση: %s@%s: η έκδοση προέλευσης της αντιγραφής αρχείου "
-"είναι η κενή αλλαγή %s:%s\n"
+"προειδοποίηση: %s@%s: η έκδοση προέλευσης της αντιγραφής αρχείου είναι η "
+"κενή αλλαγή %s:%s\n"
 
 #, python-format
 msgid "checking rename of %s"
@@ -8522,7 +8523,7 @@ msgstr "έλεγχος μετονομασίας του %s"
 
 #, python-format
 msgid "%s in manifests not found"
-msgstr ""
+msgstr "%s δε βρέθηκε στα manifests"
 
 #, python-format
 msgid "warning: orphan revlog '%s'"
