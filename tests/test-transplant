@@ -136,6 +136,15 @@ hg transplant -s ../t -b tip -a --filter ./test-filter |\
 hg log --template '{rev} {parents} {desc}\n'
 cd ..
 
+echo '% test filter with failed patch'
+cd filter
+hg up 0
+echo foo > b1
+hg ci -d '0 0' -Am foo
+hg transplant 1 --filter ./test-filter |\
+    sed 's/filtering.*/filtering/g'
+cd ..
+
 echo '% test with a win32ext like setup (differing EOLs)'
 hg init twin1
 cd twin1
