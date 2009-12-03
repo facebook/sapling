@@ -227,8 +227,6 @@ class transplanter(object):
                 finally:
                     files = patch.updatedir(self.ui, repo, files)
             except Exception, inst:
-                if filter:
-                    os.unlink(patchfile)
                 seriespath = os.path.join(self.path, 'series')
                 if os.path.exists(seriespath):
                     os.unlink(seriespath)

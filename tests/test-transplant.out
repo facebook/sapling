@@ -159,6 +159,17 @@ a53251cdf717 transplanted to 14f8512272b5
 2  b2
 1  b1
 0  r2
+% test filter with failed patch
+0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+adding b1
+adding test-filter
+created new head
+file b1 already exists
+1 out of 1 hunks FAILED -- saving rejects to file b1.rej
+abort: Fix up the merge and run hg transplant --continue
+filtering
+applying 348b36d0b6a5
+patch failed to apply
 % test with a win32ext like setup (differing EOLs)
 adding a
 adding b

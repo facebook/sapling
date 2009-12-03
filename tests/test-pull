@@ -24,3 +24,8 @@ cd ..
 hg init empty
 cd empty
 hg pull -u ../test
+
+echo % test file: uri handling
+hg pull -q file://../test-doesnt-exist
+hg pull -q file:../test
+hg pull -q file://foobar`pwd`/../test
