@@ -3154,8 +3154,8 @@ proc getblobdiffline {bdf ids} {
 	set pad [string range "----------------------------------------" 1 $l]
 	$ctext insert end "$pad $header $pad\n" filesep
 	set diffinhdr 1
-    } elseif {[regexp {^(---|\+\+\+)} $line]} {
-	set diffinhdr 0
+    } elseif {[regexp {^(---|\+\+\+) } $line] && $diffinhdr} {
+	set diffinhdr 1
     } elseif {[regexp {^@@ -([0-9]+),([0-9]+) \+([0-9]+),([0-9]+) @@(.*)} \
 		   $line match f1l f1c f2l f2c rest]} {
 	if {$gaudydiff} {
