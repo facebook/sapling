@@ -12,6 +12,7 @@ mylog = log
 lognull = log -r null
 shortlog = log --template '{rev} {node|short} | {date|isodate}\n'
 dln = lognull --debug
+nousage = rollback
 
 [defaults]
 mylog = -q
@@ -35,6 +36,10 @@ echo '% no definition'
 hg nodef
 
 cd alias
+
+echo '% no usage'
+hg nousage
+
 echo foo > foo
 hg ci -Amfoo
 

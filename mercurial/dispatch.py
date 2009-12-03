@@ -196,7 +196,12 @@ class cmdalias(object):
         cmd = args.pop(0)
 
         try:
-            self.fn, self.opts, self.help = cmdutil.findcmd(cmd, cmdtable, False)[1]
+            tableentry = cmdutil.findcmd(cmd, cmdtable, False)[1]
+            if len(tableentry) > 2:
+                self.fn, self.opts, self.help = tableentry
+            else:
+                self.fn, self.opts = tableentry
+
             self.args = aliasargs(self.fn) + args
             if cmd not in commands.norepo.split(' '):
                 self.norepo = False

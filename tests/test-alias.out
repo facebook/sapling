@@ -7,6 +7,8 @@ alias 'ambiguous' resolves to ambiguous command 's'
 alias 'recursive' resolves to unknown command 'recursive'
 % no definition
 no definition for alias 'nodefinition'
+% no usage
+no rollback information available
 adding foo
 % with opts
 C foo
