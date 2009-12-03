@@ -8137,7 +8137,7 @@ msgid "no suitable response from remote hg"
 msgstr ""
 
 msgid "remote: "
-msgstr "απομακρυσμένο:"
+msgstr "απομακρυσμένο: "
 
 #, python-format
 msgid "push refused: %s"
