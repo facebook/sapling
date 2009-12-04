@@ -228,7 +228,7 @@ class Translator(nodes.NodeVisitor):
 
                 'problematic' : ('\n.nf\n', '\n.fi\n'),
                     }
-        # NOTE dont specify the newline before a dot-command, but ensure
+        # NOTE don't specify the newline before a dot-command, but ensure
         # it is there.
 
     def comment_begin(self, text):
