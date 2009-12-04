@@ -1707,18 +1707,8 @@ class localrepository(repo.repository):
         # also assume the recipient will have all the parents.  This function
         # prunes them from the set of missing nodes.
         def prune_parents(revlog, hasset, msngset):
-            haslst = list(hasset)
-            haslst.sort(key=revlog.rev)
-            for node in haslst:
-                parentlst = [p for p in revlog.parents(node) if p != nullid]
-                while parentlst:
-                    n = parentlst.pop()
-                    if n not in hasset:
-                        hasset.add(n)
-                        p = [p for p in revlog.parents(n) if p != nullid]
-                        parentlst.extend(p)
-            for n in hasset:
-                msngset.pop(n, None)
+            for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
+                msngset.pop(revlog.node(r), None)
 
         # This is a function generating function used to set up an environment
         # for the inner function to execute in.
