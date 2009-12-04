@@ -20,6 +20,7 @@ parent revision.  This is *not* safe to run on a changelog.
 import sys, os, tempfile
 import optparse
 from mercurial import ui as ui_, hg, revlog, transaction, node, util
+from mercurial import changegroup
 
 def toposort(rl):
     write = sys.stdout.write
@@ -73,18 +74,23 @@ def toposort(rl):
 def writerevs(r1, r2, order, tr):
     write = sys.stdout.write
     write('writing %d revs ' % len(order))
-    try:
-        count = 0
-        for rev in order:
-            n = r1.node(rev)
-            p1, p2 = r1.parents(n)
-            l = r1.linkrev(rev)
-            t = r1.revision(n)
-            n2 = r2.addrevision(t, tr, l, p1, p2)
 
-            if count % 1000 == 0:
-                write('.')
-            count += 1
+    count = [0]
+    def progress(*args):
+        if count[0] % 1000 == 0:
+            write('.')
+        count[0] += 1
+
+    order = [r1.node(r) for r in order]
+
+    # this is a bit ugly, but it works
+    lookup = lambda x: "%020d" % r1.linkrev(r1.rev(x))
+    unlookup = lambda x: int(x, 10)
+
+    try:
+        group = util.chunkbuffer(r1.group(order, lookup, progress))
+        chunkiter = changegroup.chunkiter(group)
+        r2.addgroup(chunkiter, unlookup, tr)
     finally:
         write('\n')
 
