@@ -168,7 +168,7 @@ annotate: rev, follow, text, user, date, number, changeset, line-number, include
 clone: noupdate, updaterev, rev, pull, uncompressed, ssh, remotecmd
 commit: addremove, close-branch, include, exclude, message, logfile, date, user
 diff: rev, change, text, git, nodates, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, unified, stat, include, exclude
-export: output, switch-parent, text, git, nodates
+export: output, switch-parent, rev, text, git, nodates
 forget: include, exclude
 init: ssh, remotecmd
 log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, prune, patch, git, limit, no-merges, style, template, include, exclude
