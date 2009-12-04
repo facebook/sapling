@@ -763,6 +763,7 @@ class Translator(nodes.NodeVisitor):
     def visit_line_block(self, node):
         self._line_block += 1
         if self._line_block == 1:
+            self.body.append('.sp\n')
             self.body.append('.nf\n')
         else:
             self.body.append('.in +2\n')
