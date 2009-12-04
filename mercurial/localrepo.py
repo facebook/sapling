@@ -1754,7 +1754,6 @@ class localrepository(repo.repository):
         # A function generating function that sets up the initial environment
         # the inner function.
         def filenode_collector(changedfiles):
-            next_rev = [0]
             # This gathers information from each manifestnode included in the
             # changegroup about which filenodes the manifest node references
             # so we can include those in the changegroup too.
@@ -1764,8 +1763,8 @@ class localrepository(repo.repository):
             # the first manifest that references it belongs to.
             def collect_msng_filenodes(mnfstnode):
                 r = mnfst.rev(mnfstnode)
-                if r == next_rev[0]:
-                    # If the last rev we looked at was the one just previous,
+                if r - 1 in mnfst.parentrevs(r):
+                    # If the previous rev is one of the parents,
                     # we only need to see a diff.
                     deltamf = mnfst.readdelta(mnfstnode)
                     # For each line in the delta
@@ -1794,8 +1793,6 @@ class localrepository(repo.repository):
                             clnode = msng_mnfst_set[mnfstnode]
                             ndset = msng_filenode_set.setdefault(f, {})
                             ndset.setdefault(fnode, clnode)
-                # Remember the revision we hope to see next.
-                next_rev[0] = r + 1
             return collect_msng_filenodes
 
         # We have a list of filenodes we think we need for a file, lets remove
