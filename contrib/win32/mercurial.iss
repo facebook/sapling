@@ -45,7 +45,8 @@ PrivilegesRequired=none
 [Files]
 Source: contrib\mercurial.el; DestDir: {app}/Contrib
 Source: contrib\vim\*.*; DestDir: {app}/Contrib/Vim
-Source: contrib\zsh_completion; DestDir: {app}/Contrib
+Source: contrib\zsh\*.*; DestDir: {app}\Contrib\zsh
+Source: contrib\bash\*.*; DestDir: {app}\Contrib\bash
 Source: contrib\hgk; DestDir: {app}/Contrib; DestName: hgk.tcl
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: contrib\mergetools.hgrc; DestDir: {tmp};
