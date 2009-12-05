@@ -316,8 +316,8 @@ def installhg(options):
         nohome = ''
     cmd = ('%s setup.py %s clean --all'
            ' install --force --prefix="%s" --install-lib="%s"'
-           ' --install-scripts="%s" %s >%s 2>&1'
-           % (sys.executable, pure, INST, PYTHONDIR, BINDIR, nohome,
+           ' --install-scripts="%s" --install-data="%s" %s >%s 2>&1'
+           % (sys.executable, pure, INST, PYTHONDIR, BINDIR, INST, nohome,
               installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
