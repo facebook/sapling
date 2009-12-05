@@ -104,9 +104,11 @@ def runcmd(cmd, env):
     # If root is executing setup.py, but the repository is owned by
     # another user (as in "sudo python setup.py install") we will get
     # trust warnings since the .hg/hgrc file is untrusted. That is
-    # fine, we don't want to load it anyway.
+    # fine, we don't want to load it anyway.  Python may warn about
+    # a missing __init__.py in mercurial/locale, we also ignore that.
     err = [e for e in err.splitlines()
-           if not e.startswith('Not trusting file')]
+           if not e.startswith('Not trusting file') \
+              and not e.startswith('warning: Not importing')]
     if err:
         return ''
     return out
