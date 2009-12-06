@@ -230,6 +230,7 @@ def patchbomb(ui, repo, *revs, **opts):
     def outgoing(dest, revs):
         '''Return the revisions present locally but not in dest'''
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
+        dest, revs, checkout = hg.parseurl(dest, revs)
         revs = [repo.lookup(rev) for rev in revs]
         other = hg.repository(cmdutil.remoteui(repo, opts), dest)
         ui.status(_('comparing with %s\n') % dest)
