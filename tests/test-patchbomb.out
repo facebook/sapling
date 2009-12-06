@@ -1500,3 +1500,38 @@ diff -r 000000000000 -r 8580ff50825a a
 +a
 
 
+% test outgoing and dest#branch URIs
+0 files updated, 0 files merged, 6 files removed, 0 files unresolved
+marked working directory as branch test
+created new head
+comparing with ../t
+searching for changes
+This patch series consists of 1 patches.
+
+
+Displaying [PATCH] test ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH] test
+X-Mercurial-Node: 2f9fa9b998c5fe3ac2bd9a2b14bfcbeecbc7c268
+Message-Id: <2f9fa9b998c5fe3ac2bd.315532860@
+User-Agent: Mercurial-patchbomb
+Date: Tue, 01 Jan 1980 00:01:00 +0000
+From: test
+To: foo
+
+# HG changeset patch
+# User test
+# Date 4 0
+# Branch test
+# Node ID 2f9fa9b998c5fe3ac2bd9a2b14bfcbeecbc7c268
+# Parent  97d72e5f12c7e84f85064aa72e5a297142c36ed9
+d
+
+diff -r 97d72e5f12c7 -r 2f9fa9b998c5 d
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/d	Thu Jan 01 00:00:04 1970 +0000
+@@ -0,0 +1,1 @@
++d
+

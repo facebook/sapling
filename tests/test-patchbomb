@@ -176,3 +176,11 @@ export HGENCODING
 hg email --date '1980-1-1 0:1' -m tmp.mbox -f quux -t "bar@${UUML}nicode.com" \
   -s test -r 0
 cat tmp.mbox | fixheaders
+
+echo "% test outgoing and dest#branch URIs"
+hg up 1
+hg branch test
+echo d > d
+hg add d
+hg ci -md -d '4 0'
+hg email --date '1980-1-1 0:1' -n -t foo -s test -o ../t#test | fixheaders
