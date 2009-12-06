@@ -25,15 +25,19 @@ hg myinit alias
 
 echo '% unknown'
 hg unknown
+hg help unknown
 
 echo '% ambiguous'
 hg ambiguous
+hg help ambiguous
 
 echo '% recursive'
 hg recursive
+hg help recursive
 
 echo '% no definition'
 hg nodef
+hg help nodef
 
 cd alias
 

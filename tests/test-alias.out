@@ -1,11 +1,15 @@
 % basic
 % unknown
 alias 'unknown' resolves to unknown command 'bargle'
+alias 'unknown' resolves to unknown command 'bargle'
 % ambiguous
+alias 'ambiguous' resolves to ambiguous command 's'
 alias 'ambiguous' resolves to ambiguous command 's'
 % recursive
 alias 'recursive' resolves to unknown command 'recursive'
+alias 'recursive' resolves to unknown command 'recursive'
 % no definition
+no definition for alias 'nodefinition'
 no definition for alias 'nodefinition'
 % no usage
 no rollback information available

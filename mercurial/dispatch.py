@@ -177,6 +177,7 @@ class cmdalias(object):
         self.opts = []
         self.help = ''
         self.norepo = True
+        self.badalias = False
 
         try:
             cmdutil.findcmd(self.name, cmdtable, True)
@@ -189,6 +190,7 @@ class cmdalias(object):
                 ui.warn(_("no definition for alias '%s'\n") % self.name)
                 return 1
             self.fn = fn
+            self.badalias = True
 
             return
 
@@ -217,12 +219,14 @@ class cmdalias(object):
                             % (self.name, cmd))
                 return 1
             self.fn = fn
+            self.badalias = True
         except error.AmbiguousCommand:
             def fn(ui, *args):
                 ui.warn(_("alias '%s' resolves to ambiguous command '%s'\n") \
                             % (self.name, cmd))
                 return 1
             self.fn = fn
+            self.badalias = True
 
     def __call__(self, ui, *args, **opts):
         if self.shadows:

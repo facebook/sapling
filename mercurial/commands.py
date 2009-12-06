@@ -1486,6 +1486,11 @@ def help_(ui, name=None, with_version=False):
             helplist(_('list of commands:\n\n'), select)
             return
 
+        # check if it's an invalid alias and display its error if it is
+        if getattr(entry[0], 'badalias', False):
+            entry[0](ui)
+            return
+
         # synopsis
         if len(entry) > 2:
             if entry[2].startswith('hg'):
