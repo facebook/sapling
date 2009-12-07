@@ -166,7 +166,7 @@ class bundlerepository(localrepo.localrepository):
             localrepo.localrepository.__init__(self, ui, self._tempparent)
 
         if path:
-            self._url = 'bundle:' + path + '+' + bundlename
+            self._url = 'bundle:' + util.expandpath(path) + '+' + bundlename
         else:
             self._url = 'bundle:' + bundlename
 

@@ -15,8 +15,8 @@ import verify as _verify
 import errno, os, shutil
 
 def _local(path):
-    return (os.path.isfile(util.drop_scheme('file', path)) and
-            bundlerepo or localrepo)
+    path = util.expandpath(util.drop_scheme('file', path))
+    return (os.path.isfile(path) and bundlerepo or localrepo)
 
 def addbranchrevs(lrepo, repo, branches, revs):
     if not branches:

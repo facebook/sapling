@@ -24,7 +24,7 @@ class localrepository(repo.repository):
 
     def __init__(self, baseui, path=None, create=0):
         repo.repository.__init__(self)
-        self.root = os.path.realpath(path)
+        self.root = os.path.realpath(util.expandpath(path))
         self.path = os.path.join(self.root, ".hg")
         self.origroot = path
         self.opener = util.opener(self.path)

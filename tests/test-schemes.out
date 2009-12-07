@@ -9,4 +9,8 @@ comparing with parts://localhost
 sending heads command
 searching for changes
 no changes found
+% check that paths are expanded
+comparing with z://
+searching for changes
+no changes found
 % errors
