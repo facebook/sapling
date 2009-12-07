@@ -2,7 +2,7 @@
 #
 # Copyright (c) 2008 Shun-ichi Goto <shunichi.goto@gmail.com>
 #
-# Version: 0.2
+# Version: 0.3
 # Author:  Shun-ichi Goto <shunichi.goto@gmail.com>
 #
 # This software may be used and distributed according to the terms of the
@@ -33,22 +33,29 @@ This extension is not needed for:
 Note that there are some limitations on using this extension:
 
 - You should use single encoding in one repository.
-- You should set same encoding for the repository by locale or
-  HGENCODING.
 
-Path encoding conversion are done between Unicode and
-encoding.encoding which is decided by Mercurial from current locale
-setting or HGENCODING.
+
+By default, win32mbcs uses encoding.encoding decided by mercurial.
+You can specify the encoding by config option.
+
+ ex.)
+ [win32mbcs]
+ encoding = sjis
+
+It is usefull for the users who want to commit with utf-8 log message.
+
 '''
 
 import os, sys
 from mercurial.i18n import _
 from mercurial import util, encoding
 
+_encoding = None                                # see reposetup()
+
 def decode(arg):
     if isinstance(arg, str):
-        uarg = arg.decode(encoding.encoding)
-        if arg == uarg.encode(encoding.encoding):
+        uarg = arg.decode(_encoding)
+        if arg == uarg.encode(_encoding):
             return uarg
         raise UnicodeError("Not local encoding")
     elif isinstance(arg, tuple):
@@ -62,7 +69,7 @@ def decode(arg):
 
 def encode(arg):
     if isinstance(arg, unicode):
-        return arg.encode(encoding.encoding)
+        return arg.encode(_encoding)
     elif isinstance(arg, tuple):
         return tuple(map(encode, arg))
     elif isinstance(arg, list):
@@ -93,7 +100,7 @@ def wrapper(func, args, kwds):
         return encode(func(*decode(args), **decode(kwds)))
     except UnicodeError:
         raise util.Abort(_("[win32mbcs] filename conversion failed with"
-                         " %s encoding\n") % (encoding.encoding))
+                         " %s encoding\n") % (_encoding))
 
 def wrapperforlistdir(func, args, kwds):
     # Ensure 'path' argument ends with os.sep to avoids
@@ -136,12 +143,14 @@ def reposetup(ui, repo):
     if not os.path.supports_unicode_filenames:
         ui.warn(_("[win32mbcs] cannot activate on this platform.\n"))
         return
-
+    # determine encoding for filename
+    global _encoding
+    _encoding = ui.config('win32mbcs', 'encoding', encoding.encoding)
     # fake is only for relevant environment.
-    if encoding.encoding.lower() in problematic_encodings.split():
+    if _encoding.lower() in problematic_encodings.split():
         for f in funcs.split():
             wrapname(f, wrapper)
         wrapname("mercurial.osutil.listdir", wrapperforlistdir)
         ui.debug("[win32mbcs] activated with encoding: %s\n"
-                 % encoding.encoding)
+                 % _encoding)
 
