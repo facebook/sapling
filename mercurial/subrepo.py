@@ -149,6 +149,21 @@ def subrepo(ctx, path):
         raise error.Abort('unknown subrepo source %s' % state[0])
     return hgsubrepo(ctx, path, state)
 
+# subrepo classes need to implement the following methods:
+# __init__(self, ctx, path, state)
+# dirty(self): returns true if the dirstate of the subrepo
+#   does not match current stored state
+# commit(self, text, user, date): commit the current changes
+#   to the subrepo with the given log message. Use given
+#   user and date if possible. Return the new state of the subrepo.
+# remove(self): remove the subrepo (should verify the dirstate
+#   is not dirty first)
+# get(self, state): run whatever commands are needed to put the
+#   subrepo into this state
+# merge(self, state): merge currently-saved state with the new state.
+# push(self, force): perform whatever action is analagous to 'hg push'
+#   This may be a no-op on some systems.
+
 class hgsubrepo(object):
     def __init__(self, ctx, path, state):
         self._path = path
