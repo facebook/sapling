@@ -1169,7 +1169,7 @@ def walkchangerevs(repo, match, opts, prepare):
     class followfilter(object):
         def __init__(self, onlyfirst=False):
             self.startrev = nullrev
-            self.roots = []
+            self.roots = set()
             self.onlyfirst = onlyfirst
 
         def match(self, rev):
@@ -1187,18 +1187,18 @@ def walkchangerevs(repo, match, opts, prepare):
             if rev > self.startrev:
                 # forward: all descendants
                 if not self.roots:
-                    self.roots.append(self.startrev)
+                    self.roots.add(self.startrev)
                 for parent in realparents(rev):
                     if parent in self.roots:
-                        self.roots.append(rev)
+                        self.roots.add(rev)
                         return True
             else:
                 # backwards: all parents
                 if not self.roots:
-                    self.roots.extend(realparents(self.startrev))
+                    self.roots.update(realparents(self.startrev))
                 if rev in self.roots:
                     self.roots.remove(rev)
-                    self.roots.extend(realparents(rev))
+                    self.roots.update(realparents(rev))
                     return True
 
             return False
