@@ -1,0 +1,21 @@
+# When --inotify is activated, help output and config changes:
+test-debugcomplete
+test-empty
+test-fncache
+test-globalopts
+test-help
+test-hgrc
+test-inherit-mode
+test-qrecord
+test-strict
+
+# --inotify activates de facto the inotify extension. It does not play well
+# with inotify-specific tests, which activate/desactivate inotify at will:
+test-inotify
+test-inotify-debuginotify
+test-inotify-dirty-dirstate
+test-inotify-issue1208
+test-inotify-issue1371
+test-inotify-issue1542
+test-inotify-issue1556
+test-inotify-lookup

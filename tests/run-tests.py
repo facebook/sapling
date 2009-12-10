@@ -41,7 +41,6 @@
 # completes fairly quickly, includes both shell and Python scripts, and
 # includes some scripts that run daemon processes.)
 
-from ConfigParser import ConfigParser
 import difflib
 import errno
 import optparse
@@ -134,8 +133,7 @@ def parseargs():
     parser.add_option("--inotify", action="store_true",
         help="enable inotify extension when running tests")
     parser.add_option("--blacklist", action="append",
-        help="skip tests listed in the specified section of "
-             "the blacklist file")
+        help="skip tests listed in the specified blacklist file")
 
     for option, default in defaults.items():
         defaults[option] = int(os.environ.get(*default))
@@ -202,12 +200,22 @@ def parseargs():
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
             parser.error('--py3k-warnings can only be used on Python 2.6+')
     if options.blacklist:
-        configparser = ConfigParser()
-        configparser.read("blacklist")
         blacklist = dict()
-        for section in options.blacklist:
-            for (item, value) in configparser.items(section):
-                blacklist["test-" + item] = section
+        for filename in options.blacklist:
+            try:
+                path = os.path.expanduser(os.path.expandvars(filename))
+                f = open(path, "r")
+            except IOError, err:
+                if err.errno != errno.ENOENT:
+                    raise
+                print "warning: no such blacklist file: %s" % filename
+                continue
+
+            for line in f.readlines():
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    blacklist[line] = filename
+
         options.blacklist = blacklist
 
     return (options, args)
@@ -744,9 +752,9 @@ def runtests(options, tests):
 
         for test in tests:
             if options.blacklist:
-                section = options.blacklist.get(test)
-                if section is not None:
-                    skips.append((test, "blacklisted (%s section)" % section))
+                filename = options.blacklist.get(test)
+                if filename is not None:
+                    skips.append((test, "blacklisted (%s)" % filename))
                     skipped += 1
                     continue
 
