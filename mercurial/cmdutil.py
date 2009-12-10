@@ -111,10 +111,15 @@ def remoteui(src, opts):
         v = opts.get(o) or src.config('ui', o)
         if v:
             dst.setconfig("ui", o, v)
+
     # copy bundle-specific options
     r = src.config('bundle', 'mainreporoot')
     if r:
         dst.setconfig('bundle', 'mainreporoot', r)
+
+    # copy auth section settings
+    for key, val in src.configitems('auth'):
+        dst.setconfig('auth', key, val)
 
     return dst
 
