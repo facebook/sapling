@@ -47,6 +47,8 @@ Source: contrib\mercurial.el; DestDir: {app}/Contrib
 Source: contrib\vim\*.*; DestDir: {app}/Contrib/Vim
 Source: contrib\zsh_completion; DestDir: {app}/Contrib
 Source: contrib\bash_completion; DestDir: {app}/Contrib
+Source: contrib\tcsh_completion; DestDir: {app}/Contrib
+Source: contrib\tcsh_completion_build.sh; DestDir: {app}/Contrib
 Source: contrib\hgk; DestDir: {app}/Contrib; DestName: hgk.tcl
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: contrib\mergetools.hgrc; DestDir: {tmp};
