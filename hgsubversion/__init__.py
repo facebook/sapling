@@ -168,6 +168,7 @@ cmdtable = {
           ('', 'force', False, 'force an operation to happen'),
           ('', 'username', '', 'username for authentication'),
           ('', 'password', '', 'password for authentication'),
+          ('r', 'rev', '', 'Mercurial revision'),
           ],
          svncommands._helpgen(),
          ),

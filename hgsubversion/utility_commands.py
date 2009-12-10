@@ -36,7 +36,12 @@ def info(ui, repo, hg_repo_path, **opts):
     """
     meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
-    parent = util.parentrev(ui, repo, meta, hashes)
+
+    if opts.get('rev'):
+        parent = repo[opts['rev']]
+    else:
+        parent = util.parentrev(ui, repo, meta, hashes)
+
     pn = parent.node()
     if pn not in hashes:
         ui.status('Not a child of an svn revision.\n')

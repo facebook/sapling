@@ -54,6 +54,17 @@ class UtilityTests(test_util.TestBase):
                      'rev': 6,
                      })
         self.assertEqual(actual, expected)
+        hg.update(self.repo, 'default')
+        u.pushbuffer()
+        utility_commands.info(u, self.repo, self.wc_path, rev=3)
+        actual = u.popbuffer()
+        expected = (expected_info_output %
+                    {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
+                     'repourl': self.repourl,
+                     'branch': 'branches/the_branch',
+                     'rev': 5,
+                     })
+        self.assertEqual(actual, expected)
 
     def test_parent_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')
