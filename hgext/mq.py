@@ -1096,12 +1096,6 @@ class queue(object):
                 m, a, r, d = repo.status(qp, top)[:4]
                 if d:
                     raise util.Abort(_("deletions found between repo revs"))
-                for f in m:
-                    getfile(f, mmap[f], mmap.flags(f))
-                for f in r:
-                    getfile(f, mmap[f], mmap.flags(f))
-                for f in m + r:
-                    repo.dirstate.normal(f)
                 for f in a:
                     try:
                         os.unlink(repo.wjoin(f))
@@ -1111,6 +1105,12 @@ class queue(object):
                     try: os.removedirs(os.path.dirname(repo.wjoin(f)))
                     except: pass
                     repo.dirstate.forget(f)
+                for f in m:
+                    getfile(f, mmap[f], mmap.flags(f))
+                for f in r:
+                    getfile(f, mmap[f], mmap.flags(f))
+                for f in m + r:
+                    repo.dirstate.normal(f)
                 repo.dirstate.setparents(qp, nullid)
             for patch in reversed(self.applied[start:end]):
                 self.ui.status(_("popping %s\n") % patch.name)
