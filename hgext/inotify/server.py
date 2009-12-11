@@ -281,17 +281,6 @@ class repowatcher(object):
             del self.statustrees[key].dir(root).files[fn]
             del self.tree.dir(root).files[fn]
 
-    def check_dirstate(self):
-        ds_info = self.dirstate_info()
-        if ds_info == self.ds_info:
-            return
-        self.ds_info = ds_info
-        if not self.ui.debugflag:
-            self.last_event = None
-        self.dirstate.invalidate()
-        self.handle_timeout()
-        self.scan()
-
     def update_hgignore(self):
         # An update of the ignore file can potentially change the
         # states of all unknown and ignored files.

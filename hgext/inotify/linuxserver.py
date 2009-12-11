@@ -170,6 +170,7 @@ class repowatcher(server.repowatcher, pollable):
         server.repowatcher.__init__(self, ui, dirstate, root)
 
         self.lastevent = {}
+        self.dirty = False
         try:
             self.watcher = watcher.watcher()
         except OSError, err:
@@ -214,7 +215,6 @@ class repowatcher(server.repowatcher, pollable):
     def setup(self):
         self.ui.note(_('watching directories under %r\n') % self.wprefix)
         self.add_watch(self.wprefix + '.hg', inotify.IN_DELETE)
-        self.check_dirstate()
 
     def scan(self, topdir=''):
         ds = self.dirstate._map.copy()
@@ -272,8 +272,6 @@ class repowatcher(server.repowatcher, pollable):
         if wpath == '.hgignore':
             self.update_hgignore()
         elif wpath.startswith('.hg/'):
-            if wpath == '.hg/wlock':
-                self.check_dirstate()
             return
 
         self.deletefile(wpath, self.dirstate[wpath])
@@ -343,16 +341,26 @@ class repowatcher(server.repowatcher, pollable):
             if wpath.startswith('.hg/') and evt.mask & inotify.IN_ISDIR:
                 # ignore subdirectories of .hg/ (merge, patches...)
                 continue
+            if wpath == ".hg/wlock":
+                if evt.mask & inotify.IN_DELETE:
+                    self.dirstate.invalidate()
+                    self.dirty = False
+                    self.scan()
+                elif evt.mask & inotify.IN_CREATE:
+                    self.dirty = True
+            else:
+                if self.dirty:
+                    continue
 
-            if evt.mask & inotify.IN_UNMOUNT:
-                self.process_unmount(wpath, evt)
-            elif evt.mask & (inotify.IN_MODIFY | inotify.IN_ATTRIB):
-                self.process_modify(wpath, evt)
-            elif evt.mask & (inotify.IN_DELETE | inotify.IN_DELETE_SELF |
-                             inotify.IN_MOVED_FROM):
-                self.process_delete(wpath, evt)
-            elif evt.mask & (inotify.IN_CREATE | inotify.IN_MOVED_TO):
-                self.process_create(wpath, evt)
+                if evt.mask & inotify.IN_UNMOUNT:
+                    self.process_unmount(wpath, evt)
+                elif evt.mask & (inotify.IN_MODIFY | inotify.IN_ATTRIB):
+                    self.process_modify(wpath, evt)
+                elif evt.mask & (inotify.IN_DELETE | inotify.IN_DELETE_SELF |
+                                 inotify.IN_MOVED_FROM):
+                    self.process_delete(wpath, evt)
+                elif evt.mask & (inotify.IN_CREATE | inotify.IN_MOVED_TO):
+                    self.process_create(wpath, evt)
 
         self.lastevent.clear()
 
