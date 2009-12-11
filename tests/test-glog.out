@@ -643,3 +643,56 @@ o  changeset:   27:886ed638191b
    date:        Thu Jan 01 00:00:27 1970 +0000
    summary:     (27) collapse
 
+% file + limit with revs != cset revs
+o  changeset:   34:fea3ac5810e0
+|  parent:      32:d06dffa21a31
+|  user:        test
+|  date:        Thu Jan 01 00:00:34 1970 +0000
+|  summary:     (34) head
+|
+| o  changeset:   33:68608f5145f9
+| |  parent:      18:1aa84d96232a
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:33 1970 +0000
+| |  summary:     (33) head
+| |
+% file + limit + -ra:b, (b - a) < limit
+o  changeset:   34:fea3ac5810e0
+|  parent:      32:d06dffa21a31
+|  user:        test
+|  date:        Thu Jan 01 00:00:34 1970 +0000
+|  summary:     (34) head
+|
+| o  changeset:   33:68608f5145f9
+| |  parent:      18:1aa84d96232a
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:33 1970 +0000
+| |  summary:     (33) head
+| |
+o |    changeset:   32:d06dffa21a31
+|\ \   parent:      27:886ed638191b
+| | |  parent:      31:621d83e11f67
+| | |  user:        test
+| | |  date:        Thu Jan 01 00:00:32 1970 +0000
+| | |  summary:     (32) expand
+| | |
+% file + limit + -ra:b, b < tip
+o  changeset:   34:fea3ac5810e0
+|  parent:      32:d06dffa21a31
+|  user:        test
+|  date:        Thu Jan 01 00:00:34 1970 +0000
+|  summary:     (34) head
+|
+% file + limit + -ra:b, b < tip, (b - a) < limit
+o  changeset:   34:fea3ac5810e0
+|  parent:      32:d06dffa21a31
+|  user:        test
+|  date:        Thu Jan 01 00:00:34 1970 +0000
+|  summary:     (34) head
+|
+| o  changeset:   33:68608f5145f9
+| |  parent:      18:1aa84d96232a
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:33 1970 +0000
+| |  summary:     (33) head
+| |
