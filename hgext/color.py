@@ -56,6 +56,8 @@ Default effects may be overridden from the .hgrc file::
   diff.inserted = green
   diff.changed = white
   diff.trailingwhitespace = bold red_background
+
+  bookmarks.current = green
 '''
 
 import os, sys
@@ -137,6 +139,21 @@ _status_effects = { 'modified': ['blue', 'bold'],
                     'ignored': ['black', 'bold'],
                     'clean': ['none'],
                     'copied': ['none'], }
+
+_bookmark_effects = { 'current': ['green'] }
+
+def colorbookmarks(orig, ui, repo, *pats, **opts):
+    def colorize(orig, s):
+        lines = s.split('\n')
+        for i, line in enumerate(lines):
+            if line.startswith(" *"):
+                lines[i] = render_effects(line, _bookmark_effects['current'])
+        orig('\n'.join(lines))
+    oldwrite = extensions.wrapfunction(ui, 'write', colorize)
+    try:
+        orig(ui, repo, *pats, **opts)
+    finally:
+        ui.write = oldwrite
 
 def colorqseries(orig, ui, repo, *dummy, **opts):
     '''run the qseries command with colored output'''
@@ -274,6 +291,14 @@ def extsetup(ui):
         _setupcmd(ui, 'churn', churn.cmdtable, colorchurn, _diff_effects)
     except KeyError:
         churn = None
+
+    try:
+        bookmarks = extensions.find('bookmarks')
+        _setupcmd(ui, 'bookmarks', bookmarks.cmdtable, colorbookmarks,
+                  _bookmark_effects)
+    except KeyError:
+        # The bookmarks extension is not enabled
+        pass
 
 def _setupcmd(ui, cmd, table, func, effectsmap):
     '''patch in command to command table and load effect map'''
