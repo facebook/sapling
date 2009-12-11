@@ -333,6 +333,10 @@ class repowatcher(server.repowatcher, pollable):
             self.ui.note(_('%s reading %d events\n') %
                          (self.event_time(), len(events)))
         for evt in events:
+            if evt.fullpath == self.wprefix[:-1]:
+                # events on the root of the repository
+                # itself, e.g. permission changes or repository move
+                continue
             assert evt.fullpath.startswith(self.wprefix)
             wpath = evt.fullpath[self.prefixlen:]
 
