@@ -282,10 +282,14 @@ def _setupcmd(ui, cmd, table, func, effectsmap):
         if (opts['no_color'] or opts['color'] == 'never' or
             (opts['color'] == 'auto' and (os.environ.get('TERM') == 'dumb'
                                           or not sys.__stdout__.isatty()))):
+            del opts['no_color']
+            del opts['color']
             return orig(*args, **opts)
 
         oldshowpatch = extensions.wrapfunction(cmdutil.changeset_printer,
                                                'showpatch', colorshowpatch)
+        del opts['no_color']
+        del opts['color']
         try:
             if func is not None:
                 return func(orig, *args, **opts)
