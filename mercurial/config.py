@@ -100,7 +100,13 @@ class config(object):
                 base = os.path.dirname(src)
                 inc = os.path.normpath(os.path.join(base, inc))
                 if include:
-                    include(inc, remap=remap, sections=sections)
+                    try:
+                        include(inc, remap=remap, sections=sections)
+                    except IOError, inst:
+                        msg = _("config error at %s:%d: "
+                                "cannot include %s (%s)") \
+                            % (src, line, inc, inst.strerror)
+                        raise error.ConfigError(msg)
                 continue
             if emptyre.match(l):
                 continue

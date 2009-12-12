@@ -22,3 +22,6 @@ cd ..
 echo '[foo]' >> $HGRCPATH
 echo '  x = y' >> $HGRCPATH
 hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
+
+echo '%include /no-such-file' > $HGRCPATH
+hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
