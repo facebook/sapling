@@ -612,3 +612,6 @@ diff -r 9ecee4f634e3 hello.txt
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 popping empty
 patch queue now empty
+% test popping must remove files added in subdirectories first
+popping rename-dir
+patch queue now empty

@@ -561,3 +561,23 @@ echo % test popping revisions not in working dir ancestry
 hg qseries -v
 hg up qparent
 hg qpop
+
+cd ..
+hg init deletion-order
+cd deletion-order
+
+touch a
+hg ci -Aqm0
+
+hg qnew rename-dir
+hg rm a
+hg qrefresh
+
+mkdir a b
+touch a/a b/b
+hg add -q a b
+hg qrefresh
+
+echo % test popping must remove files added in subdirectories first
+hg qpop
+cd ..

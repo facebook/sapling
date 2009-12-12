@@ -579,7 +579,13 @@ class revlog(object):
         return reachable
 
     def ancestors(self, *revs):
-        'Generate the ancestors of revs using a breadth-first visit'
+        """Generate the ancestors of 'revs' in reverse topological order.
+
+        Yield a sequence of revision numbers starting with the parents
+        of each revision in revs, i.e., each revision is *not* considered
+        an ancestor of itself.  Results are in breadth-first order:
+        parents of each rev in revs, then parents of those, etc.  Result
+        does not include the null revision."""
         visit = list(revs)
         seen = set([nullrev])
         while visit:
@@ -590,7 +596,12 @@ class revlog(object):
                     yield parent
 
     def descendants(self, *revs):
-        'Generate the descendants of revs in topological order'
+        """Generate the descendants of 'revs' in revision order.
+
+        Yield a sequence of revision numbers starting with a child of
+        some rev in revs, i.e., each revision is *not* considered a
+        descendant of itself.  Results are ordered by revision number (a
+        topological sort)."""
         seen = set(revs)
         for i in xrange(min(revs) + 1, len(self)):
             for x in self.parentrevs(i):
@@ -600,15 +611,20 @@ class revlog(object):
                     break
 
     def findmissing(self, common=None, heads=None):
-        '''
-        returns the topologically sorted list of nodes from the set:
-        missing = (ancestors(heads) \ ancestors(common))
+        """Return the ancestors of heads that are not ancestors of common.
 
-        where ancestors() is the set of ancestors from heads, heads included
+        More specifically, return a list of nodes N such that every N
+        satisfies the following constraints:
 
-        if heads is None, the heads of the revlog are used
-        if common is None, nullid is assumed to be a common node
-        '''
+          1. N is an ancestor of some node in 'heads'
+          2. N is not an ancestor of any node in 'common'
+
+        The list is sorted by revision number, meaning it is
+        topologically sorted.
+
+        'heads' and 'common' are both lists of node IDs.  If heads is
+        not supplied, uses all of the revlog's heads.  If common is not
+        supplied, uses nullid."""
         if common is None:
             common = [nullid]
         if heads is None:
@@ -639,20 +655,26 @@ class revlog(object):
         return [self.node(r) for r in missing]
 
     def nodesbetween(self, roots=None, heads=None):
-        """Return a tuple containing three elements. Elements 1 and 2 contain
-        a final list bases and heads after all the unreachable ones have been
-        pruned.  Element 0 contains a topologically sorted list of all
+        """Return a topological path from 'roots' to 'heads'.
 
-        nodes that satisfy these constraints:
-        1. All nodes must be descended from a node in roots (the nodes on
-           roots are considered descended from themselves).
-        2. All nodes must also be ancestors of a node in heads (the nodes in
-           heads are considered to be their own ancestors).
+        Return a tuple (nodes, outroots, outheads) where 'nodes' is a
+        topologically sorted list of all nodes N that satisfy both of
+        these constraints:
 
-        If roots is unspecified, nullid is assumed as the only root.
-        If heads is unspecified, it is taken to be the output of the
-        heads method (i.e. a list of all nodes in the repository that
-        have no children)."""
+          1. N is a descendant of some node in 'roots'
+          2. N is an ancestor of some node in 'heads'
+
+        Every node is considered to be both a descendant and an ancestor
+        of itself, so every reachable node in 'roots' and 'heads' will be
+        included in 'nodes'.
+
+        'outroots' is the list of reachable nodes in 'roots', i.e., the
+        subset of 'roots' that is returned in 'nodes'.  Likewise,
+        'outheads' is the subset of 'heads' that is also in 'nodes'.
+
+        'roots' and 'heads' are both lists of node IDs.  If 'roots' is
+        unspecified, uses nullid as the only root.  If 'heads' is
+        unspecified, uses list of all of the revlog's heads."""
         nonodes = ([], [], [])
         if roots is not None:
             roots = list(roots)
