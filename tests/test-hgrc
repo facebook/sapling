@@ -1,24 +1,20 @@
 #!/bin/sh
 
-mkdir t
-cd t
-hg init
-echo "invalid" > .hg/hgrc
-hg status 2>&1 |sed -e "s:/.*\(/t/.*\):...\1:"
+echo "invalid" > $HGRCPATH
+hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
+echo "" > $HGRCPATH
 
-#issue 1199, escaping
-
-cd ..
+# issue1199: escaping
 hg init "foo%bar"
 hg clone "foo%bar" foobar
 p=`pwd`
 cd foobar
-cat .hg/hgrc |sed -e "s:$p:...:"
-hg paths |sed -e "s:$p:...:"
-hg showconfig |sed -e "s:$p:...:"
+cat .hg/hgrc | sed -e "s:$p:...:"
+hg paths | sed -e "s:$p:...:"
+hg showconfig | sed -e "s:$p:...:"
+cd ..
 
 # issue1829: wrong indentation
-cd ..
-echo '[foo]' >> $HGRCPATH
+echo '[foo]' > $HGRCPATH
 echo '  x = y' >> $HGRCPATH
 hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
