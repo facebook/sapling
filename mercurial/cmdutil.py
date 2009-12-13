@@ -812,28 +812,12 @@ class changeset_templater(changeset_printer):
 
         showlist = templatekw.showlist
 
-        def showbranches(templ, **args):
-            branch = ctx.branch()
-            if branch != 'default':
-                branch = encoding.tolocal(branch)
-                return showlist(templ, 'branch', [branch], plural='branches',
-                                **args)
-
-        def showparents(templ, **args):
+        def showparents(ctx, templ, **args):
             parents = [[('rev', p.rev()), ('node', p.hex())]
                        for p in self._meaningful_parentrevs(ctx)]
             return showlist(templ, 'parent', parents, **args)
 
-        def showtags(templ, **args):
-            return showlist(templ, 'tag', ctx.tags(), **args)
-
-        def showextras(templ, **args):
-            for key, value in sorted(ctx.extra().items()):
-                args = args.copy()
-                args.update(dict(key=key, value=value))
-                yield templ('extra', **args)
-
-        def showcopies(templ, **args):
+        def showcopies(ctx, templ, **args):
             c = [{'name': x[0], 'source': x[1]} for x in copies]
             return showlist(templ, 'file_copy', c, plural='file_copies', **args)
 
@@ -843,21 +827,19 @@ class changeset_templater(changeset_printer):
                 files[:] = self.repo.status(ctx.parents()[0].node(),
                                             ctx.node())[:3]
             return files
-        def showfiles(templ, **args):
-            return showlist(templ, 'file', ctx.files(), **args)
-        def showmods(templ, **args):
+        def showmods(ctx, templ, **args):
             return showlist(templ, 'file_mod', getfiles()[0], **args)
-        def showadds(templ, **args):
+        def showadds(ctx, templ, **args):
             return showlist(templ, 'file_add', getfiles()[1], **args)
-        def showdels(templ, **args):
+        def showdels(ctx, templ, **args):
             return showlist(templ, 'file_del', getfiles()[2], **args)
-        def showmanifest(templ, **args):
+        def showmanifest(ctx, templ, **args):
             args = args.copy()
             args.update(dict(rev=self.repo.manifest.rev(ctx.changeset()[0]),
                              node=hex(ctx.changeset()[0])))
             return templ('manifest', **args)
 
-        def showdiffstat(templ, **args):
+        def showdiffstat(ctx, templ, **args):
             diff = patch.diff(self.repo, ctx.parents()[0].node(), ctx.node())
             files, adds, removes = 0, 0, 0
             for i in patch.diffstatdata(util.iterlines(diff)):
@@ -866,34 +848,27 @@ class changeset_templater(changeset_printer):
                 removes += i[2]
             return '%s: +%s/-%s' % (files, adds, removes)
 
-        def showlatesttag(templ, **args):
+        def showlatesttag(ctx, templ, **args):
             return self._latesttaginfo(ctx.rev())[2]
-        def showlatesttagdistance(templ, **args):
+        def showlatesttagdistance(ctx, templ, **args):
             return self._latesttaginfo(ctx.rev())[1]
 
         defprops = {
-            'author': ctx.user(),
-            'branches': showbranches,
-            'date': ctx.date(),
-            'desc': ctx.description().strip(),
             'file_adds': showadds,
             'file_dels': showdels,
             'file_mods': showmods,
-            'files': showfiles,
             'file_copies': showcopies,
             'manifest': showmanifest,
-            'node': ctx.hex(),
             'parents': showparents,
-            'rev': ctx.rev(),
-            'tags': showtags,
-            'extras': showextras,
             'diffstat': showdiffstat,
             'latesttag': showlatesttag,
             'latesttagdistance': showlatesttagdistance,
             }
         props = props.copy()
+        props.update(templatekw.keywords)
         props.update(defprops)
         props['templ'] = self.t
+        props['ctx'] = ctx
 
         # find correct templates for current mode
 

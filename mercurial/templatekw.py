@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
+import encoding
 
 def showlist(templ, name, values, plural=None, **args):
     '''expand set of values.
@@ -66,4 +67,49 @@ def showlist(templ, name, values, plural=None, **args):
     endname = 'end_' + names
     if endname in templ:
         yield templ(endname, **args)
+
+def showauthor(ctx, templ, **args):
+    return ctx.user()
+
+def showbranches(ctx, templ, **args):
+    branch = ctx.branch()
+    if branch != 'default':
+        branch = encoding.tolocal(branch)
+        return showlist(templ, 'branch', [branch], plural='branches', **args)
+
+def showdate(ctx, templ, **args):
+    return ctx.date()
+
+def showdescription(ctx, templ, **args):
+    return ctx.description().strip()
+
+def showextras(ctx, templ, **args):
+    for key, value in sorted(ctx.extra().items()):
+        args = args.copy()
+        args.update(dict(key=key, value=value))
+        yield templ('extra', **args)
+
+def showfiles(ctx, templ, **args):
+    return showlist(templ, 'file', ctx.files(), **args)
+
+def shownode(ctx, templ, **args):
+    return ctx.hex()
+
+def showrev(ctx, templ, **args):
+    return ctx.rev()
+
+def showtags(ctx, templ, **args):
+    return showlist(templ, 'tag', ctx.tags(), **args)
+
+keywords = {
+    'author': showauthor,
+    'branches': showbranches,
+    'date': showdate,
+    'desc': showdescription,
+    'extras': showextras,
+    'files': showfiles,
+    'node': shownode,
+    'rev': showrev,
+    'tags': showtags,
+}
 
