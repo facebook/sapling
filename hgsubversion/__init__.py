@@ -145,12 +145,12 @@ def reposetup(ui, repo):
     if repo.local():
        svnrepo.generate_repo_class(ui, repo)
 
-
+_old_local = hg.schemes['file']
 def _lookup(url):
     if util.islocalrepo(url):
         return svnrepo
     else:
-        return hg._local(url)
+        return _old_local(url)
 
 # install scheme handlers
 hg.schemes.update({ 'file': _lookup, 'http': svnrepo, 'https': svnrepo,
