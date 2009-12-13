@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, glob
-import mdiff, bdiff, util, templater, patch, error, encoding
+import mdiff, bdiff, util, templater, patch, error, encoding, templatekw
 import match as _match
 
 revrangesep = ':'
@@ -810,90 +810,32 @@ class changeset_templater(changeset_printer):
     def _show(self, ctx, copies, props):
         '''show a single changeset or file revision'''
 
-        def showlist(name, values, plural=None, **args):
-            '''expand set of values.
-            name is name of key in template map.
-            values is list of strings or dicts.
-            plural is plural of name, if not simply name + 's'.
+        showlist = templatekw.showlist
 
-            expansion works like this, given name 'foo'.
-
-            if values is empty, expand 'no_foos'.
-
-            if 'foo' not in template map, return values as a string,
-            joined by space.
-
-            expand 'start_foos'.
-
-            for each value, expand 'foo'. if 'last_foo' in template
-            map, expand it instead of 'foo' for last key.
-
-            expand 'end_foos'.
-            '''
-            if plural: names = plural
-            else: names = name + 's'
-            if not values:
-                noname = 'no_' + names
-                if noname in self.t:
-                    yield self.t(noname, **args)
-                return
-            if name not in self.t:
-                if isinstance(values[0], str):
-                    yield ' '.join(values)
-                else:
-                    for v in values:
-                        yield dict(v, **args)
-                return
-            startname = 'start_' + names
-            if startname in self.t:
-                yield self.t(startname, **args)
-            vargs = args.copy()
-            def one(v, tag=name):
-                try:
-                    vargs.update(v)
-                except (AttributeError, ValueError):
-                    try:
-                        for a, b in v:
-                            vargs[a] = b
-                    except ValueError:
-                        vargs[name] = v
-                return self.t(tag, **vargs)
-            lastname = 'last_' + name
-            if lastname in self.t:
-                last = values.pop()
-            else:
-                last = None
-            for v in values:
-                yield one(v)
-            if last is not None:
-                yield one(last, tag=lastname)
-            endname = 'end_' + names
-            if endname in self.t:
-                yield self.t(endname, **args)
-
-        def showbranches(**args):
+        def showbranches(templ, **args):
             branch = ctx.branch()
             if branch != 'default':
                 branch = encoding.tolocal(branch)
-                return showlist('branch', [branch], plural='branches', **args)
+                return showlist(templ, 'branch', [branch], plural='branches',
+                                **args)
 
-        def showparents(**args):
+        def showparents(templ, **args):
             parents = [[('rev', p.rev()), ('node', p.hex())]
                        for p in self._meaningful_parentrevs(ctx)]
-            return showlist('parent', parents, **args)
+            return showlist(templ, 'parent', parents, **args)
 
-        def showtags(**args):
-            return showlist('tag', ctx.tags(), **args)
+        def showtags(templ, **args):
+            return showlist(templ, 'tag', ctx.tags(), **args)
 
-        def showextras(**args):
+        def showextras(templ, **args):
             for key, value in sorted(ctx.extra().items()):
                 args = args.copy()
                 args.update(dict(key=key, value=value))
-                yield self.t('extra', **args)
+                yield templ('extra', **args)
 
-        def showcopies(**args):
+        def showcopies(templ, **args):
             c = [{'name': x[0], 'source': x[1]} for x in copies]
-            return showlist('file_copy', c, plural='file_copies', **args)
+            return showlist(templ, 'file_copy', c, plural='file_copies', **args)
 
         files = []
         def getfiles():
@@ -901,21 +843,21 @@ class changeset_templater(changeset_printer):
                 files[:] = self.repo.status(ctx.parents()[0].node(),
                                             ctx.node())[:3]
             return files
-        def showfiles(**args):
-            return showlist('file', ctx.files(), **args)
-        def showmods(**args):
-            return showlist('file_mod', getfiles()[0], **args)
-        def showadds(**args):
-            return showlist('file_add', getfiles()[1], **args)
-        def showdels(**args):
-            return showlist('file_del', getfiles()[2], **args)
-        def showmanifest(**args):
+        def showfiles(templ, **args):
+            return showlist(templ, 'file', ctx.files(), **args)
+        def showmods(templ, **args):
+            return showlist(templ, 'file_mod', getfiles()[0], **args)
+        def showadds(templ, **args):
+            return showlist(templ, 'file_add', getfiles()[1], **args)
+        def showdels(templ, **args):
+            return showlist(templ, 'file_del', getfiles()[2], **args)
+        def showmanifest(templ, **args):
             args = args.copy()
             args.update(dict(rev=self.repo.manifest.rev(ctx.changeset()[0]),
                              node=hex(ctx.changeset()[0])))
-            return self.t('manifest', **args)
+            return templ('manifest', **args)
 
-        def showdiffstat(**args):
+        def showdiffstat(templ, **args):
             diff = patch.diff(self.repo, ctx.parents()[0].node(), ctx.node())
             files, adds, removes = 0, 0, 0
             for i in patch.diffstatdata(util.iterlines(diff)):
@@ -924,9 +866,9 @@ class changeset_templater(changeset_printer):
                 removes += i[2]
             return '%s: +%s/-%s' % (files, adds, removes)
 
-        def showlatesttag(**args):
+        def showlatesttag(templ, **args):
             return self._latesttaginfo(ctx.rev())[2]
-        def showlatesttagdistance(**args):
+        def showlatesttagdistance(templ, **args):
             return self._latesttaginfo(ctx.rev())[1]
 
         defprops = {
@@ -951,6 +893,7 @@ class changeset_templater(changeset_printer):
             }
         props = props.copy()
         props.update(defprops)
+        props['templ'] = self.t
 
         # find correct templates for current mode
 
