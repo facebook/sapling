@@ -9,6 +9,7 @@ fix_path()
 
 echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
+echo "mq = " >> $HGRCPATH
 
 svnpath=`pwd | fix_path`/svn-repo
 svnadmin create $svnpath
@@ -59,9 +60,14 @@ hg convert -s hg -d svn $svnpath-hg $svnpath-wc
 echo % new hg rev
 
 hg clone $svnpath-hg $svnpath-work
-echo b > $svnpath-work/b
-hg --cwd $svnpath-work add b
-hg --cwd $svnpath-work ci -mb
+cd $svnpath-work
+echo b > b
+hg add b
+hg ci -mb
+echo '% adding an empty revision'
+hg qnew -m emtpy empty
+hg qfinish -a
+cd ..
 
 echo % echo hg to svn
 hg --cwd $svnpath-hg pull -q $svnpath-work
