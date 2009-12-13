@@ -786,26 +786,22 @@ class changeset_templater(changeset_printer):
 
         showlist = templatekw.showlist
 
+        # showparents() behaviour depends on ui trace level which
+        # causes unexpected behaviours at templating level and makes
+        # it harder to extract it in a standalone function. Its
+        # behaviour cannot be changed so leave it here for now.
         def showparents(repo, ctx, templ, **args):
             parents = [[('rev', p.rev()), ('node', p.hex())]
                        for p in self._meaningful_parentrevs(ctx)]
             return showlist(templ, 'parent', parents, **args)
 
-        def showcopies(repo, ctx, templ, **args):
-            c = [{'name': x[0], 'source': x[1]} for x in copies]
-            return showlist(templ, 'file_copy', c, plural='file_copies', **args)
-
-        defprops = {
-            'file_copies': showcopies,            
-            'parents': showparents,            
-            }
         props = props.copy()
         props.update(templatekw.keywords)
-        props.update(defprops)
+        props['parents'] = showparents
         props['templ'] = self.t
         props['ctx'] = ctx
         props['repo'] = self.repo
-        props['revcache'] = {}
+        props['revcache'] = {'copies': copies}
         props['cache'] = self.cache
 
         # find correct templates for current mode

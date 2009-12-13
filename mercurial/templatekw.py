@@ -141,6 +141,10 @@ def showextras(repo, ctx, templ, **args):
 def showfileadds(repo, ctx, templ, revcache, **args):
     return showlist(templ, 'file_add', getfiles(repo, ctx, revcache)[1], **args)
 
+def showfilecopies(repo, ctx, templ, revcache, **args):
+    c = [{'name': x[0], 'source': x[1]} for x in revcache['copies']]
+    return showlist(templ, 'file_copy', c, plural='file_copies', **args)
+
 def showfiledels(repo, ctx, templ, revcache, **args):
     return showlist(templ, 'file_del', getfiles(repo, ctx, revcache)[2], **args)
 
@@ -179,6 +183,7 @@ keywords = {
     'diffstat': showdiffstat,
     'extras': showextras,
     'file_adds': showfileadds,
+    'file_copies': showfilecopies,
     'file_dels': showfiledels,
     'file_mods': showfilemods,
     'files': showfiles,
