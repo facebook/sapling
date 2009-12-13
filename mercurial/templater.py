@@ -77,8 +77,14 @@ class engine(object):
             raise SyntaxError(_("error expanding '%s%%%s'") % (key, format))
         lm = map.copy()
         for i in v:
-            lm.update(i)
-            yield self.process(format, lm)
+            if isinstance(i, dict): 
+                lm.update(i)
+                yield self.process(format, lm)
+            else:
+                # v is not an iterable of dicts, this happen when 'key'
+                # has been fully expanded already and format is useless.
+                # If so, return the expanded value.
+                yield i
 
     def _filter(self, expr, get, map):
         if expr not in self.cache:

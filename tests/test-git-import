@@ -141,7 +141,7 @@ diff --git a/rename2 b/rename3-2
 rename from rename2
 rename to rename3-2
 EOF
-hg log -vr. --template '{rev} {files} / {file_copies%filecopy}\n'
+hg log -vr. --template '{rev} {files} / {file_copies}\n'
 
 hg locate rename2 rename3 rename3-2
 hg cat rename3

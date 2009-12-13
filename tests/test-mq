@@ -387,10 +387,10 @@ hg ci -m 'change foo'
 hg up -C 1
 hg qrefresh --git 2>&1 | grep -v 'saving bundle'
 cat .hg/patches/bar
-hg log -v --template '{rev} {file_copies%filecopy}\n' -r .
+hg log -v --template '{rev} {file_copies}\n' -r .
 hg qrefresh --git
 cat .hg/patches/bar
-hg log -v --template '{rev} {file_copies%filecopy}\n' -r .
+hg log -v --template '{rev} {file_copies}\n' -r .
 hg qrefresh
 grep 'diff --git' .hg/patches/bar
 
@@ -403,12 +403,12 @@ hg mv bar quux
 hg mv baz bleh
 hg qrefresh --git 2>&1 | grep -v 'saving bundle'
 cat .hg/patches/bar
-hg log -v --template '{rev} {file_copies%filecopy}\n' -r .
+hg log -v --template '{rev} {file_copies}\n' -r .
 hg mv quux fred
 hg mv bleh barney
 hg qrefresh --git
 cat .hg/patches/bar
-hg log -v --template '{rev} {file_copies%filecopy}\n' -r .
+hg log -v --template '{rev} {file_copies}\n' -r .
 
 echo % refresh omitting an added file
 hg qnew baz

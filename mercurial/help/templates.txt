@@ -34,6 +34,10 @@ keywords are usually available for templating a log-like command:
 :files:     List of strings. All files modified, added, or removed
             by this changeset.
 :file_adds: List of strings. Files added by this changeset.
+:file_copies: List of strings. Files copied in this changeset with
+            their sources.
+:file_copies_switch: List of strings. Like "file_copies" but displayed
+            only if the --copied switch is set.
 :file_mods: List of strings. Files modified by this changeset.
 :file_dels: List of strings. Files removed by this changeset.
 :node:      String. The changeset identification hash, as a

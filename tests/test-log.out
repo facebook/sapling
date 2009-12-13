@@ -82,7 +82,7 @@ a
 2 dir/b (b)
 1 b (a)
 0 
-% log copies switch without --copies
+% log copies switch without --copies, with old filecopy template
 4 
 3 
 2 
