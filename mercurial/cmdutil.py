@@ -820,19 +820,6 @@ class changeset_templater(changeset_printer):
         def showcopies(repo, ctx, templ, **args):
             c = [{'name': x[0], 'source': x[1]} for x in copies]
             return showlist(templ, 'file_copy', c, plural='file_copies', **args)
-
-        files = []
-        def getfiles():
-            if not files:
-                files[:] = self.repo.status(ctx.parents()[0].node(),
-                                            ctx.node())[:3]
-            return files
-        def showmods(repo, ctx, templ, **args):
-            return showlist(templ, 'file_mod', getfiles()[0], **args)
-        def showadds(repo, ctx, templ, **args):
-            return showlist(templ, 'file_add', getfiles()[1], **args)
-        def showdels(repo, ctx, templ, **args):
-            return showlist(templ, 'file_del', getfiles()[2], **args)
         
         def showlatesttag(repo, ctx, templ, **args):
             return self._latesttaginfo(ctx.rev())[2]
@@ -840,9 +827,6 @@ class changeset_templater(changeset_printer):
             return self._latesttaginfo(ctx.rev())[1]
 
         defprops = {
-            'file_adds': showadds,
-            'file_dels': showdels,
-            'file_mods': showmods,
             'file_copies': showcopies,            
             'parents': showparents,            
             'latesttag': showlatesttag,
@@ -854,6 +838,7 @@ class changeset_templater(changeset_printer):
         props['templ'] = self.t
         props['ctx'] = ctx
         props['repo'] = self.repo
+        props['revcache'] = {}
 
         # find correct templates for current mode
 

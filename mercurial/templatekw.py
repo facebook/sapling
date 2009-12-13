@@ -69,6 +69,12 @@ def showlist(templ, name, values, plural=None, **args):
     if endname in templ:
         yield templ(endname, **args)
 
+def getfiles(repo, ctx, revcache):
+    if 'files' not in revcache:
+        revcache['files'] = repo.status(ctx.parents()[0].node(),
+                                        ctx.node())[:3]
+    return revcache['files']
+
 def showauthor(repo, ctx, templ, **args):
     return ctx.user()
 
@@ -99,6 +105,15 @@ def showextras(repo, ctx, templ, **args):
         args.update(dict(key=key, value=value))
         yield templ('extra', **args)
 
+def showfileadds(repo, ctx, templ, revcache, **args):
+    return showlist(templ, 'file_add', getfiles(repo, ctx, revcache)[1], **args)
+
+def showfiledels(repo, ctx, templ, revcache, **args):
+    return showlist(templ, 'file_del', getfiles(repo, ctx, revcache)[2], **args)
+
+def showfilemods(repo, ctx, templ, revcache, **args):
+    return showlist(templ, 'file_mod', getfiles(repo, ctx, revcache)[0], **args)
+
 def showfiles(repo, ctx, templ, **args):
     return showlist(templ, 'file', ctx.files(), **args)
 
@@ -124,6 +139,9 @@ keywords = {
     'desc': showdescription,
     'diffstat': showdiffstat,
     'extras': showextras,
+    'file_adds': showfileadds,
+    'file_dels': showfiledels,
+    'file_mods': showfilemods,
     'files': showfiles,
     'manifest': showmanifest,
     'node': shownode,
