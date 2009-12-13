@@ -76,7 +76,19 @@ description:
 a
 
 
-% log copies
+% log copies with --copies
+4 e (dir/b)
+3 b (a)
+2 dir/b (b)
+1 b (a)
+0 
+% log copies switch without --copies
+4 
+3 
+2 
+1 
+0 
+% log copies switch with --copies
 4 e (dir/b)
 3 b (a)
 2 dir/b (b)

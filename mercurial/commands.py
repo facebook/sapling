@@ -10,7 +10,7 @@ from lock import release
 from i18n import _, gettext
 import os, re, sys, difflib, time, tempfile
 import hg, util, revlog, bundlerepo, extensions, copies, error
-import patch, help, mdiff, url, encoding
+import patch, help, mdiff, url, encoding, templatekw
 import archival, changegroup, cmdutil, sshserver, hbisect
 from hgweb import server
 import merge as merge_
@@ -2018,34 +2018,9 @@ def log(ui, repo, *pats, **opts):
     limit = cmdutil.loglimit(opts)
     count = 0
 
+    endrev = None
     if opts.get('copies') and opts.get('rev'):
         endrev = max(cmdutil.revrange(repo, opts.get('rev'))) + 1
-    else:
-        endrev = len(repo)
-    rcache = {}
-    def getrenamed(fn, rev):
-        '''looks up all renames for a file (up to endrev) the first
-        time the file is given. It indexes on the changerev and only
-        parses the manifest if linkrev != changerev.
-        Returns rename info for fn at changerev rev.'''
-        if fn not in rcache:
-            rcache[fn] = {}
-            fl = repo.file(fn)
-            for i in fl:
-                lr = fl.linkrev(i)
-                renamed = fl.renamed(fl.node(i))
-                rcache[fn][lr] = renamed
-                if lr >= endrev:
-                    break
-        if rev in rcache[fn]:
-            return rcache[fn][rev]
-
-        # If linkrev != rev (i.e. rev not found in rcache) fallback to
-        # filectx logic.
-        try:
-            return repo[rev][fn].renamed()
-        except error.LookupError:
-            return None
 
     df = False
     if opts["date"]:
@@ -2075,8 +2050,10 @@ def log(ui, repo, *pats, **opts):
             else:
                 return
 
-        copies = []
+        copies = None
         if opts.get('copies') and rev:
+            copies = []
+            getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
             for fn in ctx.files():
                 rename = getrenamed(fn, rev)
                 if rename:

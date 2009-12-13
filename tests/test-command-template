@@ -94,8 +94,8 @@ cat changelog
 
 echo "# keys work"
 for key in author branches date desc file_adds file_dels file_mods \
-        'file_copies%filecopy' files manifest node parents rev tags diffstat \
-        extras; do
+        'file_copies%filecopy' 'file_copies_switch%filecopy' files \
+        manifest node parents rev tags diffstat extras; do
     for mode in '' --verbose --debug; do
         hg log $mode --template "$key$mode: {$key}\n"
     done

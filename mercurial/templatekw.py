@@ -6,7 +6,7 @@
 # GNU General Public License version 2, incorporated herein by reference.
 
 from node import hex
-import encoding, patch, util
+import encoding, patch, util, error
 
 def showlist(templ, name, values, plural=None, **args):
     '''expand set of values.
@@ -108,6 +108,38 @@ def getlatesttags(repo, ctx, cache):
         latesttags[rev] = pdate, pdist + 1, ptag
     return latesttags[rev]
 
+def getrenamedfn(repo, endrev=None):
+    rcache = {}
+    if endrev is None:
+        endrev = len(repo)
+
+    def getrenamed(fn, rev):
+        '''looks up all renames for a file (up to endrev) the first
+        time the file is given. It indexes on the changerev and only
+        parses the manifest if linkrev != changerev.
+        Returns rename info for fn at changerev rev.'''
+        if fn not in rcache:
+            rcache[fn] = {}
+            fl = repo.file(fn)
+            for i in fl:
+                lr = fl.linkrev(i)
+                renamed = fl.renamed(fl.node(i))
+                rcache[fn][lr] = renamed
+                if lr >= endrev:
+                    break
+        if rev in rcache[fn]:
+            return rcache[fn][rev]
+
+        # If linkrev != rev (i.e. rev not found in rcache) fallback to
+        # filectx logic.
+        try:
+            return repo[rev][fn].renamed()
+        except error.LookupError:
+            return None
+
+    return getrenamed
+
+
 def showauthor(repo, ctx, templ, **args):
     return ctx.user()
 
@@ -141,8 +173,27 @@ def showextras(repo, ctx, templ, **args):
 def showfileadds(repo, ctx, templ, revcache, **args):
     return showlist(templ, 'file_add', getfiles(repo, ctx, revcache)[1], **args)
 
-def showfilecopies(repo, ctx, templ, revcache, **args):
-    c = [{'name': x[0], 'source': x[1]} for x in revcache['copies']]
+def showfilecopies(repo, ctx, templ, cache, revcache, **args):
+    copies = revcache.get('copies')
+    if copies is None:
+        if 'getrenamed' not in cache:
+            cache['getrenamed'] = getrenamedfn(repo)
+        copies = []
+        getrenamed = cache['getrenamed']
+        for fn in ctx.files():
+            rename = getrenamed(fn, ctx.rev())
+            if rename:
+                copies.append((fn, rename[0]))
+            
+    c = [{'name': x[0], 'source': x[1]} for x in copies]
+    return showlist(templ, 'file_copy', c, plural='file_copies', **args)
+
+# showfilecopiesswitch() displays file copies only if copy records are
+# provided before calling the templater, usually with a --copies
+# command line switch.
+def showfilecopiesswitch(repo, ctx, templ, cache, revcache, **args):
+    copies = revcache.get('copies') or []
+    c = [{'name': x[0], 'source': x[1]} for x in copies]
     return showlist(templ, 'file_copy', c, plural='file_copies', **args)
 
 def showfiledels(repo, ctx, templ, revcache, **args):
@@ -184,6 +235,7 @@ keywords = {
     'extras': showextras,
     'file_adds': showfileadds,
     'file_copies': showfilecopies,
+    'file_copies_switch': showfilecopiesswitch,
     'file_dels': showfiledels,
     'file_mods': showfilemods,
     'files': showfiles,

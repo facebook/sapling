@@ -651,7 +651,7 @@ class changeset_printer(object):
             return 1
         return 0
 
-    def show(self, ctx, copies=(), **props):
+    def show(self, ctx, copies=None, **props):
         if self.buffered:
             self.ui.pushbuffer()
             self._show(ctx, copies, props)

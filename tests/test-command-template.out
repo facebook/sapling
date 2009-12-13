@@ -380,6 +380,7 @@ file_mods--debug: c
 file_mods--debug: 
 file_mods--debug: 
 file_mods--debug: 
+file_copies%filecopy: fourth (second)
 file_copies%filecopy: 
 file_copies%filecopy: 
 file_copies%filecopy: 
@@ -388,7 +389,7 @@ file_copies%filecopy:
 file_copies%filecopy: 
 file_copies%filecopy: 
 file_copies%filecopy: 
-file_copies%filecopy: 
+file_copies%filecopy--verbose: fourth (second)
 file_copies%filecopy--verbose: 
 file_copies%filecopy--verbose: 
 file_copies%filecopy--verbose: 
@@ -397,7 +398,7 @@ file_copies%filecopy--verbose:
 file_copies%filecopy--verbose: 
 file_copies%filecopy--verbose: 
 file_copies%filecopy--verbose: 
-file_copies%filecopy--verbose: 
+file_copies%filecopy--debug: fourth (second)
 file_copies%filecopy--debug: 
 file_copies%filecopy--debug: 
 file_copies%filecopy--debug: 
@@ -406,7 +407,33 @@ file_copies%filecopy--debug:
 file_copies%filecopy--debug: 
 file_copies%filecopy--debug: 
 file_copies%filecopy--debug: 
-file_copies%filecopy--debug: 
+file_copies_switch%filecopy: 
+file_copies_switch%filecopy: 
+file_copies_switch%filecopy: 
+file_copies_switch%filecopy: 
+file_copies_switch%filecopy: 
+file_copies_switch%filecopy: 
+file_copies_switch%filecopy: 
+file_copies_switch%filecopy: 
+file_copies_switch%filecopy: 
+file_copies_switch%filecopy--verbose: 
+file_copies_switch%filecopy--verbose: 
+file_copies_switch%filecopy--verbose: 
+file_copies_switch%filecopy--verbose: 
+file_copies_switch%filecopy--verbose: 
+file_copies_switch%filecopy--verbose: 
+file_copies_switch%filecopy--verbose: 
+file_copies_switch%filecopy--verbose: 
+file_copies_switch%filecopy--verbose: 
+file_copies_switch%filecopy--debug: 
+file_copies_switch%filecopy--debug: 
+file_copies_switch%filecopy--debug: 
+file_copies_switch%filecopy--debug: 
+file_copies_switch%filecopy--debug: 
+file_copies_switch%filecopy--debug: 
+file_copies_switch%filecopy--debug: 
+file_copies_switch%filecopy--debug: 
+file_copies_switch%filecopy--debug: 
 files: fourth second third
 files: second
 files: 
