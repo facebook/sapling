@@ -95,7 +95,7 @@ def loglimit(opts):
             raise util.Abort(_('limit must be a positive integer'))
         if limit <= 0: raise util.Abort(_('limit must be positive'))
     else:
-        limit = sys.maxint
+        limit = None
     return limit
 
 def remoteui(src, opts):

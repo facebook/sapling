@@ -250,7 +250,8 @@ def graphlog(ui, repo, path=None, **opts):
     if path: # could be reset in canonpath
         revdag = graphmod.filerevs(repo, path, start, stop, limit)
     else:
-        stop = max(stop, start - limit + 1)
+        if limit is not None:
+            stop = max(stop, start - limit + 1)
         revdag = graphmod.revisions(repo, start, stop)
 
     displayer = show_changeset(ui, repo, opts, buffered=True)
@@ -260,7 +261,7 @@ def graphlog(ui, repo, path=None, **opts):
 def graphrevs(repo, nodes, opts):
     limit = cmdutil.loglimit(opts)
     nodes.reverse()
-    if limit < sys.maxint:
+    if limit is not None:
         nodes = nodes[:limit]
     return graphmod.nodes(repo, nodes)
 

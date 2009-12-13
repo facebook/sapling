@@ -1924,7 +1924,7 @@ def incoming(ui, repo, source="default", **opts):
         displayer = cmdutil.show_changeset(ui, other, opts)
         count = 0
         for n in o:
-            if count >= limit:
+            if limit is not None and count >= limit:
                 break
             parents = [p for p in other.changelog.parents(n) if p != nullid]
             if opts.get('no_merges') and len(parents) == 2:
@@ -2179,7 +2179,7 @@ def outgoing(ui, repo, dest=None, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts)
     count = 0
     for n in o:
-        if count >= limit:
+        if limit is not None and count >= limit:
             break
         parents = [p for p in repo.changelog.parents(n) if p != nullid]
         if opts.get('no_merges') and len(parents) == 2:
