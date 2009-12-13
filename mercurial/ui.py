@@ -253,7 +253,13 @@ class ui(object):
     def interactive(self):
         i = self.configbool("ui", "interactive", None)
         if i is None:
-            return sys.stdin.isatty()
+            try:
+                return sys.stdin.isatty()
+            except AttributeError:
+                # some environments replace stdin without implementing isatty
+                # usually those are non-interactive
+                return False
+
         return i
 
     def _readline(self, prompt=''):
