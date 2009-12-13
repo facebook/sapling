@@ -8,7 +8,7 @@ created new head
 # revision with no copies (used to print a traceback)
 
 # compact style works
-8[tip]   946e2bd9c565   2020-01-01 10:01 +0000   test
+8[tip]   3bdecc1cde0c   2020-01-01 10:01 +0000   test
   third
 
 7:-1   29114dbae42b   1970-01-12 13:46 +0000   user
@@ -35,7 +35,7 @@ created new head
 0   1e4e1b8f71e0   1970-01-12 13:46 +0000   user
   line 1
 
-8[tip]   946e2bd9c565   2020-01-01 10:01 +0000   test
+8[tip]   3bdecc1cde0c   2020-01-01 10:01 +0000   test
   third
 
 7:-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
@@ -66,7 +66,7 @@ other 3
   line 1
 line 2
 
-8[tip]:7,-1   946e2bd9c565   2020-01-01 10:01 +0000   test
+8[tip]:7,-1   3bdecc1cde0c   2020-01-01 10:01 +0000   test
   third
 
 7:-1,-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
@@ -128,9 +128,9 @@ abort: template file ./q: Permission denied
 # issue338
 2020-01-01  test  <test>
 
-	* third:
+	* fourth, second, third:
 	third
-	[946e2bd9c565] [tip]
+	[3bdecc1cde0c] [tip]
 
 1970-01-12  User Name  <user@hostname>
 
@@ -299,7 +299,7 @@ other 2
 other 3
 desc--debug: line 1
 line 2
-file_adds: third
+file_adds: fourth third
 file_adds: second
 file_adds: 
 file_adds: d
@@ -308,7 +308,7 @@ file_adds:
 file_adds: c
 file_adds: b
 file_adds: a
-file_adds--verbose: third
+file_adds--verbose: fourth third
 file_adds--verbose: second
 file_adds--verbose: 
 file_adds--verbose: d
@@ -317,7 +317,7 @@ file_adds--verbose:
 file_adds--verbose: c
 file_adds--verbose: b
 file_adds--verbose: a
-file_adds--debug: third
+file_adds--debug: fourth third
 file_adds--debug: second
 file_adds--debug: 
 file_adds--debug: d
@@ -326,6 +326,7 @@ file_adds--debug:
 file_adds--debug: c
 file_adds--debug: b
 file_adds--debug: a
+file_dels: second
 file_dels: 
 file_dels: 
 file_dels: 
@@ -334,7 +335,7 @@ file_dels:
 file_dels: 
 file_dels: 
 file_dels: 
-file_dels: 
+file_dels--verbose: second
 file_dels--verbose: 
 file_dels--verbose: 
 file_dels--verbose: 
@@ -343,8 +344,7 @@ file_dels--verbose:
 file_dels--verbose: 
 file_dels--verbose: 
 file_dels--verbose: 
-file_dels--verbose: 
-file_dels--debug: 
+file_dels--debug: second
 file_dels--debug: 
 file_dels--debug: 
 file_dels--debug: 
@@ -380,7 +380,34 @@ file_mods--debug: c
 file_mods--debug: 
 file_mods--debug: 
 file_mods--debug: 
-files: third
+file_copies%filecopy: 
+file_copies%filecopy: 
+file_copies%filecopy: 
+file_copies%filecopy: 
+file_copies%filecopy: 
+file_copies%filecopy: 
+file_copies%filecopy: 
+file_copies%filecopy: 
+file_copies%filecopy: 
+file_copies%filecopy--verbose: 
+file_copies%filecopy--verbose: 
+file_copies%filecopy--verbose: 
+file_copies%filecopy--verbose: 
+file_copies%filecopy--verbose: 
+file_copies%filecopy--verbose: 
+file_copies%filecopy--verbose: 
+file_copies%filecopy--verbose: 
+file_copies%filecopy--verbose: 
+file_copies%filecopy--debug: 
+file_copies%filecopy--debug: 
+file_copies%filecopy--debug: 
+file_copies%filecopy--debug: 
+file_copies%filecopy--debug: 
+file_copies%filecopy--debug: 
+file_copies%filecopy--debug: 
+file_copies%filecopy--debug: 
+file_copies%filecopy--debug: 
+files: fourth second third
 files: second
 files: 
 files: d
@@ -389,7 +416,7 @@ files: c
 files: c
 files: b
 files: a
-files--verbose: third
+files--verbose: fourth second third
 files--verbose: second
 files--verbose: 
 files--verbose: d
@@ -398,7 +425,7 @@ files--verbose: c
 files--verbose: c
 files--verbose: b
 files--verbose: a
-files--debug: third
+files--debug: fourth second third
 files--debug: second
 files--debug: 
 files--debug: d
@@ -407,7 +434,7 @@ files--debug: c
 files--debug: c
 files--debug: b
 files--debug: a
-manifest: 8:8a0d8faab8b2
+manifest: 8:79c71159cb0a
 manifest: 7:f2dbc354b94e
 manifest: 6:91015e9dbdd7
 manifest: 5:4dc3def4f9b4
@@ -416,7 +443,7 @@ manifest: 3:cb5a1327723b
 manifest: 2:6e0e82995c35
 manifest: 1:4e8d705b1e53
 manifest: 0:a0c8bcbbb45c
-manifest--verbose: 8:8a0d8faab8b2
+manifest--verbose: 8:79c71159cb0a
 manifest--verbose: 7:f2dbc354b94e
 manifest--verbose: 6:91015e9dbdd7
 manifest--verbose: 5:4dc3def4f9b4
@@ -425,7 +452,7 @@ manifest--verbose: 3:cb5a1327723b
 manifest--verbose: 2:6e0e82995c35
 manifest--verbose: 1:4e8d705b1e53
 manifest--verbose: 0:a0c8bcbbb45c
-manifest--debug: 8:8a0d8faab8b2eee97dcfccabbcb18f413c9d097b
+manifest--debug: 8:79c71159cb0a1a84add78e7922a1e5e7be34c499
 manifest--debug: 7:f2dbc354b94e5ec0b4f10680ee0cee816101d0bf
 manifest--debug: 6:91015e9dbdd76a6791085d12b0a0ec7fcd22ffbf
 manifest--debug: 5:4dc3def4f9b4c6e8de820f6ee74737f91e96a216
@@ -434,7 +461,7 @@ manifest--debug: 3:cb5a1327723bada42f117e4c55a303246eaf9ccc
 manifest--debug: 2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1
 manifest--debug: 1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
 manifest--debug: 0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
-node: 946e2bd9c565394777d74d9669045b39e856e3ea
+node: 3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57
 node: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
 node: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
 node: 13207e5a10d9fd28ec424934298e176197f2c67f
@@ -443,7 +470,7 @@ node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
 node: 97054abb4ab824450e9164180baf491ae0078465
 node: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
 node: 1e4e1b8f71e05681d422154f5421e385fec3454f
-node--verbose: 946e2bd9c565394777d74d9669045b39e856e3ea
+node--verbose: 3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57
 node--verbose: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
 node--verbose: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
 node--verbose: 13207e5a10d9fd28ec424934298e176197f2c67f
@@ -452,7 +479,7 @@ node--verbose: 10e46f2dcbf4823578cf180f33ecf0b957964c47
 node--verbose: 97054abb4ab824450e9164180baf491ae0078465
 node--verbose: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
 node--verbose: 1e4e1b8f71e05681d422154f5421e385fec3454f
-node--debug: 946e2bd9c565394777d74d9669045b39e856e3ea
+node--debug: 3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57
 node--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
 node--debug: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
 node--debug: 13207e5a10d9fd28ec424934298e176197f2c67f
@@ -542,7 +569,7 @@ tags--debug:
 tags--debug: 
 tags--debug: 
 tags--debug: 
-diffstat: 1: +1/-0
+diffstat: 3: +2/-1
 diffstat: 1: +1/-0
 diffstat: 0: +0/-0
 diffstat: 1: +1/-0
@@ -551,7 +578,7 @@ diffstat: 1: +1/-0
 diffstat: 1: +4/-0
 diffstat: 1: +2/-0
 diffstat: 1: +1/-0
-diffstat--verbose: 1: +1/-0
+diffstat--verbose: 3: +2/-1
 diffstat--verbose: 1: +1/-0
 diffstat--verbose: 0: +0/-0
 diffstat--verbose: 1: +1/-0
@@ -560,7 +587,7 @@ diffstat--verbose: 1: +1/-0
 diffstat--verbose: 1: +4/-0
 diffstat--verbose: 1: +2/-0
 diffstat--verbose: 1: +1/-0
-diffstat--debug: 1: +1/-0
+diffstat--debug: 3: +2/-1
 diffstat--debug: 1: +1/-0
 diffstat--debug: 0: +0/-0
 diffstat--debug: 1: +1/-0
@@ -670,7 +697,7 @@ no user, no domain
 no person
 other 1
 line 1
-946e2bd9c565
+3bdecc1cde0c
 29114dbae42b
 c7b487c6c50e
 13207e5a10d9

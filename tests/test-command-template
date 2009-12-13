@@ -32,6 +32,7 @@ hg add second
 hg commit -m second -d '1000000 0' -u 'User Name <user@hostname>'
 echo third > third
 hg add third
+hg mv second fourth
 hg commit -m third -d "2020-01-01 10:01"
 
 # make sure user/global hgrc does not affect tests
@@ -93,7 +94,8 @@ cat changelog
 
 echo "# keys work"
 for key in author branches date desc file_adds file_dels file_mods \
-        files manifest node parents rev tags diffstat extras; do
+        'file_copies%filecopy' files manifest node parents rev tags diffstat \
+        extras; do
     for mode in '' --verbose --debug; do
         hg log $mode --template "$key$mode: {$key}\n"
     done
