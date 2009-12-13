@@ -18,7 +18,8 @@ cd repo2
 [ -d .hg/store ] \
   && echo "fail: .hg/store should not exist" \
   || echo "pass: .hg/store does not exist"
-cat .hg/sharedpath | sed "s:$HGTMP:*HGTMP*:"; echo
+# sed appends a newline to the stream if none, GNU sed does not
+sed "s:$HGTMP:*HGTMP*:" .hg/sharedpath | tr -d '\n'; echo
 
 echo % commit in shared clone
 echo a >> a
