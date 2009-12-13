@@ -35,15 +35,13 @@ Note that there are some limitations on using this extension:
 - You should use single encoding in one repository.
 
 
-By default, win32mbcs uses encoding.encoding decided by mercurial.
-You can specify the encoding by config option.
+By default, win32mbcs uses encoding.encoding decided by Mercurial.
+You can specify the encoding by config option::
 
- ex.)
  [win32mbcs]
  encoding = sjis
 
-It is usefull for the users who want to commit with utf-8 log message.
-
+It is useful for the users who want to commit with UTF-8 log message.
 '''
 
 import os, sys
