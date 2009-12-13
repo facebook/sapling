@@ -226,20 +226,17 @@ def formatblock(block, width):
     initindent = subindent = indent
     if block['type'] == 'bullet':
         m = _bulletre.match(block['lines'][0])
-        if m:
-            subindent = indent + m.end() * ' '
+        subindent = indent + m.end() * ' '
     elif block['type'] == 'field':
         m = _fieldre.match(block['lines'][0])
-        if m:
-            key, spaces, rest = m.groups()
-            # Turn ":foo: bar" into "foo   bar".
-            block['lines'][0] = '%s  %s%s' % (key, spaces, rest)
-            subindent = indent + (2 + len(key) + len(spaces)) * ' '
+        key, spaces, rest = m.groups()
+        # Turn ":foo: bar" into "foo   bar".
+        block['lines'][0] = '%s  %s%s' % (key, spaces, rest)
+        subindent = indent + (2 + len(key) + len(spaces)) * ' '
     elif block['type'] == 'option':
         m = _optionre.match(block['lines'][0])
-        if m:
-            option, arg, rest = m.groups()
-            subindent = indent + (len(option) + len(arg)) * ' '
+        option, arg, rest = m.groups()
+        subindent = indent + (len(option) + len(arg)) * ' '
 
     text = ' '.join(map(str.strip, block['lines']))
     return textwrap.fill(text, width=width,
