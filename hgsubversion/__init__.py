@@ -77,7 +77,7 @@ def uisetup(ui):
     docvals = {'extension': 'hgsubversion'}
     for cmd, (generic, target, fixdoc, ppopts, opts) in wrapcmds.iteritems():
 
-        if fixdoc:
+        if fixdoc and wrappers.generic.__doc__:
             docvals['command'] = cmd
             docvals['Command'] = cmd.capitalize()
             docvals['target'] = target

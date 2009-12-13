@@ -282,6 +282,9 @@ def _helpgen():
            'subcommands for Subversion integration', '',
            'list of subcommands:', '']
     for name, func in sorted(table.items()):
-        short_description = (func.__doc__ or '').splitlines()[0]
+        if func.__doc__:
+            short_description = func.__doc__.splitlines()[0]
+        else:
+            short_description = ''
         ret.append(" %-10s  %s" % (name, short_description))
     return '\n'.join(ret) + '\n'
