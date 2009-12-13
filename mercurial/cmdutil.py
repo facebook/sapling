@@ -763,9 +763,7 @@ class changeset_templater(changeset_printer):
                                          'manifest': '{rev}:{node|formatnode}',
                                          'filecopy': '{name} ({source})',
                                          'extra': '{key}={value|stringescape}'})
-        # Cache mapping from rev to a tuple with tag date, tag
-        # distance and tag name
-        self._latesttagcache = {-1: (0, 0, 'null')}
+        self.cache = {}
 
     def use_template(self, t):
         '''set template string to use'''
@@ -783,30 +781,6 @@ class changeset_templater(changeset_printer):
             return []
         return parents
 
-    def _latesttaginfo(self, rev):
-        '''return date, distance and name for the latest tag of rev'''
-        todo = [rev]
-        while todo:
-            rev = todo.pop()
-            if rev in self._latesttagcache:
-                continue
-            ctx = self.repo[rev]
-            tags = [t for t in ctx.tags() if self.repo.tagtype(t) == 'global']
-            if tags:
-                self._latesttagcache[rev] = ctx.date()[0], 0, ':'.join(sorted(tags))
-                continue
-            try:
-                # The tuples are laid out so the right one can be found by comparison.
-                pdate, pdist, ptag = max(
-                    self._latesttagcache[p.rev()] for p in ctx.parents())
-            except KeyError:
-                # Cache miss - recurse
-                todo.append(rev)
-                todo.extend(p.rev() for p in ctx.parents())
-                continue
-            self._latesttagcache[rev] = pdate, pdist + 1, ptag
-        return self._latesttagcache[rev]
-
     def _show(self, ctx, copies, props):
         '''show a single changeset or file revision'''
 
@@ -820,17 +794,10 @@ class changeset_templater(changeset_printer):
         def showcopies(repo, ctx, templ, **args):
             c = [{'name': x[0], 'source': x[1]} for x in copies]
             return showlist(templ, 'file_copy', c, plural='file_copies', **args)
-        
-        def showlatesttag(repo, ctx, templ, **args):
-            return self._latesttaginfo(ctx.rev())[2]
-        def showlatesttagdistance(repo, ctx, templ, **args):
-            return self._latesttaginfo(ctx.rev())[1]
 
         defprops = {
             'file_copies': showcopies,            
             'parents': showparents,            
-            'latesttag': showlatesttag,
-            'latesttagdistance': showlatesttagdistance,
             }
         props = props.copy()
         props.update(templatekw.keywords)
@@ -839,6 +806,7 @@ class changeset_templater(changeset_printer):
         props['ctx'] = ctx
         props['repo'] = self.repo
         props['revcache'] = {}
+        props['cache'] = self.cache
 
         # find correct templates for current mode
 

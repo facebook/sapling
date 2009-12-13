@@ -75,6 +75,39 @@ def getfiles(repo, ctx, revcache):
                                         ctx.node())[:3]
     return revcache['files']
 
+def getlatesttags(repo, ctx, cache):
+    '''return date, distance and name for the latest tag of rev'''
+
+    if 'latesttags' not in cache:
+        # Cache mapping from rev to a tuple with tag date, tag
+        # distance and tag name
+        cache['latesttags'] = {-1: (0, 0, 'null')}
+    latesttags = cache['latesttags']
+
+    rev = ctx.rev()
+    todo = [rev]
+    while todo:
+        rev = todo.pop()
+        if rev in latesttags:
+            continue
+        ctx = repo[rev]
+        tags = [t for t in ctx.tags() if repo.tagtype(t) == 'global']
+        if tags:
+            latesttags[rev] = ctx.date()[0], 0, ':'.join(sorted(tags))
+            continue
+        try:
+            # The tuples are laid out so the right one can be found by
+            # comparison.
+            pdate, pdist, ptag = max(
+                latesttags[p.rev()] for p in ctx.parents())
+        except KeyError:
+            # Cache miss - recurse
+            todo.append(rev)
+            todo.extend(p.rev() for p in ctx.parents())
+            continue
+        latesttags[rev] = pdate, pdist + 1, ptag
+    return latesttags[rev]
+
 def showauthor(repo, ctx, templ, **args):
     return ctx.user()
 
@@ -117,6 +150,12 @@ def showfilemods(repo, ctx, templ, revcache, **args):
 def showfiles(repo, ctx, templ, **args):
     return showlist(templ, 'file', ctx.files(), **args)
 
+def showlatesttag(repo, ctx, templ, cache, **args):
+    return getlatesttags(repo, ctx, cache)[2]
+
+def showlatesttagdistance(repo, ctx, templ, cache, **args):
+    return getlatesttags(repo, ctx, cache)[1]
+
 def showmanifest(repo, ctx, templ, **args):
     args = args.copy()
     args.update(dict(rev=repo.manifest.rev(ctx.changeset()[0]),
@@ -143,6 +182,8 @@ keywords = {
     'file_dels': showfiledels,
     'file_mods': showfilemods,
     'files': showfiles,
+    'latesttag': showlatesttag,
+    'latesttagdistance': showlatesttagdistance,
     'manifest': showmanifest,
     'node': shownode,
     'rev': showrev,
