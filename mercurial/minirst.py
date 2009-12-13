@@ -273,6 +273,7 @@ if __name__ == "__main__":
     text = open(sys.argv[1]).read()
     blocks = debug(findblocks, text)
     blocks = debug(findliteralblocks, blocks)
+    blocks = debug(inlineliterals, blocks)
     blocks = debug(splitparagraphs, blocks)
     blocks = debug(findsections, blocks)
     blocks = debug(addmargins, blocks)
