@@ -912,7 +912,11 @@ class svn_source(converter_source):
         cmd = '%s debugsvnlog' % util.shellquote(hgexe)
         stdin, stdout = util.popen2(cmd)
         stdin.write(arg)
-        stdin.close()
+        try:
+            stdin.close()
+        except IOError:
+            raise util.Abort(_('Mercurial failed to run itself, check'
+                               ' hg executable is in PATH'))
         return logstream(stdout)
 
 pre_revprop_change = '''#!/bin/sh
