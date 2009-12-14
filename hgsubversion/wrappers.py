@@ -29,6 +29,15 @@ revmeta = [
     ('message', 'message'),
 ]
 
+
+def version(orig, ui, *args, **opts):
+    svn = opts.pop('svn', None)
+    orig(ui, *args, **opts)
+    if svn:
+        ui.status('\nsvn bindings: %s\n' % svnwrap.version())
+        ui.status('hgsubversion: %s\n' % util.version(ui))
+
+
 def parents(orig, ui, repo, *args, **opts):
     """show Mercurial & Subversion parents of the working dir or revision
     """
