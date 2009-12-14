@@ -2,4 +2,11 @@ adding a
 comparing with l://
 searching for changes
 no changes found
+% check that {1} syntax works
+using http://localhost:/
+sending between command
+comparing with parts://localhost
+sending heads command
+searching for changes
+no changes found
 % errors

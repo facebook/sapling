@@ -6,6 +6,7 @@ schemes=
 
 [schemes]
 l = http://localhost:$HGPORT/
+parts = http://{1}:$HGPORT/
 EOF
 
 hg init test
@@ -17,6 +18,9 @@ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 
 hg incoming l://
+
+echo % check that {1} syntax works
+hg incoming --debug parts://localhost | sed 's/[0-9]//g'
 
 echo % errors
 cat errors.log
