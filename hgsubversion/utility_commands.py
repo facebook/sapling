@@ -97,16 +97,8 @@ def listauthors(ui, args, authors=None, **opts):
         ui.status('%s\n' % '\n'.join(sorted(author_set)))
 
 
-def version(ui, **opts):
-    """Show current version of hg and hgsubversion.
-    """
-    ui.status('hg: %s\n' % hgutil.version())
-    ui.status('svn bindings: %s\n' % svnwrap.version())
-    ui.status('hgsubversion: %s\n' % util.version(ui))
-
 table = {
     'genignore': genignore,
     'info': info,
     'listauthors': listauthors,
-    'version': version,
 }
