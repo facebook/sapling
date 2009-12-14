@@ -49,6 +49,9 @@ svnopts = [
      'use slower, but more compatible, protocol for Subversion'),
 ]
 
+# generic means it picks up all options from svnopts
+# fixdoc means update the docstring
+# TODO: fixdoc hoses l18n
 wrapcmds = { # cmd: generic, target, fixdoc, ppopts, opts
     'parents': (False, None, False, False, [
         ('', 'svn', None, 'show parent svn revision instead'),
