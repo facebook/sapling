@@ -86,15 +86,12 @@ def _statusmessage(code):
 def statusmessage(code, message=None):
     return '%d %s' % (code, message or _statusmessage(code))
 
-def get_mtime(repo_path):
-    store_path = os.path.join(repo_path, ".hg")
-    if not os.path.isdir(os.path.join(store_path, "data")):
-        store_path = os.path.join(store_path, "store")
-    cl_path = os.path.join(store_path, "00changelog.i")
+def get_mtime(spath):
+    cl_path = os.path.join(spath, "00changelog.i")
     if os.path.exists(cl_path):
         return os.stat(cl_path).st_mtime
     else:
-        return os.stat(store_path).st_mtime
+        return os.stat(spath).st_mtime
 
 def staticfile(directory, fname, req):
     """return a file inside directory with guessed Content-Type header

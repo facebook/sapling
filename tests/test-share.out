@@ -43,3 +43,11 @@ summary:     init
 
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 b
+% hg serve shared clone
+200 Script output follows
+
+
+-rw-r--r-- 4 a
+-rw-r--r-- 2 b
+
+

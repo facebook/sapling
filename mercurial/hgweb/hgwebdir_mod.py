@@ -235,7 +235,8 @@ class hgwebdir(object):
 
                 # update time with local timezone
                 try:
-                    d = (get_mtime(path), util.makedate()[1])
+                    r = hg.repository(self.ui, path)
+                    d = (get_mtime(r.spath), util.makedate()[1])
                 except OSError:
                     continue
 

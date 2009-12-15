@@ -57,7 +57,7 @@ class hgweb(object):
     def refresh(self, request=None):
         if request:
             self.repo.ui.environ = request.env
-        mtime = get_mtime(self.repo.root)
+        mtime = get_mtime(self.repo.spath)
         if mtime != self.mtime:
             self.mtime = mtime
             self.repo = hg.repository(self.repo.ui, self.repo.root)
