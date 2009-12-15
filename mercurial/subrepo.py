@@ -160,6 +160,9 @@ class hgsubrepo(object):
         else:
             util.makedirs(root)
             self._repo = hg.repository(r.ui, root, create=True)
+            f = file(os.path.join(root, '.hg', 'hgrc'), 'w')
+            f.write('[paths]\ndefault = %s\n' % state[0])
+            f.close()
         self._repo._subparent = r
         self._repo._subsource = state[0]
 
