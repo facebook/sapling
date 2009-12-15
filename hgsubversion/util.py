@@ -61,13 +61,18 @@ def islocalrepo(url):
 
 
 def version(ui):
-    """Guess the version of hgsubversion.
-    """
-    # TODO make this say something other than "unknown" for installed hgsubversion
-    dn = os.path.dirname
-    repo = hg.repository(ui, dn(dn(__file__)))
-    ver = repo.dirstate.parents()[0]
-    return node.hex(ver)[:12]
+    """Return version information if available."""
+    try:
+        import __version__
+        return __version__.version
+    except ImportError:
+        try:
+            dn = os.path.dirname
+            repo = hg.repository(ui, dn(dn(__file__)))
+            ver = repo.dirstate.parents()[0]
+            return node.hex(ver)[:12]
+        except:
+            return 'unknown'
 
 
 def normalize_url(url):
