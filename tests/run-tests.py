@@ -251,9 +251,8 @@ def parsehghaveoutput(lines):
 
     return missing, failed
 
-def showdiff(expected, output):
-    for line in difflib.unified_diff(expected, output,
-            "Expected output", "Test output"):
+def showdiff(expected, output, ref, err):
+    for line in difflib.unified_diff(expected, output, ref, err):
         sys.stdout.write(line)
 
 def findprogram(program):
@@ -452,13 +451,13 @@ def runone(options, test, skips, fails):
         if not options.verbose:
             skips.append((test, msg))
         else:
-            print "\nSkipping %s: %s" % (test, msg)
+            print "\nSkipping %s: %s" % (testpath, msg)
         return None
 
     def fail(msg):
         fails.append((test, msg))
         if not options.nodiff:
-            print "\nERROR: %s %s" % (test, msg)
+            print "\nERROR: %s %s" % (testpath, msg)
         return None
 
     vlog("# Test", test)
@@ -565,7 +564,7 @@ def runone(options, test, skips, fails):
         else:
             fail("output changed")
         if not options.nodiff:
-            showdiff(refout, out)
+            showdiff(refout, out, ref, err)
         ret = 1
     elif ret:
         mark = '!'
