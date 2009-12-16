@@ -61,8 +61,10 @@ class mercurial_sink(converter_sink):
 
     def after(self):
         self.ui.debug('run hg sink post-conversion action\n')
-        self.lock.release()
-        self.wlock.release()
+        if self.lock:
+            self.lock.release()
+        if self.wlock:
+            self.wlock.release()
 
     def revmapfile(self):
         return os.path.join(self.path, ".hg", "shamap")
