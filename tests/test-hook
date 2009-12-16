@@ -260,6 +260,6 @@ echo '[hooks]' > .hg/hgrc
 echo 'precommit.importfail = python:importfail.whatever' >> .hg/hgrc
 
 echo a >> a
-hg --traceback commit -Ama 2>&1 | grep '^\(exception\|Traceback\|ImportError\)'
+hg --traceback commit -Ama 2>&1 | egrep '^(exception|Traceback|ImportError)'
 
 exit 0
