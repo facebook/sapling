@@ -33,7 +33,7 @@ hg branch
 
 echo '% rollback by pretxncommit saves commit message (issue 1635)'
 echo a >> a
-hg --config hooks.pretxncommit=false commit -m"precious commit message"
+hg --config hooks.pretxncommit=false commit -m"precious commit message" 2>&1 | sed 's,exited with status .*,exited ...,g'
 echo '.hg/last-message.txt:'
 cat .hg/last-message.txt ; echo
 
@@ -43,6 +43,6 @@ cat > $HGTMP/editor <<'__EOF__'
 echo "another precious commit message" > "$1"
 __EOF__
 chmod +x $HGTMP/editor
-HGEDITOR=$HGTMP/editor hg --config hooks.pretxncommit=false commit
+HGEDITOR=$HGTMP/editor hg --config hooks.pretxncommit=false commit 2>&1 | sed 's,exited with status .*,exited ...,g'
 echo '.hg/last-message.txt:'
 cat .hg/last-message.txt
