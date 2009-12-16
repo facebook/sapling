@@ -175,3 +175,19 @@ cd repo2
 hg incoming --graph ../repo
 cd ..
 hg -R repo outgoing --graph repo2
+
+cd repo
+echo % file + limit with revs != cset revs
+touch b
+hg ci -Aqm0
+# this used to show only one cset
+hg glog -l2 a
+
+echo "% file + limit + -ra:b, (b - a) < limit"
+hg glog -l3000 -r32:tip a
+
+echo "% file + limit + -ra:b, b < tip"
+hg glog -l1 -r32:34 a
+
+echo "% file + limit + -ra:b, b < tip, (b - a) < limit"
+hg glog -l10 -r33:34 a

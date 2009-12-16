@@ -241,15 +241,15 @@ def graphlog(ui, repo, path=None, **opts):
     check_unsupported_flags(opts)
     limit = cmdutil.loglimit(opts)
     start, stop = get_revs(repo, opts["rev"])
-    stop = max(stop, start - limit + 1)
     if start == nullrev:
         return
 
     if path:
         path = util.canonpath(repo.root, os.getcwd(), path)
     if path: # could be reset in canonpath
-        revdag = graphmod.filerevs(repo, path, start, stop)
+        revdag = graphmod.filerevs(repo, path, start, stop, limit)
     else:
+        stop = max(stop, start - limit + 1)
         revdag = graphmod.revisions(repo, start, stop)
 
     displayer = show_changeset(ui, repo, opts, buffered=True)

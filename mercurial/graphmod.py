@@ -17,6 +17,7 @@ context of the graph returned. Type is a constant specifying the node type.
 Data depends on type.
 """
 
+import sys
 from mercurial.node import nullrev
 
 CHANGESET = 'C'
@@ -36,21 +37,24 @@ def revisions(repo, start, stop):
         yield (cur, CHANGESET, ctx, sorted(parents))
         cur -= 1
 
-def filerevs(repo, path, start, stop):
+def filerevs(repo, path, start, stop, limit=sys.maxint):
     """file cset DAG generator yielding (id, CHANGESET, ctx, [parentids]) tuples
 
     This generator function walks through the revision history of a single
     file from revision start down to revision stop.
     """
     filerev = len(repo.file(path)) - 1
-    while filerev >= 0:
+    rev = stop + 1
+    count = 0
+    while filerev >= 0 and rev > stop:
         fctx = repo.filectx(path, fileid=filerev)
         parents = [f.linkrev() for f in fctx.parents() if f.path() == path]
         rev = fctx.rev()
         if rev <= start:
             yield (rev, CHANGESET, fctx.changectx(), sorted(parents))
-        if rev <= stop:
-            break
+            count += 1
+            if count == limit:
+                break
         filerev -= 1
 
 def nodes(repo, nodes):
