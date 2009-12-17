@@ -281,8 +281,7 @@ def pull(repo, source, heads=[], force=False):
 
                         meta.save_tbdelta(tbdelta)
                         close = pullfuns[have_replay](ui, meta, svn, r, tbdelta)
-                        if tbdelta['tags'][0] or tbdelta['tags'][1]:
-                            meta.committags(tbdelta['tags'], r, close)
+                        meta.committags(r, close)
                         for branch, parent in close.iteritems():
                             if parent in (None, node.nullid):
                                 continue

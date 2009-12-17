@@ -88,6 +88,8 @@ class SVNMeta(object):
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.filemap = maps.FileMap(repo)
+        self.addedtags = {}
+        self.deletedtags = {}
 
     @property
     def layout(self):
@@ -363,30 +365,26 @@ class SVNMeta(object):
         return int(revnum), self.localname(self.normalize(branch))
 
     def update_branch_tag_map_for_rev(self, revision):
-        """Given a revision object, determine changes to branches and tags.
+        """Given a revision object, determine changes to branches.
 
         Returns: a dict of {
-            'tags': (added_tags, rmtags),
             'branches': (added_branches, self.closebranches),
-        } where adds are dicts where the keys are branch/tag names and
-        values are the place the branch/tag came from. The deletions are
+        } where adds are dicts where the keys are branch names and
+        values are the place the branch came from. The deletions are
         sets of the deleted branches.
         """
         if self.layout == 'single':
-            return {'tags': ({}, set()),
-                    'branches': ({None: (None, 0, -1), }, set()),
+            return {'branches': ({None: (None, 0, -1), }, set()),
                     }
         paths = revision.paths
         added_branches = {}
-        added_tags = {}
+        self.addedtags = {}
+        self.deletedtags = {}
         self.closebranches = set()
-        tags_to_delete = set()
         for p in sorted(paths):
             t_name = self.get_path_tag(p)
             if t_name:
                 src_p, src_rev = paths[p].copyfrom_path, paths[p].copyfrom_rev
-                # if you commit to a tag, I'm calling you stupid and ignoring
-                # you.
                 if src_p is not None and src_rev is not None:
                     file, branch = self.split_branch_path(src_p)[:2]
                     if file is None:
@@ -398,16 +396,21 @@ class SVNMeta(object):
                             ci = self.repo[self.tags[from_tag]].extra()['convert_revision']
                             src_rev, branch, = self.parse_converted_revision(ci)
                             file = ''
-                    if t_name not in added_tags and file is '':
-                        added_tags[t_name] = branch, src_rev
+                    if t_name not in self.addedtags and file is '':
+                        self.addedtags[t_name] = branch, src_rev
                     elif file:
                         t_name = t_name[:-(len(file)+1)]
-                        if t_name in added_tags and src_rev > added_tags[t_name][1]:
-                            added_tags[t_name] = branch, src_rev
+                        found = t_name in self.addedtags
+                        if found and src_rev > self.addedtags[t_name][1]:
+                            self.addedtags[t_name] = branch, src_rev
                 elif (paths[p].action == 'D' and p.endswith(t_name)
                       and t_name in self.tags):
-                        tags_to_delete.add(t_name)
+                    ctx = self.repo[self.tags[t_name]]
+                    srev = ctx.extra()['convert_revision']
+                    src_rev, branch = self.parse_converted_revision(srev)
+                    self.deletedtags[t_name] = branch, None
                 continue
+
             # At this point we know the path is not a tag. In that
             # case, we only care if it is the root of a new branch (in
             # this function). This is determined by the following
@@ -454,12 +457,7 @@ class SVNMeta(object):
                     and branch not in added_branches):
                     parent = {branch: (None, 0, revision.revnum)}
             added_branches.update(parent)
-        def branchoftag(tag):
-            cr = self.repo[self.tags[tag]].extra()['convert_revision']
-            return self.parse_converted_revision(cr)[1]
-        rmtags = dict((t, branchoftag(t)) for t in tags_to_delete)
         return {
-            'tags': (added_tags, rmtags),
             'branches': (added_branches, self.closebranches),
         }
 
@@ -513,16 +511,16 @@ class SVNMeta(object):
         self.tags[tag] = hash, rev.revnum
         util.describe_commit(self.ui, new_hash, branch)
 
-    def committags(self, delta, rev, endbranches):
-
+    def committags(self, rev, endbranches):
+        if not self.addedtags and not self.deletedtags:
+            return
         date = self.fixdate(rev.date)
         # determine additions/deletions per branch
         branches = {}
-        for tag, source in delta[0].iteritems():
-            b, r = source
-            branches.setdefault(b, []).append(('add', tag, r))
-        for tag, branch in delta[1].iteritems():
-            branches.setdefault(branch, []).append(('rm', tag, None))
+        for tags in (self.addedtags, self.deletedtags):
+            for tag, (branch, srcrev) in tags.iteritems():
+                op = srcrev is None and 'rm' or 'add'
+                branches.setdefault(branch, []).append((op, tag, srcrev))
 
         for b, tags in branches.iteritems():
             fromtag = self.get_path_tag(self.remotename(b))
@@ -540,7 +538,7 @@ class SVNMeta(object):
                     else:
                         tagged = node.hex(self.revmap[
                             self.get_parent_svn_branch_and_rev(r+1, b)])
-                elif op == 'rm':
+                else:
                     tagged = node.hex(node.nullid)
                 src += '%s %s\n' % (tagged, tag)
                 self.tags[tag] = node.bin(tagged), rev.revnum
