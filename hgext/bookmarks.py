@@ -296,6 +296,13 @@ def reposetup(ui, repo):
             tags.update(self._bookmarks)
             return (tags, tagtypes)
 
+        if hasattr(repo, 'invalidate'):
+            def invalidate(self):
+                super(bookmark_repo, self).invalidate()
+                for attr in ('_bookmarks', '_bookmarkcurrent'):
+                    if attr in self.__dict__:
+                        delattr(repo, attr)
+
     repo.__class__ = bookmark_repo
 
 def uisetup(ui):
