@@ -115,9 +115,9 @@ def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdi
 
     confvars = locals()
     def conf():
+        _ui = ui.ui()
         for var in ('stupid', 'layout'):
-            _ui = ui.ui()
-            _ui.setconfig('hgsubversion', var, confvars[var])
+            _ui.setconfig('hgsubversion', var, str(confvars[var]))
         return _ui
     _ui = conf()
     commands.clone(_ui, fileurl(repo_path), wc_path, noupdate=noupdate)
