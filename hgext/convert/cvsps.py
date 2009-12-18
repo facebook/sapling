@@ -11,6 +11,7 @@ import re
 import cPickle as pickle
 from mercurial import util
 from mercurial.i18n import _
+from mercurial import hook
 
 class logentry(object):
     '''Class logentry has the following attributes:
@@ -444,6 +445,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
 
     ui.status(_('%d log entries\n') % len(log))
 
+    hook.hook(ui, None, "cvslog", True, log=log)
+
     return log
 
 
@@ -729,6 +732,8 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
         c.id = i + 1
 
     ui.status(_('%d changeset entries\n') % len(changesets))
+
+    hook.hook(ui, None, "cvschangesets", True, changesets=changesets)
 
     return changesets
 

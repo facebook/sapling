@@ -17,8 +17,10 @@ connecting to cvsrepo
 scanning source...
 collecting CVS rlog
 5 log entries
+cvslog hook: 5 entries
 creating changesets
 3 changeset entries
+cvschangesets hook: 3 changesets
 sorting...
 converting...
 2 Initial revision
@@ -34,8 +36,10 @@ connecting to cvsrepo
 scanning source...
 collecting CVS rlog
 5 log entries
+cvslog hook: 5 entries
 creating changesets
 3 changeset entries
+cvschangesets hook: 3 changesets
 sorting...
 converting...
 2 Initial revision
@@ -57,8 +61,10 @@ connecting to cvsrepo
 scanning source...
 collecting CVS rlog
 7 log entries
+cvslog hook: 7 entries
 creating changesets
 4 changeset entries
+cvschangesets hook: 4 changesets
 sorting...
 converting...
 0 ci1
@@ -72,8 +78,10 @@ connecting to cvsrepo
 scanning source...
 collecting CVS rlog
 7 log entries
+cvslog hook: 7 entries
 creating changesets
 4 changeset entries
+cvschangesets hook: 4 changesets
 sorting...
 converting...
 0 ci1
@@ -94,8 +102,10 @@ connecting to cvsrepo
 scanning source...
 collecting CVS rlog
 8 log entries
+cvslog hook: 8 entries
 creating changesets
 5 changeset entries
+cvschangesets hook: 5 changesets
 sorting...
 converting...
 0 ci2
@@ -106,8 +116,10 @@ connecting to cvsrepo
 scanning source...
 collecting CVS rlog
 8 log entries
+cvslog hook: 8 entries
 creating changesets
 5 changeset entries
+cvschangesets hook: 5 changesets
 sorting...
 converting...
 0 ci2
@@ -125,8 +137,10 @@ connecting to cvsrepo
 scanning source...
 collecting CVS rlog
 9 log entries
+cvslog hook: 9 entries
 creating changesets
 6 changeset entries
+cvschangesets hook: 6 changesets
 sorting...
 converting...
 0 funny
@@ -148,8 +162,10 @@ o  0 () Initial revision files: a b/c
 % testing debugcvsps
 collecting CVS rlog
 9 log entries
+cvslog hook: 9 entries
 creating changesets
 8 changeset entries
+cvschangesets hook: 8 changesets
 ---------------------
 PatchSet 1 
 Date:

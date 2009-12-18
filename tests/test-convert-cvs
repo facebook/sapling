@@ -16,10 +16,23 @@ echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
 echo "graphlog = " >> $HGRCPATH
 
+cat > cvshooks.py <<EOF
+def cvslog(ui,repo,hooktype,log):
+    print "%s hook: %d entries"%(hooktype,len(log))
+
+def cvschangesets(ui,repo,hooktype,changesets):
+    print "%s hook: %d changesets"%(hooktype,len(changesets))
+EOF
+hookpath=$PWD
+
+echo "[hooks]" >> $HGRCPATH
+echo "cvslog=python:$hookpath/cvshooks.py:cvslog" >> $HGRCPATH
+echo "cvschangesets=python:$hookpath/cvshooks.py:cvschangesets" >> $HGRCPATH
+
 echo % create cvs repository
 mkdir cvsrepo
 cd cvsrepo
-CVSROOT=`pwd`
+CVSROOT=$PWD
 export CVSROOT
 CVS_OPTIONS=-f
 export CVS_OPTIONS
