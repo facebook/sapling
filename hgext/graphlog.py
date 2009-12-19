@@ -218,7 +218,8 @@ def check_unsupported_flags(opts):
                "only_merges", "user", "only_branch", "prune", "newest_first",
                "no_merges", "include", "exclude"]:
         if op in opts and opts[op]:
-            raise util.Abort(_("--graph option is incompatible with --%s") % op)
+            raise util.Abort(_("--graph option is incompatible with --%s")
+                             % op.replace("_", "-"))
 
 def generate(ui, dag, displayer, showparents, edgefn):
     seen, state = [], asciistate()
