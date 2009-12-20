@@ -10,6 +10,13 @@ applying eol.diff
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying eol.diff
 'a\r\nyyyy\r\ncc\r\n\r\nd\r\ne'
+% auto EOL on LF file
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying eol.diff
+'a\nyyyy\ncc\n\nd\ne'
+% auto EOL on CRLF file
+applying eol.diff
+'a\r\nyyyy\r\ncc\r\n\r\nd\r\ne'
 adding b
 % binary patch with --eol
 applying bin.diff

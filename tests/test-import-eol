@@ -28,16 +28,32 @@ echo '\.diff' > .hgignore
 python -c 'file("a", "wb").write("a\nbbb\ncc\n\nd\ne")'
 hg ci -Am adda
 python ../makepatch.py
+
 echo % invalid eol
 hg --config patch.eol='LFCR' import eol.diff
 hg revert -a
+
 echo % force LF
 hg --traceback --config patch.eol='LF' import eol.diff
 python -c 'print repr(file("a","rb").read())'
 hg st
+
 echo % force CRLF
 hg up -C 0
 hg --traceback --config patch.eol='CRLF' import eol.diff
+python -c 'print repr(file("a","rb").read())'
+hg st
+
+echo % auto EOL on LF file
+hg up -C 0
+hg --traceback --config patch.eol='auto' import eol.diff
+python -c 'print repr(file("a","rb").read())'
+hg st
+
+echo % auto EOL on CRLF file
+python -c 'file("a", "wb").write("a\r\nbbb\r\ncc\r\n\r\nd\r\ne")'
+hg commit -m 'switch EOLs in a'
+hg --traceback --config patch.eol='auto' import eol.diff
 python -c 'print repr(file("a","rb").read())'
 hg st
 

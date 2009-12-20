@@ -239,6 +239,7 @@ class linereader(object):
         self.fp = fp
         self.buf = []
         self.textmode = textmode
+        self.eol = None
 
     def push(self, line):
         if line is not None:
@@ -250,6 +251,11 @@ class linereader(object):
             del self.buf[0]
             return l
         l = self.fp.readline()
+        if not self.eol:
+            if l.endswith('\r\n'):
+                self.eol = '\r\n'
+            elif l.endswith('\n'):
+                self.eol = '\n'
         if self.textmode and l.endswith('\r\n'):
             l = l[:-2] + '\n'
         return l
@@ -264,13 +270,13 @@ class linereader(object):
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
-eolmodes = ['strict', 'crlf', 'lf']
+eolmodes = ['strict', 'crlf', 'lf', 'auto']
 
 class patchfile(object):
     def __init__(self, ui, fname, opener, missing=False, eolmode='strict'):
         self.fname = fname
         self.eolmode = eolmode
-        self.eol = {'strict': None, 'crlf': '\r\n', 'lf': '\n'}[eolmode]
+        self.eol = None
         self.opener = opener
         self.ui = ui
         self.lines = []
@@ -298,7 +304,10 @@ class patchfile(object):
             return [os.readlink(fname)]
         fp = self.opener(fname, 'r')
         try:
-            return list(linereader(fp, self.eolmode != 'strict'))
+            lr = linereader(fp, self.eolmode != 'strict')
+            lines = list(lr)
+            self.eol = lr.eol
+            return lines
         finally:
             fp.close()
 
@@ -312,10 +321,17 @@ class patchfile(object):
         else:
             fp = self.opener(fname, 'w')
         try:
-            if self.eol and self.eol != '\n':
+            if self.eolmode == 'auto' and self.eol:
+                eol = self.eol
+            elif self.eolmode == 'crlf':
+                eol = '\r\n'
+            else:
+                eol = '\n'
+
+            if self.eolmode != 'strict' and eol != '\n':
                 for l in lines:
                     if l and l[-1] == '\n':
-                        l = l[:-1] + self.eol
+                        l = l[:-1] + eol
                     fp.write(l)
             else:
                 fp.writelines(lines)
