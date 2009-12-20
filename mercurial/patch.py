@@ -264,11 +264,13 @@ class linereader(object):
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
+eolmodes = ['strict', 'crlf', 'lf']
 
 class patchfile(object):
-    def __init__(self, ui, fname, opener, missing=False, eol=None):
+    def __init__(self, ui, fname, opener, missing=False, eolmode='strict'):
         self.fname = fname
-        self.eol = eol
+        self.eolmode = eolmode
+        self.eol = {'strict': None, 'crlf': '\r\n', 'lf': '\n'}[eolmode]
         self.opener = opener
         self.ui = ui
         self.lines = []
@@ -296,7 +298,7 @@ class patchfile(object):
             return [os.readlink(fname)]
         fp = self.opener(fname, 'r')
         try:
-            return list(linereader(fp, self.eol is not None))
+            return list(linereader(fp, self.eolmode != 'strict'))
         finally:
             fp.close()
 
@@ -939,7 +941,7 @@ def iterhunks(ui, fp, sourcefile=None, textmode=False):
     if hunknum == 0 and dopatch and not gitworkdone:
         raise NoHunks
 
-def applydiff(ui, fp, changed, strip=1, sourcefile=None, eol=None):
+def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
     """
     Reads a patch from fp and tries to apply it.
 
@@ -947,16 +949,16 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eol=None):
     by the patch. Returns 0 for a clean patch, -1 if any rejects were
     found and 1 if there was any fuzz.
 
-    If 'eol' is None, the patch content and patched file are read in
-    binary mode. Otherwise, line endings are ignored when patching then
-    normalized to 'eol' (usually '\n' or \r\n').
+    If 'eolmode' is 'strict', the patch content and patched file are
+    read in binary mode. Otherwise, line endings are ignored when
+    patching then normalized according to 'eolmode'.
     """
     rejects = 0
     err = 0
     current_file = None
     gitpatches = None
     opener = util.opener(os.getcwd())
-    textmode = eol is not None
+    textmode = eolmode != 'strict'
 
     def closefile():
         if not current_file:
@@ -979,11 +981,11 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eol=None):
             afile, bfile, first_hunk = values
             try:
                 if sourcefile:
-                    current_file = patchfile(ui, sourcefile, opener, eol=eol)
+                    current_file = patchfile(ui, sourcefile, opener, eolmode=eolmode)
                 else:
                     current_file, missing = selectfile(afile, bfile, first_hunk,
                                             strip)
-                    current_file = patchfile(ui, current_file, opener, missing, eol)
+                    current_file = patchfile(ui, current_file, opener, missing, eolmode)
             except PatchError, err:
                 ui.warn(str(err) + '\n')
                 current_file, current_hunk = None, None
@@ -1104,10 +1106,9 @@ def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):
         files = {}
     if eolmode is None:
         eolmode = ui.config('patch', 'eol', 'strict')
-    try:
-        eol = {'strict': None, 'crlf': '\r\n', 'lf': '\n'}[eolmode.lower()]
-    except KeyError:
+    if eolmode.lower() not in eolmodes:
         raise util.Abort(_('Unsupported line endings type: %s') % eolmode)
+    eolmode = eolmode.lower()
 
     try:
         fp = open(patchobj, 'rb')
@@ -1117,7 +1118,7 @@ def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):
         curdir = os.getcwd()
         os.chdir(cwd)
     try:
-        ret = applydiff(ui, fp, files, strip=strip, eol=eol)
+        ret = applydiff(ui, fp, files, strip=strip, eolmode=eolmode)
     finally:
         if cwd:
             os.chdir(curdir)
