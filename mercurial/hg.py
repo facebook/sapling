@@ -88,7 +88,7 @@ def share(ui, source, dest=None, update=True):
         raise util.Abort(_('can only share local repositories'))
 
     if not dest:
-        dest = os.path.basename(source)
+        dest = defaultdest(source)
     else:
         dest = ui.expandpath(dest)
 
