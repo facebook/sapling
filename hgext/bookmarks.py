@@ -33,24 +33,6 @@ from mercurial.node import nullid, nullrev, hex, short
 from mercurial import util, commands, localrepo, repair, extensions
 import os
 
-def parse(repo):
-    '''Parse .hg/bookmarks file and return a dictionary
-
-    Bookmarks are stored as {HASH}\\s{NAME}\\n (localtags format) values
-    in the .hg/bookmarks file. They are read by the parse() method and
-    returned as a dictionary with name => hash values.
-
-    The parsed dictionary is cached until a write() operation is done.
-    '''
-    try:
-        bookmarks = {}
-        for line in repo.opener('bookmarks'):
-            sha, refspec = line.strip().split(' ', 1)
-            bookmarks[refspec] = repo.lookup(sha)
-    except:
-        pass
-    return bookmarks
-
 def write(repo):
     '''Write bookmarks
 
@@ -73,23 +55,6 @@ def write(repo):
         file.rename()
     finally:
         wlock.release()
-
-def current(repo):
-    '''Get the current bookmark
-
-    If we use gittishsh branches we have a current bookmark that
-    we are on. This function returns the name of the bookmark. It
-    is stored in .hg/bookmarks.current
-    '''
-    mark = None
-    if os.path.exists(repo.join('bookmarks.current')):
-        file = repo.opener('bookmarks.current')
-        # No readline() in posixfile_nt, reading everything is cheap
-        mark = (file.readlines() or [''])[0]
-        if mark == '':
-            mark = None
-        file.close()
-    return mark
 
 def setcurrent(repo, mark):
     '''Set the name of the bookmark that we are currently on
@@ -236,11 +201,38 @@ def reposetup(ui, repo):
 
         @util.propertycache
         def _bookmarks(self):
-            return parse(self)
+            '''Parse .hg/bookmarks file and return a dictionary
+
+            Bookmarks are stored as {HASH}\\s{NAME}\\n (localtags format) values
+            in the .hg/bookmarks file. They are read returned as a dictionary
+            with name => hash values.
+            '''
+            try:
+                bookmarks = {}
+                for line in self.opener('bookmarks'):
+                    sha, refspec = line.strip().split(' ', 1)
+                    bookmarks[refspec] = super(bookmark_repo, self).lookup(sha)
+            except:
+                pass
+            return bookmarks
 
         @util.propertycache
         def _bookmarkcurrent(self):
-            return current(self)
+            '''Get the current bookmark
+
+            If we use gittishsh branches we have a current bookmark that
+            we are on. This function returns the name of the bookmark. It
+            is stored in .hg/bookmarks.current
+            '''
+            mark = None
+            if os.path.exists(self.join('bookmarks.current')):
+                file = self.opener('bookmarks.current')
+                # No readline() in posixfile_nt, reading everything is cheap
+                mark = (file.readlines() or [''])[0]
+                if mark == '':
+                    mark = None
+                file.close()
+            return mark
 
         def rollback(self):
             if os.path.exists(self.join('undo.bookmarks')):
