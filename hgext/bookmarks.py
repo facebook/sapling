@@ -252,44 +252,7 @@ def reposetup(ui, repo):
                 key = self._bookmarks[key]
             return super(bookmark_repo, self).lookup(key)
 
-        def commitctx(self, ctx, error=False):
-            """Add a revision to the repository and
-            move the bookmark"""
-            wlock = self.wlock() # do both commit and bookmark with lock held
-            try:
-                node  = super(bookmark_repo, self).commitctx(ctx, error)
-                if node is None:
-                    return None
-                parents = self.changelog.parents(node)
-                if parents[1] == nullid:
-                    parents = (parents[0],)
-                marks = self._bookmarks
-                update = False
-                if ui.configbool('bookmarks', 'track.current'):
-                    mark = self._bookmarkcurrent
-                    if mark and marks[mark] in parents:
-                        marks[mark] = node
-                        update = True
-                else:
-                    for mark, n in marks.items():
-                        if n in parents:
-                            marks[mark] = node
-                            update = True
-                if update:
-                    write(self)
-                return node
-            finally:
-                wlock.release()
-
-        def addchangegroup(self, source, srctype, url, emptyok=False):
-            parents = self.dirstate.parents()
-
-            result = super(bookmark_repo, self).addchangegroup(
-                source, srctype, url, emptyok)
-            if result > 1:
-                # We have more heads than before
-                return result
-            node = self.changelog.tip()
+        def _bookmarksupdate(self, parents, node):
             marks = self._bookmarks
             update = False
             if ui.configbool('bookmarks', 'track.current'):
@@ -304,6 +267,35 @@ def reposetup(ui, repo):
                         update = True
             if update:
                 write(self)
+
+        def commitctx(self, ctx, error=False):
+            """Add a revision to the repository and
+            move the bookmark"""
+            wlock = self.wlock() # do both commit and bookmark with lock held
+            try:
+                node  = super(bookmark_repo, self).commitctx(ctx, error)
+                if node is None:
+                    return None
+                parents = self.changelog.parents(node)
+                if parents[1] == nullid:
+                    parents = (parents[0],)
+
+                self._bookmarksupdate(parents, node)
+                return node
+            finally:
+                wlock.release()
+
+        def addchangegroup(self, source, srctype, url, emptyok=False):
+            parents = self.dirstate.parents()
+
+            result = super(bookmark_repo, self).addchangegroup(
+                source, srctype, url, emptyok)
+            if result > 1:
+                # We have more heads than before
+                return result
+            node = self.changelog.tip()
+
+            self._bookmarksupdate(parents, node)
             return result
 
         def _findtags(self):
