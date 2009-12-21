@@ -43,15 +43,13 @@ def parse(repo):
     The parsed dictionary is cached until a write() operation is done.
     '''
     try:
-        if repo._bookmarks:
-            return repo._bookmarks
-        repo._bookmarks = {}
+        bookmarks = {}
         for line in repo.opener('bookmarks'):
             sha, refspec = line.strip().split(' ', 1)
-            repo._bookmarks[refspec] = repo.lookup(sha)
+            bookmarks[refspec] = repo.lookup(sha)
     except:
         pass
-    return repo._bookmarks
+    return bookmarks
 
 def write(repo, refs):
     '''Write bookmarks
@@ -104,7 +102,7 @@ def setcurrent(repo, mark):
     if current(repo) == mark:
         return
 
-    refs = parse(repo)
+    refs = repo._bookmarks
 
     # do not update if we do update to a rev equal to the current bookmark
     if (mark and mark not in refs and
@@ -135,7 +133,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
     the bookmark is assigned to that revision.
     '''
     hexfn = ui.debugflag and hex or short
-    marks = parse(repo)
+    marks = repo._bookmarks
     cur   = repo.changectx('.').node()
 
     if rename:
@@ -219,7 +217,7 @@ def strip(oldstrip, ui, repo, node, backup="all"):
     the mercurial.strip method. This usually happens during
     qpush and qpop"""
     revisions = _revstostrip(repo.changelog, node)
-    marks = parse(repo)
+    marks = repo._bookmarks
     update = []
     for mark, n in marks.iteritems():
         if repo.changelog.rev(n) in revisions:
@@ -236,18 +234,20 @@ def reposetup(ui, repo):
 
     # init a bookmark cache as otherwise we would get a infinite reading
     # in lookup()
-    repo._bookmarks = None
     repo._bookmarkcurrent = None
 
     class bookmark_repo(repo.__class__):
+
+        @util.propertycache
+        def _bookmarks(self):
+            return parse(self)
+
         def rollback(self):
             if os.path.exists(self.join('undo.bookmarks')):
                 util.rename(self.join('undo.bookmarks'), self.join('bookmarks'))
             return super(bookmark_repo, self).rollback()
 
         def lookup(self, key):
-            if self._bookmarks is None:
-                self._bookmarks = parse(self)
             if key in self._bookmarks:
                 key = self._bookmarks[key]
             return super(bookmark_repo, self).lookup(key)
@@ -263,7 +263,7 @@ def reposetup(ui, repo):
                 parents = self.changelog.parents(node)
                 if parents[1] == nullid:
                     parents = (parents[0],)
-                marks = parse(self)
+                marks = self._bookmarks
                 update = False
                 if ui.configbool('bookmarks', 'track.current'):
                     mark = current(self)
@@ -290,7 +290,7 @@ def reposetup(ui, repo):
                 # We have more heads than before
                 return result
             node = self.changelog.tip()
-            marks = parse(self)
+            marks = self._bookmarks
             update = False
             if ui.configbool('bookmarks', 'track.current'):
                 mark = current(self)
@@ -309,7 +309,7 @@ def reposetup(ui, repo):
         def _findtags(self):
             """Merge bookmarks with normal tags"""
             (tags, tagtypes) = super(bookmark_repo, self)._findtags()
-            tags.update(parse(self))
+            tags.update(self._bookmarks)
             return (tags, tagtypes)
 
     repo.__class__ = bookmark_repo
