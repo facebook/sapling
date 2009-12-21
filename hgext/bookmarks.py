@@ -51,7 +51,7 @@ def parse(repo):
         pass
     return bookmarks
 
-def write(repo, refs):
+def write(repo):
     '''Write bookmarks
 
     Write the given bookmark => hash dictionary to the .hg/bookmarks file
@@ -60,6 +60,7 @@ def write(repo, refs):
     We also store a backup of the previous state in undo.bookmarks that
     can be copied back on rollback.
     '''
+    refs = repo._bookmarks
     if os.path.exists(repo.join('bookmarks')):
         util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
     if current(repo) not in refs:
@@ -147,7 +148,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         del marks[rename]
         if current(repo) == rename:
             setcurrent(repo, mark)
-        write(repo, marks)
+        write(repo)
         return
 
     if delete:
@@ -158,7 +159,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         if mark == current(repo):
             setcurrent(repo, None)
         del marks[mark]
-        write(repo, marks)
+        write(repo)
         return
 
     if mark != None:
@@ -176,7 +177,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         else:
             marks[mark] = repo.changectx('.').node()
             setcurrent(repo, mark)
-        write(repo, marks)
+        write(repo)
         return
 
     if mark is None:
@@ -226,7 +227,7 @@ def strip(oldstrip, ui, repo, node, backup="all"):
     if len(update) > 0:
         for m in update:
             marks[m] = repo.changectx('.').node()
-        write(repo, marks)
+        write(repo)
 
 def reposetup(ui, repo):
     if not repo.local():
@@ -276,7 +277,7 @@ def reposetup(ui, repo):
                             marks[mark] = node
                             update = True
                 if update:
-                    write(self, marks)
+                    write(self)
                 return node
             finally:
                 wlock.release()
@@ -303,7 +304,7 @@ def reposetup(ui, repo):
                         marks[mark] = node
                         update = True
             if update:
-                write(self, marks)
+                write(self)
             return result
 
         def _findtags(self):
