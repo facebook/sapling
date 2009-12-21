@@ -63,7 +63,7 @@ def write(repo):
     refs = repo._bookmarks
     if os.path.exists(repo.join('bookmarks')):
         util.copyfile(repo.join('bookmarks'), repo.join('undo.bookmarks'))
-    if current(repo) not in refs:
+    if repo._bookmarkcurrent not in refs:
         setcurrent(repo, None)
     wlock = repo.wlock()
     try:
@@ -81,8 +81,6 @@ def current(repo):
     we are on. This function returns the name of the bookmark. It
     is stored in .hg/bookmarks.current
     '''
-    if repo._bookmarkcurrent:
-        return repo._bookmarkcurrent
     mark = None
     if os.path.exists(repo.join('bookmarks.current')):
         file = repo.opener('bookmarks.current')
@@ -91,7 +89,6 @@ def current(repo):
         if mark == '':
             mark = None
         file.close()
-    repo._bookmarkcurrent = mark
     return mark
 
 def setcurrent(repo, mark):
@@ -100,14 +97,15 @@ def setcurrent(repo, mark):
     Set the name of the bookmark that we are on (hg update <bookmark>).
     The name is recorded in .hg/bookmarks.current
     '''
-    if current(repo) == mark:
+    current = repo._bookmarkcurrent
+    if current == mark:
         return
 
     refs = repo._bookmarks
 
     # do not update if we do update to a rev equal to the current bookmark
     if (mark and mark not in refs and
-        current(repo) and refs[current(repo)] == repo.changectx('.').node()):
+        current and refs[current] == repo.changectx('.').node()):
         return
     if mark not in refs:
         mark = ''
@@ -146,7 +144,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             raise util.Abort(_("new bookmark name required"))
         marks[mark] = marks[rename]
         del marks[rename]
-        if current(repo) == rename:
+        if repo._bookmarkcurrent == rename:
             setcurrent(repo, mark)
         write(repo)
         return
@@ -156,7 +154,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             raise util.Abort(_("bookmark name required"))
         if mark not in marks:
             raise util.Abort(_("a bookmark of this name does not exist"))
-        if mark == current(repo):
+        if mark == repo._bookmarkcurrent:
             setcurrent(repo, None)
         del marks[mark]
         write(repo)
@@ -188,7 +186,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         else:
             for bmark, n in marks.iteritems():
                 if ui.configbool('bookmarks', 'track.current'):
-                    prefix = (bmark == current(repo) and n == cur) and '*' or ' '
+                    current = repo._bookmarkcurrent
+                    prefix = (bmark == current and n == cur) and '*' or ' '
                 else:
                     prefix = (n == cur) and '*' or ' '
 
@@ -233,15 +232,15 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    # init a bookmark cache as otherwise we would get a infinite reading
-    # in lookup()
-    repo._bookmarkcurrent = None
-
     class bookmark_repo(repo.__class__):
 
         @util.propertycache
         def _bookmarks(self):
             return parse(self)
+
+        @util.propertycache
+        def _bookmarkcurrent(self):
+            return current(self)
 
         def rollback(self):
             if os.path.exists(self.join('undo.bookmarks')):
@@ -267,7 +266,7 @@ def reposetup(ui, repo):
                 marks = self._bookmarks
                 update = False
                 if ui.configbool('bookmarks', 'track.current'):
-                    mark = current(self)
+                    mark = self._bookmarkcurrent
                     if mark and marks[mark] in parents:
                         marks[mark] = node
                         update = True
@@ -294,7 +293,7 @@ def reposetup(ui, repo):
             marks = self._bookmarks
             update = False
             if ui.configbool('bookmarks', 'track.current'):
-                mark = current(self)
+                mark = self._bookmarkcurrent
                 if mark and marks[mark] in parents:
                     marks[mark] = node
                     update = True
