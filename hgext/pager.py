@@ -8,7 +8,7 @@
 # To load the extension, add it to your .hgrc file:
 #
 #   [extension]
-#   hgext.pager =
+#   pager =
 #
 # Run "hg help pager" to get info on configuration.
 
