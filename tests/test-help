@@ -4,6 +4,10 @@ hg
 hg -q
 hg help
 hg -q help
+
+echo %% test short command list with verbose option
+hg -v help shortlist | sed 's/[(]version [^)]*[)]/(version xxx)/'
+
 hg add -h
 hg add --skjdfks
 hg help diff
