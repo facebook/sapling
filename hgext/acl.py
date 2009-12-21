@@ -25,7 +25,7 @@ is no way to distinguish them.
 To use this hook, configure the acl extension in your hgrc like this::
 
   [extensions]
-  hgext.acl =
+  acl =
 
   [hooks]
   pretxnchangegroup.acl = python:hgext.acl.hook

@@ -103,7 +103,7 @@ baseurl
 Activating the extension::
 
     [extensions]
-    hgext.bugzilla =
+    bugzilla =
 
     [hooks]
     # run bugzilla hook on every change pulled or pushed in here

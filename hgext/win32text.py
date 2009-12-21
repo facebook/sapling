@@ -10,7 +10,7 @@
 To perform automatic newline conversion, use::
 
   [extensions]
-  hgext.win32text =
+  win32text =
   [encode]
   ** = cleverencode:
   # or ** = macencode:

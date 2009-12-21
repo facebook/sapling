@@ -14,7 +14,7 @@ To use, configure the notify extension and enable it in hgrc like
 this::
 
   [extensions]
-  hgext.notify =
+  notify =
 
   [hooks]
   # one email for each incoming changeset
