@@ -73,9 +73,9 @@ python -c 'print repr(file("neweol","rb").read())'
 hg st
 
 # Test --eol and binary patches
-python -c 'file("b", "wb").write("a\x00\nb")'
+python -c 'file("b", "wb").write("a\x00\nb\r\nd")'
 hg ci -Am addb
-python -c 'file("b", "wb").write("a\x00\nc")'
+python -c 'file("b", "wb").write("a\x00\nc\r\nd")'
 hg diff --git > bin.diff
 hg revert --no-backup b
 echo % binary patch with --eol

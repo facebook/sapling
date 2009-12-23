@@ -24,4 +24,4 @@ applying noeol.diff
 adding b
 % binary patch with --eol
 applying bin.diff
-'a\x00\nc'
+'a\x00\nc\r\nd'
