@@ -57,6 +57,21 @@ hg --traceback --config patch.eol='auto' import eol.diff
 python -c 'print repr(file("a","rb").read())'
 hg st
 
+echo % auto EOL on new file or source without any EOL
+python -c 'file("noeol", "wb").write("noeol")'
+hg add noeol
+hg commit -m 'add noeol'
+python -c 'file("noeol", "wb").write("noeol\r\nnoeol\n")'
+python -c 'file("neweol", "wb").write("neweol\nneweol\r\n")'
+hg add neweol
+hg diff --git > noeol.diff
+hg revert --no-backup noeol neweol
+rm neweol
+hg --traceback --config patch.eol='auto' import -m noeol noeol.diff
+python -c 'print repr(file("noeol","rb").read())'
+python -c 'print repr(file("neweol","rb").read())'
+hg st
+
 # Test --eol and binary patches
 python -c 'file("b", "wb").write("a\x00\nb")'
 hg ci -Am addb

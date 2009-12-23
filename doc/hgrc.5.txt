@@ -646,12 +646,13 @@ command or with Mercurial Queues extension.
 
 ``eol``
     When set to 'strict' patch content and patched files end of lines
-    are preserved. When set to ``lf`` or ``crlf``, both files end of lines
-    are ignored when patching and the result line endings are
+    are preserved. When set to ``lf`` or ``crlf``, both files end of
+    lines are ignored when patching and the result line endings are
     normalized to either LF (Unix) or CRLF (Windows). When set to
     ``auto``, end of lines are again ignored while patching but line
     endings in patched files are normalized to their original setting
-    on a per-file basis.
+    on a per-file basis. If target file does not exist or has no end
+    of line, patch line endings are preserved.
     Default: strict.
 
 

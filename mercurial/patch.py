@@ -321,14 +321,14 @@ class patchfile(object):
         else:
             fp = self.opener(fname, 'w')
         try:
-            if self.eolmode == 'auto' and self.eol:
+            if self.eolmode == 'auto':
                 eol = self.eol
             elif self.eolmode == 'crlf':
                 eol = '\r\n'
             else:
                 eol = '\n'
 
-            if self.eolmode != 'strict' and eol != '\n':
+            if self.eolmode != 'strict' and eol and eol != '\n':
                 for l in lines:
                     if l and l[-1] == '\n':
                         l = l[:-1] + eol
@@ -433,6 +433,15 @@ class patchfile(object):
                 self.dirty = 1
             return 0
 
+        horig = h
+        if self.eolmode == 'auto' and self.eol:
+            # If eolmode == 'auto' and target file exists and has line
+            # endings we have to normalize input data before patching.
+            # Otherwise, patchfile operates in 'strict' mode. If
+            # eolmode is set to 'crlf' or 'lf', input hunk is already
+            # normalized to avoid data copy.
+            h = h.getnormalized()
+
         # fast case first, no offsets, no fuzz
         old = h.old()
         # patch starts counting at 1 unless we are adding the file
@@ -488,7 +497,7 @@ class patchfile(object):
                         return fuzzlen
         self.printfile(True)
         self.ui.warn(_("Hunk #%d FAILED at %d\n") % (h.number, orig_start))
-        self.rej.append(h)
+        self.rej.append(horig)
         return -1
 
 class hunk(object):
@@ -500,12 +509,38 @@ class hunk(object):
         self.b = []
         self.starta = self.lena = None
         self.startb = self.lenb = None
-        if context:
-            self.read_context_hunk(lr)
-        else:
-            self.read_unified_hunk(lr)
+        if lr is not None:
+            if context:
+                self.read_context_hunk(lr)
+            else:
+                self.read_unified_hunk(lr)
         self.create = create
         self.remove = remove and not create
+
+    def getnormalized(self):
+        """Return a copy with line endings normalized to LF."""
+
+        def normalize(lines):
+            nlines = []
+            for line in lines:
+                if line.endswith('\r\n'):
+                    line = line[:-2] + '\n'
+                nlines.append(line)
+            return nlines
+
+        # Dummy object, it is rebuilt manually
+        nh = hunk(self.desc, self.number, None, None, False, False)
+        nh.number = self.number
+        nh.desc = self.desc
+        nh.a = normalize(self.a)
+        nh.b = normalize(self.b)
+        nh.starta = self.starta
+        nh.startb = self.startb
+        nh.lena = self.lena
+        nh.lenb = self.lenb
+        nh.create = self.create
+        nh.remove = self.remove
+        return nh
 
     def read_unified_hunk(self, lr):
         m = unidesc.match(self.desc)
@@ -974,7 +1009,10 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
     current_file = None
     gitpatches = None
     opener = util.opener(os.getcwd())
-    textmode = eolmode != 'strict'
+    # In 'auto' mode, we must preserve original eols if target file
+    # eols are undefined. Otherwise, hunk data will be normalized
+    # later.
+    textmode = eolmode not in ('strict', 'auto')
 
     def closefile():
         if not current_file:
