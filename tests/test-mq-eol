@@ -20,7 +20,7 @@ w(' c\r\n')
 w(' d\n')
 w('-e\n')
 w('\ No newline at end of file\n')
-w('+z\n')
+w('+z\r\n')
 w('\ No newline at end of file\r\n')
 EOF
 

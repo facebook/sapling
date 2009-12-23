@@ -22,6 +22,9 @@ static void _fix_newline(PyObject *hunk, PyObject *a, PyObject *b)
 	PyObject *s = PyList_GET_ITEM(hunk, hunksz-1);
 	char *l = PyString_AS_STRING(s);
 	int sz = PyString_GET_SIZE(s);
+	if (sz > 1 && l[sz-2] == '\r')
+	        /* tolerate CRLF in last line */
+	        sz -= 1;
 	int alen = PyList_Size(a);
 	int blen = PyList_Size(b);
 	char c = l[0];
