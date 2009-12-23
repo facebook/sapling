@@ -35,7 +35,7 @@ pretxncommit.crlf = python:hgext.win32text.forbidcrlf
 and also consider adding:
 
 [extensions]
-hgext.win32text =
+win32text =
 [encode]
 ** = cleverencode:
 [decode]
@@ -214,7 +214,7 @@ pretxncommit.crlf = python:hgext.win32text.forbidcrlf
 and also consider adding:
 
 [extensions]
-hgext.win32text =
+win32text =
 [encode]
 ** = cleverencode:
 [decode]
