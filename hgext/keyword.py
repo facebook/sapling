@@ -536,7 +536,8 @@ def reposetup(ui, repo):
     repo.__class__ = kwrepo
 
     extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
-    extensions.wrapfunction(patch, 'diff', kw_diff)
+    if not kwt.restrict:
+        extensions.wrapfunction(patch, 'diff', kw_diff)
     for c in 'annotate changeset rev filediff diff'.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)
 
