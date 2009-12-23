@@ -93,7 +93,8 @@ nokwcommands = ('add addremove annotate bundle copy export grep incoming init'
 
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
-restricted = 'merge record resolve qfold qimport qnew qpush qrefresh qrecord'
+restricted = ('merge record resolve qfold qimport qnew qpush qrefresh qrecord'
+              ' transplant')
 
 # provide cvs-like UTC date filter
 utcdate = lambda x: util.datestr(x, '%Y/%m/%d %H:%M:%S')
@@ -537,7 +538,8 @@ def reposetup(ui, repo):
     repo.__class__ = kwrepo
 
     extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
-    extensions.wrapfunction(patch, 'diff', kw_diff)
+    if not kwt.restrict:
+        extensions.wrapfunction(patch, 'diff', kw_diff)
     for c in 'annotate changeset rev filediff diff'.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)
 
