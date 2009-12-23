@@ -44,7 +44,7 @@ cd ..
 hg clone -r 0 a b
 
 echo '[extensions]' >> $HGRCPATH
-echo 'hgext.acl =' >> $HGRCPATH
+echo 'acl =' >> $HGRCPATH
 
 config=b/.hg/hgrc
 

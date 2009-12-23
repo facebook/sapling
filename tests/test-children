@@ -3,7 +3,7 @@
 
 cat <<EOF >> $HGRCPATH
 [extensions]
-hgext.children=
+children =
 EOF
 
 echo "% init"

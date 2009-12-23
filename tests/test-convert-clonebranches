@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "[extensions]" >> $HGRCPATH
-echo "hgext.convert = " >> $HGRCPATH
+echo "convert = " >> $HGRCPATH
 echo "[convert]" >> $HGRCPATH
 echo "hg.tagsbranch=0" >> $HGRCPATH
 

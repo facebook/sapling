@@ -15,7 +15,7 @@ checkundo()
 }
 
 echo "[extensions]" >> $HGRCPATH
-echo "hgext.mq=" >> $HGRCPATH
+echo "mq =" >> $HGRCPATH
 
 # Commit two dummy files in "init" changeset
 hg init t

@@ -23,7 +23,7 @@ hg init repo
 cd repo
 
 echo '[extensions]' > .hg/hgrc
-echo 'hgext.parentrevspec =' >> .hg/hgrc
+echo 'parentrevspec =' >> .hg/hgrc
 
 commit '0: add foo'
 commit '1: change foo 1'

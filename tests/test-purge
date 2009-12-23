@@ -2,7 +2,7 @@
 
 cat <<EOF >> $HGRCPATH
 [extensions]
-hgext.purge=
+purge =
 EOF
 
 echo % init

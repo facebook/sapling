@@ -3,8 +3,8 @@
 HGMERGE=true; export HGMERGE
 
 echo '[extensions]' >> $HGRCPATH
-echo 'hgext.graphlog =' >> $HGRCPATH
-echo 'hgext.convert =' >> $HGRCPATH
+echo 'graphlog =' >> $HGRCPATH
+echo 'convert =' >> $HGRCPATH
 
 glog()
 {

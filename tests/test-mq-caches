@@ -2,7 +2,7 @@
 
 branches=.hg/branchheads.cache
 echo '[extensions]' >> $HGRCPATH
-echo 'hgext.mq=' >> $HGRCPATH
+echo 'mq =' >> $HGRCPATH
 
 show_branch_cache()
 {

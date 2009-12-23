@@ -10,7 +10,7 @@ baz my-id "mercurial <mercurial@selenic.com>"
 
 echo "[extensions]" >> $HGRCPATH
 echo "convert=" >> $HGRCPATH
-echo 'hgext.graphlog =' >> $HGRCPATH
+echo 'graphlog =' >> $HGRCPATH
 
 echo % create baz archive
 baz make-archive baz@mercurial--convert hg-test-convert-baz
