@@ -137,7 +137,7 @@ def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
                   'and also consider adding:\n'
                   '\n'
                   '[extensions]\n'
-                  'hgext.win32text =\n'
+                  'win32text =\n'
                   '[encode]\n'
                   '** = %sencode:\n'
                   '[decode]\n'
