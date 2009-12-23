@@ -58,3 +58,19 @@ cat ../.hg/patches/p
 echo '% qnew -u with no username configured'
 HGUSER= hg qnew -u blue red
 cat ../.hg/patches/red
+
+echo '% fail when trying to import a merge'
+hg init merge
+cd merge
+touch a
+hg ci -Am null
+echo a >> a
+hg ci -m a
+hg up -r 0
+echo b >> a
+hg ci -m b
+hg merge -f 1
+hg resolve --mark a
+hg qnew -f merge
+
+exit 0

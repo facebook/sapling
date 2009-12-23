@@ -35,3 +35,13 @@ diff --git a/d/b b/d/b
 % qnew -u with no username configured
 From: blue
 
+% fail when trying to import a merge
+adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+merging a
+warning: conflicts during merge.
+merging a failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+abort: cannot manage merge changesets

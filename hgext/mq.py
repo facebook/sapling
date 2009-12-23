@@ -770,6 +770,10 @@ class queue(object):
         else:
             m, a, r, d = self.check_localchanges(repo, force)
             match = cmdutil.matchfiles(repo, m + a + r)
+        if force:
+            p = repo[None].parents()
+            if len(p) > 1:
+                raise util.Abort(_('cannot manage merge changesets'))
         commitfiles = m + a + r
         self.check_toppatch(repo)
         insert = self.full_series_end()
