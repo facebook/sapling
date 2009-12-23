@@ -4,7 +4,7 @@
 
 cat <<EOF >> $HGRCPATH
 [extensions]
-hgext.highlight =
+highlight =
 [web]
 pygments_style = friendly
 EOF

@@ -2,10 +2,10 @@
 
 cat <<EOF >> $HGRCPATH
 [extensions]
-hgext.keyword =
-hgext.mq =
-hgext.notify =
-hgext.transplant =
+keyword =
+mq =
+notify =
+transplant =
 EOF
 
 # demo before [keyword] files are set up
