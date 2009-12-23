@@ -1,3 +1,9 @@
+# If you want to change PREFIX, do not just edit it below. The changed
+# value wont get passed on to recursive make calls. You should instead
+# override the variable on the command like:
+#
+# % make PREFIX=/opt/ install
+
 PREFIX=/usr/local
 export PREFIX
 PYTHON=python
