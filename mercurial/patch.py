@@ -715,14 +715,6 @@ class hunk(object):
     def old(self, fuzz=0, toponly=False):
         return self.fuzzit(self.a, fuzz, toponly)
 
-    def newctrl(self):
-        res = []
-        for x in self.hunk:
-            c = x[0]
-            if c == ' ' or c == '+':
-                res.append(x)
-        return res
-
     def new(self, fuzz=0, toponly=False):
         return self.fuzzit(self.b, fuzz, toponly)
 
