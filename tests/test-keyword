@@ -5,6 +5,7 @@ cat <<EOF >> $HGRCPATH
 hgext.keyword =
 hgext.mq =
 hgext.notify =
+hgext.transplant =
 EOF
 
 # demo before [keyword] files are set up
@@ -336,6 +337,23 @@ echo % resolve to local
 HGMERGE=internal:local hg resolve -a
 hg commit -m localresolve
 cat m
+
+echo % test restricted mode with transplant -b
+hg update 6
+hg branch foo
+mv a a.bak
+echo foobranch > a
+cat a.bak >> a
+rm a.bak
+hg commit -m 9foobranch
+hg update default
+hg -y transplant -b foo tip
+echo % no expansion in changeset
+hg tip -p
+echo % expansion in file
+head -n 2 a
+hg -q rollback
+hg -q update -C
 
 echo % switch off expansion
 echo % kwshrink with unknown file u
