@@ -434,12 +434,11 @@ class patchfile(object):
             return 0
 
         horig = h
-        if self.eolmode == 'auto' and self.eol:
-            # If eolmode == 'auto' and target file exists and has line
-            # endings we have to normalize input data before patching.
-            # Otherwise, patchfile operates in 'strict' mode. If
-            # eolmode is set to 'crlf' or 'lf', input hunk is already
-            # normalized to avoid data copy.
+        if (self.eolmode in ('crlf', 'lf')
+            or self.eolmode == 'auto' and self.eol):
+            # If new eols are going to be normalized, then normalize
+            # hunk data before patching. Otherwise, preserve input
+            # line-endings.
             h = h.getnormalized()
 
         # fast case first, no offsets, no fuzz
@@ -870,15 +869,13 @@ def scangitpatch(lr, firstline):
     fp.seek(pos)
     return dopatch, gitpatches
 
-def iterhunks(ui, fp, sourcefile=None, textmode=False):
+def iterhunks(ui, fp, sourcefile=None):
     """Read a patch and yield the following events:
     - ("file", afile, bfile, firsthunk): select a new target file.
     - ("hunk", hunk): a new hunk is ready to be applied, follows a
     "file" event.
     - ("git", gitchanges): current diff is in git format, gitchanges
     maps filenames to gitpatch records. Unique event.
-
-    If textmode is True, input line-endings are normalized to LF.
     """
     changed = {}
     current_hunk = None
@@ -892,7 +889,7 @@ def iterhunks(ui, fp, sourcefile=None, textmode=False):
     # our states
     BFILE = 1
     context = None
-    lr = linereader(fp, textmode)
+    lr = linereader(fp)
     dopatch = True
     # gitworkdone is True if a git operation (copy, rename, ...) was
     # performed already for the current file. Useful when the file
@@ -1009,10 +1006,6 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
     current_file = None
     gitpatches = None
     opener = util.opener(os.getcwd())
-    # In 'auto' mode, we must preserve original eols if target file
-    # eols are undefined. Otherwise, hunk data will be normalized
-    # later.
-    textmode = eolmode not in ('strict', 'auto')
 
     def closefile():
         if not current_file:
@@ -1020,7 +1013,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
         current_file.close()
         return len(current_file.rej)
 
-    for state, values in iterhunks(ui, fp, sourcefile, textmode):
+    for state, values in iterhunks(ui, fp, sourcefile):
         if state == 'hunk':
             if not current_file:
                 continue
