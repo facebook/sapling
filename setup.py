@@ -145,8 +145,8 @@ if os.path.isdir('.hg'):
     if version.endswith('+'):
         version += time.strftime('%Y%m%d')
 elif os.path.exists('.hg_archival.txt'):
-    kw = dict([t.strip() for t in l.split(':', 1)]
-              for l in open('.hg_archival.txt'))
+    kw = dict([[t.strip() for t in l.split(':', 1)]
+               for l in open('.hg_archival.txt')])
     if 'tag' in kw:
         version =  kw['tag']
     elif 'latesttag' in kw:
