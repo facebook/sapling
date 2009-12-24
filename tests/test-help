@@ -48,4 +48,7 @@ echo "helpext = $abspath" >> $HGRCPATH
 echo %% test command with no help text
 hg help nohelp
 
+echo %% test that default list of commands omits extension commands
+hg help
+
 exit 0
