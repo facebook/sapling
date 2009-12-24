@@ -89,7 +89,6 @@ def filtermanifest(manifest):
 def fileurl(path):
     path = os.path.abspath(path)
     drive, path = os.path.splitdrive(path)
-    path = urllib.pathname2url(path)
     if drive:
         drive = '/' + drive
     url = 'file://%s%s' % (drive, path)
