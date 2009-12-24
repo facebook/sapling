@@ -223,7 +223,11 @@ class SubversionRepo(object):
         callbacks.auth_baton = self.auth_baton
         self.callbacks = callbacks
         try:
-            self.ra = ra.open2(self.svn_url.encode('utf-8'), callbacks,
+            url = self.svn_url.encode('utf-8')
+            scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+            path=urllib.quote(path)
+            url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
+            self.ra = ra.open2(url, callbacks,
                                svn_config, self.pool)
         except core.SubversionException, e:
             raise hgutil.Abort(e.args[0])
