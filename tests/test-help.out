@@ -294,6 +294,13 @@ options:
  -n --dry-run  do not perform actions, just print output
 
 use "hg -v help add" to show global options
+%% test ambiguous command help
+list of commands:
+
+ add         add the specified files on the next commit
+ addremove   add all new files, delete all missing files
+
+use "hg -v help ad" to show aliases and global options
 hg diff [OPTION]... [-r REV1 [-r REV2]] [FILE]...
 
 diff repository (or selected files)

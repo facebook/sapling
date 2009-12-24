@@ -14,6 +14,10 @@ echo %% test help option with version option
 hg add -h --version | sed 's/[(]version [^)]*[)]/(version xxx)/'
 
 hg add --skjdfks
+
+echo %% test ambiguous command help
+hg help ad
+
 hg help diff
 hg help status
 hg -q help status
