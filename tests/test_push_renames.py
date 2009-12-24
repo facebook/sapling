@@ -49,6 +49,27 @@ class TestPushRenames(test_util.TestBase):
         # self._debug_print_copies(tip)
         self.assertchanges(changes, tip)
 
+    def test_push_rename_with_space(self):
+        changes = [
+            ('random/dir with space/file with space',
+             'random/dir with space/file with space',
+             'file contents'),
+            ]
+        self.commitchanges(changes)
+
+        changes = [
+            ('random/dir with space/file with space',
+             'random2/dir with space/file with space',
+             None),
+            ('random/dir with space/file with space',
+             None, None),
+            ]
+        self.commitchanges(changes)
+        self.pushrevisions()
+        self.assertEqual(self.repo['tip'].manifest().keys(),
+                         ['a', 'c', 'b', 'e', 'd',
+                          'random2/dir with space/file with space'])
+
     def test_push_rename_tree(self):
         repo = self.repo
 

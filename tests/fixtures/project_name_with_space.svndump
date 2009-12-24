@@ -1,0 +1,249 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 5696e9c1-c844-4b75-be77-832074ca2506
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2009-12-24T18:41:45.385996Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 102
+Content-length: 102
+
+K 7
+svn:log
+V 3
+btt
+K 10
+svn:author
+V 5
+augie
+K 8
+svn:date
+V 27
+2009-12-24T18:41:46.148218Z
+PROPS-END
+
+Node-path: project name
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: project name/branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: project name/tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: project name/trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 110
+Content-length: 110
+
+K 7
+svn:log
+V 10
+Add files.
+K 10
+svn:author
+V 5
+augie
+K 8
+svn:date
+V 27
+2009-12-24T18:41:47.184399Z
+PROPS-END
+
+Node-path: project name/trunk/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 9f9f90dbe3e5ee1218c86b8839db1995
+Text-content-sha1: d046cd9b7ffb7661e449683313d41f6fc33e3130
+Content-length: 16
+
+PROPS-END
+alpha
+
+
+Node-path: project name/trunk/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: f0cf2a92516045024a0c99147b28f05b
+Text-content-sha1: 6c007a14875d53d9bf0ef5a6fc0257c817f0fb83
+Content-length: 15
+
+PROPS-END
+beta
+
+
+Node-path: project name/trunk/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: d2840cc81bc032bd1141b56687d0f93c
+Text-content-sha1: 4bd6315d6d7824c4e376847ca7d116738ad2f29a
+Content-length: 16
+
+PROPS-END
+delta
+
+
+Node-path: project name/trunk/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 303febb9068384eca46b5b6516843b35
+Text-content-sha1: 37f385b028bf2f93a4b497ca9ff44eea63945b7f
+Content-length: 16
+
+PROPS-END
+gamma
+
+
+Revision-number: 3
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 16
+add directory al
+K 10
+svn:author
+V 5
+augie
+K 8
+svn:date
+V 27
+2009-12-24T18:41:48.125685Z
+PROPS-END
+
+Node-path: project name/trunk/al
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: project name/trunk/al/foo
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: d3b07384d113edec49eaa6238ad5ff00
+Text-content-sha1: f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
+Content-length: 14
+
+PROPS-END
+foo
+
+
+Revision-number: 4
+Prop-content-length: 105
+Content-length: 105
+
+K 7
+svn:log
+V 6
+branch
+K 10
+svn:author
+V 5
+augie
+K 8
+svn:date
+V 27
+2009-12-24T18:41:51.073403Z
+PROPS-END
+
+Node-path: project name/branches/dev_branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: project name/trunk
+
+
+Revision-number: 5
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 14
+branch changes
+K 10
+svn:author
+V 5
+augie
+K 8
+svn:date
+V 27
+2009-12-24T18:41:52.164995Z
+PROPS-END
+
+Node-path: project name/branches/dev_branch/alpha
+Node-kind: file
+Node-action: change
+Text-content-length: 5
+Text-content-md5: 5e723ed52db2000686425ca28bc5ba4a
+Text-content-sha1: 89dc052326e95e1d1c5b08e2b8471d99112d1fa4
+Content-length: 5
+
+narf
+
+
+Node-path: project name/branches/dev_branch/iota
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: ebcf3971120220589f1dfbf8d56e25b9
+Text-content-sha1: 47e9aceee5149402971cda8590e9b912c1b1053e
+Content-length: 15
+
+PROPS-END
+iota
+
+
+Node-path: project name/branches/dev_branch/delta
+Node-action: delete
+
+
