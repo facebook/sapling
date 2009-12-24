@@ -18,6 +18,9 @@ hg add --skjdfks
 echo %% test ambiguous command help
 hg help ad
 
+echo %% test command without options
+hg help verify
+
 hg help diff
 hg help status
 hg -q help status
