@@ -51,4 +51,7 @@ hg help nohelp
 echo %% test that default list of commands omits extension commands
 hg help
 
+echo %% test list of commands with command with no help text
+hg help helpext
+
 exit 0

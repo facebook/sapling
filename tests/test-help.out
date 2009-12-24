@@ -542,3 +542,11 @@ additional help topics:
  extensions   Using additional features
 
 use "hg -v help" to show aliases and global options
+%% test list of commands with command with no help text
+helpext extension - no help text available
+
+list of commands:
+
+ nohelp   (no help text available)
+
+use "hg -v help helpext" to show aliases and global options
