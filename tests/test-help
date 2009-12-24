@@ -27,4 +27,25 @@ hg -q help status
 hg help foo
 hg skjdfks
 
+cat > helpext.py <<EOF
+import os
+from mercurial import commands
+
+def nohelp(ui, *args, **kwargs):
+    pass
+
+cmdtable = {
+    "nohelp": (nohelp, [], "hg nohelp"),
+}
+
+commands.norepo += ' nohelp'
+EOF
+abspath=`pwd`/helpext.py
+
+echo '[extensions]' >> $HGRCPATH
+echo "helpext = $abspath" >> $HGRCPATH
+
+echo %% test command with no help text
+hg help nohelp
+
 exit 0

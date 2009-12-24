@@ -462,3 +462,9 @@ basic commands:
  update     update working directory
 
 use "hg help" for the full list of commands or "hg -v" for details
+%% test command with no help text
+hg nohelp
+
+(no help text available)
+
+use "hg -v help nohelp" to show global options
