@@ -5,10 +5,6 @@ import test_util
 
 
 class TestFetchRenames(test_util.TestBase):
-    def _load_fixture_and_fetch(self, fixture_name, stupid):
-        return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path, stupid=stupid)
-
     def _debug_print_copies(self, repo):
         w = sys.stderr.write
         for rev in repo:
@@ -19,7 +15,7 @@ class TestFetchRenames(test_util.TestBase):
                 w('%s: %r %r\n' % (f, fctx.data(), fctx.renamed()))
 
     def _test_rename(self, stupid):
-        repo = self._load_fixture_and_fetch('renames.svndump', stupid)
+        repo = self._load_fixture_and_fetch('renames.svndump', stupid=stupid)
         # self._debug_print_copies(repo)
 
         # Map revnum to mappings of dest name to (source name, dest content)
@@ -65,7 +61,7 @@ class TestFetchRenames(test_util.TestBase):
         self._test_rename(True)
 
     def _test_case(self, stupid):
-        repo = self._load_fixture_and_fetch('filecase.svndump', stupid)
+        repo = self._load_fixture_and_fetch('filecase.svndump', stupid=stupid)
         files = {
             0: ['A', 'a', 'e/a', 'b', 'd/a', 'D/a', 'f/a', 'F'],
             1: ['A', 'a', 'E/a', 'B', 'd/A', 'D/a', 'f/a', 'F'],
