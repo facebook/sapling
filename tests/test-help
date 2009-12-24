@@ -54,4 +54,7 @@ hg help
 echo %% test list of commands with command with no help text
 hg help helpext
 
+echo %% test a help topic
+hg help revs
+
 exit 0
