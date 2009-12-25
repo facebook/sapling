@@ -404,8 +404,6 @@ class GitHandler(object):
 
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
-        # TODO: Do something less coarse-grained than try/except on the
-        #        get_file call for removed files
 
         (strip_message, hg_renames, hg_branch, extra) = self.extract_hg_metadata(commit.message)
 
@@ -450,15 +448,14 @@ class GitHandler(object):
         oldenc = self.swap_out_encoding()
 
         def getfilectx(repo, memctx, f):
-            try:
-                (mode, sha, data) = self.get_file(commit, f)
-                e = self.convert_git_int_mode(mode)
-            except (TypeError, KeyError):
-                raise IOError()
-            if f in hg_renames:
-                copied_path = hg_renames[f]
-            else:
-                copied_path = None
+            delete, mode, sha = files[f]
+            if delete:
+                raise IOError
+
+            data = self.git[sha].data
+            copied_path = hg_renames.get(f)
+            e = self.convert_git_int_mode(mode)
+
             return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
 
         gparents = map(self.map_hg_get, commit.parents)
@@ -468,7 +465,7 @@ class GitHandler(object):
         if len(gparents) > 1:
             # merge, possibly octopus
             def commit_octopus(p1, p2):
-                ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
+                ctx = context.memctx(self.repo, (p1, p2), text, list(files), getfilectx,
                                      author, date, {'hg-git': 'octopus'})
                 return hex(self.repo.commitctx(ctx))
 
@@ -481,8 +478,6 @@ class GitHandler(object):
         else:
             if gparents:
                 p1 = gparents.pop()
-
-        files = list(set(files))
 
         pa = None
         if not (p2 == nullid):
@@ -509,7 +504,7 @@ class GitHandler(object):
         if octopus:
             extra['hg-git'] ='octopus-done'
 
-        ctx = context.memctx(self.repo, (p1, p2), text, files, getfilectx,
+        ctx = context.memctx(self.repo, (p1, p2), text, list(files), getfilectx,
                              author, date, extra)
 
         node = self.repo.commitctx(ctx)
@@ -754,57 +749,25 @@ class GitHandler(object):
                 otree = obj
 
     def get_files_changed(self, commit):
-        def filenames(basetree, comptree, prefix):
-            basefiles = set()
-            changes = list()
-            csha = None
-            cmode = None
-            if basetree is not None:
-                for (bmode, bname, bsha) in basetree.entries():
-                    if bmode == 0160000: # TODO: properly handle submodules
-                        continue
-                    basefiles.add(bname)
-                    bobj = self.git.get_object(bsha)
-                    if comptree is not None:
-                        if bname in comptree:
-                            (cmode, csha) = comptree[bname]
-                        else:
-                            (cmode, csha) = (None, None)
-                    if not ((csha == bsha) and (cmode == bmode)):
-                        if isinstance (bobj, Blob):
-                            changes.append (prefix + bname)
-                        elif isinstance(bobj, Tree):
-                            ctree = None
-                            if csha:
-                                ctree = self.git.get_object(csha)
-                            changes.extend(filenames(bobj,
-                                                     ctree,
-                                                     prefix + bname + '/'))
+        tree = commit.tree
+        btree = None
 
-            # handle removals
-            if comptree is not None:
-                for (bmode, bname, bsha) in comptree.entries():
-                    if bmode == 0160000: # TODO: handle submodles
-                        continue
-                    if bname not in basefiles:
-                        bobj = self.git.get_object(bsha)
-                        if isinstance(bobj, Blob):
-                            changes.append(prefix + bname)
-                        elif isinstance(bobj, Tree):
-                            changes.extend(filenames(None, bobj,
-                                                     prefix + bname + '/'))
-            return changes
+        if commit.parents:
+            btree = self.git[commit.parents[0]].tree
 
-        all_changes = list()
-        otree = self.git.tree(commit.tree)
-        if len(commit.parents) == 0:
-            all_changes = filenames(otree, None, '')
-        for parent in commit.parents:
-            pcommit = self.git.commit(parent)
-            ptree = self.git.tree(pcommit.tree)
-            all_changes.extend(filenames(otree, ptree, ''))
+        changes = self.git.object_store.tree_changes(btree, tree)
+        files = {}
+        for (oldfile, newfile), (oldmode, newmode), (oldsha, newsha) in changes:
+            if newfile is None:
+                file = oldfile
+                delete = True
+            else:
+                file = newfile
+                delete = False
 
-        return all_changes
+            files[file] = (delete, newmode, newsha)
+
+        return files
 
     def remote_name(self, remote):
         names = [name for name, path in self.paths if path == remote]

@@ -3,26 +3,36 @@ Initialized empty Git repository in gitrepo/.git/
 Initialized empty Git repository in gitrepo2/.git/
 
 importing Hg objects into Git
-Counting objects: 8, done.
-Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
-Total 8 (delta 0), reused 0 (delta 0)
+Counting objects: 12, done.
+Compressing objects:  16% (1/6)   Compressing objects:  33% (2/6)   Compressing objects:  50% (3/6)   Compressing objects:  66% (4/6)   Compressing objects:  83% (5/6)   Compressing objects: 100% (6/6)   Compressing objects: 100% (6/6), done.
+Total 12 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
-at: 0/2
+at: 0/3
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adds: d1
+dels: d1/f1
 adds: d2/f2
 dels: d1/f2
+adds: d1/f1 d1/f2
+dels: 
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
 importing Hg objects into Git
-at: 0/2
+at: 0/3
 creating and sending data
-commit 7d84da95f2caf7a65833ae580fe5a08a0c3cb6b2
+commit 6e0dbd8cd92ed4823c69cb48d8a2b81f904e6e69
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:12 2007 +0000
+
+    replace a dir with a file
+
+commit a1874d5cd0b1549ed729e36f0da4a93ed36259ee
 Author: test <test@example.org>
 Date:   Mon Jan 1 00:00:11 2007 +0000
 
     rename
 
-commit 48e6424b6487f2a16e901f72fe52168b40278f5b
+commit 102c17a5deda49db3f10ec5573f9378867098b7c
 Author: test <test@example.org>
 Date:   Mon Jan 1 00:00:10 2007 +0000
 

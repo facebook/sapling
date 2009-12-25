@@ -34,13 +34,20 @@ cd gitrepo
 git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
 
 mkdir d1
-touch d1/f1 d1/f2
+echo a > d1/f1
+echo b > d1/f2
 git add d1/f1 d1/f2
 commit -m initial
 
 mkdir d2
 git mv d1/f2 d2/f2
 commit -m 'rename'
+
+rm -r d1
+echo c > d1
+git add d1
+commit -m 'replace a dir with a file'
+
 
 cd ..
 mkdir gitrepo2
@@ -58,7 +65,7 @@ git daemon --base-path="$(pwd)"\
 
 hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 cd hgrepo
-hg log -r tip --template 'adds: {file_adds}\ndels: {file_dels}\n'
+hg log --template 'adds: {file_adds}\ndels: {file_dels}\n'
 
 hg gclear
 hg push git://localhost/gitrepo2

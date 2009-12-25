@@ -20,17 +20,17 @@ Total 14 (delta 3), reused 0 (delta 0)
 importing Git objects into Hg
 at: 0/5
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@    changeset:   5:7acfed59bdde
+@    changeset:   5:6523aa9f4775
 |\   tag:         master
 | |  tag:         default/master
 | |  tag:         tip
 | |  parent:      1:1436150b86c2
-| |  parent:      4:6e0acfc91939
+| |  parent:      4:7f6c791a169f
 | |  user:        test <test@example.org>
 | |  date:        Mon Jan 01 00:00:13 2007 +0000
 | |  summary:     Merge branches 'branch1' and 'branch2'
 | |
-| o    changeset:   4:6e0acfc91939
+| o    changeset:   4:7f6c791a169f
 | |\   parent:      2:7bcd915dc873
 | | |  parent:      3:37c124f2d0a0
 | | |  user:        test <test@example.org>
