@@ -73,6 +73,7 @@ hg push git://localhost/gitrepo2
 
 cd ..
 cd gitrepo2
+echo % git log in repo pushed from hg
 git log master | sed 's/\.\.\.//g'
 git log beta | sed 's/\.\.\.//g'
 
