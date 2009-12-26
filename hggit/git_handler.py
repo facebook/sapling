@@ -1,4 +1,4 @@
-import os, sys, math, urllib, re
+import os, math, urllib, re
 import toposort
 
 from dulwich.errors import HangupException
@@ -11,11 +11,6 @@ from hgext import bookmarks
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
 from mercurial import context, util as hgutil
-
-try:
-    from mercurial.error import RepoError
-except ImportError:
-    from mercurial.repo import RepoError
 
 
 class GitHandler(object):
@@ -539,7 +534,7 @@ class GitHandler(object):
             del new_refs['capabilities^{}']
             if not self.local_heads():
                 tip = hex(self.repo.lookup('tip'))
-                bookmarks.bookmark(self.ui, self.repo, 'master', tip)
+                bookmarks.bookmark(self.ui, self.repo, 'master', tip, force=True)
                 bookmarks.setcurrent(self.repo, 'master')
                 new_refs['refs/heads/master'] = self.map_git_get(tip)
 
@@ -594,9 +589,10 @@ class GitHandler(object):
             return want
         f, commit = self.git.object_store.add_pack()
         try:
-            return client.fetch_pack(path, determine_wants, graphwalker, f.write, self.ui.status)
-        except HangupException:
-            raise hgutil.Abort("the remote end hung up unexpectedly")
+            try:
+                return client.fetch_pack(path, determine_wants, graphwalker, f.write, self.ui.status)
+            except HangupException:
+                raise hgutil.Abort("the remote end hung up unexpectedly")
         finally:
             commit()
 
@@ -618,7 +614,10 @@ class GitHandler(object):
 
     def local_heads(self):
         try:
-            bms = bookmarks.parse(self.repo)
+            if getattr(bookmarks, 'parse', None):
+                bms = bookmarks.parse(self.repo)
+            else:
+                bms = self.repo._bookmarks
             return dict([(bm, hex(bms[bm])) for bm in bms])
         except AttributeError: #pragma: no cover
             return {}
@@ -655,7 +654,11 @@ class GitHandler(object):
 
     def update_hg_bookmarks(self, refs):
         try:
-            bms = bookmarks.parse(self.repo)
+            oldbm = getattr(bookmarks, 'parse', None)
+            if oldbm:
+                bms = bookmarks.parse(self.repo)
+            else:
+                bms = self.repo._bookmarks
             heads = dict([(ref[11:],refs[ref]) for ref in refs
                           if ref.startswith('refs/heads/')])
 
@@ -674,7 +677,11 @@ class GitHandler(object):
                         # fast forward
                         bms[head] = hgsha
             if heads:
-                bookmarks.write(self.repo, bms)
+                if oldbm:
+                    bookmarks.write(self.repo, bms)
+                else:
+                    self.repo._bookmarks = bms
+                    bookmarks.write(self.repo)
 
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
