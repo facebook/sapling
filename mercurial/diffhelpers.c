@@ -21,15 +21,17 @@ static void _fix_newline(PyObject *hunk, PyObject *a, PyObject *b)
 	int hunksz = PyList_Size(hunk);
 	PyObject *s = PyList_GET_ITEM(hunk, hunksz-1);
 	char *l = PyString_AS_STRING(s);
-	int sz = PyString_GET_SIZE(s);
-	if (sz > 1 && l[sz-2] == '\r')
-	        /* tolerate CRLF in last line */
-	        sz -= 1;
 	int alen = PyList_Size(a);
 	int blen = PyList_Size(b);
 	char c = l[0];
+	PyObject *hline;
+	int sz = PyString_GET_SIZE(s);
 
-	PyObject *hline = PyString_FromStringAndSize(l, sz-1);
+	if (sz > 1 && l[sz-2] == '\r')
+		/* tolerate CRLF in last line */
+		sz -= 1;
+	hline = PyString_FromStringAndSize(l, sz-1);
+
 	if (c == ' ' || c == '+') {
 		PyObject *rline = PyString_FromStringAndSize(l+1, sz-2);
 		PyList_SetItem(b, blen-1, rline);
