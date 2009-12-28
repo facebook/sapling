@@ -637,6 +637,7 @@ class changeset_printer(object):
         self.header = {}
         self.hunk = {}
         self.lastheader = None
+        self.footer = None
 
     def flush(self, rev):
         if rev in self.header:
@@ -650,6 +651,10 @@ class changeset_printer(object):
             del self.hunk[rev]
             return 1
         return 0
+
+    def close(self):
+        if self.footer:
+            self.ui.write(self.footer)
 
     def show(self, ctx, copies=None, **props):
         if self.buffered:
@@ -817,7 +822,7 @@ class changeset_templater(changeset_printer):
             (self.ui.debugflag, 'debug'),
         ]
 
-        types = {'header': '', 'changeset': 'changeset'}
+        types = {'header': '', 'footer':'', 'changeset': 'changeset'}
         for mode, postfix  in tmplmodes:
             for type in types:
                 cur = postfix and ('%s_%s' % (type, postfix)) or type
@@ -838,6 +843,11 @@ class changeset_templater(changeset_printer):
             key = types['changeset']
             self.ui.write(templater.stringify(self.t(key, **props)))
             self.showpatch(ctx.node())
+
+            if types['header']:
+                if not self.footer:
+                    self.footer = templater.stringify(self.t(types['footer'],
+                                                      **props))
 
         except KeyError, inst:
             msg = _("%s: no key named '%s'")

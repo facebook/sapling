@@ -306,6 +306,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                         "bad revision could be any of:\n"))
             for n in nodes:
                 displayer.show(repo[n])
+        displayer.close()
 
     def check_state(state, interactive=True):
         if not state['good'] or not state['bad']:
@@ -1443,6 +1444,7 @@ def heads(ui, repo, *branchrevs, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in heads:
         displayer.show(repo[n])
+    displayer.close()
 
 def help_(ui, name=None, with_version=False):
     """show help for a given topic or a help overview
@@ -1931,6 +1933,7 @@ def incoming(ui, repo, source="default", **opts):
                 continue
             count += 1
             displayer.show(other[n])
+        displayer.close()
     finally:
         if hasattr(other, 'close'):
             other.close()
@@ -2066,6 +2069,7 @@ def log(ui, repo, *pats, **opts):
             break
         if displayer.flush(ctx.rev()):
             count += 1
+    displayer.close()
 
 def manifest(ui, repo, node=None, rev=None):
     """output the current or given revision of the project manifest
@@ -2148,6 +2152,7 @@ def merge(ui, repo, node=None, **opts):
         for node in repo.changelog.nodesbetween(roots=roots, heads=heads)[0]:
             if node not in roots:
                 displayer.show(repo[node])
+        displayer.close()
         return 0
 
     return hg.merge(repo, node, force=opts.get('force'))
@@ -2186,6 +2191,7 @@ def outgoing(ui, repo, dest=None, **opts):
             continue
         count += 1
         displayer.show(repo[n])
+    displayer.close()
 
 def parents(ui, repo, file_=None, **opts):
     """show the parents of the working directory or revision
@@ -2226,6 +2232,7 @@ def parents(ui, repo, file_=None, **opts):
     for n in p:
         if n != nullid:
             displayer.show(repo[n])
+    displayer.close()
 
 def paths(ui, repo, search=None):
     """show aliases for remote repositories
@@ -3106,7 +3113,9 @@ def tip(ui, repo, **opts):
     that repository becomes the current tip. The "tip" tag is special
     and cannot be renamed or assigned to a different changeset.
     """
-    cmdutil.show_changeset(ui, repo, opts).show(repo[len(repo) - 1])
+    displayer = cmdutil.show_changeset(ui, repo, opts)
+    displayer.show(repo[len(repo) - 1])
+    displayer.close()
 
 def unbundle(ui, repo, fname1, *fnames, **opts):
     """apply one or more changegroup files

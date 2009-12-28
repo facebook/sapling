@@ -33,7 +33,7 @@ def children(ui, repo, file_=None, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for cctx in ctx.children():
         displayer.show(cctx)
-
+    displayer.close()
 
 cmdtable = {
     "children":

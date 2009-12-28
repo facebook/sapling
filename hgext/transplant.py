@@ -430,6 +430,7 @@ def browserevs(ui, repo, nodes, opts):
             transplants = ()
             merges = ()
             break
+    displayer.close()
     return (transplants, merges)
 
 def transplant(ui, repo, *revs, **opts):
