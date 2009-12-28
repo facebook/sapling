@@ -25,7 +25,8 @@ shortcuts = {
     'static': [('cmd', ['static']), ('file', None)]
 }
 
-def expand(form):
+def normalize(form):
+    # first expand the shortcuts
     for k in shortcuts.iterkeys():
         if k in form:
             for name, value in shortcuts[k]:
@@ -33,6 +34,9 @@ def expand(form):
                     value = form[k]
                 form[name] = value
             del form[k]
+    # And strip the values
+    for k, v in form.iteritems():
+        form[k] = [i.strip() for i in v]
     return form
 
 class wsgirequest(object):
@@ -47,7 +51,9 @@ class wsgirequest(object):
         self.multiprocess = wsgienv['wsgi.multiprocess']
         self.run_once = wsgienv['wsgi.run_once']
         self.env = wsgienv
-        self.form = expand(cgi.parse(self.inp, self.env, keep_blank_values=1))
+        self.form = normalize(cgi.parse(self.inp,
+                                        self.env,
+                                        keep_blank_values=1))
         self._start_response = start_response
         self.server_write = None
         self.headers = []
