@@ -11,7 +11,7 @@ hg serve -p $HGPORT -d --pid-file=hg.pid
 cat hg.pid >> $DAEMON_PIDS
 cd ..
 
-http_proxy= hg clone --pull http://localhost:$HGPORT/ copy | sed -e 's,:[0-9][0-9]*/,/,'
+hg clone --pull http://localhost:$HGPORT/ copy | sed -e 's,:[0-9][0-9]*/,/,'
 cd copy
 hg verify
 hg co

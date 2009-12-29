@@ -19,15 +19,15 @@ cd ..
 cat hg1.pid hg2.pid >> $DAEMON_PIDS
 
 echo % clone via stream
-http_proxy= hg clone --uncompressed http://localhost:$HGPORT/ copy 2>&1 | \
+hg clone --uncompressed http://localhost:$HGPORT/ copy 2>&1 | \
   sed -e 's/[0-9][0-9.]*/XXX/g' -e 's/[KM]\(B\/sec\)/X\1/'
 hg verify -R copy
 
 echo % try to clone via stream, should use pull instead
-http_proxy= hg clone --uncompressed http://localhost:$HGPORT1/ copy2
+hg clone --uncompressed http://localhost:$HGPORT1/ copy2
 
 echo % clone via pull
-http_proxy= hg clone http://localhost:$HGPORT1/ copy-pull
+hg clone http://localhost:$HGPORT1/ copy-pull
 hg verify -R copy-pull
 
 cd test
