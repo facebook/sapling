@@ -1293,11 +1293,10 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
     date1 = util.datestr(ctx1.date())
     man1 = ctx1.manifest()
 
-    if repo.ui.quiet:
-        r = None
-    else:
+    revs = None
+    if not repo.ui.quiet and not opts.git:
         hexfunc = repo.ui.debugflag and hex or short
-        r = [hexfunc(node) for node in [node1, node2] if node]
+        revs = [hexfunc(node) for node in [node1, node2] if node]
 
     if opts.git:
         copy, diverge = copies.copies(repo, ctx1, ctx2, repo[nullid])
@@ -1350,8 +1349,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
                 _addmodehdr(header, omode, nmode)
                 if util.binary(to) or util.binary(tn):
                     dodiff = 'binary'
-            r = None
-            header.insert(0, mdiff.diffline(r, a, b, opts))
+            header.insert(0, mdiff.diffline(revs, a, b, opts))
         if dodiff:
             if dodiff == 'binary':
                 text = b85diff(to, tn)
@@ -1359,7 +1357,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
                 text = mdiff.unidiff(to, date1,
                                     # ctx2 date may be dynamic
                                     tn, util.datestr(ctx2.date()),
-                                    a, b, r, opts=opts)
+                                    a, b, revs, opts=opts)
             if header and (text or len(header) > 1):
                 yield ''.join(header)
             if text:
