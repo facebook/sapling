@@ -1159,15 +1159,6 @@ class queue(object):
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
             ph = patchheader(self.join(patchfn))
-
-            patchf = self.opener(patchfn, 'r')
-
-            # if the patch was a git patch, refresh it as a git patch
-            for line in patchf:
-                if line.startswith('diff --git'):
-                    self.diffopts().git = True
-                    break
-
             if msg:
                 ph.setmessage(msg)
             if newuser:
@@ -1175,11 +1166,16 @@ class queue(object):
             if newdate:
                 ph.setdate(newdate)
 
+            # if the patch was a git patch, refresh it as a git patch
+            patchf = self.opener(patchfn, 'r')
+            for line in patchf:
+                if line.startswith('diff --git'):
+                    self.diffopts().git = True
+                    break
+            patchf.close()
+
             # only commit new patch when write is complete
             patchf = self.opener(patchfn, 'w', atomictemp=True)
-
-            patchf.seek(0)
-            patchf.truncate()
 
             comments = str(ph)
             if comments:
