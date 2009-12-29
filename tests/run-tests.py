@@ -786,6 +786,7 @@ def main():
     os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
     os.environ['CDPATH'] = ''
     os.environ['COLUMNS'] = '80'
+    os.environ['http_proxy'] = ''
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
