@@ -368,8 +368,9 @@ cat >>$HGRCPATH <<EOF
 git = False
 EOF
 hg qdiff --git
-
 cd ..
+
+echo % test file addition in slow path
 hg init slow
 cd slow
 hg qinit
@@ -394,7 +395,7 @@ hg log -v --template '{rev} {file_copies}\n' -r .
 hg qrefresh
 grep 'diff --git' .hg/patches/bar
 
-echo
+echo % test file move chains in the slow path
 hg up -C 1
 echo >> foo
 hg ci -m 'change foo again'

@@ -380,6 +380,7 @@ copy to copy
 diff --git a/new b/copy
 copy from new
 copy to copy
+% test file addition in slow path
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 created new head
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -415,7 +416,7 @@ rename to baz
 2 baz (foo)
 diff --git a/bar b/bar
 diff --git a/foo b/baz
-
+% test file move chains in the slow path
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 popping bar
