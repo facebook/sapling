@@ -86,8 +86,9 @@ hg bisect -g
 set +e
 
 echo % test invalid command
+# assuming that the shell returns 127 if command not found ...
 hg bisect -r
-hg bisect --command './foobar' 2>&1 | sed 's|\(/bin/sh: \./foobar:\).*|\1 not found|'
+hg bisect --command 'exit 127'
 
 echo % test bisecting command
 cat > script.py <<EOF
