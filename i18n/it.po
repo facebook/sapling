@@ -902,7 +902,7 @@ msgstr "La revisione %d è un merge, ignoro...\n"
 
 #, fuzzy, python-format
 msgid "generating stats: %d%%"
-msgstr "\rsto generando le statistiche: %d%%"
+msgstr "sto generando le statistiche: %d%%"
 
 msgid ""
 "histogram of changes to the repository\n"
