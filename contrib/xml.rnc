@@ -1,0 +1,41 @@
+# RelaxNG schema for "xml" log style
+# Inspired by Subversion's XML log format.
+
+start = log
+node.type = xsd:string  {minLength = "40" maxLength = "40"}
+
+log = element log { logentry+ }
+logentry = element logentry {
+    logentry.attlist,
+    branch*, tag*, hgparent*,
+    author, date,
+    msg, paths?, copies?, extra*
+}
+logentry.attlist =
+    attribute revision {xsd:nonNegativeInteger}
+  & attribute node {node.type}
+branch = element branch { text }
+tag = element tag { text }
+hgparent = element parent {hgparent.attlist, text}
+hgparent.attlist =
+    attribute revision {xsd:integer {minInclusive = "-1"} }
+  & attribute node {node.type}
+author = element author { author.attlist, text }
+author.attlist =
+    attribute email {text}
+date = element date {xsd:dateTime}
+msg = element msg {msg.attlist, text}
+msg.attlist =
+    attribute xml:space {"preserve"}
+paths = element paths { path* }
+path = element path { path.attlist, text }
+path.attlist =
+    # Action: (A)dd, (M)odify, (R)emove
+    attribute action {"A"|"M"|"R"}
+copies = element copies { copy+ }
+copy = element copy { copy.attlist, text }
+copy.attlist =
+    attribute source {text}
+extra = element extra {extra.attlist, text}
+extra.attlist =
+    attribute key {text}

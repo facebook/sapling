@@ -62,6 +62,14 @@ hg log --style compact
 hg log -v --style compact
 hg log --debug --style compact
 
+# Test xml styles
+echo '# xml style works (--style xml)'
+hg log --style xml
+echo '# xml style works (-v --style xml)'
+hg log -v --style xml
+echo '# xml style works (--debug --style xml)'
+hg log --debug --style xml
+
 echo '# error if style not readable'
 touch q
 chmod 0 q

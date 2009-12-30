@@ -203,7 +203,7 @@ def find_exe(command):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
             return executable
-    return None
+    return findexisting(os.path.expanduser(os.path.expandvars(command)))
 
 def set_signal_handler():
     try:
