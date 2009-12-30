@@ -97,6 +97,266 @@ other 3
   line 1
 line 2
 
+# xml style works (--style xml)
+<?xml version="1.0"?>
+<log>
+<logentry revision="8" node="3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57">
+<tag>tip</tag>
+<author email="test">test</author>
+<date>2020-01-01T10:01:00+00:00</date>
+<msg xml:space="preserve">third</msg>
+</logentry>
+<logentry revision="7" node="29114dbae42b9f078cf2714dbe3a86bba8ec7453">
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="user@hostname">User Name</author>
+<date>1970-01-12T13:46:40+00:00</date>
+<msg xml:space="preserve">second</msg>
+</logentry>
+<logentry revision="6" node="c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f">
+<parent revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f" />
+<parent revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4" />
+<author email="person">person</author>
+<date>1970-01-18T08:40:01+00:00</date>
+<msg xml:space="preserve">merge</msg>
+</logentry>
+<logentry revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f">
+<parent revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
+<author email="person">person</author>
+<date>1970-01-18T08:40:00+00:00</date>
+<msg xml:space="preserve">new head</msg>
+</logentry>
+<logentry revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4">
+<branch>foo</branch>
+<author email="person">person</author>
+<date>1970-01-17T04:53:20+00:00</date>
+<msg xml:space="preserve">new branch</msg>
+</logentry>
+<logentry revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47">
+<author email="person">person</author>
+<date>1970-01-16T01:06:40+00:00</date>
+<msg xml:space="preserve">no user, no domain</msg>
+</logentry>
+<logentry revision="2" node="97054abb4ab824450e9164180baf491ae0078465">
+<author email="other@place">other</author>
+<date>1970-01-14T21:20:00+00:00</date>
+<msg xml:space="preserve">no person</msg>
+</logentry>
+<logentry revision="1" node="b608e9d1a3f0273ccf70fb85fd6866b3482bf965">
+<author email="other@place">A. N. Other</author>
+<date>1970-01-13T17:33:20+00:00</date>
+<msg xml:space="preserve">other 1
+other 2
+
+other 3</msg>
+</logentry>
+<logentry revision="0" node="1e4e1b8f71e05681d422154f5421e385fec3454f">
+<author email="user@hostname">User Name</author>
+<date>1970-01-12T13:46:40+00:00</date>
+<msg xml:space="preserve">line 1
+line 2</msg>
+</logentry>
+</log>
+# xml style works (-v --style xml)
+<?xml version="1.0"?>
+<log>
+<logentry revision="8" node="3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57">
+<tag>tip</tag>
+<author email="test">test</author>
+<date>2020-01-01T10:01:00+00:00</date>
+<msg xml:space="preserve">third</msg>
+<paths>
+<path action="A">fourth</path>
+<path action="A">third</path>
+<path action="R">second</path>
+</paths>
+<copies>
+<copy source="second">fourth</copy>
+</copies>
+</logentry>
+<logentry revision="7" node="29114dbae42b9f078cf2714dbe3a86bba8ec7453">
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="user@hostname">User Name</author>
+<date>1970-01-12T13:46:40+00:00</date>
+<msg xml:space="preserve">second</msg>
+<paths>
+<path action="A">second</path>
+</paths>
+</logentry>
+<logentry revision="6" node="c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f">
+<parent revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f" />
+<parent revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4" />
+<author email="person">person</author>
+<date>1970-01-18T08:40:01+00:00</date>
+<msg xml:space="preserve">merge</msg>
+<paths>
+</paths>
+</logentry>
+<logentry revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f">
+<parent revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
+<author email="person">person</author>
+<date>1970-01-18T08:40:00+00:00</date>
+<msg xml:space="preserve">new head</msg>
+<paths>
+<path action="A">d</path>
+</paths>
+</logentry>
+<logentry revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4">
+<branch>foo</branch>
+<author email="person">person</author>
+<date>1970-01-17T04:53:20+00:00</date>
+<msg xml:space="preserve">new branch</msg>
+<paths>
+</paths>
+</logentry>
+<logentry revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47">
+<author email="person">person</author>
+<date>1970-01-16T01:06:40+00:00</date>
+<msg xml:space="preserve">no user, no domain</msg>
+<paths>
+<path action="M">c</path>
+</paths>
+</logentry>
+<logentry revision="2" node="97054abb4ab824450e9164180baf491ae0078465">
+<author email="other@place">other</author>
+<date>1970-01-14T21:20:00+00:00</date>
+<msg xml:space="preserve">no person</msg>
+<paths>
+<path action="A">c</path>
+</paths>
+</logentry>
+<logentry revision="1" node="b608e9d1a3f0273ccf70fb85fd6866b3482bf965">
+<author email="other@place">A. N. Other</author>
+<date>1970-01-13T17:33:20+00:00</date>
+<msg xml:space="preserve">other 1
+other 2
+
+other 3</msg>
+<paths>
+<path action="A">b</path>
+</paths>
+</logentry>
+<logentry revision="0" node="1e4e1b8f71e05681d422154f5421e385fec3454f">
+<author email="user@hostname">User Name</author>
+<date>1970-01-12T13:46:40+00:00</date>
+<msg xml:space="preserve">line 1
+line 2</msg>
+<paths>
+<path action="A">a</path>
+</paths>
+</logentry>
+</log>
+# xml style works (--debug --style xml)
+<?xml version="1.0"?>
+<log>
+<logentry revision="8" node="3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57">
+<tag>tip</tag>
+<parent revision="7" node="29114dbae42b9f078cf2714dbe3a86bba8ec7453" />
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="test">test</author>
+<date>2020-01-01T10:01:00+00:00</date>
+<msg xml:space="preserve">third</msg>
+<paths>
+<path action="A">fourth</path>
+<path action="A">third</path>
+<path action="R">second</path>
+</paths>
+<copies>
+<copy source="second">fourth</copy>
+</copies>
+<extra key="branch">default</extra>
+</logentry>
+<logentry revision="7" node="29114dbae42b9f078cf2714dbe3a86bba8ec7453">
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="user@hostname">User Name</author>
+<date>1970-01-12T13:46:40+00:00</date>
+<msg xml:space="preserve">second</msg>
+<paths>
+<path action="A">second</path>
+</paths>
+<extra key="branch">default</extra>
+</logentry>
+<logentry revision="6" node="c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f">
+<parent revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f" />
+<parent revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4" />
+<author email="person">person</author>
+<date>1970-01-18T08:40:01+00:00</date>
+<msg xml:space="preserve">merge</msg>
+<paths>
+</paths>
+<extra key="branch">default</extra>
+</logentry>
+<logentry revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f">
+<parent revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="person">person</author>
+<date>1970-01-18T08:40:00+00:00</date>
+<msg xml:space="preserve">new head</msg>
+<paths>
+<path action="A">d</path>
+</paths>
+<extra key="branch">default</extra>
+</logentry>
+<logentry revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4">
+<branch>foo</branch>
+<parent revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="person">person</author>
+<date>1970-01-17T04:53:20+00:00</date>
+<msg xml:space="preserve">new branch</msg>
+<paths>
+</paths>
+<extra key="branch">foo</extra>
+</logentry>
+<logentry revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47">
+<parent revision="2" node="97054abb4ab824450e9164180baf491ae0078465" />
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="person">person</author>
+<date>1970-01-16T01:06:40+00:00</date>
+<msg xml:space="preserve">no user, no domain</msg>
+<paths>
+<path action="M">c</path>
+</paths>
+<extra key="branch">default</extra>
+</logentry>
+<logentry revision="2" node="97054abb4ab824450e9164180baf491ae0078465">
+<parent revision="1" node="b608e9d1a3f0273ccf70fb85fd6866b3482bf965" />
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="other@place">other</author>
+<date>1970-01-14T21:20:00+00:00</date>
+<msg xml:space="preserve">no person</msg>
+<paths>
+<path action="A">c</path>
+</paths>
+<extra key="branch">default</extra>
+</logentry>
+<logentry revision="1" node="b608e9d1a3f0273ccf70fb85fd6866b3482bf965">
+<parent revision="0" node="1e4e1b8f71e05681d422154f5421e385fec3454f" />
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="other@place">A. N. Other</author>
+<date>1970-01-13T17:33:20+00:00</date>
+<msg xml:space="preserve">other 1
+other 2
+
+other 3</msg>
+<paths>
+<path action="A">b</path>
+</paths>
+<extra key="branch">default</extra>
+</logentry>
+<logentry revision="0" node="1e4e1b8f71e05681d422154f5421e385fec3454f">
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<parent revision="-1" node="0000000000000000000000000000000000000000" />
+<author email="user@hostname">User Name</author>
+<date>1970-01-12T13:46:40+00:00</date>
+<msg xml:space="preserve">line 1
+line 2</msg>
+<paths>
+<path action="A">a</path>
+</paths>
+<extra key="branch">default</extra>
+</logentry>
+</log>
 # error if style not readable
 abort: Permission denied: ./q
 # error if no style

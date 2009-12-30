@@ -844,7 +844,7 @@ class changeset_templater(changeset_printer):
             self.ui.write(templater.stringify(self.t(key, **props)))
             self.showpatch(ctx.node())
 
-            if types['header']:
+            if types['footer']:
                 if not self.footer:
                     self.footer = templater.stringify(self.t(types['footer'],
                                                       **props))
