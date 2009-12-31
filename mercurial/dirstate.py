@@ -425,7 +425,7 @@ class dirstate(object):
                 return True
         return False
 
-    def walk(self, match, unknown, ignored):
+    def walk(self, match, subrepos, unknown, ignored):
         '''
         Walk recursively through the directory tree, finding all files
         matched by match.
@@ -486,7 +486,8 @@ class dirstate(object):
         files = set(match.files())
         if not files or '.' in files:
             files = ['']
-        results = {'.hg': None}
+        results = dict.fromkeys(subrepos)
+        results['.hg'] = None
 
         # step 1: find all explicit files
         for ff in sorted(files):
@@ -564,11 +565,12 @@ class dirstate(object):
                 if not st is None and not getkind(st.st_mode) in (regkind, lnkkind):
                     st = None
                 results[nf] = st
-
+        for s in subrepos:
+            del results[s]
         del results['.hg']
         return results
 
-    def status(self, match, ignored, clean, unknown):
+    def status(self, match, subrepos, ignored, clean, unknown):
         '''Determine the status of the working copy relative to the
         dirstate and return a tuple of lists (unsure, modified, added,
         removed, deleted, unknown, ignored, clean), where:
@@ -609,7 +611,8 @@ class dirstate(object):
         dadd = deleted.append
         cadd = clean.append
 
-        for fn, st in self.walk(match, listunknown, listignored).iteritems():
+        for fn, st in self.walk(match, subrepos, listunknown,
+                                listignored).iteritems():
             if fn not in dmap:
                 if (listignored or match.exact(fn)) and self._dirignore(fn):
                     if listignored:

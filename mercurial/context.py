@@ -638,7 +638,8 @@ class workingctx(changectx):
         return self._parents[0].ancestor(c2) # punt on two parents for now
 
     def walk(self, match):
-        return sorted(self._repo.dirstate.walk(match, True, False))
+        return sorted(self._repo.dirstate.walk(match, self.substate.keys(),
+                                               True, False))
 
     def dirty(self, missing=False):
         "check whether a working directory is modified"

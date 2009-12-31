@@ -32,7 +32,7 @@ def timer(func, title=None):
 def perfwalk(ui, repo, *pats):
     try:
         m = cmdutil.match(repo, pats, {})
-        timer(lambda: len(list(repo.dirstate.walk(m, True, False))))
+        timer(lambda: len(list(repo.dirstate.walk(m, [], True, False))))
     except:
         try:
             m = cmdutil.match(repo, pats, {})
@@ -150,4 +150,3 @@ cmdtable = {
     'perftemplating': (perftemplating, []),
     'perfdiffwd': (perfdiffwd, []),
 }
-
