@@ -16,12 +16,12 @@ def state(ctx):
     p = config.config()
     def read(f, sections=None, remap=None):
         if f in ctx:
-            try:
-                p.parse(f, ctx[f].data(), sections, remap)
-            except IOError, err:
-                if err.errno != errno.ENOENT:
-                    raise
-    read('.hgsub')
+            p.parse(f, ctx[f].data(), sections, remap, read)
+        else:
+            raise util.Abort(_("subrepo spec file %s not found") % f)
+
+    if '.hgsub' in ctx:
+        read('.hgsub')
 
     rev = {}
     if '.hgsubstate' in ctx:
