@@ -10,7 +10,7 @@ from i18n import _
 import config, util, node, error
 hg = None
 
-nullstate = ('', '')
+nullstate = ('', '', 'empty')
 
 def state(ctx):
     p = config.config()
@@ -35,7 +35,13 @@ def state(ctx):
 
     state = {}
     for path, src in p[''].items():
-        state[path] = (src, rev.get(path, ''))
+        kind = 'hg'
+        if src.startswith('['):
+            if ']' not in src:
+                raise util.Abort(_('missing ] in subrepo source'))
+            kind, src = src.split(']', 1)
+            kind = kind[1:]
+        state[path] = (src, rev.get(path, ''), kind)
 
     return state
 
@@ -57,7 +63,7 @@ def submerge(repo, wctx, mctx, actx):
 
     def debug(s, msg, r=""):
         if r:
-            r = "%s:%s" % r
+            r = "%s:%s:%s" % r
         repo.ui.debug("  subrepo %s: %s %s\n" % (s, msg, r))
 
     for s, l in s1.items():
@@ -146,9 +152,9 @@ def subrepo(ctx, path):
 
     util.path_auditor(ctx._repo.root)(path)
     state = ctx.substate.get(path, nullstate)
-    if state[0].startswith('['): # future expansion
-        raise error.Abort('unknown subrepo source %s' % state[0])
-    return hgsubrepo(ctx, path, state)
+    if state[2] not in types:
+        raise util.Abort(_('unknown subrepo type %s') % t)
+    return types[state[2]](ctx, path, state[:2])
 
 # subrepo classes need to implement the following methods:
 # __init__(self, ctx, path, state)
@@ -205,7 +211,7 @@ class hgsubrepo(object):
         hg.clean(self._repo, node.nullid, False)
 
     def _get(self, state):
-        source, revision = state
+        source, revision, kind = state
         try:
             self._repo.lookup(revision)
         except error.RepoError:
@@ -217,7 +223,7 @@ class hgsubrepo(object):
 
     def get(self, state):
         self._get(state)
-        source, revision = state
+        source, revision, kind = state
         self._repo.ui.debug("getting subrepo %s\n" % self._path)
         hg.clean(self._repo, revision, False)
 
@@ -243,3 +249,7 @@ class hgsubrepo(object):
         dsturl = _abssource(self._repo, True)
         other = hg.repository(self._repo.ui, dsturl)
         self._repo.push(other, force)
+
+types = {
+    'hg': hgsubrepo,
+    }
