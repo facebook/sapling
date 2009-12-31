@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2, incorporated herein by reference.
 
-import errno, os
+import errno, os, re
 from i18n import _
 import config, util, node, error
 hg = None
@@ -250,6 +250,88 @@ class hgsubrepo(object):
         other = hg.repository(self._repo.ui, dsturl)
         self._repo.push(other, force)
 
+class svnsubrepo(object):
+    def __init__(self, ctx, path, state):
+        self._path = path
+        self._state = state
+        self._ctx = ctx
+        self._ui = ctx._repo.ui
+
+    def _svncommand(self, commands):
+        cmd = ['svn'] + commands + [self._path]
+        cmd = [util.shellquote(arg) for arg in cmd]
+        cmd = util.quotecommand(' '.join(cmd))
+        write, read, err = util.popen3(cmd)
+        retdata = read.read()
+        err = err.read().strip()
+        if err:
+            raise util.Abort(err)
+        return retdata
+
+    def _wcrev(self):
+        info = self._svncommand(['info'])
+        mat = re.search('Revision: ([\d]+)\n', info)
+        if not mat:
+            return 0
+        return mat.groups()[0]
+
+    def _url(self):
+        info = self._svncommand(['info'])
+        mat = re.search('URL: ([^\n]+)\n', info)
+        if not mat:
+            return 0
+        return mat.groups()[0]
+
+    def _wcclean(self):
+        status = self._svncommand(['status'])
+        status = '\n'.join([s for s in status.splitlines() if s[0] != '?'])
+        if status.strip():
+            return False
+        return True
+
+    def dirty(self):
+        if self._wcrev() == self._state[1] and self._wcclean():
+            return False
+        return True
+
+    def commit(self, text, user, date):
+        # user and date are out of our hands since svn is centralized
+        if self._wcclean():
+            return self._wcrev()
+        commitinfo = self._svncommand(['commit', '-m', text])
+        self._ui.status(commitinfo)
+        newrev = re.search('Committed revision ([\d]+).', commitinfo)
+        if not newrev:
+            raise util.Abort(commitinfo.splitlines()[-1])
+        newrev = newrev.groups()[0]
+        self._ui.status(self._svncommand(['update', '-r', newrev]))
+        return newrev
+
+    def remove(self):
+        if self.dirty():
+            self._repo.ui.warn('Not removing repo %s because'
+                               'it has changes.\n' % self._path)
+            return
+        self._repo.ui.note('removing subrepo %s\n' % self._path)
+        shutil.rmtree(self._ctx.repo.join(self._path))
+
+    def get(self, state):
+        status = self._svncommand(['checkout', state[0], '--revision', state[1]])
+        if not re.search('Checked out revision [\d]+.', status):
+            raise util.Abort(status.splitlines()[-1])
+        self._ui.status(status)
+
+    def merge(self, state):
+        old = int(self._state[1])
+        new = int(state[1])
+        if new > old:
+            self.get(state)
+
+    def push(self, force):
+        # nothing for svn
+        pass
+
 types = {
     'hg': hgsubrepo,
+    'svn': svnsubrepo,
     }
