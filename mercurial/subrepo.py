@@ -45,6 +45,7 @@ def writestate(repo, state):
                          for s in sorted(state)]), '')
 
 def submerge(repo, wctx, mctx, actx):
+    # working context, merging context, ancestor context
     if mctx == actx: # backwards?
         actx = wctx.p1()
     s1 = wctx.substate
@@ -105,7 +106,7 @@ def submerge(repo, wctx, mctx, actx):
             continue
         elif s not in sa:
             debug(s, "remote added, get", r)
-            wctx.sub(s).get(r)
+            mctx.sub(s).get(r)
             sm[s] = r
         elif r != sa[s]:
             if repo.ui.promptchoice(
