@@ -25,3 +25,40 @@ abort: local changes found, refresh first
  a
 +a
 +b
+reverting a
+% fold git patch into a regular patch, expect git patch
+popping git
+now at: regular
+diff --git a/a b/a
+--- a/a
++++ b/a
+@@ -1,3 +1,4 @@
+ a
+ a
+ b
++a
+diff --git a/a b/aa
+copy from a
+copy to aa
+--- a/a
++++ b/aa
+@@ -1,3 +1,4 @@
+ a
+ a
+ b
++a
+popping regular
+now at: p1
+% fold regular patch into a git patch, expect git patch
+popping regular
+now at: git
+diff --git a/a b/aa
+copy from a
+copy to aa
+--- a/a
++++ b/aa
+@@ -1,3 +1,4 @@
+ a
+ a
+ b
++b

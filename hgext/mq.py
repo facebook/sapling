@@ -264,18 +264,19 @@ class queue(object):
             diffopts = self.patchopts(diffopts, patchfn)
         return diffopts
 
-    def patchopts(self, diffopts, patchfn):
+    def patchopts(self, diffopts, *patches):
         """Return a copy of input diff options with git set to true if
         referenced patch is a git patch.
         """
         diffopts = diffopts.copy()
-        patchf = self.opener(patchfn, 'r')
-        # if the patch was a git patch, refresh it as a git patch
-        for line in patchf:
-            if line.startswith('diff --git'):
-                diffopts.git = True
-                break
-        patchf.close()
+        for patchfn in patches:
+            patchf = self.opener(patchfn, 'r')
+            # if the patch was a git patch, refresh it as a git patch
+            for line in patchf:
+                if line.startswith('diff --git'):
+                    diffopts.git = True
+                    break
+            patchf.close()
         return diffopts
 
     def join(self, *p):
@@ -2070,7 +2071,8 @@ def fold(ui, repo, *files, **opts):
     if opts['edit']:
         message = ui.edit(message, user or ui.username())
 
-    q.refresh(repo, msg=message)
+    diffopts = q.patchopts(q.diffopts(), *patches)
+    q.refresh(repo, msg=message, git=diffopts.git)
     q.delete(repo, patches, opts)
     q.save_dirty()
 

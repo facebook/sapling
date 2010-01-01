@@ -25,12 +25,35 @@ echo '% fold in the middle of the queue'
 hg qpop p1
 hg qdiff | filterdiff
 hg qfold p2
+grep git .hg/patches/p1 && echo 'git patch found!'
 hg qser
 hg qdiff | filterdiff
 echo '% fold with local changes'
 echo d >> a
 hg qfold p3
 hg diff -c . | filterdiff
+hg revert -a --no-backup
+
+echo '% fold git patch into a regular patch, expect git patch'
+echo a >> a
+hg qnew -f regular
+hg cp a aa
+hg qnew --git -f git
+hg qpop
+hg qfold git
+cat .hg/patches/regular
+hg qpop
+hg qdel regular
+
+echo '% fold regular patch into a git patch, expect git patch'
+hg cp a aa
+hg qnew --git -f git
+echo b >> aa
+hg qnew -f regular
+hg qpop
+hg qfold regular
+cat .hg/patches/git
+
 cd ..
 
 
