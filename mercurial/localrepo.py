@@ -1000,7 +1000,9 @@ class localrepository(repo.repository):
             match.bad = bad
 
         if working: # we need to scan the working dir
-            s = self.dirstate.status(match, listignored, listclean, listunknown)
+            subrepos = ctx1.substate.keys()
+            s = self.dirstate.status(match, subrepos, listignored,
+                                     listclean, listunknown)
             cmp, modified, added, removed, deleted, unknown, ignored, clean = s
 
             # check for any possibly clean files

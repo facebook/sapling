@@ -1,0 +1,48 @@
+% create subversion repo
+Checked out revision 0.
+A         alpha
+Adding         alpha
+Transmitting file data .
+Committed revision 1.
+% create hg repo
+% first revision, no sub
+adding a
+% add first svn sub
+committing subrepository s
+% debugsub
+path s
+ source   file:///root/svn-repo
+ revision 1
+
+% change file in svn and hg, commit
+committing subrepository s
+Sending        s/alpha
+Transmitting file data .
+Committed revision 2.
+At revision 2.
+path s
+ source   file:///root/svn-repo
+ revision 2
+
+% should be empty despite change to s/a
+
+% add a commit from svn
+U    alpha
+Updated to revision 2.
+Sending        alpha
+Transmitting file data .
+Committed revision 3.
+% this commit from hg will fail
+committing subrepository s
+abort: svn: Commit failed (details follow):
+svn: File '/alpha' is out of date
+
+% clone
+updating to branch default
+A    s/alpha
+Checked out revision 2.
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% debugsub in clone
+path s
+ source   file:///root/svn-repo
+ revision 2

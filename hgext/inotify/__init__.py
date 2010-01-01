@@ -42,11 +42,11 @@ def reposetup(ui, repo):
         # to start an inotify server if it won't start.
         _inotifyon = True
 
-        def status(self, match, ignored, clean, unknown=True):
+        def status(self, match, subrepos, ignored, clean, unknown=True):
             files = match.files()
             if '.' in files:
                 files = []
-            if self._inotifyon and not ignored and not self._dirty:
+            if self._inotifyon and not ignored and not subrepos and not self._dirty:
                 cli = client(ui, repo)
                 try:
                     result = cli.statusquery(files, match, False,
@@ -70,7 +70,7 @@ def reposetup(ui, repo):
                         result = r2
                     return result
             return super(inotifydirstate, self).status(
-                match, ignored, clean, unknown)
+                match, subrepos, ignored, clean, unknown)
 
     repo.dirstate.__class__ = inotifydirstate
 
