@@ -50,7 +50,9 @@ def _findoldnames(fctx, limit):
     return [o[1] for o in sorted(old.values())]
 
 def _findlimit(repo, a, b):
-    "find the earliest revision that's an ancestor of a or b but not both"
+    """Find the earliest revision that's an ancestor of a or b but not both,
+    None if no such revision exists.
+    """
     # basic idea:
     # - mark a and b with different sides
     # - if a parent's children are all on the same side, the parent is
@@ -73,6 +75,7 @@ def _findlimit(repo, a, b):
     visit = [-a, -b]
     heapq.heapify(visit)
     interesting = len(visit)
+    hascommonancestor = False
     limit = working
 
     while interesting:
@@ -82,6 +85,8 @@ def _findlimit(repo, a, b):
         else:
             parents = cl.parentrevs(r)
         for p in parents:
+            if p < 0:
+                continue
             if p not in side:
                 # first time we see p; add it to visit
                 side[p] = side[r]
@@ -92,9 +97,13 @@ def _findlimit(repo, a, b):
                 # p was interesting but now we know better
                 side[p] = 0
                 interesting -= 1
+                hascommonancestor = True
         if side[r]:
             limit = r # lowest rev visited
             interesting -= 1
+
+    if not hascommonancestor:
+        return None
     return limit
 
 def copies(repo, c1, c2, ca, checkdirs=False):
@@ -110,6 +119,9 @@ def copies(repo, c1, c2, ca, checkdirs=False):
         return repo.dirstate.copies(), {}
 
     limit = _findlimit(repo, c1.rev(), c2.rev())
+    if limit is None:
+        # no common ancestor, no copies
+        return {}, {}
     m1 = c1.manifest()
     m2 = c2.manifest()
     ma = ca.manifest()

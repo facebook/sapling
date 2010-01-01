@@ -78,3 +78,18 @@ tb "hg cp a b" "hg cp b c" "hg cp c d" "copy chain"
 tb "add a a1" "hg mv a b" "hg mv b a" "circular rename"
 
 tb "hg mv x y" "add y/x x1" "add y/x x2" "directory move"
+
+# Cannot implement unrelated branch with tb
+echo '% testing copies with unrelated branch'
+hg init unrelated
+cd unrelated
+add a a
+hg ci -Am adda
+hg mv a b
+hg ci -m movea
+hg up -C null
+add a a
+hg ci -Am addunrelateda
+echo '% unrelated branch diff'
+hg diff --git -r 2 -r 1
+cd ..

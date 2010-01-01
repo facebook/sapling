@@ -1234,3 +1234,21 @@ new file mode 100644
 +y1
 
 
+% testing copies with unrelated branch
+adding a
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding a
+created new head
+% unrelated branch diff
+diff --git a/a b/a
+deleted file mode 100644
+--- a/a
++++ /dev/null
+@@ -1,1 +0,0 @@
+-a
+diff --git a/b b/b
+new file mode 100644
+--- /dev/null
++++ b/b
+@@ -0,0 +1,1 @@
++a
