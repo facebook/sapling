@@ -23,7 +23,7 @@ applying eol.diff
 now at: eol.diff
 test message<LF>
 <LF>
-diff --git a/a b/a<LF>
+diff -r 0d0bf99a8b7a a<LF>
 --- a/a<LF>
 +++ b/a<LF>
 @@ -1,5 +1,5 @@<LF>

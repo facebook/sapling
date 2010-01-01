@@ -16,6 +16,8 @@ checkundo()
 
 echo "[extensions]" >> $HGRCPATH
 echo "mq =" >> $HGRCPATH
+echo "[mq]" >> $HGRCPATH
+echo "git = keep" >> $HGRCPATH
 
 # Commit two dummy files in "init" changeset
 hg init t

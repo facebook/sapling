@@ -4,6 +4,8 @@
 
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
+echo "[diff]" >> $HGRCPATH
+echo "nodates=1" >> $HGRCPATH
 
 cat > makepatch.py <<EOF
 f = file('eol.diff', 'wb')

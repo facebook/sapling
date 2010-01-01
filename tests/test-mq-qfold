@@ -2,6 +2,8 @@
 
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
+echo "[mq]" >> $HGRCPATH
+echo "git=keep" >> $HGRCPATH
 
 filterdiff()
 {

@@ -21,6 +21,18 @@ Common tasks (use "hg help command" for more details):
   remove patch from applied stack           qpop
   refresh contents of top applied patch     qrefresh
 
+By default, mq will automatically use git patches when required to avoid
+losing file mode changes, copy records, binary files or empty files creations
+or deletions. This behaviour can be configured with:
+
+  [mq]
+  git = auto/keep/yes/no
+
+If set to 'keep', mq will obey the [diff] section configuration while
+preserving existing git patches upon qrefresh. If set to 'yes' or 'no', mq
+will override the [diff] section and always generate git or regular patches,
+possibly losing data in the second case.
+
 list of commands:
 
  qapplied     print the patches already applied
