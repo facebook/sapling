@@ -225,7 +225,6 @@ class queue(object):
         self.guards_path = "guards"
         self.active_guards = None
         self.guards_dirty = False
-        self._diffopts = None
 
     @util.propertycache
     def applied(self):
@@ -259,10 +258,26 @@ class queue(object):
         self.guards_dirty = False
         self.active_guards = None
 
-    def diffopts(self):
-        if self._diffopts is None:
-            self._diffopts = patch.diffopts(self.ui)
-        return self._diffopts
+    def diffopts(self, opts={}, patchfn=None):
+        diffopts = patch.diffopts(self.ui, opts)
+        if patchfn:
+            diffopts = self.patchopts(diffopts, patchfn)
+        return diffopts
+
+    def patchopts(self, diffopts, *patches):
+        """Return a copy of input diff options with git set to true if
+        referenced patch is a git patch.
+        """
+        diffopts = diffopts.copy()
+        for patchfn in patches:
+            patchf = self.opener(patchfn, 'r')
+            # if the patch was a git patch, refresh it as a git patch
+            for line in patchf:
+                if line.startswith('diff --git'):
+                    diffopts.git = True
+                    break
+            patchf.close()
+        return diffopts
 
     def join(self, *p):
         return os.path.join(self.path, *p)
@@ -418,24 +433,24 @@ class queue(object):
         except OSError, inst:
             self.ui.warn(_('error removing undo: %s\n') % str(inst))
 
-    def printdiff(self, repo, node1, node2=None, files=None,
+    def printdiff(self, repo, diffopts, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
         stat = opts.get('stat')
         if stat:
             opts['unified'] = '0'
 
         m = cmdutil.match(repo, files, opts)
-        chunks = patch.diff(repo, node1, node2, m, changes, self.diffopts())
+        chunks = patch.diff(repo, node1, node2, m, changes, diffopts)
         write = fp is None and repo.ui.write or fp.write
         if stat:
             width = self.ui.interactive() and util.termwidth() or 80
             write(patch.diffstat(util.iterlines(chunks), width=width,
-                                 git=self.diffopts().git))
+                                 git=diffopts.git))
         else:
             for chunk in chunks:
                 write(chunk)
 
-    def mergeone(self, repo, mergeq, head, patch, rev):
+    def mergeone(self, repo, mergeq, head, patch, rev, diffopts):
         # first try just applying the patch
         (err, n) = self.apply(repo, [ patch ], update_status=False,
                               strict=True, merge=rev)
@@ -464,11 +479,12 @@ class queue(object):
         except:
             raise util.Abort(_("unable to read %s") % patch)
 
+        diffopts = self.patchopts(diffopts, patch)
         patchf = self.opener(patch, "w")
         comments = str(ph)
         if comments:
             patchf.write(comments)
-        self.printdiff(repo, head, n, fp=patchf)
+        self.printdiff(repo, diffopts, head, n, fp=patchf)
         patchf.close()
         self.removeundo(repo)
         return (0, n)
@@ -492,7 +508,7 @@ class queue(object):
                 return pp[1]
         return pp[0]
 
-    def mergepatch(self, repo, mergeq, series):
+    def mergepatch(self, repo, mergeq, series, diffopts):
         if len(self.applied) == 0:
             # each of the patches merged in will have two parents.  This
             # can confuse the qrefresh, qdiff, and strip code because it
@@ -522,7 +538,7 @@ class queue(object):
                 self.ui.warn(_("patch %s is not applied\n") % patch)
                 return (1, None)
             rev = bin(info[1])
-            (err, head) = self.mergeone(repo, mergeq, head, patch, rev)
+            err, head = self.mergeone(repo, mergeq, head, patch, rev, diffopts)
             if head:
                 self.applied.append(statusentry(hex(head), patch))
                 self.applied_dirty = 1
@@ -757,6 +773,7 @@ class queue(object):
         date = opts.get('date')
         if date:
             date = util.parsedate(date)
+        diffopts = self.diffopts({'git': opts.get('git')})
         self.check_reserved_name(patchfn)
         if os.path.exists(self.join(patchfn)):
             raise util.Abort(_('patch "%s" already exists') % patchfn)
@@ -806,8 +823,6 @@ class queue(object):
                         msg = msg + "\n\n"
                         p.write(msg)
                     if commitfiles:
-                        diffopts = self.diffopts()
-                        if opts.get('git'): diffopts.git = True
                         parent = self.qparents(repo, n)
                         chunks = patch.diff(repo, node1=parent, node2=n,
                                             match=match, opts=diffopts)
@@ -932,6 +947,7 @@ class queue(object):
 
     def push(self, repo, patch=None, force=False, list=False,
              mergeq=None, all=False):
+        diffopts = self.diffopts()
         wlock = repo.wlock()
         try:
             if repo.dirstate.parents()[0] not in repo.heads():
@@ -994,7 +1010,7 @@ class queue(object):
             all_files = {}
             try:
                 if mergeq:
-                    ret = self.mergepatch(repo, mergeq, s)
+                    ret = self.mergepatch(repo, mergeq, s, diffopts)
                 else:
                     ret = self.apply(repo, s, list, all_files=all_files)
             except:
@@ -1137,8 +1153,8 @@ class queue(object):
             node1, node2 = None, qp
         else:
             node1, node2 = qp, None
-        self._diffopts = patch.diffopts(self.ui, opts)
-        self.printdiff(repo, node1, node2, files=pats, opts=opts)
+        diffopts = self.diffopts(opts)
+        self.printdiff(repo, diffopts, node1, node2, files=pats, opts=opts)
 
     def refresh(self, repo, pats=None, **opts):
         if len(self.applied) == 0:
@@ -1159,20 +1175,13 @@ class queue(object):
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
             ph = patchheader(self.join(patchfn))
+            diffopts = self.diffopts({'git': opts.get('git')}, patchfn)
             if msg:
                 ph.setmessage(msg)
             if newuser:
                 ph.setuser(newuser)
             if newdate:
                 ph.setdate(newdate)
-
-            # if the patch was a git patch, refresh it as a git patch
-            patchf = self.opener(patchfn, 'r')
-            for line in patchf:
-                if line.startswith('diff --git'):
-                    self.diffopts().git = True
-                    break
-            patchf.close()
 
             # only commit new patch when write is complete
             patchf = self.opener(patchfn, 'w', atomictemp=True)
@@ -1181,8 +1190,6 @@ class queue(object):
             if comments:
                 patchf.write(comments)
 
-            if opts.get('git'):
-                self.diffopts().git = True
             tip = repo.changelog.tip()
             if top == tip:
                 # if the top of our patch queue is also the tip, there is an
@@ -1248,12 +1255,12 @@ class queue(object):
                 c = [filter(matchfn, l) for l in (m, a, r)]
                 match = cmdutil.matchfiles(repo, set(c[0] + c[1] + c[2]))
                 chunks = patch.diff(repo, patchparent, match=match,
-                                    changes=c, opts=self.diffopts())
+                                    changes=c, opts=diffopts)
                 for chunk in chunks:
                     patchf.write(chunk)
 
                 try:
-                    if self.diffopts().git:
+                    if diffopts.git:
                         copies = {}
                         for dst in a:
                             src = repo.dirstate.copied(dst)
@@ -1332,7 +1339,7 @@ class queue(object):
                                    '(revert --all, qpush to recover)\n'))
                     raise
             else:
-                self.printdiff(repo, patchparent, fp=patchf)
+                self.printdiff(repo, diffopts, patchparent, fp=patchf)
                 patchf.rename()
                 added = repo.status()[1]
                 for a in added:
@@ -1612,9 +1619,7 @@ class queue(object):
                                      % rev[0])
                 lastparent = None
 
-            if git:
-                self.diffopts().git = True
-
+            diffopts = self.diffopts({'git': git})
             for r in rev:
                 p1, p2 = repo.changelog.parentrevs(r)
                 n = repo.changelog.node(r)
@@ -1633,7 +1638,7 @@ class queue(object):
                 self.full_series.insert(0, patchname)
 
                 patchf = self.opener(patchname, "w")
-                patch.export(repo, [n], fp=patchf, opts=self.diffopts())
+                patch.export(repo, [n], fp=patchf, opts=diffopts)
                 patchf.close()
 
                 se = statusentry(hex(n), patchname)
@@ -2065,7 +2070,8 @@ def fold(ui, repo, *files, **opts):
     if opts['edit']:
         message = ui.edit(message, user or ui.username())
 
-    q.refresh(repo, msg=message)
+    diffopts = q.patchopts(q.diffopts(), *patches)
+    q.refresh(repo, msg=message, git=diffopts.git)
     q.delete(repo, patches, opts)
     q.save_dirty()
 
