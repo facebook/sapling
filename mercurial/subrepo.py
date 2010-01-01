@@ -309,8 +309,8 @@ class svnsubrepo(object):
 
     def remove(self):
         if self.dirty():
-            self._repo.ui.warn('Not removing repo %s because'
-                               'it has changes.\n' % self._path)
+            self._repo.ui.warn(_('not removing repo %s because'
+                                 'it has changes.\n' % self._path))
             return
         self._repo.ui.note('removing subrepo %s\n' % self._path)
         shutil.rmtree(self._ctx.repo.join(self._path))
