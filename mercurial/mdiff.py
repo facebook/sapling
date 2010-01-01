@@ -27,7 +27,9 @@ class diffopts(object):
     nodates removes dates from diff headers
     ignorews ignores all whitespace changes in the diff
     ignorewsamount ignores changes in the amount of whitespace
-    ignoreblanklines ignores changes whose lines are all blank'''
+    ignoreblanklines ignores changes whose lines are all blank
+    upgrade generates git diffs to avoid data loss
+    '''
 
     defaults = {
         'context': 3,
@@ -38,6 +40,7 @@ class diffopts(object):
         'ignorews': False,
         'ignorewsamount': False,
         'ignoreblanklines': False,
+        'upgrade': False,
         }
 
     __slots__ = defaults.keys()

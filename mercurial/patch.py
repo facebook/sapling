@@ -1246,17 +1246,25 @@ def b85diff(to, tn):
     ret.append('\n')
     return ''.join(ret)
 
-def _addmodehdr(header, omode, nmode):
-    if omode != nmode:
-        header.append('old mode %s\n' % omode)
-        header.append('new mode %s\n' % nmode)
+class GitDiffRequired(Exception):
+    pass
 
-def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
+def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
+         losedatafn=None):
     '''yields diff of changes to files between two nodes, or node and
     working directory.
 
     if node1 is None, use first dirstate parent instead.
-    if node2 is None, compare node1 with working directory.'''
+    if node2 is None, compare node1 with working directory.
+
+    losedatafn(**kwarg) is a callable run when opts.upgrade=True and
+    every time some change cannot be represented with the current
+    patch format. Return False to upgrade to git patch format, True to
+    accept the loss or raise an exception to abort the diff. It is
+    called with the name of current file being diffed as 'fn'. If set
+    to None, patches will always be upgraded to git format when
+    necessary.
+    '''
 
     if opts is None:
         opts = mdiff.defaultopts
@@ -1288,24 +1296,50 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
     modified, added, removed = changes[:3]
 
     if not modified and not added and not removed:
-        return
-
-    date1 = util.datestr(ctx1.date())
-    man1 = ctx1.manifest()
+        return []
 
     revs = None
-    if not repo.ui.quiet and not opts.git:
+    if not repo.ui.quiet:
         hexfunc = repo.ui.debugflag and hex or short
         revs = [hexfunc(node) for node in [node1, node2] if node]
 
-    if opts.git:
-        copy, diverge = copies.copies(repo, ctx1, ctx2, repo[nullid])
+    copy = {}
+    if opts.git or opts.upgrade:
+        copy = copies.copies(repo, ctx1, ctx2, repo[nullid])[0]
         copy = copy.copy()
         for k, v in copy.items():
             copy[v] = k
 
+    difffn = lambda opts, losedata: trydiff(repo, revs, ctx1, ctx2,
+                 modified, added, removed, copy, getfilectx, opts, losedata)
+    if opts.upgrade and not opts.git:
+        try:
+            def losedata(fn):
+                if not losedatafn or not losedatafn(fn=fn):
+                    raise GitDiffRequired()
+            # Buffer the whole output until we are sure it can be generated
+            return list(difffn(opts.copy(git=False), losedata))
+        except GitDiffRequired:
+            return difffn(opts.copy(git=True), None)
+    else:
+        return difffn(opts, None)
+
+def _addmodehdr(header, omode, nmode):
+    if omode != nmode:
+        header.append('old mode %s\n' % omode)
+        header.append('new mode %s\n' % nmode)
+
+def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
+            copy, getfilectx, opts, losedatafn):
+
+    date1 = util.datestr(ctx1.date())
+    man1 = ctx1.manifest()
+
     gone = set()
     gitmode = {'l': '120000', 'x': '100755', '': '100644'}
+
+    if opts.git:
+        revs = None
 
     for f in sorted(modified + added + removed):
         to = None
@@ -1317,39 +1351,61 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None):
         if f not in removed:
             tn = getfilectx(f, ctx2).data()
         a, b = f, f
-        if opts.git:
+        if opts.git or losedatafn:
             if f in added:
                 mode = gitmode[ctx2.flags(f)]
                 if f in copy:
-                    a = copy[f]
-                    omode = gitmode[man1.flags(a)]
-                    _addmodehdr(header, omode, mode)
-                    if a in removed and a not in gone:
-                        op = 'rename'
-                        gone.add(a)
+                    if opts.git:
+                        a = copy[f]
+                        omode = gitmode[man1.flags(a)]
+                        _addmodehdr(header, omode, mode)
+                        if a in removed and a not in gone:
+                            op = 'rename'
+                            gone.add(a)
+                        else:
+                            op = 'copy'
+                        header.append('%s from %s\n' % (op, a))
+                        header.append('%s to %s\n' % (op, f))
+                        to = getfilectx(a, ctx1).data()
                     else:
-                        op = 'copy'
-                    header.append('%s from %s\n' % (op, a))
-                    header.append('%s to %s\n' % (op, f))
-                    to = getfilectx(a, ctx1).data()
+                        losedatafn(f)
                 else:
-                    header.append('new file mode %s\n' % mode)
+                    if opts.git:
+                        header.append('new file mode %s\n' % mode)
+                    elif ctx2.flags(f):
+                        losedatafn(f)
                 if util.binary(tn):
-                    dodiff = 'binary'
+                    if opts.git:
+                        dodiff = 'binary'
+                    else:
+                        losedatafn(f)
+                if not opts.git and not tn:
+                    # regular diffs cannot represent new empty file
+                    losedatafn(f)
             elif f in removed:
-                # have we already reported a copy above?
-                if f in copy and copy[f] in added and copy[copy[f]] == f:
-                    dodiff = False
-                else:
-                    header.append('deleted file mode %s\n' %
-                                  gitmode[man1.flags(f)])
+                if opts.git:
+                    # have we already reported a copy above?
+                    if f in copy and copy[f] in added and copy[copy[f]] == f:
+                        dodiff = False
+                    else:
+                        header.append('deleted file mode %s\n' %
+                                      gitmode[man1.flags(f)])
+                elif not to:
+                    # regular diffs cannot represent empty file deletion
+                    losedatafn(f)
             else:
-                omode = gitmode[man1.flags(f)]
-                nmode = gitmode[ctx2.flags(f)]
-                _addmodehdr(header, omode, nmode)
-                if util.binary(to) or util.binary(tn):
-                    dodiff = 'binary'
-            header.insert(0, mdiff.diffline(revs, a, b, opts))
+                oflag = man1.flags(f)
+                nflag = ctx2.flags(f)
+                binary = util.binary(to) or util.binary(tn)
+                if opts.git:
+                    _addmodehdr(header, gitmode[oflag], gitmode[nflag])
+                    if binary:
+                        dodiff = 'binary'
+                elif binary or nflag != oflag:
+                    losedatafn(f)
+            if opts.git:
+                header.insert(0, mdiff.diffline(revs, a, b, opts))
+
         if dodiff:
             if dodiff == 'binary':
                 text = b85diff(to, tn)
