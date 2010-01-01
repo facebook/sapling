@@ -50,6 +50,7 @@ Source: contrib\bash_completion; DestDir: {app}/Contrib
 Source: contrib\tcsh_completion; DestDir: {app}/Contrib
 Source: contrib\tcsh_completion_build.sh; DestDir: {app}/Contrib
 Source: contrib\hgk; DestDir: {app}/Contrib; DestName: hgk.tcl
+Source: contrib\xml.rnc; DestDir: {app}/Contrib
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: contrib\mergetools.hgrc; DestDir: {tmp};
 Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Check: CheckFile; AfterInstall: ConcatenateFiles;
