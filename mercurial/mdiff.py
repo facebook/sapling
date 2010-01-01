@@ -55,6 +55,11 @@ class diffopts(object):
             raise util.Abort(_('diff context lines count must be '
                                'an integer, not %r') % self.context)
 
+    def copy(self, **kwargs):
+        opts = dict((k, getattr(self, k)) for k in self.defaults)
+        opts.update(kwargs)
+        return diffopts(**opts)
+
 defaultopts = diffopts()
 
 def wsclean(opts, text, blank=True):
