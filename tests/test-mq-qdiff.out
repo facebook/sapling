@@ -103,3 +103,22 @@ diff -r 35fb829491c1 lines
  7
  8
  9
+% qdiff preserve existing git flag
+diff --git a/lines b/lines
+--- a/lines
++++ b/lines
+@@ -1,9 +1,12 @@
++
++
+ 1
+ 2
+ 3
+ 4
+-hello world
+-goodbye world
++hello  world
++     goodbye world
+ 7
+ 8
+ 9
++a

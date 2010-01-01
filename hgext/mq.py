@@ -771,11 +771,13 @@ class queue(object):
     def check_toppatch(self, repo):
         if len(self.applied) > 0:
             top = bin(self.applied[-1].rev)
+            patch = self.applied[-1].name
             pp = repo.dirstate.parents()
             if top not in pp:
                 raise util.Abort(_("working directory revision is not qtip"))
-            return top
-        return None
+            return top, patch
+        return None, None
+
     def check_localchanges(self, repo, force=False, refresh=True):
         m, a, r, d = repo.status()[:4]
         if m or a or r or d:
@@ -1125,7 +1127,7 @@ class queue(object):
             end = len(self.applied)
             rev = bin(self.applied[start].rev)
             if update:
-                top = self.check_toppatch(repo)
+                top = self.check_toppatch(repo)[0]
 
             try:
                 heads = repo.changelog.heads(rev)
@@ -1174,7 +1176,7 @@ class queue(object):
             wlock.release()
 
     def diff(self, repo, pats, opts):
-        top = self.check_toppatch(repo)
+        top, patch = self.check_toppatch(repo)
         if not top:
             self.ui.write(_("no patches applied\n"))
             return
@@ -1183,7 +1185,7 @@ class queue(object):
             node1, node2 = None, qp
         else:
             node1, node2 = qp, None
-        diffopts = self.diffopts(opts)
+        diffopts = self.diffopts(opts, patch)
         self.printdiff(repo, diffopts, node1, node2, files=pats, opts=opts)
 
     def refresh(self, repo, pats=None, **opts):
@@ -2058,7 +2060,7 @@ def fold(ui, repo, *files, **opts):
 
     if not files:
         raise util.Abort(_('qfold requires at least one patch name'))
-    if not q.check_toppatch(repo):
+    if not q.check_toppatch(repo)[0]:
         raise util.Abort(_('No patches applied'))
     q.check_localchanges(repo)
 
