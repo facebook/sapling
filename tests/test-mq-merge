@@ -56,18 +56,27 @@ echo
 echo % init t2
 hg init t2
 cd t2
+echo '[diff]' > .hg/hgrc
+echo 'nodates = 1' >> .hg/hgrc
 echo a > a
 hg ci -Am init
-echo b >> a
+echo b > a
 hg ci -m changea
 hg up -C 0
+hg cp a aa
 echo c >> a
-hg qnew -f -e patcha
+hg qnew --git -f -e patcha
+echo d >> a
+hg qnew -d '0 0' -f -e patcha2
 echo % create the reference queue
 hg qsave -c -e -n refqueue 2> /dev/null
 hg up -C 1
 echo % merge
-hg qpush -m -n refqueue 2>&1 | \
+HGMERGE=internal:other hg qpush -a -m -n refqueue 2>&1 | \
     sed 's/merging with queue at.*refqueue/merging with queue at refqueue/'
+echo % check patcha is still a git patch
+cat .hg/patches/patcha
+echo % check patcha2 is still a regular patch
+grep git .hg/patches/patcha2 && echo 'git patch found!'
 cd ..
 

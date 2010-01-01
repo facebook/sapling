@@ -261,12 +261,21 @@ class queue(object):
     def diffopts(self, opts={}, patchfn=None):
         diffopts = patch.diffopts(self.ui, opts)
         if patchfn:
-            # if the patch was a git patch, refresh it as a git patch
-            patchf = self.opener(patchfn, 'r')
-            for line in patchf:
-                if line.startswith('diff --git'):
-                    diffopts.git = True
-                    break
+            diffopts = self.patchopts(diffopts, patchfn)
+        return diffopts
+
+    def patchopts(self, diffopts, patchfn):
+        """Return a copy of input diff options with git set to true if
+        referenced patch is a git patch.
+        """
+        diffopts = diffopts.copy()
+        patchf = self.opener(patchfn, 'r')
+        # if the patch was a git patch, refresh it as a git patch
+        for line in patchf:
+            if line.startswith('diff --git'):
+                diffopts.git = True
+                break
+        patchf.close()
         return diffopts
 
     def join(self, *p):
@@ -469,6 +478,7 @@ class queue(object):
         except:
             raise util.Abort(_("unable to read %s") % patch)
 
+        diffopts = self.patchopts(diffopts, patch)
         patchf = self.opener(patch, "w")
         comments = str(ph)
         if comments:
