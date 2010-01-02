@@ -2,11 +2,19 @@
 
 "$TESTDIR/hghave" svn || exit 80
 
-escapedwd=$(pwd | \
-            python -c \
-            "import sys,urllib; print urllib.pathname2url(sys.stdin.read().strip())"
-           )
-filterpath="sed s+$escapedwd+/root+"
+fix_path()
+{
+    tr '\\' /
+}
+
+escapedwd=`pwd | fix_path`
+# SVN wants all paths to start with a slash. Unfortunately,
+# Windows ones don't. Handle that.
+expr $escapedwd : "\/" > /dev/null
+if [ $? -ne 0 ]; then
+    escapedwd='/'$escapedwd
+fi
+filterpath="sed s|$escapedwd|/root|"
 
 echo % create subversion repo
 
@@ -64,7 +72,7 @@ hg ci -m 'amend alpha from hg'
 echo
 echo % clone
 cd ..
-hg clone t tc
+hg clone t tc | fix_path
 cd tc
 echo % debugsub in clone
 hg debugsub | $filterpath
