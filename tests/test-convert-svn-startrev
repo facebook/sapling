@@ -2,11 +2,6 @@
 
 "$TESTDIR/hghave" svn svn-bindings || exit 80
 
-fix_path()
-{
-    tr '\\' /
-}
-
 echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
 echo "graphlog =" >> $HGRCPATH
