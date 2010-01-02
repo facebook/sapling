@@ -261,7 +261,7 @@ class svnsubrepo(object):
         cmd = ['svn'] + commands + [self._path]
         cmd = [util.shellquote(arg) for arg in cmd]
         cmd = util.quotecommand(' '.join(cmd))
-        write, read, err = util.popen3(cmd)
+        write, read, err = util.popen3(cmd, newlines=True)
         retdata = read.read()
         err = err.read().strip()
         if err:
