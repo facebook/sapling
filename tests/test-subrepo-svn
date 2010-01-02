@@ -21,8 +21,6 @@ svn ci -m 'Add alpha'
 cd ..
 
 echo % create hg repo
-
-rm -rf sub
 mkdir sub
 cd sub
 hg init t
@@ -54,11 +52,11 @@ hg st
 
 echo
 echo % add a commit from svn
-pushd "$WCROOT" > /dev/null
+cd "$WCROOT"
 svn up
 echo xyz >> alpha
 svn ci -m 'amend a from svn'
-popd > /dev/null
+cd ../sub/t
 echo % this commit from hg will fail
 echo zzz >> s/alpha
 hg ci -m 'amend alpha from hg'
