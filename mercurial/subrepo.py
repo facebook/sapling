@@ -261,7 +261,10 @@ class svnsubrepo(object):
         cmd = ['svn'] + commands + [self._path]
         cmd = [util.shellquote(arg) for arg in cmd]
         cmd = util.quotecommand(' '.join(cmd))
-        write, read, err = util.popen3(cmd, newlines=True)
+        env = dict(os.environ)
+        for k in ('LANGUAGE', 'LANG', 'LC_ALL', 'LC_MESSAGES'):
+            env[k] = 'en_US.UTF-8'
+        write, read, err = util.popen3(cmd, env=env, newlines=True)
         retdata = read.read()
         err = err.read().strip()
         if err:

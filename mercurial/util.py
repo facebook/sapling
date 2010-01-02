@@ -39,22 +39,24 @@ def _fastsha1(s):
 import subprocess
 closefds = os.name == 'posix'
 
-def popen2(cmd, newlines=False):
+def popen2(cmd, env=None, newlines=False):
     # Setting bufsize to -1 lets the system decide the buffer size.
     # The default for bufsize is 0, meaning unbuffered. This leads to
     # poor performance on Mac OS X: http://bugs.python.org/issue4194
     p = subprocess.Popen(cmd, shell=True, bufsize=-1,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         universal_newlines=newlines)
+                         universal_newlines=newlines,
+                         env=env)
     return p.stdin, p.stdout
 
-def popen3(cmd, newlines=False):
+def popen3(cmd, env=None, newlines=False):
     p = subprocess.Popen(cmd, shell=True, bufsize=-1,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
-                         universal_newlines=newlines)
+                         universal_newlines=newlines,
+                         env=env)
     return p.stdin, p.stdout, p.stderr
 
 def version():
