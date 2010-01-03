@@ -25,5 +25,5 @@ hg tags -q
 cd ..
 
 echo '% test hg failing to call itself'
-HG=foobar hg convert svn-repo B-hg 2>&1 | grep -v foobar
+HG=foobar hg convert svn-repo B-hg 2>&1 | grep itself
 

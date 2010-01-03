@@ -49,5 +49,4 @@ old                            9:
 old2                           8:
 tip
 % test hg failing to call itself
-initializing destination B-hg repository
 abort: Mercurial failed to run itself, check hg executable is in PATH
