@@ -1126,6 +1126,8 @@ def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):
     finally:
         if cwd:
             os.chdir(curdir)
+        if fp != patchobj:
+            fp.close()
     if ret < 0:
         raise PatchError
     return ret > 0
