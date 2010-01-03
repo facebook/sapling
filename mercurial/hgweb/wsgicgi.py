@@ -17,8 +17,11 @@ def launch(application):
 
     environ = dict(os.environ.iteritems())
     environ.setdefault('PATH_INFO', '')
-    if '.cgi' in environ['PATH_INFO']:
-        environ['PATH_INFO'] = environ['PATH_INFO'].split('.cgi', 1)[1]
+    if environ.get('SERVER_SOFTWARE', '').startswith('Microsoft-IIS'):
+        # IIS includes script_name in path_info
+        scriptname = environ['SCRIPT_NAME']
+        if environ['PATH_INFO'].startswith(scriptname):
+            environ['PATH_INFO'] = environ['PATH_INFO'][len(scriptname):]
 
     environ['wsgi.input'] = sys.stdin
     environ['wsgi.errors'] = sys.stderr
