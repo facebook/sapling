@@ -50,7 +50,14 @@ def reposetup(ui, repo):
                     realpath = ''
                     if 'paths' in conf:
                         for path, uri in conf['paths'].items():
-                            if uri.rstrip('/') == remote.path.rstrip('/'):
+                            uri = self.ui.expandpath(uri)
+                            if remote.local():
+                                uri = os.path.realpath(uri).rstrip('/')
+                                rpath = remote.root.rstrip('/')
+                            else:
+                                uri = uri.rstrip('/')
+                                rpath = remote.path.rstrip('/')
+                            if uri == rpath:
                                 realpath = path
                                 # prefer a non-default name to default
                                 if path != 'default':
