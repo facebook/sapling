@@ -3216,7 +3216,7 @@ def version_(ui):
     ui.write(_("Mercurial Distributed SCM (version %s)\n")
              % util.version())
     ui.status(_(
-        "\nCopyright (C) 2005-2009 Matt Mackall <mpm@selenic.com> and others\n"
+        "\nCopyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> and others\n"
         "This is free software; see the source for copying conditions. "
         "There is NO\nwarranty; "
         "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
