@@ -6467,7 +6467,7 @@ msgstr "Mercurial Κατανεμημένο SCM (version %s)\n"
 
 msgid ""
 "\n"
-"Copyright (C) 2005-2009 Matt Mackall <mpm@selenic.com> and others\n"
+"Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""

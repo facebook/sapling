@@ -17,7 +17,7 @@
 #endif
 
 [Setup]
-AppCopyright=Copyright 2005-2009 Matt Mackall and others
+AppCopyright=Copyright 2005-2010 Matt Mackall and others
 AppName=Mercurial
 AppVerName=Mercurial {#VERSION}
 InfoAfterFile=contrib/win32/postinstall.txt
@@ -33,7 +33,7 @@ OutputBaseFilename=Mercurial-{#VERSION}
 DefaultDirName={pf}\Mercurial
 SourceDir=..\..
 VersionInfoDescription=Mercurial distributed SCM (version {#VERSION})
-VersionInfoCopyright=Copyright 2005-2009 Matt Mackall and others
+VersionInfoCopyright=Copyright 2005-2010 Matt Mackall and others
 VersionInfoCompany=Matt Mackall and others
 InternalCompressLevel=max
 SolidCompression=true
