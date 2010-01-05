@@ -95,7 +95,7 @@ class httprepository(repo.repository):
             resp_url = resp_url[:-len(qs)]
         if self._url.rstrip('/') != resp_url.rstrip('/'):
             self.ui.status(_('real URL is %s\n') % resp_url)
-            self._url = resp_url
+        self._url = resp_url
         try:
             proto = resp.getheader('content-type')
         except AttributeError:
