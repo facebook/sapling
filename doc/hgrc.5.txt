@@ -202,6 +202,7 @@ Filter patterns are globs by default, rooted at the repository root.
 For example, to match any file ending in ``.txt`` in the root
 directory only, use the pattern ``*.txt``. To match any file ending
 in ``.c`` anywhere in the repository, use the pattern ``**.c``.
+For each file only the first matching filter applies.
 
 The filter command can start with a specifier, either ``pipe:`` or
 ``tempfile:``. If no specifier is given, ``pipe:`` is used by default.
