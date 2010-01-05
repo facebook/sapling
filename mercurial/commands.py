@@ -3575,7 +3575,7 @@ table = {
     "^pull":
         (pull,
          [('u', 'update', None,
-           _('update to new tip if changesets were pulled')),
+           _('update to new branch head if changesets were pulled')),
           ('f', 'force', None,
            _('run even when remote repository is unrelated')),
           ('r', 'rev', [],
@@ -3688,7 +3688,7 @@ table = {
     "unbundle":
         (unbundle,
          [('u', 'update', None,
-           _('update to new tip if changesets were unbundled'))],
+           _('update to new branch head if changesets were unbundled'))],
          _('[-u] FILE...')),
     "^update|up|checkout|co":
         (update,

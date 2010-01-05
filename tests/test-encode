@@ -4,34 +4,40 @@ hg init
 
 cat > .hg/hgrc <<EOF
 [encode]
+not.gz = tr a-z A-Z
 *.gz = gzip -d
 
 [decode]
+not.gz = tr A-Z a-z
 *.gz = gzip
 
 EOF
 
 echo "this is a test" | gzip > a.gz
-hg add a.gz
+echo "this is a test" > not.gz
+hg add *
 hg ci -m "test" -d "1000000 0"
 echo %% no changes
 hg status
-touch a.gz
+touch *
 
 echo %% no changes
 hg status
 
-echo %% uncompressed contents in repo
+echo %% check contents in repo are encoded
 hg debugdata .hg/store/data/a.gz.d 0
+hg debugdata .hg/store/data/not.gz.d 0
 
-echo %% uncompress our working dir copy
+echo %% check committed content was decoded
 gunzip < a.gz
+cat not.gz
 
-rm a.gz
+rm *
 hg co -C
 
-echo %% uncompress our new working dir copy
+echo %% check decoding of our new working dir copy
 gunzip < a.gz
+cat not.gz
 
 echo %% check hg cat operation
 hg cat a.gz
