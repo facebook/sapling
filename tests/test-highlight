@@ -119,7 +119,7 @@ cd ..
 hg init eucjp
 cd eucjp
 
-printf '\265\376\n' >> eucjp.txt  # Japanese kanji "Kyo"
+python -c 'print("\265\376")' >> eucjp.txt  # Japanese kanji "Kyo"
 
 hg ci -Ama
 
