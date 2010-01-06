@@ -7,7 +7,7 @@
 
 from node import hex, nullid, nullrev, short
 from i18n import _
-import os, sys, errno, re, glob
+import os, sys, errno, re, glob, tempfile, time
 import mdiff, bdiff, util, templater, patch, error, encoding, templatekw
 import match as _match
 
@@ -567,22 +567,31 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
     '''Run a command as a service.'''
 
     if opts['daemon'] and not opts['daemon_pipefds']:
-        rfd, wfd = os.pipe()
-        if not runargs:
-            runargs = sys.argv[:]
-        runargs.append('--daemon-pipefds=%d,%d' % (rfd, wfd))
-        # Don't pass --cwd to the child process, because we've already
-        # changed directory.
-        for i in xrange(1,len(runargs)):
-            if runargs[i].startswith('--cwd='):
-                del runargs[i]
-                break
-            elif runargs[i].startswith('--cwd'):
-                del runargs[i:i+2]
-                break
-        pid = util.spawndetached(runargs)
-        os.close(wfd)
-        os.read(rfd, 1)
+        # Signal child process startup with file removal
+        lockfd, lockpath = tempfile.mkstemp(prefix='hg-service-')
+        os.close(lockfd)        
+        try:
+            if not runargs:
+                runargs = sys.argv[:]
+            runargs.append('--daemon-pipefds=%s' % lockpath)
+            # Don't pass --cwd to the child process, because we've already
+            # changed directory.
+            for i in xrange(1,len(runargs)):
+                if runargs[i].startswith('--cwd='):
+                    del runargs[i]
+                    break
+                elif runargs[i].startswith('--cwd'):
+                    del runargs[i:i+2]
+                    break
+            pid = util.spawndetached(runargs)  
+            while os.path.exists(lockpath):
+                time.sleep(0.1)
+        finally:
+            try:
+                os.unlink(lockpath)
+            except OSError, e:
+                if e.errno != errno.ENOENT:
+                    raise
         if parentfn:
             return parentfn(pid)
         else:
@@ -598,14 +607,12 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         fp.close()
 
     if opts['daemon_pipefds']:
-        rfd, wfd = [int(x) for x in opts['daemon_pipefds'].split(',')]
-        os.close(rfd)
+        lockpath = opts['daemon_pipefds']
         try:
             os.setsid()
         except AttributeError:
             pass
-        os.write(wfd, 'y')
-        os.close(wfd)
+        os.unlink(lockpath)
         sys.stdout.flush()
         sys.stderr.flush()
 
