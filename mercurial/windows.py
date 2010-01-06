@@ -352,6 +352,9 @@ def spawndetached(args):
         STARTUPINFO())
     return pid
 
+def gethgcmd():
+    return [sys.executable] + sys.argv[:1]
+
 try:
     # override functions with win32 versions if possible
     from win32 import *

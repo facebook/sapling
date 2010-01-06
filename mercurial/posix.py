@@ -262,3 +262,5 @@ def spawndetached(args):
     return os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
                       args[0], args)
 
+def gethgcmd():
+    return sys.argv[:1]

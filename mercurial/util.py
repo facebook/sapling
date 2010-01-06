@@ -1274,3 +1274,14 @@ def iterlines(iterator):
 
 def expandpath(path):
     return os.path.expanduser(os.path.expandvars(path))
+
+def hgcmd():
+    """Return the command used to execute current hg
+
+    This is different from hgexecutable() because on Windows we want
+    to avoid things opening new shell windows like batch files, so we
+    get either the python call or current executable.
+    """
+    if main_is_frozen():
+        return [sys.executable]
+    return gethgcmd()

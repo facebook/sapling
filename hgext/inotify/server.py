@@ -461,9 +461,9 @@ def start(ui, dirstate, root, opts):
                 self.master.shutdown()
 
     if 'inserve' not in sys.argv:
-        runargs = [sys.argv[0], 'inserve', '-R', root]
+        runargs = util.hgcmd() + ['inserve', '-R', root]
     else:
-        runargs = sys.argv[:]
+        runargs = util.hgcmd() + sys.argv[1:]
 
     pidfile = ui.config('inotify', 'pidfile')
     if opts['daemon'] and pidfile is not None and 'pid-file' not in runargs:
