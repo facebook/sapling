@@ -51,6 +51,7 @@ Source: contrib\tcsh_completion; DestDir: {app}/Contrib
 Source: contrib\tcsh_completion_build.sh; DestDir: {app}/Contrib
 Source: contrib\hgk; DestDir: {app}/Contrib; DestName: hgk.tcl
 Source: contrib\xml.rnc; DestDir: {app}/Contrib
+Source: contrib\shrink-revlog.py; DestDir: {app}/Contrib
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: contrib\mergetools.hgrc; DestDir: {tmp};
 Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Check: CheckFile; AfterInstall: ConcatenateFiles;
@@ -77,6 +78,7 @@ Filename: {app}\Mercurial.url; Section: InternetShortcut; Key: URL; String: http
 
 [UninstallDelete]
 Type: files; Name: {app}\Mercurial.url
+Type: files; Name: {app}\Contrib\shrink-revlog.pyc
 
 [Icons]
 Name: {group}\Uninstall Mercurial; Filename: {uninstallexe}
