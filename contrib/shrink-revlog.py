@@ -22,13 +22,12 @@ import optparse
 from mercurial import ui as ui_, hg, revlog, transaction, node, util
 from mercurial import changegroup
 
-def toposort(rl):
-    write = sys.stdout.write
+def toposort(ui, rl):
 
     children = {}
     root = []
     # build children and roots
-    write('reading %d revs ' % len(rl))
+    ui.write('reading %d revs ' % len(rl))
     try:
         for i in rl:
             children[i] = []
@@ -44,14 +43,14 @@ def toposort(rl):
                 root.append(i)
 
             if i % 1000 == 0:
-                write('.')
+                ui.write('.')
     finally:
-        write('\n')
+        ui.write('\n')
 
     # XXX this is a reimplementation of the 'branchsort' topo sort
     # algorithm in hgext.convert.convcmd... would be nice not to duplicate
     # the algorithm
-    write('sorting ...')
+    ui.write('sorting ...')
     visit = root
     ret = []
     while visit:
@@ -68,17 +67,16 @@ def toposort(rl):
             if len(parents_unseen) == 0:
                 next.append(c)
         visit = next + visit
-    write('\n')
+    ui.write('\n')
     return ret
 
-def writerevs(r1, r2, order, tr):
-    write = sys.stdout.write
-    write('writing %d revs ' % len(order))
+def writerevs(ui, r1, r2, order, tr):
 
+    ui.write('writing %d revs ' % len(order))
     count = [0]
     def progress(*args):
         if count[0] % 1000 == 0:
-            write('.')
+            ui.write('.')
         count[0] += 1
 
     order = [r1.node(r) for r in order]
@@ -92,29 +90,27 @@ def writerevs(r1, r2, order, tr):
         chunkiter = changegroup.chunkiter(group)
         r2.addgroup(chunkiter, unlookup, tr)
     finally:
-        write('\n')
+        ui.write('\n')
 
-def report(olddatafn, newdatafn):
+def report(ui, olddatafn, newdatafn):
     oldsize = float(os.stat(olddatafn).st_size)
     newsize = float(os.stat(newdatafn).st_size)
 
     # argh: have to pass an int to %d, because a float >= 2^32
     # blows up under Python 2.5 or earlier
-    sys.stdout.write('old file size: %12d bytes (%6.1f MiB)\n'
-                     % (int(oldsize), oldsize/1024/1024))
-    sys.stdout.write('new file size: %12d bytes (%6.1f MiB)\n'
-                     % (int(newsize), newsize/1024/1024))
+    ui.write('old file size: %12d bytes (%6.1f MiB)\n'
+             % (int(oldsize), oldsize/1024/1024))
+    ui.write('new file size: %12d bytes (%6.1f MiB)\n'
+             % (int(newsize), newsize/1024/1024))
 
     shrink_percent = (oldsize - newsize) / oldsize * 100
     shrink_factor = oldsize / newsize
-    sys.stdout.write('shrinkage: %.1f%% (%.1fx)\n'
-                     % (shrink_percent, shrink_factor))
+    ui.write('shrinkage: %.1f%% (%.1fx)\n' % (shrink_percent, shrink_factor))
 
 def main():
 
     # Unbuffer stdout for nice progress output.
     sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-    write = sys.stdout.write
 
     parser = optparse.OptionParser(description=__doc__)
     parser.add_option('-R', '--repository',
@@ -168,7 +164,7 @@ def main():
                      'running again'
                      % (oldindexfn, olddatafn))
 
-    write('shrinking %s\n' % indexfn)
+    ui.write('shrinking %s\n' % indexfn)
     prefix = os.path.basename(indexfn)[:-1]
     (tmpfd, tmpindexfn) = tempfile.mkstemp(dir=os.path.dirname(indexfn),
                                            prefix=prefix,
@@ -190,9 +186,9 @@ def main():
 
     try:
         try:
-            order = toposort(r1)
-            writerevs(r1, r2, order, tr)
-            report(datafn, tmpdatafn)
+            order = toposort(ui, r1)
+            writerevs(ui, r1, r2, order, tr)
+            report(ui, datafn, tmpdatafn)
             tr.close()
         except:
             # Abort transaction first, so we truncate the files before
@@ -210,7 +206,7 @@ def main():
     os.link(datafn, olddatafn)
     os.rename(tmpindexfn, indexfn)
     os.rename(tmpdatafn, datafn)
-    write('note: old revlog saved in:\n'
+    ui.write('note: old revlog saved in:\n'
           '  %s\n'
           '  %s\n'
           '(You can delete those files when you are satisfied that your\n'
