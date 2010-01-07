@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 
 """\
-Reorder a revlog (by default the the manifest file in the current
-repository) to save space.  Specifically, this topologically sorts the
-revisions in the revlog so that revisions on the same branch are adjacent
-as much as possible.  This is a workaround for the fact that Mercurial
-computes deltas relative to the previous revision rather than relative to a
-parent revision.  This is *not* safe to run on a changelog.
+Reorder a revlog (by default the manifest file in the current repository) to
+save space. Specifically, this topologically sorts the revisions in the revlog
+so that revisions on the same branch are adjacent as much as possible. This is
+a workaround for the fact that Mercurial computes deltas relative to the
+previous revision rather than relative to a parent revision.
+
+This is *not* safe to run on a changelog.
 """
 
 # Originally written by Benoit Boissinot <benoit.boissinot at ens-lyon.org>
-# as a patch to rewrite-log.  Cleaned up, refactored, documented, and
+# as a patch to rewrite-log. Cleaned up, refactored, documented, and
 # renamed by Greg Ward <greg at gerg.ca>.
 
 # XXX would be nice to have a way to verify the repository after shrinking,
@@ -165,7 +166,7 @@ def shrink(ui, repo, **opts):
 
     # Don't use repo.transaction(), because then things get hairy with
     # paths: some need to be relative to .hg, and some need to be
-    # absolute.  Doing it this way keeps things simple: everything is an
+    # absolute. Doing it this way keeps things simple: everything is an
     # absolute path.
     lock = repo.lock(wait=False)
     tr = transaction.transaction(sys.stderr.write,
