@@ -122,47 +122,46 @@ def main():
                       help='shrink FILE [default: REPO/hg/store/00manifest.i]')
     (options, args) = parser.parse_args()
     if args:
-        parser.error('too many arguments')
+        raise util.Abort('too many arguments')
 
     # Open the specified repository.
     ui = ui_.ui()
     repo = hg.repository(ui, options.repository)
     if not repo.local():
-        parser.error('not a local repository: %s' % options.repository)
+        raise util.Abort('not a local repository: %s' % options.repository)
 
     if options.revlog is None:
         indexfn = repo.sjoin('00manifest.i')
     else:
         if not options.revlog.endswith('.i'):
-            parser.error('--revlog option must specify the revlog index file '
-                         '(*.i), not %s' % options.revlog)
+            raise util.Abort('--revlog option must specify the revlog index '
+                             'file (*.i), not %s' % options.revlog)
 
         indexfn = os.path.realpath(options.revlog)
         store = repo.sjoin('')
         if not indexfn.startswith(store):
-            parser.error('--revlog option must specify a revlog in %s, not %s'
-                         % (store, indexfn))
+            raise util.Abort('--revlog option must specify a revlog in %s, '
+                             'not %s' % (store, indexfn))
 
     datafn = indexfn[:-2] + '.d'
     if not os.path.exists(indexfn):
-        parser.error('no such file: %s' % indexfn)
+        raise util.Abort('no such file: %s' % indexfn)
     if '00changelog' in indexfn:
-        parser.error('shrinking the changelog will corrupt your repository')
+        raise util.Abort('shrinking the changelog will corrupt your repository')
     if not os.path.exists(datafn):
         # This is just a lazy shortcut because I can't be bothered to
         # handle all the special cases that entail from no .d file.
-        parser.error('%s does not exist: revlog not big enough '
-                     'to be worth shrinking' % datafn)
+        raise util.Abort('%s does not exist: revlog not big enough '
+                         'to be worth shrinking' % datafn)
 
     oldindexfn = indexfn + '.old'
     olddatafn = datafn + '.old'
     if os.path.exists(oldindexfn) or os.path.exists(olddatafn):
-        parser.error('one or both of\n'
-                     '  %s\n'
-                     '  %s\n'
-                     'exists from a previous run; please clean up before '
-                     'running again'
-                     % (oldindexfn, olddatafn))
+        raise util.Abort('one or both of\n'
+                         '  %s\n'
+                         '  %s\n'
+                         'exists from a previous run; please clean up before '
+                         'running again' % (oldindexfn, olddatafn))
 
     ui.write('shrinking %s\n' % indexfn)
     prefix = os.path.basename(indexfn)[:-1]
@@ -216,5 +215,7 @@ def main():
 
 try:
     main()
+except util.Abort, inst:
+    print inst.args[0]
 except KeyboardInterrupt:
     sys.exit("interrupted")
