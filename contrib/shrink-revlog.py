@@ -107,37 +107,26 @@ def report(ui, olddatafn, newdatafn):
     shrink_factor = oldsize / newsize
     ui.write('shrinkage: %.1f%% (%.1fx)\n' % (shrink_percent, shrink_factor))
 
-def main():
+def shrink(ui, repo, **opts):
+    """
+    Shrink revlog by re-ordering revisions. Will operate on manifest for
+    the given repository if no other revlog is specified."""
 
     # Unbuffer stdout for nice progress output.
     sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 
-    parser = optparse.OptionParser(description=__doc__)
-    parser.add_option('-R', '--repository',
-                      default=os.path.curdir,
-                      metavar='REPO',
-                      help='repository root directory [default: current dir]')
-    parser.add_option('--revlog',
-                      metavar='FILE',
-                      help='shrink FILE [default: REPO/hg/store/00manifest.i]')
-    (options, args) = parser.parse_args()
-    if args:
-        raise util.Abort('too many arguments')
-
-    # Open the specified repository.
-    ui = ui_.ui()
-    repo = hg.repository(ui, options.repository)
     if not repo.local():
-        raise util.Abort('not a local repository: %s' % options.repository)
+        raise util.Abort('not a local repository: %s' % repo.root)
 
-    if options.revlog is None:
+    fn = opts.get('revlog')
+    if not fn:
         indexfn = repo.sjoin('00manifest.i')
     else:
-        if not options.revlog.endswith('.i'):
+        if not fn.endswith('.i'):
             raise util.Abort('--revlog option must specify the revlog index '
-                             'file (*.i), not %s' % options.revlog)
+                             'file (*.i), not %s' % opts.get('revlog'))
 
-        indexfn = os.path.realpath(options.revlog)
+        indexfn = os.path.realpath(fn)
         store = repo.sjoin('')
         if not indexfn.startswith(store):
             raise util.Abort('--revlog option must specify a revlog in %s, '
@@ -213,9 +202,8 @@ def main():
           'Running \'hg verify\' is strongly recommended.)\n'
           % (oldindexfn, olddatafn))
 
-try:
-    main()
-except util.Abort, inst:
-    print inst.args[0]
-except KeyboardInterrupt:
-    sys.exit("interrupted")
+cmdtable = {
+    'shrink': (shrink,
+               [('', 'revlog', '', 'shrink file')],
+               'hg shrink [--revlog PATH]')
+}
