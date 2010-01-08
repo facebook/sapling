@@ -106,7 +106,7 @@ def colorstatus(orig, ui, repo, *pats, **opts):
     ui.pushbuffer()
     retval = orig(ui, repo, *pats, **opts)
     # filter out empty strings
-    lines_with_status = [ line for line in ui.popbuffer().split(delimiter) if line ]
+    lines_with_status = [line for line in ui.popbuffer().split(delimiter) if line]
 
     if nostatus:
         lines = [l[2:] for l in lines_with_status]
