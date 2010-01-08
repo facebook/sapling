@@ -3,10 +3,16 @@
 echo "[extensions]" >> $HGRCPATH
 echo "relink=" >> $HGRCPATH
 
+fix_path()
+{
+    tr '\\' /
+}
+
 cat > arelinked.py <<EOF
 import sys, os
+from mercurial import util
 path1, path2 = sys.argv[1:3]
-if os.stat(path1).st_ino == os.stat(path2).st_ino:
+if util.samefile(path1, path2):
     print '%s == %s' % (path1, path2)
 else:
     print '%s != %s' % (path1, path2)
@@ -23,6 +29,8 @@ hg ci -Am addfile
 echo a >> a
 echo a >> b
 hg ci -Am changefiles
+# Test files are read in binary mode
+python -c "file('.hg/store/data/dummy.i', 'wb').write('a\r\nb\n')"
 cd ..
 
 echo '% clone and pull to break links'
@@ -33,9 +41,11 @@ echo 'username= A. Baz <a.baz@bar.com>' >> .hg/hgrc
 hg pull -q
 echo b >> b
 hg ci -m changeb
+python -c "file('.hg/store/data/dummy.i', 'wb').write('a\nb\r\n')"
 
 echo '% relink'
-hg relink --debug | sed 's:relinking.*store:relinking .hg/store:g'
+hg relink --debug | sed 's:relinking.*store:relinking .hg/store:g' \
+    | fix_path
 cd ..
 
 echo '% check hardlinks'

@@ -37,7 +37,7 @@ def os_link(src, dst):
     except NotImplementedError: # Another fake error win Win98
         raise OSError(errno.EINVAL, 'Hardlinking not supported')
 
-def nlinks(pathname):
+def _getfileinfo(pathname):
     """Return number of hardlinks for the given file."""
     try:
         fh = win32file.CreateFile(pathname,
@@ -45,9 +45,38 @@ def nlinks(pathname):
             None, win32file.OPEN_EXISTING, 0, None)
         res = win32file.GetFileInformationByHandle(fh)
         fh.Close()
-        return res[7]
+        return res
     except pywintypes.error:
+        return None
+
+def nlinks(pathname):
+    """Return number of hardlinks for the given file."""
+    res = _getfileinfo(pathname)
+    if res is not None:
+        return res[7]
+    else:
         return os.lstat(pathname).st_nlink
+
+def samefile(fpath1, fpath2):
+    """Returns whether fpath1 and fpath2 refer to the same file. This is only
+    guaranteed to work for files, not directories."""
+    res1 = _getfileinfo(fpath1)
+    res2 = _getfileinfo(fpath2)
+    if res1 is not None and res2 is not None:
+        # Index 4 is the volume serial number, and 8 and 9 contain the file ID
+        return res1[4] == res2[4] and res1[8] == res2[8] and res1[9] == res2[9]
+    else:
+        return False
+
+def samedevice(fpath1, fpath2):
+    """Returns whether fpath1 and fpath2 are on the same device. This is only
+    guaranteed to work for files, not directories."""
+    res1 = _getfileinfo(fpath1)
+    res2 = _getfileinfo(fpath2)
+    if res1 is not None and res2 is not None:
+        return res1[4] == res2[4]
+    else:
+        return False
 
 def testpid(pid):
     '''return True if pid is still running or unable to

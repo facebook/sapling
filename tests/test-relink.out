@@ -12,12 +12,13 @@ updating to branch default
 created new head
 % relink
 relinking .hg/store
-collected 4 candidate storage files
+collected 5 candidate storage files
 not linkable: 00changelog.i
 not linkable: 00manifest.i
 not linkable: data/b.i
-pruned down to 1 probably relinkable files
-relink: data/a.i 1/1  files (1e+02%)
+pruned down to 2 probably relinkable files
+relink: data/a.i 1/2  files (  50%)
+not linkable: data/dummy.i
 relinked 1 files (136 bytes reclaimed)
 % check hardlinks
 repo/.hg/store/data/a.i == clone/.hg/store/data/a.i

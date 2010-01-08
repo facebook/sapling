@@ -34,6 +34,8 @@ def relink(ui, repo, origin=None, **opts):
     Do not attempt any read operations on this repository while the command is
     running. (Both repositories will be locked against writes.)
     """
+    if not hasattr(util, 'samefile') or not hasattr(util, 'samedevice'):
+        raise util.Abort(_('hardlinks are not supported on this system'))
     src = hg.repository(
         cmdutil.remoteui(repo, opts),
         ui.expandpath(origin or 'default-relink', origin or 'default'))
@@ -45,7 +47,7 @@ def relink(ui, repo, origin=None, **opts):
         remotelock = src.lock()
         try:
             candidates = collect(src.store.path, ui)
-            targets = prune(candidates, repo.store.path, ui)
+            targets = prune(candidates, src.store.path, repo.store.path, ui)
             do_relink(src.store.path, repo.store.path, targets, ui)
         finally:
             remotelock.release()
@@ -68,16 +70,16 @@ def collect(src, ui):
     ui.status(_('collected %d candidate storage files\n') % len(candidates))
     return candidates
 
-def prune(candidates, dst, ui):
-    def linkfilter(dst, st):
+def prune(candidates, src, dst, ui):
+    def linkfilter(src, dst, st):
         try:
             ts = os.stat(dst)
         except OSError:
             # Destination doesn't have this file?
             return False
-        if st.st_ino == ts.st_ino:
+        if util.samefile(src, dst):
             return False
-        if st.st_dev != ts.st_dev:
+        if not util.samedevice(src, dst):
             # No point in continuing
             raise util.Abort(
                 _('source and destination are on different devices'))
@@ -87,8 +89,9 @@ def prune(candidates, dst, ui):
 
     targets = []
     for fn, st in candidates:
+        srcpath = os.path.join(src, fn)
         tgt = os.path.join(dst, fn)
-        ts = linkfilter(tgt, st)
+        ts = linkfilter(srcpath, tgt, st)
         if not ts:
             ui.debug(_('not linkable: %s\n') % fn)
             continue
@@ -102,7 +105,7 @@ def do_relink(src, dst, files, ui):
         bak = dst + '.bak'
         os.rename(dst, bak)
         try:
-            os.link(src, dst)
+            util.os_link(src, dst)
         except OSError:
             os.rename(bak, dst)
             raise
@@ -118,14 +121,17 @@ def do_relink(src, dst, files, ui):
         pos += 1
         source = os.path.join(src, f)
         tgt = os.path.join(dst, f)
-        sfp = file(source)
-        dfp = file(tgt)
+        # Binary mode, so that read() works correctly, especially on Windows
+        sfp = file(source, 'rb')
+        dfp = file(tgt, 'rb')
         sin = sfp.read(CHUNKLEN)
         while sin:
             din = dfp.read(CHUNKLEN)
             if sin != din:
                 break
             sin = sfp.read(CHUNKLEN)
+        sfp.close()
+        dfp.close()
         if sin:
             ui.debug(_('not linkable: %s\n') % f)
             continue
