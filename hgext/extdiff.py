@@ -35,6 +35,22 @@ you do not need to type "hg extdiff -p kdiff3" always. ::
   # your .vimrc
   vimdiff = gvim -f '+next' '+execute "DirDiff" argv(0) argv(1)'
 
+Tool arguments can include variables that are expanded at runtime:
+
+  $parent1, $plabel1 - filename, descriptive label of first parent
+  $child,   $clabel  - filename, descriptive label of child revision
+  $parent2, $plabel2 - filename, descriptive label of second parent
+  $parent is an alias for $parent1.
+
+The extdiff extension will look in your [diff-tools] and [merge-tools]
+sections for diff tool arguments, when none are specified in [extdiff].
+
+  [extdiff]
+  kdiff3 = 
+
+  [diff-tools]
+  kdiff3.diffargs=--L1 '$plabel1' --L2 '$clabel' $parent $child
+
 You can use -I/-X and list of file or directory names like normal "hg
 diff" command. The extdiff extension makes snapshots of only needed
 files, so running the external diff program will actually be pretty
@@ -133,18 +149,23 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         # Always make a copy of node1a (and node1b, if applicable)
         dir1a_files = mod_a | rem_a | ((mod_b | add_b) - add_a)
         dir1a = snapshot(ui, repo, dir1a_files, node1a, tmproot)[0]
+        rev1a = '@%d' % repo[node1a].rev()
         if do3way:
             dir1b_files = mod_b | rem_b | ((mod_a | add_a) - add_b)
             dir1b = snapshot(ui, repo, dir1b_files, node1b, tmproot)[0]
+            rev1b = '@%d' % repo[node1b].rev()
         else:
             dir1b = None
+            rev1b = ''
 
         fns_and_mtime = []
 
         # If node2 in not the wc or there is >1 change, copy it
         dir2root = ''
+        rev2 = ''
         if node2:
             dir2 = snapshot(ui, repo, modadd, node2, tmproot)[0]
+            rev2 = '@%d' % repo[node2].rev()
         elif len(common) > 1:
             #we only actually need to get the files to copy back to
             #the working dir in this case (because the other cases
@@ -156,23 +177,32 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
             dir2 = ''
             dir2root = repo.root
 
+        label1a = rev1a
+        label1b = rev1b
+        label2 = rev2
+
         # If only one change, diff the files instead of the directories
         # Handle bogus modifies correctly by checking if the files exist
         if len(common) == 1:
             common_file = util.localpath(common.pop())
             dir1a = os.path.join(dir1a, common_file)
+            label1a = common_file + rev1a
             if not os.path.isfile(os.path.join(tmproot, dir1a)):
                 dir1a = os.devnull
             if do3way:
                 dir1b = os.path.join(dir1b, common_file)
+                label1b = common_file + rev1b
                 if not os.path.isfile(os.path.join(tmproot, dir1b)):
                     dir1b = os.devnull
             dir2 = os.path.join(dir2root, dir2, common_file)
+            label2 = common_file + rev2
 
         # Function to quote file/dir names in the argument string.
         # When not operating in 3-way mode, an empty string is
         # returned for parent2
-        replace = dict(parent=dir1a, parent1=dir1a, parent2=dir1b, child=dir2)
+        replace = dict(parent=dir1a, parent1=dir1a, parent2=dir1b,
+                       plabel1=label1a, plabel2=label1b,
+                       clabel=label2, child=dir2)
         def quote(match):
             key = match.group()[1:]
             if not do3way and key == 'parent2':
@@ -180,7 +210,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
             return util.shellquote(replace[key])
 
         # Match parent2 first, so 'parent1?' will match both parent1 and parent
-        regex = '\$(parent2|parent1?|child)'
+        regex = '\$(parent2|parent1?|child|plabel1|plabel2|clabel)'
         if not do3way and not re.search(regex, args):
             args += ' $parent1 $child'
         args = re.sub(regex, quote, args)
@@ -252,6 +282,12 @@ def uisetup(ui):
                 path = diffopts.pop(0)
             else:
                 path, diffopts = cmd, []
+        # look for diff arguments in [diff-tools] then [merge-tools]
+        if diffopts == []:
+            args = ui.config('diff-tools', cmd+'.diffargs') or \
+                   ui.config('merge-tools', cmd+'.diffargs')
+            if args:
+                diffopts = shlex.split(args)
         def save(cmd, path, diffopts):
             '''use closure to save diff command to use'''
             def mydiff(ui, repo, *pats, **opts):
