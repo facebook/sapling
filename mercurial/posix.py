@@ -105,6 +105,18 @@ def pconvert(path):
 def localpath(path):
     return path
 
+def samefile(fpath1, fpath2):
+    """Returns whether path1 and path2 refer to the same file. This is only
+    guaranteed to work for files, not directories."""
+    return os.path.samefile(fpath1, fpath2)
+
+def samedevice(fpath1, fpath2):
+    """Returns whether fpath1 and fpath2 are on the same device. This is only
+    guaranteed to work for files, not directories."""
+    st1 = os.lstat(fpath1)
+    st2 = os.lstat(fpath2)
+    return st1.st_dev == st2.st_dev
+
 if sys.platform == 'darwin':
     def realpath(path):
         '''
