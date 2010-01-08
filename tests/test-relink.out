@@ -17,7 +17,7 @@ not linkable: 00changelog.i
 not linkable: 00manifest.i
 not linkable: data/b.i
 pruned down to 2 probably relinkable files
-relink: data/a.i 1/2  files (  50%)
+relink: data/a.i 1/2  files (50.00%)
 not linkable: data/dummy.i
 relinked 1 files (136 bytes reclaimed)
 % check hardlinks
