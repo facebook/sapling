@@ -43,9 +43,10 @@ def _getfileinfo(pathname):
         fh = win32file.CreateFile(pathname,
             win32file.GENERIC_READ, win32file.FILE_SHARE_READ,
             None, win32file.OPEN_EXISTING, 0, None)
-        res = win32file.GetFileInformationByHandle(fh)
-        fh.Close()
-        return res
+        try:
+            return win32file.GetFileInformationByHandle(fh)
+        finally:
+            fh.Close()
     except pywintypes.error:
         return None
 
