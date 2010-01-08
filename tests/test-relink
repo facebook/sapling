@@ -1,0 +1,44 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "relink=" >> $HGRCPATH
+
+cat > arelinked.py <<EOF
+import sys, os
+path1, path2 = sys.argv[1:3]
+if os.stat(path1).st_ino == os.stat(path2).st_ino:
+    print '%s == %s' % (path1, path2)
+else:
+    print '%s != %s' % (path1, path2)
+EOF
+
+echo '% create source repository'
+hg init repo
+cd repo
+echo '[ui]' > .hg/hgrc
+echo 'username= A. Foo <a.foo@bar.com>' >> .hg/hgrc
+echo a > a
+echo b > b
+hg ci -Am addfile
+echo a >> a
+echo a >> b
+hg ci -Am changefiles
+cd ..
+
+echo '% clone and pull to break links'
+hg clone --pull -r0 repo clone
+cd clone
+echo '[ui]' >> .hg/hgrc
+echo 'username= A. Baz <a.baz@bar.com>' >> .hg/hgrc
+hg pull -q
+echo b >> b
+hg ci -m changeb
+
+echo '% relink'
+hg relink --debug | sed 's:relinking.*store:relinking .hg/store:g'
+cd ..
+
+echo '% check hardlinks'
+python arelinked.py repo/.hg/store/data/a.i clone/.hg/store/data/a.i
+python arelinked.py repo/.hg/store/data/b.i clone/.hg/store/data/b.i
+
