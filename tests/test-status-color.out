@@ -132,3 +132,16 @@ M modified
 [0;31;1mR removed[0m
 [0;36;1;4m! deleted[0m
 [0;35;1;4m? unknown[0m
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+merging a
+warning: conflicts during merge.
+merging a failed!
+merging b
+warning: conflicts during merge.
+merging b failed!
+0 files updated, 0 files merged, 0 files removed, 2 files unresolved
+use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+hg resolve with one unresolved, one resolved:
+[0;31;1mU a[0m
+[0;32;1mR b[0m

@@ -98,3 +98,23 @@ assert "-q" "-u"         1
 assert "-m" "-a"         1
 assert "-r" "-d"         1
 
+cd ..
+
+# test 'resolve -l'
+hg init repo4
+cd repo4
+echo "file a" > a
+echo "file b" > b
+hg add a b
+hg commit -m "initial"
+echo "file a change 1" > a
+echo "file b change 1" > b
+hg commit -m "head 1"
+hg update 0
+echo "file a change 2" > a
+echo "file b change 2" > b
+hg commit -m "head 2"
+hg merge
+hg resolve -m b
+echo "hg resolve with one unresolved, one resolved:"
+hg resolve --color=always -l
