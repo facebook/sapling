@@ -2460,7 +2460,7 @@ def resolve(ui, repo, *pats, **opts):
     will be overwritten if the merge is retried with resolve. The
     -m/--mark switch should be used to mark the file as resolved.
 
-    You can specify a set of files to operate on, or use the -a/-all
+    You can specify a set of files to operate on, or use the -a/--all
     switch to select all unresolved files.
 
     This command also allows listing resolved files and manually
