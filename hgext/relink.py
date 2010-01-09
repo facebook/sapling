@@ -48,7 +48,7 @@ def relink(ui, repo, origin=None, **opts):
     try:
         remotelock = src.lock()
         try:
-            candidates = collect(src.store.path, ui)
+            candidates = sorted(collect(src.store.path, ui))
             targets = prune(candidates, src.store.path, repo.store.path, ui)
             do_relink(src.store.path, repo.store.path, targets, ui)
         finally:
