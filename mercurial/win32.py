@@ -16,7 +16,7 @@ used.
 import win32api
 
 import errno, os, sys, pywintypes, win32con, win32file, win32process
-import winerror
+import winerror, win32gui
 import osutil, encoding
 from win32com.shell import shell, shellcon
 
@@ -172,3 +172,12 @@ def set_signal_handler_win32():
         win32process.ExitProcess(1)
     win32api.SetConsoleCtrlHandler(handler)
 
+def hidewindow():
+    def callback(*args, **kwargs):
+        hwnd, pid = args
+        wpid = win32process.GetWindowThreadProcessId(hwnd)[1]
+        if pid == wpid:
+            win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
+
+    pid =  win32process.GetCurrentProcessId()
+    win32gui.EnumWindows(callback, pid)

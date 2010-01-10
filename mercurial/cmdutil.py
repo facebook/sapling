@@ -613,6 +613,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         except AttributeError:
             pass
         os.unlink(lockpath)
+        util.hidewindow()
         sys.stdout.flush()
         sys.stderr.flush()
 
