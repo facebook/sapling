@@ -7,6 +7,7 @@ from mercurial import ui
 from mercurial import url
 from mercurial import util
 
+from hgext import schemes
 
 def reposetup(ui, repo):
     if repo.local():
@@ -63,6 +64,19 @@ def reposetup(ui, repo):
                 realpath = ''
                 if 'paths' in conf:
                     for path, uri in conf['paths'].items():
+                        for s in schemes.schemes.iterkeys():
+                            if uri.startswith('%s://' % s):
+                                # TODO: refactor schemes so we don't duplicate this logic
+                                ui.note('performing schemes expansion with scheme %s\n' % s)
+                                scheme = hg.schemes[s]
+                                parts = uri.split('://', 1)[1].split('/', scheme.parts)
+                                if len(parts) > scheme.parts:
+                                    tail = parts[-1]
+                                    parts = parts[:-1]
+                                else:
+                                    tail = ''
+                                context = dict((str(i+1), v) for i, v in enumerate(parts))
+                                uri = ''.join(scheme.templater.process(scheme.url, context)) + tail
                         uri = self.ui.expandpath(uri)
                         if remote.local():
                             uri = os.path.realpath(uri)

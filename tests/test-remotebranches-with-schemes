@@ -1,0 +1,57 @@
+#!/bin/sh
+
+
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+echo "schemes=" >> $HGRCPATH
+echo "remotebranches=$(echo $(dirname $(dirname $0)))/hg_remotebranches.py" >> $HGRCPATH
+
+cat >> $HGRCPATH <<EOF
+
+[schemes]
+dotdot = ../{1}
+EOF
+
+FILTERPWD="sed s%$PWD/%%g"
+
+function mkcommit()
+{
+    echo $1 > $1
+    hg add $1
+    hg ci -m "add $1"
+}
+
+hg init alpha
+cd alpha
+mkcommit a
+mkcommit b
+hg branch stable
+mkcommit c
+cd ..
+hg clone alpha beta | $FILTERPWD
+cd beta
+mkcommit d
+hg co -C stable
+hg merge default
+hg ci -m 'merged'
+cd ..
+
+hg init gamma
+cd gamma
+cat > .hg/hgrc <<EOF
+[paths]
+default = ../alpha
+alpha = ../alpha
+beta = dotdot://beta
+EOF
+hg pull | $FILTERPWD
+hg pull beta | $FILTERPWD
+hg co -C default
+hg branch default
+mkcommit e
+hg merge stable
+hg ci -m 'merging stable'
+
+echo
+echo % graph shows tags for the branch heads of each path
+hg log --graph
