@@ -4,6 +4,7 @@ from mercurial import config
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
+from mercurial import url
 from mercurial import util
 
 
@@ -41,31 +42,43 @@ def reposetup(ui, repo):
                 res = opull(remote, *args, **kwargs)
                 lock = self.lock()
                 try:
-                    conf = config.config()
-                    rc = self.join('hgrc')
-                    if os.path.exists(rc):
-                        fp = open(rc)
-                        conf.parse('.hgrc', fp.read())
-                        fp.close()
-                    realpath = ''
-                    if 'paths' in conf:
-                        for path, uri in conf['paths'].items():
-                            uri = self.ui.expandpath(uri)
-                            if remote.local():
-                                uri = os.path.realpath(uri).rstrip('/')
-                                rpath = remote.root.rstrip('/')
-                            else:
-                                uri = uri.rstrip('/')
-                                rpath = remote.path.rstrip('/')
-                            if uri == rpath:
-                                realpath = path
-                                # prefer a non-default name to default
-                                if path != 'default':
-                                    break
-                        self.saveremotebranches(realpath, remote.branchmap())
+                    try:
+                        path = self._activepath(remote)
+                        if path:
+                            self.saveremotebranches(path, remote.branchmap())
+                    except Exception, e:
+                        ui.debug('remote branches for path %s not saved: %s\n'
+                                 % (path, e))
                 finally:
                     lock.release()
                     return res
+
+            def _activepath(self, remote):
+                conf = config.config()
+                rc = self.join('hgrc')
+                if os.path.exists(rc):
+                    fp = open(rc)
+                    conf.parse('.hgrc', fp.read())
+                    fp.close()
+                realpath = ''
+                if 'paths' in conf:
+                    for path, uri in conf['paths'].items():
+                        uri = self.ui.expandpath(uri)
+                        if remote.local():
+                            uri = os.path.realpath(uri)
+                            rpath = remote.root
+                        else:
+                            rpath = remote._url
+                            if uri.startswith('http'):
+                                uri = url.getauthinfo(uri)[0]
+                        uri = uri.rstrip('/')
+                        rpath = rpath.rstrip('/')
+                        if uri == rpath:
+                            realpath = path
+                            # prefer a non-default name to default
+                            if path != 'default':
+                                break
+                return realpath
 
             def saveremotebranches(self, remote, bm):
                 real = {}
