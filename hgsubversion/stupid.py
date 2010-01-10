@@ -78,11 +78,11 @@ def mempatchproxy(parentctx, files):
 
 def filteriterhunks(meta):
     iterhunks = patch.iterhunks
-    def filterhunks(ui, fp, sourcefile=None, textmode=False):
+    def filterhunks(ui, fp, sourcefile=None):
         applycurrent = False
         # Passing False instead of textmode because we should never
         # be ignoring EOL type.
-        for data in iterhunks(ui, fp, sourcefile, False):
+        for data in iterhunks(ui, fp, sourcefile):
             if data[0] == 'file':
                 if data[1][1] in meta.filemap:
                     applycurrent = True
