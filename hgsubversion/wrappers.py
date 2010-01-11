@@ -255,7 +255,7 @@ def pull(repo, source, heads=[], force=False):
         raise hgutil.Abort('Revision skipping at repository initialization '
                            'remains unimplemented.')
 
-    revisions = 0
+    oldrevisions = len(meta.revmap)
     try:
         try:
             # start converting revisions
@@ -302,11 +302,12 @@ def pull(repo, source, heads=[], force=False):
                             ui.status('Got a 502, retrying (%s)\n' % tries)
                         else:
                             raise hgutil.Abort(*e.args)
-                revisions += 1
         except KeyboardInterrupt:
             pass
     finally:
         util.swap_out_encoding(old_encoding)
+
+    revisions = len(meta.revmap) - oldrevisions
 
     if revisions == 0:
         ui.status(i18n._("no changes found\n"))
