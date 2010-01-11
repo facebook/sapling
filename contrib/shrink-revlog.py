@@ -212,7 +212,8 @@ def main():
           'Running \'hg verify\' is strongly recommended.)\n'
           % (oldindexfn, olddatafn))
 
-try:
-    main()
-except KeyboardInterrupt:
-    sys.exit("interrupted")
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit("interrupted")
