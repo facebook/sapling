@@ -169,7 +169,7 @@ def shrink(ui, repo, **opts):
     # absolute. Doing it this way keeps things simple: everything is an
     # absolute path.
     lock = repo.lock(wait=False)
-    tr = transaction.transaction(sys.stderr.write,
+    tr = transaction.transaction(ui.warn,
                                  open,
                                  repo.sjoin('journal'))
 
@@ -188,13 +188,14 @@ def shrink(ui, repo, **opts):
             if os.path.exists(tmpdatafn):
                 os.unlink(tmpdatafn)
             raise
+        # Racy since both files cannot be renamed atomically
+        util.os_link(indexfn, oldindexfn)
+        util.os_link(datafn, olddatafn)
+        util.rename(tmpindexfn, indexfn)
+        util.rename(tmpdatafn, datafn)
     finally:
         lock.release()
 
-    os.link(indexfn, oldindexfn)
-    os.link(datafn, olddatafn)
-    os.rename(tmpindexfn, indexfn)
-    os.rename(tmpdatafn, datafn)
     ui.write('note: old revlog saved in:\n'
           '  %s\n'
           '  %s\n'
