@@ -33,13 +33,13 @@ _oldlocal = hg.schemes['file']
 
 def _local(path):
     p = util.drop_scheme('file', path)
-    if (os.path.exists(os.path.join(p, '.git')) and 
+    if (os.path.exists(os.path.join(p, '.git')) and
         not os.path.exists(os.path.join(p, '.hg'))):
         return gitrepo
     # detect a bare repository
-    if (os.path.exists(os.path.join(p, 'HEAD')) and 
-        os.path.exists(os.path.join(p, 'objects')) and 
-        os.path.exists(os.path.join(p, 'refs')) and 
+    if (os.path.exists(os.path.join(p, 'HEAD')) and
+        os.path.exists(os.path.join(p, 'objects')) and
+        os.path.exists(os.path.join(p, 'refs')) and
         not os.path.exists(os.path.join(p, '.hg'))):
         return gitrepo
     return _oldlocal(path)
