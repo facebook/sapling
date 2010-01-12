@@ -189,25 +189,32 @@ def shrink(ui, repo, **opts):
             if os.path.exists(tmpdatafn):
                 os.unlink(tmpdatafn)
             raise
-        # Racy since both files cannot be renamed atomically
-        util.os_link(indexfn, oldindexfn)
-        util.os_link(datafn, olddatafn)
-        util.rename(tmpindexfn, indexfn)
-        util.rename(tmpdatafn, datafn)
+        if not opts.get('dry_run'):
+            # Racy since both files cannot be renamed atomically
+            util.os_link(indexfn, oldindexfn)
+            util.os_link(datafn, olddatafn)
+            util.rename(tmpindexfn, indexfn)
+            util.rename(tmpdatafn, datafn)
+        else:
+            os.unlink(tmpindexfn)
+            os.unlink(tmpdatafn)
     finally:
         lock.release()
 
-    ui.write('note: old revlog saved in:\n'
-          '  %s\n'
-          '  %s\n'
-          '(You can delete those files when you are satisfied that your\n'
-          'repository is still sane.  '
-          'Running \'hg verify\' is strongly recommended.)\n'
-          % (oldindexfn, olddatafn))
+    if not opts.get('dry_run'):
+        ui.write('note: old revlog saved in:\n'
+                 '  %s\n'
+                 '  %s\n'
+                 '(You can delete those files when you are satisfied that your\n'
+                 'repository is still sane.  '
+                 'Running \'hg verify\' is strongly recommended.)\n'
+                 % (oldindexfn, olddatafn))
 
 cmdtable = {
     'shrink': (shrink,
-               [('', 'revlog', '', 'index (.i) file of the revlog to shrink')],
+               [('', 'revlog', '', 'index (.i) file of the revlog to shrink'),
+                ('n', 'dry-run', None, 'do not shrink, simulate only'),
+                ],
                'hg shrink [--revlog PATH]')
 }
 
