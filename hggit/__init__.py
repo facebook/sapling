@@ -46,6 +46,15 @@ def _local(path):
 
 hg.schemes['file'] = _local
 
+hgdefaultdest = hg.defaultdest
+def defaultdest(source):
+    for scheme in ('git', 'git+ssh'):
+        if source.startswith('%s://' % scheme) and source.endswith('.git'):
+            source = source[:-4]
+            break
+    return hgdefaultdest(source)
+hg.defaultdest = defaultdest
+
 def reposetup(ui, repo):
     klass = hgrepo.generate_repo_subclass(repo.__class__)
     repo.__class__ = klass
