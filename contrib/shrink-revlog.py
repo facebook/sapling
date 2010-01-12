@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 """\
-Reorder a revlog (by default the manifest file in the current repository) to
-save space. Specifically, this topologically sorts the revisions in the revlog
-so that revisions on the same branch are adjacent as much as possible. This is
-a workaround for the fact that Mercurial computes deltas relative to the
+reorder a revlog (the manifest by default) to save space
+
+Specifically, this topologically sorts the revisions in the revlog so that
+revisions on the same branch are adjacent as much as possible. This is a
+workaround for the fact that Mercurial computes deltas relative to the
 previous revision rather than relative to a parent revision.
 
 This is *not* safe to run on a changelog.
@@ -206,6 +207,9 @@ def shrink(ui, repo, **opts):
 
 cmdtable = {
     'shrink': (shrink,
-               [('', 'revlog', '', 'shrink file')],
+               [('', 'revlog', '', 'index (.i) file of the revlog to shrink')],
                'hg shrink [--revlog PATH]')
 }
+
+if __name__ == "__main__":
+	print "shrink-revlog.py is now an extension (see hg help extensions)"
