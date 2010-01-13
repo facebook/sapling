@@ -131,6 +131,8 @@ class ui(object):
         v = self.config(section, name, None, untrusted)
         if v is None:
             return default
+        if isinstance(v, bool):
+            return v
         if v.lower() not in _booleans:
             raise error.ConfigError(_("%s.%s not a boolean ('%s')")
                                     % (section, name, v))
