@@ -120,6 +120,7 @@ ignore = [
     '_xmlplus',
     'fcntl',
     'win32com.gen_py',
+    '_winreg', # 2.7 mimetypes needs immediate ImportError
     'pythoncom',
     # imported by tarfile, not available under Windows
     'pwd',
