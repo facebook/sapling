@@ -39,7 +39,11 @@
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate">rev {rev}: {changenav%navshortentry}</div>
+<div class="navigate">
+<a href="{url}shortlog/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url}shortlog/{rev}{morevars%urlparameter}">more</a>
+| rev {rev}: {changenav%navshortentry}
+</div>
 
 <table class="bigtable">
  <tr>
@@ -50,7 +54,12 @@ files, or words in the commit message</div>
 {entries%shortlogentry}
 </table>
 
-<div class="navigate">rev {rev}: {changenav%navshortentry}</div>
+<div class="navigate">
+<a href="{url}shortlog/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url}shortlog/{rev}{morevars%urlparameter}">more</a>
+| rev {rev}: {changenav%navshortentry}
+</div>
+
 </div>
 </div>
 

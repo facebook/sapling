@@ -43,7 +43,10 @@
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate">{nav%filenaventry}</div>
+<div class="navigate">
+<a href="{url}log/{node|short}/{file|urlescape}{lessvars%urlparameter}">less</a>
+<a href="{url}log/{node|short}/{file|urlescape}{morevars%urlparameter}">more</a>
+| {nav%filenaventry}</div>
 
 <table class="bigtable">
  <tr>
@@ -53,6 +56,12 @@ files, or words in the commit message</div>
  </tr>
 {entries%filelogentry}
 </table>
+
+<div class="navigate">
+<a href="{url}log/{node|short}/{file|urlescape}{lessvars%urlparameter}">less</a>
+<a href="{url}log/{node|short}/{file|urlescape}{morevars%urlparameter}">more</a>
+| {nav%filenaventry}
+</div>
 
 </div>
 </div>

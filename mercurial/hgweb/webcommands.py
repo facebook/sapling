@@ -200,24 +200,32 @@ def changelog(web, req, tmpl, shortlog = False):
         for e in l:
             yield e
 
-    maxchanges = shortlog and web.maxshortchanges or web.maxchanges
+    revcount = shortlog and web.maxshortchanges or web.maxchanges
+    if 'revcount' in req.form:
+        revcount = int(req.form.get('revcount', [revcount])[0])
+        tmpl.defaults['sessionvars']['revcount'] = revcount
+
+    lessvars = copy.copy(tmpl.defaults['sessionvars'])
+    lessvars['revcount'] = revcount / 2
+    morevars = copy.copy(tmpl.defaults['sessionvars'])
+    morevars['revcount'] = revcount * 2
+
     cl = web.repo.changelog
     count = len(cl)
     pos = ctx.rev()
-    start = max(0, pos - maxchanges + 1)
-    end = min(count, start + maxchanges)
+    start = max(0, pos - revcount + 1)
+    end = min(count, start + revcount)
     pos = end - 1
     parity = paritygen(web.stripecount, offset=start-end)
 
-    changenav = webutil.revnavgen(pos, maxchanges, count, web.repo.changectx)
+    changenav = webutil.revnavgen(pos, revcount, count, web.repo.changectx)
 
-    return tmpl(shortlog and 'shortlog' or 'changelog',
-                changenav=changenav,
-                node=hex(ctx.node()),
-                rev=pos, changesets=count,
+    return tmpl(shortlog and 'shortlog' or 'changelog', changenav=changenav,
+                node=hex(ctx.node()), rev=pos, changesets=count,
                 entries=lambda **x: changelist(limit=0,**x),
                 latestentry=lambda **x: changelist(limit=1,**x),
-                archives=web.archivelist("tip"))
+                archives=web.archivelist("tip"), revcount=revcount,
+                morevars=morevars, lessvars=lessvars)
 
 def shortlog(web, req, tmpl):
     return changelog(web, req, tmpl, shortlog = True)
@@ -567,10 +575,19 @@ def filelog(web, req, tmpl):
             frev -= 1
         fctx = web.repo.filectx(f, fl.linkrev(frev))
 
+    revcount = web.maxshortchanges
+    if 'revcount' in req.form:
+        revcount = int(req.form.get('revcount', [revcount])[0])
+        tmpl.defaults['sessionvars']['revcount'] = revcount
+
+    lessvars = copy.copy(tmpl.defaults['sessionvars'])
+    lessvars['revcount'] = revcount / 2
+    morevars = copy.copy(tmpl.defaults['sessionvars'])
+    morevars['revcount'] = revcount * 2
+
     count = fctx.filerev() + 1
-    pagelen = web.maxshortchanges
-    start = max(0, fctx.filerev() - pagelen + 1) # first rev on this page
-    end = min(count, start + pagelen) # last rev on this page
+    start = max(0, fctx.filerev() - revcount + 1) # first rev on this page
+    end = min(count, start + revcount) # last rev on this page
     parity = paritygen(web.stripecount, offset=start-end)
 
     def entries(limit=0, **map):
@@ -602,11 +619,11 @@ def filelog(web, req, tmpl):
             yield e
 
     nodefunc = lambda x: fctx.filectx(fileid=x)
-    nav = webutil.revnavgen(end - 1, pagelen, count, nodefunc)
+    nav = webutil.revnavgen(end - 1, revcount, count, nodefunc)
     return tmpl("filelog", file=f, node=hex(fctx.node()), nav=nav,
                 entries=lambda **x: entries(limit=0, **x),
-                latestentry=lambda **x: entries(limit=1, **x))
-
+                latestentry=lambda **x: entries(limit=1, **x),
+                revcount=revcount, morevars=morevars, lessvars=lessvars)
 
 def archive(web, req, tmpl):
     type_ = req.form.get('type', [None])[0]

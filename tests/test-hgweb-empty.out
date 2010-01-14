@@ -47,7 +47,11 @@
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate">rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> </div>
+<div class="navigate">
+<a href="/shortlog/-1?revcount=30">less</a>
+<a href="/shortlog/-1?revcount=120">more</a>
+| rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> 
+</div>
 
 <table class="bigtable">
  <tr>
@@ -58,7 +62,12 @@ files, or words in the commit message</div>
 
 </table>
 
-<div class="navigate">rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> </div>
+<div class="navigate">
+<a href="/shortlog/-1?revcount=30">less</a>
+<a href="/shortlog/-1?revcount=120">more</a>
+| rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> 
+</div>
+
 </div>
 </div>
 
@@ -116,7 +125,11 @@ files, or words in the commit message</div>
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate">rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> </div>
+<div class="navigate">
+<a href="/shortlog/-1?revcount=5">less</a>
+<a href="/shortlog/-1?revcount=20">more</a>
+| rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> 
+</div>
 
 <table class="bigtable">
  <tr>
@@ -127,7 +140,12 @@ files, or words in the commit message</div>
 
 </table>
 
-<div class="navigate">rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> </div>
+<div class="navigate">
+<a href="/shortlog/-1?revcount=5">less</a>
+<a href="/shortlog/-1?revcount=20">more</a>
+| rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> 
+</div>
+
 </div>
 </div>
 

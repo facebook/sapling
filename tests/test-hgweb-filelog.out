@@ -139,7 +139,10 @@ diff -r 000000000000 -r 6563da9dcf87 b
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate"><a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
+<div class="navigate">
+<a href="/log/01de2d66a28d/a?revcount=30">less</a>
+<a href="/log/01de2d66a28d/a?revcount=120">more</a>
+| <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
 
 <table class="bigtable">
  <tr>
@@ -159,6 +162,12 @@ files, or words in the commit message</div>
  </tr>
 
 </table>
+
+<div class="navigate">
+<a href="/log/01de2d66a28d/a?revcount=30">less</a>
+<a href="/log/01de2d66a28d/a?revcount=120">more</a>
+| <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
+</div>
 
 </div>
 </div>
@@ -222,7 +231,10 @@ files, or words in the commit message</div>
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate"><a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
+<div class="navigate">
+<a href="/log/01de2d66a28d/a?revcount=30">less</a>
+<a href="/log/01de2d66a28d/a?revcount=120">more</a>
+| <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
 
 <table class="bigtable">
  <tr>
@@ -242,6 +254,12 @@ files, or words in the commit message</div>
  </tr>
 
 </table>
+
+<div class="navigate">
+<a href="/log/01de2d66a28d/a?revcount=30">less</a>
+<a href="/log/01de2d66a28d/a?revcount=120">more</a>
+| <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
+</div>
 
 </div>
 </div>
@@ -305,7 +323,10 @@ files, or words in the commit message</div>
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate"><a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
+<div class="navigate">
+<a href="/log/5ed941583260/a?revcount=30">less</a>
+<a href="/log/5ed941583260/a?revcount=120">more</a>
+| <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
 
 <table class="bigtable">
  <tr>
@@ -320,6 +341,12 @@ files, or words in the commit message</div>
  </tr>
 
 </table>
+
+<div class="navigate">
+<a href="/log/5ed941583260/a?revcount=30">less</a>
+<a href="/log/5ed941583260/a?revcount=120">more</a>
+| <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
+</div>
 
 </div>
 </div>
@@ -383,7 +410,10 @@ files, or words in the commit message</div>
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate"><a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
+<div class="navigate">
+<a href="/log/5ed941583260/a?revcount=30">less</a>
+<a href="/log/5ed941583260/a?revcount=120">more</a>
+| <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
 
 <table class="bigtable">
  <tr>
@@ -398,6 +428,12 @@ files, or words in the commit message</div>
  </tr>
 
 </table>
+
+<div class="navigate">
+<a href="/log/5ed941583260/a?revcount=30">less</a>
+<a href="/log/5ed941583260/a?revcount=120">more</a>
+| <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
+</div>
 
 </div>
 </div>

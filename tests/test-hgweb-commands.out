@@ -201,7 +201,11 @@ marked working directory as branch stable
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate">rev 2: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> </div>
+<div class="navigate">
+<a href="/shortlog/2?revcount=30">less</a>
+<a href="/shortlog/2?revcount=120">more</a>
+| rev 2: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> 
+</div>
 
 <table class="bigtable">
  <tr>
@@ -227,7 +231,12 @@ files, or words in the commit message</div>
 
 </table>
 
-<div class="navigate">rev 2: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> </div>
+<div class="navigate">
+<a href="/shortlog/2?revcount=30">less</a>
+<a href="/shortlog/2?revcount=120">more</a>
+| rev 2: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> 
+</div>
+
 </div>
 </div>
 
