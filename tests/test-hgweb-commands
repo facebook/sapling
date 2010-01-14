@@ -26,6 +26,7 @@ echo % Logs and changes
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/shortlog/'
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/rev/0/'
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/rev/1/?style=raw'
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/log?rev=base'
 
 echo % File-related
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/file/1/foo/?style=raw'

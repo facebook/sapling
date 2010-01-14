@@ -352,6 +352,76 @@ diff -r 2ef0ac749a14 -r a4f92ed23982 .hgtags
 @@ -0,0 +1,1 @@
 +2ef0ac749a14e4f57a5a822464a0902c6f7f448f 1.0
 
+200 Script output follows
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+<head>
+<link rel="icon" href="/static/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow" />
+<link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+
+<title>test: searching for base</title>
+</head>
+<body>
+
+<div class="container">
+<div class="menu">
+<div class="logo">
+<a href="http://mercurial.selenic.com/">
+<img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial"></a>
+</div>
+<ul>
+<li><a href="/shortlog">log</a></li>
+<li><a href="/graph">graph</a></li>
+<li><a href="/tags">tags</a></li>
+<li><a href="/branches">branches</a></li>
+</ul>
+</div>
+
+<div class="main">
+<h2><a href="/">test</a></h2>
+<h3>searching for 'base'</h3>
+
+<form class="search" action="/log">
+
+<p><input name="rev" id="search1" type="text" size="30"></p>
+<div id="hint">find changesets by author, revision,
+files, or words in the commit message</div>
+</form>
+
+<div class="navigate">
+<a href="/search/?rev=base&revcount=5">less</a>
+<a href="/search/?rev=base&revcount=20">more</a>
+</div>
+
+<table class="bigtable">
+ <tr>
+  <th class="age">age</th>
+  <th class="author">author</th>
+  <th class="description">description</th>
+ </tr>
+ <tr class="parity0">
+  <td class="age">1970-01-01</td>
+  <td class="author">test</td>
+  <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> </td>
+ </tr>
+
+</table>
+
+<div class="navigate">
+<a href="/search/?rev=base&revcount=5">less</a>
+<a href="/search/?rev=base&revcount=20">more</a>
+</div>
+
+</div>
+</div>
+
+
+
+</body>
+</html>
+
 % File-related
 200 Script output follows
 
