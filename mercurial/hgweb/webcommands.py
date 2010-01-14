@@ -654,10 +654,10 @@ def static(web, req, tmpl):
     return [staticfile(static, fname, req)]
 
 def graph(web, req, tmpl):
+
     rev = webutil.changectx(web.repo, req).rev()
     bg_height = 39
-
-    revcount = 25
+    revcount = web.maxshortchanges
     if 'revcount' in req.form:
         revcount = int(req.form.get('revcount', [revcount])[0])
         tmpl.defaults['sessionvars']['revcount'] = revcount

@@ -184,8 +184,8 @@ files, or words in the commit message</div>
 </form>
 
 <div class="navigate">
-<a href="/graph/-1?revcount=12">less</a>
-<a href="/graph/-1?revcount=50">more</a>
+<a href="/graph/-1?revcount=30">less</a>
+<a href="/graph/-1?revcount=120">more</a>
 | rev -1: <a href="/graph/000000000000">(0)</a> <a href="/graph/tip">tip</a> 
 </div>
 
@@ -267,8 +267,8 @@ graph.render(data);
 </script>
 
 <div class="navigate">
-<a href="/graph/-1?revcount=12">less</a>
-<a href="/graph/-1?revcount=50">more</a>
+<a href="/graph/-1?revcount=30">less</a>
+<a href="/graph/-1?revcount=120">more</a>
 | rev -1: <a href="/graph/000000000000">(0)</a> <a href="/graph/tip">tip</a> 
 </div>
 
