@@ -98,7 +98,20 @@ def file(web, req, tmpl):
         except ErrorResponse:
             raise inst
 
-def _search(web, tmpl, query):
+def _search(web, req, tmpl):
+
+    query = req.form['rev'][0]
+    revcount = web.maxchanges
+    if 'revcount' in req.form:
+        revcount = int(req.form.get('revcount', [revcount])[0])
+        tmpl.defaults['sessionvars']['revcount'] = revcount
+
+    lessvars = copy.copy(tmpl.defaults['sessionvars'])
+    lessvars['revcount'] = revcount / 2
+    lessvars['rev'] = query
+    morevars = copy.copy(tmpl.defaults['sessionvars'])
+    morevars['revcount'] = revcount * 2
+    morevars['rev'] = query
 
     def changelist(**map):
         cl = web.repo.changelog
@@ -146,19 +159,18 @@ def _search(web, tmpl, query):
                        inbranch=webutil.nodeinbranch(web.repo, ctx),
                        branches=webutil.nodebranchdict(web.repo, ctx))
 
-            if count >= web.maxchanges:
+            if count >= revcount:
                 break
 
     cl = web.repo.changelog
     parity = paritygen(web.stripecount)
 
-    return tmpl('search',
-                query=query,
-                node=hex(cl.tip()),
-                entries=changelist,
-                archives=web.archivelist("tip"))
+    return tmpl('search', query=query, node=hex(cl.tip()),
+                entries=changelist, archives=web.archivelist("tip"),
+                morevars=morevars, lessvars=lessvars)
 
-def changelog(web, req, tmpl, shortlog = False):
+def changelog(web, req, tmpl, shortlog=False):
+
     if 'node' in req.form:
         ctx = webutil.changectx(web.repo, req)
     else:
@@ -169,7 +181,7 @@ def changelog(web, req, tmpl, shortlog = False):
         try:
             ctx = web.repo[hi]
         except error.RepoError:
-            return _search(web, tmpl, hi) # XXX redirect to 404 page?
+            return _search(web, req, tmpl) # XXX redirect to 404 page?
 
     def changelist(limit=0, **map):
         l = [] # build a list in forward order for efficiency
