@@ -104,3 +104,57 @@ cd ../tc
 hg pull | sed 's/ .*sub/ ...sub/g'
 hg up # should pull t
 cat t/t
+
+echo % issue 1986
+cd ..
+rm -rf sub
+hg init main
+cd main
+
+hg init s           # subrepo layout
+cd s                #
+echo a > a          #   o   5 br
+hg ci -Am1          #  /|
+hg branch br        # o |   4 default
+echo a >> a         # | |
+hg ci -m1           # | o   3 br
+hg up default       # |/|
+echo b > b          # o |   2 default
+hg ci -Am1          # | |
+hg up br            # | o   1 br
+hg merge tip        # |/
+hg ci -m1           # o     0 default
+hg up 2
+echo c > c
+hg ci -Am1
+hg up 3
+hg merge 4
+hg ci -m1
+
+cd ..                         # main repo layout:
+echo 's = s' > .hgsub         #
+hg -R s up 2                  #   * <-- try to merge default into br again
+hg ci -Am1                    # .`|
+hg branch br                  # . o   5 br      --> substate = 5
+echo b > b                    # . |
+hg -R s up 3                  # o |   4 default --> substate = 4
+hg ci -Am1                    # | |
+hg up default                 # | o   3 br      --> substate = 2
+echo c > c                    # |/|
+hg ci -Am1                    # o |   2 default --> substate = 2
+hg up 1                       # | |     
+hg merge 2                    # | o   1 br      --> substate = 3
+hg ci -m1                     # |/    
+hg up 2                       # o     0 default --> substate = 2
+hg -R s up 4
+echo d > d
+hg ci -Am1
+hg up 3
+hg -R s up 5
+echo e > e
+hg ci -Am1
+
+hg up 5
+hg merge 4    # try to merge default into br again
+
+exit 0

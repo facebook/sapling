@@ -209,9 +209,12 @@ class hgsubrepo(object):
         self._get(state)
         cur = self._repo['.']
         dst = self._repo[state[1]]
-        if dst.ancestor(cur) == cur:
+        anc = dst.ancestor(cur)
+        if anc == cur:
             self._repo.ui.debug("updating subrepo %s\n" % self._path)
             hg.update(self._repo, state[1])
+        elif anc == dst:
+            self._repo.ui.debug("skipping subrepo %s\n" % self._path)
         else:
             self._repo.ui.debug("merging subrepo %s\n" % self._path)
             hg.merge(self._repo, state[1], remind=False)

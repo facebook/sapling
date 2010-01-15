@@ -201,3 +201,43 @@ adding file changes
 added 1 changesets with 1 changes to 1 files
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 blah
+% issue 1986
+adding a
+marked working directory as branch br
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding b
+created new head
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding c
+created new head
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding .hgsub
+committing subrepository s
+marked working directory as branch br
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding b
+committing subrepository s
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding c
+created new head
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding d
+committing subrepository s
+created new head
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding e
+committing subrepository s
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
