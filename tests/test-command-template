@@ -171,5 +171,18 @@ echo '# merged tag overrides'
 hg tag -r 5 -m t5 -d '9 0' t5
 hg tag -r 3 -m at3 -d '10 0' at3
 hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
+cd ..
+
+echo '# style path expansion (issue1948)'
+mkdir -p home/styles
+cat > home/styles/teststyle <<EOF
+changeset = 'test {rev}:{node|short}\n'
+EOF
+HOME=`pwd`/home; export HOME
+cat > latesttag/.hg/hgrc <<EOF
+[ui]
+style = ~/styles/teststyle
+EOF
+hg -R latesttag tip
 
 echo '# done'

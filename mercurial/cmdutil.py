@@ -1005,7 +1005,7 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
         if tmpl:
             tmpl = templater.parsestring(tmpl)
         else:
-            style = ui.config('ui', 'style')
+            style = util.expandpath(ui.config('ui', 'style', ''))
 
     if not (tmpl or style):
         return changeset_printer(ui, repo, patch, opts, buffered)

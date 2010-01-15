@@ -723,4 +723,6 @@ created new head
 2: t2+0
 1: t1+0
 0: null+1
+# style path expansion (issue1948)
+test 10:dee8f28249af
 # done
