@@ -32,31 +32,34 @@ def revnavgen(pos, pagelen, limit, nodefunc):
         for f in seq(factor * 10):
             yield f
 
-    def nav(**map):
-        l = []
-        last = 0
-        for f in seq(1, pagelen):
-            if f < pagelen or f <= last:
-                continue
-            if f > limit:
-                break
-            last = f
-            if pos + f < limit:
-                l.append(("+%d" % f, hex(nodefunc(pos + f).node())))
-            if pos - f >= 0:
-                l.insert(0, ("-%d" % f, hex(nodefunc(pos - f).node())))
+    navbefore = []
+    navafter = []
 
-        try:
-            yield {"label": "(0)", "node": hex(nodefunc('0').node())}
+    last = 0
+    for f in seq(1, pagelen):
+        if f < pagelen or f <= last:
+            continue
+        if f > limit:
+            break
+        last = f
+        if pos + f < limit:
+            navafter.append(("+%d" % f, hex(nodefunc(pos + f).node())))
+        if pos - f >= 0:
+            navbefore.insert(0, ("-%d" % f, hex(nodefunc(pos - f).node())))
 
+    navafter.append(("tip", "tip"))
+    try:
+        navbefore.insert(0, ("(0)", hex(nodefunc('0').node())))
+    except error.RepoError:
+        pass
+
+    def gen(l):
+        def f(**map):
             for label, node in l:
                 yield {"label": label, "node": node}
+        return f
 
-            yield {"label": "tip", "node": "tip"}
-        except error.RepoError:
-            pass
-
-    return nav
+    return (dict(before=gen(navbefore), after=gen(navafter)), )
 
 def _siblings(siblings=[], hiderev=None):
     siblings = [s for s in siblings if s.node() != nullid]

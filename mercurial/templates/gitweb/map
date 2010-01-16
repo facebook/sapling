@@ -34,6 +34,12 @@ filenolink = '
       <a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a>
     </td>
   </tr>'
+
+nav = '{before%naventry} {after%naventry}'
+navshort = '{before%navshortentry}{after%navshortentry}'
+navgraph = '{before%navgraphentry}{after%navgraphentry}'
+filenav = '{before%filenaventry}{after%filenaventry}'
+
 fileellipses = '...'
 changelogentry = changelogentry.tmpl
 searchentry = changelogentry.tmpl

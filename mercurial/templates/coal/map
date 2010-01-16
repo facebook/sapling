@@ -23,6 +23,11 @@ searchentry = ../paper/shortlogentry.tmpl
 changeset = ../paper/changeset.tmpl
 manifest = ../paper/manifest.tmpl
 
+nav = '{before%naventry} {after%naventry}'
+navshort = '{before%navshortentry}{after%navshortentry}'
+navgraph = '{before%navgraphentry}{after%navgraphentry}'
+filenav = '{before%filenaventry}{after%filenaventry}'
+
 direntry = '
   <tr class="fileline parity{parity}">
     <td class="name">

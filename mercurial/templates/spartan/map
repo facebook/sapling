@@ -20,6 +20,11 @@ searchentry = changelogentry.tmpl
 changeset = changeset.tmpl
 manifest = manifest.tmpl
 
+nav = '{before%naventry} {after%naventry}'
+navshort = '{before%navshortentry}{after%navshortentry}'
+navgraph = '{before%navgraphentry}{after%navgraphentry}'
+filenav = '{before%filenaventry}{after%filenaventry}'
+
 direntry = '
   <tr class="parity{parity}">
     <td><tt>drwxr-xr-x</tt>&nbsp;
