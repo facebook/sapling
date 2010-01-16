@@ -229,23 +229,21 @@ class SVNMeta(object):
             path = path[1:]
         return path
 
-    def is_path_tag(self, path):
-        """If path could represent the path to a tag, returns the potential tag
-        name. Otherwise, returns False.
+    def get_path_tag(self, path):
+        """If path could represent the path to a tag, returns the
+        potential (non-empty) tag name. Otherwise, returns None
 
         Note that it's only a tag if it was copied from the path '' in a branch
         (or tag) we have, for our purposes.
         """
-        if self.layout == 'single':
-            return False
-        path = self.normalize(path)
-        for tagspath in self.tag_locations:
-            onpath = path.startswith(tagspath)
-            longer = len(path) > len('%s/' % tagspath)
-            if path and onpath and longer:
-                tag, subpath = path[len(tagspath) + 1:], ''
-                return tag
-        return False
+        if self.layout != 'single':
+            path = self.normalize(path)
+            for tagspath in self.tag_locations:
+                if path.startswith(tagspath + '/'):
+                    tag = path[len(tagspath) + 1:]
+                    if tag:
+                        return tag
+        return None
 
     def split_branch_path(self, path, existing=True):
         """Figure out which branch inside our repo this path represents, and
@@ -260,8 +258,8 @@ class SVNMeta(object):
         path = self.normalize(path)
         if self.layout == 'single':
             return (path, None, '')
-        if self.is_path_tag(path):
-            tag = self.is_path_tag(path)
+        tag = self.get_path_tag(path)
+        if tag:
             matched = [t for t in self.tags.iterkeys() if tag.startswith(t+'/')]
             if not matched:
                 return None, None, None
@@ -299,10 +297,10 @@ class SVNMeta(object):
     def _determine_parent_branch(self, p, src_path, src_rev, revnum):
         if src_path is not None:
             src_file, src_branch = self.split_branch_path(src_path)[:2]
-            src_tag = self.is_path_tag(src_path)
-            if src_tag != False or src_file == '': # case 2
+            src_tag = self.get_path_tag(src_path)
+            if src_tag or src_file == '':
                 ln = self.localname(p)
-                if src_tag != False and src_tag in self.tags:
+                if src_tag and src_tag in self.tags:
                     ci = self.repo[self.tags[src_tag]].extra()['convert_revision']
                     src_rev, src_branch, = self.parse_converted_revision(ci)
                 return {ln: (src_branch, src_rev, revnum)}
@@ -350,7 +348,7 @@ class SVNMeta(object):
     def get_parent_revision(self, number, branch):
         '''Get the parent revision hash for a commit on a specific branch.
         '''
-        tag = self.is_path_tag(self.remotename(branch))
+        tag = self.get_path_tag(self.remotename(branch))
         limitedtags = maps.TagMap(self.repo, endrev=number-1)
         if tag and tag in limitedtags:
             ha = limitedtags[tag]
@@ -384,8 +382,8 @@ class SVNMeta(object):
         self.closebranches = set()
         tags_to_delete = set()
         for p in sorted(paths):
-            t_name = self.is_path_tag(p)
-            if t_name != False:
+            t_name = self.get_path_tag(p)
+            if t_name:
                 src_p, src_rev = paths[p].copyfrom_path, paths[p].copyfrom_rev
                 # if you commit to a tag, I'm calling you stupid and ignoring
                 # you.
@@ -393,7 +391,7 @@ class SVNMeta(object):
                     file, branch = self.split_branch_path(src_p)[:2]
                     if file is None:
                         # some crazy people make tags from other tags
-                        from_tag = self.is_path_tag(src_p)
+                        from_tag = self.get_path_tag(src_p)
                         if not from_tag:
                             continue
                         if from_tag in self.tags:
@@ -527,7 +525,7 @@ class SVNMeta(object):
             branches.setdefault(branch, []).append(('rm', tag, None))
 
         for b, tags in branches.iteritems():
-            fromtag = self.is_path_tag(self.remotename(b))
+            fromtag = self.get_path_tag(self.remotename(b))
             # modify parent's .hgtags source
             parent = self.repo[self.get_parent_revision(rev.revnum, b)]
             if '.hgtags' not in parent:

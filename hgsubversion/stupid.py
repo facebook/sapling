@@ -469,7 +469,7 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
         relpath, branch, branchpath = meta.split_branch_path(p)
         if relpath is not None:
             branches[branch] = branchpath
-        elif paths[p].action == 'D' and not meta.is_path_tag(p):
+        elif paths[p].action == 'D' and not meta.get_path_tag(p):
             ln = meta.localname(p)
             # must check in branches_to_delete as well, because this runs after we
             # already updated the branch map
@@ -552,7 +552,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
 
     deleted_branches = {}
     for p in r.paths:
-        if meta.is_path_tag(p):
+        if meta.get_path_tag(p):
             continue
         branch = meta.localname(p)
         if not (r.paths[p].action == 'R' and branch in meta.branches):
@@ -618,9 +618,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
 
         extra = meta.genextra(r.revnum, b)
 
-        tag = False
-        tag = meta.is_path_tag(meta.remotename(b))
-
+        tag = meta.get_path_tag(meta.remotename(b))
         if tag:
             if parentctx.node() == node.nullid:
                 continue
@@ -642,7 +640,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         branch = extra.get('branch', None)
         if not tag:
             if (not branch in meta.branches
-                and not meta.is_path_tag(meta.remotename(branch))):
+                and not meta.get_path_tag(meta.remotename(branch))):
                 meta.branches[branch] = None, 0, r.revnum
             meta.revmap[r.revnum, b] = ha
         else:

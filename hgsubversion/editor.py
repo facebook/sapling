@@ -193,7 +193,7 @@ class HgEditor(delta.Editor):
         if not fpath:
             return
         if (branch not in self.meta.branches and
-            not self.meta.is_path_tag(self.meta.remotename(branch))):
+            not self.meta.get_path_tag(self.meta.remotename(branch))):
             # we know this branch will exist now, because it has at least one file. Rock.
             self.meta.branches[branch] = None, 0, self.current.rev.revnum
         self.current.file = path
@@ -235,12 +235,12 @@ class HgEditor(delta.Editor):
         if br_path is None or not copyfrom_path:
             return path
         if copyfrom_path:
-            tag = self.meta.is_path_tag(copyfrom_path)
+            tag = self.meta.get_path_tag(copyfrom_path)
             if tag not in self.meta.tags:
                 tag = None
-            if not self.meta.is_path_valid(copyfrom_path) and not tag:
-                self.current.missing.add('%s/' % path)
-                return path
+                if not self.meta.is_path_valid(copyfrom_path):
+                    self.current.missing.add('%s/' % path)
+                    return path
         if tag:
             ci = self.meta.repo[self.meta.tags[tag]].extra()['convert_revision']
             source_rev, source_branch, = self.meta.parse_converted_revision(ci)

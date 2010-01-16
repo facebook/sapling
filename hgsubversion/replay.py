@@ -128,12 +128,14 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             continue
 
         extra = meta.genextra(rev.revnum, branch)
-        tag = False
+        tag = None
         if branch is not None:
-            tag = meta.is_path_tag(meta.remotename(branch))
-            if (not (tag and tag in meta.tags) and
-                (branch not in meta.branches
-                and branch not in meta.repo.branchtags())):
+            # New regular tag without modifications, it will be committed by
+            # svnmeta.committag(), we can skip the whole branch for now
+            tag = meta.get_path_tag(meta.remotename(branch))
+            if (tag and tag not in meta.tags and
+                branch not in meta.branches
+                and branch not in meta.repo.branchtags()):
                 continue
 
         parentctx = meta.repo.changectx(parents[0])
