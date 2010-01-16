@@ -176,7 +176,7 @@ hg email --date '1980-1-1 0:1' -m tmp.mbox -f quux -t 'spam<spam><eggs>' \
 cat tmp.mbox | fixheaders
 
 echo "% test multi-byte domain parsing"
-UUML=`printf '\374'`
+UUML=`python -c 'import sys; sys.stdout.write("\374")'`
 HGENCODING=iso-8859-1
 export HGENCODING
 hg email --date '1980-1-1 0:1' -m tmp.mbox -f quux -t "bar@${UUML}nicode.com" \

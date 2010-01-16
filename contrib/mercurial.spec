@@ -19,6 +19,9 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 #
 BuildRequires: python >= 2.4, python-devel, make, gcc, docutils >= 0.5
 Provides: hg = %{version}-%{release}
+Requires: python >= 2.4
+# The hgk extension uses the wish tcl interpreter, but we don't enforce it
+#Requires: tk
 
 %define pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')
 %define emacs_lispdir %{_datadir}/emacs/site-lisp
@@ -41,7 +44,8 @@ make install-doc DESTDIR=$RPM_BUILD_ROOT MANDIR=%{_mandir}
 install contrib/hgk          $RPM_BUILD_ROOT%{_bindir}
 install contrib/convert-repo $RPM_BUILD_ROOT%{_bindir}/mercurial-convert-repo
 install contrib/hg-ssh       $RPM_BUILD_ROOT%{_bindir}
-install contrib/git-viz/{hg-viz,git-rev-tree} $RPM_BUILD_ROOT%{_bindir}
+install contrib/git-viz/hg-viz $RPM_BUILD_ROOT%{_bindir}
+install contrib/git-viz/git-rev-tree $RPM_BUILD_ROOT%{_bindir}
 
 bash_completion_dir=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
 mkdir -p $bash_completion_dir
@@ -53,6 +57,7 @@ install -m 644 contrib/zsh_completion $zsh_completion_dir/_mercurial
 
 mkdir -p $RPM_BUILD_ROOT%{emacs_lispdir}
 install contrib/mercurial.el $RPM_BUILD_ROOT%{emacs_lispdir}
+install contrib/mq.el $RPM_BUILD_ROOT%{emacs_lispdir}
 
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/mercurial/hgrc.d
 install contrib/mergetools.hgrc $RPM_BUILD_ROOT%{_sysconfdir}/mercurial/hgrc.d/mergetools.rc
@@ -63,11 +68,12 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html doc/ja *.cgi contrib/*.fcgi
-%doc %attr(644,root,root) %{_mandir}/man?/hg*.gz
+%doc %attr(644,root,root) %{_mandir}/man?/hg*
 %doc %attr(644,root,root) contrib/*.svg contrib/sample.hgrc
 %{_sysconfdir}/bash_completion.d/mercurial.sh
 %{_datadir}/zsh/site-functions/_mercurial
 %{_datadir}/emacs/site-lisp/mercurial.el
+%{_datadir}/emacs/site-lisp/mq.el
 %{_bindir}/hg
 %{_bindir}/hgk
 %{_bindir}/hg-ssh
