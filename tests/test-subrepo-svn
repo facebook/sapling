@@ -19,7 +19,7 @@ filterpath="sed s|$escapedwd|/root|"
 echo % create subversion repo
 
 SVNREPO="file://$escapedwd/svn-repo"
-WCROOT="$(pwd)/svn-wc"
+WCROOT="`pwd`/svn-wc"
 svnadmin create svn-repo
 svn co $SVNREPO svn-wc
 cd svn-wc
