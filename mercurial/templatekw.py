@@ -8,7 +8,7 @@
 from node import hex
 import encoding, patch, util, error
 
-def showlist(templ, name, values, plural=None, **args):
+def showlist(name, values, plural=None, **args):
     '''expand set of values.
     name is name of key in template map.
     values is list of strings or dicts.
@@ -28,6 +28,7 @@ def showlist(templ, name, values, plural=None, **args):
 
     expand 'end_foos'.
     '''
+    templ = args['templ']
     if plural: names = plural
     else: names = name + 's'
     if not values:
@@ -143,11 +144,11 @@ def getrenamedfn(repo, endrev=None):
 def showauthor(repo, ctx, templ, **args):
     return ctx.user()
 
-def showbranches(repo, ctx, templ, **args):
-    branch = ctx.branch()
+def showbranches(**args):
+    branch = args['ctx'].branch()
     if branch != 'default':
         branch = encoding.tolocal(branch)
-        return showlist(templ, 'branch', [branch], plural='branches', **args)
+        return showlist('branch', [branch], plural='branches', **args)
 
 def showdate(repo, ctx, templ, **args):
     return ctx.date()
@@ -164,20 +165,23 @@ def showdiffstat(repo, ctx, templ, **args):
         removes += i[2]
     return '%s: +%s/-%s' % (files, adds, removes)
 
-def showextras(repo, ctx, templ, **args):
-    for key, value in sorted(ctx.extra().items()):
+def showextras(**args):
+    templ = args['templ']
+    for key, value in sorted(args['ctx'].extra().items()):
         args = args.copy()
         args.update(dict(key=key, value=value))
         yield templ('extra', **args)
 
-def showfileadds(repo, ctx, templ, revcache, **args):
-    return showlist(templ, 'file_add', getfiles(repo, ctx, revcache)[1], **args)
+def showfileadds(**args):
+    repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
+    return showlist('file_add', getfiles(repo, ctx, revcache)[1], **args)
 
-def showfilecopies(repo, ctx, templ, cache, revcache, **args):
-    copies = revcache.get('copies')
+def showfilecopies(**args):
+    cache, ctx= args['cache'], args['ctx']
+    copies = args['revcache'].get('copies')
     if copies is None:
         if 'getrenamed' not in cache:
-            cache['getrenamed'] = getrenamedfn(repo)
+            cache['getrenamed'] = getrenamedfn(args['repo'])
         copies = []
         getrenamed = cache['getrenamed']
         for fn in ctx.files():
@@ -186,24 +190,26 @@ def showfilecopies(repo, ctx, templ, cache, revcache, **args):
                 copies.append((fn, rename[0]))
             
     c = [{'name': x[0], 'source': x[1]} for x in copies]
-    return showlist(templ, 'file_copy', c, plural='file_copies', **args)
+    return showlist('file_copy', c, plural='file_copies', **args)
 
 # showfilecopiesswitch() displays file copies only if copy records are
 # provided before calling the templater, usually with a --copies
 # command line switch.
-def showfilecopiesswitch(repo, ctx, templ, cache, revcache, **args):
-    copies = revcache.get('copies') or []
+def showfilecopiesswitch(**args):
+    copies = args['revcache'].get('copies') or []
     c = [{'name': x[0], 'source': x[1]} for x in copies]
-    return showlist(templ, 'file_copy', c, plural='file_copies', **args)
+    return showlist('file_copy', c, plural='file_copies', **args)
 
-def showfiledels(repo, ctx, templ, revcache, **args):
-    return showlist(templ, 'file_del', getfiles(repo, ctx, revcache)[2], **args)
+def showfiledels(**args):
+    repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
+    return showlist('file_del', getfiles(repo, ctx, revcache)[2], **args)
 
-def showfilemods(repo, ctx, templ, revcache, **args):
-    return showlist(templ, 'file_mod', getfiles(repo, ctx, revcache)[0], **args)
+def showfilemods(**args):
+    repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
+    return showlist('file_mod', getfiles(repo, ctx, revcache)[0], **args)
 
-def showfiles(repo, ctx, templ, **args):
-    return showlist(templ, 'file', ctx.files(), **args)
+def showfiles(**args):
+    return showlist('file', args['ctx'].files(), **args)
 
 def showlatesttag(repo, ctx, templ, cache, **args):
     return getlatesttags(repo, ctx, cache)[2]
@@ -211,7 +217,8 @@ def showlatesttag(repo, ctx, templ, cache, **args):
 def showlatesttagdistance(repo, ctx, templ, cache, **args):
     return getlatesttags(repo, ctx, cache)[1]
 
-def showmanifest(repo, ctx, templ, **args):
+def showmanifest(**args):
+    repo, ctx, templ = args['repo'], args['ctx'], args['templ']
     args = args.copy()
     args.update(dict(rev=repo.manifest.rev(ctx.changeset()[0]),
                      node=hex(ctx.changeset()[0])))
@@ -223,9 +230,17 @@ def shownode(repo, ctx, templ, **args):
 def showrev(repo, ctx, templ, **args):
     return ctx.rev()
 
-def showtags(repo, ctx, templ, **args):
-    return showlist(templ, 'tag', ctx.tags(), **args)
+def showtags(**args):
+    return showlist('tag', args['ctx'].tags(), **args)
 
+# keywords are callables like:
+# fn(repo, ctx, templ, cache, revcache, **args)
+# with:
+# repo - current repository instance
+# ctx - the changectx being displayed
+# templ - the templater instance
+# cache - a cache dictionary for the whole templater run
+# revcache - a cache dictionary for the current revision
 keywords = {
     'author': showauthor,
     'branches': showbranches,

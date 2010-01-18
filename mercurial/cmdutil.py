@@ -806,10 +806,11 @@ class changeset_templater(changeset_printer):
         # causes unexpected behaviours at templating level and makes
         # it harder to extract it in a standalone function. Its
         # behaviour cannot be changed so leave it here for now.
-        def showparents(repo, ctx, templ, **args):
+        def showparents(**args):
+            ctx = args['ctx']
             parents = [[('rev', p.rev()), ('node', p.hex())]
                        for p in self._meaningful_parentrevs(ctx)]
-            return showlist(templ, 'parent', parents, **args)
+            return showlist('parent', parents, **args)
 
         props = props.copy()
         props.update(templatekw.keywords)

@@ -195,4 +195,13 @@ style = ~/styles/teststyle
 EOF
 hg -R latesttag tip
 
+echo '# test recursive showlist template (issue1989)'
+cat > style1989 <<EOF
+changeset = '{file_mods}{manifest}{extras}'
+file_mod  = 'M|{author|person}\n'
+manifest = '{rev},{author}\n'
+extra = '{key}: {author}\n'
+EOF
+hg -R latesttag log -r tip --style=style1989
+
 echo '# done'
