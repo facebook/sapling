@@ -98,7 +98,10 @@ class AuthorMap(dict):
 
 
 class TagMap(dict):
+    """Map tags to converted node identifier.
 
+    tag names are non-empty strings.
+    """
     VERSION = 2
 
     @classmethod
@@ -133,6 +136,8 @@ class TagMap(dict):
             tag = tag[:-1]
             if self.endrev is not None and revision > self.endrev:
                 break
+            if not tag:
+                continue
             dict.__setitem__(self, tag, node.bin(hash))
         f.close()
 
@@ -148,14 +153,17 @@ class TagMap(dict):
             self[k] = v
 
     def __contains__(self, tag):
-        return dict.__contains__(self, tag) and dict.__getitem__(self, tag) != node.nullid
+        return (tag and dict.__contains__(self, tag) 
+                and dict.__getitem__(self, tag) != node.nullid)
 
     def __getitem__(self, tag):
-        if tag in self:
+        if tag and tag in self:
             return dict.__getitem__(self, tag)
         raise KeyError()
 
     def __setitem__(self, tag, info):
+        if not tag:
+            raise hgutil.Abort('tag cannot be empty')
         hash, revision = info
         f = open(self.path, 'a')
         f.write('%s %s %s\n' % (node.hex(hash), revision, tag))

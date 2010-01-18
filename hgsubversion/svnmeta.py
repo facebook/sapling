@@ -300,7 +300,7 @@ class SVNMeta(object):
             src_tag = self.get_path_tag(src_path)
             if src_tag or src_file == '':
                 ln = self.localname(p)
-                if src_tag and src_tag in self.tags:
+                if src_tag in self.tags:
                     ci = self.repo[self.tags[src_tag]].extra()['convert_revision']
                     src_rev, src_branch, = self.parse_converted_revision(ci)
                 return {ln: (src_branch, src_rev, revnum)}
@@ -350,7 +350,7 @@ class SVNMeta(object):
         '''
         tag = self.get_path_tag(self.remotename(branch))
         limitedtags = maps.TagMap(self.repo, endrev=number-1)
-        if tag and tag in limitedtags:
+        if tag in limitedtags:
             ha = limitedtags[tag]
             return ha
         r, br = self.get_parent_svn_branch_and_rev(number, branch)
