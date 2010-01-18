@@ -234,13 +234,12 @@ class HgEditor(delta.Editor):
                 self.current.emptybranches[branch] = False
         if br_path is None or not copyfrom_path:
             return path
-        if copyfrom_path:
-            tag = self.meta.get_path_tag(copyfrom_path)
-            if tag not in self.meta.tags:
-                tag = None
-                if not self.meta.is_path_valid(copyfrom_path):
-                    self.current.missing.add('%s/' % path)
-                    return path
+        tag = self.meta.get_path_tag(copyfrom_path)
+        if tag not in self.meta.tags:
+            tag = None
+            if not self.meta.is_path_valid(copyfrom_path):
+                self.current.missing.add('%s/' % path)
+                return path
         if tag:
             ci = self.meta.repo[self.meta.tags[tag]].extra()['convert_revision']
             source_rev, source_branch, = self.meta.parse_converted_revision(ci)
