@@ -2133,7 +2133,7 @@ def heads(ui, repo, *branchrevs, **opts):
         displayer.show(ctx)
     displayer.close()
 
-def help_(ui, name=None, with_version=False, unknowncmd=False, full=True):
+def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts):
     """show help for a given topic or a help overview
 
     With no arguments, print a list of commands with short help messages.
@@ -2332,6 +2332,8 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True):
         i = None
         if unknowncmd:
             queries = (helpextcmd,)
+        elif opts.get('extension'):
+            queries = (helpext,)
         else:
             queries = (helptopic, helpcmd, helpext, helpextcmd)
         for f in queries:
@@ -4705,7 +4707,9 @@ table = {
            _('show normal and closed branch heads')),
          ] + templateopts,
          _('[-ac] [-r STARTREV] [REV]...')),
-    "help": (help_, [], _('[TOPIC]')),
+    "help": (help_,
+        [('e', 'extension', None, _('show only help for extensions'))],
+        _('[-e] [TOPIC]')),
     "identify|id":
         (identify,
          [('r', 'rev', '',

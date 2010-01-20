@@ -232,6 +232,101 @@ Check hgweb's load order:
   [+] marked option can be specified multiple times
   $ echo 'debugextension = !' >> $HGRCPATH
 
+Extension module help vs command help:
+
+  $ echo 'extdiff =' >> $HGRCPATH
+  $ hg help extdiff
+  hg extdiff [OPT]... [FILE]...
+  
+  use external program to diff repository (or selected files)
+  
+      Show differences between revisions for the specified files, using an
+      external program. The default program used is diff, with default options
+      "-Npru".
+  
+      To select a different program, use the -p/--program option. The program
+      will be passed the names of two directories to compare. To pass additional
+      options to the program, use -o/--option. These will be passed before the
+      names of the directories to compare.
+  
+      When two revision arguments are given, then changes are shown between
+      those revisions. If only one revision is specified then that revision is
+      compared to the working directory, and, when no revisions are specified,
+      the working directory files are compared to its parent.
+  
+  options:
+  
+   -p --program CMD          comparison program to run
+   -o --option OPT [+]       pass option to comparison program
+   -r --rev REV [+]          revision
+   -c --change REV           change made by revision
+   -I --include PATTERN [+]  include names matching the given patterns
+   -X --exclude PATTERN [+]  exclude names matching the given patterns
+  
+  [+] marked option can be specified multiple times
+  
+  use "hg -v help extdiff" to show global options
+
+  $ hg help --extension extdiff
+  extdiff extension - command to allow external programs to compare revisions
+  
+  The extdiff Mercurial extension allows you to use external programs to compare
+  revisions, or revision with working directory. The external diff programs are
+  called with a configurable set of options and two non-option arguments: paths
+  to directories containing snapshots of files to compare.
+  
+  The extdiff extension also allows to configure new diff commands, so you do
+  not need to type "hg extdiff -p kdiff3" always.
+  
+    [extdiff]
+    # add new command that runs GNU diff(1) in 'context diff' mode
+    cdiff = gdiff -Nprc5
+    ## or the old way:
+    #cmd.cdiff = gdiff
+    #opts.cdiff = -Nprc5
+  
+    # add new command called vdiff, runs kdiff3
+    vdiff = kdiff3
+  
+    # add new command called meld, runs meld (no need to name twice)
+    meld =
+  
+    # add new command called vimdiff, runs gvimdiff with DirDiff plugin
+    # (see http://www.vim.org/scripts/script.php?script_id=102) Non
+    # English user, be sure to put "let g:DirDiffDynamicDiffText = 1" in
+    # your .vimrc
+    vimdiff = gvim -f '+next' '+execute "DirDiff" argv(0) argv(1)'
+  
+  Tool arguments can include variables that are expanded at runtime:
+  
+    $parent1, $plabel1 - filename, descriptive label of first parent
+    $child,   $clabel  - filename, descriptive label of child revision
+    $parent2, $plabel2 - filename, descriptive label of second parent
+    $root              - repository root
+    $parent is an alias for $parent1.
+  
+  The extdiff extension will look in your [diff-tools] and [merge-tools]
+  sections for diff tool arguments, when none are specified in [extdiff].
+  
+    [extdiff]
+    kdiff3 =
+  
+    [diff-tools]
+    kdiff3.diffargs=--L1 '$plabel1' --L2 '$clabel' $parent $child
+  
+  You can use -I/-X and list of file or directory names like normal "hg diff"
+  command. The extdiff extension makes snapshots of only needed files, so
+  running the external diff program will actually be pretty fast (at least
+  faster than having to compare the entire tree).
+  
+  list of commands:
+  
+   extdiff   use external program to diff repository (or selected files)
+  
+  use "hg -v help extdiff" to show builtin aliases and global options
+
+  $ echo 'extdiff = !' >> $HGRCPATH
+
 Issue811: Problem loading extensions twice (by site and by user)
 
   $ debugpath=`pwd`/debugissue811.py
