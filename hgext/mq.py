@@ -613,10 +613,10 @@ class queue(object):
 
             message = ph.message
             if not message:
-                message = _("imported patch %s\n") % patchname
+                message = "imported patch %s\n" % patchname
             else:
                 if list:
-                    message.append(_("\nimported patch %s") % patchname)
+                    message.append("\nimported patch %s" % patchname)
                 message = '\n'.join(message)
 
             if ph.haspatch:
