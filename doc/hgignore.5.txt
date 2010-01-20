@@ -106,6 +106,6 @@ Copying
 This manual page is copyright 2006 Vadim Gelfer.
 Mercurial is copyright 2005-2010 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General
-Public License version 2.
+Public License version 2 or any later version.
 
 .. include:: common.txt

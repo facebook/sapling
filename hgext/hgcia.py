@@ -1,5 +1,7 @@
 # Copyright (C) 2007-8 Brendan Cully <brendan@kublai.com>
-# Published under the GNU GPL
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
 
 """hooks for integrating with the CIA.vc notification service
 

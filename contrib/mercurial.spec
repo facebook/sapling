@@ -2,7 +2,7 @@ Summary: Mercurial -- a distributed SCM
 Name: mercurial
 Version: snapshot
 Release: 0
-License: GPLv2
+License: GPLv2+
 Group: Development/Tools
 URL: http://mercurial.selenic.com/
 Source0: http://mercurial.selenic.com/release/%{name}-%{version}.tar.gz

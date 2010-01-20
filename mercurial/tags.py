@@ -4,7 +4,7 @@
 # Copyright 2009 Greg Ward <greg@gerg.ca>
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2, incorporated herein by reference.
+# GNU General Public License version 2 or any later version.
 
 # Currently this module only deals with reading and caching tags.
 # Eventually, it could take care of updating (adding/removing/moving)

@@ -5,8 +5,8 @@
 ;; Author: Bryan O'Sullivan <bos@serpentine.com>
 
 ;; mercurial.el is free software; you can redistribute it and/or
-;; modify it under the terms of version 2 of the GNU General Public
-;; License as published by the Free Software Foundation.
+;; modify it under the terms of the GNU General Public License or any
+;; later version.
 
 ;; mercurial.el is distributed in the hope that it will be useful, but
 ;; WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -784,7 +784,7 @@ Push changes                          G    C-c h >      hg-push"
 (defun hg-help-overview ()
   "This is an overview of the Mercurial SCM mode for Emacs.
 
-You can find the source code, license (GPL v2), and credits for this
+You can find the source code, license (GPLv2+), and credits for this
 code by typing `M-x find-library mercurial RET'."
   (interactive)
   (hg-view-output ("Mercurial Help Overview")

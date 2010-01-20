@@ -3,7 +3,7 @@
 # Copyright (C) 2007 Brendan Cully <brendan@kublai.com>
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2, incorporated herein by reference.
+# GNU General Public License version 2 or any later version.
 
 """recreates hardlinks between repository clones"""
 
