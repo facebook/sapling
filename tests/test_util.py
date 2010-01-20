@@ -88,7 +88,7 @@ def filtermanifest(manifest):
                   manifest)
 
 def fileurl(path):
-    path = os.path.abspath(path)
+    path = os.path.abspath(path).replace(os.sep, '/')
     drive, path = os.path.splitdrive(path)
     if drive:
         drive = '/' + drive
