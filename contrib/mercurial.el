@@ -5,8 +5,8 @@
 ;; Author: Bryan O'Sullivan <bos@serpentine.com>
 
 ;; mercurial.el is free software; you can redistribute it and/or
-;; modify it under the terms of the GNU General Public License or any
-;; later version.
+;; modify it under the terms of the GNU General Public License version
+;; 2 or any later version.
 
 ;; mercurial.el is distributed in the hope that it will be useful, but
 ;; WITHOUT ANY WARRANTY; without even the implied warranty of
