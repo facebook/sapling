@@ -2949,6 +2949,7 @@ def summary(ui, repo, **opts):
             t.append(l % len(s))
 
     t = ', '.join(t)
+    cleanworkdir = False
 
     if len(parents) > 1:
         t += _(' (merge)')
@@ -2956,10 +2957,11 @@ def summary(ui, repo, **opts):
         t += _(' (new branch)')
     elif (not st[0] and not st[1] and not st[2]):
         t += _(' (clean)')
+        cleanworkdir = True
     elif pnode not in bheads:
         t += _(' (new branch head)')
 
-    if 'clean' in t:
+    if cleanworkdir:
         ui.status(_('commit: %s\n') % t.strip())
     else:
         ui.write(_('commit: %s\n') % t.strip())
