@@ -495,6 +495,17 @@ class filectx(object):
 
         return None
 
+    def ancestors(self):
+        seen = set(str(self))
+        visit = [self]
+        while visit:
+            for parent in visit.pop(0).parents():
+                s = str(parent)
+                if s not in seen:
+                    visit.append(parent)
+                    seen.add(s)
+                    yield parent
+
 class workingctx(changectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.

@@ -28,27 +28,6 @@ def _dirs(files):
             f = _dirname(f)
     return d
 
-def _findoldnames(fctx, limit):
-    "find files that path was copied from, back to linkrev limit"
-    old = {}
-    seen = set()
-    orig = fctx.path()
-    visit = [(fctx, 0)]
-    while visit:
-        fc, depth = visit.pop()
-        s = str(fc)
-        if s in seen:
-            continue
-        seen.add(s)
-        if fc.path() != orig and fc.path() not in old:
-            old[fc.path()] = (depth, fc.path()) # remember depth
-        if fc.rev() is not None and fc.rev() < limit:
-            continue
-        visit += [(p, depth - 1) for p in fc.parents()]
-
-    # return old names sorted by depth
-    return [o[1] for o in sorted(old.values())]
-
 def _findlimit(repo, a, b):
     """Find the earliest revision that's an ancestor of a or b but not both,
     None if no such revision exists.
@@ -138,23 +117,50 @@ def copies(repo, c1, c2, ca, checkdirs=False):
     fullcopy = {}
     diverge = {}
 
+    def related(f1, f2, limit):
+        g1, g2 = f1.ancestors(), f2.ancestors()
+        try:
+            while 1:
+                f1r, f2r = f1.rev(), f2.rev()
+                if f1r > f2r:
+                    f1 = g1.next()
+                elif f2r > f1r:
+                    f2 = g2.next()
+                elif f1 == f2:
+                    return f1 # a match
+                elif f1r == f2r or f1r < limit or f2r < limit:
+                    return False # copy no longer relevant
+        except StopIteration:
+            return False
+
     def checkcopies(f, m1, m2):
         '''check possible copies of f from m1 to m2'''
-        c1 = ctx(f, m1[f])
-        for of in _findoldnames(c1, limit):
+        of = None
+        seen = set([f])
+        for oc in ctx(f, m1[f]).ancestors():
+            ocr = oc.rev()
+            of = oc.path()
+            if of in seen:
+                # check limit late - grab last rename before
+                if ocr < limit:
+                    break
+                continue
+            seen.add(of)
+
             fullcopy[f] = of # remember for dir rename detection
-            if of in m2: # original file not in other manifest?
-                # if the original file is unchanged on the other branch,
-                # no merge needed
-                if m2[of] != ma.get(of):
-                    c2 = ctx(of, m2[of])
-                    ca = c1.ancestor(c2)
-                    # related and named changed on only one side?
-                    if ca and (ca.path() == f or ca.path() == c2.path()):
-                        if c1 != ca or c2 != ca: # merge needed?
-                            copy[f] = of
-            elif of in ma:
-                diverge.setdefault(of, []).append(f)
+            if of not in m2:
+                continue # no match, keep looking
+            if m2[of] == ma.get(of):
+                break # no merge needed, quit early
+            c2 = ctx(of, m2[of])
+            cr = related(oc, c2, ca.rev())
+            if of == f or of == c2.path(): # non-divergent
+                copy[f] = of
+                of = None
+                break
+
+        if of in ma:
+            diverge.setdefault(of, []).append(f)
 
     repo.ui.debug("  searching for copies back to rev %d\n" % limit)
 
