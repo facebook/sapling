@@ -1,10 +1,9 @@
-#
 # Mercurial built-in replacement for cvsps.
 #
 # Copyright 2008, Frank Kingswood <frank@kingswood-consulting.co.uk>
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2, incorporated herein by reference.
+# GNU General Public License version 2 or any later version.
 
 import os
 import re

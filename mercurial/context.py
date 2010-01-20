@@ -3,7 +3,7 @@
 # Copyright 2006, 2007 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2, incorporated herein by reference.
+# GNU General Public License version 2 or any later version.
 
 from node import nullid, nullrev, short, hex
 from i18n import _
@@ -492,6 +492,17 @@ class filectx(object):
             return filectx(self._repo, f, fileid=n, filelog=flcache[f])
 
         return None
+
+    def ancestors(self):
+        seen = set(str(self))
+        visit = [self]
+        while visit:
+            for parent in visit.pop(0).parents():
+                s = str(parent)
+                if s not in seen:
+                    visit.append(parent)
+                    seen.add(s)
+                    yield parent
 
 class workingctx(changectx):
     """A workingctx object makes access to data related to

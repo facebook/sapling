@@ -6,7 +6,7 @@
 # Inspired by git bisect, extension skeleton taken from mq.py.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2, incorporated herein by reference.
+# GNU General Public License version 2 or any later version.
 
 import os
 from i18n import _

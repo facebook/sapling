@@ -5,7 +5,7 @@
 # Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2, incorporated herein by reference.
+# GNU General Public License version 2 or any later version.
 
 import urllib, urllib2, urlparse, httplib, os, re, socket, cStringIO
 from i18n import _

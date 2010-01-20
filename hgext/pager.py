@@ -3,7 +3,7 @@
 # Copyright 2008 David Soria Parra <dsp@php.net>
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2, incorporated herein by reference.
+# GNU General Public License version 2 or any later version.
 #
 # To load the extension, add it to your .hgrc file:
 #

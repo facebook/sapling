@@ -4,7 +4,7 @@
 # Copyright 2008 Alexander Solovyov <piranha@piranha.org.ua>
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2, incorporated herein by reference.
+# GNU General Public License version 2 or any later version.
 
 '''command to display statistics about repository history'''
 
