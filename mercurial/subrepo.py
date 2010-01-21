@@ -265,8 +265,8 @@ class svnsubrepo(object):
         cmd = [util.shellquote(arg) for arg in cmd]
         cmd = util.quotecommand(' '.join(cmd))
         env = dict(os.environ)
-        for k in ('LANGUAGE', 'LANG', 'LC_ALL', 'LC_MESSAGES'):
-            env[k] = 'en_US.UTF-8'
+        # Avoid localized output, preserve current locale for everything else.
+        env['LC_MESSAGES'] = 'C'
         write, read, err = util.popen3(cmd, env=env, newlines=True)
         retdata = read.read()
         err = err.read().strip()
