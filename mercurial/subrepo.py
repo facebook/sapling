@@ -282,27 +282,45 @@ class svnsubrepo(object):
             return 0
         return int(entries[0].getAttribute('revision') or 0)
 
-    def _wcclean(self):
+    def _wcchanged(self):
+        """Return (changes, extchanges) where changes is True
+        if the working directory was changed, and extchanges is
+        True if any of these changes concern an external entry.
+        """
         output = self._svncommand(['status', '--xml'])
+        externals, changes = [], []
         doc = xml.dom.minidom.parseString(output)
-        for s in doc.getElementsByTagName('wc-status'):
-            st = s.getAttribute('item')
-            if st and st != 'unversioned':
-                return False
-            props = s.getAttribute('props')
-            if props and props != 'none':
-                return False
-        return True
+        for e in doc.getElementsByTagName('entry'):
+            s = e.getElementsByTagName('wc-status')
+            if not s:
+                continue
+            item = s[0].getAttribute('item')
+            props = s[0].getAttribute('props')
+            path = e.getAttribute('path')
+            if item == 'external':
+                externals.append(path)
+            if (item not in ('', 'normal', 'unversioned', 'external')
+                or props not in ('', 'none')):
+                changes.append(path)
+        for path in changes:
+            for ext in externals:
+                if path == ext or path.startswith(ext + os.sep):
+                    return True, True
+        return bool(changes), False
 
     def dirty(self):
-        if self._wcrev() == self._state[1] and self._wcclean():
+        if self._wcrev() == self._state[1] and not self._wcchanged()[0]:
             return False
         return True
 
     def commit(self, text, user, date):
         # user and date are out of our hands since svn is centralized
-        if self._wcclean():
+        changed, extchanged = self._wcchanged()
+        if not changed:
             return self._wcrev()
+        if extchanged:
+            # Do not try to commit externals
+            raise util.Abort(_('cannot commit svn externals'))
         commitinfo = self._svncommand(['commit', '-m', text])
         self._ui.status(commitinfo)
         newrev = re.search('Committed revision ([\d]+).', commitinfo)

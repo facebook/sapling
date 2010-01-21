@@ -1,9 +1,20 @@
 % create subversion repo
 Checked out revision 0.
-A         alpha
-Adding         alpha
-Transmitting file data .
+A         src
+A         src/alpha
+A         externals
+A         externals/other
+Adding         externals
+Adding         externals/other
+Adding         src
+Adding         src/alpha
+Transmitting file data ..
 Committed revision 1.
+At revision 1.
+property 'svn:externals' set on 'src'
+Sending        src
+
+Committed revision 2.
 % create hg repo
 % first revision, no sub
 adding a
@@ -11,38 +22,66 @@ adding a
 committing subrepository s
 % debugsub
 path s
- source   file:///root/svn-repo
- revision 1
+ source   file:///root/svn-repo/src
+ revision 2
 
 % change file in svn and hg, commit
 committing subrepository s
 Sending        s/alpha
 Transmitting file data .
-Committed revision 2.
-At revision 2.
+Committed revision 3.
+
+Fetching external item into 's/externals'
+External at revision 1.
+
+At revision 3.
 path s
- source   file:///root/svn-repo
- revision 2
+ source   file:///root/svn-repo/src
+ revision 3
 
 % should be empty despite change to s/a
 
 % add a commit from svn
 U    alpha
-Updated to revision 2.
-Sending        alpha
+
+Fetching external item into 'externals'
+A    externals/other
+Updated external to revision 1.
+
+Updated to revision 3.
+property 'svn:mime-type' set on 'alpha'
+Sending        src/alpha
 Transmitting file data .
-Committed revision 3.
+Committed revision 4.
 % this commit from hg will fail
 committing subrepository s
 abort: svn: Commit failed (details follow):
-svn: File '/alpha' is out of date
+svn: File '/src/alpha' is out of date
+% this commit fails because of meta changes
+property 'svn:mime-type' set on 's/alpha'
+committing subrepository s
+abort: svn: Commit failed (details follow):
+svn: File '/src/alpha' is out of date
+% this commit fails because of externals changes
+committing subrepository s
+abort: cannot commit svn externals
+% this commit fails because of externals meta changes
+property 'svn:mime-type' set on 's/externals/other'
+committing subrepository s
+abort: cannot commit svn externals
 
 % clone
 updating to branch default
 A    s/alpha
-Checked out revision 2.
+ U   s
+
+Fetching external item into 's/externals'
+A    s/externals/other
+Checked out external at revision 1.
+
+Checked out revision 3.
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % debugsub in clone
 path s
- source   file:///root/svn-repo
- revision 2
+ source   file:///root/svn-repo/src
+ revision 3

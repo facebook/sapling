@@ -23,9 +23,19 @@ WCROOT="`pwd`/svn-wc"
 svnadmin create svn-repo
 svn co $SVNREPO svn-wc
 cd svn-wc
-echo alpha > alpha
-svn add alpha
+mkdir src
+echo alpha > src/alpha
+svn add src
+mkdir externals
+echo other > externals/other
+svn add externals
 svn ci -m 'Add alpha'
+svn up
+cat > extdef <<EOF
+externals -r1 $SVNREPO/externals
+EOF
+svn propset -F extdef svn:externals src
+svn ci -m 'Setting externals'
 cd ..
 
 echo % create hg repo
@@ -39,8 +49,8 @@ echo a > a
 hg ci -Am0
 
 echo % add first svn sub
-echo "s = [svn]$SVNREPO" >> .hgsub
-svn co --quiet $SVNREPO s
+echo "s = [svn]$SVNREPO/src" >> .hgsub
+svn co --quiet $SVNREPO/src s
 hg add .hgsub
 hg ci -m1
 echo % debugsub
@@ -60,14 +70,32 @@ hg st
 
 echo
 echo % add a commit from svn
-cd "$WCROOT"
+cd "$WCROOT"/src
 svn up
 echo xyz >> alpha
+svn propset svn:mime-type 'text/xml' alpha
 svn ci -m 'amend a from svn'
-cd ../sub/t
+cd ../../sub/t
+
 echo % this commit from hg will fail
 echo zzz >> s/alpha
 hg ci -m 'amend alpha from hg'
+svn revert -q s/alpha
+
+echo % this commit fails because of meta changes
+svn propset svn:mime-type 'text/html' s/alpha
+hg ci -m 'amend alpha from hg'
+svn revert -q s/alpha
+
+echo % this commit fails because of externals changes
+echo zzz > s/externals/other
+hg ci -m 'amend externals from hg'
+svn revert -q s/externals/other
+
+echo % this commit fails because of externals meta changes
+svn propset svn:mime-type 'text/html' s/externals/other
+hg ci -m 'amend externals from hg'
+svn revert -q s/externals/other
 
 echo
 echo % clone
