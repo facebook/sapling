@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, re
+import errno, os, re, xml.dom.minidom
 from i18n import _
 import config, util, node, error
 hg = None
@@ -275,24 +275,23 @@ class svnsubrepo(object):
         return retdata
 
     def _wcrev(self):
-        info = self._svncommand(['info'])
-        mat = re.search('Revision: ([\d]+)\n', info)
-        if not mat:
+        output = self._svncommand(['info', '--xml'])
+        doc = xml.dom.minidom.parseString(output)
+        entries = doc.getElementsByTagName('entry')
+        if not entries:
             return 0
-        return mat.groups()[0]
-
-    def _url(self):
-        info = self._svncommand(['info'])
-        mat = re.search('URL: ([^\n]+)\n', info)
-        if not mat:
-            return 0
-        return mat.groups()[0]
+        return int(entries[0].getAttribute('revision') or 0)
 
     def _wcclean(self):
-        status = self._svncommand(['status'])
-        status = '\n'.join([s for s in status.splitlines() if s[0] != '?'])
-        if status.strip():
-            return False
+        output = self._svncommand(['status', '--xml'])
+        doc = xml.dom.minidom.parseString(output)
+        for s in doc.getElementsByTagName('wc-status'):
+            st = s.getAttribute('item')
+            if st and st != 'unversioned':
+                return False
+            props = s.getAttribute('props')
+            if props and props != 'none':
+                return False
         return True
 
     def dirty(self):
