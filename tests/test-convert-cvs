@@ -23,7 +23,7 @@ def cvslog(ui,repo,hooktype,log):
 def cvschangesets(ui,repo,hooktype,changesets):
     print "%s hook: %d changesets"%(hooktype,len(changesets))
 EOF
-hookpath=$PWD
+hookpath=`pwd`
 
 echo "[hooks]" >> $HGRCPATH
 echo "cvslog=python:$hookpath/cvshooks.py:cvslog" >> $HGRCPATH
@@ -32,7 +32,7 @@ echo "cvschangesets=python:$hookpath/cvshooks.py:cvschangesets" >> $HGRCPATH
 echo % create cvs repository
 mkdir cvsrepo
 cd cvsrepo
-CVSROOT=$PWD
+CVSROOT=`pwd`
 export CVSROOT
 CVS_OPTIONS=-f
 export CVS_OPTIONS
