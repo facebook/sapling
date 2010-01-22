@@ -6,7 +6,7 @@ echo "[extensions]" >> $HGRCPATH
 echo "convert = " >> $HGRCPATH
 
 echo % create p4 depot
-P4ROOT=$PWD/depot; export P4ROOT
+P4ROOT=`pwd`/depot; export P4ROOT
 P4AUDIT=$P4ROOT/audit; export P4AUDIT
 P4JOURNAL=$P4ROOT/journal; export P4JOURNAL
 P4LOG=$P4ROOT/log; export P4LOG
