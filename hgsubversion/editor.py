@@ -234,6 +234,9 @@ class HgEditor(delta.Editor):
                 self.current.emptybranches[branch] = False
         if br_path is None or not copyfrom_path:
             return path
+        if self.meta.get_path_tag(path):
+            del self.current.emptybranches[branch]
+            return path
         tag = self.meta.get_path_tag(copyfrom_path)
         if tag not in self.meta.tags:
             tag = None

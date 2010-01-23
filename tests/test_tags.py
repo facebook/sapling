@@ -1,4 +1,4 @@
-import os
+import os, sys, cStringIO, difflib
 import unittest
 
 from mercurial import commands
@@ -188,6 +188,73 @@ class TestTags(test_util.TestBase):
         commands.pull(repo.ui, repo)
         self.assertEqual(open(tm).read().splitlines()[0], '2')
 
+    def _debug_print_tags(self, repo, ctx, fp):
+        def formatnode(ctx):
+            crev = ctx.extra().get('convert_revision', 'unk/unk@unk')
+            path, rev = crev.rsplit('@', 1)
+            path = path.split('/', 1)[-1]
+            branch = ctx.branch() or 'default'
+            return 'hg=%s@%d:svn=%s@%s' % (branch, ctx.rev(), path, rev)
+
+        w = fp.write
+        if '.hgtags' not in ctx or not ctx['.hgtags'].data().strip():
+            return
+        desc = ctx.description().splitlines()[0].strip()
+        w('node: %s\n' % formatnode(ctx))
+        w('%s\n' % desc)
+        for line in ctx['.hgtags'].data().splitlines(False):
+            node, name = line.split(None, 1)
+            w('  %s: %s\n' % (name, formatnode(repo[node])))
+        w('\n')
+
+    def _test_tags(self, testpath, expected, stupid=False):
+        repo = self._load_fixture_and_fetch(testpath, stupid=stupid)
+        fp = cStringIO.StringIO()
+        for r in repo:
+            self._debug_print_tags(repo, repo[r], fp=fp)
+        output = fp.getvalue().strip()
+        expected = expected.strip()
+        if expected == output:
+            return
+        expected = expected.splitlines()
+        output = output.splitlines()
+        diff = difflib.unified_diff(expected, output, 'expected', 'output')
+        self.assert_(False, '\n' + '\n'.join(diff))
+
+    def test_tagging_into_tag(self, expected=None, stupid=False):
+        expected = """\
+node: hg=test@2:svn=branches/test@4
+First tag.
+  test-0.1: hg=test@1:svn=branches/test@3
+
+node: hg=test@3:svn=branches/test@5
+Weird tag.
+  test-0.1: hg=test@1:svn=branches/test@3
+  test-0.1/test: hg=test@1:svn=branches/test@3
+"""
+        self._test_tags('renametagdir.svndump', expected)
+
+    def test_tagging_into_tag_stupid(self):
+        # This test exposed existing flaws with tag handling in stupid mode.
+        # They will be resolved in the future.
+        expected = """\
+node: hg=test@2:svn=branches/test@4
+First tag.
+  test-0.1: hg=test@1:svn=branches/test@3
+
+node: hg=test@4:svn=branches/test@4
+Weird tag.
+  test-0.1: hg=test@1:svn=branches/test@3
+  test-0.1: hg=test@3:svn=tags/test-0.1@5
+
+node: hg=test@5:svn=branches/test@5
+Weird tag.
+  test-0.1: hg=test@1:svn=branches/test@3
+  test-0.1: hg=test@3:svn=tags/test-0.1@5
+  test-0.1/test: hg=test@1:svn=branches/test@3
+"""
+        self._test_tags('renametagdir.svndump', expected, True)
+    
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(TestTags)

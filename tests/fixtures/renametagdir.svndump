@@ -1,0 +1,165 @@
+SVN-fs-dump-format-version: 2
+
+UUID: a0c6ec72-28b3-4974-bd95-6d36963afc51
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2010-01-16T19:26:17.747443Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 104
+Content-length: 104
+
+K 7
+svn:log
+V 3
+btt
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-01-16T19:26:18.096428Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 110
+Content-length: 110
+
+K 7
+svn:log
+V 9
+Add file.
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-01-16T19:26:19.083966Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 3
+Prop-content-length: 108
+Content-length: 108
+
+K 7
+svn:log
+V 7
+Branch.
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-01-16T19:26:22.053451Z
+PROPS-END
+
+Node-path: branches/test
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk
+
+
+Revision-number: 4
+Prop-content-length: 112
+Content-length: 112
+
+K 7
+svn:log
+V 10
+First tag.
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-01-16T19:26:24.099798Z
+PROPS-END
+
+Node-path: tags/test-0.1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: branches/test
+
+
+Revision-number: 5
+Prop-content-length: 112
+Content-length: 112
+
+K 7
+svn:log
+V 10
+Weird tag.
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-01-16T19:26:24.191458Z
+PROPS-END
+
+Node-path: tags/test-0.1/test
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: branches/test
+
+

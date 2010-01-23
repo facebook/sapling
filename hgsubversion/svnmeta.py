@@ -262,10 +262,13 @@ class SVNMeta(object):
             return (path, None, '')
         tag = self.get_path_tag(path)
         if tag:
-            matched = [t for t in self.tags.iterkeys() if tag.startswith(t+'/')]
+            # consider the new tags when dispatching entries
+            matched = []
+            for tags in (self.tags, self.addedtags):
+                matched += [t for t in tags if tag.startswith(t + '/')]
             if not matched:
                 return None, None, None
-            matched.sort(cmp=lambda x,y: cmp(len(x),len(y)), reverse=True)
+            matched.sort(key=len, reverse=True)
             brpath = tag[len(matched[0])+1:]
             svrpath = path[:-(len(brpath)+1)]
             ln = self.localname(svrpath)
