@@ -4,11 +4,11 @@ hg init
 
 cat > .hg/hgrc <<EOF
 [encode]
-not.gz = tr a-z A-Z
+not.gz = tr [:lower:] [:upper:]
 *.gz = gzip -d
 
 [decode]
-not.gz = tr A-Z a-z
+not.gz = tr [:upper:] [:lower:]
 *.gz = gzip
 
 EOF
