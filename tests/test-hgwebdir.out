@@ -67,7 +67,7 @@ error: repository c not found
         <th><a href="?sort=name">Name</a></th>
         <th><a href="?sort=description">Description</a></th>
         <th><a href="?sort=contact">Contact</a></th>
-        <th><a href="?sort=lastchange">Last change</a></th>
+        <th><a href="?sort=lastchange">Last modified</a></th>
         <th>&nbsp;</th>
     </tr>
     
@@ -203,7 +203,7 @@ error: repository c not found
         <th><a href="?sort=name">Name</a></th>
         <th><a href="?sort=description">Description</a></th>
         <th><a href="?sort=contact">Contact</a></th>
-        <th><a href="?sort=lastchange">Last change</a></th>
+        <th><a href="?sort=lastchange">Last modified</a></th>
         <th>&nbsp;</th>
     </tr>
     
