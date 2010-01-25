@@ -460,7 +460,7 @@ class SubversionRepo(object):
             elif action == 'add':
                 frompath, fromrev = copies.get(path, (None, -1))
                 if frompath:
-                    frompath = self.svn_url + '/' + frompath
+                    frompath = self.path2url(frompath)
                 baton = editor.add_file(path, parent, frompath, fromrev, pool)
             elif action == 'delete':
                 baton = editor.delete_entry(path, base_revision, parent, pool)
