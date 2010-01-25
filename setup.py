@@ -48,9 +48,7 @@ if os.path.isdir('.hg'):
         # error 0xc0150004. See: http://bugs.python.org/issue3440
         env['SystemRoot'] = os.environ['SystemRoot']
     cmd = ['hg', 'id', '-i', '-t']
-    print runcmd(cmd, env)
     l = runcmd(cmd, env).split()
-    print l
     while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
         l.pop()
     if len(l) > 1: # tag found
@@ -64,7 +62,6 @@ if os.path.isdir('.hg'):
     if not version:
         version = runcmd(['hg', 'parents', '--template' '{node|short}\n'],
                          env)
-        print 'xxx', version
         if version:
             version = version.split()[0]
     if version.endswith('+'):
