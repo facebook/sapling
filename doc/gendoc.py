@@ -19,7 +19,7 @@ def get_desc(docstr):
 
     i = docstr.find("\n")
     if i != -1:
-        desc = docstr[i+2:]
+        desc = docstr[i + 2:]
     else:
         desc = "    %s" % shortdesc
     return (shortdesc, desc)
@@ -76,7 +76,8 @@ def show_doc(ui):
     cmds.sort()
 
     for f in cmds:
-        if f.startswith("debug"): continue
+        if f.startswith("debug"):
+            continue
         d = get_cmd(h[f])
         # synopsis
         ui.write(".. _%s:\n\n" % d['cmd'])

@@ -62,7 +62,7 @@ def fromlocal(s):
     try:
         return s.decode(encoding, encodingmode).encode("utf-8")
     except UnicodeDecodeError, inst:
-        sub = s[max(0, inst.start-10):inst.start+10]
+        sub = s[max(0, inst.start - 10):inst.start + 10]
         raise error.Abort("decoding near '%s': %s!" % (sub, inst))
     except LookupError, k:
         raise error.Abort("%s, please check your locale settings" % k)

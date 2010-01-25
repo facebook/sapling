@@ -125,4 +125,5 @@ class SvnRaTransport(object):
                     self._baton, pool)
 
     def do_update(self, revnum, path, *args, **kwargs):
-        return self.Reporter(svn.ra.do_update(self.ra, revnum, path, *args, **kwargs))
+        return self.Reporter(svn.ra.do_update(self.ra, revnum, path,
+                                              *args, **kwargs))

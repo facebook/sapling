@@ -35,7 +35,8 @@ def _runcatch(ui, args):
 
     for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
         num = getattr(signal, name, None)
-        if num: signal.signal(num, catchterm)
+        if num:
+            signal.signal(num, catchterm)
 
     try:
         try:

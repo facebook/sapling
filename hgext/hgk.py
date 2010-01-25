@@ -186,7 +186,7 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
                     l[x].changeset() # force reading
                 else:
                     l[x] = 1
-            for x in xrange(chunk-1, -1, -1):
+            for x in xrange(chunk - 1, -1, -1):
                 if l[x] != 0:
                     yield (i + x, full != None and l[x] or None)
             if i == 0:

@@ -120,7 +120,8 @@ import urllib2
 DEBUG = None
 
 import sys
-if sys.version_info < (2, 4): HANDLE_ERRORS = 1
+if sys.version_info < (2, 4):
+    HANDLE_ERRORS = 1
 else: HANDLE_ERRORS = 0
 
 class ConnectionManager:
@@ -137,7 +138,8 @@ class ConnectionManager:
     def add(self, host, connection, ready):
         self._lock.acquire()
         try:
-            if not host in self._hostmap: self._hostmap[host] = []
+            if not host in self._hostmap:
+                self._hostmap[host] = []
             self._hostmap[host].append(connection)
             self._connmap[connection] = host
             self._readymap[connection] = ready
@@ -160,8 +162,10 @@ class ConnectionManager:
             self._lock.release()
 
     def set_ready(self, connection, ready):
-        try: self._readymap[connection] = ready
-        except KeyError: pass
+        try:
+            self._readymap[connection] = ready
+        except KeyError:
+            pass
 
     def get_ready_conn(self, host):
         conn = None
@@ -214,7 +218,8 @@ class KeepAliveHandler:
         self._cm.set_ready(connection, 1)
 
     def _remove_connection(self, host, connection, close=0):
-        if close: connection.close()
+        if close:
+            connection.close()
         self._cm.remove(connection)
 
     #### Transaction Execution
@@ -233,7 +238,8 @@ class KeepAliveHandler:
 
                 # if this response is non-None, then it worked and we're
                 # done.  Break out, skipping the else block.
-                if r: break
+                if r:
+                    break
 
                 # connection is bad - possibly closed by server
                 # discard it and ask for the next free connection
@@ -243,8 +249,9 @@ class KeepAliveHandler:
             else:
                 # no (working) free connections were found.  Create a new one.
                 h = http_class(host)
-                if DEBUG: DEBUG.info("creating new connection to %s (%d)",
-                                     host, id(h))
+                if DEBUG:
+                    DEBUG.info("creating new connection to %s (%d)",
+                               host, id(h))
                 self._cm.add(host, h, 0)
                 self._start_transaction(h, req)
                 r = h.getresponse()
@@ -252,9 +259,11 @@ class KeepAliveHandler:
             raise urllib2.URLError(err)
 
         # if not a persistent connection, don't try to reuse it
-        if r.will_close: self._cm.remove(h)
+        if r.will_close:
+            self._cm.remove(h)
 
-        if DEBUG: DEBUG.info("STATUS: %s, %s", r.status, r.reason)
+        if DEBUG:
+            DEBUG.info("STATUS: %s, %s", r.status, r.reason)
         r._handler = self
         r._host = host
         r._url = req.get_full_url()
@@ -293,8 +302,9 @@ class KeepAliveHandler:
             # same exception was raised, etc.  The tradeoff is
             # that it's now possible this call will raise
             # a DIFFERENT exception
-            if DEBUG: DEBUG.error("unexpected exception - closing " + \
-                                  "connection to %s (%d)", host, id(h))
+            if DEBUG:
+                DEBUG.error("unexpected exception - closing "
+                            "connection to %s (%d)", host, id(h))
             self._cm.remove(h)
             h.close()
             raise
@@ -304,11 +314,13 @@ class KeepAliveHandler:
             # bad header back.  This is most likely to happen if
             # the socket has been closed by the server since we
             # last used the connection.
-            if DEBUG: DEBUG.info("failed to re-use connection to %s (%d)",
-                                 host, id(h))
+            if DEBUG:
+                DEBUG.info("failed to re-use connection to %s (%d)",
+                           host, id(h))
             r = None
         else:
-            if DEBUG: DEBUG.info("re-using connection to %s (%d)", host, id(h))
+            if DEBUG:
+                DEBUG.info("re-using connection to %s (%d)", host, id(h))
 
         return r
 
@@ -319,7 +331,7 @@ class KeepAliveHandler:
         if sys.version_info >= (2, 4):
             headers.update(req.unredirected_hdrs)
         headers.update(self.parent.addheaders)
-        headers = dict((n.lower(), v) for n,v in headers.items())
+        headers = dict((n.lower(), v) for n, v in headers.items())
         skipheaders = {}
         for n in ('host', 'accept-encoding'):
             if n in headers:
@@ -477,13 +489,18 @@ class HTTPResponse(httplib.HTTPResponse):
         i = self._rbuf.find('\n')
         while i < 0 and not (0 < limit <= len(self._rbuf)):
             new = self._raw_read(self._rbufsize)
-            if not new: break
+            if not new:
+                break
             i = new.find('\n')
-            if i >= 0: i = i + len(self._rbuf)
+            if i >= 0:
+                i = i + len(self._rbuf)
             self._rbuf = self._rbuf + new
-        if i < 0: i = len(self._rbuf)
-        else: i = i+1
-        if 0 <= limit < len(self._rbuf): i = limit
+        if i < 0:
+            i = len(self._rbuf)
+        else:
+            i = i + 1
+        if 0 <= limit < len(self._rbuf):
+            i = limit
         data, self._rbuf = self._rbuf[:i], self._rbuf[i:]
         return data
 
@@ -492,7 +509,8 @@ class HTTPResponse(httplib.HTTPResponse):
         list = []
         while 1:
             line = self.readline()
-            if not line: break
+            if not line:
+                break
             list.append(line)
             total += len(line)
             if sizehint and total >= sizehint:
@@ -528,9 +546,10 @@ def safesend(self, str):
     if self.debuglevel > 0:
         print "send:", repr(str)
     try:
-        blocksize=8192
+        blocksize = 8192
         if hasattr(str,'read') :
-            if self.debuglevel > 0: print "sendIng a read()able"
+            if self.debuglevel > 0:
+                print "sendIng a read()able"
             data=str.read(blocksize)
             while data:
                 self.sock.sendall(data)
@@ -588,8 +607,10 @@ def error_handler(url):
             fo = urllib2.urlopen(url)
             fo.read()
             fo.close()
-            try: status, reason = fo.status, fo.reason
-            except AttributeError: status, reason = None, None
+            try:
+                status, reason = fo.status, fo.reason
+            except AttributeError:
+                status, reason = None, None
         except IOError, e:
             print "  EXCEPTION: %s" % e
             raise
@@ -635,7 +656,8 @@ def continuity(url):
     foo = ''
     while 1:
         f = fo.readline()
-        if f: foo = foo + f
+        if f:
+            foo = foo + f
         else: break
     fo.close()
     m = md5.new(foo)
@@ -657,14 +679,15 @@ def comp(N, url):
     urllib2.install_opener(opener)
     t2 = fetch(N, url)
     print '  TIME: %.3f s' % t2
-    print '  improvement factor: %.2f' % (t1/t2, )
+    print '  improvement factor: %.2f' % (t1 / t2)
 
 def fetch(N, url, delay=0):
     import time
     lens = []
     starttime = time.time()
     for i in range(N):
-        if delay and i > 0: time.sleep(delay)
+        if delay and i > 0:
+            time.sleep(delay)
         fo = urllib2.urlopen(url)
         foo = fo.read()
         fo.close()
@@ -683,7 +706,8 @@ def test_timeout(url):
     global DEBUG
     dbbackup = DEBUG
     class FakeLogger:
-        def debug(self, msg, *args): print msg % args
+        def debug(self, msg, *args):
+            print msg % args
         info = warning = error = debug
     DEBUG = FakeLogger()
     print "  fetching the file to establish a connection"

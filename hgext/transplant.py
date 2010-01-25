@@ -489,7 +489,7 @@ def transplant(ui, repo, *revs, **opts):
 
     def incwalk(repo, incoming, branches, match=util.always):
         if not branches:
-            branches=None
+            branches = None
         for node in repo.changelog.nodesbetween(incoming, branches)[0]:
             if match(node):
                 yield node
@@ -506,7 +506,7 @@ def transplant(ui, repo, *revs, **opts):
 
     def checkopts(opts, revs):
         if opts.get('continue'):
-            if filter(lambda opt: opts.get(opt), ('branch', 'all', 'merge')):
+            if opts.get('branch') or opts.get('all') or opts.get('merge'):
                 raise util.Abort(_('--continue is incompatible with '
                                    'branch, all or merge'))
             return

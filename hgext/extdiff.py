@@ -239,7 +239,8 @@ def uisetup(ui):
     for cmd, path in ui.configitems('extdiff'):
         if cmd.startswith('cmd.'):
             cmd = cmd[4:]
-            if not path: path = cmd
+            if not path:
+                path = cmd
             diffopts = ui.config('extdiff', 'opts.' + cmd, '')
             diffopts = diffopts and [diffopts] or []
         elif cmd.startswith('opts.'):

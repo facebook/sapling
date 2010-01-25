@@ -240,7 +240,7 @@ extmodules = [
     ]
 
 packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert',
-            'hgext.highlight', 'hgext.zeroconf', ]
+            'hgext.highlight', 'hgext.zeroconf']
 
 if sys.platform == 'linux2' and os.uname()[2] > '2.6':
     # The inotify extension is only usable with Linux 2.6 kernels.
@@ -257,7 +257,7 @@ packagedata = {'mercurial': ['locale/*/LC_MESSAGES/hg.mo',
 def ordinarypath(p):
     return p and p[0] != '.' and p[-1] != '~'
 
-for root in ('templates', ):
+for root in ('templates',):
     for curdir, dirs, files in os.walk(os.path.join('mercurial', root)):
         curdir = curdir.split(os.sep, 1)[1]
         dirs[:] = filter(ordinarypath, dirs)

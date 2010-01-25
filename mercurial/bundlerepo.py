@@ -73,7 +73,8 @@ class bundlerevlog(revlog.revlog):
         if rev < 0:
             return False
         return rev in self.basemap
-    def bundlebase(self, rev): return self.basemap[rev]
+    def bundlebase(self, rev):
+        return self.basemap[rev]
     def _chunk(self, rev):
         # Warning: in case of bundle, the diff is against bundlebase,
         # not against rev - 1
@@ -98,7 +99,8 @@ class bundlerevlog(revlog.revlog):
 
     def revision(self, node):
         """return an uncompressed revision of a given"""
-        if node == nullid: return ""
+        if node == nullid:
+            return ""
 
         text = None
         chain = []

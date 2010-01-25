@@ -112,7 +112,8 @@ class pollable(object):
             timeout = None
             timeobj = None
             for obj in cls.instances.itervalues():
-                if obj.timeout is not None and (timeout is None or obj.timeout < timeout):
+                if obj.timeout is not None and (timeout is None
+                                                or obj.timeout < timeout):
                     timeout, timeobj = obj.timeout, obj
             try:
                 events = cls.poll.poll(timeout)

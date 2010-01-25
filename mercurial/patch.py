@@ -78,7 +78,7 @@ def extract(ui, fileobj):
             if subject.startswith('[PATCH'):
                 pend = subject.find(']')
                 if pend >= 0:
-                    subject = subject[pend+1:].lstrip()
+                    subject = subject[pend + 1:].lstrip()
             subject = subject.replace('\n\t', ' ')
             ui.debug('Subject: %s\n' % subject)
         if user:
@@ -472,7 +472,7 @@ class patchfile(object):
             search_start = orig_start + self.skew
 
         for fuzzlen in xrange(3):
-            for toponly in [ True, False ]:
+            for toponly in [True, False]:
                 old = h.old(fuzzlen, toponly)
 
                 cand = self.findlines(old[0][1:], search_start)
@@ -497,7 +497,7 @@ class patchfile(object):
                         else:
                             msg = _("Hunk #%d succeeded at %d %s"
                                     "(offset %d lines).\n")
-                        f(msg % (h.number, l+1, fuzzstr, offset))
+                        f(msg % (h.number, l + 1, fuzzstr, offset))
                         return fuzzlen
         self.printfile(True)
         self.ui.warn(_("Hunk #%d FAILED at %d\n") % (h.number, orig_start))
@@ -508,7 +508,7 @@ class hunk(object):
     def __init__(self, desc, num, lr, context, create=False, remove=False):
         self.number = num
         self.desc = desc
-        self.hunk = [ desc ]
+        self.hunk = [desc]
         self.a = []
         self.b = []
         self.starta = self.lena = None
@@ -621,7 +621,7 @@ class hunk(object):
             if l.startswith('\ '):
                 s = self.b[-1][:-1]
                 self.b[-1] = s
-                self.hunk[hunki-1] = s
+                self.hunk[hunki - 1] = s
                 continue
             if not l:
                 lr.push(l)
@@ -650,7 +650,7 @@ class hunk(object):
                 elif h.startswith('-'):
                     continue
                 else:
-                    self.hunk.insert(hunki-1, u)
+                    self.hunk.insert(hunki - 1, u)
                     break
 
         if not self.a:
@@ -689,15 +689,15 @@ class hunk(object):
             top = 0
             bot = 0
             hlen = len(self.hunk)
-            for x in xrange(hlen-1):
+            for x in xrange(hlen - 1):
                 # the hunk starts with the @@ line, so use x+1
-                if self.hunk[x+1][0] == ' ':
+                if self.hunk[x + 1][0] == ' ':
                     top += 1
                 else:
                     break
             if not toponly:
-                for x in xrange(hlen-1):
-                    if self.hunk[hlen-bot-1][0] == ' ':
+                for x in xrange(hlen - 1):
+                    if self.hunk[hlen - bot - 1][0] == ' ':
                         bot += 1
                     else:
                         break
@@ -1025,11 +1025,13 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
             afile, bfile, first_hunk = values
             try:
                 if sourcefile:
-                    current_file = patchfile(ui, sourcefile, opener, eolmode=eolmode)
+                    current_file = patchfile(ui, sourcefile, opener,
+                                             eolmode=eolmode)
                 else:
-                    current_file, missing = selectfile(afile, bfile, first_hunk,
-                                            strip)
-                    current_file = patchfile(ui, current_file, opener, missing, eolmode)
+                    current_file, missing = selectfile(afile, bfile,
+                                                       first_hunk, strip)
+                    current_file = patchfile(ui, current_file, opener,
+                                             missing, eolmode)
             except PatchError, err:
                 ui.warn(str(err) + '\n')
                 current_file, current_hunk = None, None
@@ -1196,7 +1198,8 @@ def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
             try:
                 return internalpatch(patchname, ui, strip, cwd, files, eolmode)
             except NoHunks:
-                patcher = util.find_exe('gpatch') or util.find_exe('patch') or 'patch'
+                patcher = (util.find_exe('gpatch') or util.find_exe('patch')
+                           or 'patch')
                 ui.debug('no valid hunks found; trying with %r instead\n' %
                          patcher)
                 if util.needbinarypatch():
@@ -1232,7 +1235,7 @@ def b85diff(to, tn):
         l = len(text)
         i = 0
         while i < l:
-            yield text[i:i+csize]
+            yield text[i:i + csize]
             i += csize
 
     tohash = gitindex(to)
@@ -1460,7 +1463,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             fp.write(chunk)
 
     for seqno, rev in enumerate(revs):
-        single(rev, seqno+1, fp)
+        single(rev, seqno + 1, fp)
 
 def diffstatdata(lines):
     filename, adds, removes = None, 0, 0
@@ -1495,7 +1498,7 @@ def diffstat(lines, width=80, git=False):
         totaladds += adds
         totalremoves += removes
         maxname = max(maxname, len(filename))
-        maxtotal = max(maxtotal, adds+removes)
+        maxtotal = max(maxtotal, adds + removes)
         if isbinary:
             hasbinary = True
 

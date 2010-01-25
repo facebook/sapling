@@ -12,15 +12,19 @@ import os, shutil, tempfile
 
 # The naming drift of ElementTree is fun!
 
-try: from xml.etree.cElementTree import ElementTree
+try:
+    from xml.etree.cElementTree import ElementTree
 except ImportError:
-    try: from xml.etree.ElementTree import ElementTree
+    try:
+        from xml.etree.ElementTree import ElementTree
     except ImportError:
-        try: from elementtree.cElementTree import ElementTree
+        try:
+            from elementtree.cElementTree import ElementTree
         except ImportError:
-            try: from elementtree.ElementTree import ElementTree
-            except ImportError: ElementTree = None
-
+            try:
+                from elementtree.ElementTree import ElementTree
+            except ImportError:
+                ElementTree = None
 
 class darcs_source(converter_source, commandline):
     def __init__(self, ui, path, rev=None):

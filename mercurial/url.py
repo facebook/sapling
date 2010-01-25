@@ -30,18 +30,18 @@ def netlocsplit(netloc):
     if a == -1:
         user, passwd = None, None
     else:
-        userpass, netloc = netloc[:a], netloc[a+1:]
+        userpass, netloc = netloc[:a], netloc[a + 1:]
         c = userpass.find(':')
         if c == -1:
             user, passwd = urllib.unquote(userpass), None
         else:
             user = urllib.unquote(userpass[:c])
-            passwd = urllib.unquote(userpass[c+1:])
+            passwd = urllib.unquote(userpass[c + 1:])
     c = netloc.find(':')
     if c == -1:
         host, port = netloc, None
     else:
-        host, port = netloc[:c], netloc[c+1:]
+        host, port = netloc[:c], netloc[c + 1:]
     return host, port, user, passwd
 
 def netlocunsplit(host, port, user=None, passwd=None):
@@ -89,7 +89,8 @@ def quotepath(path):
     l = list(path)
     for i in xrange(len(l)):
         c = l[i]
-        if c == '%' and i + 2 < len(l) and (l[i+1] in _hex and l[i+2] in _hex):
+        if (c == '%' and i + 2 < len(l) and
+            l[i + 1] in _hex and l[i + 2] in _hex):
             pass
         elif c not in _safeset:
             l[i] = '%%%02X' % ord(c)
@@ -148,7 +149,8 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
         bestauth = None
         for auth in config.itervalues():
             prefix = auth.get('prefix')
-            if not prefix: continue
+            if not prefix:
+                continue
             p = prefix.split('://', 1)
             if len(p) > 1:
                 schemes, prefix = [p[0]], p[1]
@@ -180,7 +182,7 @@ class proxyhandler(urllib2.ProxyHandler):
                 proxypasswd = ui.config("http_proxy", "passwd")
 
             # see if we should use a proxy for this url
-            no_list = [ "localhost", "127.0.0.1" ]
+            no_list = ["localhost", "127.0.0.1"]
             no_list.extend([p.lower() for
                             p in ui.configlist("http_proxy", "no")])
             no_list.extend([p.strip().lower() for
@@ -436,7 +438,8 @@ if has_https:
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.sock.connect((self.host, self.port))
                 if _generic_proxytunnel(self):
-                    self.sock = _ssl_wrap_socket(self.sock, self.cert_file, self.key_file)
+                    self.sock = _ssl_wrap_socket(self.sock, self.cert_file,
+                                                 self.key_file)
             else:
                 BetterHTTPS.connect(self)
 

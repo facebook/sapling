@@ -42,8 +42,12 @@ class p4_source(converter_source):
         self.encoding = "latin_1"
         self.depotname = {}           # mapping from local name to depot name
         self.modecache = {}
-        self.re_type = re.compile("([a-z]+)?(text|binary|symlink|apple|resource|unicode|utf\d+)(\+\w+)?$")
-        self.re_keywords = re.compile(r"\$(Id|Header|Date|DateTime|Change|File|Revision|Author):[^$\n]*\$")
+        self.re_type = re.compile(
+            "([a-z]+)?(text|binary|symlink|apple|resource|unicode|utf\d+)"
+            "(\+\w+)?$")
+        self.re_keywords = re.compile(
+            r"\$(Id|Header|Date|DateTime|Change|File|Revision|Author)"
+            r":[^$\n]*\$")
         self.re_keywords_old = re.compile("\$(Id|Header):[^$\n]*\$")
 
         self._parse(ui, path)
@@ -118,7 +122,8 @@ class p4_source(converter_source):
 
             date = (int(d["time"]), 0)     # timezone not set
             c = commit(author=self.recode(d["user"]), date=util.datestr(date),
-                        parents=parents, desc=desc, branch='', extra={"p4": change})
+                       parents=parents, desc=desc, branch='',
+                       extra={"p4": change})
 
             files = []
             i = 0

@@ -15,11 +15,11 @@
 #include <limits.h>
 
 #if defined __hpux || defined __SUNPRO_C || defined _AIX
-# define inline
+#define inline
 #endif
 
 #ifdef __linux
-# define inline __inline
+#define inline __inline
 #endif
 
 #ifdef _WIN32
@@ -267,19 +267,21 @@ static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 
 	/* normalize the hunk list, try to push each hunk towards the end */
 	for (curr = l.base; curr != l.head; curr++) {
-		struct hunk *next = curr+1;
+		struct hunk *next = curr + 1;
 		int shift = 0;
 
 		if (next == l.head)
 			break;
 
 		if (curr->a2 == next->a1)
-			while (curr->a2+shift < an && curr->b2+shift < bn
-			       && !cmp(a+curr->a2+shift, b+curr->b2+shift))
+			while (curr->a2 + shift < an && curr->b2 + shift < bn
+			       && !cmp(a + curr->a2 + shift,
+				       b + curr->b2 + shift))
 				shift++;
 		else if (curr->b2 == next->b1)
-			while (curr->b2+shift < bn && curr->a2+shift < an
-			       && !cmp(b+curr->b2+shift, a+curr->a2+shift))
+			while (curr->b2 + shift < bn && curr->a2 + shift < an
+			       && !cmp(b + curr->b2 + shift,
+				       a + curr->a2 + shift))
 				shift++;
 		if (!shift)
 			continue;

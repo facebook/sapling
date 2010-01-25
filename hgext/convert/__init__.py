@@ -279,7 +279,8 @@ cmdtable = {
           # Main options shared with cvsps-2.1
           ('b', 'branches', [], _('only return changes on specified branches')),
           ('p', 'prefix', '', _('prefix to remove from file names')),
-          ('r', 'revisions', [], _('only return changes after or between specified tags')),
+          ('r', 'revisions', [],
+           _('only return changes after or between specified tags')),
           ('u', 'update-cache', None, _("update cvs log cache")),
           ('x', 'new-cache', None, _("create new cvs log cache")),
           ('z', 'fuzz', 60, _('set commit time fuzz in seconds')),

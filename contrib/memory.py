@@ -29,7 +29,7 @@ def memusage(ui):
     finally:
         if status is not None:
             status.close()
-    ui.write_err(", ".join(["%s: %.1f MiB" % (key, value/1024.0)
+    ui.write_err(", ".join(["%s: %.1f MiB" % (key, value / 1024.0)
                             for key, value in result.iteritems()]) + "\n")
 
 def extsetup(ui):

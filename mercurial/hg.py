@@ -348,7 +348,8 @@ _update = update
 def clean(repo, node, show_stats=True):
     """forcibly switch the working directory to node, clobbering changes"""
     stats = _merge.update(repo, node, False, True, None)
-    if show_stats: _showstats(repo, stats)
+    if show_stats:
+        _showstats(repo, stats)
     return stats[3] > 0
 
 def merge(repo, node, force=None, remind=True):

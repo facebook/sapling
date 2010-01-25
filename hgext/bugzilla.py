@@ -297,7 +297,8 @@ class bugzilla_2_18(bugzilla_2_16):
 
     def __init__(self, ui):
         bugzilla_2_16.__init__(self, ui)
-        self.default_notify = "cd %(bzdir)s && perl -T contrib/sendbugmail.pl %(id)s %(user)s"
+        self.default_notify = \
+            "cd %(bzdir)s && perl -T contrib/sendbugmail.pl %(id)s %(user)s"
 
 class bugzilla_3_0(bugzilla_2_18):
     '''support for bugzilla 3.0 series.'''
@@ -369,7 +370,8 @@ class bugzilla(object):
                 break
             start = m.end()
             for id in bugzilla._split_re.split(m.group(1)):
-                if not id: continue
+                if not id:
+                    continue
                 ids.add(int(id))
         if ids:
             ids = self.filter_real_bug_ids(ids)
@@ -389,7 +391,7 @@ class bugzilla(object):
                 c = root.find('/')
                 if c == -1:
                     break
-                root = root[c+1:]
+                root = root[c + 1:]
                 count -= 1
             return root
 

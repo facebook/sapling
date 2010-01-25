@@ -74,7 +74,7 @@ class mercurial_sink(converter_sink):
 
     def getheads(self):
         h = self.repo.changelog.heads()
-        return [ hex(x) for x in h ]
+        return [hex(x) for x in h]
 
     def setbranch(self, branch, pbranches):
         if not self.clonebranches:
@@ -147,8 +147,10 @@ class mercurial_sink(converter_sink):
             m1node = self.repo.changelog.read(bin(parents[0]))[0]
             parent = parents[0]
 
-        if len(parents) < 2: parents.append(nullid)
-        if len(parents) < 2: parents.append(nullid)
+        if len(parents) < 2:
+            parents.append(nullid)
+        if len(parents) < 2:
+            parents.append(nullid)
         p2 = parents.pop(0)
 
         text = commit.desc
@@ -161,8 +163,8 @@ class mercurial_sink(converter_sink):
         while parents:
             p1 = p2
             p2 = parents.pop(0)
-            ctx = context.memctx(self.repo, (p1, p2), text, files.keys(), getfilectx,
-                                 commit.author, commit.date, extra)
+            ctx = context.memctx(self.repo, (p1, p2), text, files.keys(),
+                                 getfilectx, commit.author, commit.date, extra)
             self.repo.commitctx(ctx)
             text = "(octopus merge fixup)\n"
             p2 = hex(self.repo.changelog.tip())

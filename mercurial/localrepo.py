@@ -319,7 +319,7 @@ class localrepository(repo.repository):
         # TODO: rename this function?
         tiprev = len(self) - 1
         if lrev != tiprev:
-            self._updatebranchcache(partial, lrev+1, tiprev+1)
+            self._updatebranchcache(partial, lrev + 1, tiprev + 1)
             self._writebranchcache(partial, self.changelog.tip(), tiprev)
 
         return partial
@@ -377,7 +377,8 @@ class localrepository(repo.repository):
                 # invalidate the cache
                 raise ValueError('invalidating branch cache (tip differs)')
             for l in lines:
-                if not l: continue
+                if not l:
+                    continue
                 node, label = l.split(" ", 1)
                 partial.setdefault(label.strip(), []).append(bin(node))
         except KeyboardInterrupt:
@@ -562,7 +563,8 @@ class localrepository(repo.repository):
 
         # abort here if the journal already exists
         if os.path.exists(self.sjoin("journal")):
-            raise error.RepoError(_("abandoned transaction found - run hg recover"))
+            raise error.RepoError(
+                _("abandoned transaction found - run hg recover"))
 
         # save dirstate for rollback
         try:
@@ -587,7 +589,8 @@ class localrepository(repo.repository):
         try:
             if os.path.exists(self.sjoin("journal")):
                 self.ui.status(_("rolling back interrupted transaction\n"))
-                transaction.rollback(self.sopener, self.sjoin("journal"), self.ui.warn)
+                transaction.rollback(self.sopener, self.sjoin("journal"),
+                                     self.ui.warn)
                 self.invalidate()
                 return True
             else:
@@ -603,7 +606,8 @@ class localrepository(repo.repository):
             lock = self.lock()
             if os.path.exists(self.sjoin("undo")):
                 self.ui.status(_("rolling back last transaction\n"))
-                transaction.rollback(self.sopener, self.sjoin("undo"), self.ui.warn)
+                transaction.rollback(self.sopener, self.sjoin("undo"),
+                                     self.ui.warn)
                 util.rename(self.join("undo.dirstate"), self.join("dirstate"))
                 try:
                     branch = self.opener("undo.branch").read()
@@ -1339,7 +1343,7 @@ class localrepository(repo.repository):
                 self.ui.debug("request %d: %s\n" %
                             (reqcnt, " ".join(map(short, r))))
                 for p in xrange(0, len(r), 10):
-                    for b in remote.branches(r[p:p+10]):
+                    for b in remote.branches(r[p:p + 10]):
                         self.ui.debug("received %s:%s\n" %
                                       (short(b[0]), short(b[1])))
                         unknown.append(b)
@@ -1609,7 +1613,8 @@ class localrepository(repo.repository):
         ret = self.prepush(remote, force, revs)
         if ret[0] is not None:
             cg, remote_heads = ret
-            if force: remote_heads = ['force']
+            if force:
+                remote_heads = ['force']
             return remote.unbundle(cg, remote_heads, 'push')
         return ret[1]
 

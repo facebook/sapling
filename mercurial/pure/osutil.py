@@ -11,13 +11,20 @@ import stat as _stat
 posixfile = open
 
 def _mode_to_kind(mode):
-    if _stat.S_ISREG(mode): return _stat.S_IFREG
-    if _stat.S_ISDIR(mode): return _stat.S_IFDIR
-    if _stat.S_ISLNK(mode): return _stat.S_IFLNK
-    if _stat.S_ISBLK(mode): return _stat.S_IFBLK
-    if _stat.S_ISCHR(mode): return _stat.S_IFCHR
-    if _stat.S_ISFIFO(mode): return _stat.S_IFIFO
-    if _stat.S_ISSOCK(mode): return _stat.S_IFSOCK
+    if _stat.S_ISREG(mode):
+        return _stat.S_IFREG
+    if _stat.S_ISDIR(mode):
+        return _stat.S_IFDIR
+    if _stat.S_ISLNK(mode):
+        return _stat.S_IFLNK
+    if _stat.S_ISBLK(mode):
+        return _stat.S_IFBLK
+    if _stat.S_ISCHR(mode):
+        return _stat.S_IFCHR
+    if _stat.S_ISFIFO(mode):
+        return _stat.S_IFIFO
+    if _stat.S_ISSOCK(mode):
+        return _stat.S_IFSOCK
     return mode
 
 def listdir(path, stat=False, skip=None):

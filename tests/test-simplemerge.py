@@ -89,7 +89,8 @@ TAO = split_lines("""     The Way that can be told of is not the eternal Way;
 
 """)
 
-MERGED_RESULT = split_lines("""     The Way that can be told of is not the eternal Way;
+MERGED_RESULT = split_lines("""\
+     The Way that can be told of is not the eternal Way;
      The name that can be named is not the eternal name.
      The Nameless is the origin of Heaven and Earth;
      The Named is the mother of all things.
@@ -125,7 +126,7 @@ class TestMerge3(TestCase):
                           [(0, 2,
                             0, 2,
                             0, 2),
-                           (2,2, 2,2, 2,2)])
+                           (2, 2,  2, 2,  2, 2)])
 
         self.assertEquals(list(m3.merge_regions()),
                           [('unchanged', 0, 2)])
@@ -141,8 +142,8 @@ class TestMerge3(TestCase):
         # todo: should use a sentinal at end as from get_matching_blocks
         # to match without zz
         self.assertEquals(list(m3.find_sync_regions()),
-                          [(0,1, 2,3, 0,1),
-                           (1,1, 3,3, 1,1),])
+                          [(0, 1,  2, 3,  0, 1),
+                           (1, 1,  3, 3,  1, 1),])
 
         self.assertEquals(list(m3.merge_regions()),
                           [('a', 0, 2),
@@ -159,7 +160,7 @@ class TestMerge3(TestCase):
         # todo: should use a sentinal at end as from get_matching_blocks
         # to match without zz
         self.assertEquals(list(m3.find_sync_regions()),
-                          [(0,0, 2,2, 0,0)])
+                          [(0, 0,  2, 2,  0, 0)])
 
         self.assertEquals(list(m3.merge_regions()),
                           [('a', 0, 2)])
@@ -177,9 +178,9 @@ class TestMerge3(TestCase):
                           [(0, 1), (1, 2)])
 
         self.assertEquals(list(m3.find_sync_regions()),
-                          [(0,1, 0,1, 0,1),
-                           (1,2, 2,3, 1,2),
-                           (2,2, 3,3, 2,2),])
+                          [(0, 1,  0, 1,  0, 1),
+                           (1, 2,  2, 3,  1, 2),
+                           (2, 2,  3, 3,  2, 2),])
 
         self.assertEquals(list(m3.merge_regions()),
                           [('unchanged', 0, 1),
@@ -253,14 +254,14 @@ class TestMerge3(TestCase):
                           [(0, 1), (1, 2)])
 
         self.assertEquals(list(m3.find_sync_regions()),
-                          [(0,1, 0,1, 0,1),
-                           (1,2, 2,3, 2,3),
-                           (2,2, 3,3, 3,3),])
+                          [(0, 1,  0, 1,  0, 1),
+                           (1, 2,  2, 3,  2, 3),
+                           (2, 2,  3, 3,  3, 3),])
 
         self.assertEquals(list(m3.merge_regions()),
-                          [('unchanged', 0,1),
-                           ('conflict', 1,1, 1,2, 1,2),
-                           ('unchanged', 1,2)])
+                          [('unchanged', 0, 1),
+                           ('conflict', 1, 1,  1, 2,  1, 2),
+                           ('unchanged', 1, 2)])
 
         self.assertEquals(list(m3.merge_groups()),
                           [('unchanged', ['aaa\n']),
@@ -293,9 +294,9 @@ bbb
                           [(0, 1), (2, 3)])
 
         self.assertEquals(list(m3.find_sync_regions()),
-                          [(0,1, 0,1, 0,1),
-                           (2,3, 2,3, 2,3),
-                           (3,3, 3,3, 3,3),])
+                          [(0, 1,  0, 1,  0, 1),
+                           (2, 3,  2, 3,  2, 3),
+                           (3, 3,  3, 3,  3, 3),])
 
     def test_replace_multi(self):
         """Replacement with regions of different size."""
@@ -308,9 +309,9 @@ bbb
 
 
         self.assertEquals(list(m3.find_sync_regions()),
-                          [(0,1, 0,1, 0,1),
-                           (3,4, 4,5, 5,6),
-                           (4,4, 5,5, 6,6),])
+                          [(0, 1,  0, 1,  0, 1),
+                           (3, 4,  4, 5,  5, 6),
+                           (4, 4,  5, 5,  6, 6)])
 
     def test_merge_poem(self):
         """Test case from diff3 manual"""

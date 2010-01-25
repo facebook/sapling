@@ -1,13 +1,13 @@
 #!/bin/sh
 
 "$TESTDIR/hghave" rst2html || exit 80
-RST2HTML=$(which rst2html 2> /dev/null || which rst2html.py)
+RST2HTML=`which rst2html 2> /dev/null || which rst2html.py`
 
 HGENCODING=UTF-8
 export HGENCODING
 
 for PO in C $TESTDIR/../i18n/*.po; do
-    LOCALE=$(basename $PO .po)
+    LOCALE=`basename $PO .po`
     echo
     echo "% extracting documentation from $LOCALE"
     echo ".. -*- coding: utf-8 -*-" > gendoc-$LOCALE.txt

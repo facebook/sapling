@@ -46,7 +46,8 @@ class convert_cvs(converter_source):
                 # patchset number?
                 maxrev = int(self.rev)
             except ValueError:
-                raise util.Abort(_('revision %s is not a patchset number') % self.rev)
+                raise util.Abort(_('revision %s is not a patchset number')
+                                 % self.rev)
 
         d = os.getcwd()
         try:
@@ -65,7 +66,7 @@ class convert_cvs(converter_source):
                 mergefrom=self.ui.config('convert', 'cvsps.mergefrom', None))
 
             for cs in db:
-                if maxrev and cs.id>maxrev:
+                if maxrev and cs.id > maxrev:
                     break
                 id = str(cs.id)
                 cs.author = self.recode(cs.author)
@@ -76,7 +77,8 @@ class convert_cvs(converter_source):
 
                 files = {}
                 for f in cs.entries:
-                    files[f.file] = "%s%s" % ('.'.join([str(x) for x in f.revision]),
+                    files[f.file] = "%s%s" % ('.'.join([str(x)
+                                                        for x in f.revision]),
                                               ['', '(DEAD)'][f.dead])
 
                 # add current commit to set
@@ -186,8 +188,8 @@ class convert_cvs(converter_source):
         self.writep.flush()
         r = self.readp.readline()
         if not r.startswith("Valid-requests"):
-            raise util.Abort(_("unexpected response from CVS server "
-                               "(expected \"Valid-requests\", but got %r)")
+            raise util.Abort(_('unexpected response from CVS server '
+                               '(expected "Valid-requests", but got %r)')
                              % r)
         if "UseUnchanged" in r:
             self.writep.write("UseUnchanged\n")
@@ -208,7 +210,8 @@ class convert_cvs(converter_source):
             while count > 0:
                 data = fp.read(min(count, chunksize))
                 if not data:
-                    raise util.Abort(_("%d bytes missing from remote file") % count)
+                    raise util.Abort(_("%d bytes missing from remote file")
+                                     % count)
                 count -= len(data)
                 output.write(data)
             return output.getvalue()

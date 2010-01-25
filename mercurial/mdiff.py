@@ -96,7 +96,8 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
             return '\t\n'
         return '\n'
 
-    if not a and not b: return ""
+    if not a and not b:
+        return ""
     epoch = util.datestr((0, 0))
 
     if not opts.text and (util.binary(a) or util.binary(b)):
@@ -125,7 +126,8 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
         al = splitnewlines(a)
         bl = splitnewlines(b)
         l = list(bunidiff(a, b, al, bl, "a/" + fn1, "b/" + fn2, opts=opts))
-        if not l: return ""
+        if not l:
+            return ""
         # difflib uses a space, rather than a tab
         l[0] = "%s%s" % (l[0][:-2], datetag(ad))
         l[1] = "%s%s" % (l[1][:-2], datetag(bd))
@@ -182,7 +184,7 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
         for x in xrange(a2, aend):
             yield ' ' + l1[x]
 
-    header = [ "--- %s\t\n" % header1, "+++ %s\t\n" % header2 ]
+    header = ["--- %s\t\n" % header1, "+++ %s\t\n" % header2]
 
     if opts.showfunc:
         funcre = re.compile('\w')
@@ -203,7 +205,7 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
         # in the file.  If it starts later, old and new below will both be
         # empty and we'll continue to the next match.
         if i > 0:
-            s = diff[i-1]
+            s = diff[i - 1]
         else:
             s = [0, 0, 0, 0]
         delta = []
@@ -246,11 +248,11 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
             delta = hunk[4]
         else:
             # create a new hunk
-            hunk = [ astart, a2, bstart, b2, delta ]
+            hunk = [astart, a2, bstart, b2, delta]
 
-        delta[len(delta):] = [ ' ' + x for x in l1[astart:a1] ]
-        delta[len(delta):] = [ '-' + x for x in old ]
-        delta[len(delta):] = [ '+' + x for x in new ]
+        delta[len(delta):] = [' ' + x for x in l1[astart:a1]]
+        delta[len(delta):] = ['-' + x for x in old]
+        delta[len(delta):] = ['+' + x for x in new]
 
     if hunk:
         for x in yieldhunk(hunk, header):

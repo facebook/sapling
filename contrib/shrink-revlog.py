@@ -101,9 +101,9 @@ def report(ui, olddatafn, newdatafn):
     # argh: have to pass an int to %d, because a float >= 2^32
     # blows up under Python 2.5 or earlier
     ui.write('old file size: %12d bytes (%6.1f MiB)\n'
-             % (int(oldsize), oldsize/1024/1024))
+             % (int(oldsize), oldsize / 1024 / 1024))
     ui.write('new file size: %12d bytes (%6.1f MiB)\n'
-             % (int(newsize), newsize/1024/1024))
+             % (int(newsize), newsize / 1024 / 1024))
 
     shrink_percent = (oldsize - newsize) / oldsize * 100
     shrink_factor = oldsize / newsize
@@ -219,4 +219,4 @@ cmdtable = {
 }
 
 if __name__ == "__main__":
-	print "shrink-revlog.py is now an extension (see hg help extensions)"
+    print "shrink-revlog.py is now an extension (see hg help extensions)"

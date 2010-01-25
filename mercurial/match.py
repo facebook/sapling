@@ -125,10 +125,11 @@ def _globre(pat):
     res = ''
     group = 0
     escape = re.escape
-    def peek(): return i < n and pat[i]
+    def peek():
+        return i < n and pat[i]
     while i < n:
         c = pat[i]
-        i = i+1
+        i += 1
         if c not in '*?[{},\\':
             res += escape(c)
         elif c == '*':

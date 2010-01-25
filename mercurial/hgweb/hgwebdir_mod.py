@@ -324,7 +324,7 @@ class hgwebdir(object):
         style, mapfile = templater.stylemap(styles)
         if style == styles[0]:
             vars['style'] = style
-        
+
         start = url[-1] == '?' and '&' or '?'
         sessionvars = webutil.sessionvars(vars, start)
         staticurl = config('web', 'staticurl') or url + 'static/'

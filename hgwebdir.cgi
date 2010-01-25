@@ -37,7 +37,7 @@ import mercurial.hgweb.wsgicgi as wsgicgi
 # [collections]
 # /prefix/to/strip/off = /root/of/tree/full/of/repos
 #
-# paths example: 
+# paths example:
 #
 # * First two lines mount one repository into one virtual path, like
 # '/real/path1' into 'virtual/path1'.

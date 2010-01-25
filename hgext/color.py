@@ -190,8 +190,8 @@ def colorqseries(orig, ui, repo, *dummy, **opts):
         if opts['missing']:
             effects = _patch_effects['missing']
         # Determine if patch is applied.
-        elif [ applied for applied in repo.mq.applied
-               if patchname == applied.name ]:
+        elif [applied for applied in repo.mq.applied
+               if patchname == applied.name]:
             effects = _patch_effects['applied']
         else:
             effects = _patch_effects['unapplied']

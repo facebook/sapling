@@ -16,7 +16,8 @@ def writeauth(items):
     return ui
 
 def dumpdict(dict):
-    return '{' + ', '.join(['%s: %s' % (k, dict[k]) for k in sorted(dict.iterkeys())]) + '}'
+    return '{' + ', '.join(['%s: %s' % (k, dict[k])
+                            for k in sorted(dict.iterkeys())]) + '}'
 
 def test(auth):
     print 'CFG:', dumpdict(auth)
@@ -56,6 +57,8 @@ test({'x.prefix': 'example.org', 'x.schemes': 'https'})
 test({'x.prefix': 'example.org', 'x.schemes': 'http https'})
 
 print '\n*** Test prefix matching\n'
-test({'x.prefix': 'http://example.org/foo', 'y.prefix': 'http://example.org/bar'})
-test({'x.prefix': 'http://example.org/foo', 'y.prefix': 'http://example.org/foo/bar'})
+test({'x.prefix': 'http://example.org/foo',
+      'y.prefix': 'http://example.org/bar'})
+test({'x.prefix': 'http://example.org/foo',
+      'y.prefix': 'http://example.org/foo/bar'})
 test({'x.prefix': '*', 'y.prefix': 'https://example.org/bar'})

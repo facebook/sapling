@@ -67,7 +67,7 @@ def reposetup(ui, repo):
                     p = cl.parentrevs(rev)
                     if j < len(suffix) and suffix[j].isdigit():
                         j += 1
-                        n = int(suffix[i+1:j])
+                        n = int(suffix[i + 1:j])
                         if n > 2 or n == 2 and p[1] == -1:
                             raise
                     else:
@@ -85,7 +85,7 @@ def reposetup(ui, repo):
                         j += 1
                     if j == i + 1:
                         raise
-                    n = int(suffix[i+1:j])
+                    n = int(suffix[i + 1:j])
                     for k in xrange(n):
                         rev = cl.parentrevs(rev)[0]
                     i = j

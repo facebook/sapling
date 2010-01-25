@@ -50,7 +50,7 @@ def intersect(ra, rb):
 def compare_range(a, astart, aend, b, bstart, bend):
     """Compare a[astart:aend] == b[bstart:bend], without slicing.
     """
-    if (aend-astart) != (bend-bstart):
+    if (aend - astart) != (bend - bstart):
         return False
     for ia, ib in zip(xrange(astart, aend), xrange(bstart, bend)):
         if a[ia] != b[ib]:
@@ -303,7 +303,7 @@ class Merge3Text(object):
                                            region_ib)
                 if reg is not None:
                     yield reg
-                yield 'same', region_ia, region_len+region_ia
+                yield 'same', region_ia, region_len + region_ia
                 next_a = region_ia + region_len
                 next_b = region_ib + region_len
             reg = self.mismatch_region(next_a, amatch, next_b, bmatch)
@@ -336,7 +336,7 @@ class Merge3Text(object):
 
             # there is an unconflicted block at i; how long does it
             # extend?  until whichever one ends earlier.
-            i = intersect((abase, abase+alen), (bbase, bbase+blen))
+            i = intersect((abase, abase + alen), (bbase, bbase + blen))
             if i:
                 intbase = i[0]
                 intend = i[1]

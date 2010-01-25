@@ -138,7 +138,7 @@ class logstream(object):
 # looking for several svn-specific files and directories in the given
 # directory.
 def filecheck(ui, path, proto):
-    for x in ('locks', 'hooks', 'format', 'db', ):
+    for x in ('locks', 'hooks', 'format', 'db'):
         if not os.path.exists(os.path.join(path, x)):
             return False
     return True
@@ -150,7 +150,7 @@ def httpcheck(ui, path, proto):
     try:
         opener = urllib2.build_opener()
         rsp = opener.open('%s://%s/!svn/ver/0/.svn' % (proto, path))
-        data = rsp.read()        
+        data = rsp.read()
     except urllib2.HTTPError, inst:
         if inst.code != 404:
             # Except for 404 we cannot know for sure this is not an svn repo
@@ -231,7 +231,7 @@ class svn_source(converter_source):
             # deleted branches.
             at = url.rfind('@')
             if at >= 0:
-                latest = int(url[at+1:])
+                latest = int(url[at + 1:])
                 url = url[:at]
         except ValueError:
             pass
@@ -363,7 +363,8 @@ class svn_source(converter_source):
                                    'with more than one branch'))
             revnum = self.revnum(self.heads[0])
             if revnum < self.startrev:
-                raise util.Abort(_('svn: no revision found after start revision %d')
+                raise util.Abort(
+                    _('svn: no revision found after start revision %d')
                                  % self.startrev)
 
         return self.heads
@@ -389,7 +390,7 @@ class svn_source(converter_source):
             uuid, module, revnum = self.revsplit(rev)
             entries = svn.client.ls(self.baseurl + urllib.quote(module),
                                     optrev(revnum), True, self.ctx)
-            files = [n for n,e in entries.iteritems()
+            files = [n for n, e in entries.iteritems()
                      if e.kind == svn.core.svn_node_file]
             copies = {}
 
@@ -564,7 +565,8 @@ class svn_source(converter_source):
         except SubversionException:
             dirent = None
         if not dirent:
-            raise SvnPathNotFound(_('%s not found up to revision %d') % (path, stop))
+            raise SvnPathNotFound(_('%s not found up to revision %d')
+                                  % (path, stop))
 
         # stat() gives us the previous revision on this line of
         # development, but it might be in *another module*. Fetch the
@@ -645,7 +647,8 @@ class svn_source(converter_source):
                 # We can avoid the reparent calls if the module has
                 # not changed but it probably does not worth the pain.
                 prevmodule = self.reparent('')
-                fromkind = svn.ra.check_path(self.ra, parentpath.strip('/'), prevnum)
+                fromkind = svn.ra.check_path(self.ra, parentpath.strip('/'),
+                                             prevnum)
                 self.reparent(prevmodule)
 
                 if fromkind == svn.core.svn_node_file:
@@ -657,7 +660,7 @@ class svn_source(converter_source):
                         oroot = parentpath.strip('/')
                         nroot = path.strip('/')
                         children = self._find_children(oroot, prevnum)
-                        children = [s.replace(oroot,nroot) for s in children]
+                        children = [s.replace(oroot, nroot) for s in children]
 
                     for child in children:
                         childpath = self.getrelpath("/" + child, pmodule)
@@ -738,7 +741,8 @@ class svn_source(converter_source):
             # check whether this revision is the start of a branch or part
             # of a branch renaming
             orig_paths = sorted(orig_paths.iteritems())
-            root_paths = [(p,e) for p,e in orig_paths if self.module.startswith(p)]
+            root_paths = [(p, e) for p, e in orig_paths
+                          if self.module.startswith(p)]
             if root_paths:
                 path, ent = root_paths[-1]
                 if ent.copyfrom_path:
@@ -750,8 +754,9 @@ class svn_source(converter_source):
                         prevmodule, prevnum = self.revsplit(previd)[1:]
                         if prevnum >= self.startrev:
                             parents = [previd]
-                            self.ui.note(_('found parent of branch %s at %d: %s\n') %
-                                         (self.module, prevnum, prevmodule))
+                            self.ui.note(
+                                _('found parent of branch %s at %d: %s\n') %
+                                (self.module, prevnum, prevmodule))
                 else:
                     self.ui.debug("no copyfrom path, don't know what to do.\n")
 

@@ -24,7 +24,8 @@ def decodeargs(s):
     s = base64.decodestring(s)
     return pickle.loads(s)
 
-class MissingTool(Exception): pass
+class MissingTool(Exception):
+    pass
 
 def checktool(exe, name=None, abort=True):
     name = name or exe
@@ -32,7 +33,8 @@ def checktool(exe, name=None, abort=True):
         exc = abort and util.Abort or MissingTool
         raise exc(_('cannot find required "%s" tool') % name)
 
-class NoRepo(Exception): pass
+class NoRepo(Exception):
+    pass
 
 SKIPREV = 'SKIP'
 
@@ -322,7 +324,7 @@ class commandline(object):
         # Since ARG_MAX is for command line _and_ environment, lower our limit
         # (and make happy Windows shells while doing this).
 
-        self._argmax = self._argmax/2 - 1
+        self._argmax = self._argmax / 2 - 1
         return self._argmax
 
     def limit_arglist(self, arglist, cmd, *args, **kwargs):
@@ -367,8 +369,9 @@ class mapfile(dict):
             try:
                 key, value = line.splitlines()[0].rsplit(' ', 1)
             except ValueError:
-                raise util.Abort(_('syntax error in %s(%d): key/value pair expected')
-                                 % (self.path, i+1))
+                raise util.Abort(
+                    _('syntax error in %s(%d): key/value pair expected')
+                    % (self.path, i + 1))
             if key not in self:
                 self.order.append(key)
             super(mapfile, self).__setitem__(key, value)

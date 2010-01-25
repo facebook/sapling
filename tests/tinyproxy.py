@@ -25,14 +25,15 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         (ip, port) =  self.client_address
         if hasattr(self, 'allowed_clients') and ip not in self.allowed_clients:
             self.raw_requestline = self.rfile.readline()
-            if self.parse_request(): self.send_error(403)
+            if self.parse_request():
+                self.send_error(403)
         else:
             self.__base_handle()
 
     def _connect_to(self, netloc, soc):
         i = netloc.find(':')
         if i >= 0:
-            host_port = netloc[:i], int(netloc[i+1:])
+            host_port = netloc[:i], int(netloc[i + 1:])
         else:
             host_port = netloc, 80
         print "\t" "connect to %s:%d" % host_port
@@ -91,7 +92,8 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         while 1:
             count += 1
             (ins, _, exs) = select.select(iw, ow, iw, 3)
-            if exs: break
+            if exs:
+                break
             if ins:
                 for i in ins:
                     if i is soc:
@@ -104,12 +106,13 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
                         count = 0
             else:
                 print "\t" "idle", count
-            if count == max_idling: break
+            if count == max_idling:
+                break
 
     do_HEAD = do_GET
     do_POST = do_GET
     do_PUT  = do_GET
-    do_DELETE=do_GET
+    do_DELETE = do_GET
 
 class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
                            BaseHTTPServer.HTTPServer): pass

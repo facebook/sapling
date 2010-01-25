@@ -135,8 +135,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 _(" conflicting flags for %s\n"
                   "(n)one, e(x)ec or sym(l)ink?") % f,
                 (_("&None"), _("E&xec"), _("Sym&link")), 0)
-            if r == 1: return "x" # Exec
-            if r == 2: return "l" # Symlink
+            if r == 1:
+                return "x" # Exec
+            if r == 2:
+                return "l" # Symlink
             return ""
         if m and m != a: # changed from a to m
             return m

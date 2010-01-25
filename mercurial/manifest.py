@@ -11,8 +11,10 @@ import array, struct
 
 class manifestdict(dict):
     def __init__(self, mapping=None, flags=None):
-        if mapping is None: mapping = {}
-        if flags is None: flags = {}
+        if mapping is None:
+            mapping = {}
+        if flags is None:
+            flags = {}
         dict.__init__(self, mapping)
         self._flags = flags
     def flags(self, f):
@@ -70,7 +72,7 @@ class manifest(revlog.revlog):
         while lo < hi:
             mid = (lo + hi) // 2
             start = mid
-            while start > 0 and m[start-1] != '\n':
+            while start > 0 and m[start - 1] != '\n':
                 start -= 1
             end = advance(start, '\0')
             if m[start:end] < s:
@@ -85,7 +87,7 @@ class manifest(revlog.revlog):
         if cmp(s, found) == 0:
             # we know that after the null there are 40 bytes of sha1
             end = advance(end + 40, '\n')
-            return (lo, end+1)
+            return (lo, end + 1)
         else:
             return (lo, lo)
 

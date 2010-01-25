@@ -29,7 +29,8 @@ def showlist(name, values, plural=None, **args):
     expand 'end_foos'.
     '''
     templ = args['templ']
-    if plural: names = plural
+    if plural:
+        names = plural
     else: names = name + 's'
     if not values:
         noname = 'no_' + names
@@ -188,7 +189,7 @@ def showfilecopies(**args):
             rename = getrenamed(fn, ctx.rev())
             if rename:
                 copies.append((fn, rename[0]))
-            
+
     c = [{'name': x[0], 'source': x[1]} for x in copies]
     return showlist('file_copy', c, plural='file_copies', **args)
 

@@ -12,7 +12,7 @@ from common import SKIPREV, converter_source
 def rpairs(name):
     e = len(name)
     while e != -1:
-        yield name[:e], name[e+1:]
+        yield name[:e], name[e + 1:]
         e = name.rfind('/', 0, e)
     yield '.', name
 

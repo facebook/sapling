@@ -87,20 +87,33 @@ class changectx(object):
         for f in sorted(self._manifest):
             yield f
 
-    def changeset(self): return self._changeset
-    def manifest(self): return self._manifest
-    def manifestnode(self): return self._changeset[0]
+    def changeset(self):
+        return self._changeset
+    def manifest(self):
+        return self._manifest
+    def manifestnode(self):
+        return self._changeset[0]
 
-    def rev(self): return self._rev
-    def node(self): return self._node
-    def hex(self): return hex(self._node)
-    def user(self): return self._changeset[1]
-    def date(self): return self._changeset[2]
-    def files(self): return self._changeset[3]
-    def description(self): return self._changeset[4]
-    def branch(self): return self._changeset[5].get("branch")
-    def extra(self): return self._changeset[5]
-    def tags(self): return self._repo.nodetags(self._node)
+    def rev(self):
+        return self._rev
+    def node(self):
+        return self._node
+    def hex(self):
+        return hex(self._node)
+    def user(self):
+        return self._changeset[1]
+    def date(self):
+        return self._changeset[2]
+    def files(self):
+        return self._changeset[3]
+    def description(self):
+        return self._changeset[4]
+    def branch(self):
+        return self._changeset[5].get("branch")
+    def extra(self):
+        return self._changeset[5]
+    def tags(self):
+        return self._repo.nodetags(self._node)
 
     def parents(self):
         """return contexts for each parent changeset"""
@@ -283,10 +296,14 @@ class filectx(object):
         return filectx(self._repo, self._path, fileid=fileid,
                        filelog=self._filelog)
 
-    def filerev(self): return self._filerev
-    def filenode(self): return self._filenode
-    def flags(self): return self._changectx.flags(self._path)
-    def filelog(self): return self._filelog
+    def filerev(self):
+        return self._filerev
+    def filenode(self):
+        return self._filenode
+    def flags(self):
+        return self._changectx.flags(self._path)
+    def filelog(self):
+        return self._filelog
 
     def rev(self):
         if '_changectx' in self.__dict__:
@@ -295,23 +312,38 @@ class filectx(object):
             return self._changectx.rev()
         return self._filelog.linkrev(self._filerev)
 
-    def linkrev(self): return self._filelog.linkrev(self._filerev)
-    def node(self): return self._changectx.node()
-    def hex(self): return hex(self.node())
-    def user(self): return self._changectx.user()
-    def date(self): return self._changectx.date()
-    def files(self): return self._changectx.files()
-    def description(self): return self._changectx.description()
-    def branch(self): return self._changectx.branch()
-    def extra(self): return self._changectx.extra()
-    def manifest(self): return self._changectx.manifest()
-    def changectx(self): return self._changectx
+    def linkrev(self):
+        return self._filelog.linkrev(self._filerev)
+    def node(self):
+        return self._changectx.node()
+    def hex(self):
+        return hex(self.node())
+    def user(self):
+        return self._changectx.user()
+    def date(self):
+        return self._changectx.date()
+    def files(self):
+        return self._changectx.files()
+    def description(self):
+        return self._changectx.description()
+    def branch(self):
+        return self._changectx.branch()
+    def extra(self):
+        return self._changectx.extra()
+    def manifest(self):
+        return self._changectx.manifest()
+    def changectx(self):
+        return self._changectx
 
-    def data(self): return self._filelog.read(self._filenode)
-    def path(self): return self._path
-    def size(self): return self._filelog.size(self._filerev)
+    def data(self):
+        return self._filelog.read(self._filenode)
+    def path(self):
+        return self._path
+    def size(self):
+        return self._filelog.size(self._filerev)
 
-    def cmp(self, text): return self._filelog.cmp(self._filenode, text)
+    def cmp(self, text):
+        return self._filelog.cmp(self._filenode, text)
 
     def renamed(self):
         """check if file was actually renamed in this changeset revision
@@ -348,7 +380,7 @@ class filectx(object):
             pl[0] = (r[0], r[1], None)
 
         return [filectx(self._repo, p, fileid=n, filelog=l)
-                for p,n,l in pl if n != nullid]
+                for p, n, l in pl if n != nullid]
 
     def children(self):
         # hard for renames
@@ -594,22 +626,33 @@ class workingctx(changectx):
         self._parents = [changectx(self._repo, x) for x in p]
         return self._parents
 
-    def manifest(self): return self._manifest
-
-    def user(self): return self._user or self._repo.ui.username()
-    def date(self): return self._date
-    def description(self): return self._text
+    def manifest(self):
+        return self._manifest
+    def user(self):
+        return self._user or self._repo.ui.username()
+    def date(self):
+        return self._date
+    def description(self):
+        return self._text
     def files(self):
         return sorted(self._status[0] + self._status[1] + self._status[2])
 
-    def modified(self): return self._status[0]
-    def added(self): return self._status[1]
-    def removed(self): return self._status[2]
-    def deleted(self): return self._status[3]
-    def unknown(self): return self._status[4]
-    def clean(self): return self._status[5]
-    def branch(self): return self._extra['branch']
-    def extra(self): return self._extra
+    def modified(self):
+        return self._status[0]
+    def added(self):
+        return self._status[1]
+    def removed(self):
+        return self._status[2]
+    def deleted(self):
+        return self._status[3]
+    def unknown(self):
+        return self._status[4]
+    def clean(self):
+        return self._status[5]
+    def branch(self):
+        return self._extra['branch']
+    def extra(self):
+        return self._extra
 
     def tags(self):
         t = []
@@ -685,7 +728,8 @@ class workingfilectx(filectx):
     def __str__(self):
         return "%s@%s" % (self.path(), self._changectx)
 
-    def data(self): return self._repo.wread(self._path)
+    def data(self):
+        return self._repo.wread(self._path)
     def renamed(self):
         rp = self._repo.dirstate.copied(self._path)
         if not rp:
@@ -711,21 +755,24 @@ class workingfilectx(filectx):
             pl.append((path, filenode(pc, path), fl))
 
         return [filectx(self._repo, p, fileid=n, filelog=l)
-                for p,n,l in pl if n != nullid]
+                for p, n, l in pl if n != nullid]
 
     def children(self):
         return []
 
-    def size(self): return os.stat(self._repo.wjoin(self._path)).st_size
+    def size(self):
+        return os.stat(self._repo.wjoin(self._path)).st_size
     def date(self):
         t, tz = self._changectx.date()
         try:
             return (int(os.lstat(self._repo.wjoin(self._path)).st_mtime), tz)
         except OSError, err:
-            if err.errno != errno.ENOENT: raise
+            if err.errno != errno.ENOENT:
+                raise
             return (t, tz)
 
-    def cmp(self, text): return self._repo.wread(self._path) == text
+    def cmp(self, text):
+        return self._repo.wread(self._path) == text
 
 class memctx(object):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
@@ -787,22 +834,37 @@ class memctx(object):
     def __getitem__(self, key):
         return self.filectx(key)
 
-    def p1(self): return self._parents[0]
-    def p2(self): return self._parents[1]
+    def p1(self):
+        return self._parents[0]
+    def p2(self):
+        return self._parents[1]
 
-    def user(self): return self._user or self._repo.ui.username()
-    def date(self): return self._date
-    def description(self): return self._text
-    def files(self): return self.modified()
-    def modified(self): return self._status[0]
-    def added(self): return self._status[1]
-    def removed(self): return self._status[2]
-    def deleted(self): return self._status[3]
-    def unknown(self): return self._status[4]
-    def clean(self): return self._status[5]
-    def branch(self): return self._extra['branch']
-    def extra(self): return self._extra
-    def flags(self, f): return self[f].flags()
+    def user(self):
+        return self._user or self._repo.ui.username()
+    def date(self):
+        return self._date
+    def description(self):
+        return self._text
+    def files(self):
+        return self.modified()
+    def modified(self):
+        return self._status[0]
+    def added(self):
+        return self._status[1]
+    def removed(self):
+        return self._status[2]
+    def deleted(self):
+        return self._status[3]
+    def unknown(self):
+        return self._status[4]
+    def clean(self):
+        return self._status[5]
+    def branch(self):
+        return self._extra['branch']
+    def extra(self):
+        return self._extra
+    def flags(self, f):
+        return self[f].flags()
 
     def parents(self):
         """return contexts for each parent changeset"""
@@ -832,11 +894,19 @@ class memfilectx(object):
         if copied:
             self._copied = (copied, nullid)
 
-    def __nonzero__(self): return True
-    def __str__(self): return "%s@%s" % (self.path(), self._changectx)
-    def path(self): return self._path
-    def data(self): return self._data
-    def flags(self): return self._flags
-    def isexec(self): return 'x' in self._flags
-    def islink(self): return 'l' in self._flags
-    def renamed(self): return self._copied
+    def __nonzero__(self):
+        return True
+    def __str__(self):
+        return "%s@%s" % (self.path(), self._changectx)
+    def path(self):
+        return self._path
+    def data(self):
+        return self._data
+    def flags(self):
+        return self._flags
+    def isexec(self):
+        return 'x' in self._flags
+    def islink(self):
+        return 'l' in self._flags
+    def renamed(self):
+        return self._copied

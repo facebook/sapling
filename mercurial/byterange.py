@@ -310,7 +310,8 @@ class FTPRangeHandler(urllib2.FTPHandler):
                 (fb, lb) = range_tup
                 if lb == '':
                     if retrlen is None or retrlen == 0:
-                        raise RangeError('Requested Range Not Satisfiable due to unobtainable file length.')
+                        raise RangeError('Requested Range Not Satisfiable due'
+                                         ' to unobtainable file length.')
                     lb = retrlen
                     retrlen = lb - fb
                     if retrlen < 0:

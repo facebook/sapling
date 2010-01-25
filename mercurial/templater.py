@@ -77,7 +77,7 @@ class engine(object):
             raise SyntaxError(_("error expanding '%s%%%s'") % (key, format))
         lm = map.copy()
         for i in v:
-            if isinstance(i, dict): 
+            if isinstance(i, dict):
                 lm.update(i)
                 yield self.process(format, lm)
             else:
@@ -244,7 +244,6 @@ def stylemap(styles, paths=None):
         styles = [styles]
 
     for style in styles:
-    	
         if not style:
             continue
         locations = [os.path.join(style, 'map'), 'map-' + style]

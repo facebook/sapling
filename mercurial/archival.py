@@ -205,7 +205,8 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     prefix is name of path to put before every archive member.'''
 
     def write(name, mode, islink, getdata):
-        if matchfn and not matchfn(name): return
+        if matchfn and not matchfn(name):
+            return
         data = getdata()
         if decode:
             data = repo.wwritedata(name, data)

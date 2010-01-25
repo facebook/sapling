@@ -80,7 +80,7 @@ def prompt(ui, prompt, default=None, rest=':'):
     if not ui.interactive():
         if default is not None:
             return default
-        raise util.Abort(_("%s Please enter a valid value" % (prompt+rest)))
+        raise util.Abort(_("%s Please enter a valid value" % (prompt + rest)))
     if default:
         prompt += ' [%s]' % default
     prompt += rest

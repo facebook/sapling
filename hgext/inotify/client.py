@@ -11,7 +11,8 @@ from mercurial.i18n import _
 import common, server
 import errno, os, socket, struct
 
-class QueryFailed(Exception): pass
+class QueryFailed(Exception):
+    pass
 
 def start_server(function):
     """
@@ -137,8 +138,10 @@ class client(object):
             states = 'almrx!'
             if ignored:
                 raise ValueError('this is insanity')
-            if clean: states += 'c'
-            if unknown: states += '?'
+            if clean:
+                states += 'c'
+            if unknown:
+                states += '?'
             yield states
 
         req = '\0'.join(genquery())

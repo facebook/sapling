@@ -376,7 +376,8 @@ class queue(object):
             try:
                 guards = self.opener(self.guards_path).read().split()
             except IOError, err:
-                if err.errno != errno.ENOENT: raise
+                if err.errno != errno.ENOENT:
+                    raise
                 guards = []
             for i, guard in enumerate(guards):
                 bad = self.check_guard(guard)
@@ -450,9 +451,12 @@ class queue(object):
             for i in items:
                 fp.write("%s\n" % i)
             fp.close()
-        if self.applied_dirty: write_list(map(str, self.applied), self.status_path)
-        if self.series_dirty: write_list(self.full_series, self.series_path)
-        if self.guards_dirty: write_list(self.active_guards, self.guards_path)
+        if self.applied_dirty:
+            write_list(map(str, self.applied), self.status_path)
+        if self.series_dirty:
+            write_list(self.full_series, self.series_path)
+        if self.guards_dirty:
+            write_list(self.active_guards, self.guards_path)
 
     def removeundo(self, repo):
         undo = repo.sjoin('undo')
@@ -482,7 +486,7 @@ class queue(object):
 
     def mergeone(self, repo, mergeq, head, patch, rev, diffopts):
         # first try just applying the patch
-        (err, n) = self.apply(repo, [ patch ], update_status=False,
+        (err, n) = self.apply(repo, [patch], update_status=False,
                               strict=True, merge=rev)
 
         if err == 0:
@@ -529,7 +533,7 @@ class queue(object):
             return bin(self.applied[-1].rev)
         pp = repo.changelog.parents(rev)
         if pp[1] != nullid:
-            arevs = [ x.rev for x in self.applied ]
+            arevs = [x.rev for x in self.applied]
             p0 = hex(pp[0])
             p1 = hex(pp[1])
             if p0 in arevs:
@@ -864,7 +868,8 @@ class queue(object):
                     wlock.release()
                     wlock = None
                     r = self.qrepo()
-                    if r: r.add([patchfn])
+                    if r:
+                        r.add([patchfn])
                 except:
                     repo.rollback()
                     raise
@@ -941,7 +946,7 @@ class queue(object):
         if not os.path.isfile(self.join(patch)):
             try:
                 sno = int(patch)
-            except(ValueError, OverflowError):
+            except (ValueError, OverflowError):
                 pass
             else:
                 if -len(self.series) <= sno < len(self.series):
@@ -957,8 +962,8 @@ class queue(object):
                     if res:
                         i = self.series.index(res)
                         try:
-                            off = int(patch[minus+1:] or 1)
-                        except(ValueError, OverflowError):
+                            off = int(patch[minus + 1:] or 1)
+                        except (ValueError, OverflowError):
                             pass
                         else:
                             if i - off >= 0:
@@ -969,8 +974,8 @@ class queue(object):
                     if res:
                         i = self.series.index(res)
                         try:
-                            off = int(patch[plus+1:] or 1)
-                        except(ValueError, OverflowError):
+                            off = int(patch[plus + 1:] or 1)
+                        except (ValueError, OverflowError):
                             pass
                         else:
                             if i + off < len(self.series):
@@ -1106,7 +1111,7 @@ class queue(object):
 
             if not update:
                 parents = repo.dirstate.parents()
-                rr = [ bin(x.rev) for x in self.applied ]
+                rr = [bin(x.rev) for x in self.applied]
                 for p in parents:
                     if p in rr:
                         self.ui.warn(_("qpop: forcing dirstate update\n"))
@@ -1306,7 +1311,8 @@ class queue(object):
                             f = repo.file(dst)
                             src = f.renamed(man[dst])
                             if src:
-                                copies.setdefault(src[0], []).extend(copies.get(dst, []))
+                                copies.setdefault(src[0], []).extend(
+                                    copies.get(dst, []))
                                 if dst in a:
                                     copies[src[0]].append(dst)
                             # we can't copy a file created by the patch itself
@@ -1440,8 +1446,8 @@ class queue(object):
             length = len(self.series) - start
         if not missing:
             if self.ui.verbose:
-                idxwidth = len(str(start+length - 1))
-            for i in xrange(start, start+length):
+                idxwidth = len(str(start + length - 1))
+            for i in xrange(start, start + length):
                 patch = self.series[i]
                 if patch in applied:
                     stat = 'A'
@@ -1493,7 +1499,7 @@ class queue(object):
             elif line.startswith('Dirstate:'):
                 l = line.rstrip()
                 l = l[10:].split(' ')
-                qpp = [ bin(x) for x in l ]
+                qpp = [bin(x) for x in l]
             elif datastart != None:
                 l = line.rstrip()
                 se = statusentry(l)
@@ -1542,7 +1548,7 @@ class queue(object):
             self.ui.warn(_("status is already saved\n"))
             return 1
 
-        ar = [ ':' + x for x in self.full_series ]
+        ar = [':' + x for x in self.full_series]
         if not msg:
             msg = _("hg patches saved state")
         else:
@@ -1694,7 +1700,8 @@ class queue(object):
                 try:
                     if filename == '-':
                         if not patchname:
-                            raise util.Abort(_('need --name to import a patch from -'))
+                            raise util.Abort(
+                                _('need --name to import a patch from -'))
                         text = sys.stdin.read()
                     else:
                         text = url.open(self.ui, filename).read()
@@ -1912,7 +1919,8 @@ def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository"""
     q = repo.mq
     r = q.qrepo()
-    if not r: raise util.Abort('no queue repository')
+    if not r:
+        raise util.Abort('no queue repository')
     commands.commit(r.ui, r, *pats, **opts)
 
 def series(ui, repo, **opts):
@@ -1925,7 +1933,7 @@ def top(ui, repo, **opts):
     q = repo.mq
     t = q.applied and q.series_end(True) or 0
     if t:
-        return q.qseries(repo, start=t-1, length=1, status='A',
+        return q.qseries(repo, start=t - 1, length=1, status='A',
                          summary=opts.get('summary'))
     else:
         ui.write(_("no patches applied\n"))
@@ -1950,7 +1958,7 @@ def prev(ui, repo, **opts):
     if not l:
         ui.write(_("no patches applied\n"))
         return 1
-    return q.qseries(repo, start=l-2, length=1, status='A',
+    return q.qseries(repo, start=l - 2, length=1, status='A',
                      summary=opts.get('summary'))
 
 def setupheaderopts(ui, opts):
@@ -1984,7 +1992,8 @@ def new(ui, repo, patch, *args, **opts):
     information.
     """
     msg = cmdutil.logmessage(opts)
-    def getmsg(): return ui.edit(msg, ui.username())
+    def getmsg():
+        return ui.edit(msg, ui.username())
     q = repo.mq
     opts['msg'] = msg
     if opts.get('edit'):
@@ -2272,7 +2281,8 @@ def rename(ui, repo, patch, name=None, **opts):
         raise util.Abort(_('%s already exists') % absdest)
 
     if name in q.series:
-        raise util.Abort(_('A patch named %s already exists in the series file') % name)
+        raise util.Abort(
+            _('A patch named %s already exists in the series file') % name)
 
     if ui.verbose:
         ui.write('renaming %s to %s\n' % (patch, name))
@@ -2464,7 +2474,7 @@ def select(ui, repo, *args, **opts):
                 if i == 0:
                     q.pop(repo, all=True)
                 else:
-                    q.pop(repo, i-1)
+                    q.pop(repo, i - 1)
                 break
     if popped:
         try:
@@ -2575,8 +2585,8 @@ def reposetup(ui, repo):
             start = lrev + 1
             if start < qbase:
                 # update the cache (excluding the patches) and save it
-                self._updatebranchcache(partial, lrev+1, qbase)
-                self._writebranchcache(partial, cl.node(qbase-1), qbase-1)
+                self._updatebranchcache(partial, lrev + 1, qbase)
+                self._writebranchcache(partial, cl.node(qbase - 1), qbase - 1)
                 start = qbase
             # if start = qbase, the cache is as updated as it should be.
             # if start > qbase, the cache includes (part of) the patches.
@@ -2591,7 +2601,8 @@ def reposetup(ui, repo):
         repo.__class__ = mqrepo
 
 def mqimport(orig, ui, repo, *args, **kwargs):
-    if hasattr(repo, 'abort_if_wdir_patched') and not kwargs.get('no_commit', False):
+    if (hasattr(repo, 'abort_if_wdir_patched')
+        and not kwargs.get('no_commit', False)):
         repo.abort_if_wdir_patched(_('cannot import over an applied patch'),
                                    kwargs.get('force'))
     return orig(ui, repo, *args, **kwargs)
@@ -2688,11 +2699,16 @@ cmdtable = {
         (refresh,
          [('e', 'edit', None, _('edit commit message')),
           ('g', 'git', None, _('use git extended diff format')),
-          ('s', 'short', None, _('refresh only files already in the patch and specified files')),
-          ('U', 'currentuser', None, _('add/update author field in patch with current user')),
-          ('u', 'user', '', _('add/update author field in patch with given user')),
-          ('D', 'currentdate', None, _('add/update date field in patch with current date')),
-          ('d', 'date', '', _('add/update date field in patch with given date'))
+          ('s', 'short', None,
+           _('refresh only files already in the patch and specified files')),
+          ('U', 'currentuser', None,
+           _('add/update author field in patch with current user')),
+          ('u', 'user', '',
+           _('add/update author field in patch with given user')),
+          ('D', 'currentdate', None,
+           _('add/update date field in patch with current date')),
+          ('d', 'date', '',
+           _('add/update date field in patch with given date'))
           ] + commands.walkopts + commands.commitopts,
          _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...')),
     'qrename|qmv':

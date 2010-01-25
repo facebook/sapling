@@ -78,7 +78,7 @@ class appender(object):
             doff = self.offset - self.size
             self.data.insert(0, "".join(self.data))
             del self.data[1:]
-            s = self.data[0][doff:doff+count]
+            s = self.data[0][doff:doff + count]
             self.offset += len(s)
             ret += s
         return ret

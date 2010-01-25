@@ -136,7 +136,7 @@ class hgweb(object):
             style = cmd.rfind('-')
             if style != -1:
                 req.form['style'] = [cmd[:style]]
-                cmd = cmd[style+1:]
+                cmd = cmd[style + 1:]
 
             # avoid accepting e.g. style parameter as command
             if hasattr(webcommands, cmd):

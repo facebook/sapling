@@ -83,7 +83,7 @@ echo "# or true.executable not found in PATH:"
 domerge -r 2 --config merge-tools.true.executable=nonexistingmergetool
 
 echo "# or true.executable with bogus path:"
-domerge -r 2 --config merge-tools.true.executable=/bin/nonexistingmergetool
+domerge -r 2 --config merge-tools.true.executable=/nonexisting/mergetool
 
 echo "# but true.executable set to cat found in PATH works:"
 echo "true.executable=cat" >> .hg/hgrc
@@ -103,7 +103,7 @@ echo "# merge-patterns specifies executable not found in PATH and gets warning:"
 domerge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=nonexistingmergetool
 
 echo "# merge-patterns specifies executable with bogus path and gets warning:"
-domerge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=/bin/nonexistingmergetool
+domerge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=/nonexisting/mergetool
 
 echo
 echo ui.merge overrules priority

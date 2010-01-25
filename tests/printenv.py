@@ -48,7 +48,8 @@ elif url.startswith("remote:http"):
 
 out.write("%s hook: " % name)
 for v in env:
-    out.write("%s=%s " % (v, os.environ[v].replace(os.environ["HGTMP"], '$HGTMP')))
+    out.write("%s=%s " %
+              (v, os.environ[v].replace(os.environ["HGTMP"], '$HGTMP')))
 out.write("\n")
 out.close()
 

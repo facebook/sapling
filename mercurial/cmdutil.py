@@ -93,7 +93,8 @@ def loglimit(opts):
             limit = int(limit)
         except ValueError:
             raise util.Abort(_('limit must be a positive integer'))
-        if limit <= 0: raise util.Abort(_('limit must be positive'))
+        if limit <= 0:
+            raise util.Abort(_('limit must be positive'))
     else:
         limit = None
     return limit
@@ -166,7 +167,7 @@ def revrange(repo, revs):
             start = revfix(repo, start, 0)
             end = revfix(repo, end, len(repo) - 1)
             step = start > end and -1 or 1
-            for rev in xrange(start, end+step, step):
+            for rev in xrange(start, end + step, step):
                 if rev in seen:
                     continue
                 seen.add(rev)
@@ -569,21 +570,21 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
     if opts['daemon'] and not opts['daemon_pipefds']:
         # Signal child process startup with file removal
         lockfd, lockpath = tempfile.mkstemp(prefix='hg-service-')
-        os.close(lockfd)        
+        os.close(lockfd)
         try:
             if not runargs:
                 runargs = util.hgcmd() + sys.argv[1:]
             runargs.append('--daemon-pipefds=%s' % lockpath)
             # Don't pass --cwd to the child process, because we've already
             # changed directory.
-            for i in xrange(1,len(runargs)):
+            for i in xrange(1, len(runargs)):
                 if runargs[i].startswith('--cwd='):
                     del runargs[i]
                     break
                 elif runargs[i].startswith('--cwd'):
-                    del runargs[i:i+2]
+                    del runargs[i:i + 2]
                     break
-            pid = util.spawndetached(runargs)  
+            pid = util.spawndetached(runargs)
             while os.path.exists(lockpath):
                 time.sleep(0.1)
         finally:
@@ -903,13 +904,15 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
         if not os.path.split(mapfile)[0]:
             mapname = (templater.templatepath('map-cmdline.' + mapfile)
                        or templater.templatepath(mapfile))
-            if mapname: mapfile = mapname
+            if mapname:
+                mapfile = mapname
 
     try:
         t = changeset_templater(ui, repo, patch, opts, mapfile, buffered)
     except SyntaxError, inst:
         raise util.Abort(inst.args[0])
-    if tmpl: t.use_template(tmpl)
+    if tmpl:
+        t.use_template(tmpl)
     return t
 
 def finddate(ui, repo, date):
@@ -951,13 +954,13 @@ def walkchangerevs(repo, match, opts, prepare):
     def increasing_windows(start, end, windowsize=8, sizelimit=512):
         if start < end:
             while start < end:
-                yield start, min(windowsize, end-start)
+                yield start, min(windowsize, end - start)
                 start += windowsize
                 if windowsize < sizelimit:
                     windowsize *= 2
         else:
             while start > end:
-                yield start, min(windowsize, start-end-1)
+                yield start, min(windowsize, start - end - 1)
                 start -= windowsize
                 if windowsize < sizelimit:
                     windowsize *= 2
@@ -1014,7 +1017,8 @@ def walkchangerevs(repo, match, opts, prepare):
                     # A zero count may be a directory or deleted file, so
                     # try to find matching entries on the slow path.
                     if follow:
-                        raise util.Abort(_('cannot follow nonexistent file: "%s"') % file_)
+                        raise util.Abort(
+                            _('cannot follow nonexistent file: "%s"') % file_)
                     slowpath = True
                     break
                 else:
@@ -1088,7 +1092,7 @@ def walkchangerevs(repo, match, opts, prepare):
         rev = repo.changelog.rev(repo.lookup(rev))
         ff = followfilter()
         stop = min(revs[0], revs[-1])
-        for x in xrange(rev, stop-1, -1):
+        for x in xrange(rev, stop - 1, -1):
             if ff.match(x):
                 wanted.discard(x)
 
@@ -1103,7 +1107,7 @@ def walkchangerevs(repo, match, opts, prepare):
 
         for i, window in increasing_windows(0, len(revs)):
             change = util.cachefunc(repo.changectx)
-            nrevs = [rev for rev in revs[i:i+window] if want(rev)]
+            nrevs = [rev for rev in revs[i:i + window] if want(rev)]
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)
                 ctx = change(rev)

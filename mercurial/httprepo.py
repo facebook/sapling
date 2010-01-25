@@ -107,9 +107,10 @@ class httprepository(repo.repository):
                 proto.startswith('text/plain') or
                 proto.startswith('application/hg-changegroup')):
             self.ui.debug("requested URL: '%s'\n" % url.hidepassword(cu))
-            raise error.RepoError(_("'%s' does not appear to be an hg repository:\n"
-                                    "---%%<--- (%s)\n%s\n---%%<---\n")
-                                  % (safeurl, proto, resp.read()))
+            raise error.RepoError(
+                _("'%s' does not appear to be an hg repository:\n"
+                  "---%%<--- (%s)\n%s\n---%%<---\n")
+                % (safeurl, proto, resp.read()))
 
         if proto.startswith('application/mercurial-'):
             try:
@@ -171,7 +172,7 @@ class httprepository(repo.repository):
         n = " ".join(map(hex, nodes))
         d = self.do_read("branches", nodes=n)
         try:
-            br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
+            br = [tuple(map(bin, b.split(" "))) for b in d.splitlines()]
             return br
         except:
             raise error.ResponseError(_("unexpected response:"), d)
@@ -183,7 +184,8 @@ class httprepository(repo.repository):
             n = " ".join(["-".join(map(hex, p)) for p in pairs[i:i + batch]])
             d = self.do_read("between", pairs=n)
             try:
-                r += [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
+                r += [l and map(bin, l.split(" ")) or []
+                      for l in d.splitlines()]
             except:
                 raise error.ResponseError(_("unexpected response:"), d)
         return r

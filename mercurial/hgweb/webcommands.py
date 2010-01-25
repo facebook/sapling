@@ -228,7 +228,7 @@ def changelog(web, req, tmpl, shortlog=False):
     start = max(0, pos - revcount + 1)
     end = min(count, start + revcount)
     pos = end - 1
-    parity = paritygen(web.stripecount, offset=start-end)
+    parity = paritygen(web.stripecount, offset=start - end)
 
     changenav = webutil.revnavgen(pos, revcount, count, web.repo.changectx)
 
@@ -334,7 +334,7 @@ def manifest(web, req, tmpl):
             emptydirs = []
             h = dirs[d]
             while isinstance(h, dict) and len(h) == 1:
-                k,v = h.items()[0]
+                k, v = h.items()[0]
                 if v:
                     emptydirs.append(k)
                 h = v
@@ -378,9 +378,9 @@ def tags(web, req, tmpl):
 
     return tmpl("tags",
                 node=hex(web.repo.changelog.tip()),
-                entries=lambda **x: entries(False,0, **x),
-                entriesnotip=lambda **x: entries(True,0, **x),
-                latestentry=lambda **x: entries(True,1, **x))
+                entries=lambda **x: entries(False, 0, **x),
+                entriesnotip=lambda **x: entries(True, 0, **x),
+                latestentry=lambda **x: entries(True, 1, **x))
 
 def branches(web, req, tmpl):
     b = web.repo.branchtags()
@@ -437,14 +437,14 @@ def summary(web, req, tmpl):
 
         b = web.repo.branchtags()
         l = [(-web.repo.changelog.rev(n), n, t) for t, n in b.iteritems()]
-        for r,n,t in sorted(l):
+        for r, n, t in sorted(l):
             yield {'parity': parity.next(),
                    'branch': t,
                    'node': hex(n),
                    'date': web.repo[n].date()}
 
     def changelist(**map):
-        parity = paritygen(web.stripecount, offset=start-end)
+        parity = paritygen(web.stripecount, offset=start - end)
         l = [] # build a list in forward order for efficiency
         for i in xrange(start, end):
             ctx = web.repo[i]
@@ -600,7 +600,7 @@ def filelog(web, req, tmpl):
     count = fctx.filerev() + 1
     start = max(0, fctx.filerev() - revcount + 1) # first rev on this page
     end = min(count, start + revcount) # last rev on this page
-    parity = paritygen(web.stripecount, offset=start-end)
+    parity = paritygen(web.stripecount, offset=start - end)
 
     def entries(limit=0, **map):
         l = []

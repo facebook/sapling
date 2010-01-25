@@ -402,7 +402,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                     # normal branch
                     if revparts[:-2] == e.revision:
                         branchpoints.add(branch)
-                elif revparts == (1,1,1): # vendor branch
+                elif revparts == (1, 1, 1): # vendor branch
                     if revparts in e.branches:
                         branchpoints.add(branch)
             e.branchpoints = branchpoints
@@ -632,7 +632,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     branches = {}    # changeset index where we saw a branch
     n = len(changesets)
     i = 0
-    while i<n:
+    while i < n:
         c = changesets[i]
 
         for f in c.entries:
@@ -702,9 +702,12 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
                     m = None   # if no group found then merge to HEAD
                 if m in branches and c.branch != m:
                     # insert empty changeset for merge
-                    cc = changeset(author=c.author, branch=m, date=c.date,
-                            comment='convert-repo: CVS merge from branch %s' % c.branch,
-                            entries=[], tags=[], parents=[changesets[branches[m]], c])
+                    cc = changeset(
+                        author=c.author, branch=m, date=c.date,
+                        comment='convert-repo: CVS merge from branch %s'
+                        % c.branch,
+                        entries=[], tags=[],
+                        parents=[changesets[branches[m]], c])
                     changesets.insert(i + 1, cc)
                     branches[m] = i + 1
 
@@ -774,7 +777,7 @@ def debugcvsps(ui, *args, **opts):
 
         if opts["ancestors"]:
             if cs.branch not in branches and cs.parents and cs.parents[0].id:
-                ancestors[cs.branch] = (changesets[cs.parents[0].id-1].branch,
+                ancestors[cs.branch] = (changesets[cs.parents[0].id - 1].branch,
                                         cs.parents[0].id)
             branches[cs.branch] = cs.id
 
@@ -791,14 +794,15 @@ def debugcvsps(ui, *args, **opts):
                                                  '%Y/%m/%d %H:%M:%S %1%2'))
             ui.write('Author: %s\n' % cs.author)
             ui.write('Branch: %s\n' % (cs.branch or 'HEAD'))
-            ui.write('Tag%s: %s \n' % (['', 's'][len(cs.tags)>1],
+            ui.write('Tag%s: %s \n' % (['', 's'][len(cs.tags) > 1],
                                   ','.join(cs.tags) or '(none)'))
             branchpoints = getattr(cs, 'branchpoints', None)
             if branchpoints:
                 ui.write('Branchpoints: %s \n' % ', '.join(branchpoints))
             if opts["parents"] and cs.parents:
-                if len(cs.parents)>1:
-                    ui.write('Parents: %s\n' % (','.join([str(p.id) for p in cs.parents])))
+                if len(cs.parents) > 1:
+                    ui.write('Parents: %s\n' %
+                             (','.join([str(p.id) for p in cs.parents])))
                 else:
                     ui.write('Parent: %d\n' % cs.parents[0].id)
 
@@ -818,8 +822,10 @@ def debugcvsps(ui, *args, **opts):
                 fn = f.file
                 if fn.startswith(opts["prefix"]):
                     fn = fn[len(opts["prefix"]):]
-                ui.write('\t%s:%s->%s%s \n' % (fn, '.'.join([str(x) for x in f.parent]) or 'INITIAL',
-                                          '.'.join([str(x) for x in f.revision]), ['', '(DEAD)'][f.dead]))
+                ui.write('\t%s:%s->%s%s \n' % (
+                        fn, '.'.join([str(x) for x in f.parent]) or 'INITIAL',
+                        '.'.join([str(x) for x in f.revision]),
+                        ['', '(DEAD)'][f.dead]))
             ui.write('\n')
 
         # have we seen the start tag?
@@ -829,7 +835,7 @@ def debugcvsps(ui, *args, **opts):
                 off = False
 
         # see if we reached the end tag
-        if len(revisions)>1 and not off:
+        if len(revisions) > 1 and not off:
             if revisions[1] == str(cs.id) or \
                 revisions[1] in cs.tags:
                 break

@@ -231,7 +231,7 @@ def splitnewlines(text):
             if last:
                 lines.append(last)
             return lines
-        lines.append(text[i:n+1])
+        lines.append(text[i:n + 1])
         i = n + 1
 
 def parsehghaveoutput(lines):
@@ -660,7 +660,8 @@ def runchildren(options, tests):
     jobs = [[] for j in xrange(options.jobs)]
     while tests:
         for job in jobs:
-            if not tests: break
+            if not tests:
+                break
             job.append(tests.pop())
     fps = {}
     for j, job in enumerate(jobs):

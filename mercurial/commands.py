@@ -34,7 +34,7 @@ def add(ui, repo, *pats, **opts):
     names = []
     m = cmdutil.match(repo, pats, opts)
     oldbad = m.bad
-    m.bad = lambda x,y: bad.append(x) or oldbad(x,y)
+    m.bad = lambda x, y: bad.append(x) or oldbad(x, y)
 
     for f in repo.walk(m):
         exact = m.exact(f)
@@ -69,7 +69,7 @@ def addremove(ui, repo, *pats, **opts):
         raise util.Abort(_('similarity must be a number'))
     if sim < 0 or sim > 100:
         raise util.Abort(_('similarity must be between 0 and 100'))
-    return cmdutil.addremove(repo, pats, opts, similarity=sim/100.)
+    return cmdutil.addremove(repo, pats, opts, similarity=sim / 100.0)
 
 def annotate(ui, repo, *pats, **opts):
     """show changeset information by line for each file
@@ -98,8 +98,8 @@ def annotate(ui, repo, *pats, **opts):
              ('follow', lambda x: x[0].path()),
             ]
 
-    if (not opts.get('user') and not opts.get('changeset') and not opts.get('date')
-        and not opts.get('follow')):
+    if (not opts.get('user') and not opts.get('changeset')
+        and not opts.get('date') and not opts.get('follow')):
         opts['number'] = 1
 
     linenumber = opts.get('line_number') is not None
@@ -173,7 +173,8 @@ def archive(ui, repo, dest, **opts):
         if kind == 'files':
             raise util.Abort(_('cannot archive plain files to stdout'))
         dest = sys.stdout
-        if not prefix: prefix = os.path.basename(repo.root) + '-%h'
+        if not prefix:
+            prefix = os.path.basename(repo.root) + '-%h'
     prefix = cmdutil.make_filename(repo, prefix, node)
     archival.archive(repo, dest, node, kind, not opts.get('no_decode'),
                      matchfn, prefix)
@@ -257,7 +258,8 @@ def backout(ui, repo, node=None, rev=None, **opts):
     if op1 != node:
         hg.clean(repo, op1, show_stats=False)
         if opts.get('merge'):
-            ui.status(_('merging with changeset %s\n') % nice(repo.changelog.tip()))
+            ui.status(_('merging with changeset %s\n')
+                      % nice(repo.changelog.tip()))
             hg.merge(repo, hex(repo.changelog.tip()))
         else:
             ui.status(_('the backout changeset is a new head - '
@@ -868,11 +870,14 @@ def debugstate(ui, repo, nodates=None):
         if showdate:
             if ent[3] == -1:
                 # Pad or slice to locale representation
-                locale_len = len(time.strftime("%Y-%m-%d %H:%M:%S ", time.localtime(0)))
+                locale_len = len(time.strftime("%Y-%m-%d %H:%M:%S ",
+                                               time.localtime(0)))
                 timestr = 'unset'
-                timestr = timestr[:locale_len] + ' '*(locale_len - len(timestr))
+                timestr = (timestr[:locale_len] +
+                           ' ' * (locale_len - len(timestr)))
             else:
-                timestr = time.strftime("%Y-%m-%d %H:%M:%S ", time.localtime(ent[3]))
+                timestr = time.strftime("%Y-%m-%d %H:%M:%S ",
+                                        time.localtime(ent[3]))
         if ent[1] & 020000:
             mode = 'lnk'
         else:
@@ -884,7 +889,7 @@ def debugstate(ui, repo, nodates=None):
 def debugsub(ui, repo, rev=None):
     if rev == '':
         rev = None
-    for k,v in sorted(repo[rev].substate.items()):
+    for k, v in sorted(repo[rev].substate.items()):
         ui.write('path %s\n' % k)
         ui.write(' source   %s\n' % v[0])
         ui.write(' revision %s\n' % v[1])
@@ -1428,7 +1433,8 @@ def heads(ui, repo, *branchrevs, **opts):
             bheads = repo.branchheads(branch, start, closed=closed)
             if not bheads:
                 if not opts.get('rev'):
-                    ui.warn(_("no open branch heads on branch %s\n") % encodedbranch)
+                    ui.warn(_("no open branch heads on branch %s\n")
+                            % encodedbranch)
                 elif branch != branchrev:
                     ui.warn(_("no changes on branch %s containing %s are "
                               "reachable from %s\n")
@@ -1640,7 +1646,8 @@ def help_(ui, name=None, with_version=False):
     for title, options in option_lists:
         opt_output.append(("\n%s" % title, None))
         for shortopt, longopt, default, desc in options:
-            if _("DEPRECATED") in desc and not ui.verbose: continue
+            if _("DEPRECATED") in desc and not ui.verbose:
+                               continue
             opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
                                           longopt and " --%s" % longopt),
                                "%s%s" % (desc,
@@ -1851,7 +1858,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                     patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
                                 files=files, eolmode=None)
                 finally:
-                    files = patch.updatedir(ui, repo, files, similarity=sim/100.)
+                    files = patch.updatedir(ui, repo, files,
+                                            similarity=sim / 100.0)
                 if not opts.get('no_commit'):
                     m = cmdutil.matchfiles(repo, files or [])
                     n = repo.commit(message, opts.get('user') or user,
@@ -1976,7 +1984,7 @@ def locate(ui, repo, *pats, **opts):
 
     ret = 1
     m = cmdutil.match(repo, pats, opts, default='relglob')
-    m.bad = lambda x,y: False
+    m.bad = lambda x, y: False
     for abs in repo[rev].walk(m):
         if not rev and abs not in repo.dirstate:
             continue
@@ -2168,7 +2176,8 @@ def outgoing(ui, repo, dest=None, **opts):
     """
     limit = cmdutil.loglimit(opts)
     dest, revs, checkout = hg.parseurl(
-        ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
+        ui.expandpath(dest or 'default-push', dest or 'default'),
+        opts.get('rev'))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
@@ -2324,7 +2333,8 @@ def push(ui, repo, dest=None, **opts):
     URLs. If DESTINATION is omitted, a default path will be used.
     """
     dest, revs, checkout = hg.parseurl(
-        ui.expandpath(dest or 'default-push', dest or 'default'), opts.get('rev'))
+        ui.expandpath(dest or 'default-push', dest or 'default'),
+        opts.get('rev'))
     other = hg.repository(cmdutil.remoteui(repo, opts), dest)
     ui.status(_('pushing to %s\n') % url.hidepassword(dest))
     if revs:
@@ -2561,7 +2571,7 @@ def revert(ui, repo, *pats, **opts):
         # walk dirstate.
 
         m = cmdutil.match(repo, pats, opts)
-        m.bad = lambda x,y: False
+        m.bad = lambda x, y: False
         for abs in repo.walk(m):
             names[abs] = m.rel(abs), m.exact(abs)
 
@@ -2634,7 +2644,8 @@ def revert(ui, repo, *pats, **opts):
                         msg = msg(abs)
                     ui.status(msg % rel)
             for table, hitlist, misslist, backuphit, backupmiss in disptable:
-                if abs not in table: continue
+                if abs not in table:
+                    continue
                 # file has changed in dirstate
                 if mfentry:
                     handle(hitlist, backuphit)
@@ -2650,7 +2661,8 @@ def revert(ui, repo, *pats, **opts):
                     continue
                 # file has not changed in dirstate
                 if node == parent:
-                    if exact: ui.warn(_('no changes needed to %s\n') % rel)
+                    if exact:
+                        ui.warn(_('no changes needed to %s\n') % rel)
                     continue
                 if pmf is None:
                     # only need parent manifest in this unlikely case,
@@ -2782,7 +2794,8 @@ def serve(ui, repo, **opts):
             util.set_signal_handler()
             self.httpd = server.create_server(baseui, repo)
 
-            if not ui.verbose: return
+            if not ui.verbose:
+                return
 
             if self.httpd.prefix:
                 prefix = self.httpd.prefix.strip('/') + '/'
@@ -2939,7 +2952,7 @@ def summary(ui, repo, **opts):
               _('%d deleted'), _('%d unknown'), _('%d ignored'),
               _('%d unresolved')]
     t = []
-    for s,l in zip(st, labels):
+    for s, l in zip(st, labels):
         if s:
             t.append(l % len(s))
 
@@ -3463,7 +3476,8 @@ table = {
          [('0', 'print0', None, _('end fields with NUL')),
           ('', 'all', None, _('print all revisions that match')),
           ('f', 'follow', None,
-           _('follow changeset history, or file history across copies and renames')),
+           _('follow changeset history,'
+             ' or file history across copies and renames')),
           ('i', 'ignore-case', None, _('ignore case when matching')),
           ('l', 'files-with-matches', None,
            _('print only filenames and revisions that match')),
@@ -3499,7 +3513,8 @@ table = {
           ('b', 'base', '', _('base path')),
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes')),
-          ('', 'no-commit', None, _("don't commit, just update the working directory")),
+          ('', 'no-commit', None,
+           _("don't commit, just update the working directory")),
           ('', 'exact', None,
            _('apply patch to the nodes from which it was generated')),
           ('', 'import-branch', None,
@@ -3533,7 +3548,8 @@ table = {
     "^log|history":
         (log,
          [('f', 'follow', None,
-           _('follow changeset history, or file history across copies and renames')),
+           _('follow changeset history,'
+             ' or file history across copies and renames')),
           ('', 'follow-first', None,
            _('only follow the first parent of merge changesets')),
           ('d', 'date', '', _('show revisions matching date spec')),
@@ -3545,7 +3561,8 @@ table = {
           ('u', 'user', [], _('revisions committed by user')),
           ('b', 'only-branch', [],
             _('show only changesets within the given named branch')),
-          ('P', 'prune', [], _('do not display revision or any of its ancestors')),
+          ('P', 'prune', [],
+           _('do not display revision or any of its ancestors')),
          ] + logopts + walkopts,
          _('[OPTION]... [FILE]')),
     "manifest":
@@ -3632,8 +3649,10 @@ table = {
           ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
           ('E', 'errorlog', '', _('name of error log file to write to')),
           ('p', 'port', 0, _('port to listen on (default: 8000)')),
-          ('a', 'address', '', _('address to listen on (default: all interfaces)')),
-          ('', 'prefix', '', _('prefix path to serve from (default: server root)')),
+          ('a', 'address', '',
+           _('address to listen on (default: all interfaces)')),
+          ('', 'prefix', '',
+           _('prefix path to serve from (default: server root)')),
           ('n', 'name', '',
            _('name to show in web pages (default: working directory)')),
           ('', 'webdir-conf', '', _('name of the webdir config file'

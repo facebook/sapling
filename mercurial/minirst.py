@@ -78,9 +78,9 @@ def findliteralblocks(blocks):
         #    | indented literal block    |
         #    +---------------------------+
         blocks[i]['type'] = 'paragraph'
-        if blocks[i]['lines'][-1].endswith('::') and i+1 < len(blocks):
+        if blocks[i]['lines'][-1].endswith('::') and i + 1 < len(blocks):
             indent = blocks[i]['indent']
-            adjustment = blocks[i+1]['indent'] - indent
+            adjustment = blocks[i + 1]['indent'] - indent
 
             if blocks[i]['lines'] == ['::']:
                 # Expanded form: remove block
@@ -104,9 +104,9 @@ def findliteralblocks(blocks):
                 adjustment -= m.end()
 
             # Mark the following indented blocks.
-            while i+1 < len(blocks) and blocks[i+1]['indent'] > indent:
-                blocks[i+1]['type'] = 'literal'
-                blocks[i+1]['indent'] -= adjustment
+            while i + 1 < len(blocks) and blocks[i + 1]['indent'] > indent:
+                blocks[i + 1]['type'] = 'literal'
+                blocks[i + 1]['indent'] -= adjustment
                 i += 1
         i += 1
     return blocks
@@ -133,7 +133,7 @@ def splitparagraphs(blocks):
         item (but only if singleline is True).
         """
         line1 = lines[i]
-        line2 = i+1 < len(lines) and lines[i+1] or ''
+        line2 = i + 1 < len(lines) and lines[i + 1] or ''
         if not itemre.match(line1):
             return False
         if singleline:
@@ -153,7 +153,7 @@ def splitparagraphs(blocks):
                             items.append(dict(type=type, lines=[],
                                               indent=blocks[i]['indent']))
                         items[-1]['lines'].append(line)
-                    blocks[i:i+1] = items
+                    blocks[i:i + 1] = items
                     break
         i += 1
     return blocks
@@ -221,7 +221,7 @@ def addmargins(blocks):
     """
     i = 1
     while i < len(blocks):
-        if (blocks[i]['type'] == blocks[i-1]['type'] and
+        if (blocks[i]['type'] == blocks[i - 1]['type'] and
             blocks[i]['type'] in ('bullet', 'option', 'field', 'definition')):
             i += 1
         else:

@@ -87,13 +87,14 @@ class dirstate(object):
             elif l > 0 and l < 40:
                 raise util.Abort(_('working directory state appears damaged!'))
         except IOError, err:
-            if err.errno != errno.ENOENT: raise
+            if err.errno != errno.ENOENT:
+                raise
         return [nullid, nullid]
 
     @propertycache
     def _dirs(self):
         dirs = {}
-        for f,s in self._map.iteritems():
+        for f, s in self._map.iteritems():
             if s[0] != 'r':
                 _incdirs(dirs, f)
         return dirs
@@ -157,7 +158,8 @@ class dirstate(object):
 
     def getcwd(self):
         cwd = os.getcwd()
-        if cwd == self._root: return ''
+        if cwd == self._root:
+            return ''
         # self._root ends with a path separator if self._root is '/' or 'C:\'
         rootsep = self._root
         if not util.endswithsep(rootsep):
@@ -215,7 +217,8 @@ class dirstate(object):
         try:
             st = self._opener("dirstate").read()
         except IOError, err:
-            if err.errno != errno.ENOENT: raise
+            if err.errno != errno.ENOENT:
+                raise
             return
         if not st:
             return
@@ -440,11 +443,16 @@ class dirstate(object):
 
         def badtype(mode):
             kind = _('unknown')
-            if stat.S_ISCHR(mode): kind = _('character device')
-            elif stat.S_ISBLK(mode): kind = _('block device')
-            elif stat.S_ISFIFO(mode): kind = _('fifo')
-            elif stat.S_ISSOCK(mode): kind = _('socket')
-            elif stat.S_ISDIR(mode): kind = _('directory')
+            if stat.S_ISCHR(mode):
+                kind = _('character device')
+            elif stat.S_ISBLK(mode):
+                kind = _('block device')
+            elif stat.S_ISFIFO(mode):
+                kind = _('fifo')
+            elif stat.S_ISSOCK(mode):
+                kind = _('socket')
+            elif stat.S_ISDIR(mode):
+                kind = _('directory')
             return _('unsupported file type (type is %s)') % kind
 
         ignore = self._ignore

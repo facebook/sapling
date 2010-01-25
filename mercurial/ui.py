@@ -198,7 +198,8 @@ class ui(object):
 
     def shortuser(self, user):
         """Return a short representation of a user name or email address."""
-        if not self.verbose: user = util.shortuser(user)
+        if not self.verbose:
+            user = util.shortuser(user)
         return user
 
     def _path(self, loc):
@@ -236,12 +237,14 @@ class ui(object):
 
     def write_err(self, *args):
         try:
-            if not sys.stdout.closed: sys.stdout.flush()
+            if not sys.stdout.closed:
+                sys.stdout.flush()
             for a in args:
                 sys.stderr.write(str(a))
             # stderr may be buffered under win32 when redirected to files,
             # including stdout.
-            if not sys.stderr.closed: sys.stderr.flush()
+            if not sys.stderr.closed:
+                sys.stderr.flush()
         except IOError, inst:
             if inst.errno != errno.EPIPE:
                 raise
@@ -311,21 +314,24 @@ class ui(object):
                 return resps.index(r.lower())
             self.write(_("unrecognized response\n"))
 
-
     def getpass(self, prompt=None, default=None):
-        if not self.interactive(): return default
+        if not self.interactive():
+            return default
         try:
             return getpass.getpass(prompt or _('password: '))
         except EOFError:
             raise util.Abort(_('response expected'))
     def status(self, *msg):
-        if not self.quiet: self.write(*msg)
+        if not self.quiet:
+            self.write(*msg)
     def warn(self, *msg):
         self.write_err(*msg)
     def note(self, *msg):
-        if self.verbose: self.write(*msg)
+        if self.verbose:
+            self.write(*msg)
     def debug(self, *msg):
-        if self.debugflag: self.write(*msg)
+        if self.debugflag:
+            self.write(*msg)
     def edit(self, text, user):
         (fd, name) = tempfile.mkstemp(prefix="hg-editor-", suffix=".txt",
                                       text=True)

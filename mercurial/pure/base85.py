@@ -48,7 +48,7 @@ def b85decode(text):
     l = len(text)
     out = []
     for i in range(0, len(text), 5):
-        chunk = text[i:i+5]
+        chunk = text[i:i + 5]
         acc = 0
         for j, c in enumerate(chunk):
             try:

@@ -90,9 +90,11 @@ class sshrepository(repo.repository):
     def readerr(self):
         while 1:
             size = util.fstat(self.pipee).st_size
-            if size == 0: break
+            if size == 0:
+                break
             l = self.pipee.readline()
-            if not l: break
+            if not l:
+                break
             self.ui.status(_("remote: "), l)
 
     def abort(self, exception):
@@ -190,7 +192,7 @@ class sshrepository(repo.repository):
         n = " ".join(map(hex, nodes))
         d = self.call("branches", nodes=n)
         try:
-            br = [ tuple(map(bin, b.split(" "))) for b in d.splitlines() ]
+            br = [tuple(map(bin, b.split(" "))) for b in d.splitlines()]
             return br
         except:
             self.abort(error.ResponseError(_("unexpected response:"), d))
@@ -199,7 +201,7 @@ class sshrepository(repo.repository):
         n = " ".join(["-".join(map(hex, p)) for p in pairs])
         d = self.call("between", pairs=n)
         try:
-            p = [ l and map(bin, l.split(" ")) or [] for l in d.splitlines() ]
+            p = [l and map(bin, l.split(" ")) or [] for l in d.splitlines()]
             return p
         except:
             self.abort(error.ResponseError(_("unexpected response:"), d))

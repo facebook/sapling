@@ -6,7 +6,8 @@ for f in sys.argv[1:]:
     try:
         print f, '->', os.readlink(f)
     except OSError, err:
-        if err.errno != errno.EINVAL: raise
+        if err.errno != errno.EINVAL:
+            raise
         print f, 'not a symlink'
 
 sys.exit(0)

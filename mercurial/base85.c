@@ -105,18 +105,24 @@ b85decode(PyObject *self, PyObject *args)
 		{
 			c = b85dec[(int)*text++] - 1;
 			if (c < 0)
-				return PyErr_Format(PyExc_ValueError, "Bad base85 character at position %d", i);
+				return PyErr_Format(
+					PyExc_ValueError,
+					"Bad base85 character at position %d", i);
 			acc = acc * 85 + c;
 		}
 		if (i++ < len)
 		{
 			c = b85dec[(int)*text++] - 1;
 			if (c < 0)
-				return PyErr_Format(PyExc_ValueError, "Bad base85 character at position %d", i);
+				return PyErr_Format(
+					PyExc_ValueError,
+					"Bad base85 character at position %d", i);
 			/* overflow detection: 0xffffffff == "|NsC0",
 			 * "|NsC" == 0x03030303 */
 			if (acc > 0x03030303 || (acc *= 85) > 0xffffffff - c)
-				return PyErr_Format(PyExc_ValueError, "Bad base85 sequence at position %d", i);
+				return PyErr_Format(
+					PyExc_ValueError,
+					"Bad base85 sequence at position %d", i);
 			acc += c;
 		}
 

@@ -38,8 +38,10 @@ class gpg(object):
         finally:
             for f in (sigfile, datafile):
                 try:
-                    if f: os.unlink(f)
-                except: pass
+                    if f:
+                        os.unlink(f)
+                except:
+                    pass
         keys = []
         key, fingerprint = None, None
         err = ""

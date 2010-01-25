@@ -297,7 +297,8 @@ def filterpatch(ui, chunks):
                 doc = gettext(record.__doc__)
                 c = doc.find(_('y - record this change'))
                 for l in doc[c:].splitlines():
-                    if l: ui.write(l.strip(), '\n')
+                    if l:
+                        ui.write(l.strip(), '\n')
                 continue
             elif r == 0: # yes
                 ret = True
@@ -437,8 +438,10 @@ def dorecord(ui, repo, committer, *pats, **opts):
 
         contenders = set()
         for h in chunks:
-            try: contenders.update(set(h.files()))
-            except AttributeError: pass
+            try:
+                contenders.update(set(h.files()))
+            except AttributeError:
+                pass
 
         changed = changes[0] + changes[1] + changes[2]
         newfiles = [f for f in changed if f in contenders]

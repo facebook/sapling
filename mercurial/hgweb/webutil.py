@@ -59,7 +59,7 @@ def revnavgen(pos, pagelen, limit, nodefunc):
                 yield {"label": label, "node": node}
         return f
 
-    return (dict(before=gen(navbefore), after=gen(navafter)), )
+    return (dict(before=gen(navbefore), after=gen(navafter)),)
 
 def _siblings(siblings=[], hiderev=None):
     siblings = [s for s in siblings if s.node() != nullid]

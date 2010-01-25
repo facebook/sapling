@@ -155,7 +155,8 @@ def _verify(repo):
     ui.status(_("crosschecking files in changesets and manifests\n"))
 
     if havemf:
-        for c,m in sorted([(c, m) for m in mflinkrevs for c in mflinkrevs[m]]):
+        for c, m in sorted([(c, m) for m in mflinkrevs
+                            for c in mflinkrevs[m]]):
             err(c, _("changeset refers to unknown manifest %s") % short(m))
         mflinkrevs = None # del is bad here due to scope issues
 
@@ -259,7 +260,7 @@ def _verify(repo):
 
         # cross-check
         if f in filenodes:
-            fns = [(lr, n) for n,lr in filenodes[f].iteritems()]
+            fns = [(lr, n) for n, lr in filenodes[f].iteritems()]
             for lr, node in sorted(fns):
                 err(lr, _("%s in manifests not found") % short(node), f)
 

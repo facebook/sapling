@@ -16,7 +16,7 @@ def gnugetopt(args, options, longoptions):
     extraargs = []
     if '--' in args:
         stopindex = args.index('--')
-        extraargs = args[stopindex+1:]
+        extraargs = args[stopindex + 1:]
         args = args[:stopindex]
     opts, parseargs = getopt.getopt(args, options, longoptions)
     args = []
@@ -77,8 +77,10 @@ def fancyopts(args, options, state, gnu=False):
 
         # does it take a parameter?
         if not (default is None or default is True or default is False):
-            if short: short += ':'
-            if oname: oname += '='
+            if short:
+                short += ':'
+            if oname:
+                oname += '='
         if short:
             shortlist += short
         if name:

@@ -17,7 +17,7 @@ class filelog(revlog.revlog):
         if not t.startswith('\1\n'):
             return t
         s = t.index('\1\n', 2)
-        return t[s+2:]
+        return t[s + 2:]
 
     def _readmeta(self, node):
         t = self.revision(node)

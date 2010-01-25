@@ -131,14 +131,14 @@ quit:
 }
 
 #ifdef _WIN32
-# ifdef _MSC_VER
+#ifdef _MSC_VER
 /* msvc 6.0 has problems */
-#  define inline __inline
+#define inline __inline
 typedef unsigned long uint32_t;
 typedef unsigned __int64 uint64_t;
-# else
-#  include <stdint.h>
-# endif
+#else
+#include <stdint.h>
+#endif
 static uint32_t ntohl(uint32_t x)
 {
 	return ((x & 0x000000ffUL) << 24) |
@@ -148,13 +148,13 @@ static uint32_t ntohl(uint32_t x)
 }
 #else
 /* not windows */
-# include <sys/types.h>
-# if defined __BEOS__ && !defined __HAIKU__
-#  include <ByteOrder.h>
-# else
-#  include <arpa/inet.h>
-# endif
-# include <inttypes.h>
+#include <sys/types.h>
+#if defined __BEOS__ && !defined __HAIKU__
+#include <ByteOrder.h>
+#else
+#include <arpa/inet.h>
+#endif
+#include <inttypes.h>
 #endif
 
 static PyObject *parse_dirstate(PyObject *self, PyObject *args)
@@ -303,16 +303,16 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 		if (n == 0) /* mask out version number for the first entry */
 			offset_flags &= 0xFFFF;
 		else {
-			uint32_t offset_high =  ntohl(*((uint32_t *) decode));
-			offset_flags |= ((uint64_t) offset_high) << 32;
+			uint32_t offset_high =  ntohl(*((uint32_t *)decode));
+			offset_flags |= ((uint64_t)offset_high) << 32;
 		}
 
-		comp_len = ntohl(*((uint32_t *) (decode + 8)));
-		uncomp_len = ntohl(*((uint32_t *) (decode + 12)));
-		base_rev = ntohl(*((uint32_t *) (decode + 16)));
-		link_rev = ntohl(*((uint32_t *) (decode + 20)));
-		parent_1 = ntohl(*((uint32_t *) (decode + 24)));
-		parent_2 = ntohl(*((uint32_t *) (decode + 28)));
+		comp_len = ntohl(*((uint32_t *)(decode + 8)));
+		uncomp_len = ntohl(*((uint32_t *)(decode + 12)));
+		base_rev = ntohl(*((uint32_t *)(decode + 16)));
+		link_rev = ntohl(*((uint32_t *)(decode + 20)));
+		parent_1 = ntohl(*((uint32_t *)(decode + 24)));
+		parent_2 = ntohl(*((uint32_t *)(decode + 28)));
 		c_node_id = decode + 32;
 
 		entry = _build_idx_entry(nodemap, n, offset_flags,

@@ -64,7 +64,7 @@ class ShortRepository(object):
             parts = parts[:-1]
         else:
             tail = ''
-        context = dict((str(i+1), v) for i, v in enumerate(parts))
+        context = dict((str(i + 1), v) for i, v in enumerate(parts))
         url = ''.join(self.templater.process(self.url, context)) + tail
         return hg._lookup(url).instance(ui, url, create)
 

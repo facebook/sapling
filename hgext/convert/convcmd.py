@@ -108,7 +108,8 @@ class converter(object):
         parents = {}
         while visit:
             n = visit.pop(0)
-            if n in known or n in self.map: continue
+            if n in known or n in self.map:
+                continue
             known.add(n)
             commit = self.cachecommit(n)
             parents[n] = []
