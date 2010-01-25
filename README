@@ -1,0 +1,33 @@
+.. -*-restructuredtext-*-
+
+============
+remotebranches
+============
+Keep track of remote branch heads in Mercurial.
+
+With this extension installed, Mercurial gains one new feature: when you pull
+from a repository listed in .hg/hgrc's [paths] section, you get output similar
+to the following::
+
+ @  3[tip]   7c2fd3b9020c   2009-04-27 18:04 -0500   durin42
+ |    Add delta
+ |
+ o  2[default/default]   030b686bedc4   2009-04-27 18:04 -0500   durin42
+ |    Add gamma
+ |
+ o  1[stable/default]   c561b4e977df   2009-04-27 18:04 -0500   durin42
+ |    Add beta
+ |
+ o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42
+      Add alpha
+
+What this output is showing is that the head of the default branch in a
+repo at path 'stable' is c561b4e977df, and the head of default in the
+repo at path 'default' is at 030b686bedc4. This is accomplished by sending
+a single extra request to the Mercurial server after the pull is complete.
+The nature of this request (branchheads) requires that the server be
+Mercurial 1.3 or newer.
+
+This extension should work properly with paths from the schemes extension
+included with Mercurial 1.4 and later. Other extensions which perform varying
+kinds of manipulation on the repository path may not function as expected.
