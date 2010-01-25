@@ -1,0 +1,34 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+echo "remotebranches=$(echo $(dirname $(dirname $0)))/hg_remotebranches.py" >> $HGRCPATH
+
+hg init test
+cd test
+echo foo>foo
+mkdir foo.d foo.d/bAr.hg.d foo.d/baR.d.hg
+echo foo>foo.d/foo
+echo bar>foo.d/bAr.hg.d/BaR
+echo bar>foo.d/baR.d.hg/bAR
+
+hg commit -A -m 1
+hg serve -p $HGPORT -d --pid-file=../hg.pid
+cd ..
+cat hg.pid >> $DAEMON_PIDS
+
+echo % clone
+hg clone http://localhost:$HGPORT/ copy 2>&1 | \
+  sed -e 's/[0-9][0-9.]*/XXX/g' -e 's/[KM]\(B\/sec\)/X\1/'
+
+cd copy
+echo
+echo % add a commit to the clone
+echo alpha > alpha
+hg add alpha
+hg ci -m 'add alpha'
+
+echo
+echo % verify that the branchheads are stored properly
+hg pull | sed "s/$HGPORT//"
+hg log --graph
