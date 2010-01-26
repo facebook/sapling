@@ -1,5 +1,6 @@
 import cStringIO
 import getpass
+import errno
 import os
 import shutil
 import sys
@@ -574,8 +575,8 @@ class SubversionRepo(object):
         except core.SubversionException, e:
             notfound = (core.SVN_ERR_FS_NOT_FOUND,
                         core.SVN_ERR_RA_DAV_PATH_NOT_FOUND)
-            if e.apr_err in notfound: # File not found
-                raise IOError()
+            if e.args[1] in notfound: # File not found
+                raise IOError(errno.ENOENT, e.args[0])
             raise
         if mode  == 'l':
             linkprefix = "link "
@@ -596,7 +597,7 @@ class SubversionRepo(object):
         except core.SubversionException, e:
             # Specified path does not exist at this revision
             if e.apr_err == core.SVN_ERR_NODE_UNKNOWN_KIND:
-                raise IOError()
+                raise IOError(errno.ENOENT, e.args[0])
             raise
         if not pl:
             return {}
@@ -623,7 +624,8 @@ class SubversionRepo(object):
             entries = client.ls(rpath, rev, True, self.client_context, pool)
         except core.SubversionException, e:
             if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
-                raise IOError('%s cannot be found at r%d' % (dirpath, revision))
+                raise IOError(errno.ENOENT,
+                              '%s cannot be found at r%d' % (dirpath, revision))
             raise
         for path, e in entries.iteritems():
             kind = _svntypes.get(e.kind)

@@ -1,3 +1,4 @@
+import errno
 import shutil
 
 from mercurial import commands
@@ -90,7 +91,7 @@ class TestSingleDir(test_util.TestBase):
                                           islink=False,
                                           isexec=False,
                                           copied=False)
-            raise IOError()
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['tip'].node(), node.nullid),
                              'automated test',
@@ -150,7 +151,7 @@ class TestSingleDir(test_util.TestBase):
                                               islink=False,
                                               isexec=False,
                                               copied=False)
-                raise IOError()
+                raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
             return cb
 
         def commit_to_branch(name, parent):

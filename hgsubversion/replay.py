@@ -1,3 +1,4 @@
+import errno
 import traceback
 
 from mercurial import revlog
@@ -138,7 +139,8 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         def filectxfn(repo, memctx, path):
             current_file = files[path]
             if current_file in current.deleted:
-                raise IOError()
+                raise IOError(errno.EBADF,
+                              'Operation on deleted file attempted')
             copied = current.copies.get(current_file)
             flags = parentctx.flags(path)
             is_exec = current.execfiles.get(current_file, 'x' in flags)

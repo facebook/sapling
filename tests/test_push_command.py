@@ -1,4 +1,5 @@
 import atexit
+import errno
 import os
 import random
 import shutil
@@ -106,7 +107,7 @@ class PushTests(test_util.TestBase):
                                               islink=False,
                                               isexec=False,
                                               copied=False)
-                raise IOError()
+                raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
             ctx = context.memctx(repo,
                                  parents=(repo['default'].node(), node.nullid),
                                  text='automated test',
@@ -145,7 +146,7 @@ class PushTests(test_util.TestBase):
                                           islink=False,
                                           isexec=False,
                                           copied=False)
-            raise IOError()
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
                              'automated test',
@@ -213,7 +214,7 @@ class PushTests(test_util.TestBase):
                                           islink=False,
                                           isexec=False,
                                           copied=False)
-            raise IOError()
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
                              'automated test',
@@ -248,7 +249,7 @@ class PushTests(test_util.TestBase):
                                           islink=False,
                                           isexec=False,
                                           copied=False)
-            raise IOError()
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['the_branch'].node(), node.nullid),
                              'automated test',
@@ -301,7 +302,7 @@ class PushTests(test_util.TestBase):
     def test_delete_file(self):
         repo = self.repo
         def file_callback(repo, memctx, path):
-            raise IOError()
+            raise IOError(errno.EBADF, 'Operation on deleted file attempted')
         old_files = set(repo['default'].manifest().keys())
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
@@ -329,7 +330,7 @@ class PushTests(test_util.TestBase):
                                           islink=False,
                                           isexec=True,
                                           copied=False)
-            raise IOError()
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['tip'].node(), node.nullid),
                              'message',
@@ -359,7 +360,7 @@ class PushTests(test_util.TestBase):
                                           islink=True,
                                           isexec=False,
                                           copied=False)
-            raise IOError()
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['tip'].node(), node.nullid),
                              'message',

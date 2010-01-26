@@ -1,4 +1,5 @@
 import cStringIO
+import errno
 import re
 
 from mercurial import patch
@@ -60,7 +61,7 @@ def mempatchproxy(parentctx, files):
 
         def readlines(self, fname):
             if fname not in parentctx:
-                raise IOError('Cannot find %r to patch' % fname)
+                raise IOError(errno.ENOENT, 'Cannot find %r to patch' % fname)
             fctx = parentctx[fname]
             data = fctx.data()
             if 'l' in fctx.flags():
@@ -226,7 +227,7 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
 
     def filectxfn(repo, memctx, path):
         if path in files_data and files_data[path] is None:
-            raise IOError()
+            raise IOError(errno.EBADF, 'No data configured for file ' + path)
 
         if path in binary_files or path in unknown_files:
             pa = path
@@ -595,12 +596,14 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         def filectxfn(repo, memctx, path):
             if path == '.hgsvnexternals':
                 if not externals:
-                    raise IOError()
+                    raise IOError(errno.EINVAL,
+                                  '.hgsvnexternals exists, but externals are '
+                                  'not configured')
                 return context.memfilectx(path=path, data=externals.write(),
                                           islink=False, isexec=False, copied=None)
             for bad in bad_branch_paths[b]:
                 if path.startswith(bad):
-                    raise IOError()
+                    raise IOError(errno.EINVAL, 'Path %s is bad' % path)
             return filectxfn2(repo, memctx, path)
 
         if '' in files_touched:
