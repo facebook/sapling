@@ -74,3 +74,13 @@ o  changeset:   0:1f0dee641bb7
    date:        Thu Jan 01 00:00:00 1970 +0000
    summary:     add a
 
+
+% make sure bogus revisions in .hg/remotebranches do not break hg
+changeset:   6:ce61ec32ee23
+tag:         tip
+parent:      5:6d6442577283
+parent:      4:8948da77173b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     merging stable
+

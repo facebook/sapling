@@ -31,7 +31,11 @@ def reposetup(ui, repo):
                         line = line.strip()
                         if line:
                             hash, name = line.split(' ', 1)
-                            remotebranches[name] = olookup(hash)
+                            # look up the hash in the changelog directly
+                            # to avoid infinite recursion if the hash is bogus
+                            n = self.changelog._match(hash)
+                            if n:
+                                remotebranches[name] = n
                 return remotebranches
 
             def lookup(self, key):
