@@ -305,7 +305,7 @@ Settings for extensions that send email messages.
     email addresses.
 ``bcc``
     Optional. Comma-separated list of blind carbon copy recipients'
-    email addresses. Cannot be set interactively.
+    email addresses.
 ``method``
     Optional. Method to use to send email messages. If value is ``smtp``
     (default), use SMTP (see the SMTP_ section for configuration).
