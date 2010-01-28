@@ -35,6 +35,9 @@ file::
   cc = cc1, cc2, ...
   bcc = bcc1, bcc2, ...
 
+Use ``[patchbomb]`` as configuration section name if you need to
+override global ``[email]`` address settings.
+
 Then you can use the "hg email" command to mail a series of changesets
 as a patchbomb.
 
