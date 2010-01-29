@@ -134,20 +134,16 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
     if '\0' in d:
         raise BadPatchApply('binary diffs are not supported')
     files_data = {}
-    binary_files = {}
-    touched_files = {}
-    for m in binary_file_re.findall(d):
-        # we have to pull each binary file by hand as a fulltext,
-        # which sucks but we've got no choice
-        binary_files[m] = 1
-        touched_files[m] = 1
+    # we have to pull each binary file by hand as a fulltext,
+    # which sucks but we've got no choice
+    binary_files = set(binary_file_re.findall(d))
+    touched_files = set(binary_files)
     d2 = empty_file_patch_wont_make_re.sub('', d)
     d2 = property_exec_set_re.sub('', d2)
     d2 = property_exec_removed_re.sub('', d2)
-    for f in any_file_re.findall(d):
-        # Here we ensure that all files, including the new empty ones
-        # are marked as touched. Content is loaded on demand.
-        touched_files[f] = 1
+    # Here we ensure that all files, including the new empty ones
+    # are marked as touched. Content is loaded on demand.
+    touched_files.update(any_file_re.findall(d))
     if d2.strip() and len(re.findall('\n[-+]', d2.strip())) > 0:
         try:
             oldpatchfile = patch.patchfile
@@ -190,8 +186,7 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
         exec_files[m] = False
     for m in property_exec_set_re.findall(d):
         exec_files[m] = True
-    for m in exec_files:
-        touched_files[m] = 1
+    touched_files.update(exec_files)
     link_files = {}
     for m in property_special_set_re.findall(d):
         # TODO(augie) when a symlink is removed, patching will fail.
@@ -223,8 +218,8 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
         else:
             files_data.update((f, None) for f in toucheds)
 
-    touched_files.update((f, 1) for f in files_data)
-    touched_files.update((f, 1) for f in unknown_files)
+    touched_files.update(files_data)
+    touched_files.update(unknown_files)
 
     copies = getcopies(svn, meta, branch, diff_path, r, touched_files,
                        parentctx)
