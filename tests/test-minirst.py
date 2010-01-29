@@ -15,10 +15,7 @@ This is some text in the first paragraph.
   A small indented paragraph.
   It is followed by some lines
   containing random whitespace.
- 
-  
-   
-The third and final paragraph.
+ \n  \n   \nThe third and final paragraph.
 """
 
 debugformat('paragraphs', paragraphs, 60)
