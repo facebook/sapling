@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: df2126f7-00ab-4d49-b42c-7e981dde0bcf
+UUID: b94d0721-81cf-435e-ab14-c40b19ce1924
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,12 +9,12 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2008-10-07T22:49:12.059692Z
+2010-01-17T19:05:32.787484Z
 PROPS-END
 
 Revision-number: 1
-Prop-content-length: 111
-Content-length: 111
+Prop-content-length: 113
+Content-length: 113
 
 K 7
 svn:log
@@ -22,12 +22,12 @@ V 11
 Empty dirs.
 K 10
 svn:author
-V 5
-durin
+V 7
+pmezard
 K 8
 svn:date
 V 27
-2008-10-07T22:49:41.118037Z
+2010-01-17T19:05:33.116308Z
 PROPS-END
 
 Node-path: branches
@@ -58,8 +58,8 @@ PROPS-END
 
 
 Revision-number: 2
-Prop-content-length: 108
-Content-length: 108
+Prop-content-length: 110
+Content-length: 110
 
 K 7
 svn:log
@@ -67,12 +67,12 @@ V 9
 Add alpha
 K 10
 svn:author
-V 5
-durin
+V 7
+pmezard
 K 8
 svn:date
 V 27
-2008-10-07T23:23:02.991743Z
+2010-01-17T19:05:34.099166Z
 PROPS-END
 
 Node-path: trunk/alpha
@@ -81,6 +81,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 12
 Text-content-md5: 3c72ebf8bbd7fa88b1fdcee5398b5a17
+Text-content-sha1: f552a50b53177d35b29a4a0ab1cece918b5b5e9b
 Content-length: 22
 
 PROPS-END
@@ -88,8 +89,8 @@ file: alpha
 
 
 Revision-number: 3
-Prop-content-length: 107
-Content-length: 107
+Prop-content-length: 109
+Content-length: 109
 
 K 7
 svn:log
@@ -97,12 +98,12 @@ V 8
 Add beta
 K 10
 svn:author
-V 5
-durin
+V 7
+pmezard
 K 8
 svn:date
 V 27
-2008-10-07T23:28:22.651398Z
+2010-01-17T19:05:36.110949Z
 PROPS-END
 
 Node-path: trunk/beta
@@ -111,6 +112,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 13
 Text-content-md5: 981d1eb5fd0bbe05354c292105944863
+Text-content-sha1: 5d40e0a9ceda69f3d98d4851a6bee02c10a6e277
 Content-length: 23
 
 PROPS-END
@@ -118,8 +120,8 @@ Data of beta
 
 
 Revision-number: 4
-Prop-content-length: 110
-Content-length: 110
+Prop-content-length: 112
+Content-length: 112
 
 K 7
 svn:log
@@ -127,12 +129,12 @@ V 10
 tagging r3
 K 10
 svn:author
-V 5
-durin
+V 7
+pmezard
 K 8
 svn:date
 V 27
-2008-10-08T23:18:29.837825Z
+2010-01-17T19:05:38.066217Z
 PROPS-END
 
 Node-path: tags/tag_r3
@@ -140,19 +142,11 @@ Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 3
 Node-copyfrom-path: trunk
-Prop-content-length: 34
-Content-length: 34
-
-K 13
-svn:mergeinfo
-V 0
-
-PROPS-END
 
 
 Revision-number: 5
-Prop-content-length: 114
-Content-length: 114
+Prop-content-length: 116
+Content-length: 116
 
 K 7
 svn:log
@@ -160,12 +154,12 @@ V 14
 tag from a tag
 K 10
 svn:author
-V 5
-durin
+V 7
+pmezard
 K 8
 svn:date
 V 27
-2008-10-08T23:18:51.091356Z
+2010-01-17T19:05:38.116376Z
 PROPS-END
 
 Node-path: tags/copied_tag
@@ -176,8 +170,8 @@ Node-copyfrom-path: tags/tag_r3
 
 
 Revision-number: 6
-Prop-content-length: 112
-Content-length: 112
+Prop-content-length: 114
+Content-length: 114
 
 K 7
 svn:log
@@ -185,12 +179,12 @@ V 12
 rename a tag
 K 10
 svn:author
-V 5
-durin
+V 7
+pmezard
 K 8
 svn:date
 V 27
-2008-10-08T23:20:23.431085Z
+2010-01-17T19:05:38.179177Z
 PROPS-END
 
 Node-path: tags/other_tag_r3

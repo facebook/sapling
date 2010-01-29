@@ -36,10 +36,24 @@ class TestTags(test_util.TestBase):
         self.test_remove_tag(stupid=True)
 
     def test_rename_tag(self, stupid=False):
-        repo = self._load_fixture_and_fetch('rename_tag_test.svndump',
-                                            stupid=stupid)
-        self.assertEqual(repo['tag_r3'], repo['other_tag_r3'])
-        self.assert_('copied_tag' not in repo.tags())
+        expected = """\
+node: hg=default@2:svn=trunk@4
+tagging r3
+  tag_r3: hg=default@1:svn=trunk@3
+
+node: hg=default@3:svn=trunk@5
+tag from a tag
+  tag_r3: hg=default@1:svn=trunk@3
+  copied_tag: hg=default@1:svn=trunk@3
+
+node: hg=default@4:svn=trunk@6
+rename a tag
+  tag_r3: hg=default@1:svn=trunk@3
+  copied_tag: hg=default@1:svn=trunk@3
+  copied_tag: hg=default@-1:svn=unk@unk
+  other_tag_r3: hg=default@1:svn=trunk@3
+"""
+        self._test_tags('rename_tag_test.svndump', expected, stupid)
 
     def test_rename_tag_stupid(self):
         self.test_rename_tag(stupid=True)
