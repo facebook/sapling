@@ -86,22 +86,6 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         if not meta.is_path_valid(f):
             continue
         p, b = meta.split_branch_path(f)[:2]
-        # Subversion sometimes "over reports" edits from our perspective,
-        # typically when a directory is restored from some past version.
-        # This isn't something we can detect reliably until the end of
-        # the delta edit, so we have to punt this detection until here
-        # This just verifies that if the file content is identical
-        # in the parent and the to-be-committed file, we don't bother
-        # marking it in the changelog as modified in this revision.
-        if f in current.maybeedits:
-            pctx = meta.repo[meta.get_parent_revision(rev.revnum, b)]
-            if p in pctx and pctx[p].data() == current.files[f]:
-                flags = pctx[p].flags()
-                is_exec = current.execfiles.get(f, 'x' in flags)
-                is_link = current.symlinks.get(f, 'l' in flags)
-                if is_link == ('l' in flags) and is_exec == ('x' in flags):
-                    # file is wholly unchanged, we can skip it
-                    continue
         if b not in branch_batches:
             branch_batches[b] = []
         branch_batches[b].append((p, f))

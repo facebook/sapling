@@ -203,20 +203,28 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
         assert m in files_data
         link_files[m] = False
 
+    unknown_files = set()
     for p in r.paths:
-        if p.startswith(diff_path) and r.paths[p].action == 'D':
-            if diff_path:
-                p2 = p[len(diff_path)+1:].strip('/')
-            else:
-                p2 = p
-            if p2 in parentctx:
-                files_data[p2] = None
-                continue
+        action = r.paths[p].action
+        if not p.startswith(diff_path) or action not in 'DR':
+            continue
+        if diff_path:
+            p2 = p[len(diff_path)+1:].strip('/')
+        else:
+            p2 = p
+        if p2 in parentctx:
+            toucheds = [p2]
+        else:
             # If this isn't in the parent ctx, it must've been a dir
-            files_data.update([(f, None) for f in parentctx if f.startswith(p2 + '/')])
+            toucheds = [f for f in parentctx if f.startswith(p2 + '/')]
+        if action == 'R':
+            # Files were replaced, we don't know if they still exist
+            unknown_files.update(toucheds)
+        else:
+            files_data.update((f, None) for f in toucheds)
 
-    for f in files_data:
-        touched_files[f] = 1
+    touched_files.update((f, 1) for f in files_data)
+    touched_files.update((f, 1) for f in unknown_files)
 
     copies = getcopies(svn, meta, branch, diff_path, r, touched_files,
                        parentctx)
@@ -225,7 +233,7 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
         if path in files_data and files_data[path] is None:
             raise IOError()
 
-        if path in binary_files:
+        if path in binary_files or path in unknown_files:
             pa = path
             if diff_path:
                 pa = diff_path + '/' + path
