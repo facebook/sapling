@@ -1571,3 +1571,5 @@ if __name__ == '__main__':
 	r.unregisterService(info)
 	print "   Unregister done."
 	r.close()
+
+# no-check-code
