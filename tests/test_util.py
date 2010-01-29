@@ -19,6 +19,7 @@ from mercurial import hg
 from mercurial import i18n
 from mercurial import node
 from mercurial import ui
+from mercurial import extensions
 
 from hgsubversion import util
 
@@ -280,3 +281,21 @@ class TestBase(unittest.TestCase):
             if dest != source:
                 copy = ctx[dest].renamed()
                 self.assertEqual(copy[0], source)
+
+    def draw(self, repo):
+        """Helper function displaying a repository graph, especially
+        useful when debugging comprehensive tests.
+        """
+        # Could be more elegant, but it works with stock hg
+        _ui = ui.ui()
+        _ui.setconfig('extensions', 'graphlog', '')
+        extensions.loadall(_ui)
+        graphlog = extensions.find('graphlog')
+        templ = """\
+changeset: {rev}:{node|short}
+branch:    {branches}
+summary:   {desc|firstline}
+files:     {files}
+
+"""
+        graphlog.graphlog(_ui, repo, rev=None, template=templ)
