@@ -154,7 +154,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
                 break # no merge needed, quit early
             c2 = ctx(of, m2[of])
             cr = related(oc, c2, ca.rev())
-            if of == f or of == c2.path(): # non-divergent
+            if cr and (cr.path() == f or cr.path == c2.path()): # non-divergent
                 copy[f] = of
                 of = None
                 break
