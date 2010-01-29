@@ -135,11 +135,15 @@ for f in check:
         if not re.match(match, f):
             continue
         pre = post = open(f).read()
+        if "no-" + "check-code" in pre:
+            break
         for p, r in filters:
             post = re.sub(p, r, post)
         # print post # uncomment to show filtered version
         z = enumerate(zip(pre.splitlines(), post.splitlines(True)))
         for n, l in z:
+            if "check-code" + "-ignore" in l[0]:
+                continue
             lc = 0
             for p, msg in pats:
                 if re.search(p, l[1]):
