@@ -73,10 +73,10 @@ class config(object):
     def parse(self, src, data, sections=None, remap=None, include=None):
         sectionre = re.compile(r'\[([^\[]+)\]')
         itemre = re.compile(r'([^=\s][^=]*?)\s*=\s*(.*\S|)')
-        contre = re.compile(r'\s+(\S.*\S)')
+        contre = re.compile(r'\s+(\S|\S.*\S)\s*$')
         emptyre = re.compile(r'(;|#|\s*$)')
         unsetre = re.compile(r'%unset\s+(\S+)')
-        includere = re.compile(r'%include\s+(\S.*\S)')
+        includere = re.compile(r'%include\s+(\S|\S.*\S)\s*$')
         section = ""
         item = None
         line = 0

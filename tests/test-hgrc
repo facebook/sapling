@@ -23,5 +23,9 @@ echo '[foo]' >> $HGRCPATH
 echo '  x = y' >> $HGRCPATH
 hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
 
+python -c "print '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n'" \
+    > $HGRCPATH
+hg showconfig foo
+
 echo '%include /no-such-file' > $HGRCPATH
 hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"

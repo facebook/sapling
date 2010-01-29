@@ -11,4 +11,6 @@ defaults.tag=-d "0 0"
 paths.default=.../foo%bar
 ui.slash=True
 hg: config error at $HGRCPATH:8: '  x = y'
+foo.bar=a\nb\nc\nde\nfg
+foo.baz=bif cb
 hg: config error at $HGRCPATH:1: cannot include /no-such-file (No such file or directory)
