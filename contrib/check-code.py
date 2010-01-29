@@ -71,6 +71,7 @@ pypats = [
     (r'^\s*(if|while|def|class|except|try)\s[^[]*:\s*[^\]#\s]+',
      "linebreak after :"),
     (r'class\s[^(]:', "old-style class, use class foo(object)"),
+    (r'^\s+del\(', "del isn't a function"),
     (r'^\s+except\(', "except isn't a function"),
 #    (r'class\s[A-Z][^\(]*\((?!Exception)',
 #     "don't capitalize non-exception classes"),
