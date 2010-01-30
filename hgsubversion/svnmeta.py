@@ -306,8 +306,8 @@ class SVNMeta(object):
             if src_tag or src_file == '':
                 ln = self.localname(p)
                 if src_tag in self.tags:
-                    ci = self.repo[self.tags[src_tag]].extra()['convert_revision']
-                    src_rev, src_branch, = self.parse_converted_revision(ci)
+                    changeid = self.tags[src_tag]
+                    src_rev, src_branch = self.get_source_rev(changeid)[:2]
                 return {ln: (src_branch, src_rev, revnum)}
         return {}
 
@@ -364,9 +364,23 @@ class SVNMeta(object):
             return self.revmap[r, br]
         return revlog.nullid
 
-    def parse_converted_revision(self, convertedrev):
-        branch, revnum = convertedrev[40:].rsplit('@', 1)
-        return int(revnum), self.localname(self.normalize(branch))
+    def get_source_rev(self, changeid=None, ctx=None):
+        """Return the source svn revision, the branch name and the svn
+        branch path or a converted changeset. If supplied revision
+        has no conversion record, raise KeyError.
+
+        If ctx is None, build one from supplied changeid
+        """
+        if ctx is None:
+            ctx = self.repo[changeid]
+        extra = ctx.extra()['convert_revision']        
+        branchpath, revnum = extra[40:].rsplit('@', 1)
+        branch = self.localname(self.normalize(branchpath))
+        if self.layout == 'single':
+            branchpath = ''
+        if branchpath and branchpath[0] == '/':
+            branchpath = branchpath[1:]
+        return int(revnum), branch, branchpath
 
     def update_branch_tag_map_for_rev(self, revision):
         """Given a revision object, determine changes to branches.
@@ -397,8 +411,8 @@ class SVNMeta(object):
                         if not from_tag:
                             continue
                         if from_tag in self.tags:
-                            ci = self.repo[self.tags[from_tag]].extra()['convert_revision']
-                            src_rev, branch, = self.parse_converted_revision(ci)
+                            changeid = self.tags[from_tag]
+                            src_rev, branch = self.get_source_rev(changeid)[:2]
                             file = ''
                     if t_name not in self.addedtags and file is '':
                         self.addedtags[t_name] = branch, src_rev
@@ -409,9 +423,7 @@ class SVNMeta(object):
                             self.addedtags[t_name] = branch, src_rev
                 elif (paths[p].action == 'D' and p.endswith(t_name)
                       and t_name in self.tags):
-                    ctx = self.repo[self.tags[t_name]]
-                    srev = ctx.extra()['convert_revision']
-                    src_rev, branch = self.parse_converted_revision(srev)
+                    branch = self.get_source_rev(self.tags[t_name])[1]
                     self.deletedtags[t_name] = branch, None
                 continue
 
@@ -487,19 +499,16 @@ class SVNMeta(object):
                                       data=tagdata,
                                       islink=False,
                                       isexec=False,
-                                      copied=False)
-        pextra = parentctx.extra()
-        revnum, branch = self.parse_converted_revision(pextra['convert_revision'])
+                                      copied=False)        
+        revnum, branch = self.get_source_rev(ctx=parentctx)[:2]
         newparent = None
         for child in parentctx.children():
-            cextra = child.extra()
-            if (self.parse_converted_revision(cextra['convert_revision'])[1] == branch
-                and cextra.get('close', False)):
+            if (self.get_source_rev(ctx=child)[1] == branch
+                and child.extra().get('close', False)):
                 newparent = child
         if newparent:
             parentctx = newparent
-            pextra = parentctx.extra()
-            revnum, branch = self.parse_converted_revision(pextra['convert_revision'])
+            revnum, branch = self.get_source_rev(ctx=parentctx)[:2]
         ctx = context.memctx(self.repo,
                              (parentctx.node(), node.nullid),
                              rev.message or '...',
@@ -507,7 +516,7 @@ class SVNMeta(object):
                              hgtagsfn,
                              self.authors[rev.author],
                              date,
-                             pextra)
+                             parentctx.extra())
         new_hash = self.repo.commitctx(ctx)
         if not newparent:
             assert self.revmap[revnum, branch] == parentctx.node()
