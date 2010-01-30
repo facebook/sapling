@@ -95,7 +95,7 @@ def filteriterhunks(meta):
     return filterhunks
 
 
-def diff_branchrev(ui, svn, meta, branch, r, parentctx):
+def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
     """Extract all 'branch' content at a given revision.
 
     Return a tuple (files, filectxfn) where 'files' is the list of all files
@@ -112,15 +112,14 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
             return branch[3:]
         return 'branches/%s' % branch
     parent_rev, br_p = meta.get_parent_svn_branch_and_rev(r.revnum, branch)
-    diff_path = make_diff_path(branch)
     try:
         if br_p == branch:
             # letting patch handle binaries sounded
             # cool, but it breaks patch in sad ways
-            d = svn.get_unified_diff(diff_path, r.revnum, deleted=False,
+            d = svn.get_unified_diff(branchpath, r.revnum, deleted=False,
                                      ignore_type=False)
         else:
-            d = svn.get_unified_diff(diff_path, r.revnum,
+            d = svn.get_unified_diff(branchpath, r.revnum,
                                      other_path=make_diff_path(br_p),
                                      other_rev=parent_rev,
                                      deleted=True, ignore_type=True)
@@ -202,10 +201,10 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
     unknown_files = set()
     for p in r.paths:
         action = r.paths[p].action
-        if not p.startswith(diff_path) or action not in 'DR':
+        if not p.startswith(branchpath) or action not in 'DR':
             continue
-        if diff_path:
-            p2 = p[len(diff_path)+1:].strip('/')
+        if branchpath:
+            p2 = p[len(branchpath)+1:].strip('/')
         else:
             p2 = p
         if p2 in parentctx:
@@ -222,7 +221,7 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
     touched_files.update(files_data)
     touched_files.update(unknown_files)
 
-    copies = getcopies(svn, meta, branch, diff_path, r, touched_files,
+    copies = getcopies(svn, meta, branch, branchpath, r, touched_files,
                        parentctx)
 
     def filectxfn(repo, memctx, path):
@@ -231,8 +230,8 @@ def diff_branchrev(ui, svn, meta, branch, r, parentctx):
 
         if path in binary_files or path in unknown_files:
             pa = path
-            if diff_path:
-                pa = diff_path + '/' + path
+            if branchpath:
+                pa = branchpath + '/' + path
             data, mode = svn.get_file(pa, r.revnum)
             isexe = 'x' in mode
             islink = 'l' in mode
@@ -581,7 +580,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
 
         try:
             files_touched, filectxfn2 = diff_branchrev(
-                                           ui, svn, meta, b, r, parentctx)
+                ui, svn, meta, b, branches[b], r, parentctx)
         except BadPatchApply, e:
             # Either this revision or the previous one does not exist.
             ui.status("Fetching entire revision: %s.\n" % e.args[0])
