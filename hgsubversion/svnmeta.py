@@ -354,10 +354,11 @@ class SVNMeta(object):
         '''Get the parent revision hash for a commit on a specific branch.
         '''
         tag = self.get_path_tag(self.remotename(branch))
-        limitedtags = maps.TagMap(self.repo, endrev=number-1)
-        if tag in limitedtags:
-            ha = limitedtags[tag]
-            return ha
+        if tag:
+            limitedtags = maps.TagMap(self.repo, endrev=number-1)
+            if tag in limitedtags:
+                ha = limitedtags[tag]
+                return ha
         r, br = self.get_parent_svn_branch_and_rev(number, branch)
         if r is not None:
             return self.revmap[r, br]
