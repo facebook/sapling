@@ -446,6 +446,10 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
         isexec = 'x' in mode
         islink = 'l' in mode
         copied = copies.get(path)
+        # TODO this branch feels like it should not be required,
+        # and this may actually imply a bug in getcopies
+        if copied not in parentctx.manifest():
+            copied = None
         return context.memfilectx(path=path, data=data, islink=islink,
                                   isexec=isexec, copied=copied)
 
