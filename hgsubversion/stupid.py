@@ -103,25 +103,19 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
     callable to retrieve individual file information. Raise BadPatchApply upon
     error.
     """
-    def make_diff_path(branch):
-        if meta.layout == 'single':
-            return ''
-        if branch == 'trunk' or branch is None:
-            return 'trunk'
-        elif branch.startswith('../'):
-            return branch[3:]
-        return 'branches/%s' % branch
-    parent_rev, br_p = meta.get_parent_svn_branch_and_rev(r.revnum, branch)
     try:
-        if br_p == branch:
+        prev, pbranch, ppath = meta.get_source_rev(ctx=parentctx)
+    except KeyError:
+        prev, pbranch, ppath = None, None, None
+    try:
+        if prev is None or pbranch == branch:
             # letting patch handle binaries sounded
             # cool, but it breaks patch in sad ways
             d = svn.get_unified_diff(branchpath, r.revnum, deleted=False,
                                      ignore_type=False)
         else:
             d = svn.get_unified_diff(branchpath, r.revnum,
-                                     other_path=make_diff_path(br_p),
-                                     other_rev=parent_rev,
+                                     other_path=ppath, other_rev=prev,
                                      deleted=True, ignore_type=True)
             if d:
                 raise BadPatchApply('branch creation with mods')
@@ -473,7 +467,7 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
     branches = {}
     paths_need_discovery = []
     for p in paths:
-        relpath, branch, branchpath = meta.split_branch_path(p)
+        relpath, branch, branchpath = meta.split_branch_path(p, exacttag=True)
         if relpath is not None:
             branches[branch] = branchpath
         elif paths[p].action == 'D' and not meta.get_path_tag(p):
@@ -572,14 +566,13 @@ def convert_rev(ui, meta, svn, r, tbdelta):
     check_deleted_branches = set(tbdelta['branches'][1])
     for b in branches:
         parentctx = meta.repo[meta.get_parent_revision(r.revnum, b)]
-        if parentctx.branch() != (b or 'default'):
-            check_deleted_branches.add(b)
-
+        tag = meta.get_path_tag(meta.remotename(b))
         kind = svn.checkpath(branches[b], r.revnum)
         if kind != 'd':
-            # Branch does not exist at this revision. Get parent revision and
-            # remove everything.
-            deleted_branches[b] = parentctx.node()
+            if not tag:
+                # Branch does not exist at this revision. Get parent
+                # revision and remove everything.
+                deleted_branches[b] = parentctx.node()
             continue
 
         try:
@@ -615,6 +608,14 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         for f in excluded:
             files_touched.remove(f)
 
+        if b:
+            # Regular tag without modifications, it will be committed by
+            # svnmeta.committag(), we can skip the whole branch for now
+            if (tag and tag not in meta.tags and
+                b not in meta.branches
+                and b not in meta.repo.branchtags()):
+                continue
+
         if parentctx.node() == node.nullid and not files_touched:
             meta.repo.ui.debug('skipping commit since parent is null and no files touched.\n')
             continue
@@ -626,8 +627,6 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                 assert f[0] != '/'
 
         extra = meta.genextra(r.revnum, b)
-
-        tag = meta.get_path_tag(meta.remotename(b))
         if tag:
             if parentctx.node() == node.nullid:
                 continue

@@ -235,7 +235,7 @@ rename a tag
         diff = difflib.unified_diff(expected, output, 'expected', 'output')
         self.assert_(False, '\n' + '\n'.join(diff))
 
-    def test_tagging_into_tag(self, expected=None, stupid=False):
+    def test_tagging_into_tag(self, stupid=False):
         expected = """\
 node: hg=test@2:svn=branches/test@4
 First tag.
@@ -246,28 +246,10 @@ Weird tag.
   test-0.1: hg=test@1:svn=branches/test@3
   test-0.1/test: hg=test@1:svn=branches/test@3
 """
-        self._test_tags('renametagdir.svndump', expected)
+        self._test_tags('renametagdir.svndump', expected, stupid=stupid)
 
     def test_tagging_into_tag_stupid(self):
-        # This test exposed existing flaws with tag handling in stupid mode.
-        # They will be resolved in the future.
-        expected = """\
-node: hg=test@2:svn=branches/test@4
-First tag.
-  test-0.1: hg=test@1:svn=branches/test@3
-
-node: hg=test@4:svn=branches/test@4
-Weird tag.
-  test-0.1: hg=test@1:svn=branches/test@3
-  test-0.1: hg=test@3:svn=tags/test-0.1@5
-
-node: hg=test@5:svn=branches/test@5
-Weird tag.
-  test-0.1: hg=test@1:svn=branches/test@3
-  test-0.1: hg=test@3:svn=tags/test-0.1@5
-  test-0.1/test: hg=test@1:svn=branches/test@3
-"""
-        self._test_tags('renametagdir.svndump', expected, True)
+        self.test_tagging_into_tag(True)
     
 
 def suite():

@@ -247,7 +247,7 @@ class SVNMeta(object):
                         return tag
         return None
 
-    def split_branch_path(self, path, existing=True):
+    def split_branch_path(self, path, existing=True, exacttag=False):
         """Figure out which branch inside our repo this path represents, and
         also figure out which path inside that branch it is.
 
@@ -256,6 +256,11 @@ class SVNMeta(object):
         If existing=True, will return None, None, None if the file isn't on some known
         branch. If existing=False, then it will guess what the branch would be if it were
         known. Server-side branch path should be relative to our subdirectory.
+
+        If exacttag=True and path matches exactly a new or existing
+        tag, then return it as an empty relative path. Otherwise,
+        ignore the path and return (None, None, None). Only subpaths
+        of supplied tag path will be split.
         """
         path = self.normalize(path)
         if self.layout == 'single':
@@ -265,12 +270,20 @@ class SVNMeta(object):
             # consider the new tags when dispatching entries
             matched = []
             for tags in (self.tags, self.addedtags):
-                matched += [t for t in tags if tag.startswith(t + '/')]
+                if exacttag:
+                    matched += [t for t in tags
+                                if (tag == t or tag.startswith(t + '/'))]
+                else:
+                    matched += [t for t in tags if tag.startswith(t + '/')]
             if not matched:
                 return None, None, None
             matched.sort(key=len, reverse=True)
-            brpath = tag[len(matched[0])+1:]
-            svrpath = path[:-(len(brpath)+1)]
+            if tag == matched[0]:
+                brpath = ''
+                svrpath = path
+            else:
+                brpath = tag[len(matched[0])+1:]
+                svrpath = path[:-(len(brpath)+1)]
             ln = self.localname(svrpath)
             return brpath, ln, svrpath
         test = ''
