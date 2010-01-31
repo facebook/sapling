@@ -22,25 +22,6 @@ from mercurial.lock import release
 from mercurial.i18n import _
 import os, errno
 
-def rebasemerge(repo, rev, first=False):
-    'return the correct ancestor'
-    oldancestor = ancestor.ancestor
-
-    def newancestor(a, b, pfunc):
-        if b == rev:
-            return repo[rev].parents()[0].rev()
-        return oldancestor(a, b, pfunc)
-
-    if not first:
-        ancestor.ancestor = newancestor
-    else:
-        repo.ui.debug("first revision, do not change ancestor\n")
-    try:
-        stats = merge.update(repo, rev, True, True, False)
-        return stats
-    finally:
-        ancestor.ancestor = oldancestor
-
 def rebase(ui, repo, **opts):
     """move changeset (and descendants) to a different branch
 
@@ -55,6 +36,7 @@ def rebase(ui, repo, **opts):
     external = nullrev
     state = {}
     skipped = set()
+    targetancestors = set()
 
     lock = wlock = None
     try:
@@ -94,12 +76,16 @@ def rebase(ui, repo, **opts):
                 raise error.ParseError('rebase', _('cannot specify both a '
                                                    'revision and a base'))
             cmdutil.bail_if_changed(repo)
-            result = buildstate(repo, destf, srcf, basef, collapsef)
-            if result:
-                originalwd, target, state, external = result
-            else: # Empty state built, nothing to rebase
+            result = buildstate(repo, destf, srcf, basef)
+            if not result:
+                # Empty state built, nothing to rebase
                 ui.status(_('nothing to rebase\n'))
                 return
+            else:
+                originalwd, target, state = result
+                if collapsef:
+                    targetancestors = set(repo.changelog.ancestors(target))
+                    external = checkexternal(repo, state, targetancestors)
 
         if keepbranchesf:
             if extrafn:
@@ -109,22 +95,56 @@ def rebase(ui, repo, **opts):
                 extra['branch'] = ctx.branch()
 
         # Rebase
-        targetancestors = list(repo.changelog.ancestors(target))
-        targetancestors.append(target)
+        if not targetancestors:
+            targetancestors = set(repo.changelog.ancestors(target))
+            targetancestors.add(target)
 
         for rev in sorted(state):
             if state[rev] == -1:
+                ui.debug("rebasing %d:%s\n" % (rev, repo[rev]))
                 storestatus(repo, originalwd, target, state, collapsef, keepf,
                                                     keepbranchesf, external)
-                rebasenode(repo, rev, target, state, skipped, targetancestors,
-                                                       collapsef, extrafn)
+                p1, p2 = defineparents(repo, rev, target, state,
+                                                        targetancestors)
+                if len(repo.parents()) == 2:
+                    repo.ui.debug('resuming interrupted rebase\n')
+                else:
+                    stats = rebasenode(repo, rev, p1, p2, state)
+                    if stats and stats[3] > 0:
+                        raise util.Abort(_('fix unresolved conflicts with hg '
+                                    'resolve then run hg rebase --continue'))
+                updatedirstate(repo, rev, target, p2)
+                if not collapsef:
+                    extra = {'rebase_source': repo[rev].hex()}
+                    if extrafn:
+                        extrafn(repo[rev], extra)
+                    newrev = concludenode(repo, rev, p1, p2, extra=extra)
+                else:
+                    # Skip commit if we are collapsing
+                    repo.dirstate.setparents(repo[p1].node())
+                    newrev = None
+                # Update the state
+                if newrev is not None:
+                    state[rev] = repo[newrev].rev()
+                else:
+                    if not collapsef:
+                        ui.note(_('no changes, revision %d skipped\n') % rev)
+                        ui.debug('next revision set to %s\n' % p1)
+                        skipped.add(rev)
+                    state[rev] = p1
+
         ui.note(_('rebase merging completed\n'))
 
         if collapsef:
             p1, p2 = defineparents(repo, min(state), target,
                                                         state, targetancestors)
-            concludenode(repo, rev, p1, external, state, collapsef,
-                         last=True, skipped=skipped, extrafn=extrafn)
+            commitmsg = 'Collapsed revision'
+            for rebased in state:
+                if rebased not in skipped:
+                    commitmsg += '\n* %s' % repo[rebased].description()
+            commitmsg = ui.edit(commitmsg, repo.ui.username())
+            concludenode(repo, rev, p1, external, commitmsg=commitmsg,
+                                                    extra=extrafn)
 
         if 'qtip' in repo.tags():
             updatemq(repo, state, skipped, **opts)
@@ -146,37 +166,67 @@ def rebase(ui, repo, **opts):
     finally:
         release(lock, wlock)
 
-def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped=None,
-                 extrafn=None):
-    """Skip commit if collapsing has been required and rev is not the last
-    revision, commit otherwise
-    """
-    repo.ui.debug(" set parents\n")
-    if collapse and not last:
-        repo.dirstate.setparents(repo[p1].node())
-        return None
+def rebasemerge(repo, rev, first=False):
+    'return the correct ancestor'
+    oldancestor = ancestor.ancestor
 
-    repo.dirstate.setparents(repo[p1].node(), repo[p2].node())
+    def newancestor(a, b, pfunc):
+        if b == rev:
+            return repo[rev].parents()[0].rev()
+        return oldancestor(a, b, pfunc)
 
-    if skipped is None:
-        skipped = set()
-
-    # Commit, record the old nodeid
-    newrev = nullrev
+    if not first:
+        ancestor.ancestor = newancestor
+    else:
+        repo.ui.debug("first revision, do not change ancestor\n")
     try:
-        if last:
-            # we don't translate commit messages
-            commitmsg = 'Collapsed revision'
-            for rebased in state:
-                if rebased not in skipped:
-                    commitmsg += '\n* %s' % repo[rebased].description()
-            commitmsg = repo.ui.edit(commitmsg, repo.ui.username())
-        else:
+        stats = merge.update(repo, rev, True, True, False)
+        return stats
+    finally:
+        ancestor.ancestor = oldancestor
+
+def checkexternal(repo, state, targetancestors):
+    """Check whether one or more external revisions need to be taken in
+    consideration. In the latter case, abort.
+    """
+    external = nullrev
+    source = min(state)
+    for rev in state:
+        if rev == source:
+            continue
+        # Check externals and fail if there are more than one
+        for p in repo[rev].parents():
+            if (p.rev() not in state
+                        and p.rev() not in targetancestors):
+                if external != nullrev:
+                    raise util.Abort(_('unable to collapse, there is more '
+                            'than one external parent'))
+                external = p.rev()
+    return external
+
+def updatedirstate(repo, rev, p1, p2):
+    """Keep track of renamed files in the revision that is going to be rebased
+    """
+    # Here we simulate the copies and renames in the source changeset
+    cop, diver = copies.copies(repo, repo[rev], repo[p1], repo[p2], True)
+    m1 = repo[rev].manifest()
+    m2 = repo[p1].manifest()
+    for k, v in cop.iteritems():
+        if k in m1:
+            if v in m1 or v in m2:
+                repo.dirstate.copy(v, k)
+                if v in m2 and v not in m1:
+                    repo.dirstate.remove(v)
+
+def concludenode(repo, rev, p1, p2, commitmsg=None, extra=None):
+    'Commit the changes and store useful information in extra'
+    try:
+        repo.dirstate.setparents(repo[p1].node(), repo[p2].node())
+        if commitmsg is None:
             commitmsg = repo[rev].description()
+        if extra is None:
+            extra = {}
         # Commit might fail if unresolved files exist
-        extra = {'rebase_source': repo[rev].hex()}
-        if extrafn:
-            extrafn(repo[rev], extra)
         newrev = repo.commit(text=commitmsg, user=repo[rev].user(),
                              date=repo[rev].date(), extra=extra)
         repo.dirstate.setbranch(repo[newrev].branch())
@@ -186,59 +236,20 @@ def concludenode(repo, rev, p1, p2, state, collapse, last=False, skipped=None,
         repo.dirstate.invalidate()
         raise
 
-def rebasenode(repo, rev, target, state, skipped, targetancestors, collapse,
-               extrafn):
+def rebasenode(repo, rev, p1, p2, state):
     'Rebase a single revision'
-    repo.ui.debug("rebasing %d:%s\n" % (rev, repo[rev]))
-
-    p1, p2 = defineparents(repo, rev, target, state, targetancestors)
-
-    repo.ui.debug(" future parents are %d and %d\n" % (repo[p1].rev(),
-                                                            repo[p2].rev()))
-
     # Merge phase
-    if len(repo.parents()) != 2:
-        # Update to target and merge it with local
-        if repo['.'].rev() != repo[p1].rev():
-            repo.ui.debug(" update to %d:%s\n" % (repo[p1].rev(), repo[p1]))
-            merge.update(repo, p1, False, True, False)
-        else:
-            repo.ui.debug(" already in target\n")
-        repo.dirstate.write()
-        repo.ui.debug(" merge against %d:%s\n" % (repo[rev].rev(), repo[rev]))
-        first = repo[rev].rev() == repo[min(state)].rev()
-        stats = rebasemerge(repo, rev, first)
-
-        if stats[3] > 0:
-            raise util.Abort(_('fix unresolved conflicts with hg resolve then '
-                                                'run hg rebase --continue'))
-    else: # we have an interrupted rebase
-        repo.ui.debug('resuming interrupted rebase\n')
-
-    # Keep track of renamed files in the revision that is going to be rebased
-    # Here we simulate the copies and renames in the source changeset
-    cop, diver = copies.copies(repo, repo[rev], repo[target], repo[p2], True)
-    m1 = repo[rev].manifest()
-    m2 = repo[target].manifest()
-    for k, v in cop.iteritems():
-        if k in m1:
-            if v in m1 or v in m2:
-                repo.dirstate.copy(v, k)
-                if v in m2 and v not in m1:
-                    repo.dirstate.remove(v)
-
-    newrev = concludenode(repo, rev, p1, p2, state, collapse,
-                          extrafn=extrafn)
-
-    # Update the state
-    if newrev is not None:
-        state[rev] = repo[newrev].rev()
+    # Update to target and merge it with local
+    if repo['.'].rev() != repo[p1].rev():
+        repo.ui.debug(" update to %d:%s\n" % (repo[p1].rev(), repo[p1]))
+        merge.update(repo, p1, False, True, False)
     else:
-        if not collapse:
-            repo.ui.note(_('no changes, revision %d skipped\n') % rev)
-            repo.ui.debug('next revision set to %s\n' % p1)
-            skipped.add(rev)
-        state[rev] = p1
+        repo.ui.debug(" already in target\n")
+    repo.dirstate.write()
+    repo.ui.debug(" merge against %d:%s\n" % (repo[rev].rev(), repo[rev]))
+    first = repo[rev].rev() == repo[min(state)].rev()
+    stats = rebasemerge(repo, rev, first)
+    return stats
 
 def defineparents(repo, rev, target, state, targetancestors):
     'Return the new parent relationship of the revision that will be rebased'
@@ -267,6 +278,8 @@ def defineparents(repo, rev, target, state, targetancestors):
                 raise util.Abort(_('cannot use revision %d as base, result '
                         'would have 3 parents') % rev)
             p2 = P2n
+    repo.ui.debug(" future parents are %d and %d\n" %
+                            (repo[p1].rev(), repo[p2].rev()))
     return p1, p2
 
 def isagitpatch(repo, patchname):
@@ -366,7 +379,7 @@ def abort(repo, originalwd, target, state):
         clearstatus(repo)
         repo.ui.status(_('rebase aborted\n'))
 
-def buildstate(repo, dest, src, base, collapse):
+def buildstate(repo, dest, src, base):
     'Define which revisions are going to be rebased and where'
     targetancestors = set()
 
@@ -413,22 +426,8 @@ def buildstate(repo, dest, src, base, collapse):
 
     repo.ui.debug('rebase onto %d starting from %d\n' % (dest, source))
     state = dict.fromkeys(repo.changelog.descendants(source), nullrev)
-    external = nullrev
-    if collapse:
-        if not targetancestors:
-            targetancestors = set(repo.changelog.ancestors(dest))
-        for rev in state:
-            # Check externals and fail if there are more than one
-            for p in repo[rev].parents():
-                if (p.rev() not in state and p.rev() != source
-                            and p.rev() not in targetancestors):
-                    if external != nullrev:
-                        raise util.Abort(_('unable to collapse, there is more '
-                                'than one external parent'))
-                    external = p.rev()
-
     state[source] = nullrev
-    return repo['.'].rev(), repo[dest].rev(), state, external
+    return repo['.'].rev(), repo[dest].rev(), state
 
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
