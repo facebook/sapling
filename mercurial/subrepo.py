@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, re, xml.dom.minidom
+import errno, os, re, xml.dom.minidom, shutil
 from i18n import _
 import config, util, node, error
 hg = None
@@ -153,7 +153,7 @@ def subrepo(ctx, path):
     util.path_auditor(ctx._repo.root)(path)
     state = ctx.substate.get(path, nullstate)
     if state[2] not in types:
-        raise util.Abort(_('unknown subrepo type %s') % t)
+        raise util.Abort(_('unknown subrepo type %s') % state[2])
     return types[state[2]](ctx, path, state[:2])
 
 # subrepo classes need to implement the following methods:
@@ -332,10 +332,10 @@ class svnsubrepo(object):
 
     def remove(self):
         if self.dirty():
-            self._repo.ui.warn(_('not removing repo %s because '
-                                 'it has changes.\n' % self._path))
+            self._ui.warn(_('not removing repo %s because '
+                            'it has changes.\n' % self._path))
             return
-        self._repo.ui.note('removing subrepo %s\n' % self._path)
+        self._ui.note('removing subrepo %s\n' % self._path)
         shutil.rmtree(self._ctx.repo.join(self._path))
 
     def get(self, state):
