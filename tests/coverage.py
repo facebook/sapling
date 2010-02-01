@@ -645,7 +645,7 @@ class coverage:
     def find_docstring_pass_pair(self, tree, spots):
         for i in range(1, len(tree)):
             if (self.is_string_constant(tree[i]) and
-                self.is_pass_stmt(tree[i + 1]):
+                self.is_pass_stmt(tree[i + 1])):
                 first_line = self.first_line_of_tree(tree[i])
                 last_line = self.last_line_of_tree(tree[i + 1])
                 self.record_multiline(spots, first_line, last_line)
