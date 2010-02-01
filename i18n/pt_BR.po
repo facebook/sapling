@@ -4102,18 +4102,6 @@ msgid "unable to read %s\n"
 msgstr "impossível ler %s\n"
 
 #, python-format
-msgid "imported patch %s\n"
-msgstr "patch %s importado\n"
-
-#, python-format
-msgid ""
-"\n"
-"imported patch %s"
-msgstr ""
-"\n"
-"patch %s importado"
-
-#, python-format
 msgid "patch %s is empty\n"
 msgstr "o patch %s é vazio\n"
 
@@ -5520,6 +5508,9 @@ msgid ""
 "  cc = cc1, cc2, ...\n"
 "  bcc = bcc1, bcc2, ...\n"
 "\n"
+"Use ``[patchbomb]`` as configuration section name if you need to\n"
+"override global ``[email]`` address settings.\n"
+"\n"
 "Then you can use the \"hg email\" command to mail a series of changesets\n"
 "as a patchbomb.\n"
 "\n"
@@ -5584,6 +5575,9 @@ msgstr ""
 "  to = destinatario1, destinatario2, ...\n"
 "  cc = cc1, cc2, ...\n"
 "  bcc = bcc1, bcc2, ...\n"
+"\n"
+"Use ``[patchbomb]`` como nome da seção de configuração se for preciso\n"
+"sobrepor configurações globais da seção ``[email]``.\n"
 "\n"
 "Então você poderá usar o comando \"hg email\" para enviar por e-mail\n"
 "uma série de revisões como uma \"patchbomb\".\n"
