@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: a0c6ec72-28b3-4974-bd95-6d36963afc51
+UUID: b3e24de6-f874-406f-9561-e48db081ff5e
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2010-01-16T19:26:17.747443Z
+2010-01-20T12:58:05.107637Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-01-16T19:26:18.096428Z
+2010-01-20T12:58:06.111903Z
 PROPS-END
 
 Node-path: branches
@@ -72,7 +72,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-01-16T19:26:19.083966Z
+2010-01-20T12:58:07.088858Z
 PROPS-END
 
 Node-path: trunk/a
@@ -103,7 +103,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-01-16T19:26:22.053451Z
+2010-01-20T12:58:10.062719Z
 PROPS-END
 
 Node-path: branches/test
@@ -128,7 +128,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-01-16T19:26:24.099798Z
+2010-01-20T12:58:12.060717Z
 PROPS-END
 
 Node-path: tags/test-0.1
@@ -153,7 +153,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-01-16T19:26:24.191458Z
+2010-01-20T12:58:12.110400Z
 PROPS-END
 
 Node-path: tags/test-0.1/test
@@ -161,5 +161,85 @@ Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 3
 Node-copyfrom-path: branches/test
+
+
+Revision-number: 6
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 13
+Fix tag pt 1.
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-01-20T12:58:12.169328Z
+PROPS-END
+
+Node-path: tags/test-0.1/test
+Node-action: delete
+
+
+Node-path: tags/test-0.1-real
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: tags/test-0.1/test
+
+
+Revision-number: 7
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 13
+Remove weird.
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-01-20T12:58:12.212355Z
+PROPS-END
+
+Node-path: tags/test-0.1
+Node-action: delete
+
+
+Revision-number: 8
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 13
+Fix tag pt 2.
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2010-01-20T12:58:12.317421Z
+PROPS-END
+
+Node-path: tags/test-0.1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 7
+Node-copyfrom-path: tags/test-0.1-real
+
+
+Node-path: tags/test-0.1-real
+Node-action: delete
 
 

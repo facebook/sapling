@@ -211,9 +211,9 @@ rename a tag
             return 'hg=%s@%d:svn=%s@%s' % (branch, ctx.rev(), path, rev)
 
         w = fp.write
+        desc = ctx.description().splitlines()[0].strip()
         if '.hgtags' not in ctx or not ctx['.hgtags'].data().strip():
             return
-        desc = ctx.description().splitlines()[0].strip()
         w('node: %s\n' % formatnode(ctx))
         w('%s\n' % desc)
         for line in ctx['.hgtags'].data().splitlines(False):
@@ -245,6 +245,31 @@ node: hg=test@3:svn=branches/test@5
 Weird tag.
   test-0.1: hg=test@1:svn=branches/test@3
   test-0.1/test: hg=test@1:svn=branches/test@3
+
+node: hg=test@4:svn=branches/test@6
+Fix tag pt 1.
+  test-0.1: hg=test@1:svn=branches/test@3
+  test-0.1/test: hg=test@1:svn=branches/test@3
+  test-0.1/test: hg=default@-1:svn=unk@unk
+  test-0.1-real: hg=test@1:svn=branches/test@3
+
+node: hg=test@5:svn=branches/test@7
+Remove weird.
+  test-0.1: hg=test@1:svn=branches/test@3
+  test-0.1/test: hg=test@1:svn=branches/test@3
+  test-0.1/test: hg=default@-1:svn=unk@unk
+  test-0.1-real: hg=test@1:svn=branches/test@3
+  test-0.1: hg=default@-1:svn=unk@unk
+
+node: hg=test@6:svn=branches/test@8
+Fix tag pt 2.
+  test-0.1: hg=test@1:svn=branches/test@3
+  test-0.1/test: hg=test@1:svn=branches/test@3
+  test-0.1/test: hg=default@-1:svn=unk@unk
+  test-0.1-real: hg=test@1:svn=branches/test@3
+  test-0.1: hg=default@-1:svn=unk@unk
+  test-0.1-real: hg=default@-1:svn=unk@unk
+  test-0.1: hg=test@1:svn=branches/test@3
 """
         self._test_tags('renametagdir.svndump', expected, stupid=stupid)
 

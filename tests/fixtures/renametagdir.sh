@@ -23,6 +23,9 @@ svn up
 cd ..
 svn cp -m 'First tag.' $REPO/branches/test@3 $REPO/tags/test-0.1
 svn cp -m 'Weird tag.' $REPO/branches/test@3 $REPO/tags/test-0.1/test
+svn mv -m 'Fix tag pt 1.' $REPO/tags/test-0.1/test $REPO/tags/test-0.1-real
+svn rm -m 'Remove weird.' $REPO/tags/test-0.1
+svn mv -m 'Fix tag pt 2.' $REPO/tags/test-0.1-real $REPO/tags/test-0.1
 
 cd ..
 svnadmin dump temp/repo > renametagdir.svndump
