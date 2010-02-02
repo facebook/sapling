@@ -467,7 +467,7 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
     branches = {}
     paths_need_discovery = []
     for p in paths:
-        relpath, branch, branchpath = meta.split_branch_path(p, exacttag=True)
+        relpath, branch, branchpath = meta.split_branch_path(p)
         if relpath is not None:
             branches[branch] = branchpath
         elif paths[p].action == 'D' and not meta.get_path_tag(p):

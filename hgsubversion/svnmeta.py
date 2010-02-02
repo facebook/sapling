@@ -247,20 +247,21 @@ class SVNMeta(object):
                         return tag
         return None
 
-    def split_branch_path(self, path, existing=True, exacttag=False):
+    def split_branch_path(self, path, existing=True):
         """Figure out which branch inside our repo this path represents, and
         also figure out which path inside that branch it is.
 
         Returns a tuple of (path within branch, local branch name, server-side branch path).
 
+        Note that tag paths can also be matched: assuming tags/tag-1.1
+        is a tag then:
+        tags/tag-1.1 => ('', '../tags/tag-1.1', 'tags/tag-1.1')
+        tags/tag-1.1/file => ('file', '../tags/tag-1.1', 'tags/tag-1.1')
+        tags/tag-1.2 => (None, None, None)
+
         If existing=True, will return None, None, None if the file isn't on some known
         branch. If existing=False, then it will guess what the branch would be if it were
         known. Server-side branch path should be relative to our subdirectory.
-
-        If exacttag=True and path matches exactly a new or existing
-        tag, then return it as an empty relative path. Otherwise,
-        ignore the path and return (None, None, None). Only subpaths
-        of supplied tag path will be split.
         """
         path = self.normalize(path)
         if self.layout == 'single':
@@ -270,11 +271,8 @@ class SVNMeta(object):
             # consider the new tags when dispatching entries
             matched = []
             for tags in (self.tags, self.addedtags):
-                if exacttag:
-                    matched += [t for t in tags
-                                if (tag == t or tag.startswith(t + '/'))]
-                else:
-                    matched += [t for t in tags if tag.startswith(t + '/')]
+                matched += [t for t in tags
+                            if (tag == t or tag.startswith(t + '/'))]
             if not matched:
                 return None, None, None
             matched.sort(key=len, reverse=True)
@@ -429,7 +427,7 @@ class SVNMeta(object):
             if t_name:
                 src_p, src_rev = paths[p].copyfrom_path, paths[p].copyfrom_rev
                 if src_p is not None and src_rev is not None:
-                    file, branch = self.split_branch_path(src_p, exacttag=True)[:2]
+                    file, branch = self.split_branch_path(src_p)[:2]
                     from_tag = self.get_path_tag(src_p)
                     if file is None and not from_tag:
                         continue
@@ -477,7 +475,7 @@ class SVNMeta(object):
             #    already-known branches, so we mark them as deleted.
             # 6. It's a branch being replaced by another branch - the
             #    action will be 'R'.
-            fi, br = self.split_branch_path(p, exacttag=True)[:2]
+            fi, br = self.split_branch_path(p)[:2]
             if fi is not None:
                 if fi == '':
                     if paths[p].action == 'D':
@@ -495,7 +493,7 @@ class SVNMeta(object):
             parent = self._determine_parent_branch(
                 p, paths[p].copyfrom_path, paths[p].copyfrom_rev, revision.revnum)
             if not parent and paths[p].copyfrom_path:
-                bpath, branch = self.split_branch_path(p, False, exacttag=True)[:2]
+                bpath, branch = self.split_branch_path(p, False)[:2]
                 if (bpath is not None
                     and branch not in self.branches
                     and branch not in added_branches):

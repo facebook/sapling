@@ -123,8 +123,11 @@ class HgEditor(delta.Editor):
 
     @ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
-        br_path, branch = self.meta.split_branch_path(path)[:2]
+        br_path, branch = self.meta.split_branch_path(path)[:2]        
         if br_path == '':
+            if self.meta.get_path_tag(path):
+                # Tag deletion is not handled as branched deletion
+                return
             self.meta.closebranches.add(branch)
         if br_path is not None:
             ha = self.meta.get_parent_revision(self.current.rev.revnum, branch)
@@ -305,7 +308,8 @@ class HgEditor(delta.Editor):
         self.current.batons[path] = path
         p_, branch = self.meta.split_branch_path(path)[:2]
         if p_ == '' or (self.meta.layout == 'single' and p_):
-            self.current.emptybranches[branch] = False
+            if not self.meta.get_path_tag(path):
+                self.current.emptybranches[branch] = False
         return path
 
     @ieditor
