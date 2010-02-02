@@ -418,8 +418,11 @@ class SVNMeta(object):
                     }
         paths = revision.paths
         added_branches = {}
-        self.addedtags = {}
-        self.deletedtags = {}
+        # Reset the tags delta before detecting the new one, and take
+        # care not to fill them until done since split_branch_path()
+        # use them.
+        self.addedtags, self.deletedtags = {}, {}
+        addedtags, deletedtags = {}, {}
         self.closebranches = set()
         for p in sorted(paths):
             t_name = self.get_path_tag(p)
@@ -436,17 +439,17 @@ class SVNMeta(object):
                             changeid = self.tags[from_tag]
                             src_rev, branch = self.get_source_rev(changeid)[:2]
                             file = ''
-                    if t_name not in self.addedtags and file is '':
-                        self.addedtags[t_name] = branch, src_rev
+                    if t_name not in addedtags and file is '':
+                        addedtags[t_name] = branch, src_rev
                     elif file:
                         t_name = t_name[:-(len(file)+1)]
-                        found = t_name in self.addedtags
-                        if found and src_rev > self.addedtags[t_name][1]:
-                            self.addedtags[t_name] = branch, src_rev
+                        found = t_name in addedtags
+                        if found and src_rev > addedtags[t_name][1]:
+                            addedtags[t_name] = branch, src_rev
                 elif (paths[p].action == 'D' and p.endswith(t_name)
                       and t_name in self.tags):
                     branch = self.get_source_rev(self.tags[t_name])[1]
-                    self.deletedtags[t_name] = branch, None
+                    deletedtags[t_name] = branch, None
                 continue
 
             # At this point we know the path is not a tag. In that
@@ -495,6 +498,7 @@ class SVNMeta(object):
                     and branch not in added_branches):
                     parent = {branch: (None, 0, revision.revnum)}
             added_branches.update(parent)
+        self.addedtags, self.deletedtags = addedtags, deletedtags
         return {
             'branches': (added_branches, self.closebranches),
         }
