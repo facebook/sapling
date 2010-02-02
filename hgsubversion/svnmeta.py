@@ -368,10 +368,19 @@ class SVNMeta(object):
         '''
         tag = self.get_path_tag(self.remotename(branch))
         if tag:
+            # Reference a tag being created
+            if tag in self.addedtags:
+                tbranch, trev = self.addedtags[tag]
+                fromtag = self.get_path_tag(self.remotename(tbranch))
+                if not fromtag:
+                    # Created from a regular branch, not another tag
+                    tagged = self.get_parent_svn_branch_and_rev(trev + 1, tbranch)
+                    return node.hex(self.revmap[tagged])
+                tag = fromtag
+            # Reference an existing tag
             limitedtags = maps.TagMap(self.repo, endrev=number-1)
             if tag in limitedtags:
-                ha = limitedtags[tag]
-                return ha
+                return limitedtags[tag]
         r, br = self.get_parent_svn_branch_and_rev(number, branch)
         if r is not None:
             return self.revmap[r, br]
