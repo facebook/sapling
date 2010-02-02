@@ -429,23 +429,26 @@ class SVNMeta(object):
             if t_name:
                 src_p, src_rev = paths[p].copyfrom_path, paths[p].copyfrom_rev
                 if src_p is not None and src_rev is not None:
-                    file, branch = self.split_branch_path(src_p)[:2]
-                    if file is None:
-                        # some crazy people make tags from other tags
-                        from_tag = self.get_path_tag(src_p)
-                        if not from_tag:
-                            continue
-                        if from_tag in self.tags:
+                    file, branch = self.split_branch_path(src_p, exacttag=True)[:2]
+                    from_tag = self.get_path_tag(src_p)
+                    if file is None and not from_tag:
+                        continue
+                    if from_tag and from_tag not in self.tags:
+                        # Ignore copies from unknown tags
+                        continue
+                    if not file:
+                        # Direct branch or tag copy
+                        if from_tag:
                             changeid = self.tags[from_tag]
                             src_rev, branch = self.get_source_rev(changeid)[:2]
-                            file = ''
-                    if t_name not in addedtags and file is '':
-                        addedtags[t_name] = branch, src_rev
-                    elif file:
+                        if t_name not in addedtags:
+                            addedtags[t_name] = branch, src_rev
+                    else:
+                        # Subbranch or subtag copy
                         t_name = t_name[:-(len(file)+1)]
                         found = t_name in addedtags
                         if found and src_rev > addedtags[t_name][1]:
-                            addedtags[t_name] = branch, src_rev
+                            addedtags[t_name] = branch, src_rev                        
                 elif (paths[p].action == 'D' and p.endswith(t_name)
                       and t_name in self.tags):
                     branch = self.get_source_rev(self.tags[t_name])[1]
@@ -474,7 +477,7 @@ class SVNMeta(object):
             #    already-known branches, so we mark them as deleted.
             # 6. It's a branch being replaced by another branch - the
             #    action will be 'R'.
-            fi, br = self.split_branch_path(p)[:2]
+            fi, br = self.split_branch_path(p, exacttag=True)[:2]
             if fi is not None:
                 if fi == '':
                     if paths[p].action == 'D':
@@ -492,7 +495,7 @@ class SVNMeta(object):
             parent = self._determine_parent_branch(
                 p, paths[p].copyfrom_path, paths[p].copyfrom_rev, revision.revnum)
             if not parent and paths[p].copyfrom_path:
-                bpath, branch = self.split_branch_path(p, False)[:2]
+                bpath, branch = self.split_branch_path(p, False, exacttag=True)[:2]
                 if (bpath is not None
                     and branch not in self.branches
                     and branch not in added_branches):
