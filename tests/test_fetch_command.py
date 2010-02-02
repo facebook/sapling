@@ -33,15 +33,15 @@ class TestBasicRepoLayout(test_util.TestBase):
     def test_branches(self):
         repo = self._load_fixture_and_fetch('simple_branch.svndump')
         self.assertEqual(node.hex(repo[0].node()),
-                         '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
+                         'a1ff9f5d90852ce7f8e607fa144066b0a06bdc57')
         self.assertEqual(node.hex(repo['tip'].node()),
-                         'f1ff5b860f5dbb9a59ad0921a79da77f10f25109')
+                         '545e36ed13615e39c5c8fb0c325109d8cb8e00c3')
         self.assertEqual(len(repo['tip'].parents()), 1)
         self.assertEqual(repo['tip'].parents()[0], repo['default'])
         self.assertEqual(repo['tip'].extra()['convert_revision'],
-                         'svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/branches/the_branch@4')
+                         'svn:3cd547df-371e-4add-bccf-aba732a2baf5/branches/the_branch@4')
         self.assertEqual(repo['default'].extra()['convert_revision'],
-                         'svn:df2126f7-00ab-4d49-b42c-7e981dde0bcf/trunk@3')
+                         'svn:3cd547df-371e-4add-bccf-aba732a2baf5/trunk@3')
         self.assertEqual(len(repo.heads()), 1)
 
     def test_two_branches_with_heads(self):
