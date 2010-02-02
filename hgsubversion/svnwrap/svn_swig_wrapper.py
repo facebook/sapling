@@ -603,12 +603,6 @@ class SubversionRepo(object):
             return {}
         return pl[0][1]
 
-    def fetch_all_files_to_dir(self, path, revision, checkout_path):
-        rev = optrev(revision)
-        client.export3(self.svn_url+'/'+path, checkout_path, rev,
-                       rev, True, True, True, 'LF', # should be 'CRLF' on win32
-                       self.client_context, self.pool)
-
     def list_files(self, dirpath, revision):
         """List the content of a directory at a given revision, recursively.
 

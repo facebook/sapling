@@ -107,9 +107,6 @@ class SubversionRepo(object):
     def proplist(self, path, revision, recurse=False):
         raise NotImplementedError
 
-    def fetch_all_files_to_dir(self, path, revision, checkout_path):
-        raise NotImplementedError
-
 class SubversionRepoCanNotReplay(Exception):
     """Exception raised when the svn server is too old to have replay.
     """
