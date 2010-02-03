@@ -12,7 +12,7 @@ commands. When this options is given, an ASCII representation of the
 revision graph is also shown.
 '''
 
-import os, sys
+import os
 from mercurial.cmdutil import revrange, show_changeset
 from mercurial.commands import templateopts
 from mercurial.i18n import _
