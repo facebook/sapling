@@ -97,7 +97,7 @@ restricted = ('merge record resolve qfold qimport qnew qpush qrefresh qrecord'
               ' transplant')
 
 # provide cvs-like UTC date filter
-utcdate = lambda x: util.datestr(x, '%Y/%m/%d %H:%M:%S')
+utcdate = lambda x: util.datestr((x[0], 0), '%Y/%m/%d %H:%M:%S')
 
 # make keyword tools accessible
 kwtools = {'templater': None, 'hgcmd': '', 'inc': [], 'exc': ['.hg*']}
