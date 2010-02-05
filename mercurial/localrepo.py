@@ -748,7 +748,7 @@ class localrepository(repo.repository):
             return flog.add(text, meta, tr, linkrev, fparent1, fparent2)
 
         # are just the flags changed during merge?
-        if fparent1 !=  fparent2o and manifest1.flags(fname) != fctx.flags():
+        if fparent1 != fparent2o and manifest1.flags(fname) != fctx.flags():
             changelist.append(fname)
 
         return fparent1
