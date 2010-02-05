@@ -95,10 +95,10 @@ class engine(object):
             except KeyError, i:
                 raise SyntaxError(_("unknown filter '%s'") % i[0])
             def apply(get):
-                    x = get(val)
-                    for f in filters:
-                        x = f(x)
-                    return x
+                x = get(val)
+                for f in filters:
+                    x = f(x)
+                return x
             self.cache[expr] = apply
         return self.cache[expr](get)
 

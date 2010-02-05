@@ -30,7 +30,7 @@ def launch(application):
     environ['wsgi.multiprocess'] = True
     environ['wsgi.run_once'] = True
 
-    if environ.get('HTTPS','off').lower() in ('on','1','yes'):
+    if environ.get('HTTPS', 'off').lower() in ('on', '1', 'yes'):
         environ['wsgi.url_scheme'] = 'https'
     else:
         environ['wsgi.url_scheme'] = 'http'
