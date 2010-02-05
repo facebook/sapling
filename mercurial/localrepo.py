@@ -89,6 +89,7 @@ class localrepository(repo.repository):
         self.sopener = self.store.opener
         self.sjoin = self.store.join
         self.opener.createmode = self.store.createmode
+        self.sopener.options = {}
 
         # These two define the set of tags for this repository.  _tags
         # maps tag name to node; _tagtypes maps tag name to 'global' or
@@ -112,7 +113,7 @@ class localrepository(repo.repository):
             p = os.environ['HG_PENDING']
             if p.startswith(self.root):
                 c.readpending('00changelog.i.a')
-        self.sopener.defversion = c.version
+        self.sopener.options['defversion'] = c.version
         return c
 
     @propertycache

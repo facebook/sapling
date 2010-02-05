@@ -431,8 +431,8 @@ class revlog(object):
         self.index = []
 
         v = REVLOG_DEFAULT_VERSION
-        if hasattr(opener, "defversion"):
-            v = opener.defversion
+        if hasattr(opener, 'options') and 'defversion' in opener.options:
+            v = opener.options['defversion']
             if v & REVLOGNG:
                 v |= REVLOGNGINLINEDATA
 
