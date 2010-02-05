@@ -49,7 +49,7 @@ def getip():
         dumbip = socket.gethostbyaddr(socket.gethostname())[2][0]
         if not dumbip.startswith('127.') and ':' not in dumbip:
             return dumbip
-    except socket.gaierror:
+    except (socket.gaierror, socket.herror):
         dumbip = '127.0.0.1'
 
     # works elsewhere, but actually sends a packet
