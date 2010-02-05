@@ -426,11 +426,12 @@ def branch(ui, repo, label=None, **opts):
         repo.dirstate.setbranch(label)
         ui.status(_('reset working directory to branch %s\n') % label)
     elif label:
-        if not opts.get('force') and label in repo.branchtags():
+        utflabel = encoding.fromlocal(label)
+        if not opts.get('force') and utflabel in repo.branchtags():
             if label not in [p.branch() for p in repo.parents()]:
                 raise util.Abort(_('a branch of the same name already exists'
                                    ' (use --force to override)'))
-        repo.dirstate.setbranch(encoding.fromlocal(label))
+        repo.dirstate.setbranch(utflabel)
         ui.status(_('marked working directory as branch %s\n') % label)
     else:
         ui.write("%s\n" % encoding.tolocal(repo.dirstate.branch()))
