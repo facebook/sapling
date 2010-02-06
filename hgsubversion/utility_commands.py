@@ -48,7 +48,9 @@ def info(ui, repo, hg_repo_path, **opts):
         return 0
     r, br = hashes[pn]
     subdir = parent.extra()['convert_revision'][40:].split('@')[0]
-    if br == None:
+    if meta.layout == 'single':
+        branchpath = ''
+    elif br == None:
         branchpath = '/trunk'
     elif br.startswith('../'):
         branchpath = '/%s' % br[3:]

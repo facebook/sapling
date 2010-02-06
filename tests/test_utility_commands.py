@@ -66,6 +66,21 @@ class UtilityTests(test_util.TestBase):
                      })
         self.assertEqual(actual, expected)
 
+    def test_info_single(self):
+        self._load_fixture_and_fetch('two_heads.svndump', subdir='trunk')
+        hg.update(self.repo, 'tip')
+        u = ui.ui()
+        u.pushbuffer()
+        utility_commands.info(u, self.repo, self.wc_path)
+        actual = u.popbuffer()
+        expected = (expected_info_output %
+                    {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
+                     'repourl': self.repourl,
+                     'branch': 'trunk',
+                     'rev': 6,
+                     })
+        self.assertStringEqual(expected, actual)
+
     def test_parent_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')
         u = ui.ui()
