@@ -1060,16 +1060,16 @@ class ServiceInfo(object):
 			for key in properties:
 				value = properties[key]
 				if value is None:
-					suffix = ''.encode('utf-8')
+					suffix = ''
 				elif isinstance(value, str):
-					suffix = value.encode('utf-8')
+					suffix = value
 				elif isinstance(value, int):
 					if value:
 						suffix = 'true'
 					else:
 						suffix = 'false'
 				else:
-					suffix = ''.encode('utf-8')
+					suffix = ''
 				list.append('='.join((key, suffix)))
 			for item in list:
 				result = ''.join((result, struct.pack('!c', chr(len(item))), item))
