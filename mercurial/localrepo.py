@@ -326,6 +326,7 @@ class localrepository(repo.repository):
         return partial
 
     def branchmap(self):
+        '''returns a dictionary {branch: [branchheads]}'''
         tip = self.changelog.tip()
         if self._branchcache is not None and self._branchcachetip == tip:
             return self._branchcache
