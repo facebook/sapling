@@ -3492,7 +3492,7 @@ table = {
         (heads,
          [('r', 'rev', '', _('show only heads which are descendants of REV')),
           ('a', 'active', False,
-           _('show only the active branch heads from open branches')),
+           _('show active branchheads only [DEPRECATED]')),
           ('c', 'closed', False,
            _('show normal and closed branch heads')),
          ] + templateopts,
