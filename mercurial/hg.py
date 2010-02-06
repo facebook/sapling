@@ -22,10 +22,10 @@ def parseurl(url, revs=[]):
     '''parse url#branch, returning url, branch + revs'''
 
     if '#' not in url:
-        return url, (revs or None), revs and revs[-1] or None
+        return url, (revs or None), revs and revs[0] or None
 
     url, branch = url.split('#', 1)
-    checkout = revs and revs[-1] or branch
+    checkout = revs and revs[0] or branch
     return url, (revs or []) + [branch], checkout
 
 schemes = {
@@ -188,7 +188,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     else:
         src_repo = source
         origsource = source = src_repo.url()
-        checkout = rev and rev[-1] or None
+        checkout = rev and rev[0] or None
 
     if dest is None:
         dest = defaultdest(source)

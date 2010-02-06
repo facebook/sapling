@@ -17,6 +17,11 @@ cd copy
 echo '% pull a missing revision'
 hg pull -qr missing ../repo
 
+echo '% pull multiple revisions with update'
+hg pull -qu -r 0 -r 1 ../repo
+hg -q parents
+hg rollback
+
 echo '% pull -r 0'
 hg pull -qr 0 ../repo
 hg log

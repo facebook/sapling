@@ -17,6 +17,9 @@ summary:     add foo
 
 % pull a missing revision
 abort: unknown revision 'missing'!
+% pull multiple revisions with update
+0:bbd179dfa0a7
+rolling back last transaction
 % pull -r 0
 changeset:   0:bbd179dfa0a7
 tag:         tip
