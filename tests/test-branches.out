@@ -117,7 +117,7 @@ c                              6:589736a22561 (inactive)
 a                              5:d8cbc61dbaa6 (inactive)
 default                        0:19709c5a4e75 (inactive)
 a branch name much longer than the default justification used by branches 7:10ff5895aa57
-no open branch heads on branch b
+no open branch heads found on branches b
 changeset:   12:2da6583810df
 branch:      b
 tag:         tip
@@ -169,6 +169,7 @@ user:        test
 date:        Thu Jan 01 00:00:04 1970 +0000
 summary:     Adding b branch head 2
 
+no open branch heads found on branches a
 % branch b
 changeset:   13:6ac12926b8c3
 branch:      b

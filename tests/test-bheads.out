@@ -56,7 +56,7 @@ marked working directory as branch c
 -------
 7: Adding c branch
 =======
-no changes on branch c are reachable from 3
+no open branch heads found on branches c (started at 3)
 1
 -------
 7: Adding c branch
@@ -72,7 +72,7 @@ no changes on branch c are reachable from 3
 3: Adding b branch head 1
 0
 -------
-no changes on branch b are reachable from 7
+no open branch heads found on branches b (started at 7)
 1
 =======
 0 files updated, 0 files merged, 2 files removed, 0 files unresolved

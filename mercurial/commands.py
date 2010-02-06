@@ -1422,25 +1422,26 @@ def heads(ui, repo, *branchrevs, **opts):
         heads = repo.heads(start)
 
     else:
+
         if hideinactive:
             dagheads = repo.heads(start)
         decode, encode = encoding.fromlocal, encoding.tolocal
         branches = set(repo[decode(br)].branch() for br in branchrevs)
         heads = []
-        visitedset = set()
+
         for b in branches:
             bheads = repo.branchheads(b, start, closed=closed)
-            if not bheads:
-                encodedbranch = encode(b)
-                if not opts.get('rev'):
-                    ui.warn(_("no open branch heads on branch %s\n")
-                            % encodedbranch)
-                else:
-                    ui.warn(_("no changes on branch %s are reachable from %s\n")
-                            % (encodedbranch, opts.get('rev')))
             if hideinactive:
                 bheads = [bhead for bhead in bheads if bhead in dagheads]
             heads.extend(bheads)
+
+        haveheads = set(repo[h].branch() for h in heads)
+        if branches - haveheads:
+            headless = ', '.join(encode(b) for b in branches - haveheads)
+            msg = _('no open branch heads found on branches %s')
+            if opts.get('rev'):
+                msg += _(' (started at %s)' % opts['rev'])
+            ui.warn((msg + '\n') % headless)
 
     if not heads:
         return 1
