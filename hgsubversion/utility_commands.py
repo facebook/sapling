@@ -17,12 +17,16 @@ def genignore(ui, repo, force=False, **opts):
     hashes = meta.revmap.hashes()
     parent = util.parentrev(ui, repo, meta, hashes)
     r, br = hashes[parent.node()]
-    branchpath = br and ('branches/%s' % br) or 'trunk'
+    if meta.layout == 'single':
+        branchpath = ''
+    else:
+        branchpath = br and ('branches/%s/' % br) or 'trunk/'
     ignorelines = ['.hgignore', 'syntax:glob']
     dirs = [''] + [d[0] for d in svn.list_files(branchpath, r)
                    if d[1] == 'd']
     for dir in dirs:
-        props = svn.list_props('%s/%s/' % (branchpath, dir), r)
+        path = '%s%s' % (branchpath, dir)
+        props = svn.list_props(path, r)
         if 'svn:ignore' not in props:
             continue
         lines = props['svn:ignore'].strip().split('\n')
