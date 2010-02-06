@@ -56,7 +56,7 @@ marked working directory as branch c
 -------
 7: Adding c branch
 =======
-no changes on branch c containing . are reachable from 3
+no changes on branch c are reachable from 3
 1
 -------
 7: Adding c branch
@@ -72,7 +72,7 @@ no changes on branch c containing . are reachable from 3
 3: Adding b branch head 1
 0
 -------
-no changes on branch b containing . are reachable from 7
+no changes on branch b are reachable from 7
 1
 =======
 0 files updated, 0 files merged, 2 files removed, 0 files unresolved
@@ -149,6 +149,6 @@ abort: unknown revision 'z'!
 =======
 0: Adding root node
 1: Adding a branch
+7: Adding c branch
 6: Merging b branch head 2 and b branch head 3
 3: Adding b branch head 1
-7: Adding c branch

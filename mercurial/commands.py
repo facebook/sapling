@@ -1431,16 +1431,12 @@ def heads(ui, repo, *branchrevs, **opts):
         heads = []
         visitedset = set()
         for b in branches:
-            bheads = repo.branchheads(branch, start, closed=closed)
+            bheads = repo.branchheads(b, start, closed=closed)
             if not bheads:
                 encodedbranch = encode(b)
                 if not opts.get('rev'):
                     ui.warn(_("no open branch heads on branch %s\n")
                             % encodedbranch)
-                elif branch != branchrev:
-                    ui.warn(_("no changes on branch %s containing %s are "
-                              "reachable from %s\n")
-                            % (encodedbranch, branchrev, opts.get('rev')))
                 else:
                     ui.warn(_("no changes on branch %s are reachable from %s\n")
                             % (encodedbranch, opts.get('rev')))
