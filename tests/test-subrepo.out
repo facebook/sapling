@@ -243,3 +243,15 @@ committing subrepository s
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+% test repository cloning
+adding nested_absolute/foo
+adding nested_relative/foo2
+adding main/.hgsub
+committing subrepository nested_relative
+committing subrepository nested_absolute
+updating to branch default
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+[paths]
+default = /tmp/mercurial/main/nested_absolute
+[paths]
+default = /tmp/mercurial/main/nested_relative
