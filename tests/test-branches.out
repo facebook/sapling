@@ -143,12 +143,6 @@ user:        test
 date:        Thu Jan 01 00:00:09 1970 +0000
 summary:     reopen branch with a change
 
-changeset:   11:c84627f3c15d
-branch:      b
-user:        test
-date:        Thu Jan 01 00:00:09 1970 +0000
-summary:     prune bad branch
-
 changeset:   7:10ff5895aa57
 branch:      a branch name much longer than the default justification used by branches
 user:        test

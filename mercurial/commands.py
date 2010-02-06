@@ -1436,13 +1436,14 @@ def heads(ui, repo, *branchrevs, **opts):
             descendants.add(startrev)
             heads += [h for h in ls if repo.changelog.rev(h) in descendants]
 
-        if not opts.get('closed'):
-            heads = [h for h in heads if not repo[h].extra().get('close')]
+    if not opts.get('closed'):
+        heads = [h for h in heads if not repo[h].extra().get('close')]
 
-        if opts.get('active'):
-            dagheads = repo.heads(start)
-            heads = [h for h in heads if h in dagheads]
+    if opts.get('active') and branchrevs:
+        dagheads = repo.heads(start)
+        heads = [h for h in heads if h in dagheads]
 
+    if branchrevs:
         haveheads = set(repo[h].branch() for h in heads)
         if branches - haveheads:
             headless = ', '.join(encode(b) for b in branches - haveheads)
