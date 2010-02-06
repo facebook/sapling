@@ -1447,9 +1447,10 @@ def heads(ui, repo, *branchrevs, **opts):
     if not heads:
         return 1
 
+    heads = sorted((repo[h] for h in heads), key=lambda x: -x.rev())
     displayer = cmdutil.show_changeset(ui, repo, opts)
-    for n in heads:
-        displayer.show(repo[n])
+    for ctx in heads:
+        displayer.show(ctx)
     displayer.close()
 
 def help_(ui, name=None, with_version=False):
