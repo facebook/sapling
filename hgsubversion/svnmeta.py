@@ -393,7 +393,7 @@ class SVNMeta(object):
         """
         if ctx is None:
             ctx = self.repo[changeid]
-        extra = ctx.extra()['convert_revision']        
+        extra = ctx.extra()['convert_revision']
         branchpath, revnum = extra[40:].rsplit('@', 1)
         branch = self.localname(self.normalize(branchpath))
         if self.layout == 'single':
@@ -446,7 +446,7 @@ class SVNMeta(object):
                         t_name = t_name[:-(len(file)+1)]
                         found = t_name in addedtags
                         if found and src_rev > addedtags[t_name][1]:
-                            addedtags[t_name] = branch, src_rev                        
+                            addedtags[t_name] = branch, src_rev
                 elif (paths[p].action == 'D' and p.endswith(t_name)
                       and t_name in self.tags):
                     branch = self.get_source_rev(self.tags[t_name])[1]
@@ -526,7 +526,7 @@ class SVNMeta(object):
                                       data=tagdata,
                                       islink=False,
                                       isexec=False,
-                                      copied=False)        
+                                      copied=False)
         revnum, branch = self.get_source_rev(ctx=parentctx)[:2]
         newparent = None
         for child in parentctx.children():

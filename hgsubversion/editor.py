@@ -123,7 +123,7 @@ class HgEditor(delta.Editor):
 
     @ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
-        br_path, branch = self.meta.split_branch_path(path)[:2]        
+        br_path, branch = self.meta.split_branch_path(path)[:2]
         if br_path == '':
             if self.meta.get_path_tag(path):
                 # Tag deletion is not handled as branched deletion
