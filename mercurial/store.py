@@ -293,7 +293,7 @@ class fncachestore(basicstore):
             if (mode not in ('r', 'rb')
                 and path.startswith('data/')
                 and path not in fnc):
-                    fnc.add(path)
+                fnc.add(path)
             return op(hybridencode(path), mode, *args, **kw)
         self.opener = fncacheopener
 
