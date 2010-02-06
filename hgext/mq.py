@@ -1166,16 +1166,17 @@ class queue(object):
         if newdate:
             newdate = '%d %d' % util.parsedate(newdate)
         wlock = repo.wlock()
+
         try:
             self.check_toppatch(repo)
             (top, patchfn) = (self.applied[-1].rev, self.applied[-1].name)
             top = bin(top)
             if repo.changelog.heads(top) != [top]:
                 raise util.Abort(_("cannot refresh a revision with children"))
+
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
             ph = patchheader(self.join(patchfn))
-
             diffopts = self.diffopts({'git': opts.get('git')}, patchfn)
             if msg:
                 ph.setmessage(msg)
@@ -1191,172 +1192,147 @@ class queue(object):
             if comments:
                 patchf.write(comments)
 
-            tip = repo.changelog.tip()
-            if top == tip:
-                # if the top of our patch queue is also the tip, there is an
-                # optimization here.  We update the dirstate in place and strip
-                # off the tip commit.  Then just commit the current directory
-                # tree.  We can also send repo.commit the list of files
-                # changed to speed up the diff
-                #
-                # in short mode, we only diff the files included in the
-                # patch already plus specified files
-                #
-                # this should really read:
-                #   mm, dd, aa, aa2 = repo.status(tip, patchparent)[:4]
-                # but we do it backwards to take advantage of manifest/chlog
-                # caching against the next repo.status call
-                #
-                mm, aa, dd, aa2 = repo.status(patchparent, tip)[:4]
-                changes = repo.changelog.read(tip)
-                man = repo.manifest.read(changes[0])
-                aaa = aa[:]
-                matchfn = cmdutil.match(repo, pats, opts)
-                if opts.get('short'):
-                    # if amending a patch, we start with existing
-                    # files plus specified files - unfiltered
-                    match = cmdutil.matchfiles(repo, mm + aa + dd + matchfn.files())
-                    # filter with inc/exl options
-                    matchfn = cmdutil.match(repo, opts=opts)
-                else:
-                    match = cmdutil.matchall(repo)
-                m, a, r, d = repo.status(match=match)[:4]
-
-                # we might end up with files that were added between
-                # tip and the dirstate parent, but then changed in the
-                # local dirstate. in this case, we want them to only
-                # show up in the added section
-                for x in m:
-                    if x not in aa:
-                        mm.append(x)
-                # we might end up with files added by the local dirstate that
-                # were deleted by the patch.  In this case, they should only
-                # show up in the changed section.
-                for x in a:
-                    if x in dd:
-                        del dd[dd.index(x)]
-                        mm.append(x)
-                    else:
-                        aa.append(x)
-                # make sure any files deleted in the local dirstate
-                # are not in the add or change column of the patch
-                forget = []
-                for x in d + r:
-                    if x in aa:
-                        del aa[aa.index(x)]
-                        forget.append(x)
-                        continue
-                    elif x in mm:
-                        del mm[mm.index(x)]
-                    dd.append(x)
-
-                m = list(set(mm))
-                r = list(set(dd))
-                a = list(set(aa))
-                c = [filter(matchfn, l) for l in (m, a, r)]
-                match = cmdutil.matchfiles(repo, set(c[0] + c[1] + c[2]))
-                chunks = patch.diff(repo, patchparent, match=match,
-                                    changes=c, opts=diffopts)
-                for chunk in chunks:
-                    patchf.write(chunk)
-
-                try:
-                    if diffopts.git:
-                        copies = {}
-                        for dst in a:
-                            src = repo.dirstate.copied(dst)
-                            # during qfold, the source file for copies may
-                            # be removed. Treat this as a simple add.
-                            if src is not None and src in repo.dirstate:
-                                copies.setdefault(src, []).append(dst)
-                            repo.dirstate.add(dst)
-                        # remember the copies between patchparent and tip
-                        for dst in aaa:
-                            f = repo.file(dst)
-                            src = f.renamed(man[dst])
-                            if src:
-                                copies.setdefault(src[0], []).extend(copies.get(dst, []))
-                                if dst in a:
-                                    copies[src[0]].append(dst)
-                            # we can't copy a file created by the patch itself
-                            if dst in copies:
-                                del copies[dst]
-                        for src, dsts in copies.iteritems():
-                            for dst in dsts:
-                                repo.dirstate.copy(src, dst)
-                    else:
-                        for dst in a:
-                            repo.dirstate.add(dst)
-                        # Drop useless copy information
-                        for f in list(repo.dirstate.copies()):
-                            repo.dirstate.copy(None, f)
-                    for f in r:
-                        repo.dirstate.remove(f)
-                    # if the patch excludes a modified file, mark that
-                    # file with mtime=0 so status can see it.
-                    mm = []
-                    for i in xrange(len(m)-1, -1, -1):
-                        if not matchfn(m[i]):
-                            mm.append(m[i])
-                            del m[i]
-                    for f in m:
-                        repo.dirstate.normal(f)
-                    for f in mm:
-                        repo.dirstate.normallookup(f)
-                    for f in forget:
-                        repo.dirstate.forget(f)
-
-                    if not msg:
-                        if not ph.message:
-                            message = "[mq]: %s\n" % patchfn
-                        else:
-                            message = "\n".join(ph.message)
-                    else:
-                        message = msg
-
-                    user = ph.user or changes[1]
-
-                    # assumes strip can roll itself back if interrupted
-                    repo.dirstate.setparents(*cparents)
-                    self.applied.pop()
-                    self.applied_dirty = 1
-                    self.strip(repo, top, update=False,
-                               backup='strip')
-                except:
-                    repo.dirstate.invalidate()
-                    raise
-
-                try:
-                    # might be nice to attempt to roll back strip after this
-                    patchf.rename()
-                    n = repo.commit(message, user, ph.date, match=match,
-                                    force=True)
-                    self.applied.append(statusentry(hex(n), patchfn))
-                except:
-                    ctx = repo[cparents[0]]
-                    repo.dirstate.rebuild(ctx.node(), ctx.manifest())
-                    self.save_dirty()
-                    self.ui.warn(_('refresh interrupted while patch was popped! '
-                                   '(revert --all, qpush to recover)\n'))
-                    raise
+            # update the dirstate in place, strip off the qtip commit
+            # and then commit.
+            #
+            # this should really read:
+            #   mm, dd, aa, aa2 = repo.status(tip, patchparent)[:4]
+            # but we do it backwards to take advantage of manifest/chlog
+            # caching against the next repo.status call
+            mm, aa, dd, aa2 = repo.status(patchparent, top)[:4]
+            changes = repo.changelog.read(top)
+            man = repo.manifest.read(changes[0])
+            aaa = aa[:]
+            matchfn = cmdutil.match(repo, pats, opts)
+            # in short mode, we only diff the files included in the
+            # patch already plus specified files
+            if opts.get('short'):
+                # if amending a patch, we start with existing
+                # files plus specified files - unfiltered
+                match = cmdutil.matchfiles(repo, mm + aa + dd + matchfn.files())
+                # filter with inc/exl options
+                matchfn = cmdutil.match(repo, opts=opts)
             else:
-                self.printdiff(repo, diffopts, patchparent, fp=patchf)
+                match = cmdutil.matchall(repo)
+            m, a, r, d = repo.status(match=match)[:4]
+
+            # we might end up with files that were added between
+            # qtip and the dirstate parent, but then changed in the
+            # local dirstate. in this case, we want them to only
+            # show up in the added section
+            for x in m:
+                if x not in aa:
+                    mm.append(x)
+            # we might end up with files added by the local dirstate that
+            # were deleted by the patch.  In this case, they should only
+            # show up in the changed section.
+            for x in a:
+                if x in dd:
+                    del dd[dd.index(x)]
+                    mm.append(x)
+                else:
+                    aa.append(x)
+            # make sure any files deleted in the local dirstate
+            # are not in the add or change column of the patch
+            forget = []
+            for x in d + r:
+                if x in aa:
+                    del aa[aa.index(x)]
+                    forget.append(x)
+                    continue
+                elif x in mm:
+                    del mm[mm.index(x)]
+                dd.append(x)
+
+            m = list(set(mm))
+            r = list(set(dd))
+            a = list(set(aa))
+            c = [filter(matchfn, l) for l in (m, a, r)]
+            match = cmdutil.matchfiles(repo, set(c[0] + c[1] + c[2]))
+            chunks = patch.diff(repo, patchparent, match=match,
+                                changes=c, opts=diffopts)
+            for chunk in chunks:
+                patchf.write(chunk)
+
+            try:
+                if diffopts.git:
+                    copies = {}
+                    for dst in a:
+                        src = repo.dirstate.copied(dst)
+                        # during qfold, the source file for copies may
+                        # be removed. Treat this as a simple add.
+                        if src is not None and src in repo.dirstate:
+                            copies.setdefault(src, []).append(dst)
+                        repo.dirstate.add(dst)
+                    # remember the copies between patchparent and qtip
+                    for dst in aaa:
+                        f = repo.file(dst)
+                        src = f.renamed(man[dst])
+                        if src:
+                            copies.setdefault(src[0], []).extend(copies.get(dst, []))
+                            if dst in a:
+                                copies[src[0]].append(dst)
+                        # we can't copy a file created by the patch itself
+                        if dst in copies:
+                            del copies[dst]
+                    for src, dsts in copies.iteritems():
+                        for dst in dsts:
+                            repo.dirstate.copy(src, dst)
+                else:
+                    for dst in a:
+                        repo.dirstate.add(dst)
+                    # Drop useless copy information
+                    for f in list(repo.dirstate.copies()):
+                        repo.dirstate.copy(None, f)
+                for f in r:
+                    repo.dirstate.remove(f)
+                # if the patch excludes a modified file, mark that
+                # file with mtime=0 so status can see it.
+                mm = []
+                for i in xrange(len(m)-1, -1, -1):
+                    if not matchfn(m[i]):
+                        mm.append(m[i])
+                        del m[i]
+                for f in m:
+                    repo.dirstate.normal(f)
+                for f in mm:
+                    repo.dirstate.normallookup(f)
+                for f in forget:
+                    repo.dirstate.forget(f)
+
+                if not msg:
+                    if not ph.message:
+                        message = "[mq]: %s\n" % patchfn
+                    else:
+                        message = "\n".join(ph.message)
+                else:
+                    message = msg
+
+                user = ph.user or changes[1]
+
+                # assumes strip can roll itself back if interrupted
+                repo.dirstate.setparents(*cparents)
+                self.applied.pop()
+                self.applied_dirty = 1
+                self.strip(repo, top, update=False,
+                           backup='strip')
+            except:
+                repo.dirstate.invalidate()
+                raise
+
+            try:
+                # might be nice to attempt to roll back strip after this
                 patchf.rename()
-                added = repo.status()[1]
-                for a in added:
-                    f = repo.wjoin(a)
-                    try:
-                        os.unlink(f)
-                    except OSError, e:
-                        if e.errno != errno.ENOENT:
-                            raise
-                    try: os.removedirs(os.path.dirname(f))
-                    except: pass
-                    # forget the file copies in the dirstate
-                    # push should readd the files later on
-                    repo.dirstate.forget(a)
-                self.pop(repo, force=True)
-                self.push(repo, force=True)
+                n = repo.commit(message, user, ph.date, match=match,
+                                force=True)
+                self.applied.append(statusentry(hex(n), patchfn))
+            except:
+                ctx = repo[cparents[0]]
+                repo.dirstate.rebuild(ctx.node(), ctx.manifest())
+                self.save_dirty()
+                self.ui.warn(_('refresh interrupted while patch was popped! '
+                               '(revert --all, qpush to recover)\n'))
+                raise
         finally:
             wlock.release()
             self.removeundo(repo)
