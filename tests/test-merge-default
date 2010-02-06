@@ -42,4 +42,11 @@ hg up 0
 echo % should fail because 1 head
 hg merge
 
+hg up 3
+echo a >> a
+hg branch foobranch
+hg commit -mf
+echo % should fail because merge with other branch
+hg merge
+
 true
