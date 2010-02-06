@@ -1423,12 +1423,18 @@ def heads(ui, repo, *branchrevs, **opts):
     else:
 
         decode, encode = encoding.fromlocal, encoding.tolocal
-        branches = set(repo[decode(br)].branch() for br in branchrevs)
         heads = []
-
-        for b in branches:
-            bheads = repo.branchheads(b, start, True)
-            heads.extend(bheads)
+        branches = set(repo[decode(br)].branch() for br in branchrevs)
+        for b, ls in repo.branchmap().iteritems():
+            if b not in branches:
+                continue
+            if start is None:
+                heads += ls
+                continue
+            startrev = repo.changelog.rev(start)
+            descendants = set(repo.changelog.descendants(startrev))
+            descendants.add(startrev)
+            heads += [h for h in ls if repo.changelog.rev(h) in descendants]
 
         if not opts.get('closed'):
             heads = [h for h in heads if not repo[h].extra().get('close')]
