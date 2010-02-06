@@ -2,7 +2,7 @@
 
 heads()
 {
-    hg heads --template '{rev}: {desc|firstline|strip}\n' "$@"
+    hg heads --template '{rev}: {desc|firstline|strip} ({branches})\n' "$@"
 }
 
 hg init a
@@ -111,3 +111,6 @@ done
 
 echo '======='
 heads 0 1 2 3 4 5 6 7
+
+echo '% topological heads'
+heads -t

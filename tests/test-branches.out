@@ -83,6 +83,24 @@ user:        test
 date:        Thu Jan 01 00:00:06 1970 +0000
 summary:     Adding d branch
 
+changeset:   6:589736a22561
+branch:      c
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+summary:     Adding c branch
+
+changeset:   5:d8cbc61dbaa6
+branch:      a
+parent:      2:881fe2b92ad0
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+changeset:   0:19709c5a4e75
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Adding root node
+
 changeset:   10:bfbe841b666e
 branch:      b
 tag:         tip
@@ -102,6 +120,24 @@ branch:      a branch name much longer than the default justification used by br
 user:        test
 date:        Thu Jan 01 00:00:06 1970 +0000
 summary:     Adding d branch
+
+changeset:   6:589736a22561
+branch:      c
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+summary:     Adding c branch
+
+changeset:   5:d8cbc61dbaa6
+branch:      a
+parent:      2:881fe2b92ad0
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+changeset:   0:19709c5a4e75
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Adding root node
 
 b                              8:eebb944467c9
 a branch name much longer than the default justification used by branches 7:10ff5895aa57
@@ -148,6 +184,24 @@ branch:      a branch name much longer than the default justification used by br
 user:        test
 date:        Thu Jan 01 00:00:06 1970 +0000
 summary:     Adding d branch
+
+changeset:   6:589736a22561
+branch:      c
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+summary:     Adding c branch
+
+changeset:   5:d8cbc61dbaa6
+branch:      a
+parent:      2:881fe2b92ad0
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+summary:     Adding b branch head 2
+
+changeset:   0:19709c5a4e75
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Adding root node
 
 % branch default
 changeset:   0:19709c5a4e75

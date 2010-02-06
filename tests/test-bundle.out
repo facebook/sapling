@@ -19,11 +19,6 @@ adding file changes
 added 0 changesets with 0 changes to 4 files
 (run 'hg update' to get a working copy)
 ====== Verify empty
-changeset:   -1:000000000000
-tag:         tip
-user:        
-date:        Thu Jan 01 00:00:00 1970 +0000
-
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

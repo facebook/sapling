@@ -15,6 +15,11 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     change a
 
+changeset:   0:1f0dee641bb7
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     add a
+
 % parents
 changeset:   1:cd2a86ecc814
 branch:      foo
@@ -63,6 +68,11 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     new head of branch foo
 
+changeset:   0:1f0dee641bb7
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     add a
+
 
 % rolling back
 rolling back last transaction
@@ -75,6 +85,11 @@ tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     new head of branch foo
+
+changeset:   0:1f0dee641bb7
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     add a
 
 
 % pull should not have updated
@@ -107,6 +122,7 @@ rolling back last transaction
 0:1f0dee641bb7
 % heads
 1:cd2a86ecc814
+0:1f0dee641bb7
 % pull -u -r otherrev url#rev updates to rev
 % parents
 changeset:   3:4cd725637392

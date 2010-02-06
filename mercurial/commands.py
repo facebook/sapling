@@ -1388,27 +1388,24 @@ def grep(ui, repo, pattern, *pats, **opts):
 def heads(ui, repo, *branchrevs, **opts):
     """show current repository heads or show branch heads
 
-    With no arguments, show all repository head changesets.
+    With no arguments, show all repository branch heads.
 
     Repository "heads" are changesets with no child changesets. They are
     where development generally takes place and are the usual targets
-    for update and merge operations.
+    for update and merge operations. Branch heads are changesets that have
+    no child changeset on the same branch.
 
-    If one or more REV is given, the "branch heads" will be shown for
-    the named branch associated with the specified changeset(s).
-
-    Branch heads are changesets on a named branch with no descendants on
-    the same branch. A branch head could be a "true" (repository) head,
-    or it could be the last changeset on that branch before it was
-    merged into another branch, or it could be the last changeset on the
-    branch before a new branch was created. If none of the branch heads
-    are true heads, the branch is considered inactive.
+    If one or more REVs are given, only branch heads on the branches
+    associated with the specified changesets are shown.
 
     If -c/--closed is specified, also show branch heads marked closed
     (see hg commit --close-branch).
 
     If STARTREV is specified, only those heads that are descendants of
     STARTREV will be displayed.
+
+    If -t/--topo is specified, named branch mechanics will be ignored and only
+    changesets without children will be shown.
     """
 
     if opts.get('rev'):
@@ -1416,35 +1413,34 @@ def heads(ui, repo, *branchrevs, **opts):
     else:
         start = None
 
-    closed = opts.get('closed')
-    if not branchrevs:
-        heads = repo.heads(start)
-
+    if opts.get('topo'):
+        heads = [repo[h] for h in repo.heads(start)]
     else:
-
-        decode, encode = encoding.fromlocal, encoding.tolocal
         heads = []
-        branches = set(repo[decode(br)].branch() for br in branchrevs)
         for b, ls in repo.branchmap().iteritems():
-            if b not in branches:
-                continue
             if start is None:
-                heads += ls
+                heads += [repo[h] for h in ls]
                 continue
             startrev = repo.changelog.rev(start)
             descendants = set(repo.changelog.descendants(startrev))
             descendants.add(startrev)
-            heads += [h for h in ls if repo.changelog.rev(h) in descendants]
+            rev = repo.changelog.rev
+            heads += [repo[h] for h in ls if rev(h) in descendants]
+
+    if branchrevs:
+        decode, encode = encoding.fromlocal, encoding.tolocal
+        branches = set(repo[decode(br)].branch() for br in branchrevs)
+        heads = [h for h in heads if h.branch() in branches]
 
     if not opts.get('closed'):
-        heads = [h for h in heads if not repo[h].extra().get('close')]
+        heads = [h for h in heads if not h.extra().get('close')]
 
     if opts.get('active') and branchrevs:
         dagheads = repo.heads(start)
-        heads = [h for h in heads if h in dagheads]
+        heads = [h for h in heads if h.node() in dagheads]
 
     if branchrevs:
-        haveheads = set(repo[h].branch() for h in heads)
+        haveheads = set(h.branch() for h in heads)
         if branches - haveheads:
             headless = ', '.join(encode(b) for b in branches - haveheads)
             msg = _('no open branch heads found on branches %s')
@@ -1455,7 +1451,7 @@ def heads(ui, repo, *branchrevs, **opts):
     if not heads:
         return 1
 
-    heads = sorted((repo[h] for h in heads), key=lambda x: -x.rev())
+    heads = sorted(heads, key=lambda x: -x.rev())
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for ctx in heads:
         displayer.show(ctx)
@@ -3499,6 +3495,7 @@ table = {
     "heads":
         (heads,
          [('r', 'rev', '', _('show only heads which are descendants of REV')),
+          ('t', 'topo', False, _('show topological heads only')),
           ('a', 'active', False,
            _('show active branchheads only [DEPRECATED]')),
           ('c', 'closed', False,

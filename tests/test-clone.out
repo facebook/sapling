@@ -217,6 +217,11 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     another change for branch stable
 
+changeset:   10:a7949464abda
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     test
+
 
 % same revision checked out in repo a and ua
 e8ece76546a6
@@ -239,6 +244,11 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     another change for branch stable
 
+changeset:   10:a7949464abda
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     test
+
 
 % same revision checked out in repo a and ua
 e8ece76546a6
@@ -260,6 +270,11 @@ tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     another change for branch stable
+
+changeset:   10:a7949464abda
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     test
 
 
 % branch stable is checked out
