@@ -1419,9 +1419,6 @@ def heads(ui, repo, *branchrevs, **opts):
     closed = opts.get('closed')
     hideinactive, _heads = opts.get('active'), None
     if not branchrevs:
-        if closed:
-            raise error.Abort(_('you must specify a branch to use --closed'))
-        # Assume we're looking repo-wide heads if no revs were specified.
         heads = repo.heads(start)
 
     else:
