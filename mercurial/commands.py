@@ -1409,10 +1409,12 @@ def heads(ui, repo, *branchrevs, **opts):
     If STARTREV is specified, only those heads that are descendants of
     STARTREV will be displayed.
     """
+
     if opts.get('rev'):
         start = repo.lookup(opts['rev'])
     else:
         start = None
+
     closed = opts.get('closed')
     hideinactive, _heads = opts.get('active'), None
     if not branchrevs:
@@ -1420,19 +1422,18 @@ def heads(ui, repo, *branchrevs, **opts):
             raise error.Abort(_('you must specify a branch to use --closed'))
         # Assume we're looking repo-wide heads if no revs were specified.
         heads = repo.heads(start)
+
     else:
         if hideinactive:
-            _heads = repo.heads(start)
+            dagheads = repo.heads(start)
+        decode, encode = encoding.fromlocal, encoding.tolocal
+        branches = set(repo[decode(br)].branch() for br in branchrevs)
         heads = []
         visitedset = set()
-        for branchrev in branchrevs:
-            branch = repo[encoding.fromlocal(branchrev)].branch()
-            encodedbranch = encoding.tolocal(branch)
-            if branch in visitedset:
-                continue
-            visitedset.add(branch)
+        for b in branches:
             bheads = repo.branchheads(branch, start, closed=closed)
             if not bheads:
+                encodedbranch = encode(b)
                 if not opts.get('rev'):
                     ui.warn(_("no open branch heads on branch %s\n")
                             % encodedbranch)
@@ -1444,10 +1445,12 @@ def heads(ui, repo, *branchrevs, **opts):
                     ui.warn(_("no changes on branch %s are reachable from %s\n")
                             % (encodedbranch, opts.get('rev')))
             if hideinactive:
-                bheads = [bhead for bhead in bheads if bhead in _heads]
+                bheads = [bhead for bhead in bheads if bhead in dagheads]
             heads.extend(bheads)
+
     if not heads:
         return 1
+
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for n in heads:
         displayer.show(repo[n])
