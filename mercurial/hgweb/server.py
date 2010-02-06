@@ -8,6 +8,7 @@
 
 import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer, traceback
 from mercurial import util, error
+from mercurial.hgweb import common
 from mercurial.i18n import _
 
 def _splitURI(uri):
@@ -111,6 +112,9 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
         env['SERVER_PROTOCOL'] = self.request_version
         env['wsgi.version'] = (1, 0)
         env['wsgi.url_scheme'] = self.url_scheme
+        if env.get('HTTP_EXPECT', '').lower() == '100-continue':
+            self.rfile = common.continuereader(self.rfile, self.wfile.write)
+
         env['wsgi.input'] = self.rfile
         env['wsgi.errors'] = _error_logger(self)
         env['wsgi.multithread'] = isinstance(self.server,

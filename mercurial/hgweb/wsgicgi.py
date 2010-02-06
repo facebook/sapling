@@ -10,6 +10,7 @@
 
 import os, sys
 from mercurial import util
+from mercurial.hgweb import common
 
 def launch(application):
     util.set_binary(sys.stdin)
@@ -23,7 +24,11 @@ def launch(application):
         if environ['PATH_INFO'].startswith(scriptname):
             environ['PATH_INFO'] = environ['PATH_INFO'][len(scriptname):]
 
-    environ['wsgi.input'] = sys.stdin
+    stdin = sys.stdin
+    if environ.get('HTTP_EXPECT', '').lower() == '100-continue':
+        stdin = common.continuereader(stdin, sys.stdout.write)
+
+    environ['wsgi.input'] = stdin
     environ['wsgi.errors'] = sys.stderr
     environ['wsgi.version'] = (1, 0)
     environ['wsgi.multithread'] = False
