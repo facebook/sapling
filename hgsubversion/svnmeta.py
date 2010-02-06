@@ -1,4 +1,5 @@
 import cPickle as pickle
+import posixpath
 import os
 import tempfile
 
@@ -498,6 +499,18 @@ class SVNMeta(object):
                     and branch not in self.branches
                     and branch not in added_branches):
                     parent = {branch: (None, 0, revision.revnum)}
+                elif bpath is None:
+                    srcpath = paths[p].copyfrom_path
+                    srcrev = paths[p].copyfrom_rev
+                    parent = {}
+                    for br in self.branches:
+                        rn = self.remotename(br)
+                        if rn.startswith(srcpath[1:] + '/'):
+                            bname = posixpath.basename(rn)
+                            newbr = posixpath.join(p, bname)
+                            parent.update(
+                                self._determine_parent_branch(
+                                    newbr, rn, srcrev, revision.revnum))
             added_branches.update(parent)
         self.addedtags, self.deletedtags = addedtags, deletedtags
         return {

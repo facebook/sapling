@@ -100,6 +100,10 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         ha = branchedits[0][1]
         closebranches[branch] = ha
 
+    extraempty = (set(tbdelta['branches'][0]) -
+                  (set(current.emptybranches) | set(branch_batches.keys())))
+    current.emptybranches.update([(x, False) for x in extraempty])
+
     # 1. handle normal commits
     closedrevs = closebranches.values()
     for branch, files in branch_batches.iteritems():

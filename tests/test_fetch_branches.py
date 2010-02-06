@@ -27,6 +27,16 @@ class TestFetchBranches(test_util.TestBase):
                        ctx.extra().get('close', None) != '1')
         return sorted(branches)
 
+    def test_rename_branch_parent(self, stupid=False):
+        repo = self._load_fixture_and_fetch('rename_branch_parent_dir.svndump', stupid)
+        heads = [repo[n] for n in repo.heads()]
+        heads = dict([(ctx.branch(), ctx) for ctx in heads])
+        # Let these tests disabled yet as the fix is not obvious
+        self.assertEqual(['dev_branch'], self.openbranches(repo))
+
+    def test_rename_branch_parent_stupid(self):
+        self.test_rename_branch_parent(stupid=True)
+
     def test_unrelatedbranch(self, stupid=False):
         repo = self._load_fixture_and_fetch('unrelatedbranch.svndump', stupid)
         heads = [repo[n] for n in repo.heads()]
