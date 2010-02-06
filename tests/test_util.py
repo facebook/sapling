@@ -295,6 +295,7 @@ class TestBase(unittest.TestCase):
         templ = """\
 changeset: {rev}:{node|short}
 branch:    {branches}
+tags:      {tags}
 summary:   {desc|firstline}
 files:     {files}
 
