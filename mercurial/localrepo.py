@@ -1558,25 +1558,18 @@ class localrepository(repo.repository):
 
             if remote_heads != [nullid]:
                 if remote.capable('branchmap'):
-                    localhds = {}
+                    remotebrheads = remote.branchmap()
+
                     if not revs:
-                        localhds = self.branchmap()
+                        localbrheads = self.branchmap()
                     else:
+                        localbrheads = {}
                         for n in heads:
                             branch = self[n].branch()
-                            if branch in localhds:
-                                localhds[branch].append(n)
-                            else:
-                                localhds[branch] = [n]
+                            localbrheads.setdefault(branch, []).append(n)
 
-                    remotehds = remote.branchmap()
-
-                    for lh in localhds:
-                        if lh in remotehds:
-                            rheads = remotehds[lh]
-                        else:
-                            rheads = []
-                        lheads = localhds[lh]
+                    for branch, lheads in localbrheads.iteritems():
+                        rheads = remotebrheads.get(branch, [])
                         if not checkbranch(lheads, rheads, update):
                             return None, 0
                 else:
