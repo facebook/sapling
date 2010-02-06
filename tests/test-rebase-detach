@@ -1,0 +1,68 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+echo "rebase=" >> $HGRCPATH
+
+BASE=`pwd`
+
+addcommit () {
+    echo $1 > $1
+    hg add $1
+    hg commit -d "${2} 0" -m $1
+}
+
+commit () {
+    hg commit -d "${2} 0" -m $1
+}
+
+createrepo () {
+    cd $BASE
+    rm -rf a
+    hg init a
+    cd a
+    addcommit "A" 0
+    addcommit "B" 1
+    addcommit "C" 2
+    addcommit "D" 3
+
+    hg update -C 0
+    addcommit "E" 4
+}
+
+createrepo > /dev/null 2>&1
+hg glog  --template '{rev}: {desc}\n'
+echo '% Rebasing D onto E detaching from C'
+hg rebase --detach -s 3 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg glog  --template '{rev}: {desc}\n'
+echo "Expected A, D, E"
+hg manifest
+
+echo
+createrepo > /dev/null 2>&1
+hg glog  --template '{rev}: {desc}\n'
+echo '% Rebasing C onto E detaching from B'
+hg rebase --detach -s 2 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg glog  --template '{rev}: {desc}\n'
+echo "Expected A, C, D, E"
+hg manifest
+
+echo
+createrepo > /dev/null 2>&1
+hg glog  --template '{rev}: {desc}\n'
+echo '% Rebasing B onto E using detach (same as not using it)'
+hg rebase --detach -s 1 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg glog  --template '{rev}: {desc}\n'
+echo "Expected A, B, C, D, E"
+hg manifest
+
+echo
+createrepo > /dev/null 2>&1
+hg glog  --template '{rev}: {desc}\n'
+echo '% Rebasing C onto E detaching from B and collapsing'
+hg rebase --detach --collapse -s 2 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg glog  --template '{rev}: {desc}\n'
+echo "Expected A, C, D, E"
+hg manifest
+
+exit 0

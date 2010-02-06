@@ -2,7 +2,7 @@
 
 % Use continue and abort
 hg rebase: cannot use both abort and continue
-hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--keepbranches] | [-c] | [-a]
 
 move changeset (and descendants) to a different branch
 
@@ -21,6 +21,7 @@ options:
     --collapse      collapse the rebased changesets
     --keep          keep original changesets
     --keepbranches  keep original branch names
+    --detach        force detaching of source from its original branch
  -c --continue      continue an interrupted rebase
  -a --abort         abort an interrupted rebase
     --style         display using template map file
@@ -30,7 +31,7 @@ use "hg -v help rebase" to show global options
 
 % Use continue and collapse
 hg rebase: cannot use collapse with continue or abort
-hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--keepbranches] | [-c] | [-a]
 
 move changeset (and descendants) to a different branch
 
@@ -49,6 +50,7 @@ options:
     --collapse      collapse the rebased changesets
     --keep          keep original changesets
     --keepbranches  keep original branch names
+    --detach        force detaching of source from its original branch
  -c --continue      continue an interrupted rebase
  -a --abort         abort an interrupted rebase
     --style         display using template map file
@@ -58,7 +60,7 @@ use "hg -v help rebase" to show global options
 
 % Use continue/abort and dest/source
 hg rebase: abort and continue do not allow specifying revisions
-hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--keepbranches] | [-c] | [-a]
 
 move changeset (and descendants) to a different branch
 
@@ -77,6 +79,7 @@ options:
     --collapse      collapse the rebased changesets
     --keep          keep original changesets
     --keepbranches  keep original branch names
+    --detach        force detaching of source from its original branch
  -c --continue      continue an interrupted rebase
  -a --abort         abort an interrupted rebase
     --style         display using template map file
@@ -86,7 +89,7 @@ use "hg -v help rebase" to show global options
 
 % Use source and base
 hg rebase: cannot specify both a revision and a base
-hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--keepbranches] | [-c] | [-a]
 
 move changeset (and descendants) to a different branch
 
@@ -105,6 +108,7 @@ options:
     --collapse      collapse the rebased changesets
     --keep          keep original changesets
     --keepbranches  keep original branch names
+    --detach        force detaching of source from its original branch
  -c --continue      continue an interrupted rebase
  -a --abort         abort an interrupted rebase
     --style         display using template map file
