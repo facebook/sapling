@@ -1137,21 +1137,21 @@ class revlog(object):
             self._cache = (node, curr, text)
         return node
 
-    def descendant(self, a, b):
-        if a > b:
-            return False
-        for i in self.descendants(a):
-            if i == b:
+    def descendant(self, start, end):
+        for i in self.descendants(start):
+            if i == end:
                 return True
-            elif i > b:
+            elif i > end:
                 break
         return False
 
     def ancestor(self, a, b):
         """calculate the least common ancestor of nodes a and b"""
 
+        # fast path, check if it is a descendant
+        a, b = self.rev(a), self.rev(b)
         start, end = sorted((a, b))
-        if self.descendant(a, b):
+        if self.descendant(start, end):
             return self.node(start)
 
         def parents(rev):
