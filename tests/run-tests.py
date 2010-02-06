@@ -45,6 +45,7 @@ import difflib
 import errno
 import optparse
 import os
+import signal
 import subprocess
 import shutil
 import signal
@@ -283,6 +284,31 @@ def checktools():
         else:
             print "WARNING: Did not find prerequisite tool: "+p
 
+def killdaemons():
+    # Kill off any leftover daemon processes
+    try:
+        fp = open(DAEMON_PIDS)
+        for line in fp:
+            try:
+                pid = int(line)
+            except ValueError:
+                continue
+            try:
+                os.kill(pid, 0)
+                vlog('# Killing daemon process %d' % pid)
+                os.kill(pid, signal.SIGTERM)
+                time.sleep(0.25)
+                os.kill(pid, 0)
+                vlog('# Daemon process %d is stuck - really killing it' % pid)
+                os.kill(pid, signal.SIGKILL)
+            except OSError, err:
+                if err.errno != errno.ESRCH:
+                    raise
+        fp.close()
+        os.unlink(DAEMON_PIDS)
+    except IOError:
+        pass
+
 def cleanup(options):
     if not options.keep_tmpdir:
         vlog("# Cleaning up HGTMP", HGTMP)
@@ -432,6 +458,14 @@ def run(cmd, options):
             ret = 0
     else:
         proc = Popen4(cmd)
+        def cleanup():
+            os.kill(proc.pid, signal.SIGTERM)
+            ret = proc.wait()
+            if ret == 0:
+                ret = signal.SIGTERM << 8
+            killdaemons()
+            return ret
+
         try:
             output = ''
             proc.tochild.close()
@@ -441,12 +475,14 @@ def run(cmd, options):
                 ret = os.WEXITSTATUS(ret)
         except Timeout:
             vlog('# Process %d timed out - killing it' % proc.pid)
-            os.kill(proc.pid, signal.SIGTERM)
-            ret = proc.wait()
-            if ret == 0:
-                ret = signal.SIGTERM << 8
+            ret = cleanup()
             output += ("\n### Abort: timeout after %d seconds.\n"
                        % options.timeout)
+        except KeyboardInterrupt:
+            vlog('# Handling keyboard interrupt')
+            cleanup()
+            raise
+
     return ret, splitnewlines(output)
 
 def runone(options, test, skips, fails):
@@ -589,29 +625,7 @@ def runone(options, test, skips, fails):
             f.write(line)
         f.close()
 
-    # Kill off any leftover daemon processes
-    try:
-        fp = open(DAEMON_PIDS)
-        for line in fp:
-            try:
-                pid = int(line)
-            except ValueError:
-                continue
-            try:
-                os.kill(pid, 0)
-                vlog('# Killing daemon process %d' % pid)
-                os.kill(pid, signal.SIGTERM)
-                time.sleep(0.25)
-                os.kill(pid, 0)
-                vlog('# Daemon process %d is stuck - really killing it' % pid)
-                os.kill(pid, signal.SIGKILL)
-            except OSError, err:
-                if err.errno != errno.ESRCH:
-                    raise
-        fp.close()
-        os.unlink(DAEMON_PIDS)
-    except IOError:
-        pass
+    killdaemons()
 
     os.chdir(TESTDIR)
     if not options.keep_tmpdir:
@@ -672,6 +686,7 @@ def runchildren(options, tests):
                 break
             job.append(tests.pop())
     fps = {}
+
     for j, job in enumerate(jobs):
         if not job:
             continue
@@ -683,6 +698,7 @@ def runchildren(options, tests):
         vlog(' '.join(cmdline))
         fps[os.spawnvp(os.P_NOWAIT, cmdline[0], cmdline)] = os.fdopen(rfd, 'r')
         os.close(wfd)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     failures = 0
     tested, skipped, failed = 0, 0, 0
     skips = []
@@ -691,7 +707,10 @@ def runchildren(options, tests):
         pid, status = os.wait()
         fp = fps.pop(pid)
         l = fp.read().splitlines()
-        test, skip, fail = map(int, l[:3])
+        try:
+            test, skip, fail = map(int, l[:3])
+        except ValueError:
+            test, skip, fail = 0, 0, 0
         split = -fail or len(l)
         for s in l[3:split]:
             skips.append(s.split(" ", 1))
@@ -925,6 +944,7 @@ def main():
         else:
             runtests(options, tests)
     finally:
+        time.sleep(1)
         cleanup(options)
 
 main()

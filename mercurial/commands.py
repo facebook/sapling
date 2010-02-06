@@ -1139,8 +1139,9 @@ def export(ui, repo, *changesets, **opts):
 
     Print the changeset header and diffs for one or more revisions.
 
-    The information shown in the changeset header is: author,
-    changeset hash, parent(s) and commit comment.
+    The information shown in the changeset header is: author, date,
+    branch name (if non-default), changeset hash, parent(s) and commit
+    comment.
 
     NOTE: export may generate unexpected diff output for merge
     changesets, as it will compare the merge changeset against its
