@@ -16,7 +16,7 @@ hide platform-specific details from the core.
 from i18n import _
 import error, osutil, encoding
 import cStringIO, errno, re, shutil, sys, tempfile, traceback
-import os, stat, time, calendar, textwrap
+import os, stat, time, calendar, textwrap, signal
 import imp
 
 # Python compatibility
@@ -1308,3 +1308,37 @@ def hgcmd():
     if main_is_frozen():
         return [sys.executable]
     return gethgcmd()
+
+def rundetached(args, condfn):
+    """Execute the argument list in a detached process.
+    
+    condfn is a callable which is called repeatedly and should return
+    True once the child process is known to have started successfully.
+    At this point, the child process PID is returned. If the child
+    process fails to start or finishes before condfn() evaluates to
+    True, return -1.
+    """
+    # Windows case is easier because the child process is either
+    # successfully starting and validating the condition or exiting
+    # on failure. We just poll on its PID. On Unix, if the child
+    # process fails to start, it will be left in a zombie state until
+    # the parent wait on it, which we cannot do since we expect a long
+    # running process on success. Instead we listen for SIGCHLD telling
+    # us our child process terminated.
+    terminated = set()
+    def handler(signum, frame):
+        terminated.add(os.wait())
+    prevhandler = None
+    if hasattr(signal, 'SIGCHLD'):
+        prevhandler = signal.signal(signal.SIGCHLD, handler)
+    try:
+        pid = spawndetached(args)
+        while not condfn():
+            if ((pid in terminated or not testpid(pid))
+                and not condfn()):
+                return -1
+            time.sleep(0.1)
+        return pid
+    finally:
+        if prevhandler is not None:
+            signal.signal(signal.SIGCHLD, prevhandler)

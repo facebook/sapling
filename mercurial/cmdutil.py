@@ -584,9 +584,11 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
                 elif runargs[i].startswith('--cwd'):
                     del runargs[i:i + 2]
                     break
-            pid = util.spawndetached(runargs)
-            while os.path.exists(lockpath):
-                time.sleep(0.1)
+            def condfn():
+                return not os.path.exists(lockpath)
+            pid = util.rundetached(runargs, condfn)
+            if pid < 0:
+                raise util.Abort(_('child process failed to start'))
         finally:
             try:
                 os.unlink(lockpath)
