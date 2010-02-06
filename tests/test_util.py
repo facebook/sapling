@@ -1,4 +1,5 @@
 import StringIO
+import difflib
 import errno
 import gettext
 import imp
@@ -179,6 +180,17 @@ class TestBase(unittest.TestCase):
         rmtree(self.tmpdir)
         os.chdir(self.oldwd)
         setattr(ui.ui, self.patch[0].func_name, self.patch[0])
+
+    def assertStringEqual(self, l, r):
+        try:
+            self.assertEqual(l, r, 'failed string equality check, see stdout for details')
+        except:
+            add_nl = lambda li: map(lambda x: x+'\n', li)
+            print 'failed expectation:'
+            print ''.join(difflib.unified_diff(
+                add_nl(l.splitlines()), add_nl(r.splitlines()),
+                fromfile='expected', tofile='got'))
+            raise
 
     def _load_fixture_and_fetch(self, fixture_name, subdir=None, stupid=False, layout='auto'):
         if layout == 'single':
