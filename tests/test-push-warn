@@ -90,38 +90,47 @@ hg -q up 0
 echo 5 > foo
 hg -q branch c
 hg -q ci -d "1000000 0" -m 5
+hg push ../f; echo $?
 hg push -r 4 -r 5 ../f; echo $?
+
+echo % multiple new branches
+hg -q branch d
+echo 6 > foo
+hg -q ci -d "1000000 0" -m 6
+hg push ../f; echo $?
+hg push -r 4 -r 6 ../f; echo $?
+cd ../g
 
 echo % fail on multiple head push
 hg -q up 1
-echo 6 > foo
-hg -q ci -d "1000000 0" -m 6
-hg push -r 4 -r 6 ../f; echo $?
+echo 7 > foo
+hg -q ci -d "1000000 0" -m 7
+hg push -r 4 -r 7 ../f; echo $?
 
 echo % push replacement head on existing branches
 hg -q up 3
-echo 7 > foo
-hg -q ci -d "1000000 0" -m 7
-hg push -r 6 -r 7 ../f; echo $?
+echo 8 > foo
+hg -q ci -d "1000000 0" -m 8
+hg push -r 7 -r 8 ../f; echo $?
 
 echo % merge of branch a to other branch b followed by unrelated push on branch a
-hg -q up 6
-HGMERGE=true hg -q merge 7
-hg -q ci -d "1000000 0" -m 8
 hg -q up 7
-echo 9 > foo
+HGMERGE=true hg -q merge 8
 hg -q ci -d "1000000 0" -m 9
-hg push -r 8 ../f; echo $?
+hg -q up 8
+echo 10 > foo
+hg -q ci -d "1000000 0" -m 10
 hg push -r 9 ../f; echo $?
+hg push -r 10 ../f; echo $?
 
 echo % cheating the counting algorithm
-hg -q up 8
+hg -q up 9
 HGMERGE=true hg -q merge 2
-hg -q ci -d "1000000 0" -m 10
-hg -q up 1
-echo 11 > foo
 hg -q ci -d "1000000 0" -m 11
-hg push -r 10 -r 11 ../f; echo $?
+hg -q up 1
+echo 12 > foo
+hg -q ci -d "1000000 0" -m 12
+hg push -r 11 -r 12 ../f; echo $?
 
 echo % checking prepush logic does not allow silently pushing multiple new heads
 cd ..

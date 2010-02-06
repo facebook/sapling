@@ -1531,13 +1531,7 @@ class localrepository(repo.repository):
                     warn = 1
 
             if warn:
-                if not rheads: # new branch requires --force
-                    self.ui.warn(_("abort: push creates new"
-                                   " remote branch '%s'!\n") %
-                                   self[lheads[0]].branch())
-                else:
-                    self.ui.warn(_("abort: push creates new remote heads!\n"))
-
+                self.ui.warn(_("abort: push creates new remote heads!\n"))
                 self.ui.status(_("(did you forget to merge?"
                                  " use push -f to force)\n"))
                 return False
@@ -1568,10 +1562,20 @@ class localrepository(repo.repository):
                             branch = self[n].branch()
                             localbrheads.setdefault(branch, []).append(n)
 
+                    newbranches = list(set(localbrheads) - set(remotebrheads))
+                    if newbranches: # new branch requires --force
+                        branchnames = ', '.join("'%s'" % b for b in newbranches)
+                        self.ui.warn(_("abort: push creates "
+                                       "new remote branches: %s!\n")
+                                     % branchnames)
+                        # propose 'push -b .' in the msg too?
+                        self.ui.status(_("(use 'hg push -f' to force)\n"))
+                        return None, 0
                     for branch, lheads in localbrheads.iteritems():
-                        rheads = remotebrheads.get(branch, [])
-                        if not checkbranch(lheads, rheads, update):
-                            return None, 0
+                        if branch in remotebrheads:
+                            rheads = remotebrheads[branch]
+                            if not checkbranch(lheads, rheads, update):
+                                return None, 0
                 else:
                     if not checkbranch(heads, remote_heads, update):
                         return None, 0
