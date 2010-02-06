@@ -563,3 +563,38 @@ Node-action: add
 Node-copyfrom-rev: 8
 Node-copyfrom-path: tags/will-edit/alpha
 Text-copy-source-md5: 9f9f90dbe3e5ee1218c86b8839db1995
+
+Revision-number: 20
+Prop-content-length: 153
+Content-length: 153
+
+K 7
+svn:log
+V 53
+make a tag from a branch and edit it at the same time
+K 10
+svn:author
+V 5
+augie
+K 8
+svn:date
+V 27
+2010-02-06T13:31:13.153406Z
+PROPS-END
+
+Node-path: tags/edit-at-create
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 19
+Node-copyfrom-path: branches/magic
+
+
+Node-path: tags/edit-at-create/alpha
+Node-kind: file
+Node-action: change
+Text-content-length: 12
+Text-content-md5: 7b77a55a273801087b943dfbe257f4db
+Content-length: 12
+
+alpha
+alpha

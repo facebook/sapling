@@ -131,7 +131,8 @@ rename a tag
     def test_edited_tag(self, stupid=False):
        repo = self._load_fixture_and_fetch('commit-to-tag.svndump',
                                            stupid=stupid)
-       self.assertEqual(len(repo.heads()), 5)
+       headcount = 6
+       self.assertEqual(len(repo.heads()), headcount)
        heads = repo.heads()
        openheads = [h for h in heads if not repo[h].extra().get('close', False)]
        closedheads = set(heads) - set(openheads)
@@ -146,7 +147,7 @@ rename a tag
 
        self.assertEqual(1, len(self.repo.branchheads('magic')))
 
-       alsoedit, editlater, closeme, willedit, = closedheads
+       alsoedit, editlater, closeme, willedit, editcreate, = closedheads
        self.assertEqual(
            repo[willedit].extra(),
            {'close': '1',
@@ -180,6 +181,7 @@ rename a tag
            {'close': '1',
             'branch': 'closeme',
             'convert_revision': 'svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/branches/closeme@17'})
+       self.assertEqual('alpha\nalpha\n', repo['edit-at-create']['alpha'].data())
 
     def test_tags_in_unusual_location(self):
         repo = self._load_fixture_and_fetch('tag_name_same_as_branch.svndump')

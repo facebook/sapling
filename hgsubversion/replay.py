@@ -118,9 +118,10 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             # New regular tag without modifications, it will be committed by
             # svnmeta.committag(), we can skip the whole branch for now
             tag = meta.get_path_tag(meta.remotename(branch))
-            if (tag and tag not in meta.tags and
-                branch not in meta.branches
-                and branch not in meta.repo.branchtags()):
+            if (tag and tag not in meta.tags
+                and branch not in meta.branches
+                and branch not in meta.repo.branchtags()
+                and not files):
                 continue
 
         parentctx = meta.repo.changectx(parents[0])
@@ -176,6 +177,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             meta.revmap[rev.revnum, branch] = new_hash
         if tag:
             meta.movetag(tag, new_hash, parentctx.extra().get('branch', None), rev, date)
+            meta.addedtags.pop(tag, None)
 
     # 2. handle branches that need to be committed without any files
     for branch in current.emptybranches:

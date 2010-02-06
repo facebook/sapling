@@ -510,7 +510,7 @@ class SVNMeta(object):
         self.branches.update(tbdelta['branches'][0])
 
     def movetag(self, tag, hash, branch, rev, date):
-        if self.tags[tag] == hash:
+        if tag in self.tags and self.tags[tag] == hash:
             return
         if branch == 'default':
             branch = None

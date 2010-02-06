@@ -64,6 +64,11 @@ svn up
 svn merge -r9:8 $REPOPATH .
 svn ci -m 'Revert revision 9.'
 
+# make a tag from a branch and edit it at the same time
+svn up
+svn cp branches/magic tags/edit-at-create
+echo alpha >> tags/edit-at-create/alpha
+svn ci -m 'make a tag from a branch and edit it at the same time'
 
 cd ../..
 svnadmin dump temp/repo > commit-to-tag.svndump

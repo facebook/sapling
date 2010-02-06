@@ -553,7 +553,8 @@ def convert_rev(ui, meta, svn, r, tbdelta):
 
     deleted_branches = {}
     for p in r.paths:
-        if meta.get_path_tag(p):
+        tag = meta.get_path_tag(p)
+        if tag and tag not in meta.tags:
             continue
         branch = meta.localname(p)
         if not (r.paths[p].action == 'R' and branch in meta.branches):
@@ -613,7 +614,8 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             # svnmeta.committag(), we can skip the whole branch for now
             if (tag and tag not in meta.tags and
                 b not in meta.branches
-                and b not in meta.repo.branchtags()):
+                and b not in meta.repo.branchtags()
+                and not files_touched):
                 continue
 
         if parentctx.node() == node.nullid and not files_touched:
@@ -653,6 +655,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             meta.revmap[r.revnum, b] = ha
         else:
             meta.movetag(tag, ha, parentctx.extra().get('branch', None), r, date)
+            meta.addedtags.pop(tag, None)
         util.describe_commit(ui, ha, b)
 
     # These are branches with an 'R' status in svn log. This means they were
