@@ -40,7 +40,7 @@ def interhg_escape(x):
 
 templatefilters.filters["escape"] = interhg_escape
 
-def interhg_refresh(orig, self):
+def interhg_refresh(orig, self, *args, **kwargs):
     interhg_table[:] = []
     for key, pattern in self.repo.ui.configitems('interhg'):
         # grab the delimiter from the character after the "s"
@@ -75,6 +75,6 @@ def interhg_refresh(orig, self):
         except re.error:
             self.repo.ui.warn(_("interhg: invalid regexp for %s: %s\n")
                               % (key, regexp))
-    return orig(self)
+    return orig(self, *args, **kwargs)
 
 extensions.wrapfunction(hgweb_mod.hgweb, 'refresh', interhg_refresh)
