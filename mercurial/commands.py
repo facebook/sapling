@@ -1417,23 +1417,25 @@ def heads(ui, repo, *branchrevs, **opts):
         start = None
 
     closed = opts.get('closed')
-    hideinactive, _heads = opts.get('active'), None
     if not branchrevs:
         heads = repo.heads(start)
 
     else:
 
-        if hideinactive:
-            dagheads = repo.heads(start)
         decode, encode = encoding.fromlocal, encoding.tolocal
         branches = set(repo[decode(br)].branch() for br in branchrevs)
         heads = []
 
         for b in branches:
-            bheads = repo.branchheads(b, start, closed=closed)
-            if hideinactive:
-                bheads = [bhead for bhead in bheads if bhead in dagheads]
+            bheads = repo.branchheads(b, start, True)
             heads.extend(bheads)
+
+        if not opts.get('closed'):
+            heads = [h for h in heads if not repo[h].extra().get('close')]
+
+        if opts.get('active'):
+            dagheads = repo.heads(start)
+            heads = [h for h in heads if h in dagheads]
 
         haveheads = set(repo[h].branch() for h in heads)
         if branches - haveheads:
