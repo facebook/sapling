@@ -237,7 +237,7 @@ class ui(object):
 
     def write_err(self, *args):
         try:
-            if not sys.stdout.closed:
+            if not hasattr(sys.stdout, 'closed') or not sys.stdout.closed:
                 sys.stdout.flush()
             for a in args:
                 sys.stderr.write(str(a))
