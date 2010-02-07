@@ -155,6 +155,31 @@ hg qrefresh
 hg qdiff --nodates
 cd ..
 
+echo '% issue2025: qrefresh does not honor filtering options when tip != qtip'
+hg init repo-2025
+cd repo-2025
+echo a > a
+echo b > b
+hg ci -qAm addab
+echo a >> a
+echo b >> b
+hg qnew -f patch
+hg up -qC 0
+echo c > c
+hg ci -qAm addc
+hg up -qC 1
+echo '% refresh with tip != qtip'
+hg --config diff.nodates=1 qrefresh -I b 2>&1 \
+    | sed 's/saving bundle.*/saving bundle.../g'
+echo '% status after refresh'
+hg st
+echo '% b after refresh'
+cat b
+echo '% patch file after refresh'
+cat .hg/patches/patch
+cd ..
+
+
 echo % issue1441 with git patches
 hg init repo-1441-git
 cd repo-1441-git
