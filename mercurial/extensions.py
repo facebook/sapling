@@ -131,22 +131,17 @@ def wrapfunction(container, funcname, wrapper):
     setattr(container, funcname, wrap)
     return origfn
 
-def disabled():
-    '''find disabled extensions from hgext
-    returns a dict of {name: desc}, and the max name length'''
-
+def _disabledpaths():
+    '''find paths of disabled extensions. returns a dict of {name: path}'''
     import hgext
     extpath = os.path.dirname(os.path.abspath(hgext.__file__))
-
     try: # might not be a filesystem path
         files = os.listdir(extpath)
     except OSError:
-        return None, 0
+        return {}
 
     exts = {}
-    maxlength = 0
     for e in files:
-
         if e.endswith('.py'):
             name = e.rsplit('.', 1)[0]
             path = os.path.join(extpath, e)
@@ -155,23 +150,42 @@ def disabled():
             path = os.path.join(extpath, e, '__init__.py')
             if not os.path.exists(path):
                 continue
-
         if name in exts or name in _order or name == '__init__':
             continue
+        exts[name] = path
+    return exts
 
-        try:
-            file = open(path)
-        except IOError:
+def _disabledhelp(path):
+    '''retrieve help synopsis of a disabled extension (without importing)'''
+    try:
+        file = open(path)
+    except IOError:
+        return
+    else:
+        doc = help.moduledoc(file)
+        file.close()
+
+    if doc: # extracting localized synopsis
+        return gettext(doc).splitlines()[0]
+    else:
+        return _('(no help text available)')
+
+def disabled():
+    '''find disabled extensions from hgext
+    returns a dict of {name: desc}, and the max name length'''
+
+    paths = _disabledpaths()
+    if not paths:
+        return None, 0
+
+    exts = {}
+    maxlength = 0
+    for name, path in paths.iteritems():
+        doc = _disabledhelp(path)
+        if not doc:
             continue
-        else:
-            doc = help.moduledoc(file)
-            file.close()
 
-        if doc: # extracting localized synopsis
-            exts[name] = gettext(doc).splitlines()[0]
-        else:
-            exts[name] = _('(no help text available)')
-
+        exts[name] = doc
         if len(name) > maxlength:
             maxlength = len(name)
 
