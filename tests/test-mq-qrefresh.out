@@ -259,6 +259,26 @@ diff -r 000000000000 b
 +++ b/b
 @@ -0,0 +1,1 @@
 +a
+% issue2025: qrefresh does not honor filtering options when tip != qtip
+% refresh with tip != qtip
+saving bundle...
+adding branch
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+% status after refresh
+M a
+% b after refresh
+b
+b
+% patch file after refresh
+diff -r 1a60229be7ac b
+--- a/b
++++ b/b
+@@ -1,1 +1,2 @@
+ b
++b
 % issue1441 with git patches
 diff --git a/b b/b
 new file mode 100644
