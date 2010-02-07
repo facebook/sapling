@@ -21,8 +21,11 @@ def _local(path):
 def addbranchrevs(lrepo, repo, branches, revs):
     if not branches:
         return revs or None, revs and revs[0] or None
-    branchmap = repo.branchmap()
     revs = revs and list(revs) or []
+    if not repo.capable('branchmap'):
+        revs.extend(branches)
+        return revs, revs[0]
+    branchmap = repo.branchmap()
     for branch in branches:
         if branch == '.':
             if not lrepo or not lrepo.local():
