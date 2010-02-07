@@ -2316,7 +2316,9 @@ def rename(ui, repo, patch, name=None, **opts):
     q.save_dirty()
 
 def restore(ui, repo, rev, **opts):
-    """restore the queue state saved by a revision"""
+    """restore the queue state saved by a revision (DEPRECATED)
+
+    This command is deprecated, use rebase --mq instead."""
     rev = repo.lookup(rev)
     q = repo.mq
     q.restore(repo, rev, delete=opts['delete'],
@@ -2325,7 +2327,9 @@ def restore(ui, repo, rev, **opts):
     return 0
 
 def save(ui, repo, **opts):
-    """save current queue state"""
+    """save current queue state (DEPRECATED)
+
+    This command is deprecated, use rebase --mq instead."""
     q = repo.mq
     message = cmdutil.logmessage(opts)
     ret = q.save(repo, msg=message)
@@ -2704,7 +2708,7 @@ cmdtable = {
     "^qpop":
         (pop,
          [('a', 'all', None, _('pop all patches')),
-          ('n', 'name', '', _('queue name to pop')),
+          ('n', 'name', '', _('queue name to pop (DEPRECATED)')),
           ('f', 'force', None, _('forget any local changes to patched files'))],
          _('hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]')),
     "^qpush":
@@ -2712,8 +2716,8 @@ cmdtable = {
          [('f', 'force', None, _('apply if the patch has rejects')),
           ('l', 'list', None, _('list patch name in commit text')),
           ('a', 'all', None, _('apply all patches')),
-          ('m', 'merge', None, _('merge from another queue')),
-          ('n', 'name', '', _('merge queue name'))],
+          ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
+          ('n', 'name', '', _('merge queue name (DEPRECATED)'))],
          _('hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]')),
     "^qrefresh":
         (refresh,

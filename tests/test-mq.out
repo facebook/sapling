@@ -54,8 +54,6 @@ list of commands:
  qpush        push the next patch onto the stack
  qrefresh     update the current patch
  qrename      rename a patch
- qrestore     restore the queue state saved by a revision
- qsave        save current queue state
  qselect      set or print guarded patches to push
  qseries      print the entire series file
  qtop         print the name of the current patch
