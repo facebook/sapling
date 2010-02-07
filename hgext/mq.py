@@ -987,7 +987,12 @@ class queue(object):
         diffopts = self.diffopts()
         wlock = repo.wlock()
         try:
-            if repo.dirstate.parents()[0] not in repo.heads():
+            heads = []
+            for b, ls in repo.branchmap().iteritems():
+                heads += ls
+            if not heads:
+                heads = [nullid]
+            if repo.dirstate.parents()[0] not in heads:
                 self.ui.status(_("(working directory not at a head)\n"))
 
             if not self.series:

@@ -12,3 +12,37 @@ abort: popping would remove a revision not managed by this patch queue
 abort: cannot refresh a revision with children
 % tip:
 3 append quux
+% qpush warning branchheads
+popping qp
+patch queue now empty
+adding a
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+marked working directory as branch b
+adding c
+created new head
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+changeset:   2:65309210bf4e
+branch:      b
+tag:         tip
+parent:      1:707adb4c8ae1
+parent:      0:cb9a9f314b8b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     merge
+
+changeset:   1:707adb4c8ae1
+branch:      b
+parent:      -1:000000000000
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     c
+
+changeset:   0:cb9a9f314b8b
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     a
+
+applying qp
+now at: qp

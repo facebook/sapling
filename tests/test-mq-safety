@@ -42,3 +42,23 @@ hg qrefresh
 
 echo '% tip:'
 hg tip --template '{rev} {desc}\n'
+
+echo '% qpush warning branchheads'
+cd ..
+hg init branchy
+cd branchy
+echo q > q
+hg add q
+hg qnew -f qp
+hg qpop
+echo a > a
+hg ci -Ama
+hg up null
+hg branch b
+echo c > c
+hg ci -Amc
+hg merge default
+hg ci -mmerge
+hg up default
+hg log
+hg qpush
