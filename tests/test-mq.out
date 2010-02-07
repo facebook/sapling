@@ -37,7 +37,6 @@ list of commands:
 
  qapplied     print the patches already applied
  qclone       clone main and patch repository at same time
- qcommit      commit changes in the queue repository
  qdelete      remove patches from queue
  qdiff        diff of the current patch and subsequent modifications
  qfinish      move applied patches into repository history
@@ -46,7 +45,6 @@ list of commands:
  qguard       set or print guards for a patch
  qheader      print the header of the topmost or specified patch
  qimport      import a patch
- qinit        init a new queue repository
  qnew         create a new patch
  qnext        print the name of the next patch
  qpop         pop the current patch off the stack

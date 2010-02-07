@@ -1826,13 +1826,16 @@ def qimport(ui, repo, *filename, **opts):
     return 0
 
 def init(ui, repo, **opts):
-    """init a new queue repository
+    """init a new queue repository (DEPRECATED)
 
     The queue repository is unversioned by default. If
     -c/--create-repo is specified, qinit will create a separate nested
     repository for patches (qinit -c may also be run later to convert
     an unversioned patch repository into a versioned one). You can use
-    qcommit to commit changes to this queue repository."""
+    qcommit to commit changes to this queue repository.
+
+    This command is depreacted. Without -c, it's implied by other relevant
+    commands. With -c, use hg -Q init instead."""
     q = repo.mq
     r = q.init(repo, create=opts['create_repo'])
     q.save_dirty()
@@ -1916,7 +1919,9 @@ def clone(ui, source, dest=None, **opts):
             hg.update(dr, dr.changelog.tip())
 
 def commit(ui, repo, *pats, **opts):
-    """commit changes in the queue repository"""
+    """commit changes in the queue repository (DEPRECATED)
+
+    This command is deprecated; use hg -Q commit instead."""
     q = repo.mq
     r = q.qrepo()
     if not r:
