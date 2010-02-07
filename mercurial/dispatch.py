@@ -93,7 +93,12 @@ def _runcatch(ui, args):
         ui.warn(_("killed!\n"))
     except error.UnknownCommand, inst:
         ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
-        commands.help_(ui, 'shortlist')
+        try:
+            # check if the command is in a disabled extension
+            # (but don't check for extensions themselves)
+            commands.help_(ui, inst.args[0], unknowncmd=True)
+        except error.UnknownCommand:
+            commands.help_(ui, 'shortlist')
     except util.Abort, inst:
         ui.warn(_("abort: %s\n") % inst)
     except ImportError, inst:
@@ -218,6 +223,11 @@ class cmdalias(object):
             def fn(ui, *args):
                 ui.warn(_("alias '%s' resolves to unknown command '%s'\n") \
                             % (self.name, cmd))
+                try:
+                    # check if the command is in a disabled extension
+                    commands.help_(ui, cmd, unknowncmd=True)
+                except error.UnknownCommand:
+                    pass
                 return 1
             self.fn = fn
             self.badalias = True

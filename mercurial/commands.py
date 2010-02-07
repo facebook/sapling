@@ -1457,7 +1457,7 @@ def heads(ui, repo, *branchrevs, **opts):
         displayer.show(ctx)
     displayer.close()
 
-def help_(ui, name=None, with_version=False):
+def help_(ui, name=None, with_version=False, unknowncmd=False):
     """show help for a given topic or a help overview
 
     With no arguments, print a list of commands with short help messages.
@@ -1490,7 +1490,7 @@ def help_(ui, name=None, with_version=False):
             ui.write('\n')
 
         try:
-            aliases, entry = cmdutil.findcmd(name, table, False)
+            aliases, entry = cmdutil.findcmd(name, table, strict=unknowncmd)
         except error.AmbiguousCommand, inst:
             # py3k fix: except vars can't be used outside the scope of the
             # except block, nor can be used inside a lambda. python issue4617
@@ -1501,7 +1501,8 @@ def help_(ui, name=None, with_version=False):
 
         # check if it's an invalid alias and display its error if it is
         if getattr(entry[0], 'badalias', False):
-            entry[0](ui)
+            if not unknowncmd:
+                entry[0](ui)
             return
 
         # synopsis
@@ -1592,10 +1593,13 @@ def help_(ui, name=None, with_version=False):
     def helpext(name):
         try:
             mod = extensions.find(name)
+            doc = gettext(mod.__doc__) or _('no help text available')
         except KeyError:
-            raise error.UnknownCommand(name)
+            mod = None
+            doc = extensions.disabledext(name)
+            if not doc:
+                raise error.UnknownCommand(name)
 
-        doc = gettext(mod.__doc__) or _('no help text available')
         if '\n' not in doc:
             head, tail = doc, ""
         else:
@@ -1605,17 +1609,36 @@ def help_(ui, name=None, with_version=False):
             ui.write(minirst.format(tail, textwidth))
             ui.status('\n\n')
 
-        try:
-            ct = mod.cmdtable
-        except AttributeError:
-            ct = {}
+        if mod:
+            try:
+                ct = mod.cmdtable
+            except AttributeError:
+                ct = {}
+            modcmds = set([c.split('|', 1)[0] for c in ct])
+            helplist(_('list of commands:\n\n'), modcmds.__contains__)
+        else:
+            ui.write(_('use "hg help extensions" for information on enabling '
+                       'extensions\n'))
 
-        modcmds = set([c.split('|', 1)[0] for c in ct])
-        helplist(_('list of commands:\n\n'), modcmds.__contains__)
+    def helpextcmd(name):
+        cmd, ext, mod = extensions.disabledcmd(name, ui.config('ui', 'strict'))
+        doc = gettext(mod.__doc__).splitlines()[0]
+
+        msg = help.listexts(_("'%s' is provided by the following "
+                              "extension:") % cmd, {ext: doc}, len(ext),
+                            indent=4)
+        ui.write(minirst.format(msg, textwidth))
+        ui.write('\n\n')
+        ui.write(_('use "hg help extensions" for information on enabling '
+                   'extensions\n'))
 
     if name and name != 'shortlist':
         i = None
-        for f in (helptopic, helpcmd, helpext):
+        if unknowncmd:
+            queries = (helpextcmd,)
+        else:
+            queries = (helptopic, helpcmd, helpext, helpextcmd)
+        for f in queries:
             try:
                 f(name)
                 i = None

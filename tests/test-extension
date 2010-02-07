@@ -153,3 +153,27 @@ echo "hgext/mq=" >> $HGRCPATH
 
 echo % show extensions
 hg debugextensions
+
+echo '% disabled extension commands'
+HGRCPATH=
+hg help email
+hg qdel
+hg churn
+echo '% disabled extensions'
+hg help churn
+hg help patchbomb
+echo '% broken disabled extension and command'
+mkdir hgext
+echo > hgext/__init__.py
+cat > hgext/broken.py <<EOF
+"broken extension'
+EOF
+TMPPYTHONPATH="$PYTHONPATH"
+PYTHONPATH="`pwd`:$PYTHONPATH"
+export PYTHONPATH
+hg help broken
+hg help foo > /dev/null
+PYTHONPATH="$TMPPYTHONPATH"
+export PYTHONPATH
+
+exit 0

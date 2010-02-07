@@ -96,3 +96,33 @@ global options:
 % show extensions
 debugissue811
 mq
+% disabled extension commands
+'email' is provided by the following extension:
+
+    patchbomb  command to send changesets as (a series of) patch emails
+
+use "hg help extensions" for information on enabling extensions
+hg: unknown command 'qdel'
+'qdelete' is provided by the following extension:
+
+    mq  manage a stack of patches
+
+use "hg help extensions" for information on enabling extensions
+hg: unknown command 'churn'
+'churn' is provided by the following extension:
+
+    churn  command to display statistics about repository history
+
+use "hg help extensions" for information on enabling extensions
+% disabled extensions
+churn extension - command to display statistics about repository history
+
+use "hg help extensions" for information on enabling extensions
+patchbomb extension - command to send changesets as (a series of) patch emails
+
+use "hg help extensions" for information on enabling extensions
+% broken disabled extension and command
+broken extension - (no help text available)
+
+use "hg help extensions" for information on enabling extensions
+hg: unknown command 'foo'

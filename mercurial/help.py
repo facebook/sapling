@@ -42,13 +42,14 @@ def moduledoc(file):
 
     return ''.join(result)
 
-def listexts(header, exts, maxlength):
+def listexts(header, exts, maxlength, indent=1):
     '''return a text listing of the given extensions'''
     if not exts:
         return ''
     result = '\n%s\n\n' % header
     for name, desc in sorted(exts.iteritems()):
-        result += ' %-*s %s\n' % (maxlength + 2, ':%s:' % name, desc)
+        result += '%s%-*s %s\n' % (' ' * indent, maxlength + 2,
+                                   ':%s:' % name, desc)
     return result
 
 def extshelp():
