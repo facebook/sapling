@@ -486,8 +486,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
     Generate a compressed changegroup file collecting changesets not
     known to be in another repository.
 
-    If no destination repository is specified the destination is
-    assumed to have all the nodes specified by one or more --base
+    If you omit the destination repository, then hg assumes the
+    destination will have all the nodes you specify with --base
     parameters. To create a bundle containing all changesets, use
     -a/--all (or --base null).
 
@@ -2200,13 +2200,13 @@ def merge(ui, repo, node=None, **opts):
     return hg.merge(repo, node, force=opts.get('force'))
 
 def outgoing(ui, repo, dest=None, **opts):
-    """show changesets not found in destination
+    """show changesets not found in the destination
 
     Show changesets not found in the specified destination repository
     or the default push location. These are the changesets that would
     be pushed if a push was requested.
 
-    See pull for valid destination format details.
+    See pull for details of valid destination formats.
     """
     limit = cmdutil.loglimit(opts)
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
@@ -2350,7 +2350,7 @@ def pull(ui, repo, source="default", **opts):
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
 
-    Push changes from the local repository to the given destination.
+    Push changes from the local repository to the specified destination.
 
     This is the symmetrical operation for pull. It moves changes from
     the current repository to a different one. If the destination is
@@ -2550,8 +2550,8 @@ def revert(ui, repo, *pats, **opts):
     to the contents they had in the parent of the working directory.
     This restores the contents of the affected files to an unmodified
     state and unschedules adds, removes, copies, and renames. If the
-    working directory has two parents, you must explicitly specify the
-    revision to revert to.
+    working directory has two parents, you must explicitly specify a
+    revision.
 
     Using the -r/--rev option, revert the given files or directories
     to their contents as of a specific revision. This can be helpful
@@ -2775,7 +2775,7 @@ def rollback(ui, repo):
     - commit
     - import
     - pull
-    - push (with this repository as destination)
+    - push (with this repository as the destination)
     - unbundle
 
     This command is not intended for use on public repositories. Once

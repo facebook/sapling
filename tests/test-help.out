@@ -69,7 +69,7 @@ list of commands:
  log          show revision history of entire repository or files
  manifest     output the current or given revision of the project manifest
  merge        merge working directory with another revision
- outgoing     show changesets not found in destination
+ outgoing     show changesets not found in the destination
  parents      show the parents of the working directory or revision
  paths        show aliases for remote repositories
  pull         pull changes from the specified source
@@ -134,7 +134,7 @@ use "hg -v help" to show aliases and global options
  log          show revision history of entire repository or files
  manifest     output the current or given revision of the project manifest
  merge        merge working directory with another revision
- outgoing     show changesets not found in destination
+ outgoing     show changesets not found in the destination
  parents      show the parents of the working directory or revision
  paths        show aliases for remote repositories
  pull         pull changes from the specified source
@@ -500,7 +500,7 @@ list of commands:
  log          show revision history of entire repository or files
  manifest     output the current or given revision of the project manifest
  merge        merge working directory with another revision
- outgoing     show changesets not found in destination
+ outgoing     show changesets not found in the destination
  parents      show the parents of the working directory or revision
  paths        show aliases for remote repositories
  pull         pull changes from the specified source
