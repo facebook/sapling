@@ -1833,9 +1833,82 @@ def import_(ui, repo, patch1, *patches, **opts):
     d = opts["base"]
     strip = opts["strip"]
     wlock = lock = None
+
+    def tryone(ui, hunk):
+        tmpname, message, user, date, branch, nodeid, p1, p2 = patch.extract(ui, hunk)
+
+        if not tmpname:
+            return None
+        commitid = _('to working directory')
+
+        try:
+            cmdline_message = cmdutil.logmessage(opts)
+            if cmdline_message:
+                # pickup the cmdline msg
+                message = cmdline_message
+            elif message:
+                # pickup the patch msg
+                message = message.strip()
+            else:
+                # launch the editor
+                message = None
+            ui.debug('message:\n%s\n' % message)
+
+            wp = repo.parents()
+            if opts.get('exact'):
+                if not nodeid or not p1:
+                    raise util.Abort(_('not a Mercurial patch'))
+                p1 = repo.lookup(p1)
+                p2 = repo.lookup(p2 or hex(nullid))
+
+                if p1 != wp[0].node():
+                    hg.clean(repo, p1)
+                repo.dirstate.setparents(p1, p2)
+            elif p2:
+                try:
+                    p1 = repo.lookup(p1)
+                    p2 = repo.lookup(p2)
+                    if p1 == wp[0].node():
+                        repo.dirstate.setparents(p1, p2)
+                except error.RepoError:
+                    pass
+            if opts.get('exact') or opts.get('import_branch'):
+                repo.dirstate.setbranch(branch or 'default')
+
+            files = {}
+            try:
+                patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
+                            files=files, eolmode=None)
+            finally:
+                files = patch.updatedir(ui, repo, files,
+                                        similarity=sim / 100.0)
+            if not opts.get('no_commit'):
+                if opts.get('exact'):
+                    m = None
+                else:
+                    m = cmdutil.matchfiles(repo, files or [])
+                n = repo.commit(message, opts.get('user') or user,
+                                opts.get('date') or date, match=m,
+                                editor=cmdutil.commiteditor)
+                if opts.get('exact'):
+                    if hex(n) != nodeid:
+                        repo.rollback()
+                        raise util.Abort(_('patch is damaged'
+                                           ' or loses information'))
+                # Force a dirstate write so that the next transaction
+                # backups an up-do-date file.
+                repo.dirstate.write()
+                if n:
+                    commitid = short(n)
+
+            return commitid
+        finally:
+            os.unlink(tmpname)
+        
     try:
         wlock = repo.wlock()
         lock = repo.lock()
+        lastcommit = None
         for p in patches:
             pf = os.path.join(d, p)
 
@@ -1845,68 +1918,19 @@ def import_(ui, repo, patch1, *patches, **opts):
             else:
                 ui.status(_("applying %s\n") % p)
                 pf = url.open(ui, pf)
-            data = patch.extract(ui, pf)
-            tmpname, message, user, date, branch, nodeid, p1, p2 = data
 
-            if tmpname is None:
+            haspatch = False
+            for hunk in patch.split(pf):
+                commitid = tryone(ui, hunk)
+                if commitid:
+                    haspatch = True
+                    if lastcommit:
+                        ui.status(_('applied %s\n') % lastcommit)
+                    lastcommit = commitid
+
+            if not haspatch:
                 raise util.Abort(_('no diffs found'))
 
-            try:
-                cmdline_message = cmdutil.logmessage(opts)
-                if cmdline_message:
-                    # pickup the cmdline msg
-                    message = cmdline_message
-                elif message:
-                    # pickup the patch msg
-                    message = message.strip()
-                else:
-                    # launch the editor
-                    message = None
-                ui.debug('message:\n%s\n' % message)
-
-                wp = repo.parents()
-                if opts.get('exact'):
-                    if not nodeid or not p1:
-                        raise util.Abort(_('not a Mercurial patch'))
-                    p1 = repo.lookup(p1)
-                    p2 = repo.lookup(p2 or hex(nullid))
-
-                    if p1 != wp[0].node():
-                        hg.clean(repo, p1)
-                    repo.dirstate.setparents(p1, p2)
-                elif p2:
-                    try:
-                        p1 = repo.lookup(p1)
-                        p2 = repo.lookup(p2)
-                        if p1 == wp[0].node():
-                            repo.dirstate.setparents(p1, p2)
-                    except error.RepoError:
-                        pass
-                if opts.get('exact') or opts.get('import_branch'):
-                    repo.dirstate.setbranch(branch or 'default')
-
-                files = {}
-                try:
-                    patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
-                                files=files, eolmode=None)
-                finally:
-                    files = patch.updatedir(ui, repo, files,
-                                            similarity=sim / 100.0)
-                if not opts.get('no_commit'):
-                    m = cmdutil.matchfiles(repo, files or [])
-                    n = repo.commit(message, opts.get('user') or user,
-                                    opts.get('date') or date, match=m,
-                                    editor=cmdutil.commiteditor)
-                    if opts.get('exact'):
-                        if hex(n) != nodeid:
-                            repo.rollback()
-                            raise util.Abort(_('patch is damaged'
-                                               ' or loses information'))
-                    # Force a dirstate write so that the next transaction
-                    # backups an up-do-date file.
-                    repo.dirstate.write()
-            finally:
-                os.unlink(tmpname)
     finally:
         release(lock, wlock)
 

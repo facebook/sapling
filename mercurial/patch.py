@@ -41,6 +41,130 @@ def copyfile(src, dst, basedir):
 
 # public functions
 
+def split(stream):
+    '''return an iterator of individual patches from a stream'''
+    def isheader(line, inheader):
+        if inheader and line[0] in (' ', '\t'):
+            # continuation
+            return True
+        l = line.split(': ', 1)
+        return len(l) == 2 and ' ' not in l[0]
+
+    def chunk(lines):
+        return cStringIO.StringIO(''.join(lines))
+
+    def hgsplit(stream, cur):
+        inheader = True
+
+        for line in stream:
+            if not line.strip():
+                inheader = False
+            if not inheader and line.startswith('# HG changeset patch'):
+                yield chunk(cur)
+                cur = []
+                inheader = True
+
+            cur.append(line)
+
+        if cur:
+            yield chunk(cur)
+
+    def mboxsplit(stream, cur):
+        for line in stream:
+            if line.startswith('From '):
+                for c in split(chunk(cur[1:])):
+                    yield c
+                cur = []
+
+            cur.append(line)
+
+        if cur:
+            for c in split(chunk(cur[1:])):
+                yield c
+
+    def mimesplit(stream, cur):
+        def msgfp(m):
+            fp = cStringIO.StringIO()
+            g = email.Generator.Generator(fp, mangle_from_=False)
+            g.flatten(m)
+            fp.seek(0)
+            return fp
+
+        for line in stream:
+            cur.append(line)
+        c = chunk(cur)
+
+        m = email.Parser.Parser().parse(c)
+        if not m.is_multipart():
+            yield msgfp(m)
+        else:
+            ok_types = ('text/plain', 'text/x-diff', 'text/x-patch')
+            for part in m.walk():
+                ct = part.get_content_type()
+                if ct not in ok_types:
+                    continue
+                yield msgfp(part)
+
+    def headersplit(stream, cur):
+        inheader = False
+
+        for line in stream:
+            if not inheader and isheader(line, inheader):
+                yield chunk(cur)
+                cur = []
+                inheader = True
+            if inheader and not isheader(line, inheader):
+                inheader = False
+
+            cur.append(line)
+
+        if cur:
+            yield chunk(cur)
+
+    def remainder(cur):
+        yield chunk(cur)
+
+    class fiter(object):
+        def __init__(self, fp):
+            self.fp = fp
+
+        def __iter__(self):
+            return self
+
+        def next(self):
+            l = self.fp.readline()
+            if not l:
+                raise StopIteration
+            return l
+
+    inheader = False
+    cur = []
+
+    mimeheaders = ['content-type']
+
+    if not hasattr(stream, 'next'):
+        # http responses, for example, have readline but not next
+        stream = fiter(stream)
+
+    for line in stream:
+        cur.append(line)
+        if line.startswith('# HG changeset patch'):
+            return hgsplit(stream, cur)
+        elif line.startswith('From '):
+            return mboxsplit(stream, cur)
+        elif isheader(line, inheader):
+            inheader = True
+            if line.split(':', 1)[0].lower() in mimeheaders:
+                # let email parser handle this
+                return mimesplit(stream, cur)
+        elif inheader:
+            # No evil headers seen, split by hand
+            return headersplit(stream, cur)
+        # Not enough info, keep reading
+
+    # if we are here, we have a very plain patch
+    return remainder(cur)
+
 def extract(ui, fileobj):
     '''extract patch from data read from fileobj.
 

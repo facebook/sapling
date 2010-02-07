@@ -74,6 +74,13 @@ hg clone -r0 a b
 hg --cwd a export tip | hg --cwd b import -
 rm -r b
 
+echo % import two patches in one stream
+hg init b
+hg --cwd a export 0:tip | hg --cwd b import -
+hg --cwd a id
+hg --cwd b id
+rm -r b
+
 echo % override commit message
 hg clone -r0 a b
 hg --cwd a export tip | hg --cwd b import -m 'override' -
