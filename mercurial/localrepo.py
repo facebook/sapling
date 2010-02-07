@@ -1716,28 +1716,6 @@ class localrepository(repo.repository):
             for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
                 msngset.pop(revlog.node(r), None)
 
-        # This is a function generating function used to set up an environment
-        # for the inner function to execute in.
-        def manifest_and_file_collector(changedfileset):
-            # This is an information gathering function that gathers
-            # information from each changeset node that goes out as part of
-            # the changegroup.  The information gathered is a list of which
-            # manifest nodes are potentially required (the recipient may
-            # already have them) and total list of all files which were
-            # changed in any changeset in the changegroup.
-            #
-            # We also remember the first changenode we saw any manifest
-            # referenced by so we can later determine which changenode 'owns'
-            # the manifest.
-            def collect_manifests_and_files(clnode):
-                c = cl.read(clnode)
-                for f in c[3]:
-                    # This is to make sure we only have one instance of each
-                    # filename string for each filename.
-                    changedfileset.setdefault(f, f)
-                msng_mnfst_set.setdefault(c[0], clnode)
-            return collect_manifests_and_files
-
         # Figure out which manifest nodes (of the ones we think might be part
         # of the changegroup) the recipient must know about and remove them
         # from the changegroup.
@@ -1838,10 +1816,11 @@ class localrepository(repo.repository):
         def gengroup():
             # The set of changed files starts empty.
             changedfiles = {}
+            collect = changegroup.collector(cl, msng_mnfst_set, changedfiles)
+            
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
-            group = cl.group(msng_cl_lst, identity,
-                             manifest_and_file_collector(changedfiles))
+            group = cl.group(msng_cl_lst, identity, collect)
             for chnk in group:
                 yield chnk
 
@@ -1936,12 +1915,6 @@ class localrepository(repo.repository):
                 if log.linkrev(r) in revset:
                     yield log.node(r)
 
-        def changed_file_collector(changedfileset):
-            def collect_changed_files(clnode):
-                c = cl.read(clnode)
-                changedfileset.update(c[3])
-            return collect_changed_files
-
         def lookuprevlink_func(revlog):
             def lookuprevlink(n):
                 return cl.node(revlog.linkrev(revlog.rev(n)))
@@ -1950,10 +1923,11 @@ class localrepository(repo.repository):
         def gengroup():
             '''yield a sequence of changegroup chunks (strings)'''
             # construct a list of all changed files
-            changedfiles = set()
+            changedfiles = {}
+            mmfs = {}
+            collect = changegroup.collector(cl, mmfs, changedfiles)
 
-            for chnk in cl.group(nodes, identity,
-                                 changed_file_collector(changedfiles)):
+            for chnk in cl.group(nodes, identity, collect):
                 yield chnk
 
             mnfst = self.manifest
