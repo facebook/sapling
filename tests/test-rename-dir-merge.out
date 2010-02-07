@@ -28,11 +28,17 @@ resolving manifests
  a/a: other deleted -> r
  b/a: remote created -> g
  b/b: remote created -> g
+update: a/a 1/6 files (16.67%)
 removing a/a
+update: a/b 2/6 files (33.33%)
 removing a/b
+update: a/c 3/6 files (50.00%)
 moving a/c to b/c
+update: a/d 4/6 files (66.67%)
 moving a/d to b/d
+update: b/a 5/6 files (83.33%)
 getting b/a
+update: b/b 6/6 files (100.00%)
 getting b/b
 4 files updated, 0 files merged, 2 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -64,6 +70,7 @@ resolving manifests
  overwrite None partial False
  ancestor f9b20c0d4c51 local 55119e611c80+ remote ce36d17b18fb
  None: local renamed directory to b/c -> d
+update:None 1/1 files (100.00%)
 getting a/c to b/c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)

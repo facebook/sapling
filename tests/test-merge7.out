@@ -25,6 +25,7 @@ resolving manifests
  ancestor faaea63e63a9 local 451c744aabcc+ remote a070d41e8360
  test.txt: versions differ -> m
 preserving test.txt for resolve of test.txt
+update: test.txt 1/1 files (100.00%)
 picked tool 'internal:merge' for test.txt (binary False symlink False)
 merging test.txt
 my test.txt@451c744aabcc+ other test.txt@a070d41e8360 ancestor test.txt@faaea63e63a9

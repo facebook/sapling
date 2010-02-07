@@ -17,10 +17,12 @@ resolving manifests
  foo: remote copied to bar -> m
 preserving foo for resolve of bar
 preserving foo for resolve of foo
+update: foo 1/2 files (50.00%)
 picked tool 'internal:merge' for bar (binary False symlink False)
 merging foo and bar to bar
 my bar@2092631ce82b+ other bar@7731dad1c2b9 ancestor foo@310fd17130da
  premerge successful
+update: foo 2/2 files (100.00%)
 picked tool 'internal:merge' for foo (binary False symlink False)
 merging foo
 my foo@2092631ce82b+ other foo@7731dad1c2b9 ancestor foo@310fd17130da
