@@ -1716,20 +1716,6 @@ class localrepository(repo.repository):
             for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
                 msngset.pop(revlog.node(r), None)
 
-        # Figure out which manifest nodes (of the ones we think might be part
-        # of the changegroup) the recipient must know about and remove them
-        # from the changegroup.
-        def prune_manifests():
-            has_mnfst_set = set()
-            for n in msng_mnfst_set:
-                # If a 'missing' manifest thinks it belongs to a changenode
-                # the recipient is assumed to have, obviously the recipient
-                # must have that manifest.
-                linknode = cl.node(mnfst.linkrev(mnfst.rev(n)))
-                if linknode in has_cl_set:
-                    has_mnfst_set.add(n)
-            prune_parents(mnfst, has_mnfst_set, msng_mnfst_set)
-
         # Use the information collected in collect_manifests_and_files to say
         # which changenode any manifestnode belongs to.
         def lookup_manifest_link(mnfstnode):
@@ -1824,9 +1810,18 @@ class localrepository(repo.repository):
             for chnk in group:
                 yield chnk
 
-            # The list of manifests has been collected by the generator
-            # calling our functions back.
-            prune_manifests()
+            # Figure out which manifest nodes (of the ones we think might be
+            # part of the changegroup) the recipient must know about and
+            # remove them from the changegroup.
+            has_mnfst_set = set()
+            for n in msng_mnfst_set:
+                # If a 'missing' manifest thinks it belongs to a changenode
+                # the recipient is assumed to have, obviously the recipient
+                # must have that manifest.
+                linknode = cl.node(mnfst.linkrev(mnfst.rev(n)))
+                if linknode in has_cl_set:
+                    has_mnfst_set.add(n)
+            prune_parents(mnfst, has_mnfst_set, msng_mnfst_set)
             add_extra_nodes(1, msng_mnfst_set)
             msng_mnfst_lst = msng_mnfst_set.keys()
             # Sort the manifestnodes by revision number.
