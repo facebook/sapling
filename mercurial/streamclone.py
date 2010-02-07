@@ -33,11 +33,14 @@ class StreamException(Exception):
 #
 #   server writes out raw file data.
 
-def stream_out(repo, untrusted=False):
+def allowed(ui):
+    return ui.configbool('server', 'uncompressed', untrusted=True)
+
+def stream_out(repo):
     '''stream out all metadata files in repository.
     writes to file-like object, must support write() and optional flush().'''
 
-    if not repo.ui.configbool('server', 'uncompressed', untrusted=untrusted):
+    if not allowed(repo.ui):
         raise StreamException(1)
 
     entries = []

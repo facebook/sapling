@@ -91,7 +91,7 @@ class sshserver(object):
         capabilities: space separated list of tokens
         '''
         caps = copy.copy(self.caps)
-        if self.ui.configbool('server', 'uncompressed'):
+        if streamclone.allowed(self.repo.ui):
             caps.append('stream=%d' % self.repo.changelog.version)
         self.respond("capabilities: %s\n" % (' '.join(caps),))
 

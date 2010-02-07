@@ -111,7 +111,7 @@ def changegroupsubset(repo, req):
 
 def capabilities(repo, req):
     caps = copy.copy(basecaps)
-    if repo.ui.configbool('server', 'uncompressed', untrusted=True):
+    if streamclone.allowed(repo.ui):
         caps.append('stream=%d' % repo.changelog.version)
     if changegroupmod.bundlepriority:
         caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
@@ -202,7 +202,7 @@ def unbundle(repo, req):
 def stream_out(repo, req):
     req.respond(HTTP_OK, HGTYPE)
     try:
-        for chunk in streamclone.stream_out(repo, untrusted=True):
+        for chunk in streamclone.stream_out(repo):
             yield chunk
     except streamclone.StreamException, inst:
         yield str(inst)
