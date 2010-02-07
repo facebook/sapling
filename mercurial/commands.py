@@ -538,7 +538,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                         visit.append(p)
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
-        dest, branches = hg.parseurl(dest)
+        dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.repository(cmdutil.remoteui(repo, opts), dest)
         revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
         o = repo.findoutgoing(other, force=opts.get('force'))
@@ -607,8 +607,9 @@ def clone(ui, source, dest=None, **opts):
 
     a) the changeset, tag or branch specified with -u/--updaterev
     b) the changeset, tag or branch given with the first -r/--rev
-    c) the branch given with the url#branch source syntax
-    d) the head of the default branch
+    c) the branch given with the first -b/--branch
+    d) the branch given with the url#branch source syntax
+    e) the head of the default branch
 
     Use 'hg clone -u . src dst' to checkout the source repository's
     parent changeset (applicable for local source repositories only).
@@ -651,7 +652,8 @@ def clone(ui, source, dest=None, **opts):
              pull=opts.get('pull'),
              stream=opts.get('uncompressed'),
              rev=opts.get('rev'),
-             update=opts.get('updaterev') or not opts.get('noupdate'))
+             update=opts.get('updaterev') or not opts.get('noupdate'),
+             branch=opts.get('branch'))
 
 def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
@@ -1921,7 +1923,7 @@ def incoming(ui, repo, source="default", **opts):
     See pull for valid source format details.
     """
     limit = cmdutil.loglimit(opts)
-    source, branches = hg.parseurl(ui.expandpath(source))
+    source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     other = hg.repository(cmdutil.remoteui(repo, opts), source)
     ui.status(_('comparing with %s\n') % url.hidepassword(source))
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
@@ -2210,7 +2212,7 @@ def outgoing(ui, repo, dest=None, **opts):
     """
     limit = cmdutil.loglimit(opts)
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    dest, branches = hg.parseurl(dest)
+    dest, branches = hg.parseurl(dest, opts.get('branch'))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
@@ -2330,7 +2332,7 @@ def pull(ui, repo, source="default", **opts):
     If SOURCE is omitted, the 'default' path will be used.
     See 'hg help urls' for more information.
     """
-    source, branches = hg.parseurl(ui.expandpath(source))
+    source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     other = hg.repository(cmdutil.remoteui(repo, opts), source)
     ui.status(_('pulling from %s\n') % url.hidepassword(source))
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
@@ -2368,7 +2370,7 @@ def push(ui, repo, dest=None, **opts):
     URLs. If DESTINATION is omitted, a default path will be used.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    dest, branches = hg.parseurl(dest)
+    dest, branches = hg.parseurl(dest, opts.get('branch'))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     other = hg.repository(cmdutil.remoteui(repo, opts), dest)
     ui.status(_('pushing to %s\n') % url.hidepassword(dest))
@@ -3415,6 +3417,8 @@ table = {
            _('run even when the destination is unrelated')),
           ('r', 'rev', [],
            _('a changeset intended to be added to the destination')),
+          ('b', 'branch', [],
+           _('a specific branch you would like to bundle')),
           ('', 'base', [],
            _('a base changeset assumed to be available at the destination')),
           ('a', 'all', None, _('bundle all changesets in the repository')),
@@ -3436,6 +3440,8 @@ table = {
            _('revision, tag or branch to check out')),
           ('r', 'rev', [],
            _('include the specified changeset')),
+          ('b', 'branch', [],
+           _('clone only the specified branch')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
@@ -3567,6 +3573,8 @@ table = {
           ('', 'bundle', '', _('file to store the bundles into')),
           ('r', 'rev', [],
            _('a remote changeset intended to be added')),
+          ('b', 'branch', [],
+           _('a specific branch you would like to pull')),
          ] + logopts + remoteopts,
          _('[-p] [-n] [-M] [-f] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
@@ -3621,6 +3629,8 @@ table = {
           ('r', 'rev', [],
            _('a changeset intended to be included in the destination')),
           ('n', 'newest-first', None, _('show newest record first')),
+          ('b', 'branch', [],
+           _('a specific branch you would like to push')),
          ] + logopts + remoteopts,
          _('[-M] [-p] [-n] [-f] [-r REV]... [DEST]')),
     "parents":
@@ -3637,6 +3647,8 @@ table = {
            _('run even when remote repository is unrelated')),
           ('r', 'rev', [],
            _('a remote changeset intended to be added')),
+          ('b', 'branch', [],
+           _('a specific branch you would like to pull')),
          ] + remoteopts,
          _('[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]')),
     "^push":
@@ -3644,6 +3656,8 @@ table = {
          [('f', 'force', None, _('force push')),
           ('r', 'rev', [],
            _('a changeset intended to be included in the destination')),
+          ('b', 'branch', [],
+           _('a specific branch you would like to push')),
          ] + remoteopts,
          _('[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]')),
     "recover": (recover, []),

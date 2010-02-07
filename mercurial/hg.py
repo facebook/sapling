@@ -164,7 +164,7 @@ def share(ui, source, dest=None, update=True):
         _update(r, uprev)
 
 def clone(ui, source, dest=None, pull=False, rev=None, update=True,
-          stream=False):
+          stream=False, branch=None):
     """Make a copy of an existing repository.
 
     Create a copy of an existing repository in a new directory.  The
@@ -196,11 +196,13 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     update: update working directory after clone completes, if
     destination is local repository (True means update to default rev,
     anything else is treated as a revision)
+
+    branch: branches to clone
     """
 
     if isinstance(source, str):
         origsource = ui.expandpath(source)
-        source, branch = parseurl(origsource)
+        source, branch = parseurl(origsource, branch)
         src_repo = repository(ui, source)
     else:
         src_repo = source

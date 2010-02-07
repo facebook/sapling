@@ -26,8 +26,10 @@ hg ci -d '0 0' -mb2
 
 echo in rev c branch a
 hg in -qr c ../branch#a
+hg in -qr c -b a
 echo out branch .
 hg out -q ../branch#.
+hg out -q -b .
 echo clone branch b
 cd ..
 hg clone branch2#b branch3
