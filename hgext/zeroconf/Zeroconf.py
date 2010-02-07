@@ -560,7 +560,7 @@ class DNSIncoming(object):
 				#
 				#print "UNKNOWN TYPE = " + str(info[0])
 				#raise BadTypeInNameException
-				break
+				self.offset += info[3]
 
 			if rec is not None:
 				self.answers.append(rec)
