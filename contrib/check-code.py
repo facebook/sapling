@@ -37,7 +37,7 @@ testpats = [
     (r'\W\$?\(\([^\)]*\)\)', "don't use (()) or $(()), use expr"),
     (r'^function', "don't use 'function', use old style"),
     (r'grep.*-q', "don't use grep -q, redirect to /dev/null"),
-    (r'echo.*\\n', "don't use 'echo \n', use printf"),
+    (r'echo.*\\n', "don't use 'echo \\n', use printf"),
     (r'^diff.*-\w*N', "don't use diff -N"),
     (r'(^| )wc[^|]*$', "filter wc output"),
     (r'head -c', "don't use head -c, use dd"),
