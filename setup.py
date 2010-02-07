@@ -88,13 +88,24 @@ try:
 except ImportError:
     version = 'unknown'
 
+try:
+    from svn import core
+    assert core.SVN_VER_MAJOR == 1
+    assert core.SVN_VER_MINOR >= 5
+except ImportError:
+    raise Exception('You need to install the SWIG'
+                    ' bindings for Subversion to use this package.')
+except AssertionError:
+    raise Exception('You need at least Subversion 1.5 to use this package.')
+
+
 setup(
     name = 'hgsubversion',
     version = version,
     url = 'http://bitbucket.org/durin42/hgsubversion',
     license = 'GNU GPL',
     author = 'Augie Fackler, others',
-    author_email = 'hgsubversion@googlegroups.com',
+    author_email = 'durin42@gmail.com',
     description = ('hgsubversion is a Mercurial extension for working with '
                    'Subversion repositories.'),
     long_description = open(os.path.join(os.path.dirname(__file__),
@@ -102,11 +113,12 @@ setup(
     keywords = 'mercurial',
     packages = ('hgsubversion', 'hgsubversion.svnwrap'),
     platforms = 'any',
+    install_requires=['mercurial', ],
     classifiers = [
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Version Control',
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 4 - Beta',
         'Programming Language :: Python',
         'Operating System :: OS Independent',
     ],
