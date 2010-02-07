@@ -95,11 +95,11 @@ def annotate(ui, repo, *pats, **opts):
              ('number', lambda x: str(x[0].rev())),
              ('changeset', lambda x: short(x[0].node())),
              ('date', getdate),
-             ('follow', lambda x: x[0].path()),
+             ('file', lambda x: x[0].path()),
             ]
 
     if (not opts.get('user') and not opts.get('changeset')
-        and not opts.get('date') and not opts.get('follow')):
+        and not opts.get('date') and not opts.get('file')):
         opts['number'] = 1
 
     linenumber = opts.get('line_number') is not None
@@ -112,16 +112,15 @@ def annotate(ui, repo, *pats, **opts):
         funcmap[-1] = lambda x: "%s:%s" % (lastfunc(x), x[1])
 
     ctx = repo[opts.get('rev')]
-
     m = cmdutil.match(repo, pats, opts)
+    follow = not opts.get('no_follow')
     for abs in ctx.walk(m):
         fctx = ctx[abs]
         if not opts.get('text') and util.binary(fctx.data()):
             ui.write(_("%s: binary file\n") % ((pats and m.rel(abs)) or abs))
             continue
 
-        lines = fctx.annotate(follow=opts.get('follow'),
-                              linenumber=linenumber)
+        lines = fctx.annotate(follow=follow, linenumber=linenumber)
         pieces = []
 
         for f in funcmap:
@@ -3360,9 +3359,11 @@ table = {
     "^annotate|blame":
         (annotate,
          [('r', 'rev', '', _('annotate the specified revision')),
-          ('f', 'follow', None, _('follow file copies and renames')),
+          ('', 'follow', None, _('follow copies and renames (DEPRECATED)')),
+          ('', 'no-follow', None, _("don't follow copies and renames")),
           ('a', 'text', None, _('treat all files as text')),
           ('u', 'user', None, _('list the author (long with -v)')),
+          ('f', 'file', None, _('list the filename')),
           ('d', 'date', None, _('list the date (short with -q)')),
           ('n', 'number', None, _('list the revision number (default)')),
           ('c', 'changeset', None, _('list the changeset')),

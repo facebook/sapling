@@ -18,6 +18,13 @@ nobody 0 8435f90966e4 Thu Jan 01 00:00:01 1970 +0000: a
 % annotate -cdnul
 nobody 0 8435f90966e4 Thu Jan 01 00:00:01 1970 +0000:1: a
 % annotate -n b
+0: a
+1: a
+1: a
+3: b4
+3: b5
+3: b6
+% annotate --no-follow b
 2: a
 2: a
 2: a
@@ -25,9 +32,9 @@ nobody 0 8435f90966e4 Thu Jan 01 00:00:01 1970 +0000:1: a
 3: b5
 3: b6
 % annotate -nl b
-2:1: a
-2:2: a
-2:3: a
+0:1: a
+1:2: a
+1:3: a
 3:4: b4
 3:5: b5
 3:6: b6
@@ -95,4 +102,4 @@ merging b
 1:3: a
 % generate ABA rename configuration
 % annotate after ABA with follow
-foo: foo
+8: foo

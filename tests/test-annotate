@@ -49,6 +49,8 @@ hg ci -mb2 -d '2 0'
 
 echo % annotate -n b
 hg annotate -n b
+echo % annotate --no-follow b
+hg annotate --no-follow b
 echo % annotate -nl b
 hg annotate -nl b
 echo % annotate -nf b
