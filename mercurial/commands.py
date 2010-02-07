@@ -538,9 +538,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
                         seen[p] = 1
                         visit.append(p)
     else:
-        dest, revs, checkout = hg.parseurl(
-            ui.expandpath(dest or 'default-push', dest or 'default'), revs)
+        dest = ui.expandpath(dest or 'default-push', dest or 'default')
+        dest, branches = hg.parseurl(dest)
         other = hg.repository(cmdutil.remoteui(repo, opts), dest)
+        revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
         o = repo.findoutgoing(other, force=opts.get('force'))
 
     if revs:
@@ -607,7 +608,8 @@ def clone(ui, source, dest=None, **opts):
 
     a) the changeset, tag or branch specified with -u/--updaterev
     b) the changeset, tag or branch given with the first -r/--rev
-    c) the head of the default branch
+    c) the branch given with the url#branch source syntax
+    d) the head of the default branch
 
     Use 'hg clone -u . src dst' to checkout the source repository's
     parent changeset (applicable for local source repositories only).
@@ -1727,8 +1729,9 @@ def identify(ui, repo, source=None,
 
     revs = []
     if source:
-        source, revs, checkout = hg.parseurl(ui.expandpath(source), [])
+        source, branches = hg.parseurl(ui.expandpath(source))
         repo = hg.repository(ui, source)
+        revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
 
     if not repo.local():
         if not rev and revs:
@@ -1919,9 +1922,10 @@ def incoming(ui, repo, source="default", **opts):
     See pull for valid source format details.
     """
     limit = cmdutil.loglimit(opts)
-    source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
+    source, branches = hg.parseurl(ui.expandpath(source))
     other = hg.repository(cmdutil.remoteui(repo, opts), source)
     ui.status(_('comparing with %s\n') % url.hidepassword(source))
+    revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
     if revs:
         revs = [other.lookup(rev) for rev in revs]
     common, incoming, rheads = repo.findcommonincoming(other, heads=revs,
@@ -2206,9 +2210,9 @@ def outgoing(ui, repo, dest=None, **opts):
     See pull for valid destination format details.
     """
     limit = cmdutil.loglimit(opts)
-    dest, revs, checkout = hg.parseurl(
-        ui.expandpath(dest or 'default-push', dest or 'default'),
-        opts.get('rev'))
+    dest = ui.expandpath(dest or 'default-push', dest or 'default')
+    dest, branches = hg.parseurl(dest)
+    revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
@@ -2327,9 +2331,10 @@ def pull(ui, repo, source="default", **opts):
     If SOURCE is omitted, the 'default' path will be used.
     See 'hg help urls' for more information.
     """
-    source, revs, checkout = hg.parseurl(ui.expandpath(source), opts.get('rev'))
+    source, branches = hg.parseurl(ui.expandpath(source))
     other = hg.repository(cmdutil.remoteui(repo, opts), source)
     ui.status(_('pulling from %s\n') % url.hidepassword(source))
+    revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
     if revs:
         try:
             revs = [other.lookup(rev) for rev in revs]
@@ -2363,9 +2368,9 @@ def push(ui, repo, dest=None, **opts):
     Please see 'hg help urls' for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
     """
-    dest, revs, checkout = hg.parseurl(
-        ui.expandpath(dest or 'default-push', dest or 'default'),
-        opts.get('rev'))
+    dest = ui.expandpath(dest or 'default-push', dest or 'default')
+    dest, branches = hg.parseurl(dest)
+    revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     other = hg.repository(cmdutil.remoteui(repo, opts), dest)
     ui.status(_('pushing to %s\n') % url.hidepassword(dest))
     if revs:

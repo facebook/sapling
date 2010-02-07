@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# test branch selection options
+hg init branch
+cd branch
+hg branch a
+echo a > foo
+hg ci -d '0 0' -Ama
+echo a2 > foo
+hg ci -d '0 0' -ma2
+hg up 0
+hg branch c
+echo c > foo
+hg ci -d '0 0' -mc
+cd ..
+hg clone -r 0 branch branch2
+cd branch2
+hg up 0
+hg branch b
+echo b > foo
+hg ci -d '0 0' -mb
+hg up 0
+hg branch -f b
+echo b2 > foo
+hg ci -d '0 0' -mb2
+
+echo in rev c branch a
+hg in -qr c ../branch#a
+echo out branch .
+hg out -q ../branch#.
+echo clone branch b
+cd ..
+hg clone branch2#b branch3
+hg -q -R branch3 heads b
+hg -q -R branch3 parents
+rm -rf branch3
+echo clone rev a branch b
+hg clone -r a branch2#b branch3
+hg -q -R branch3 heads b
+hg -q -R branch3 parents
+rm -rf branch3

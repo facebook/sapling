@@ -9,7 +9,7 @@
 from i18n import _
 from lock import release
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
-import lock, util, extensions, error, encoding
+import lock, util, extensions, error, encoding, node
 import merge as _merge
 import verify as _verify
 import errno, os, shutil
@@ -18,15 +18,31 @@ def _local(path):
     return (os.path.isfile(util.drop_scheme('file', path)) and
             bundlerepo or localrepo)
 
-def parseurl(url, revs=[]):
-    '''parse url#branch, returning url, branch + revs'''
+def addbranchrevs(lrepo, repo, branches, revs):
+    if not branches:
+        return revs or None, revs and revs[0] or None
+    branchmap = repo.branchmap()
+    revs = revs and list(revs) or []
+    for branch in branches:
+        if branch == '.':
+            if not lrepo or not lrepo.local():
+                raise util.Abort(_("dirstate branch not accessible"))
+            revs.append(lrepo.dirstate.branch())
+        else:
+            butf8 = encoding.fromlocal(branch)
+            if butf8 in branchmap:
+                revs.extend(node.hex(r) for r in reversed(branchmap[butf8]))
+            else:
+                revs.append(branch)
+    return revs, revs[0]
+
+def parseurl(url, branches=None):
+    '''parse url#branch, returning url, branches+[branch]'''
 
     if '#' not in url:
-        return url, (revs or None), revs and revs[0] or None
-
+        return url, branches or []
     url, branch = url.split('#', 1)
-    checkout = revs and revs[0] or branch
-    return url, (revs or []) + [branch], checkout
+    return url, (branches or []) + [branch]
 
 schemes = {
     'bundle': bundlerepo,
@@ -94,8 +110,9 @@ def share(ui, source, dest=None, update=True):
 
     if isinstance(source, str):
         origsource = ui.expandpath(source)
-        source, rev, checkout = parseurl(origsource, '')
+        source, branches = parseurl(origsource)
         srcrepo = repository(ui, source)
+        rev, checkout = addbranchrevs(srcrepo, srcrepo, branches, None)
     else:
         srcrepo = source
         origsource = source = srcrepo.url()
@@ -183,12 +200,12 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
     if isinstance(source, str):
         origsource = ui.expandpath(source)
-        source, rev, checkout = parseurl(origsource, rev)
+        source, branch = parseurl(origsource)
         src_repo = repository(ui, source)
     else:
         src_repo = source
         origsource = source = src_repo.url()
-        checkout = rev and rev[0] or None
+    rev, checkout = addbranchrevs(src_repo, src_repo, branch, rev)
 
     if dest is None:
         dest = defaultdest(source)
