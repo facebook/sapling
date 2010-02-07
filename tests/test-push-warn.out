@@ -84,23 +84,23 @@ added 1 changesets with 1 changes to 1 files
 % push on existing branch and new branch
 pushing to ../f
 searching for changes
-abort: push creates new remote branches: 'c'!
+abort: push creates new remote branches: c!
 (use 'hg push -f' to force)
 1
 pushing to ../f
 searching for changes
-abort: push creates new remote branches: 'c'!
+abort: push creates new remote branches: c!
 (use 'hg push -f' to force)
 1
 % multiple new branches
 pushing to ../f
 searching for changes
-abort: push creates new remote branches: 'c', 'd'!
+abort: push creates new remote branches: c, d!
 (use 'hg push -f' to force)
 1
 pushing to ../f
 searching for changes
-abort: push creates new remote branches: 'd'!
+abort: push creates new remote branches: d!
 (use 'hg push -f' to force)
 1
 % fail on multiple head push

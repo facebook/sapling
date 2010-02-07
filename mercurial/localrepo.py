@@ -1564,7 +1564,7 @@ class localrepository(repo.repository):
 
                     newbranches = list(set(localbrheads) - set(remotebrheads))
                     if newbranches: # new branch requires --force
-                        branchnames = ', '.join("'%s'" % b for b in newbranches)
+                        branchnames = ', '.join("%s" % b for b in newbranches)
                         self.ui.warn(_("abort: push creates "
                                        "new remote branches: %s!\n")
                                      % branchnames)
