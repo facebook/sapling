@@ -37,7 +37,6 @@ from distutils.command.build_py import build_py
 from distutils.spawn import spawn, find_executable
 from distutils.ccompiler import new_compiler
 
-extra = {}
 scripts = ['hg']
 if os.name == 'nt':
     scripts.append('contrib/win32/hg.bat')
@@ -77,6 +76,7 @@ def hasfunction(cc, funcname):
 # py2exe needs to be installed to work
 try:
     import py2exe
+    py2exeloaded = True
 
     # Help py2exe to find win32com.shell
     try:
@@ -92,9 +92,8 @@ try:
     except ImportError:
         pass
 
-    extra['console'] = ['hg']
-
 except ImportError:
+    py2exeloaded = False
     pass
 
 def runcmd(cmd, env):
@@ -266,9 +265,22 @@ for root in ('templates',):
             packagedata['mercurial'].append(f)
 
 datafiles = []
+setupversion = version
+extra = {}
+
+if py2exeloaded:
+    extra['console'] = [
+        {'script':'hg',
+         'copyright':'Copyright (C) 2005-2010 Matt Mackall and others',
+         'product_version':version}]
+
+if os.name == 'nt':
+    # Windows binary file versions for exe/dll files must have the
+    # form W.X.Y.Z, where W,X,Y,Z are numbers in the range 0..65535
+    setupversion = version.split('+', 1)[0]
 
 setup(name='mercurial',
-      version=version,
+      version=setupversion,
       author='Matt Mackall',
       author_email='mpm@selenic.com',
       url='http://mercurial.selenic.com/',
