@@ -5,12 +5,11 @@ abort: "status" cannot be used as the name of a patch
 abort: "guards" cannot be used as the name of a patch
 abort: ".hgignore" cannot be used as the name of a patch
 % qnew with uncommitted changes
-abort: local changes found, refresh first
-A somefile
+uncommitted.patch
 % qnew implies add
 A .hgignore
 A series
-A test.patch
+A uncommitted.patch
 % qnew missing
 abort: missing: No such file or directory
 % qnew -m
@@ -22,7 +21,7 @@ abort: patch "first.patch" already exists
 % qnew -f from a subdirectory
 popping first.patch
 popping mtest.patch
-popping test.patch
+popping uncommitted.patch
 patch queue now empty
 adding d/b
 M d/b

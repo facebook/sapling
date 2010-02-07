@@ -23,11 +23,8 @@ hg add somefile
 hg qnew uncommitted.patch
 hg st
 hg qseries
-hg revert --no-backup somefile
-rm somefile
 
 echo '% qnew implies add'
-hg qnew test.patch
 hg -R .hg/patches st
 
 echo '% qnew missing'

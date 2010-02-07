@@ -784,12 +784,11 @@ class queue(object):
 
     def check_localchanges(self, repo, force=False, refresh=True):
         m, a, r, d = repo.status()[:4]
-        if m or a or r or d:
-            if not force:
-                if refresh:
-                    raise util.Abort(_("local changes found, refresh first"))
-                else:
-                    raise util.Abort(_("local changes found"))
+        if (m or a or r or d) and not force:
+            if refresh:
+                raise util.Abort(_("local changes found, refresh first"))
+            else:
+                raise util.Abort(_("local changes found"))
         return m, a, r, d
 
     _reserved = ('series', 'status', 'guards')
@@ -804,7 +803,6 @@ class queue(object):
            msg: a string or a no-argument function returning a string
         """
         msg = opts.get('msg')
-        force = opts.get('force')
         user = opts.get('user')
         date = opts.get('date')
         if date:
@@ -821,12 +819,10 @@ class queue(object):
             match.bad = badfn
             m, a, r, d = repo.status(match=match)[:4]
         else:
-            m, a, r, d = self.check_localchanges(repo, force)
+            m, a, r, d = self.check_localchanges(repo, force=True)
             match = cmdutil.matchfiles(repo, m + a + r)
-        if force:
-            p = repo[None].parents()
-            if len(p) > 1:
-                raise util.Abort(_('cannot manage merge changesets'))
+        if len(repo[None].parents()) > 1:
+            raise util.Abort(_('cannot manage merge changesets'))
         commitfiles = m + a + r
         self.check_toppatch(repo)
         insert = self.full_series_end()
@@ -2682,7 +2678,7 @@ cmdtable = {
     "qnew":
         (new,
          [('e', 'edit', None, _('edit commit message')),
-          ('f', 'force', None, _('import uncommitted changes into patch')),
+          ('f', 'force', None, _('import uncommitted changes into patch (deprecated)')),
           ('g', 'git', None, _('use git extended diff format')),
           ('U', 'currentuser', None, _('add "From: <current user>" to patch')),
           ('u', 'user', '', _('add "From: <given user>" to patch')),
