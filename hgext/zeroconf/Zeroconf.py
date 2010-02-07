@@ -560,7 +560,7 @@ class DNSIncoming(object):
 				#
 				#print "UNKNOWN TYPE = " + str(info[0])
 				#raise BadTypeInNameException
-				pass
+				break
 
 			if rec is not None:
 				self.answers.append(rec)
@@ -575,11 +575,7 @@ class DNSIncoming(object):
 
 	def readUTF(self, offset, len):
 		"""Reads a UTF-8 string of a given length from the packet"""
-		result = self.data[offset:offset+len]
-		try:
-			return result.decode('utf-8')
-		except UnicodeDecodeError:
-			return result.decode('utf-16')
+		return self.data[offset:offset+len].decode('utf-8')
 
 	def readName(self):
 		"""Reads a domain name from the packet"""
