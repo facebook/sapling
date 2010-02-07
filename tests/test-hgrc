@@ -25,3 +25,22 @@ hg showconfig foo
 
 echo '%include /no-such-file' > $HGRCPATH
 hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
+
+# HGPLAIN
+cd ..
+p=`pwd`
+echo "[ui]" > $HGRCPATH
+echo "debug=true" >> $HGRCPATH
+echo "fallbackencoding=ASCII" >> $HGRCPATH
+echo "quiet=true" >> $HGRCPATH
+echo "traceback=true" >> $HGRCPATH
+echo "verbose=true" >> $HGRCPATH
+echo "[defaults]" >> $HGRCPATH
+echo "identify=-n" >> $HGRCPATH
+
+echo '% customized hgrc'
+hg showconfig | sed -e "s:$p:...:"
+
+echo '% plain hgrc'
+HGPLAIN=; export HGPLAIN
+hg showconfig --config ui.traceback=True --debug | sed -e "s:$p:...:"

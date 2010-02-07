@@ -48,5 +48,8 @@ def gettext(message):
         # An unknown encoding results in a LookupError.
         return message
 
-_ = gettext
+if 'HGPLAIN' in os.environ:
+    _ = lambda message: message
+else:
+    _ = gettext
 

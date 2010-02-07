@@ -10,3 +10,15 @@ hg: config error at $HGRCPATH:2: '  x = y'
 foo.bar=a\nb\nc\nde\nfg
 foo.baz=bif cb
 hg: config error at $HGRCPATH:1: cannot include /no-such-file (No such file or directory)
+% customized hgrc
+.../.hgrc:8: defaults.identify=-n
+.../.hgrc:2: ui.debug=true
+.../.hgrc:3: ui.fallbackencoding=ASCII
+.../.hgrc:4: ui.quiet=true
+.../.hgrc:5: ui.traceback=true
+.../.hgrc:6: ui.verbose=true
+% plain hgrc
+none: ui.traceback=True
+none: ui.verbose=False
+none: ui.debug=True
+none: ui.quiet=False

@@ -79,6 +79,14 @@ class ui(object):
                 raise
             self.warn(_("Ignored: %s\n") % str(inst))
 
+        if self.plain():
+            for k in ('debug', 'fallbackencoding', 'quiet', 'traceback',
+                      'verbose'):
+                if k in cfg['ui']:
+                    del cfg['ui'][k]
+            for k, v in cfg.items('defaults'):
+                del cfg['defaults'][k]
+
         if trusted:
             self._tcfg.update(cfg)
             self._tcfg.update(self._ocfg)
@@ -168,6 +176,9 @@ class ui(object):
         for section in cfg.sections():
             for name, value in self.configitems(section, untrusted):
                 yield section, name, str(value).replace('\n', '\\n')
+
+    def plain(self):
+        return 'HGPLAIN' in os.environ
 
     def username(self):
         """Return default username to be used in commits.
