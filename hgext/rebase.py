@@ -87,6 +87,9 @@ def rebase(ui, repo, **opts):
         keepf = opts.get('keep', False)
         keepbranchesf = opts.get('keepbranches', False)
         detachf = opts.get('detach', False)
+        # keepopen is not meant for use on the command line, but by
+        # other extensions
+        keepopen = opts.get('keepopen', False)
 
         if contf or abortf:
             if contf and abortf:
@@ -181,7 +184,7 @@ def rebase(ui, repo, **opts):
 
         ui.note(_('rebase merging completed\n'))
 
-        if collapsef:
+        if collapsef and not keepopen:
             p1, p2 = defineparents(repo, min(state), target,
                                                         state, targetancestors)
             commitmsg = 'Collapsed revision'
