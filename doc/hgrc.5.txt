@@ -72,16 +72,19 @@ ones.
     in ``/shared/tools/etc/mercurial/hgrc``. Options in these files apply
     to all Mercurial commands executed by any user in any directory.
 
-| (Windows) ``C:\Mercurial\Mercurial.ini``
-| (Windows) ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial``
 | (Windows) ``<install-dir>\Mercurial.ini``
+| (Windows) ``<install-dir>\hgrc.d\*.rc``
+| (Windows) ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial``
 
     Per-installation/system configuration files, for the system on
     which Mercurial is running. Options in these files apply to all
     Mercurial commands executed by any user in any directory. Registry
     keys contain PATH-like strings, every part of which must reference
     a ``Mercurial.ini`` file or be a directory where ``*.rc`` files will
-    be read.
+    be read.  Mercurial checks each of these locations in the specified
+    order until one or more configuration files are detected.  If the
+    py2win32 extensions are not installed, Mercurial will only look for
+    site-wide configuration in ``C:\Mercurial\Mercurial.ini``.
 
 Syntax
 ------

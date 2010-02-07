@@ -131,6 +131,14 @@ def system_rcpath_win32():
     progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
     if os.path.isfile(progrc):
         return [progrc]
+    # Use hgrc.d found in directory with hg.exe
+    progrcd = os.path.join(os.path.dirname(filename), 'hgrc.d')
+    if os.path.isdir(progrcd):
+        rcpath = []
+        for f, kind in osutil.listdir(progrcd):
+            if f.endswith('.rc'):
+                rcpath.append(os.path.join(progrcd, f))
+        return rcpath
     # else look for a system rcpath in the registry
     try:
         value = win32api.RegQueryValue(
