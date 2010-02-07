@@ -31,6 +31,8 @@ diff -r b55ecdccb5cf 2/base
 -base
 +patched
 % patch file contents
+# HG changeset patch
+# Parent 
 mqbase
 
 diff -r b55ecdccb5cf 1/base
@@ -73,6 +75,8 @@ diff -r b55ecdccb5cf 2/base
 -base
 +patched
 % patch file contents
+# HG changeset patch
+# Parent 
 mqbase
 
 diff -r b55ecdccb5cf 1/base
@@ -109,6 +113,8 @@ diff -r b55ecdccb5cf 2/base
 -base
 +patched
 % patch file contents
+# HG changeset patch
+# Parent 
 mqbase
 
 diff -r b55ecdccb5cf 1/base
@@ -145,6 +151,8 @@ diff -r b55ecdccb5cf 2/base
 -base
 +patched
 % patch file contents
+# HG changeset patch
+# Parent 
 mqbase
 
 diff -r b55ecdccb5cf 1/base
@@ -181,6 +189,8 @@ diff -r b55ecdccb5cf orphanchild
 @@ -0,0 +1,1 @@
 +orphan
 % -- patch file content
+# HG changeset patch
+# Parent 
 mqbase
 
 diff -r b55ecdccb5cf 1/base
@@ -273,6 +283,9 @@ M a
 b
 b
 % patch file after refresh
+# HG changeset patch
+# Parent 
+
 diff -r 1a60229be7ac b
 --- a/b
 +++ b/b

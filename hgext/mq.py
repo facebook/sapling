@@ -68,7 +68,7 @@ class statusentry(object):
         return self.rev + ':' + self.name
 
 class patchheader(object):
-    def __init__(self, pf):
+    def __init__(self, pf, plainmode=False):
         def eatdiff(lines):
             while lines:
                 l = lines[-1]
@@ -90,6 +90,7 @@ class patchheader(object):
         comments = []
         user = None
         date = None
+        parent = None
         format = None
         subject = None
         diffstart = 0
@@ -112,6 +113,8 @@ class patchheader(object):
                     user = line[7:]
                 elif line.startswith("# Date "):
                     date = line[7:]
+                elif line.startswith("# Parent "):
+                    parent = line[9:]
                 elif not line.startswith("# ") and line:
                     message.append(line)
                     format = None
@@ -125,6 +128,10 @@ class patchheader(object):
             elif (format != "tagdone" and (line.startswith("From: ") or
                                            line.startswith("from: "))):
                 user = line[6:]
+                format = "tag"
+            elif (format != "tagdone" and (line.startswith("Date: ") or
+                                           line.startswith("date: "))):
+                date = line[6:]
                 format = "tag"
             elif format == "tag" and line == "":
                 # when looking for tags (subject: from: etc) they
@@ -148,7 +155,9 @@ class patchheader(object):
         self.comments = comments
         self.user = user
         self.date = date
+        self.parent = parent
         self.haspatch = diffstart > 1
+        self.plainmode = plainmode
 
     def setuser(self, user):
         if not self.updateheader(['From: ', '# User '], user):
@@ -156,7 +165,7 @@ class patchheader(object):
                 patchheaderat = self.comments.index('# HG changeset patch')
                 self.comments.insert(patchheaderat + 1, '# User ' + user)
             except ValueError:
-                if self._hasheader(['Date: ']):
+                if self.plainmode or self._hasheader(['Date: ']):
                     self.comments = ['From: ' + user] + self.comments
                 else:
                     tmp = ['# HG changeset patch', '# User ' + user, '']
@@ -169,12 +178,21 @@ class patchheader(object):
                 patchheaderat = self.comments.index('# HG changeset patch')
                 self.comments.insert(patchheaderat + 1, '# Date ' + date)
             except ValueError:
-                if self._hasheader(['From: ']):
+                if self.plainmode or self._hasheader(['From: ']):
                     self.comments = ['Date: ' + date] + self.comments
                 else:
                     tmp = ['# HG changeset patch', '# Date ' + date, '']
                     self.comments = tmp + self.comments
         self.date = date
+
+    def setparent(self, parent):
+        if not self.updateheader(['# Parent '], parent):
+            try:
+                patchheaderat = self.comments.index('# HG changeset patch')
+                self.comments.insert(patchheaderat + 1, '# Parent ' + parent)
+            except ValueError:
+                pass
+        self.parent = parent
 
     def setmessage(self, message):
         if self.comments:
@@ -245,6 +263,7 @@ class queue(object):
             self.gitmode = gitmode and 'yes' or 'no'
         except error.ConfigError:
             self.gitmode = ui.config('mq', 'git', 'auto').lower()
+        self.plainmode = ui.configbool('mq', 'plain', False)
 
     @util.propertycache
     def applied(self):
@@ -509,7 +528,7 @@ class queue(object):
         if n is None:
             raise util.Abort(_("repo commit failed"))
         try:
-            ph = patchheader(mergeq.join(patch))
+            ph = patchheader(mergeq.join(patch), self.plainmode)
         except:
             raise util.Abort(_("unable to read %s") % patch)
 
@@ -639,7 +658,7 @@ class queue(object):
             pf = os.path.join(patchdir, patchname)
 
             try:
-                ph = patchheader(self.join(patchname))
+                ph = patchheader(self.join(patchname), self.plainmode)
             except:
                 self.ui.warn(_("unable to read %s\n") % patchname)
                 err = 1
@@ -831,14 +850,20 @@ class queue(object):
             # if patch file write fails, abort early
             p = self.opener(patchfn, "w")
             try:
-                if date:
+                if self.plainmode:
+                    if user:
+                        p.write("From: " + user + "\n")
+                        if not date:
+                            p.write("\n")
+                    if date:
+                        p.write("Date: %d %d\n\n" % date)
+                else:
                     p.write("# HG changeset patch\n")
+                    p.write("# Parent " + hex(repo[None].parents()[0].node()) + "\n")
                     if user:
                         p.write("# User " + user + "\n")
-                    p.write("# Date %d %d\n\n" % date)
-                elif user:
-                    p.write("From: " + user + "\n\n")
-
+                    if date:
+                        p.write("# Date %s %s\n\n" % date)
                 if hasattr(msg, '__call__'):
                     msg = msg()
                 commitmsg = msg and msg or ("[mq]: %s" % patchfn)
@@ -1214,7 +1239,7 @@ class queue(object):
 
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
-            ph = patchheader(self.join(patchfn))
+            ph = patchheader(self.join(patchfn), self.plainmode)
             diffopts = self.diffopts({'git': opts.get('git')}, patchfn)
             if msg:
                 ph.setmessage(msg)
@@ -1222,6 +1247,7 @@ class queue(object):
                 ph.setuser(newuser)
             if newdate:
                 ph.setdate(newdate)
+            ph.setparent(hex(patchparent))
 
             # only commit new patch when write is complete
             patchf = self.opener(patchfn, 'w', atomictemp=True)
@@ -1406,7 +1432,7 @@ class queue(object):
                 summary=False):
         def displayname(pfx, patchname):
             if summary:
-                ph = patchheader(self.join(patchname))
+                ph = patchheader(self.join(patchname), self.plainmode)
                 msg = ph.message and ph.message[0] or ''
                 if self.ui.interactive():
                     width = util.termwidth() - len(pfx) - len(patchname) - 2
@@ -2012,7 +2038,7 @@ def refresh(ui, repo, *pats, **opts):
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
         patch = q.applied[-1].name
-        ph = patchheader(q.join(patch))
+        ph = patchheader(q.join(patch), q.plainmode)
         message = ui.edit('\n'.join(ph.message), ph.user or ui.username())
     setupheaderopts(ui, opts)
     ret = q.refresh(repo, pats, msg=message, **opts)
@@ -2074,7 +2100,7 @@ def fold(ui, repo, *files, **opts):
 
     for p in patches:
         if not message:
-            ph = patchheader(q.join(p))
+            ph = patchheader(q.join(p), q.plainmode)
             if ph.message:
                 messages.append(ph.message)
         pf = q.join(p)
@@ -2084,7 +2110,7 @@ def fold(ui, repo, *files, **opts):
         patch.updatedir(ui, repo, files)
 
     if not message:
-        ph = patchheader(q.join(parent))
+        ph = patchheader(q.join(parent), q.plainmode)
         message, user = ph.message, ph.user
         for msg in messages:
             message.append('* * *')
@@ -2167,7 +2193,7 @@ def header(ui, repo, patch=None):
             ui.write('no patches applied\n')
             return 1
         patch = q.lookup('qtip')
-    ph = patchheader(repo.mq.join(patch))
+    ph = patchheader(q.join(patch), q.plainmode)
 
     ui.write('\n'.join(ph.message) + '\n')
 

@@ -10,6 +10,9 @@ checkundo()
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
 
+echo "[mq]" >> $HGRCPATH
+echo "plain=true" >> $HGRCPATH
+
 echo % help
 hg help mq
 

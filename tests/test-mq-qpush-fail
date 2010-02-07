@@ -29,7 +29,7 @@ echo bar > bar
 hg add bar
 hg qrefresh -m 'patch 2'
 
-hg qnew bad-patch
+hg qnew --config 'mq.plain=true' bad-patch
 echo >> foo
 hg qrefresh
 

@@ -48,7 +48,7 @@ hg qpush
 cat s
 hg st
 
-echo '% test symlink removal' 
+echo '% test symlink removal'
 hg qnew removesl.patch
 hg rm a
 hg qrefresh --git

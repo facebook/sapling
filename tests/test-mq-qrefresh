@@ -3,6 +3,10 @@
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
 
+catpatch() {
+    cat $1 | sed -e "s/^\(# Parent \).*/\1/"
+}
+
 echo % init
 hg init a
 cd a
@@ -30,7 +34,7 @@ hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
                  -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 echo % patch file contents
-cat .hg/patches/mqbase | \
+catpatch .hg/patches/mqbase | \
 sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
@@ -47,7 +51,7 @@ hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
                  -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 echo % patch file contents
-cat .hg/patches/mqbase | \
+catpatch .hg/patches/mqbase | \
 sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
@@ -63,7 +67,7 @@ hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
                  -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 echo % patch file contents
-cat .hg/patches/mqbase | \
+catpatch .hg/patches/mqbase | \
 sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
@@ -79,7 +83,7 @@ hg qdiff . | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
                  -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 echo % patch file contents
-cat .hg/patches/mqbase | \
+catpatch .hg/patches/mqbase | \
 sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
@@ -98,7 +102,7 @@ hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
                -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 
 echo % -- patch file content
-cat .hg/patches/mqbase | \
+catpatch .hg/patches/mqbase | \
 sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/" \
     -e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 hg st
@@ -176,7 +180,7 @@ hg st
 echo '% b after refresh'
 cat b
 echo '% patch file after refresh'
-cat .hg/patches/patch
+catpatch .hg/patches/patch
 cd ..
 
 

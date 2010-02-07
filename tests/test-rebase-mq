@@ -5,6 +5,9 @@ echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
 
+echo "[mq]" >> $HGRCPATH
+echo "plain=true" >> $HGRCPATH
+
 filterpatch()
 {
     sed -e "s/^\(# Date\).*/\1/" \

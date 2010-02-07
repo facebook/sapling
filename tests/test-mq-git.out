@@ -1,5 +1,6 @@
 % git=auto: regular patch creation
 # HG changeset patch
+# Parent 0000000000000000000000000000000000000000
 # Date 0 0
 
 diff -r 000000000000 -r ef8dafc9fa4c a
@@ -9,6 +10,7 @@ diff -r 000000000000 -r ef8dafc9fa4c a
 +a
 % git=auto: git patch creation with copy
 # HG changeset patch
+# Parent ef8dafc9fa4caff80f6e243eb0171bcd60c455b4
 # Date 0 0
 
 diff --git a/a b/b
@@ -16,6 +18,7 @@ copy from a
 copy to b
 % git=auto: git patch when using --git
 # HG changeset patch
+# Parent 2962f232b49d41ebc26c591ec8d556724be213ab
 # Date 0 0
 
 diff --git a/regular b/regular
@@ -26,6 +29,7 @@ new file mode 100644
 +regular
 % git=auto: regular patch after qrefresh without --git
 # HG changeset patch
+# Parent 2962f232b49d41ebc26c591ec8d556724be213ab
 # Date 0 0
 
 diff -r 2962f232b49d regular
@@ -35,6 +39,7 @@ diff -r 2962f232b49d regular
 +regular
 % git=keep: git patch with --git
 # HG changeset patch
+# Parent 0000000000000000000000000000000000000000
 # Date 0 0
 
 diff --git a/a b/a
@@ -45,6 +50,7 @@ new file mode 100644
 +a
 % git=keep: git patch after qrefresh without --git
 # HG changeset patch
+# Parent 0000000000000000000000000000000000000000
 # Date 0 0
 
 diff --git a/a b/a
@@ -56,6 +62,7 @@ new file mode 100644
 +a
 % git=yes: git patch
 # HG changeset patch
+# Parent 0000000000000000000000000000000000000000
 # Date 0 0
 
 diff --git a/a b/a
@@ -66,6 +73,7 @@ new file mode 100644
 +a
 % git=yes: git patch after qrefresh
 # HG changeset patch
+# Parent 0000000000000000000000000000000000000000
 # Date 0 0
 
 diff --git a/a b/a
@@ -77,6 +85,7 @@ new file mode 100644
 +a
 % git=no: regular patch with copy
 # HG changeset patch
+# Parent ef8dafc9fa4caff80f6e243eb0171bcd60c455b4
 # Date 0 0
 
 diff -r ef8dafc9fa4c -r 110cde11d262 b
@@ -86,6 +95,7 @@ diff -r ef8dafc9fa4c -r 110cde11d262 b
 +a
 % git=no: regular patch after qrefresh with copy
 # HG changeset patch
+# Parent ef8dafc9fa4caff80f6e243eb0171bcd60c455b4
 # Date 0 0
 
 diff -r ef8dafc9fa4c b

@@ -12,6 +12,11 @@ filterdiff()
 	-e "s/\(--- [a-zA-Z0-9_/.-]*\).*/\1/"
 }
 
+filterpatch()
+{
+    sed -e "s/\(# Parent \).*/\1/"
+}
+
 echo '% init'
 hg init repo
 cd repo
@@ -43,7 +48,7 @@ hg cp a aa
 hg qnew --git -f git
 hg qpop
 hg qfold git
-cat .hg/patches/regular
+cat .hg/patches/regular | filterpatch
 hg qpop
 hg qdel regular
 
@@ -54,7 +59,7 @@ echo b >> aa
 hg qnew -f regular
 hg qpop
 hg qfold regular
-cat .hg/patches/git
+cat .hg/patches/git | filterpatch
 
 cd ..
 

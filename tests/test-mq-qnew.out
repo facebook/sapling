@@ -1,3 +1,4 @@
+%%% plain headers
 adding a
 % qnew should refuse bad patch names
 abort: "series" cannot be used as the name of a patch
@@ -34,6 +35,58 @@ diff --git a/d/b b/d/b
 % qnew -u with no username configured
 From: blue
 
+% fail when trying to import a merge
+adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+merging a
+warning: conflicts during merge.
+merging a failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+abort: cannot manage merge changesets
+%%% hg headers
+adding a
+% qnew should refuse bad patch names
+abort: "series" cannot be used as the name of a patch
+abort: "status" cannot be used as the name of a patch
+abort: "guards" cannot be used as the name of a patch
+abort: ".hgignore" cannot be used as the name of a patch
+% qnew with uncommitted changes
+uncommitted.patch
+% qnew implies add
+A .hgignore
+A series
+A uncommitted.patch
+% qnew missing
+abort: missing: No such file or directory
+% qnew -m
+# HG changeset patch
+# Parent 
+foo bar
+
+% qnew twice
+abort: patch "first.patch" already exists
+abort: patch "first.patch" already exists
+% qnew -f from a subdirectory
+popping first.patch
+popping mtest.patch
+popping uncommitted.patch
+patch queue now empty
+adding d/b
+M d/b
+# HG changeset patch
+# Parent 
+diff --git a/d/b b/d/b
+--- a/d/b
++++ b/d/b
+@@ -1,1 +1,2 @@
+ b
++b
+% qnew -u with no username configured
+# HG changeset patch
+# Parent 
+# User blue
 % fail when trying to import a merge
 adding a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved

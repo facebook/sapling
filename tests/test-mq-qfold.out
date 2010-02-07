@@ -29,6 +29,9 @@ reverting a
 % fold git patch into a regular patch, expect git patch
 popping git
 now at: regular
+# HG changeset patch
+# Parent 
+
 diff --git a/a b/a
 --- a/a
 +++ b/a
@@ -52,6 +55,9 @@ now at: p1
 % fold regular patch into a git patch, expect git patch
 popping regular
 now at: git
+# HG changeset patch
+# Parent 
+
 diff --git a/a b/aa
 copy from a
 copy to aa

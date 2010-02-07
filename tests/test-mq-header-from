@@ -7,101 +7,145 @@ echo "nodates=true" >> $HGRCPATH
 
 
 catlog() {
-    cat .hg/patches/$1.patch | sed -e "s/^diff \-r [0-9a-f]* /diff -r ... /"
+    cat .hg/patches/$1.patch | sed -e "s/^diff \-r [0-9a-f]* /diff -r ... /" \
+                                   -e "s/^\(# Parent \).*/\1/"
+    hg log --template "{rev}: {desc} - {author}\n"
+}
+
+runtest() {
+    echo ==== init
+    hg init a
+    cd a
+    hg qinit
+
+
+    echo ==== qnew -U
+    hg qnew -U 1.patch
+    catlog 1
+
+    echo ==== qref
+    echo "1" >1
+    hg add
+    hg qref
+    catlog 1
+
+    echo ==== qref -u
+    hg qref -u mary
+    catlog 1
+
+    echo ==== qnew
+    hg qnew 2.patch
+    echo "2" >2
+    hg add
+    hg qref
+    catlog 2
+
+    echo ==== qref -u
+    hg qref -u jane
+    catlog 2
+
+
+    echo ==== qnew -U -m
+    hg qnew -U -m "Three" 3.patch
+    catlog 3
+
+    echo ==== qref
+    echo "3" >3
+    hg add
+    hg qref
+    catlog 3
+
+    echo ==== qref -m
+    hg qref -m "Drei"
+    catlog 3
+
+    echo ==== qref -u
+    hg qref -u mary
+    catlog 3
+
+    echo ==== qref -u -m
+    hg qref -u maria -m "Three (again)"
+    catlog 3
+
+    echo ==== qnew -m
+    hg qnew -m "Four" 4.patch
+    echo "4" >4of t
+    hg add
+    hg qref
+    catlog 4
+
+    echo ==== qref -u
+    hg qref -u jane
+    catlog 4
+
+
+    echo ==== qnew with HG header
+    hg qnew --config 'mq.plain=true' 5.patch
+    hg qpop
+    echo "# HG changeset patch" >>.hg/patches/5.patch
+    echo "# User johndoe" >>.hg/patches/5.patch
+    hg qpush 2>&1 | grep 'now at'
+    catlog 5
+
+    echo ==== hg qref
+    echo "5" >5
+    hg add
+    hg qref
+    catlog 5
+
+    echo ==== hg qref -U
+    hg qref -U
+    catlog 5
+
+    echo ==== hg qref -u
+    hg qref -u johndeere
+    catlog 5
+
+
+    echo ==== qnew with plain header
+    hg qnew --config 'mq.plain=true' -U 6.patch
+    hg qpop
+    hg qpush 2>&1 | grep 'now at'
+    catlog 6
+
+    echo ==== hg qref
+    echo "6" >6
+    hg add
+    hg qref
+    catlog 6
+
+    echo ==== hg qref -U
+    hg qref -U
+    catlog 6
+
+    echo ==== hg qref -u
+    hg qref -u johndeere
+    catlog 6
+
+
+    echo ==== "qpop -a / qpush -a"
+    hg qpop -a
+    hg qpush -a
     hg log --template "{rev}: {desc} - {author}\n"
 }
 
 
-echo ==== init
-hg init a
-cd a
-hg qinit
+echo ======= plain headers
+
+echo "[mq]" >> $HGRCPATH
+echo "plain=true" >> $HGRCPATH
+
+mkdir sandbox
+(cd sandbox ; runtest)
+rm -r sandbox
 
 
-echo ==== qnew -U
-hg qnew -U 1.patch
-catlog 1
+echo ======= hg headers
 
-echo ==== qref
-echo "1" >1
-hg add
-hg qref
-catlog 1
+echo "plain=false" >> $HGRCPATH
 
-echo ==== qref -u
-hg qref -u mary
-catlog 1
+mkdir sandbox
+(cd sandbox ; runtest)
+rm -r sandbox
 
-echo ==== qnew
-hg qnew 2.patch
-echo "2" >2
-hg add
-hg qref
-catlog 2
-
-echo ==== qref -u
-hg qref -u jane
-catlog 2
-
-
-echo ==== qnew -U -m
-hg qnew -U -m "Three" 3.patch
-catlog 3
-
-echo ==== qref
-echo "3" >3
-hg add
-hg qref
-catlog 3
-
-echo ==== qref -m
-hg qref -m "Drei"
-catlog 3
-
-echo ==== qref -u
-hg qref -u mary
-catlog 3
-
-echo ==== qref -u -m
-hg qref -u maria -m "Three (again)"
-catlog 3
-
-echo ==== qnew -m
-hg qnew -m "Four" 4.patch
-echo "4" >4
-hg add
-hg qref
-catlog 4
-
-echo ==== qref -u
-hg qref -u jane
-catlog 4
-
-
-echo ==== qnew with HG header
-hg qnew 5.patch
-hg qpop
-echo "# HG changeset patch" >>.hg/patches/5.patch
-echo "# User johndoe" >>.hg/patches/5.patch
-hg qpush 2>&1 | grep 'now at'
-catlog 5
-
-echo ==== hg qref
-echo "5" >5
-hg add
-hg qref
-catlog 5
-
-echo ==== hg qref -U
-hg qref -U
-catlog 5
-
-echo ==== hg qref -u
-hg qref -u johndeere
-catlog 5
-
-
-echo ==== "qpop -a / qpush -a"
-hg qpop -a
-hg qpush -a
-hg log --template "{rev}: {desc} - {author}\n"
+runtest

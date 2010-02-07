@@ -34,6 +34,9 @@ patch didn't work out, merging patcha
 applying patcha2
 now at: patcha2
 % check patcha is still a git patch
+# HG changeset patch
+# Parent d3873e73d99ef67873dac33fbcc66268d5d2b6f4
+
 diff --git a/a b/a
 --- a/a
 +++ b/a

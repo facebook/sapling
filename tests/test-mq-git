@@ -25,7 +25,7 @@ hg add regular
 hg qnew -d '0 0' --git -f git
 cat .hg/patches/git
 echo '% git=auto: regular patch after qrefresh without --git'
-hg qrefresh -d '0 0' 
+hg qrefresh -d '0 0'
 cat .hg/patches/git
 cd ..
 
