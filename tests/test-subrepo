@@ -160,5 +160,27 @@ hg ci -Am1
 
 hg up 5
 hg merge 4    # try to merge default into br again
+cd ..
+
+echo % test repository cloning
+mkdir mercurial mercurial2
+hg init nested_absolute
+echo test > nested_absolute/foo
+hg -R nested_absolute add
+hg -R nested_absolute ci -mtest
+cd mercurial
+hg init nested_relative
+echo test2 > nested_relative/foo2
+hg -R nested_relative add
+hg -R nested_relative ci -mtest2
+hg init main
+echo nested_relative = ../nested_relative > main/.hgsub
+echo nested_absolute = $PWD/nested_absolute >> main/.hgsub
+hg -R main add
+hg -R main ci -m "add subrepos"
+cd ..
+hg clone mercurial/main mercurial2/main
+cat mercurial2/main/nested_absolute/.hg/hgrc mercurial2/main/nested_relative/.hg/hgrc | sed "s:${PWD}:/tmp:"
+rm -rf mercurial mercurial2
 
 exit 0
