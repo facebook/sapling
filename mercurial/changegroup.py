@@ -24,13 +24,15 @@ def getchunk(source):
                           % (len(d), l - 4))
     return d
 
-def chunkiter(source):
+def chunkiter(source, progress=None):
     """iterate through the chunks in source, yielding a sequence of chunks
     (strings)"""
     while 1:
         c = getchunk(source)
         if not c:
             break
+        elif progress is not None:
+            progress()
         yield c
 
 def chunkheader(length):
