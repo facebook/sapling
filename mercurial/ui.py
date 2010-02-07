@@ -383,8 +383,10 @@ class ui(object):
         revision, bytes, etc.), unit is a corresponding unit label,
         and total is the highest expected pos.
 
-        Multiple nested topics may be active at a time. All topics
-        should be marked closed by setting pos to None at termination.
+        Multiple nested topics may be active at a time.
+
+        All topics should be marked closed by setting pos to None at
+        termination.
         '''
 
         if pos == None or not self.debugflag:
