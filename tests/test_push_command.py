@@ -475,7 +475,9 @@ class PushTests(test_util.TestBase):
             assert False, 'This should have aborted!'
         except hgutil.Abort, e:
             self.assertEqual(e.args[0],
-                             'Base text was out of date, maybe rebase?')
+                             'Outgoing changesets parent is not at subversion '
+                             'HEAD\n'
+                             '(pull again and rebase on a newer revision)')
 
 
 def suite():

@@ -203,7 +203,9 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     except core.SubversionException, e:
         if hasattr(e, 'apr_err') and (e.apr_err == core.SVN_ERR_FS_TXN_OUT_OF_DATE
                                       or e.apr_err == core.SVN_ERR_FS_CONFLICT):
-            raise hgutil.Abort('Base text was out of date, maybe rebase?')
+            raise hgutil.Abort('Outgoing changesets parent is not at '
+                               'subversion HEAD\n'
+                               '(pull again and rebase on a newer revision)')
         else:
             raise
 
