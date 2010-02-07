@@ -78,11 +78,25 @@ def version(ui):
 def normalize_url(url):
     if url.startswith('svn+http://') or url.startswith('svn+https://'):
         url = url[4:]
-    url, revs, checkout = hg.parseurl(url)
+    url, revs, checkout = parseurl(url)
     url = url.rstrip('/')
     if checkout:
         url = '%s#%s' % (url, checkout)
     return url
+
+
+def parseurl(url, heads=[]):
+    parsed = hg.parseurl(url, heads)
+    if len(parsed) == 3:
+        # old hg, remove when we can be 1.5-only
+        svn_url, heads, checkout = parsed
+    else:
+        svn_url, heads = parsed
+        if heads:
+            checkout = heads[0]
+        else:
+            checkout = None
+    return svn_url, heads, checkout
 
 
 class PrefixMatch(object):

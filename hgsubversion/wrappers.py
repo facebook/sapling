@@ -57,7 +57,7 @@ def incoming(orig, ui, repo, source='default', **opts):
     """show incoming revisions from Subversion
     """
 
-    source, revs, checkout = hg.parseurl(ui.expandpath(source))
+    source, revs, checkout = util.parseurl(ui.expandpath(source))
     other = hg.repository(ui, source)
     if 'subversion' not in other.capabilities:
         return orig(ui, repo, source, **opts)
@@ -81,7 +81,7 @@ def outgoing(repo, dest=None, heads=None, force=False):
     assert dest.capable('subversion')
 
     # split off #rev; TODO implement --revision/#rev support
-    svnurl, revs, checkout = hg.parseurl(dest.svnurl, heads)
+    svnurl, revs, checkout = util.parseurl(dest.svnurl, heads)
     meta = repo.svnmeta()
     parent = repo.parents()[0].node()
     hashes = meta.revmap.hashes()
@@ -210,7 +210,7 @@ def pull(repo, source, heads=[], force=False):
     svn_url = source.svnurl
 
     # Split off #rev
-    svn_url, heads, checkout = hg.parseurl(svn_url, heads)
+    svn_url, heads, checkout = util.parseurl(svn_url, heads)
     old_encoding = util.swap_out_encoding()
 
     # TODO implement skipto support
