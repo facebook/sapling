@@ -575,8 +575,11 @@ class DNSIncoming(object):
 
 	def readUTF(self, offset, len):
 		"""Reads a UTF-8 string of a given length from the packet"""
-		result = self.data[offset:offset+len].decode('utf-8')
-		return result
+		result = self.data[offset:offset+len]
+		try:
+			return result.decode('utf-8')
+		except UnicodeDecodeError:
+			return result.decode('utf-16')
 
 	def readName(self):
 		"""Reads a domain name from the packet"""
