@@ -1816,7 +1816,7 @@ def init(ui, repo, **opts):
     an unversioned patch repository into a versioned one). You can use
     qcommit to commit changes to this queue repository.
 
-    This command is depreacted. Without -c, it's implied by other relevant
+    This command is deprecated. Without -c, it's implied by other relevant
     commands. With -c, use hg -Q init instead."""
     q = repo.mq
     r = q.init(repo, create=opts['create_repo'])
