@@ -13,6 +13,9 @@ import match as _match
 
 revrangesep = ':'
 
+def parsealiases(cmd):
+    return cmd.lstrip("^").split("|")
+
 def findpossible(cmd, table, strict=False):
     """
     Return cmd -> (aliases, command table entry)
@@ -22,7 +25,7 @@ def findpossible(cmd, table, strict=False):
     choice = {}
     debugchoice = {}
     for e in table.keys():
-        aliases = e.lstrip("^").split("|")
+        aliases = parsealiases(e)
         found = None
         if cmd in aliases:
             found = cmd

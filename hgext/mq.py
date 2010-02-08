@@ -2638,8 +2638,10 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
 
 def uisetup(ui):
     extensions.wrapcommand(commands.table, 'import', mqimport)
-    for cmd in ('commit', 'export', 'incoming', 'log', 'outgoing', 'pull',
-                'push', 'status', 'tag', 'tags', 'tip', 'update'):
+    for cmd in commands.table:
+        cmd = cmdutil.parsealiases(cmd)[0]
+        if cmd in commands.norepo:
+            continue
         entry = extensions.wrapcommand(commands.table, cmd, mqcommand)
         entry[1].extend([('Q', 'mq', None, _("operate on patch repository"))])
 
