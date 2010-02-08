@@ -126,7 +126,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     modadd = mod_a | add_a | mod_b | add_b
     common = modadd | rem_a | rem_b
     if not common:
-       return 0
+        return 0
 
     tmproot = tempfile.mkdtemp(prefix='extdiff.')
     try:

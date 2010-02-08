@@ -9,7 +9,7 @@
 # file to defer pygments loading and speedup extension setup.
 
 from mercurial import demandimport
-demandimport.ignore.extend(['pkgutil', 'pkg_resources', '__main__',])
+demandimport.ignore.extend(['pkgutil', 'pkg_resources', '__main__'])
 from mercurial import util, encoding
 
 from pygments import highlight

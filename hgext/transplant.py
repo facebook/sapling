@@ -552,7 +552,7 @@ def transplant(ui, repo, *revs, **opts):
             tp.resume(repo, source, opts)
             return
 
-        tf=tp.transplantfilter(repo, source, p1)
+        tf = tp.transplantfilter(repo, source, p1)
         if opts.get('prune'):
             prune = [source.lookup(r)
                      for r in cmdutil.revrange(source, opts.get('prune'))]

@@ -41,7 +41,7 @@ class winstdout(object):
             limit = 16000
             l = len(s)
             start = 0
-            self.softspace = 0;
+            self.softspace = 0
             while start < l:
                 end = start + limit
                 self.fp.write(s[start:end])
@@ -217,7 +217,6 @@ def statfiles(files):
     '''Stat each file in files and yield stat or None if file does not exist.
     Cluster and cache stat per directory to minimize number of OS stat calls.'''
     ncase = os.path.normcase
-    sep   = os.sep
     dircache = {} # dirname -> filename -> status | None if file does not exist
     for nf in files:
         nf  = ncase(nf)

@@ -178,7 +178,7 @@ def showfileadds(**args):
     return showlist('file_add', getfiles(repo, ctx, revcache)[1], **args)
 
 def showfilecopies(**args):
-    cache, ctx= args['cache'], args['ctx']
+    cache, ctx = args['cache'], args['ctx']
     copies = args['revcache'].get('copies')
     if copies is None:
         if 'getrenamed' not in cache:

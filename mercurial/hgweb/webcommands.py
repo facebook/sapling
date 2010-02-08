@@ -707,7 +707,7 @@ def graph(web, req, tmpl):
 
     dag = graphmod.revisions(web.repo, rev, downrev)
     tree = list(graphmod.colored(dag))
-    canvasheight = (len(tree) + 1) * bg_height - 27;
+    canvasheight = (len(tree) + 1) * bg_height - 27
     data = []
     for (id, type, ctx, vtx, edges) in tree:
         if type != graphmod.CHANGESET:

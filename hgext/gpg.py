@@ -90,7 +90,7 @@ def sigwalk(repo):
             if not l:
                 continue
             yield (l.split(" ", 2), (context, ln))
-            ln +=1
+            ln += 1
 
     # read the heads
     fl = repo.file(".hgsigs")

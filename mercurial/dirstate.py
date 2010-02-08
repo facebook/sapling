@@ -366,7 +366,7 @@ class dirstate(object):
     def clear(self):
         self._map = {}
         if "_dirs" in self.__dict__:
-            delattr(self, "_dirs");
+            delattr(self, "_dirs")
         self._copymap = {}
         self._pl = [nullid, nullid]
         self._dirty = True

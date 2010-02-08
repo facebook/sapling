@@ -170,7 +170,7 @@ class bzr_source(converter_source):
         return changes
 
     def _gettreechanges(self, current, origin):
-        revid = current._revision_id;
+        revid = current._revision_id
         changes = []
         renames = {}
         for (fileid, paths, changed_content, versioned, parent, name,

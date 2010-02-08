@@ -10,7 +10,7 @@ import os, re, time
 from mercurial.i18n import _
 from mercurial import ui, hg, util, templater
 from mercurial import error, encoding
-from common import ErrorResponse, get_mtime, staticfile, paritygen,\
+from common import ErrorResponse, get_mtime, staticfile, paritygen, \
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
 from request import wsgirequest

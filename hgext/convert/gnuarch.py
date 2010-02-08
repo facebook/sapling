@@ -172,7 +172,7 @@ class gnuarch_source(converter_source, commandline):
 
         for src in self.changes[rev].ren_dirs:
             to = self.changes[rev].ren_dirs[src]
-            chgs, cps = self._rendirchanges(src, to);
+            chgs, cps = self._rendirchanges(src, to)
             changes += [(f, rev) for f in chgs]
             copies.update(cps)
 

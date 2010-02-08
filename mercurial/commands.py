@@ -103,7 +103,7 @@ def annotate(ui, repo, *pats, **opts):
         opts['number'] = 1
 
     linenumber = opts.get('line_number') is not None
-    if (linenumber and (not opts.get('changeset')) and (not opts.get('number'))):
+    if linenumber and (not opts.get('changeset')) and (not opts.get('number')):
         raise util.Abort(_('at least one of -n/-c is required for -l'))
 
     funcmap = [func for op, func in opmap if opts.get(op)]
