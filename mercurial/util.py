@@ -1311,7 +1311,7 @@ def hgcmd():
 
 def rundetached(args, condfn):
     """Execute the argument list in a detached process.
-    
+
     condfn is a callable which is called repeatedly and should return
     True once the child process is known to have started successfully.
     At this point, the child process PID is returned. If the child
