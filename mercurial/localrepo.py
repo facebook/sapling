@@ -350,16 +350,12 @@ class localrepository(repo.repository):
         the branch, open heads come before closed'''
         bt = {}
         for bn, heads in self.branchmap().iteritems():
-            head = None
-            for i in range(len(heads)-1, -1, -1):
-                h = heads[i]
+            tip = heads[-1]
+            for h in reversed(heads):
                 if 'close' not in self.changelog.read(h)[5]:
-                    head = h
+                    tip = h
                     break
-            # no open heads were found
-            if head is None:
-                head = heads[-1]
-            bt[bn] = head
+            bt[bn] = tip
         return bt
 
 
