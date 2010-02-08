@@ -66,14 +66,14 @@ hg pull ../test-7
 hg verify
 cd ..
 cd test-1
-hg pull -r 4 http://localhost:$HGPORT/ 2>&1 | sed -e 's,:[0-9][0-9]*/,/,'
+hg pull -r 4 http://localhost:$HGPORT/ 2>&1 | sed -e "s,:$HGPORT/,:\$HGPORT/,"
 hg verify
-hg pull http://localhost:$HGPORT/ 2>&1 | sed -e 's,:[0-9][0-9]*/,/,'
+hg pull http://localhost:$HGPORT/ 2>&1 | sed -e "s,:$HGPORT/,:\$HGPORT/,"
 cd ..
 cd test-2
-hg pull -r 5 http://localhost:$HGPORT/ 2>&1 | sed -e 's,:[0-9][0-9]*/,/,'
+hg pull -r 5 http://localhost:$HGPORT/ 2>&1 | sed -e "s,:$HGPORT/,:\$HGPORT/,"
 hg verify
-hg pull http://localhost:$HGPORT/ 2>&1 | sed -e 's,:[0-9][0-9]*/,/,'
+hg pull http://localhost:$HGPORT/ 2>&1 | sed -e "s,:$HGPORT/,:\$HGPORT/,"
 hg verify
 cd ..
 cat error.log

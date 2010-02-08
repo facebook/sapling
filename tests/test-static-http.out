@@ -21,8 +21,8 @@ checking files
 1 files, 1 changesets, 1 total revisions
 foo
 adding quux
-changegroup hook: HG_NODE=34401e0e9971e9720b613d9089ffa9a6eefb3d2d HG_SOURCE=pull HG_URL=http://localhost/remote 
-pulling from static-http://localhost/remote
+changegroup hook: HG_NODE=34401e0e9971e9720b613d9089ffa9a6eefb3d2d HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/remote 
+pulling from static-http://localhost:$HGPORT/remote
 searching for changes
 adding changesets
 adding manifests
@@ -32,7 +32,7 @@ added 1 changesets with 1 changes to 1 files
 % trying to push
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 abort: cannot lock static-http repository
-pushing to static-http://localhost/remote
+pushing to static-http://localhost:$HGPORT/remote
 % test with "/" URI (issue 747)
 requesting all changes
 adding changesets
@@ -47,7 +47,7 @@ crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
 a
-default = static-http://localhost/
+default = static-http://localhost:$HGPORT/
 % test with empty repo (issue965)
 no changes found
 updating to branch default
@@ -57,6 +57,6 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 0 files, 0 changesets, 0 total revisions
-default = static-http://localhost/remotempty
+default = static-http://localhost:$HGPORT/remotempty
 % test with non-repo
-abort: 'http://localhost/notarepo' does not appear to be an hg repository!
+abort: 'http://localhost:$HGPORT/notarepo' does not appear to be an hg repository!

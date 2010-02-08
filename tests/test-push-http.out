@@ -2,22 +2,22 @@ adding a
 updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % expect ssl error
-pushing to http://localhost/
+pushing to http://localhost:$HGPORT/
 searching for changes
 ssl required
 % serve errors
 % expect authorization error
 abort: authorization failed
-pushing to http://localhost/
+pushing to http://localhost:$HGPORT/
 searching for changes
 % serve errors
 % expect authorization error: must have authorized user
 abort: authorization failed
-pushing to http://localhost/
+pushing to http://localhost:$HGPORT/
 searching for changes
 % serve errors
 % expect success
-pushing to http://localhost/
+pushing to http://localhost:$HGPORT/
 searching for changes
 adding changesets
 adding manifests
@@ -28,11 +28,11 @@ changegroup hook: HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=ser
 rolling back last transaction
 % expect authorization error: all users denied
 abort: authorization failed
-pushing to http://localhost/
+pushing to http://localhost:$HGPORT/
 searching for changes
 % serve errors
 % expect authorization error: some users denied, users must be authenticated
 abort: authorization failed
-pushing to http://localhost/
+pushing to http://localhost:$HGPORT/
 searching for changes
 % serve errors

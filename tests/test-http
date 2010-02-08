@@ -14,7 +14,7 @@ hg commit -A -m 1
 hg --config server.uncompressed=True serve -p $HGPORT -d --pid-file=../hg1.pid
 hg serve -p $HGPORT1 -d --pid-file=../hg2.pid
 # Test server address cannot be reused
-hg serve -p $HGPORT1 2>&1 | sed -e "s/abort: cannot start server at ':$HGPORT1':.*/abort: cannot start server at ':20060':/"
+hg serve -p $HGPORT1 2>&1 | sed -e "s/abort: cannot start server at ':$HGPORT1':.*/abort: cannot start server at ':\$HGPORT1':/"
 cd ..
 cat hg1.pid hg2.pid >> $DAEMON_PIDS
 
@@ -39,5 +39,5 @@ echo % pull
 cd copy-pull
 echo '[hooks]' >> .hg/hgrc
 echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
-hg pull | sed -e 's,:[0-9][0-9]*/,/,'
+hg pull | sed -e "s,:$HGPORT1/,:\$HGPORT1/,"
 cd ..

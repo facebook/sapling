@@ -4,7 +4,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 9 changesets, 9 total revisions
-comparing with http://localhost/
+comparing with http://localhost:$HGPORT/
 changeset:   0:9cb21d99fe27
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -51,7 +51,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     8
 
-comparing with http://localhost/
+comparing with http://localhost:$HGPORT/
 changeset:   0:9cb21d99fe27
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -189,7 +189,7 @@ diff --git a/foo b/foo
  0
 +1
 
-comparing with http://localhost/
+comparing with http://localhost:$HGPORT/
 changeset:   0:9cb21d99fe27
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -358,7 +358,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     11
 
-comparing with http://localhost/
+comparing with http://localhost:$HGPORT/
 searching for changes
 changeset:   9:3741c3ad1096
 user:        test
@@ -386,7 +386,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     13
 
-comparing with http://localhost/
+comparing with http://localhost:$HGPORT/
 searching for changes
 changeset:   9:3741c3ad1096
 user:        test

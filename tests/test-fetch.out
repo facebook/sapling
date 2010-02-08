@@ -36,7 +36,7 @@ a
 b
 c
 % fetch over http, no auth
-pulling from http://localhost:20059/
+pulling from http://localhost:$HGPORT/
 searching for changes
 adding changesets
 adding manifests
@@ -47,9 +47,9 @@ updating to 2:97d72e5f12c7
 merging with 1:5e056962225c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 new changeset 3:... merges remote changes with local
-Automated merge with http://localhost:20059/
+Automated merge with http://localhost:$HGPORT/
 % fetch over http with auth (should be hidden in desc)
-pulling from http://user:***@localhost:20059/
+pulling from http://user:***@localhost:$HGPORT/
 searching for changes
 adding changesets
 adding manifests
@@ -60,7 +60,7 @@ updating to 2:97d72e5f12c7
 merging with 1:5e056962225c
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 new changeset 3:... merges remote changes with local
-Automated merge with http://localhost:20059/
+Automated merge with http://localhost:$HGPORT/
 updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 updating to branch default

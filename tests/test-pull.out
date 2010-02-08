@@ -19,7 +19,7 @@ checking files
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 foo
 2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   foo
-pulling from http://localhost/
+pulling from http://localhost:$HGPORT/
 searching for changes
 no changes found
 % issue 622

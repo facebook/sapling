@@ -148,7 +148,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 4 files, 9 changesets, 7 total revisions
-pulling from http://localhost/
+pulling from http://localhost:$HGPORT/
 searching for changes
 adding changesets
 adding manifests
@@ -160,14 +160,14 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 3 changesets, 2 total revisions
-pulling from http://localhost/
+pulling from http://localhost:$HGPORT/
 searching for changes
 adding changesets
 adding manifests
 adding file changes
 added 6 changesets with 5 changes to 4 files
 (run 'hg update' to get a working copy)
-pulling from http://localhost/
+pulling from http://localhost:$HGPORT/
 searching for changes
 adding changesets
 adding manifests
@@ -179,7 +179,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 5 changesets, 3 total revisions
-pulling from http://localhost/
+pulling from http://localhost:$HGPORT/
 searching for changes
 adding changesets
 adding manifests

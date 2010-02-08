@@ -2,7 +2,7 @@ adding foo
 adding foo.d/bAr.hg.d/BaR
 adding foo.d/baR.d.hg/bAR
 adding foo.d/foo
-abort: cannot start server at ':20060':
+abort: cannot start server at ':$HGPORT1':
 % clone via stream
 streaming all changes
 XXX files to transfer, XXX bytes of data
@@ -37,8 +37,8 @@ checking files
 4 files, 1 changesets, 4 total revisions
 adding bar
 % pull
-changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=http://localhost/ 
-pulling from http://localhost/
+changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=http://localhost:$HGPORT1/ 
+pulling from http://localhost:$HGPORT1/
 searching for changes
 adding changesets
 adding manifests

@@ -7,6 +7,6 @@ requesting all changes
 % serve errors
 % expect error, pulling not allowed
 abort: authorization failed
-pulling from http://localhost/
+pulling from http://localhost:$HGPORT/
 searching for changes
 % serve errors
