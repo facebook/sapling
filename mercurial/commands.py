@@ -3006,9 +3006,9 @@ def summary(ui, repo, **opts):
     else:
         ui.status(m)
 
-    st = list(repo.status(unknown=True))[:7]
+    st = list(repo.status(unknown=True))[:6]
     ms = merge_.mergestate(repo)
-    st.append([f for f in ms if f == 'u'])
+    st.append([f for f in ms if ms[f] == 'u'])
     labels = [_('%d modified'), _('%d added'), _('%d removed'),
               _('%d deleted'), _('%d unknown'), _('%d ignored'),
               _('%d unresolved')]
@@ -3038,8 +3038,13 @@ def summary(ui, repo, **opts):
     # all ancestors of branch heads - all ancestors of parent = new csets
     new = [0] * len(repo)
     cl = repo.changelog
+    for a in [cl.rev(n) for n in bheads]:
+        new[a] = 1
     for a in cl.ancestors(*[cl.rev(n) for n in bheads]):
         new[a] = 1
+    for a in [p.rev() for p in parents]:
+        if a >= 0:
+            new[a] = 0
     for a in cl.ancestors(*[p.rev() for p in parents]):
         new[a] = 0
     new = sum(new)
@@ -3071,7 +3076,7 @@ def summary(ui, repo, **opts):
         repo.ui.pushbuffer()
         o = repo.findoutgoing(other)
         repo.ui.popbuffer()
-        o = repo.changelog.nodesbetween(o, revs)[0]
+        o = repo.changelog.nodesbetween(o, None)[0]
         if o:
             t.append(_('%d outgoing') % len(o))
 
