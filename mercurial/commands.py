@@ -1904,7 +1904,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             return commitid
         finally:
             os.unlink(tmpname)
-        
+
     try:
         wlock = repo.wlock()
         lock = repo.lock()

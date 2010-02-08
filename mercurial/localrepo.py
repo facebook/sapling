@@ -1808,7 +1808,7 @@ class localrepository(repo.repository):
             # The set of changed files starts empty.
             changedfiles = {}
             collect = changegroup.collector(cl, msng_mnfst_set, changedfiles)
-            
+
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
             group = cl.group(msng_cl_lst, identity, collect)
