@@ -62,6 +62,14 @@ def findcmd(cmd, table, strict=True):
 
     raise error.UnknownCommand(cmd)
 
+def findrepo(p):
+    while not os.path.isdir(os.path.join(p, ".hg")):
+        oldp, p = p, os.path.dirname(p)
+        if p == oldp:
+            return None
+
+    return p
+
 def bail_if_changed(repo):
     if repo.dirstate.parents()[1] != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))

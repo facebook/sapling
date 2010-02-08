@@ -162,14 +162,6 @@ def _runcatch(ui, args):
 
     return -1
 
-def _findrepo(p):
-    while not os.path.isdir(os.path.join(p, ".hg")):
-        oldp, p = p, os.path.dirname(p)
-        if p == oldp:
-            return None
-
-    return p
-
 def aliasargs(fn):
     if hasattr(fn, 'args'):
         return fn.args
@@ -360,7 +352,7 @@ def _dispatch(ui, args):
         os.chdir(cwd[-1])
 
     # read the local repository .hgrc into a local ui object
-    path = _findrepo(os.getcwd()) or ""
+    path = cmdutil.findrepo(os.getcwd()) or ""
     if not path:
         lui = ui
     else:
@@ -459,7 +451,7 @@ def _dispatch(ui, args):
         except error.RepoError:
             if cmd not in commands.optionalrepo.split():
                 if args and not path: # try to infer -R from command args
-                    repos = map(_findrepo, args)
+                    repos = map(cmdutil.findrepo, args)
                     guess = repos[0]
                     if guess and repos.count(guess) == len(repos):
                         return _dispatch(ui, ['--repository', guess] + fullargs)

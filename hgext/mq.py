@@ -43,7 +43,7 @@ regular patches, possibly losing data in the second case.
 from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
-from mercurial import commands, cmdutil, hg, patch, util
+from mercurial import commands, cmdutil, dispatch, hg, patch, util
 from mercurial import repair, extensions, url, error
 import os, sys, re, errno
 
@@ -1839,7 +1839,7 @@ def init(ui, repo, **opts):
     qcommit to commit changes to this queue repository.
 
     This command is deprecated. Without -c, it's implied by other relevant
-    commands. With -c, use hg -Q init instead."""
+    commands. With -c, use hg init -Q instead."""
     q = repo.mq
     r = q.init(repo, create=opts['create_repo'])
     q.save_dirty()
@@ -2620,6 +2620,32 @@ def mqimport(orig, ui, repo, *args, **kwargs):
                                    kwargs.get('force'))
     return orig(ui, repo, *args, **kwargs)
 
+def mqinit(orig, ui, *args, **kwargs):
+    mq = kwargs['mq']
+    del kwargs['mq']
+
+    if not mq:
+        return orig(ui, *args, **kwargs)
+
+    repopath = cmdutil.findrepo(os.getcwd())
+    repo = hg.repository(ui, repopath)
+    q = repo.mq
+    r = q.init(repo, create=True)
+    q.save_dirty()
+
+    if not os.path.exists(r.wjoin('.hgignore')):
+        fp = r.wopener('.hgignore', 'w')
+        fp.write('^\\.hg\n')
+        fp.write('^\\.mq\n')
+        fp.write('syntax: glob\n')
+        fp.write('status\n')
+        fp.write('guards\n')
+        fp.close()
+    if not os.path.exists(r.wjoin('series')):
+        r.wopener('series', 'w').close()
+    r.add(['.hgignore', 'series'])
+    commands.add(ui, r)
+
 def mqcommand(orig, ui, repo, *args, **kwargs):
     """Add --mq option to operate on patch repository instead of main"""
 
@@ -2637,13 +2663,19 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
     return orig(ui, r, *args, **kwargs)
 
 def uisetup(ui):
+    mqopt = [('Q', 'mq', None, _("operate on patch repository"))]
+
     extensions.wrapcommand(commands.table, 'import', mqimport)
+
+    entry = extensions.wrapcommand(commands.table, 'init', mqinit)
+    entry[1].extend(mqopt)
+
     for cmd in commands.table:
         cmd = cmdutil.parsealiases(cmd)[0]
         if cmd in commands.norepo:
             continue
         entry = extensions.wrapcommand(commands.table, cmd, mqcommand)
-        entry[1].extend([('Q', 'mq', None, _("operate on patch repository"))])
+        entry[1].extend(mqopt)
 
 seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
