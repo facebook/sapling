@@ -83,7 +83,7 @@ ones.
     a ``Mercurial.ini`` file or be a directory where ``*.rc`` files will
     be read.  Mercurial checks each of these locations in the specified
     order until one or more configuration files are detected.  If the
-    py2win32 extensions are not installed, Mercurial will only look for
+    pywin32 extensions are not installed, Mercurial will only look for
     site-wide configuration in ``C:\Mercurial\Mercurial.ini``.
 
 Syntax
