@@ -151,7 +151,7 @@ adding file changes
 added 1 changesets with 1 changes to 1 files
 % push -f
 committing subrepository s
-abort: push creates new remote heads!
+abort: push creates new remote heads on branch 'default'!
 pushing ...sub/t
 pushing ...subrepo ss
 searching for changes

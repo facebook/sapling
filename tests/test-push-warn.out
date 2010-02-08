@@ -2,8 +2,8 @@ updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to ../a
 searching for changes
-abort: push creates new remote heads!
-(did you forget to merge? use push -f to force)
+abort: push creates new remote heads on branch 'default'!
+(you should pull and merge or use push -f to force)
 pulling from ../a
 searching for changes
 adding changesets
@@ -13,7 +13,7 @@ added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 pushing to ../a
 searching for changes
-abort: push creates new remote heads!
+abort: push creates new remote heads on branch 'default'!
 (did you forget to merge? use push -f to force)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -35,7 +35,7 @@ merging foo
 (branch merge, don't forget to commit)
 pushing to ../c
 searching for changes
-abort: push creates new remote heads!
+abort: push creates new remote heads on branch 'default'!
 (did you forget to merge? use push -f to force)
 1
 pushing to ../c
@@ -44,12 +44,12 @@ no changes found
 0
 pushing to ../c
 searching for changes
-abort: push creates new remote heads!
-(did you forget to merge? use push -f to force)
+abort: push creates new remote heads on branch 'default'!
+(you should pull and merge or use push -f to force)
 1
 pushing to ../c
 searching for changes
-abort: push creates new remote heads!
+abort: push creates new remote heads on branch 'default'!
 (did you forget to merge? use push -f to force)
 1
 pushing to ../c
@@ -106,8 +106,8 @@ abort: push creates new remote branches: d!
 % fail on multiple head push
 pushing to ../f
 searching for changes
-abort: push creates new remote heads!
-(did you forget to merge? use push -f to force)
+abort: push creates new remote heads on branch 'a'!
+(you should pull and merge or use push -f to force)
 1
 % push replacement head on existing branches
 pushing to ../f
@@ -153,8 +153,8 @@ adding c
 created new head
 pushing to h
 searching for changes
-abort: push creates new remote heads!
-(did you forget to merge? use push -f to force)
+abort: push creates new remote heads on branch 'default'!
+(you should pull and merge or use push -f to force)
 
 % check prepush logic with merged branches
 marked working directory as branch a
@@ -167,6 +167,6 @@ marked working directory as branch b
 (branch merge, don't forget to commit)
 pushing to j
 searching for changes
-abort: push creates new remote heads!
-(did you forget to merge? use push -f to force)
+abort: push creates new remote heads on branch 'a'!
+(you should pull and merge or use push -f to force)
 

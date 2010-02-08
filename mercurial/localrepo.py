@@ -1491,7 +1491,7 @@ class localrepository(repo.repository):
         update, updated_heads = self.findoutgoing(remote, common, remote_heads)
         msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
 
-        def checkbranch(lheads, rheads, updatelb):
+        def checkbranch(lheads, rheads, updatelb, branchname=None):
             '''
             check whether there are more local heads than remote heads on
             a specific branch.
@@ -1527,9 +1527,18 @@ class localrepository(repo.repository):
                     warn = 1
 
             if warn:
-                self.ui.warn(_("abort: push creates new remote heads!\n"))
-                self.ui.status(_("(did you forget to merge?"
-                                 " use push -f to force)\n"))
+                if branchname is not None:
+                    msg = _("abort: push creates new remote heads"
+                            " on branch '%s'!\n") % branchname
+                else:
+                    msg = _("abort: push creates new remote heads!\n")
+                self.ui.warn(msg)
+                if len(lheads) > len(rheads):
+                    self.ui.status(_("(did you forget to merge?"
+                                     " use push -f to force)\n"))
+                else:
+                    self.ui.status(_("(you should pull and merge or"
+                                     " use push -f to force)\n"))
                 return False
             return True
 
@@ -1570,7 +1579,7 @@ class localrepository(repo.repository):
                     for branch, lheads in localbrheads.iteritems():
                         if branch in remotebrheads:
                             rheads = remotebrheads[branch]
-                            if not checkbranch(lheads, rheads, update):
+                            if not checkbranch(lheads, rheads, update, branch):
                                 return None, 0
                 else:
                     if not checkbranch(heads, remote_heads, update):
