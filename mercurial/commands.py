@@ -3054,9 +3054,9 @@ def summary(ui, repo, **opts):
 
     if opts.get('remote'):
         t = []
-        source, revs, checkout = hg.parseurl(ui.expandpath('default'),
-                                             opts.get('rev'))
+        source, branches = hg.parseurl(ui.expandpath('default'))
         other = hg.repository(cmdutil.remoteui(repo, {}), source)
+        revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
         ui.debug('comparing with %s\n' % url.hidepassword(source))
         repo.ui.pushbuffer()
         common, incoming, rheads = repo.findcommonincoming(other)
@@ -3064,8 +3064,8 @@ def summary(ui, repo, **opts):
         if incoming:
             t.append(_('1 or more incoming'))
 
-        dest, revs, checkout = hg.parseurl(
-            ui.expandpath('default-push', 'default'))
+        dest, branches = hg.parseurl(ui.expandpath('default-push', 'default'))
+        revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
         other = hg.repository(cmdutil.remoteui(repo, {}), dest)
         ui.debug('comparing with %s\n' % url.hidepassword(dest))
         repo.ui.pushbuffer()
