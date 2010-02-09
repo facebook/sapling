@@ -522,18 +522,11 @@ def runone(options, test, skips, fails):
         hgrc.write('appendpid=True\n')
     hgrc.close()
 
-    err = os.path.join(TESTDIR, test+".err")
-    ref = os.path.join(TESTDIR, test+".out")
     testpath = os.path.join(TESTDIR, test)
-
+    ref = os.path.join(TESTDIR, test+".out")
+    err = os.path.join(TESTDIR, test+".err")
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
-
-    # Make a tmp subdirectory to work in
-    tmpd = os.path.join(HGTMP, test)
-    os.mkdir(tmpd)
-    os.chdir(tmpd)
-
     try:
         tf = open(testpath)
         firstline = tf.readline().rstrip()
@@ -562,6 +555,11 @@ def runone(options, test, skips, fails):
         elif not os.access(testpath, os.X_OK):
             return skip("not executable")
         cmd = '"%s"' % testpath
+
+    # Make a tmp subdirectory to work in
+    tmpd = os.path.join(HGTMP, test)
+    os.mkdir(tmpd)
+    os.chdir(tmpd)
 
     if options.timeout > 0:
         signal.alarm(options.timeout)
