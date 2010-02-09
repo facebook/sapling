@@ -1816,8 +1816,13 @@ class localrepository(repo.repository):
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
             group = cl.group(msng_cl_lst, identity, collect)
+            cnt = 0
             for chnk in group:
                 yield chnk
+                self.ui.progress('bundle changes', cnt, unit='chunks')
+                cnt += 1
+            self.ui.progress('bundle changes', None, unit='chunks')
+
 
             # Figure out which manifest nodes (of the ones we think might be
             # part of the changegroup) the recipient must know about and
@@ -1839,8 +1844,12 @@ class localrepository(repo.repository):
             # and data collection functions back.
             group = mnfst.group(msng_mnfst_lst, lookup_manifest_link,
                                 filenode_collector(changedfiles))
+            cnt = 0
             for chnk in group:
                 yield chnk
+                self.ui.progress('bundle manifests', cnt, unit='chunks')
+                cnt += 1
+            self.ui.progress('bundle manifests', None, unit='chunks')
 
             # These are no longer needed, dereference and toss the memory for
             # them.
@@ -1854,6 +1863,7 @@ class localrepository(repo.repository):
                     msng_filenode_set.setdefault(fname, {})
                     changedfiles[fname] = 1
             # Go through all our files in order sorted by name.
+            cnt = 0
             for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
@@ -1879,12 +1889,16 @@ class localrepository(repo.repository):
                     group = filerevlog.group(msng_filenode_lst,
                                              lookup_filenode_link_func(fname))
                     for chnk in group:
+                        self.ui.progress(
+                            'bundle files', cnt, item=fname, unit='chunks')
+                        cnt += 1
                         yield chnk
                 if fname in msng_filenode_set:
                     # Don't need this anymore, toss it to free memory.
                     del msng_filenode_set[fname]
             # Signal that no more groups are left.
             yield changegroup.closechunk()
+            self.ui.progress('bundle files', None, unit='chunks')
 
             if msng_cl_lst:
                 self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
@@ -1931,14 +1945,23 @@ class localrepository(repo.repository):
             mmfs = {}
             collect = changegroup.collector(cl, mmfs, changedfiles)
 
+            cnt = 0
             for chnk in cl.group(nodes, identity, collect):
+                self.ui.progress('bundle changes', cnt, unit='chunks')
+                cnt += 1
                 yield chnk
+            self.ui.progress('bundle changes', None, unit='chunks')
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
+            cnt = 0
             for chnk in mnfst.group(nodeiter, lookuprevlink_func(mnfst)):
+                self.ui.progress('bundle manifests', cnt, unit='chunks')
+                cnt += 1
                 yield chnk
+            self.ui.progress('bundle manifests', None, unit='chunks')
 
+            cnt = 0
             for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
@@ -1950,7 +1973,11 @@ class localrepository(repo.repository):
                     yield fname
                     lookup = lookuprevlink_func(filerevlog)
                     for chnk in filerevlog.group(nodeiter, lookup):
+                        self.ui.progress(
+                            'bundle files', cnt, item=fname, unit='chunks')
+                        cnt += 1
                         yield chnk
+            self.ui.progress('bundle files', None, unit='chunks')
 
             yield changegroup.closechunk()
 
