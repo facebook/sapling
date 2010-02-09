@@ -34,7 +34,7 @@ class StreamException(Exception):
 #   server writes out raw file data.
 
 def allowed(ui):
-    return ui.configbool('server', 'uncompressed', untrusted=True)
+    return ui.configbool('server', 'uncompressed', True, untrusted=True)
 
 def stream_out(repo):
     '''stream out all metadata files in repository.

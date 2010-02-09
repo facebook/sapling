@@ -11,8 +11,8 @@ echo bar>foo.d/bAr.hg.d/BaR
 echo bar>foo.d/baR.d.hg/bAR
 
 hg commit -A -m 1
-hg --config server.uncompressed=True serve -p $HGPORT -d --pid-file=../hg1.pid
-hg serve -p $HGPORT1 -d --pid-file=../hg2.pid
+hg serve -p $HGPORT -d --pid-file=../hg1.pid
+hg --config server.uncompressed=False serve -p $HGPORT1 -d --pid-file=../hg2.pid
 # Test server address cannot be reused
 hg serve -p $HGPORT1 2>&1 | sed -e "s/abort: cannot start server at ':$HGPORT1':.*/abort: cannot start server at ':\$HGPORT1':/"
 cd ..

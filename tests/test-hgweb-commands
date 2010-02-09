@@ -16,7 +16,7 @@ hg tag 1.0
 echo another > foo
 hg branch stable
 hg ci -Ambranch
-hg serve -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
+hg serve --config server.uncompressed=False -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
 cat hg.pid >> $DAEMON_PIDS
 
 echo % Logs and changes
