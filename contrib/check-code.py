@@ -60,7 +60,7 @@ testfilters = [
 
 pypats = [
     (r'^\s*\t', "don't use tabs"),
-    (r'(\S\s+|^\s+)\n', "trailing whitespace"),
+    (r'\S;\s*\n', "semicolon"),
     (r'\w,\w', "missing whitespace after ,"),
     (r'\w[+/*\-<>]\w', "missing whitespace in expression"),
     (r'^\s+\w+=\w+[^,)]$', "missing whitespace in assignment"),
@@ -73,6 +73,7 @@ pypats = [
     (r'class\s[^(]:', "old-style class, use class foo(object)"),
     (r'^\s+del\(', "del isn't a function"),
     (r'^\s+except\(', "except isn't a function"),
+    (r',]', "unneeded trailing ',' in list"),
 #    (r'class\s[A-Z][^\(]*\((?!Exception)',
 #     "don't capitalize non-exception classes"),
 #    (r'in range\(', "use xrange"),
@@ -83,7 +84,10 @@ pypats = [
     (r'if\s.*\selse', "if ... else form not available in Python 2.4"),
     (r'([\(\[]\s\S)|(\S\s[\)\]])', "gratuitous whitespace in () or []"),
 #    (r'\s\s=', "gratuitous whitespace before ="),
-    (r'\S(\+=|-=|!=|<>|<=|>=|<<=|>>=)\S', "missing whitespace around operator")
+    (r'[^>< ](\+=|-=|!=|<>|<=|>=|<<=|>>=)\S', "missing whitespace around operator"),
+    (r'[^>< ](\+=|-=|!=|<>|<=|>=|<<=|>>=)\s', "missing whitespace around operator"),
+    (r'\s(\+=|-=|!=|<>|<=|>=|<<=|>>=)\S', "missing whitespace around operator"),
+    (r'[^+=*!<>&| -](\s=|=\s)[^= ]', "wrong whitespace around ="),
 ]
 
 pyfilters = [
