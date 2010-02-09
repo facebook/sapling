@@ -49,8 +49,8 @@ echo % first revision, no sub
 echo a > a
 hg ci -Am0
 
-echo % add first svn sub
-echo "s = [svn]$SVNREPO/src" >> .hgsub
+echo % add first svn sub with leading whitespaces
+echo "s = [svn]       $SVNREPO/src" >> .hgsub
 svn co --quiet $SVNREPO/src s
 hg add .hgsub
 hg ci -m1

@@ -18,7 +18,7 @@ Committed revision 2.
 % create hg repo
 % first revision, no sub
 adding a
-% add first svn sub
+% add first svn sub with leading whitespaces
 committing subrepository s
 % debugsub
 path s

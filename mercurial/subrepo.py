@@ -41,7 +41,7 @@ def state(ctx):
                 raise util.Abort(_('missing ] in subrepo source'))
             kind, src = src.split(']', 1)
             kind = kind[1:]
-        state[path] = (src, rev.get(path, ''), kind)
+        state[path] = (src.strip(), rev.get(path, ''), kind)
 
     return state
 
