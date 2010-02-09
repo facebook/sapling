@@ -15,6 +15,7 @@ if [ $? -ne 0 ]; then
     escapedwd='/'$escapedwd
 fi
 filterpath="sed s|$escapedwd|/root|"
+filtersvn='s/ in transaction.*/ is out of date/;s/Out of date: /File /'
 
 echo % create subversion repo
 
@@ -79,12 +80,12 @@ cd ../../sub/t
 
 echo % this commit from hg will fail
 echo zzz >> s/alpha
-hg ci -m 'amend alpha from hg'
+hg ci -m 'amend alpha from hg' 2>&1 | sed "$filtersvn"
 svn revert -q s/alpha
 
 echo % this commit fails because of meta changes
 svn propset svn:mime-type 'text/html' s/alpha
-hg ci -m 'amend alpha from hg'
+hg ci -m 'amend alpha from hg' 2>&1 | sed "$filtersvn"
 svn revert -q s/alpha
 
 echo % this commit fails because of externals changes
