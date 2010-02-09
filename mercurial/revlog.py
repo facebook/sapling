@@ -537,26 +537,6 @@ class revlog(object):
         t = self.revision(self.node(rev))
         return len(t)
 
-        # Alternate implementation. The advantage to this code is it
-        # will be faster for a single revision. However, the results
-        # are not cached, so finding the size of every revision will
-        # be slower.
-        #
-        # if self.cache and self.cache[1] == rev:
-        #     return len(self.cache[2])
-        #
-        # base = self.base(rev)
-        # if self.cache and self.cache[1] >= base and self.cache[1] < rev:
-        #     base = self.cache[1]
-        #     text = self.cache[2]
-        # else:
-        #     text = self.revision(self.node(base))
-        #
-        # l = len(text)
-        # for x in xrange(base + 1, rev + 1):
-        #     l = mdiff.patchedsize(l, self._chunk(x))
-        # return l
-
     def reachable(self, node, stop=None):
         """return the set of all nodes ancestral to a given node, including
          the node itself, stopping when stop is matched"""
