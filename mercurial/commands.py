@@ -1835,7 +1835,8 @@ def import_(ui, repo, patch1, *patches, **opts):
     wlock = lock = None
 
     def tryone(ui, hunk):
-        tmpname, message, user, date, branch, nodeid, p1, p2 = patch.extract(ui, hunk)
+        tmpname, message, user, date, branch, nodeid, p1, p2 = \
+            patch.extract(ui, hunk)
 
         if not tmpname:
             return None

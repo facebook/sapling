@@ -859,7 +859,8 @@ class queue(object):
                         p.write("Date: %d %d\n\n" % date)
                 else:
                     p.write("# HG changeset patch\n")
-                    p.write("# Parent " + hex(repo[None].parents()[0].node()) + "\n")
+                    p.write("# Parent "
+                            + hex(repo[None].parents()[0].node()) + "\n")
                     if user:
                         p.write("# User " + user + "\n")
                     if date:

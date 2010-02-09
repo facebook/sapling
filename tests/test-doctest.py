@@ -1,5 +1,5 @@
 # this is hack to make sure no escape characters are inserted into the output
-import os;
+import os
 if 'TERM' in os.environ:
     del os.environ['TERM']
 import doctest

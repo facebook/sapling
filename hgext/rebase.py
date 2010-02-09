@@ -499,7 +499,7 @@ cmdtable = {
         ('', 'detach', False, _('force detaching of source from its original '
                                 'branch')),
         ('c', 'continue', False, _('continue an interrupted rebase')),
-        ('a', 'abort', False, _('abort an interrupted rebase')),] +
+        ('a', 'abort', False, _('abort an interrupted rebase'))] +
          templateopts,
         _('hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] '
                         '[--keep] [--keepbranches] | [-c] | [-a]')),

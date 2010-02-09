@@ -847,7 +847,7 @@ class coverage:
         morfs = self.filter_by_prefix(morfs, omit_prefixes)
         morfs.sort(self.morf_name_compare)
 
-        max_name = max([5,] + map(len, map(self.morf_name, morfs)))
+        max_name = max([5] + map(len, map(self.morf_name, morfs)))
         fmt_name = "%%- %ds  " % max_name
         fmt_err = fmt_name + "%s: %s"
         header = fmt_name % "Name" + " Stmts   Exec  Cover"

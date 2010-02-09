@@ -785,7 +785,7 @@ def runtests(options, tests):
                     if k in t:
                         break
                 else:
-                    skipped +=1
+                    skipped += 1
                     continue
 
             ret = runone(options, test, skips, fails)

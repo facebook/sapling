@@ -112,7 +112,7 @@ class Writer(writers.Writer):
 class Table:
     def __init__(self):
         self._rows = []
-        self._options = ['center',]
+        self._options = ['center']
         self._tab_char = '\t'
         self._coldefs = []
     def new_row(self):

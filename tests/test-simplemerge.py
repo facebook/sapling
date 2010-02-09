@@ -143,7 +143,7 @@ class TestMerge3(TestCase):
         # to match without zz
         self.assertEquals(list(m3.find_sync_regions()),
                           [(0, 1,  2, 3,  0, 1),
-                           (1, 1,  3, 3,  1, 1),])
+                           (1, 1,  3, 3,  1, 1)])
 
         self.assertEquals(list(m3.merge_regions()),
                           [('a', 0, 2),
@@ -180,12 +180,12 @@ class TestMerge3(TestCase):
         self.assertEquals(list(m3.find_sync_regions()),
                           [(0, 1,  0, 1,  0, 1),
                            (1, 2,  2, 3,  1, 2),
-                           (2, 2,  3, 3,  2, 2),])
+                           (2, 2,  3, 3,  2, 2)])
 
         self.assertEquals(list(m3.merge_regions()),
                           [('unchanged', 0, 1),
                            ('a', 1, 2),
-                           ('unchanged', 1, 2),])
+                           ('unchanged', 1, 2)])
 
     def test_append_a(self):
         m3 = Merge3(['aaa\n', 'bbb\n'],
@@ -256,7 +256,7 @@ class TestMerge3(TestCase):
         self.assertEquals(list(m3.find_sync_regions()),
                           [(0, 1,  0, 1,  0, 1),
                            (1, 2,  2, 3,  2, 3),
-                           (2, 2,  3, 3,  3, 3),])
+                           (2, 2,  3, 3,  3, 3)])
 
         self.assertEquals(list(m3.merge_regions()),
                           [('unchanged', 0, 1),
@@ -296,7 +296,7 @@ bbb
         self.assertEquals(list(m3.find_sync_regions()),
                           [(0, 1,  0, 1,  0, 1),
                            (2, 3,  2, 3,  2, 3),
-                           (3, 3,  3, 3,  3, 3),])
+                           (3, 3,  3, 3,  3, 3)])
 
     def test_replace_multi(self):
         """Replacement with regions of different size."""
