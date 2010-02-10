@@ -43,7 +43,7 @@ regular patches, possibly losing data in the second case.
 from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
-from mercurial import commands, cmdutil, dispatch, hg, patch, util
+from mercurial import commands, cmdutil, hg, patch, util
 from mercurial import repair, extensions, url, error
 import os, sys, re, errno
 
