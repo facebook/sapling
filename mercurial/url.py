@@ -272,7 +272,7 @@ if has_https:
 
     try:
         _create_connection = socket.create_connection
-    except ImportError:
+    except AttributeError:
         def _create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
                                source_address=None):
             # lifted from Python 2.6
