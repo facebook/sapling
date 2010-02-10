@@ -873,6 +873,26 @@ Web interface configuration.
     Base URL to use when publishing URLs in other locations, so
     third-party tools like email notification hooks can construct
     URLs. Example: ``http://hgserver/repos/``.
+``cacerts``
+    Path to file containing a list of PEM encoded certificate authorities
+    that may be used to verify an SSL server's identity. The form must be
+    as follows::
+
+        -----BEGIN CERTIFICATE-----
+        ... (certificate in base64 PEM encoding) ...
+        -----END CERTIFICATE-----
+        -----BEGIN CERTIFICATE-----
+        ... (certificate in base64 PEM encoding) ...
+        -----END CERTIFICATE-----
+
+    This feature is only supported when using Python 2.6. If you wish to
+    use it with earlier versions of Python, install the backported
+    version of the ssl library that is available from
+    ``http://pypi.python.org``.
+
+    You can use OpenSSL's CA certificate file if your platform has one.
+    On most Linux systems this will be ``/etc/ssl/certs/ca-certificates.crt``.
+    Otherwise you will have to generate this file manually.
 ``contact``
     Name or email address of the person in charge of the repository.
     Defaults to ui.username or ``$EMAIL`` or "unknown" if unset or empty.

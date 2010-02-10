@@ -255,10 +255,47 @@ if has_https:
         # avoid using deprecated/broken FakeSocket in python 2.6
         import ssl
         _ssl_wrap_socket = ssl.wrap_socket
+        CERT_REQUIRED = ssl.CERT_REQUIRED
     except ImportError:
-        def _ssl_wrap_socket(sock, key_file, cert_file):
+        CERT_REQUIRED = 2
+
+        def _ssl_wrap_socket(sock, key_file, cert_file,
+                             cert_reqs=CERT_REQUIRED, ca_certs=None):
+            if ca_certs:
+                raise util.Abort(_(
+                    'certificate checking requires Python 2.6'))
+
             ssl = socket.ssl(sock, key_file, cert_file)
             return httplib.FakeSocket(sock, ssl)
+
+        _GLOBAL_DEFAULT_TIMEOUT = object()
+
+    try:
+        _create_connection = socket.create_connection
+    except ImportError:
+        def _create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
+                               source_address=None):
+            # lifted from Python 2.6
+
+            msg = "getaddrinfo returns an empty list"
+            host, port = address
+            for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
+                af, socktype, proto, canonname, sa = res
+                sock = None
+                try:
+                    sock = socket.socket(af, socktype, proto)
+                    if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
+                        sock.settimeout(timeout)
+                    if source_address:
+                        sock.bind(source_address)
+                    sock.connect(sa)
+                    return sock
+
+                except socket.error, msg:
+                    if sock is not None:
+                        sock.close()
+
+            raise socket.error, msg
 
 class httpconnection(keepalive.HTTPConnection):
     # must be able to send big bundle as stream.
@@ -427,6 +464,21 @@ if has_https:
     class BetterHTTPS(httplib.HTTPSConnection):
         send = keepalive.safesend
 
+        def connect(self):
+            if hasattr(self, 'ui'):
+                cacerts = self.ui.config('web', 'cacerts')
+            else:
+                cacerts = None
+
+            if cacerts:
+                sock = _create_connection((self.host, self.port))
+                self.sock = _ssl_wrap_socket(sock, self.key_file,
+                        self.cert_file, cert_reqs=CERT_REQUIRED,
+                        ca_certs=cacerts)
+                self.ui.debug(_('server identity verification succeeded\n'))
+            else:
+                httplib.HTTPSConnection.connect(self)
+
     class httpsconnection(BetterHTTPS):
         response_class = keepalive.HTTPResponse
         # must be able to send big bundle as stream.
@@ -473,7 +525,9 @@ if has_https:
                 keyfile = self.auth['key']
                 certfile = self.auth['cert']
 
-            return httpsconnection(host, port, keyfile, certfile, *args, **kwargs)
+            conn = httpsconnection(host, port, keyfile, certfile, *args, **kwargs)
+            conn.ui = self.ui
+            return conn
 
 # In python < 2.5 AbstractDigestAuthHandler raises a ValueError if
 # it doesn't know about the auth type requested.  This can happen if
