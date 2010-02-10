@@ -2660,7 +2660,7 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
     r = q.qrepo()
     if not r:
         raise util.Abort('no queue repository')
-    return orig(ui, r, *args, **kwargs)
+    return orig(r.ui, r, *args, **kwargs)
 
 def uisetup(ui):
     mqopt = [('Q', 'mq', None, _("operate on patch repository"))]
