@@ -458,7 +458,7 @@ if has_https:
             self.auth = self.pwmgr.readauthtoken(req.get_full_url())
             return self.do_open(self._makeconnection, req)
 
-        def _makeconnection(self, host, port=443, *args, **kwargs):
+        def _makeconnection(self, host, port=None, *args, **kwargs):
             keyfile = None
             certfile = None
 
@@ -472,13 +472,6 @@ if has_https:
             if self.auth and 'key' in self.auth and 'cert' in self.auth:
                 keyfile = self.auth['key']
                 certfile = self.auth['cert']
-
-            # let host port take precedence
-            if ':' in host and '[' not in host or ']:' in host:
-                host, port = host.rsplit(':', 1)
-                port = int(port)
-                if '[' in host:
-                    host = host[1:-1]
 
             return httpsconnection(host, port, keyfile, certfile, *args, **kwargs)
 
