@@ -300,6 +300,19 @@ R d1/b
 # idempotent renames (d1/b -> d1/bb followed by d1/bb -> d1/b)
 M d1/b
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+# overwriting with renames (issue1959)
+A d1/a
+  d1/b
+A d1/c
+  d1/a
+R d1/b
+diff --git a/d1/b b/d1/a
+rename from d1/b
+rename to d1/a
+diff --git a/d1/a b/d1/c
+copy from d1/a
+copy to d1/c
+2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 # check illegal path components
 abort: path contains illegal component: .hg/foo
 abort: ../foo not under root

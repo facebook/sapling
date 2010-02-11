@@ -1436,8 +1436,6 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
     if opts.git or opts.upgrade:
         copy = copies.copies(repo, ctx1, ctx2, repo[nullid])[0]
         copy = copy.copy()
-        for k, v in copy.items():
-            copy[v] = k
 
     difffn = lambda opts, losedata: trydiff(repo, revs, ctx1, ctx2,
                  modified, added, removed, copy, getfilectx, opts, losedata)
@@ -1467,6 +1465,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
     gone = set()
     gitmode = {'l': '120000', 'x': '100755', '': '100644'}
 
+    copyto = dict([(v, k) for k, v in copy.items()])
+
     if opts.git:
         revs = None
 
@@ -1483,9 +1483,12 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if opts.git or losedatafn:
             if f in added:
                 mode = gitmode[ctx2.flags(f)]
-                if f in copy:
+                if f in copy or f in copyto:
                     if opts.git:
-                        a = copy[f]
+                        if f in copy:
+                            a = copy[f]
+                        else:
+                            a = copyto[f]
                         omode = gitmode[man1.flags(a)]
                         _addmodehdr(header, omode, mode)
                         if a in removed and a not in gone:
@@ -1514,7 +1517,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             elif f in removed:
                 if opts.git:
                     # have we already reported a copy above?
-                    if f in copy and copy[f] in added and copy[copy[f]] == f:
+                    if f in copy and copy[f] in added and copyto[copy[f]] == f:
+                        dodiff = False
+                    elif f in copyto and copyto[f] in added and copy[copyto[f]] == f:
                         dodiff = False
                     else:
                         header.append('deleted file mode %s\n' %

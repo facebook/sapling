@@ -210,6 +210,13 @@ hg rename d1/bb d1/b
 hg status -C
 hg update -C
 
+echo '# overwriting with renames (issue1959)'
+hg rename d1/a d1/c
+hg rename d1/b d1/a
+hg status -C
+hg diff --git
+hg update -C
+
 echo "# check illegal path components"
 
 hg rename d1/d11/a1 .hg/foo
