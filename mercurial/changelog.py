@@ -218,8 +218,13 @@ class changelog(revlog.revlog):
             parseddate = "%d %d" % util.parsedate(date)
         else:
             parseddate = "%d %d" % util.makedate()
-        if extra and extra.get("branch") in ("default", ""):
-            del extra["branch"]
+        if extra:
+            branch = extra.get("branch")
+            if branch in ("default", ""):
+                del extra["branch"]
+            elif branch in (".", "null", "tip"):
+                raise error.RevlogError(_('the name \'%s\' is reserved')
+                                        % branch)
         if extra:
             extra = encodeextra(extra)
             parseddate = "%s %s" % (parseddate, extra)
