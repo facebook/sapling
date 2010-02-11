@@ -302,7 +302,7 @@ class httpconnection(keepalive.HTTPConnection):
     send = _gen_sendfile(keepalive.HTTPConnection)
 
     def connect(self):
-        if has_https and self.realhost: # use CONNECT proxy
+        if has_https and self.realhostport: # use CONNECT proxy
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.host, self.port))
             if _generic_proxytunnel(self):
@@ -335,21 +335,16 @@ def _generic_start_transaction(handler, h, req):
     if new_tunnel or tunnel_host == req.get_full_url(): # has proxy
         urlparts = urlparse.urlparse(tunnel_host)
         if new_tunnel or urlparts[0] == 'https': # only use CONNECT for HTTPS
-            if ':' in urlparts[1]:
-                realhost, realport = urlparts[1].split(':')
-                realport = int(realport)
-            else:
-                realhost = urlparts[1]
-                realport = 443
+            realhostport = urlparts[1]
+            if realhostport[-1] == ']' or ':' not in realhostport:
+                realhostport += ':443'
 
-            h.realhost = realhost
-            h.realport = realport
+            h.realhostport = realhostport
             h.headers = req.headers.copy()
             h.headers.update(handler.parent.addheaders)
             return
 
-    h.realhost = None
-    h.realport = None
+    h.realhostport = None
     h.headers = None
 
 def _generic_proxytunnel(self):
@@ -357,7 +352,7 @@ def _generic_proxytunnel(self):
             [(x, self.headers[x]) for x in self.headers
              if x.lower().startswith('proxy-')])
     self._set_hostport(self.host, self.port)
-    self.send('CONNECT %s:%d HTTP/1.0\r\n' % (self.realhost, self.realport))
+    self.send('CONNECT %s HTTP/1.0\r\n' % self.realhostport)
     for header in proxyheaders.iteritems():
         self.send('%s: %s\r\n' % header)
     self.send('\r\n')
@@ -486,7 +481,7 @@ if has_https:
         getresponse = keepalive.wrapgetresponse(httplib.HTTPSConnection)
 
         def connect(self):
-            if self.realhost: # use CONNECT proxy
+            if self.realhostport: # use CONNECT proxy
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.sock.connect((self.host, self.port))
                 if _generic_proxytunnel(self):
