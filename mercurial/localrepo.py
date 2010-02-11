@@ -876,8 +876,12 @@ class localrepository(repo.repository):
                     new[f] = self._filecommit(fctx, m1, m2, linkrev, trp,
                                               changed)
                     m1.set(f, fctx.flags())
-                except (OSError, IOError):
-                    if error:
+                except OSError, inst:
+                    self.ui.warn(_("trouble committing %s!\n") % f)
+                    raise
+                except IOError, inst:
+                    errcode = getattr(inst, 'errno', errno.ENOENT)
+                    if error or errcode and errcode != errno.ENOENT:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
                     else:
