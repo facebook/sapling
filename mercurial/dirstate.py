@@ -202,6 +202,8 @@ class dirstate(object):
         self._pl = p1, p2
 
     def setbranch(self, branch):
+        if branch in ['tip', '.', 'null']:
+            raise util.Abort(_('the name \'%s\' is reserved') % branch)
         self._branch = branch
         self._opener("branch", "w").write(branch + '\n')
 

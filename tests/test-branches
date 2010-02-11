@@ -36,6 +36,10 @@ hg add c
 hg branch c
 hg commit -d '5 0' -m "Adding c branch"
 
+hg branch tip
+hg branch null
+hg branch .
+
 echo 'd' >d
 hg add d
 hg branch 'a branch name much longer than the default justification used by branches'

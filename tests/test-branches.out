@@ -6,6 +6,9 @@ marked working directory as branch b
 created new head
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 marked working directory as branch c
+abort: the name 'tip' is reserved
+abort: the name 'null' is reserved
+abort: the name '.' is reserved
 marked working directory as branch a branch name much longer than the default justification used by branches
 a branch name much longer than the default justification used by branches 7:10ff5895aa57
 b                              4:aee39cd168d0
