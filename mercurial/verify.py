@@ -120,7 +120,9 @@ def _verify(repo):
     ui.status(_("checking changesets\n"))
     seen = {}
     checklog(cl, "changelog", 0)
+    total = len(repo)
     for i in repo:
+        ui.progress('changelog', i, total=total)
         n = cl.node(i)
         checkentry(cl, i, n, seen, [i], "changelog")
 
@@ -131,11 +133,14 @@ def _verify(repo):
                 filelinkrevs.setdefault(f, []).append(i)
         except Exception, inst:
             exc(i, _("unpacking changeset %s") % short(n), inst)
+    ui.progress('changelog', None)
 
     ui.status(_("checking manifests\n"))
     seen = {}
     checklog(mf, "manifest", 0)
+    total = len(mf)
     for i in mf:
+        ui.progress('manifests', i, total=total)
         n = mf.node(i)
         lr = checkentry(mf, i, n, seen, mflinkrevs.get(n, []), "manifest")
         if n in mflinkrevs:
@@ -151,22 +156,31 @@ def _verify(repo):
                     filenodes.setdefault(f, {}).setdefault(fn, lr)
         except Exception, inst:
             exc(lr, _("reading manifest delta %s") % short(n), inst)
+    ui.progress('manifests', None)
 
     ui.status(_("crosschecking files in changesets and manifests\n"))
 
+    total = len(mflinkrevs) + len(filelinkrevs) + len(filenodes)
+    count = 0
     if havemf:
         for c, m in sorted([(c, m) for m in mflinkrevs
                             for c in mflinkrevs[m]]):
+            count += 1
+            ui.progress('crosscheck', count, total=total)
             err(c, _("changeset refers to unknown manifest %s") % short(m))
         mflinkrevs = None # del is bad here due to scope issues
 
         for f in sorted(filelinkrevs):
+            count += 1
+            ui.progress('crosscheck', count, total=total)
             if f not in filenodes:
                 lr = filelinkrevs[f][0]
                 err(lr, _("in changeset but not in manifest"), f)
 
     if havecl:
         for f in sorted(filenodes):
+            count += 1
+            ui.progress('crosscheck', count, total=total)
             if f not in filelinkrevs:
                 try:
                     fl = repo.file(f)
@@ -174,6 +188,8 @@ def _verify(repo):
                 except:
                     lr = None
                 err(lr, _("in manifest but not in changeset"), f)
+
+    ui.progress('crosscheck', None)
 
     ui.status(_("checking files\n"))
 
@@ -185,7 +201,9 @@ def _verify(repo):
             storefiles.add(f)
 
     files = sorted(set(filenodes) | set(filelinkrevs))
-    for f in files:
+    total = len(files)
+    for i, f in enumerate(files):
+        ui.progress('files', i, item=f, total=total)
         try:
             linkrevs = filelinkrevs[f]
         except KeyError:
@@ -263,6 +281,7 @@ def _verify(repo):
             fns = [(lr, n) for n, lr in filenodes[f].iteritems()]
             for lr, node in sorted(fns):
                 err(lr, _("%s in manifests not found") % short(node), f)
+    ui.progress('files', None)
 
     for f in storefiles:
         warn(_("warning: orphan revlog '%s'") % f)
