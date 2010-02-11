@@ -2005,6 +2005,16 @@ class localrepository(repo.repository):
             # be empty during the pull
             self.manifest.addgroup(chunkiter, revmap, trp)
 
+            needfiles = {}
+            if self.ui.configbool('server', 'validate', default=False):
+                # validate incoming csets have their manifests
+                for cset in xrange(clstart, clend):
+                    mfest = self.changelog.read(self.changelog.node(cset))[0]
+                    mfest = self.manifest.readdelta(mfest)
+                    # store file nodes we must see
+                    for f, n in mfest.iteritems():
+                        needfiles.setdefault(f, set()).add(n)
+
             # process the files
             self.ui.status(_("adding file changes\n"))
             while 1:
@@ -2019,6 +2029,24 @@ class localrepository(repo.repository):
                     raise util.Abort(_("received file revlog group is empty"))
                 revisions += len(fl) - o
                 files += 1
+                if f in needfiles:
+                    needs = needfiles[f]
+                    for new in xrange(o, len(fl)):
+                        n = fl.node(new)
+                        if n in needs:
+                            needs.remove(n)
+                    if not needs:
+                        del needfiles[f]
+
+            for f, needs in needfiles.iteritems():
+                fl = self.file(f)
+                for n in needs:
+                    try:
+                        fl.rev(n)
+                    except error.LookupError:
+                        raise util.Abort(
+                            _('missing file data for %s:%s - run hg verify') %
+                            (f, hex(n)))
 
             newheads = len(cl.heads())
             heads = ""
