@@ -716,8 +716,14 @@ Controls generic server settings.
     WAN, an uncompressed streaming clone is a lot faster (~10x) than a
     regular clone. Over most WAN connections (anything slower than
     about 6 Mbps), uncompressed streaming is slower, because of the
-    extra data transfer overhead. Default is False.
+    extra data transfer overhead. This mode will also temporarily hold
+    the write lock while determining what data to transfer.
+    Default is True.
 
+``validate``
+    Whether to validate the completeness of pushed changesets by
+    checking that all new file revisions specified in manifests are
+    present. Default is False.
 
 ``trusted``
 """""""""""
