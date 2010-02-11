@@ -618,6 +618,9 @@ proxy.
     Optional. Password to authenticate with at the proxy server.
 ``user``
     Optional. User name to authenticate with at the proxy server.
+``always``
+    Optional. Always use the proxy, even for localhost and any entries
+    in ``http_proxy.no``. True or False. Default: False.
 
 ``smtp``
 """"""""
