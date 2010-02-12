@@ -169,8 +169,8 @@ def rebase(ui, repo, **opts):
             rebased = [rev for rev in state if state[rev] != nullmerge]
             if rebased:
                 if set(repo.changelog.descendants(min(rebased))) - set(state):
-                    ui.warn(_("warning: new changesets detected on source branch, "
-                                                            "not stripping\n"))
+                    ui.warn(_("warning: new changesets detected "
+                              "on source branch, not stripping\n"))
                 else:
                     repair.strip(ui, repo, repo[min(rebased)].node(), "strip")
 
