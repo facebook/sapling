@@ -237,13 +237,13 @@ class ui(object):
 
     def write_err(self, *args):
         try:
-            if not hasattr(sys.stdout, 'closed') or not sys.stdout.closed:
+            if not getattr(sys.stdout, 'closed', False):
                 sys.stdout.flush()
             for a in args:
                 sys.stderr.write(str(a))
             # stderr may be buffered under win32 when redirected to files,
             # including stdout.
-            if not sys.stderr.closed:
+            if not getattr(sys.stderr, 'closed', False):
                 sys.stderr.flush()
         except IOError, inst:
             if inst.errno != errno.EPIPE:
