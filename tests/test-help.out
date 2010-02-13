@@ -243,6 +243,8 @@ add the specified files on the next commit
 
     If no names are given, add all files to the repository.
 
+use "hg -v help add" to show verbose help
+
 options:
 
  -I --include  include names matching the given patterns
@@ -250,6 +252,51 @@ options:
  -n --dry-run  do not perform actions, just print output
 
 use "hg -v help add" to show global options
+%% verbose help for add
+hg add [OPTION]... [FILE]...
+
+add the specified files on the next commit
+
+    Schedule files to be version controlled and added to the repository.
+
+    The files will be added to the repository at the next commit. To undo an
+    add before that, see hg forget.
+
+    If no names are given, add all files to the repository.
+
+    An example showing how new (unknown) files are added automatically by "hg
+    add":
+
+      $ ls
+      foo.c
+      $ hg status
+      ? foo.c
+      $ hg add
+      adding foo.c
+      $ hg status
+
+options:
+
+ -I --include         include names matching the given patterns
+ -X --exclude         exclude names matching the given patterns
+ -n --dry-run         do not perform actions, just print output
+
+global options:
+ -R --repository      repository root directory or name of overlay bundle file
+    --cwd             change working directory
+ -y --noninteractive  do not prompt, assume 'yes' for any required answers
+ -q --quiet           suppress output
+ -v --verbose         enable additional output
+    --config          set/override config option
+    --debug           enable debugging output
+    --debugger        start debugger
+    --encoding        set the charset encoding (default: ascii)
+    --encodingmode    set the charset encoding mode (default: strict)
+    --traceback       always print a traceback on exception
+    --time            time how long the command takes
+    --profile         print command execution profile
+    --version         output version information and exit
+ -h --help            display help and exit
 %% test help option with version option
 Mercurial Distributed SCM (version xxx)
 
@@ -267,6 +314,8 @@ add the specified files on the next commit
     add before that, see hg forget.
 
     If no names are given, add all files to the repository.
+
+use "hg -v help add" to show verbose help
 
 options:
 
@@ -286,6 +335,8 @@ add the specified files on the next commit
     add before that, see hg forget.
 
     If no names are given, add all files to the repository.
+
+use "hg -v help add" to show verbose help
 
 options:
 

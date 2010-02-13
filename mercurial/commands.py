@@ -28,6 +28,19 @@ def add(ui, repo, *pats, **opts):
     undo an add before that, see hg forget.
 
     If no names are given, add all files to the repository.
+
+    .. container:: verbose
+
+       An example showing how new (unknown) files are added
+       automatically by ``hg add``::
+
+         $ ls
+         foo.c
+         $ hg status
+         ? foo.c
+         $ hg add
+         adding foo.c
+         $ hg status
     """
 
     bad = []
