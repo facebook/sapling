@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-01-18 19:49+0100\n"
-"PO-Revision-Date: 2010-01-18 19:57+0100\n"
+"POT-Creation-Date: 2010-02-13 22:39+0100\n"
+"PO-Revision-Date: 2010-02-14 00:05+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -2193,16 +2193,6 @@ msgid "unable to read %s\n"
 msgstr ""
 
 #, python-format
-msgid "imported patch %s\n"
-msgstr ""
-
-#, python-format
-msgid ""
-"\n"
-"imported patch %s"
-msgstr ""
-
-#, python-format
 msgid "patch %s is empty\n"
 msgstr ""
 
@@ -2495,13 +2485,16 @@ msgid ""
 msgstr ""
 
 msgid ""
-"init a new queue repository\n"
+"init a new queue repository (DEPRECATED)\n"
 "\n"
 "    The queue repository is unversioned by default. If\n"
 "    -c/--create-repo is specified, qinit will create a separate nested\n"
 "    repository for patches (qinit -c may also be run later to convert\n"
 "    an unversioned patch repository into a versioned one). You can use\n"
-"    qcommit to commit changes to this queue repository."
+"    qcommit to commit changes to this queue repository.\n"
+"\n"
+"    This command is deprecated. Without -c, it's implied by other relevant\n"
+"    commands. With -c, use hg init -Q instead."
 msgstr ""
 
 msgid ""
@@ -2536,7 +2529,10 @@ msgstr ""
 msgid "updating destination repository\n"
 msgstr ""
 
-msgid "commit changes in the queue repository"
+msgid ""
+"commit changes in the queue repository (DEPRECATED)\n"
+"\n"
+"    This command is deprecated; use hg -Q commit instead."
 msgstr ""
 
 msgid "print the entire series file"
@@ -2722,10 +2718,16 @@ msgstr ""
 msgid "A patch named %s already exists in the series file"
 msgstr ""
 
-msgid "restore the queue state saved by a revision"
+msgid ""
+"restore the queue state saved by a revision (DEPRECATED)\n"
+"\n"
+"    This command is deprecated, use rebase --mq instead."
 msgstr ""
 
-msgid "save current queue state"
+msgid ""
+"save current queue state (DEPRECATED)\n"
+"\n"
+"    This command is deprecated, use rebase --mq instead."
 msgstr ""
 
 #, python-format
@@ -2850,6 +2852,9 @@ msgstr ""
 msgid "cannot import over an applied patch"
 msgstr ""
 
+msgid "operate on patch repository"
+msgstr "arbeta med patcharkiv"
+
 msgid "print first line of patch header"
 msgstr ""
 
@@ -2943,8 +2948,8 @@ msgstr ""
 msgid "hg qinit [-c]"
 msgstr ""
 
-msgid "import uncommitted changes into patch"
-msgstr ""
+msgid "import uncommitted changes (DEPRECATED)"
+msgstr "importera icke arkiverade ändringar (FÖRLEGAD)"
 
 msgid "add \"From: <current user>\" to patch"
 msgstr ""
@@ -2970,7 +2975,7 @@ msgstr ""
 msgid "pop all patches"
 msgstr ""
 
-msgid "queue name to pop"
+msgid "queue name to pop (DEPRECATED)"
 msgstr ""
 
 msgid "forget any local changes to patched files"
@@ -2988,10 +2993,10 @@ msgstr ""
 msgid "apply all patches"
 msgstr ""
 
-msgid "merge from another queue"
+msgid "merge from another queue (DEPRECATED)"
 msgstr ""
 
-msgid "merge queue name"
+msgid "merge queue name (DEPRECATED)"
 msgstr ""
 
 msgid "hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]"
@@ -3271,6 +3276,9 @@ msgid ""
 "  cc = cc1, cc2, ...\n"
 "  bcc = bcc1, bcc2, ...\n"
 "\n"
+"Use ``[patchbomb]`` as configuration section name if you need to\n"
+"override global ``[email]`` address settings.\n"
+"\n"
 "Then you can use the \"hg email\" command to mail a series of changesets\n"
 "as a patchbomb.\n"
 "\n"
@@ -3475,6 +3483,30 @@ msgstr ""
 msgid "hg email [OPTION]... [DEST]..."
 msgstr ""
 
+msgid ""
+"show progress bars for some actions\n"
+"\n"
+"This extension uses the progress information commands can log with hg\n"
+"to draw progres bars that are as informative as possible. Some progress\n"
+"bars only offer indeterminate information, while others have a definite\n"
+"end point.\n"
+"\n"
+"The following settings are available::\n"
+"\n"
+"  [progress]\n"
+"  delay = 3 # number of seconds (float) before showing the progress bar\n"
+"  refresh = 0.1 # time in seconds between refreshes of the progress bar\n"
+"  format = topic bar number # format of the progress bar\n"
+"  width = <none> # if set, the maximum width of the progress information\n"
+"                 # (that is, min(width, term width) will be used)\n"
+"  clear-complete = True # clear the progress bar after it's done\n"
+"\n"
+"Valid entries for the format field are topic, bar, number, unit, and item.\n"
+"item defaults to the last 20 characters of the item, but this can be\n"
+"changed by adding either -<num> which would take the last num characters,\n"
+"or +<num> for the first num characters.\n"
+msgstr ""
+
 msgid "command to delete untracked files from the working directory"
 msgstr ""
 
@@ -3565,17 +3597,33 @@ msgstr ""
 msgid "cannot use collapse with continue or abort"
 msgstr ""
 
+msgid "cannot use detach with continue or abort"
+msgstr "kan inte använda detach med continue eller abort"
+
 msgid "abort and continue do not allow specifying revisions"
 msgstr ""
 
 msgid "cannot specify both a revision and a base"
 msgstr ""
 
+msgid "detach requires a revision to be specified"
+msgstr "detach kräver att en revision anges"
+
+msgid "cannot specify a base with detach"
+msgstr "kan inte ange en bas med detach"
+
 msgid "nothing to rebase\n"
 msgstr ""
 
 msgid "cannot use both keepbranches and extrafn"
 msgstr ""
+
+msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
+msgstr "fixa olösta konflikter med hg resolve, kör sedan hg rebase --continue"
+
+#, python-format
+msgid "no changes, revision %d skipped\n"
+msgstr "inga ändringar, revision %d hoppas över\n"
 
 msgid "rebase merging completed\n"
 msgstr ""
@@ -3590,12 +3638,8 @@ msgstr ""
 msgid "%d revisions have been skipped\n"
 msgstr ""
 
-msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
-msgstr ""
-
-#, python-format
-msgid "no changes, revision %d skipped\n"
-msgstr ""
+msgid "unable to collapse, there is more than one external parent"
+msgstr "kan inte kollapsa, det finns mer än en extern förälder"
 
 #, python-format
 msgid "cannot use revision %d as base, result would have 3 parents"
@@ -3619,9 +3663,6 @@ msgstr ""
 msgid "source is descendant of destination"
 msgstr ""
 
-msgid "unable to collapse, there is more than one external parent"
-msgstr ""
-
 msgid "rebase working directory to branch head"
 msgstr ""
 
@@ -3643,6 +3684,9 @@ msgstr ""
 msgid "keep original branch names"
 msgstr ""
 
+msgid "force detaching of source from its original branch"
+msgstr ""
+
 msgid "continue an interrupted rebase"
 msgstr ""
 
@@ -3650,8 +3694,8 @@ msgid "abort an interrupted rebase"
 msgstr ""
 
 msgid ""
-"hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--keep] [--keepbranches] "
-"| [-c] | [-a]"
+"hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--"
+"keepbranches] | [-c] | [-a]"
 msgstr ""
 
 msgid "commands to interactively select changes for commit/qrefresh"
@@ -4207,6 +4251,10 @@ msgstr ""
 msgid "username %s contains a newline"
 msgstr ""
 
+#, python-format
+msgid "the name '%s' is reserved"
+msgstr "namnet '%s' är reserverat"
+
 msgid "options --message and --logfile are mutually exclusive"
 msgstr ""
 
@@ -4293,6 +4341,9 @@ msgstr ""
 
 msgid "(consider using --after)\n"
 msgstr ""
+
+msgid "child process failed to start"
+msgstr "barnprocess kunde inte startas"
 
 #, python-format
 msgid "changeset:   %d:%s\n"
@@ -4535,7 +4586,7 @@ msgid ""
 "    removed.\n"
 "    "
 msgstr ""
-"skapa ett icke versionshanterat arkiv från en arkivresision\n"
+"skapa ett icke versionshanterat arkiv från en arkivrevision\n"
 "\n"
 "    Som standard används revisonen för arbetskatalogens förälder; använd\n"
 "    -r/--rev för att specificera en annan revision.\n"
@@ -4722,17 +4773,35 @@ msgid ""
 "    'hg commit --close-branch' to mark this branch as closed.\n"
 "    "
 msgstr ""
+"sätt eller visa det aktuella grennamnet\n"
+"\n"
+"    Utan arguments visas det aktuella grennamnet. Med ett argument\n"
+"    sätts arbetskatalogens grennamn (grenen existerar inte i arkivet\n"
+"    förrän nästa arkivering). Standardförfarandet är att all primär\n"
+"    utveckling sker i grenen 'default'.\n"
+"\n"
+"    Om inte -f/--force är specificerad, kommer branch inte att tillåta\n"
+"    dig att sätta ett grennamn som redan existerar, även om den är\n"
+"    inaktiv.\n"
+"\n"
+"    Använd -C/--clean för att återställa arbetskatalogens gren till\n"
+"    samma som förälderns arbetskatalog, och återställer ett tidigare\n"
+"    grenbyte.\n"
+"\n"
+"    Använd kommandot 'hg update' för att byta till en existerande gren.\n"
+"    Använd 'hg commit --close-branch' för att markera grenen som stängd.\n"
+"    "
 
 #, python-format
 msgid "reset working directory to branch %s\n"
-msgstr ""
+msgstr "återställ arbetskatalogen till grenen %s\n"
 
 msgid "a branch of the same name already exists (use --force to override)"
-msgstr ""
+msgstr "en gren med samma namn existerar redan (använd --force för att tvinga)"
 
 #, python-format
 msgid "marked working directory as branch %s\n"
-msgstr ""
+msgstr "markerade arbetskatalogen som grenen %s\n"
 
 msgid ""
 "list repository named branches\n"
@@ -4747,6 +4816,17 @@ msgid ""
 "    Use the command 'hg update' to switch to an existing branch.\n"
 "    "
 msgstr ""
+"visa namngivna grenar i arkivet\n"
+"\n"
+"    Visa alla namngivna grenar i arkivet, och indikera vilka som är\n"
+"    inaktiva. Om -c/--closed anges, visas också grenar som har markerats\n"
+"    som stängda (se hg commit --close-branch).\n"
+"\n"
+"    Om -a/--acive anges, visas bara aktiva grenar. En gren anses aktiv om\n"
+"    den innehåller arkivhuvuden.\n"
+"\n"
+"    Använd kommandot 'hg update' för att byta till en existerande gren.\n"
+"    "
 
 msgid " (closed)"
 msgstr " (stängd)"
@@ -4760,8 +4840,8 @@ msgid ""
 "    Generate a compressed changegroup file collecting changesets not\n"
 "    known to be in another repository.\n"
 "\n"
-"    If no destination repository is specified the destination is\n"
-"    assumed to have all the nodes specified by one or more --base\n"
+"    If you omit the destination repository, then hg assumes the\n"
+"    destination will have all the nodes you specify with --base\n"
 "    parameters. To create a bundle containing all changesets, use\n"
 "    -a/--all (or --base null).\n"
 "\n"
@@ -4778,12 +4858,33 @@ msgid ""
 "    permissions, copy/rename information, and revision history.\n"
 "    "
 msgstr ""
+"skapa en ändringsgruppsfil\n"
+"\n"
+"    Skapa en komprimerad ändringsgruppfil genom att samla ihop ändringar\n"
+"    som inte finns i ett annat arkiv.\n"
+"\n"
+"    Om inget destinationsarkiv anges, så antar hg att destinationen har\n"
+"    alla noder du anger med parametrar av typen --base. För att skapa en\n"
+"    bunt med alla ändringar, använd -a/--all (eller --base null).\n"
+"\n"
+"    Du kan ändra kompressionsmetod med flaggan -t/--type. De tillgänliga\n"
+"    kompressionsmetoderna är: none, bzip2, och gzip (som standard\n"
+"    komprimeras buntar med bzip2).\n"
+"\n"
+"    Buntfilen kan överföras med konventionella metoder och appliceras i\n"
+"    ett annat arkiv med kommandot unbundle eller pull. Detta är\n"
+"    användbart när en direkt push och pull inte är tillgängliga eller\n"
+"    när export av ett helt arkiv inte är intressant.\n"
+"\n"
+"    Applicering av buntar bevarar all ändringsinnehåll inklusive\n"
+"    tillstånd, information om kopior/namnbyte, och revisionshistorik.\n"
+"    "
 
 msgid "--base is incompatible with specifying a destination"
-msgstr ""
+msgstr "--base är inkompatibel med specificering av destination"
 
 msgid "unknown bundle type specified with --type"
-msgstr ""
+msgstr "okänd bunttyp specificerad med --type"
 
 msgid ""
 "output the current or given revision of files\n"
@@ -4801,6 +4902,20 @@ msgid ""
 "    :``%p``: root-relative path name of file being printed\n"
 "    "
 msgstr ""
+"visa den aktuella eller angivna revisionen för filer\n"
+"\n"
+"    Visa de angivna filerna som de ser ut i den angivna revisionen. Om\n"
+"    ingen revision anges, så används arbetskatalogens förälder, eller tip\n"
+"    om ingen revision är uthämtad.\n"
+"\n"
+"    Utmatning kan vara till en fil, och då anges filnamnet med en\n"
+"    formatsträng. Formatteringsreglerna är samma som för kommandot\n"
+"    export, med följande tillägg:\n"
+"\n"
+"    :``%s``: basnamn på den visade filen\n"
+"    :``%d``: katalognamn på den visade filen, eller '.' om i arkivroten\n"
+"    :``%p``: rotrelativ sökvägsnamn för den visade filen\n"
+"    "
 
 msgid ""
 "make a copy of an existing repository\n"
@@ -4826,7 +4941,9 @@ msgid ""
 "\n"
 "    a) the changeset, tag or branch specified with -u/--updaterev\n"
 "    b) the changeset, tag or branch given with the first -r/--rev\n"
-"    c) the head of the default branch\n"
+"    c) the branch given with the first -b/--branch\n"
+"    d) the branch given with the url#branch source syntax\n"
+"    e) the head of the default branch\n"
 "\n"
 "    Use 'hg clone -u . src dst' to checkout the source repository's\n"
 "    parent changeset (applicable for local source repositories only).\n"
@@ -4886,7 +5003,9 @@ msgstr ""
 "\n"
 "    a) ändringen, taggen eller grenen specificerad med -u/--updaterev\n"
 "    b) ändringen, taggen eller grenen given med den första -r/--rev\n"
-"    c) huvudet på grenen 'default'\n"
+"    c) grenen angiven med den första -b/--branch\n"
+"    d) grenen angiven med källsyntaxen url#gren\n"
+"    e) huvudet på grenen 'default'\n"
 "\n"
 "    Använd 'hg clone -u . källa dst' för att hämta ut källkodsarkivets\n"
 "    föräldraänrding (gäller bara för lokala arkiv).\n"
@@ -4962,14 +5081,14 @@ msgstr ""
 "    "
 
 msgid "nothing changed\n"
-msgstr ""
+msgstr "inget ändrat\n"
 
 msgid "created new head\n"
-msgstr ""
+msgstr "skapade ett nytt huvud\n"
 
 #, python-format
 msgid "committed changeset %d:%s\n"
-msgstr ""
+msgstr "arkiverade ändringen %d:%s\n"
 
 msgid ""
 "mark files as copied for the next commit\n"
@@ -4986,43 +5105,56 @@ msgid ""
 "    before that, see hg revert.\n"
 "    "
 msgstr ""
+"markera filer som kopierade vid nästa arkivering\n"
+"\n"
+"    Markera dest som kopia av källfilerna. Om dest är en katalog,\n"
+"    placeras kopiorna i den katalogen. Om dest är en fil, måste källan\n"
+"    vara en enda fil.\n"
+"\n"
+"    Som standard kopierar detta kommando filinnehållet som det ser ut i\n"
+"    arbetskatalogen. Om det aktiveras med -A/--after, sparas operationen\n"
+"    men ingen kopiering utförs.\n"
+"\n"
+"    Kommandot slår igenom vid nästa arkivering. För att ångra en\n"
+"    kopiering innan dess, se hg revert.\n"
+"    "
 
 msgid "find the ancestor revision of two revisions in a given index"
-msgstr ""
+msgstr "hitta föregående revision av två revisioner i ett givet index"
 
 msgid "There is no Mercurial repository here (.hg not found)"
 msgstr "Det finns inget Mercurial-arkiv här (.hg hittades inte)"
 
 msgid "either two or three arguments required"
-msgstr ""
+msgstr "endera två eller tre argument krävs"
 
 msgid "returns the completion list associated with the given command"
-msgstr ""
+msgstr "returnerar kompletteringslistan associerad med det givna kommandot"
 
 msgid "rebuild the dirstate as it would look like for the given revision"
-msgstr ""
+msgstr "bygg om katalogstatusen som den skulle se ut för den givna revisionen"
 
 msgid "validate the correctness of the current dirstate"
-msgstr ""
+msgstr "validera korrektheten för den nuvarande katalogstatusen"
 
 #, python-format
 msgid "%s in state %s, but not in manifest1\n"
-msgstr ""
+msgstr "%s har status %s, men inte i manifest1\n"
 
 #, python-format
 msgid "%s in state %s, but also in manifest1\n"
-msgstr ""
+msgstr "%s har status %s, men också i manifest1\n"
 
 #, python-format
 msgid "%s in state %s, but not in either manifest\n"
-msgstr ""
+msgstr "%s har status %s, men inte i något manifest\n"
 
 #, python-format
 msgid "%s in manifest1, but listed as state %s"
-msgstr ""
+msgstr "%s i manifest1, men listad med status %s"
 
 msgid ".hg/dirstate inconsistent with current parent's manifest"
-msgstr ""
+msgstr ".hg/dirstate överrensstämmer inte med nuvarande förälders manifest"
 
 msgid ""
 "show combined config settings from all hgrc files\n"
@@ -5227,8 +5359,9 @@ msgid ""
 "\n"
 "    Print the changeset header and diffs for one or more revisions.\n"
 "\n"
-"    The information shown in the changeset header is: author,\n"
-"    changeset hash, parent(s) and commit comment.\n"
+"    The information shown in the changeset header is: author, date,\n"
+"    branch name (if non-default), changeset hash, parent(s) and commit\n"
+"    comment.\n"
 "\n"
 "    NOTE: export may generate unexpected diff output for merge\n"
 "    changesets, as it will compare the merge changeset against its\n"
@@ -5261,8 +5394,9 @@ msgstr ""
 "\n"
 "    Skriv ändringsrubriken och diffen för en eller fler revisioner.\n"
 "\n"
-"    Informationen som visas i ändringsheadern är: författare, ändringens\n"
-"    hash, föräldrar och arkiveringskommentar.\n"
+"    Informationen som visas i ändringsheadern är: författare, datum,\n"
+"    grenens namn (om inte default), ändringens hash, föräldrar och\n"
+"    arkiveringskommentar.\n"
 "\n"
 "    NOTERA: export kan generera oväntade resultat för sammanfogningar,\n"
 "    eftersom den som standard bara kommer att jämföra mot den första\n"
@@ -5348,52 +5482,78 @@ msgid ""
 "    use the --all flag.\n"
 "    "
 msgstr ""
+"sök efter ett mänster i specificerade filer och revisioner\n"
+"\n"
+"    Söker igenom revisioner och filer med reguljära uttryck.\n"
+"\n"
+"    Det här kommandot beter sig annorlunda jämfört med grep i Unix. Det\n"
+"    accepterar bara Python/Perl-regexps. Det söker arkivhistorik, inte\n"
+"    arbetskatalogen. Det visar också revisionsnumret där en träff finns.\n"
+"\n"
+"    Som standard visar grep bara utmatningen från den första revisionen\n"
+"    av en matchande fil. För att visa varje revision som innehåller en\n"
+"    ändring i träffstatus (\"-\" för en träff som blir en icke-träff,\n"
+"    eller \"+\" för en icke-träff som blir en träff), använd flaggan\n"
+"    --all.\n"
+"    "
 
 #, python-format
 msgid "grep: invalid match pattern: %s\n"
-msgstr ""
+msgstr "grep: ogiltigt träffmönster: %s\n"
 
 msgid ""
 "show current repository heads or show branch heads\n"
 "\n"
-"    With no arguments, show all repository head changesets.\n"
+"    With no arguments, show all repository branch heads.\n"
 "\n"
 "    Repository \"heads\" are changesets with no child changesets. They are\n"
 "    where development generally takes place and are the usual targets\n"
-"    for update and merge operations.\n"
+"    for update and merge operations. Branch heads are changesets that have\n"
+"    no child changeset on the same branch.\n"
 "\n"
-"    If one or more REV is given, the \"branch heads\" will be shown for\n"
-"    the named branch associated with the specified changeset(s).\n"
-"\n"
-"    Branch heads are changesets on a named branch with no descendants on\n"
-"    the same branch. A branch head could be a \"true\" (repository) head,\n"
-"    or it could be the last changeset on that branch before it was\n"
-"    merged into another branch, or it could be the last changeset on the\n"
-"    branch before a new branch was created. If none of the branch heads\n"
-"    are true heads, the branch is considered inactive.\n"
+"    If one or more REVs are given, only branch heads on the branches\n"
+"    associated with the specified changesets are shown.\n"
 "\n"
 "    If -c/--closed is specified, also show branch heads marked closed\n"
 "    (see hg commit --close-branch).\n"
 "\n"
 "    If STARTREV is specified, only those heads that are descendants of\n"
 "    STARTREV will be displayed.\n"
+"\n"
+"    If -t/--topo is specified, named branch mechanics will be ignored and "
+"only\n"
+"    changesets without children will be shown.\n"
 "    "
 msgstr ""
-
-msgid "you must specify a branch to use --closed"
-msgstr ""
+"visa aktuella arkivhuvuden och visar grenhuvuden\n"
+"\n"
+"    Utan några argument visas alla ändringar som är grenhuvuden.\n"
+"\n"
+"    Arkiv-\"huvuden\" är ändringar utan barnändringar. Det är vanligtvis\n"
+"    där som utveckling sker och är de vanligaste målen för update- och\n"
+"    merge-operationer. Grenhuvuden är ändringar som inte har några\n"
+"    barnändringar på samma gren.\n"
+"\n"
+"    Om en eller flera REV anges, kommer bara grenhuvuden på grenar\n"
+"    som är associerade med de angivna ändringarna att visas.\n"
+"\n"
+"    Om -c/--closed anges, visas också grenvhuvuden som markerats som\n"
+"    stängda (se hg commit --close-branch).\n"
+"\n"
+"    Om STARTREV anges, visas bara de huvuden som har STARTREV som\n"
+"    anfader.\n"
+"\n"
+"    Om -t/--topo anges, ignoreras all logik för namngivna grenar och bara\n"
+"    ändringar utan barn kommer att visas.\n"
+"    "
 
 #, python-format
-msgid "no open branch heads on branch %s\n"
-msgstr ""
+msgid "no open branch heads found on branches %s"
+msgstr "inga öppna grenhuvuden hittades på grenarna %s"
 
 #, python-format
-msgid "no changes on branch %s containing %s are reachable from %s\n"
-msgstr ""
-
-#, python-format
-msgid "no changes on branch %s are reachable from %s\n"
-msgstr ""
+msgid " (started at %s)"
+msgstr " (började som %s)"
 
 msgid ""
 "show help for a given topic or a help overview\n"
@@ -5463,6 +5623,14 @@ msgstr ""
 "%s-utökning - %s\n"
 "\n"
 
+msgid "use \"hg help extensions\" for information on enabling extensions\n"
+msgstr ""
+"använd \"hg help extensions\" för information om aktivering av utökningar\n"
+
+#, python-format
+msgid "'%s' is provided by the following extension:"
+msgstr "'%s' tillhandahålls av följande utökning:"
+
 msgid "Mercurial Distributed SCM\n"
 msgstr "Mercurial Distribuerad SCM\n"
 
@@ -5503,6 +5671,19 @@ msgid ""
 "    this revision and a branch name for non-default branches.\n"
 "    "
 msgstr ""
+"identifiera arbetskopian eller angivna revisioner\n"
+"\n"
+"    Utan någon revision, visas en sammanfattning av den aktuella\n"
+"    statusen för arkivet.\n"
+"\n"
+"    Specificering av en sökväg till ett arkiv eller Mercurial-bunt\n"
+"    gör att kommandot jobbar mot arkivet/bunten som är angiven.\n"
+"\n"
+"    Sammanfattningen identifierar arkivstatusen med en eller två\n"
+"    föräldrars hash-identifierare, följt av ett \"+\" om det finns\n"
+"    oarkiverade ändringar i arbetskatalogen, en lista av märken för den\n"
+"    här revisionen och ett grennamn för grenar som inte är default.\n"
+"    "
 
 msgid ""
 "import an ordered set of patches\n"
@@ -5540,16 +5721,23 @@ msgid ""
 "    "
 msgstr ""
 
+msgid "to working directory"
+msgstr "till arbetskatalog"
+
+msgid "not a Mercurial patch"
+msgstr "inte en Mercurial-patch"
+
+msgid "patch is damaged or loses information"
+msgstr "patchen är skadad eller tappar information"
+
 msgid "applying patch from stdin\n"
 msgstr ""
 
+#, python-format
+msgid "applied %s\n"
+msgstr "applicerade %s\n"
+
 msgid "no diffs found"
-msgstr ""
-
-msgid "not a Mercurial patch"
-msgstr ""
-
-msgid "patch is damaged or loses information"
 msgstr ""
 
 msgid ""
@@ -5565,6 +5753,17 @@ msgid ""
 "    See pull for valid source format details.\n"
 "    "
 msgstr ""
+"visa nya ändringar som hittas i källan\n"
+"\n"
+"    Visa nya ändringar som hittas i den specificerade sökvägen/URL:en\n"
+"    eller den vanliga pull-platsen. Dessa ändringar skulle ha dragits om\n"
+"    du använt pull-kommandot.\n"
+"\n"
+"    För fjärrarkiv, använd --bundle för att slippa ladda ner\n"
+"    ändringarna två gånger om incoming följs av pull.\n"
+"\n"
+"    Se pull för detaljer om giltiga källformat.\n"
+"    "
 
 msgid ""
 "create a new repository in the given directory\n"
@@ -5712,12 +5911,19 @@ msgstr ""
 "    "
 
 #, python-format
-msgid "branch '%s' has %d heads - please merge with an explicit rev"
-msgstr "grenen '%s' har %d huvuden - sammanfoga med en specifik rev"
+msgid "abort: branch '%s' has %d heads - please merge with an explicit rev\n"
+msgstr ""
+"avbryter: grenen '%s' har %d huvuden - sammanfoga med en specifik rev\n"
+
+msgid "(run 'hg heads .' to see heads)\n"
+msgstr "(kör 'hg heads .' för att se huvuden)\n"
 
 #, python-format
-msgid "branch '%s' has one head - please merge with an explicit rev"
-msgstr "grenen '%s' har ett huvud - sammanfoga med en specifik rev"
+msgid "abort: branch '%s' has one head - please merge with an explicit rev\n"
+msgstr "avbryter: grenen '%s' har ett huvud - sammanfoga med en specifik rev\n"
+
+msgid "(run 'hg heads' to see all heads)\n"
+msgstr "(kör 'hg heads' för att se alla huvuden)\n"
 
 msgid "there is nothing to merge"
 msgstr "det finns inget att sammanfoga"
@@ -5734,13 +5940,13 @@ msgstr ""
 "sammanfoga med en speficik rev"
 
 msgid ""
-"show changesets not found in destination\n"
+"show changesets not found in the destination\n"
 "\n"
 "    Show changesets not found in the specified destination repository\n"
 "    or the default push location. These are the changesets that would\n"
 "    be pushed if a push was requested.\n"
 "\n"
-"    See pull for valid destination format details.\n"
+"    See pull for details of valid destination formats.\n"
 "    "
 msgstr ""
 "visa ändringar som inte hittas i destinationen\n"
@@ -5853,7 +6059,7 @@ msgstr ""
 msgid ""
 "push changes to the specified destination\n"
 "\n"
-"    Push changes from the local repository to the given destination.\n"
+"    Push changes from the local repository to the specified destination.\n"
 "\n"
 "    This is the symmetrical operation for pull. It moves changes from\n"
 "    the current repository to a different one. If the destination is\n"
@@ -5873,7 +6079,7 @@ msgid ""
 msgstr ""
 "tryck ändringar till den specificerade destinationen\n"
 "\n"
-"    Trycker ändringar från det lokala arkivet till den givna destinationen.\n"
+"    Trycker ändringar från det lokala arkivet till angiven destination.\n"
 "\n"
 "    Detta är en symmetriska operationen för pull. Den flyttar ändringar\n"
 "    från det nuvarande arkivet till ett annat. Om destinationen är lokal så\n"
@@ -6076,8 +6282,8 @@ msgid ""
 "    to the contents they had in the parent of the working directory.\n"
 "    This restores the contents of the affected files to an unmodified\n"
 "    state and unschedules adds, removes, copies, and renames. If the\n"
-"    working directory has two parents, you must explicitly specify the\n"
-"    revision to revert to.\n"
+"    working directory has two parents, you must explicitly specify a\n"
+"    revision.\n"
 "\n"
 "    Using the -r/--rev option, revert the given files or directories\n"
 "    to their contents as of a specific revision. This can be helpful\n"
@@ -6109,7 +6315,7 @@ msgstr ""
 "    katalogerna till innehållet de hade i arbetskatalogens förälder. Det\n"
 "    sätter filer i ett omodifierad läge och avbeställer adderingar,\n"
 "    raderingar, kopior och namnbyten. Om arbetskatalogen har två\n"
-"    föräldrar, så måste du ange vilken revision som skall återställas.\n"
+"    föräldrar, så måste du ange en revision.\n"
 "\n"
 "    Med flaggan -r/--rev, återställs de givna filerna eller katalogerna\n"
 "    till innehållet i den specifika revisionen. Detta kan användas för\n"
@@ -6180,7 +6386,7 @@ msgid ""
 "    - commit\n"
 "    - import\n"
 "    - pull\n"
-"    - push (with this repository as destination)\n"
+"    - push (with this repository as the destination)\n"
 "    - unbundle\n"
 "\n"
 "    This command is not intended for use on public repositories. Once\n"
@@ -6466,10 +6672,6 @@ msgstr ""
 msgid "tag names must be unique"
 msgstr "märkesnamn måste vara unika"
 
-#, python-format
-msgid "the name '%s' is reserved"
-msgstr "namnet '%s' är reserverat"
-
 msgid "--rev and --remove are incompatible"
 msgstr "--rev och --remove är inkompatibla"
 
@@ -6738,8 +6940,8 @@ msgstr "visa inte sammanfogningar"
 msgid "treat all files as text"
 msgstr "behandla alla filer som text"
 
-msgid "don't include dates in diff headers"
-msgstr "inkludera inte datum i diff-rubriker"
+msgid "omit dates from diff headers"
+msgstr "exkludera datum från diff-rubriker"
 
 msgid "show which function each change is in"
 msgstr "visa vilken funktion varje ändring är i"
@@ -6771,11 +6973,17 @@ msgstr "[FLAGGA]... [FIL]..."
 msgid "annotate the specified revision"
 msgstr "annotera den specificerade revisionen"
 
-msgid "follow file copies and renames"
-msgstr "följ filkopior och namnbyten"
+msgid "follow copies and renames (DEPRECATED)"
+msgstr "följ kopieringar och namnbyten (FÖRLEGAD)"
+
+msgid "don't follow copies and renames"
+msgstr "följ inte kopieringar och namnbyten"
 
 msgid "list the author (long with -v)"
 msgstr "visa skapare (lång med -v)"
+
+msgid "list the filename"
+msgstr "visa filnamnet"
 
 msgid "list the date (short with -q)"
 msgstr "visa datum (kort med -q)"
@@ -6841,37 +7049,40 @@ msgid "[-gbsr] [-U] [-c CMD] [REV]"
 msgstr "[-gbsr] [-U] [-c KMD] [REV]"
 
 msgid "set branch name even if it shadows an existing branch"
-msgstr ""
+msgstr "sätt grennamnet även om det döljer en existerande gren"
 
 msgid "reset branch name to parent branch name"
-msgstr ""
+msgstr "återställ grennamn till förälderns grennamn"
 
 msgid "[-fC] [NAME]"
-msgstr ""
+msgstr "[-fC] [NAMN]"
 
 msgid "show only branches that have unmerged heads"
-msgstr ""
+msgstr "visa bara grenar som har icke-sammanfogade huvuden"
 
 msgid "show normal and closed branches"
-msgstr ""
+msgstr "visa normala och stängda grenar"
 
 msgid "[-ac]"
 msgstr "[-ac]"
 
-msgid "run even when remote repository is unrelated"
-msgstr "kör även när fjärrarkivet är orelaterat"
+msgid "run even when the destination is unrelated"
+msgstr "kör även när destinationen är obesläktad"
 
-msgid "a changeset up to which you would like to bundle"
-msgstr ""
+msgid "a changeset intended to be added to the destination"
+msgstr "en ändring avsedd att läggas till destinationen"
 
-msgid "a base changeset to specify instead of a destination"
-msgstr ""
+msgid "a specific branch you would like to bundle"
+msgstr "en specifik gren du vill bunta"
+
+msgid "a base changeset assumed to be available at the destination"
+msgstr "en basändring som antas är tillgängliga i destinationen"
 
 msgid "bundle all changesets in the repository"
-msgstr ""
+msgstr "bunta alla ändringar i arkivet"
 
 msgid "bundle compression type to use"
-msgstr ""
+msgstr "typ av buntkompression att använda"
 
 msgid "[-f] [-t TYPE] [-a] [-r REV]... [--base REV]... FILE [DEST]"
 msgstr "[-f] [-t TYP] [-a] [-r REV]... [--base REV]... FIL [DEST]"
@@ -6880,22 +7091,25 @@ msgid "print output to file with formatted name"
 msgstr "skriv utmatning till fil med formatterat namn"
 
 msgid "print the given revision"
-msgstr ""
+msgstr "visa den angivna revisionen"
 
 msgid "apply any matching decode filter"
-msgstr ""
+msgstr "applicera valfritt överrensstämmande avkodningsfilter"
 
 msgid "[OPTION]... FILE..."
 msgstr "[FLAGGA]... FIL..."
 
-msgid "the clone will only contain a repository (no working copy)"
-msgstr "klonen kommer bara att ha arkivet (ingen arbetskopia)"
+msgid "the clone will include an empty working copy (only a repository)"
+msgstr "klonen kommer add inkludera en tom arbetskopia (bara ett arkiv)"
 
 msgid "revision, tag or branch to check out"
 msgstr "revision, märke eller gren att hämta ut"
 
-msgid "clone only the specified revisions and ancestors"
-msgstr "klona bara specificerade revisioner och anfäder"
+msgid "include the specified changeset"
+msgstr "inkludera den angivna ändringen"
+
+msgid "clone only the specified branch"
+msgstr "klona bara den angivna grenen"
 
 msgid "[OPTION]... SOURCE [DEST]"
 msgstr "[FLAGGA]... KÄLLA [DEST]"
@@ -6907,7 +7121,7 @@ msgid "mark a branch as closed, hiding it from the branch list"
 msgstr "markera en gren som stängd, och göm den från grenlistan"
 
 msgid "record a copy that has already occurred"
-msgstr ""
+msgstr "lagra en kopiering som redan har inträffat"
 
 msgid "forcibly copy over an existing managed file"
 msgstr "tvinga kopiering över en eixsterande hanterad fil"
@@ -6916,55 +7130,55 @@ msgid "[OPTION]... [SOURCE]... DEST"
 msgstr "[FLAGGA]... [KÄLLA]... DEST"
 
 msgid "[INDEX] REV1 REV2"
-msgstr ""
+msgstr "[INDEX] REV1 REV2"
 
 msgid "[COMMAND]"
-msgstr ""
+msgstr "[KOMMANDO]"
 
 msgid "show the command options"
-msgstr ""
+msgstr "visa kommandoflaggor"
 
 msgid "[-o] CMD"
-msgstr ""
+msgstr "[-o] KMD"
 
 msgid "try extended date formats"
-msgstr ""
+msgstr "pröva utökade datumformat"
 
 msgid "[-e] DATE [RANGE]"
-msgstr ""
+msgstr "[-e] DATUM [SPANN]"
 
 msgid "FILE REV"
-msgstr ""
+msgstr "FIL REV"
 
 msgid "[PATH]"
-msgstr ""
+msgstr "[SÖKVÄG]"
 
 msgid "FILE"
-msgstr ""
+msgstr "FIL"
 
 msgid "revision to rebuild to"
-msgstr ""
+msgstr "revision att bygga om till"
 
 msgid "[-r REV] [REV]"
-msgstr ""
+msgstr "[-r REV] [REV]"
 
 msgid "revision to debug"
-msgstr ""
+msgstr "revision att debugga"
 
 msgid "[-r REV] FILE"
-msgstr ""
+msgstr "[-r REV] FIL"
 
 msgid "REV1 [REV2]"
-msgstr ""
+msgstr "REV1 [REV2]"
 
 msgid "do not display the saved mtime"
-msgstr ""
+msgstr "visa inte sparad mtime"
 
 msgid "[OPTION]..."
 msgstr "[FLAGGA]..."
 
 msgid "revision to check"
-msgstr ""
+msgstr "revision att kontrollera"
 
 msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
 msgstr "[FLAGGA]... [-r REV1 [-r REV2]] [FIL]..."
@@ -6979,38 +7193,41 @@ msgid "[OPTION]... [-o OUTFILESPEC] REV..."
 msgstr "[FLAGGA]... [-o UTFILSPEC] REV..."
 
 msgid "end fields with NUL"
-msgstr ""
+msgstr "avsluta fält med NUL"
 
 msgid "print all revisions that match"
-msgstr ""
+msgstr "visa alla revisioner som matchar"
 
 msgid "follow changeset history, or file history across copies and renames"
 msgstr ""
 "följ ändringshistorik, eller filhistorik över kopieringar och namnbyten"
 
 msgid "ignore case when matching"
-msgstr ""
+msgstr "ignorera versaler/gemener vid matchning"
 
 msgid "print only filenames and revisions that match"
-msgstr ""
+msgstr "visa bara filnamn och revisioner som matchar"
 
 msgid "print matching line numbers"
-msgstr ""
+msgstr "visa matchande radnummer"
 
 msgid "search in given revision range"
-msgstr ""
+msgstr "sök i ett givet revisionsområde"
 
 msgid "[OPTION]... PATTERN [FILE]..."
-msgstr ""
+msgstr "[FLAGGA]... MÖNSTER [FIL]..."
 
 msgid "show only heads which are descendants of REV"
-msgstr ""
+msgstr "visa bara huvuden som har REV som anfader"
 
-msgid "show only the active branch heads from open branches"
-msgstr ""
+msgid "show topological heads only"
+msgstr "visa bara topologiska huvuden"
+
+msgid "show active branchheads only [DEPRECATED]"
+msgstr "visa bara aktiva grenhuvuden [FÖRLEGAD]"
 
 msgid "show normal and closed branch heads"
-msgstr ""
+msgstr "visa normala och stängda grenhuvuden"
 
 msgid "[-ac] [-r STARTREV] [REV]..."
 msgstr "[-ac] [-r STARTREV] [REV]..."
@@ -7019,22 +7236,22 @@ msgid "[TOPIC]"
 msgstr "[ÄMNE]"
 
 msgid "identify the specified revision"
-msgstr ""
+msgstr "identifiera den angivna revisionen"
 
 msgid "show local revision number"
-msgstr ""
+msgstr "visa lokala revisionsnummer"
 
 msgid "show global revision id"
-msgstr ""
+msgstr "visa globala revisions-id"
 
 msgid "show branch"
-msgstr ""
+msgstr "visa grenar"
 
 msgid "show tags"
-msgstr ""
+msgstr "visa märken"
 
 msgid "[-nibt] [-r REV] [SOURCE]"
-msgstr ""
+msgstr "[-nibt] [-r REV] [KÄLLA]"
 
 msgid ""
 "directory strip option for patch. This has the same meaning as the "
@@ -7042,49 +7259,55 @@ msgid ""
 msgstr ""
 
 msgid "base path"
-msgstr ""
+msgstr "grundsökväg"
 
 msgid "skip check for outstanding uncommitted changes"
-msgstr ""
+msgstr "hoppa över kontroll av oarkiverade ändringar"
 
 msgid "don't commit, just update the working directory"
-msgstr ""
+msgstr "arkivera inte, uppdatera bara arbetskatalogen"
 
 msgid "apply patch to the nodes from which it was generated"
-msgstr ""
+msgstr "applicera patch till noderna som den genererades från"
 
 msgid "use any branch information in patch (implied by --exact)"
-msgstr ""
+msgstr "använd greninformation i patchen (implicit med --exact)"
 
 msgid "[OPTION]... PATCH..."
-msgstr ""
+msgstr "[FLAGGA]... PATCH..."
+
+msgid "run even if remote repository is unrelated"
+msgstr "kör även om fjärrarkivet är obesläktat"
 
 msgid "show newest record first"
 msgstr "visa nyaste saken först"
 
 msgid "file to store the bundles into"
-msgstr ""
+msgstr "fil att lagra buntarna i"
 
-msgid "a specific remote revision up to which you would like to pull"
-msgstr "en specifik fjärrrevision upp till vilken du vill dra"
+msgid "a remote changeset intended to be added"
+msgstr "en fjärrändring som avses att läggas till"
+
+msgid "a specific branch you would like to pull"
+msgstr "en specifik gren som du vill dra"
 
 msgid "[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILENAME] [SOURCE]"
-msgstr ""
+msgstr "[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILENAMN] [KÄLLA]"
 
 msgid "[-e CMD] [--remotecmd CMD] [DEST]"
 msgstr "[-e KMD] [--remotecmd KMD] [DEST]"
 
-msgid "search the repository as it stood at REV"
-msgstr ""
+msgid "search the repository as it is in REV"
+msgstr "sök igenom arkivet som det är vid REV"
 
 msgid "end filenames with NUL, for use with xargs"
 msgstr "filnamn slutar med NUL, för användning med xargs"
 
 msgid "print complete paths from the filesystem root"
-msgstr ""
+msgstr "visa kompletta sökvägar från filsystemsroten"
 
 msgid "[OPTION]... [PATTERN]..."
-msgstr ""
+msgstr "[FLAGGA]... [MÖNSTER]..."
 
 msgid "only follow the first parent of merge changesets"
 msgstr "följ bara den första föräldern vid sammanfogningar"
@@ -7134,14 +7357,17 @@ msgstr "granska revisioner att sammanfoga (ingen sammanfogning utförs)"
 msgid "[-P] [-f] [[-r] REV]"
 msgstr "[-P] [-f] [[-r] REV]"
 
-msgid "a specific revision up to which you would like to push"
-msgstr "en specifik revision upp till vilken du vill trycka"
+msgid "a changeset intended to be included in the destination"
+msgstr "en ändring avsedd att inkluderas i destinationen"
+
+msgid "a specific branch you would like to push"
+msgstr "en specifik gren som du vill trycka"
 
 msgid "[-M] [-p] [-n] [-f] [-r REV]... [DEST]"
 msgstr "[-M] [-p] [-n] [-f] [-r REV]... [DEST]"
 
-msgid "show parents from the specified revision"
-msgstr "visa föräldrar från den angivna revisionen"
+msgid "show parents of the specified revision"
+msgstr "visa föräldrar för den angivna revisionen"
 
 msgid "[-r REV] [FILE]"
 msgstr "[-r REV] [FIL]"
@@ -7151,6 +7377,9 @@ msgstr "[NAMN]"
 
 msgid "update to new branch head if changesets were pulled"
 msgstr "uppdatera till nytt grenhuvud om ändringar drogs"
+
+msgid "run even when remote repository is unrelated"
+msgstr "kör även när fjärrarkivet är orelaterat"
 
 msgid "[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"
 msgstr "[-u] [-f] [-r REV]... [-e KMD] [--remotecmd KMD] [KÄLLA]"
@@ -7194,8 +7423,8 @@ msgstr "återställ alla ändringar när inga argument ges"
 msgid "tipmost revision matching date"
 msgstr "senaste revision matchande datum"
 
-msgid "revision to revert to"
-msgstr "revision att revertera till"
+msgid "revert to the specified revision"
+msgstr "återgå till den angivna revisionen"
 
 msgid "do not save backup copies of files"
 msgstr "spara inte backup-kopior av filer"
@@ -8201,6 +8430,9 @@ msgid ""
 "  prefer it over 'default' if both are defined.\n"
 msgstr ""
 
+msgid "dirstate branch not accessible"
+msgstr ""
+
 msgid "can only share local repositories"
 msgstr ""
 
@@ -8536,14 +8768,25 @@ msgid ""
 msgstr ""
 
 #, python-format
-msgid "abort: push creates new remote branch '%s'!\n"
-msgstr ""
+msgid "abort: push creates new remote heads on branch '%s'!\n"
+msgstr "avbryter: push skapar nya fjärrhuvuden på grenen '%s'!\n"
 
 msgid "abort: push creates new remote heads!\n"
 msgstr ""
 
 msgid "(did you forget to merge? use push -f to force)\n"
 msgstr ""
+
+msgid "(you should pull and merge or use push -f to force)\n"
+msgstr ""
+"(du kan dra och sammanfoga eller eller använda push -f för att tvinga)\n"
+
+#, python-format
+msgid "abort: push creates new remote branches: %s!\n"
+msgstr "avbryter: push skapar nya fjärrgrenar: %s!\n"
+
+msgid "(use 'hg push -f' to force)\n"
+msgstr "använd 'hg push -f' för att tvinga)\n"
 
 msgid "note: unsynced remote changes!\n"
 msgstr ""
@@ -8572,12 +8815,16 @@ msgid "received file revlog group is empty"
 msgstr ""
 
 #, python-format
+msgid "missing file data for %s:%s - run hg verify"
+msgstr "fildata för %s:%s saknas - kör hg verify"
+
+#, python-format
 msgid " (%+d heads)"
-msgstr ""
+msgstr " (%+d huvuden)"
 
 #, python-format
 msgid "added %d changesets with %d changes to %d files%s\n"
-msgstr ""
+msgstr "lade till %d ändringar med %d modifikationer i %d filer%s\n"
 
 msgid "Unexpected response from remote server:"
 msgstr ""
@@ -8841,6 +9088,9 @@ msgstr ""
 msgid "unknown compression type %r"
 msgstr ""
 
+msgid "index entry flags need RevlogNG"
+msgstr "indexflaggor kräver RevlogNG"
+
 #, python-format
 msgid "index %s unknown flags %#04x for format v0"
 msgstr ""
@@ -8968,6 +9218,9 @@ msgstr ""
 msgid "pushing subrepo %s\n"
 msgstr ""
 
+msgid "cannot commit svn externals"
+msgstr ""
+
 #, python-format
 msgid "not removing repo %s because it has changes.\n"
 msgstr "raderar inte arkivet %s eftersom den har ändringar.\n"
@@ -9080,6 +9333,12 @@ msgstr ""
 #, python-format
 msgid "http auth: user %s, password %s\n"
 msgstr ""
+
+msgid "certificate checking requires Python 2.6"
+msgstr "certifikatkontroll kräver Python 2.6"
+
+msgid "server identity verification succeeded\n"
+msgstr "verifiering av serveridentitet lyckades\n"
 
 #, python-format
 msgid "command '%s' failed: %s"
