@@ -899,8 +899,12 @@ class localrepository(repo.repository):
                     new[f] = self._filecommit(fctx, m1, m2, linkrev, trp,
                                               changed)
                     m1.set(f, fctx.flags())
-                except (OSError, IOError):
-                    if error:
+                except OSError, inst:
+                    self.ui.warn(_("trouble committing %s!\n") % f)
+                    raise
+                except IOError, inst:
+                    errcode = getattr(inst, 'errno', errno.ENOENT)
+                    if error or errcode and errcode != errno.ENOENT:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
                     else:
@@ -1338,6 +1342,7 @@ class localrepository(repo.repository):
 
             if r:
                 reqcnt += 1
+                self.ui.progress('searching', reqcnt, unit='queries')
                 self.ui.debug("request %d: %s\n" %
                             (reqcnt, " ".join(map(short, r))))
                 for p in xrange(0, len(r), 10):
@@ -1350,6 +1355,7 @@ class localrepository(repo.repository):
         while search:
             newsearch = []
             reqcnt += 1
+            self.ui.progress('searching', reqcnt, unit='queries')
             for n, l in zip(search, remote.between(search)):
                 l.append(n[1])
                 p = n[0]
@@ -1385,6 +1391,7 @@ class localrepository(repo.repository):
         self.ui.debug("found new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")
 
+        self.ui.progress('searching', None, unit='queries')
         self.ui.debug("%d total queries\n" % reqcnt)
 
         return base.keys(), list(fetch), heads
@@ -1812,8 +1819,13 @@ class localrepository(repo.repository):
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
             group = cl.group(msng_cl_lst, identity, collect)
+            cnt = 0
             for chnk in group:
                 yield chnk
+                self.ui.progress('bundle changes', cnt, unit='chunks')
+                cnt += 1
+            self.ui.progress('bundle changes', None, unit='chunks')
+
 
             # Figure out which manifest nodes (of the ones we think might be
             # part of the changegroup) the recipient must know about and
@@ -1835,8 +1847,12 @@ class localrepository(repo.repository):
             # and data collection functions back.
             group = mnfst.group(msng_mnfst_lst, lookup_manifest_link,
                                 filenode_collector(changedfiles))
+            cnt = 0
             for chnk in group:
                 yield chnk
+                self.ui.progress('bundle manifests', cnt, unit='chunks')
+                cnt += 1
+            self.ui.progress('bundle manifests', None, unit='chunks')
 
             # These are no longer needed, dereference and toss the memory for
             # them.
@@ -1850,6 +1866,7 @@ class localrepository(repo.repository):
                     msng_filenode_set.setdefault(fname, {})
                     changedfiles[fname] = 1
             # Go through all our files in order sorted by name.
+            cnt = 0
             for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
@@ -1875,12 +1892,16 @@ class localrepository(repo.repository):
                     group = filerevlog.group(msng_filenode_lst,
                                              lookup_filenode_link_func(fname))
                     for chnk in group:
+                        self.ui.progress(
+                            'bundle files', cnt, item=fname, unit='chunks')
+                        cnt += 1
                         yield chnk
                 if fname in msng_filenode_set:
                     # Don't need this anymore, toss it to free memory.
                     del msng_filenode_set[fname]
             # Signal that no more groups are left.
             yield changegroup.closechunk()
+            self.ui.progress('bundle files', None, unit='chunks')
 
             if msng_cl_lst:
                 self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
@@ -1927,14 +1948,23 @@ class localrepository(repo.repository):
             mmfs = {}
             collect = changegroup.collector(cl, mmfs, changedfiles)
 
+            cnt = 0
             for chnk in cl.group(nodes, identity, collect):
+                self.ui.progress('bundle changes', cnt, unit='chunks')
+                cnt += 1
                 yield chnk
+            self.ui.progress('bundle changes', None, unit='chunks')
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
+            cnt = 0
             for chnk in mnfst.group(nodeiter, lookuprevlink_func(mnfst)):
+                self.ui.progress('bundle manifests', cnt, unit='chunks')
+                cnt += 1
                 yield chnk
+            self.ui.progress('bundle manifests', None, unit='chunks')
 
+            cnt = 0
             for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
@@ -1946,7 +1976,11 @@ class localrepository(repo.repository):
                     yield fname
                     lookup = lookuprevlink_func(filerevlog)
                     for chnk in filerevlog.group(nodeiter, lookup):
+                        self.ui.progress(
+                            'bundle files', cnt, item=fname, unit='chunks')
+                        cnt += 1
                         yield chnk
+            self.ui.progress('bundle files', None, unit='chunks')
 
             yield changegroup.closechunk()
 
@@ -1990,20 +2024,32 @@ class localrepository(repo.repository):
             # pull off the changeset group
             self.ui.status(_("adding changesets\n"))
             clstart = len(cl)
-            chunkiter = changegroup.chunkiter(source)
+            class prog(object):
+                step = 'changesets'
+                count = 1
+                ui = self.ui
+                def __call__(self):
+                    self.ui.progress(self.step, self.count, unit='chunks')
+                    self.count += 1
+            pr = prog()
+            chunkiter = changegroup.chunkiter(source, progress=pr)
             if cl.addgroup(chunkiter, csmap, trp) is None and not emptyok:
                 raise util.Abort(_("received changelog group is empty"))
             clend = len(cl)
             changesets = clend - clstart
+            self.ui.progress('changesets', None)
 
             # pull off the manifest group
             self.ui.status(_("adding manifests\n"))
-            chunkiter = changegroup.chunkiter(source)
+            pr.step = 'manifests'
+            pr.count = 1
+            chunkiter = changegroup.chunkiter(source, progress=pr)
             # no need to check for empty manifest group here:
             # if the result of the merge of 1 and 2 is the same in 3 and 4,
             # no new manifest will be created and the manifest group will
             # be empty during the pull
             self.manifest.addgroup(chunkiter, revmap, trp)
+            self.ui.progress('manifests', None)
 
             needfiles = {}
             if self.ui.configbool('server', 'validate', default=False):
@@ -2017,6 +2063,8 @@ class localrepository(repo.repository):
 
             # process the files
             self.ui.status(_("adding file changes\n"))
+            pr.step = 'files'
+            pr.count = 1
             while 1:
                 f = changegroup.getchunk(source)
                 if not f:
@@ -2024,7 +2072,7 @@ class localrepository(repo.repository):
                 self.ui.debug("adding %s revisions\n" % f)
                 fl = self.file(f)
                 o = len(fl)
-                chunkiter = changegroup.chunkiter(source)
+                chunkiter = changegroup.chunkiter(source, progress=pr)
                 if fl.addgroup(chunkiter, revmap, trp) is None:
                     raise util.Abort(_("received file revlog group is empty"))
                 revisions += len(fl) - o
@@ -2037,6 +2085,7 @@ class localrepository(repo.repository):
                             needs.remove(n)
                     if not needs:
                         del needfiles[f]
+            self.ui.progress('files', None)
 
             for f, needs in needfiles.iteritems():
                 fl = self.file(f)

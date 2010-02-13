@@ -255,6 +255,7 @@ def applyupdates(repo, action, wctx, mctx):
     substate = wctx.substate # prime
 
     # prescan for merges
+    u = repo.ui
     for a in action:
         f, m = a[:2]
         if m == 'm': # merge
@@ -277,8 +278,10 @@ def applyupdates(repo, action, wctx, mctx):
 
     audit_path = util.path_auditor(repo.root)
 
-    for a in action:
+    numupdates = len(action)
+    for i, a in enumerate(action):
         f, m = a[:2]
+        u.progress('update', i + 1, item=f, total=numupdates, unit='files')
         if f and f[0] == "/":
             continue
         if m == "r": # remove
@@ -338,6 +341,7 @@ def applyupdates(repo, action, wctx, mctx):
         elif m == "e": # exec
             flags = a[2]
             util.set_flags(repo.wjoin(f), 'l' in flags, 'x' in flags)
+    u.progress('update', None, total=numupdates, unit='files')
 
     return updated, merged, removed, unresolved
 

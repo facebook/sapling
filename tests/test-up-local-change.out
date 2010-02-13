@@ -24,9 +24,11 @@ resolving manifests
  a: versions differ -> m
  b: remote created -> g
 preserving a for resolve of a
+update: a 1/2 files (50.00%)
 picked tool 'true' for a (binary False symlink False)
 merging a
 my a@33aaa84a386b+ other a@802f095af299 ancestor a@33aaa84a386b
+update: b 2/2 files (100.00%)
 getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 changeset:   1:802f095af299
@@ -41,7 +43,9 @@ resolving manifests
  a: versions differ -> m
  b: other deleted -> r
 preserving a for resolve of a
+update: b 1/2 files (50.00%)
 removing b
+update: a 2/2 files (100.00%)
 picked tool 'true' for a (binary False symlink False)
 merging a
 my a@802f095af299+ other a@33aaa84a386b ancestor a@33aaa84a386b
@@ -68,9 +72,11 @@ resolving manifests
  a: versions differ -> m
  b: remote created -> g
 preserving a for resolve of a
+update: a 1/2 files (50.00%)
 picked tool 'true' for a (binary False symlink False)
 merging a
 my a@33aaa84a386b+ other a@802f095af299 ancestor a@33aaa84a386b
+update: b 2/2 files (100.00%)
 getting b
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 changeset:   1:802f095af299
@@ -123,9 +129,11 @@ resolving manifests
  b: versions differ -> m
 preserving a for resolve of a
 preserving b for resolve of b
+update: a 1/2 files (50.00%)
 picked tool 'true' for a (binary False symlink False)
 merging a
 my a@802f095af299+ other a@030602aee63d ancestor a@33aaa84a386b
+update: b 2/2 files (100.00%)
 picked tool 'true' for b (binary False symlink False)
 merging b
 my b@802f095af299+ other b@030602aee63d ancestor b@000000000000

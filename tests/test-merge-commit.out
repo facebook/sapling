@@ -28,6 +28,7 @@ resolving manifests
  ancestor 0a3ab4856510 local 2d2f9a22c82b+ remote 7d3b554bfdf1
  bar: versions differ -> m
 preserving bar for resolve of bar
+update: bar 1/1 files (100.00%)
 picked tool 'internal:merge' for bar (binary False symlink False)
 merging bar
 my bar@2d2f9a22c82b+ other bar@7d3b554bfdf1 ancestor bar@0a3ab4856510
@@ -78,6 +79,7 @@ resolving manifests
  ancestor 0a3ab4856510 local 2d2f9a22c82b+ remote 96ab80c60897
  bar: versions differ -> m
 preserving bar for resolve of bar
+update: bar 1/1 files (100.00%)
 picked tool 'internal:merge' for bar (binary False symlink False)
 merging bar
 my bar@2d2f9a22c82b+ other bar@96ab80c60897 ancestor bar@0a3ab4856510

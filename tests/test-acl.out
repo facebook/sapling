@@ -20,14 +20,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 updating the branch cache
 rolling back last transaction
@@ -49,14 +90,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: changes have source "push" - skipping
@@ -82,14 +164,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow not enabled
@@ -120,14 +243,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 0 entries for user fred
@@ -159,14 +323,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 1 entries for user fred
@@ -201,14 +406,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 0 entries for user barney
@@ -242,14 +488,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 1 entries for user fred
@@ -286,14 +573,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 1 entries for user fred
@@ -329,14 +657,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 0 entries for user barney
@@ -373,14 +742,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 1 entries for user barney
@@ -418,14 +828,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 1 entries for user wilma
@@ -467,14 +918,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 error: pretxnchangegroup.acl hook raised an exception: [Errno 2] No such file or directory: '../acl.config'
@@ -515,14 +1007,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 1 entries for user betty
@@ -570,14 +1103,55 @@ ef1ea85a6374b77d6da9dcda9541f498f2d17df7
 f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
 911600dab2ae7a9baff75958b84fe606851ce955
 adding changesets
+bundle changes: 0 chunks
+bundle changes: 1 chunks
+bundle changes: 2 chunks
+bundle changes: 3 chunks
+bundle changes: 4 chunks
+bundle changes: 5 chunks
+bundle changes: 6 chunks
+bundle changes: 7 chunks
+bundle changes: 8 chunks
+bundle changes: 9 chunks
+bundle manifests: 0 chunks
+bundle manifests: 1 chunks
+bundle manifests: 2 chunks
+bundle manifests: 3 chunks
+bundle manifests: 4 chunks
+bundle manifests: 5 chunks
+bundle manifests: 6 chunks
+bundle manifests: 7 chunks
+bundle manifests: 8 chunks
+bundle manifests: 9 chunks
+bundle files: foo/Bar/file.txt 0 chunks
+bundle files: foo/Bar/file.txt 1 chunks
+bundle files: foo/Bar/file.txt 2 chunks
+bundle files: foo/Bar/file.txt 3 chunks
+bundle files: foo/file.txt 4 chunks
+bundle files: foo/file.txt 5 chunks
+bundle files: foo/file.txt 6 chunks
+bundle files: foo/file.txt 7 chunks
+bundle files: quux/file.py 8 chunks
+bundle files: quux/file.py 9 chunks
+bundle files: quux/file.py 10 chunks
+bundle files: quux/file.py 11 chunks
+changesets: 1 chunks
 add changeset ef1ea85a6374
+changesets: 2 chunks
 add changeset f9cafe1212c8
+changesets: 3 chunks
 add changeset 911600dab2ae
 adding manifests
+manifests: 1 chunks
+manifests: 2 chunks
+manifests: 3 chunks
 adding file changes
 adding foo/Bar/file.txt revisions
+files: 1 chunks
 adding foo/file.txt revisions
+files: 2 chunks
 adding quux/file.py revisions
+files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow enabled, 1 entries for user barney
