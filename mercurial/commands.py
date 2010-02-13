@@ -41,6 +41,7 @@ def add(ui, repo, *pats, **opts):
          $ hg add
          adding foo.c
          $ hg status
+         A foo.c
     """
 
     bad = []
