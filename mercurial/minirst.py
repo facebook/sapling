@@ -111,7 +111,7 @@ def findliteralblocks(blocks):
         i += 1
     return blocks
 
-_bulletre = re.compile(r'(-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)) ')
+_bulletre = re.compile(r'(-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ')
 _optionre = re.compile(r'^(--[a-z-]+)((?:[ =][a-zA-Z][\w-]*)?  +)(.*)$')
 _fieldre = re.compile(r':(?![: ])([^:]*)(?<! ):[ ]+(.*)')
 _definitionre = re.compile(r'[^ ]')
@@ -291,8 +291,13 @@ def formatblock(block, width):
                                                subsequent_indent=defindent))
     initindent = subindent = indent
     if block['type'] == 'bullet':
-        m = _bulletre.match(block['lines'][0])
-        subindent = indent + m.end() * ' '
+        if block['lines'][0].startswith('| '):
+            # Remove bullet for line blocks and add no extra
+            # indention.
+            block['lines'][0] = block['lines'][0][2:]
+        else:
+            m = _bulletre.match(block['lines'][0])
+            subindent = indent + m.end() * ' '
     elif block['type'] == 'field':
         keywidth = block['keywidth']
         key = block['key']

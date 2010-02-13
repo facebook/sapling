@@ -120,6 +120,11 @@ We can have indented lists:
 (2) bar
 1) Another
 2) List
+
+Line blocks are also a form of list:
+
+This is the first line. The line continues here.
+This is the second line.
 ----------------------------------------------------------------------
 
 lists formatted to fit within 30 characters:
@@ -157,6 +162,13 @@ We can have indented lists:
 (2) bar
 1) Another
 2) List
+
+Line blocks are also a form of
+list:
+
+This is the first line. The
+line continues here.
+This is the second line.
 ----------------------------------------------------------------------
 
 options formatted to fit within 60 characters:

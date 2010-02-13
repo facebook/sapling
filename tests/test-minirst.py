@@ -106,6 +106,12 @@ We can have indented lists:
 
 1) Another
 2) List
+
+Line blocks are also a form of list:
+
+| This is the first line.
+  The line continues here.
+| This is the second line.
 """
 
 debugformat('lists', lists, 60)
