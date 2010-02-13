@@ -194,7 +194,7 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 		mtime = ntohl(*(uint32_t *)(decode + 8));
 		flen = ntohl(*(uint32_t *)(decode + 12));
 		cur += 17;
-		if (flen > end - cur) {
+		if (cur + flen > end || cur + flen < cur) {
 			PyErr_SetString(PyExc_ValueError, "overflow in dirstate");
 			goto quit;
 		}
@@ -332,7 +332,7 @@ static int _parse_index_ng (const char *data, int size, int inlined,
 
 		n++;
 		step = 64 + (inlined ? comp_len : 0);
-		if (end - data < step)
+		if (data + step > end || data + step < data)
 			break;
 		data += step;
 	}
