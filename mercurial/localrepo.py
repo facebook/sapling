@@ -1342,6 +1342,7 @@ class localrepository(repo.repository):
 
             if r:
                 reqcnt += 1
+                self.ui.progress('searching', reqcnt, unit='queries')
                 self.ui.debug("request %d: %s\n" %
                             (reqcnt, " ".join(map(short, r))))
                 for p in xrange(0, len(r), 10):
@@ -1354,6 +1355,7 @@ class localrepository(repo.repository):
         while search:
             newsearch = []
             reqcnt += 1
+            self.ui.progress('searching', reqcnt, unit='queries')
             for n, l in zip(search, remote.between(search)):
                 l.append(n[1])
                 p = n[0]
@@ -1389,6 +1391,7 @@ class localrepository(repo.repository):
         self.ui.debug("found new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")
 
+        self.ui.progress('searching', None, unit='queries')
         self.ui.debug("%d total queries\n" % reqcnt)
 
         return base.keys(), list(fetch), heads
