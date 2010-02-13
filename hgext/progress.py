@@ -140,25 +140,29 @@ class progbar(object):
     def clear(self):
         sys.stdout.write('\r%s\r' % (' ' * self.width()))
 
+    def complete(self):
+        if self.ui.configbool('progress', 'clear-complete', default=True):
+            self.clear()
+        else:
+            sys.stdout.write('\n')
+        sys.stdout.flush()
+
     def width(self):
         tw = util.termwidth()
         return min(int(self.ui.config('progress', 'width', default=tw)), tw)
 
     def progress(self, orig, topic, pos, item='', unit='', total=None):
-        now = time.time()
-        if pos is None and self.topics[-1] == topic and self.printed:
-            if self.ui.configbool('progress', 'clear-complete', default=True):
-                self.clear()
-            else:
-                sys.stdout.write('\n')
-            sys.stdout.flush()
+        if pos is None:
+            if self.topics and self.topics[-1] == topic and self.printed:
+                self.complete()
             self.resetstate()
-        elif topic not in self.topics:
-            self.topics.append(topic)
-
-        if now - self.lastprint > 0.1 and topic == self.topics[-1]:
-            self.lastprint = now
-            self.show(topic, pos, item, unit, total)
+        else:
+            if topic not in self.topics:
+                self.topics.append(topic)
+            now = time.time()
+            if now - self.lastprint > 0.1 and topic == self.topics[-1]:
+                self.lastprint = now
+                self.show(topic, pos, item, unit, total)
         return orig(topic, pos, item=item, unit=unit, total=total)
 
     def write(self, orig, *args):
