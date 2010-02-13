@@ -29,9 +29,10 @@ def toposort(ui, rl):
     children = {}
     root = []
     # build children and roots
-    ui.write('reading %d revs ' % len(rl))
+    ui.status('reading revs\n')
     try:
         for i in rl:
+            ui.progress('reading', i, total=len(rl))
             children[i] = []
             parents = [p for p in rl.parentrevs(i) if p != node.nullrev]
             # in case of duplicate parents
@@ -43,16 +44,13 @@ def toposort(ui, rl):
 
             if len(parents) == 0:
                 root.append(i)
-
-            if i % 1000 == 0:
-                ui.write('.')
     finally:
-        ui.write('\n')
+        ui.progress('reading', None, total=len(rl))
 
     # XXX this is a reimplementation of the 'branchsort' topo sort
     # algorithm in hgext.convert.convcmd... would be nice not to duplicate
     # the algorithm
-    ui.write('sorting ...')
+    ui.status('sorting revs\n')
     visit = root
     ret = []
     while visit:
@@ -69,16 +67,15 @@ def toposort(ui, rl):
             if len(parents_unseen) == 0:
                 next.append(c)
         visit = next + visit
-    ui.write('\n')
     return ret
 
 def writerevs(ui, r1, r2, order, tr):
 
-    ui.write('writing %d revs ' % len(order))
+    ui.status('writing revs\n')
+
     count = [0]
     def progress(*args):
-        if count[0] % 1000 == 0:
-            ui.write('.')
+        ui.progress('writing', count[0], total=len(order))
         count[0] += 1
 
     order = [r1.node(r) for r in order]
@@ -92,7 +89,7 @@ def writerevs(ui, r1, r2, order, tr):
         chunkiter = changegroup.chunkiter(group)
         r2.addgroup(chunkiter, unlookup, tr)
     finally:
-        ui.write('\n')
+        ui.progress('writing', None, len(order))
 
 def report(ui, olddatafn, newdatafn):
     oldsize = float(os.stat(olddatafn).st_size)
