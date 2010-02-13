@@ -77,5 +77,5 @@ hg --cwd d qpush -a
 hg --cwd d log --template "{desc}\n"
 
 echo '% test --mq works and uses correct repository config'
-hg --cwd d outgoing --mq
+hg --cwd d outgoing --mq | sed "s|$HGPORT2|\$HGPORT2|"
 hg --cwd d log --mq --template '{rev} {desc|firstline}\n'

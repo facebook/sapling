@@ -79,7 +79,7 @@ now at: b.patch
 imported patch b.patch
 a
 % test --mq works and uses correct repository config
-comparing with http://localhost:20061/a/.hg/patches
+comparing with http://localhost:$HGPORT2/a/.hg/patches
 searching for changes
 no changes found
 0 b.patch
