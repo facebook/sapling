@@ -155,7 +155,7 @@ class progbar(object):
         if pos is None:
             if self.topics and self.topics[-1] == topic and self.printed:
                 self.complete()
-            self.resetstate()
+                self.resetstate()
         else:
             if topic not in self.topics:
                 self.topics.append(topic)
