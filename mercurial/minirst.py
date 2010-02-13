@@ -192,6 +192,7 @@ def prunecontainers(blocks, keep):
     The blocks must have a 'type' field, i.e., they should have been
     run through findliteralblocks first.
     """
+    pruned = []
     i = 0
     while i + 1 < len(blocks):
         # Searching for a block that looks like this:
@@ -207,6 +208,8 @@ def prunecontainers(blocks, keep):
             adjustment = blocks[i + 1]['indent'] - indent
             containertype = blocks[i]['lines'][0][15:]
             prune = containertype not in keep
+            if prune:
+                pruned.append(containertype)
 
             # Always delete "..container:: type" block
             del blocks[i]
@@ -219,7 +222,7 @@ def prunecontainers(blocks, keep):
                     blocks[j]['indent'] -= adjustment
                     j += 1
         i += 1
-    return blocks
+    return blocks, pruned
 
 
 def findsections(blocks):
@@ -317,19 +320,23 @@ def formatblock(block, width):
                          subsequent_indent=subindent)
 
 
-def format(text, width, indent=0, keep=[]):
+def format(text, width, indent=0, keep=None):
     """Parse and format the text according to width."""
     blocks = findblocks(text)
     for b in blocks:
         b['indent'] += indent
     blocks = findliteralblocks(blocks)
-    blocks = prunecontainers(blocks, keep)
+    blocks, pruned = prunecontainers(blocks, keep or [])
     blocks = inlineliterals(blocks)
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
     blocks = findsections(blocks)
     blocks = addmargins(blocks)
-    return '\n'.join(formatblock(b, width) for b in blocks)
+    text = '\n'.join(formatblock(b, width) for b in blocks)
+    if keep is None:
+        return text
+    else:
+        return text, pruned
 
 
 if __name__ == "__main__":

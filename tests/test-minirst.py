@@ -1,11 +1,18 @@
 #!/usr/bin/env python
 
+from pprint import pprint
 from mercurial import minirst
 
 def debugformat(title, text, width, **kwargs):
     print "%s formatted to fit within %d characters:" % (title, width)
     print "-" * 70
-    print minirst.format(text, width, **kwargs)
+    formatted = minirst.format(text, width, **kwargs)
+    if type(formatted) == tuple:
+        print formatted[0]
+        print "-" * 70
+        pprint(formatted[1])
+    else:
+        print formatted
     print "-" * 70
     print
 
