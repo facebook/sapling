@@ -1527,7 +1527,11 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
             doc = _("(no help text available)")
         if ui.quiet:
             doc = doc.splitlines()[0]
-        ui.write("\n%s\n" % minirst.format(doc, textwidth))
+        keep = ui.verbose and ['verbose'] or []
+        formatted, pruned = minirst.format(doc, textwidth, keep=keep)
+        ui.write("\n%s\n" % formatted)
+        if pruned:
+            ui.write(_('\nuse "hg -v help %s" to show verbose help\n') % name)
 
         if not ui.quiet:
             # options
