@@ -18,8 +18,8 @@
 
 """show progress bars for some actions
 
-This extension uses the progress information commands can log with hg
-to draw progres bars that are as informative as possible. Some progress
+This extension uses the progress information logged by hg commands
+to draw progress bars that are as informative as possible. Some progress
 bars only offer indeterminate information, while others have a definite
 end point.
 
