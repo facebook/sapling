@@ -1,0 +1,28 @@
+#!/bin/sh
+
+hg init test
+cd test
+
+cat > .hg/hgrc <<EOF
+[extensions]
+interhg =
+
+[interhg]
+issues = s|Issue(\d+)|<a href="http://bts.example.org/issue\1">Issue\1</a>|
+
+# yes, 'x' is a weird delimiter...
+markbugs = sxbugx<i class="\x">bug</i>x
+EOF
+
+touch foo
+hg add foo
+hg commit -d '1 0' -m 'Issue123: fixed the bug!'
+
+hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+cat hg.pid >> $DAEMON_PIDS
+
+echo % log
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/' | grep bts
+
+echo % errors
+cat errors.log
