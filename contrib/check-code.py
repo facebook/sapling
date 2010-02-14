@@ -10,7 +10,8 @@
 import sys, re, glob
 
 def repquote(m):
-    t = re.sub(r"\S", "x", m.group(2))
+    t = re.sub(r"\w", "x", m.group(2))
+    t = re.sub(r"[^\sx]", "o", t)
     return m.group(1) + t + m.group(1)
 
 def repcomment(m):
@@ -88,6 +89,8 @@ pypats = [
     (r'[^>< ](\+=|-=|!=|<>|<=|>=|<<=|>>=)\s', "missing whitespace around operator"),
     (r'\s(\+=|-=|!=|<>|<=|>=|<<=|>>=)\S', "missing whitespace around operator"),
     (r'[^+=*!<>&| -](\s=|=\s)[^= ]', "wrong whitespace around ="),
+    (r'raise Exception', "don't raise generic exceptions"),
+    (r'ui\.(status|progress|write|note)\([\'\"]x', "unwrapped ui message"),
 ]
 
 pyfilters = [
