@@ -26,6 +26,10 @@ cd empty
 hg pull -u ../test
 
 echo % test file: uri handling
-hg pull -q file://../test-doesnt-exist
+hg pull -q file://../test-doesnt-exist 2>&1 \
+    | sed 's%abort: repository.*/test-doesnt-exist%abort: repository /test-doesnt-exist%'
 hg pull -q file:../test
-hg pull -q file://foobar`pwd`/../test
+# It's tricky to make file:// URLs working on every platforms
+# with regular shell commands.
+URL=`python -c "import os; print 'file://foobar' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
+hg pull -q $URL
