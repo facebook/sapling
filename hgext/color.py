@@ -65,7 +65,7 @@ Default effects may be overridden from the .hgrc file::
 
 import os, sys
 
-from mercurial import cmdutil, commands, extensions, error
+from mercurial import cmdutil, commands, extensions
 from mercurial.i18n import _
 
 # start and stop parameters for effects

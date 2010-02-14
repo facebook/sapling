@@ -11,7 +11,6 @@
 # todo: socket permissions
 
 from mercurial.i18n import _
-from mercurial import cmdutil, util
 import server
 from client import client, QueryFailed
 

@@ -39,7 +39,6 @@ changed by adding either -<num> which would take the last num characters,
 or +<num> for the first num characters.
 """
 
-import math
 import sys
 import time
 

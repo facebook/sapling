@@ -8,7 +8,6 @@
 
 from mercurial.i18n import _
 from mercurial import osutil, util
-import common
 import server
 import errno, os, select, stat, sys, time
 

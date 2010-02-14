@@ -30,7 +30,7 @@ branching.
 
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, hex, short
-from mercurial import util, commands, localrepo, repair, extensions
+from mercurial import util, commands, repair, extensions
 import os
 
 def write(repo):
