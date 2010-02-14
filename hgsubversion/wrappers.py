@@ -256,6 +256,11 @@ def pull(repo, source, heads=[], force=False):
                            'remains unimplemented.')
 
     oldrevisions = len(meta.revmap)
+    cnt = 0
+    if stopat_rev:
+        total = stopat_rev - start
+    else:
+        total = svn.HEAD - start
     try:
         try:
             # start converting revisions
@@ -277,6 +282,8 @@ def pull(repo, source, heads=[], force=False):
                             msg = [s.strip() for s in msg.splitlines() if s][0]
                         w = hgutil.termwidth()
                         bits = (r.revnum, r.author, msg)
+                        cnt += 1
+                        ui.progress('pull', cnt, total=total)
                         ui.status(('[r%d] %s: %s\n' % bits)[:w])
 
                         meta.save_tbdelta(tbdelta)
@@ -305,6 +312,7 @@ def pull(repo, source, heads=[], force=False):
         except KeyboardInterrupt:
             pass
     finally:
+        ui.progress('pull', None, total=total)
         util.swap_out_encoding(old_encoding)
 
     revisions = len(meta.revmap) - oldrevisions
