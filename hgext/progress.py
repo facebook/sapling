@@ -33,10 +33,10 @@ The following settings are available::
                  # (that is, min(width, term width) will be used)
   clear-complete = True # clear the progress bar after it's done
 
-Valid entries for the format field are topic, bar, number, unit, and item.
-item defaults to the last 20 characters of the item, but this can be
-changed by adding either -<num> which would take the last num characters,
-or +<num> for the first num characters.
+Valid entries for the format field are topic, bar, number, unit, and
+item. item defaults to the last 20 characters of the item, but this
+can be changed by adding either ``-<num>`` which would take the last
+num characters, or ``+<num>`` for the first num characters.
 """
 
 import sys
