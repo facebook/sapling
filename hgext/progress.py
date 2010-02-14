@@ -114,7 +114,10 @@ class progbar(object):
             progwidth = termwidth - used - 3
             if total:
                 amt = pos * progwidth // total
-                bar = '=' * (amt) + ' ' * (progwidth - amt)
+                bar = '=' * (amt - 1)
+                if amt > 0:
+                    bar += '>'
+                bar += ' ' * (progwidth - amt)
             else:
                 progwidth -= 3
                 self.indetcount += 1
