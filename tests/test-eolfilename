@@ -1,0 +1,43 @@
+#!/bin/sh
+# http://mercurial.selenic.com/bts/issue352
+
+"$TESTDIR/hghave" eol-in-paths || exit 80
+
+echo % test issue352
+hg init foo
+cd foo
+
+A=`printf 'he\rllo'`
+
+echo foo > "$A"
+hg add
+hg ci -A -m m
+rm "$A"
+
+echo foo > "hell
+o"
+hg add
+hg ci -A -m m
+
+echo foo > "$A"
+hg debugwalk
+
+# http://mercurial.selenic.com/bts/issue2036
+cd ..
+echo % test issue2039
+
+hg init bar
+cd bar
+
+echo "[extensions]" >> $HGRCPATH
+echo "color=" >> $HGRCPATH
+
+A=`printf 'foo\nbar'`
+B=`printf 'foo\nbar.baz'`
+
+touch "$A"
+touch "$B"
+
+hg status --color=always
+
+exit 0
