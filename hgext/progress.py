@@ -157,7 +157,7 @@ class progbar(object):
             if topic not in self.topics:
                 self.topics.append(topic)
             now = time.time()
-            if now - self.lastprint > 0.1 and topic == self.topics[-1]:
+            if now - self.lastprint > self.refresh and topic == self.topics[-1]:
                 self.lastprint = now
                 self.show(topic, pos, item, unit, total)
         return orig(topic, pos, item=item, unit=unit, total=total)
