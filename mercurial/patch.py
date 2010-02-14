@@ -1435,7 +1435,6 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
     copy = {}
     if opts.git or opts.upgrade:
         copy = copies.copies(repo, ctx1, ctx2, repo[nullid])[0]
-        copy = copy.copy()
 
     difffn = lambda opts, losedata: trydiff(repo, revs, ctx1, ctx2,
                  modified, added, removed, copy, getfilectx, opts, losedata)
@@ -1517,9 +1516,10 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             elif f in removed:
                 if opts.git:
                     # have we already reported a copy above?
-                    if f in copy and copy[f] in added and copyto[copy[f]] == f:
-                        dodiff = False
-                    elif f in copyto and copyto[f] in added and copy[copyto[f]] == f:
+                    if ((f in copy and copy[f] in added
+                         and copyto[copy[f]] == f) or
+                        (f in copyto and copyto[f] in added
+                         and copy[copyto[f]] == f)):
                         dodiff = False
                     else:
                         header.append('deleted file mode %s\n' %
