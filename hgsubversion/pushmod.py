@@ -15,7 +15,10 @@ class NoFilesException(Exception):
 
 def _isdir(svn, branchpath, svndir):
     try:
-        svn.list_dir('%s/%s' % (branchpath, svndir))
+        path = ''
+        if branchpath:
+            path = branchpath + '/'
+        svn.list_dir('%s%s' % (path, svndir))
         return True
     except core.SubversionException:
         return False
