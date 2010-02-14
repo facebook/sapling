@@ -19,7 +19,7 @@ cd repo2
   && echo "fail: .hg/store should not exist" \
   || echo "pass: .hg/store does not exist"
 # Some sed versions appends newline, some don't, and some just fails
-(cat .hg/sharedpath; echo) | head -n1 | sed "s:$HGTMP:*HGTMP*:"
+(cat .hg/sharedpath; echo) | head -n1 | "$TESTDIR/filtertmp.py"
 
 echo % commit in shared clone
 echo a >> a

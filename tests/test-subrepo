@@ -180,7 +180,9 @@ hg -R main add
 hg -R main ci -m "add subrepos"
 cd ..
 hg clone mercurial/main mercurial2/main
-cat mercurial2/main/nested_absolute/.hg/hgrc mercurial2/main/nested_relative/.hg/hgrc | sed "s:${PWD}:/tmp:"
+cat mercurial2/main/nested_absolute/.hg/hgrc \
+    mercurial2/main/nested_relative/.hg/hgrc \
+    | "$TESTDIR/filtertmp.py"
 rm -rf mercurial mercurial2
 
 exit 0

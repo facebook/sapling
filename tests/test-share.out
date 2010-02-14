@@ -5,7 +5,7 @@ updating working directory
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % contents of repo2/.hg
 pass: .hg/store does not exist
-*HGTMP*/test-share/repo1/.hg
+$HGTMP/test-share/repo1/.hg
 % commit in shared clone
 % check original
 changeset:   1:8af4dc49db9e
