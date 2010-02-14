@@ -144,8 +144,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         def filectxfn(repo, memctx, path):
             current_file = files[path]
             if current_file in current.deleted:
-                raise IOError(errno.EBADF,
-                              'Operation on deleted file attempted')
+                raise IOError(errno.ENOENT, '%s is deleted' % path)
             copied = current.copies.get(current_file)
             flags = parentctx.flags(path)
             is_exec = current.execfiles.get(current_file, 'x' in flags)
@@ -192,7 +191,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
 
         parent_ctx = meta.repo.changectx(ha)
         def del_all_files(*args):
-            raise IOError
+            raise IOError(errno.ENOENT, 'deleting all files')
 
         # True here meant nuke all files, shouldn't happen with branch closing
         if current.emptybranches[branch]: #pragma: no cover

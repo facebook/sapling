@@ -55,7 +55,7 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback(repo, memctx, path):
             return context.memfilectx(
-                path=path, data='foo', islink=False, 
+                path=path, data='foo', islink=False,
                 isexec=False, copied=False)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
@@ -302,7 +302,7 @@ class PushTests(test_util.TestBase):
     def test_delete_file(self):
         repo = self.repo
         def file_callback(repo, memctx, path):
-            raise IOError(errno.EBADF, 'Operation on deleted file attempted')
+            raise IOError(errno.ENOENT, '%s is deleted' % path)
         old_files = set(repo['default'].manifest().keys())
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),

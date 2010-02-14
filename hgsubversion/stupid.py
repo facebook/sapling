@@ -224,7 +224,7 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
 
     def filectxfn(repo, memctx, path):
         if path in files_data and files_data[path] is None:
-            raise IOError(errno.EBADF, 'No data configured for file ' + path)
+            raise IOError(errno.ENOENT, '%s is deleted' % path)
 
         if path in binary_files or path in unknown_files:
             pa = path
@@ -597,14 +597,12 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         def filectxfn(repo, memctx, path):
             if path == '.hgsvnexternals':
                 if not externals:
-                    raise IOError(errno.EINVAL,
-                                  '.hgsvnexternals exists, but externals are '
-                                  'not configured')
+                    raise IOError(errno.ENOENT, 'no externals')
                 return context.memfilectx(path=path, data=externals.write(),
                                           islink=False, isexec=False, copied=None)
             for bad in bad_branch_paths[b]:
                 if path.startswith(bad):
-                    raise IOError(errno.EINVAL, 'Path %s is bad' % path)
+                    raise IOError(errno.ENOENT, 'Path %s is bad' % path)
             return filectxfn2(repo, memctx, path)
 
         if '' in files_touched:
