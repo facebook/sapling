@@ -47,13 +47,7 @@ from mercurial import extensions
 from mercurial import util
 
 def spacejoin(*args):
-    ret = ''
-    for s in args:
-        if s:
-            if ret:
-                ret += ' '
-            ret += s
-    return ret
+    return ' '.join(s for s in args if s)
 
 class progbar(object):
     def __init__(self, ui):
