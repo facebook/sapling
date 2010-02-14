@@ -2,7 +2,7 @@ adding alpha
 adding beta
 updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-pushing to test-root/test
+pushing to $HGTMP/test-push-validation/test
 searching for changes
 adding changesets
 adding manifests

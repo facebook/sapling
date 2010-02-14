@@ -1,7 +1,5 @@
 #!/bin/sh
 
-STRIP=`pwd`
-
 hg init test
 cd test
 cat > .hg/hgrc <<EOF
@@ -21,4 +19,4 @@ cp .hg/store/data/beta.i tmp
 echo blah >> beta
 hg ci -m '2 (corrupt)'
 mv tmp .hg/store/data/beta.i
-hg push 2>&1 | sed "s%$STRIP%test-root%"
+hg push 2>&1 | "$TESTDIR/filtertmp.py"

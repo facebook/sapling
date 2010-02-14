@@ -9,6 +9,7 @@
 import sys, os
 
 input = sys.stdin.read()
-input = input.replace(os.environ['HGTMP'], '$HGTMP')
 input = input.replace(os.sep, '/')
+hgtmp = os.environ['HGTMP'].replace(os.sep, '/')
+input = input.replace(hgtmp, '$HGTMP')
 sys.stdout.write(input)
