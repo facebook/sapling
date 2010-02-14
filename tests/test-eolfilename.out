@@ -1,3 +1,4 @@
+% test issue352
 adding hello
 abort: '\n' and '\r' disallowed in filenames: 'he\rllo'
 adding hello
@@ -12,3 +13,8 @@ f  hello  hello
 f  hell
 o  hell
 o
+% test issue2039
+[0;35;1;4m? foo[0m
+bar
+[0;35;1;4m? foo[0m
+bar.baz

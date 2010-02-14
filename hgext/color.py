@@ -117,10 +117,16 @@ def _colorstatuslike(abbreviations, effectdefs, orig, ui, repo, *pats, **opts):
 
     # apply color to output and display it
     for i in xrange(len(lines)):
-        status = abbreviations[lines_with_status[i][0]]
-        effects = effectdefs[status]
-        if effects:
-            lines[i] = render_effects(lines[i], effects)
+        try:
+            status = abbreviations[lines_with_status[i][0]]
+        except KeyError:
+            # Ignore lines with invalid codes, especially in the case of
+            # of unknown filenames containing newlines (issue2036).
+            pass
+        else:
+            effects = effectdefs[status]
+            if effects:
+                lines[i] = render_effects(lines[i], effects)
         ui.write(lines[i] + delimiter)
     return retval
 
