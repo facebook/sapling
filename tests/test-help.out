@@ -274,6 +274,7 @@ add the specified files on the next commit
       $ hg add
       adding foo.c
       $ hg status
+      A foo.c
 
 options:
 
