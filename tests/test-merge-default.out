@@ -12,16 +12,16 @@ abort: branch 'default' has 3 heads - please merge with an explicit rev
 abort: branch 'default' has 3 heads - please merge with an explicit rev
 (run 'hg heads .' to see heads)
 % should succeed
-0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 % should succeed - 2 heads
-changeset:   3:903c264cdf57
-parent:      1:ba677d0156c1
+changeset:   3:ea9ff125ff88
+parent:      1:1846eede8b68
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     d
 
-0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 % should fail because at tip
 abort: there is nothing to merge
