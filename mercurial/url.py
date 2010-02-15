@@ -268,11 +268,11 @@ if has_https:
             ssl = socket.ssl(sock, key_file, cert_file)
             return httplib.FakeSocket(sock, ssl)
 
-        _GLOBAL_DEFAULT_TIMEOUT = object()
-
     try:
         _create_connection = socket.create_connection
     except AttributeError:
+        _GLOBAL_DEFAULT_TIMEOUT = object()
+
         def _create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
                                source_address=None):
             # lifted from Python 2.6
