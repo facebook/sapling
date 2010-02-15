@@ -51,10 +51,11 @@ def netlocunsplit(host, port, user=None, passwd=None):
     else:
         hostport = host
     if user:
+        quote = lambda s: urllib.quote(s, safe='')
         if passwd:
-            userpass = urllib.quote(user) + ':' + urllib.quote(passwd)
+            userpass = quote(user) + ':' + quote(passwd)
         else:
-            userpass = urllib.quote(user)
+            userpass = quote(user)
         return userpass + '@' + hostport
     return hostport
 
