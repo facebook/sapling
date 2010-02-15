@@ -34,3 +34,8 @@ created new head
 % should fail because merge with other branch
 abort: branch 'foobranch' has one head - please merge with an explicit rev
 (run 'hg heads' to see all heads)
+% merge preview not affected by common ancestor
+2:2d95304fed5d
+4:f25cbe84d8b3
+5:a431fabd6039
+6:e88e33f3bf62

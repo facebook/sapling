@@ -2233,14 +2233,14 @@ def merge(ui, repo, node=None, **opts):
         node = parent == bheads[0] and bheads[-1] or bheads[0]
 
     if opts.get('preview'):
-        p1 = repo['.']
-        p2 = repo[node]
-        common = p1.ancestor(p2)
-        roots, heads = [common.node()], [p2.node()]
+        # find nodes that are ancestors of p2 but not of p1
+        p1 = repo.lookup('.')
+        p2 = repo.lookup(node)
+        nodes = repo.changelog.findmissing(common=[p1], heads=[p2])
+
         displayer = cmdutil.show_changeset(ui, repo, opts)
-        for node in repo.changelog.nodesbetween(roots=roots, heads=heads)[0]:
-            if node not in roots:
-                displayer.show(repo[node])
+        for node in nodes:
+            displayer.show(repo[node])
         displayer.close()
         return 0
 
