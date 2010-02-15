@@ -283,8 +283,8 @@ def pull(repo, source, heads=[], force=False):
                         w = hgutil.termwidth()
                         bits = (r.revnum, r.author, msg)
                         cnt += 1
-                        ui.progress('pull', cnt, total=total)
                         ui.status(('[r%d] %s: %s\n' % bits)[:w])
+                        ui.progress('pull', cnt, total=total)
 
                         meta.save_tbdelta(tbdelta)
                         close = pullfuns[have_replay](ui, meta, svn, r, tbdelta)
