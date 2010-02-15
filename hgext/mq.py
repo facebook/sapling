@@ -1830,19 +1830,14 @@ def qimport(ui, repo, *filename, **opts):
         return q.push(repo, None)
     return 0
 
-def init(ui, repo, **opts):
-    """init a new queue repository (DEPRECATED)
+def qinit(ui, repo, create):
+    """initialize a new queue repository
 
-    The queue repository is unversioned by default. If
-    -c/--create-repo is specified, qinit will create a separate nested
-    repository for patches (qinit -c may also be run later to convert
-    an unversioned patch repository into a versioned one). You can use
-    qcommit to commit changes to this queue repository.
-
-    This command is deprecated. Without -c, it's implied by other relevant
-    commands. With -c, use hg init -Q instead."""
+    This command also creates a series file for ordering patches, and
+    an mq-specific .hgignore file in the queue repository, to exclude
+    the status and guards files (these contain mostly transient state)."""
     q = repo.mq
-    r = q.init(repo, create=opts['create_repo'])
+    r = q.init(repo, create)
     q.save_dirty()
     if r:
         if not os.path.exists(r.wjoin('.hgignore')):
@@ -1858,6 +1853,19 @@ def init(ui, repo, **opts):
         r.add(['.hgignore', 'series'])
         commands.add(ui, r)
     return 0
+
+def init(ui, repo, **opts):
+    """init a new queue repository (DEPRECATED)
+
+    The queue repository is unversioned by default. If
+    -c/--create-repo is specified, qinit will create a separate nested
+    repository for patches (qinit -c may also be run later to convert
+    an unversioned patch repository into a versioned one). You can use
+    qcommit to commit changes to this queue repository.
+
+    This command is deprecated. Without -c, it's implied by other relevant
+    commands. With -c, use hg init -Q instead."""
+    return qinit(ui, repo, create=opts['create_repo'])
 
 def clone(ui, source, dest=None, **opts):
     '''clone main and patch repository at same time
@@ -2630,22 +2638,7 @@ def mqinit(orig, ui, *args, **kwargs):
 
     repopath = cmdutil.findrepo(os.getcwd())
     repo = hg.repository(ui, repopath)
-    q = repo.mq
-    r = q.init(repo, create=True)
-    q.save_dirty()
-
-    if not os.path.exists(r.wjoin('.hgignore')):
-        fp = r.wopener('.hgignore', 'w')
-        fp.write('^\\.hg\n')
-        fp.write('^\\.mq\n')
-        fp.write('syntax: glob\n')
-        fp.write('status\n')
-        fp.write('guards\n')
-        fp.close()
-    if not os.path.exists(r.wjoin('series')):
-        r.wopener('series', 'w').close()
-    r.add(['.hgignore', 'series'])
-    commands.add(ui, r)
+    return qinit(ui, repo, True)
 
 def mqcommand(orig, ui, repo, *args, **kwargs):
     """Add --mq option to operate on patch repository instead of main"""
