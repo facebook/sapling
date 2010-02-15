@@ -145,7 +145,7 @@ from mercurial.node import short
 from mercurial import cmdutil, templater, util
 import re, time
 
-mysqldb = None
+MySQLdb = None
 
 def buglist(ids):
     return '(' + ','.join(map(str, ids)) + ')'
@@ -165,7 +165,7 @@ class bugzilla_2_16(object):
             self.ui.readconfig(usermap, sections=['usermap'])
         self.ui.note(_('connecting to %s:%s as %s, password %s\n') %
                      (host, db, user, '*' * len(passwd)))
-        self.conn = mysqldb.connect(host=host, user=user, passwd=passwd,
+        self.conn = MySQLdb.connect(host=host, user=user, passwd=passwd,
                                     db=db, connect_timeout=timeout)
         self.cursor = self.conn.cursor()
         self.longdesc_id = self.get_longdesc_id()
@@ -177,7 +177,7 @@ class bugzilla_2_16(object):
         self.ui.note(_('query: %s %s\n') % (args, kwargs))
         try:
             self.cursor.execute(*args, **kwargs)
-        except mysqldb.MySQLError:
+        except MySQLdb.MySQLError:
             self.ui.note(_('failed query: %s %s\n') % (args, kwargs))
             raise
 
@@ -419,9 +419,9 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
     bugzilla bug id. only add a comment once per bug, so same change
     seen multiple times does not fill bug with duplicate data.'''
     try:
-        import mysqldb as mysql
-        global mysqldb
-        mysqldb = mysql
+        import MySQLdb as mysql
+        global MySQLdb
+        MySQLdb = mysql
     except ImportError, err:
         raise util.Abort(_('python mysql support not available: %s') % err)
 
@@ -436,6 +436,6 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
             for id in ids:
                 bz.update(id, ctx)
             bz.notify(ids, util.email(ctx.user()))
-    except mysqldb.MySQLError, err:
+    except MySQLdb.MySQLError, err:
         raise util.Abort(_('database error: %s') % err[1])
 
