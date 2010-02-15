@@ -103,6 +103,11 @@ except ImportError:
 except AssertionError:
     raise Exception('You need at least Subversion 1.5 to use this package.')
 
+requires = []
+try:
+    import mercurial
+except ImportError:
+    requires.append('mercurial')
 
 setup(
     name = 'hgsubversion',
@@ -118,7 +123,7 @@ setup(
     keywords = 'mercurial',
     packages = ('hgsubversion', 'hgsubversion.svnwrap'),
     platforms = 'any',
-    install_requires=['mercurial', ],
+    install_requires=requires,
     classifiers = [
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',
