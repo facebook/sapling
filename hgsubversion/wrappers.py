@@ -274,8 +274,9 @@ def pull(repo, source, heads=[], force=False):
                 converted = False
                 while not converted:
                     try:
-
-                        msg = r.message.strip()
+                        msg = ''
+                        if r.message:
+                            msg = r.message.strip()
                         if not msg:
                             msg = util.default_commit_msg
                         else:
