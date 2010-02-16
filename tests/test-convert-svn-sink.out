@@ -55,7 +55,7 @@ a
 d1
 same
 % rename
-2:7009fc4efb34
+2:eb5169441d43
 assuming destination a-hg
 initializing svn wc 'a-hg-wc'
 scanning source...
@@ -93,7 +93,7 @@ a-hg-wc:
 b
 d1
 % copy
-3:56c519973ce6
+3:60effef6ab48
 assuming destination a-hg
 initializing svn wc 'a-hg-wc'
 scanning source...
@@ -132,7 +132,7 @@ b
 c
 d1
 % remove
-4:ed4dc9a6f585
+4:87bbe3013fb6
 assuming destination a-hg
 initializing svn wc 'a-hg-wc'
 scanning source...
@@ -166,7 +166,7 @@ a-hg-wc:
 c
 d1
 % executable
-5:f205b3636d77
+5:ff42e473c340
 assuming destination a-hg
 initializing svn wc 'a-hg-wc'
 scanning source...

@@ -7,9 +7,9 @@ created new head
      2         8       7      2       2 4c982badb186 125144f7e028 000000000000
      3        15       9      3       3 19b1fc555737 4c982badb186 000000000000
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      75      0       7 905359268f77 000000000000 000000000000
+     0         0      75      0       7 2565f3199a74 000000000000 000000000000
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      75      0       8 905359268f77 000000000000 000000000000
+     0         0      75      0       8 2565f3199a74 000000000000 000000000000
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       8      0       6 12ab3bcc5ea4 000000000000 000000000000
    rev    offset  length   base linkrev nodeid       p1           p2
@@ -18,8 +18,8 @@ created new head
      2        96      48      2       2 626a32663c2f 8b89697eba2c 000000000000
      3       144      48      3       3 f54c32f13478 626a32663c2f 000000000000
      4       192      58      3       6 de68e904d169 626a32663c2f 000000000000
-     5       250      68      3       7 3b45cc2ab868 de68e904d169 000000000000
-     6       318      54      6       8 24d86153a002 f54c32f13478 000000000000
+     5       250      68      3       7 09bb521d218d de68e904d169 000000000000
+     6       318      54      6       8 1fde233dfb0f f54c32f13478 000000000000
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -128,7 +128,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 3 files, 5 changesets, 6 total revisions
-4:80fe151401c2
+4:27f57c869697
 searching for changes
 5 changesets found
 adding changesets
@@ -141,7 +141,7 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 2 files, 5 changesets, 5 total revisions
-4:836ac62537ab
+4:088ff9d6e1e1
 pulling from ../test-7
 searching for changes
 adding changesets
@@ -180,7 +180,7 @@ adding file changes
 added 6 changesets with 4 changes to 4 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 % 8
-8:836ac62537ab
+8:088ff9d6e1e1
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -195,7 +195,7 @@ adding file changes
 added 2 changesets with 2 changes to 2 files
 (run 'hg update' to get a working copy)
 % 4
-4:836ac62537ab
+4:088ff9d6e1e1
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -208,7 +208,7 @@ adding file changes
 added 4 changesets with 3 changes to 3 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 % 6
-6:80fe151401c2
+6:27f57c869697
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -221,7 +221,7 @@ adding file changes
 added 2 changesets with 2 changes to 2 files
 (run 'hg update' to get a working copy)
 % 4
-4:836ac62537ab
+4:088ff9d6e1e1
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -241,7 +241,7 @@ adding file changes
 added 7 changesets with 4 changes to 4 files
 (run 'hg update' to get a working copy)
 % 9
-9:607fe5912aad
+9:e3061ea42e4c
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests

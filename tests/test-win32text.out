@@ -23,7 +23,7 @@ adding manifests
 adding file changes
 added 2 changesets with 2 changes to 2 files
 Attempt to commit or push text file(s) using CRLF line endings
-in b94ebd309a6d: g
+in bc2d09796734: g
 in b1aa5cde7ff4: f
 
 To prevent this mistake in your local repository,
@@ -56,14 +56,14 @@ added 3 changesets with 3 changes to 2 files
 
 and now for something completely different
 Attempt to commit or push text file(s) using CRLF line endings
-in cefdb8d0b741: d/f2
+in 053ba1a3035a: d/f2
 transaction abort!
 rollback completed
 abort: pretxncommit.crlf hook failed
 forgetting d/f2
 
 
-changeset:   5:d4ea9ae21be3
+changeset:   5:f0b1c8d75fce
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -72,7 +72,7 @@ description:
 5
 
 
-changeset:   4:6ba409927d51
+changeset:   4:77796dbcd4ad
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       f
@@ -80,7 +80,7 @@ description:
 4
 
 
-changeset:   3:788a4e595187
+changeset:   3:7c1b5430b350
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       f g
@@ -88,7 +88,7 @@ description:
 2.3
 
 
-changeset:   2:b94ebd309a6d
+changeset:   2:bc2d09796734
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       g
@@ -120,7 +120,7 @@ adding dupe/a
 adding dupe/b
 adding dupe/c
 adding dupe/d
-changeset:   8:7654104f33c3
+changeset:   8:67ac5962ab43
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -129,7 +129,7 @@ description:
 d
 
 
-changeset:   7:9be4c2808cc9
+changeset:   7:68c127d1834e
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       b c
@@ -137,7 +137,7 @@ description:
 b/c
 
 
-changeset:   6:aa4367ed325a
+changeset:   6:adbf8bf7f31d
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       a
@@ -145,7 +145,7 @@ description:
 a
 
 
-changeset:   5:d4ea9ae21be3
+changeset:   5:f0b1c8d75fce
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       bin
@@ -153,7 +153,7 @@ description:
 5
 
 
-changeset:   4:6ba409927d51
+changeset:   4:77796dbcd4ad
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       f
@@ -161,7 +161,7 @@ description:
 4
 
 
-changeset:   3:788a4e595187
+changeset:   3:7c1b5430b350
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       f g
@@ -169,7 +169,7 @@ description:
 2.3
 
 
-changeset:   2:b94ebd309a6d
+changeset:   2:bc2d09796734
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       g
@@ -201,9 +201,9 @@ adding manifests
 adding file changes
 added 3 changesets with 4 changes to 4 files
 Attempt to commit or push text file(s) using CRLF line endings
-in 7654104f33c3: d
-in 9be4c2808cc9: b
-in 9be4c2808cc9: c
+in 67ac5962ab43: d
+in 68c127d1834e: b
+in 68c127d1834e: c
 
 To prevent this mistake in your local repository,
 add to Mercurial.ini or .hg/hgrc:
@@ -223,7 +223,7 @@ transaction abort!
 rollback completed
 abort: pretxnchangegroup.crlf hook failed
 
-changeset:   5:d4ea9ae21be3
+changeset:   5:f0b1c8d75fce
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -232,7 +232,7 @@ description:
 5
 
 
-changeset:   4:6ba409927d51
+changeset:   4:77796dbcd4ad
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       f
@@ -240,7 +240,7 @@ description:
 4
 
 
-changeset:   3:788a4e595187
+changeset:   3:7c1b5430b350
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       f g
@@ -248,7 +248,7 @@ description:
 2.3
 
 
-changeset:   2:b94ebd309a6d
+changeset:   2:bc2d09796734
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       g

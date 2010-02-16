@@ -8,30 +8,30 @@ line0
 line1
 line2
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      77      0       2 da78c0659611 000000000000 000000000000
-     1        77      76      0       3 4b358025380b 000000000000 da78c0659611
+     0         0      77      0       2 d35118874825 000000000000 000000000000
+     1        77      76      0       3 5345f5ab8abd 000000000000 d35118874825
 bar renamed from foo:9e25c27b87571a1edee5ae4dddee5687746cc8e2
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       7      0       0 690b295714ae 000000000000 000000000000
      1         7      13      1       1 9e25c27b8757 690b295714ae 000000000000
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
-4:2d2f9a22c82b 2:0a3ab4856510 
-3:7d3b554bfdf1 2:0a3ab4856510 1:5cd961e4045d 
-2:0a3ab4856510 0:2665aaee66e9 
+4:2263c1be0967 2:0f2ff26688b9 
+3:0555950ead28 2:0f2ff26688b9 1:5cd961e4045d 
+2:0f2ff26688b9 0:2665aaee66e9 
 1:5cd961e4045d 
 0:2665aaee66e9 
 % this should use bar@rev2 as the ancestor
   searching for copies back to rev 1
 resolving manifests
  overwrite None partial False
- ancestor 0a3ab4856510 local 2d2f9a22c82b+ remote 7d3b554bfdf1
+ ancestor 0f2ff26688b9 local 2263c1be0967+ remote 0555950ead28
  bar: versions differ -> m
 preserving bar for resolve of bar
 update: bar 1/1 files (100.00%)
 picked tool 'internal:merge' for bar (binary False symlink False)
 merging bar
-my bar@2d2f9a22c82b+ other bar@7d3b554bfdf1 ancestor bar@0a3ab4856510
+my bar@2263c1be0967+ other bar@0555950ead28 ancestor bar@0f2ff26688b9
  premerge successful
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -39,10 +39,10 @@ my bar@2d2f9a22c82b+ other bar@7d3b554bfdf1 ancestor bar@0a3ab4856510
 line1
 line2
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      77      0       2 da78c0659611 000000000000 000000000000
-     1        77      76      0       3 4b358025380b 000000000000 da78c0659611
-     2       153       7      2       4 4defe5eec418 da78c0659611 000000000000
-     3       160      13      3       5 4663501da27b 4defe5eec418 4b358025380b
+     0         0      77      0       2 d35118874825 000000000000 000000000000
+     1        77      76      0       3 5345f5ab8abd 000000000000 d35118874825
+     2       153       7      2       4 ff4b45017382 d35118874825 000000000000
+     3       160      13      3       5 3701b4893544 ff4b45017382 5345f5ab8abd
 
 
 requesting all changes
@@ -59,30 +59,30 @@ line0
 line1
 line2
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      77      0       2 da78c0659611 000000000000 000000000000
-     1        77      76      0       3 4b358025380b 000000000000 da78c0659611
+     0         0      77      0       2 d35118874825 000000000000 000000000000
+     1        77      76      0       3 5345f5ab8abd 000000000000 d35118874825
 bar renamed from foo:9e25c27b87571a1edee5ae4dddee5687746cc8e2
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       7      0       0 690b295714ae 000000000000 000000000000
      1         7      13      1       1 9e25c27b8757 690b295714ae 000000000000
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
-4:2d2f9a22c82b 2:0a3ab4856510 
-3:96ab80c60897 1:5cd961e4045d 2:0a3ab4856510 
-2:0a3ab4856510 0:2665aaee66e9 
+4:2263c1be0967 2:0f2ff26688b9 
+3:3ffa6b9e35f0 1:5cd961e4045d 2:0f2ff26688b9 
+2:0f2ff26688b9 0:2665aaee66e9 
 1:5cd961e4045d 
 0:2665aaee66e9 
 % this should use bar@rev2 as the ancestor
   searching for copies back to rev 1
 resolving manifests
  overwrite None partial False
- ancestor 0a3ab4856510 local 2d2f9a22c82b+ remote 96ab80c60897
+ ancestor 0f2ff26688b9 local 2263c1be0967+ remote 3ffa6b9e35f0
  bar: versions differ -> m
 preserving bar for resolve of bar
 update: bar 1/1 files (100.00%)
 picked tool 'internal:merge' for bar (binary False symlink False)
 merging bar
-my bar@2d2f9a22c82b+ other bar@96ab80c60897 ancestor bar@0a3ab4856510
+my bar@2263c1be0967+ other bar@3ffa6b9e35f0 ancestor bar@0f2ff26688b9
  premerge successful
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -90,7 +90,7 @@ my bar@2d2f9a22c82b+ other bar@96ab80c60897 ancestor bar@0a3ab4856510
 line1
 line2
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      77      0       2 da78c0659611 000000000000 000000000000
-     1        77      76      0       3 4b358025380b 000000000000 da78c0659611
-     2       153       7      2       4 4defe5eec418 da78c0659611 000000000000
-     3       160      13      3       5 4663501da27b 4defe5eec418 4b358025380b
+     0         0      77      0       2 d35118874825 000000000000 000000000000
+     1        77      76      0       3 5345f5ab8abd 000000000000 d35118874825
+     2       153       7      2       4 ff4b45017382 d35118874825 000000000000
+     3       160      13      3       5 3701b4893544 ff4b45017382 5345f5ab8abd

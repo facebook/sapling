@@ -67,6 +67,6 @@ o  1 "added a file, src and src/b (binary)" files: a src/b
 o  0 "initial import" files:
 
 c4072c4b72e1cabace081888efa148ee80ca3cbb 644   a
-623942606de842342ac7b221ae9ccabc13b5d8c8 644   c
-43b4308708a4b36340566684df2e2a074b12ceb0 644 @ test/a-link
-73773e3389ef7ec5a070519b74895d2eaa4ad5db 644 @ test/b
+0201ac32a3a8e86e303dff60366382a54b48a72e 644   c
+c0067ba5ff0b7c9a3eb17270839d04614c435623 644 @ test/a-link
+375f4263d86feacdea7e3c27100abd1560f2a973 644 @ test/b

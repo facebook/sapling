@@ -7,23 +7,23 @@ summary:     a
 % -f, directory
 abort: cannot follow nonexistent file: "dir"
 % -f, but no args
-changeset:   4:b30c444c7c84
+changeset:   4:66c1345dc4f9
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:05 1970 +0000
 summary:     e
 
-changeset:   3:16b60bf3f99a
+changeset:   3:7c6c671bb7cc
 user:        test
 date:        Thu Jan 01 00:00:04 1970 +0000
 summary:     d
 
-changeset:   2:21fba396af4c
+changeset:   2:41dd4284081e
 user:        test
 date:        Thu Jan 01 00:00:03 1970 +0000
 summary:     c
 
-changeset:   1:c0296dabce9b
+changeset:   1:784de7cef101
 user:        test
 date:        Thu Jan 01 00:00:02 1970 +0000
 summary:     b
@@ -43,7 +43,7 @@ a
 
 
 % many renames
-changeset:   4:b30c444c7c84
+changeset:   4:66c1345dc4f9
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:05 1970 +0000
@@ -52,7 +52,7 @@ description:
 e
 
 
-changeset:   2:21fba396af4c
+changeset:   2:41dd4284081e
 user:        test
 date:        Thu Jan 01 00:00:03 1970 +0000
 files:       b dir/b
@@ -60,7 +60,7 @@ description:
 c
 
 
-changeset:   1:c0296dabce9b
+changeset:   1:784de7cef101
 user:        test
 date:        Thu Jan 01 00:00:02 1970 +0000
 files:       b
@@ -102,7 +102,7 @@ created new head
 % log copies, execute bit set
 6 
 % log -p d
-changeset:   3:16b60bf3f99a
+changeset:   3:7c6c671bb7cc
 user:        test
 date:        Thu Jan 01 00:00:04 1970 +0000
 files:       a b d
@@ -110,7 +110,7 @@ description:
 d
 
 
-diff -r 21fba396af4c -r 16b60bf3f99a d
+diff -r 41dd4284081e -r 7c6c671bb7cc d
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/d	Thu Jan 01 00:00:04 1970 +0000
 @@ -0,0 +1,1 @@

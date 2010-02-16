@@ -74,7 +74,7 @@ diff --git a/empty-rw b/empty-rename
 rename from empty-rw
 rename to empty-rename
 examine changes to 'empty-rw' and 'empty-rename'? [Ynsfdaq?] 
-changeset:   1:df251d174da3
+changeset:   1:d695e8dcb197
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
@@ -86,7 +86,7 @@ diff --git a/empty-rename b/empty-copy
 copy from empty-rename
 copy to empty-copy
 examine changes to 'empty-rename' and 'empty-copy'? [Ynsfdaq?] 
-changeset:   2:b63ea3939f8d
+changeset:   2:1d4b90bea524
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:02 1970 +0000
@@ -97,7 +97,7 @@ summary:     copy
 diff --git a/empty-copy b/empty-copy
 deleted file mode 100644
 examine changes to 'empty-copy'? [Ynsfdaq?] 
-changeset:   3:a2546574bce9
+changeset:   3:b39a238f01a1
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:03 1970 +0000
@@ -110,13 +110,13 @@ diff --git a/tip.bundle b/tip.bundle
 new file mode 100644
 this is a binary file
 examine changes to 'tip.bundle'? [Ynsfdaq?] 
-changeset:   4:9e998a545a8b
+changeset:   4:ad816da3711e
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:04 1970 +0000
 summary:     binary
 
-diff -r a2546574bce9 -r 9e998a545a8b tip.bundle
+diff -r b39a238f01a1 -r ad816da3711e tip.bundle
 Binary file tip.bundle has changed
 
 % change binary file
@@ -124,13 +124,13 @@ Binary file tip.bundle has changed
 diff --git a/tip.bundle b/tip.bundle
 this modifies a binary file (all or nothing)
 examine changes to 'tip.bundle'? [Ynsfdaq?] 
-changeset:   5:93d05561507d
+changeset:   5:dccd6f3eb485
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:05 1970 +0000
 summary:     binary-change
 
-diff -r 9e998a545a8b -r 93d05561507d tip.bundle
+diff -r ad816da3711e -r dccd6f3eb485 tip.bundle
 Binary file tip.bundle has changed
 
 % rename and change binary file
@@ -140,28 +140,28 @@ rename from tip.bundle
 rename to top.bundle
 this modifies a binary file (all or nothing)
 examine changes to 'tip.bundle' and 'top.bundle'? [Ynsfdaq?] 
-changeset:   6:699cc1bea9aa
+changeset:   6:7fa44105f5b3
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:06 1970 +0000
 summary:     binary-change-rename
 
-diff -r 93d05561507d -r 699cc1bea9aa tip.bundle
+diff -r dccd6f3eb485 -r 7fa44105f5b3 tip.bundle
 Binary file tip.bundle has changed
-diff -r 93d05561507d -r 699cc1bea9aa top.bundle
+diff -r dccd6f3eb485 -r 7fa44105f5b3 top.bundle
 Binary file top.bundle has changed
 
 % add plain file
 diff --git a/plain b/plain
 new file mode 100644
 examine changes to 'plain'? [Ynsfdaq?] 
-changeset:   7:118ed744216b
+changeset:   7:11fb457c1be4
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:07 1970 +0000
 summary:     plain
 
-diff -r 699cc1bea9aa -r 118ed744216b plain
+diff -r 7fa44105f5b3 -r 11fb457c1be4 plain
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:07 1970 +0000
 @@ -0,0 +1,10 @@
@@ -191,7 +191,7 @@ examine changes to 'plain'? [Ynsfdaq?] @@ -9,3 +9,4 @@
  9
  10
  11
-+cf81a2760718a74d44c0c2eecb72f659e63a69c5
++7264f99c5f5ff3261504828afa4fb4d406c3af54
 \ No newline at end of file
 record this change to 'plain'? [Ynsfdaq?] % modify end of plain file, add EOL
 diff --git a/plain b/plain
@@ -200,9 +200,9 @@ examine changes to 'plain'? [Ynsfdaq?] @@ -9,4 +9,4 @@
  9
  10
  11
--cf81a2760718a74d44c0c2eecb72f659e63a69c5
+-7264f99c5f5ff3261504828afa4fb4d406c3af54
 \ No newline at end of file
-+cf81a2760718a74d44c0c2eecb72f659e63a69c5
++7264f99c5f5ff3261504828afa4fb4d406c3af54
 record this change to 'plain'? [Ynsfdaq?] % modify beginning, trim end, record both
 diff --git a/plain b/plain
 2 hunks, 4 lines changed
@@ -217,15 +217,15 @@ record change 1/2 to 'plain'? [Ynsfdaq?] @@ -8,5 +8,3 @@
  9
  10
 -11
--cf81a2760718a74d44c0c2eecb72f659e63a69c5
+-7264f99c5f5ff3261504828afa4fb4d406c3af54
 record change 2/2 to 'plain'? [Ynsfdaq?] 
-changeset:   11:d09ab1967dab
+changeset:   11:efca65c9b09e
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:10 1970 +0000
 summary:     begin-and-end
 
-diff -r e2ecd9b0b78d -r d09ab1967dab plain
+diff -r cd07d48e8cbe -r efca65c9b09e plain
 --- a/plain	Thu Jan 01 00:00:10 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:10 1970 +0000
 @@ -1,4 +1,4 @@
@@ -239,7 +239,7 @@ diff -r e2ecd9b0b78d -r d09ab1967dab plain
  9
  10
 -11
--cf81a2760718a74d44c0c2eecb72f659e63a69c5
+-7264f99c5f5ff3261504828afa4fb4d406c3af54
 
 % trim beginning, modify end
 % record end
@@ -265,13 +265,13 @@ record change 1/2 to 'plain'? [Ynsfdaq?] @@ -4,7 +1,7 @@
 -10
 +10.new
 record change 2/2 to 'plain'? [Ynsfdaq?] 
-changeset:   12:44516c9708ae
+changeset:   12:7d1e66983c15
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:11 1970 +0000
 summary:     end-only
 
-diff -r d09ab1967dab -r 44516c9708ae plain
+diff -r efca65c9b09e -r 7d1e66983c15 plain
 --- a/plain	Thu Jan 01 00:00:10 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:11 1970 +0000
 @@ -7,4 +7,4 @@
@@ -292,13 +292,13 @@ examine changes to 'plain'? [Ynsfdaq?] @@ -1,6 +1,3 @@
  5
  6
 record this change to 'plain'? [Ynsfdaq?] 
-changeset:   13:3ebbace64a8d
+changeset:   13:a09fc62a0e61
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:12 1970 +0000
 summary:     begin-only
 
-diff -r 44516c9708ae -r 3ebbace64a8d plain
+diff -r 7d1e66983c15 -r a09fc62a0e61 plain
 --- a/plain	Thu Jan 01 00:00:11 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:12 1970 +0000
 @@ -1,6 +1,3 @@
@@ -358,13 +358,13 @@ record change 2/3 to 'plain'? [Ynsfdaq?] @@ -3,4 +8,6 @@
 +10
 +11
 record change 3/3 to 'plain'? [Ynsfdaq?] 
-changeset:   15:c1c639d8b268
+changeset:   15:7d137997f3a6
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:14 1970 +0000
 summary:     middle-only
 
-diff -r efc0dad7bd9f -r c1c639d8b268 plain
+diff -r c0b8e5fb0be6 -r 7d137997f3a6 plain
 --- a/plain	Thu Jan 01 00:00:13 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:14 1970 +0000
 @@ -1,5 +1,10 @@
@@ -389,13 +389,13 @@ examine changes to 'plain'? [Ynsfdaq?] @@ -9,3 +9,5 @@
 +10
 +11
 record this change to 'plain'? [Ynsfdaq?] 
-changeset:   16:80b74bbc7808
+changeset:   16:4959e3ff13eb
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:15 1970 +0000
 summary:     end-only
 
-diff -r c1c639d8b268 -r 80b74bbc7808 plain
+diff -r 7d137997f3a6 -r 4959e3ff13eb plain
 --- a/plain	Thu Jan 01 00:00:14 1970 +0000
 +++ b/plain	Thu Jan 01 00:00:15 1970 +0000
 @@ -9,3 +9,5 @@
@@ -412,13 +412,13 @@ examine changes to 'subdir/a'? [Ynsfdaq?] @@ -1,1 +1,2 @@
  a
 +a
 record this change to 'subdir/a'? [Ynsfdaq?] 
-changeset:   18:33ff5c4fb017
+changeset:   18:40698cd490b2
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:16 1970 +0000
 summary:     subdir-change
 
-diff -r aecf2b2ea83c -r 33ff5c4fb017 subdir/a
+diff -r 661eacdc08b9 -r 40698cd490b2 subdir/a
 --- a/subdir/a	Thu Jan 01 00:00:16 1970 +0000
 +++ b/subdir/a	Thu Jan 01 00:00:16 1970 +0000
 @@ -1,1 +1,2 @@
@@ -461,13 +461,13 @@ diff --git a/subdir/f1 b/subdir/f1
 examine changes to 'subdir/f1'? [Ynsfdaq?] diff --git a/subdir/f2 b/subdir/f2
 1 hunks, 1 lines changed
 examine changes to 'subdir/f2'? [Ynsfdaq?] 
-changeset:   20:094183e04b7c
+changeset:   20:d2d8c25276a8
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:18 1970 +0000
 summary:     x
 
-diff -r f9e855cd9374 -r 094183e04b7c subdir/f2
+diff -r 25eb2a7694fb -r d2d8c25276a8 subdir/f2
 --- a/subdir/f2	Thu Jan 01 00:00:17 1970 +0000
 +++ b/subdir/f2	Thu Jan 01 00:00:18 1970 +0000
 @@ -1,1 +1,2 @@
@@ -478,13 +478,13 @@ diff -r f9e855cd9374 -r 094183e04b7c subdir/f2
 diff --git a/subdir/f1 b/subdir/f1
 1 hunks, 1 lines changed
 examine changes to 'subdir/f1'? [Ynsfdaq?] 
-changeset:   21:38164785b0ef
+changeset:   21:1013f51ce32f
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:19 1970 +0000
 summary:     y
 
-diff -r 094183e04b7c -r 38164785b0ef subdir/f1
+diff -r d2d8c25276a8 -r 1013f51ce32f subdir/f1
 --- a/subdir/f1	Thu Jan 01 00:00:18 1970 +0000
 +++ b/subdir/f1	Thu Jan 01 00:00:19 1970 +0000
 @@ -1,1 +1,2 @@
@@ -501,7 +501,7 @@ examine changes to 'subdir/f1'? [Ynsfdaq?] @@ -1,2 +1,3 @@
  a
 +a
 record this change to 'subdir/f1'? [Ynsfdaq?] 
-changeset:   22:a891589cb933
+changeset:   22:5df857735621
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:20 1970 +0000
@@ -526,7 +526,7 @@ examine changes to 'subdir/f1'? [Ynsfdaq?] @@ -1,3 +1,4 @@
  a
 +b
 record this change to 'subdir/f1'? [Ynsfdaq?] 
-changeset:   23:befa0dae6201
+changeset:   23:a4ae36a78715
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:21 1970 +0000
@@ -552,7 +552,7 @@ examine changes to 'subdir/f1'? [Ynsfdaq?] @@ -2,3 +2,4 @@
  b
 +c
 record this change to 'subdir/f1'? [Ynsfdaq?] 
-changeset:   24:8fd83ff53ce6
+changeset:   24:1460f6e47966
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:22 1970 +0000
@@ -578,13 +578,13 @@ examine changes to 'subdir/f1'? [Ynsfdaq?] @@ -3,3 +3,4 @@
  c
 +d
 record this change to 'subdir/f1'? [Ynsfdaq?] 
-changeset:   25:49b3838dc9e7
+changeset:   25:5bacc1f6e9cf
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:23 1970 +0000
 summary:     w1
 
-diff -r 8fd83ff53ce6 -r 49b3838dc9e7 subdir/f1
+diff -r 1460f6e47966 -r 5bacc1f6e9cf subdir/f1
 --- a/subdir/f1	Thu Jan 01 00:00:22 1970 +0000
 +++ b/subdir/f1	Thu Jan 01 00:00:23 1970 +0000
 @@ -3,3 +3,4 @@

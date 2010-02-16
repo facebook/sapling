@@ -16,7 +16,7 @@ merge
  a2: divergent renames -> dr
 resolving manifests
  overwrite None partial False
- ancestor af1939970a1c local f26ec4fc3fa3+ remote 8e765a822af2
+ ancestor af1939970a1c local 044f8520aeeb+ remote 85c198ef2f6c
  a: remote moved to b -> m
  b2: remote created -> g
 preserving a for resolve of b
@@ -24,7 +24,7 @@ removing a
 update: a 1/3 files (33.33%)
 picked tool 'internal:merge' for b (binary False symlink False)
 merging a and b to b
-my b@f26ec4fc3fa3+ other b@8e765a822af2 ancestor a@af1939970a1c
+my b@044f8520aeeb+ other b@85c198ef2f6c ancestor a@af1939970a1c
  premerge successful
 update: a2 2/3 files (66.67%)
 warning: detected divergent renames of a2 to:
@@ -41,6 +41,6 @@ R a
 C c2
 blahblah
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      67      0       1 dc51707dfc98 000000000000 000000000000
-     1        67      72      1       3 b2494a44f0a9 000000000000 dc51707dfc98
+     0         0      67      0       1 57eacc201a7f 000000000000 000000000000
+     1        67      72      1       3 4727ba907962 000000000000 57eacc201a7f
 b renamed from a:dd03b83622e78778b403775d0d074b9ac7387a66

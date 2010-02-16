@@ -12,7 +12,7 @@ merging testdir/subdir/a and testdir/a to testdir/subdir/a
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 M testdir/subdir/a
-diff -r d02b3fc32762 testdir/subdir/a
+diff -r f7459795031e testdir/subdir/a
 --- a/testdir/subdir/a
 +++ b/testdir/subdir/a
 @@ -1,1 +1,1 @@

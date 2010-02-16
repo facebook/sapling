@@ -9,7 +9,7 @@
   checking for directory renames
 resolving manifests
  overwrite None partial False
- ancestor 583c7b748052 local fb3948d97f07+ remote 40da226db0f0
+ ancestor 583c7b748052 local fb3948d97f07+ remote 7f1309517659
  a: remote moved to c -> m
  a: remote moved to b -> m
 preserving a for resolve of b
@@ -18,12 +18,12 @@ removing a
 update: a 1/2 files (50.00%)
 picked tool 'internal:merge' for b (binary False symlink False)
 merging a and b to b
-my b@fb3948d97f07+ other b@40da226db0f0 ancestor a@583c7b748052
+my b@fb3948d97f07+ other b@7f1309517659 ancestor a@583c7b748052
  premerge successful
 update: a 2/2 files (100.00%)
 picked tool 'internal:merge' for c (binary False symlink False)
 merging a and c to c
-my c@fb3948d97f07+ other c@40da226db0f0 ancestor a@583c7b748052
+my c@fb3948d97f07+ other c@7f1309517659 ancestor a@583c7b748052
  premerge successful
 0 files updated, 2 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)

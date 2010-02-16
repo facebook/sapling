@@ -8,7 +8,7 @@ created new head
 # revision with no copies (used to print a traceback)
 
 # compact style works
-8[tip]   3bdecc1cde0c   2020-01-01 10:01 +0000   test
+8[tip]   95c24699272e   2020-01-01 10:01 +0000   test
   third
 
 7:-1   29114dbae42b   1970-01-12 13:46 +0000   user
@@ -35,7 +35,7 @@ created new head
 0   1e4e1b8f71e0   1970-01-12 13:46 +0000   user
   line 1
 
-8[tip]   3bdecc1cde0c   2020-01-01 10:01 +0000   test
+8[tip]   95c24699272e   2020-01-01 10:01 +0000   test
   third
 
 7:-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
@@ -66,7 +66,7 @@ other 3
   line 1
 line 2
 
-8[tip]:7,-1   3bdecc1cde0c   2020-01-01 10:01 +0000   test
+8[tip]:7,-1   95c24699272e   2020-01-01 10:01 +0000   test
   third
 
 7:-1,-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
@@ -100,7 +100,7 @@ line 2
 # xml style works (--style xml)
 <?xml version="1.0"?>
 <log>
-<logentry revision="8" node="3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57">
+<logentry revision="8" node="95c24699272ef57d062b8bccc32c878bf841784a">
 <tag>tip</tag>
 <author email="test">test</author>
 <date>2020-01-01T10:01:00+00:00</date>
@@ -159,7 +159,7 @@ line 2</msg>
 # xml style works (-v --style xml)
 <?xml version="1.0"?>
 <log>
-<logentry revision="8" node="3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57">
+<logentry revision="8" node="95c24699272ef57d062b8bccc32c878bf841784a">
 <tag>tip</tag>
 <author email="test">test</author>
 <date>2020-01-01T10:01:00+00:00</date>
@@ -248,7 +248,7 @@ line 2</msg>
 # xml style works (--debug --style xml)
 <?xml version="1.0"?>
 <log>
-<logentry revision="8" node="3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57">
+<logentry revision="8" node="95c24699272ef57d062b8bccc32c878bf841784a">
 <tag>tip</tag>
 <parent revision="7" node="29114dbae42b9f078cf2714dbe3a86bba8ec7453" />
 <parent revision="-1" node="0000000000000000000000000000000000000000" />
@@ -390,7 +390,7 @@ abort: template file ./q: Permission denied
 
 	* fourth, second, third:
 	third
-	[3bdecc1cde0c] [tip]
+	[95c24699272e] [tip]
 
 1970-01-12  User Name  <user@hostname>
 
@@ -721,7 +721,7 @@ files--debug: c
 files--debug: c
 files--debug: b
 files--debug: a
-manifest: 8:79c71159cb0a
+manifest: 8:94961b75a2da
 manifest: 7:f2dbc354b94e
 manifest: 6:91015e9dbdd7
 manifest: 5:4dc3def4f9b4
@@ -730,7 +730,7 @@ manifest: 3:cb5a1327723b
 manifest: 2:6e0e82995c35
 manifest: 1:4e8d705b1e53
 manifest: 0:a0c8bcbbb45c
-manifest--verbose: 8:79c71159cb0a
+manifest--verbose: 8:94961b75a2da
 manifest--verbose: 7:f2dbc354b94e
 manifest--verbose: 6:91015e9dbdd7
 manifest--verbose: 5:4dc3def4f9b4
@@ -739,7 +739,7 @@ manifest--verbose: 3:cb5a1327723b
 manifest--verbose: 2:6e0e82995c35
 manifest--verbose: 1:4e8d705b1e53
 manifest--verbose: 0:a0c8bcbbb45c
-manifest--debug: 8:79c71159cb0a1a84add78e7922a1e5e7be34c499
+manifest--debug: 8:94961b75a2da554b4df6fb599e5bfc7d48de0c64
 manifest--debug: 7:f2dbc354b94e5ec0b4f10680ee0cee816101d0bf
 manifest--debug: 6:91015e9dbdd76a6791085d12b0a0ec7fcd22ffbf
 manifest--debug: 5:4dc3def4f9b4c6e8de820f6ee74737f91e96a216
@@ -748,7 +748,7 @@ manifest--debug: 3:cb5a1327723bada42f117e4c55a303246eaf9ccc
 manifest--debug: 2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1
 manifest--debug: 1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
 manifest--debug: 0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
-node: 3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57
+node: 95c24699272ef57d062b8bccc32c878bf841784a
 node: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
 node: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
 node: 13207e5a10d9fd28ec424934298e176197f2c67f
@@ -757,7 +757,7 @@ node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
 node: 97054abb4ab824450e9164180baf491ae0078465
 node: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
 node: 1e4e1b8f71e05681d422154f5421e385fec3454f
-node--verbose: 3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57
+node--verbose: 95c24699272ef57d062b8bccc32c878bf841784a
 node--verbose: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
 node--verbose: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
 node--verbose: 13207e5a10d9fd28ec424934298e176197f2c67f
@@ -766,7 +766,7 @@ node--verbose: 10e46f2dcbf4823578cf180f33ecf0b957964c47
 node--verbose: 97054abb4ab824450e9164180baf491ae0078465
 node--verbose: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
 node--verbose: 1e4e1b8f71e05681d422154f5421e385fec3454f
-node--debug: 3bdecc1cde0c3d5fa6eaee3d9d9828f6ac468d57
+node--debug: 95c24699272ef57d062b8bccc32c878bf841784a
 node--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
 node--debug: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
 node--debug: 13207e5a10d9fd28ec424934298e176197f2c67f
@@ -984,7 +984,7 @@ no user, no domain
 no person
 other 1
 line 1
-3bdecc1cde0c
+95c24699272e
 29114dbae42b
 c7b487c6c50e
 13207e5a10d9

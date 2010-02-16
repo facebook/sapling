@@ -1,9 +1,9 @@
 A b
 b
  b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
-committed changeset 1:386a3cc01532710ca78aed9a54fa2f459c04f29c
+committed changeset 1:76973b01f66a012648546c979ea4c41de9e7d8cd
 we should see two history entries
-changeset:   1:386a3cc01532
+changeset:   1:76973b01f66a
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -30,7 +30,7 @@ this should show a revision linked to changeset 0
    rev    offset  length   base linkrev nodeid       p1           p2
      0         0       3      0       0 b789fdd96dc2 000000000000 000000000000
 we should see one log entry for b
-changeset:   1:386a3cc01532
+changeset:   1:76973b01f66a
 tag:         tip
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
@@ -38,11 +38,11 @@ summary:     2
 
 this should show a revision linked to changeset 1
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      65      0       1 9a263dd772e0 000000000000 000000000000
+     0         0      65      0       1 37d9b5d994ea 000000000000 000000000000
 this should show the rename information in the metadata
-copyrev: b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 copy: a
-ed156f22f0a6fde642de0b5eba0cbbb2  .hg/store/data/b.i
+copyrev: b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
+4999f120a3b88713bbefddd195cf5133  .hg/store/data/b.i
 60b725f10c9c85c70d97880dfe8191b3  bsum
 60b725f10c9c85c70d97880dfe8191b3  asum
 checking changesets

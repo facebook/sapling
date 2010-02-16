@@ -1,30 +1,30 @@
 adding b
 adding a
 adding a
-changeset:   6:38d962e6234d
+changeset:   6:b7682196df1c
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     change c
 
-diff -r a3b6a9e4507e -r 38d962e6234d c
+diff -r 1a6696706df2 -r b7682196df1c c
 --- a/c	Thu Jan 01 00:00:00 1970 +0000
 +++ b/c	Thu Jan 01 00:00:00 1970 +0000
 @@ -1,1 +1,2 @@
  b
 +c
 
-changeset:   5:a3b6a9e4507e
+changeset:   5:1a6696706df2
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     mv b
 
-diff -r 52e848cdcd88 -r a3b6a9e4507e b
+diff -r 52e848cdcd88 -r 1a6696706df2 b
 --- a/b	Thu Jan 01 00:00:00 1970 +0000
 +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
 @@ -1,1 +0,0 @@
 -b
-diff -r 52e848cdcd88 -r a3b6a9e4507e c
+diff -r 52e848cdcd88 -r 1a6696706df2 c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/c	Thu Jan 01 00:00:00 1970 +0000
 @@ -0,0 +1,1 @@
@@ -523,27 +523,27 @@ a@6563da9dcf87: not found in manifest
 <a href="/graph?style=spartan">graph</a>
 <a href="/tags?style=spartan">tags</a>
 <a href="/branches?style=spartan">branches</a>
-<a href="/file/38d962e6234d/c?style=spartan">file</a>
-<a href="/annotate/38d962e6234d/c?style=spartan">annotate</a>
+<a href="/file/b7682196df1c/c?style=spartan">file</a>
+<a href="/annotate/b7682196df1c/c?style=spartan">annotate</a>
 <a type="application/rss+xml" href="/rss-log/tip/c">rss</a>
 <a type="application/atom+xml" href="/atom-log/tip/c" title="Atom feed for test:c">atom</a>
 </div>
 
 <h2>c revision history</h2>
 
-<p>navigate: <small class="navigate"><a href="/log/a3b6a9e4507e/c?style=spartan">(0)</a> <a href="/log/tip/c?style=spartan">tip</a> </small></p>
+<p>navigate: <small class="navigate"><a href="/log/1a6696706df2/c?style=spartan">(0)</a> <a href="/log/tip/c?style=spartan">tip</a> </small></p>
 
 <table class="logEntry parity0">
  <tr>
   <th class="age">1970-01-01:</th>
-  <th class="firstline"><a href="/rev/38d962e6234d?style=spartan">change c</a></th>
+  <th class="firstline"><a href="/rev/b7682196df1c?style=spartan">change c</a></th>
  </tr>
  <tr>
   <th class="revision">revision 1:</td>
   <td class="node">
-   <a href="/file/38d962e6234d/c?style=spartan">38d962e6234d</a>
-   <a href="/diff/38d962e6234d/c?style=spartan">(diff)</a>
-   <a href="/annotate/38d962e6234d/c?style=spartan">(annotate)</a>
+   <a href="/file/b7682196df1c/c?style=spartan">b7682196df1c</a>
+   <a href="/diff/b7682196df1c/c?style=spartan">(diff)</a>
+   <a href="/annotate/b7682196df1c/c?style=spartan">(annotate)</a>
   </td>
  </tr>
  
@@ -561,14 +561,14 @@ a@6563da9dcf87: not found in manifest
 <table class="logEntry parity1">
  <tr>
   <th class="age">1970-01-01:</th>
-  <th class="firstline"><a href="/rev/a3b6a9e4507e?style=spartan">mv b</a></th>
+  <th class="firstline"><a href="/rev/1a6696706df2?style=spartan">mv b</a></th>
  </tr>
  <tr>
   <th class="revision">revision 0:</td>
   <td class="node">
-   <a href="/file/a3b6a9e4507e/c?style=spartan">a3b6a9e4507e</a>
-   <a href="/diff/a3b6a9e4507e/c?style=spartan">(diff)</a>
-   <a href="/annotate/a3b6a9e4507e/c?style=spartan">(annotate)</a>
+   <a href="/file/1a6696706df2/c?style=spartan">1a6696706df2</a>
+   <a href="/diff/1a6696706df2/c?style=spartan">(diff)</a>
+   <a href="/annotate/1a6696706df2/c?style=spartan">(annotate)</a>
   </td>
  </tr>
  
