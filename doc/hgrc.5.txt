@@ -431,7 +431,8 @@ Supported arguments:
   The priority in which to evaluate this tool.
   Default: 0.
 ``executable``
-  Either just the name of the executable or its pathname.
+  Either just the name of the executable or its pathname.  On Windows,
+  the path can use environment variables with ${ProgramFiles} syntax.
   Default: the tool name.
 ``args``
   The arguments to pass to the tool executable. You can refer to the
