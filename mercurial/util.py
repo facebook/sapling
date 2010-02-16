@@ -1343,14 +1343,17 @@ def rundetached(args, condfn):
         if prevhandler is not None:
             signal.signal(signal.SIGCHLD, prevhandler)
 
-def any(iterable):
-    for i in iterable:
-        if i:
-            return True
-    return False
+try:
+    any, all = any, all
+except NameError:
+    def any(iterable):
+        for i in iterable:
+            if i:
+                return True
+        return False
 
-def all(iterable):
-    for i in iterable:
-        if not i:
-            return False
-    return True
+    def all(iterable):
+        for i in iterable:
+            if not i:
+                return False
+        return True
