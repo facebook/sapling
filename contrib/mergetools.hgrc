@@ -18,6 +18,7 @@ merge.priority=-10
 gpyfm.gui=True
 
 meld.gui=True
+meld.args=--label='local' $local --label='base' $base --label='other' $other
 
 tkdiff.args=$local $other -a $base -o $output
 tkdiff.gui=True
@@ -27,7 +28,10 @@ xxdiff.args=--show-merged-pane --exit-with-merge-status --title1 local --title2 
 xxdiff.gui=True
 xxdiff.priority=-8
 
-diffmerge.args=--nosplash --merge --title1=base --title2=local --title3=other $base $local $other
+diffmerge.regkey=Software\SourceGear\SourceGear DiffMerge\
+diffmerge.regname=Location
+diffmerge.priority=-7
+diffmerge.args=-nosplash -merge -title1=local -title2=merged -title3=other $local $base $other -result=$output
 diffmerge.checkchanged=True
 diffmerge.gui=True
 
@@ -42,6 +46,7 @@ tortoisemerge.args=/base:$base /mine:$local /theirs:$other /merged:$output
 tortoisemerge.regkey=Software\TortoiseSVN
 tortoisemerge.checkchanged=True
 tortoisemerge.gui=True
+tortoisemerge.priority=-8
 
 ecmerge.args=$base $local $other --mode=merge3 --title0=base --title1=local --title2=other --to=$output
 ecmerge.regkey=Software\Elli\xc3\xa9 Computing\Merge
@@ -51,13 +56,31 @@ filemerge.executable=/Developer/Applications/Utilities/FileMerge.app/Contents/Ma
 filemerge.args=-left $other -right $local -ancestor $base -merge $output
 filemerge.gui=True
 
+; Windows version of Beyond Compare
 beyondcompare3.args=$local $other $base $output /ro /lefttitle=local /centertitle=base /righttitle=other /automerge /reviewconflicts /solo
 beyondcompare3.regkey=Software\Scooter Software\Beyond Compare 3
 beyondcompare3.regname=ExePath
 beyondcompare3.gui=True
+beyondcompare3.priority=-2
 
-winmerge.args=/e /u /dl local /dr other /wr $local $other $output
+; Linux version of Beyond Compare
+bcompare.args=$local $other $base -mergeoutput=$output -ro -lefttitle=parent1 -centertitle=base -righttitle=parent2 -outputtitle=merged -automerge -reviewconflicts -solo
+bcompare.premerge=False
+bcompare.gui=True
+bcompare.priority=-1
+
+winmerge.args=/e /x /wl /ub /dl other /dr local $other $local $output
 winmerge.regkey=Software\Thingamahoochie\WinMerge
 winmerge.regname=Executable
 winmerge.checkchanged=True
 winmerge.gui=True
+winmerge.priority=-10
+
+araxis.regkey=SOFTWARE\Classes\TypeLib\{46799e0a-7bd1-4330-911c-9660bb964ea2}\7.0\HELPDIR
+araxis.regappend=\ConsoleCompare.exe
+araxis.priority=-2
+araxis.args=/3 /a2 /wait /merge /title1:"Other" /title2:"Base" /title3:"Local :"$local $other $base $local $output
+araxis.premerge=False
+araxis.checkconflict=True
+araxis.binary=True
+araxis.gui=True
