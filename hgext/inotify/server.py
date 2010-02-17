@@ -19,6 +19,8 @@ import tempfile
 
 class AlreadyStartedException(Exception):
     pass
+class TimeoutException(Exception):
+    pass
 
 def join(a, b):
     if a:
@@ -444,9 +446,11 @@ else:
 master = _server.master
 
 def start(ui, dirstate, root, opts):
-    timeout = opts.get('timeout')
+    timeout = opts.get('idle_timeout')
     if timeout:
-        timeout = float(timeout) * 1e3
+        timeout = float(timeout) * 60000
+    else:
+        timeout = None
 
     class service(object):
         def init(self):
@@ -457,7 +461,10 @@ def start(ui, dirstate, root, opts):
 
         def run(self):
             try:
-                self.master.run()
+                try:
+                    self.master.run()
+                except TimeoutException:
+                    pass
             finally:
                 self.master.shutdown()
 

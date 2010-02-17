@@ -397,7 +397,7 @@ class socketlistener(server.socketlistener, pollable):
         self.register(timeout=timeout)
 
     def handle_timeout(self):
-        pass
+        raise server.TimeoutException
 
     def handle_pollevents(self, events):
         for e in events:
