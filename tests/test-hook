@@ -205,8 +205,8 @@ echo '# make sure --traceback works'
 echo '[hooks]' > .hg/hgrc
 echo 'commit.abort = python:hooktests.aborthook' >> .hg/hgrc
 
-echo a >> a
-hg --traceback commit -A -m a 2>&1 | grep '^Traceback'
+echo aa > a
+hg --traceback commit -d '0 0' -ma 2>&1 | grep '^Traceback'
 
 cd ..
 hg init c
@@ -224,9 +224,9 @@ echo 'hookext = hookext.py' >> .hg/hgrc
 
 touch foo
 hg add foo
-hg ci -m 'add foo'
+hg ci -d '0 0' -m 'add foo'
 echo >> foo
-hg ci --debug -m 'change foo' | sed -e 's/ at .*>/>/'
+hg ci --debug -d '0 0' -m 'change foo' | sed -e 's/ at .*>/>/'
 
 hg showconfig hooks | sed -e 's/ at .*>/>/'
 
@@ -246,7 +246,7 @@ echo '[hooks]' > ../repo/.hg/hgrc
 echo "pre-commit.test = python:`pwd`/testhooks.py:testhook" >> ../repo/.hg/hgrc
 
 cd ../repo
-hg commit
+hg commit -d '0 0'
 
 cd ../../b
 echo '# make sure --traceback works on hook import failure'
@@ -260,6 +260,14 @@ echo '[hooks]' > .hg/hgrc
 echo 'precommit.importfail = python:importfail.whatever' >> .hg/hgrc
 
 echo a >> a
-hg --traceback commit -Ama 2>&1 | egrep '^(exception|Traceback|ImportError)'
+hg --traceback commit -d '0 0' -ma 2>&1 | egrep '^(exception|Traceback|ImportError)'
+
+echo '# commit and update hooks should run after command completion (issue 1827)'
+echo '[hooks]' > .hg/hgrc
+echo 'commit = hg id' >> .hg/hgrc
+echo 'update = hg id' >> .hg/hgrc
+echo bb > a
+hg ci -d '0 0' -ma
+hg up 0
 
 exit 0

@@ -511,8 +511,9 @@ def update(repo, node, branchmerge, force, partial):
             repo.dirstate.setparents(fp1, fp2)
             if not branchmerge and not fastforward:
                 repo.dirstate.setbranch(p2.branch())
-            repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
-
-        return stats
     finally:
         wlock.release()
+
+    if not partial:
+        repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
+    return stats

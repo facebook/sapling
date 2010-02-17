@@ -846,6 +846,8 @@ class localrepository(repo.repository):
             msgfile.close()
 
             try:
+                hookp1, hookp2 = hex(p1), (p2 != nullid and hex(p2) or '')
+                self.hook("precommit", throw=True, parent1=hookp1, parent2=hookp2)
                 ret = self.commitctx(cctx, True)
             except:
                 if edited:
@@ -861,15 +863,14 @@ class localrepository(repo.repository):
                 self.dirstate.forget(f)
             self.dirstate.setparents(ret)
             ms.reset()
-
-            return ret
-
         finally:
             wlock.release()
 
+        self.hook("commit", node=hex(ret), parent1=hookp1, parent2=hookp2)
+        return ret
+
     def commitctx(self, ctx, error=False):
         """Add a new revision to current repository.
-
         Revision information is passed via the context argument.
         """
 
@@ -879,9 +880,6 @@ class localrepository(repo.repository):
         m1 = p1.manifest().copy()
         m2 = p2.manifest()
         user = ctx.user()
-
-        xp1, xp2 = p1.hex(), p2 and p2.hex() or ''
-        self.hook("precommit", throw=True, parent1=xp1, parent2=xp2)
 
         lock = self.lock()
         try:
@@ -925,6 +923,7 @@ class localrepository(repo.repository):
                                    trp, p1.node(), p2.node(),
                                    user, ctx.date(), ctx.extra().copy())
             p = lambda: self.changelog.writepending() and self.root or ""
+            xp1, xp2 = p1.hex(), p2 and p2.hex() or ''
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                       parent2=xp2, pending=p)
             self.changelog.finalize(trp)
@@ -932,8 +931,6 @@ class localrepository(repo.repository):
 
             if self._branchcache:
                 self.branchtags()
-
-            self.hook("commit", node=hex(n), parent1=xp1, parent2=xp2)
             return n
         finally:
             del tr

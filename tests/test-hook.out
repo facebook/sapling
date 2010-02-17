@@ -171,3 +171,7 @@ exception from second failed import attempt:
 Traceback (most recent call last):
 ImportError: No module named hgext_importfail
 Traceback (most recent call last):
+# commit and update hooks should run after command completion (issue 1827)
+8da618c33484 tip
+29b62aeb769f
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
