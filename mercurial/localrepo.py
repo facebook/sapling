@@ -1339,7 +1339,7 @@ class localrepository(repo.repository):
 
             if r:
                 reqcnt += 1
-                self.ui.progress('searching', reqcnt, unit='queries')
+                self.ui.progress(_('searching'), reqcnt, unit='queries')
                 self.ui.debug("request %d: %s\n" %
                             (reqcnt, " ".join(map(short, r))))
                 for p in xrange(0, len(r), 10):
@@ -1352,7 +1352,7 @@ class localrepository(repo.repository):
         while search:
             newsearch = []
             reqcnt += 1
-            self.ui.progress('searching', reqcnt, unit='queries')
+            self.ui.progress(_('searching'), reqcnt, unit='queries')
             for n, l in zip(search, remote.between(search)):
                 l.append(n[1])
                 p = n[0]
@@ -1388,7 +1388,7 @@ class localrepository(repo.repository):
         self.ui.debug("found new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")
 
-        self.ui.progress('searching', None, unit='queries')
+        self.ui.progress(_('searching'), None, unit='queries')
         self.ui.debug("%d total queries\n" % reqcnt)
 
         return base.keys(), list(fetch), heads
@@ -1819,9 +1819,9 @@ class localrepository(repo.repository):
             cnt = 0
             for chnk in group:
                 yield chnk
-                self.ui.progress('bundle changes', cnt, unit='chunks')
+                self.ui.progress(_('bundle changes'), cnt, unit='chunks')
                 cnt += 1
-            self.ui.progress('bundle changes', None, unit='chunks')
+            self.ui.progress(_('bundle changes'), None, unit='chunks')
 
 
             # Figure out which manifest nodes (of the ones we think might be
@@ -1847,9 +1847,9 @@ class localrepository(repo.repository):
             cnt = 0
             for chnk in group:
                 yield chnk
-                self.ui.progress('bundle manifests', cnt, unit='chunks')
+                self.ui.progress(_('bundle manifests'), cnt, unit='chunks')
                 cnt += 1
-            self.ui.progress('bundle manifests', None, unit='chunks')
+            self.ui.progress(_('bundle manifests'), None, unit='chunks')
 
             # These are no longer needed, dereference and toss the memory for
             # them.
@@ -1898,7 +1898,7 @@ class localrepository(repo.repository):
                     del msng_filenode_set[fname]
             # Signal that no more groups are left.
             yield changegroup.closechunk()
-            self.ui.progress('bundle files', None, unit='chunks')
+            self.ui.progress(_('bundle files'), None, unit='chunks')
 
             if msng_cl_lst:
                 self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
@@ -1947,19 +1947,19 @@ class localrepository(repo.repository):
 
             cnt = 0
             for chnk in cl.group(nodes, identity, collect):
-                self.ui.progress('bundle changes', cnt, unit='chunks')
+                self.ui.progress(_('bundle changes'), cnt, unit='chunks')
                 cnt += 1
                 yield chnk
-            self.ui.progress('bundle changes', None, unit='chunks')
+            self.ui.progress(_('bundle changes'), None, unit='chunks')
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
             cnt = 0
             for chnk in mnfst.group(nodeiter, lookuprevlink_func(mnfst)):
-                self.ui.progress('bundle manifests', cnt, unit='chunks')
+                self.ui.progress(_('bundle manifests'), cnt, unit='chunks')
                 cnt += 1
                 yield chnk
-            self.ui.progress('bundle manifests', None, unit='chunks')
+            self.ui.progress(_('bundle manifests'), None, unit='chunks')
 
             cnt = 0
             for fname in sorted(changedfiles):
@@ -2022,7 +2022,7 @@ class localrepository(repo.repository):
             self.ui.status(_("adding changesets\n"))
             clstart = len(cl)
             class prog(object):
-                step = 'changesets'
+                step = _('changesets')
                 count = 1
                 ui = self.ui
                 def __call__(self):
@@ -2034,11 +2034,11 @@ class localrepository(repo.repository):
                 raise util.Abort(_("received changelog group is empty"))
             clend = len(cl)
             changesets = clend - clstart
-            self.ui.progress('changesets', None)
+            self.ui.progress(_('changesets'), None)
 
             # pull off the manifest group
             self.ui.status(_("adding manifests\n"))
-            pr.step = 'manifests'
+            pr.step = _('manifests')
             pr.count = 1
             chunkiter = changegroup.chunkiter(source, progress=pr)
             # no need to check for empty manifest group here:
@@ -2046,7 +2046,7 @@ class localrepository(repo.repository):
             # no new manifest will be created and the manifest group will
             # be empty during the pull
             self.manifest.addgroup(chunkiter, revmap, trp)
-            self.ui.progress('manifests', None)
+            self.ui.progress(_('manifests'), None)
 
             needfiles = {}
             if self.ui.configbool('server', 'validate', default=False):
@@ -2082,7 +2082,7 @@ class localrepository(repo.repository):
                             needs.remove(n)
                     if not needs:
                         del needfiles[f]
-            self.ui.progress('files', None)
+            self.ui.progress(_('files'), None)
 
             for f, needs in needfiles.iteritems():
                 fl = self.file(f)

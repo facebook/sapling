@@ -32,7 +32,7 @@ def toposort(ui, rl):
     ui.status('reading revs\n')
     try:
         for i in rl:
-            ui.progress('reading', i, total=len(rl))
+            ui.progress(_('reading'), i, total=len(rl))
             children[i] = []
             parents = [p for p in rl.parentrevs(i) if p != node.nullrev]
             # in case of duplicate parents
@@ -45,7 +45,7 @@ def toposort(ui, rl):
             if len(parents) == 0:
                 root.append(i)
     finally:
-        ui.progress('reading', None, total=len(rl))
+        ui.progress(_('reading'), None, total=len(rl))
 
     # XXX this is a reimplementation of the 'branchsort' topo sort
     # algorithm in hgext.convert.convcmd... would be nice not to duplicate
@@ -75,7 +75,7 @@ def writerevs(ui, r1, r2, order, tr):
 
     count = [0]
     def progress(*args):
-        ui.progress('writing', count[0], total=len(order))
+        ui.progress(_('writing'), count[0], total=len(order))
         count[0] += 1
 
     order = [r1.node(r) for r in order]
@@ -89,7 +89,7 @@ def writerevs(ui, r1, r2, order, tr):
         chunkiter = changegroup.chunkiter(group)
         r2.addgroup(chunkiter, unlookup, tr)
     finally:
-        ui.progress('writing', None, len(order))
+        ui.progress(_('writing'), None, len(order))
 
 def report(ui, olddatafn, newdatafn):
     oldsize = float(os.stat(olddatafn).st_size)
