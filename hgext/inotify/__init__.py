@@ -58,7 +58,7 @@ def reposetup(ui, repo):
                 else:
                     if ui.config('inotify', 'debug'):
                         r2 = super(inotifydirstate, self).status(
-                            match, False, clean, unknown)
+                            match, [], False, clean, unknown)
                         for c, a, b in zip('LMARDUIC', result, r2):
                             for f in a:
                                 if f not in b:
