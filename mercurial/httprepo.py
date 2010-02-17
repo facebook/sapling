@@ -74,10 +74,15 @@ class httprepository(repo.repository):
         q.update(args)
         qs = '?%s' % urllib.urlencode(q)
         cu = "%s%s" % (self._url, qs)
+        req = urllib2.Request(cu, data, headers)
+        if data is not None:
+            # len(data) is broken if data doesn't fit into Py_ssize_t
+            # add the header ourself to avoid OverflowError
+            size = data.__len__()
+            self.ui.debug("sending %s bytes\n" % size)
+            req.add_unredirected_header('Content-Length', '%d' % size)
         try:
-            if data:
-                self.ui.debug("sending %s bytes\n" % len(data))
-            resp = self.urlopener.open(urllib2.Request(cu, data, headers))
+            resp = self.urlopener.open(req)
         except urllib2.HTTPError, inst:
             if inst.code == 401:
                 raise util.Abort(_('authorization failed'))
