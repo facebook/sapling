@@ -480,14 +480,7 @@ def reposetup(ui, repo):
             # other extensions can still wrap repo.commitctx directly
             self.commitctx = self.kwcommitctx
             try:
-                self._kwcommithooks = {}
-                n = super(kwrepo, self).commit(*args, **opts)
-                if self._kwcommithooks:
-                    xp1, xp2 = self._kwxp1, self._kwxp2
-                    for name, cmd in self._kwcommithooks.iteritems():
-                        ui.setconfig('hooks', name, cmd)
-                    self.hook('commit', node=n, parent1=xp1, parent2=xp2)
-                return n
+                return super(kwrepo, self).commit(*args, **opts)
             finally:
                 del self.commitctx
 
@@ -496,18 +489,7 @@ def reposetup(ui, repo):
             try:
                 wlock = self.wlock()
                 lock = self.lock()
-                # store and postpone commit hooks
-                for name, cmd in ui.configitems('hooks'):
-                    if name.split('.', 1)[0] == 'commit':
-                        self._kwcommithooks[name] = cmd
-                        ui.setconfig('hooks', name, None)
-                if self._kwcommithooks:
-                    # store parents for commit hooks
-                    p1, p2 = ctx.p1(), ctx.p2()
-                    self._kwxp1, self._kwxp2 = p1.hex(), p2 and p2.hex() or ''
-
                 n = super(kwrepo, self).commitctx(ctx, error)
-
                 kwt.overwrite(n, True, None)
                 return n
             finally:
