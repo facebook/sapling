@@ -16,8 +16,8 @@ ignored.
 
 The MSI packages built by thg-winbuild require elevated (admin)
 privileges to be installed due to the installation of MSVC CRT libraries
-under the %system32% folder.  Thus the InnoSetup installers may still
-be useful to some users.
+under the C:\WINDOWS\WinSxS folder.  Thus the InnoSetup installers may
+still be useful to some users.
 
 To build your own MSI packages, clone the thg-winbuild [1] repository
 and follow the README.txt [2] instructions closely.  There are fewer
