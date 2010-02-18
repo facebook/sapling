@@ -80,8 +80,8 @@ class ui(object):
             self.warn(_("Ignored: %s\n") % str(inst))
 
         if self.plain():
-            for k in ('debug', 'fallbackencoding', 'quiet', 'traceback',
-                      'verbose'):
+            for k in ('debug', 'fallbackencoding', 'quiet', 'slash',
+                      'traceback', 'verbose'):
                 if k in cfg['ui']:
                     del cfg['ui'][k]
             for k, v in cfg.items('alias'):
