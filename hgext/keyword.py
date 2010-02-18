@@ -294,7 +294,6 @@ def demo(ui, repo, *args, **opts):
         for k, v in sorted(items):
             ui.write('%s = %s\n' % (k, v))
 
-    msg = 'hg keyword config and expansion example'
     fn = 'demo.txt'
     branchname = 'demobranch'
     tmpdir = tempfile.mkdtemp('', 'kwdemo.')
@@ -355,7 +354,8 @@ def demo(ui, repo, *args, **opts):
         if name.split('.', 1)[0].find('commit') > -1:
             repo.ui.setconfig('hooks', name, '')
     ui.note(_('unhooked all commit hooks\n'))
-    ui.note('hg -R "%s" ci -m "%s"\n' % (tmpdir, msg))
+    msg = _('hg keyword configuration and expansion example')
+    ui.note("hg -R '%s' ci -m '%s'\n" % (tmpdir, msg))
     repo.commit(text=msg)
     ui.status(_('\n\tkeywords expanded\n'))
     ui.write(repo.wread(fn))
