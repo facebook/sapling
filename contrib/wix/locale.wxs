@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+        <ComponentGroup Id="localeFolder">
+            <Component Id="cmp83E7ADE01D9D898727106DBD965E0E17" Directory="dir37691BFCCBD5A038C2B503A0CA9FFDCC" Guid="{45A0DC87-8C6C-4BDA-907A-52F93D183C18}">
+                <File Id="fil9262D6374AF5065C3CD975127E419FD5" KeyPath="yes" Source="$(var.SourceDir)\da\LC_MESSAGES\hg.mo" />
+            </Component>
+            <Component Id="cmp52A447EBEC4DE496C672ED4285986FC2" Directory="dirFD5FFD33B2F5044881CA967A9603AD80" Guid="{D5929D29-3597-4BFA-970C-1336B74AED0D}">
+                <File Id="fil324023D432B614A0F6AD7C1795A47663" KeyPath="yes" Source="$(var.SourceDir)\de\LC_MESSAGES\hg.mo" />
+            </Component>
+            <Component Id="cmpD14AFBC2AB851E0FF50AB01087D37C37" Directory="dir11F21566046EDDA54202617BDCA27A33" Guid="{AEEB8542-91FA-4FDB-A976-C210608D45C4}">
+                <File Id="fil3263B9C209A995DEDAB99C915ADFEDF2" KeyPath="yes" Source="$(var.SourceDir)\el\LC_MESSAGES\hg.mo" />
+            </Component>
+            <Component Id="cmpF8D03402F9CC15628D08BD1547931E33" Directory="dir76A360BADC007F88A0B6C012DBA071F0" Guid="{F983F836-213C-4A8F-84C6-9DE3DDFFC4EF}">
+                <File Id="fil61661147957312ACE1F53D8B7B6FC20C" KeyPath="yes" Source="$(var.SourceDir)\fr\LC_MESSAGES\hg.mo" />
+            </Component>
+            <Component Id="cmpB7A86C8460D0C05C63F89961A89C32C2" Directory="dir84C2343136F7D4B857D28FDACE545F33" Guid="{E53EEBD5-5F54-426A-83C0-18C479C526D5}">
+                <File Id="filBA4BA4851E74E108136A44069A96DB8A" KeyPath="yes" Source="$(var.SourceDir)\it\LC_MESSAGES\hg.mo" />
+            </Component>
+            <Component Id="cmpA2E1D600E985FB335E18566CD5230E38" Directory="dir29F26642414C1248A97432E9C4947B87" Guid="{27F33F75-B5D6-47AD-AE23-DAC135401540}">
+                <File Id="filB4C1367F8EC03C778E275E7C6A4F882B" KeyPath="yes" Source="$(var.SourceDir)\ja\LC_MESSAGES\hg.mo" />
+            </Component>
+            <Component Id="cmp113B5931CE4199C5A5BF62728EA3A755" Directory="dir669486A97BE07EA6B1A33203A89256A6" Guid="{63F05AD9-CABA-420E-9A50-123F0803A8CE}">
+                <File Id="fil0B3347DB0C4538334E8346A9B7844458" KeyPath="yes" Source="$(var.SourceDir)\pt_BR\LC_MESSAGES\hg.mo" />
+            </Component>
+            <Component Id="cmpE35EFB6166609188B151E512DD832276" Directory="dir8637F62A0436F8880FACE0053CC26075" Guid="{81FC0E03-9956-4476-AFEE-1FCD0E98F860}">
+                <File Id="fil518947DB16E6B4E58C52D16C3C8559C1" KeyPath="yes" Source="$(var.SourceDir)\sv\LC_MESSAGES\hg.mo" />
+            </Component>
+            <Component Id="cmpC6F51D89D671AC7F66692F402B916E3D" Directory="dir402295F841398275038CC187DA8A3179" Guid="{198031AC-5DC5-44F9-AF77-A11AC15B82DE}">
+                <File Id="fil1905BB31038C24BBF8557DA796E65A2D" KeyPath="yes" Source="$(var.SourceDir)\zh_CN\LC_MESSAGES\hg.mo" />
+            </Component>
+            <Component Id="cmp2C7860CA004402234F7F1883F1093A1D" Directory="dirF619ECAC819DE44FC21E11EB1715B156" Guid="{EDF8F748-735A-4BC2-B683-14247D691F5C}">
+                <File Id="fil997E71C3D4C6318F0EF7048E50C5C0AA" KeyPath="yes" Source="$(var.SourceDir)\zh_TW\LC_MESSAGES\hg.mo" />
+            </Component>
+        </ComponentGroup>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="INSTALLDIR">
+            <Directory Id="dirA42EA32F4A238F2C40AD5ACF4C831152" Name="locale" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir669486A97BE07EA6B1A33203A89256A6" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirF619ECAC819DE44FC21E11EB1715B156" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirFD5FFD33B2F5044881CA967A9603AD80" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir37691BFCCBD5A038C2B503A0CA9FFDCC" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir29F26642414C1248A97432E9C4947B87" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir84C2343136F7D4B857D28FDACE545F33" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir402295F841398275038CC187DA8A3179" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir11F21566046EDDA54202617BDCA27A33" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir8637F62A0436F8880FACE0053CC26075" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir76A360BADC007F88A0B6C012DBA071F0" />
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dir0863D143DD8AA8C439D73CEC9FD66C1E" Name="fr" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dir0FE904A675AA86182DE42F092B60D5CB" Name="zh_CN" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirABB7B0E1FB87A3FA812818303D9504D3">
+            <Directory Id="dir11F21566046EDDA54202617BDCA27A33" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dir22C8B725631FC803704E5AB85CE4AB85" Name="da" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirF7EFDAD22D2FB858CCFF6C617192E3F0">
+            <Directory Id="dir29F26642414C1248A97432E9C4947B87" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir22C8B725631FC803704E5AB85CE4AB85">
+            <Directory Id="dir37691BFCCBD5A038C2B503A0CA9FFDCC" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dir40014079D6FD208765D49B2B6E77B444" Name="pt_BR" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir0FE904A675AA86182DE42F092B60D5CB">
+            <Directory Id="dir402295F841398275038CC187DA8A3179" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir40014079D6FD208765D49B2B6E77B444">
+            <Directory Id="dir669486A97BE07EA6B1A33203A89256A6" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir0863D143DD8AA8C439D73CEC9FD66C1E">
+            <Directory Id="dir76A360BADC007F88A0B6C012DBA071F0" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir8CB5F92AB36FF6BF8CDA8AF1BD4BB402">
+            <Directory Id="dir84C2343136F7D4B857D28FDACE545F33" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirE6EE5833D8D4174BB8C9193A44E67309">
+            <Directory Id="dir8637F62A0436F8880FACE0053CC26075" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dir8CB5F92AB36FF6BF8CDA8AF1BD4BB402" Name="it" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dir97CB62B25E0D4335D79170C310016140" Name="de" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dirABB7B0E1FB87A3FA812818303D9504D3" Name="el" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dirE6EE5833D8D4174BB8C9193A44E67309" Name="sv" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dirF24C7B7028912CC69CE9E1E38F2FEE54" Name="zh_TW" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirF24C7B7028912CC69CE9E1E38F2FEE54">
+            <Directory Id="dirF619ECAC819DE44FC21E11EB1715B156" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dirA42EA32F4A238F2C40AD5ACF4C831152">
+            <Directory Id="dirF7EFDAD22D2FB858CCFF6C617192E3F0" Name="ja" />
+        </DirectoryRef>
+    </Fragment>
+    <Fragment>
+        <DirectoryRef Id="dir97CB62B25E0D4335D79170C310016140">
+            <Directory Id="dirFD5FFD33B2F5044881CA967A9603AD80" Name="LC_MESSAGES" />
+        </DirectoryRef>
+    </Fragment>
+</Wix>

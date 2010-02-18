@@ -1,0 +1,133 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+
+  <!-- Copyright 2010 Steve Borho <steve@borho.org>
+
+  This software may be used and distributed according to the terms of the
+  GNU General Public License version 2 or any later version. -->
+
+  <?define ComponentMainExecutableGUID = D102B8FA-059B-4ACC-9FA3-8C78C3B58EEF ?>
+  <?define ProductUpgradeCode = A1CC6134-E945-4399-BE36-EB0017FDF7CF ?>
+
+  <Product Name='Mercurial' Id='*'
+    UpgradeCode='$(var.ProductUpgradeCode)'
+    Language='1033' Codepage='1252' Version='$(var.Version)' Manufacturer='Matt Mackall and others.'>
+
+    <Package Id='*' Keywords='Installer' Description="Mercurial distributed SCM (version $(var.Version))"
+      Comments='$(var.Comments)' Manufacturer='Matt Mackall and others.'
+      InstallerVersion='300' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+
+    <Media Id='1' Cabinet='mercurial.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1' CompressionLevel='high' />
+    <Property Id='DiskPrompt' Value="Mercurial $(var.Version) Installation [1]" />
+
+    <Condition Message='Mercurial requires Windows XP or higher'>VersionNT >= 501</Condition>
+
+    <Property Id="INSTALLDIR">
+      <ComponentSearch Id='SearchForMainExecutableComponent' Guid='$(var.ComponentMainExecutableGUID)' />
+    </Property>
+
+    <!--Property Id='ARPCOMMENTS'>any comments</Property-->
+    <Property Id='ARPCONTACT'>mercurial@selenic.com</Property>
+    <Property Id='ARPHELPLINK'>http://mercurial.selenic.com/wiki/</Property>
+    <Property Id='ARPURLINFOABOUT'>http://mercurial.selenic.com/about/</Property>
+    <Property Id='ARPURLUPDATEINFO'>http://mercurial.selenic.com/downloads/</Property>
+    <Property Id='ARPHELPTELEPHONE'>http://mercurial.selenic.com/wiki/Support</Property>
+    <Property Id='ARPPRODUCTICON'>hgIcon.ico</Property>
+
+    <Property Id='INSTALLEDMERCURIALPRODUCTS' Secure='yes'></Property>
+    <Property Id='REINSTALLMODE'>amus</Property>
+
+    <Directory Id='TARGETDIR' Name='SourceDir'>
+      <Directory Id='ProgramFilesFolder' Name='PFiles'>
+        <Directory Id='INSTALLDIR' Name='Mercurial'>
+          <Component Id='MainExecutable' Guid='$(var.ComponentMainExecutableGUID)'>
+            <File Id='hgEXE' Name='hg.exe' DiskId='1' Source='dist\hg.exe' KeyPath='yes' />
+            <File Id='libraryZIP' Name='library.zip' DiskId='1' Source='dist\library.zip' />
+            <File Id='pythonDLL' Name='python26.dll' DiskId='1' Source='dist\python26.dll' />
+            <Environment Id="Environment" Name="PATH" Part="last" System="yes"
+                         Permanent="no" Value="[INSTALLDIR]" Action="set" />
+          </Component>
+          <Component Id='ReadMe' Guid='56A8E372-991D-4DCA-B91D-93D775974CF5'>
+              <File Id='ReadMe' Name='ReadMe.html' DiskId='1' Source='contrib\win32\ReadMe.html' KeyPath='yes'/>
+          </Component>
+          <Component Id='COPYING' Guid='B7801DBA-1C49-4BF4-91AD-33C65F5C7895'>
+            <File Id='COPYING' Name='COPYING.rtf' DiskId='1' Source='..\misc\COPYING.rtf' />
+          </Component>
+          <Directory Id='HGRCD' Name='hgrc.d'>
+            <Component Id='mercurial.rc' Guid='1D5FAEEE-7E6E-43B1-9F7F-802714316B15'>
+              <File Id='mercurial.rc' Name='Mercurial.rc' DiskId='1' Source='contrib\win32\mercurial.ini'
+                    ReadOnly='yes'/>
+            </Component>
+            <Component Id='mergetools.rc' Guid='E8A1DC29-FF40-4B5F-BD12-80B9F7BF0CCD'>
+              <File Id='mergetools.rc' Name='MergeTools.rc' DiskId='1' Source='contrib\mergetools.hgrc'
+                    ReadOnly='yes'/>
+            </Component>
+          </Directory>
+        </Directory>
+      </Directory>
+
+      <Directory Id="ProgramMenuFolder" Name="Programs">
+        <Directory Id="ProgramMenuDir" Name="Mercurial $(var.Version)">
+          <Component Id="ProgramMenuDir" Guid="D5A63320-1238-489B-B68B-CF053E9577CA">
+            <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
+            <RegistryValue Root='HKCU' Key='Software\Mercurial\InstallDir' Type='string'
+                           Value='[INSTALLDIR]' KeyPath='yes' />
+            <Shortcut Id='UrlShortcut' Directory='ProgramMenuDir' Name='Mercurial Web Site' Target='[ARPHELPLINK]'
+                      Icon="hgIcon.ico" IconIndex='0' />
+          </Component>
+        </Directory>
+      </Directory>
+
+      <Directory Id="DesktopFolder" Name="Desktop" />
+      <Merge Id='VCRuntime' DiskId='1' Language='1033'
+             SourceFile='C:\Program Files\Microsoft SDKs\Windows\v7.0\Redist\VC\microsoft.vcxx.crt.x86_msm.msm' />
+      <Merge Id='VCRuntimePolicy' DiskId='1' Language='1033'
+             SourceFile='C:\Program Files\Microsoft SDKs\Windows\v7.0\Redist\VC\policy.x.xx.microsoft.vcxx.crt.x86_msm.msm' />
+    </Directory>
+
+    <Feature Id='Complete' Title='Mercurial $(var.Version)' Description='The complete package'
+        Display='expand' Level='1' ConfigurableDirectory='INSTALLDIR' >
+      <Feature Id='MainProgram' Title='Program' Description='Mercurial command line app'
+             Level='1' Absent='disallow' >
+        <ComponentRef Id='MainExecutable' />
+        <ComponentRef Id='ProgramMenuDir' />
+        <ComponentRef Id='ReadMe' />
+        <ComponentRef Id='COPYING' />
+        <ComponentRef Id='mercurial.rc' />
+        <ComponentRef Id='mergetools.rc' />
+        <ComponentGroupRef Id='helpFolder' />
+        <ComponentGroupRef Id='templatesFolder' />
+        <MergeRef Id='VCRuntime' />
+        <MergeRef Id='VCRuntimePolicy' />
+      </Feature>
+      <Feature Id='Locales' Title='Translations' Description='Translations' Level='1'>
+        <ComponentGroupRef Id='localeFolder' />
+        <ComponentGroupRef Id='i18nFolder' />
+      </Feature>
+      <Feature Id='Documentation' Title='Documentation' Description='HTML man pages' Level='1'>
+        <ComponentGroupRef Id='docFolder' />
+      </Feature>
+      <Feature Id='Misc' Title='Miscellaneous' Description='Contributed scripts' Level='1'>
+        <ComponentGroupRef Id='contribFolder' />
+      </Feature>
+    </Feature>
+
+    <UIRef Id="WixUI_FeatureTree" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+    <WixVariable Id="WixUILicenseRtf" Value="..\misc\COPYING.rtf" />
+
+    <Icon Id="hgIcon.ico" SourceFile="contrib/win32/mercurial.ico" />
+
+    <Upgrade Id='$(var.ProductUpgradeCode)'>
+      <UpgradeVersion
+        IncludeMinimum='yes' Minimum='0.0.0' IncludeMaximum='no' OnlyDetect='no'
+        Property='INSTALLEDMERCURIALPRODUCTS' />
+    </Upgrade>
+
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After='InstallInitialize'/>
+    </InstallExecuteSequence>
+
+  </Product>
+</Wix>
