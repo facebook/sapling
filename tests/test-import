@@ -372,3 +372,30 @@ hg import -d '0 0' a.patch
 hg parents -v
 cd ..
 
+echo '% tricky header splitting'
+cat > trickyheaders.patch <<EOF
+From: User A <user@a>
+Subject: [PATCH] from: tricky!
+
+# HG changeset patch
+# User User B
+# Date 1266264441 18000
+# Branch stable
+# Node ID f2be6a1170ac83bf31cb4ae0bad00d7678115bc0
+# Parent  0000000000000000000000000000000000000000
+from: tricky!
+
+That is not a header.
+
+diff -r 000000000000 -r f2be6a1170ac foo
+--- /dev/null
++++ b/foo
+@@ -0,0 +1,1 @@
++foo
+EOF
+
+hg init trickyheaders
+cd trickyheaders
+hg import -d '0 0' ../trickyheaders.patch
+hg export --git tip
+cd ..

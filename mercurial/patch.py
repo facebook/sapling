@@ -157,8 +157,8 @@ def split(stream):
             if line.split(':', 1)[0].lower() in mimeheaders:
                 # let email parser handle this
                 return mimesplit(stream, cur)
-        elif inheader:
-            # No evil headers seen, split by hand
+        elif line.startswith('--- ') and inheader:
+            # No evil headers seen by diff start, split by hand
             return headersplit(stream, cur)
         # Not enough info, keep reading
 
