@@ -84,6 +84,8 @@ class ui(object):
                       'verbose'):
                 if k in cfg['ui']:
                     del cfg['ui'][k]
+            for k, v in cfg.items('alias'):
+                del cfg['alias'][k]
             for k, v in cfg.items('defaults'):
                 del cfg['defaults'][k]
 

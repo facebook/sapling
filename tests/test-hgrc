@@ -37,6 +37,8 @@ echo "traceback=true" >> $HGRCPATH
 echo "verbose=true" >> $HGRCPATH
 echo "[defaults]" >> $HGRCPATH
 echo "identify=-n" >> $HGRCPATH
+echo "[alias]" >> $HGRCPATH
+echo "log=log -g" >> $HGRCPATH
 
 echo '% customized hgrc'
 hg showconfig | sed -e "s:$p:...:"
