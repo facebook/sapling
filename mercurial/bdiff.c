@@ -226,19 +226,23 @@ static void recurse(struct line *a, struct line *b, struct pos *pos,
 {
 	int i, j, k;
 
-	/* find the longest match in this chunk */
-	k = longest_match(a, b, pos, a1, a2, b1, b2, &i, &j);
-	if (!k)
-		return;
+	while (1) {
+		/* find the longest match in this chunk */
+		k = longest_match(a, b, pos, a1, a2, b1, b2, &i, &j);
+		if (!k)
+			return;
 
-	/* and recurse on the remaining chunks on either side */
-	recurse(a, b, pos, a1, i, b1, j, l);
-	l->head->a1 = i;
-	l->head->a2 = i + k;
-	l->head->b1 = j;
-	l->head->b2 = j + k;
-	l->head++;
-	recurse(a, b, pos, i + k, a2, j + k, b2, l);
+		/* and recurse on the remaining chunks on either side */
+		recurse(a, b, pos, a1, i, b1, j, l);
+		l->head->a1 = i;
+		l->head->a2 = i + k;
+		l->head->b1 = j;
+		l->head->b2 = j + k;
+		l->head++;
+		/* tail-recursion didn't happen, so doing equivalent iteration */
+		a1 = i + k;
+		b1 = j + k;
+	}
 }
 
 static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
