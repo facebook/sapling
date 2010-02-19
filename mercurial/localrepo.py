@@ -1890,7 +1890,7 @@ class localrepository(repo.repository):
                                              lookup_filenode_link_func(fname))
                     for chnk in group:
                         self.ui.progress(
-                            'bundle files', cnt, item=fname, unit='chunks')
+                            _('bundle files'), cnt, item=fname, unit='chunks')
                         cnt += 1
                         yield chnk
                 if fname in msng_filenode_set:
@@ -1974,10 +1974,10 @@ class localrepository(repo.repository):
                     lookup = lookuprevlink_func(filerevlog)
                     for chnk in filerevlog.group(nodeiter, lookup):
                         self.ui.progress(
-                            'bundle files', cnt, item=fname, unit='chunks')
+                            _('bundle files'), cnt, item=fname, unit='chunks')
                         cnt += 1
                         yield chnk
-            self.ui.progress('bundle files', None, unit='chunks')
+            self.ui.progress(_('bundle files'), None, unit='chunks')
 
             yield changegroup.closechunk()
 

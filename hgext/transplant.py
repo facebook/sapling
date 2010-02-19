@@ -393,13 +393,13 @@ def hasnode(repo, node):
 def browserevs(ui, repo, nodes, opts):
     '''interactively transplant changesets'''
     def browsehelp(ui):
-        ui.write('y: transplant this changeset\n'
-                 'n: skip this changeset\n'
-                 'm: merge at this changeset\n'
-                 'p: show patch\n'
-                 'c: commit selected changesets\n'
-                 'q: cancel transplant\n'
-                 '?: show this help\n')
+        ui.write(_('y: transplant this changeset\n'
+                   'n: skip this changeset\n'
+                   'm: merge at this changeset\n'
+                   'p: show patch\n'
+                   'c: commit selected changesets\n'
+                   'q: cancel transplant\n'
+                   '?: show this help\n'))
 
     displayer = cmdutil.show_changeset(ui, repo, opts)
     transplants = []
@@ -418,7 +418,7 @@ def browserevs(ui, repo, nodes, opts):
                     ui.write(chunk)
                 action = None
             elif action not in ('y', 'n', 'm', 'c', 'q'):
-                ui.write('no such option\n')
+                ui.write(_('no such option\n'))
                 action = None
         if action == 'y':
             transplants.append(node)

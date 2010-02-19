@@ -2199,7 +2199,7 @@ def header(ui, repo, patch=None):
         patch = q.lookup(patch)
     else:
         if not q.applied:
-            ui.write('no patches applied\n')
+            ui.write(_('no patches applied\n'))
             return 1
         patch = q.lookup('qtip')
     ph = patchheader(q.join(patch), q.plainmode)
@@ -2302,8 +2302,7 @@ def rename(ui, repo, patch, name=None, **opts):
         raise util.Abort(
             _('A patch named %s already exists in the series file') % name)
 
-    if ui.verbose:
-        ui.write('renaming %s to %s\n' % (patch, name))
+    ui.note(_('renaming %s to %s\n') % (patch, name))
     i = q.find_series(patch)
     guards = q.guard_re.findall(q.full_series[i])
     q.full_series[i] = name + ''.join([' #' + g for g in guards])

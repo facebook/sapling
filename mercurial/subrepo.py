@@ -336,7 +336,7 @@ class svnsubrepo(object):
             self._ui.warn(_('not removing repo %s because '
                             'it has changes.\n' % self._path))
             return
-        self._ui.note('removing subrepo %s\n' % self._path)
+        self._ui.note(_('removing subrepo %s\n') % self._path)
         shutil.rmtree(self._ctx.repo.join(self._path))
 
     def get(self, state):

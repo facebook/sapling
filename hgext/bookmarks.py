@@ -147,7 +147,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         if rev:
             raise util.Abort(_("bookmark name required"))
         if len(marks) == 0:
-            ui.status("no bookmarks set\n")
+            ui.status(_("no bookmarks set\n"))
         else:
             for bmark, n in marks.iteritems():
                 if ui.configbool('bookmarks', 'track.current'):
