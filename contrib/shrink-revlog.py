@@ -19,9 +19,8 @@ This is *not* safe to run on a changelog.
 # e.g. by comparing "before" and "after" states of random changesets
 # (maybe: export before, shrink, export after, diff).
 
-import sys, os, tempfile
-import optparse
-from mercurial import ui as ui_, hg, revlog, transaction, node, util
+import os, tempfile
+from mercurial import revlog, transaction, node, util
 from mercurial import changegroup
 from mercurial.i18n import _
 
@@ -112,9 +111,6 @@ def shrink(ui, repo, **opts):
     """
     Shrink revlog by re-ordering revisions. Will operate on manifest for
     the given repository if no other revlog is specified."""
-
-    # Unbuffer stdout for nice progress output.
-    sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 
     if not repo.local():
         raise util.Abort(_('not a local repository: %s') % repo.root)
