@@ -23,13 +23,14 @@ import sys, os, tempfile
 import optparse
 from mercurial import ui as ui_, hg, revlog, transaction, node, util
 from mercurial import changegroup
+from mercurial.i18n import _
 
 def toposort(ui, rl):
 
     children = {}
     root = []
     # build children and roots
-    ui.status('reading revs\n')
+    ui.status(_('reading revs\n'))
     try:
         for i in rl:
             ui.progress(_('reading'), i, total=len(rl))
@@ -50,7 +51,7 @@ def toposort(ui, rl):
     # XXX this is a reimplementation of the 'branchsort' topo sort
     # algorithm in hgext.convert.convcmd... would be nice not to duplicate
     # the algorithm
-    ui.status('sorting revs\n')
+    ui.status(_('sorting revs\n'))
     visit = root
     ret = []
     while visit:
@@ -71,7 +72,7 @@ def toposort(ui, rl):
 
 def writerevs(ui, r1, r2, order, tr):
 
-    ui.status('writing revs\n')
+    ui.status(_('writing revs\n'))
 
     count = [0]
     def progress(*args):
@@ -97,14 +98,15 @@ def report(ui, olddatafn, newdatafn):
 
     # argh: have to pass an int to %d, because a float >= 2^32
     # blows up under Python 2.5 or earlier
-    ui.write('old file size: %12d bytes (%6.1f MiB)\n'
+    ui.write(_('old file size: %12d bytes (%6.1f MiB)\n')
              % (int(oldsize), oldsize / 1024 / 1024))
-    ui.write('new file size: %12d bytes (%6.1f MiB)\n'
+    ui.write(_('new file size: %12d bytes (%6.1f MiB)\n')
              % (int(newsize), newsize / 1024 / 1024))
 
     shrink_percent = (oldsize - newsize) / oldsize * 100
     shrink_factor = oldsize / newsize
-    ui.write('shrinkage: %.1f%% (%.1fx)\n' % (shrink_percent, shrink_factor))
+    ui.write(_('shrinkage: %.1f%% (%.1fx)\n')
+             % (shrink_percent, shrink_factor))
 
 def shrink(ui, repo, **opts):
     """
@@ -115,43 +117,44 @@ def shrink(ui, repo, **opts):
     sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 
     if not repo.local():
-        raise util.Abort('not a local repository: %s' % repo.root)
+        raise util.Abort(_('not a local repository: %s') % repo.root)
 
     fn = opts.get('revlog')
     if not fn:
         indexfn = repo.sjoin('00manifest.i')
     else:
         if not fn.endswith('.i'):
-            raise util.Abort('--revlog option must specify the revlog index '
-                             'file (*.i), not %s' % opts.get('revlog'))
+            raise util.Abort(_('--revlog option must specify the revlog index '
+                               'file (*.i), not %s') % opts.get('revlog'))
 
         indexfn = os.path.realpath(fn)
         store = repo.sjoin('')
         if not indexfn.startswith(store):
-            raise util.Abort('--revlog option must specify a revlog in %s, '
-                             'not %s' % (store, indexfn))
+            raise util.Abort(_('--revlog option must specify a revlog in %s, '
+                               'not %s') % (store, indexfn))
 
     datafn = indexfn[:-2] + '.d'
     if not os.path.exists(indexfn):
-        raise util.Abort('no such file: %s' % indexfn)
+        raise util.Abort(_('no such file: %s') % indexfn)
     if '00changelog' in indexfn:
-        raise util.Abort('shrinking the changelog will corrupt your repository')
+        raise util.Abort(_('shrinking the changelog '
+                           'will corrupt your repository'))
     if not os.path.exists(datafn):
         # This is just a lazy shortcut because I can't be bothered to
         # handle all the special cases that entail from no .d file.
-        raise util.Abort('%s does not exist: revlog not big enough '
-                         'to be worth shrinking' % datafn)
+        raise util.Abort(_('%s does not exist: revlog not big enough '
+                           'to be worth shrinking') % datafn)
 
     oldindexfn = indexfn + '.old'
     olddatafn = datafn + '.old'
     if os.path.exists(oldindexfn) or os.path.exists(olddatafn):
-        raise util.Abort('one or both of\n'
-                         '  %s\n'
-                         '  %s\n'
-                         'exists from a previous run; please clean up before '
-                         'running again' % (oldindexfn, olddatafn))
+        raise util.Abort(_('one or both of\n'
+                           '  %s\n'
+                           '  %s\n'
+                           'exists from a previous run; please clean up '
+                           'before running again') % (oldindexfn, olddatafn))
 
-    ui.write('shrinking %s\n' % indexfn)
+    ui.write(_('shrinking %s\n') % indexfn)
     prefix = os.path.basename(indexfn)[:-1]
     (tmpfd, tmpindexfn) = tempfile.mkstemp(dir=os.path.dirname(indexfn),
                                            prefix=prefix,
@@ -199,20 +202,20 @@ def shrink(ui, repo, **opts):
         lock.release()
 
     if not opts.get('dry_run'):
-        ui.write('note: old revlog saved in:\n'
-                 '  %s\n'
-                 '  %s\n'
-                 '(You can delete those files when you are satisfied that your\n'
-                 'repository is still sane.  '
-                 'Running \'hg verify\' is strongly recommended.)\n'
+        ui.write(_('note: old revlog saved in:\n'
+                   '  %s\n'
+                   '  %s\n'
+                   '(You can delete those files when you are satisfied that your\n'
+                   'repository is still sane.  '
+                   'Running \'hg verify\' is strongly recommended.)\n')
                  % (oldindexfn, olddatafn))
 
 cmdtable = {
     'shrink': (shrink,
-               [('', 'revlog', '', 'index (.i) file of the revlog to shrink'),
-                ('n', 'dry-run', None, 'do not shrink, simulate only'),
+               [('', 'revlog', '', _('index (.i) file of the revlog to shrink')),
+                ('n', 'dry-run', None, _('do not shrink, simulate only')),
                 ],
-               'hg shrink [--revlog PATH]')
+               _('hg shrink [--revlog PATH]'))
 }
 
 if __name__ == "__main__":
