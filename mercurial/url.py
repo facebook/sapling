@@ -510,10 +510,11 @@ if has_https:
             keyfile = None
             certfile = None
 
-            if args: # key_file
-                keyfile = args.pop(0)
-            if args: # cert_file
-                certfile = args.pop(0)
+            if len(args) >= 1: # key_file
+                keyfile = args[0]
+            if len(args) >= 2: # cert_file
+                certfile = args[1]
+            args = args[2:]
 
             # if the user has specified different key/cert files in
             # hgrc, we prefer these
