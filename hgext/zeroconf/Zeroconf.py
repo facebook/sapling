@@ -863,7 +863,8 @@ class Engine(threading.Thread):
 						try:
 							self.readers[socket].handle_read()
 						except:
-							traceback.print_exc()
+							if not globals()['_GLOBAL_DONE']:
+								traceback.print_exc()
 				except:
 					pass
 
