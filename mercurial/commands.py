@@ -1768,7 +1768,7 @@ def identify(ui, repo, source=None,
         parents = ctx.parents()
         changed = False
         if default or id or num:
-            changed = ctx.files() + ctx.deleted()
+            changed = util.any(repo.status())
         if default or id:
             output = ["%s%s" % ('+'.join([hexfunc(p.node()) for p in parents]),
                                 (changed) and "+" or "")]
