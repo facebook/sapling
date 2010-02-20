@@ -1114,6 +1114,9 @@ def diff(ui, repo, *pats, **opts):
     revisions are specified, the working directory files are compared
     to its parent.
 
+    Alternatively you can specify -c/--change with a revision to use
+    as a baseline.
+
     Without the -a/--text option, diff will avoid generating diffs of
     files it detects as binary. With -a, diff will generate a diff
     anyway, probably with undesirable results.
@@ -3552,7 +3555,7 @@ table = {
          [('r', 'rev', [], _('revision')),
           ('c', 'change', '', _('change made by revision'))
          ] + diffopts + diffopts2 + walkopts,
-         _('[OPTION]... [-r REV1 [-r REV2]] [FILE]...')),
+         _('[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...')),
     "^export":
         (export,
          [('o', 'output', '', _('print output to file with formatted name')),

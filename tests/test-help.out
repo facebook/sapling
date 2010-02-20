@@ -366,7 +366,7 @@ verify the integrity of the repository
     and indices.
 
 use "hg -v help verify" to show global options
-hg diff [OPTION]... [-r REV1 [-r REV2]] [FILE]...
+hg diff [OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...
 
 diff repository (or selected files)
 
@@ -382,6 +382,9 @@ diff repository (or selected files)
     those revisions. If only one revision is specified then that revision is
     compared to the working directory, and, when no revisions are specified,
     the working directory files are compared to its parent.
+
+    Alternatively you can specify -c/--change with a revision to use as a
+    baseline.
 
     Without the -a/--text option, diff will avoid generating diffs of files it
     detects as binary. With -a, diff will generate a diff anyway, probably
