@@ -59,6 +59,7 @@ def uisetup(ui):
             attend = ui.configlist('pager', 'attend', attended)
             if (cmd in attend or
                 (cmd not in ui.configlist('pager', 'ignore') and not attend)):
+                ui.setconfig('ui', 'interactive', False)
                 sys.stderr = sys.stdout = util.popen(p, "wb")
                 if ui.configbool('pager', 'quiet'):
                     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
