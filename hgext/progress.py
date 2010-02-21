@@ -170,7 +170,7 @@ class progbar(object):
 sharedprog = None
 
 def uisetup(ui):
-    if ui.interactive() and not ui.debugflag:
+    if ui.interactive() and not ui.debugflag and not ui.quiet:
         # we instantiate one globally shared progress bar to avoid
         # competing progress bars when multiple UI objects get created
         global sharedprog
