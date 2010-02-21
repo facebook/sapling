@@ -229,17 +229,24 @@ class hgbuildpy(build_py):
 cmdclass = {'build_mo': hgbuildmo,
             'build_py': hgbuildpy}
 
+packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert',
+            'hgext.highlight', 'hgext.zeroconf']
+
+pymodules = []
+
 extmodules = [
     Extension('mercurial.base85', ['mercurial/base85.c']),
     Extension('mercurial.bdiff', ['mercurial/bdiff.c']),
     Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c']),
     Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
     Extension('mercurial.parsers', ['mercurial/parsers.c']),
-    Extension('mercurial.osutil', ['mercurial/osutil.c']),
     ]
 
-packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert',
-            'hgext.highlight', 'hgext.zeroconf']
+# disable osutil.c under windows + python 2.4 (issue1364)
+if sys.platform == 'win32' and sys.version_info < (2, 5, 0, 'final'):
+    pymodules.append('mercurial.pure.osutil')
+else:
+    extmodules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
 
 if sys.platform == 'linux2' and os.uname()[2] > '2.6':
     # The inotify extension is only usable with Linux 2.6 kernels.
@@ -288,6 +295,7 @@ setup(name='mercurial',
       license='GNU GPLv2+',
       scripts=scripts,
       packages=packages,
+      py_modules=pymodules,
       ext_modules=extmodules,
       data_files=datafiles,
       package_data=packagedata,
