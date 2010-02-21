@@ -622,15 +622,18 @@ class localrepository(repo.repository):
         finally:
             release(lock, wlock)
 
-    def invalidate(self):
-        for a in "changelog manifest".split():
-            if a in self.__dict__:
-                delattr(self, a)
+    def invalidatecaches(self):
         self._tags = None
         self._tagtypes = None
         self.nodetagscache = None
         self._branchcache = None # in UTF-8
         self._branchcachetip = None
+
+    def invalidate(self):
+        for a in "changelog manifest".split():
+            if a in self.__dict__:
+                delattr(self, a)
+        self.invalidatecaches()
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
@@ -957,7 +960,7 @@ class localrepository(repo.repository):
         # head, refresh the tag cache, then immediately add a new head.
         # But I think doing it this way is necessary for the "instant
         # tag cache retrieval" case to work.
-        tags_.findglobaltags(self.ui, self, {}, {})
+        self.invalidatecaches()
 
     def walk(self, match, node=None):
         '''

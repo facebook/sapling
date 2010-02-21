@@ -1,0 +1,104 @@
+#!/bin/sh
+
+createrepo() {
+    rm -rf repo
+    hg init repo
+    cd repo
+
+    echo "a" > a
+    hg commit -d '0 0' -A -m 'A'
+
+    hg branch branch1
+    hg commit -d '1 0' -m 'Branch1'
+
+    echo "b" > b
+    hg commit -A -d '2 0' -m 'B'
+
+    hg up 0
+    hg branch branch2
+    hg commit -d '3 0' -m 'Branch2'
+
+    echo "c" > C
+    hg commit -A -d '4 0' -m 'C'
+
+    hg up 2
+    hg branch -f branch2
+    echo "d" > d
+    hg commit -A -d '5 0' -m 'D'
+
+    echo "e" > e
+    hg commit -A -d '6 0' -m 'E'
+
+    hg update default
+
+    hg branch branch3
+    hg commit -d '7 0' -m 'Branch3'
+
+    echo "f" > f
+    hg commit -A -d '8 0' -m 'F'
+}
+
+echo
+createrepo > /dev/null 2>&1
+hg --config extensions.hgext.graphlog= glog --template '{rev}:{node|short} {desc} branch: {branches}\n'
+
+echo
+echo '% Branches'
+hg branches
+
+echo
+echo '% Heads'
+hg heads --template '{rev}:{node|short} {desc} branch: {branches}\n'
+
+echo
+echo '% Rebase part of branch2 (5-6) onto branch3 (8)'
+hg --config extensions.hgext.rebase= rebase --detach -s 5 -d 8 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+
+echo
+echo '% Branches'
+hg branches
+
+echo
+echo '% Heads'
+hg heads --template '{rev}:{node|short} {desc} branch: {branches}\n'
+
+echo
+hg --config extensions.hgext.graphlog= glog --template '{rev}:{node|short} {desc} branch: {branches}\n'
+
+echo
+echo '% Rebase head of branch3 (8) onto branch2 (6)'
+createrepo > /dev/null 2>&1
+hg --config extensions.hgext.graphlog= glog --template '{rev}:{node|short} {desc} branch: {branches}\n'
+
+hg --config extensions.hgext.rebase= rebase --detach -s 8 -d 6 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+
+echo
+echo '% Branches'
+hg branches
+
+echo
+echo '% Heads'
+hg heads --template '{rev}:{node|short} {desc} branch: {branches}\n'
+
+echo
+hg --config extensions.hgext.graphlog= glog --template '{rev}:{node|short} {desc} branch: {branches}\n'
+hg verify -q
+
+echo
+echo '% Rebase entire branch3 (7-8) onto branch2 (6)'
+createrepo > /dev/null 2>&1
+hg --config extensions.hgext.graphlog= glog --template '{rev}:{node|short} {desc} branch: {branches}\n'
+
+hg --config extensions.hgext.rebase= rebase --detach -s 7 -d 6 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+
+echo
+echo '% Branches'
+hg branches
+
+echo
+echo '% Heads'
+hg heads --template '{rev}:{node|short} {desc} branch: {branches}\n'
+
+echo
+hg --config extensions.hgext.graphlog= glog --template '{rev}:{node|short} {desc} branch: {branches}\n'
+hg verify -q
