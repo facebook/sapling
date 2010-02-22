@@ -60,18 +60,27 @@ For more information, see ``hg help svn`` while in a converted repo.
 Support for ``svn:externals``
 -----------------------------
 All ``svn:externals`` properties are serialized into a single
-``.hgsvnexternals`` file, with the following syntax::
+``.hgsvnexternals`` file having the following syntax::
 
   [.]
-   external_reference_line1_1
-   external_reference_line1_2
+   common1 http://path/to/external/svn/repo1
+   ...additional svn:externals properties lines...
   [dir2]
-   external_reference_line2_1
-   external_reference_line2_2
+   common2 -r123 http://path/to/external/svn/repo2
+   ...additional svn:externals properties lines...
 
-A header line gives the directory the property applies on, '.' for the
-project root directory. The property content follows, *every line
-being prefixed by a single space*.
+A header line in brackets specifies the directory the property applies
+to, where '.' indicates the project root directory. The property content
+follows the header, **with every content line being prefixed by a single
+space**. Note that the property lines have a format identical to
+svn:externals properties as used in Subversion, and do not support the
+hgsubversion extended svn+http:// URL format.
 
-The creation or modification of this file will trigger ``svn:externals``
-updates on the related subversion repository.
+Issuing the command ``hg svn updateexternals`` with the
+``.hgsvnexternals`` example above would fetch the latest revision of
+repo1 into the subdirectory ./common1, and revision 123 of repo2 into
+dir2/common2.  Note that ``.hgsvnexternals`` must be tracked by Mercurial
+before this will work.  If ``.hgsvnexternals`` is created or changed, it
+will not be pushed to the related Subversion repository, *but its
+contents will be used to update ``svn:externals`` properties on the
+related Subversion repository*.
