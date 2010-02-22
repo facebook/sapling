@@ -97,8 +97,9 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
 
     skipped = set()
 
+    numrevs = len(repo)
     for rev in repo:
-
+        ui.progress('rebuild', rev, total=numrevs)
         ctx = repo[rev]
         convinfo = ctx.extra().get('convert_revision', None)
         if not convinfo:
@@ -208,6 +209,7 @@ def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
                 and droprev(cctx.extra().get('convert_revision', '@')) == droprev(convinfo)):
                 branchinfo.pop(branch, None)
                 break
+    ui.progress('rebuild', None, total=numrevs)
 
     # save off branch info
     branchinfofile = open(os.path.join(svnmetadir, 'branch_info'), 'w')
