@@ -199,9 +199,9 @@ class SubversionRepo(object):
 
         self.init_ra_and_client()
         self.uuid = ra.get_uuid(self.ra, self.pool)
-        repo_root = urllib.unquote(ra.get_repos_root(self.ra, self.pool))
+        self.root = urllib.unquote(ra.get_repos_root(self.ra, self.pool))
         # *will* have a leading '/', would not if we used get_repos_root2
-        self.subdir = url[len(repo_root):]
+        self.subdir = url[len(self.root):]
         if not self.subdir or self.subdir[-1] != '/':
             self.subdir += '/'
         self.hasdiff3 = True
