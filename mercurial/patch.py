@@ -657,6 +657,7 @@ class hunk(object):
         nh = hunk(self.desc, self.number, None, None, False, False)
         nh.number = self.number
         nh.desc = self.desc
+        nh.hunk = self.hunk
         nh.a = normalize(self.a)
         nh.b = normalize(self.b)
         nh.starta = self.starta

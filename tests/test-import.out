@@ -205,7 +205,11 @@ created new head
 applying tip.patch
 patching file a
 Hunk #1 succeeded at 1 with fuzz 2 (offset -2 lines).
-a
+reverting a
+% test fuzziness with eol=auto
+applying tip.patch
+patching file a
+Hunk #1 succeeded at 1 with fuzz 2 (offset -2 lines).
 adding a
 adding b1
 adding c1

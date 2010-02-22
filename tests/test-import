@@ -196,7 +196,10 @@ echo line0 >> a
 echo line1 >> a
 echo line0 >> a
 hg ci -m brancha
-hg import -v tip.patch
+hg import --no-commit -v tip.patch
+hg revert -a
+echo '% test fuzziness with eol=auto'
+hg --config patch.eol=auto import --no-commit -v tip.patch
 cd ..
 
 # Test hunk touching empty files (issue906)
