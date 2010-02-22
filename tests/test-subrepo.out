@@ -247,6 +247,13 @@ committing subrepository s
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+% test subrepo delete from .hgsubstate
+adding testdelete/nested/foo
+adding testdelete/nested2/foo
+adding testdelete/.hgsub
+committing subrepository nested2
+committing subrepository nested
+nested
 % test repository cloning
 adding nested_absolute/foo
 adding nested_relative/foo2

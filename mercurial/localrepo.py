@@ -787,10 +787,14 @@ class localrepository(repo.repository):
 
             # check subrepos
             subs = []
+            removedsubs = set()
+            for p in wctx.parents():
+                removedsubs.update(s for s in p.substate if match(s))
             for s in wctx.substate:
+                removedsubs.discard(s)
                 if match(s) and wctx.sub(s).dirty():
                     subs.append(s)
-            if subs and '.hgsubstate' not in changes[0]:
+            if (subs or removedsubs) and '.hgsubstate' not in changes[0]:
                 changes[0].insert(0, '.hgsubstate')
 
             # make sure all explicit patterns are matched
@@ -830,7 +834,7 @@ class localrepository(repo.repository):
             edited = (text != cctx._text)
 
             # commit subs
-            if subs:
+            if subs or removedsubs:
                 state = wctx.substate.copy()
                 for s in subs:
                     self.ui.status(_('committing subrepository %s\n') % s)

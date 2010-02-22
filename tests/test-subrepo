@@ -162,6 +162,28 @@ hg up 5
 hg merge 4    # try to merge default into br again
 cd ..
 
+echo % test subrepo delete from .hgsubstate
+hg init testdelete
+mkdir testdelete/nested testdelete/nested2
+hg init testdelete/nested
+hg init testdelete/nested2
+echo test > testdelete/nested/foo
+echo test > testdelete/nested2/foo
+hg -R testdelete/nested add
+hg -R testdelete/nested2 add
+hg -R testdelete/nested ci -m test
+hg -R testdelete/nested2 ci -m test
+echo nested = nested > testdelete/.hgsub
+echo nested2 = nested2 >> testdelete/.hgsub
+hg -R testdelete add
+hg -R testdelete ci -m "nested 1 & 2 added"
+echo nested = nested > testdelete/.hgsub
+hg -R testdelete ci -m "nested 2 deleted"
+cat testdelete/.hgsubstate | sed "s:.* ::"
+hg -R testdelete remove testdelete/.hgsub
+hg -R testdelete ci -m ".hgsub deleted"
+cat testdelete/.hgsubstate
+
 echo % test repository cloning
 mkdir mercurial mercurial2
 hg init nested_absolute
