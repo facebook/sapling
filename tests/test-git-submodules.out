@@ -1,0 +1,44 @@
+Initialized empty Git repository in gitrepo1/.git/
+
+Initialized empty Git repository in gitsubrepo/.git/
+
+Initialized empty Git repository in gitrepo2/.git/
+
+Initialized empty Git repository in gitrepo2/subrepo/.git/
+
+[master e42b08b] add subrepo
+ 2 files changed, 4 insertions(+), 0 deletions(-)
+ create mode 100644 .gitmodules
+ create mode 160000 subrepo
+rm 'subrepo'
+rm '.gitmodules'
+[master 7e4c934] rm subrepo
+ 2 files changed, 0 insertions(+), 4 deletions(-)
+ delete mode 100644 .gitmodules
+ delete mode 160000 subrepo
+importing Hg objects into Git
+Counting objects: 7, done.
+Compressing objects:  20% (1/5)   Compressing objects:  40% (2/5)   Compressing objects:  60% (3/5)   Compressing objects:  80% (4/5)   Compressing objects: 100% (5/5)   Compressing objects: 100% (5/5), done.
+Total 7 (delta 1), reused 0 (delta 0)
+importing Git objects into Hg
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  changeset:   2:954cdf1c8c82
+|  tag:         master
+|  tag:         default/master
+|  tag:         tip
+|  user:        test <test@example.org>
+|  date:        Mon Jan 01 00:00:11 2007 +0000
+|  summary:     rm subrepo
+|
+o  changeset:   1:145121c71064
+|  user:        test <test@example.org>
+|  date:        Mon Jan 01 00:00:11 2007 +0000
+|  summary:     add subrepo
+|
+o  changeset:   0:3442585be8a6
+   user:        test <test@example.org>
+   date:        Mon Jan 01 00:00:10 2007 +0000
+   summary:     add alpha
+
+% we should have some bookmarks
+ * master                    2:954cdf1c8c82

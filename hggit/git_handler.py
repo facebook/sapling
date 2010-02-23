@@ -771,6 +771,21 @@ class GitHandler(object):
         changes = self.git.object_store.tree_changes(btree, tree)
         files = {}
         for (oldfile, newfile), (oldmode, newmode), (oldsha, newsha) in changes:
+            # don't create new submodules
+            if newmode == 0160000:
+                if oldfile:
+                    # become a regular delete
+                    newfile, newmode = None, None
+                else:
+                    continue
+            # so old submodules shoudn't exist
+            if oldmode == 0160000:
+                if newfile:
+                    # become a regular add
+                    oldfile, oldmode = None, None
+                else:
+                    continue
+
             if newfile is None:
                 file = oldfile
                 delete = True
