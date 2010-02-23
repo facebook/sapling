@@ -64,10 +64,7 @@ def branches(repo, req):
 def between(repo, req):
     pairs = [map(bin, p.split("-"))
              for p in req.form['pairs'][0].split(" ")]
-    resp = cStringIO.StringIO()
-    for b in repo.between(pairs):
-        resp.write(" ".join(map(hex, b)) + "\n")
-    resp = resp.getvalue()
+    resp = ''.join(" ".join(map(hex, b)) + "\n" for b in repo.between(pairs))
     req.respond(HTTP_OK, HGTYPE, length=len(resp))
     yield resp
 
