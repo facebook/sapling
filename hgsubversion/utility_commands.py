@@ -1,6 +1,7 @@
 import os
 
 from mercurial import util as hgutil
+from mercurial import error
 
 import svnwrap
 import svnrepo
@@ -9,6 +10,11 @@ import util
 def genignore(ui, repo, force=False, **opts):
     """generate .hgignore from svn:ignore properties.
     """
+
+    if repo is None:
+        raise error.RepoError("There is no Mercurial repository"
+                              " here (.hg not found)")
+
     ignpath = repo.wjoin('.hgignore')
     if not force and os.path.exists(ignpath):
         raise hgutil.Abort('not overwriting existing .hgignore, try --force?')
@@ -35,9 +41,14 @@ def genignore(ui, repo, force=False, **opts):
     repo.wopener('.hgignore', 'w').write('\n'.join(ignorelines) + '\n')
 
 
-def info(ui, repo, hg_repo_path, **opts):
+def info(ui, repo, **opts):
     """show Subversion details similar to `svn info'
     """
+
+    if repo is None:
+        raise error.RepoError("There is no Mercurial repository"
+                              " here (.hg not found)")
+
     meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
 

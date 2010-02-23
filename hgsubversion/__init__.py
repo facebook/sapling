@@ -124,10 +124,9 @@ def svn(ui, repo, subcommand, *args, **opts):
         if key in opts:
             ui.setconfig('hgsubversion', key, opts[key])
 
-    path = os.path.dirname(repo.path)
     try:
         commandfunc = svncommands.table[subcommand]
-        return commandfunc(ui, args=args, hg_repo_path=path, repo=repo, **opts)
+        return commandfunc(ui, args=args, repo=repo, **opts)
     except core.SubversionException, e:
         if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
             raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
@@ -161,6 +160,8 @@ def _lookup(url):
 hg.schemes.update({ 'file': _lookup, 'http': svnrepo, 'https': svnrepo,
                     'svn': svnrepo, 'svn+ssh': svnrepo, 'svn+http': svnrepo,
                     'svn+https': svnrepo})
+
+commands.optionalrepo += ' svn'
 
 cmdtable = {
     "svn":

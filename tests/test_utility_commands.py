@@ -34,7 +34,7 @@ class UtilityTests(test_util.TestBase):
         hg.update(self.repo, 'the_branch')
         u = ui.ui()
         u.pushbuffer()
-        utility_commands.info(u, self.repo, self.wc_path)
+        utility_commands.info(u, self.repo)
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
@@ -45,7 +45,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(actual, expected)
         hg.update(self.repo, 'default')
         u.pushbuffer()
-        utility_commands.info(u, self.repo, self.wc_path)
+        utility_commands.info(u, self.repo)
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
@@ -56,7 +56,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(actual, expected)
         hg.update(self.repo, 'default')
         u.pushbuffer()
-        utility_commands.info(u, self.repo, self.wc_path, rev=3)
+        utility_commands.info(u, self.repo, rev=3)
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
@@ -71,7 +71,7 @@ class UtilityTests(test_util.TestBase):
         hg.update(self.repo, 'tip')
         u = ui.ui()
         u.pushbuffer()
-        utility_commands.info(u, self.repo, self.wc_path)
+        utility_commands.info(u, self.repo)
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',

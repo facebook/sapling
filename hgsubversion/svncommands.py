@@ -5,6 +5,7 @@ import cPickle as pickle
 from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
+from mercurial import error
 
 import maps
 import svnwrap
@@ -13,10 +14,14 @@ import util
 import utility_commands
 import svnexternals
 
-
 def verify(ui, repo, *args, **opts):
     '''verify current revision against Subversion repository
     '''
+
+    if repo is None:
+        raise error.RepoError("There is no Mercurial repository"
+                              " here (.hg not found)")
+
     ctx = repo[opts.get('rev', '.')]
     if 'close' in ctx.extra():
         ui.write('cannot verify closed branch')
@@ -67,9 +72,14 @@ def verify(ui, repo, *args, **opts):
     return result
 
 
-def rebuildmeta(ui, repo, hg_repo_path, args, **opts):
+def rebuildmeta(ui, repo, args, **opts):
     """rebuild hgsubversion metadata using values stored in revisions
     """
+
+    if repo is None:
+        raise error.RepoError("There is no Mercurial repository"
+                              " here (.hg not found)")
+
     dest = None
     if len(args) == 1:
         dest = args[0]

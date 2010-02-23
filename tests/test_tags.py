@@ -116,7 +116,6 @@ rename a tag
         src, dest = hg.clone(repo.ui, self.wc_path, wc2_path, update=False)
         svncommands.rebuildmeta(repo.ui,
                                dest,
-                               os.path.dirname(dest.path),
                                args=[test_util.fileurl(self.repo_path), ])
         commands.pull(self.repo.ui, self.repo, stupid=stupid)
         dtags, srctags = dest.tags(), self.repo.tags()

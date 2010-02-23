@@ -22,7 +22,6 @@ def _do_case(self, name, stupid, single):
     src, dest = hg.clone(u, self.wc_path, wc2_path, update=False)
     svncommands.rebuildmeta(u,
                             dest,
-                            os.path.dirname(dest.path),
                             args=[test_util.fileurl(self.repo_path +
                                                     subdir), ])
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),

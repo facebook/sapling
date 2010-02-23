@@ -125,7 +125,7 @@ class TagMap(dict):
             repo.ui.warn('tag map outdated, running rebuildmeta...\n')
             f.close()
             os.unlink(self.path)
-            svncommands.rebuildmeta(repo.ui, repo, os.path.dirname(repo.path), ())
+            svncommands.rebuildmeta(repo.ui, repo, ())
             return
         elif ver != self.VERSION:
             print 'tagmap too new -- please upgrade'
