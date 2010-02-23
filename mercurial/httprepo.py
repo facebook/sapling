@@ -231,7 +231,7 @@ class httprepository(repo.repository):
             try:
                 resp = self.do_read(
                      'unbundle', data=fp,
-                     headers={'content-type': 'application/mercurial-0.1'},
+                     headers={'Content-Type': 'application/mercurial-0.1'},
                      heads=' '.join(map(hex, heads)))
                 resp_code, output = resp.split('\n', 1)
                 try:
