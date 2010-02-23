@@ -205,7 +205,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
             out, a = a, back # read input from backup, write to original
         replace = dict(local=a, base=b, other=c, output=out)
         args = re.sub("\$(local|base|other|output)",
-                      lambda x: '"%s"' % replace[x.group()[1:]], args)
+            lambda x: '"%s"' % util.localpath(replace[x.group()[1:]]), args)
         r = util.system(toolpath + ' ' + args, cwd=repo.root, environ=env)
 
     if not r and _toolbool(ui, tool, "checkconflicts"):
