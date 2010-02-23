@@ -197,7 +197,10 @@ class hgcia(object):
 
     def sendrpc(self, msg):
         srv = xmlrpclib.Server(self.ciaurl)
-        srv.hub.deliver(msg)
+        res = srv.hub.deliver(msg)
+        if res is not True:
+            raise util.Abort(_('%s returned an error: %s') %
+                             (self.ciaurl, res))
 
     def sendemail(self, address, data):
         p = email.Parser.Parser()
