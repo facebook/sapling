@@ -1,113 +1,148 @@
-" Vim global plugin for doing single or multipatch code reviews"{{{
+" VIM plugin for doing single, multi-patch or diff code reviews {{{
+" Home:  http://www.vim.org/scripts/script.php?script_id=1563
 
-" Version       : 0.1                                          "{{{
-" Last Modified : Thu 25 May 2006 10:15:11 PM PDT
-" Author        : Manpreet Singh (junkblocker AT yahoo DOT com)
-" Copyright     : 2006 by Manpreet Singh
+" Version       : 0.2.1                                        "{{{
+" Author        : Manpreet Singh < junkblocker@yahoo.com >
+" Copyright     : 2006-2010 by Manpreet Singh
 " License       : This file is placed in the public domain.
+"                 No warranties express or implied. Use at your own risk.
 "
-" History       : 0.1 - First released
+" Changelog :
+"
+"   0.2.1 - Minor temp directory autodetection logic and cleanup
+"
+"   0.2 - Removed the need for filterdiff by implemeting it in pure vim script
+"       - Added DiffReview command for reverse (changed repository to
+"         pristine state) reviews.
+"         (PatchReview does pristine repository to patch review)
+"       - DiffReview does automatic detection and generation of diffs for
+"         various Source Control systems
+"       - Skip load if VIM 7.0 or higher unavailable
+"
+"   0.1 - First released
 "}}}
+
 " Documentation:                                                         "{{{
 " ===========================================================================
-" This plugin allows single or multipatch code reviews to be done in VIM. Vim
-" has :diffpatch command to do single file reviews but can not handle patch
-" files containing multiple patches. This plugin provides that missing
-" functionality and doesn't require the original file to be open.
+" This plugin allows single or multiple, patch or diff based code reviews to
+" be easily done in VIM. VIM has :diffpatch command to do single file reviews
+" but a) can not handle patch files containing multiple patches or b) do
+" automated diff generation for various version control systems. This plugin
+" attempts to provide those functionalities. It opens each changed / added or
+" removed file diff in new tabs.
 "
-" Installing:                                                            "{{{
+" Installing:
 "
-"  For a quick start...
+"   For a quick start...
 "
-"   Requirements:                                                        "{{{
+"   Requirements:
 "
-"   1) (g)vim 7.0 or higher built with +diff option.
-"   2) patch and patchutils ( http://cyberelk.net/tim/patchutils/ ) installed
-"      for your OS. For windows it is availble from Cygwin (
-"      http://www.cygwin.com ) or GnuWin32 ( http://gnuwin32.sourceforge.net/
-"      ).
-""}}}
-"   Install:                                                            "{{{
+"   1) VIM 7.0 or higher built with +diff option.
 "
-"   1) Extract this in your $VIM/vimfiles or $HOME/.vim directory and restart
-"      vim.
+"   2) A gnu compatible patch command installed. This is the standard patch
+"      command on Linux, Mac OS X, *BSD, Cygwin or /usr/bin/gpatch on newer
+"      Solaris.
 "
-"   2) Make sure that you have filterdiff from patchutils and patch commands
-"      installed.
+"   3) Optional (but recommended for speed)
 "
-"   3) Optinally, specify the locations to filterdiff and patch commands and
-"      location of a temporary directory to use in your .vimrc.
+"      Install patchutils ( http://cyberelk.net/tim/patchutils/ ) for your
+"      OS. For windows it is availble from Cygwin
 "
-"      let g:patchreview_filterdiff  = '/path/to/filterdiff'
-"      let g:patchreview_patch       = '/path/to/patch'
+"         http://www.cygwin.com
+"
+"      or GnuWin32
+"
+"         http://gnuwin32.sourceforge.net/
+"
+"   Install:
+"
+"   1) Extract the zip in your $HOME/.vim or $VIM/vimfiles directory and
+"      restart vim. The  directory location relevant to your platform can be
+"      seen by running :help add-global-plugin in vim.
+"
+"   2) Restart vim.
+"
+"  Configuration:
+"
+"  Optionally, specify the locations to these filterdiff and patch commands
+"  and location of a temporary directory to use in your .vimrc.
+"
+"      let g:patchreview_patch       = '/path/to/gnu/patch'
 "      let g:patchreview_tmpdir      = '/tmp/or/something'
 "
-"   4) Optionally, generate help tags to use help
+"      " If you are using filterdiff
+"      let g:patchreview_filterdiff  = '/path/to/filterdiff'
 "
-"      :helptags ~/.vim/doc
-"      or
-"      :helptags c:\vim\vimfiles\doc
+"
+"
+" Usage:
+"
+"  Please see :help patchreview or :help diffreview for details.
+"
 ""}}}
-""}}}
-" Usage:                                                                 "{{{
-"
-"  :PatchReview path_to_submitted_patchfile [optional_source_directory]
-"
-"  after review is done
-"
-"  :PatchReviewCleanup
-"
-" See :help patchreview for details after you've created help tags.
-""}}}
-"}}}
-" Code                                                                   "{{{
 
-" Enabled only during development                                        "{{{
+" Enabled only during development
 " unlet! g:loaded_patchreview " DEBUG
 " unlet! g:patchreview_tmpdir " DEBUG
-" unlet! g:patchreview_filterdiff " DEBUG
 " unlet! g:patchreview_patch " DEBUG
-"}}}
+" unlet! g:patchreview_filterdiff " DEBUG
+" let g:patchreview_patch = 'patch'    " DEBUG
 
-" load only once                                                         "{{{
-if exists('g:loaded_patchreview')
+if v:version < 700
   finish
 endif
-let g:loaded_patchreview=1
-let s:msgbufname = 'Patch Review Messages'
+if ! has('diff')
+  call confirm('patchreview.vim plugin needs (G)VIM built with +diff support to work.')
+  finish
+endif
+
+" load only once
+if (! exists('g:patchreview_debug') && exists('g:loaded_patchreview')) || &compatible
+  finish
+endif
+let g:loaded_patchreview="0.2.1"
+
+let s:msgbufname = '-PatchReviewMessages-'
+
+function! <SID>Debug(str)                                                 "{{{
+  if exists('g:patchreview_debug')
+    Pecho 'DEBUG: ' . a:str
+  endif
+endfunction
+command! -nargs=+ -complete=expression Debug call s:Debug(<args>)
 "}}}
 
-function! <SID>PR_wipeMsgBuf()                                           "{{{
-  let s:winnum = bufwinnr(s:msgbufname)
-  if s:winnum != -1 " If the window is already open, jump to it
-    let s:cur_winnr = winnr()
-    if winnr() != s:winnum
-      exe s:winnum . 'wincmd w'
+function! <SID>PR_wipeMsgBuf()                                            "{{{
+  let winnum = bufwinnr(s:msgbufname)
+  if winnum != -1 " If the window is already open, jump to it
+    let cur_winnr = winnr()
+    if winnr() != winnum
+      exe winnum . 'wincmd w'
       exe 'bw'
-      exe s:cur_winnr . 'wincmd w'
+      exe cur_winnr . 'wincmd w'
     endif
   endif
 endfunction
 "}}}
 
-function! <SID>PR_echo(...)                                              "{{{
-  " Usage: PR_echo(msg, [return_to_original_window_flag])
+function! <SID>Pecho(...)                                                 "{{{
+  " Usage: Pecho(msg, [return_to_original_window_flag])
   "            default return_to_original_window_flag = 0
   "
-  let s:cur_winnr = winnr()
-  let s:winnum = bufwinnr(s:msgbufname)
-  if s:winnum != -1 " If the window is already open, jump to it
-    if winnr() != s:winnum
-      exe s:winnum . 'wincmd w'
+  let cur_winnr = winnr()
+  let winnum = bufwinnr(s:msgbufname)
+  if winnum != -1 " If the window is already open, jump to it
+    if winnr() != winnum
+      exe winnum . 'wincmd w'
     endif
   else
-    let s:bufnum = bufnr(s:msgbufname)
-    if s:bufnum == -1
-      let s:wcmd = s:msgbufname
+    let bufnum = bufnr(s:msgbufname)
+    if bufnum == -1
+      let wcmd = s:msgbufname
     else
-      let s:wcmd = '+buffer' . s:bufnum
+      let wcmd = '+buffer' . bufnum
     endif
-    exe 'silent! botright 5split ' . s:wcmd
+    exe 'silent! botright 5split ' . wcmd
   endif
   setlocal modifiable
   setlocal buftype=nofile
@@ -121,23 +156,26 @@ function! <SID>PR_echo(...)                                              "{{{
   exe ':$'
   setlocal nomodifiable
   if a:0 > 1 && a:2
-    exe s:cur_winnr . 'wincmd w'
+    exe cur_winnr . 'wincmd w'
   endif
 endfunction
+
+command! -nargs=+ -complete=expression Pecho call s:Pecho(<args>)
 "}}}
 
-function! <SID>PR_checkBinary(BinaryName)                                "{{{
+function! <SID>PR_checkBinary(BinaryName)                                 "{{{
   " Verify that BinaryName is specified or available
   if ! exists('g:patchreview_' . a:BinaryName)
     if executable(a:BinaryName)
       let g:patchreview_{a:BinaryName} = a:BinaryName
       return 1
     else
-      call s:PR_echo('g:patchreview_' . a:BinaryName . ' is not defined and could not be found on path. Please define it in your .vimrc.')
+      Pecho 'g:patchreview_' . a:BinaryName . ' is not defined and ' . a:BinaryName . ' command could not be found on path.'
+      Pecho 'Please define it in your .vimrc.'
       return 0
     endif
   elseif ! executable(g:patchreview_{a:BinaryName})
-    call s:PR_echo('Specified g:patchreview_' . a:BinaryName . ' [' . g:patchreview_{a.BinaryName} . '] is not executable.')
+    Pecho 'Specified g:patchreview_' . a:BinaryName . ' [' . g:patchreview_{a:BinaryName} . '] is not executable.'
     return 0
   else
     return 1
@@ -145,11 +183,11 @@ function! <SID>PR_checkBinary(BinaryName)                                "{{{
 endfunction
 "}}}
 
-function! <SID>PR_GetTempDirLocation(Quiet)                              "{{{
+function! <SID>PR_GetTempDirLocation(Quiet)                               "{{{
   if exists('g:patchreview_tmpdir')
     if ! isdirectory(g:patchreview_tmpdir) || ! filewritable(g:patchreview_tmpdir)
       if ! a:Quiet
-        call s:PR_echo('Temporary directory specified by g:patchreview_tmpdir [' . g:patchreview_tmpdir . '] is not accessible.')
+        Pecho 'Temporary directory specified by g:patchreview_tmpdir [' . g:patchreview_tmpdir . '] is not accessible.'
         return 0
       endif
     endif
@@ -160,14 +198,34 @@ function! <SID>PR_GetTempDirLocation(Quiet)                              "{{{
   elseif exists("$TMPDIR") && isdirectory($TMPDIR) && filewritable($TMPDIR)
     let g:patchreview_tmpdir = $TMPDIR
   else
-    if ! a:Quiet
-      call s:PR_echo('Could not figure out a temporary directory to use. Please specify g:patchreview_tmpdir in your .vimrc.')
+    if has("unix")
+      if isdirectory("/tmp")
+        let g:patchreview_tmpdir = "/tmp"
+      elseif isdirectory(expand("~/tmp"))
+        let g:patchreview_tmpdir = expand("~/tmp")
+      endif
+    elseif has("win32")
+      if isdirectory('c:\\tmp')
+        let g:patchreview_tmpdir = 'c:\\tmp'
+      elseif isdirectory('c:\\temp')
+        let g:patchreview_tmpdir = 'c:\\temp'
+      elseif isdirectory('c:\\windows\\temp')
+        let g:patchreview_tmpdir = 'c:\\windows\\temp'
+      elseif isdirectory($USERPROFILE . '\Local Settings\Temp')  # NOTE : No \ issue here
+        let g:patchreview_tmpdir = $USERPROFILE . '\Local Settings\Temp'
+      endif
+    endif
+    if !exists('g:patchreview_tmpdir')
+      if ! a:Quiet
+        Pecho 'Could not figure out a temporary directory to use. Please specify g:patchreview_tmpdir in your .vimrc.'
+      endif
       return 0
     endif
   endif
+  let g:patchreview_tmpdir = expand(g:patchreview_tmpdir, ':p')
   let g:patchreview_tmpdir = g:patchreview_tmpdir . '/'
   let g:patchreview_tmpdir = substitute(g:patchreview_tmpdir, '\\', '/', 'g')
-  let g:patchreview_tmpdir = substitute(g:patchreview_tmpdir, '/+$', '/', '')
+  let g:patchreview_tmpdir = substitute(g:patchreview_tmpdir, '/\+$', '/', '')
   if has('win32')
     let g:patchreview_tmpdir = substitute(g:patchreview_tmpdir, '/', '\\', 'g')
   endif
@@ -175,158 +233,694 @@ function! <SID>PR_GetTempDirLocation(Quiet)                              "{{{
 endfunction
 "}}}
 
-function! <SID>PatchReview(...)                                          "{{{
-  " VIM 7+ required"{{{
-  if version < 700
-    call s:PR_echo('This plugin needs VIM 7 or higher')
-    return
-  endif
-"}}}
-
-  let s:save_shortmess = &shortmess
-  set shortmess+=aW
-  call s:PR_wipeMsgBuf()
-
-  " Check passed arguments                                               "{{{
+function! <SID>ExtractDiffsNative(...)                                    "{{{
+  " Sets g:patches = {'reason':'', 'patch':[
+  " {
+  "  'filename': filepath
+  "  'type'    : '+' | '-' | '!'
+  "  'content' : patch text for this file
+  " },
+  " ...
+  " ]}
+  let g:patches = {'reason' : '', 'patch' : []}
+  " TODO : User pointers into lines list rather then use collect
   if a:0 == 0
-    call s:PR_echo('PatchReview command needs at least one argument specifying a patchfile path.')
-    let &shortmess = s:save_shortmess
+    let g:patches['reason'] = "ExtractDiffsNative expects at least a patchfile argument"
     return
   endif
-  if a:0 >= 1 && a:0 <= 2
-    let s:PatchFilePath = expand(a:1, ':p')
-    if ! filereadable(s:PatchFilePath)
-      call s:PR_echo('File [' . s:PatchFilePath . '] is not accessible.')
-      let &shortmess = s:save_shortmess
-      return
-    endif
-    if a:0 == 2
-      let s:SrcDirectory = expand(a:2, ':p')
-      if ! isdirectory(s:SrcDirectory)
-        call s:PR_echo('[' . s:SrcDirectory . '] is not a directory')
-        let &shortmess = s:save_shortmess
-        return
-      endif
-      try
-        exe 'cd ' . s:SrcDirectory
-      catch /^.*E344.*/
-        call s:PR_echo('Could not change to directory [' . s:SrcDirectory . ']')
-        let &shortmess = s:save_shortmess
-        return
-      endtry
-    endif
-  else
-    call s:PR_echo('PatchReview command needs at most two arguments: patchfile path and optional source directory path.')
-    let &shortmess = s:save_shortmess
+  let patchfile = expand(a:1, ':p')
+  if a:0 > 1
+    let patch = a:2
+  endif
+  if ! filereadable(patchfile)
+    let g:patches['reason'] = "File " . patchfile . " is not readable"
     return
   endif
-"}}}
-
-  " Verify that filterdiff and patch are specified or available          "{{{
-  if ! s:PR_checkBinary('filterdiff') || ! s:PR_checkBinary('patch')
-    let &shortmess = s:save_shortmess
-    return
-  endif
-
-  let s:retval = s:PR_GetTempDirLocation(0)
-  if ! s:retval
-    let &shortmess = s:save_shortmess
-    return
-  endif
-"}}}
-
-  " Requirements met, now execute                                        "{{{
-  let s:PatchFilePath = fnamemodify(s:PatchFilePath, ':p')
-  call s:PR_echo('Patch file      : ' . s:PatchFilePath)
-  call s:PR_echo('Source directory: ' . getcwd())
-  call s:PR_echo('------------------')
-  let s:theFilterDiffCommand = '' . g:patchreview_filterdiff . ' --list -s ' . s:PatchFilePath
-  let s:theFilesString = system(s:theFilterDiffCommand)
-  let s:theFilesList = split(s:theFilesString, '[\r\n]')
-  for s:filewithchangetype in s:theFilesList
-    if s:filewithchangetype !~ '^[!+-] '
-      call s:PR_echo('*** Skipping review generation due to understood change for [' . s:filewithchangetype . ']', 1)
+  unlet! filterdiffcmd
+  let filterdiffcmd = '' . g:patchreview_filterdiff . ' --list -s ' . patchfile
+  let fileslist = split(system(filterdiffcmd), '[\r\n]')
+  for filewithchangetype in fileslist
+    if filewithchangetype !~ '^[!+-] '
+      Pecho '*** Skipping review generation due to unknown change for [' . filewithchangetype . ']'
       continue
     endif
-    unlet! s:RelativeFilePath
-    let s:RelativeFilePath = substitute(s:filewithchangetype, '^. ', '', '')
-    let s:RelativeFilePath = substitute(s:RelativeFilePath, '^[a-z][^\\\/]*[\\\/]' , '' , '')
-    if s:filewithchangetype =~ '^! '
-      let s:msgtype = 'Modification : '
-    elseif s:filewithchangetype =~ '^+ '
-      let s:msgtype = 'Addition     : '
-    elseif s:filewithchangetype =~ '^- '
-      let s:msgtype = 'Deletion     : '
-    endif
-    let s:bufnum = bufnr(s:RelativeFilePath)
-    if buflisted(s:bufnum) && getbufvar(s:bufnum, '&mod')
-      call s:PR_echo('Old buffer for file [' . s:RelativeFilePath . '] exists in modified state. Skipping review.', 1)
-      continue
-    endif
-    let s:tmpname = substitute(s:RelativeFilePath, '/', '_', 'g')
-    let s:tmpname = substitute(s:tmpname, '\\', '_', 'g')
-    let s:tmpname = g:patchreview_tmpdir . 'PatchReview.' . s:tmpname . '.' . strftime('%Y%m%d%H%M%S')
-    if has('win32')
-      let s:tmpname = substitute(s:tmpname, '/', '\\', 'g')
-    endif
-    if ! exists('s:patchreview_tmpfiles')
-      let s:patchreview_tmpfiles = []
-    endif
-    let s:patchreview_tmpfiles = s:patchreview_tmpfiles + [s:tmpname]
 
-    let s:filterdiffcmd = '!' . g:patchreview_filterdiff . ' -i ' . s:RelativeFilePath . ' ' . s:PatchFilePath . ' > ' . s:tmpname
-    silent! exe s:filterdiffcmd
-    if s:filewithchangetype =~ '^+ '
-      if has('win32')
-        let s:inputfile = 'nul'
-      else
-        let s:inputfile = '/dev/null'
-      endif
-    else
-      let s:inputfile = expand(s:RelativeFilePath, ':p')
+    unlet! this_patch
+    let this_patch = {}
+
+    unlet! relpath
+    let relpath = substitute(filewithchangetype, '^. ', '', '')
+
+    let this_patch['filename'] = relpath
+
+    if filewithchangetype =~ '^! '
+      let this_patch['type'] = '!'
+    elseif filewithchangetype =~ '^+ '
+      let this_patch['type'] = '+'
+    elseif filewithchangetype =~ '^- '
+      let this_patch['type'] = '-'
     endif
-    silent exe '!' . g:patchreview_patch . ' -o ' . s:tmpname . '.file ' . s:inputfile . ' < ' . s:tmpname
-    let s:origtabpagenr = tabpagenr()
-    silent! exe 'tabedit ' . s:RelativeFilePath
-    silent! exe 'vert diffsplit ' . s:tmpname . '.file'
-    if filereadable(s:tmpname . '.file.rej')
-      silent! exe 'topleft 5split ' . s:tmpname . '.file.rej'
-      call s:PR_echo(s:msgtype . '*** REJECTED *** ' . s:RelativeFilePath, 1)
-    else
-      call s:PR_echo(s:msgtype . ' ' . s:RelativeFilePath, 1)
-    endif
-    silent! exe 'tabn ' . s:origtabpagenr
+
+    unlet! filterdiffcmd
+    let filterdiffcmd = '' . g:patchreview_filterdiff . ' -i ' . relpath . ' ' . patchfile
+    let this_patch['content'] = split(system(filterdiffcmd), '[\n\r]')
+    let g:patches['patch'] += [this_patch]
+    Debug "Patch collected for " . relpath
   endfor
-  call s:PR_echo('-----')
-  call s:PR_echo('Done.')
-  let &shortmess = s:save_shortmess
-"}}}
 endfunction
 "}}}
 
-function! <SID>PatchReviewCleanup()                                      "{{{
-  let s:retval = s:PR_GetTempDirLocation(1)
-  if s:retval && exists('g:patchreview_tmpdir') && isdirectory(g:patchreview_tmpdir) && filewritable(g:patchreview_tmpdir)
-    let s:zefilestr = globpath(g:patchreview_tmpdir, 'PatchReview.*')
-    let s:theFilesList = split(s:zefilestr, '\m[\r\n]\+')
-    for s:thefile in s:theFilesList
-      call delete(s:thefile)
+function! <SID>ExtractDiffsPureVim(...)                                   "{{{
+  " Sets g:patches = {'reason':'', 'patch':[
+  " {
+  "  'filename': filepath
+  "  'type'    : '+' | '-' | '!'
+  "  'content' : patch text for this file
+  " },
+  " ...
+  " ]}
+  let g:patches = {'reason' : '', 'patch' : []}
+  " TODO : User pointers into lines list rather then use collect
+  if a:0 == 0
+    let g:patches['reason'] = "ExtractDiffsPureVim expects at least a patchfile argument"
+    return
+  endif
+  let patchfile = expand(a:1, ':p')
+  if a:0 > 1
+    let patch = a:2
+  endif
+  if ! filereadable(patchfile)
+    let g:patches['reason'] = "File " . patchfile . " is not readable"
+    return
+  endif
+  call s:PR_wipeMsgBuf()
+  let collect = []
+  let linum = 0
+  let lines = readfile(patchfile)
+  let linescount = len(lines)
+  State 'START'
+  while linum < linescount
+    let line = lines[linum]
+    let linum += 1
+    if State() == 'START'
+      let mat = matchlist(line, '^--- \([^\t]\+\).*$')
+      if ! empty(mat) && mat[1] != ''
+        State 'MAYBE_UNIFIED_DIFF'
+        let p_first_file = mat[1]
+        let collect = [line]
+        Debug line . State()
+        continue
+      endif
+      let mat = matchlist(line, '^\*\*\* \([^\t]\+\).*$')
+      if ! empty(mat) && mat[1] != ''
+        State 'MAYBE_CONTEXT_DIFF'
+        let p_first_file = mat[1]
+        let collect = [line]
+        Debug line . State()
+        continue
+      endif
+      continue
+    elseif State() == 'MAYBE_CONTEXT_DIFF'
+      let mat = matchlist(line, '^--- \([^\t]\+\).*$')
+      if empty(mat) || mat[1] == ''
+        State 'START'
+        let linum -= 1
+        continue
+        Debug 'Back to square one ' . line()
+      endif
+      let p_second_file = mat[1]
+      if p_first_file == '/dev/null'
+        if p_second_file == '/dev/null'
+          let g:patches['reason'] = "Malformed diff found at line " . linum
+          return
+        endif
+        let p_type = '+'
+        let filepath = p_second_file
+      else
+        if p_second_file == '/dev/null'
+          let p_type = '-'
+          let filepath = p_first_file
+        else
+          let p_type = '!'
+          let filepath = p_first_file
+        endif
+      endif
+      State 'EXPECT_15_STARS'
+      let collect += [line]
+      Debug line . State()
+    elseif State() == 'EXPECT_15_STARS'
+      if line !~ '^*\{15}$'
+        State 'START'
+        let linum -= 1
+        Debug line . State()
+        continue
+      endif
+      State 'EXPECT_CONTEXT_CHUNK_HEADER_1'
+      let collect += [line]
+      Debug line . State()
+    elseif State() == 'EXPECT_CONTEXT_CHUNK_HEADER_1'
+      let mat = matchlist(line, '^\*\*\* \(\d\+,\)\?\(\d\+\) \*\*\*\*$')
+      if empty(mat) || mat[1] == ''
+        State 'START'
+        let linum -= 1
+        Debug line . State()
+        continue
+      endif
+      let collect += [line]
+      State 'SKIP_CONTEXT_STUFF_1'
+      Debug line . State()
+      continue
+    elseif State() == 'SKIP_CONTEXT_STUFF_1'
+      if line !~ '^[ !+].*$'
+        let mat = matchlist(line, '^--- \(\d\+\),\(\d\+\) ----$')
+        if ! empty(mat) && mat[1] != '' && mat[2] != ''
+          let goal_count = mat[2] - mat[1] + 1
+          let c_count = 0
+          State 'READ_CONTEXT_CHUNK'
+          let collect += [line]
+          Debug line . State() . " Goal count set to " . goal_count
+          continue
+        endif
+        State 'START'
+        let linum -= 1
+        Debug line . State()
+        continue
+      endif
+      let collect += [line]
+      continue
+    elseif State() == 'READ_CONTEXT_CHUNK'
+      let c_count += 1
+      if c_count == goal_count
+        let collect += [line]
+        State 'BACKSLASH_OR_CRANGE_EOF'
+        continue
+      else " goal not met yet
+        let mat = matchlist(line, '^\([\\!+ ]\).*$')
+        if empty(mat) || mat[1] == ''
+          let linum -= 1
+          State 'START'
+          Debug line . State()
+          continue
+        endif
+        let collect += [line]
+        continue
+      endif
+    elseif State() == 'BACKSLASH_OR_CRANGE_EOF'
+      if line =~ '^\\ No newline.*$'   " XXX: Can we go to another chunk from here??
+        let collect += [line]
+        let this_patch = {}
+        let this_patch['filename'] = filepath
+        let this_patch['type'] = p_type
+        let this_patch['content'] = collect
+        let g:patches['patch'] += [this_patch]
+        Debug "Patch collected for " . filepath
+        State 'START'
+        continue
+      endif
+      if line =~ '^\*\{15}$'
+        let collect += [line]
+        State 'EXPECT_CONTEXT_CHUNK_HEADER_1'
+        Debug line . State()
+        continue
+      endif
+      let this_patch = {}
+      let this_patch['filename'] = filepath
+      let this_patch['type'] = p_type
+      let this_patch['content'] = collect
+      let g:patches['patch'] += [this_patch]
+      let linum -= 1
+      State 'START'
+      Debug "Patch collected for " . filepath
+      Debug line . State()
+      continue
+    elseif State() == 'MAYBE_UNIFIED_DIFF'
+      let mat = matchlist(line, '^+++ \([^\t]\+\).*$')
+      if empty(mat) || mat[1] == ''
+        State 'START'
+        let linum -= 1
+        Debug line . State()
+        continue
+      endif
+      let p_second_file = mat[1]
+      if p_first_file == '/dev/null'
+        if p_second_file == '/dev/null'
+          let g:patches['reason'] = "Malformed diff found at line " . linum
+          return
+        endif
+        let p_type = '+'
+        let filepath = p_second_file
+      else
+        if p_second_file == '/dev/null'
+          let p_type = '-'
+          let filepath = p_first_file
+        else
+          let p_type = '!'
+          let filepath = p_first_file
+        endif
+      endif
+      State 'EXPECT_UNIFIED_RANGE_CHUNK'
+      let collect += [line]
+      Debug line . State()
+      continue
+    elseif State() == 'EXPECT_UNIFIED_RANGE_CHUNK'
+      let mat = matchlist(line, '^@@ -\(\d\+,\)\?\(\d\+\) +\(\d\+,\)\?\(\d\+\) @@$')
+      if ! empty(mat)
+        let old_goal_count = mat[2]
+        let new_goal_count = mat[4]
+        let o_count = 0
+        let n_count = 0
+        Debug "Goal count set to " . old_goal_count . ', ' . new_goal_count
+        State 'READ_UNIFIED_CHUNK'
+        let collect += [line]
+        Debug line . State()
+        continue
+      endif
+      State 'START'
+      Debug line . State()
+      continue
+    elseif State() == 'READ_UNIFIED_CHUNK'
+      if o_count == old_goal_count && n_count == new_goal_count
+        if line =~ '^\\.*$'   " XXX: Can we go to another chunk from here??
+          let collect += [line]
+          let this_patch = {}
+          let this_patch['filename'] = filepath
+          let this_patch['type'] = p_type
+          let this_patch['content'] = collect
+          let g:patches['patch'] += [this_patch]
+          Debug "Patch collected for " . filepath
+          State 'START'
+          continue
+        endif
+        let mat = matchlist(line, '^@@ -\(\d\+,\)\?\(\d\+\) +\(\d\+,\)\?\(\d\+\) @@$')
+        if ! empty(mat)
+          let old_goal_count = mat[2]
+          let new_goal_count = mat[4]
+          let o_count = 0
+          let n_count = 0
+          Debug "Goal count set to " . old_goal_count . ', ' . new_goal_count
+          let collect += [line]
+          Debug line . State()
+          continue
+        endif
+        let this_patch = {}
+        let this_patch['filename'] = filepath
+        let this_patch['type'] = p_type
+        let this_patch['content'] = collect
+        let g:patches['patch'] += [this_patch]
+        Debug "Patch collected for " . filepath
+        let linum -= 1
+        State 'START'
+        Debug line . State()
+        continue
+      else " goal not met yet
+        let mat = matchlist(line, '^\([\\+ -]\).*$')
+        if empty(mat) || mat[1] == ''
+          let linum -= 1
+          State 'START'
+          continue
+        endif
+        let chr = mat[1]
+        if chr == '+'
+          let n_count += 1
+        endif
+        if chr == ' '
+          let o_count += 1
+          let n_count += 1
+        endif
+        if chr == '-'
+          let o_count += 1
+        endif
+        let collect += [line]
+        Debug line . State()
+        continue
+      endif
+    else
+      let g:patches['reason'] = "Internal error: Do not use the plugin anymore and if possible please send the diff or patch file you tried it with to Manpreet Singh <junkblocker@yahoo.com>"
+      return
+    endif
+  endwhile
+  "Pecho State()
+  if (State() == 'READ_CONTEXT_CHUNK' && c_count == goal_count) || (State() == 'READ_UNIFIED_CHUNK' && n_count == new_goal_count && o_count == old_goal_count)
+    let this_patch = {}
+    let this_patch['filename'] = filepath
+    let this_patch['type'] = p_type
+    let this_patch['content'] = collect
+    let g:patches['patch'] += [this_patch]
+    Debug "Patch collected for " . filepath
+  endif
+  return
+endfunction
+"}}}
+
+function! State(...)  " For easy manipulation of diff extraction state      "{{{
+  if a:0 != 0
+    let s:STATE = a:1
+  else
+    if ! exists('s:STATE')
+      let s:STATE = 'START'
+    endif
+    return s:STATE
+  endif
+endfunction
+com! -nargs=+ -complete=expression State call State(<args>)
+"}}}
+
+function! <SID>PatchReview(...)                                           "{{{
+  let s:save_shortmess = &shortmess
+  let s:save_aw = &autowrite
+  let s:save_awa = &autowriteall
+  set shortmess=aW
+  call s:PR_wipeMsgBuf()
+  let s:reviewmode = 'patch'
+  call s:_GenericReview(a:000)
+  let &autowriteall = s:save_awa
+  let &autowrite = s:save_aw
+  let &shortmess = s:save_shortmess
+endfunction
+"}}}
+
+function! <SID>_GenericReview(argslist)                                   "{{{
+  " diff mode:
+  "   arg1 = patchfile
+  "   arg2 = strip count
+  " patch mode:
+  "   arg1 = patchfile
+  "   arg2 = strip count
+  "   arg3 = directory
+
+  " VIM 7+ required
+  if version < 700
+    Pecho 'This plugin needs VIM 7 or higher'
+    return
+  endif
+
+  " +diff required
+  if ! has('diff')
+    Pecho 'This plugin needs VIM built with +diff feature.'
+    return
+  endif
+
+
+  if s:reviewmode == 'diff'
+    let patch_R_option = ' -t -R '
+  elseif s:reviewmode == 'patch'
+    let patch_R_option = ''
+  else
+    Pecho 'Fatal internal error in patchreview.vim plugin'
+    return
+  endif
+
+  " Check passed arguments
+  if len(a:argslist) == 0
+    Pecho 'PatchReview command needs at least one argument specifying a patchfile path.'
+    return
+  endif
+  let StripCount = 0
+  if len(a:argslist) >= 1 && ((s:reviewmode == 'patch' && len(a:argslist) <= 3) || (s:reviewmode == 'diff' && len(a:argslist) == 2))
+    let PatchFilePath = expand(a:argslist[0], ':p')
+    if ! filereadable(PatchFilePath)
+      Pecho 'File [' . PatchFilePath . '] is not accessible.'
+      return
+    endif
+    if len(a:argslist) >= 2 && s:reviewmode == 'patch'
+      let s:SrcDirectory = expand(a:argslist[1], ':p')
+      if ! isdirectory(s:SrcDirectory)
+        Pecho '[' . s:SrcDirectory . '] is not a directory'
+        return
+      endif
+      try
+        " Command line has already escaped the path
+        exe 'cd ' . s:SrcDirectory
+      catch /^.*E344.*/
+        Pecho 'Could not change to directory [' . s:SrcDirectory . ']'
+        return
+      endtry
+    endif
+    if s:reviewmode == 'diff'
+      " passed in by default
+      let StripCount = eval(a:argslist[1])
+    elseif s:reviewmode == 'patch'
+      let StripCount = 1
+      " optional strip count
+      if len(a:argslist) == 3
+        let StripCount = eval(a:argslist[2])
+      endif
+    endif
+  else
+    if s:reviewmode == 'patch'
+      Pecho 'PatchReview command needs at most three arguments: patchfile path, optional source directory path and optional strip count.'
+    elseif s:reviewmode == 'diff'
+      Pecho 'DiffReview command accepts no arguments.'
+    endif
+    return
+  endif
+
+  " Verify that patch command and temporary directory are available or specified
+  if ! s:PR_checkBinary('patch')
+    return
+  endif
+
+  let retval = s:PR_GetTempDirLocation(0)
+  if ! retval
+    return
+  endif
+
+  " Requirements met, now execute
+  let PatchFilePath = fnamemodify(PatchFilePath, ':p')
+  if s:reviewmode == 'patch'
+    Pecho 'Patch file      : ' . PatchFilePath
+  endif
+  Pecho 'Source directory: ' . getcwd()
+  Pecho '------------------'
+  if s:PR_checkBinary('filterdiff')
+    Debug "Using filterdiff"
+    call s:ExtractDiffsNative(PatchFilePath)
+  else
+    Debug "Using own diff extraction (slower)"
+    call s:ExtractDiffsPureVim(PatchFilePath)
+  endif
+  for patch in g:patches['patch']
+    if patch.type !~ '^[!+-]$'
+      Pecho '*** Skipping review generation due to unknown change [' . patch.type . ']', 1
+      continue
+    endif
+    unlet! relpath
+    let relpath = patch.filename
+    " XXX: svn diff and hg diff produce different kind of outputs, one requires
+    " XXX: stripping but the other doesn't. We need to take care of that
+    let stripmore = StripCount
+    let StrippedRelativeFilePath = relpath
+    while stripmore > 0
+      " strip one
+      let StrippedRelativeFilePath = substitute(StrippedRelativeFilePath, '^[^\\\/]\+[^\\\/]*[\\\/]' , '' , '')
+      let stripmore -= 1
+    endwhile
+    if patch.type == '!'
+      if s:reviewmode == 'patch'
+        let msgtype = 'Patch modifies file: '
+      elseif s:reviewmode == 'diff'
+        let msgtype = 'File has changes: '
+      endif
+    elseif patch.type == '+'
+      if s:reviewmode == 'patch'
+        let msgtype = 'Patch adds file    : '
+      elseif s:reviewmode == 'diff'
+        let msgtype = 'New file        : '
+      endif
+    elseif patch.type == '-'
+      if s:reviewmode == 'patch'
+        let msgtype = 'Patch removes file : '
+      elseif s:reviewmode == 'diff'
+        let msgtype = 'Removed file    : '
+      endif
+    endif
+    let bufnum = bufnr(relpath)
+    if buflisted(bufnum) && getbufvar(bufnum, '&mod')
+      Pecho 'Old buffer for file [' . relpath . '] exists in modified state. Skipping review.', 1
+      continue
+    endif
+    let tmpname = substitute(relpath, '/', '_', 'g')
+    let tmpname = substitute(tmpname, '\\', '_', 'g')
+    let tmpname = g:patchreview_tmpdir . 'PatchReview.' . tmpname . '.' . strftime('%Y%m%d%H%M%S')
+    if has('win32')
+      let tmpname = substitute(tmpname, '/', '\\', 'g')
+    endif
+
+    " write patch for patch.filename into tmpname
+    call writefile(patch.content, tmpname)
+    if patch.type == '+' && s:reviewmode == 'patch'
+      let inputfile = ''
+      let patchcmd = '!' . g:patchreview_patch . patch_R_option . ' -o "' . tmpname . '.file" "' . inputfile . '" < "' . tmpname . '"'
+    elseif patch.type == '+' && s:reviewmode == 'diff'
+      let inputfile = ''
+      unlet! patchcmd
+    else
+      let inputfile = expand(StrippedRelativeFilePath, ':p')
+      let patchcmd = '!' . g:patchreview_patch . patch_R_option . ' -o "' . tmpname . '.file" "' . inputfile . '" < "' . tmpname . '"'
+    endif
+    if exists('patchcmd')
+      let v:errmsg = ''
+      Debug patchcmd
+      silent exe patchcmd
+      if v:errmsg != '' || v:shell_error
+        Pecho 'ERROR: Could not execute patch command.'
+        Pecho 'ERROR:     ' . patchcmd
+        Pecho 'ERROR: ' . v:errmsg
+        Pecho 'ERROR: Diff skipped.'
+        continue
+      endif
+    endif
+    let s:origtabpagenr = tabpagenr()
+    silent! exe 'tabedit ' . StrippedRelativeFilePath
+    if exists('patchcmd')
+      silent! exe 'vert diffsplit ' . tmpname . '.file'
+    else
+      silent! exe 'vnew'
+    endif
+    if filereadable(tmpname . '.file.rej')
+      silent! exe 'topleft 5split ' . tmpname . '.file.rej'
+      Pecho msgtype . '*** REJECTED *** ' . relpath, 1
+    else
+      Pecho msgtype . ' ' . relpath, 1
+    endif
+    silent! exe 'tabn ' . s:origtabpagenr
+  endfor
+  Pecho '-----'
+  Pecho 'Done.'
+
+endfunction
+"}}}
+
+function! <SID>PatchReviewCleanup()                                       "{{{
+  let retval = s:PR_GetTempDirLocation(1)
+  if retval && exists('g:patchreview_tmpdir') && isdirectory(g:patchreview_tmpdir) && filewritable(g:patchreview_tmpdir)
+    let zefilestr = globpath(g:patchreview_tmpdir, 'PatchReview.*')
+    let fileslist = split(zefilestr, '\m[\r\n]\+')
+    for thefile in fileslist
+      call delete(thefile)
     endfor
   endif
 endfunction
 "}}}
 
-" Commands                                                               "{{{
+function! <SID>DiffReview(...)                                            "{{{
+  let s:save_shortmess = &shortmess
+  set shortmess=aW
+  call s:PR_wipeMsgBuf()
+
+  let vcsdict = {
+                  \'Mercurial'  : {'dir' : '.hg',  'binary' : 'hg',  'diffargs' : 'diff' ,          'strip' : 1},
+                  \'Bazaar-NG'  : {'dir' : '.bzr', 'binary' : 'bzr', 'diffargs' : 'diff' ,          'strip' : 0},
+                  \'monotone'   : {'dir' : '_MTN', 'binary' : 'mtn', 'diffargs' : 'diff --unified', 'strip' : 0},
+                  \'Subversion' : {'dir' : '.svn', 'binary' : 'svn', 'diffargs' : 'diff' ,          'strip' : 0},
+                  \'cvs'        : {'dir' : 'CVS',  'binary' : 'cvs', 'diffargs' : '-q diff -u' ,    'strip' : 0},
+                  \}
+
+  unlet! s:theDiffCmd
+  unlet! l:vcs
+  if ! exists('g:patchreview_diffcmd')
+    for key in keys(vcsdict)
+      if isdirectory(vcsdict[key]['dir'])
+        if ! s:PR_checkBinary(vcsdict[key]['binary'])
+          Pecho 'Current directory looks like a ' . vcsdict[key] . ' repository but ' . vcsdist[key]['binary'] . ' command was not found on path.'
+          let &shortmess = s:save_shortmess
+          return
+        else
+          let s:theDiffCmd = vcsdict[key]['binary'] . ' ' . vcsdict[key]['diffargs']
+          let strip = vcsdict[key]['strip']
+
+          Pecho 'Using [' . s:theDiffCmd . '] to generate diffs for this ' . key . ' review.'
+          let &shortmess = s:save_shortmess
+          let l:vcs = vcsdict[key]['binary']
+          break
+        endif
+      else
+        continue
+      endif
+    endfor
+  else
+    let s:theDiffCmd = g:patchreview_diffcmd
+    let strip = 0
+  endif
+  if ! exists('s:theDiffCmd')
+    Pecho 'Please define g:patchreview_diffcmd and make sure you are in a VCS controlled top directory.'
+    let &shortmess = s:save_shortmess
+    return
+  endif
+
+  let retval = s:PR_GetTempDirLocation(0)
+  if ! retval
+    Pecho 'DiffReview aborted.'
+    let &shortmess = s:save_shortmess
+    return
+  endif
+  let outfile = g:patchreview_tmpdir . 'PatchReview.diff.' . strftime('%Y%m%d%H%M%S')
+  let cmd = '!' . s:theDiffCmd . ' > "' . outfile . '"'
+  let v:errmsg = ''
+  silent exe cmd
+  if v:errmsg == '' && exists('l:vcs') && l:vcs == 'cvs' && v:shell_error == 1
+    " Ignoring CVS non-error
+  elseif v:errmsg != '' || v:shell_error
+    Pecho 'Could not execute [' . s:theDiffCmd . ']'
+    Pecho v:errmsg
+    Pecho 'Diff review aborted.'
+    let &shortmess = s:save_shortmess
+    return
+  endif
+  let s:reviewmode = 'diff'
+  call s:_GenericReview([outfile, strip])
+  let &shortmess = s:save_shortmess
+endfunction
+"}}}
+
+" End user commands                                                         "{{{
 "============================================================================
 " :PatchReview
 command! -nargs=* -complete=file PatchReview call s:PatchReview (<f-args>)
 
+" :DiffReview
+command! -nargs=0 DiffReview call s:DiffReview()
 
 " :PatchReviewCleanup
 command! -nargs=0 PatchReviewCleanup call s:PatchReviewCleanup ()
-"}}}
+command! -nargs=0 DiffReviewCleanup call s:PatchReviewCleanup ()
 "}}}
 
-" vim: textwidth=78 nowrap tabstop=2 shiftwidth=2 softtabstop=2 expandtab
-" vim: filetype=vim encoding=latin1 fileformat=unix foldlevel=0 foldmethod=marker
+" Development                                                               "{{{
+if exists('g:patchreview_debug')
+  " Tests
+  function! <SID>PRExtractTestNative(...)
+    "let patchfiles = glob(expand(a:1) . '/?*')
+    "for fname in split(patchfiles)
+    call s:PR_wipeMsgBuf()
+    let fname = a:1
+    call s:ExtractDiffsNative(fname)
+    for patch in g:patches['patch']
+      for line in patch.content
+        Pecho line
+      endfor
+    endfor
+    "endfor
+  endfunction
+
+  function! <SID>PRExtractTestVim(...)
+    "let patchfiles = glob(expand(a:1) . '/?*')
+    "for fname in split(patchfiles)
+    call s:PR_wipeMsgBuf()
+    let fname = a:1
+    call s:ExtractDiffsPureVim(fname)
+    for patch in g:patches['patch']
+      for line in patch.content
+        Pecho line
+      endfor
+    endfor
+    "endfor
+  endfunction
+
+  command! -nargs=+ -complete=file PRTestVim call s:PRExtractTestVim(<f-args>)
+  command! -nargs=+ -complete=file PRTestNative call s:PRExtractTestNative(<f-args>)
+endif
 "}}}
+
+" modeline
+" vim: set et fdl=0 fdm=marker fenc=latin ff=unix ft=vim sw=2 sts=0 ts=2 textwidth=78 nowrap :
