@@ -239,7 +239,8 @@ class httprepository(repo.repository):
                 except ValueError, err:
                     raise error.ResponseError(
                             _('push failed (unexpected response):'), resp)
-                self.ui.write(output)
+                for l in output.splitlines(True):
+                    self.ui.status(_('remote: '), l)
                 return ret
             except socket.error, err:
                 if err[0] in (errno.ECONNRESET, errno.EPIPE):

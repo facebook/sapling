@@ -4,7 +4,7 @@ updating to branch default
 % expect ssl error
 pushing to http://localhost:$HGPORT/
 searching for changes
-ssl required
+remote: ssl required
 % serve errors
 % expect authorization error
 abort: authorization failed
@@ -19,10 +19,10 @@ searching for changes
 % expect success
 pushing to http://localhost:$HGPORT/
 searching for changes
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 1 files
+remote: adding changesets
+remote: adding manifests
+remote: adding file changes
+remote: added 1 changesets with 1 changes to 1 files
 % serve errors
 changegroup hook: HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_URL=remote:http 
 rolling back last transaction
