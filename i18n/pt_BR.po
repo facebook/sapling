@@ -266,6 +266,9 @@ msgstr "o nome do marcador não pode conter novas linhas"
 msgid "a bookmark cannot have the name of an existing branch"
 msgstr "um marcador não pode ter o mesmo nome de um ramo existente"
 
+msgid "no bookmarks set\n"
+msgstr "nenhum marcador definido\n"
+
 msgid "force"
 msgstr "forçar"
 
@@ -825,8 +828,8 @@ msgstr ""
 "colore a saída de alguns comandos\n"
 "\n"
 "Essa extensão colore a saída dos comandos para realçar diversas\n"
-"informações: nos comandos status e resolve, reflete os estados dos arquivos;\n"
-"no comando qseries, reflete os estados dos patches (aplicado,\n"
+"informações: nos comandos status e resolve, reflete os estados dos\n"
+"arquivos; no comando qseries, reflete os estados dos patches (aplicado,\n"
 "não-aplicado, faltando); e para comandos relacionados com diff,\n"
 "destaca adições, remoções, cabeçalhos de diffs e espaços em branco\n"
 "no final das linhas.\n"
@@ -1262,10 +1265,10 @@ msgstr ""
 "        do log do CVS. Essa função recebe uma lista com as entradas do log,\n"
 "        e pode modificar, adicionar ou remover entradas.\n"
 "    --config hook.cvschangesets\n"
-"        Especifica uma função Python a ser chamada após os conjuntos de mudanças\n"
-"        serem calculados a partir do log do CVS. Essa função recebe uma lista\n"
-"        com as entradas do conjunto de mudanças, e pode modificar, adicionar ou\n"
-"        remover suas entradas.\n"
+"        Especifica uma função Python a ser chamada após os conjuntos de\n"
+"        mudanças serem calculados a partir do log do CVS. Essa função\n"
+"        recebe uma lista com as entradas do conjunto de mudanças, e pode\n"
+"        modificar, adicionar ou remover suas entradas.\n"
 "\n"
 "    O comando \"debugcvsps\" do Mercurial permite que o código de mesclagem\n"
 "    interno seja executado fora do processo de conversão. Seus\n"
@@ -2126,6 +2129,10 @@ msgstr ""
 msgid "uncommitted merge - please provide a specific revision"
 msgstr "mesclagem não consolidada - por favor forneça uma revisão específica"
 
+#, python-format
+msgid "Signing %d:%s\n"
+msgstr "Assinando %d: %s\n"
+
 msgid "Error while signing"
 msgstr "Erro ao assinar"
 
@@ -2291,6 +2298,10 @@ msgstr ""
 "  [web]\n"
 "  # Se você desejar hyperlinks (opcional)\n"
 "  baseurl = http://server/path/to/repo\n"
+
+#, python-format
+msgid "%s returned an error: %s"
+msgstr "%s devolveu um erro: %s"
 
 #, python-format
 msgid "hgcia: sending update to %s\n"
@@ -2866,6 +2877,9 @@ msgstr ""
 msgid "unhooked all commit hooks\n"
 msgstr "removidos os registros de todos os ganchos de consolidação\n"
 
+msgid "hg keyword configuration and expansion example"
+msgstr "exemplo de configuração e expansão da extensão keyword"
+
 msgid ""
 "\n"
 "\tkeywords expanded\n"
@@ -3055,8 +3069,8 @@ msgstr ""
 "Se configurada como 'keep', a mq irá obedecer a seção [diff] do arquivo de\n"
 "configuração ao preservar patches git existentes em um comando qrefresh. Se\n"
 "configurada como 'yes' ou 'no', a mq irá sobrepor a seção [diff] e sempre\n"
-"gerar patches git ou comuns, respectivamente, possivelmente perdendo dados no\n"
-"segundo caso.\n"
+"gerar patches git ou comuns, respectivamente, possivelmente perdendo dados\n"
+"no segundo caso.\n"
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
@@ -3551,7 +3565,7 @@ msgid ""
 "\n"
 "    This command is deprecated; use hg -Q commit instead."
 msgstr ""
-"consolida mudanças no repositório da fila de patches (OBSOLETO) "
+"consolida mudanças no repositório da fila de patches (OBSOLETO)\n"
 "\n"
 "    Este comando é obsoleto; use hg -Q commit em seu lugar."
 
@@ -3835,22 +3849,25 @@ msgstr "%s já existe"
 msgid "A patch named %s already exists in the series file"
 msgstr "Um patch de nome %s já existe no arquivo series"
 
+#, python-format
+msgid "renaming %s to %s\n"
+msgstr "renomeando %s para %s\n"
+
 msgid ""
 "restore the queue state saved by a revision (DEPRECATED)\n"
 "\n"
 "    This command is deprecated, use rebase --mq instead."
 msgstr ""
-"restaura o estado da fila salvo por uma revisão (OBSOLETO) "
+"restaura o estado da fila salvo por uma revisão (OBSOLETO)\n"
 "\n"
-"    Este comando é obsoleto, use "
+"    Este comando é obsoleto, use rebase --mq em seu lugar."
 
 msgid ""
 "save current queue state (DEPRECATED)\n"
 "\n"
 "    This command is deprecated, use rebase --mq instead."
 msgstr ""
-"salva o estado atual da fila (OBSOLETO) "
-"\n"
+"salva o estado atual da fila (OBSOLETO)\n"
 "    Este comando é obsoleto, use rebase --mq em seu lugar."
 
 #, python-format
@@ -4952,15 +4969,17 @@ msgstr ""
 "\n"
 "  [progress]\n"
 "  delay = 3 # número de segundos (float) antes que a barra seja mostrada\n"
-"  refresh = 0.1 # tempo em segundos entre atualizações da barra de progresso\n"
+"  refresh = 0.1 # tempo em segundos entre atualizações da\n"
+"                # barra de progresso\n"
 "  format = topic bar number # formato da barra de progresso\n"
-"  width = <none> # se definido, será a largura máxima da informação de progresso\n"
-"                 # (isto é, min(largura, largura do terminal) será usada)\n"
+"  width = <none> # se definido, será a largura máxima da informação de\n"
+"                 # progresso (isto é, min(largura, largura do terminal)\n"
+"                 # será usada)\n"
 "  clear-complete = True # limpa a barra de progresso após terminar\n"
 "\n"
 "Entradas válidas para o campo format são topic (tópico), bar (barra),\n"
-"number (número), unit (unidade) e item (item). item por padrão são os últimos\n"
-"caracteres do item, mas isto pode ser modificado adicionando ou\n"
+"number (número), unit (unidade) e item (item). item por padrão são os\n"
+"últimos caracteres do item, mas isto pode ser modificado adicionando ou\n"
 "``-<num>``, que consideraria os últimos num caracteres, ou ``+<num>``\n"
 "para os primeiros num caracteres.\n"
 
@@ -5200,8 +5219,8 @@ msgid ""
 "hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--"
 "keepbranches] | [-c] | [-a]"
 msgstr ""
-"hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep]"
-" [--keepbranches] [-c] | [-a]"
+"hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--"
+"keepbranches] [-c] | [-a]"
 
 msgid "commands to interactively select changes for commit/qrefresh"
 msgstr "comandos para selecionar interativamente mudanças em um commit ou qrefresh"
@@ -5599,8 +5618,28 @@ msgstr "diretório de trabalho não está no pai do transplante %s"
 msgid "commit failed"
 msgstr "falha ao consolidar"
 
+msgid ""
+"y: transplant this changeset\n"
+"n: skip this changeset\n"
+"m: merge at this changeset\n"
+"p: show patch\n"
+"c: commit selected changesets\n"
+"q: cancel transplant\n"
+"?: show this help\n"
+msgstr ""
+"y: transplante esta revisão\n"
+"n: pula esta revisão\n"
+"m: mescal nesta revisão\n"
+"p: mostra o patch\n"
+"c: consolida revisões selecionadas\n"
+"q: cancela o transplante\n"
+"?: exibe esta ajuda\n"
+
 msgid "apply changeset? [ynmpcq?]:"
 msgstr "aplicar revisão? [ynmpcq?]:"
+
+msgid "no such option\n"
+msgstr "não existe tal opção\n"
 
 msgid ""
 "transplant changesets from another branch\n"
@@ -7165,6 +7204,9 @@ msgid ""
 "    revisions are specified, the working directory files are compared\n"
 "    to its parent.\n"
 "\n"
+"    Alternatively you can specify -c/--change with a revision to see\n"
+"    the changes in that changeset relative to its first parent.\n"
+"\n"
 "    Without the -a/--text option, diff will avoid generating diffs of\n"
 "    files it detects as binary. With -a, diff will generate a diff\n"
 "    anyway, probably with undesirable results.\n"
@@ -7189,6 +7231,9 @@ msgstr ""
 "    especificada, tal revisão será comparada com o diretório de\n"
 "    trabalho, e se não for especificada uma revisão, os arquivos do\n"
 "    diretório de trabalho serão comparados com seu pai.\n"
+"\n"
+"    Alternativamente você pode especificar -c/--change com uma revisão\n"
+"    para ver as mudanças nessa revisão relativas a seu primeiro pai.\n"
 "\n"
 "    Sem a opção -a/--text, diff evitará gerar diffs de arquivos que\n"
 "    detectar como binários. Com -a, diff irá gerar um diff de\n"
@@ -7842,7 +7887,9 @@ msgstr ""
 
 #, python-format
 msgid "abort: branch '%s' has %d heads - please merge with an explicit rev\n"
-msgstr "abortado: o ramo '%s' tem %d cabeças - por favor mescle com uma revisão específica\n"
+msgstr ""
+"abortado: o ramo '%s' tem %d cabeças - por favor mescle com uma revisão "
+"específica\n"
 
 msgid "(run 'hg heads .' to see heads)\n"
 msgstr "(execute 'hg heads .' para ver as cabeças)\n"
@@ -8636,19 +8683,19 @@ msgstr "--rev e --remove são incompatíveis"
 
 #, python-format
 msgid "tag '%s' does not exist"
-msgstr "etiqueta '%s' não existe"
+msgstr "a etiqueta '%s' não existe"
 
 #, python-format
 msgid "tag '%s' is not a global tag"
-msgstr "etiqueta '%s' não é uma etiqueta global"
+msgstr "a etiqueta '%s' não é uma etiqueta global"
 
 #, python-format
 msgid "tag '%s' is not a local tag"
-msgstr "etiqueta '%s' não é uma etiqueta local"
+msgstr "a etiqueta '%s' não é uma etiqueta local"
 
 #, python-format
 msgid "tag '%s' already exists (use -f to force)"
-msgstr "etiqueta '%s' já existe (use -f para forçar)"
+msgstr "a etiqueta '%s' já existe (use -f para forçar)"
 
 msgid ""
 "list repository tags\n"
@@ -9148,8 +9195,8 @@ msgstr "[OPÇÃO]..."
 msgid "revision to check"
 msgstr "revisão para verificar"
 
-msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
-msgstr "[OPÇÃO]... [-r REV1 [-r REV2]] [ARQUIVO]..."
+msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
+msgstr "[OPÇÃO]... ([-c REV] | [-r REV1 [-r REV2]]) [ARQUIVO]..."
 
 msgid "diff against the second parent"
 msgstr "faz o diff com o segundo pai"
@@ -11269,6 +11316,12 @@ msgstr "cópia falhou: %s não é um arquivo ou um link simbólico\n"
 msgid "searching for changes\n"
 msgstr "procurando por mudanças\n"
 
+msgid "queries"
+msgstr "consultas"
+
+msgid "searching"
+msgstr "procurando"
+
 msgid "already have changeset "
 msgstr "já possui a revisão "
 
@@ -11315,12 +11368,27 @@ msgstr "aviso: mudanças remotas não sincronizadas!\n"
 msgid "%d changesets found\n"
 msgstr "%d revisões encontradas\n"
 
+msgid "bundle changes"
+msgstr "empacotando mudanças"
+
+msgid "chunks"
+msgstr "trechos"
+
+msgid "bundle manifests"
+msgstr "empacotando manifestos"
+
 #, python-format
 msgid "empty or missing revlog for %s"
 msgstr "revlog vazio ou não encontrado para %s"
 
+msgid "bundle files"
+msgstr "empacotando arquivos"
+
 msgid "adding changesets\n"
 msgstr "adicionando revisões\n"
+
+msgid "changesets"
+msgstr "revisões"
 
 msgid "received changelog group is empty"
 msgstr "grupo de changelogs recebido é vazio"
@@ -11328,11 +11396,17 @@ msgstr "grupo de changelogs recebido é vazio"
 msgid "adding manifests\n"
 msgstr "adicionando manifestos\n"
 
+msgid "manifests"
+msgstr "manifestos"
+
 msgid "adding file changes\n"
 msgstr "adicionando mudanças em arquivos\n"
 
 msgid "received file revlog group is empty"
 msgstr "grupo recebido de arquivos revlog vazio"
+
+msgid "files"
+msgstr "arquivos"
 
 #, python-format
 msgid "missing file data for %s:%s - run hg verify"
@@ -11546,12 +11620,14 @@ msgid "file %s already exists\n"
 msgstr "arquivo %s já existe\n"
 
 #, python-format
-msgid "Hunk #%d succeeded at %d %s(offset %d line).\n"
-msgstr "Trecho #%d aplicado com sucesso em %d %s(distância %d linha).\n"
+msgid "Hunk #%d succeeded at %d with fuzz %d (offset %d lines).\n"
+msgstr ""
+"Trecho #%d aplicado com sucesso em %d com indistinção %d (distância %d "
+"linhas).\n"
 
 #, python-format
-msgid "Hunk #%d succeeded at %d %s(offset %d lines).\n"
-msgstr "Trecho #%d aplicado com sucesso em %d %s(distância %d linhas).\n"
+msgid "Hunk #%d succeeded at %d (offset %d lines).\n"
+msgstr "Trecho #%d aplicado com sucesso em %d (distância %d linhas).\n"
 
 #, python-format
 msgid "Hunk #%d FAILED at %d\n"
@@ -12023,6 +12099,9 @@ msgstr "repositório utiliza revlog no formato %d\n"
 msgid "checking changesets\n"
 msgstr "checando revisões\n"
 
+msgid "changelog"
+msgstr "changelog"
+
 #, python-format
 msgid "unpacking changeset %s"
 msgstr "desempacotando revisão %s"
@@ -12043,6 +12122,9 @@ msgstr "lendo alterações no manifesto %s"
 
 msgid "crosschecking files in changesets and manifests\n"
 msgstr "checagem cruzada de arquivos em revisões e no manifesto\n"
+
+msgid "crosscheck"
+msgstr "checagem cruzada"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
