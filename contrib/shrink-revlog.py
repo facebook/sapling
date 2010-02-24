@@ -19,7 +19,7 @@ This is *not* safe to run on a changelog.
 # e.g. by comparing "before" and "after" states of random changesets
 # (maybe: export before, shrink, export after, diff).
 
-import os, tempfile
+import os, tempfile, errno
 from mercurial import revlog, transaction, node, util
 from mercurial import changegroup
 from mercurial.i18n import _
@@ -91,9 +91,19 @@ def writerevs(ui, r1, r2, order, tr):
     finally:
         ui.progress(_('writing'), None, len(order))
 
-def report(ui, olddatafn, newdatafn):
-    oldsize = float(os.stat(olddatafn).st_size)
-    newsize = float(os.stat(newdatafn).st_size)
+def report(ui, r1, r2):
+    def getsize(r):
+        s = 0
+        for fn in (r.indexfile, r.datafile):
+            try:
+                s += os.stat(fn).st_size
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+        return s
+
+    oldsize = float(getsize(r1))
+    newsize = float(getsize(r2))
 
     # argh: have to pass an int to %d, because a float >= 2^32
     # blows up under Python 2.5 or earlier
@@ -129,17 +139,23 @@ def shrink(ui, repo, **opts):
             raise util.Abort(_('--revlog option must specify a revlog in %s, '
                                'not %s') % (store, indexfn))
 
-    datafn = indexfn[:-2] + '.d'
     if not os.path.exists(indexfn):
         raise util.Abort(_('no such file: %s') % indexfn)
     if '00changelog' in indexfn:
         raise util.Abort(_('shrinking the changelog '
                            'will corrupt your repository'))
-    if not os.path.exists(datafn):
-        # This is just a lazy shortcut because I can't be bothered to
-        # handle all the special cases that entail from no .d file.
-        raise util.Abort(_('%s does not exist: revlog not big enough '
-                           'to be worth shrinking') % datafn)
+
+    ui.write(_('shrinking %s\n') % indexfn)
+    prefix = os.path.basename(indexfn)[:-1]
+    (tmpfd, tmpindexfn) = tempfile.mkstemp(dir=os.path.dirname(indexfn),
+                                           prefix=prefix,
+                                           suffix='.i')
+    os.close(tmpfd)
+
+    r1 = revlog.revlog(util.opener(os.getcwd(), audit=False), indexfn)
+    r2 = revlog.revlog(util.opener(os.getcwd(), audit=False), tmpindexfn)
+
+    datafn, tmpdatafn = r1.datafile, r2.datafile
 
     oldindexfn = indexfn + '.old'
     olddatafn = datafn + '.old'
@@ -150,17 +166,6 @@ def shrink(ui, repo, **opts):
                            'exists from a previous run; please clean up '
                            'before running again') % (oldindexfn, olddatafn))
 
-    ui.write(_('shrinking %s\n') % indexfn)
-    prefix = os.path.basename(indexfn)[:-1]
-    (tmpfd, tmpindexfn) = tempfile.mkstemp(dir=os.path.dirname(indexfn),
-                                           prefix=prefix,
-                                           suffix='.i')
-    tmpdatafn = tmpindexfn[:-2] + '.d'
-    os.close(tmpfd)
-
-    r1 = revlog.revlog(util.opener(os.getcwd(), audit=False), indexfn)
-    r2 = revlog.revlog(util.opener(os.getcwd(), audit=False), tmpindexfn)
-
     # Don't use repo.transaction(), because then things get hairy with
     # paths: some need to be relative to .hg, and some need to be
     # absolute. Doing it this way keeps things simple: everything is an
@@ -170,30 +175,44 @@ def shrink(ui, repo, **opts):
                                  open,
                                  repo.sjoin('journal'))
 
+    def ignoremissing(func):
+        def f(*args, **kw):
+            try:
+                return func(*args, **kw)
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+        return f
+
     try:
         try:
             order = toposort(ui, r1)
             writerevs(ui, r1, r2, order, tr)
-            report(ui, datafn, tmpdatafn)
+            report(ui, r1, r2)
             tr.close()
         except:
             # Abort transaction first, so we truncate the files before
             # deleting them.
             tr.abort()
-            if os.path.exists(tmpindexfn):
-                os.unlink(tmpindexfn)
-            if os.path.exists(tmpdatafn):
-                os.unlink(tmpdatafn)
+            for fn in (tmpindexfn, tmpdatafn):
+                ignoremissing(os.unlink)(fn)
             raise
         if not opts.get('dry_run'):
-            # Racy since both files cannot be renamed atomically
+            # racy, both files cannot be renamed atomically
+            # copy files
             util.os_link(indexfn, oldindexfn)
-            util.os_link(datafn, olddatafn)
+            ignoremissing(util.os_link)(datafn, olddatafn)
+            # rename
             util.rename(tmpindexfn, indexfn)
-            util.rename(tmpdatafn, datafn)
+            try:
+                util.rename(tmpdatafn, datafn)
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+                ignoremissing(os.unlink)(datafn)
         else:
-            os.unlink(tmpindexfn)
-            os.unlink(tmpdatafn)
+            for fn in (tmpindexfn, tmpdatafn):
+                ignoremissing(os.unlink)(fn)
     finally:
         lock.release()
 
