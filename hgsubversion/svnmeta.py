@@ -350,7 +350,6 @@ class SVNMeta(object):
         return subpath in self.filemap
 
     def get_parent_svn_branch_and_rev(self, number, branch):
-        number -= 1
         if (number, branch) in self.revmap:
             return number, branch
         real_num = 0
@@ -374,7 +373,7 @@ class SVNMeta(object):
                 parent_branch = None
             if branch_created_rev <= number+1 and branch != parent_branch:
                 return self.get_parent_svn_branch_and_rev(
-                                                parent_branch_rev+1,
+                                                parent_branch_rev,
                                                 parent_branch)
         if real_num != 0:
             return real_num, branch
@@ -391,14 +390,14 @@ class SVNMeta(object):
                 fromtag = self.get_path_tag(self.remotename(tbranch))
                 if not fromtag:
                     # Created from a regular branch, not another tag
-                    tagged = self.get_parent_svn_branch_and_rev(trev + 1, tbranch)
+                    tagged = self.get_parent_svn_branch_and_rev(trev, tbranch)
                     return node.hex(self.revmap[tagged])
                 tag = fromtag
             # Reference an existing tag
             limitedtags = maps.TagMap(self.repo, endrev=number-1)
             if tag in limitedtags:
                 return limitedtags[tag]
-        r, br = self.get_parent_svn_branch_and_rev(number, branch)
+        r, br = self.get_parent_svn_branch_and_rev(number - 1, branch)
         if r is not None:
             return self.revmap[r, br]
         return revlog.nullid
@@ -608,7 +607,7 @@ class SVNMeta(object):
                             tagged = node.hex(self.tags[fromtag])
                     else:
                         tagged = node.hex(self.revmap[
-                            self.get_parent_svn_branch_and_rev(r+1, b)])
+                            self.get_parent_svn_branch_and_rev(r, b)])
                 else:
                     tagged = node.hex(node.nullid)
                 src += '%s %s\n' % (tagged, tag)
