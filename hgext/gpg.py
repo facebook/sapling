@@ -6,7 +6,7 @@
 '''commands to sign and verify changesets'''
 
 import os, tempfile, binascii
-from mercurial import util, commands, match, cmdutil
+from mercurial import util, commands, match
 from mercurial import node as hgnode
 from mercurial.i18n import _
 
@@ -237,7 +237,7 @@ def sign(ui, repo, *revs, **opts):
         repo.opener("localsigs", "ab").write(sigmessage)
         return
 
-    msigs = cmdutil.matchfiles(repo, ['.hgsigs'])
+    msigs = match.exact(repo.root, '', ['.hgsigs'])
     s = repo.status(match=msigs, unknown=True, ignored=True)[:6]
     if util.any(s) and not opts["force"]:
         raise util.Abort(_("working copy of .hgsigs is changed "
