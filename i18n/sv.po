@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-02-16 18:12+0100\n"
-"PO-Revision-Date: 2010-02-16 22:01+0100\n"
+"POT-Creation-Date: 2010-02-24 19:41+0100\n"
+"PO-Revision-Date: 2010-02-24 19:47+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -159,8 +159,11 @@ msgstr ""
 msgid "a bookmark cannot have the name of an existing branch"
 msgstr ""
 
+msgid "no bookmarks set\n"
+msgstr "inga bokmärken satta\n"
+
 msgid "force"
-msgstr ""
+msgstr "tvinga"
 
 msgid "revision"
 msgstr "revision"
@@ -1436,6 +1439,10 @@ msgstr ""
 msgid "uncommitted merge - please provide a specific revision"
 msgstr ""
 
+#, python-format
+msgid "Signing %d:%s\n"
+msgstr "Signerar %d:%s\n"
+
 msgid "Error while signing"
 msgstr ""
 
@@ -1552,6 +1559,10 @@ msgid ""
 "  # If you want hyperlinks (optional)\n"
 "  baseurl = http://server/path/to/repo\n"
 msgstr ""
+
+#, python-format
+msgid "%s returned an error: %s"
+msgstr "%s returnerade ett fel: %s"
 
 #, python-format
 msgid "hgcia: sending update to %s\n"
@@ -1986,6 +1997,9 @@ msgstr ""
 
 msgid "unhooked all commit hooks\n"
 msgstr ""
+
+msgid "hg keyword configuration and expansion example"
+msgstr "exempel på nyckelordskonfiguration och -expansion i hg"
 
 msgid ""
 "\n"
@@ -2717,6 +2731,10 @@ msgstr ""
 #, python-format
 msgid "A patch named %s already exists in the series file"
 msgstr ""
+
+#, python-format
+msgid "renaming %s to %s\n"
+msgstr "döper om %s till %s\n"
 
 msgid ""
 "restore the queue state saved by a revision (DEPRECATED)\n"
@@ -3988,8 +4006,28 @@ msgstr ""
 msgid "commit failed"
 msgstr ""
 
-msgid "apply changeset? [ynmpcq?]:"
+msgid ""
+"y: transplant this changeset\n"
+"n: skip this changeset\n"
+"m: merge at this changeset\n"
+"p: show patch\n"
+"c: commit selected changesets\n"
+"q: cancel transplant\n"
+"?: show this help\n"
 msgstr ""
+"y: transplantera denna ändring\n"
+"n: hoppa över denna ändring\n"
+"m: sammanfoga vid denna ändring\n"
+"p: visa patch\n"
+"c: arkivera valda ändringar\n"
+"q: avbryt transplantation\n"
+"?: visa denna hjälp\n"
+
+msgid "apply changeset? [ynmpcq?]:"
+msgstr "applicera ändring? [ynmpcq?]:"
+
+msgid "no such option\n"
+msgstr "inget sådant alternativ\n"
 
 msgid ""
 "transplant changesets from another branch\n"
@@ -5352,6 +5390,9 @@ msgid ""
 "    revisions are specified, the working directory files are compared\n"
 "    to its parent.\n"
 "\n"
+"    Alternatively you can specify -c/--change with a revision to see\n"
+"    the changes in that changeset relative to its first parent.\n"
+"\n"
 "    Without the -a/--text option, diff will avoid generating diffs of\n"
 "    files it detects as binary. With -a, diff will generate a diff\n"
 "    anyway, probably with undesirable results.\n"
@@ -5374,6 +5415,9 @@ msgstr ""
 "    revisioner. Om bara en revision anges kommer den att jämföras med\n"
 "    arbetskatalogen, och om ingen revision anges, jämförs arbetskatalogens\n"
 "    filer med dess förälder.\n"
+"\n"
+"    Alternativt så kan du ange -c/--change med en revision för att se\n"
+"    modifikationerna i den ändringen relativt till dess första förälder.\n"
 "\n"
 "    Utan flaggan -a/--text, kommer diff att försöka undvika att visa\n"
 "    skillnader mellan binära filer. Med -a, kommer en diff att skapas ändå,\n"
@@ -7217,8 +7261,8 @@ msgstr "[FLAGGA]..."
 msgid "revision to check"
 msgstr "revision att kontrollera"
 
-msgid "[OPTION]... [-r REV1 [-r REV2]] [FILE]..."
-msgstr "[FLAGGA]... [-r REV1 [-r REV2]] [FIL]..."
+msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
+msgstr "[FLAGGA]... ([-c REV] | [-r REV1 [-r REV2]]) [FIL]..."
 
 msgid "diff against the second parent"
 msgstr "diffa mot den andra föräldern"
@@ -8799,6 +8843,12 @@ msgstr ""
 msgid "searching for changes\n"
 msgstr "söker efter ändringar\n"
 
+msgid "queries"
+msgstr "frågar"
+
+msgid "searching"
+msgstr "söker"
+
 msgid "already have changeset "
 msgstr ""
 
@@ -8844,12 +8894,27 @@ msgstr "notera: osynkade fjärrändringar!\n"
 msgid "%d changesets found\n"
 msgstr "%d ändringar hittades\n"
 
+msgid "bundle changes"
+msgstr "bunta ändringar"
+
+msgid "chunks"
+msgstr "stycken"
+
+msgid "bundle manifests"
+msgstr "bunta manifest"
+
 #, python-format
 msgid "empty or missing revlog for %s"
 msgstr "tom eller saknad revlog för %s"
 
+msgid "bundle files"
+msgstr "bunta filer"
+
 msgid "adding changesets\n"
 msgstr "lägger till ändringar\n"
+
+msgid "changesets"
+msgstr "ändringar"
 
 msgid "received changelog group is empty"
 msgstr "mottagen ändringsgrupp är tom"
@@ -8857,11 +8922,17 @@ msgstr "mottagen ändringsgrupp är tom"
 msgid "adding manifests\n"
 msgstr "lägger till manifest\n"
 
+msgid "manifests"
+msgstr "manifest"
+
 msgid "adding file changes\n"
 msgstr "lägger till filändringar\n"
 
 msgid "received file revlog group is empty"
 msgstr "mottagen revlog-grupp för filer är tom"
+
+msgid "files"
+msgstr "filer"
 
 #, python-format
 msgid "missing file data for %s:%s - run hg verify"
@@ -9061,12 +9132,12 @@ msgid "file %s already exists\n"
 msgstr ""
 
 #, python-format
-msgid "Hunk #%d succeeded at %d %s(offset %d line).\n"
-msgstr ""
+msgid "Hunk #%d succeeded at %d with fuzz %d (offset %d lines).\n"
+msgstr "Stycke #%d lyckades vid %d med luddigheten %d (offset %d rader).\n"
 
 #, python-format
-msgid "Hunk #%d succeeded at %d %s(offset %d lines).\n"
-msgstr ""
+msgid "Hunk #%d succeeded at %d (offset %d lines).\n"
+msgstr "Stycke #%d lyckades vid %d (offset %d rader).\n"
 
 #, python-format
 msgid "Hunk #%d FAILED at %d\n"
@@ -9383,6 +9454,10 @@ msgstr ""
 msgid "http auth: user %s, password %s\n"
 msgstr ""
 
+#, python-format
+msgid "ignoring invalid [auth] key '%s'\n"
+msgstr "ignorerar ogiltig [auth]-nyckel '%s'\n"
+
 msgid "certificate checking requires Python 2.6"
 msgstr "certifikatkontroll kräver Python 2.6"
 
@@ -9532,6 +9607,9 @@ msgstr "arkivet använder revlog-format %d\n"
 msgid "checking changesets\n"
 msgstr "kontrollerar ändringar\n"
 
+msgid "changelog"
+msgstr "ändringslogg"
+
 #, python-format
 msgid "unpacking changeset %s"
 msgstr ""
@@ -9552,6 +9630,9 @@ msgstr ""
 
 msgid "crosschecking files in changesets and manifests\n"
 msgstr "korskontrollerar filer i ändringar och manifest\n"
+
+msgid "crosscheck"
+msgstr "korskontroll"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
