@@ -24,7 +24,7 @@ at: 0/5
 |\   tag:         master
 | |  tag:         default/master
 | |  tag:         tip
-| |  parent:      1:1436150b86c2
+| |  parent:      3:1436150b86c2
 | |  parent:      4:7f6c791a169f
 | |  user:        test <test@example.org>
 | |  date:        Mon Jan 01 00:00:13 2007 +0000
@@ -32,31 +32,31 @@ at: 0/5
 | |
 | o    changeset:   4:7f6c791a169f
 | |\   parent:      2:7bcd915dc873
-| | |  parent:      3:37c124f2d0a0
+| | |  parent:      1:37c124f2d0a0
 | | |  user:        test <test@example.org>
 | | |  date:        Mon Jan 01 00:00:13 2007 +0000
 | | |  summary:     Merge branches 'branch1' and 'branch2'
 | | |
-| | o  changeset:   3:37c124f2d0a0
-| | |  tag:         branch2
-| | |  tag:         default/branch2
+o | |  changeset:   3:1436150b86c2
 | | |  parent:      0:3442585be8a6
 | | |  user:        test <test@example.org>
-| | |  date:        Mon Jan 01 00:00:12 2007 +0000
-| | |  summary:     add gamma
+| | |  date:        Mon Jan 01 00:00:13 2007 +0000
+| | |  summary:     add delta
 | | |
-| o |  changeset:   2:7bcd915dc873
-| |/   tag:         branch1
++---o  changeset:   2:7bcd915dc873
+| |    tag:         branch1
 | |    tag:         default/branch1
 | |    parent:      0:3442585be8a6
 | |    user:        test <test@example.org>
 | |    date:        Mon Jan 01 00:00:11 2007 +0000
 | |    summary:     add beta
 | |
-o |  changeset:   1:1436150b86c2
-|/   user:        test <test@example.org>
-|    date:        Mon Jan 01 00:00:13 2007 +0000
-|    summary:     add delta
+| o  changeset:   1:37c124f2d0a0
+|/   tag:         branch2
+|    tag:         default/branch2
+|    user:        test <test@example.org>
+|    date:        Mon Jan 01 00:00:12 2007 +0000
+|    summary:     add gamma
 |
 o  changeset:   0:3442585be8a6
    user:        test <test@example.org>

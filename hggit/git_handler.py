@@ -1,5 +1,4 @@
 import os, math, urllib, re
-import toposort
 
 from dulwich.errors import HangupException
 from dulwich.index import commit_tree
@@ -371,19 +370,25 @@ class GitHandler(object):
                         todo.append(sha)
 
         # traverse the heads getting a list of all the unique commits
+        commits = []
+        seen = set(todo)
         while todo:
-            sha = todo.pop()
-            assert isinstance(sha, str)
+            sha = todo[-1]
             if sha in done:
+                todo.pop()
                 continue
-            done.add(sha)
+            assert isinstance(sha, str)
             obj = self.git.get_object(sha)
             assert isinstance(obj, Commit)
-            convert_list[sha] = obj
-            todo.extend([p for p in obj.parents if p not in done])
-
-        # sort the commits
-        commits = toposort.TopoSort(convert_list).items()
+            for p in obj.parents:
+                if p not in done:
+                    todo.append(p)
+                    break
+            else:
+                commits.append(sha)
+                convert_list[sha] = obj
+                done.add(sha)
+                todo.pop()
 
         commits = [commit for commit in commits if not commit in self._map_git]
         # import each of the commits, oldest first
