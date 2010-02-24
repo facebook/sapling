@@ -354,14 +354,21 @@ class GitHandler(object):
         convert_list = {}
 
         # get a list of all the head shas
+        seenheads = set()
+        if refs is None:
+            refs = self.git.refs
         if refs:
-          for head, sha in refs.iteritems():
-              # refs contains all the refs in the server, not just the ones
-              # we are pulling
-              if sha in self.git.object_store:
-                  todo.append(sha)
-        else:
-            todo = self.git.refs.values()[:]
+            for sha in refs.itervalues():
+                # refs contains all the refs in the server, not just the ones
+                # we are pulling
+                if sha in self.git.object_store:
+                    obj = self.git.get_object(sha)
+                    while isinstance(obj, Tag):
+                        obj_type, sha = obj.get_object()
+                        obj = self.git.get_object(sha)
+                    if isinstance (obj, Commit) and sha not in seenheads:
+                        seenheads.add(sha)
+                        todo.append(sha)
 
         # traverse the heads getting a list of all the unique commits
         while todo:
@@ -371,15 +378,9 @@ class GitHandler(object):
                 continue
             done.add(sha)
             obj = self.git.get_object(sha)
-            if isinstance (obj, Commit):
-                convert_list[sha] = obj
-                todo.extend([p for p in obj.parents if p not in done])
-            if isinstance(obj, Tag):
-                (obj_type, obj_sha) = obj.get_object()
-                obj = self.git.get_object(obj_sha)
-                if isinstance (obj, Commit):
-                    convert_list[sha] = obj
-                    todo.extend([p for p in obj.parents if p not in done])
+            assert isinstance(obj, Commit)
+            convert_list[sha] = obj
+            todo.extend([p for p in obj.parents if p not in done])
 
         # sort the commits
         commits = toposort.TopoSort(convert_list).items()
