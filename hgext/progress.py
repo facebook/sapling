@@ -170,6 +170,10 @@ class progbar(object):
 sharedprog = None
 
 def uisetup(ui):
+    # Apps that derive a class from ui.ui() can use
+    # setconfig('progress', 'disable', 'True') to disable this extension
+    if ui.configbool('progress', 'disable'):
+        return
     if ui.interactive() and not ui.debugflag and not ui.quiet:
         # we instantiate one globally shared progress bar to avoid
         # competing progress bars when multiple UI objects get created
