@@ -141,7 +141,7 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
         config = dict()
         for key, val in self.ui.configitems('auth'):
             if '.' not in key:
-                self.ui.warn(_("ignoring invalid [auth] key '%s'\n" % key))
+                self.ui.warn(_("ignoring invalid [auth] key '%s'\n") % key)
                 continue
             group, setting = key.split('.', 1)
             gdict = config.setdefault(group, dict())
