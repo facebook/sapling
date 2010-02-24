@@ -369,6 +369,13 @@ class GitHandler(object):
                         seenheads.add(sha)
                         todo.append(sha)
 
+        # sort by commit date
+        def commitdate(sha):
+            obj = self.git.get_object(sha)
+            return obj.commit_time-obj.commit_timezone
+
+        todo.sort(key=commitdate, reverse=True)
+
         # traverse the heads getting a list of all the unique commits
         commits = []
         seen = set(todo)
