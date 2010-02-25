@@ -24,7 +24,7 @@ from mercurial import revlog, transaction, node, util
 from mercurial import changegroup
 from mercurial.i18n import _
 
-def toposort(ui, rl):
+def toposort_branchsort(ui, rl):
 
     children = {}
     root = []
@@ -130,9 +130,18 @@ def report(ui, r1, r2):
              % (shrink_percent, shrink_factor))
 
 def shrink(ui, repo, **opts):
+    """shrink a revlog by reordering revisions
+
+    Rewrites all the entries in some revlog of the current repository
+    (by default, the manifest log) to save space.
+
+    Different sort algorithms have different performance
+    characteristics.  Use ``--sort`` to select a sort algorithm so you
+    can determine which works best for your data.  The default
+    algorithm, ``branchsort``, works well for workflows with lots of
+    active (unmerged) branches, but not so well when all branches have
+    been merged and there is only one repository head.
     """
-    Shrink revlog by re-ordering revisions. Will operate on manifest for
-    the given repository if no other revlog is specified."""
 
     if not repo.local():
         raise util.Abort(_('not a local repository: %s') % repo.root)
@@ -150,6 +159,12 @@ def shrink(ui, repo, **opts):
         if not indexfn.startswith(store):
             raise util.Abort(_('--revlog option must specify a revlog in %s, '
                                'not %s') % (store, indexfn))
+
+    sortname = opts['sort']
+    try:
+        toposort = globals()['toposort_' + sortname]
+    except KeyError:
+        raise util.Abort(_('no such toposort algorithm: %s') % sortname)
 
     if not os.path.exists(indexfn):
         raise util.Abort(_('no such file: %s') % indexfn)
@@ -241,6 +256,7 @@ cmdtable = {
     'shrink': (shrink,
                [('', 'revlog', '', _('index (.i) file of the revlog to shrink')),
                 ('n', 'dry-run', None, _('do not shrink, simulate only')),
+                ('', 'sort', 'branchsort', 'name of sort algorithm to use'),
                 ],
                _('hg shrink [--revlog PATH]'))
 }
