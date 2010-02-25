@@ -4,11 +4,9 @@ importing Hg objects into Git
 Counting objects: 3, done.
 Total 3 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
-at: 0/1
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to git://localhost/gitrepo
 importing Hg objects into Git
-at: 0/1
 creating and sending data
     default::refs/tags/alpha => GIT:7eeab2ea
     default::refs/heads/master => GIT:9a2616b9
@@ -33,7 +31,6 @@ Counting objects: 6, done.
 Compressing objects:  33% (1/3)   Compressing objects:  66% (2/3)   Compressing objects: 100% (3/3)   Compressing objects: 100% (3/3), done.
 Total 6 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
-at: 0/2
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   1:d529e9229f6d
 |  tag:         default/master

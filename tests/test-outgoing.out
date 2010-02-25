@@ -4,11 +4,9 @@ importing Hg objects into Git
 Counting objects: 3, done.
 Total 3 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
-at: 0/1
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 comparing with git://localhost/gitrepo
 importing Hg objects into Git
-at: 0/2
 changeset:   1:0564f526fb0f
 tag:         beta
 user:        test
@@ -58,7 +56,6 @@ Counting objects: 3, done.
 Compressing objects:  50% (1/2)   Compressing objects: 100% (2/2)   Compressing objects: 100% (2/2), done.
 Total 3 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
-at: 0/1
 (run 'hg update' to get a working copy)
 comparing with git://localhost/gitrepo
 importing Hg objects into Git

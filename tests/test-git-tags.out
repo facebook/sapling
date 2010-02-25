@@ -5,7 +5,6 @@ Counting objects: 7, done.
 Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
 Total 7 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
-at: 0/2
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   1:99dcc15b7b07
 |  tag:         default/master

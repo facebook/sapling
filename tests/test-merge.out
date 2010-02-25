@@ -13,13 +13,11 @@ Counting objects: 11, done.
 Compressing objects:  14% (1/7)   Compressing objects:  28% (2/7)   Compressing objects:  42% (3/7)   Compressing objects:  57% (4/7)   Compressing objects:  71% (5/7)   Compressing objects:  85% (6/7)   Compressing objects: 100% (7/7)   Compressing objects: 100% (7/7), done.
 Total 11 (delta 3), reused 0 (delta 0)
 importing Git objects into Hg
-at: 0/4
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % clear the cache to be sure it is regenerated correctly
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
 importing Hg objects into Git
-at: 0/4
 creating and sending data
 % git log in repo pushed from hg
 commit 5806851511aaf3bfe813ae3a86c5027165fa9b96

@@ -173,20 +173,16 @@ class GitHandler(object):
         nodes = [self.repo.lookup(n) for n in self.repo]
         export = [node for node in nodes if not hex(node) in self._map_hg]
         total = len(export)
-        if total:
-          magnitude = int(math.log(total, 10)) + 1
-        else:
-          magnitude = 1
         for i, rev in enumerate(export):
-            if i%100 == 0:
-                self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
-
+            self.ui.progress('import', i, total=total)
             ctx = self.repo.changectx(rev)
             state = ctx.extra().get('hg-git', None)
             if state == 'octopus':
                 self.ui.debug("revision %d is a part of octopus explosion\n" % ctx.rev())
                 continue
             self.export_hg_commit(rev)
+        self.ui.progress('import', None, total=total)
+
 
     # convert this commit into git objects
     # go through the manifest, convert all blobs/trees we don't have
@@ -401,15 +397,11 @@ class GitHandler(object):
         commits = [commit for commit in commits if not commit in self._map_git]
         # import each of the commits, oldest first
         total = len(commits)
-        if total:
-            magnitude = int(math.log(total, 10)) + 1
-        else:
-            magnitude = 1
         for i, csha in enumerate(commits):
-            if i%100 == 0:
-                self.ui.status(_("at: %*d/%d\n") % (magnitude, i, total))
+            self.ui.progress('import', i, total=total, unit='commits')
             commit = convert_list[csha]
             self.import_git_commit(commit)
+        self.ui.progress('import', None, total=total, unit='commits')
 
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
@@ -844,4 +836,4 @@ class GitHandler(object):
                     transportpath = path
                 return transport(host, thin_packs=False), transportpath
         # if its not git or git+ssh, try a local url..
-        return SubprocessGitClient(thin_packs=False), uri
+        return client.SubprocessGitClient(thin_packs=False), uri

@@ -6,13 +6,11 @@ importing Hg objects into Git
 Counting objects: 2, done.
 Total 2 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
-at: 0/1
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 files: 
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
 importing Hg objects into Git
-at: 0/1
 creating and sending data
 commit 678256865a8c85ae925bf834369264193c88f8de
 Author: test <test@example.org>

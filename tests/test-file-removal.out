@@ -11,7 +11,6 @@ Counting objects: 14, done.
 Compressing objects:  12% (1/8)   Compressing objects:  25% (2/8)   Compressing objects:  37% (3/8)   Compressing objects:  50% (4/8)   Compressing objects:  62% (5/8)   Compressing objects:  75% (6/8)   Compressing objects:  87% (7/8)   Compressing objects: 100% (8/8)   Compressing objects: 100% (8/8), done.
 Total 14 (delta 1), reused 0 (delta 0)
 importing Git objects into Hg
-at: 0/5
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   4:ea41a3f0ed10
 |  tag:         master
@@ -51,7 +50,6 @@ beta
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
 importing Hg objects into Git
-at: 0/5
 creating and sending data
 commit b991de8952c482a7cd51162674ffff8474862218
 Author: test <test@example.org>
