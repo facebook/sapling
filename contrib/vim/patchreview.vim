@@ -1,13 +1,19 @@
 " VIM plugin for doing single, multi-patch or diff code reviews {{{
 " Home:  http://www.vim.org/scripts/script.php?script_id=1563
 
-" Version       : 0.2.1                                        "{{{
+" Version       : 0.2.2                                        "{{{
 " Author        : Manpreet Singh < junkblocker@yahoo.com >
 " Copyright     : 2006-2010 by Manpreet Singh
 " License       : This file is placed in the public domain.
 "                 No warranties express or implied. Use at your own risk.
 "
 " Changelog :
+"
+"   0.2.2 - Security fixes by removing custom tempfile creation
+"         - Removed need for DiffReviewCleanup/PatchReviewCleanup
+"         - Better command execution error detection and display
+"         - Improved diff view and folding by ignoring modelines
+"         - Improved tab labels display
 "
 "   0.2.1 - Minor temp directory autodetection logic and cleanup
 "
@@ -33,7 +39,10 @@
 "
 " Installing:
 "
-"   For a quick start...
+"   For a quick start, unzip patchreview.zip into your ~/.vim directory and
+"   restart Vim.
+"
+" Details:
 "
 "   Requirements:
 "
@@ -68,11 +77,9 @@
 "  and location of a temporary directory to use in your .vimrc.
 "
 "      let g:patchreview_patch       = '/path/to/gnu/patch'
-"      let g:patchreview_tmpdir      = '/tmp/or/something'
 "
 "      " If you are using filterdiff
 "      let g:patchreview_filterdiff  = '/path/to/filterdiff'
-"
 "
 "
 " Usage:
@@ -83,7 +90,6 @@
 
 " Enabled only during development
 " unlet! g:loaded_patchreview " DEBUG
-" unlet! g:patchreview_tmpdir " DEBUG
 " unlet! g:patchreview_patch " DEBUG
 " unlet! g:patchreview_filterdiff " DEBUG
 " let g:patchreview_patch = 'patch'    " DEBUG
@@ -100,7 +106,7 @@ endif
 if (! exists('g:patchreview_debug') && exists('g:loaded_patchreview')) || &compatible
   finish
 endif
-let g:loaded_patchreview="0.2.1"
+let g:loaded_patchreview="0.2.2"
 
 let s:msgbufname = '-PatchReviewMessages-'
 
@@ -180,56 +186,6 @@ function! <SID>PR_checkBinary(BinaryName)                                 "{{{
   else
     return 1
   endif
-endfunction
-"}}}
-
-function! <SID>PR_GetTempDirLocation(Quiet)                               "{{{
-  if exists('g:patchreview_tmpdir')
-    if ! isdirectory(g:patchreview_tmpdir) || ! filewritable(g:patchreview_tmpdir)
-      if ! a:Quiet
-        Pecho 'Temporary directory specified by g:patchreview_tmpdir [' . g:patchreview_tmpdir . '] is not accessible.'
-        return 0
-      endif
-    endif
-  elseif exists("$TMP") && isdirectory($TMP) && filewritable($TMP)
-    let g:patchreview_tmpdir = $TMP
-  elseif exists("$TEMP") && isdirectory($TEMP) && filewritable($TEMP)
-    let g:patchreview_tmpdir = $TEMP
-  elseif exists("$TMPDIR") && isdirectory($TMPDIR) && filewritable($TMPDIR)
-    let g:patchreview_tmpdir = $TMPDIR
-  else
-    if has("unix")
-      if isdirectory("/tmp")
-        let g:patchreview_tmpdir = "/tmp"
-      elseif isdirectory(expand("~/tmp"))
-        let g:patchreview_tmpdir = expand("~/tmp")
-      endif
-    elseif has("win32")
-      if isdirectory('c:\\tmp')
-        let g:patchreview_tmpdir = 'c:\\tmp'
-      elseif isdirectory('c:\\temp')
-        let g:patchreview_tmpdir = 'c:\\temp'
-      elseif isdirectory('c:\\windows\\temp')
-        let g:patchreview_tmpdir = 'c:\\windows\\temp'
-      elseif isdirectory($USERPROFILE . '\Local Settings\Temp')  # NOTE : No \ issue here
-        let g:patchreview_tmpdir = $USERPROFILE . '\Local Settings\Temp'
-      endif
-    endif
-    if !exists('g:patchreview_tmpdir')
-      if ! a:Quiet
-        Pecho 'Could not figure out a temporary directory to use. Please specify g:patchreview_tmpdir in your .vimrc.'
-      endif
-      return 0
-    endif
-  endif
-  let g:patchreview_tmpdir = expand(g:patchreview_tmpdir, ':p')
-  let g:patchreview_tmpdir = g:patchreview_tmpdir . '/'
-  let g:patchreview_tmpdir = substitute(g:patchreview_tmpdir, '\\', '/', 'g')
-  let g:patchreview_tmpdir = substitute(g:patchreview_tmpdir, '/\+$', '/', '')
-  if has('win32')
-    let g:patchreview_tmpdir = substitute(g:patchreview_tmpdir, '/', '\\', 'g')
-  endif
-  return 1
 endfunction
 "}}}
 
@@ -680,11 +636,6 @@ function! <SID>_GenericReview(argslist)                                   "{{{
     return
   endif
 
-  let retval = s:PR_GetTempDirLocation(0)
-  if ! retval
-    return
-  endif
-
   " Requirements met, now execute
   let PatchFilePath = fnamemodify(PatchFilePath, ':p')
   if s:reviewmode == 'patch'
@@ -739,12 +690,7 @@ function! <SID>_GenericReview(argslist)                                   "{{{
       Pecho 'Old buffer for file [' . relpath . '] exists in modified state. Skipping review.', 1
       continue
     endif
-    let tmpname = substitute(relpath, '/', '_', 'g')
-    let tmpname = substitute(tmpname, '\\', '_', 'g')
-    let tmpname = g:patchreview_tmpdir . 'PatchReview.' . tmpname . '.' . strftime('%Y%m%d%H%M%S')
-    if has('win32')
-      let tmpname = substitute(tmpname, '/', '\\', 'g')
-    endif
+    let tmpname = tempname()
 
     " write patch for patch.filename into tmpname
     call writefile(patch.content, tmpname)
@@ -770,10 +716,26 @@ function! <SID>_GenericReview(argslist)                                   "{{{
         continue
       endif
     endif
+    call delete(tmpname)
     let s:origtabpagenr = tabpagenr()
     silent! exe 'tabedit ' . StrippedRelativeFilePath
     if exists('patchcmd')
+      " modelines in loaded files mess with diff comparision
+      let s:keep_modeline=&modeline
+      let &modeline=0
       silent! exe 'vert diffsplit ' . tmpname . '.file'
+      setlocal buftype=nofile
+      setlocal noswapfile
+      setlocal syntax=none
+      setlocal bufhidden=delete
+      setlocal nobuflisted
+      setlocal modifiable
+      setlocal nowrap
+      " Remove buffer name
+      silent! 0f
+      " Switch to original to get a nice tab title
+      silent! wincmd p
+      let &modeline=s:keep_modeline
     else
       silent! exe 'vnew'
     endif
@@ -788,18 +750,6 @@ function! <SID>_GenericReview(argslist)                                   "{{{
   Pecho '-----'
   Pecho 'Done.'
 
-endfunction
-"}}}
-
-function! <SID>PatchReviewCleanup()                                       "{{{
-  let retval = s:PR_GetTempDirLocation(1)
-  if retval && exists('g:patchreview_tmpdir') && isdirectory(g:patchreview_tmpdir) && filewritable(g:patchreview_tmpdir)
-    let zefilestr = globpath(g:patchreview_tmpdir, 'PatchReview.*')
-    let fileslist = split(zefilestr, '\m[\r\n]\+')
-    for thefile in fileslist
-      call delete(thefile)
-    endfor
-  endif
 endfunction
 "}}}
 
@@ -848,21 +798,17 @@ function! <SID>DiffReview(...)                                            "{{{
     return
   endif
 
-  let retval = s:PR_GetTempDirLocation(0)
-  if ! retval
-    Pecho 'DiffReview aborted.'
-    let &shortmess = s:save_shortmess
-    return
-  endif
-  let outfile = g:patchreview_tmpdir . 'PatchReview.diff.' . strftime('%Y%m%d%H%M%S')
-  let cmd = '!' . s:theDiffCmd . ' > "' . outfile . '"'
+  let outfile = tempname()
+  let cmd = s:theDiffCmd . ' > "' . outfile . '"'
   let v:errmsg = ''
-  silent exe cmd
+  let cout = system(cmd)
   if v:errmsg == '' && exists('l:vcs') && l:vcs == 'cvs' && v:shell_error == 1
     " Ignoring CVS non-error
   elseif v:errmsg != '' || v:shell_error
-    Pecho 'Could not execute [' . s:theDiffCmd . ']'
     Pecho v:errmsg
+    Pecho 'Could not execute [' . s:theDiffCmd . ']'
+    Pecho 'Error code: ' . v:shell_error
+    Pecho cout
     Pecho 'Diff review aborted.'
     let &shortmess = s:save_shortmess
     return
@@ -880,10 +826,6 @@ command! -nargs=* -complete=file PatchReview call s:PatchReview (<f-args>)
 
 " :DiffReview
 command! -nargs=0 DiffReview call s:DiffReview()
-
-" :PatchReviewCleanup
-command! -nargs=0 PatchReviewCleanup call s:PatchReviewCleanup ()
-command! -nargs=0 DiffReviewCleanup call s:PatchReviewCleanup ()
 "}}}
 
 " Development                                                               "{{{

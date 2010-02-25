@@ -1,5 +1,5 @@
 *patchreview.txt* Vim global plugin for doing single, multi-patch or diff code reviews
-                  Version  v0.2.1 (for Vim version 7.0 or higher)
+                  Version  v0.2.2 (for Vim version 7.0 or higher)
 
             Author: Manpreet Singh < junkblocker@yahoo.com >
             Copyright (C) 2006-2010 by Manpreet Singh
@@ -15,8 +15,6 @@ CONTENTS	                 *patchreview* *diffreview* *patchreview-contents*
   4. PatchReview Usage................................: |patchreview-usage|
      4.1 DiffReview Usage.............................: |:DiffReview|
      4.2 PatchReview Usage............................: |:PatchReview|
-     4.3 DiffReviewCleanup Usage......................: |:DiffReviewCleanup|
-     4.4 PatchReviewCleanup Usage.....................: |:PatchReviewCleanup|
 
 =============================================================================
 
@@ -36,21 +34,25 @@ It also improves on |:diffpatch|'s behaviour of creating the patched files in
 the same directory as original file which can lead to project workspace
 pollution.
 
+It does automatic diff generation for various version control systems by
+running their diff command.
+
 =============================================================================
 
 PatchReview Options                                     *patchreview-options*
 
-  g:patchreview_tmpdir = {string}
-      Optional path where the plugin can save temporary files.  If this is not
-      specified, the plugin tries to use TMP, TEMP and TMPDIR environment
-      variables in succession.
+  g:patchreview_patch = {string}
+      Optional path to patch binary. PatchReview tries to locate patch on
+      system path automatically. If the binary is not on system path, this
+      option tell PatchReview the full path to the binary.  This option, if
+      specified, overrides the default patch binary on the path.
 
     examples:
-        (On Windows) >
-            let g:patchreview_tmpdir = 'c:\\tmp'
+        (On Windows with Cygwin) >
+           let g:patchreview_patch = 'c:\\cygwin\\bin\\patch.exe'
 <
         (On *nix systems) >
-            let g:patchreview_tmpdir = '~/tmp'
+           let g:patchreview_patch = '/usr/bin/gpatch'
 <
 
   g:patchreview_filterdiff = {string}
@@ -69,20 +71,6 @@ PatchReview Options                                     *patchreview-options*
 >
            let g:patchreview_filterdiff = '/usr/bin/filterdiff'
 <
-  g:patchreview_patch = {string}
-      Optional path to patch binary. PatchReview tries to locate patch on
-      system path automatically. If the binary is not on system path, this
-      option tell PatchReview the full path to the binary.  This option, if
-      specified, overrides the default patch binary on the path.
-
-    examples:
-        (On Windows with Cygwin) >
-           let g:patchreview_patch = 'c:\\cygwin\\bin\\patch.exe'
-<
-        (On *nix systems) >
-           let g:patchreview_patch = '/usr/bin/gpatch'
-<
-
 =============================================================================
 
 PatchReview Usage                                          *patchreview-usage*
@@ -105,16 +93,5 @@ PatchReview Usage                                          *patchreview-usage*
 
     Only supports context or unified format patches.
 
-                                                          *:DiffReviewCleanup*
-                                                          *:PatchReviewCleanup*
-
-  :DiffReviewCleanup
-  :PatchReviewCleanup
-
-    After you are done using the :DiffReview or :PatchReview command, you can
-    cleanup the temporary files in the temporary directory using either of
-    these commands.
-
 ------------------------------------------------------------------------------
-
  vim: ft=help:ts=2:sts=2:sw=2:tw=78:norl:
