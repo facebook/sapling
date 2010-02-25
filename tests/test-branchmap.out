@@ -17,10 +17,10 @@ summary:     foo
 
 pushing to http://localhost:PORT
 searching for changes
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 1 files
+remote: adding changesets
+remote: adding manifests
+remote: adding file changes
+remote: added 1 changesets with 1 changes to 1 files
 changeset:   1:58e7c90d67cb
 branch:      æ
 tag:         tip
