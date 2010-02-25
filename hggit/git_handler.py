@@ -5,6 +5,7 @@ from dulwich.index import commit_tree
 from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone
 from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo
+from dulwich import client
 
 from hgext import bookmarks
 from mercurial.i18n import _
@@ -819,8 +820,9 @@ class GitHandler(object):
             return string.decode('ascii', 'replace').encode('utf-8')
 
     def get_transport_and_path(self, uri):
-        from dulwich.client import TCPGitClient, SSHGitClient, SubprocessGitClient
-        for handler, transport in (("git://", TCPGitClient), ("git@", SSHGitClient), ("git+ssh://", SSHGitClient)):
+        for handler, transport in (("git://", client.TCPGitClient),
+                                   ("git@", client.SSHGitClient),
+                                   ("git+ssh://", client.SSHGitClient)):
             if uri.startswith(handler):
                 # We need to split around : or /, whatever comes first
                 hostpath = uri[len(handler):]
