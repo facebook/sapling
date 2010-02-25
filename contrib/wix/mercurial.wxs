@@ -51,7 +51,7 @@
               <File Id='ReadMe' Name='ReadMe.html' DiskId='1' Source='contrib\win32\ReadMe.html' KeyPath='yes'/>
           </Component>
           <Component Id='COPYING' Guid='B7801DBA-1C49-4BF4-91AD-33C65F5C7895'>
-            <File Id='COPYING' Name='COPYING.rtf' DiskId='1' Source='..\misc\COPYING.rtf' />
+            <File Id='COPYING' Name='COPYING.rtf' DiskId='1' Source='contrib\wix\COPYING.rtf' />
           </Component>
           <Directory Id='HGRCD' Name='hgrc.d'>
             <Component Id='mercurial.rc' Guid='1D5FAEEE-7E6E-43B1-9F7F-802714316B15'>
@@ -115,7 +115,7 @@
     <UIRef Id="WixUI_FeatureTree" />
     <UIRef Id="WixUI_ErrorProgressText" />
 
-    <WixVariable Id="WixUILicenseRtf" Value="..\misc\COPYING.rtf" />
+    <WixVariable Id="WixUILicenseRtf" Value="contrib\wix\COPYING.rtf" />
 
     <Icon Id="hgIcon.ico" SourceFile="contrib/win32/mercurial.ico" />
 
