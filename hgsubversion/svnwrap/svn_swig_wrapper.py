@@ -22,10 +22,14 @@ from svn import ra
 from mercurial import util as hgutil
 
 def version():
-    return '%d.%d.%d' % (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO)
+    return '%d.%d.%d' % (core.SVN_VER_MAJOR, core.SVN_VER_MINOR,
+                         core.SVN_VER_MICRO)
 
-if (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO) < (1, 5, 0): #pragma: no cover
-    raise ImportError, 'You must have Subversion 1.5.0 or newer and matching SWIG bindings.'
+if (core.SVN_VER_MAJOR, core.SVN_VER_MINOR,
+    core.SVN_VER_MICRO) < (1, 5, 0): #pragma: no cover
+    raise ImportError, ('You must have Subversion 1.5.0 or newer and '
+                        'matching SWIG bindings. You appear to'
+                        ' have %s' % version())
 
 class SubversionRepoCanNotReplay(Exception):
     """Exception raised when the svn server is too old to have replay.
