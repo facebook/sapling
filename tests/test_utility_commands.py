@@ -9,7 +9,7 @@ from mercurial import node
 from mercurial import commands
 
 from hgsubversion import util
-from hgsubversion import utility_commands
+from hgsubversion import svncommands
 import test_util
 from hgsubversion import wrappers
 
@@ -33,7 +33,7 @@ class UtilityTests(test_util.TestBase):
         hg.update(self.repo, 'the_branch')
         u = self.ui()
         u.pushbuffer()
-        utility_commands.info(u, self.repo)
+        svncommands.info(u, self.repo)
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
@@ -44,7 +44,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(actual, expected)
         hg.update(self.repo, 'default')
         u.pushbuffer()
-        utility_commands.info(u, self.repo)
+        svncommands.info(u, self.repo)
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
@@ -55,7 +55,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(actual, expected)
         hg.update(self.repo, 'default')
         u.pushbuffer()
-        utility_commands.info(u, self.repo, rev=3)
+        svncommands.info(u, self.repo, rev=3)
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
@@ -70,7 +70,7 @@ class UtilityTests(test_util.TestBase):
         hg.update(self.repo, 'tip')
         u = self.ui()
         u.pushbuffer()
-        utility_commands.info(u, self.repo)
+        svncommands.info(u, self.repo)
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
@@ -187,7 +187,7 @@ class UtilityTests(test_util.TestBase):
                                          self.wc_path, noupdate=False)
         u = self.ui()
         u.pushbuffer()
-        utility_commands.genignore(u, self.repo, self.wc_path)
+        svncommands.genignore(u, self.repo, self.wc_path)
         self.assertEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
                          '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
 
@@ -196,7 +196,7 @@ class UtilityTests(test_util.TestBase):
         hg.update(self.repo, 'tip')
         u = self.ui()
         u.pushbuffer()
-        utility_commands.genignore(u, self.repo, self.wc_path)
+        svncommands.genignore(u, self.repo, self.wc_path)
         self.assertStringEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
                                '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
 
@@ -205,7 +205,7 @@ class UtilityTests(test_util.TestBase):
                                        'replace_trunk_with_branch.svndump')
         u = self.ui()
         u.pushbuffer()
-        utility_commands.listauthors(u,
+        svncommands.listauthors(u,
                                      args=[test_util.fileurl(self.repo_path)],
                                      authors=None)
         actual = u.popbuffer()
@@ -216,7 +216,7 @@ class UtilityTests(test_util.TestBase):
         test_util.load_svndump_fixture(self.repo_path,
                                        'replace_trunk_with_branch.svndump')
         author_path = os.path.join(self.repo_path, 'authors')
-        utility_commands.listauthors(self.ui(),
+        svncommands.listauthors(self.ui(),
                                      args=[test_util.fileurl(self.repo_path)],
                                      authors=author_path)
         self.assertEqual(open(author_path).read(), 'Augie=\nevil=\n')
