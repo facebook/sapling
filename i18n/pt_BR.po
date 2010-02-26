@@ -8884,8 +8884,8 @@ msgstr "suprime saída"
 msgid "enable additional output"
 msgstr "habilita saída adicional"
 
-msgid "set/override config option"
-msgstr "define/sobrepõe opção de configuração"
+msgid "set/override config option (use 'section.name=value')"
+msgstr "define/sobrepõe opção de configuração (use 'seção.nome=valor')"
 
 msgid "enable debugging output"
 msgstr "habilita saída de depuração"
@@ -11162,6 +11162,9 @@ msgstr "procurar mudanças remotas"
 msgid "push failed (unexpected response):"
 msgstr "o push falhou (resposta inesperada):"
 
+msgid "remote: "
+msgstr "remoto: "
+
 #, python-format
 msgid "push failed: %s"
 msgstr "o push falhou: %s"
@@ -11760,9 +11763,6 @@ msgstr "não foi possível criar repositório remoto"
 msgid "no suitable response from remote hg"
 msgstr "nenhuma resposta adequada do hg remoto"
 
-msgid "remote: "
-msgstr "remoto: "
-
 #, python-format
 msgid "push refused: %s"
 msgstr "envio recusado: %s"
@@ -11949,6 +11949,10 @@ msgstr "usuário:"
 #, python-format
 msgid "http auth: user %s, password %s\n"
 msgstr "autenticação http: usuário %s, senha %s\n"
+
+#, python-format
+msgid "ignoring invalid [auth] key '%s'\n"
+msgstr "ignorando chave inválida em [auth] '%s'\n"
 
 msgid "certificate checking requires Python 2.6"
 msgstr "verificação de certificado exige Python 2.6"
