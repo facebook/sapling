@@ -20,6 +20,7 @@ import test_push_renames
 import test_push_dirs
 import test_push_eol
 import test_rebuildmeta
+import test_single_dir_clone
 import test_svnwrap
 import test_tags
 import test_utility_commands

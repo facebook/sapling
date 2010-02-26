@@ -1,5 +1,6 @@
 import errno
 import shutil
+import unittest
 
 from mercurial import commands
 from mercurial import context
@@ -180,3 +181,7 @@ class TestSingleDir(test_util.TestBase):
         self.pushrevisions()
         self.assertTrue('default' in self.svnls(''))
         self.assertEquals(len(self.repo.branchheads('default')), 1)
+
+def suite():
+    all = [unittest.TestLoader().loadTestsFromTestCase(TestSingleDir)]
+    return unittest.TestSuite(all)
