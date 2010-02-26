@@ -11,7 +11,6 @@ from mercurial import context
 from mercurial import commands
 from mercurial import hg
 from mercurial import node
-from mercurial import ui
 from mercurial import revlog
 from mercurial import util as hgutil
 
@@ -94,7 +93,7 @@ class PushTests(test_util.TestBase):
             time.sleep(2)
             import shutil
             shutil.rmtree(self.wc_path)
-            commands.clone(ui.ui(), 'svn://%s:%d/' % (self.host, self.port),
+            commands.clone(self.ui(), 'svn://%s:%d/' % (self.host, self.port),
                            self.wc_path, noupdate=True)
 
             repo = self.repo

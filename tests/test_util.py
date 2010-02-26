@@ -97,6 +97,14 @@ def fileurl(path):
     url = 'file://%s%s' % (drive, path)
     return url
 
+def testui(stupid=False, layout='auto'):
+    u = ui.ui()
+    bools = {True: 'true', False: 'false'}
+    u.setconfig('ui', 'quiet', bools[True])
+    u.setconfig('hgsubversion', 'stupid', bools[stupid])
+    u.setconfig('hgsubversion', 'layout', layout)
+    return u
+
 def load_svndump_fixture(path, fixture_name):
     '''Loads an svnadmin dump into a fresh repo at path, which should not
     already exist.
@@ -114,17 +122,9 @@ def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdi
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
-
-    confvars = locals()
-    def conf():
-        _ui = ui.ui()
-        for var in ('stupid', 'layout'):
-            _ui.setconfig('hgsubversion', var, str(confvars[var]))
-        return _ui
-    _ui = conf()
+    _ui = testui(stupid=stupid, layout=layout)
     commands.clone(_ui, fileurl(repo_path), wc_path, noupdate=noupdate)
-    _ui = conf()
-    return hg.repository(_ui, wc_path)
+    return hg.repository(testui(), wc_path)
 
 def rmtree(path):
     # Read-only files cannot be removed under Windows
@@ -192,6 +192,9 @@ class TestBase(unittest.TestCase):
                 fromfile='expected', tofile='got'))
             raise
 
+    def ui(self, stupid=False, layout='auto'):
+        return testui(stupid, layout)
+
     def _load_fixture_and_fetch(self, fixture_name, subdir=None, stupid=False, layout='auto'):
         if layout == 'single':
             if subdir is None:
@@ -205,7 +208,7 @@ class TestBase(unittest.TestCase):
     # define this as a property so that it reloads anytime we need it
     @property
     def repo(self):
-        return hg.repository(ui.ui(), self.wc_path)
+        return hg.repository(testui(), self.wc_path)
 
     def pushrevisions(self, stupid=False, expected_extra_back=0):
         before = len(self.repo)

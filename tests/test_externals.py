@@ -113,7 +113,7 @@ class TestFetchExternals(test_util.TestBase):
                 self.assertTrue(not os.path.isdir(p),
                                 'unexpected: %s@%r' % (d, rev))
 
-        ui = test_util.ui.ui()
+        ui = self.ui()
         repo = self._load_fixture_and_fetch('externals.svndump', stupid=0)
         commands.update(ui, repo)
         checkdeps(['deps/project1'], [], repo, 0)

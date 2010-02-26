@@ -4,7 +4,6 @@ import os
 import unittest
 
 from mercurial import commands
-from mercurial import ui
 from mercurial import node
 
 import test_util
@@ -30,10 +29,9 @@ class MapTests(test_util.TestBase):
         authormap.write('Augie=Augie Fackler <durin42@gmail.com> # stuffy\n')
         authormap.write("Augie Fackler <durin42@gmail.com>\n")
         authormap.close()
-        _ui = ui.ui()
-        _ui.setconfig('hgsubversion', 'stupid', str(stupid))
-        _ui.setconfig('hgsubversion', 'authormap', self.authors)
-        commands.clone(_ui, test_util.fileurl(self.repo_path),
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'authormap', self.authors)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
                        self.wc_path, authors=self.authors)
         self.assertEqual(self.repo[0].user(),
                          'Augie Fackler <durin42@gmail.com>')
@@ -48,10 +46,9 @@ class MapTests(test_util.TestBase):
         authormap = open(self.authors, 'w')
         authormap.write("evil=Testy <test@test>")
         authormap.close()
-        _ui = ui.ui()
-        _ui.setconfig('hgsubversion', 'stupid', str(stupid))
-        _ui.setconfig('hgsubversion', 'authormap', self.authors)
-        commands.clone(_ui, test_util.fileurl(self.repo_path),
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'authormap', self.authors)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
                        self.wc_path, authors=self.authors)
         self.assertEqual(self.repo[0].user(),
                          'Augie@5b65bade-98f3-4993-a01f-b7a6710da339')
@@ -67,7 +64,7 @@ class MapTests(test_util.TestBase):
         new = open(self.authors, 'w')
         new.write(open(orig).read())
         new.close()
-        test = maps.AuthorMap(ui.ui(), self.authors)
+        test = maps.AuthorMap(self.ui(), self.authors)
         fromself = set(test)
         test.load(orig)
         all = set(test)
@@ -78,10 +75,9 @@ class MapTests(test_util.TestBase):
         filemap = open(self.filemap, 'w')
         filemap.write("include alpha\n")
         filemap.close()
-        _ui = ui.ui()
-        _ui.setconfig('hgsubversion', 'stupid', str(stupid))
-        _ui.setconfig('hgsubversion', 'filemap', self.filemap)
-        commands.clone(_ui, test_util.fileurl(self.repo_path),
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'filemap', self.filemap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
                        self.wc_path, filemap=self.filemap)
         self.assertEqual(node.hex(self.repo[0].node()), '88e2c7492d83e4bf30fbb2dcbf6aa24d60ac688d')
         self.assertEqual(node.hex(self.repo['default'].node()), 'e524296152246b3837fe9503c83b727075835155')
@@ -94,10 +90,9 @@ class MapTests(test_util.TestBase):
         filemap = open(self.filemap, 'w')
         filemap.write("exclude alpha\n")
         filemap.close()
-        _ui = ui.ui()
-        _ui.setconfig('hgsubversion', 'stupid', str(stupid))
-        _ui.setconfig('hgsubversion', 'filemap', self.filemap)
-        commands.clone(_ui, test_util.fileurl(self.repo_path),
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'filemap', self.filemap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
                        self.wc_path, filemap=self.filemap)
         self.assertEqual(node.hex(self.repo[0].node()), '2c48f3525926ab6c8b8424bcf5eb34b149b61841')
         self.assertEqual(node.hex(self.repo['default'].node()), 'b37a3c0297b71f989064d9b545b5a478bbed7cc1')
@@ -111,10 +106,9 @@ class MapTests(test_util.TestBase):
         branchmap.write("badname = good-name # stuffy\n")
         branchmap.write("feature = default\n")
         branchmap.close()
-        _ui = ui.ui()
-        _ui.setconfig('hgsubversion', 'stupid', str(stupid))
-        _ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
-        commands.clone(_ui, test_util.fileurl(self.repo_path),
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
                        self.wc_path, branchmap=self.branchmap)
         branches = set(self.repo[i].branch() for i in self.repo)
         self.assert_('badname' not in branches)

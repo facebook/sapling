@@ -77,7 +77,7 @@ def info(ui, repo, **opts):
     author = meta.authors.reverselookup(parent.user())
     # cleverly figure out repo root w/o actually contacting the server
     reporoot = url[:len(url)-len(subdir)]
-    ui.status('''URL: %(url)s
+    ui.write('''URL: %(url)s
 Repository Root: %(reporoot)s
 Repository UUID: %(uuid)s
 Revision: %(revision)s
@@ -111,7 +111,7 @@ def listauthors(ui, args, authors=None, **opts):
         authorfile.write('%s=\n' % '=\n'.join(sorted(author_set)))
         authorfile.close()
     else:
-        ui.status('%s\n' % '\n'.join(sorted(author_set)))
+        ui.write('%s\n' % '\n'.join(sorted(author_set)))
 
 
 table = {

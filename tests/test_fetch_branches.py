@@ -2,7 +2,6 @@ import unittest
 
 from mercurial import hg
 from mercurial import node
-from mercurial import ui
 from mercurial import util as hgutil
 
 import test_util
@@ -18,8 +17,8 @@ class TestFetchBranches(test_util.TestBase):
     def _load_fixture_and_fetch_with_anchor(self, fixture_name, anchor):
         test_util.load_svndump_fixture(self.repo_path, fixture_name)
         source = '%s#%s' % (test_util.fileurl(self.repo_path), anchor)
-        repo = hg.clone(ui.ui(), source=source, dest=self.wc_path)
-        return hg.repository(ui.ui(), self.wc_path)
+        repo = hg.clone(self.ui(), source=source, dest=self.wc_path)
+        return hg.repository(self.ui(), self.wc_path)
 
     def openbranches(self, repo):
         hctxs = [repo[hn] for hn in repo.heads()]

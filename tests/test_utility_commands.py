@@ -2,7 +2,6 @@ import os
 import unittest
 
 from hgext import rebase
-from mercurial import ui
 from mercurial import hg
 from mercurial import revlog
 from mercurial import context
@@ -32,7 +31,7 @@ class UtilityTests(test_util.TestBase):
     def test_info_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')
         hg.update(self.repo, 'the_branch')
-        u = ui.ui()
+        u = self.ui()
         u.pushbuffer()
         utility_commands.info(u, self.repo)
         actual = u.popbuffer()
@@ -69,7 +68,7 @@ class UtilityTests(test_util.TestBase):
     def test_info_single(self):
         self._load_fixture_and_fetch('two_heads.svndump', subdir='trunk')
         hg.update(self.repo, 'tip')
-        u = ui.ui()
+        u = self.ui()
         u.pushbuffer()
         utility_commands.info(u, self.repo)
         actual = u.popbuffer()
@@ -83,7 +82,7 @@ class UtilityTests(test_util.TestBase):
 
     def test_parent_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')
-        u = ui.ui()
+        u = self.ui()
         u.pushbuffer()
         parents = (self.repo['the_branch'].node(), revlog.nullid, )
         def filectxfn(repo, memctx, path):
@@ -104,21 +103,16 @@ class UtilityTests(test_util.TestBase):
         hg.update(self.repo, new)
         wrappers.parents(lambda x, y: None, u, self.repo, svn=True)
         actual = u.popbuffer()
-        self.assertEqual(actual,
-                         'changeset:   3:4e256962fc5d\n'
-                         'branch:      the_branch\n'
-                         'user:        durin@df2126f7-00ab-4d49-b42c-7e981dde0bcf\n'
-                         'date:        Wed Oct 08 01:39:05 2008 +0000\n'
-                         'summary:     add delta on the branch\n\n')
+        self.assertEqual(actual, '3:4e256962fc5d\n')
 
         hg.update(self.repo, 'default')
+
         # Make sure styles work
         u.pushbuffer()
         wrappers.parents(lambda x, y: None, u, self.repo, svn=True, style='compact')
         actual = u.popbuffer()
-        self.assertEqual(actual,
-                         '4:1   1083037b18d8   2008-10-08 01:39 +0000   durin\n'
-                         '  Add gamma on trunk.\n\n')
+        self.assertEqual(actual, '4:1083037b18d8\n')
+
         # custom templates too
         u.pushbuffer()
         wrappers.parents(lambda x, y: None, u, self.repo, svn=True, template='{node}\n')
@@ -128,16 +122,11 @@ class UtilityTests(test_util.TestBase):
         u.pushbuffer()
         wrappers.parents(lambda x, y: None, u, self.repo, svn=True)
         actual = u.popbuffer()
-        self.assertEqual(actual,
-                         'changeset:   4:1083037b18d8\n'
-                         'parent:      1:c95251e0dd04\n'
-                         'user:        durin@df2126f7-00ab-4d49-b42c-7e981dde0bcf\n'
-                         'date:        Wed Oct 08 01:39:29 2008 +0000\n'
-                         'summary:     Add gamma on trunk.\n\n')
+        self.assertEqual(actual, '4:1083037b18d8\n')
 
     def test_outgoing_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')
-        u = ui.ui()
+        u = self.ui()
         parents = (self.repo['the_branch'].node(), revlog.nullid, )
         def filectxfn(repo, memctx, path):
             return context.memfilectx(path=path,
@@ -158,23 +147,13 @@ class UtilityTests(test_util.TestBase):
         u.pushbuffer()
         commands.outgoing(u, self.repo, self.repourl)
         actual = u.popbuffer()
-        u.write(actual)
         self.assertTrue(node.hex(self.repo['localbranch'].node())[:8] in actual)
-        actual = actual.splitlines()
-        self.assertEqual(actual[0], 'comparing with ' + self.repourl)
-        self.assertEqual(actual[1], 'changeset:   5:6de15430fa20')
-        self.assertEqual(actual[2], 'branch:      localbranch')
-        self.assertEqual(actual[3], 'tag:         tip')
-        self.assertEqual(actual[4], 'parent:      3:4e256962fc5d')
-        self.assertEqual(actual[5], 'user:        testy')
-        self.assertEqual(actual[6], 'date:        Sun Dec 21 16:32:00 2008 -0500')
-        self.assertEqual(actual[7], 'summary:     automated test')
+        self.assertEqual(actual.strip(), '5:6de15430fa20')
         hg.update(self.repo, 'default')
         u.pushbuffer()
         commands.outgoing(u, self.repo, self.repourl)
         actual = u.popbuffer()
-        u.write(actual)
-        self.assertEqual(actual.splitlines()[1], 'no changes found')
+        self.assertEqual(actual, '')
 
     def test_rebase(self):
         self._load_fixture_and_fetch('two_revs.svndump')
@@ -197,7 +176,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(self.repo['tip'].branch(), 'localbranch')
         beforerebasehash = self.repo['tip'].node()
         hg.update(self.repo, 'tip')
-        wrappers.rebase(rebase.rebase, ui.ui(), self.repo, svn=True)
+        wrappers.rebase(rebase.rebase, self.ui(), self.repo, svn=True)
         self.assertEqual(self.repo['tip'].branch(), 'localbranch')
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0], self.repo[0])
         self.assertNotEqual(beforerebasehash, self.repo['tip'].node())
@@ -206,7 +185,7 @@ class UtilityTests(test_util.TestBase):
         """ Test generation of .hgignore file. """
         test_util.load_fixture_and_fetch('ignores.svndump', self.repo_path,
                                          self.wc_path, noupdate=False)
-        u = ui.ui()
+        u = self.ui()
         u.pushbuffer()
         utility_commands.genignore(u, self.repo, self.wc_path)
         self.assertEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
@@ -215,7 +194,7 @@ class UtilityTests(test_util.TestBase):
     def test_genignore_single(self):
         self._load_fixture_and_fetch('ignores.svndump', subdir='trunk')
         hg.update(self.repo, 'tip')
-        u = ui.ui()
+        u = self.ui()
         u.pushbuffer()
         utility_commands.genignore(u, self.repo, self.wc_path)
         self.assertStringEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
@@ -224,7 +203,7 @@ class UtilityTests(test_util.TestBase):
     def test_list_authors(self):
         test_util.load_svndump_fixture(self.repo_path,
                                        'replace_trunk_with_branch.svndump')
-        u = ui.ui()
+        u = self.ui()
         u.pushbuffer()
         utility_commands.listauthors(u,
                                      args=[test_util.fileurl(self.repo_path)],
@@ -237,7 +216,7 @@ class UtilityTests(test_util.TestBase):
         test_util.load_svndump_fixture(self.repo_path,
                                        'replace_trunk_with_branch.svndump')
         author_path = os.path.join(self.repo_path, 'authors')
-        utility_commands.listauthors(ui.ui(),
+        utility_commands.listauthors(self.ui(),
                                      args=[test_util.fileurl(self.repo_path)],
                                      authors=author_path)
         self.assertEqual(open(author_path).read(), 'Augie=\nevil=\n')
