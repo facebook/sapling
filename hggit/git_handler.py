@@ -352,7 +352,7 @@ class GitHandler(object):
         # get a list of all the head shas
         seenheads = set()
         if refs is None:
-            refs = self.git.refs
+            refs = self.git.refs.as_dict()
         if refs:
             for sha in refs.itervalues():
                 # refs contains all the refs in the server, not just the ones
