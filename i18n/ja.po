@@ -99,7 +99,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-02-24 12:01+0900\n"
+"POT-Creation-Date: 2010-02-27 18:17+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -248,7 +248,7 @@ msgid "a bookmark cannot have the name of an existing branch"
 msgstr "既存ブランチと同名のブックマークは作成できません"
 
 msgid "no bookmarks set\n"
-msgstr ""
+msgstr "ブックマークは存在しません\n"
 
 msgid "force"
 msgstr "強制実施"
@@ -459,6 +459,9 @@ msgid ""
 "details:\n"
 "\t{desc|tabindent}"
 msgstr ""
+"リポジトリ {root} のリビジョン {node|short} がバグ {bug} に関連。\n"
+"詳細:\n"
+"\t{desc|tabindent}"
 
 #, python-format
 msgid "python mysql support not available: %s"
@@ -1393,11 +1396,11 @@ msgstr ""
 
 #, python-format
 msgid "making snapshot of %d files from rev %s\n"
-msgstr ""
+msgstr "%d 個のファイルのスナップショットをリビジョン %s から生成中\n"
 
 #, python-format
 msgid "making snapshot of %d files from working directory\n"
-msgstr ""
+msgstr "%d 個のファイルのスナップショットを作業領域から生成中\n"
 
 msgid "cannot specify --rev and --change at the same time"
 msgstr "--rev と --change は同時には指定出来ません"
@@ -1425,16 +1428,16 @@ msgid ""
 msgstr ""
 
 msgid "comparison program to run"
-msgstr ""
+msgstr "比較実行用プログラム"
 
 msgid "pass option to comparison program"
-msgstr ""
+msgstr "比較実行用プログラムへのオプション指定"
 
 msgid "change made by revision"
 msgstr "当該リビジョンにおける変更内容の表示"
 
 msgid "hg extdiff [OPT]... [FILE]..."
-msgstr ""
+msgstr "hg extdiff [OPT]... [FILE]..."
 
 #, python-format
 msgid ""
@@ -1452,10 +1455,10 @@ msgstr ""
 
 #, python-format
 msgid "hg %s [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg %s [OPTION]... [FILE]..."
 
 msgid "pull, update and merge in one command"
-msgstr ""
+msgstr "pull, update, merge の一括実行"
 
 msgid ""
 "pull changes from a remote repository, merge new changes if needed.\n"
@@ -1480,6 +1483,8 @@ msgstr ""
 msgid ""
 "working dir not at branch tip (use \"hg update\" to check out branch tip)"
 msgstr ""
+"作業領域はブランチ tip ではありません(\"hg update\" でブランチ tip に更新可"
+"能)"
 
 msgid "outstanding uncommitted merge"
 msgstr "マージが未コミットです"
@@ -1493,6 +1498,8 @@ msgstr "作業領域に存在しないファイルがあります"
 msgid ""
 "multiple heads in this branch (use \"hg heads .\" and \"hg merge\" to merge)"
 msgstr ""
+"このブランチには複数のヘッドがあります(\"hg heads .\" と \"hg merge\" でマー"
+"ジしてください)"
 
 #, python-format
 msgid "pulling from %s\n"
@@ -1508,6 +1515,8 @@ msgid ""
 "not merging with %d other new branch heads (use \"hg heads .\" and \"hg merge"
 "\" to merge them)\n"
 msgstr ""
+"%d 個の新規ブランチヘッドとはマージされません(\"hg heads .\" と \"hg merge\" "
+"でマージしてください)\n"
 
 #, python-format
 msgid "updating to %d:%s\n"
@@ -1519,40 +1528,40 @@ msgstr "%d とマージしています:%s\n"
 
 #, python-format
 msgid "new changeset %d:%s merges remote changes with local\n"
-msgstr ""
+msgstr "新規リビジョン %d:%s で遠隔とローカルのリビジョンをマージ\n"
 
 msgid "a specific revision you would like to pull"
-msgstr ""
+msgstr "取り込み対象リビジョンの指定"
 
 msgid "edit commit message"
 msgstr "コミットメッセージの編集"
 
 msgid "edit commit message (DEPRECATED)"
-msgstr ""
+msgstr "コミットメッセージの編集(非推奨)"
 
 msgid "switch parents when merging"
-msgstr ""
+msgstr "マージの際の第1親リビジョンを切り替え"
 
 msgid "hg fetch [SOURCE]"
-msgstr ""
+msgstr "hg fetch [SOURCE]"
 
 msgid "commands to sign and verify changesets"
 msgstr "チェンジセットの署名および検証のコマンド"
 
 msgid "error while verifying signature"
-msgstr ""
+msgstr "署名検証中のエラー"
 
 #, python-format
 msgid "%s Bad signature from \"%s\"\n"
-msgstr ""
+msgstr "%s 不正署名(\"%s\" による署名)\n"
 
 #, python-format
 msgid "%s Note: Signature has expired (signed by: \"%s\")\n"
-msgstr ""
+msgstr "%s 備考: 有効期限切れ署名(\"%s\" による署名)\n"
 
 #, python-format
 msgid "%s Note: This key has expired (signed by: \"%s\")\n"
-msgstr ""
+msgstr "%s 備考: 有効期限切れ鍵(\"%s\" による署名)\n"
 
 msgid "list signed changesets"
 msgstr "署名済みリビジョンの一覧表示"
@@ -1562,7 +1571,7 @@ msgid "%s:%d node does not exist\n"
 msgstr "%s:%d ノードは存在しません\n"
 
 msgid "verify all the signatures there may be for a particular revision"
-msgstr ""
+msgstr "特定リビジョンに関する全署名の検証"
 
 #, python-format
 msgid "No valid signature for %s\n"
@@ -1592,21 +1601,23 @@ msgid ""
 "working copy of .hgsigs is changed (please commit .hgsigs manually or use --"
 "force)"
 msgstr ""
+"作業領域の .hgsigs は変更されています(.hgsigs を手動コミットするか、--force "
+"を使用してください)"
 
 msgid "unknown signature version"
 msgstr "未知の署名バージョン"
 
 msgid "make the signature local"
-msgstr ""
+msgstr "自リポジトリローカルな署名"
 
 msgid "sign even if the sigfile is modified"
-msgstr ""
+msgstr "署名ファイルが変更されていても署名を実施"
 
 msgid "do not commit the sigfile after signing"
-msgstr ""
+msgstr "署名後の署名ファイルのコミットを抑止"
 
 msgid "the key id to sign with"
-msgstr ""
+msgstr "署名に使用する鍵ID"
 
 msgid "commit message"
 msgstr "コミットメッセージ"
@@ -1722,7 +1733,7 @@ msgid "hgcia: sending update to %s\n"
 msgstr "hgcia: %s に更新を送信しています\n"
 
 msgid "email.from must be defined when sending by email"
-msgstr ""
+msgstr "電子メール送信のためには email.from の定義が必要です"
 
 msgid ""
 "browse the repository in a graphical way\n"
@@ -1764,7 +1775,7 @@ msgid "cat a specific revision"
 msgstr "指定リビジョン時点の内容表示"
 
 msgid "cat-file: type or revision not supplied\n"
-msgstr ""
+msgstr "cat-file: 種別もリビジョンも指定されていません\n"
 
 msgid "aborting hg cat-file only understands commits\n"
 msgstr ""
@@ -1779,7 +1790,7 @@ msgid "print extension options"
 msgstr "エクステンション設定の表示"
 
 msgid "start interactive history viewer"
-msgstr ""
+msgstr "対話的な履歴参照の開始"
 
 msgid "hg view [-l LIMIT] [REVRANGE]"
 msgstr "hg view [-l LIMIT] [REVRANGE]"
@@ -1800,7 +1811,7 @@ msgid "detect copies"
 msgstr "コピーの検出"
 
 msgid "search"
-msgstr ""
+msgstr "検索"
 
 msgid "hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]..."
 msgstr "hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]..."
@@ -1824,13 +1835,13 @@ msgid "header"
 msgstr "ヘッダ"
 
 msgid "topo-order"
-msgstr ""
+msgstr "履歴トポロジーの順序"
 
 msgid "parents"
 msgstr "親"
 
 msgid "max-count"
-msgstr ""
+msgstr "最大数"
 
 msgid "hg debug-rev-list [OPTION]... REV..."
 msgstr "hg debug-rev-list [OPTION]... REV..."
@@ -3697,7 +3708,7 @@ msgstr "%s: %d 件の新しいチェンジセット"
 
 #, python-format
 msgid "notify: sending %d subscribers %d changes\n"
-msgstr ""
+msgstr "notify: %d 購読者に %d 変更を送信中\n"
 
 #, python-format
 msgid ""
@@ -3705,6 +3716,9 @@ msgid ""
 "diffs (truncated from %d to %d lines):\n"
 "\n"
 msgstr ""
+"\n"
+"差分 (%d 行から %d 行に切り詰め):\n"
+"\n"
 
 #, python-format
 msgid ""
@@ -3712,10 +3726,13 @@ msgid ""
 "diffs (%d lines):\n"
 "\n"
 msgstr ""
+"\n"
+"差分 (%d 行):\n"
+"\n"
 
 #, python-format
 msgid "notify: suppressing notification for merge %d:%s\n"
-msgstr ""
+msgstr "notify: マージ %d:%s の通知を抑止中\n"
 
 msgid ""
 "browse command output with an external pager\n"
@@ -4489,7 +4506,7 @@ msgid "hg qrecord [OPTION]... PATCH [FILE]..."
 msgstr "hg qrecord [OPTION]... PATCH [FILE]..."
 
 msgid "recreates hardlinks between repository clones"
-msgstr ""
+msgstr "複製リポジトリ間でのハードリンクの再生成"
 
 msgid ""
 "recreate hardlinks between two repositories\n"
@@ -4527,7 +4544,7 @@ msgstr "%s から %s にハードリンク中\n"
 
 #, python-format
 msgid "collected %d candidate storage files\n"
-msgstr ""
+msgstr "%d 個の候補ファイルの領域を回収\n"
 
 msgid "source and destination are on different devices"
 msgstr "リンク元とリンク先が同一ファイルシステム上にありません"
@@ -4538,7 +4555,7 @@ msgstr "リンク不可ファイル: %s\n"
 
 #, python-format
 msgid "pruned down to %d probably relinkable files\n"
-msgstr ""
+msgstr "ハードリンク可能と思われる %d のファイルを除外\n"
 
 msgid " files"
 msgstr " ファイル"
@@ -4551,7 +4568,7 @@ msgid "relinked %d files (%d bytes reclaimed)\n"
 msgstr "%d ファイルを再リンク(%d バイトの節約)\n"
 
 msgid "[ORIGIN]"
-msgstr ""
+msgstr "[ORIGIN]"
 
 msgid ""
 "extend schemes with shortcuts to repository swarms\n"
@@ -4591,7 +4608,7 @@ msgid ""
 msgstr ""
 
 msgid "share a common history between several working directories"
-msgstr ""
+msgstr "複数作業領域による履歴情報領域の共有"
 
 msgid ""
 "create a new shared repository (experimental)\n"
@@ -7826,8 +7843,8 @@ msgstr "出力を抑止"
 msgid "enable additional output"
 msgstr "付加的な出力を有効化"
 
-msgid "set/override config option"
-msgstr "オプション設定を指定／上書き"
+msgid "set/override config option (use 'section.name=value')"
+msgstr "オプション設定を指定／上書き(指定形式は 'section.name=value')"
 
 msgid "enable debugging output"
 msgstr "デバッグ出力を有効化"
@@ -10051,6 +10068,9 @@ msgstr "連携先での変更の検索"
 msgid "push failed (unexpected response):"
 msgstr "履歴反映に失敗(未知のレスポンス):"
 
+msgid "remote: "
+msgstr "遠隔ホスト: "
+
 #, python-format
 msgid "push failed: %s"
 msgstr "履歴反映に失敗: %s"
@@ -10635,9 +10655,6 @@ msgstr "遠隔ホストとの連携に失敗"
 msgid "no suitable response from remote hg"
 msgstr "遠隔ホストの応答が不適切"
 
-msgid "remote: "
-msgstr "遠隔ホスト: "
-
 #, python-format
 msgid "push refused: %s"
 msgstr "履歴反映が拒否されました: %s"
@@ -10824,6 +10841,10 @@ msgstr "ユーザ:"
 #, python-format
 msgid "http auth: user %s, password %s\n"
 msgstr "HTTP 認証: ユーザ名 %s, パスワード %s\n"
+
+#, python-format
+msgid "ignoring invalid [auth] key '%s'\n"
+msgstr "不正な [auth] セクションのキー'%s' を無視します\n"
 
 msgid "certificate checking requires Python 2.6"
 msgstr "証明書検証には Python 2.6 が必要です"
