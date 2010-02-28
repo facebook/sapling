@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-02-24 19:41+0100\n"
-"PO-Revision-Date: 2010-02-24 19:47+0100\n"
+"POT-Creation-Date: 2010-02-28 19:35+0100\n"
+"PO-Revision-Date: 2010-02-28 19:37+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -6952,8 +6952,8 @@ msgstr "förhindra utmatning"
 msgid "enable additional output"
 msgstr "aktivera ytterligare utmatning"
 
-msgid "set/override config option"
-msgstr "sätt/upphäv konfigurationsflagga"
+msgid "set/override config option (use 'section.name=value')"
+msgstr "sätt/upphäv konfigurationsflagga (använd 'sektion.namn=värde')"
 
 msgid "enable debugging output"
 msgstr "aktivera debugutmatning"
@@ -8695,6 +8695,9 @@ msgstr ""
 msgid "push failed (unexpected response):"
 msgstr ""
 
+msgid "remote: "
+msgstr "fjärr: "
+
 #, python-format
 msgid "push failed: %s"
 msgstr ""
@@ -9268,9 +9271,6 @@ msgid "could not create remote repo"
 msgstr ""
 
 msgid "no suitable response from remote hg"
-msgstr ""
-
-msgid "remote: "
 msgstr ""
 
 #, python-format
