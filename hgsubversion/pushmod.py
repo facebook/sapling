@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 from mercurial import util as hgutil
 
 from svn import core
