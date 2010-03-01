@@ -1544,6 +1544,8 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
         doc = gettext(entry[0].__doc__)
         if not doc:
             doc = _("(no help text available)")
+        if hasattr(entry[0], 'definition'):  # aliased command
+            doc = _('alias for: hg %s\n\n%s') % (entry[0].definition, doc)
         if ui.quiet:
             doc = doc.splitlines()[0]
         keep = ui.verbose and ['verbose'] or []
