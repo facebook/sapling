@@ -14,6 +14,7 @@ from mercurial import demandimport
 demandimport.ignore.extend([
         'bzrlib.transactions',
         'bzrlib.urlutils',
+        'ElementPath',
     ])
 
 from mercurial.i18n import _
