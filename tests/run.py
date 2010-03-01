@@ -64,4 +64,6 @@ if __name__ == '__main__':
                 suite.append(all[arg].suite())
 
     runner = unittest.TextTestRunner(**kwargs)
-    runner.run(unittest.TestSuite(suite))
+    result = runner.run(unittest.TestSuite(suite))
+    if not result.wasSuccessful():
+        sys.exit(1)
