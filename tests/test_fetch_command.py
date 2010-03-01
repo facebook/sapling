@@ -69,10 +69,13 @@ class TestBasicRepoLayout(test_util.TestBase):
         self._many_special_cases_checks(repo)
 
     def _many_special_cases_checks(self, repo):
-        self.assertEqual(node.hex(repo[0].node()),
+        self.assertEquals(node.hex(repo[0].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
-        self.assertEqual(node.hex(repo['tip'].node()),
-                         'b7bdc73041b1852563deb1ef3f4153c2fe4484f2')
+        # two possible hashes for bw compat to hg < 1.5, since hg 1.5
+        # sorts entries in extra()
+        self.assertTrue(node.hex(repo['tip'].node()) in
+                         ('e92012d8c170a0236c84166167f149c2e28548c6',
+                         'b7bdc73041b1852563deb1ef3f4153c2fe4484f2'))
         self.assertEqual(node.hex(repo['the_branch'].node()),
                          '4e256962fc5df545e2e0a51d0d1dc61c469127e6')
         self.assertEqual(node.hex(repo['the_branch'].parents()[0].node()),
