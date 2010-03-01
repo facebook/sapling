@@ -86,6 +86,9 @@ class SVNMeta(object):
         self.authors = maps.AuthorMap(self.ui, self.authors_file,
                                  defaulthost=author_host)
         if authors: self.authors.load(authors)
+        self.branchmap = maps.BranchMap(self.ui, self.branchmapfile)
+        if self.ui.config('hgsubversion', 'branchmap'):
+            self.branchmap.load(self.ui.config('hgsubversion', 'branchmap'))
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.filemap = maps.FileMap(repo)
@@ -153,6 +156,10 @@ class SVNMeta(object):
         return os.path.join(self.meta_data_dir, 'authors')
 
     @property
+    def branchmapfile(self):
+        return os.path.join(self.meta_data_dir, 'branchmap')
+
+    @property
     def layoutfile(self):
         return os.path.join(self.meta_data_dir, 'layout')
 
@@ -217,6 +224,17 @@ class SVNMeta(object):
             'rev': revnum,
         }
         return extra
+
+    def mapbranch(self, extra, close=False):
+        if close:
+            extra['close'] = 1
+        if extra.get('branch') == 'default':
+            extra.pop('branch', None)
+        mapped = self.branchmap.get(extra.get('branch'))
+        if not self.usebranchnames or mapped == 'default':
+            extra.pop('branch', None)
+        elif mapped:
+            extra['branch'] = mapped
 
     def normalize(self, path):
         '''Normalize a path to strip of leading slashes and our subdir if we
@@ -601,13 +619,12 @@ class SVNMeta(object):
                 return context.memfilectx(path='.hgtags', data=src,
                                           islink=False, isexec=False,
                                           copied=None)
+
             extra = self.genextra(rev.revnum, b)
             if fromtag:
                 extra['branch'] = parent.extra().get('branch', 'default')
-            if not self.usebranchnames:
-                extra.pop('branch', None)
-            if b in endbranches or fromtag:
-                extra['close'] = 1
+            self.mapbranch(extra, b in endbranches or fromtag)
+
             ctx = context.memctx(self.repo,
                                  (parent.node(), node.nullid),
                                  rev.message or ' ',
@@ -629,9 +646,7 @@ class SVNMeta(object):
         pctx = self.repo[node]
         files = pctx.manifest().keys()
         extra = self.genextra(rev.revnum, branch)
-        extra['close'] = 1
-        if self.usebranchnames:
-            extra['branch'] = branch or 'default'
+        self.mapbranch(extra, True)
         ctx = context.memctx(self.repo,
                              (node, revlog.nullid),
                              rev.message or util.default_commit_msg,

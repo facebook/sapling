@@ -163,8 +163,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                                       islink=is_link, isexec=is_exec,
                                       copied=copied)
 
-        if not meta.usebranchnames or extra.get('branch', None) == 'default':
-            extra.pop('branch', None)
+        meta.mapbranch(extra)
         current_ctx = context.memctx(meta.repo,
                                      parents,
                                      rev.message or '...',

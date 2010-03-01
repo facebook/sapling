@@ -292,3 +292,60 @@ class FileMap(object):
                 msg = 'ignoring bad line in filemap %s: %s\n'
                 self.ui.warn(msg % (fn, line.rstrip()))
         f.close()
+
+class BranchMap(dict):
+    '''Facility for controlled renaming of branch names. Example:
+
+    oldname = newname
+    other = default
+
+    All changes on the oldname branch will now be on the newname branch; all
+    changes on other will now be on default (have no branch name set).
+    '''
+
+    def __init__(self, ui, path):
+        self.ui = ui
+        self.path = path
+        self.super = super(BranchMap, self)
+        self.super.__init__()
+        self.load(path)
+
+    def load(self, path):
+        '''Load mappings from a file at the specified path.'''
+        if not os.path.exists(path):
+            return
+
+        writing = False
+        if path != self.path:
+            writing = open(self.path, 'a')
+
+        self.ui.note('reading branchmap from %s\n' % path)
+        f = open(path, 'r')
+        for number, line in enumerate(f):
+
+            if writing:
+                writing.write(line)
+
+            line = line.split('#')[0]
+            if not line.strip():
+                continue
+
+            try:
+                src, dst = line.split('=', 1)
+            except (IndexError, ValueError):
+                msg = 'ignoring line %i in branch map %s: %s\n'
+                self.ui.warn(msg % (number, path, line.rstrip()))
+                continue
+
+            src = src.strip()
+            dst = dst.strip()
+            self.ui.debug('adding branch %s to branch map\n' % src)
+            if src in self and dst != self[src]:
+                msg = 'overriding branch: "%s" to "%s" (%s)\n'
+                self.ui.warn(msg % (self[src], dst, src))
+            self[src] = dst
+
+        f.close()
+        if writing:
+            writing.flush()
+            writing.close()

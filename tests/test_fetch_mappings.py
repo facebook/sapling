@@ -20,6 +20,10 @@ class MapTests(test_util.TestBase):
     def filemap(self):
         return os.path.join(self.tmpdir, 'filemap')
 
+    @property
+    def branchmap(self):
+        return os.path.join(self.tmpdir, 'branchmap')
+
     def test_author_map(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'replace_trunk_with_branch.svndump')
         authormap = open(self.authors, 'w')
@@ -100,6 +104,25 @@ class MapTests(test_util.TestBase):
 
     def test_file_map_exclude_stupid(self):
         self.test_file_map_exclude(True)
+
+    def test_branchmap(self, stupid=False):
+        test_util.load_svndump_fixture(self.repo_path, 'branchmap.svndump')
+        branchmap = open(self.branchmap, 'w')
+        branchmap.write("badname = good-name # stuffy\n")
+        branchmap.write("feature = default\n")
+        branchmap.close()
+        _ui = ui.ui()
+        _ui.setconfig('hgsubversion', 'stupid', str(stupid))
+        _ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
+        commands.clone(_ui, test_util.fileurl(self.repo_path),
+                       self.wc_path, branchmap=self.branchmap)
+        branches = set(self.repo[i].branch() for i in self.repo)
+        self.assert_('badname' not in branches)
+        self.assert_('good-name' in branches)
+        self.assertEquals(self.repo[2].branch(), 'default')
+
+    def test_branchmap_stupid(self):
+        self.test_branchmap(True)
 
 
 def suite():

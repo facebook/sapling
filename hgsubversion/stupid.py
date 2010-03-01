@@ -637,8 +637,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             extra.update({'branch': parentctx.extra().get('branch', None),
                           'close': 1})
 
-        if not meta.usebranchnames or extra.get('branch', None) == 'default':
-            extra.pop('branch', None)
+        meta.mapbranch(extra)
         current_ctx = context.memctx(meta.repo,
                                      [parentctx.node(), revlog.nullid],
                                      r.message or util.default_commit_msg,

@@ -73,6 +73,7 @@ wrapcmds = { # cmd: generic, target, fixdoc, ppopts, opts
          'file containing rules for remapping Subversion repository paths'),
         ('', 'layout', 'auto', ('import standard layout or single '
                                 'directory? Can be standard, single, or auto.')),
+        ('', 'branchmap', '', 'file containing rules for branch conversion'),
     ]),
 }
 
