@@ -56,7 +56,7 @@ class AuthorMap(dict):
                 src, dst = line.split('=', 1)
             except (IndexError, ValueError):
                 msg = 'ignoring line %i in author map %s: %s\n'
-                self.ui.warn(msg % (number, path, line.rstrip()))
+                self.ui.status(msg % (number, path, line.rstrip()))
                 continue
 
             src = src.strip()
@@ -64,7 +64,7 @@ class AuthorMap(dict):
             self.ui.debug('adding author %s to author map\n' % src)
             if src in self and dst != self[src]:
                 msg = 'overriding author: "%s" to "%s" (%s)\n'
-                self.ui.warn(msg % (self[src], dst, src))
+                self.ui.status(msg % (self[src], dst, src))
             self[src] = dst
 
         f.close()
@@ -122,7 +122,7 @@ class TagMap(dict):
         f = open(self.path)
         ver = int(f.readline())
         if ver < self.VERSION:
-            repo.ui.warn('tag map outdated, running rebuildmeta...\n')
+            repo.ui.status('tag map outdated, running rebuildmeta...\n')
             f.close()
             os.unlink(self.path)
             svncommands.rebuildmeta(repo.ui, repo, ())
@@ -268,7 +268,7 @@ class FileMap(object):
         mapping = getattr(self, map)
         if path in mapping:
             msg = 'duplicate %s entry in %s: "%d"\n'
-            self.ui.warn(msg % (map, fn, path))
+            self.ui.status(msg % (map, fn, path))
             return
         bits = map.strip('e'), path
         self.ui.debug('%sing %s\n' % bits)
@@ -334,7 +334,7 @@ class BranchMap(dict):
                 src, dst = line.split('=', 1)
             except (IndexError, ValueError):
                 msg = 'ignoring line %i in branch map %s: %s\n'
-                self.ui.warn(msg % (number, path, line.rstrip()))
+                self.ui.status(msg % (number, path, line.rstrip()))
                 continue
 
             src = src.strip()
@@ -342,7 +342,7 @@ class BranchMap(dict):
             self.ui.debug('adding branch %s to branch map\n' % src)
             if src in self and dst != self[src]:
                 msg = 'overriding branch: "%s" to "%s" (%s)\n'
-                self.ui.warn(msg % (self[src], dst, src))
+                self.ui.status(msg % (self[src], dst, src))
             self[src] = dst
 
         f.close()
