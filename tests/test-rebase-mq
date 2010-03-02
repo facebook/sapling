@@ -45,6 +45,12 @@ echo '% Rebase - try to rebase on an applied mq patch'
 hg rebase -s 1 -d 3
 
 echo
+echo '% Rebase - same thing, but mq patch is default dest'
+hg update -q 1
+hg rebase
+hg update -q qtip
+
+echo
 echo '% Rebase - generate a conflict'
 hg rebase -s 2 -d 1
 

@@ -440,10 +440,14 @@ def buildstate(repo, dest, src, base, detach):
         branch = repo[None].branch()
         dest = repo[branch].rev()
     else:
-        if 'qtip' in repo.tags() and (repo[dest].hex() in
-                                [s.rev for s in repo.mq.applied]):
-            raise util.Abort(_('cannot rebase onto an applied mq patch'))
         dest = repo[dest].rev()
+
+    # This check isn't strictly necessary, since mq detects commits over an
+    # applied patch. But it prevents messing up the working directory when
+    # a partially completed rebase is blocked by mq.
+    if 'qtip' in repo.tags() and (repo[dest].hex() in
+                            [s.rev for s in repo.mq.applied]):
+        raise util.Abort(_('cannot rebase onto an applied mq patch'))
 
     if src:
         commonbase = repo[src].ancestor(repo[dest])
