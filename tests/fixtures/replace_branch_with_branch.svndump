@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: 9ccfc2a0-ffd9-470e-a000-ccb1f0fe21e5
+UUID: a88ce668-5208-4e23-8d73-bebfb2ebee53
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2010-02-24T20:15:47.286918Z
+2010-03-01T20:45:07.143960Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-02-24T20:15:48.124168Z
+2010-03-01T20:45:08.063083Z
 PROPS-END
 
 Node-path: branches
@@ -76,7 +76,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-02-24T20:15:51.070312Z
+2010-03-01T20:45:11.044475Z
 PROPS-END
 
 Node-path: branches/branch1
@@ -101,7 +101,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-02-24T20:15:53.123732Z
+2010-03-01T20:45:13.068264Z
 PROPS-END
 
 Node-path: branches/branch1/b
@@ -130,6 +130,28 @@ PROPS-END
 d
 
 
+Node-path: branches/branch1/dir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: branches/branch1/dir/e
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 9ffbf43126e33be52cd2bf7e01d627f9
+Text-content-sha1: 094e3afb2fe8dfe82f63731cdcd3b999f4856cff
+Content-length: 12
+
+PROPS-END
+e
+
+
 Revision-number: 4
 Prop-content-length: 108
 Content-length: 108
@@ -145,7 +167,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-02-24T20:15:55.095809Z
+2010-03-01T20:45:15.045695Z
 PROPS-END
 
 Node-path: branches/branch2
@@ -170,7 +192,7 @@ pmezard
 K 8
 svn:date
 V 27
-2010-02-24T20:15:57.098439Z
+2010-03-01T20:45:17.065669Z
 PROPS-END
 
 Node-path: branches/branch2/c
@@ -184,6 +206,28 @@ Content-length: 12
 
 PROPS-END
 c
+
+
+Node-path: branches/branch2/dir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: branches/branch2/dir/e
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 3
+Text-content-md5: c18e1214a2500c0c3636092222f8a850
+Text-content-sha1: 4a078b075f259063b9a730521378f70ec3223238
+Content-length: 13
+
+PROPS-END
+e2
 
 
 Revision-number: 6
@@ -201,7 +245,7 @@ evil
 K 8
 svn:date
 V 27
-2010-02-24T20:15:59.687871Z
+2010-03-01T20:45:19.243252Z
 PROPS-END
 
 Node-path: branches/branch1
@@ -230,5 +274,25 @@ Text-copy-source-md5: e29311f6f1bf1af907f9ef9f44b8328b
 Text-copy-source-sha1: e983f374794de9c64e3d1c1de1d490c0756eeeff
 
 
+
+
+Node-path: branches/branch1/dir
+Node-kind: dir
+Node-action: delete
+
+Node-path: branches/branch1/dir
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: branches/branch1/dir
+
+
+
+
+Node-path: branches/branch1/dir2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: branches/branch1/dir
 
 

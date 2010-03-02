@@ -22,13 +22,17 @@ svn ci -m 'branch1'
 svn up
 echo b > branches/branch1/b
 echo d > branches/branch1/d
-svn add branches/branch1/b branches/branch1/d
+mkdir branches/branch1/dir
+echo e > branches/branch1/dir/e
+svn add branches/branch1/b branches/branch1/d branches/branch1/dir
 svn ci -m 'add b to branch1'
 svn cp trunk branches/branch2
 svn ci -m 'branch2'
 svn up
 echo c > branches/branch2/c
-svn add branches/branch2/c
+mkdir branches/branch2/dir
+echo e2 > branches/branch2/dir/e
+svn add branches/branch2/c branches/branch2/dir
 svn ci -m 'add c to branch2'
 svn up
 
@@ -38,6 +42,8 @@ cat > clobber.rsvn <<EOF
 rdelete branches/branch1
 rcopy branches/branch2 branches/branch1
 rcopy branches/branch1/d branches/branch1/a
+rcopy branches/branch1/dir branches/branch1/dir
+rcopy branches/branch1/dir branches/branch1/dir2
 EOF
 
 python $RSVN --message=blah --username=evil `pwd`/repo < clobber.rsvn

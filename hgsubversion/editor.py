@@ -262,7 +262,7 @@ class HgEditor(delta.Editor):
                 assert br_path is not None
                 tmp = source_branch, source_rev, self.current.rev.revnum
                 self.meta.branches[branch] = tmp
-        new_hash = self.meta.get_parent_revision(source_rev + 1, source_branch)
+        new_hash = self.meta.get_parent_revision(source_rev + 1, source_branch, True)
         if new_hash == node.nullid:
             self.current.missing.add('%s/' % path)
             return path
