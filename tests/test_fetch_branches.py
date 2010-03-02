@@ -131,6 +131,26 @@ class TestFetchBranches(test_util.TestBase):
         self.assertEqual(node.hex(repo['tip'].node()),
                          '4108a81a82c7925d5551091165dc54c41b06a8a8')
 
+    def test_replace_branch_with_branch(self, stupid=False):
+        repo = self._load_fixture_and_fetch('replace_branch_with_branch.svndump',
+                                            stupid)
+        self.assertEqual(7, len(repo))
+        # tip is former topological branch1 being closed
+        ctx = repo['tip']
+        self.assertEqual('1', ctx.extra().get('close', '0'))
+        self.assertEqual('branch1', ctx.branch())
+        # r5 is where the replacement takes place
+        ctx = repo[5]
+        self.assertEqual(set(['a', 'c']), set(ctx))
+        self.assertEqual('0', ctx.extra().get('close', '0'))
+        self.assertEqual('branch1', ctx.branch())
+        self.assertEqual('c\n', ctx['c'].data())
+        # a replacement does not work yet
+        #self.assertEqual('d\n', ctx['a'].data())
+
+    def test_replace_branch_with_branch_stupid(self, stupid=False):
+        self.test_replace_branch_with_branch(True)
+
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
           ]

@@ -145,7 +145,9 @@ def swap_out_encoding(new_encoding="UTF-8"):
 
 
 def issamefile(parentctx, childctx, f):
-    """Assuming f exists and is the same in childctx and parentctx, return True."""
+    """Return True if f exists and is the same in childctx and parentctx"""
+    if f not in parentctx or f not in childctx:
+        return False
     if parentctx == childctx:
         return True
     if parentctx.rev() > childctx.rev():

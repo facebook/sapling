@@ -216,13 +216,13 @@ class HgEditor(delta.Editor):
             fctx = ctx.filectx(from_file)
             flags = fctx.flags()
             self.current.set(path, fctx.data(), 'x' in flags, 'l' in flags)
-        if from_branch == branch:
-            parentid = self.meta.get_parent_revision(self.current.rev.revnum,
-                                                     branch)
-            if parentid != revlog.nullid:
-                parentctx = self.repo.changectx(parentid)
-                if util.issamefile(parentctx, ctx, from_file):
-                    self.current.copies[path] = from_file
+            if from_branch == branch:
+                parentid = self.meta.get_parent_revision(
+                    self.current.rev.revnum, branch)
+                if parentid != revlog.nullid:
+                    parentctx = self.repo.changectx(parentid)
+                    if util.issamefile(parentctx, ctx, from_file):
+                        self.current.copies[path] = from_file
 
     @ieditor
     def add_directory(self, path, parent_baton, copyfrom_path,
