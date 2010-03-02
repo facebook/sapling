@@ -166,17 +166,20 @@ class HgEditor(delta.Editor):
         if self.current.file in self.current.files:
             return
 
-        baserev = base_revision
-        if baserev is None or baserev == -1:
-            baserev = self.current.rev.revnum - 1
-        parent = self.meta.get_parent_revision(baserev + 1, branch)
-
-        ctx = self.repo[parent]
         if not self.meta.is_path_valid(path):
             return
 
+        baserev = base_revision
+        if baserev is None or baserev == -1:
+            baserev = self.current.rev.revnum - 1
+        # Use exact=True because during replacements ('R' action) we select
+        # replacing branch as parent, but svn delta editor provides delta
+        # agains replaced branch.
+        parent = self.meta.get_parent_revision(baserev + 1, branch, True)
+        ctx = self.repo[parent]
         if fpath not in ctx:
             self.current.missing.add(path)
+            return
 
         fctx = ctx.filectx(fpath)
         base = fctx.data()
