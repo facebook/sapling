@@ -141,13 +141,17 @@ class TestFetchBranches(test_util.TestBase):
         self.assertEqual('branch1', ctx.branch())
         # r5 is where the replacement takes place
         ctx = repo[5]
-        self.assertEqual(set(['a', 'c', 'dir/e', 'dir2/e']), set(ctx))
+        self.assertEqual(set(['a', 'c', 'dir/e', 'dir2/e', 'f', 'g']), set(ctx))
         self.assertEqual('0', ctx.extra().get('close', '0'))
         self.assertEqual('branch1', ctx.branch())
         self.assertEqual('c\n', ctx['c'].data())
         self.assertEqual('d\n', ctx['a'].data())
         self.assertEqual('e\n', ctx['dir/e'].data())
         self.assertEqual('e\n', ctx['dir2/e'].data())
+        self.assertEqual('f\n', ctx['f'].data())
+        self.assertEqual('g\n', ctx['g'].data())
+        for f in ctx:
+            self.assertTrue(not ctx[f].renamed())
 
     def test_replace_branch_with_branch_stupid(self, stupid=False):
         self.test_replace_branch_with_branch(True)

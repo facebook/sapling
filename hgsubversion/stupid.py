@@ -254,7 +254,7 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
 
     return list(touched_files), filectxfn
 
-def makecopyfinder(r, branchpath, rootdir):
+def makecopyfinder(meta, r, branchpath):
     """Return a function detecting copies.
 
     Returned copyfinder(path) returns None if no copy information can
@@ -264,21 +264,35 @@ def makecopyfinder(r, branchpath, rootdir):
     "sourcepath" and "source" are the same, while file copies dectected from
     directory copies return the copied source directory in "source".
     """
+    # cache changeset contexts and map them to source svn revisions
+    ctxs = {}
+    def getctx(branch, svnrev):
+        if svnrev in ctxs:
+            return ctxs[svnrev]
+        changeid = meta.get_parent_revision(svnrev + 1, branch, True)
+        ctx = None
+        if changeid != revlog.nullid:
+            ctx = meta.repo.changectx(changeid)
+        ctxs[svnrev] = ctx
+        return ctx
+
     # filter copy information for current branch
     branchpath = (branchpath and branchpath + '/') or ''
-    fullbranchpath = rootdir + branchpath
     copies = []
     for path, e in r.paths.iteritems():
         if not e.copyfrom_path:
             continue
         if not path.startswith(branchpath):
             continue
-        if not e.copyfrom_path.startswith(fullbranchpath):
-            # ignore cross branch copies
+        # compute converted source path and revision
+        frompath, frombranch = meta.split_branch_path(e.copyfrom_path)[:2]
+        if frompath is None:
             continue
-        dest = path[len(branchpath):]
-        source = e.copyfrom_path[len(fullbranchpath):]
-        copies.append((dest, (source, e.copyfrom_rev)))
+        fromctx = getctx(frombranch, e.copyfrom_rev)
+        if fromctx is None:
+            continue
+        destpath = path[len(branchpath):]
+        copies.append((destpath, (frompath, fromctx)))
 
     copies.sort(reverse=True)
     exactcopies = dict(copies)
@@ -287,12 +301,12 @@ def makecopyfinder(r, branchpath, rootdir):
         if path in exactcopies:
             return exactcopies[path], exactcopies[path][0]
         # look for parent directory copy, longest first
-        for dest, (source, sourcerev) in copies:
+        for dest, (source, sourcectx) in copies:
             dest = dest + '/'
             if not path.startswith(dest):
                 continue
             sourcepath = source + '/' + path[len(dest):]
-            return (source, sourcerev), sourcepath
+            return (source, sourcectx), sourcepath
         return None
 
     return finder
@@ -309,7 +323,7 @@ def getcopies(svn, meta, branch, branchpath, r, files, parentctx):
     # one event for single file copy). We assume that copy events match
     # copy sources in revision info.
     svncopies = {}
-    finder = makecopyfinder(r, branchpath, svn.subdir)
+    finder = makecopyfinder(meta, r, branchpath)
     for f in files:
         copy = finder(f)
         if copy:
@@ -317,24 +331,9 @@ def getcopies(svn, meta, branch, branchpath, r, files, parentctx):
     if not svncopies:
         return {}
 
-    # cache changeset contexts and map them to source svn revisions
-    ctxs = {}
-    def getctx(svnrev):
-        if svnrev in ctxs:
-            return ctxs[svnrev]
-        changeid = meta.get_parent_revision(svnrev + 1, branch)
-        ctx = None
-        if changeid != revlog.nullid:
-            ctx = meta.repo.changectx(changeid)
-        ctxs[svnrev] = ctx
-        return ctx
-
     # check svn copies really make sense in mercurial
     hgcopies = {}
-    for (sourcepath, rev), copies in svncopies.iteritems():
-        sourcectx = getctx(rev)
-        if sourcectx is None:
-            continue
+    for (sourcepath, sourcectx), copies in svncopies.iteritems():
         for k, v in copies:
             if not util.issamefile(sourcectx, parentctx, v):
                 continue
