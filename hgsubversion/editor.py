@@ -209,8 +209,11 @@ class HgEditor(delta.Editor):
         if not from_file:
             self.current.missing.add(path)
             return
+        # Use exact=True because during replacements ('R' action) we select
+        # replacing branch as parent, but svn delta editor provides delta
+        # agains replaced branch.
         ha = self.meta.get_parent_revision(copyfrom_revision + 1,
-                                           from_branch)
+                                           from_branch, True)
         ctx = self.repo.changectx(ha)
         if from_file in ctx:
             fctx = ctx.filectx(from_file)

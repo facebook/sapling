@@ -145,8 +145,7 @@ class TestFetchBranches(test_util.TestBase):
         self.assertEqual('0', ctx.extra().get('close', '0'))
         self.assertEqual('branch1', ctx.branch())
         self.assertEqual('c\n', ctx['c'].data())
-        # a replacement does not work yet
-        #self.assertEqual('d\n', ctx['a'].data())
+        self.assertEqual('d\n', ctx['a'].data())
 
     def test_replace_branch_with_branch_stupid(self, stupid=False):
         self.test_replace_branch_with_branch(True)
