@@ -63,6 +63,7 @@ class SVNMeta(object):
             f = open(self.branch_info_file)
             self.branches = pickle.load(f)
             f.close()
+        self.prevbranches = dict(self.branches)
         self.tags = maps.TagMap(repo)
         if os.path.exists(self.tag_locations_file):
             f = open(self.tag_locations_file)
@@ -349,7 +350,16 @@ class SVNMeta(object):
             return False
         return subpath in self.filemap
 
-    def get_parent_svn_branch_and_rev(self, number, branch):
+    def get_parent_svn_branch_and_rev(self, number, branch, exact=False):
+        """Return the parent revision of branch at number as a tuple
+        (parentnum, parentbranch) or (None, None) if undefined.
+
+        By default, current revision copy records will be used to resolve
+        the parent. For instance, if branch1 is replaced by branch2 in
+        current revision, then the parent of current revision on branch1
+        will be branch2. In this case, use exact=True to select the
+        existing branch before looking at the copy records.
+        """
         if (number, branch) in self.revmap:
             return number, branch
         real_num = 0
@@ -372,14 +382,17 @@ class SVNMeta(object):
             if parent_branch == 'trunk':
                 parent_branch = None
             if branch_created_rev <= number+1 and branch != parent_branch:
+                # did the branch exist in previous run
+                if exact and branch in self.prevbranches:
+                    if self.prevbranches[branch][1] < real_num:
+                        return real_num, branch
                 return self.get_parent_svn_branch_and_rev(
-                                                parent_branch_rev,
-                                                parent_branch)
+                    parent_branch_rev, parent_branch)
         if real_num != 0:
             return real_num, branch
         return None, None
 
-    def get_parent_revision(self, number, branch):
+    def get_parent_revision(self, number, branch, exact=False):
         '''Get the parent revision hash for a commit on a specific branch.
         '''
         tag = self.get_path_tag(self.remotename(branch))
@@ -397,7 +410,7 @@ class SVNMeta(object):
             limitedtags = maps.TagMap(self.repo, endrev=number-1)
             if tag in limitedtags:
                 return limitedtags[tag]
-        r, br = self.get_parent_svn_branch_and_rev(number - 1, branch)
+        r, br = self.get_parent_svn_branch_and_rev(number - 1, branch, exact)
         if r is not None:
             return self.revmap[r, br]
         return revlog.nullid
@@ -535,6 +548,7 @@ class SVNMeta(object):
         }
 
     def save_tbdelta(self, tbdelta):
+        self.prevbranches = dict(self.branches)
         for br in tbdelta['branches'][1]:
             del self.branches[br]
         self.branches.update(tbdelta['branches'][0])
