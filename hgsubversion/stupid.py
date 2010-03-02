@@ -425,6 +425,10 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
                 for child, k in svn.list_files(dirpath, r.revnum):
                     if k == 'f':
                         files.append(path + '/' + child)
+                if e.action == 'R':
+                    # Check all files in replaced directory
+                    path = path + '/'
+                    files += [f for f in parentctx if f.startswith(path)]
             else:
                 if path in parentctx:
                     files.append(path)
