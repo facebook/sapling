@@ -209,7 +209,7 @@ hg -q ci -Am b
 cd ..
 hg -q clone -r 0 i2047a i2047b
 cd i2047b
-hg fetch
+hg fetch ../i2047a
 
 "$TESTDIR/killdaemons.py"
 

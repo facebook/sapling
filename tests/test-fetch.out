@@ -209,7 +209,7 @@ new changeset 3 merges remote changes with local
 3
 
 % test issue2047
-pulling from /tmp/hgtests.848H9Z/test-fetch/i2047a
+pulling from ../i2047a
 searching for changes
 adding changesets
 adding manifests
