@@ -1544,6 +1544,8 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
         doc = gettext(entry[0].__doc__)
         if not doc:
             doc = _("(no help text available)")
+        if hasattr(entry[0], 'definition'):  # aliased command
+            doc = _('alias for: hg %s\n\n%s') % (entry[0].definition, doc)
         if ui.quiet:
             doc = doc.splitlines()[0]
         keep = ui.verbose and ['verbose'] or []
@@ -2529,26 +2531,31 @@ def rename(ui, repo, *pats, **opts):
         wlock.release()
 
 def resolve(ui, repo, *pats, **opts):
-    """retry file merges from a merge or update
+    """various operations to help finish a merge
 
-    This command can cleanly retry unresolved file merges using file
-    revisions preserved from the last update or merge.
+    This command includes several actions that are often useful while
+    performing a merge, after running ``merge`` but before running
+    ``commit``.  (It is only meaningful if your working directory has
+    two parents.)  It is most relevant for merges with unresolved
+    conflicts, which are typically a result of non-interactive merging with
+    ``internal:merge`` or a command-line merge tool like ``diff3``.
 
-    If a conflict is resolved manually, please note that the changes
-    will be overwritten if the merge is retried with resolve. The
-    -m/--mark switch should be used to mark the file as resolved.
+    The available actions are:
 
-    You can specify a set of files to operate on, or use the -a/--all
-    switch to select all unresolved files.
+      1) list files that were merged with conflicts (U, for unresolved)
+         and without conflicts (R, for resolved): ``hg resolve -l``
+         (this is like ``status`` for merges)
+      2) record that you have resolved conflicts in certain files:
+         ``hg resolve -m [file ...]`` (default: mark all unresolved files)
+      3) forget that you have resolved conflicts in certain files:
+         ``hg resolve -u [file ...]`` (default: unmark all resolved files)
+      4) discard your current attempt(s) at resolving conflicts and
+         restart the merge from scratch: ``hg resolve file...``
+         (or ``-a`` for all unresolved files)
 
-    This command also allows listing resolved files and manually
-    indicating whether or not files are resolved. All files must be
-    marked as resolved before a commit is permitted.
-
-    The codes used to show the status of files are::
-
-      U = unresolved
-      R = resolved
+    Note that Mercurial will not let you commit files with unresolved merge
+    conflicts.  You must use ``hg resolve -m ...`` before you can commit
+    after a conflicting merge.
     """
 
     all, mark, unmark, show, nostatus = \

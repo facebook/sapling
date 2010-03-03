@@ -2629,8 +2629,7 @@ def mqimport(orig, ui, repo, *args, **kwargs):
     return orig(ui, repo, *args, **kwargs)
 
 def mqinit(orig, ui, *args, **kwargs):
-    mq = kwargs['mq']
-    del kwargs['mq']
+    mq = kwargs.pop('mq', None)
 
     if not mq:
         return orig(ui, *args, **kwargs)
@@ -2643,8 +2642,7 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
     """Add --mq option to operate on patch repository instead of main"""
 
     # some commands do not like getting unknown options
-    mq = kwargs['mq']
-    del kwargs['mq']
+    mq = kwargs.pop('mq', None)
 
     if not mq:
         return orig(ui, repo, *args, **kwargs)

@@ -36,6 +36,8 @@ echo "quiet=true" >> $HGRCPATH
 echo "slash=true" >> $HGRCPATH
 echo "traceback=true" >> $HGRCPATH
 echo "verbose=true" >> $HGRCPATH
+echo "style=~/.hgstyle" >> $HGRCPATH
+echo "logtemplate={node}" >> $HGRCPATH
 echo "[defaults]" >> $HGRCPATH
 echo "identify=-n" >> $HGRCPATH
 echo "[alias]" >> $HGRCPATH

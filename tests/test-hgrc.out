@@ -11,14 +11,16 @@ foo.bar=a\nb\nc\nde\nfg
 foo.baz=bif cb
 hg: config error at $HGRCPATH:1: cannot include /no-such-file (No such file or directory)
 % customized hgrc
-.../.hgrc:11: alias.log=log -g
-.../.hgrc:9: defaults.identify=-n
+.../.hgrc:13: alias.log=log -g
+.../.hgrc:11: defaults.identify=-n
 .../.hgrc:2: ui.debug=true
 .../.hgrc:3: ui.fallbackencoding=ASCII
 .../.hgrc:4: ui.quiet=true
 .../.hgrc:5: ui.slash=true
 .../.hgrc:6: ui.traceback=true
 .../.hgrc:7: ui.verbose=true
+.../.hgrc:8: ui.style=~/.hgstyle
+.../.hgrc:9: ui.logtemplate={node}
 % plain hgrc
 none: ui.traceback=True
 none: ui.verbose=False

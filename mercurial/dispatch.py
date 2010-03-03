@@ -208,8 +208,7 @@ class cmdalias(object):
             if self.help.startswith("hg " + cmd):
                 # drop prefix in old-style help lines so hg shows the alias
                 self.help = self.help[4 + len(cmd):]
-            self.__doc__ = _("alias for: hg %s\n\n%s") \
-                               % (definition, self.fn.__doc__)
+            self.__doc__ = self.fn.__doc__
 
         except error.UnknownCommand:
             def fn(ui, *args):
