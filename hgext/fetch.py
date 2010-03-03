@@ -81,7 +81,6 @@ def fetch(ui, repo, source='default', **opts):
 
         # Is this a simple fast-forward along the current branch?
         newheads = repo.branchheads(branch)
-        newheads = [head for head in newheads if len(repo[head].children()) == 0]
         newchildren = repo.changelog.nodesbetween([parent], newheads)[2]
         if len(newheads) == 1:
             if newchildren[0] != parent:

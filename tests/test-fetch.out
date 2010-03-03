@@ -207,3 +207,11 @@ merging a
 0 files updated, 1 files merged, 0 files removed, 0 files unresolved
 new changeset 3 merges remote changes with local
 3
+
+% test issue2047
+pulling from /tmp/hgtests.848H9Z/test-fetch/i2047a
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files

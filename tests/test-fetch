@@ -197,6 +197,20 @@ hg --cwd i1726r2 ci -m third
 HGMERGE=true hg --cwd i1726r2 fetch ../i1726r1 | sed 's/new changeset 3:[0-9a-zA-Z]* /new changeset 3 /'
 hg --cwd i1726r2 heads default --template '{rev}\n'
 
+echo
+echo % test issue2047
+hg -q init i2047a
+cd i2047a
+echo a > a
+hg -q ci -Am a
+hg -q branch stable
+echo b > b
+hg -q ci -Am b
+cd ..
+hg -q clone -r 0 i2047a i2047b
+cd i2047b
+hg fetch
+
 "$TESTDIR/killdaemons.py"
 
 true
