@@ -1,6 +1,9 @@
 # An example WSGI script for IIS/isapi-wsgi to export multiple hgweb repos
 # Copyright 2010 Sune Foldager <cryo@cyanite.org>
 #
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+#
 # Requirements:
 # - Python 2.6
 # - IIS 7
