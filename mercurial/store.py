@@ -267,7 +267,9 @@ class fncache(object):
     def add(self, fn):
         if self.entries is None:
             self._load()
-        self.opener('fncache', 'ab').write(encodedir(fn) + '\n')
+        if fn not in self.entries:
+            self.opener('fncache', 'ab').write(encodedir(fn) + '\n')
+            self.entries.add(fn)
 
     def __contains__(self, fn):
         if self.entries is None:
@@ -290,9 +292,7 @@ class fncachestore(basicstore):
         self.fncache = fnc
 
         def fncacheopener(path, mode='r', *args, **kw):
-            if (mode not in ('r', 'rb')
-                and path.startswith('data/')
-                and path not in fnc):
+            if mode not in ('r', 'rb') and path.startswith('data/'):
                 fnc.add(path)
             return op(hybridencode(path), mode, *args, **kw)
         self.opener = fncacheopener
