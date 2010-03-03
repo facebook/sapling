@@ -99,6 +99,11 @@ def annotate(ui, repo, *pats, **opts):
     anyway, although the results will probably be neither useful
     nor desirable.
     """
+    if opts.get('follow'):
+        # --follow is deprecated and now just an alias for -f/--file
+        # to mimic the behavior of Mercurial before version 1.5
+        opts['file'] = 1
+
     datefunc = ui.quiet and util.shortdate or util.datestr
     getdate = util.cachefunc(lambda x: datefunc(x[0].date()))
 
@@ -3422,7 +3427,8 @@ table = {
     "^annotate|blame":
         (annotate,
          [('r', 'rev', '', _('annotate the specified revision')),
-          ('', 'follow', None, _('follow copies and renames (DEPRECATED)')),
+          ('', 'follow', None,
+           _('follow copies/renames and list the filename (DEPRECATED)')),
           ('', 'no-follow', None, _("don't follow copies and renames")),
           ('a', 'text', None, _('treat all files as text')),
           ('u', 'user', None, _('list the author (long with -v)')),
