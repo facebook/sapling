@@ -57,7 +57,7 @@ echo "intree = True" >> .hg/hgrc
 hg gexport
 
 echo % do some work
-git checkout master
+git checkout master 2>&1 | sed s/\'/\"/g
 echo beta > beta
 git add beta
 commit -m 'add beta'
