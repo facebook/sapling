@@ -84,6 +84,10 @@ def normalize_url(url):
         url = '%s#%s' % (url, checkout)
     return url
 
+# TODO remove when we drop 1.3 support
+def progress(ui, *args, **kwargs):
+    if getattr(ui, 'progress', False):
+        return ui.progress(*args, **kwargs)
 
 def parseurl(url, heads=[]):
     parsed = hg.parseurl(url, heads)

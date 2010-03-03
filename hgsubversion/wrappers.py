@@ -285,7 +285,7 @@ def pull(repo, source, heads=[], force=False):
                         bits = (r.revnum, r.author, msg)
                         cnt += 1
                         ui.status(('[r%d] %s: %s\n' % bits)[:w])
-                        ui.progress('pull', cnt, total=total)
+                        util.progress(ui, 'pull', cnt, total=total)
 
                         meta.save_tbdelta(tbdelta)
                         close = pullfuns[have_replay](ui, meta, svn, r, tbdelta)
@@ -313,7 +313,7 @@ def pull(repo, source, heads=[], force=False):
         except KeyboardInterrupt:
             pass
     finally:
-        ui.progress('pull', None, total=total)
+        util.progress(ui, 'pull', None, total=total)
         util.swap_out_encoding(old_encoding)
 
     revisions = len(meta.revmap) - oldrevisions

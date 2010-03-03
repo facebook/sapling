@@ -79,7 +79,6 @@ wrapcmds = { # cmd: generic, target, fixdoc, ppopts, opts
 
 def uisetup(ui):
     """insert command wrappers for a bunch of commands"""
-
     docvals = {'extension': 'hgsubversion'}
     for cmd, (generic, target, fixdoc, ppopts, opts) in wrapcmds.iteritems():
 
