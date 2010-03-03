@@ -3,8 +3,8 @@ Initialized empty Git repository in gitrepo/.git/
 Switched to a new branch "branch1"
 Switched to a new branch "branch2"
 Switched to branch "master"
-Trying simple merge with 9497a4ee62e16ee641860d7677cdb2589ea15554
-Trying simple merge with e5023f9e5cb24fdcec7b6c127cec45d8888e35a9
+Trying simple merge with branch1
+Trying simple merge with branch2
 Merge made by octopus.
  beta  |    1 +
  gamma |    1 +
@@ -30,8 +30,8 @@ importing Git objects into Hg
 | |  summary:     Merge branches 'branch1' and 'branch2'
 | |
 | o    changeset:   4:7f6c791a169f
-| |\   parent:      2:7bcd915dc873
-| | |  parent:      1:37c124f2d0a0
+| |\   parent:      1:7bcd915dc873
+| | |  parent:      2:37c124f2d0a0
 | | |  user:        test <test@example.org>
 | | |  date:        Mon Jan 01 00:00:13 2007 +0000
 | | |  summary:     Merge branches 'branch1' and 'branch2'
@@ -42,20 +42,20 @@ o | |  changeset:   3:1436150b86c2
 | | |  date:        Mon Jan 01 00:00:13 2007 +0000
 | | |  summary:     add delta
 | | |
-+---o  changeset:   2:7bcd915dc873
-| |    tag:         branch1
-| |    tag:         default/branch1
++---o  changeset:   2:37c124f2d0a0
+| |    tag:         branch2
+| |    tag:         default/branch2
 | |    parent:      0:3442585be8a6
 | |    user:        test <test@example.org>
-| |    date:        Mon Jan 01 00:00:11 2007 +0000
-| |    summary:     add beta
+| |    date:        Mon Jan 01 00:00:12 2007 +0000
+| |    summary:     add gamma
 | |
-| o  changeset:   1:37c124f2d0a0
-|/   tag:         branch2
-|    tag:         default/branch2
+| o  changeset:   1:7bcd915dc873
+|/   tag:         branch1
+|    tag:         default/branch1
 |    user:        test <test@example.org>
-|    date:        Mon Jan 01 00:00:12 2007 +0000
-|    summary:     add gamma
+|    date:        Mon Jan 01 00:00:11 2007 +0000
+|    summary:     add beta
 |
 o  changeset:   0:3442585be8a6
    user:        test <test@example.org>
