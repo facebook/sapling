@@ -9007,8 +9007,8 @@ msgstr "[OPÇÃO]... [ARQUIVO]..."
 msgid "annotate the specified revision"
 msgstr "faz um annotate da revisão especificada"
 
-msgid "follow copies and renames (DEPRECATED)"
-msgstr "segue cópias e renomeações (OBSOLETA)"
+msgid "follow copies/renames and list the filename (DEPRECATED)"
+msgstr "segue cópias e renomeações e lista o nome de arquivo (OBSOLETA)"
 
 msgid "don't follow copies and renames"
 msgstr "não segue cópias e renomeações"
