@@ -5,6 +5,8 @@ abort: "series" cannot be used as the name of a patch
 abort: "status" cannot be used as the name of a patch
 abort: "guards" cannot be used as the name of a patch
 abort: ".hgignore" cannot be used as the name of a patch
+abort: ".mqfoo" cannot be used as the name of a patch
+abort: "foo#bar" cannot be used as the name of a patch
 % qnew with uncommitted changes
 uncommitted.patch
 % qnew implies add
@@ -52,6 +54,8 @@ abort: "series" cannot be used as the name of a patch
 abort: "status" cannot be used as the name of a patch
 abort: "guards" cannot be used as the name of a patch
 abort: ".hgignore" cannot be used as the name of a patch
+abort: ".mqfoo" cannot be used as the name of a patch
+abort: "foo#bar" cannot be used as the name of a patch
 % qnew with uncommitted changes
 uncommitted.patch
 % qnew implies add

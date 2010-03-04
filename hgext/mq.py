@@ -813,7 +813,8 @@ class queue(object):
     _reserved = ('series', 'status', 'guards')
     def check_reserved_name(self, name):
         if (name in self._reserved or name.startswith('.hg')
-            or name.startswith('.mq')):
+            or name.startswith('.mq') or '#' in name
+            or (os.name == 'nt' and ':' in name)):
             raise util.Abort(_('"%s" cannot be used as the name of a patch')
                              % name)
 
