@@ -1864,7 +1864,7 @@ def init(ui, repo, **opts):
     qcommit to commit changes to this queue repository.
 
     This command is deprecated. Without -c, it's implied by other relevant
-    commands. With -c, use hg init -Q instead."""
+    commands. With -c, use hg init --mq instead."""
     return qinit(ui, repo, create=opts['create_repo'])
 
 def clone(ui, source, dest=None, **opts):
@@ -1934,7 +1934,7 @@ def clone(ui, source, dest=None, **opts):
 def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository (DEPRECATED)
 
-    This command is deprecated; use hg -Q commit instead."""
+    This command is deprecated; use hg --mq commit instead."""
     q = repo.mq
     r = q.qrepo()
     if not r:
@@ -2654,7 +2654,7 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
     return orig(r.ui, r, *args, **kwargs)
 
 def uisetup(ui):
-    mqopt = [('Q', 'mq', None, _("operate on patch repository"))]
+    mqopt = [('', 'mq', None, _("operate on patch repository"))]
 
     extensions.wrapcommand(commands.table, 'import', mqimport)
 
