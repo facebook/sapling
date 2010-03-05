@@ -168,12 +168,13 @@ echo > hgext/__init__.py
 cat > hgext/broken.py <<EOF
 "broken extension'
 EOF
-TMPPYTHONPATH="$PYTHONPATH"
-PYTHONPATH="`pwd`:$PYTHONPATH"
-export PYTHONPATH
-hg help broken
-hg help foo > /dev/null
-PYTHONPATH="$TMPPYTHONPATH"
-export PYTHONPATH
+cat > path.py <<EOF
+import os, sys
+sys.path.insert(0, os.environ['HGEXTPATH'])
+EOF
+HGEXTPATH=`pwd`
+export HGEXTPATH
+hg --config extensions.path=./path.py help broken
+hg --config extensions.path=./path.py help foo > /dev/null
 
 exit 0
