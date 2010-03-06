@@ -182,6 +182,7 @@ def uisetup(ui):
             sharedprog = progbar(ui)
         extensions.wrapfunction(ui, 'progress', sharedprog.progress)
         extensions.wrapfunction(ui, 'write', sharedprog.write)
+        extensions.wrapfunction(ui, 'write_err', sharedprog.write)
 
 def reposetup(ui, repo):
     uisetup(repo.ui)
