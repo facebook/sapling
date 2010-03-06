@@ -102,4 +102,4 @@ merging b
 1:3: a
 % generate ABA rename configuration
 % annotate after ABA with follow
-8: foo
+foo: foo

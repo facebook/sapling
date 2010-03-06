@@ -152,7 +152,7 @@ branchentry = '
 changelogtag = '<span class="tag">{name|escape}</span> '
 changesettag = '<span class="tag">{tag|escape}</span> '
 changelogbranchhead = '<span class="branchhead">{name|escape}</span> '
-changelogbranchname = '<span class="branchname">{name|escape}</span> ' 
+changelogbranchname = '<span class="branchname">{name|escape}</span> '
 
 filediffparent = '
   <tr>

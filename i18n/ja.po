@@ -99,7 +99,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-03-02 11:58+0900\n"
+"POT-Creation-Date: 2010-03-04 11:38+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -6511,6 +6511,16 @@ msgstr "(ヘルプはありません)"
 
 #, python-format
 msgid ""
+"alias for: hg %s\n"
+"\n"
+"%s"
+msgstr ""
+"hg %s の別名\n"
+"\n"
+"%s"
+
+#, python-format
+msgid ""
 "\n"
 "use \"hg -v help %s\" to show verbose help\n"
 msgstr ""
@@ -7951,8 +7961,8 @@ msgstr "[OPTION]... [FILE]..."
 msgid "annotate the specified revision"
 msgstr "当該リビジョン時点での由来情報を表示"
 
-msgid "follow copies and renames (DEPRECATED)"
-msgstr "複製／改名元ファイルの履歴も追跡(非推奨)"
+msgid "follow copies/renames and list the filename (DEPRECATED)"
+msgstr "複製／改名元ファイルの履歴追跡と、ファイル名の表示(非推奨)"
 
 msgid "don't follow copies and renames"
 msgstr "複製／改名元ファイル履歴の追跡を抑止"
@@ -8679,16 +8689,6 @@ msgstr "** 読み込み済みエクステンション: %s\n"
 #, python-format
 msgid "no definition for alias '%s'\n"
 msgstr "'%s' を別名に持つコマンドはありません\n"
-
-#, python-format
-msgid ""
-"alias for: hg %s\n"
-"\n"
-"%s"
-msgstr ""
-"hg %s の別名\n"
-"\n"
-"%s"
 
 #, python-format
 msgid "alias '%s' resolves to unknown command '%s'\n"

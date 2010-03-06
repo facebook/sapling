@@ -19,6 +19,9 @@ runtest() {
     hg qnew status
     hg qnew guards
     hg qnew .hgignore
+    hg qnew .mqfoo
+    hg qnew 'foo#bar'
+    hg qnew 'foo:bar'
 
     hg qinit -c
 

@@ -273,3 +273,17 @@ initializing destination a-foo repository
 abort: foo: invalid source repository type
 % convert with imaginary sink type
 abort: foo: invalid destination repository type
+
+% testing: convert must not produce duplicate entries in fncache
+initializing destination b repository
+scanning source...
+sorting...
+converting...
+4 a
+3 b
+2 c
+1 d
+0 e
+% contents of fncache file:
+data/a.i
+data/b.i

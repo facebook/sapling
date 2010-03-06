@@ -56,4 +56,10 @@ hg convert --source-type foo a a-foo
 echo % convert with imaginary sink type
 hg convert --dest-type foo a a-foo
 
+echo
+echo % "testing: convert must not produce duplicate entries in fncache"
+hg convert a b
+echo % "contents of fncache file:"
+cat b/.hg/store/fncache
+
 true
