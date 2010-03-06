@@ -14,15 +14,13 @@ def stringify(thing):
         return "".join([stringify(t) for t in thing if t is not None])
     return str(thing)
 
-agescales = [("second", 1),
-             ("minute", 60),
-             ("hour", 3600),
-             ("day", 3600 * 24),
-             ("week", 3600 * 24 * 7),
+agescales = [("year", 3600 * 24 * 365),
              ("month", 3600 * 24 * 30),
-             ("year", 3600 * 24 * 365)]
-
-agescales.reverse()
+             ("week", 3600 * 24 * 7),
+             ("day", 3600 * 24),
+             ("hour", 3600),
+             ("minute", 60),
+             ("second", 1),]
 
 def age(date):
     '''turn a (timestamp, tzoff) tuple into an age string.'''
