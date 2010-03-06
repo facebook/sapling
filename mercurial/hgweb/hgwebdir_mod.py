@@ -195,11 +195,8 @@ class hgwebdir(object):
                     yield {"type" : i[0], "extension": i[1],
                            "node": nodeid, "url": url}
 
-        sortdefault = None, False
-        def entries(sortcolumn="", descending=False, subdir="", **map):
+        def rawentries(subdir="", **map):
 
-            rows = []
-            parity = paritygen(self.stripecount)
             descend = self.ui.configbool('web', 'descend', True)
             for name, path in self.repos:
 
@@ -253,19 +250,19 @@ class hgwebdir(object):
                            lastchange=d,
                            lastchange_sort=d[1]-d[0],
                            archives=archivelist(u, "tip", url))
-                if (not sortcolumn or (sortcolumn, descending) == sortdefault):
-                    # fast path for unsorted output
-                    row['parity'] = parity.next()
-                    yield row
-                else:
-                    rows.append((row["%s_sort" % sortcolumn], row))
-            if rows:
-                rows.sort()
-                if descending:
-                    rows.reverse()
-                for key, row in rows:
-                    row['parity'] = parity.next()
-                    yield row
+                yield row
+
+        sortdefault = None, False
+        def entries(sortcolumn="", descending=False, subdir="", **map):
+            rows = rawentries(subdir=subdir, **map)
+
+            if sortcolumn and sortdefault != (sortcolumn, descending):
+                sortkey = '%s_sort' % sortcolumn
+                rows = sorted(rows, key=lambda x: x[sortkey],
+                              reverse=descending)
+            for row, parity in zip(rows, paritygen(self.stripecount)):
+                row['parity'] = parity
+                yield row
 
         self.refresh()
         sortable = ["name", "description", "contact", "lastchange"]
