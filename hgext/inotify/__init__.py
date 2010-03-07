@@ -41,7 +41,7 @@ def reposetup(ui, repo):
         # to start an inotify server if it won't start.
         _inotifyon = True
 
-        def status(self, match, subrepos, ignored, clean, unknown=True):
+        def status(self, match, subrepos, ignored, clean, unknown):
             files = match.files()
             if '.' in files:
                 files = []
