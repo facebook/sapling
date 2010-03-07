@@ -79,7 +79,6 @@ like CVS' $Log$, are not supported. A keyword template map "Log =
 from mercurial import commands, cmdutil, dispatch, filelog, revlog, extensions
 from mercurial import patch, localrepo, templater, templatefilters, util, match
 from mercurial.hgweb import webcommands
-from mercurial.lock import release
 from mercurial.node import nullid
 from mercurial.i18n import _
 import re, shutil, tempfile
@@ -264,17 +263,15 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     if repo.dirstate.parents()[1] != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
     kwt = kwtools['templater']
-    status = _status(ui, repo, kwt, *pats, **opts)
-    modified, added, removed, deleted, unknown, ignored, clean = status
-    if modified or added or removed or deleted:
-        raise util.Abort(_('outstanding uncommitted changes'))
-    wlock = lock = None
+    wlock = repo.wlock()
     try:
-        wlock = repo.wlock()
-        lock = repo.lock()
+        status = _status(ui, repo, kwt, *pats, **opts)
+        modified, added, removed, deleted, unknown, ignored, clean = status
+        if modified or added or removed or deleted:
+            raise util.Abort(_('outstanding uncommitted changes'))
         kwt.overwrite(None, expand, clean)
     finally:
-        release(lock, wlock)
+        wlock.release()
 
 def demo(ui, repo, *args, **opts):
     '''print [keywordmaps] configuration and an expansion example
@@ -485,15 +482,10 @@ def reposetup(ui, repo):
                 del self.commitctx
 
         def kwcommitctx(self, ctx, error=False):
-            wlock = lock = None
-            try:
-                wlock = self.wlock()
-                lock = self.lock()
-                n = super(kwrepo, self).commitctx(ctx, error)
-                kwt.overwrite(n, True, None)
-                return n
-            finally:
-                release(lock, wlock)
+            n = super(kwrepo, self).commitctx(ctx, error)
+            # no lock needed, only called from repo.commit() which already locks
+            kwt.overwrite(n, True, None)
+            return n
 
     # monkeypatches
     def kwpatchfile_init(orig, self, ui, fname, opener,
