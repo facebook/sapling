@@ -295,6 +295,12 @@ def findrenames(repo, added, removed, threshold):
             continue
         fctx = ctx.filectx(r)
 
+        # lazily load text
+        @util.cachefunc
+        def data():
+            orig = fctx.data()
+            return orig, mdiff.splitnewlines(orig)
+
         def score(text):
             if not len(text):
                 return 0.0
@@ -302,14 +308,13 @@ def findrenames(repo, added, removed, threshold):
                 return 1.0
             if threshold == 1.0:
                 return 0.0
-            orig = fctx.data()
+            orig, lines = data()
             # bdiff.blocks() returns blocks of matching lines
             # count the number of bytes in each
             equal = 0
-            alines = mdiff.splitnewlines(text)
             matches = bdiff.blocks(text, orig)
             for x1, x2, y1, y2 in matches:
-                for line in alines[x1:x2]:
+                for line in lines[y1:y2]:
                     equal += len(line)
 
             lengths = len(text) + len(orig)
