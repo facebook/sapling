@@ -115,7 +115,7 @@ def colored(dag):
                 edges.append((ecol, next.index(eid), colors[eid]))
             elif eid == cur:
                 for p in parents:
-                    edges.append((ecol, next.index(p), colors[p]))
+                    edges.append((ecol, next.index(p), color))
 
         # Yield and move on
         yield (cur, type, data, (col, color), edges)
