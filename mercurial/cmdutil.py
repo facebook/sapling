@@ -356,9 +356,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             removed.append(abs)
         elif repo.dirstate[abs] == 'a':
             added.append(abs)
-    if not dry_run:
-        repo.remove(deleted)
-        repo.add(unknown)
+    copies = {}
     if similarity > 0:
         for old, new, score in findrenames(repo, added + unknown,
                                            removed + deleted, similarity):
@@ -366,8 +364,17 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
                 repo.ui.status(_('recording removal of %s as rename to %s '
                                  '(%d%% similar)\n') %
                                (m.rel(old), m.rel(new), score * 100))
-            if not dry_run:
+            copies[new] = old
+
+    if not dry_run:
+        wlock = repo.wlock()
+        try:
+            repo.remove(deleted)
+            repo.add(unknown)
+            for new, old in copies.iteritems():
                 repo.copy(old, new)
+        finally:
+            wlock.release()
 
 def copy(ui, repo, pats, opts, rename=False):
     # called with the repo lock held
