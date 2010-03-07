@@ -265,14 +265,14 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
         raise util.Abort(_('outstanding uncommitted merge'))
     kwt = kwtools['templater']
     status = _status(ui, repo, kwt, *pats, **opts)
-    modified, added, removed, deleted = status[:4]
+    modified, added, removed, deleted, unknown, ignored, clean = status
     if modified or added or removed or deleted:
         raise util.Abort(_('outstanding uncommitted changes'))
     wlock = lock = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        kwt.overwrite(None, expand, status[6])
+        kwt.overwrite(None, expand, clean)
     finally:
         release(lock, wlock)
 
