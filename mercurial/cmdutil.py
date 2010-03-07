@@ -289,7 +289,8 @@ def findrenames(repo, added, removed, threshold):
     '''find renamed files -- yields (before, after, score) tuples'''
     copies = {}
     ctx = repo['.']
-    for r in removed:
+    for i, r in enumerate(removed):
+        repo.ui.progress(_('looking for similarities'), i, total=len(removed))
         if r not in ctx:
             continue
         fctx = ctx.filectx(r)
@@ -319,6 +320,7 @@ def findrenames(repo, added, removed, threshold):
             myscore = score(repo.wread(a))
             if myscore >= bestscore:
                 copies[a] = (r, myscore)
+    repo.ui.progress(_('looking for similarities'), None, total=len(removed))
 
     for dest, v in copies.iteritems():
         source, score = v
