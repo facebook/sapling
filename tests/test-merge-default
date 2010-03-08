@@ -24,7 +24,7 @@ hg merge
 
 hg up
 echo % should fail because \> 2 heads
-export HGMERGE=internal:other
+HGMERGE=internal:other; export HGMERGE
 hg merge
 
 echo % should succeed
