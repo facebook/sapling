@@ -1204,7 +1204,7 @@ def export(ui, repo, *changesets, **opts):
         ui.note(_('exporting patches:\n'))
     else:
         ui.note(_('exporting patch:\n'))
-    patch.export(repo, revs, template=opts.get('output'),
+    cmdutil.export(repo, revs, template=opts.get('output'),
                  switch_parent=opts.get('switch_parent'),
                  opts=patch.diffopts(ui, opts))
 

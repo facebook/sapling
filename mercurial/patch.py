@@ -1551,47 +1551,6 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             if text:
                 yield text
 
-def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
-           opts=None):
-    '''export changesets as hg patches.'''
-
-    total = len(revs)
-    revwidth = max([len(str(rev)) for rev in revs])
-
-    def single(rev, seqno, fp):
-        ctx = repo[rev]
-        node = ctx.node()
-        parents = [p.node() for p in ctx.parents() if p]
-        branch = ctx.branch()
-        if switch_parent:
-            parents.reverse()
-        prev = (parents and parents[0]) or nullid
-
-        if not fp:
-            fp = cmdutil.make_file(repo, template, node, total=total,
-                                   seqno=seqno, revwidth=revwidth,
-                                   mode='ab')
-        if fp != sys.stdout and hasattr(fp, 'name'):
-            repo.ui.note("%s\n" % fp.name)
-
-        fp.write("# HG changeset patch\n")
-        fp.write("# User %s\n" % ctx.user())
-        fp.write("# Date %d %d\n" % ctx.date())
-        if branch and (branch != 'default'):
-            fp.write("# Branch %s\n" % branch)
-        fp.write("# Node ID %s\n" % hex(node))
-        fp.write("# Parent  %s\n" % hex(prev))
-        if len(parents) > 1:
-            fp.write("# Parent  %s\n" % hex(parents[1]))
-        fp.write(ctx.description().rstrip())
-        fp.write("\n\n")
-
-        for chunk in diff(repo, prev, node, opts=opts):
-            fp.write(chunk)
-
-    for seqno, rev in enumerate(revs):
-        single(rev, seqno + 1, fp)
-
 def diffstatdata(lines):
     filename, adds, removes = None, 0, 0
     for line in lines:

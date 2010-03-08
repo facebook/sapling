@@ -113,7 +113,7 @@ class ciamsg(object):
 
         n = self.ctx.node()
         pbuf = patchbuf()
-        patch.export(self.cia.repo, [n], fp=pbuf)
+        cmdutil.export(self.cia.repo, [n], fp=pbuf)
         return patch.diffstat(pbuf.lines) or ''
 
     def logmsg(self):

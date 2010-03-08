@@ -1681,7 +1681,7 @@ class queue(object):
                 self.full_series.insert(0, patchname)
 
                 patchf = self.opener(patchname, "w")
-                patch.export(repo, [n], fp=patchf, opts=diffopts)
+                cmdutil.export(repo, [n], fp=patchf, opts=diffopts)
                 patchf.close()
 
                 se = statusentry(hex(n), patchname)
