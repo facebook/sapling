@@ -451,7 +451,7 @@ def branch(ui, repo, label=None, **opts):
         if not opts.get('force') and utflabel in repo.branchtags():
             if label not in [p.branch() for p in repo.parents()]:
                 raise util.Abort(_('a branch of the same name already exists'
-                                   ' (use --force to override)'))
+                                   " (use 'hg update' to switch to it)"))
         repo.dirstate.setbranch(utflabel)
         ui.status(_('marked working directory as branch %s\n') % label)
     else:
