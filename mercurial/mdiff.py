@@ -125,12 +125,12 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
     else:
         al = splitnewlines(a)
         bl = splitnewlines(b)
-        l = list(bunidiff(a, b, al, bl, "a/" + fn1, "b/" + fn2, opts=opts))
+        l = list(_unidiff(a, b, al, bl, opts=opts))
         if not l:
             return ""
-        # difflib uses a space, rather than a tab
-        l[0] = "%s%s" % (l[0][:-2], datetag(ad))
-        l[1] = "%s%s" % (l[1][:-2], datetag(bd))
+
+        l.insert(0, "--- a/%s%s" % (fn1, datetag(ad)))
+        l.insert(1, "+++ b/%s%s" % (fn2, datetag(bd)))
 
     for ln in xrange(len(l)):
         if l[ln][-1] != '\n':
@@ -141,11 +141,10 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
 
     return "".join(l)
 
-# somewhat self contained replacement for difflib.unified_diff
+# creates a headerless unified diff
 # t1 and t2 are the text to be diffed
 # l1 and l2 are the text broken up into lines
-# header1 and header2 are the filenames for the diff output
-def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
+def _unidiff(t1, t2, l1, l2, opts=defaultopts):
     def contextend(l, len):
         ret = l + opts.context
         if ret > len:
@@ -158,10 +157,7 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
             return 0
         return ret
 
-    def yieldhunk(hunk, header):
-        if header:
-            for x in header:
-                yield x
+    def yieldhunk(hunk):
         (astart, a2, bstart, b2, delta) = hunk
         aend = contextend(a2, len(l1))
         alen = aend - astart
@@ -183,8 +179,6 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
             yield x
         for x in xrange(a2, aend):
             yield ' ' + l1[x]
-
-    header = ["--- %s\t\n" % header1, "+++ %s\t\n" % header2]
 
     if opts.showfunc:
         funcre = re.compile('\w')
@@ -236,11 +230,8 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
                 astart = hunk[1]
                 bstart = hunk[3]
             else:
-                for x in yieldhunk(hunk, header):
+                for x in yieldhunk(hunk):
                     yield x
-                # we only want to yield the header if the files differ, and
-                # we only want to yield it once.
-                header = None
         if prev:
             # we've joined the previous hunk, record the new ending points.
             hunk[1] = a2
@@ -255,7 +246,7 @@ def bunidiff(t1, t2, l1, l2, header1, header2, opts=defaultopts):
         delta[len(delta):] = ['+' + x for x in new]
 
     if hunk:
-        for x in yieldhunk(hunk, header):
+        for x in yieldhunk(hunk):
             yield x
 
 def patchtext(bin):
