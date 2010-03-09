@@ -1175,20 +1175,6 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
         return -1
     return err
 
-def diffopts(ui, opts=None, untrusted=False):
-    def get(key, name=None, getter=ui.configbool):
-        return ((opts and opts.get(key)) or
-                getter('diff', name or key, None, untrusted=untrusted))
-    return mdiff.diffopts(
-        text=opts and opts.get('text'),
-        git=get('git'),
-        nodates=get('nodates'),
-        showfunc=get('show_function', 'showfunc'),
-        ignorews=get('ignore_all_space', 'ignorews'),
-        ignorewsamount=get('ignore_space_change', 'ignorewsamount'),
-        ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'),
-        context=get('unified', getter=ui.config))
-
 def updatedir(ui, repo, patches, similarity=0):
     '''Update dirstate after patch application according to metadata'''
     if not patches:
@@ -1375,6 +1361,20 @@ def b85diff(to, tn):
 
 class GitDiffRequired(Exception):
     pass
+
+def diffopts(ui, opts=None, untrusted=False):
+    def get(key, name=None, getter=ui.configbool):
+        return ((opts and opts.get(key)) or
+                getter('diff', name or key, None, untrusted=untrusted))
+    return mdiff.diffopts(
+        text=opts and opts.get('text'),
+        git=get('git'),
+        nodates=get('nodates'),
+        showfunc=get('show_function', 'showfunc'),
+        ignorews=get('ignore_all_space', 'ignorews'),
+        ignorewsamount=get('ignore_space_change', 'ignorewsamount'),
+        ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'),
+        context=get('unified', getter=ui.config))
 
 def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
          losedatafn=None):
