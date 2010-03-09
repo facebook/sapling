@@ -812,6 +812,9 @@ class svn_source(converter_source):
                         break
                     if not paths:
                         self.ui.debug('revision %d has no entries\n' % revnum)
+                        # If we ever leave the loop on an empty
+                        # revision, do not try to get a parent branch
+                        lastonbranch = lastonbranch or revnum == 0
                         continue
                     cset, lastonbranch = parselogentry(paths, revnum, author,
                                                        date, message)
