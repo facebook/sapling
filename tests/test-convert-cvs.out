@@ -53,6 +53,28 @@ c
 2 update tags files: .hgtags
 1 ci0 files: b/c
 0 Initial revision files: b/c
+% convert full repository (issue1649)
+U srcfull/src/a
+U srcfull/src/b/c
+CVS
+CVSROOT
+src
+initializing destination srcfull-hg repository
+connecting to cvsrepo
+scanning source...
+collecting CVS rlog
+creating changesets
+4 changeset entries
+sorting...
+converting...
+3 Initial revision
+2 import
+1 initial checkin
+0 ci0
+updating tags
+a
+c
+c
 % commit new file revisions
 checking in src/a,v
 checking in src/b/c,v

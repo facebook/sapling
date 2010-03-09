@@ -124,9 +124,9 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         # Get the real directory in the repository
         try:
             prefix = open(os.path.join('CVS','Repository')).read().strip()
+            directory = prefix
             if prefix == ".":
                 prefix = ""
-            directory = prefix
         except IOError:
             raise logerror('Not a CVS sandbox')
 
@@ -184,7 +184,11 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         p = util.normpath(getrepopath(root))
         if not p.endswith('/'):
             p += '/'
-        prefix = p + util.normpath(prefix)
+        if prefix:
+            # looks like normpath replaces "" by "."
+            prefix = p + util.normpath(prefix)
+        else:
+            prefix = p
     cmd.append(['log', 'rlog'][rlog])
     if date:
         # no space between option and date string
