@@ -133,6 +133,7 @@ ignore = [
     # setuptools' pkg_resources.py expects "from __main__ import x" to
     # raise ImportError if x not defined
     '__main__',
+    '_ssl', # conditional imports in the stdlib, issue1964
     ]
 
 def enable():
