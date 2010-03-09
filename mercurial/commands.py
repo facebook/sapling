@@ -564,6 +564,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
         revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
         o = repo.findoutgoing(other, force=opts.get('force'))
 
+    if not o:
+        ui.status(_("no changes found\n"))
+        return
+
     if revs:
         cg = repo.changegroupsubset(o, revs, 'bundle')
     else:
