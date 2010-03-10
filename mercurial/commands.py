@@ -2868,6 +2868,10 @@ def serve(ui, repo, **opts):
     By default, the server logs accesses to stdout and errors to
     stderr. Use the -A/--accesslog and -E/--errorlog options to log to
     files.
+
+    To have the server choose a free port number to listen on, specify
+    a port number of 0; in this case, the server will print the port
+    number it uses.
     """
 
     if opts["stdio"]:
@@ -2881,10 +2885,12 @@ def serve(ui, repo, **opts):
     optlist = ("name templates style address port prefix ipv6"
                " accesslog errorlog webdir_conf certificate encoding")
     for o in optlist.split():
-        if opts.get(o, None):
-            baseui.setconfig("web", o, str(opts[o]))
-            if (repo is not None) and (repo.ui != baseui):
-                repo.ui.setconfig("web", o, str(opts[o]))
+        val = opts.get(o, '')
+        if val in (None, ''): # should check against default options instead
+            continue
+        baseui.setconfig("web", o, val)
+        if repo and repo.ui != baseui:
+            repo.ui.setconfig("web", o, val)
 
     if repo is None and not ui.config("web", "webdir_conf"):
         raise error.RepoError(_("There is no Mercurial repository here"
@@ -2895,7 +2901,7 @@ def serve(ui, repo, **opts):
             util.set_signal_handler()
             self.httpd = server.create_server(baseui, repo)
 
-            if not ui.verbose:
+            if opts['port'] and not ui.verbose:
                 return
 
             if self.httpd.prefix:
@@ -2916,8 +2922,12 @@ def serve(ui, repo, **opts):
             fqaddr = self.httpd.fqaddr
             if ':' in fqaddr:
                 fqaddr = '[%s]' % fqaddr
-            ui.status(_('listening at http://%s%s/%s (bound to %s:%d)\n') %
-                      (fqaddr, port, prefix, bindaddr, self.httpd.port))
+            if opts['port']:
+                write = ui.status
+            else:
+                write = ui.write
+            write(_('listening at http://%s%s/%s (bound to %s:%d)\n') %
+                  (fqaddr, port, prefix, bindaddr, self.httpd.port))
 
         def run(self):
             self.httpd.serve_forever()
@@ -3771,7 +3781,7 @@ table = {
           ('d', 'daemon', None, _('run server in background')),
           ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
           ('E', 'errorlog', '', _('name of error log file to write to')),
-          ('p', 'port', 0, _('port to listen on (default: 8000)')),
+          ('p', 'port', 8000, _('port to listen on')),
           ('a', 'address', '',
            _('address to listen on (default: all interfaces)')),
           ('', 'prefix', '',
