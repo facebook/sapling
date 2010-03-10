@@ -25,6 +25,23 @@ from mercurial import changegroup
 from mercurial.i18n import _
 
 
+def postorder(start, edges):
+    result = []
+    visit = list(start)
+    finished = set()
+
+    while visit:
+        cur = visit[-1]
+        for p in edges[cur]:
+            if p not in finished:
+                visit.append(p)
+                break
+        else:
+            result.append(cur)
+            finished.add(cur)
+            visit.pop()
+
+    return result
 
 def toposort_reversepostorder(ui, rl):
     # postorder of the reverse directed graph
@@ -43,32 +60,17 @@ def toposort_reversepostorder(ui, rl):
                 parents[rev] = (p1,)    # normal node
             else:
                 parents[rev] = (p2, p1) # merge node
-
             heads.add(rev)
-
             for p in parents[rev]:
                 heads.discard(p)
     finally:
         ui.progress(_('reading'), None, total=len(rl))
 
+    heads = list(heads)
+    heads.sort(reverse=True)
+
     ui.status(_('sorting revs\n'))
-    result = []
-    visit = list(heads)
-    visit.sort(reverse=True)
-    finished = set()
-
-    while visit:
-        cur = visit[-1]
-        for p in parents[cur]:
-            if p not in finished:
-                visit.append(p)
-                break
-        else:
-            result.append(cur)
-            finished.add(cur)
-            visit.pop()
-
-    return result
+    return postorder(heads, parents)
 
 def toposort_postorderreverse(ui, rl):
     # reverse-postorder of the reverse directed graph
@@ -82,9 +84,7 @@ def toposort_postorderreverse(ui, rl):
             (p1, p2) = rl.parentrevs(rev)
             if p1 == p2 == node.nullrev:
                 roots.add(rev)
-
             children[rev] = []
-
             if p1 != node.nullrev:
                 children[p1].append(rev)
             if p2 != node.nullrev:
@@ -92,23 +92,11 @@ def toposort_postorderreverse(ui, rl):
     finally:
         ui.progress(_('reading'), None, total=len(rl))
 
+    root = list(roots)
+    roots.sort()
+
     ui.status(_('sorting revs\n'))
-    result = []
-    visit = list(roots)
-    visit.sort()
-    finished = set()
-
-    while visit:
-        cur = visit[-1]
-        for p in children[cur]:
-            if p not in finished:
-                visit.append(p)
-                break
-        else:
-            result.append(cur)
-            finished.add(cur)
-            visit.pop()
-
+    result = postorder(roots, children)
     result.reverse()
     return result
 
