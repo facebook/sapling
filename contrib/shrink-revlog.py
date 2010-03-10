@@ -31,19 +31,19 @@ def toposort(ui, rl):
     # build children and roots
     ui.status(_('reading revs\n'))
     try:
-        for i in rl:
-            ui.progress(_('reading'), i, total=len(rl))
-            children[i] = []
-            parents = [p for p in rl.parentrevs(i) if p != node.nullrev]
+        for rev in rl:
+            ui.progress(_('reading'), rev, total=len(rl))
+            children[rev] = []
+            parents = [p for p in rl.parentrevs(rev) if p != node.nullrev]
             # in case of duplicate parents
             if len(parents) == 2 and parents[0] == parents[1]:
                 del parents[1]
             for p in parents:
                 assert p in children
-                children[p].append(i)
+                children[p].append(rev)
 
             if len(parents) == 0:
-                root.append(i)
+                root.append(rev)
     finally:
         ui.progress(_('reading'), None, total=len(rl))
 
@@ -52,34 +52,34 @@ def toposort(ui, rl):
     # the algorithm
     ui.status(_('sorting revs\n'))
     visit = root
-    ret = []
+    result = []
 
     # suboptimal: nodes whose predecessor is not first parent
     suboptimal = 0
 
     while visit:
-        i = visit.pop(0)
-        # revlog will compute delta relative to ret[-1], so keep track
+        cur = visit.pop(0)
+        # revlog will compute delta relative to result[-1], so keep track
         # of nodes where this might result in a large delta
-        parents = rl.parentrevs(i)
-        if ret:
-            if ret[-1] != parents[0]:
+        parents = rl.parentrevs(cur)
+        if result:
+            if result[-1] != parents[0]:
                 suboptimal += 1
 
-        ret.append(i)
-        if i not in children:
+        result.append(cur)
+        if cur not in children:
             # This only happens if some node's p1 == p2, which can
             # happen in the manifest in certain circumstances.
             continue
         next = []
-        for c in children.pop(i):
+        for c in children.pop(cur):
             parents_unseen = [p for p in rl.parentrevs(c)
                               if p != node.nullrev and p in children]
             if len(parents_unseen) == 0:
                 next.append(c)
         visit = next + visit
     ui.note(_('%d suboptimal nodes\n') % suboptimal)
-    return ret
+    return result
 
 def writerevs(ui, r1, r2, order, tr):
 
