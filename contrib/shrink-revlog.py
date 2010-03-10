@@ -111,6 +111,7 @@ def toposort_reversepostorder(ui, rl):
     visit = list(heads)
     visit.sort(reverse=True)
     finished = set()
+    suboptimal = 0
 
     while visit:
         cur = visit[-1]
@@ -119,9 +120,16 @@ def toposort_reversepostorder(ui, rl):
                 visit.append(p)
                 break
         else:
+            curparents = rl.parentrevs(cur)
+            if result and result[-1] != curparents[0]:
+                suboptimal += 1
+
             result.append(cur)
             finished.add(cur)
             visit.pop()
+
+    ui.note(_('%d suboptimal nodes\n') % suboptimal)
+
     return result
 
 def toposort_postorderreverse(ui, rl):
@@ -151,6 +159,8 @@ def toposort_postorderreverse(ui, rl):
     visit = list(roots)
     visit.sort()
     finished = set()
+    suboptimal = 0
+
     while visit:
         cur = visit[-1]
         for p in children[cur]:
@@ -158,9 +168,19 @@ def toposort_postorderreverse(ui, rl):
                 visit.append(p)
                 break
         else:
+            # if cur is not the first parent of its successor, then the
+            # successor is a suboptimal node
+            if result:
+                succparents = rl.parentrevs(result[-1])
+                if succparents[0] != cur:
+                    suboptimal += 1
+
             result.append(cur)
             finished.add(cur)
             visit.pop()
+
+    ui.note(_('%d suboptimal nodes\n') % suboptimal)
+
     result.reverse()
     return result
 
