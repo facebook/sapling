@@ -284,8 +284,7 @@ class hgwebdir(object):
                 for column in sortable]
 
         self.refresh()
-        if self._baseurl is not None:
-            req.env['SCRIPT_NAME'] = self._baseurl
+        self.updatereqenv(req.env)
 
         return tmpl("index", entries=entries, subdir=subdir,
                     sortcolumn=sortcolumn, descending=descending,
@@ -308,8 +307,7 @@ class hgwebdir(object):
         def config(section, name, default=None, untrusted=True):
             return self.ui.config(section, name, default, untrusted)
 
-        if self._baseurl is not None:
-            req.env['SCRIPT_NAME'] = self._baseurl
+        self.updatereqenv(req.env)
 
         url = req.env.get('SCRIPT_NAME', '')
         if not url.endswith('/'):
@@ -339,3 +337,7 @@ class hgwebdir(object):
                                              "staticurl": staticurl,
                                              "sessionvars": sessionvars})
         return tmpl
+
+    def updatereqenv(self, env):
+        if self._baseurl is not None:
+            env['SCRIPT_NAME'] = self._baseurl
