@@ -2886,7 +2886,7 @@ def serve(ui, repo, **opts):
                " accesslog errorlog webdir_conf certificate encoding")
     for o in optlist.split():
         val = opts.get(o, '')
-        if val is None or val == '': # should check against default options instead
+        if val in (None, ''): # should check against default options instead
             continue
         baseui.setconfig("web", o, val)
         if repo and repo.ui != baseui:
