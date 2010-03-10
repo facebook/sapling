@@ -2885,13 +2885,12 @@ def serve(ui, repo, **opts):
     optlist = ("name templates style address port prefix ipv6"
                " accesslog errorlog webdir_conf certificate encoding")
     for o in optlist.split():
-        try: val = opts[o]
-        except KeyError: continue
-        else:
-            if val == '': continue
-            baseui.setconfig("web", o, val)
-            if repo and repo.ui != baseui:
-                repo.ui.setconfig("web", o, val)
+        val = opts.get(o, '')
+        if val is None or val == '': # should check against default options instead
+            continue
+        baseui.setconfig("web", o, val)
+        if repo and repo.ui != baseui:
+            repo.ui.setconfig("web", o, val)
 
     if repo is None and not ui.config("web", "webdir_conf"):
         raise error.RepoError(_("There is no Mercurial repository here"
@@ -2924,7 +2923,7 @@ def serve(ui, repo, **opts):
             if ':' in fqaddr:
                 fqaddr = '[%s]' % fqaddr
             if opts['port']:
-                write = ui.status    
+                write = ui.status
             else:
                 write = ui.write
             write(_('listening at http://%s%s/%s (bound to %s:%d)\n') %
