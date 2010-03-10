@@ -53,8 +53,19 @@ def toposort(ui, rl):
     ui.status(_('sorting revs\n'))
     visit = root
     ret = []
+
+    # suboptimal: nodes whose predecessor is not first parent
+    suboptimal = 0
+
     while visit:
         i = visit.pop(0)
+        # revlog will compute delta relative to ret[-1], so keep track
+        # of nodes where this might result in a large delta
+        parents = rl.parentrevs(i)
+        if ret:
+            if ret[-1] != parents[0]:
+                suboptimal += 1
+
         ret.append(i)
         if i not in children:
             # This only happens if some node's p1 == p2, which can
@@ -67,6 +78,7 @@ def toposort(ui, rl):
             if len(parents_unseen) == 0:
                 next.append(c)
         visit = next + visit
+    ui.note(_('%d suboptimal nodes\n') % suboptimal)
     return ret
 
 def writerevs(ui, r1, r2, order, tr):
