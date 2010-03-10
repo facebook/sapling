@@ -2,8 +2,10 @@
 
 hgserve()
 {
-    hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid -E errors.log -v $@ \
-        | sed -e 's/:[0-9][0-9]*//g' -e 's/http:\/\/[^/]*\//http:\/\/localhost\//'
+    hg serve -a localhost -d --pid-file=hg.pid -E errors.log -v $@ \
+        | sed -e "s/:$HGPORT1\\([^0-9]\\)/:HGPORT1\1/g" \
+              -e "s/:$HGPORT2\\([^0-9]\\)/:HGPORT2\1/g" \
+              -e 's/http:\/\/[^/]*\//http:\/\/localhost\//'
     cat hg.pid >> "$DAEMON_PIDS"
     echo % errors
     cat errors.log
@@ -17,6 +19,7 @@ cd test
 
 echo '[web]' > .hg/hgrc
 echo 'accesslog = access.log' >> .hg/hgrc
+echo "port = $HGPORT1" >> .hg/hgrc
 
 echo % Without -v
 hg serve -a localhost -p $HGPORT -d --pid-file=hg.pid -E errors.log
@@ -29,6 +32,9 @@ cat errors.log
 
 echo % With -v
 hgserve
+
+echo % With -v and -p HGPORT2
+hgserve -p "$HGPORT2"
 
 echo % With --prefix foo
 hgserve --prefix foo
