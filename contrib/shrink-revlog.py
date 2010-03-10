@@ -81,6 +81,89 @@ def toposort_branchsort(ui, rl):
     ui.note(_('%d suboptimal nodes\n') % suboptimal)
     return result
 
+def toposort_reversepostorder(ui, rl):
+    # postorder of the reverse directed graph
+
+    # map rev to list of parent revs (p2 first)
+    parents = {}
+    heads = set()
+    ui.status(_('reading revs\n'))
+    try:
+        for rev in rl:
+            ui.progress(_('reading'), rev, total=len(rl))
+            (p1, p2) = rl.parentrevs(rev)
+            if p1 == p2 == node.nullrev:
+                parents[rev] = ()       # root node
+            elif p1 == p2 or p2 == node.nullrev:
+                parents[rev] = (p1,)    # normal node
+            else:
+                parents[rev] = (p2, p1) # merge node
+
+            heads.add(rev)
+
+            for p in parents[rev]:
+                heads.discard(p)
+    finally:
+        ui.progress(_('reading'), None, total=len(rl))
+
+    ui.status(_('sorting revs\n'))
+    result = []
+    visit = list(heads)
+    visit.sort(reverse=True)
+    finished = set()
+
+    while visit:
+        cur = visit[-1]
+        for p in parents[cur]:
+            if p not in finished:
+                visit.append(p)
+                break
+        else:
+            result.append(cur)
+            finished.add(cur)
+            visit.pop()
+    return result
+
+def toposort_postorderreverse(ui, rl):
+    # reverse-postorder of the reverse directed graph
+
+    children = {}
+    roots = set()
+    ui.status(_('reading revs\n'))
+    try:
+        for rev in rl:
+            ui.progress(_('reading'), rev, total=len(rl))
+            (p1, p2) = rl.parentrevs(rev)
+            if p1 == p2 == node.nullrev:
+                roots.add(rev)
+
+            children[rev] = []
+
+            if p1 != node.nullrev:
+                children[p1].append(rev)
+            if p2 != node.nullrev:
+                children[p2].append(rev)
+    finally:
+        ui.progress(_('reading'), None, total=len(rl))
+
+    ui.status(_('sorting revs\n'))
+    result = []
+    visit = list(roots)
+    visit.sort()
+    finished = set()
+    while visit:
+        cur = visit[-1]
+        for p in children[cur]:
+            if p not in finished:
+                visit.append(p)
+                break
+        else:
+            result.append(cur)
+            finished.add(cur)
+            visit.pop()
+    result.reverse()
+    return result
+
 def writerevs(ui, r1, r2, order, tr):
 
     ui.status(_('writing revs\n'))
