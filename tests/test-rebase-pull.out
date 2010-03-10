@@ -10,7 +10,6 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
-(run 'hg heads' to see heads, 'hg merge' to merge)
 saving bundle to 
 adding branch
 adding changesets
@@ -39,8 +38,8 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-(run 'hg update' to get a working copy)
 nothing to rebase
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  2
 |
 

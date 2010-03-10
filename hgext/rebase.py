@@ -14,7 +14,7 @@ For more information:
 http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
-from mercurial import util, repair, merge, cmdutil, commands, error
+from mercurial import hg, util, repair, merge, cmdutil, commands, error
 from mercurial import extensions, ancestor, copies, patch
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
@@ -467,7 +467,14 @@ def pullrebase(orig, ui, repo, *args, **opts):
 
         cmdutil.bail_if_changed(repo)
         revsprepull = len(repo)
-        orig(ui, repo, *args, **opts)
+        origpostincoming = commands.postincoming
+        def _dummy(*args, **kwargs):
+            pass
+        commands.postincoming = _dummy
+        try:
+            orig(ui, repo, *args, **opts)
+        finally:
+            commands.postincoming = origpostincoming
         revspostpull = len(repo)
         if revspostpull > revsprepull:
             rebase(ui, repo, **opts)
@@ -475,7 +482,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
             dest = repo[branch].rev()
             if dest != repo['.'].rev():
                 # there was nothing to rebase we force an update
-                merge.update(repo, dest, False, False, False)
+                hg.update(repo, dest)
     else:
         orig(ui, repo, *args, **opts)
 
