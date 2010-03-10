@@ -229,9 +229,7 @@ class hgwebdir(object):
                     parts.insert(0, req.env['PATH_INFO'].rstrip('/'))
                 if req.env['SCRIPT_NAME']:
                     parts.insert(0, req.env['SCRIPT_NAME'])
-                m = re.match('((?:https?://)?)(.*)', '/'.join(parts))
-                # squish repeated slashes out of the path component
-                url = m.group(1) + re.sub('/+', '/', m.group(2)) + '/'
+                url = re.sub(r'/+', '/', '/'.join(parts) + '/')
 
                 # update time with local timezone
                 try:
