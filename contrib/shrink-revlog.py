@@ -24,62 +24,7 @@ from mercurial import revlog, transaction, node, util
 from mercurial import changegroup
 from mercurial.i18n import _
 
-def toposort_branchsort(ui, rl):
 
-    children = {}
-    root = []
-    # build children and roots
-    ui.status(_('reading revs\n'))
-    try:
-        for rev in rl:
-            ui.progress(_('reading'), rev, total=len(rl))
-            children[rev] = []
-            parents = [p for p in rl.parentrevs(rev) if p != node.nullrev]
-            # in case of duplicate parents
-            if len(parents) == 2 and parents[0] == parents[1]:
-                del parents[1]
-            for p in parents:
-                assert p in children
-                children[p].append(rev)
-
-            if len(parents) == 0:
-                root.append(rev)
-    finally:
-        ui.progress(_('reading'), None, total=len(rl))
-
-    # XXX this is a reimplementation of the 'branchsort' topo sort
-    # algorithm in hgext.convert.convcmd... would be nice not to duplicate
-    # the algorithm
-    ui.status(_('sorting revs\n'))
-    visit = root
-    result = []
-
-    # suboptimal: nodes whose predecessor is not first parent
-    suboptimal = 0
-
-    while visit:
-        cur = visit.pop(0)
-        # revlog will compute delta relative to result[-1], so keep track
-        # of nodes where this might result in a large delta
-        parents = rl.parentrevs(cur)
-        if result:
-            if result[-1] != parents[0]:
-                suboptimal += 1
-
-        result.append(cur)
-        if cur not in children:
-            # This only happens if some node's p1 == p2, which can
-            # happen in the manifest in certain circumstances.
-            continue
-        next = []
-        for c in children.pop(cur):
-            parents_unseen = [p for p in rl.parentrevs(c)
-                              if p != node.nullrev and p in children]
-            if len(parents_unseen) == 0:
-                next.append(c)
-        visit = next + visit
-    ui.note(_('%d suboptimal nodes\n') % suboptimal)
-    return result
 
 def toposort_reversepostorder(ui, rl):
     # postorder of the reverse directed graph
@@ -240,10 +185,7 @@ def shrink(ui, repo, **opts):
 
     Different sort algorithms have different performance
     characteristics.  Use ``--sort`` to select a sort algorithm so you
-    can determine which works best for your data.  The default
-    algorithm, ``branchsort``, works well for workflows with lots of
-    active (unmerged) branches, but not so well when all branches have
-    been merged and there is only one repository head.
+    can determine which works best for your data.
     """
 
     if not repo.local():
@@ -359,7 +301,7 @@ cmdtable = {
     'shrink': (shrink,
                [('', 'revlog', '', _('index (.i) file of the revlog to shrink')),
                 ('n', 'dry-run', None, _('do not shrink, simulate only')),
-                ('', 'sort', 'branchsort', 'name of sort algorithm to use'),
+                ('', 'sort', 'reversepostorder', 'name of sort algorithm to use'),
                 ],
                _('hg shrink [--revlog PATH]'))
 }
