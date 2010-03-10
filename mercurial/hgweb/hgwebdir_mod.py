@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, re, time
+import os, re, time, urlparse
 from mercurial.i18n import _
 from mercurial import ui, hg, util, templater
 from mercurial import error, encoding
@@ -339,5 +339,17 @@ class hgwebdir(object):
         return tmpl
 
     def updatereqenv(self, env):
+        def splitnetloc(netloc):
+            if ':' in netloc:
+                return netloc.split(':', 1)
+            else:
+                return (netloc, None)
+
         if self._baseurl is not None:
-            env['SCRIPT_NAME'] = self._baseurl
+            urlcomp = urlparse.urlparse(self._baseurl)
+            host, port = splitnetloc(urlcomp[1])
+            path = urlcomp[2]
+            env['SERVER_NAME'] = host
+            if port:
+                env['SERVER_PORT'] = port
+            env['SCRIPT_NAME'] = path
