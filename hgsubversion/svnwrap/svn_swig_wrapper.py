@@ -401,11 +401,13 @@ class SubversionRepo(object):
                            callback,
                            self.pool)
             except core.SubversionException, e:
-                if e.apr_err not in [core.SVN_ERR_FS_NOT_FOUND]:
-                    raise
-                else:
+                if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
                     raise hgutil.Abort('%s not found at revision %d!'
                                        % (self.subdir.rstrip('/'), stop))
+                elif e.apr_err == core.SVN_ERR_FS_NO_SUCH_REVISION:
+                    raise hgutil.Abort(e.message)
+                else:
+                    raise
 
             while len(revisions) > 1:
                 yield revisions.popleft()
