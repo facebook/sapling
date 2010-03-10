@@ -3781,7 +3781,7 @@ table = {
           ('d', 'daemon', None, _('run server in background')),
           ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
           ('E', 'errorlog', '', _('name of error log file to write to')),
-          ('p', 'port', 8000, _('port to listen on (default: 8000)')),
+          ('p', 'port', 8000, _('port to listen on')),
           ('a', 'address', '',
            _('address to listen on (default: all interfaces)')),
           ('', 'prefix', '',
