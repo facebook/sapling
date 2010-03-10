@@ -2,22 +2,52 @@
 
 % Use continue and abort
 hg rebase: cannot use both abort and continue
-hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [options]
+hg rebase {-a|-c}
 
 move changeset (and descendants) to a different branch
 
     Rebase uses repeated merging to graft changesets from one part of history
-    onto another. This can be useful for linearizing local changes relative to
-    a master development tree.
+    (the source) onto another (the destination). This can be useful for
+    linearizing local changes relative to a master development tree.
+
+    If you don't specify a destination changeset ("-d/--dest"), rebase uses
+    the tipmost head of the current named branch as the destination. (The
+    destination changeset is not modified by rebasing, but new changesets are
+    added as its descendants.)
+
+    You can specify which changesets to rebase in two ways: as a "source"
+    changeset or as a "base" changeset. Both are shorthand for a topologically
+    related set of changesets (the "source branch"). If you specify source
+    ("-s/--source"), rebase will rebase that changeset and all of its
+    descendants onto dest. If you specify base ("-b/--base"), rebase will
+    select ancestors of base back to but not including the common ancestor
+    with dest. Thus, "-b" is less precise but more convenient than "-s": you
+    can specify any changeset in the source branch, and rebase will select the
+    whole branch. If you specify neither "-s" nor "-b", rebase uses the parent
+    of the working directory as the base.
+
+    By default, rebase recreates the changesets in the source branch as
+    descendants of dest and then destroys the originals. Use "--keep" to
+    preserve the original source changesets. Some changesets in the source
+    branch (e.g. merges from the destination branch) may be dropped if they no
+    longer contribute any change.
+
+    One result of the rules for selecting the destination changeset and source
+    branch is that, unlike "merge", rebase will do nothing if you are at the
+    latest (tipmost) head of a named branch with two heads. You need to
+    explicitly specify source and/or destination (or "update" to the other
+    head, if it's the head of the intended source branch).
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
 options:
 
- -s --source        rebase from a given revision
- -b --base          rebase from the base of a given revision
- -d --dest          rebase onto a given revision
+ -s --source        rebase from the specified changeset
+ -b --base          rebase from the base of the specified changeset (up to
+                    greatest common ancestor of base and dest)
+ -d --dest          rebase onto the specified changeset
     --collapse      collapse the rebased changesets
     --keep          keep original changesets
     --keepbranches  keep original branch names
@@ -31,22 +61,52 @@ use "hg -v help rebase" to show global options
 
 % Use continue and collapse
 hg rebase: cannot use collapse with continue or abort
-hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [options]
+hg rebase {-a|-c}
 
 move changeset (and descendants) to a different branch
 
     Rebase uses repeated merging to graft changesets from one part of history
-    onto another. This can be useful for linearizing local changes relative to
-    a master development tree.
+    (the source) onto another (the destination). This can be useful for
+    linearizing local changes relative to a master development tree.
+
+    If you don't specify a destination changeset ("-d/--dest"), rebase uses
+    the tipmost head of the current named branch as the destination. (The
+    destination changeset is not modified by rebasing, but new changesets are
+    added as its descendants.)
+
+    You can specify which changesets to rebase in two ways: as a "source"
+    changeset or as a "base" changeset. Both are shorthand for a topologically
+    related set of changesets (the "source branch"). If you specify source
+    ("-s/--source"), rebase will rebase that changeset and all of its
+    descendants onto dest. If you specify base ("-b/--base"), rebase will
+    select ancestors of base back to but not including the common ancestor
+    with dest. Thus, "-b" is less precise but more convenient than "-s": you
+    can specify any changeset in the source branch, and rebase will select the
+    whole branch. If you specify neither "-s" nor "-b", rebase uses the parent
+    of the working directory as the base.
+
+    By default, rebase recreates the changesets in the source branch as
+    descendants of dest and then destroys the originals. Use "--keep" to
+    preserve the original source changesets. Some changesets in the source
+    branch (e.g. merges from the destination branch) may be dropped if they no
+    longer contribute any change.
+
+    One result of the rules for selecting the destination changeset and source
+    branch is that, unlike "merge", rebase will do nothing if you are at the
+    latest (tipmost) head of a named branch with two heads. You need to
+    explicitly specify source and/or destination (or "update" to the other
+    head, if it's the head of the intended source branch).
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
 options:
 
- -s --source        rebase from a given revision
- -b --base          rebase from the base of a given revision
- -d --dest          rebase onto a given revision
+ -s --source        rebase from the specified changeset
+ -b --base          rebase from the base of the specified changeset (up to
+                    greatest common ancestor of base and dest)
+ -d --dest          rebase onto the specified changeset
     --collapse      collapse the rebased changesets
     --keep          keep original changesets
     --keepbranches  keep original branch names
@@ -60,22 +120,52 @@ use "hg -v help rebase" to show global options
 
 % Use continue/abort and dest/source
 hg rebase: abort and continue do not allow specifying revisions
-hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [options]
+hg rebase {-a|-c}
 
 move changeset (and descendants) to a different branch
 
     Rebase uses repeated merging to graft changesets from one part of history
-    onto another. This can be useful for linearizing local changes relative to
-    a master development tree.
+    (the source) onto another (the destination). This can be useful for
+    linearizing local changes relative to a master development tree.
+
+    If you don't specify a destination changeset ("-d/--dest"), rebase uses
+    the tipmost head of the current named branch as the destination. (The
+    destination changeset is not modified by rebasing, but new changesets are
+    added as its descendants.)
+
+    You can specify which changesets to rebase in two ways: as a "source"
+    changeset or as a "base" changeset. Both are shorthand for a topologically
+    related set of changesets (the "source branch"). If you specify source
+    ("-s/--source"), rebase will rebase that changeset and all of its
+    descendants onto dest. If you specify base ("-b/--base"), rebase will
+    select ancestors of base back to but not including the common ancestor
+    with dest. Thus, "-b" is less precise but more convenient than "-s": you
+    can specify any changeset in the source branch, and rebase will select the
+    whole branch. If you specify neither "-s" nor "-b", rebase uses the parent
+    of the working directory as the base.
+
+    By default, rebase recreates the changesets in the source branch as
+    descendants of dest and then destroys the originals. Use "--keep" to
+    preserve the original source changesets. Some changesets in the source
+    branch (e.g. merges from the destination branch) may be dropped if they no
+    longer contribute any change.
+
+    One result of the rules for selecting the destination changeset and source
+    branch is that, unlike "merge", rebase will do nothing if you are at the
+    latest (tipmost) head of a named branch with two heads. You need to
+    explicitly specify source and/or destination (or "update" to the other
+    head, if it's the head of the intended source branch).
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
 options:
 
- -s --source        rebase from a given revision
- -b --base          rebase from the base of a given revision
- -d --dest          rebase onto a given revision
+ -s --source        rebase from the specified changeset
+ -b --base          rebase from the base of the specified changeset (up to
+                    greatest common ancestor of base and dest)
+ -d --dest          rebase onto the specified changeset
     --collapse      collapse the rebased changesets
     --keep          keep original changesets
     --keepbranches  keep original branch names
@@ -89,22 +179,52 @@ use "hg -v help rebase" to show global options
 
 % Use source and base
 hg rebase: cannot specify both a revision and a base
-hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] [--keep] [--keepbranches] | [-c] | [-a]
+hg rebase [-s REV | -b REV] [-d REV] [options]
+hg rebase {-a|-c}
 
 move changeset (and descendants) to a different branch
 
     Rebase uses repeated merging to graft changesets from one part of history
-    onto another. This can be useful for linearizing local changes relative to
-    a master development tree.
+    (the source) onto another (the destination). This can be useful for
+    linearizing local changes relative to a master development tree.
+
+    If you don't specify a destination changeset ("-d/--dest"), rebase uses
+    the tipmost head of the current named branch as the destination. (The
+    destination changeset is not modified by rebasing, but new changesets are
+    added as its descendants.)
+
+    You can specify which changesets to rebase in two ways: as a "source"
+    changeset or as a "base" changeset. Both are shorthand for a topologically
+    related set of changesets (the "source branch"). If you specify source
+    ("-s/--source"), rebase will rebase that changeset and all of its
+    descendants onto dest. If you specify base ("-b/--base"), rebase will
+    select ancestors of base back to but not including the common ancestor
+    with dest. Thus, "-b" is less precise but more convenient than "-s": you
+    can specify any changeset in the source branch, and rebase will select the
+    whole branch. If you specify neither "-s" nor "-b", rebase uses the parent
+    of the working directory as the base.
+
+    By default, rebase recreates the changesets in the source branch as
+    descendants of dest and then destroys the originals. Use "--keep" to
+    preserve the original source changesets. Some changesets in the source
+    branch (e.g. merges from the destination branch) may be dropped if they no
+    longer contribute any change.
+
+    One result of the rules for selecting the destination changeset and source
+    branch is that, unlike "merge", rebase will do nothing if you are at the
+    latest (tipmost) head of a named branch with two heads. You need to
+    explicitly specify source and/or destination (or "update" to the other
+    head, if it's the head of the intended source branch).
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
 options:
 
- -s --source        rebase from a given revision
- -b --base          rebase from the base of a given revision
- -d --dest          rebase onto a given revision
+ -s --source        rebase from the specified changeset
+ -b --base          rebase from the base of the specified changeset (up to
+                    greatest common ancestor of base and dest)
+ -d --dest          rebase onto the specified changeset
     --collapse      collapse the rebased changesets
     --keep          keep original changesets
     --keepbranches  keep original branch names

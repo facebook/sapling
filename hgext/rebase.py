@@ -28,8 +28,40 @@ def rebase(ui, repo, **opts):
     """move changeset (and descendants) to a different branch
 
     Rebase uses repeated merging to graft changesets from one part of
-    history onto another. This can be useful for linearizing local
-    changes relative to a master development tree.
+    history (the source) onto another (the destination). This can be
+    useful for linearizing local changes relative to a master
+    development tree.
+
+    If you don't specify a destination changeset (``-d/--dest``),
+    rebase uses the tipmost head of the current named branch as the
+    destination. (The destination changeset is not modified by
+    rebasing, but new changesets are added as its descendants.)
+
+    You can specify which changesets to rebase in two ways: as a
+    \"source\" changeset or as a \"base\" changeset. Both are
+    shorthand for a topologically related set of changesets (the
+    \"source branch\"). If you specify source (``-s/--source``),
+    rebase will rebase that changeset and all of its descendants onto
+    dest. If you specify base (``-b/--base``), rebase will select
+    ancestors of base back to but not including the common ancestor
+    with dest. Thus, ``-b`` is less precise but more convenient than
+    ``-s``: you can specify any changeset in the source branch, and
+    rebase will select the whole branch. If you specify neither ``-s``
+    nor ``-b``, rebase uses the parent of the working directory as the
+    base.
+
+    By default, rebase recreates the changesets in the source branch
+    as descendants of dest and then destroys the originals. Use
+    ``--keep`` to preserve the original source changesets. Some
+    changesets in the source branch (e.g. merges from the destination
+    branch) may be dropped if they no longer contribute any change.
+
+    One result of the rules for selecting the destination changeset
+    and source branch is that, unlike ``merge``, rebase will do
+    nothing if you are at the latest (tipmost) head of a named branch
+    with two heads. You need to explicitly specify source and/or
+    destination (or ``update`` to the other head, if it's the head of
+    the intended source branch).
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
@@ -490,9 +522,10 @@ cmdtable = {
 "rebase":
         (rebase,
         [
-        ('s', 'source', '', _('rebase from a given revision')),
-        ('b', 'base', '', _('rebase from the base of a given revision')),
-        ('d', 'dest', '', _('rebase onto a given revision')),
+        ('s', 'source', '', _('rebase from the specified changeset')),
+        ('b', 'base', '', _('rebase from the base of the specified changeset '
+                            '(up to greatest common ancestor of base and dest)')),
+        ('d', 'dest', '', _('rebase onto the specified changeset')),
         ('', 'collapse', False, _('collapse the rebased changesets')),
         ('', 'keep', False, _('keep original changesets')),
         ('', 'keepbranches', False, _('keep original branch names')),
@@ -501,6 +534,6 @@ cmdtable = {
         ('c', 'continue', False, _('continue an interrupted rebase')),
         ('a', 'abort', False, _('abort an interrupted rebase'))] +
          templateopts,
-        _('hg rebase [-s REV | -b REV] [-d REV] [--collapse] [--detach] '
-                        '[--keep] [--keepbranches] | [-c] | [-a]')),
+        _('hg rebase [-s REV | -b REV] [-d REV] [options]\n'
+          'hg rebase {-a|-c}'))
 }
