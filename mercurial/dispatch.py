@@ -9,7 +9,7 @@ from i18n import _
 import os, sys, atexit, signal, pdb, socket, errno, shlex, time
 import util, commands, hg, fancyopts, extensions, hook, error
 import cmdutil, encoding
-import ui as _ui
+import ui as uimod
 
 def run():
     "run the command in sys.argv"
@@ -18,7 +18,7 @@ def run():
 def dispatch(args):
     "run the command specified in args"
     try:
-        u = _ui.ui()
+        u = uimod.ui()
         if '--traceback' in args:
             u.setconfig('ui', 'traceback', 'on')
     except util.Abort, inst:

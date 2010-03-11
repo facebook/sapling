@@ -13,7 +13,7 @@ import hg, util, revlog, bundlerepo, extensions, copies, error
 import patch, help, mdiff, url, encoding, templatekw
 import archival, changegroup, cmdutil, sshserver, hbisect
 from hgweb import server, hgweb_mod, hgwebdir_mod
-import merge as merge_
+import merge as mergemod
 import minirst
 
 # Commands start here, listed alphabetically
@@ -2596,7 +2596,7 @@ def resolve(ui, repo, *pats, **opts):
         raise util.Abort(_('no files or directories specified; '
                            'use --all to remerge all files'))
 
-    ms = merge_.mergestate(repo)
+    ms = mergemod.mergestate(repo)
     m = cmdutil.match(repo, pats, opts)
 
     for f in ms:
@@ -3083,7 +3083,7 @@ def summary(ui, repo, **opts):
         ui.status(m)
 
     st = list(repo.status(unknown=True))[:6]
-    ms = merge_.mergestate(repo)
+    ms = mergemod.mergestate(repo)
     st.append([f for f in ms if ms[f] == 'u'])
     labels = [_('%d modified'), _('%d added'), _('%d removed'),
               _('%d deleted'), _('%d unknown'), _('%d ignored'),

@@ -10,8 +10,8 @@ from i18n import _
 from lock import release
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
 import lock, util, extensions, error, encoding, node
-import merge as _merge
-import verify as _verify
+import merge as mergemod
+import verify as verifymod
 import errno, os, shutil
 
 def _local(path):
@@ -358,7 +358,7 @@ def _showstats(repo, stats):
 
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
-    stats = _merge.update(repo, node, False, False, None)
+    stats = mergemod.update(repo, node, False, False, None)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
@@ -369,14 +369,14 @@ _update = update
 
 def clean(repo, node, show_stats=True):
     """forcibly switch the working directory to node, clobbering changes"""
-    stats = _merge.update(repo, node, False, True, None)
+    stats = mergemod.update(repo, node, False, True, None)
     if show_stats:
         _showstats(repo, stats)
     return stats[3] > 0
 
 def merge(repo, node, force=None, remind=True):
     """branch merge with node, resolving changes"""
-    stats = _merge.update(repo, node, True, force, False)
+    stats = mergemod.update(repo, node, True, force, False)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges "
@@ -387,8 +387,8 @@ def merge(repo, node, force=None, remind=True):
 
 def revert(repo, node, choose):
     """revert changes to revision in node without updating dirstate"""
-    return _merge.update(repo, node, False, True, choose)[3] > 0
+    return mergemod.update(repo, node, False, True, choose)[3] > 0
 
 def verify(repo):
     """verify the consistency of a repository"""
-    return _verify.verify(repo)
+    return verifymod.verify(repo)

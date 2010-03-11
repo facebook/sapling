@@ -6,25 +6,25 @@
 # GNU General Public License version 2 or any later version.
 
 import os
-import stat as _stat
+import stat as statmod
 
 posixfile = open
 
 def _mode_to_kind(mode):
-    if _stat.S_ISREG(mode):
-        return _stat.S_IFREG
-    if _stat.S_ISDIR(mode):
-        return _stat.S_IFDIR
-    if _stat.S_ISLNK(mode):
-        return _stat.S_IFLNK
-    if _stat.S_ISBLK(mode):
-        return _stat.S_IFBLK
-    if _stat.S_ISCHR(mode):
-        return _stat.S_IFCHR
-    if _stat.S_ISFIFO(mode):
-        return _stat.S_IFIFO
-    if _stat.S_ISSOCK(mode):
-        return _stat.S_IFSOCK
+    if statmod.S_ISREG(mode):
+        return statmod.S_IFREG
+    if statmod.S_ISDIR(mode):
+        return statmod.S_IFDIR
+    if statmod.S_ISLNK(mode):
+        return statmod.S_IFLNK
+    if statmod.S_ISBLK(mode):
+        return statmod.S_IFBLK
+    if statmod.S_ISCHR(mode):
+        return statmod.S_IFCHR
+    if statmod.S_ISFIFO(mode):
+        return statmod.S_IFIFO
+    if statmod.S_ISSOCK(mode):
+        return statmod.S_IFSOCK
     return mode
 
 def listdir(path, stat=False, skip=None):
@@ -49,7 +49,7 @@ def listdir(path, stat=False, skip=None):
     names.sort()
     for fn in names:
         st = os.lstat(prefix + fn)
-        if fn == skip and _stat.S_ISDIR(st.st_mode):
+        if fn == skip and statmod.S_ISDIR(st.st_mode):
             return []
         if stat:
             result.append((fn, _mode_to_kind(st.st_mode), st))
