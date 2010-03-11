@@ -218,14 +218,8 @@ def create_server(ui, repo):
         myui = repo.ui
     address = myui.config("web", "address", "")
     port = int(myui.config("web", "port", 8000))
-    prefix = myui.config("web", "prefix", "")
-    if prefix:
-        prefix = "/" + prefix.strip("/")
     use_ipv6 = myui.configbool("web", "ipv6")
     webdir_conf = myui.config("web", "webdir_conf")
-    ssl_cert = myui.config("web", "certificate")
-    accesslog = openlog(myui.config("web", "accesslog", "-"), sys.stdout)
-    errorlog = openlog(myui.config("web", "errorlog", "-"), sys.stderr)
 
     if webdir_conf:
         hgwebobj = hgwebdir(webdir_conf, ui)
@@ -241,13 +235,12 @@ def create_server(ui, repo):
         if os.name == 'nt':
             allow_reuse_address = 0
 
-        def __init__(self, *args, **kargs):
+        def __init__(self, ui, *args, **kargs):
             BaseHTTPServer.HTTPServer.__init__(self, *args, **kargs)
-            self.accesslog = accesslog
-            self.errorlog = errorlog
             self.daemon_threads = True
             self.application = hgwebobj
 
+            ssl_cert = ui.config('web', 'certificate')
             if ssl_cert:
                 try:
                     from OpenSSL import SSL
@@ -261,8 +254,17 @@ def create_server(ui, repo):
                 self.server_bind()
                 self.server_activate()
 
-            self.addr, self.port = self.socket.getsockname()[0:2]
+            prefix = ui.config('web', 'prefix', '')
+            if prefix:
+                prefix = '/' + prefix.strip('/')
             self.prefix = prefix
+
+            alog = openlog(ui.config('web', 'accesslog', '-'), sys.stdout)
+            elog = openlog(ui.config('web', 'errorlog', '-'), sys.stderr)
+            self.accesslog = alog
+            self.errorlog = elog
+
+            self.addr, self.port = self.socket.getsockname()[0:2]
             self.fqaddr = socket.getfqdn(address)
 
     class IPv6HTTPServer(MercurialHTTPServer):
@@ -273,7 +275,7 @@ def create_server(ui, repo):
                 raise error.RepoError(_('IPv6 is not available on this system'))
             super(IPv6HTTPServer, self).__init__(*args, **kwargs)
 
-    if ssl_cert:
+    if myui.config('web', 'certificate'):
         handler = _shgwebhandler
     else:
         handler = _hgwebhandler
@@ -283,9 +285,9 @@ def create_server(ui, repo):
 
     try:
         if use_ipv6:
-            return IPv6HTTPServer((address, port), handler)
+            return IPv6HTTPServer(myui, (address, port), handler)
         else:
-            return MercurialHTTPServer((address, port), handler)
+            return MercurialHTTPServer(myui, (address, port), handler)
     except socket.error, inst:
         raise util.Abort(_("cannot start server at '%s:%d': %s")
                          % (address, port, inst.args[1]))
