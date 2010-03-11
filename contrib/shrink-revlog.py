@@ -235,7 +235,7 @@ def shrink(ui, repo, **opts):
             for i in xrange(1, len(order)):
                 parents = [p for p in r1.parentrevs(order[i])
                            if p != node.nullrev]
-                if parents and order[i-1] not in parents:
+                if parents and order[i - 1] not in parents:
                     suboptimal += 1
             ui.note(_('%d suboptimal nodes\n') % suboptimal)
 
