@@ -1,0 +1,66 @@
+#!/bin/sh
+
+echo
+echo % prepare repo a
+mkdir a
+cd a
+hg init
+echo foo > bar
+hg commit -Am default
+hg up -r null
+hg branch mine
+echo hello > world
+hg commit -Am hello
+hg up -r null
+hg branch other
+echo good > bye
+hg commit -Am other
+hg up -r mine
+
+echo % test -U -u
+hg clone -U -u . .#other ../b -r 0 -r 1 -r 2 -b other
+
+echo % test -U
+hg clone -U .#other ../b -r 0 -r 1 -r 2 -b other
+rm -rf ../b
+
+echo % test -u .
+hg clone -u . .#other ../b -r 0 -r 1 -r 2 -b other
+rm -rf ../b
+
+echo % test -u 0
+hg clone -u 0 .#other ../b -r 0 -r 1 -r 2 -b other
+rm -rf ../b
+
+echo % test -u 1
+hg clone -u 1 .#other ../b -r 0 -r 1 -r 2 -b other
+rm -rf ../b
+
+echo % test -u 2
+hg clone -u 2 .#other ../b -r 0 -r 1 -r 2 -b other
+rm -rf ../b
+
+echo % test -r 0
+hg clone -u 2 .#other ../b -r 0 -r 1 -r 2 -b other
+rm -rf ../b
+
+echo % test -r mine ... mine is ignored
+hg clone -u 2 .#other ../b -r mine -r 0 -r 1 -r 2 -b other
+rm -rf ../b
+
+echo % test -b default
+hg clone .#other ../b -b default -b mine
+rm -rf ../b
+
+echo % test #other
+hg clone .#other ../b
+rm -rf ../b
+
+echo % test tip
+hg clone -U . ../c -r 1 -r 2 > /dev/null
+hg clone ../c ../b
+rm -rf ../b ../c
+cd ..
+
+rm -rf a
+exit 0

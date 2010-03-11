@@ -625,20 +625,6 @@ def clone(ui, source, dest=None, **opts):
     .hg/hgrc and working directory will be created on the remote side.
     Please see 'hg help urls' for important details about ``ssh://`` URLs.
 
-    If the -U/--noupdate option is specified, the new clone will contain
-    only a repository (.hg) and no working copy (the working copy parent
-    will be the null changeset). Otherwise, clone will initially check
-    out (in order of precedence):
-
-    a) the changeset, tag or branch specified with -u/--updaterev
-    b) the changeset, tag or branch given with the first -r/--rev
-    c) the branch given with the first -b/--branch
-    d) the branch given with the url#branch source syntax
-    e) the head of the default branch
-
-    Use 'hg clone -u . src dst' to checkout the source repository's
-    parent changeset (applicable for local source repositories only).
-
     A set of changesets (tags, or branch names) to pull may be specified
     by listing each changeset (tag, or branch name) with -r/--rev.
     If -r/--rev is used, the cloned repository will contain only a subset
@@ -653,12 +639,12 @@ def clone(ui, source, dest=None, **opts):
 
     For efficiency, hardlinks are used for cloning whenever the source
     and destination are on the same filesystem (note this applies only
-    to the repository data, not to the checked out files). Some
+    to the repository data, not to the working directory). Some
     filesystems, such as AFS, implement hardlinking incorrectly, but
     do not report errors. In these cases, use the --pull option to
     avoid hardlinking.
 
-    In some cases, you can clone repositories and checked out files
+    In some cases, you can clone repositories and the working directory
     using full hardlinks with ::
 
       $ cp -al REPO REPOCLONE
@@ -669,6 +655,20 @@ def clone(ui, source, dest=None, **opts):
     breaks hardlinks (Emacs and most Linux Kernel tools do so). Also,
     this is not compatible with certain extensions that place their
     metadata under the .hg directory, such as mq.
+
+    Mercurial will update the working directory to the first applicable
+    revision from this list:
+
+      a) null if -U or the source repository has no changesets
+      b) if -u . and the source repository is local, the first parent of
+         the source repository's working directory
+      c) the changeset specified with -u (if a branch name, this means the
+         latest head of that branch)
+      d) the changeset specified with -r
+      e) the tipmost head specified with -b
+      f) the tipmost head specified with the url#branch source syntax
+      g) the tipmost head of the default branch
+      h) tip
     """
     if opts.get('noupdate') and opts.get('updaterev'):
         raise util.Abort(_("cannot specify both --noupdate and --updaterev"))
