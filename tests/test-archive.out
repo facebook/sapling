@@ -45,6 +45,14 @@ test-TIP/.hg_archival.txt
 test-TIP/bar
 test-TIP/baz/bletch
 test-TIP/foo
+autodetected_test/.hg_archival.txt
+autodetected_test/bar
+autodetected_test/baz/bletch
+autodetected_test/foo
+autodetect_override_test.zip/.hg_archival.txt
+autodetect_override_test.zip/bar
+autodetect_override_test.zip/baz/bletch
+autodetect_override_test.zip/foo
 True
 abort: archive prefix contains illegal components
 Archive:  test.zip

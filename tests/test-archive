@@ -74,6 +74,20 @@ bunzip2 -dc test.tar.bz2 | tar tf - 2>/dev/null
 hg archive -t tgz -p %b-%h test-%h.tar.gz
 gzip -dc test-$QTIP.tar.gz | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
 
+hg archive autodetected_test.tar
+tar tf autodetected_test.tar
+
+# The '-t' should override autodetection
+hg archive -t tar autodetect_override_test.zip
+tar tf autodetect_override_test.zip
+
+for ext in tar tar.gz tgz tar.bz2 tbz2 zip; do
+    hg archive auto_test.$ext
+    if [ -d auto_test.$ext ]; then
+        echo "extension $ext was not autodetected."
+    fi
+done
+
 cat > md5comp.py <<EOF
 try:
     from hashlib import md5
