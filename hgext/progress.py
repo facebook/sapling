@@ -32,6 +32,7 @@ The following settings are available::
   width = <none> # if set, the maximum width of the progress information
                  # (that is, min(width, term width) will be used)
   clear-complete = True # clear the progress bar after it's done
+  disable = False # if true, don't show a progress bar
 
 Valid entries for the format field are topic, bar, number, unit, and
 item. item defaults to the last 20 characters of the item, but this
