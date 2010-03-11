@@ -48,7 +48,7 @@ def countrate(ui, repo, amap, *pats, **opts):
             tmpl.show(ctx)
             return ui.popbuffer()
 
-    state = {'count': 0, 'pct': 0}
+    state = {'count': 0}
     rate = {}
     df = False
     if opts.get('date'):
@@ -74,20 +74,13 @@ def countrate(ui, repo, amap, *pats, **opts):
             lines = changedlines(ui, repo, ctx1, ctx, fns)
             rate[key] = [r + l for r, l in zip(rate.get(key, (0, 0)), lines)]
 
-        if opts.get('progress'):
-            state['count'] += 1
-            newpct = int(100.0 * state['count'] / max(len(repo), 1))
-            if state['pct'] < newpct:
-                state['pct'] = newpct
-                ui.write("\r" + _("generating stats: %d%%") % state['pct'])
-                sys.stdout.flush()
+        state['count'] += 1
+        ui.progress(_('churning changes'), state['count'], total=len(repo))
 
     for ctx in cmdutil.walkchangerevs(repo, m, opts, prep):
         continue
 
-    if opts.get('progress'):
-        ui.write("\r")
-        sys.stdout.flush()
+    ui.progress(_('churning changes'), None)
 
     return rate
 
@@ -188,6 +181,6 @@ cmdtable = {
           ('s', 'sort', False, _('sort by key (default: sort by count)')),
           ('', 'diffstat', False, _('display added/removed lines separately')),
           ('', 'aliases', '', _('file with email aliases')),
-          ('', 'progress', None, _('show progress'))],
-         _("hg churn [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]")),
+          ],
+         _("hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]")),
 }
