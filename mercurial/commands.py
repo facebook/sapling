@@ -12,7 +12,7 @@ import os, re, sys, difflib, time, tempfile
 import hg, util, revlog, bundlerepo, extensions, copies, error
 import patch, help, mdiff, url, encoding, templatekw
 import archival, changegroup, cmdutil, sshserver, hbisect
-from hgweb import server
+from hgweb import server, hgweb_mod, hgwebdir_mod
 import merge as merge_
 import minirst
 
@@ -2887,7 +2887,7 @@ def serve(ui, repo, **opts):
 
     baseui = repo and repo.baseui or ui
     optlist = ("name templates style address port prefix ipv6"
-               " accesslog errorlog webdir_conf certificate encoding")
+               " accesslog errorlog certificate encoding")
     for o in optlist.split():
         val = opts.get(o, '')
         if val in (None, ''): # should check against default options instead
@@ -2896,14 +2896,18 @@ def serve(ui, repo, **opts):
         if repo and repo.ui != baseui:
             repo.ui.setconfig("web", o, val)
 
-    if repo is None and not ui.config("web", "webdir_conf"):
-        raise error.RepoError(_("There is no Mercurial repository here"
-                                " (.hg not found)"))
+    if opts.get('webdir_conf'):
+        app = hgwebdir_mod.hgwebdir(opts['webdir_conf'], ui)
+    elif repo is not None:
+        app = hgweb_mod.hgweb(hg.repository(repo.ui, repo.root))
+    else:
+        raise error.RepoError(_("There is no Mercurial repository"
+                                " here (.hg not found)"))
 
     class service(object):
         def init(self):
             util.set_signal_handler()
-            self.httpd = server.create_server(baseui, repo)
+            self.httpd = server.create_server(ui, app)
 
             if opts['port'] and not ui.verbose:
                 return

@@ -8,8 +8,6 @@
 
 import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer, traceback
 from mercurial import hg, util, error
-from hgweb_mod import hgweb
-from hgwebdir_mod import hgwebdir
 from mercurial.i18n import _
 
 def _splitURI(uri):
@@ -255,39 +253,25 @@ class IPv6HTTPServer(MercurialHTTPServer):
             raise error.RepoError(_('IPv6 is not available on this system'))
         super(IPv6HTTPServer, self).__init__(*args, **kwargs)
 
-def create_server(ui, repo):
+def create_server(ui, app):
 
-    if repo is None:
-        myui = ui
-    else:
-        myui = repo.ui
-    address = myui.config("web", "address", "")
-    port = int(myui.config("web", "port", 8000))
-
-    if myui.config('web', 'certificate'):
+    if ui.config('web', 'certificate'):
         handler = _shgwebhandler
     else:
         handler = _hgwebhandler
 
-    if myui.configbool('web', 'ipv6'):
+    if ui.configbool('web', 'ipv6'):
         cls = IPv6HTTPServer
     else:
         cls = MercurialHTTPServer
 
-    webdir_conf = myui.config("web", "webdir_conf")
-    if webdir_conf:
-        hgwebobj = hgwebdir(webdir_conf, ui)
-    elif repo is not None:
-        hgwebobj = hgweb(hg.repository(repo.ui, repo.root))
-    else:
-        raise error.RepoError(_("There is no Mercurial repository"
-                                " here (.hg not found)"))
-
     # ugly hack due to python issue5853 (for threaded use)
     import mimetypes; mimetypes.init()
 
+    address = ui.config('web', 'address', '')
+    port = int(ui.config('web', 'port', 8000))
     try:
-        return cls(myui, hgwebobj, (address, port), handler)
+        return cls(ui, app, (address, port), handler)
     except socket.error, inst:
         raise util.Abort(_("cannot start server at '%s:%d': %s")
                          % (address, port, inst.args[1]))
