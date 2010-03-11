@@ -41,6 +41,7 @@
 # completes fairly quickly, includes both shell and Python scripts, and
 # includes some scripts that run daemon processes.)
 
+from distutils import version
 import difflib
 import errno
 import optparse
@@ -110,8 +111,6 @@ def parseargs():
              " (default: $%s or %d)" % defaults['port'])
     parser.add_option("-r", "--retest", action="store_true",
         help="retest failed tests")
-    parser.add_option("-s", "--cover_stdlib", action="store_true",
-        help="print a test coverage report inc. standard libraries")
     parser.add_option("-S", "--noskips", action="store_true",
         help="don't report skip tests verbosely")
     parser.add_option("-t", "--timeout", type="int",
@@ -155,16 +154,20 @@ def parseargs():
                          % hgbin)
         options.with_hg = hgbin
 
-    options.anycoverage = (options.cover or
-                           options.cover_stdlib or
-                           options.annotate)
+    options.anycoverage = options.cover or options.annotate
+    if options.anycoverage:
+        try:
+            import coverage
+            covver = version.StrictVersion(coverage.__version__).version
+            if covver < (3, 3):
+                parser.error('coverage options require coverage 3.3 or later')
+        except ImportError:
+            parser.error('coverage options now require the coverage package')
 
-    if options.anycoverage and options.with_hg:
-        # I'm not sure if this is a fundamental limitation or just a
-        # bug.  But I don't want to waste people's time and energy doing
-        # test runs that don't give the results they want.
-        parser.error("sorry, coverage options do not work when --with-hg "
-                     "or --local specified")
+    if options.anycoverage and options.local:
+        # this needs some path mangling somewhere, I guess
+        parser.error("sorry, coverage options do not work when --local "
+                     "is specified")
 
     global vlog
     if options.verbose:
@@ -390,20 +393,15 @@ def installhg(options):
         f.close()
 
     if options.anycoverage:
-        vlog("# Installing coverage wrapper")
-        os.environ['COVERAGE_FILE'] = COVERAGE_FILE
-        if os.path.exists(COVERAGE_FILE):
-            os.unlink(COVERAGE_FILE)
-        # Create a wrapper script to invoke hg via coverage.py
-        os.rename(os.path.join(BINDIR, "hg"), os.path.join(BINDIR, "_hg.py"))
-        f = open(os.path.join(BINDIR, 'hg'), 'w')
-        f.write('#!' + sys.executable + '\n')
-        f.write('import sys, os; os.execv(sys.executable, [sys.executable, '
-                '"%s", "-x", "-p", "%s"] + sys.argv[1:])\n' %
-                (os.path.join(TESTDIR, 'coverage.py'),
-                 os.path.join(BINDIR, '_hg.py')))
-        f.close()
-        os.chmod(os.path.join(BINDIR, 'hg'), 0700)
+        custom = os.path.join(TESTDIR, 'sitecustomize.py')
+        target = os.path.join(PYTHONDIR, 'sitecustomize.py')
+        vlog('# Installing coverage trigger to %s' % target)
+        shutil.copyfile(custom, target)
+        rc = os.path.join(TESTDIR, '.coveragerc')
+        vlog('# Installing coverage rc to %s' % rc)
+        os.environ['COVERAGE_PROCESS_START'] = rc
+        fn = os.path.join(INST, '..', '.coverage')
+        os.environ['COVERAGE_FILE'] = fn
 
 def outputcoverage(options):
 
@@ -411,22 +409,15 @@ def outputcoverage(options):
     os.chdir(PYTHONDIR)
 
     def covrun(*args):
-        start = sys.executable, os.path.join(TESTDIR, 'coverage.py')
-        cmd = '"%s" "%s" %s' % (start[0], start[1], ' '.join(args))
+        cmd = 'coverage %s' % ' '.join(args)
         vlog('# Running: %s' % cmd)
         os.system(cmd)
 
-    omit = [BINDIR, TESTDIR, PYTHONDIR]
-    if not options.cover_stdlib:
-        # Exclude as system paths (ignoring empty strings seen on win)
-        omit += [x for x in sys.path if x != '']
-    omit = ','.join(omit)
+    if options.child:
+        return
 
-    covrun('-c') # combine from parallel processes
-    for fn in os.listdir(TESTDIR):
-        if fn.startswith('.coverage.'):
-            os.unlink(os.path.join(TESTDIR, fn))
-
+    covrun('-c')
+    omit = ','.join([BINDIR, TESTDIR])
     covrun('-i', '-r', '"--omit=%s"' % omit) # report
     if options.annotate:
         adir = os.path.join(TESTDIR, 'annotated')
@@ -668,6 +659,8 @@ def runchildren(options, tests):
     optcopy['jobs'] = 1
     if optcopy['with_hg'] is None:
         optcopy['with_hg'] = os.path.join(BINDIR, "hg")
+    optcopy.pop('anycoverage', None)
+
     opts = []
     for opt, value in optcopy.iteritems():
         name = '--' + opt.replace('_', '-')
@@ -729,6 +722,9 @@ def runchildren(options, tests):
     _checkhglib("Tested")
     print "# Ran %d tests, %d skipped, %d failed." % (
         tested, skipped, failed)
+
+    if options.anycoverage:
+        outputcoverage(options)
     sys.exit(failures != 0)
 
 def runtests(options, tests):

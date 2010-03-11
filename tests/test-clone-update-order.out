@@ -1,0 +1,87 @@
+
+% prepare repo a
+adding bar
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+marked working directory as branch mine
+adding world
+created new head
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+marked working directory as branch other
+adding bye
+created new head
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+% test -U -u
+abort: cannot specify both --noupdate and --updaterev
+% test -U
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 3 changes to 3 files (+2 heads)
+% test -u .
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 3 changes to 3 files (+2 heads)
+updating to branch mine
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% test -u 0
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 3 changes to 3 files (+2 heads)
+updating to branch default
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% test -u 1
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 3 changes to 3 files (+2 heads)
+updating to branch mine
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% test -u 2
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 3 changes to 3 files (+2 heads)
+updating to branch other
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% test -r 0
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 3 changes to 3 files (+2 heads)
+updating to branch other
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% test -r mine ... mine is ignored
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 3 changes to 3 files (+2 heads)
+updating to branch other
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% test -b default
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 3 changesets with 3 changes to 3 files (+2 heads)
+updating to branch default
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% test
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+updating to branch other
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% test tip
+updating to branch other
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
