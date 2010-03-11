@@ -250,10 +250,8 @@ def _status(ui, repo, kwt, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
-        unknown = (opts.get('unknown') or opts.get('all')
-                   or opts.get('untracked'))
         return repo.status(match=cmdutil.match(repo, pats, opts), clean=True,
-                           unknown=unknown)
+                           unknown=opts.get('unknown') or opts.get('all'))
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
     raise util.Abort(_('no [keyword] patterns configured'))
@@ -395,7 +393,7 @@ def files(ui, repo, *pats, **opts):
     cwd = pats and repo.getcwd() or ''
     modified, added, removed, deleted, unknown, ignored, clean = status
     files = []
-    if not (opts.get('unknown') or opts.get('untracked')) or opts.get('all'):
+    if not opts.get('unknown') or opts.get('all'):
         files = sorted(modified + added + clean)
     wctx = repo[None]
     kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
@@ -532,9 +530,6 @@ cmdtable = {
          [('A', 'all', None, _('show keyword status flags of all files')),
           ('i', 'ignore', None, _('show files excluded from expansion')),
           ('u', 'unknown', None, _('only show unknown (not tracked) files')),
-          ('a', 'all', None,
-           _('show keyword status flags of all files (DEPRECATED)')),
-          ('u', 'untracked', None, _('only show untracked files (DEPRECATED)')),
          ] + commands.walkopts,
          _('hg kwfiles [OPTION]... [FILE]...')),
     'kwshrink': (shrink, commands.walkopts,
