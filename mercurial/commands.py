@@ -196,7 +196,7 @@ def archive(ui, repo, dest, **opts):
         }
 
         for type, extensions in exttypes.items():
-            if any(dest.endswith(ext) for ext in extensions):
+            if util.any(dest.endswith(ext) for ext in extensions):
                 return type
         return None
 
