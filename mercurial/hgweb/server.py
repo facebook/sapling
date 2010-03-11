@@ -233,6 +233,14 @@ def create_server(ui, repo):
             class _mixin:
                 pass
 
+    if webdir_conf:
+        hgwebobj = hgwebdir(webdir_conf, ui)
+    elif repo is not None:
+        hgwebobj = hgweb(hg.repository(repo.ui, repo.root))
+    else:
+        raise error.RepoError(_("There is no Mercurial repository"
+                                " here (.hg not found)"))
+
     class MercurialHTTPServer(object, _mixin, BaseHTTPServer.HTTPServer):
 
         # SO_REUSEADDR has broken semantics on windows
@@ -244,16 +252,7 @@ def create_server(ui, repo):
             self.accesslog = accesslog
             self.errorlog = errorlog
             self.daemon_threads = True
-            def make_handler():
-                if webdir_conf:
-                    hgwebobj = hgwebdir(webdir_conf, ui)
-                elif repo is not None:
-                    hgwebobj = hgweb(hg.repository(repo.ui, repo.root))
-                else:
-                    raise error.RepoError(_("There is no Mercurial repository"
-                                            " here (.hg not found)"))
-                return hgwebobj
-            self.application = make_handler()
+            self.application = hgwebobj
 
             if ssl_cert:
                 try:
