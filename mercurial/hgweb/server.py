@@ -195,8 +195,17 @@ class _shgwebhandler(_hgwebhandler):
             self.close_connection = True
             pass
 
+try:
+    from threading import activeCount
+    _mixin = SocketServer.ThreadingMixIn
+except ImportError:
+    if hasattr(os, "fork"):
+        _mixin = SocketServer.ForkingMixIn
+    else:
+        class _mixin:
+            pass
+
 def create_server(ui, repo):
-    use_threads = True
 
     def openlog(opt, default):
         if opt and opt != '-':
@@ -217,21 +226,6 @@ def create_server(ui, repo):
     ssl_cert = myui.config("web", "certificate")
     accesslog = openlog(myui.config("web", "accesslog", "-"), sys.stdout)
     errorlog = openlog(myui.config("web", "errorlog", "-"), sys.stderr)
-
-    if use_threads:
-        try:
-            from threading import activeCount
-        except ImportError:
-            use_threads = False
-
-    if use_threads:
-        _mixin = SocketServer.ThreadingMixIn
-    else:
-        if hasattr(os, "fork"):
-            _mixin = SocketServer.ForkingMixIn
-        else:
-            class _mixin:
-                pass
 
     if webdir_conf:
         hgwebobj = hgwebdir(webdir_conf, ui)
