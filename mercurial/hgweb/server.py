@@ -205,12 +205,57 @@ except ImportError:
         class _mixin:
             pass
 
-def create_server(ui, repo):
+def openlog(opt, default):
+    if opt and opt != '-':
+        return open(opt, 'a')
+    return default
 
-    def openlog(opt, default):
-        if opt and opt != '-':
-            return open(opt, 'a')
-        return default
+class MercurialHTTPServer(object, _mixin, BaseHTTPServer.HTTPServer):
+
+    # SO_REUSEADDR has broken semantics on windows
+    if os.name == 'nt':
+        allow_reuse_address = 0
+
+    def __init__(self, ui, app, addr, handler, **kwargs):
+        BaseHTTPServer.HTTPServer.__init__(self, addr, handler, **kwargs)
+        self.daemon_threads = True
+        self.application = app
+
+        ssl_cert = ui.config('web', 'certificate')
+        if ssl_cert:
+            try:
+                from OpenSSL import SSL
+                ctx = SSL.Context(SSL.SSLv23_METHOD)
+            except ImportError:
+                raise util.Abort(_("SSL support is unavailable"))
+            ctx.use_privatekey_file(ssl_cert)
+            ctx.use_certificate_file(ssl_cert)
+            sock = socket.socket(self.address_family, self.socket_type)
+            self.socket = SSL.Connection(ctx, sock)
+            self.server_bind()
+            self.server_activate()
+
+        prefix = ui.config('web', 'prefix', '')
+        if prefix:
+            prefix = '/' + prefix.strip('/')
+        self.prefix = prefix
+
+        alog = openlog(ui.config('web', 'accesslog', '-'), sys.stdout)
+        elog = openlog(ui.config('web', 'errorlog', '-'), sys.stderr)
+        self.accesslog = alog
+        self.errorlog = elog
+
+        self.addr, self.port = self.socket.getsockname()[0:2]
+        self.fqaddr = socket.getfqdn(addr[0])
+
+class IPv6HTTPServer(MercurialHTTPServer):
+    address_family = getattr(socket, 'AF_INET6', None)
+    def __init__(self, *args, **kwargs):
+        if self.address_family is None:
+            raise error.RepoError(_('IPv6 is not available on this system'))
+        super(IPv6HTTPServer, self).__init__(*args, **kwargs)
+
+def create_server(ui, repo):
 
     if repo is None:
         myui = ui
@@ -218,52 +263,6 @@ def create_server(ui, repo):
         myui = repo.ui
     address = myui.config("web", "address", "")
     port = int(myui.config("web", "port", 8000))
-
-    class MercurialHTTPServer(object, _mixin, BaseHTTPServer.HTTPServer):
-
-        # SO_REUSEADDR has broken semantics on windows
-        if os.name == 'nt':
-            allow_reuse_address = 0
-
-        def __init__(self, ui, app, *args, **kargs):
-            BaseHTTPServer.HTTPServer.__init__(self, *args, **kargs)
-            self.daemon_threads = True
-            self.application = app
-
-            ssl_cert = ui.config('web', 'certificate')
-            if ssl_cert:
-                try:
-                    from OpenSSL import SSL
-                    ctx = SSL.Context(SSL.SSLv23_METHOD)
-                except ImportError:
-                    raise util.Abort(_("SSL support is unavailable"))
-                ctx.use_privatekey_file(ssl_cert)
-                ctx.use_certificate_file(ssl_cert)
-                sock = socket.socket(self.address_family, self.socket_type)
-                self.socket = SSL.Connection(ctx, sock)
-                self.server_bind()
-                self.server_activate()
-
-            prefix = ui.config('web', 'prefix', '')
-            if prefix:
-                prefix = '/' + prefix.strip('/')
-            self.prefix = prefix
-
-            alog = openlog(ui.config('web', 'accesslog', '-'), sys.stdout)
-            elog = openlog(ui.config('web', 'errorlog', '-'), sys.stderr)
-            self.accesslog = alog
-            self.errorlog = elog
-
-            self.addr, self.port = self.socket.getsockname()[0:2]
-            self.fqaddr = socket.getfqdn(address)
-
-    class IPv6HTTPServer(MercurialHTTPServer):
-        address_family = getattr(socket, 'AF_INET6', None)
-
-        def __init__(self, *args, **kwargs):
-            if self.address_family is None:
-                raise error.RepoError(_('IPv6 is not available on this system'))
-            super(IPv6HTTPServer, self).__init__(*args, **kwargs)
 
     if myui.config('web', 'certificate'):
         handler = _shgwebhandler
