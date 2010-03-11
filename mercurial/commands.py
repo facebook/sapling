@@ -659,16 +659,16 @@ def clone(ui, source, dest=None, **opts):
     Mercurial will update the working directory to the first applicable
     revision from this list:
 
-      a) null if -U or the source repository has no changesets
-      b) if -u . and the source repository is local, the first parent of
-         the source repository's working directory
-      c) the changeset specified with -u (if a branch name, this means the
-         latest head of that branch)
-      d) the changeset specified with -r
-      e) the tipmost head specified with -b
-      f) the tipmost head specified with the url#branch source syntax
-      g) the tipmost head of the default branch
-      h) tip
+    a) null if -U or the source repository has no changesets
+    b) if -u . and the source repository is local, the first parent of
+       the source repository's working directory
+    c) the changeset specified with -u (if a branch name, this means the
+       latest head of that branch)
+    d) the changeset specified with -r
+    e) the tipmost head specified with -b
+    f) the tipmost head specified with the url#branch source syntax
+    g) the tipmost head of the default branch
+    h) tip
     """
     if opts.get('noupdate') and opts.get('updaterev'):
         raise util.Abort(_("cannot specify both --noupdate and --updaterev"))
