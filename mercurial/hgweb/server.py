@@ -218,7 +218,6 @@ def create_server(ui, repo):
         myui = repo.ui
     address = myui.config("web", "address", "")
     port = int(myui.config("web", "port", 8000))
-    use_ipv6 = myui.configbool("web", "ipv6")
     webdir_conf = myui.config("web", "webdir_conf")
 
     if webdir_conf:
@@ -280,14 +279,16 @@ def create_server(ui, repo):
     else:
         handler = _hgwebhandler
 
+    if myui.configbool('web', 'ipv6'):
+        cls = IPv6HTTPServer
+    else:
+        cls = MercurialHTTPServer
+
     # ugly hack due to python issue5853 (for threaded use)
     import mimetypes; mimetypes.init()
 
     try:
-        if use_ipv6:
-            return IPv6HTTPServer(myui, (address, port), handler)
-        else:
-            return MercurialHTTPServer(myui, (address, port), handler)
+        return cls(myui, (address, port), handler)
     except socket.error, inst:
         raise util.Abort(_("cannot start server at '%s:%d': %s")
                          % (address, port, inst.args[1]))
