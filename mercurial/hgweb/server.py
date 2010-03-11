@@ -218,15 +218,6 @@ def create_server(ui, repo):
         myui = repo.ui
     address = myui.config("web", "address", "")
     port = int(myui.config("web", "port", 8000))
-    webdir_conf = myui.config("web", "webdir_conf")
-
-    if webdir_conf:
-        hgwebobj = hgwebdir(webdir_conf, ui)
-    elif repo is not None:
-        hgwebobj = hgweb(hg.repository(repo.ui, repo.root))
-    else:
-        raise error.RepoError(_("There is no Mercurial repository"
-                                " here (.hg not found)"))
 
     class MercurialHTTPServer(object, _mixin, BaseHTTPServer.HTTPServer):
 
@@ -234,10 +225,10 @@ def create_server(ui, repo):
         if os.name == 'nt':
             allow_reuse_address = 0
 
-        def __init__(self, ui, *args, **kargs):
+        def __init__(self, ui, app, *args, **kargs):
             BaseHTTPServer.HTTPServer.__init__(self, *args, **kargs)
             self.daemon_threads = True
-            self.application = hgwebobj
+            self.application = app
 
             ssl_cert = ui.config('web', 'certificate')
             if ssl_cert:
@@ -284,11 +275,20 @@ def create_server(ui, repo):
     else:
         cls = MercurialHTTPServer
 
+    webdir_conf = myui.config("web", "webdir_conf")
+    if webdir_conf:
+        hgwebobj = hgwebdir(webdir_conf, ui)
+    elif repo is not None:
+        hgwebobj = hgweb(hg.repository(repo.ui, repo.root))
+    else:
+        raise error.RepoError(_("There is no Mercurial repository"
+                                " here (.hg not found)"))
+
     # ugly hack due to python issue5853 (for threaded use)
     import mimetypes; mimetypes.init()
 
     try:
-        return cls(myui, (address, port), handler)
+        return cls(myui, hgwebobj, (address, port), handler)
     except socket.error, inst:
         raise util.Abort(_("cannot start server at '%s:%d': %s")
                          % (address, port, inst.args[1]))
