@@ -131,7 +131,7 @@ def _abssource(repo, push=False):
         source = repo._subsource
         if source.startswith('/') or '://' in source:
             return source
-        parent = _abssource(repo._subparent)
+        parent = _abssource(repo._subparent, push)
         if '://' in parent:
             if parent[-1] == '/':
                 parent = parent[:-1]
