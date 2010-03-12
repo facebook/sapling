@@ -1082,11 +1082,10 @@ class queue(object):
                 self.ui.warn(_('cleaning up working directory...'))
                 node = repo.dirstate.parents()[0]
                 hg.revert(repo, node, None)
-                unknown = repo.status(unknown=True)[4]
                 # only remove unknown files that we know we touched or
                 # created while patching
-                for f in unknown:
-                    if f in all_files:
+                for f in all_files:
+                    if f not in repo.dirstate:
                         util.unlink(repo.wjoin(f))
                 self.ui.warn(_('done\n'))
                 raise
