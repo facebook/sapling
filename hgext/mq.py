@@ -616,7 +616,7 @@ class queue(object):
         return (True, files, fuzz)
 
     def apply(self, repo, series, list=False, update_status=True,
-              strict=False, patchdir=None, merge=None, all_files={}):
+              strict=False, patchdir=None, merge=None, all_files=None):
         wlock = lock = tr = None
         try:
             wlock = repo.wlock()
@@ -641,7 +641,7 @@ class queue(object):
             self.removeundo(repo)
 
     def _apply(self, repo, series, list=False, update_status=True,
-               strict=False, patchdir=None, merge=None, all_files={}):
+               strict=False, patchdir=None, merge=None, all_files=None):
         '''returns (error, hash)
         error = 1 for unable to read, 2 for patch failed, 3 for patch fuzz'''
         # TODO unify with commands.py
@@ -674,7 +674,8 @@ class queue(object):
 
             if ph.haspatch:
                 (patcherr, files, fuzz) = self.patch(repo, pf)
-                all_files.update(files)
+                if all_files is not None:
+                    all_files.update(files)
                 patcherr = not patcherr
             else:
                 self.ui.warn(_("patch %s is empty\n") % patchname)
@@ -1071,7 +1072,7 @@ class queue(object):
                 end = self.series.index(patch, start) + 1
 
             s = self.series[start:end]
-            all_files = {}
+            all_files = set()
             try:
                 if mergeq:
                     ret = self.mergepatch(repo, mergeq, s, diffopts)
