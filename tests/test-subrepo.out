@@ -108,19 +108,19 @@ t3
 >>>>>>> other
 % clone
 updating to branch default
-pulling subrepo s
+pulling subrepo s from .../sub/t/s
 requesting all changes
 adding changesets
 adding manifests
 adding file changes
 added 4 changesets with 5 changes to 3 files
-pulling subrepo ss
+pulling subrepo ss from .../sub/t/s/ss
 requesting all changes
 adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
-pulling subrepo t
+pulling subrepo t from .../sub/t/t
 requesting all changes
 adding changesets
 adding manifests
@@ -197,7 +197,7 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
-pulling subrepo t
+pulling subrepo t from .../sub/t/t
 searching for changes
 adding changesets
 adding manifests

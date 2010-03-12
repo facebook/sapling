@@ -78,7 +78,7 @@ cat t/t
 
 echo % clone
 cd ..
-hg clone t tc
+hg clone t tc | sed 's|from .*/sub|from .../sub|g'
 cd tc
 hg debugsub
 
@@ -102,7 +102,8 @@ hg ci -m13
 echo % pull
 cd ../tc
 hg pull | sed 's/ .*sub/ ...sub/g'
-hg up # should pull t
+# should pull t
+hg up | sed 's|from .*/sub|from .../sub|g'
 cat t/t
 
 echo % bogus subrepo path aborts

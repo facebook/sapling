@@ -217,8 +217,8 @@ class hgsubrepo(object):
             self._repo.lookup(revision)
         except error.RepoError:
             self._repo._subsource = source
-            self._repo.ui.status(_('pulling subrepo %s\n') % self._path)
             srcurl = _abssource(self._repo)
+            self._repo.ui.status(_('pulling subrepo %s from %s\n') % (self._path, srcurl))
             other = hg.repository(self._repo.ui, srcurl)
             self._repo.pull(other)
 
