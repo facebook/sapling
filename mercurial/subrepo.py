@@ -177,24 +177,32 @@ class hgsubrepo(object):
         self._state = state
         r = ctx._repo
         root = r.wjoin(path)
-        if os.path.exists(os.path.join(root, '.hg')):
-            self._repo = hg.repository(r.ui, root)
-        else:
+        create = False
+        if not os.path.exists(os.path.join(root, '.hg')):
+            create = True
             util.makedirs(root)
-            self._repo = hg.repository(r.ui, root, create=True)
-            f = file(os.path.join(root, '.hg', 'hgrc'), 'w')
-            f.write('[paths]\ndefault = %s\n' % os.path.join(
-                _abssource(ctx._repo), path))
-            f.close()
+        self._repo = hg.repository(r.ui, root, create=create)
         self._repo._subparent = r
         self._repo._subsource = state[0]
+
+        if create:
+            fp = self._repo.opener("hgrc", "w", text=True)
+            fp.write('[paths]\n')
+
+            def addpathconfig(key, value):
+                fp.write('%s = %s\n' % (key, value))
+                self._repo.ui.setconfig('paths', key, value)
+
+            defpath = os.path.join(_abssource(ctx._repo), path)
+            addpathconfig('default', defpath)
+            fp.close()
 
     def dirty(self):
         r = self._state[1]
         if r == '':
             return True
         w = self._repo[None]
-        if w.p1() != self._repo[r]: # version checked out changed
+        if w.p1() != self._repo[r]: # version checked out change
             return True
         return w.dirty() # working directory changed
 
