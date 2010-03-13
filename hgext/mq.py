@@ -1544,7 +1544,6 @@ class queue(object):
             self.ui.warn(_("status is already saved\n"))
             return 1
 
-        ar = [':' + x for x in self.full_series]
         if not msg:
             msg = _("hg patches saved state")
         else:
@@ -1554,9 +1553,9 @@ class queue(object):
             pp = r.dirstate.parents()
             msg += "\nDirstate: %s %s" % (hex(pp[0]), hex(pp[1]))
         msg += "\n\nPatch Data:\n"
-        text = msg + "\n".join([str(x) for x in self.applied]) + '\n' + (ar and
-                   "\n".join(ar) + '\n' or "")
-        n = repo.commit(text, force=True)
+        msg += ''.join('%s\n' % x for x in self.applied)
+        msg += ''.join(':%s\n' % x for x in self.full_series)
+        n = repo.commit(msg, force=True)
         if not n:
             self.ui.warn(_("repo commit failed\n"))
             return 1
