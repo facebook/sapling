@@ -193,8 +193,11 @@ class hgsubrepo(object):
                 fp.write('%s = %s\n' % (key, value))
                 self._repo.ui.setconfig('paths', key, value)
 
-            defpath = os.path.join(_abssource(ctx._repo), path)
+            defpath = _abssource(self._repo)
+            defpushpath = _abssource(self._repo, True)
             addpathconfig('default', defpath)
+            if defpath != defpushpath:
+                addpathconfig('default-push', defpushpath)
             fp.close()
 
     def dirty(self):

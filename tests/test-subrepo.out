@@ -263,6 +263,6 @@ committing subrepository nested_absolute
 updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 [paths]
-default = $HGTMP/test-subrepo/sub/mercurial/main/nested_absolute
+default = $HGTMP/test-subrepo/sub/mercurial/nested_absolute
 [paths]
-default = $HGTMP/test-subrepo/sub/mercurial/main/nested_relative
+default = $HGTMP/test-subrepo/sub/mercurial/main/../nested_relative
