@@ -1104,10 +1104,6 @@ class queue(object):
             wlock.release()
 
     def pop(self, repo, patch=None, force=False, update=True, all=False):
-        def getfile(f, rev, flags):
-            t = repo.file(f).read(rev)
-            repo.wwrite(f, t, flags)
-
         wlock = repo.wlock()
         try:
             if patch:
@@ -1175,8 +1171,7 @@ class queue(object):
             # form of hg.update.
             if update:
                 qp = self.qparents(repo, rev)
-                changes = repo.changelog.read(qp)
-                mmap = repo.manifest.read(changes[0])
+                ctx = repo[qp]
                 m, a, r, d = repo.status(qp, top)[:4]
                 if d:
                     raise util.Abort(_("deletions found between repo revs"))
@@ -1189,11 +1184,9 @@ class queue(object):
                     try: os.removedirs(os.path.dirname(repo.wjoin(f)))
                     except: pass
                     repo.dirstate.forget(f)
-                for f in m:
-                    getfile(f, mmap[f], mmap.flags(f))
-                for f in r:
-                    getfile(f, mmap[f], mmap.flags(f))
                 for f in m + r:
+                    fctx = ctx[f]
+                    repo.wwrite(f, fctx.data(), fctx.flags())
                     repo.dirstate.normal(f)
                 repo.dirstate.setparents(qp, nullid)
             for patch in reversed(self.applied[start:end]):
