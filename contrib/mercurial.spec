@@ -67,7 +67,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html doc/ja *.cgi contrib/*.fcgi
+%doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html *.cgi contrib/*.fcgi
 %doc %attr(644,root,root) %{_mandir}/man?/hg*
 %doc %attr(644,root,root) contrib/*.svg contrib/sample.hgrc
 %{_sysconfdir}/bash_completion.d/mercurial.sh
