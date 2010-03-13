@@ -11,6 +11,9 @@ o  0 C1 tags: qparent
 % Rebase - try to rebase on an applied mq patch
 abort: cannot rebase onto an applied mq patch
 
+% Rebase - same thing, but mq patch is default dest
+abort: cannot rebase onto an applied mq patch
+
 % Rebase - generate a conflict
 merging f
 warning: conflicts during merge.

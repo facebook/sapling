@@ -25,6 +25,12 @@ b
 
 
 error: repository c not found
+% atom-log without basedir
+ <link rel="self" href="http://example.com:8080/a/atom-log"/>
+ <link rel="alternate" href="http://example.com:8080/a/"/>
+  <link href="http://example.com:8080/a/rev/8580ff50825a"/>
+% rss-log without basedir
+    <guid isPermaLink="true">http://example.com:8080/a/rev/8580ff50825a</guid>
 % should succeed, slashy names
 200 Script output follows
 
@@ -323,10 +329,10 @@ d
 200 Script output follows
 
 
-http://hg.example.com:8080/a/
-http://hg.example.com:8080/a/.hg/patches/
-http://hg.example.com:8080/b/
-http://hg.example.com:8080/c/
+/a/
+/a/.hg/patches/
+/b/
+/c/
 
 200 Script output follows
 
@@ -337,7 +343,20 @@ b
 200 Script output follows
 
 c
+% atom-log with basedir /
+ <link rel="self" href="http://example.com:8080/a/atom-log"/>
+ <link rel="alternate" href="http://example.com:8080/a/"/>
+  <link href="http://example.com:8080/a/rev/8580ff50825a"/>
+% rss-log with basedir /
+    <guid isPermaLink="true">http://example.com:8080/a/rev/8580ff50825a</guid>
+% atom-log with basedir /foo/
+ <link rel="self" href="http://example.com:8080/foo/a/atom-log"/>
+ <link rel="alternate" href="http://example.com:8080/foo/a/"/>
+  <link href="http://example.com:8080/foo/a/rev/8580ff50825a"/>
+% rss-log with basedir /foo/
+    <guid isPermaLink="true">http://example.com:8080/foo/a/rev/8580ff50825a</guid>
 % paths errors 1
 % paths errors 2
 % paths errors 3
 % collections errors
+% collections errors 2
