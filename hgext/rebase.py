@@ -348,10 +348,10 @@ def updatemq(repo, state, skipped, **opts):
     'Update rebased mq patches - finalize and then import them'
     mqrebase = {}
     for p in repo.mq.applied:
-        if repo[p.rev].rev() in state:
+        if repo[p.node].rev() in state:
             repo.ui.debug('revision %d is an mq patch (%s), finalize it.\n' %
-                                        (repo[p.rev].rev(), p.name))
-            mqrebase[repo[p.rev].rev()] = (p.name, isagitpatch(repo, p.name))
+                                        (repo[p.node].rev(), p.name))
+            mqrebase[repo[p.node].rev()] = (p.name, isagitpatch(repo, p.name))
 
     if mqrebase:
         repo.mq.finish(repo, mqrebase.keys())
@@ -448,8 +448,8 @@ def buildstate(repo, dest, src, base, detach):
     # This check isn't strictly necessary, since mq detects commits over an
     # applied patch. But it prevents messing up the working directory when
     # a partially completed rebase is blocked by mq.
-    if 'qtip' in repo.tags() and (repo[dest].hex() in
-                            [s.rev for s in repo.mq.applied]):
+    if 'qtip' in repo.tags() and (repo[dest].node() in
+                            [s.node for s in repo.mq.applied]):
         raise util.Abort(_('cannot rebase onto an applied mq patch'))
 
     if src:

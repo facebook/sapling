@@ -54,18 +54,19 @@ commands.norepo += " qclone"
 normname = util.normpath
 
 class statusentry(object):
-    def __init__(self, rev, name=None):
+    def __init__(self, node, name=None):
         if not name:
-            fields = rev.split(':', 1)
+            fields = node.split(':', 1)
             if len(fields) == 2:
-                self.rev, self.name = fields
+                n, name = fields
+                self.node, self.name = bin(n), name
             else:
-                self.rev, self.name = None, None
+                self.node, self.name = None, None
         else:
-            self.rev, self.name = rev, name
+            self.node, self.name = node, name
 
     def __str__(self):
-        return self.rev + ':' + self.name
+        return hex(self.node) + ':' + self.name
 
 class patchheader(object):
     def __init__(self, pf, plainmode=False):
@@ -549,17 +550,15 @@ class queue(object):
                 return p1
             if len(self.applied) == 0:
                 return None
-            return bin(self.applied[-1].rev)
-        pp = repo.changelog.parents(rev)
-        if pp[1] != nullid:
-            arevs = [x.rev for x in self.applied]
-            p0 = hex(pp[0])
-            p1 = hex(pp[1])
-            if p0 in arevs:
-                return pp[0]
+            return self.applied[-1].node
+        p1, p2 = repo.changelog.parents(rev)
+        if p2 != nullid:
+            arevs = [x.node for x in self.applied]
             if p1 in arevs:
-                return pp[1]
-        return pp[0]
+                return p1
+            if p2 in arevs:
+                return p2
+        return p1
 
     def mergepatch(self, repo, mergeq, series, diffopts):
         if len(self.applied) == 0:
@@ -572,7 +571,7 @@ class queue(object):
             pname = ".hg.patches.merge.marker"
             n = repo.commit('[mq]: merge marker', force=True)
             self.removeundo(repo)
-            self.applied.append(statusentry(hex(n), pname))
+            self.applied.append(statusentry(n, pname))
             self.applied_dirty = 1
 
         head = self.qparents(repo)
@@ -590,10 +589,10 @@ class queue(object):
             if not info:
                 self.ui.warn(_("patch %s is not applied\n") % patch)
                 return (1, None)
-            rev = bin(info[1])
+            rev = info[1]
             err, head = self.mergeone(repo, mergeq, head, patch, rev, diffopts)
             if head:
-                self.applied.append(statusentry(hex(head), patch))
+                self.applied.append(statusentry(head, patch))
                 self.applied_dirty = 1
             if err:
                 return (err, head)
@@ -705,7 +704,7 @@ class queue(object):
                 raise util.Abort(_("repo commit failed"))
 
             if update_status:
-                self.applied.append(statusentry(hex(n), patchname))
+                self.applied.append(statusentry(n, patchname))
 
             if patcherr:
                 self.ui.warn(_("patch failed, rejects left in working dir\n"))
@@ -737,7 +736,7 @@ class queue(object):
         self.series_dirty = 1
 
     def _revpatches(self, repo, revs):
-        firstrev = repo[self.applied[0].rev].rev()
+        firstrev = repo[self.applied[0].node].rev()
         patches = []
         for i, rev in enumerate(revs):
 
@@ -745,7 +744,7 @@ class queue(object):
                 raise util.Abort(_('revision %d is not managed') % rev)
 
             ctx = repo[rev]
-            base = bin(self.applied[i].rev)
+            base = self.applied[i].node
             if ctx.node() != base:
                 msg = _('cannot delete revision %d above applied patches')
                 raise util.Abort(msg % rev)
@@ -794,7 +793,7 @@ class queue(object):
 
     def check_toppatch(self, repo):
         if len(self.applied) > 0:
-            top = bin(self.applied[-1].rev)
+            top = self.applied[-1].node
             patch = self.applied[-1].name
             pp = repo.dirstate.parents()
             if top not in pp:
@@ -874,7 +873,7 @@ class queue(object):
                     raise util.Abort(_("repo commit failed"))
                 try:
                     self.full_series[insert:insert] = [patchfn]
-                    self.applied.append(statusentry(hex(n), patchfn))
+                    self.applied.append(statusentry(n, patchfn))
                     self.parse_series()
                     self.series_dirty = 1
                     self.applied_dirty = 1
@@ -931,7 +930,7 @@ class queue(object):
         """returns (index, rev, patch)"""
         for i, a in enumerate(self.applied):
             if a.name == patch:
-                return (i, a.rev, a.name)
+                return (i, a.node, a.name)
         return None
 
     # if the exact patch name does not exist, we try a few
@@ -1134,16 +1133,16 @@ class queue(object):
 
             if not update:
                 parents = repo.dirstate.parents()
-                rr = [bin(x.rev) for x in self.applied]
+                rr = [x.node for x in self.applied]
                 for p in parents:
                     if p in rr:
                         self.ui.warn(_("qpop: forcing dirstate update\n"))
                         update = True
             else:
-                parents = [p.hex() for p in repo[None].parents()]
+                parents = [p.node() for p in repo[None].parents()]
                 needupdate = False
                 for entry in self.applied[start:]:
-                    if entry.rev in parents:
+                    if entry.node in parents:
                         needupdate = True
                         break
                 update = needupdate
@@ -1153,7 +1152,7 @@ class queue(object):
 
             self.applied_dirty = 1
             end = len(self.applied)
-            rev = bin(self.applied[start].rev)
+            rev = self.applied[start].node
             if update:
                 top = self.check_toppatch(repo)[0]
 
@@ -1163,7 +1162,7 @@ class queue(object):
                 node = short(rev)
                 raise util.Abort(_('trying to pop unknown node %s') % node)
 
-            if heads != [bin(self.applied[-1].rev)]:
+            if heads != [self.applied[-1].node]:
                 raise util.Abort(_("popping would remove a revision not "
                                    "managed by this patch queue"))
 
@@ -1226,8 +1225,7 @@ class queue(object):
 
         try:
             self.check_toppatch(repo)
-            (top, patchfn) = (self.applied[-1].rev, self.applied[-1].name)
-            top = bin(top)
+            (top, patchfn) = (self.applied[-1].node, self.applied[-1].name)
             if repo.changelog.heads(top) != [top]:
                 raise util.Abort(_("cannot refresh a revision with children"))
 
@@ -1384,7 +1382,7 @@ class queue(object):
                 patchf.rename()
                 n = repo.commit(message, user, ph.date, match=match,
                                 force=True)
-                self.applied.append(statusentry(hex(n), patchfn))
+                self.applied.append(statusentry(n, patchfn))
             except:
                 ctx = repo[cparents[0]]
                 repo.dirstate.rebuild(ctx.node(), ctx.manifest())
@@ -1502,9 +1500,9 @@ class queue(object):
                 l = line.rstrip()
                 se = statusentry(l)
                 file_ = se.name
-                if se.rev:
+                if se.node:
                     applied.append(se)
-                else:
+                else: # XXX file_ is equal to None?
                     series.append(file_)
         if datastart is None:
             self.ui.warn(_("No saved patch data found\n"))
@@ -1562,7 +1560,7 @@ class queue(object):
         if not n:
             self.ui.warn(_("repo commit failed\n"))
             return 1
-        self.applied.append(statusentry(hex(n),'.hg.patches.save.line'))
+        self.applied.append(statusentry(n,'.hg.patches.save.line'))
         self.applied_dirty = 1
         self.removeundo(repo)
 
@@ -1640,14 +1638,14 @@ class queue(object):
                 raise util.Abort(_('revision %d is the root of more than one '
                                    'branch') % rev[-1])
             if self.applied:
-                base = hex(repo.changelog.node(rev[0]))
-                if base in [n.rev for n in self.applied]:
+                base = repo.changelog.node(rev[0])
+                if base in [n.node for n in self.applied]:
                     raise util.Abort(_('revision %d is already managed')
                                      % rev[0])
-                if heads != [bin(self.applied[-1].rev)]:
+                if heads != [self.applied[-1].node]:
                     raise util.Abort(_('revision %d is not the parent of '
                                        'the queue') % rev[0])
-                base = repo.changelog.rev(bin(self.applied[0].rev))
+                base = repo.changelog.rev(self.applied[0].node)
                 lastparent = repo.changelog.parentrevs(base)[0]
             else:
                 if heads != [repo.changelog.node(rev[0])]:
@@ -1677,7 +1675,7 @@ class queue(object):
                 cmdutil.export(repo, [n], fp=patchf, opts=diffopts)
                 patchf.close()
 
-                se = statusentry(hex(n), patchname)
+                se = statusentry(n, patchname)
                 self.applied.insert(0, se)
 
                 added.append(patchname)
@@ -1895,7 +1893,7 @@ def clone(ui, source, dest=None, **opts):
     qbase, destrev = None, None
     if sr.local():
         if sr.mq.applied:
-            qbase = bin(sr.mq.applied[0].rev)
+            qbase = sr.mq.applied[0].node
             if not hg.islocal(dest):
                 heads = set(sr.heads())
                 destrev = list(heads.difference(sr.heads(qbase)))
@@ -2537,8 +2535,8 @@ def reposetup(ui, repo):
 
         def abort_if_wdir_patched(self, errmsg, force=False):
             if self.mq.applied and not force:
-                parent = hex(self.dirstate.parents()[0])
-                if parent in [s.rev for s in self.mq.applied]:
+                parent = self.dirstate.parents()[0]
+                if parent in [s.node for s in self.mq.applied]:
                     raise util.Abort(errmsg)
 
         def commit(self, text="", user=None, date=None, match=None,
@@ -2563,7 +2561,7 @@ def reposetup(ui, repo):
             if not q.applied:
                 return result
 
-            mqtags = [(bin(patch.rev), patch.name) for patch in q.applied]
+            mqtags = [(patch.node, patch.name) for patch in q.applied]
 
             if mqtags[-1][0] not in self.changelog.nodemap:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
@@ -2589,7 +2587,7 @@ def reposetup(ui, repo):
                 return super(mqrepo, self)._branchtags(partial, lrev)
 
             cl = self.changelog
-            qbasenode = bin(q.applied[0].rev)
+            qbasenode = q.applied[0].node
             if qbasenode not in cl.nodemap:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(qbasenode))
