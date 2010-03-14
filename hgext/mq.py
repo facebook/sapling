@@ -328,16 +328,12 @@ class queue(object):
         return os.path.join(self.path, *p)
 
     def find_series(self, patch):
-        pre = re.compile("(\s*)([^#]+)")
-        index = 0
-        for l in self.full_series:
-            m = pre.match(l)
-            if m:
-                s = m.group(2)
-                s = s.rstrip()
-                if s == patch:
-                    return index
-            index += 1
+        def matchpatch(l):
+            l = l.split('#', 1)[0]
+            return l.strip() == patch
+        for index, l in enumerate(self.full_series):
+            if matchpatch(l):
+                return index
         return None
 
     guard_re = re.compile(r'\s?#([-+][^-+# \t\r\n\f][^# \t\r\n\f]*)')
