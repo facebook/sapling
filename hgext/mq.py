@@ -1548,7 +1548,7 @@ class queue(object):
         if not n:
             self.ui.warn(_("repo commit failed\n"))
             return 1
-        self.applied.append(statusentry(n,'.hg.patches.save.line'))
+        self.applied.append(statusentry(n, '.hg.patches.save.line'))
         self.applied_dirty = 1
         self.removeundo(repo)
 
