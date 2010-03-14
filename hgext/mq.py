@@ -1070,7 +1070,11 @@ class queue(object):
                 # created while patching
                 for f in all_files:
                     if f not in repo.dirstate:
-                        util.unlink(repo.wjoin(f))
+                        try:
+                            util.unlink(repo.wjoin(f))
+                        except OSError, inst:
+                            if inst.errno != errno.ENOENT:
+                                raise
                 self.ui.warn(_('done\n'))
                 raise
 
