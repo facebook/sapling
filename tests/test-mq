@@ -80,6 +80,19 @@ echo '  series:'
 cat .hg/patches/series
 cd ..
 
+echo '% init --mq without repo'
+mkdir f
+cd f
+hg init --mq
+cd ..
+
+echo '% init --mq with nonexistent directory'
+hg init --mq nonexistentdir
+
+echo '% init --mq with bundle (non "local")'
+hg -R a bundle --all a.bundle >/dev/null
+hg init --mq a.bundle
+
 cd a
 
 hg qnew -m 'foo bar' test.patch

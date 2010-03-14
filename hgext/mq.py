@@ -2633,7 +2633,16 @@ def mqinit(orig, ui, *args, **kwargs):
     if not mq:
         return orig(ui, *args, **kwargs)
 
-    repopath = cmdutil.findrepo(os.getcwd())
+    if args:
+        repopath = args[0]
+        if not hg.islocal(repopath):
+            raise util.Abort(_('only a local queue repository '
+                               'may be initialized'))
+    else:
+        repopath = cmdutil.findrepo(os.getcwd())
+        if not repopath:
+            raise util.Abort(_('There is no Mercurial repository here '
+                               '(.hg not found)'))
     repo = hg.repository(ui, repopath)
     return qinit(ui, repo, True)
 
