@@ -539,7 +539,7 @@ class queue(object):
             (p1, p2) = repo.dirstate.parents()
             if p2 == nullid:
                 return p1
-            if len(self.applied) == 0:
+            if not self.applied:
                 return None
             return self.applied[-1].node
         p1, p2 = repo.changelog.parents(rev)
@@ -548,7 +548,7 @@ class queue(object):
         return p1
 
     def mergepatch(self, repo, mergeq, series, diffopts):
-        if len(self.applied) == 0:
+        if not self.applied:
             # each of the patches merged in will have two parents.  This
             # can confuse the qrefresh, qdiff, and strip code because it
             # needs to know which parent is actually in the patch queue.
@@ -779,7 +779,7 @@ class queue(object):
         self._cleanup(realpatches, numrevs, opts.get('keep'))
 
     def check_toppatch(self, repo):
-        if len(self.applied) > 0:
+        if self.applied:
             top = self.applied[-1].node
             patch = self.applied[-1].name
             pp = repo.dirstate.parents()
@@ -940,7 +940,7 @@ class queue(object):
                 return None
             if matches:
                 return matches[0]
-            if len(self.series) > 0 and len(self.applied) > 0:
+            if self.series and self.applied:
                 if s == 'qtip':
                     return self.series[self.series_end(True)-1]
                 if s == 'qbase':
@@ -1101,7 +1101,7 @@ class queue(object):
                 if not info:
                     raise util.Abort(_("patch %s is not applied") % patch)
 
-            if len(self.applied) == 0:
+            if not self.applied:
                 # Allow qpop -a to work repeatedly,
                 # but not qpop without an argument
                 self.ui.warn(_("no patches applied\n"))
@@ -1179,7 +1179,7 @@ class queue(object):
                 self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
             self.strip(repo, rev, update=False, backup='strip')
-            if len(self.applied):
+            if self.applied:
                 self.ui.write(_("now at: %s\n") % self.applied[-1].name)
             else:
                 self.ui.write(_("patch queue now empty\n"))
@@ -1200,7 +1200,7 @@ class queue(object):
         self.printdiff(repo, diffopts, node1, node2, files=pats, opts=opts)
 
     def refresh(self, repo, pats=None, **opts):
-        if len(self.applied) == 0:
+        if not self.applied:
             self.ui.write(_("no patches applied\n"))
             return 1
         msg = opts.get('msg', '').rstrip()
@@ -1522,7 +1522,7 @@ class queue(object):
                 hg.clean(r, qpp[0])
 
     def save(self, repo, msg=None):
-        if len(self.applied) == 0:
+        if not self.applied:
             self.ui.warn(_("save: no patches applied, exiting\n"))
             return 1
         if self.issaveline(self.applied[-1]):
@@ -1549,7 +1549,7 @@ class queue(object):
         self.removeundo(repo)
 
     def full_series_end(self):
-        if len(self.applied) > 0:
+        if self.applied:
             p = self.applied[-1].name
             end = self.find_series(p)
             if end is None:
@@ -1574,7 +1574,7 @@ class queue(object):
                 self.explain_pushable(i)
                 i += 1
             return i
-        if len(self.applied) > 0:
+        if self.applied:
             p = self.applied[-1].name
             try:
                 end = self.series.index(p)
