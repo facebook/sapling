@@ -73,8 +73,7 @@ class patchheader(object):
                     break
         def eatempty(lines):
             while lines:
-                l = lines[-1]
-                if re.match('\s*$', l):
+                if not lines[-1].strip():
                     del lines[-1]
                 else:
                     break
