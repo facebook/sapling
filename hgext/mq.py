@@ -54,16 +54,8 @@ commands.norepo += " qclone"
 normname = util.normpath
 
 class statusentry(object):
-    def __init__(self, node, name=None):
-        if not name:
-            fields = node.split(':', 1)
-            if len(fields) == 2:
-                n, name = fields
-                self.node, self.name = bin(n), name
-            else:
-                self.node, self.name = None, None
-        else:
-            self.node, self.name = node, name
+    def __init__(self, node, name):
+        self.node, self.name = node, name
 
     def __str__(self):
         return hex(self.node) + ':' + self.name
@@ -269,8 +261,11 @@ class queue(object):
     @util.propertycache
     def applied(self):
         if os.path.exists(self.join(self.status_path)):
+            def parse(l):
+                n, name = l.split(':', 1)
+                return statusentry(bin(n), name)
             lines = self.opener(self.status_path).read().splitlines()
-            return [statusentry(l) for l in lines]
+            return [parse(l) for l in lines]
         return []
 
     @util.propertycache
@@ -1493,12 +1488,12 @@ class queue(object):
                 qpp = [bin(x) for x in l]
             elif datastart != None:
                 l = line.rstrip()
-                se = statusentry(l)
-                file_ = se.name
-                if se.node:
-                    applied.append(se)
-                else: # XXX file_ is equal to None?
-                    series.append(file_)
+                try:
+                    n, name = l.split(':', 1)
+                except ValueError:
+                    series.append(l)
+                else:
+                    applied.append(statusentry(bin(n), name))
         if datastart is None:
             self.ui.warn(_("No saved patch data found\n"))
             return 1
