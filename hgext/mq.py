@@ -16,7 +16,6 @@ directory. Applied patches are both patch files and changesets.
 
 Common tasks (use "hg help command" for more details)::
 
-  prepare repository to work with patches   qinit
   create new patch                          qnew
   import existing patch                     qimport
 
@@ -1850,7 +1849,7 @@ def clone(ui, source, dest=None, **opts):
     default. Use -p <url> to change.
 
     The patch directory must be a nested Mercurial repository, as
-    would be created by qinit -c.
+    would be created by init --mq.
     '''
     def patchdir(repo):
         url = repo.url()
@@ -1868,7 +1867,7 @@ def clone(ui, source, dest=None, **opts):
         hg.repository(ui, patchespath)
     except error.RepoError:
         raise util.Abort(_('versioned patch repository not found'
-                           ' (see qinit -c)'))
+                           ' (see init --mq)'))
     qbase, destrev = None, None
     if sr.local():
         if sr.mq.applied:
@@ -2604,7 +2603,16 @@ def mqinit(orig, ui, *args, **kwargs):
     if not mq:
         return orig(ui, *args, **kwargs)
 
-    repopath = cmdutil.findrepo(os.getcwd())
+    if args:
+        repopath = args[0]
+        if not hg.islocal(repopath):
+            raise util.Abort(_('only a local queue repository '
+                               'may be initialized'))
+    else:
+        repopath = cmdutil.findrepo(os.getcwd())
+        if not repopath:
+            raise util.Abort(_('There is no Mercurial repository here '
+                               '(.hg not found)'))
     repo = hg.repository(ui, repopath)
     return qinit(ui, repo, True)
 

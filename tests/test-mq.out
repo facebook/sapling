@@ -10,7 +10,6 @@ Applied patches are both patch files and changesets.
 
 Common tasks (use "hg help command" for more details):
 
-  prepare repository to work with patches   qinit
   create new patch                          qnew
   import existing patch                     qimport
 
@@ -90,6 +89,12 @@ bleh
   series:
 A
 B
+% init --mq without repo
+abort: There is no Mercurial repository here (.hg not found)
+% init --mq with nonexistent directory
+abort: repository nonexistentdir not found!
+% init --mq with bundle (non "local")
+abort: only a local queue repository may be initialized
 % qrefresh
 foo bar
 
@@ -513,7 +518,7 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add foo
 
 % qclone
-abort: versioned patch repository not found (see qinit -c)
+abort: versioned patch repository not found (see init --mq)
 adding .hg/patches/patch1
 main repo:
     rev 1: change foo
