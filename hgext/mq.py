@@ -1477,8 +1477,7 @@ class queue(object):
             return hg.repository(self.ui, path=self.path, create=create)
 
     def restore(self, repo, rev, delete=None, qupdate=None):
-        c = repo.changelog.read(rev)
-        desc = c[4].strip()
+        desc = repo[rev].description().strip()
         lines = desc.splitlines()
         i = 0
         datastart = None
