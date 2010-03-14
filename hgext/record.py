@@ -293,6 +293,7 @@ def filterpatch(ui, chunks):
                     _('&Quit, recording no changes'),
                     _('&?'))
             r = ui.promptchoice("%s %s" % (query, resps), choices)
+            ui.write("\n")
             if r == 7: # ?
                 doc = gettext(record.__doc__)
                 c = doc.find(_('y - record this change'))
