@@ -16,7 +16,6 @@ directory. Applied patches are both patch files and changesets.
 
 Common tasks (use "hg help command" for more details)::
 
-  prepare repository to work with patches   qinit
   create new patch                          qnew
   import existing patch                     qimport
 
