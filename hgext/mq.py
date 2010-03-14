@@ -1879,7 +1879,7 @@ def clone(ui, source, dest=None, **opts):
     default. Use -p <url> to change.
 
     The patch directory must be a nested Mercurial repository, as
-    would be created by qinit -c.
+    would be created by init --mq.
     '''
     def patchdir(repo):
         url = repo.url()
@@ -1897,7 +1897,7 @@ def clone(ui, source, dest=None, **opts):
         hg.repository(ui, patchespath)
     except error.RepoError:
         raise util.Abort(_('versioned patch repository not found'
-                           ' (see qinit -c)'))
+                           ' (see init --mq)'))
     qbase, destrev = None, None
     if sr.local():
         if sr.mq.applied:
