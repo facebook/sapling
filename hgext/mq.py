@@ -1564,15 +1564,13 @@ class queue(object):
         """
         end = 0
         def next(start):
-            if all_patches:
+            if all_patches or start >= len(self.series):
                 return start
-            i = start
-            while i < len(self.series):
+            for i in xrange(start, len(self.series)):
                 p, reason = self.pushable(i)
                 if p:
                     break
                 self.explain_pushable(i)
-                i += 1
             return i
         if self.applied:
             p = self.applied[-1].name
@@ -1611,7 +1609,6 @@ class queue(object):
         if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
                                'patches'))
-        i = 0
         added = []
         if rev:
             # If mq patches are applied, we can only import revisions
@@ -1667,7 +1664,7 @@ class queue(object):
             self.parse_series()
             self.applied_dirty = 1
 
-        for filename in files:
+        for i, filename in enumerate(files):
             if existing:
                 if filename == '-':
                     raise util.Abort(_('-e is incompatible with import from -'))
@@ -1700,7 +1697,6 @@ class queue(object):
                 self.full_series[index:index] = [patchname]
             self.parse_series()
             self.ui.warn(_("adding %s to series file\n") % patchname)
-            i += 1
             added.append(patchname)
             patchname = None
         self.series_dirty = 1
