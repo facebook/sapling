@@ -552,12 +552,8 @@ class queue(object):
                 return None
             return self.applied[-1].node
         p1, p2 = repo.changelog.parents(rev)
-        if p2 != nullid:
-            arevs = [x.node for x in self.applied]
-            if p1 in arevs:
-                return p1
-            if p2 in arevs:
-                return p2
+        if p2 != nullid and p2 in [x.node for x in self.applied]:
+            return p2
         return p1
 
     def mergepatch(self, repo, mergeq, series, diffopts):
