@@ -1488,12 +1488,11 @@ class queue(object):
                 qpp = [bin(x) for x in l]
             elif datastart != None:
                 l = line.rstrip()
-                try:
-                    n, name = l.split(':', 1)
-                except ValueError:
-                    series.append(l)
-                else:
+                n, name = l.split(':', 1)
+                if n:
                     applied.append(statusentry(bin(n), name))
+                else:
+                    series.append(l)
         if datastart is None:
             self.ui.warn(_("No saved patch data found\n"))
             return 1
