@@ -32,6 +32,7 @@ class logentry(object):
         .branchpoints- the branches that start at the current entry
     '''
     def __init__(self, **entries):
+        self.synthetic = False
         self.__dict__.update(entries)
 
     def __repr__(self):
@@ -296,8 +297,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             assert match, _('expected revision number')
             e = logentry(rcs=scache(rcs), file=scache(filename),
                     revision=tuple([int(x) for x in match.group(1).split('.')]),
-                    branches=[], parent=None,
-                    synthetic=False)
+                    branches=[], parent=None)
             state = 6
 
         elif state == 6:
@@ -469,6 +469,7 @@ class changeset(object):
         .branchpoints- the branches that start at the current entry
     '''
     def __init__(self, **entries):
+        self.synthetic = False
         self.__dict__.update(entries)
 
     def __repr__(self):
@@ -542,8 +543,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
         #   "File file4 was added on branch ..." (synthetic, 1 entry)
         #   "Add file3 and file4 to fix ..."     (real, 2 entries)
         # Hence the check for 1 entry here.
-        synth = getattr(c.entries[0], 'synthetic', None)
-        c.synthetic = (len(c.entries) == 1 and synth)
+        c.synthetic = len(c.entries) == 1 and c.entries[0].synthetic
 
     # Sort files in each changeset
 
