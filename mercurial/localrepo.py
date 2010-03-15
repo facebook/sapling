@@ -1826,9 +1826,9 @@ class localrepository(repo.repository):
             cnt = 0
             for chnk in group:
                 yield chnk
-                self.ui.progress(_('bundle changes'), cnt, unit=_('chunks'))
+                self.ui.progress(_('bundling changes'), cnt, unit=_('chunks'))
                 cnt += 1
-            self.ui.progress(_('bundle changes'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling changes'), None, unit=_('chunks'))
 
 
             # Figure out which manifest nodes (of the ones we think might be
@@ -1854,9 +1854,9 @@ class localrepository(repo.repository):
             cnt = 0
             for chnk in group:
                 yield chnk
-                self.ui.progress(_('bundle manifests'), cnt, unit=_('chunks'))
+                self.ui.progress(_('bundling manifests'), cnt, unit=_('chunks'))
                 cnt += 1
-            self.ui.progress(_('bundle manifests'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling manifests'), None, unit=_('chunks'))
 
             # These are no longer needed, dereference and toss the memory for
             # them.
@@ -1897,7 +1897,7 @@ class localrepository(repo.repository):
                                              lookup_filenode_link_func(fname))
                     for chnk in group:
                         self.ui.progress(
-                            _('bundle files'), cnt, item=fname, unit=_('chunks'))
+                            _('bundling files'), cnt, item=fname, unit=_('chunks'))
                         cnt += 1
                         yield chnk
                 if fname in msng_filenode_set:
@@ -1905,7 +1905,7 @@ class localrepository(repo.repository):
                     del msng_filenode_set[fname]
             # Signal that no more groups are left.
             yield changegroup.closechunk()
-            self.ui.progress(_('bundle files'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling files'), None, unit=_('chunks'))
 
             if msng_cl_lst:
                 self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
@@ -1954,19 +1954,19 @@ class localrepository(repo.repository):
 
             cnt = 0
             for chnk in cl.group(nodes, identity, collect):
-                self.ui.progress(_('bundle changes'), cnt, unit=_('chunks'))
+                self.ui.progress(_('bundling changes'), cnt, unit=_('chunks'))
                 cnt += 1
                 yield chnk
-            self.ui.progress(_('bundle changes'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling changes'), None, unit=_('chunks'))
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
             cnt = 0
             for chnk in mnfst.group(nodeiter, lookuprevlink_func(mnfst)):
-                self.ui.progress(_('bundle manifests'), cnt, unit=_('chunks'))
+                self.ui.progress(_('bundling manifests'), cnt, unit=_('chunks'))
                 cnt += 1
                 yield chnk
-            self.ui.progress(_('bundle manifests'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling manifests'), None, unit=_('chunks'))
 
             cnt = 0
             for fname in sorted(changedfiles):
@@ -1981,10 +1981,10 @@ class localrepository(repo.repository):
                     lookup = lookuprevlink_func(filerevlog)
                     for chnk in filerevlog.group(nodeiter, lookup):
                         self.ui.progress(
-                            _('bundle files'), cnt, item=fname, unit=_('chunks'))
+                            _('bundling files'), cnt, item=fname, unit=_('chunks'))
                         cnt += 1
                         yield chnk
-            self.ui.progress(_('bundle files'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling files'), None, unit=_('chunks'))
 
             yield changegroup.closechunk()
 
