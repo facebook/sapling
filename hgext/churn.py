@@ -75,12 +75,12 @@ def countrate(ui, repo, amap, *pats, **opts):
             rate[key] = [r + l for r, l in zip(rate.get(key, (0, 0)), lines)]
 
         state['count'] += 1
-        ui.progress(_('churning changes'), state['count'], total=len(repo))
+        ui.progress(_('analyzing'), state['count'], total=len(repo))
 
     for ctx in cmdutil.walkchangerevs(repo, m, opts, prep):
         continue
 
-    ui.progress(_('churning changes'), None)
+    ui.progress(_('analyzing'), None)
 
     return rate
 
