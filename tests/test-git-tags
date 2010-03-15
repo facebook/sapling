@@ -40,6 +40,7 @@ tag()
 mkdir gitrepo
 cd gitrepo
 git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
+git config receive.denyCurrentBranch ignore
 echo alpha > alpha
 git add alpha
 commit -m 'add alpha'
@@ -56,12 +57,16 @@ git daemon --base-path="$(pwd)"\
  --listen=localhost\
  --export-all\
  --pid-file=gitdaemon.pid \
- --detach --reuseaddr
+ --detach --reuseaddr \
+ --enable=receive-pack
 
 hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 
 cd hgrepo
 hg log --graph
+echo beta-fix >> beta
+hg commit -m 'fix for beta'
+hg push
 
 cd ..
 kill `cat gitdaemon.pid`
