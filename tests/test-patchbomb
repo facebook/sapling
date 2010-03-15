@@ -126,6 +126,11 @@ echo "% test intro for single patch"
 hg email --date '1970-1-1 0:1' -n --intro -f quux -t foo -c bar -s test \
   -r 2 | fixheaders
 
+echo "% test --desc without --intro for a single patch"
+echo foo > intro.text
+hg email --date '1970-1-1 0:1' -n --desc intro.text -f quux -t foo -c bar \
+  -s test -r 2 | fixheaders
+
 echo "% test intro for multiple patches"
 hg email --date '1970-1-1 0:1' -n --intro -f quux -t foo -c bar -s test \
   -r 0:1 | fixheaders

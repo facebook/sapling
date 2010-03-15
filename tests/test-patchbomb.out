@@ -940,6 +940,52 @@ diff -r 97d72e5f12c7 -r ff2c9fa2018b c
 @@ -0,0 +1,1 @@
 +c
 
+% test --desc without --intro for a single patch
+This patch series consists of 1 patches.
+
+
+Displaying [PATCH 0 of 1] test ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH 0 of 1] test
+Message-Id: <patchbomb.60@
+User-Agent: Mercurial-patchbomb
+Date: Thu, 01 Jan 1970 00:01:00 +0000
+From: quux
+To: foo
+Cc: bar
+
+foo
+
+Displaying [PATCH 1 of 1] c ...
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [PATCH 1 of 1] c
+X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
+Message-Id: <ff2c9fa2018b15fa74b3.61@
+In-Reply-To: <patchbomb.60@
+References: <patchbomb.60@
+User-Agent: Mercurial-patchbomb
+Date: Thu, 01 Jan 1970 00:01:01 +0000
+From: quux
+To: foo
+Cc: bar
+
+# HG changeset patch
+# User test
+# Date 3 0
+# Node ID ff2c9fa2018b15fa74b33363bda9527323e2a99f
+# Parent  97d72e5f12c7e84f85064aa72e5a297142c36ed9
+c
+
+diff -r 97d72e5f12c7 -r ff2c9fa2018b c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:03 1970 +0000
+@@ -0,0 +1,1 @@
++c
+
 % test intro for multiple patches
 This patch series consists of 2 patches.
 
