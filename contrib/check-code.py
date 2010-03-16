@@ -133,8 +133,40 @@ checks = [
     ('test script', r'(.*/)?test-[^.~]*$', testfilters, testpats),
     ('c', r'.*\.c$', cfilters, cpats),
 ]
-def checkfile(f, maxerr=None):
-    """checks style and portability of a given file"""
+
+class norepeatlogger(object):
+    def __init__(self):
+        self._lastseen = None
+
+    def log(self, fname, lineno, line, msg):
+        """print error related a to given line of a given file.
+
+        The faulty line will also be printed but only once in the case
+        of multiple errors.
+
+        :fname: filename
+        :lineno: line number
+        :line: actual content of the line
+        :msg: error message
+        """
+        msgid = fname, lineno, line
+        if msgid != self._lastseen:
+            print "%s:%d:" % (fname, lineno)
+            print " > %s" % line
+            self._lastseen = msgid
+        print " " + msg
+
+_defaultlogger = norepeatlogger()
+
+def checkfile(f, logfunc=_defaultlogger.log, maxerr=None):
+    """checks style and portability of a given file
+
+    :f: filepath
+    :logfunc: function used to report error
+              logfunc(filename, linenumber, linecontent, errormessage)
+    :maxerr: number of error to display before arborting.
+             Set to None (default) to report all errors
+    """
     for name, match, filters, pats in checks:
         fc = 0
         if not re.match(match, f):
@@ -149,14 +181,9 @@ def checkfile(f, maxerr=None):
         for n, l in z:
             if "check-code" + "-ignore" in l[0]:
                 continue
-            lc = 0
             for p, msg in pats:
                 if re.search(p, l[1]):
-                    if not lc:
-                        print "%s:%d:" % (f, n + 1)
-                        print " > %s" % l[0]
-                    print " %s" % msg
-                    lc += 1
+                    logfunc(f, n+1, l[0], msg)
                     fc += 1
             if maxerr is not None and fc >= maxerr:
                 print " (too many errors, giving up)"
