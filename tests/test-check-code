@@ -1,0 +1,16 @@
+#!/bin/sh
+#cd `dirname $0`
+cat > correct.py <<EOF
+def toto(arg1, arg2):
+    del arg2
+    return (5 + 6, 9)
+EOF
+
+cat > wrong.py <<EOF
+def toto( arg1, arg2):
+    del(arg2)
+    return ( 5+6, 9)
+EOF
+
+check_code=`dirname $0`/../contrib/check-code.py
+${check_code} ./wrong.py ./correct.py
