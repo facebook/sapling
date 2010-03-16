@@ -287,7 +287,6 @@ def demo(ui, repo, *args, **opts):
             ui.write('%s = %s\n' % (k, v))
 
     fn = 'demo.txt'
-    branchname = 'demobranch'
     tmpdir = tempfile.mkdtemp('', 'kwdemo.')
     ui.note(_('creating temporary repository at %s\n') % tmpdir)
     repo = localrepo.localrepository(ui, tmpdir, True)
@@ -333,25 +332,17 @@ def demo(ui, repo, *args, **opts):
     keywords = '$' + '$\n$'.join(sorted(kwmaps.keys())) + '$\n'
     repo.wopener(fn, 'w').write(keywords)
     repo.add([fn])
-    path = repo.wjoin(fn)
-    ui.note(_('\nkeywords written to %s:\n') % path)
+    ui.note(_('\nkeywords written to %s:\n') % fn)
     ui.note(keywords)
-    ui.note('\nhg -R "%s" branch "%s"\n' % (tmpdir, branchname))
-    # silence branch command if not verbose
-    quiet = ui.quiet
-    ui.quiet = not ui.verbose
-    commands.branch(ui, repo, branchname)
-    ui.quiet = quiet
+    repo.dirstate.setbranch('demobranch')
     for name, cmd in ui.configitems('hooks'):
         if name.split('.', 1)[0].find('commit') > -1:
             repo.ui.setconfig('hooks', name, '')
-    ui.note(_('unhooked all commit hooks\n'))
     msg = _('hg keyword configuration and expansion example')
-    ui.note("hg -R '%s' ci -m '%s'\n" % (tmpdir, msg))
+    ui.note("hg ci -m '%s'\n" % msg)
     repo.commit(text=msg)
     ui.status(_('\n\tkeywords expanded\n'))
     ui.write(repo.wread(fn))
-    ui.debug('\nremoving temporary repository %s\n' % tmpdir)
     shutil.rmtree(tmpdir, ignore_errors=True)
 
 def expand(ui, repo, *pats, **opts):
