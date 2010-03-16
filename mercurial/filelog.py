@@ -59,7 +59,7 @@ class filelog(revlog.revlog):
         """compare text with a given file revision"""
 
         # for renames, we have to go the slow way
-        if self.renamed(node):
+        if text.startswith('\1\n') or self.renamed(node):
             t2 = self.read(node)
             return t2 != text
 
