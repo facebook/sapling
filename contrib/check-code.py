@@ -134,36 +134,37 @@ checks = [
     ('c', r'.*\.c$', cfilters, cpats),
 ]
 
-if len(sys.argv) == 1:
-    check = glob.glob("*")
-else:
-    check = sys.argv[1:]
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        check = glob.glob("*")
+    else:
+        check = sys.argv[1:]
 
-for f in check:
-    for name, match, filters, pats in checks:
-        fc = 0
-        if not re.match(match, f):
-            continue
-        pre = post = open(f).read()
-        if "no-" + "check-code" in pre:
-            break
-        for p, r in filters:
-            post = re.sub(p, r, post)
-        # print post # uncomment to show filtered version
-        z = enumerate(zip(pre.splitlines(), post.splitlines(True)))
-        for n, l in z:
-            if "check-code" + "-ignore" in l[0]:
+    for f in check:
+        for name, match, filters, pats in checks:
+            fc = 0
+            if not re.match(match, f):
                 continue
-            lc = 0
-            for p, msg in pats:
-                if re.search(p, l[1]):
-                    if not lc:
-                        print "%s:%d:" % (f, n + 1)
-                        print " > %s" % l[0]
-                    print " %s" % msg
-                    lc += 1
-                    fc += 1
-            if fc == 15:
-                print " (too many errors, giving up)"
+            pre = post = open(f).read()
+            if "no-" + "check-code" in pre:
                 break
-        break
+            for p, r in filters:
+                post = re.sub(p, r, post)
+            # print post # uncomment to show filtered version
+            z = enumerate(zip(pre.splitlines(), post.splitlines(True)))
+            for n, l in z:
+                if "check-code" + "-ignore" in l[0]:
+                    continue
+                lc = 0
+                for p, msg in pats:
+                    if re.search(p, l[1]):
+                        if not lc:
+                            print "%s:%d:" % (f, n + 1)
+                            print " > %s" % l[0]
+                        print " %s" % msg
+                        lc += 1
+                        fc += 1
+                if fc == 15:
+                    print " (too many errors, giving up)"
+                    break
+            break
