@@ -33,9 +33,7 @@ class filelog(revlog.revlog):
 
     def add(self, text, meta, transaction, link, p1=None, p2=None):
         if meta or text.startswith('\1\n'):
-            mt = ""
-            if meta:
-                mt = ["%s: %s\n" % (k, v) for k, v in sorted(meta.iteritems())]
+            mt = ["%s: %s\n" % (k, v) for k, v in sorted(meta.iteritems())]
             text = "\1\n%s\1\n%s" % ("".join(mt), text)
         return self.addrevision(text, transaction, link, p1, p2)
 
