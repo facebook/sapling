@@ -168,9 +168,6 @@ class kwtemplater(object):
         mf = ctx.manifest()
         if node is not None:     # commit
             files = [f for f in ctx.files() if f in mf]
-            notify = self.ui.debug
-        else:                    # kwexpand/kwshrink
-            notify = self.ui.note
         candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
         if candidates:
             self.restrict = True # do not expand when reading
@@ -189,7 +186,7 @@ class kwtemplater(object):
                 else:
                     found = self.re_kw.search(data)
                 if found:
-                    notify(msg % f)
+                    self.ui.note(msg % f)
                     self.repo.wwrite(f, data, mf.flags(f))
                     if node is None:
                         self.repo.dirstate.normal(f)
