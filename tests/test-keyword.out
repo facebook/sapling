@@ -1,6 +1,6 @@
 % hg kwdemo
 [extensions]
-keyword = 
+keyword =
 [keyword]
 demo.txt = 
 [keywordmaps]
@@ -21,7 +21,7 @@ $RCSfile: demo.txt,v $
 $Revision: xxxxxxxxxxxx $
 $Source: /TMP/demo.txt,v $
 [extensions]
-keyword = 
+keyword =
 [keyword]
 demo.txt = 
 [keywordmaps]
@@ -206,7 +206,7 @@ A c
 % custom keyword expansion
 % try with kwdemo
 [extensions]
-keyword = 
+keyword =
 [keyword]
 * = 
 b = ignore

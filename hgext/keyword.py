@@ -322,11 +322,7 @@ def demo(ui, repo, *args, **opts):
 
     uisetup(ui)
     reposetup(ui, repo)
-    for k, v in ui.configitems('extensions'):
-        if k.endswith('keyword'):
-            extension = '%s = %s' % (k, v)
-            break
-    ui.write('[extensions]\n%s\n' % extension)
+    ui.write('[extensions]\nkeyword =\n')
     demoitems('keyword', ui.configitems('keyword'))
     demoitems('keywordmaps', kwmaps.iteritems())
     keywords = '$' + '$\n$'.join(sorted(kwmaps.keys())) + '$\n'
