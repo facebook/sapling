@@ -133,7 +133,7 @@ checks = [
     ('test script', r'(.*/)?test-[^.~]*$', testfilters, testpats),
     ('c', r'.*\.c$', cfilters, cpats),
 ]
-def checkfile(f):
+def checkfile(f, maxerr=None):
     """checks style and portability of a given file"""
     for name, match, filters, pats in checks:
         fc = 0
@@ -158,7 +158,7 @@ def checkfile(f):
                     print " %s" % msg
                     lc += 1
                     fc += 1
-            if fc == 15:
+            if maxerr is not None and fc >= maxerr:
                 print " (too many errors, giving up)"
                 break
         break
@@ -171,4 +171,4 @@ if __name__ == "__main__":
         check = sys.argv[1:]
 
     for f in check:
-        checkfile(f)
+        checkfile(f, maxerr=15)
