@@ -162,13 +162,13 @@ class kwtemplater(object):
         Caveat: localrepository._link fails on Windows.'''
         return self.match(path) and not 'l' in flagfunc(path)
 
-    def overwrite(self, node, expand, files):
+    def overwrite(self, node, expand, candidates):
         '''Overwrites selected files expanding/shrinking keywords.'''
         ctx = self.repo[node]
         mf = ctx.manifest()
         if node is not None:     # commit
-            files = [f for f in ctx.files() if f in mf]
-        candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
+            candidates = [f for f in ctx.files() if f in mf]
+        candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
         if candidates:
             self.restrict = True # do not expand when reading
             msg = (expand and _('overwriting %s expanding keywords\n')
