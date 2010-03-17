@@ -91,6 +91,8 @@ A
 B
 % init --mq without repo
 abort: There is no Mercurial repository here (.hg not found)
+% init --mq with repo path
+ok
 % init --mq with nonexistent directory
 abort: repository nonexistentdir not found!
 % init --mq with bundle (non "local")

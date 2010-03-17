@@ -9,7 +9,7 @@
   <?define ComponentMainExecutableGUID = D102B8FA-059B-4ACC-9FA3-8C78C3B58EEF ?>
   <?define ProductUpgradeCode = A1CC6134-E945-4399-BE36-EB0017FDF7CF ?>
 
-  <Product Name='Mercurial' Id='*'
+  <Product Name='Mercurial $(var.Version)' Id='*'
     UpgradeCode='$(var.ProductUpgradeCode)'
     Language='1033' Codepage='1252' Version='$(var.Version)' Manufacturer='Matt Mackall and others.'>
 

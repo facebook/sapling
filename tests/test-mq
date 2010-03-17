@@ -86,6 +86,11 @@ cd f
 hg init --mq
 cd ..
 
+echo '% init --mq with repo path'
+hg init g
+hg init --mq g
+test -d g/.hg/patches/.hg && echo "ok" || echo "failed"
+
 echo '% init --mq with nonexistent directory'
 hg init --mq nonexistentdir
 
