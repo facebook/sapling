@@ -166,7 +166,10 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None):
               logfunc(filename, linenumber, linecontent, errormessage)
     :maxerr: number of error to display before arborting.
              Set to None (default) to report all errors
+
+    return True if no error is found, False otherwise.
     """
+    result = True
     for name, match, filters, pats in checks:
         fc = 0
         if not re.match(match, f):
@@ -185,10 +188,12 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None):
                 if re.search(p, l[1]):
                     logfunc(f, n+1, l[0], msg)
                     fc += 1
+                    result = False
             if maxerr is not None and fc >= maxerr:
                 print " (too many errors, giving up)"
                 break
         break
+    return result
 
 
 if __name__ == "__main__":
