@@ -10,9 +10,9 @@
 import sys, re, glob
 
 def repquote(m):
-    t = re.sub(r"\w", "x", m.group(2))
+    t = re.sub(r"\w", "x", m.group('text'))
     t = re.sub(r"[^\sx]", "o", t)
-    return m.group(1) + t + m.group(1)
+    return m.group('quote') + t + m.group('quote')
 
 def repcomment(m):
     return m.group(1) + "#" * len(m.group(2))
@@ -96,10 +96,9 @@ pypats = [
 ]
 
 pyfilters = [
-    (r'''(?<!")(")(([^"\n]|\\")+)"(?!")''', repquote),
-    (r"""(?<!')(')(([^'\n]|\\')+)'(?!')""", repquote),
-    (r"""(''')(([^']|\\'|'{1,2}(?!'))*)'''""", repquote),
-    (r'''(""")(([^"]|\\"|"{1,2}(?!"))*)"""''', repquote),
+    (r"""(?msx)(?P<quote>('''|\"\"\"|(?<!')'(?!')|(?<!")"(?!")))
+         (?P<text>(.*?))
+         (?<!\\)(?P=quote)""", repquote),
     (r"( *)(#([^\n]*\S)?)", repcomment),
 ]
 
@@ -123,7 +122,7 @@ cpats = [
 
 cfilters = [
     (r'(/\*)(((\*(?!/))|[^*])*)\*/', repccomment),
-    (r'''(?<!")(")(([^"]|\\")+"(?!"))''', repquote),
+    (r'''(?P<quote>(?<!")")(?P<text>([^"]|\\")+)"(?!")''', repquote),
     (r'''(#\s*include\s+<)([^>]+)>''', repinclude),
     (r'(\()([^)]+\))', repcallspaces),
 ]
