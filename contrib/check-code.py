@@ -185,7 +185,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None):
                 continue
             for p, msg in pats:
                 if re.search(p, l[1]):
-                    logfunc(f, n+1, l[0], msg)
+                    logfunc(f, n + 1, l[0], msg)
                     fc += 1
                     result = False
             if maxerr is not None and fc >= maxerr:
