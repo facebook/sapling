@@ -96,13 +96,11 @@ class patchheader(object):
 
         for line in file(pf):
             line = line.rstrip()
-            if line.startswith('diff --git'):
+            if (line.startswith('diff --git')
+                or (diffstart and line.startswith('+++ '))):
                 diffstart = 2
                 break
-            if diffstart:
-                if line.startswith('+++ '):
-                    diffstart = 2
-                break
+            diffstart = 0 # reset
             if line.startswith("--- "):
                 diffstart = 1
                 continue
