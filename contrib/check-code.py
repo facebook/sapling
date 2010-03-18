@@ -14,6 +14,12 @@ def repquote(m):
     t = re.sub(r"[^\sx]", "o", t)
     return m.group('quote') + t + m.group('quote')
 
+def reppython(m):
+    comment = m.group('comment')
+    if comment:
+        return "#" * len(comment)
+    return repquote(m)
+
 def repcomment(m):
     return m.group(1) + "#" * len(m.group(2))
 
@@ -96,10 +102,10 @@ pypats = [
 ]
 
 pyfilters = [
-    (r"""(?msx)(?P<quote>('''|\"\"\"|(?<!')'(?!')|(?<!")"(?!")))
-         (?P<text>(.*?))
-         (?<!\\)(?P=quote)""", repquote),
-    (r"( *)(#([^\n]*\S)?)", repcomment),
+    (r"""(?msx)(?P<comment>\#.*?$)|
+         ((?P<quote>('''|\"\"\"|(?<!')'(?!')|(?<!")"(?!")))
+          (?P<text>(([^\\]|\\.)*?))
+          (?P=quote))""", reppython),
 ]
 
 cpats = [

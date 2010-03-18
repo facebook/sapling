@@ -8,6 +8,6 @@
  >     return ( 5+6, 9)
  missing whitespace in expression
  gratuitous whitespace in () or []
-./quote.py:4:
+./quote.py:5:
  > '"""', 42+1, """and
  missing whitespace in expression

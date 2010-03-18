@@ -13,11 +13,13 @@ def toto( arg1, arg2):
 EOF
 
 cat > quote.py <<EOF
+# let's use quote in comments
 (''' ( 4x5 )
-but """\''' and finally''',
+but """\\''' and finally''',
 """let's fool checkpatch""", '1+2',
 '"""', 42+1, """and
 ( 4-1 ) """, "( 1+1 )\" and ")
+a, '\\\\\\\\', "\\\\\\" x-2", "c-1"
 EOF
 
 check_code=`dirname $0`/../contrib/check-code.py
