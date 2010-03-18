@@ -375,6 +375,25 @@ hg import -d '0 0' a.patch
 hg parents -v
 cd ..
 
+echo % '--- in commit message'
+hg init commitconfusion
+cd commitconfusion
+cat > a.patch <<EOF
+module: summary
+
+--- description
+
+diff --git a/a b/a
+new file mode 100644
+--- /dev/null
++++ b/a
+@@ -0,0 +1,1 @@
++a
+EOF
+hg import -d '0 0' a.patch
+hg parents -v
+cd ..
+
 echo '% tricky header splitting'
 cat > trickyheaders.patch <<EOF
 From: User A <user@a>
