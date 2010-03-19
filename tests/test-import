@@ -351,9 +351,21 @@ diff -Naur proj-orig/foo proj-new/foo
 @@ -0,0 +1,1 @@
 +a
 EOF
+# some people have patches like the following too
+cat > create2.patch <<EOF
+diff -Naur proj-orig/foo proj-new/foo
+--- proj-orig/foo.orig  1969-12-31 16:00:00.000000000 -0800
++++ proj-new/foo        2009-07-17 16:50:45.801368000 -0700
+@@ -0,0 +1,1 @@
++a
+EOF
 hg init oddcreate
 cd oddcreate
 hg import --no-commit ../create.patch
+cat foo
+rm foo
+hg revert foo
+hg import --no-commit ../create2.patch
 cat foo
 
 echo % 'first line mistaken for email headers (issue 1859)'
