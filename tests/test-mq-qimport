@@ -43,6 +43,7 @@ Text before patch.
 First line of commit message.
 
 More text in commit message.
+--- confuse the diff detection
 
 diff --git a/x b/x
 new file mode 100644

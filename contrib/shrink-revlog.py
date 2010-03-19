@@ -64,7 +64,7 @@ def toposort_reversepostorder(ui, rl):
             for p in parents[rev]:
                 heads.discard(p)
     finally:
-        ui.progress(_('reading'), None, total=len(rl))
+        ui.progress(_('reading'), None)
 
     heads = list(heads)
     heads.sort(reverse=True)
@@ -90,7 +90,7 @@ def toposort_postorderreverse(ui, rl):
             if p2 != node.nullrev:
                 children[p2].append(rev)
     finally:
-        ui.progress(_('reading'), None, total=len(rl))
+        ui.progress(_('reading'), None)
 
     root = list(roots)
     roots.sort()
@@ -120,7 +120,7 @@ def writerevs(ui, r1, r2, order, tr):
         chunkiter = changegroup.chunkiter(group)
         r2.addgroup(chunkiter, unlookup, tr)
     finally:
-        ui.progress(_('writing'), None, len(order))
+        ui.progress(_('writing'), None)
 
 def report(ui, r1, r2):
     def getsize(r):

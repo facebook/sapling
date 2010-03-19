@@ -162,16 +162,13 @@ class kwtemplater(object):
         Caveat: localrepository._link fails on Windows.'''
         return self.match(path) and not 'l' in flagfunc(path)
 
-    def overwrite(self, node, expand, files):
+    def overwrite(self, node, expand, candidates):
         '''Overwrites selected files expanding/shrinking keywords.'''
         ctx = self.repo[node]
         mf = ctx.manifest()
         if node is not None:     # commit
-            files = [f for f in ctx.files() if f in mf]
-            notify = self.ui.debug
-        else:                    # kwexpand/kwshrink
-            notify = self.ui.note
-        candidates = [f for f in files if self.iskwfile(f, ctx.flags)]
+            candidates = [f for f in ctx.files() if f in mf]
+        candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
         if candidates:
             self.restrict = True # do not expand when reading
             msg = (expand and _('overwriting %s expanding keywords\n')
@@ -189,7 +186,7 @@ class kwtemplater(object):
                 else:
                     found = self.re_kw.search(data)
                 if found:
-                    notify(msg % f)
+                    self.ui.note(msg % f)
                     self.repo.wwrite(f, data, mf.flags(f))
                     if node is None:
                         self.repo.dirstate.normal(f)
@@ -290,7 +287,6 @@ def demo(ui, repo, *args, **opts):
             ui.write('%s = %s\n' % (k, v))
 
     fn = 'demo.txt'
-    branchname = 'demobranch'
     tmpdir = tempfile.mkdtemp('', 'kwdemo.')
     ui.note(_('creating temporary repository at %s\n') % tmpdir)
     repo = localrepo.localrepository(ui, tmpdir, True)
@@ -326,35 +322,23 @@ def demo(ui, repo, *args, **opts):
 
     uisetup(ui)
     reposetup(ui, repo)
-    for k, v in ui.configitems('extensions'):
-        if k.endswith('keyword'):
-            extension = '%s = %s' % (k, v)
-            break
-    ui.write('[extensions]\n%s\n' % extension)
+    ui.write('[extensions]\nkeyword =\n')
     demoitems('keyword', ui.configitems('keyword'))
     demoitems('keywordmaps', kwmaps.iteritems())
     keywords = '$' + '$\n$'.join(sorted(kwmaps.keys())) + '$\n'
     repo.wopener(fn, 'w').write(keywords)
     repo.add([fn])
-    path = repo.wjoin(fn)
-    ui.note(_('\nkeywords written to %s:\n') % path)
+    ui.note(_('\nkeywords written to %s:\n') % fn)
     ui.note(keywords)
-    ui.note('\nhg -R "%s" branch "%s"\n' % (tmpdir, branchname))
-    # silence branch command if not verbose
-    quiet = ui.quiet
-    ui.quiet = not ui.verbose
-    commands.branch(ui, repo, branchname)
-    ui.quiet = quiet
+    repo.dirstate.setbranch('demobranch')
     for name, cmd in ui.configitems('hooks'):
         if name.split('.', 1)[0].find('commit') > -1:
             repo.ui.setconfig('hooks', name, '')
-    ui.note(_('unhooked all commit hooks\n'))
     msg = _('hg keyword configuration and expansion example')
-    ui.note("hg -R '%s' ci -m '%s'\n" % (tmpdir, msg))
+    ui.note("hg ci -m '%s'\n" % msg)
     repo.commit(text=msg)
     ui.status(_('\n\tkeywords expanded\n'))
     ui.write(repo.wread(fn))
-    ui.debug('\nremoving temporary repository %s\n' % tmpdir)
     shutil.rmtree(tmpdir, ignore_errors=True)
 
 def expand(ui, repo, *pats, **opts):

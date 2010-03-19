@@ -1091,10 +1091,11 @@ class localrepository(repo.repository):
                     rejected.append(f)
                     continue
                 if st.st_size > 10000000:
-                    self.ui.warn(_("%s: files over 10MB may cause memory and"
-                                   " performance problems\n"
-                                   "(use 'hg revert %s' to unadd the file)\n")
-                                   % (f, f))
+                    self.ui.warn(_("%s: up to %d MB of RAM may be required "
+                                   "to manage this file\n"
+                                   "(use 'hg revert %s' to cancel the "
+                                   "pending addition)\n")
+                                   % (f, 3 * st.st_size // 1000000, f))
                 if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                     self.ui.warn(_("%s not added: only files and symlinks "
                                    "supported currently\n") % f)
@@ -1395,7 +1396,7 @@ class localrepository(repo.repository):
         self.ui.debug("found new changesets starting at " +
                      " ".join([short(f) for f in fetch]) + "\n")
 
-        self.ui.progress(_('searching'), None, unit=_('queries'))
+        self.ui.progress(_('searching'), None)
         self.ui.debug("%d total queries\n" % reqcnt)
 
         return base.keys(), list(fetch), heads
@@ -1828,7 +1829,7 @@ class localrepository(repo.repository):
                 yield chnk
                 self.ui.progress(_('bundling changes'), cnt, unit=_('chunks'))
                 cnt += 1
-            self.ui.progress(_('bundling changes'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling changes'), None)
 
 
             # Figure out which manifest nodes (of the ones we think might be
@@ -1856,7 +1857,7 @@ class localrepository(repo.repository):
                 yield chnk
                 self.ui.progress(_('bundling manifests'), cnt, unit=_('chunks'))
                 cnt += 1
-            self.ui.progress(_('bundling manifests'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling manifests'), None)
 
             # These are no longer needed, dereference and toss the memory for
             # them.
@@ -1905,7 +1906,7 @@ class localrepository(repo.repository):
                     del msng_filenode_set[fname]
             # Signal that no more groups are left.
             yield changegroup.closechunk()
-            self.ui.progress(_('bundling files'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling files'), None)
 
             if msng_cl_lst:
                 self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
@@ -1957,7 +1958,7 @@ class localrepository(repo.repository):
                 self.ui.progress(_('bundling changes'), cnt, unit=_('chunks'))
                 cnt += 1
                 yield chnk
-            self.ui.progress(_('bundling changes'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling changes'), None)
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
@@ -1966,7 +1967,7 @@ class localrepository(repo.repository):
                 self.ui.progress(_('bundling manifests'), cnt, unit=_('chunks'))
                 cnt += 1
                 yield chnk
-            self.ui.progress(_('bundling manifests'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling manifests'), None)
 
             cnt = 0
             for fname in sorted(changedfiles):
@@ -1984,7 +1985,7 @@ class localrepository(repo.repository):
                             _('bundling files'), cnt, item=fname, unit=_('chunks'))
                         cnt += 1
                         yield chnk
-            self.ui.progress(_('bundling files'), None, unit=_('chunks'))
+            self.ui.progress(_('bundling files'), None)
 
             yield changegroup.closechunk()
 

@@ -105,6 +105,10 @@ def cdiffstat(ui, summary, patchlines):
         raise util.Abort(_('diffstat rejected'))
     return s
 
+def introneeded(opts, number):
+    '''is an introductory message required?'''
+    return number > 1 or opts.get('intro') or opts.get('desc')
+
 def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
 
     desc = []
@@ -170,7 +174,7 @@ def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
         flag = ' ' + flag
 
     subj = desc[0].strip().rstrip('. ')
-    if total == 1 and not opts.get('intro'):
+    if not introneeded(opts, total):
         subj = '[PATCH%s] %s' % (flag, opts.get('subject') or subj)
     else:
         tlen = len(str(total))
@@ -329,7 +333,7 @@ def patchbomb(ui, repo, *revs, **opts):
                             len(patches), name)
             msgs.append(msg)
 
-        if len(patches) > 1 or opts.get('intro'):
+        if introneeded(opts, len(patches)):
             tlen = len(str(len(patches)))
 
             flag = ' '.join(opts.get('flag'))

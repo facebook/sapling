@@ -116,6 +116,7 @@ def do_relink(src, dst, files, ui):
     CHUNKLEN = 65536
     relinked = 0
     savedbytes = 0
+    f = ''
 
     pos = 0
     total = len(files)
@@ -145,7 +146,7 @@ def do_relink(src, dst, files, ui):
         except OSError, inst:
             ui.warn('%s: %s\n' % (tgt, str(inst)))
 
-    ui.progress(_('relinking'), None, f, _(' files'), total)
+    ui.progress(_('relinking'), None)
 
     ui.status(_('relinked %d files (%d bytes reclaimed)\n') %
               (relinked, savedbytes))

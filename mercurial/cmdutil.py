@@ -325,7 +325,7 @@ def findrenames(repo, added, removed, threshold):
             myscore = score(repo.wread(a))
             if myscore >= bestscore:
                 copies[a] = (r, myscore)
-    repo.ui.progress(_('searching'), None, total=len(removed))
+    repo.ui.progress(_('searching'), None)
 
     for dest, v in copies.iteritems():
         source, score = v

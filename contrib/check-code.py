@@ -10,9 +10,15 @@
 import sys, re, glob
 
 def repquote(m):
-    t = re.sub(r"\w", "x", m.group(2))
+    t = re.sub(r"\w", "x", m.group('text'))
     t = re.sub(r"[^\sx]", "o", t)
-    return m.group(1) + t + m.group(1)
+    return m.group('quote') + t + m.group('quote')
+
+def reppython(m):
+    comment = m.group('comment')
+    if comment:
+        return "#" * len(comment)
+    return repquote(m)
 
 def repcomment(m):
     return m.group(1) + "#" * len(m.group(2))
@@ -96,11 +102,10 @@ pypats = [
 ]
 
 pyfilters = [
-    (r"""(''')(([^']|\\'|'{1,2}(?!'))*)'''""", repquote),
-    (r'''(""")(([^"]|\\"|"{1,2}(?!"))*)"""''', repquote),
-    (r'''(?<!")(")(([^"\n]|\\")+)"(?!")''', repquote),
-    (r"""(?<!')(')(([^'\n]|\\')+)'(?!')""", repquote),
-    (r"( *)(#([^\n]*\S)?)", repcomment),
+    (r"""(?msx)(?P<comment>\#.*?$)|
+         ((?P<quote>('''|\"\"\"|(?<!')'(?!')|(?<!")"(?!")))
+          (?P<text>(([^\\]|\\.)*?))
+          (?P=quote))""", reppython),
 ]
 
 cpats = [
@@ -123,7 +128,7 @@ cpats = [
 
 cfilters = [
     (r'(/\*)(((\*(?!/))|[^*])*)\*/', repccomment),
-    (r'''(?<!")(")(([^"]|\\")+"(?!"))''', repquote),
+    (r'''(?P<quote>(?<!")")(?P<text>([^"]|\\")+)"(?!")''', repquote),
     (r'''(#\s*include\s+<)([^>]+)>''', repinclude),
     (r'(\()([^)]+\))', repcallspaces),
 ]
@@ -134,12 +139,42 @@ checks = [
     ('c', r'.*\.c$', cfilters, cpats),
 ]
 
-if len(sys.argv) == 1:
-    check = glob.glob("*")
-else:
-    check = sys.argv[1:]
+class norepeatlogger(object):
+    def __init__(self):
+        self._lastseen = None
 
-for f in check:
+    def log(self, fname, lineno, line, msg):
+        """print error related a to given line of a given file.
+
+        The faulty line will also be printed but only once in the case
+        of multiple errors.
+
+        :fname: filename
+        :lineno: line number
+        :line: actual content of the line
+        :msg: error message
+        """
+        msgid = fname, lineno, line
+        if msgid != self._lastseen:
+            print "%s:%d:" % (fname, lineno)
+            print " > %s" % line
+            self._lastseen = msgid
+        print " " + msg
+
+_defaultlogger = norepeatlogger()
+
+def checkfile(f, logfunc=_defaultlogger.log, maxerr=None):
+    """checks style and portability of a given file
+
+    :f: filepath
+    :logfunc: function used to report error
+              logfunc(filename, linenumber, linecontent, errormessage)
+    :maxerr: number of error to display before arborting.
+             Set to None (default) to report all errors
+
+    return True if no error is found, False otherwise.
+    """
+    result = True
     for name, match, filters, pats in checks:
         fc = 0
         if not re.match(match, f):
@@ -154,16 +189,23 @@ for f in check:
         for n, l in z:
             if "check-code" + "-ignore" in l[0]:
                 continue
-            lc = 0
             for p, msg in pats:
                 if re.search(p, l[1]):
-                    if not lc:
-                        print "%s:%d:" % (f, n + 1)
-                        print " > %s" % l[0]
-                    print " %s" % msg
-                    lc += 1
+                    logfunc(f, n + 1, l[0], msg)
                     fc += 1
-            if fc == 15:
+                    result = False
+            if maxerr is not None and fc >= maxerr:
                 print " (too many errors, giving up)"
                 break
         break
+    return result
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        check = glob.glob("*")
+    else:
+        check = sys.argv[1:]
+
+    for f in check:
+        checkfile(f, maxerr=15)
