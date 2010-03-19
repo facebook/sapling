@@ -9,7 +9,7 @@
   <?define ComponentMainExecutableGUID = D102B8FA-059B-4ACC-9FA3-8C78C3B58EEF ?>
   <?define ProductUpgradeCode = A1CC6134-E945-4399-BE36-EB0017FDF7CF ?>
 
-  <Product Name='Mercurial' Id='*'
+  <Product Name='Mercurial $(var.Version)' Id='*'
     UpgradeCode='$(var.ProductUpgradeCode)'
     Language='1033' Codepage='1252' Version='$(var.Version)' Manufacturer='Matt Mackall and others.'>
 
@@ -80,12 +80,12 @@
 
       <Directory Id="DesktopFolder" Name="Desktop" />
       <Merge Id='VCRuntime' DiskId='1' Language='1033'
-             SourceFile='C:\Program Files\Microsoft SDKs\Windows\v7.0\Redist\VC\microsoft.vcxx.crt.x86_msm.msm' />
+             SourceFile='$(var.VCRedistSrcDir)\microsoft.vcxx.crt.x86_msm.msm' />
       <Merge Id='VCRuntimePolicy' DiskId='1' Language='1033'
-             SourceFile='C:\Program Files\Microsoft SDKs\Windows\v7.0\Redist\VC\policy.x.xx.microsoft.vcxx.crt.x86_msm.msm' />
+             SourceFile='$(var.VCRedistSrcDir)\policy.x.xx.microsoft.vcxx.crt.x86_msm.msm' />
     </Directory>
 
-    <Feature Id='Complete' Title='Mercurial $(var.Version)' Description='The complete package'
+    <Feature Id='Complete' Title='Mercurial' Description='The complete package'
         Display='expand' Level='1' ConfigurableDirectory='INSTALLDIR' >
       <Feature Id='MainProgram' Title='Program' Description='Mercurial command line app'
              Level='1' Absent='disallow' >

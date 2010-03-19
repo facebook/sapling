@@ -178,7 +178,8 @@ def extract(ui, fileobj):
     # (this heuristic is borrowed from quilt)
     diffre = re.compile(r'^(?:Index:[ \t]|diff[ \t]|RCS file: |'
                         r'retrieving revision [0-9]+(\.[0-9]+)*$|'
-                        r'(---|\*\*\*)[ \t])', re.MULTILINE)
+                        r'---[ \t].*?^\+\+\+[ \t]|'
+                        r'\*\*\*[ \t].*?^---[ \t])', re.MULTILINE|re.DOTALL)
 
     fd, tmpname = tempfile.mkstemp(prefix='hg-patch-')
     tmpfp = os.fdopen(fd, 'w')

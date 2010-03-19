@@ -318,6 +318,17 @@ module: summary
 description
 
 
+% --- in commit message
+applying a.patch
+changeset:   0:f34d9187897d
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       a
+description:
+module: summary
+
+
 % tricky header splitting
 applying ../trickyheaders.patch
 # HG changeset patch

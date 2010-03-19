@@ -1091,10 +1091,11 @@ class localrepository(repo.repository):
                     rejected.append(f)
                     continue
                 if st.st_size > 10000000:
-                    self.ui.warn(_("%s: files over 10MB may cause memory and"
-                                   " performance problems\n"
-                                   "(use 'hg revert %s' to unadd the file)\n")
-                                   % (f, f))
+                    self.ui.warn(_("%s: up to %d MB of RAM may be required "
+                                   "to manage this file\n"
+                                   "(use 'hg revert %s' to cancel the "
+                                   "pending addition)\n")
+                                   % (f, 3 * st.st_size // 1000000, f))
                 if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                     self.ui.warn(_("%s not added: only files and symlinks "
                                    "supported currently\n") % f)
