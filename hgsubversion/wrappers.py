@@ -256,7 +256,7 @@ def pull(repo, source, heads=[], force=False):
                            'remains unimplemented.')
 
     oldrevisions = len(meta.revmap)
-    cnt = 0
+    progoffset = 0
     if stopat_rev:
         total = stopat_rev - start
     else:
@@ -283,9 +283,10 @@ def pull(repo, source, heads=[], force=False):
                             msg = [s.strip() for s in msg.splitlines() if s][0]
                         w = hgutil.termwidth()
                         bits = (r.revnum, r.author, msg)
-                        cnt += 1
+                        if not progoffset:
+                            progoffset = r.revnum
                         ui.status(('[r%d] %s: %s\n' % bits)[:w])
-                        util.progress(ui, 'pull', cnt, total=total)
+                        util.progress(ui, 'pull', (r.revnum-progoffset), total=(total-progoffset))
 
                         meta.save_tbdelta(tbdelta)
                         close = pullfuns[have_replay](ui, meta, svn, r, tbdelta)
@@ -313,7 +314,7 @@ def pull(repo, source, heads=[], force=False):
         except KeyboardInterrupt:
             pass
     finally:
-        util.progress(ui, 'pull', None, total=total)
+        util.progress(ui, 'pull', None, total=(total-progoffset))
         util.swap_out_encoding(old_encoding)
 
     revisions = len(meta.revmap) - oldrevisions
