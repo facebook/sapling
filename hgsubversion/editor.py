@@ -96,7 +96,7 @@ class RevisionData(object):
                 new = [p + f for f, k in svn.list_files(dir, r) if k == 'f']
                 files.update(new)
             else:
-                files.add(p[len(root):])
+                files.add(p)
 
         i = 1
         self.ui.note('\nfetching files...\n')
