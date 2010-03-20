@@ -433,3 +433,44 @@ cd trickyheaders
 hg import -d '0 0' ../trickyheaders.patch
 hg export --git tip
 cd ..
+
+echo '% issue2102'
+hg init issue2102
+cd issue2102
+mkdir -p src/cmd/gc
+touch src/cmd/gc/mksys.bash
+hg ci -Am init
+hg import - <<EOF
+# HG changeset patch
+# User Rob Pike
+# Date 1216685449 25200
+# Node ID 03aa2b206f499ad6eb50e6e207b9e710d6409c98
+# Parent  93d10138ad8df586827ca90b4ddb5033e21a3a84
+help management of empty pkg and lib directories in perforce
+
+R=gri
+DELTA=4  (4 added, 0 deleted, 0 changed)
+OCL=13328
+CL=13328
+
+diff --git a/lib/place-holder b/lib/place-holder
+new file mode 100644
+--- /dev/null
++++ b/lib/place-holder
+@@ -0,0 +1,2 @@
++perforce does not maintain empty directories.
++this file helps.
+diff --git a/pkg/place-holder b/pkg/place-holder
+new file mode 100644
+--- /dev/null
++++ b/pkg/place-holder
+@@ -0,0 +1,2 @@
++perforce does not maintain empty directories.
++this file helps.
+diff --git a/src/cmd/gc/mksys.bash b/src/cmd/gc/mksys.bash
+old mode 100644
+new mode 100755
+EOF
+hg sum
+hg diff --git -c tip
+cd ..
