@@ -1012,14 +1012,14 @@ def iterhunks(ui, fp, sourcefile=None):
     BFILE = 1
     context = None
     lr = linereader(fp)
-    dopatch = True
     # gitworkdone is True if a git operation (copy, rename, ...) was
     # performed already for the current file. Useful when the file
     # section may have no hunk.
     gitworkdone = False
+    empty = None
 
     while True:
-        newfile = False
+        newfile = newgitfile = False
         x = lr.readline()
         if not x:
             break
@@ -1028,7 +1028,7 @@ def iterhunks(ui, fp, sourcefile=None):
                 current_hunk.fix_newline()
             yield 'hunk', current_hunk
             current_hunk = None
-            gitworkdone = False
+            empty = False
         if ((sourcefile or state == BFILE) and ((not context and x[0] == '@') or
             ((context is not False) and x.startswith('***************')))):
             try:
@@ -1046,31 +1046,35 @@ def iterhunks(ui, fp, sourcefile=None):
             if emitfile:
                 emitfile = False
                 yield 'file', (afile, bfile, current_hunk)
+                empty = False
         elif state == BFILE and x.startswith('GIT binary patch'):
             current_hunk = binhunk(changed[bfile])
             hunknum += 1
             if emitfile:
                 emitfile = False
                 yield 'file', ('a/' + afile, 'b/' + bfile, current_hunk)
+                empty = False
             current_hunk.extract(lr)
         elif x.startswith('diff --git'):
             # check for git diff, scanning the whole patch file if needed
             m = gitre.match(x)
+            gitworkdone = False
             if m:
                 afile, bfile = m.group(1, 2)
                 if not git:
                     git = True
-                    dopatch, gitpatches = scangitpatch(lr, x)
+                    gitpatches = scangitpatch(lr, x)[1]
                     yield 'git', gitpatches
                     for gp in gitpatches:
                         changed[gp.path] = gp
                 # else error?
                 # copy/rename + modify should modify target, not source
                 gp = changed.get(bfile)
-                if gp and gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD'):
+                if gp and (gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD')
+                           or gp.mode):
                     afile = bfile
                     gitworkdone = True
-            newfile = True
+                newgitfile = True
         elif x.startswith('---'):
             # check for a unified diff
             l2 = lr.readline()
@@ -1098,17 +1102,24 @@ def iterhunks(ui, fp, sourcefile=None):
             bfile = parsefilename(l2)
 
         if newfile:
+            if empty:
+                raise NoHunks
+            empty = not gitworkdone
+            gitworkdone = False
+
+        if newgitfile or newfile:
             emitfile = True
             state = BFILE
             hunknum = 0
     if current_hunk:
         if current_hunk.complete():
             yield 'hunk', current_hunk
+            empty = False
         else:
             raise PatchError(_("malformed patch %s %s") % (afile,
                              current_hunk.desc))
 
-    if hunknum == 0 and dopatch and not gitworkdone:
+    if (empty is None and not gitworkdone) or empty:
         raise NoHunks
 
 def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
