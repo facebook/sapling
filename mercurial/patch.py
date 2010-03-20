@@ -1019,7 +1019,7 @@ def iterhunks(ui, fp, sourcefile=None):
     gitworkdone = False
 
     while True:
-        newfile = False
+        newfile = newgitfile = False
         x = lr.readline()
         if not x:
             break
@@ -1070,7 +1070,7 @@ def iterhunks(ui, fp, sourcefile=None):
                 if gp and gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD'):
                     afile = bfile
                     gitworkdone = True
-            newfile = True
+                newgitfile = True
         elif x.startswith('---'):
             # check for a unified diff
             l2 = lr.readline()
@@ -1097,7 +1097,7 @@ def iterhunks(ui, fp, sourcefile=None):
             afile = parsefilename(x)
             bfile = parsefilename(l2)
 
-        if newfile:
+        if newgitfile or newfile:
             emitfile = True
             state = BFILE
             hunknum = 0
