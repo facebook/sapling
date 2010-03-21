@@ -188,7 +188,7 @@ class GitHandler(object):
     # go through the manifest, convert all blobs/trees we don't have
     # write the commit object (with metadata info)
     def export_hg_commit(self, rev):
-        self.ui.note(_("converting revision %s\n") % rev)
+        self.ui.note(_("converting revision %s\n") % hex(rev))
 
         oldenc = self.swap_out_encoding()
 
