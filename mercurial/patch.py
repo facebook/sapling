@@ -1320,6 +1320,10 @@ def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
             try:
                 return internalpatch(patchname, ui, strip, cwd, files, eolmode)
             except NoHunks:
+                ui.warn(_('internal patcher failed\n'
+                          'please report details to '
+                          'http://mercurial.selenic.com/bts/\n'
+                          'or mercurial@selenic.com\n'))
                 patcher = (util.find_exe('gpatch') or util.find_exe('patch')
                            or 'patch')
                 ui.debug('no valid hunks found; trying with %r instead\n' %
