@@ -69,5 +69,9 @@ def launch(application):
         return write
 
     content = application(environ, start_response)
-    for chunk in content:
-        write(chunk)
+    try:
+        for chunk in content:
+            write(chunk)
+    finally:
+        if hasattr(content, 'close'):
+            content.close()
