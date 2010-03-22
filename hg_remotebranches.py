@@ -12,6 +12,7 @@ from hgext import schemes
 def reposetup(ui, repo):
     if repo.local():
         opull = repo.pull
+        opush = repo.push
         olookup = repo.lookup
         ofindtags = repo._findtags
 
@@ -45,6 +46,21 @@ def reposetup(ui, repo):
 
             def pull(self, remote, *args, **kwargs):
                 res = opull(remote, *args, **kwargs)
+                lock = self.lock()
+                try:
+                    try:
+                        path = self._activepath(remote)
+                        if path:
+                            self.saveremotebranches(path, remote.branchmap())
+                    except Exception, e:
+                        ui.debug('remote branches for path %s not saved: %s\n'
+                                 % (path, e))
+                finally:
+                    lock.release()
+                    return res
+
+            def push(self, remote, *args, **kwargs):
+                res = opush(remote, *args, **kwargs)
                 lock = self.lock()
                 try:
                     try:
