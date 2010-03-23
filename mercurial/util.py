@@ -36,6 +36,13 @@ def _fastsha1(s):
     _fastsha1 = sha1 = _sha1
     return _sha1(s)
 
+import __builtin__
+
+def fakebuffer(sliceable, offset=0):
+    return sliceable[offset:]
+if not hasattr(__builtin__, 'buffer'):
+    __builtin__.buffer = fakebuffer
+
 import subprocess
 closefds = os.name == 'posix'
 
