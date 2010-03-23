@@ -144,7 +144,7 @@ def parseargs():
     (options, args) = parser.parse_args()
 
     # jython is always pure
-    if 'java' in sys.platform:
+    if 'java' in sys.platform or '__pypy__' in sys.modules:
         options.pure = True
 
     if options.with_hg:
