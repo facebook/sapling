@@ -80,7 +80,8 @@ cvscall -q -d "$CVSROOT" checkout -d srcfull "." | grep -v CVSROOT
 ls srcfull
 hg convert srcfull srcfull-hg \
     | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g' \
-    | grep -v 'log entries' | grep -v 'hook:'
+    | grep -v 'log entries' | grep -v 'hook:' \
+    | grep -v '^[0-3] .*' # filter instable changeset order
 hg cat -r tip srcfull-hg/src/a
 hg cat -r tip srcfull-hg/src/b/c
 

@@ -66,8 +66,9 @@ keywords are usually available for templating a log-like command:
 The "date" keyword does not produce human-readable output. If you
 want to use a date in your output, you can use a filter to process
 it. Filters are functions which return a string based on the input
-variable. You can also use a chain of filters to get the desired
-output::
+variable. Be sure to use the stringify filter first when you're
+applying a string-input filter to a list-like input variable.
+You can also use a chain of filters to get the desired output::
 
    $ hg tip --template "{date|isodate}\n"
    2008-08-21 18:22 +0000

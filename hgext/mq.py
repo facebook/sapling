@@ -1905,7 +1905,7 @@ def clone(ui, source, dest=None, **opts):
 def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository (DEPRECATED)
 
-    This command is deprecated; use hg --mq commit instead."""
+    This command is deprecated; use hg commit --mq instead."""
     q = repo.mq
     r = q.qrepo()
     if not r:

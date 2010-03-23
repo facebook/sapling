@@ -43,7 +43,7 @@ createrepo > /dev/null 2>&1
 hg glog  --template '{rev}: {desc}\n'
 echo '% Rebasing B onto H'
 hg up -C 3
-hg rebase --collapse 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --collapse --keepbranches 2>&1 | sed 's/\(saving bundle to \).*/\1/'
 hg glog  --template '{rev}: {desc}\n'
 echo "Expected A, B, C, D, F, H"
 hg manifest
