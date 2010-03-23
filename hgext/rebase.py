@@ -161,10 +161,7 @@ def rebase(ui, repo, **opts):
                                     'resolve then run hg rebase --continue'))
                 updatedirstate(repo, rev, target, p2)
                 if not collapsef:
-                    extra = {'rebase_source': repo[rev].hex()}
-                    if extrafn:
-                        extrafn(repo[rev], extra)
-                    newrev = concludenode(repo, rev, p1, p2, extra=extra)
+                    newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn)
                 else:
                     # Skip commit if we are collapsing
                     repo.dirstate.setparents(repo[p1].node())
@@ -190,7 +187,7 @@ def rebase(ui, repo, **opts):
                     commitmsg += '\n* %s' % repo[rebased].description()
             commitmsg = ui.edit(commitmsg, repo.ui.username())
             newrev = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
-                                                    extra=extrafn)
+                                  extrafn=extrafn)
 
         if 'qtip' in repo.tags():
             updatemq(repo, state, skipped, **opts)
@@ -266,17 +263,19 @@ def updatedirstate(repo, rev, p1, p2):
                 if v in m2 and v not in m1:
                     repo.dirstate.remove(v)
 
-def concludenode(repo, rev, p1, p2, commitmsg=None, extra=None):
+def concludenode(repo, rev, p1, p2, commitmsg=None, extrafn=None):
     'Commit the changes and store useful information in extra'
     try:
         repo.dirstate.setparents(repo[p1].node(), repo[p2].node())
         if commitmsg is None:
             commitmsg = repo[rev].description()
-        if extra is None:
-            extra = {}
+        ctx = repo[rev]
+        extra = {'rebase_source': ctx.hex()}
+        if extrafn:
+            extrafn(ctx, extra)
         # Commit might fail if unresolved files exist
-        newrev = repo.commit(text=commitmsg, user=repo[rev].user(),
-                             date=repo[rev].date(), extra=extra)
+        newrev = repo.commit(text=commitmsg, user=ctx.user(),
+                             date=ctx.date(), extra=extra)
         repo.dirstate.setbranch(repo[newrev].branch())
         return newrev
     except util.Abort:
