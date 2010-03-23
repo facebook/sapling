@@ -7,7 +7,7 @@
 
 from i18n import _
 import osutil
-import os, sys, errno, stat, getpass, pwd, grp, fcntl
+import os, sys, errno, stat, getpass, pwd, grp
 
 posixfile = open
 nulldev = '/dev/null'
@@ -118,6 +118,7 @@ def samedevice(fpath1, fpath2):
     return st1.st_dev == st2.st_dev
 
 if sys.platform == 'darwin':
+    import fcntl # only needed on darwin, missing on jython
     def realpath(path):
         '''
         Returns the true, canonical file system path equivalent to the given

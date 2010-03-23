@@ -26,6 +26,12 @@ except:
     raise SystemExit(
         "Couldn't import standard zlib (incomplete Python install).")
 
+try:
+	import bz2
+except:
+	raise SystemExit(
+		"Couldn't import standard bz2 (incomplete Python install).")
+
 import os, subprocess, time
 import shutil
 import tempfile
