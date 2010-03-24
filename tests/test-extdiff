@@ -36,7 +36,7 @@ hg merge 1
 # should diff cloned file against wc file
 hg falabala > out
 # cleanup the output since the wc is a tmp directory
-sed  's:\(.* \).*\(\/test-extdiff\):\1[tmp]\2:' out
+sed  's:\(diffing [^ ]* \).*\(\/test-extdiff\):\1[tmp]\2:' out
 # test --change option
 hg ci -d '2 0' -mtest3
 hg falabala -c 1
@@ -54,15 +54,15 @@ echo '% diff in working directory, before'
 hg diff --git
 echo '% edit with extdiff -p'
 # prepare custom diff/edit tool
-cat > differ.py << EOT
+cat > 'diff tool.py' << EOT
 #!/usr/bin/env python
 import time
 time.sleep(1) # avoid unchanged-timestamp problems
 file('a/a', 'ab').write('edited\n')
 file('a/b', 'ab').write('edited\n')
 EOT
-chmod +x differ.py
-hg extdiff -p `pwd`/differ.py # will change to /tmp/extdiff.TMP and populate directories a.TMP and a and start tool
+chmod +x 'diff tool.py'
+hg extdiff -p "`pwd`/diff tool.py" # will change to /tmp/extdiff.TMP and populate directories a.TMP and a and start tool
 echo '% diff in working directory, after'
 hg diff --git
 

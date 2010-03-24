@@ -42,7 +42,7 @@ cat > $HGTMP/editor <<'__EOF__'
 #!/bin/sh
 echo "another precious commit message" > "$1"
 __EOF__
-chmod +x $HGTMP/editor
-HGEDITOR=$HGTMP/editor hg --config hooks.pretxncommit=false commit 2>&1 | sed 's,exited with status .*,exited ...,g'
+chmod +x "$HGTMP"/editor
+HGEDITOR="'$HGTMP'"/editor hg --config hooks.pretxncommit=false commit 2>&1 | sed 's,exited with status .*,exited ...,g'
 echo '.hg/last-message.txt:'
 cat .hg/last-message.txt

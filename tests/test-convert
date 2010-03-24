@@ -49,7 +49,7 @@ echo % converting empty dir should fail "nicely"
 mkdir emptydir
 # override $PATH to ensure p4 not visible; use $PYTHON in case we're
 # running from a devel copy, not a temp installation
-PATH=$BINDIR $PYTHON $BINDIR/hg convert emptydir 2>&1 | sed 's,file://.*/emptydir,.../emptydir,g'
+PATH="$BINDIR" $PYTHON "$BINDIR"/hg convert emptydir 2>&1 | sed 's,file://.*/emptydir,.../emptydir,g'
 
 echo % convert with imaginary source type
 hg convert --source-type foo a a-foo

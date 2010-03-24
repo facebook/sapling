@@ -32,4 +32,4 @@ hg pull -q file:../test
 # It's tricky to make file:// URLs working on every platforms
 # with regular shell commands.
 URL=`python -c "import os; print 'file://foobar' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
-hg pull -q $URL
+hg pull -q "$URL"

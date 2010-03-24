@@ -87,8 +87,8 @@ echo % diff a hooktest
 diff a hooktest
 
 echo % removing commit hook from config
-sed -e '/\[hooks\]/,$ d' $HGRCPATH > $HGRCPATH.nohook
-mv $HGRCPATH.nohook $HGRCPATH
+sed -e '/\[hooks\]/,$ d' "$HGRCPATH" > $HGRCPATH.nohook
+mv "$HGRCPATH".nohook "$HGRCPATH"
 rm hooktest
 
 echo % bundle
@@ -115,8 +115,8 @@ echo % pull from bundle
 hg pull -u ../kw.hg 2>&1 | sed -e '/^Content-Type:/,/^diffs (/ d'
 
 echo % remove notify config
-sed -e '/\[hooks\]/,$ d' $HGRCPATH > $HGRCPATH.nonotify
-mv $HGRCPATH.nonotify $HGRCPATH
+sed -e '/\[hooks\]/,$ d' "$HGRCPATH" > $HGRCPATH.nonotify
+mv "$HGRCPATH".nonotify "$HGRCPATH"
 
 echo % touch
 touch a b
@@ -364,7 +364,7 @@ cat a b
 echo % hg cat
 hg cat sym a b
 echo
-rm $HGRCPATH
+rm "$HGRCPATH"
 echo % cat
 cat a b
 echo % hg cat

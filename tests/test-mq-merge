@@ -2,11 +2,6 @@
 
 # Test issue 529 - mq aborts when merging patch deleting files
 
-rewrite_path()
-{
-    sed -e 's:\\:/:g' -e 's:[^ ]*/t/::g'
-}
-
 checkundo()
 {
     if [ -f .hg/store/undo ]; then
@@ -33,7 +28,7 @@ hg rm a
 hg qrefresh -m "rm a"
 
 # Save the patch queue so we can merge it later
-hg qsave -c -e 2>&1 | rewrite_path
+hg qsave -c -e 2>&1 | grep -v ^copy
 checkundo qsave
 
 # Update b and commit in an "update" changeset
@@ -45,7 +40,7 @@ hg ci -m update
 # Here, qpush used to abort with :
 # The system cannot find the file specified => a
 hg manifest
-hg qpush -a -m 2>&1 | rewrite_path
+hg qpush -a -m 2>&1 | grep -v ^merging
 checkundo 'qpush -m'
 hg manifest
 
