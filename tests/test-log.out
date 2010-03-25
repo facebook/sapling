@@ -94,6 +94,27 @@ a
 2 dir/b (b)
 1 b (a)
 0 
+% log copies with hardcoded style and with --style=default
+changeset:   4:66c1345dc4f9
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+files:       dir/b e
+copies:      e (dir/b)
+description:
+e
+
+
+changeset:   4:66c1345dc4f9
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:05 1970 +0000
+files:       dir/b e
+copies:      e (dir/b)
+description:
+e
+
+
 % log copies, non-linear manifest
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding foo
