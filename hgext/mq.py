@@ -2577,7 +2577,8 @@ def reposetup(ui, repo):
             start = lrev + 1
             if start < qbase:
                 # update the cache (excluding the patches) and save it
-                self._updatebranchcache(partial, lrev + 1, qbase)
+                ctxgen = (self[r] for r in xrange(lrev + 1, qbase))
+                self._updatebranchcache(partial, ctxgen)
                 self._writebranchcache(partial, cl.node(qbase - 1), qbase - 1)
                 start = qbase
             # if start = qbase, the cache is as updated as it should be.
@@ -2585,7 +2586,8 @@ def reposetup(ui, repo):
             # we might as well use it, but we won't save it.
 
             # update the cache up to the tip
-            self._updatebranchcache(partial, start, len(cl))
+            ctxgen = (self[r] for r in xrange(start, len(cl)))
+            self._updatebranchcache(partial, ctxgen)
 
             return partial
 

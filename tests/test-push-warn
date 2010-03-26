@@ -166,4 +166,32 @@ hg -R k ci -m merge
 hg -R k push -r a j
 echo
 
+echo % prepush -r should not allow you to sneak in new heads
+hg init l
+cd l
+echo a >> foo
+hg -q add foo
+hg -q branch a
+hg -q ci -d '0 0' -ma
+hg -q up null
+echo a >> foo
+hg -q add foo
+hg -q branch b
+hg -q ci -d '0 0' -mb
+cd ..
+hg -q clone l m -u a
+cd m
+hg -q merge b
+hg -q ci -d '0 0' -mmb
+hg -q up 0
+echo a >> foo
+hg -q ci -ma2
+hg -q up 2
+echo a >> foo
+hg -q branch -f b
+hg -q ci -d '0 0' -mb2
+hg -q merge 3
+hg -q ci -d '0 0' -mma
+hg push ../l -b b
+
 exit 0

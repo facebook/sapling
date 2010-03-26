@@ -320,7 +320,8 @@ class localrepository(repo.repository):
         # TODO: rename this function?
         tiprev = len(self) - 1
         if lrev != tiprev:
-            self._updatebranchcache(partial, lrev + 1, tiprev + 1)
+            ctxgen = (self[r] for r in xrange(lrev + 1, tiprev + 1))
+            self._updatebranchcache(partial, ctxgen)
             self._writebranchcache(partial, self.changelog.tip(), tiprev)
 
         return partial
@@ -398,11 +399,10 @@ class localrepository(repo.repository):
         except (IOError, OSError):
             pass
 
-    def _updatebranchcache(self, partial, start, end):
+    def _updatebranchcache(self, partial, ctxgen):
         # collect new branch entries
         newbranches = {}
-        for r in xrange(start, end):
-            c = self[r]
+        for c in ctxgen:
             newbranches.setdefault(c.branch(), []).append(c.node())
         # if older branchheads are reachable from new ones, they aren't
         # really branchheads. Note checking parents is insufficient:
@@ -1503,30 +1503,22 @@ class localrepository(repo.repository):
         update, updated_heads = self.findoutgoing(remote, common, remote_heads)
         msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
 
-        def checkbranch(lheads, rheads, updatelb, branchname=None):
+        def checkbranch(lheads, rheads, branchname=None):
             '''
             check whether there are more local heads than remote heads on
             a specific branch.
 
             lheads: local branch heads
             rheads: remote branch heads
-            updatelb: outgoing local branch bases
             '''
 
             warn = 0
 
-            if not revs and len(lheads) > len(rheads):
+            if len(lheads) > len(rheads):
                 warn = 1
             else:
-                # add local heads involved in the push
-                updatelheads = [self.changelog.heads(x, lheads)
-                                for x in updatelb]
-                newheads = set(sum(updatelheads, [])) & set(lheads)
-
-                if not newheads:
-                    return True
-
                 # add heads we don't have or that are not involved in the push
+                newheads = set(lheads)
                 for r in rheads:
                     if r in self.changelog.nodemap:
                         desc = self.changelog.heads(r, heads)
@@ -1575,9 +1567,8 @@ class localrepository(repo.repository):
                         localbrheads = self.branchmap()
                     else:
                         localbrheads = {}
-                        for n in heads:
-                            branch = self[n].branch()
-                            localbrheads.setdefault(branch, []).append(n)
+                        ctxgen = (self[n] for n in msng_cl)
+                        self._updatebranchcache(localbrheads, ctxgen)
 
                     newbranches = list(set(localbrheads) - set(remotebrheads))
                     if newbranches: # new branch requires --force
@@ -1591,10 +1582,10 @@ class localrepository(repo.repository):
                     for branch, lheads in localbrheads.iteritems():
                         if branch in remotebrheads:
                             rheads = remotebrheads[branch]
-                            if not checkbranch(lheads, rheads, update, branch):
+                            if not checkbranch(lheads, rheads, branch):
                                 return None, 0
                 else:
-                    if not checkbranch(heads, remote_heads, update):
+                    if not checkbranch(heads, remote_heads):
                         return None, 0
 
             if inc:

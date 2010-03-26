@@ -100,7 +100,7 @@ abort: push creates new remote branches: c, d!
 1
 pushing to ../f
 searching for changes
-abort: push creates new remote branches: d!
+abort: push creates new remote branches: c, d!
 (use 'hg push -f' to force)
 1
 % fail on multiple head push
@@ -167,6 +167,11 @@ marked working directory as branch b
 (branch merge, don't forget to commit)
 pushing to j
 searching for changes
-abort: push creates new remote heads on branch 'a'!
-(you should pull and merge or use push -f to force)
+abort: push creates new remote branches: b!
+(use 'hg push -f' to force)
 
+% prepush -r should not allow you to sneak in new heads
+pushing to ../l
+searching for changes
+abort: push creates new remote heads on branch 'a'!
+(did you forget to merge? use push -f to force)
