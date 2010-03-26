@@ -11,7 +11,7 @@ Merge made by octopus.
  2 files changed, 2 insertions(+), 0 deletions(-)
  create mode 100644 beta
  create mode 100644 gamma
-Initialized empty Git repository in gitrepo2/.git/
+Initialized empty Git repository in gitrepo2/
 
 importing Hg objects into Git
 Counting objects: 14, done.

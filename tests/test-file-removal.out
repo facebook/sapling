@@ -4,7 +4,7 @@ rm 'alpha'
 rm 'foo/bar'
 % final manifest in git is just beta
 beta
-Initialized empty Git repository in gitrepo2/.git/
+Initialized empty Git repository in gitrepo2/
 
 importing Hg objects into Git
 Counting objects: 14, done.

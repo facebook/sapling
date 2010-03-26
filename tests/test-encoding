@@ -46,7 +46,7 @@ commit -m 'add älphà'
 cd ..
 mkdir gitrepo2
 cd gitrepo2
-git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
+git init --bare | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
 
 # dulwich does not presently support local git repos, workaround
 cd ..

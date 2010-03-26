@@ -1,5 +1,6 @@
 Initialized empty Git repository in gitrepo/.git/
 
+Switched to a new branch "not-master"
 importing Hg objects into Git
 Counting objects: 3, done.
 Total 3 (delta 0), reused 0 (delta 0)
@@ -9,12 +10,15 @@ pushing to git://localhost/gitrepo
 importing Hg objects into Git
 creating and sending data
     default::refs/heads/beta => GIT:cffa0e8d
+    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:7eeab2ea
 % should have two different branches
-  beta   cffa0e8 add beta
-* master 7eeab2e add alpha
+  beta       cffa0e8 add beta
+  master     7eeab2e add alpha
+* not-master 7eeab2e add alpha
 % some more work on master from git
-Already on "master"
+Switched to branch "master"
+Switched to branch "not-master"
 % this should fail
 pushing to git://localhost/gitrepo
 importing Hg objects into Git
@@ -38,6 +42,8 @@ default/master                     3:1436150b86c2
 master                             2:72f56395749d
 default/beta                       1:0564f526fb0f
 beta                               1:0564f526fb0f
+not-master                         0:3442585be8a6
+default/not-master                 0:3442585be8a6
 % this should also fail
 pushing to git://localhost/gitrepo
 importing Hg objects into Git
@@ -48,4 +54,5 @@ pushing to git://localhost/gitrepo
 importing Hg objects into Git
 creating and sending data
     default::refs/heads/beta => GIT:cffa0e8d
+    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:cc119202

@@ -6,7 +6,7 @@ Merge made by recursive.
  beta |    1 +
  1 files changed, 1 insertions(+), 0 deletions(-)
  create mode 100644 beta
-Initialized empty Git repository in gitrepo2/.git/
+Initialized empty Git repository in gitrepo2/
 
 importing Hg objects into Git
 Counting objects: 11, done.

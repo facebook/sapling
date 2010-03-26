@@ -6,7 +6,7 @@ variable i18n.commitencoding to the encoding your project uses.
 Warning: commit message does not conform to UTF-8.
 You may want to amend it after fixing the message, or set the config
 variable i18n.commitencoding to the encoding your project uses.
-Initialized empty Git repository in gitrepo2/.git/
+Initialized empty Git repository in gitrepo2/
 
 importing Hg objects into Git
 Counting objects: 12, done.
