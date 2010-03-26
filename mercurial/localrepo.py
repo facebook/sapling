@@ -320,7 +320,8 @@ class localrepository(repo.repository):
         # TODO: rename this function?
         tiprev = len(self) - 1
         if lrev != tiprev:
-            self._updatebranchcache(partial, lrev + 1, tiprev + 1)
+            ctxgen = (self[r] for r in xrange(lrev + 1, tiprev + 1))
+            self._updatebranchcache(partial, ctxgen)
             self._writebranchcache(partial, self.changelog.tip(), tiprev)
 
         return partial
@@ -398,11 +399,10 @@ class localrepository(repo.repository):
         except (IOError, OSError):
             pass
 
-    def _updatebranchcache(self, partial, start, end):
+    def _updatebranchcache(self, partial, ctxgen):
         # collect new branch entries
         newbranches = {}
-        for r in xrange(start, end):
-            c = self[r]
+        for c in ctxgen:
             newbranches.setdefault(c.branch(), []).append(c.node())
         # if older branchheads are reachable from new ones, they aren't
         # really branchheads. Note checking parents is insufficient:
