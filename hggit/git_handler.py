@@ -584,11 +584,11 @@ class GitHandler(object):
                 for h in heads:
                     r = [ref for ref in refs if ref.endswith('/'+h)]
                     if not r:
-                        raise hgutil.Abort("ref %s not found on remote server")
+                        raise hgutil.Abort("ref %s not found on remote server" % h)
                     elif len(r) == 1:
                         want.append(refs[r[0]])
                     else:
-                        raise hgutil.Abort("ambiguous reference %s: %r"%(h, r))
+                        raise hgutil.Abort("ambiguous reference %s: %r" % (h, r))
             else:
                 want = [sha for ref, sha in refs.iteritems()
                         if not ref.endswith('^{}')]
