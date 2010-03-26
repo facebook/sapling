@@ -1575,9 +1575,8 @@ class localrepository(repo.repository):
                         localbrheads = self.branchmap()
                     else:
                         localbrheads = {}
-                        for n in heads:
-                            branch = self[n].branch()
-                            localbrheads.setdefault(branch, []).append(n)
+                        ctxgen = (self[n] for n in msng_cl)
+                        self._updatebranchcache(localbrheads, ctxgen)
 
                     newbranches = list(set(localbrheads) - set(remotebrheads))
                     if newbranches: # new branch requires --force
