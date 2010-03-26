@@ -148,7 +148,8 @@ class GitHandler(object):
 
         if remote_name and changed_refs:
             for ref, sha in changed_refs.iteritems():
-                self.ui.status("    "+ remote_name + "::" + ref + " => GIT:" + sha[0:8] + "\n")
+                self.ui.status("    %s::%s => GIT:%s\n" %
+                               (remote_name, ref, sha[0:8]))
 
             self.update_remote_branches(remote_name, changed_refs)
 
@@ -178,7 +179,8 @@ class GitHandler(object):
             ctx = self.repo.changectx(rev)
             state = ctx.extra().get('hg-git', None)
             if state == 'octopus':
-                self.ui.debug("revision %d is a part of octopus explosion\n" % ctx.rev())
+                self.ui.debug("revision %d is a part "
+                              "of octopus explosion\n" % ctx.rev())
                 continue
             self.export_hg_commit(rev)
         self.ui.progress('import', None, total=total)
@@ -406,7 +408,8 @@ class GitHandler(object):
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
 
-        (strip_message, hg_renames, hg_branch, extra) = self.extract_hg_metadata(commit.message)
+        (strip_message, hg_renames,
+         hg_branch, extra) = self.extract_hg_metadata(commit.message)
 
         # get a list of the changed, added, removed files
         files = self.get_files_changed(commit)
@@ -494,7 +497,8 @@ class GitHandler(object):
         if commit.author != commit.committer \
                or commit.author_time != commit.commit_time \
                or commit.author_timezone != commit.commit_timezone:
-            extra['committer'] = "%s %d %d" % (commit.committer, commit.commit_time, -commit.commit_timezone)
+            extra['committer'] = "%s %d %d" % (
+                commit.committer, commit.commit_time, -commit.commit_timezone)
 
         if commit.encoding:
             extra['encoding'] = commit.encoding
@@ -596,7 +600,8 @@ class GitHandler(object):
         f, commit = self.git.object_store.add_pack()
         try:
             try:
-                return client.fetch_pack(path, determine_wants, graphwalker, f.write, self.ui.status)
+                return client.fetch_pack(path, determine_wants, graphwalker,
+                                         f.write, self.ui.status)
             except HangupException:
                 raise hgutil.Abort("the remote end hung up unexpectedly")
         finally:
