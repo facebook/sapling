@@ -55,6 +55,14 @@ def defaultdest(source):
     return hgdefaultdest(source)
 hg.defaultdest = defaultdest
 
+# defend against tracebacks if we specify -r in 'hg pull'
+def safebranchrevs(orig, lrepo, repo, branches, revs):
+    revs, co = orig(lrepo, repo, branches, revs)
+    if getattr(lrepo, 'changelog', False) and co not in lrepo.changelog:
+        co = None
+    return revs, co
+extensions.wrapfunction(hg, 'addbranchrevs', safebranchrevs)
+
 def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):
         klass = hgrepo.generate_repo_subclass(repo.__class__)
