@@ -1503,30 +1503,22 @@ class localrepository(repo.repository):
         update, updated_heads = self.findoutgoing(remote, common, remote_heads)
         msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
 
-        def checkbranch(lheads, rheads, updatelb, branchname=None):
+        def checkbranch(lheads, rheads, branchname=None):
             '''
             check whether there are more local heads than remote heads on
             a specific branch.
 
             lheads: local branch heads
             rheads: remote branch heads
-            updatelb: outgoing local branch bases
             '''
 
             warn = 0
 
-            if not revs and len(lheads) > len(rheads):
+            if len(lheads) > len(rheads):
                 warn = 1
             else:
-                # add local heads involved in the push
-                updatelheads = [self.changelog.heads(x, lheads)
-                                for x in updatelb]
-                newheads = set(sum(updatelheads, [])) & set(lheads)
-
-                if not newheads:
-                    return True
-
                 # add heads we don't have or that are not involved in the push
+                newheads = set(lheads)
                 for r in rheads:
                     if r in self.changelog.nodemap:
                         desc = self.changelog.heads(r, heads)
@@ -1590,10 +1582,10 @@ class localrepository(repo.repository):
                     for branch, lheads in localbrheads.iteritems():
                         if branch in remotebrheads:
                             rheads = remotebrheads[branch]
-                            if not checkbranch(lheads, rheads, update, branch):
+                            if not checkbranch(lheads, rheads, branch):
                                 return None, 0
                 else:
-                    if not checkbranch(heads, remote_heads, update):
+                    if not checkbranch(heads, remote_heads):
                         return None, 0
 
             if inc:
