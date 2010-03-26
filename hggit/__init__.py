@@ -56,8 +56,9 @@ def defaultdest(source):
 hg.defaultdest = defaultdest
 
 def reposetup(ui, repo):
-    klass = hgrepo.generate_repo_subclass(repo.__class__)
-    repo.__class__ = klass
+    if not isinstance(repo, gitrepo.gitrepo):
+        klass = hgrepo.generate_repo_subclass(repo.__class__)
+        repo.__class__ = klass
 
 def gimport(ui, repo, remote_name=None):
     git = GitHandler(repo, ui)
