@@ -14,12 +14,12 @@ from mercurial import context, util as hgutil
 
 
 class GitHandler(object):
+    mapfile = 'git-mapfile'
+    tagsfile = 'git-tags'
 
     def __init__(self, dest_repo, ui):
         self.repo = dest_repo
         self.ui = ui
-        self.mapfile = 'git-mapfile'
-        self.tagsfile = 'git-tags'
 
         if ui.config('git', 'intree'):
             self.gitdir = self.repo.wjoin('.git')
@@ -509,6 +509,8 @@ class GitHandler(object):
         if octopus:
             extra['hg-git'] ='octopus-done'
 
+        if p1 not in self.repo or p2 not in self.repo:
+            raise hgutil.Abort(_('you appear to have run strip - please run hg git-cleanup'))
         ctx = context.memctx(self.repo, (p1, p2), text, list(files), getfilectx,
                              author, date, extra)
 

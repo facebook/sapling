@@ -1,0 +1,85 @@
+#!/bin/sh
+
+# Fails for some reason, need to investigate
+# "$TESTDIR/hghave" git || exit 80
+
+# bail if the user does not have dulwich
+python -c 'import dulwich, dulwich.repo' || exit 80
+
+# bail early if the user is already running git-daemon
+echo hi | nc localhost 9418 2>/dev/null && exit 80
+
+
+cat >> $HGRCPATH <<EOF
+[extensions]
+graphlog=
+bookmarks=
+mq=
+EOF
+echo "hggit=$(echo $(dirname $(dirname $0)))/hggit" >> $HGRCPATH
+
+GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
+GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
+GIT_AUTHOR_DATE="2007-01-01 00:00:00 +0000"; export GIT_AUTHOR_DATE
+GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
+GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
+GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
+
+count=10
+commit()
+{
+    GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
+    GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
+    git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
+    count=`expr $count + 1`
+}
+
+mkdir gitrepo
+cd gitrepo
+git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
+echo alpha > alpha
+git add alpha
+commit -m 'add alpha'
+
+git tag alpha
+
+git checkout -b beta 2>&1 | sed s/\'/\"/g
+echo beta > beta
+git add beta
+commit -m 'add beta'
+
+
+cd ..
+git daemon --base-path="$(pwd)"\
+ --listen=localhost\
+ --export-all\
+ --pid-file=gitdaemon.pid \
+ --detach --reuseaddr
+
+echo % clone a tag
+hg clone -r alpha git://localhost/gitrepo hgrepo-a | grep -v '^updating'
+cd hgrepo-a
+hg log --graph
+
+cd ..
+echo % clone a branch
+hg clone -r beta git://localhost/gitrepo hgrepo-b | grep -v '^updating'
+cd hgrepo-b
+hg log --graph
+cd ..
+
+cd gitrepo
+echo beta line 2 >> beta
+git add beta
+commit -m 'add to beta'
+
+cd ..
+cd hgrepo-b
+hg strip tip 2>&1 | grep -v saving
+hg pull -r beta
+hg git-cleanup
+hg pull -r beta
+hg log --graph
+
+cd ..
+kill `cat gitdaemon.pid`

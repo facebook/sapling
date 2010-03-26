@@ -81,6 +81,16 @@ def gclear(ui, repo):
     git = GitHandler(repo, ui)
     git.clear()
 
+def git_cleanup(ui, repo):
+    new_map = []
+    for line in repo.opener(GitHandler.mapfile):
+        gitsha, hgsha = line.strip().split(' ', 1)
+        if hgsha in repo:
+            new_map.append('%s %s\n' % (gitsha, hgsha))
+    f = repo.opener(GitHandler.mapfile, 'wb')
+    map(f.write, new_map)
+    ui.status(_('git commit map cleaned\n'))
+
 cmdtable = {
   "gimport":
         (gimport, [], _('hg gimport')),
@@ -88,4 +98,6 @@ cmdtable = {
         (gexport, [], _('hg gexport')),
   "gclear":
       (gclear, [], _('Clears out the Git cached data')),
+  "git-cleanup": (git_cleanup, [], _(
+        "Cleans up git repository after history editing"))
 }
