@@ -153,7 +153,7 @@ class TagMap(dict):
             self[k] = v
 
     def __contains__(self, tag):
-        return (tag and dict.__contains__(self, tag) 
+        return (tag and dict.__contains__(self, tag)
                 and dict.__getitem__(self, tag) != node.nullid)
 
     def __getitem__(self, tag):
@@ -267,7 +267,7 @@ class FileMap(object):
     def add(self, fn, map, path):
         mapping = getattr(self, map)
         if path in mapping:
-            msg = 'duplicate %s entry in %s: "%d"\n'
+            msg = 'duplicate %s entry in %s: "%s"\n'
             self.ui.status(msg % (map, fn, path))
             return
         bits = map.strip('e'), path
