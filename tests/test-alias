@@ -13,6 +13,7 @@ lognull = log -r null
 shortlog = log --template '{rev} {node|short} | {date|isodate}\n'
 dln = lognull --debug
 nousage = rollback
+put = export -r 0 -o "\$PWD/%R.diff"
 
 [defaults]
 mylog = -q
@@ -59,3 +60,7 @@ hg lognull
 
 echo '% properly recursive'
 hg dln
+
+echo '% path expanding'
+hg put
+cat 0.diff
