@@ -2311,6 +2311,9 @@ def rename(ui, repo, patch, name=None, **opts):
         q.applied[info[0]] = statusentry(info[1], name)
     q.applied_dirty = 1
 
+    destdir = os.path.dirname(absdest)
+    if not os.path.isdir(destdir):
+        os.makedirs(destdir)
     util.rename(q.join(patch), absdest)
     r = q.qrepo()
     if r:

@@ -8,6 +8,10 @@ abort: ".hgignore" cannot be used as the name of a patch
 abort: ".mqfoo" cannot be used as the name of a patch
 abort: "foo#bar" cannot be used as the name of a patch
 abort: "foo:bar" cannot be used as the name of a patch
+% qnew with name containing slash
+foo/bar.patch
+popping foo/bar.patch
+patch queue now empty
 % qnew with uncommitted changes
 uncommitted.patch
 % qnew implies add
@@ -58,6 +62,10 @@ abort: ".hgignore" cannot be used as the name of a patch
 abort: ".mqfoo" cannot be used as the name of a patch
 abort: "foo#bar" cannot be used as the name of a patch
 abort: "foo:bar" cannot be used as the name of a patch
+% qnew with name containing slash
+foo/bar.patch
+popping foo/bar.patch
+patch queue now empty
 % qnew with uncommitted changes
 uncommitted.patch
 % qnew implies add

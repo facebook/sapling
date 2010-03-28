@@ -25,6 +25,12 @@ runtest() {
 
     hg qinit -c
 
+    echo '% qnew with name containing slash'
+    hg qnew foo/bar.patch
+    hg qseries
+    hg qpop
+    hg qdelete foo/bar.patch
+
     echo '% qnew with uncommitted changes'
     echo a > somefile
     hg add somefile

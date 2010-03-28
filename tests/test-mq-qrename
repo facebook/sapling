@@ -22,6 +22,9 @@ ls .hg/patches/bar
 hg qrename bar/renamed baz
 hg qseries
 ls .hg/patches/baz
+hg qrename baz new/dir
+hg qseries
+ls .hg/patches/new/dir
 cd ..
 
 echo % test patch being renamed before committed
