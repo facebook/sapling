@@ -26,6 +26,9 @@ GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
 GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
 GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
 
+# TODO stop using this when we're 1.5 only
+filterhash="sed s/71414c4e3c6f/a31e374801c9/;s/698615204564/d93a72262a83/"
+
 count=10
 commit()
 {
@@ -71,12 +74,12 @@ hg branch gamma
 hgcommit -m 'started branch gamma'
 hg push
 
-hg log --graph
+hg log --graph | $filterhash
 
 cd ..
 hg clone git://localhost/gitrepo hgrepo2 | grep -v '^updating'
 cd hgrepo2
-hg log --graph
+hg log --graph | $filterhash
 
 cd ..
 kill `cat gitdaemon.pid`
