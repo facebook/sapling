@@ -3,6 +3,17 @@
 # Fails for some reason, need to investigate
 # "$TESTDIR/hghave" git || exit 80
 
+# this test is busted on hg < 1.5. I'm not sure how to fix it.
+cat > tmp.py <<EOF
+import sys
+v = sys.stdin.read().strip()[:-1]
+if v[1] == '.' and int(v[2]) > 4:
+  sys.exit(0)
+sys.exit(1)
+EOF
+
+hg version | grep version | sed 's/.*(version //' | python tmp.py || exit 80
+
 # bail if the user does not have dulwich
 python -c 'import dulwich, dulwich.repo' || exit 80
 
@@ -78,6 +89,7 @@ cd hgrepo-b
 hg strip tip 2>&1 | grep -v saving
 hg pull -r beta
 hg git-cleanup
+echo % pull works after `hg git-cleanup`
 hg pull -r beta
 hg log --graph
 

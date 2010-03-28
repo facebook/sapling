@@ -61,7 +61,8 @@ def safebranchrevs(orig, lrepo, repo, branches, revs):
     if getattr(lrepo, 'changelog', False) and co not in lrepo.changelog:
         co = None
     return revs, co
-extensions.wrapfunction(hg, 'addbranchrevs', safebranchrevs)
+if getattr(hg, 'addbranchrevs', False):
+    extensions.wrapfunction(hg, 'addbranchrevs', safebranchrevs)
 
 def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):

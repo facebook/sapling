@@ -48,6 +48,7 @@ Total 6 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 abort: you appear to have run strip - please run hg git-cleanup
 git commit map cleaned
+% pull works after git commit map cleaned
 pulling from git://localhost/gitrepo
 importing Hg objects into Git
 Counting objects: 6, done.
