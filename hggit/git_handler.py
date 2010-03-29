@@ -726,7 +726,8 @@ class GitHandler(object):
 
                 new_ref = 'refs/remotes/%s/%s' % (remote_name, head)
                 self.git.refs[new_ref] = sha
-            elif ref_name.startswith('refs/tags'):
+            elif ref_name.startswith('refs/tags') and \
+                not ref_name.endswith('^{}'):
                 self.git.refs[ref_name] = sha
 
 
