@@ -20,7 +20,7 @@ agescales = [("year", 3600 * 24 * 365),
              ("day", 3600 * 24),
              ("hour", 3600),
              ("minute", 60),
-             ("second", 1),]
+             ("second", 1)]
 
 def age(date):
     '''turn a (timestamp, tzoff) tuple into an age string.'''
