@@ -10,11 +10,11 @@ fix_path()
 escapedwd=`pwd | fix_path`
 # SVN wants all paths to start with a slash. Unfortunately,
 # Windows ones don't. Handle that.
-expr $escapedwd : "\/" > /dev/null
+expr "$escapedwd" : "\/" > /dev/null
 if [ $? -ne 0 ]; then
-    escapedwd='/'$escapedwd
+    escapedwd="/$escapedwd"
 fi
-filterpath="sed s|$escapedwd|/root|"
+filterpath="s|$escapedwd|/root|"
 filtersvn='s/ in transaction.*/ is out of date/;s/Out of date: /File /'
 
 echo % create subversion repo
@@ -22,7 +22,7 @@ echo % create subversion repo
 SVNREPO="file://$escapedwd/svn-repo"
 WCROOT="`pwd`/svn-wc"
 svnadmin create svn-repo
-svn co $SVNREPO svn-wc
+svn co "$SVNREPO" svn-wc
 cd svn-wc
 mkdir src
 echo alpha > src/alpha
@@ -33,7 +33,7 @@ svn add externals
 svn ci -m 'Add alpha'
 svn up
 cat > extdef <<EOF
-externals -r1 $SVNREPO/externals
+externals -r1 "$SVNREPO/externals"
 EOF
 svn propset -F extdef svn:externals src
 svn ci -m 'Setting externals'
@@ -51,18 +51,18 @@ hg ci -Am0
 
 echo % add first svn sub with leading whitespaces
 echo "s = [svn]       $SVNREPO/src" >> .hgsub
-svn co --quiet $SVNREPO/src s
+svn co --quiet "$SVNREPO"/src s
 hg add .hgsub
 hg ci -m1
 echo % debugsub
-hg debugsub | $filterpath
+hg debugsub | sed "$filterpath"
 
 echo
 echo % change file in svn and hg, commit
 echo a >> a
 echo alpha >> s/alpha
 hg commit -m 'Message!'
-hg debugsub | $filterpath
+hg debugsub | sed "$filterpath"
 
 echo
 echo a > s/a
@@ -104,4 +104,4 @@ cd ..
 hg clone t tc | fix_path
 cd tc
 echo % debugsub in clone
-hg debugsub | $filterpath
+hg debugsub | sed "$filterpath"

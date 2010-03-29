@@ -167,7 +167,7 @@ hg --cwd a export tip | sed -e 's/d1\/d2\///' > tip.patch
 dir=`pwd`
 cd b/d1/d2 2>&1 > /dev/null
 hg import  ../../../tip.patch
-cd $dir
+cd "$dir"
 echo "% message should be 'subdir change'"
 hg --cwd b tip | grep 'subdir change'
 echo "% committer should be 'someoneelse'"

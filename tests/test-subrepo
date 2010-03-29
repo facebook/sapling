@@ -197,8 +197,8 @@ echo test2 > nested_relative/foo2
 hg -R nested_relative add
 hg -R nested_relative ci -mtest2
 hg init main
-echo nested_relative = ../nested_relative > main/.hgsub
-echo nested_absolute = `pwd`/nested_absolute >> main/.hgsub
+echo "nested_relative = ../nested_relative" > main/.hgsub
+echo "nested_absolute = `pwd`/nested_absolute" >> main/.hgsub
 hg -R main add
 hg -R main ci -m "add subrepos"
 cd ..

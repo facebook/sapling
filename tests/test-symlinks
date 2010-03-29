@@ -51,7 +51,7 @@ ln -s x y
 cd x
 touch f
 hg add f
-hg status $p/y/f
+hg status "$p"/y/f
 
 echo '# try symlink outside repo to file inside'
 ln -s x/f ../z

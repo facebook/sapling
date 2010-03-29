@@ -103,5 +103,5 @@ chmod +x script.py
 hg bisect -r
 hg bisect --good tip
 hg bisect --bad 0
-hg bisect --command "`pwd`/script.py"
+hg bisect --command "'`pwd`/script.py' and some parameters"
 true

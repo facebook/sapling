@@ -16,9 +16,9 @@ svnadmin create svn-repo
 svnpath=`pwd | fix_path`
 # SVN wants all paths to start with a slash. Unfortunately,
 # Windows ones don't. Handle that.
-expr $svnpath : "\/" > /dev/null
+expr "$svnpath" : "\/" > /dev/null
 if [ $? -ne 0 ]; then
-    svnpath='/'$svnpath
+    svnpath="/$svnpath"
 fi
 
 echo "# now tests that it works with trunk/tags layout, but no branches yet"
@@ -30,12 +30,12 @@ mkdir trunk
 mkdir tags
 cd ..
 
-svnurl=file://$svnpath/svn-repo/proj%20B
-svn import -m "init projB" projB $svnurl | fix_path
+svnurl="file://$svnpath/svn-repo/proj%20B"
+svn import -m "init projB" projB "$svnurl" | fix_path
 
 
 echo % update svn repository
-svn co $svnurl/trunk B | fix_path
+svn co "$svnurl"/trunk B | fix_path
 cd B
 echo hello > 'letter .txt'
 svn add 'letter .txt'
@@ -44,14 +44,14 @@ svn ci -m hello
 "$TESTDIR/svn-safe-append.py" world 'letter .txt'
 svn ci -m world
 
-svn copy -m "tag v0.1" $svnurl/trunk $svnurl/tags/v0.1
+svn copy -m "tag v0.1" "$svnurl"/trunk "$svnurl"/tags/v0.1
 
 "$TESTDIR/svn-safe-append.py" 'nice day today!' 'letter .txt'
 svn ci -m "nice day"
 cd ..
 
 echo % convert to hg once
-hg convert $svnurl B-hg
+hg convert "$svnurl" B-hg
 
 echo % update svn repository again
 cd B
@@ -60,7 +60,7 @@ echo "nice to meet you" > letter2.txt
 svn add letter2.txt
 svn ci -m "second letter"
 
-svn copy -m "tag v0.2" $svnurl/trunk $svnurl/tags/v0.2
+svn copy -m "tag v0.2" "$svnurl"/trunk "$svnurl"/tags/v0.2
 
 "$TESTDIR/svn-safe-append.py" "blah-blah-blah" letter2.txt
 svn ci -m "work in progress"
@@ -69,7 +69,7 @@ cd ..
 ########################################
 
 echo % test incremental conversion
-hg convert $svnurl B-hg
+hg convert "$svnurl" B-hg
 
 cd B-hg
 hg glog --template '{rev} {desc|firstline} files: {files}\n'
@@ -78,11 +78,11 @@ cd ..
 
 echo % test filemap
 echo 'include letter2.txt' > filemap
-hg convert --filemap filemap $svnurl/trunk fmap
+hg convert --filemap filemap "$svnurl"/trunk fmap
 hg glog -R fmap --template '{rev} {desc|firstline} files: {files}\n'
 
 echo % test stop revision
-hg convert --rev 1 $svnurl/trunk stoprev
+hg convert --rev 1 "$svnurl"/trunk stoprev
 # Check convert_revision extra-records.
 # This is also the only place testing more than one extra field
 # in a revision.

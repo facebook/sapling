@@ -1,12 +1,10 @@
 adding a
 adding b
-copy .hg/patches to .hg/patches.1
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 M b
 created new head
 a
 b
-merging with queue at: .hg/patches.1
 applying rm_a
 now at: rm_a
 b

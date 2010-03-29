@@ -62,7 +62,7 @@ beforemerge
 echo "# hg merge -r 2"
 # override $PATH to ensure hgmerge not visible; use $PYTHON in case we're
 # running from a devel copy, not a temp installation
-PATH=$BINDIR $PYTHON $BINDIR/hg merge -r 2
+PATH="$BINDIR" $PYTHON "$BINDIR"/hg merge -r 2
 aftermerge
 
 echo "# simplest hgrc using false for merge:"
@@ -175,6 +175,17 @@ aftermerge
 echo '# Merge with "echo mergeresult > $output" - the variable is a bit magic:'
 beforemerge
 hg merge -r 2 --config merge-tools.true.executable=echo --config merge-tools.true.args='mergeresult > $output'
+aftermerge
+
+echo '# Merge using tool with a path that must be quoted:'
+beforemerge
+cat <<EOF > 'my merge tool'
+#!/bin/sh
+cat "\$1" "\$2" "\$3" > "\$4"
+EOF
+chmod +x 'my merge tool'
+hg merge -r 2 --config merge-tools.true.executable='./my merge tool' --config merge-tools.true.args='$base $local $other $output'
+rm -f 'my merge tool'
 aftermerge
 
 

@@ -34,6 +34,7 @@ For convenience, the extension adds these schemes by default::
   bb = https://bitbucket.org/
   bb+ssh = ssh://hg@bitbucket.org/
   gcode = https://{1}.googlecode.com/hg/
+  kiln = https://{1}.kilnhg.com/Repo/
 
 You can override a predefined scheme by defining a new scheme with the
 same name.
@@ -72,7 +73,8 @@ schemes = {
     'py': 'http://hg.python.org/',
     'bb': 'https://bitbucket.org/',
     'bb+ssh': 'ssh://hg@bitbucket.org/',
-    'gcode': 'https://{1}.googlecode.com/hg/'
+    'gcode': 'https://{1}.googlecode.com/hg/',
+    'kiln': 'https://{1}.kilnhg.com/Repo/'
     }
 
 def extsetup(ui):

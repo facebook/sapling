@@ -38,6 +38,10 @@ hg log -v --template '{rev} {file_copies_switch%filecopy}\n'
 echo '% log copies switch with --copies'
 hg log -vC --template '{rev} {file_copies_switch}\n'
 
+echo '% log copies with hardcoded style and with --style=default'
+hg log -vC -r4
+hg log -vC -r4 --style=default
+
 echo % log copies, non-linear manifest
 hg up -C 3
 hg mv dir/b e

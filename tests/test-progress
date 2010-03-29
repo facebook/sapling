@@ -30,7 +30,7 @@ EOF
 
 echo "[extensions]" >> $HGRCPATH
 echo "progress=" >> $HGRCPATH
-echo "loop=" `pwd`/loop.py >> $HGRCPATH
+echo "loop=`pwd`/loop.py" >> $HGRCPATH
 echo "[ui]" >> $HGRCPATH
 echo "interactive=1" >> $HGRCPATH
 

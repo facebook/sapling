@@ -17,14 +17,14 @@ cat "$TESTDIR/svn/move.svndump" | svnadmin load svn-repo > /dev/null
 svnpath=`pwd | fix_path`
 # SVN wants all paths to start with a slash. Unfortunately,
 # Windows ones don't. Handle that.
-expr $svnpath : "\/" > /dev/null
+expr "$svnpath" : "\/" > /dev/null
 if [ $? -ne 0 ]; then
-    svnpath='/'$svnpath
+    svnpath="/$svnpath"
 fi
-svnurl=file://$svnpath/svn-repo
+svnurl="file://$svnpath/svn-repo"
 
 echo % convert trunk and branches
-hg convert --datesort $svnurl/subproject A-hg
+hg convert --datesort "$svnurl"/subproject A-hg
 
 cd A-hg
 hg glog --template '{rev} {desc|firstline} files: {files}\n'

@@ -4,8 +4,6 @@ echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
 
-BASE=`pwd`
-
 addcommit () {
     echo $1 > $1
     hg add $1
@@ -16,7 +14,6 @@ commit () {
     hg commit -d "${2} 0" -m $1
 }
 
-cd $BASE
 rm -rf a
 hg init a
 cd a

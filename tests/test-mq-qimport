@@ -68,12 +68,12 @@ hg revert --no-backup foo
 rm foo
 # Under unix: file:///foobar/blah
 # Under windows: file:///c:/foobar/blah
-patchurl=`echo $HGTMP/url.diff | tr '\\\\' /`
-expr $patchurl : "\/" > /dev/null
+patchurl=`echo "$HGTMP"/url.diff | tr '\\\\' /`
+expr "$patchurl" : "\/" > /dev/null
 if [ $? -ne 0 ]; then
-    patchurl='/'$patchurl
+    patchurl="/$patchurl"
 fi
-hg qimport file://$patchurl
+hg qimport file://"$patchurl"
 hg qun
 
 echo % import patch that already exists
