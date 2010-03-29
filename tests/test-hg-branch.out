@@ -21,8 +21,8 @@ creating and sending data
 @  changeset:   2:d93a72262a83
 |  branch:      gamma
 |  tag:         master
-|  tag:         default/master
 |  tag:         tip
+|  tag:         default/master
 |  user:        test
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  summary:     started branch gamma
@@ -48,8 +48,8 @@ importing Git objects into Hg
 o  changeset:   2:d93a72262a83
 |  branch:      gamma
 |  tag:         master
-|  tag:         default/master
 |  tag:         tip
+|  tag:         default/master
 |  user:        test
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  summary:     started branch gamma

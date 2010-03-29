@@ -19,8 +19,8 @@ creating and sending data
     default::refs/heads/master => GIT:2b9ec6a4
 @  changeset:   2:92d33c0dd6e1
 |  tag:         master
-|  tag:         default/master
 |  tag:         tip
+|  tag:         default/master
 |  user:        test <test@example.com> (comment)
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  summary:     modify beta
@@ -45,8 +45,8 @@ importing Git objects into Hg
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   2:92d33c0dd6e1
 |  tag:         master
-|  tag:         default/master
 |  tag:         tip
+|  tag:         default/master
 |  user:        test <test@example.com> (comment)
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  summary:     modify beta
