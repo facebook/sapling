@@ -724,7 +724,7 @@ class GitHandler(object):
 
         for ref_name in refs:
             if ref_name.startswith('refs/heads'):
-                new_ref = 'refs/remotes/%s/%s' % (remote_name, ref_name[10:])
+                new_ref = 'refs/remotes/%s/%s' % (remote_name, ref_name[11:])
                 self.git.refs[new_ref] = refs[ref_name]
             elif ref_name.startswith('refs/tags'):
                 self.git.refs[ref_name] = refs[ref_name]
