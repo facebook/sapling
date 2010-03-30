@@ -227,6 +227,7 @@ class convert_cvs(converter_source):
         self.writep.flush()
 
         data = ""
+        mode = None
         while 1:
             line = self.readp.readline()
             if line.startswith("Created ") or line.startswith("Updated "):
@@ -244,6 +245,8 @@ class convert_cvs(converter_source):
                 data = chunkedread(self.readp, count)
             else:
                 if line == "ok\n":
+                    if mode is None:
+                        raise util.Abort(_('malformed response from CVS'))
                     return (data, "x" in mode and "x" or "")
                 elif line.startswith("E "):
                     self.ui.warn(_("cvs server: %s\n") % line[2:])
