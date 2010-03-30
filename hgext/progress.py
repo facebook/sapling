@@ -33,6 +33,8 @@ The following settings are available::
                  # (that is, min(width, term width) will be used)
   clear-complete = True # clear the progress bar after it's done
   disable = False # if true, don't show a progress bar
+  assume-tty = False # if true, ALWAYS show a progress bar, unless
+                     # disable is given
 
 Valid entries for the format field are topic, bar, number, unit, and
 item. item defaults to the last 20 characters of the item, but this
@@ -131,18 +133,18 @@ class progbar(object):
             out = spacejoin(head, prog, tail)
         else:
             out = spacejoin(head, tail)
-        sys.stdout.write('\r' + out[:termwidth])
-        sys.stdout.flush()
+        sys.stderr.write('\r' + out[:termwidth])
+        sys.stderr.flush()
 
     def clear(self):
-        sys.stdout.write('\r%s\r' % (' ' * self.width()))
+        sys.stderr.write('\r%s\r' % (' ' * self.width()))
 
     def complete(self):
         if self.ui.configbool('progress', 'clear-complete', default=True):
             self.clear()
         else:
-            sys.stdout.write('\n')
-        sys.stdout.flush()
+            sys.stderr.write('\n')
+        sys.stderr.flush()
 
     def width(self):
         tw = util.termwidth()
@@ -175,7 +177,8 @@ def uisetup(ui):
     # setconfig('progress', 'disable', 'True') to disable this extension
     if ui.configbool('progress', 'disable'):
         return
-    if ui.interactive() and not ui.debugflag and not ui.quiet:
+    if ((sys.stderr.isatty() or ui.configbool('progress', 'assume-tty'))
+        and not ui.debugflag and not ui.quiet):
         # we instantiate one globally shared progress bar to avoid
         # competing progress bars when multiple UI objects get created
         global sharedprog

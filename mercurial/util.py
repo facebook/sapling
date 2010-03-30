@@ -1260,7 +1260,7 @@ def termwidth():
             pass
     try:
         import termios, array, fcntl
-        for dev in (sys.stdout, sys.stdin):
+        for dev in (sys.stderr, sys.stdout, sys.stdin):
             try:
                 try:
                     fd = dev.fileno()
