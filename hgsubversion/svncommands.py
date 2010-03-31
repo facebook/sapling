@@ -8,6 +8,8 @@ from mercurial import node
 from mercurial import util as hgutil
 from mercurial import error
 
+from svn import core
+
 import maps
 import svnwrap
 import svnrepo
@@ -397,6 +399,45 @@ def _helpgen():
         ret.append(" :%s: %s" % (name, short_description))
     return '\n'.join(ret) + '\n'
 
+def svn(ui, repo, subcommand, *args, **opts):
+    '''see detailed help for list of subcommands'''
+
+    # guess command if prefix
+    if subcommand not in table:
+        candidates = []
+        for c in table:
+            if c.startswith(subcommand):
+                candidates.append(c)
+        if len(candidates) == 1:
+            subcommand = candidates[0]
+        else:
+            raise error.AmbiguousCommand(subcommand, candidates)
+
+    # override subversion credentials
+    for key in ('username', 'password'):
+        if key in opts:
+            ui.setconfig('hgsubversion', key, opts[key])
+
+    try:
+        commandfunc = table[subcommand]
+        return commandfunc(ui, args=args, repo=repo, **opts)
+    except core.SubversionException, e:
+        if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
+            raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
+                     'Please try running svn ls on that url first.')
+        raise
+    except TypeError:
+        tb = traceback.extract_tb(sys.exc_info()[2])
+        if len(tb) == 1:
+            ui.status('Bad arguments for subcommand %s\n' % subcommand)
+        else:
+            raise
+    except KeyError, e:
+        tb = traceback.extract_tb(sys.exc_info()[2])
+        if len(tb) == 1:
+            ui.status('Unknown subcommand %s\n' % subcommand)
+        else:
+            raise
 
 table = {
     'genignore': genignore,
@@ -408,3 +449,4 @@ table = {
     'updateexternals': svnexternals.updateexternals,
     'verify': verify,
 }
+svn.__doc__ = _helpgen()

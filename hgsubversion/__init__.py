@@ -37,8 +37,6 @@ demandimport.ignore.extend([
     'svn.ra',
     ])
 
-from svn import core
-
 import svncommands
 import util
 import svnrepo
@@ -107,44 +105,6 @@ def uisetup(ui):
         pass
 
 
-def svn(ui, repo, subcommand, *args, **opts):
-    '''see detailed help for list of subcommands'''
-
-    # guess command if prefix
-    if subcommand not in svncommands.table:
-        candidates = []
-        for c in svncommands.table:
-            if c.startswith(subcommand):
-                candidates.append(c)
-        if len(candidates) == 1:
-            subcommand = candidates[0]
-
-    # override subversion credentials
-    for key in ('username', 'password'):
-        if key in opts:
-            ui.setconfig('hgsubversion', key, opts[key])
-
-    try:
-        commandfunc = svncommands.table[subcommand]
-        return commandfunc(ui, args=args, repo=repo, **opts)
-    except core.SubversionException, e:
-        if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
-            raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
-                     'Please try running svn ls on that url first.')
-        raise
-    except TypeError:
-        tb = traceback.extract_tb(sys.exc_info()[2])
-        if len(tb) == 1:
-            ui.status('Bad arguments for subcommand %s\n' % subcommand)
-        else:
-            raise
-    except KeyError, e:
-        tb = traceback.extract_tb(sys.exc_info()[2])
-        if len(tb) == 1:
-            ui.status('Unknown subcommand %s\n' % subcommand)
-        else:
-            raise
-svn.__doc__ = svncommands._helpgen()
 
 def reposetup(ui, repo):
     if repo.local():
@@ -166,7 +126,7 @@ commands.optionalrepo += ' svn'
 
 cmdtable = {
     "svn":
-        (svn,
+        (svncommands.svn,
          [('u', 'svn-url', '', 'path to the Subversion server.'),
           ('', 'stupid', False, 'be stupid and use diffy replay.'),
           ('A', 'authors', '', 'username mapping filename'),
