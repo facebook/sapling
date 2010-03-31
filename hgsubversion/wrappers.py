@@ -7,8 +7,6 @@ from mercurial import util as hgutil
 from mercurial import node
 from mercurial import i18n
 
-from svn import core
-
 import replay
 import pushmod
 import stupid as stupidmod
@@ -294,8 +292,8 @@ def pull(repo, source, heads=[], force=False):
                         ui.status('%s\n' % e.message)
                         stupidmod.print_your_svn_is_old_message(ui)
                         have_replay = False
-                    except core.SubversionException, e: #pragma: no cover
-                        if (e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED
+                    except svnwrap.SubversionException, e: #pragma: no cover
+                        if (e.args[1] == svnwrap.ERR_RA_DAV_REQUEST_FAILED
                             and '502' in str(e)
                             and tries < 3):
                             tries += 1

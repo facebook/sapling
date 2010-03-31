@@ -42,6 +42,20 @@ class SubversionRepoCanNotDiff(Exception):
 '''Default chunk size used in fetch_history_at_paths() and revisions().'''
 _chunk_size = 1000
 
+# exported values
+ERR_FS_CONFLICT = core.SVN_ERR_FS_CONFLICT
+ERR_FS_NOT_FOUND = core.SVN_ERR_FS_NOT_FOUND
+ERR_FS_TXN_OUT_OF_DATE = core.SVN_ERR_FS_TXN_OUT_OF_DATE
+ERR_INCOMPLETE_DATA = core.SVN_ERR_INCOMPLETE_DATA
+ERR_RA_DAV_REQUEST_FAILED = core.SVN_ERR_RA_DAV_REQUEST_FAILED
+SubversionException = core.SubversionException
+Editor = delta.Editor
+
+def apply_txdelta(base, target):
+    handler, baton = delta.svn_txdelta_apply(cStringIO.StringIO(base),
+                                             target, None)
+    return (lambda window: handler(window, baton))
+
 def optrev(revnum):
     optrev = core.svn_opt_revision_t()
     optrev.kind = core.svn_opt_revision_number

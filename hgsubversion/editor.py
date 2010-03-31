@@ -4,11 +4,9 @@ import sys
 from mercurial import util as hgutil
 from mercurial import revlog
 from mercurial import node
-from svn import delta
-from svn import core
 
+import svnwrap
 import util
-
 
 def ieditor(fn):
     """Helps identify methods used by the SVN editor interface.
@@ -113,7 +111,7 @@ class RevisionData(object):
         self.ui.note('\n')
 
 
-class HgEditor(delta.Editor):
+class HgEditor(svnwrap.Editor):
 
     def __init__(self, meta):
         self.meta = meta
@@ -339,11 +337,10 @@ class HgEditor(delta.Editor):
         if self.current.file in self.current.missing:
             return lambda x: None
         base = self.current.files[self.current.file]
-        source = cStringIO.StringIO(base)
         target = cStringIO.StringIO()
         self.stream = target
 
-        handler, baton = delta.svn_txdelta_apply(source, target, None)
+        handler = svnwrap.apply_txdelta(base, target)
         if not callable(handler): #pragma: no cover
             raise hgutil.Abort('Error in Subversion bindings: '
                                'cannot call handler!')
@@ -351,12 +348,12 @@ class HgEditor(delta.Editor):
             try:
                 if not self.meta.is_path_valid(self.current.file):
                     return
-                handler(window, baton)
+                handler(window)
                 # window being None means commit this file
                 if not window:
                     self.current.files[self.current.file] = target.getvalue()
-            except core.SubversionException, e: #pragma: no cover
-                if e.apr_err == core.SVN_ERR_INCOMPLETE_DATA:
+            except svnwrap.SubversionException, e: #pragma: no cover
+                if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
                     self.current.missing.add(self.current.file)
                 else: #pragma: no cover
                     raise hgutil.Abort(*e.args)

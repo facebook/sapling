@@ -6,7 +6,6 @@ from mercurial import patch
 from mercurial import node
 from mercurial import context
 from mercurial import revlog
-from svn import core
 
 import svnwrap
 import svnexternals
@@ -125,8 +124,8 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
                 raise BadPatchApply('branch creation with mods')
     except svnwrap.SubversionRepoCanNotDiff:
         raise BadPatchApply('subversion diffing code is not supported')
-    except core.SubversionException, e:
-        if (hasattr(e, 'apr_err') and e.apr_err != core.SVN_ERR_FS_NOT_FOUND):
+    except svnwrap.SubversionException, e:
+        if len(e.args) > 1 and e.args[1] != svnwrap.ERR_FS_NOT_FOUND:
             raise
         raise BadPatchApply('previous revision does not exist')
     if '\0' in d:

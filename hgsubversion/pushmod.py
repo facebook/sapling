@@ -1,7 +1,5 @@
 from mercurial import util as hgutil
 
-from svn import core
-
 import svnwrap
 import svnexternals
 
@@ -18,7 +16,7 @@ def _isdir(svn, branchpath, svndir):
             path = branchpath + '/'
         svn.list_dir('%s%s' % (path, svndir))
         return True
-    except core.SubversionException:
+    except svnwrap.SubversionException:
         return False
 
 
@@ -201,9 +199,9 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
         svn.commit(new_target_files, rev_ctx.description(), file_data,
                    base_revision, set(addeddirs), set(deleteddirs),
                    props, newcopies)
-    except core.SubversionException, e:
-        if hasattr(e, 'apr_err') and (e.apr_err == core.SVN_ERR_FS_TXN_OUT_OF_DATE
-                                      or e.apr_err == core.SVN_ERR_FS_CONFLICT):
+    except svnwrap.SubversionException, e:
+        if len(e.args) > 0 and e.args[1] in (svnwrap.ERR_FS_TXN_OUT_OF_DATE,
+                                             svnwrap.ERR_FS_CONFLICT):
             raise hgutil.Abort('Outgoing changesets parent is not at '
                                'subversion HEAD\n'
                                '(pull again and rebase on a newer revision)')
