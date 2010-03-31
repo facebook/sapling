@@ -53,6 +53,7 @@ testpats = [
     (r'\$PWD', "don't use $PWD, use `pwd`"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'export.*=', "don't export and assign at once"),
+    ('^([^"\']|("[^"]*")|(\'[^\']*\'))*\\^', "^ must be quoted"),
 ]
 
 testfilters = [
