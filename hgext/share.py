@@ -9,7 +9,7 @@ from mercurial.i18n import _
 from mercurial import hg, commands
 
 def share(ui, source, dest=None, noupdate=False):
-    """create a new shared repository (experimental)
+    """create a new shared repository
 
     Initialize a new repository and working directory that shares its
     history with another repository.
