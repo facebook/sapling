@@ -2669,9 +2669,10 @@ def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'init', mqinit)
     entry[1].extend(mqopt)
 
+    norepo = commands.norepo.split(" ")
     for cmd in commands.table.keys():
         cmd = cmdutil.parsealiases(cmd)[0]
-        if cmd in commands.norepo:
+        if cmd in norepo:
             continue
         entry = extensions.wrapcommand(commands.table, cmd, mqcommand)
         entry[1].extend(mqopt)
