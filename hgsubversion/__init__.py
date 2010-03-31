@@ -144,6 +144,7 @@ def svn(ui, repo, subcommand, *args, **opts):
             ui.status('Unknown subcommand %s\n' % subcommand)
         else:
             raise
+svn.__doc__ = svncommands._helpgen()
 
 def reposetup(ui, repo):
     if repo.local():
@@ -176,7 +177,7 @@ cmdtable = {
           ('', 'password', '', 'password for authentication'),
           ('r', 'rev', '', 'Mercurial revision'),
           ],
-         svncommands._helpgen(),
+         'hg svn <subcommand> ...',
          ),
 }
 

@@ -2,6 +2,7 @@ import os
 import posixpath
 import cPickle as pickle
 
+from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
@@ -248,7 +249,7 @@ def help_(ui, args=None, **opts):
             doc = "No documentation available for %s." % subcommand
         ui.status(doc.strip(), '\n')
         return
-    ui.status(_helpgen())
+    commands.help_(ui, 'svn')
 
 
 def update(ui, args, repo, clean=False, **opts):
@@ -386,15 +387,14 @@ def listauthors(ui, args, authors=None, **opts):
 
 
 def _helpgen():
-    ret = ['hg svn ...', '',
-           'subcommands for Subversion integration', '',
+    ret = ['subcommands for Subversion integration', '',
            'list of subcommands:', '']
     for name, func in sorted(table.items()):
         if func.__doc__:
             short_description = func.__doc__.splitlines()[0]
         else:
             short_description = ''
-        ret.append(" %-10s  %s" % (name, short_description))
+        ret.append(" :%s: %s" % (name, short_description))
     return '\n'.join(ret) + '\n'
 
 
