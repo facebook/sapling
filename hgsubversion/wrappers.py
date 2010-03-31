@@ -8,7 +8,6 @@ from mercurial import node
 from mercurial import i18n
 
 from svn import core
-from svn import delta
 
 import replay
 import pushmod
@@ -222,15 +221,7 @@ def pull(repo, source, heads=[], force=False):
                            'only numbers work.' % checkout)
 
     have_replay = not repo.ui.configbool('hgsubversion', 'stupid')
-    if have_replay and not callable(
-        delta.svn_txdelta_apply(None, None, None)[0]): #pragma: no cover
-        repo.ui.status('You are using old Subversion SWIG bindings. Replay '
-                       'will not work until you upgrade to 1.5.0 or newer. '
-                       'Falling back to a slower method that may be buggier. '
-                       'Please upgrade, or contribute a patch to use the '
-                       'ctypes bindings instead of SWIG.\n')
-        have_replay = False
-    elif not have_replay:
+    if not have_replay:
         repo.ui.note('fetching stupidly...\n')
 
     # TODO: do credentials specified in the URL still work?
