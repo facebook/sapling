@@ -227,7 +227,7 @@ def rebuildmeta(ui, repo, args, **opts):
     branchinfofile.close()
 
 
-def help(ui, args=None, **opts):
+def help_(ui, args=None, **opts):
     """show help for a given subcommands or a help overview
     """
     if args:
@@ -403,7 +403,7 @@ table = {
     'info': info,
     'listauthors': listauthors,
     'update': update,
-    'help': help,
+    'help': help_,
     'rebuildmeta': rebuildmeta,
     'updateexternals': svnexternals.updateexternals,
     'verify': verify,
