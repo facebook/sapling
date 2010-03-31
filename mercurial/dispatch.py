@@ -194,6 +194,7 @@ class cmdalias(object):
 
         args = shlex.split(self.definition)
         cmd = args.pop(0)
+        args = map(util.expandpath, args)
 
         try:
             tableentry = cmdutil.findcmd(cmd, cmdtable, False)[1]
