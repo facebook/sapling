@@ -3462,6 +3462,7 @@ logopts = [
     ('g', 'git', None, _('use git extended diff format')),
     ('l', 'limit', '', _('limit number of changes displayed')),
     ('M', 'no-merges', None, _('do not show merges')),
+    ('', 'stat', None, _('output diffstat-style summary of changes')),
 ] + templateopts
 
 diffopts = [

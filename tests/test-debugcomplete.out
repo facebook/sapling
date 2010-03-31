@@ -171,7 +171,7 @@ diff: rev, change, text, git, nodates, show-function, reverse, ignore-all-space,
 export: output, switch-parent, rev, text, git, nodates
 forget: include, exclude
 init: ssh, remotecmd
-log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, patch, git, limit, no-merges, style, template, include, exclude
+log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, patch, git, limit, no-merges, stat, style, template, include, exclude
 merge: force, rev, preview
 pull: update, force, rev, branch, ssh, remotecmd
 push: force, rev, branch, ssh, remotecmd
@@ -210,10 +210,10 @@ heads: rev, topo, active, closed, style, template
 help: 
 identify: rev, num, id, branch, tags
 import: strip, base, force, no-commit, exact, import-branch, message, logfile, date, user, similarity
-incoming: force, newest-first, bundle, rev, branch, patch, git, limit, no-merges, style, template, ssh, remotecmd
+incoming: force, newest-first, bundle, rev, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd
 locate: rev, print0, fullpath, include, exclude
 manifest: rev
-outgoing: force, rev, newest-first, branch, patch, git, limit, no-merges, style, template, ssh, remotecmd
+outgoing: force, rev, newest-first, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd
 parents: rev, style, template
 paths: 
 recover: 

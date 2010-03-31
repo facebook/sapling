@@ -306,6 +306,16 @@ summary:     m12
 [0;35m@@ -0,0 +1,1 @@[0m
 [0;32m+b2[0m
 
+% log -r tip --stat
+changeset:   6:2404bbcab562
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     b1.1
+
+ b1 |  1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
 adding a
 adding b
 changeset:   0:29a4c94f1924

@@ -803,11 +803,11 @@ class changeset_printer(object):
 
     def showpatch(self, node):
         if self.patch:
+            stat = self.diffopts.get('stat')
+            diffopts = patch.diffopts(self.ui, self.diffopts)
             prev = self.repo.changelog.parents(node)[0]
-            chunks = patch.diffui(self.repo, prev, node, match=self.patch,
-                                  opts=patch.diffopts(self.ui, self.diffopts))
-            for chunk, label in chunks:
-                self.ui.write(chunk, label=label)
+            diffordiffstat(self.ui, self.repo, diffopts, prev, node,
+                           match=self.patch, stat=stat)
             self.ui.write("\n")
 
     def _meaningful_parentrevs(self, log, rev):
@@ -939,7 +939,7 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
     """
     # options
     patch = False
-    if opts.get('patch'):
+    if opts.get('patch') or opts.get('stat'):
         patch = matchfn or matchall(repo)
 
     tmpl = opts.get('template')
