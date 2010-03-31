@@ -52,7 +52,7 @@ class SVNMeta(object):
         authors = self.ui.config('hgsubversion', 'authormap')
         tag_locations = self.ui.configlist('hgsubversion', 'tagpaths', ['tags'])
         self.usebranchnames = self.ui.configbool('hgsubversion',
-                                                  'usebranchnames', True)
+                                                 'usebranchnames', True)
 
         # FIXME: test that this hasn't changed! defer & compare?
         self.subdir = subdir
