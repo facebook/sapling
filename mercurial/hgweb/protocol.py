@@ -179,6 +179,8 @@ def unbundle(repo, req):
             raise ErrorResponse(HTTP_OK, inst)
         except (OSError, IOError), inst:
             error = getattr(inst, 'strerror', 'Unknown error')
+            if not isinstance(error, str):
+                error = 'Error: %s' % str(error)
             if inst.errno == errno.ENOENT:
                 code = HTTP_NOT_FOUND
             else:
