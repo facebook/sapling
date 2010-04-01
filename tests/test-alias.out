@@ -30,3 +30,16 @@ user:
 date:        Thu Jan 01 00:00:00 1970 +0000
 extra:       branch=default
 
+% path expanding
+# HG changeset patch
+# User test
+# Date 0 0
+# Node ID e63c23eaa88ae77967edcf4ea194d31167c478b0
+# Parent  0000000000000000000000000000000000000000
+foo
+
+diff -r 000000000000 -r e63c23eaa88a foo
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++foo

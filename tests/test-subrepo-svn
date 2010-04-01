@@ -14,6 +14,7 @@ expr "$escapedwd" : "\/" > /dev/null
 if [ $? -ne 0 ]; then
     escapedwd="/$escapedwd"
 fi
+escapedwd=`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$escapedwd"`
 filterpath="s|$escapedwd|/root|"
 filtersvn='s/ in transaction.*/ is out of date/;s/Out of date: /File /'
 
@@ -33,7 +34,7 @@ svn add externals
 svn ci -m 'Add alpha'
 svn up
 cat > extdef <<EOF
-externals -r1 "$SVNREPO/externals"
+externals -r1 $SVNREPO/externals
 EOF
 svn propset -F extdef svn:externals src
 svn ci -m 'Setting externals'

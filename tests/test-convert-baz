@@ -30,7 +30,7 @@ cd src
 dd count=1 if=/dev/zero of=b > /dev/null 2> /dev/null
 baz add b
 # HACK: hide GNU tar-1.22 "tar: The --preserve option is deprecated, use --preserve-permissions --preserve-order instead"
-baz commit -s "added a file, src and src/b (binary)" 2>&1 | grep -v ^tar
+baz commit -s "added a file, src and src/b (binary)" 2>&1 | grep -v '^tar'
 
 echo % create link file and modify a
 ln -s ../a a-link
