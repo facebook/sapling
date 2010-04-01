@@ -1986,9 +1986,8 @@ def new(ui, repo, patch, *args, **opts):
     """create a new patch
 
     qnew creates a new patch on top of the currently-applied patch (if
-    any). It will refuse to run if there are any outstanding changes
-    unless -f/--force is specified, in which case the patch will be
-    initialized with them. You may also use -I/--include,
+    any). The patch will be initialized with any outstanding changes
+    in the working directory. You may also use -I/--include,
     -X/--exclude, and/or a list of files after the patch name to add
     only changes to matching files to the new patch, leaving the rest
     as uncommitted modifications.
