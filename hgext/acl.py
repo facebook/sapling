@@ -63,7 +63,7 @@ def buildmatch(ui, repo, user, key):
         return None
 
     pats = [pat for pat, users in ui.configitems(key)
-            if user in users.replace(',', ' ').split()]
+            if users == '*' or user in users.replace(',', ' ').split()]
     ui.debug('acl: %s enabled, %d entries for user %s\n' %
              (key, len(pats), user))
     if pats:

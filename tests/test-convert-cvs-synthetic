@@ -110,7 +110,7 @@ hg -R proj.hg glog --template "{rev} {desc}\n"
 
 echo "% convert to hg (#2: with merge detection)"
 filterpath hg convert \
-  --config convert.cvsps.mergefrom="\"^MERGE from (\S+):\"" \
+  --config convert.cvsps.mergefrom='"^MERGE from (\S+):"' \
   --datesort \
   proj proj.hg2
 
