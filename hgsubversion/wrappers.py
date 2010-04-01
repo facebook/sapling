@@ -222,8 +222,7 @@ def pull(repo, source, heads=[], force=False):
     if not have_replay:
         repo.ui.note('fetching stupidly...\n')
 
-    # TODO: do credentials specified in the URL still work?
-    svn = svnrepo.svnremoterepo(repo.ui, svn_url).svn
+    svn = source.svn
     meta = repo.svnmeta(svn.uuid, svn.subdir)
 
     layout = repo.ui.config('hgsubversion', 'layout', 'auto')
