@@ -153,8 +153,10 @@ def churn(ui, repo, *pats, **opts):
         def format(name, (added, removed)):
             return "%s %15s %s%s\n" % (pad(name, maxname),
                                        '+%d/-%d' % (added, removed),
-                                       '+' * charnum(added),
-                                       '-' * charnum(removed))
+                                       ui.label('+' * charnum(added),
+                                                'diffstat.inserted'),
+                                       ui.label('-' * charnum(removed),
+                                                'diffstat.deleted'))
     else:
         width -= 6
         def format(name, count):
