@@ -165,10 +165,10 @@ class progbar(object):
                 self.show(topic, pos, item, unit, total)
         return orig(topic, pos, item=item, unit=unit, total=total)
 
-    def write(self, orig, *args):
+    def write(self, orig, *args, **opts):
         if self.printed:
             self.clear()
-        return orig(*args)
+        return orig(*args, **opts)
 
 sharedprog = None
 
