@@ -2134,7 +2134,17 @@ def guard(ui, repo, *args, **opts):
     '''
     def status(idx):
         guards = q.series_guards[idx] or ['unguarded']
-        ui.write('%s: %s\n' % (q.series[idx], ' '.join(guards)))
+        ui.write('%s: ' % ui.label(q.series[idx], 'qguard.patch'))
+        for i, guard in enumerate(guards):
+            if guard.startswith('+'):
+                ui.write(guard, label='qguard.positive')
+            elif guard.startswith('-'):
+                ui.write(guard, label='qguard.negative')
+            else:
+                ui.write(guard, label='qguard.unguarded')
+            if i != len(guards) - 1:
+                ui.write(' ')
+        ui.write('\n')
     q = repo.mq
     patch = None
     args = list(args)
