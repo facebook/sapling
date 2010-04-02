@@ -363,7 +363,7 @@ class GitHandler(object):
                 if sha in self.git.object_store:
                     obj = self.git.get_object(sha)
                     while isinstance(obj, Tag):
-                        obj_type, sha = obj.get_object()
+                        obj_type, sha = obj._get_object()
                         obj = self.git.get_object(sha)
                     if isinstance (obj, Commit) and sha not in seenheads:
                         seenheads.add(sha)
@@ -666,7 +666,7 @@ class GitHandler(object):
                         sha = self.map_hg_get(refs[k])
                         self.tags[ref_name] = sha
                     elif isinstance (obj, Tag): # annotated
-                        (obj_type, obj_sha) = obj.get_object()
+                        (obj_type, obj_sha) = obj._get_object()
                         obj = self.git.get_object(obj_sha)
                         if isinstance (obj, Commit):
                             sha = self.map_hg_get(obj_sha)
