@@ -261,7 +261,7 @@ class GitHandler(object):
             author = author + ' <none@none>'
 
         if 'author' in ctx.extra():
-            author = apply_delta(author, ctx.extra()['author'])
+            author = "".join(apply_delta(author, ctx.extra()['author']))
 
         return author
 
@@ -289,7 +289,7 @@ class GitHandler(object):
 
         message = ctx.description() + "\n"
         if 'message' in extra:
-            message = apply_delta(message, extra['message'])
+            message = "".join(apply_delta(message, extra['message']))
 
         # HG EXTRA INFORMATION
         add_extras = False
