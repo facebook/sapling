@@ -735,7 +735,7 @@ class changeset_printer(object):
         if self.buffered:
             self.ui.pushbuffer()
             self._show(ctx, copies, props)
-            self.hunk[ctx.rev()] = self.ui.popbuffer()
+            self.hunk[ctx.rev()] = self.ui.popbuffer(labeled=True)
         else:
             self._show(ctx, copies, props)
 
@@ -745,7 +745,8 @@ class changeset_printer(object):
         rev = ctx.rev()
 
         if self.ui.quiet:
-            self.ui.write("%d:%s\n" % (rev, short(changenode)))
+            self.ui.write("%d:%s\n" % (rev, short(changenode)),
+                          label='log.node')
             return
 
         log = self.repo.changelog
@@ -756,52 +757,66 @@ class changeset_printer(object):
         parents = [(p, hexfunc(log.node(p)))
                    for p in self._meaningful_parentrevs(log, rev)]
 
-        self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)))
+        self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)),
+                      label='log.changeset')
 
         branch = ctx.branch()
         # don't show the default branch name
         if branch != 'default':
             branch = encoding.tolocal(branch)
-            self.ui.write(_("branch:      %s\n") % branch)
+            self.ui.write(_("branch:      %s\n") % branch,
+                          label='log.branch')
         for tag in self.repo.nodetags(changenode):
-            self.ui.write(_("tag:         %s\n") % tag)
+            self.ui.write(_("tag:         %s\n") % tag,
+                          label='log.tag')
         for parent in parents:
-            self.ui.write(_("parent:      %d:%s\n") % parent)
+            self.ui.write(_("parent:      %d:%s\n") % parent,
+                          label='log.parent')
 
         if self.ui.debugflag:
             mnode = ctx.manifestnode()
             self.ui.write(_("manifest:    %d:%s\n") %
-                          (self.repo.manifest.rev(mnode), hex(mnode)))
-        self.ui.write(_("user:        %s\n") % ctx.user())
-        self.ui.write(_("date:        %s\n") % date)
+                          (self.repo.manifest.rev(mnode), hex(mnode)),
+                          label='ui.debug log.manifest')
+        self.ui.write(_("user:        %s\n") % ctx.user(),
+                      label='log.user')
+        self.ui.write(_("date:        %s\n") % date,
+                      label='log.date')
 
         if self.ui.debugflag:
             files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
             for key, value in zip([_("files:"), _("files+:"), _("files-:")],
                                   files):
                 if value:
-                    self.ui.write("%-12s %s\n" % (key, " ".join(value)))
+                    self.ui.write("%-12s %s\n" % (key, " ".join(value)),
+                                  label='ui.debug log.files')
         elif ctx.files() and self.ui.verbose:
-            self.ui.write(_("files:       %s\n") % " ".join(ctx.files()))
+            self.ui.write(_("files:       %s\n") % " ".join(ctx.files()),
+                          label='ui.note log.files')
         if copies and self.ui.verbose:
             copies = ['%s (%s)' % c for c in copies]
-            self.ui.write(_("copies:      %s\n") % ' '.join(copies))
+            self.ui.write(_("copies:      %s\n") % ' '.join(copies),
+                          label='ui.note log.copies')
 
         extra = ctx.extra()
         if extra and self.ui.debugflag:
             for key, value in sorted(extra.items()):
                 self.ui.write(_("extra:       %s=%s\n")
-                              % (key, value.encode('string_escape')))
+                              % (key, value.encode('string_escape')),
+                              label='ui.debug log.extra')
 
         description = ctx.description().strip()
         if description:
             if self.ui.verbose:
-                self.ui.write(_("description:\n"))
-                self.ui.write(description)
+                self.ui.write(_("description:\n"),
+                              label='ui.note log.description')
+                self.ui.write(description,
+                              label='ui.note log.description')
                 self.ui.write("\n\n")
             else:
                 self.ui.write(_("summary:     %s\n") %
-                              description.splitlines()[0])
+                              description.splitlines()[0],
+                              label='log.summary')
         self.ui.write("\n")
 
         self.showpatch(changenode)
@@ -809,10 +824,10 @@ class changeset_printer(object):
     def showpatch(self, node):
         if self.patch:
             prev = self.repo.changelog.parents(node)[0]
-            chunks = patch.diff(self.repo, prev, node, match=self.patch,
-                                opts=patch.diffopts(self.ui, self.diffopts))
-            for chunk in chunks:
-                self.ui.write(chunk)
+            chunks = patch.diffui(self.repo, prev, node, match=self.patch,
+                                  opts=patch.diffopts(self.ui, self.diffopts))
+            for chunk, label in chunks:
+                self.ui.write(chunk, label=label)
             self.ui.write("\n")
 
     def _meaningful_parentrevs(self, log, rev):
