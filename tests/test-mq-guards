@@ -99,6 +99,8 @@ hg qguard -- a.patch +1 +2 -3
 hg qselect 1 2 3
 echo % list patches and guards
 hg qguard -l
+echo % list patches and guards with color
+hg --config extensions.color= qguard -l --color=always
 echo % list series
 hg qseries -v
 echo % list guards
@@ -125,6 +127,8 @@ hg qpop
 echo % should show new.patch and b.patch as Guarded, c.patch as Applied
 echo % and d.patch as Unapplied
 hg qseries -v
+echo % qseries again, but with color
+hg --config extensions.color= qseries -v --color=always
 
 hg qguard d.patch +2
 echo % new.patch, b.patch: Guarded. c.patch: Applied. d.patch: Guarded.
@@ -159,3 +163,5 @@ echo % hg qseries -m: only b.patch should be shown
 echo the guards file was not ignored in the past
 hg qdelete -k b.patch
 hg qseries -m
+echo % hg qseries -m with color
+hg --config extensions.color= qseries -m --color=always

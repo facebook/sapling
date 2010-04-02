@@ -14,7 +14,7 @@ f  hell
 o  hell
 o
 % test issue2039
-[0;35;1;4m? foo[0m
-bar
-[0;35;1;4m? foo[0m
-bar.baz
+[0;35;1;4m? foo
+bar[0m
+[0;35;1;4m? foo
+bar.baz[0m

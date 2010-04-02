@@ -4,6 +4,10 @@ grep: invalid match pattern: nothing to repeat
 port:4:export
 port:4:vaportight
 port:4:import/export
+% simple with color
+port:4:ex[0;31;1mport[0m
+port:4:va[0;31;1mport[0might
+port:4:im[0;31;1mport[0m/export
 % all
 port:4:4:-:spam:import/export
 port:3:4:+:eggs:import/export

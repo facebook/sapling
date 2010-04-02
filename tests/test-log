@@ -118,6 +118,9 @@ hg log -k r1
 echo '% log -d -1'
 hg log -d -1
 
+echo '% log -p -l2 --color=always'
+hg --config extensions.color= log -p -l2 --color=always
+
 cd ..
 
 hg init usertest

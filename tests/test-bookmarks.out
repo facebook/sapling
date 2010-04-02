@@ -3,6 +3,8 @@ no bookmarks set
 % bookmark rev -1
 % list bookmarks
  * X                         -1:000000000000
+% list bookmarks with color
+[0;32m * X                         -1:000000000000[0m
 % bookmark X moved to rev 0
  * X                         0:f7b1eb17ad24
 % look up bookmark

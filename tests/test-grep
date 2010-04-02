@@ -21,6 +21,8 @@ echo % pattern error
 hg grep '**test**'
 echo % simple
 hg grep port port
+echo % simple with color
+hg --config extensions.color= grep --color=always port port
 echo % all
 hg grep --traceback --all -nu port port
 echo % other

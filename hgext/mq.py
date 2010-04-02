@@ -2810,3 +2810,11 @@ cmdtable = {
          [('a', 'applied', None, _('finish all applied changesets'))],
          _('hg qfinish [-a] [REV]...')),
 }
+
+colortable = {'qguard.negative': 'red',
+              'qguard.positive': 'yellow',
+              'qguard.unguarded': 'green',
+              'qseries.applied': 'blue bold underline',
+              'qseries.guarded': 'black bold',
+              'qseries.missing': 'red bold',
+              'qseries.unapplied': 'black bold'}

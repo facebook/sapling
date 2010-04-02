@@ -84,6 +84,10 @@ number of unguarded, unapplied patches has changed from 3 to 2
 a.patch: +1 +2 -3
 b.patch: +2
 c.patch: unguarded
+% list patches and guards with color
+a.patch: [0;33m+1[0m [0;33m+2[0m [0;31m-3[0m
+b.patch: [0;33m+2[0m
+c.patch: [0;32munguarded[0m
 % list series
 0 G a.patch
 1 U b.patch
@@ -126,6 +130,11 @@ now at: c.patch
 1 G b.patch
 2 A c.patch
 3 U d.patch
+% qseries again, but with color
+[0;30;1m0 G new.patch[0m
+[0;30;1m1 G b.patch[0m
+[0;34;1;4m2 A c.patch[0m
+[0;30;1m3 U d.patch[0m
 % new.patch, b.patch: Guarded. c.patch: Applied. d.patch: Guarded.
 0 G new.patch
 1 G b.patch
@@ -206,3 +215,5 @@ c.patch
 % hg qseries -m: only b.patch should be shown
 the guards file was not ignored in the past
 b.patch
+% hg qseries -m with color
+[0;31;1mb.patch[0m

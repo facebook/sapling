@@ -65,310 +65,118 @@ Default effects may be overridden from the .hgrc file::
 
 import os, sys
 
-from mercurial import cmdutil, commands, extensions
+from mercurial import commands, dispatch, extensions
 from mercurial.i18n import _
+from mercurial.ui import ui as uicls
 
 # start and stop parameters for effects
-_effect_params = {'none': 0,
-                  'black': 30,
-                  'red': 31,
-                  'green': 32,
-                  'yellow': 33,
-                  'blue': 34,
-                  'magenta': 35,
-                  'cyan': 36,
-                  'white': 37,
-                  'bold': 1,
-                  'italic': 3,
-                  'underline': 4,
-                  'inverse': 7,
-                  'black_background': 40,
-                  'red_background': 41,
-                  'green_background': 42,
-                  'yellow_background': 43,
-                  'blue_background': 44,
-                  'purple_background': 45,
-                  'cyan_background': 46,
-                  'white_background': 47}
+_effects = {'none': 0, 'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
+            'blue': 34, 'magenta': 35, 'cyan': 36, 'white': 37, 'bold': 1,
+            'italic': 3, 'underline': 4, 'inverse': 7,
+            'black_background': 40, 'red_background': 41,
+            'green_background': 42, 'yellow_background': 43,
+            'blue_background': 44, 'purple_background': 45,
+            'cyan_background': 46, 'white_background': 47}
+
+_styles = {'grep.match': 'red bold',
+           'diff.changed': 'white',
+           'diff.deleted': 'red',
+           'diff.diffline': 'bold',
+           'diff.extended': 'cyan bold',
+           'diff.file_a': 'red bold',
+           'diff.file_b': 'green bold',
+           'diff.hunk': 'magenta',
+           'diff.inserted': 'green',
+           'diff.trailingwhitespace': 'bold red_background',
+           'diffstat.deleted': 'red',
+           'diffstat.inserted': 'green',
+           'log.changeset': 'yellow',
+           'resolve.resolved': 'green bold',
+           'resolve.unresolved': 'red bold',
+           'status.added': 'green bold',
+           'status.clean': 'none',
+           'status.copied': 'none',
+           'status.deleted': 'cyan bold underline',
+           'status.ignored': 'black bold',
+           'status.modified': 'blue bold',
+           'status.removed': 'red bold',
+           'status.unknown': 'magenta bold underline'}
+
 
 def render_effects(text, effects):
     'Wrap text in commands to turn on each effect.'
-    start = [str(_effect_params[e]) for e in ['none'] + effects]
+    if not text:
+        return text
+    start = [str(_effects[e]) for e in ['none'] + effects.split()]
     start = '\033[' + ';'.join(start) + 'm'
-    stop = '\033[' + str(_effect_params['none']) + 'm'
-    return ''.join([start, text, stop])
-
-def _colorstatuslike(abbreviations, effectdefs, orig, ui, repo, *pats, **opts):
-    '''run a status-like command with colorized output'''
-    delimiter = opts.get('print0') and '\0' or '\n'
-
-    nostatus = opts.get('no_status')
-    opts['no_status'] = False
-    # run original command and capture its output
-    ui.pushbuffer()
-    retval = orig(ui, repo, *pats, **opts)
-    # filter out empty strings
-    lines_with_status = [line for line in ui.popbuffer().split(delimiter) if line]
-
-    if nostatus:
-        lines = [l[2:] for l in lines_with_status]
+    stop = '\033[' + str(_effects['none']) + 'm'
+    if text[-1] == '\n':
+        return ''.join([start, text[:-1], stop, '\n'])
     else:
-        lines = lines_with_status
+        return ''.join([start, text, stop])
 
-    # apply color to output and display it
-    for i in xrange(len(lines)):
-        try:
-            status = abbreviations[lines_with_status[i][0]]
-        except KeyError:
-            # Ignore lines with invalid codes, especially in the case of
-            # of unknown filenames containing newlines (issue2036).
-            pass
-        else:
-            effects = effectdefs[status]
-            if effects:
-                lines[i] = render_effects(lines[i], effects)
-        ui.write(lines[i] + delimiter)
-    return retval
+def extstyles():
+    for name, ext in extensions.extensions():
+        _styles.update(getattr(ext, 'colortable', {}))
 
-
-_status_abbreviations = { 'M': 'modified',
-                          'A': 'added',
-                          'R': 'removed',
-                          '!': 'deleted',
-                          '?': 'unknown',
-                          'I': 'ignored',
-                          'C': 'clean',
-                          ' ': 'copied', }
-
-_status_effects = { 'modified': ['blue', 'bold'],
-                    'added': ['green', 'bold'],
-                    'removed': ['red', 'bold'],
-                    'deleted': ['cyan', 'bold', 'underline'],
-                    'unknown': ['magenta', 'bold', 'underline'],
-                    'ignored': ['black', 'bold'],
-                    'clean': ['none'],
-                    'copied': ['none'], }
-
-def colorstatus(orig, ui, repo, *pats, **opts):
-    '''run the status command with colored output'''
-    return _colorstatuslike(_status_abbreviations, _status_effects,
-                            orig, ui, repo, *pats, **opts)
-
-
-_resolve_abbreviations = { 'U': 'unresolved',
-                           'R': 'resolved', }
-
-_resolve_effects = { 'unresolved': ['red', 'bold'],
-                     'resolved': ['green', 'bold'], }
-
-def colorresolve(orig, ui, repo, *pats, **opts):
-    '''run the resolve command with colored output'''
-    if not opts.get('list'):
-        # only colorize for resolve -l
-        return orig(ui, repo, *pats, **opts)
-    return _colorstatuslike(_resolve_abbreviations, _resolve_effects,
-                            orig, ui, repo, *pats, **opts)
-
-
-_bookmark_effects = { 'current': ['green'] }
-
-def colorbookmarks(orig, ui, repo, *pats, **opts):
-    def colorize(orig, s):
-        lines = s.split('\n')
-        for i, line in enumerate(lines):
-            if line.startswith(" *"):
-                lines[i] = render_effects(line, _bookmark_effects['current'])
-        orig('\n'.join(lines))
-    oldwrite = extensions.wrapfunction(ui, 'write', colorize)
-    try:
-        orig(ui, repo, *pats, **opts)
-    finally:
-        ui.write = oldwrite
-
-def colorqseries(orig, ui, repo, *dummy, **opts):
-    '''run the qseries command with colored output'''
-    ui.pushbuffer()
-    retval = orig(ui, repo, **opts)
-    patchlines = ui.popbuffer().splitlines()
-    patchnames = repo.mq.series
-
-    for patch, patchname in zip(patchlines, patchnames):
-        if opts['missing']:
-            effects = _patch_effects['missing']
-        # Determine if patch is applied.
-        elif [applied for applied in repo.mq.applied
-               if patchname == applied.name]:
-            effects = _patch_effects['applied']
-        else:
-            effects = _patch_effects['unapplied']
-
-        patch = patch.replace(patchname, render_effects(patchname, effects), 1)
-        ui.write(patch + '\n')
-    return retval
-
-_patch_effects = { 'applied': ['blue', 'bold', 'underline'],
-                    'missing': ['red', 'bold'],
-                    'unapplied': ['black', 'bold'], }
-def colorwrap(orig, *args):
-    '''wrap ui.write for colored diff output'''
-    def _colorize(s):
-        lines = s.split('\n')
-        for i, line in enumerate(lines):
-            stripline = line
-            if line and line[0] in '+-':
-                # highlight trailing whitespace, but only in changed lines
-                stripline = line.rstrip()
-            for prefix, style in _diff_prefixes:
-                if stripline.startswith(prefix):
-                    lines[i] = render_effects(stripline, _diff_effects[style])
-                    break
-            if line != stripline:
-                lines[i] += render_effects(
-                    line[len(stripline):], _diff_effects['trailingwhitespace'])
-        return '\n'.join(lines)
-    orig(*[_colorize(s) for s in args])
-
-def colorshowpatch(orig, self, node):
-    '''wrap cmdutil.changeset_printer.showpatch with colored output'''
-    oldwrite = extensions.wrapfunction(self.ui, 'write', colorwrap)
-    try:
-        orig(self, node)
-    finally:
-        self.ui.write = oldwrite
-
-def colordiffstat(orig, s):
-    lines = s.split('\n')
-    for i, line in enumerate(lines):
-        if line and line[-1] in '+-':
-            name, graph = line.rsplit(' ', 1)
-            graph = graph.replace('-',
-                        render_effects('-', _diff_effects['deleted']))
-            graph = graph.replace('+',
-                        render_effects('+', _diff_effects['inserted']))
-            lines[i] = ' '.join([name, graph])
-    orig('\n'.join(lines))
-
-def colordiff(orig, ui, repo, *pats, **opts):
-    '''run the diff command with colored output'''
-    if opts.get('stat'):
-        wrapper = colordiffstat
-    else:
-        wrapper = colorwrap
-    oldwrite = extensions.wrapfunction(ui, 'write', wrapper)
-    try:
-        orig(ui, repo, *pats, **opts)
-    finally:
-        ui.write = oldwrite
-
-def colorchurn(orig, ui, repo, *pats, **opts):
-    '''run the churn command with colored output'''
-    if not opts.get('diffstat'):
-        return orig(ui, repo, *pats, **opts)
-    oldwrite = extensions.wrapfunction(ui, 'write', colordiffstat)
-    try:
-        orig(ui, repo, *pats, **opts)
-    finally:
-        ui.write = oldwrite
-
-_diff_prefixes = [('diff', 'diffline'),
-                  ('copy', 'extended'),
-                  ('rename', 'extended'),
-                  ('old', 'extended'),
-                  ('new', 'extended'),
-                  ('deleted', 'extended'),
-                  ('---', 'file_a'),
-                  ('+++', 'file_b'),
-                  ('@', 'hunk'),
-                  ('-', 'deleted'),
-                  ('+', 'inserted')]
-
-_diff_effects = {'diffline': ['bold'],
-                 'extended': ['cyan', 'bold'],
-                 'file_a': ['red', 'bold'],
-                 'file_b': ['green', 'bold'],
-                 'hunk': ['magenta'],
-                 'deleted': ['red'],
-                 'inserted': ['green'],
-                 'changed': ['white'],
-                 'trailingwhitespace': ['bold', 'red_background']}
-
-def extsetup(ui):
-    '''Initialize the extension.'''
-    _setupcmd(ui, 'diff', commands.table, colordiff, _diff_effects)
-    _setupcmd(ui, 'incoming', commands.table, None, _diff_effects)
-    _setupcmd(ui, 'log', commands.table, None, _diff_effects)
-    _setupcmd(ui, 'outgoing', commands.table, None, _diff_effects)
-    _setupcmd(ui, 'tip', commands.table, None, _diff_effects)
-    _setupcmd(ui, 'status', commands.table, colorstatus, _status_effects)
-    _setupcmd(ui, 'resolve', commands.table, colorresolve, _resolve_effects)
-
-    try:
-        mq = extensions.find('mq')
-        _setupcmd(ui, 'qdiff', mq.cmdtable, colordiff, _diff_effects)
-        _setupcmd(ui, 'qseries', mq.cmdtable, colorqseries, _patch_effects)
-    except KeyError:
-        mq = None
-
-    try:
-        rec = extensions.find('record')
-        _setupcmd(ui, 'record', rec.cmdtable, colordiff, _diff_effects)
-    except KeyError:
-        rec = None
-
-    if mq and rec:
-        _setupcmd(ui, 'qrecord', rec.cmdtable, colordiff, _diff_effects)
-    try:
-        churn = extensions.find('churn')
-        _setupcmd(ui, 'churn', churn.cmdtable, colorchurn, _diff_effects)
-    except KeyError:
-        churn = None
-
-    try:
-        bookmarks = extensions.find('bookmarks')
-        _setupcmd(ui, 'bookmarks', bookmarks.cmdtable, colorbookmarks,
-                  _bookmark_effects)
-    except KeyError:
-        # The bookmarks extension is not enabled
-        pass
-
-def _setupcmd(ui, cmd, table, func, effectsmap):
-    '''patch in command to command table and load effect map'''
-    def nocolor(orig, *args, **opts):
-
-        if (opts['no_color'] or opts['color'] == 'never' or
-            (opts['color'] == 'auto' and (os.environ.get('TERM') == 'dumb'
-                                          or not sys.__stdout__.isatty()))):
-            del opts['no_color']
-            del opts['color']
-            return orig(*args, **opts)
-
-        oldshowpatch = extensions.wrapfunction(cmdutil.changeset_printer,
-                                               'showpatch', colorshowpatch)
-        del opts['no_color']
-        del opts['color']
-        try:
-            if func is not None:
-                return func(orig, *args, **opts)
-            return orig(*args, **opts)
-        finally:
-            cmdutil.changeset_printer.showpatch = oldshowpatch
-
-    entry = extensions.wrapcommand(table, cmd, nocolor)
-    entry[1].extend([
-        ('', 'color', 'auto', _("when to colorize (always, auto, or never)")),
-        ('', 'no-color', None, _("don't colorize output (DEPRECATED)")),
-    ])
-
-    for status in effectsmap:
-        configkey = cmd + '.' + status
-        effects = ui.configlist('color', configkey)
-        if effects:
+def configstyles(ui):
+    for status, cfgeffects in ui.configitems('color'):
+        if '.' not in status:
+            continue
+        cfgeffects = ui.configlist('color', status)
+        if cfgeffects:
             good = []
-            for e in effects:
-                if e in _effect_params:
+            for e in cfgeffects:
+                if e in _effects:
                     good.append(e)
                 else:
                     ui.warn(_("ignoring unknown color/effect %r "
                               "(configured in color.%s)\n")
-                            % (e, configkey))
-            effectsmap[status] = good
+                            % (e, status))
+            _styles[status] = ' '.join(good)
+
+_buffers = None
+def style(msg, label):
+    effects = ''
+    for l in label.split():
+        effects += _styles.get(l, '')
+    if effects:
+        return render_effects(msg, effects)
+    return msg
+
+def popbuffer(orig, labeled=False):
+    global _buffers
+    if labeled:
+        return ''.join(style(a, label) for a, label in _buffers.pop())
+    return ''.join(a for a, label in _buffers.pop())
+
+def write(orig, *args, **opts):
+    label = opts.get('label', '')
+    global _buffers
+    if _buffers:
+        _buffers[-1].extend([(str(a), label) for a in args])
+    else:
+        return orig(*[style(str(a), label) for a in args], **opts)
+
+def write_err(orig, *args, **opts):
+    label = opts.get('label', '')
+    return orig(*[style(str(a), label) for a in args], **opts)
+
+def uisetup(ui):
+    def colorcmd(orig, ui_, opts, cmd, cmdfunc):
+        if (opts['color'] == 'always' or
+            (opts['color'] == 'auto' and (os.environ.get('TERM') != 'dumb'
+                                          and sys.__stdout__.isatty()))):
+            global _buffers
+            _buffers = ui_._buffers
+            extensions.wrapfunction(ui_, 'popbuffer', popbuffer)
+            extensions.wrapfunction(ui_, 'write', write)
+            extensions.wrapfunction(ui_, 'write_err', write_err)
+            ui_.label = style
+            extstyles()
+            configstyles(ui)
+        return orig(ui_, opts, cmd, cmdfunc)
+    extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
+
+commands.globalopts.append(('', 'color', 'auto',
+                            _("when to colorize (always, auto, or never)")))

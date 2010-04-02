@@ -3,6 +3,8 @@ no bookmarks set
 % set bookmark X
 % list bookmarks
  * X                         -1:000000000000
+% list bookmarks with color
+[0;32m * X                         -1:000000000000[0m
 % update to bookmark X
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % list bookmarks
