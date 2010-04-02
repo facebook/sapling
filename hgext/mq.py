@@ -1416,7 +1416,7 @@ class queue(object):
 
     def qseries(self, repo, missing=None, start=0, length=None, status=None,
                 summary=False):
-        def displayname(pfx, patchname):
+        def displayname(pfx, patchname, state):
             if summary:
                 ph = patchheader(self.join(patchname), self.plainmode)
                 msg = ph.message and ph.message[0] or ''
@@ -1429,7 +1429,7 @@ class queue(object):
                 msg = "%s%s: %s" % (pfx, patchname, msg)
             else:
                 msg = pfx + patchname
-            self.ui.write(msg + '\n')
+            self.ui.write(msg + '\n', label='qseries.' + state)
 
         applied = set([p.name for p in self.applied])
         if length is None:
@@ -1440,17 +1440,17 @@ class queue(object):
             for i in xrange(start, start + length):
                 patch = self.series[i]
                 if patch in applied:
-                    stat = 'A'
+                    char, state = 'A', 'applied'
                 elif self.pushable(i)[0]:
-                    stat = 'U'
+                    char, state = 'U', 'unapplied'
                 else:
-                    stat = 'G'
+                    char, state = 'G', 'guarded'
                 pfx = ''
                 if self.ui.verbose:
-                    pfx = '%*d %s ' % (idxwidth, i, stat)
-                elif status and status != stat:
+                    pfx = '%*d %s ' % (idxwidth, i, char)
+                elif status and status != char:
                     continue
-                displayname(pfx, patch)
+                displayname(pfx, patch, state)
         else:
             msng_list = []
             for root, dirs, files in os.walk(self.path):
@@ -1464,7 +1464,7 @@ class queue(object):
                         msng_list.append(fl)
             for x in sorted(msng_list):
                 pfx = self.ui.verbose and ('D ') or ''
-                displayname(pfx, x)
+                displayname(pfx, x, 'missing')
 
     def issaveline(self, l):
         if l.name == '.hg.patches.save.line':
