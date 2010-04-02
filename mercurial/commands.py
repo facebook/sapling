@@ -1353,6 +1353,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             iter = [('', l) for l in states]
         for change, l in iter:
             cols = [fn, str(rev)]
+            before, match, after = None, None, None
             if opts.get('line_number'):
                 cols.append(str(l.linenum))
             if opts.get('all'):
@@ -1367,8 +1368,15 @@ def grep(ui, repo, pattern, *pats, **opts):
                     continue
                 filerevmatches[c] = 1
             else:
-                cols.append(l.line)
-            ui.write(sep.join(cols), eol)
+                before = l.line[:l.colstart]
+                match = l.line[l.colstart:l.colend]
+                after = l.line[l.colend:]
+            ui.write(sep.join(cols))
+            if before is not None:
+                ui.write(sep + before)
+                ui.write(match, label='grep.match')
+                ui.write(after)
+            ui.write(eol)
             found = True
         return found
 
