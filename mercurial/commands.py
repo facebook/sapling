@@ -2613,7 +2613,9 @@ def resolve(ui, repo, *pats, **opts):
                 if nostatus:
                     ui.write("%s\n" % f)
                 else:
-                    ui.write("%s %s\n" % (ms[f].upper(), f))
+                    ui.write("%s %s\n" % (ms[f].upper(), f),
+                             label='resolve.' +
+                             {'u': 'unresolved', 'r': 'resolved'}[ms[f]])
             elif mark:
                 ms.mark(f, "r")
             elif unmark:
@@ -3052,9 +3054,11 @@ def status(ui, repo, *pats, **opts):
                 format = "%%s%s" % end
 
             for f in files:
-                ui.write(format % repo.pathto(f, cwd))
+                ui.write(format % repo.pathto(f, cwd),
+                         label='status.' + state)
                 if f in copy:
-                    ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end))
+                    ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end),
+                             label='status.copied')
 
 def summary(ui, repo, **opts):
     """summarize working directory state
