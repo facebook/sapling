@@ -110,10 +110,7 @@ def render_effects(text, effects):
     start = [str(_effects[e]) for e in ['none'] + effects.split()]
     start = '\033[' + ';'.join(start) + 'm'
     stop = '\033[' + str(_effects['none']) + 'm'
-    if text[-1] == '\n':
-        return ''.join([start, text[:-1], stop, '\n'])
-    else:
-        return ''.join([start, text, stop])
+    return ''.join([start, text, stop])
 
 def extstyles():
     for name, ext in extensions.extensions():
@@ -141,7 +138,8 @@ def style(msg, label):
     for l in label.split():
         effects += _styles.get(l, '')
     if effects:
-        return render_effects(msg, effects)
+        return '\n'.join([render_effects(s, effects)
+                          for s in msg.split('\n')])
     return msg
 
 def popbuffer(orig, labeled=False):
