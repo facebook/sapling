@@ -10,29 +10,49 @@ import util
 import mdiff
 import bdiff
 
-def findrenames(repo, added, removed, threshold):
-    '''find renamed files -- yields (before, after, score) tuples'''
+def _findexactmatches(repo, added, removed):
+    '''find renamed files that have no changes
+
+    Takes a list of new filectxs and a list of removed filectxs, and yields
+    (before, after) tuples of exact matches.
+    '''
+    numfiles = len(added) + len(removed)
+
+    # Get hashes of removed files.
+    hashes = {}
+    for i, fctx in enumerate(removed):
+        repo.ui.progress(_('searching for exact renames'), i, total=numfiles)
+        h = util.sha1(fctx.data()).digest()
+        hashes[h] = fctx
+
+    # For each added file, see if it corresponds to a removed file.
+    for i, fctx in enumerate(added):
+        repo.ui.progress(_('searching for exact renames'), i + len(removed),
+                total=numfiles)
+        h = util.sha1(fctx.data()).digest()
+        if h in hashes:
+            yield (hashes[h], fctx)
+
+    # Done
+    repo.ui.progress(_('searching for exact renames'), None)
+
+def _findsimilarmatches(repo, added, removed, threshold):
+    '''find potentially renamed files based on similar file content
+
+    Takes a list of new filectxs and a list of removed filectxs, and yields
+    (before, after, score) tuples of partial matches.
+    '''
     copies = {}
-    ctx = repo['.']
     for i, r in enumerate(removed):
-        repo.ui.progress(_('searching'), i, total=len(removed))
-        if r not in ctx:
-            continue
-        fctx = ctx.filectx(r)
+        repo.ui.progress(_('searching for similar files'), i, total=len(removed))
 
         # lazily load text
         @util.cachefunc
         def data():
-            orig = fctx.data()
+            orig = r.data()
             return orig, mdiff.splitnewlines(orig)
 
         def score(text):
-            if not len(text):
-                return 0.0
-            if not fctx.cmp(text):
-                return 1.0
-            if threshold == 1.0:
-                return 0.0
             orig, lines = data()
             # bdiff.blocks() returns blocks of matching lines
             # count the number of bytes in each
@@ -47,7 +67,7 @@ def findrenames(repo, added, removed, threshold):
 
         for a in added:
             bestscore = copies.get(a, (None, threshold))[1]
-            myscore = score(repo.wread(a))
+            myscore = score(a.data())
             if myscore >= bestscore:
                 copies[a] = (r, myscore)
     repo.ui.progress(_('searching'), None)
@@ -56,4 +76,28 @@ def findrenames(repo, added, removed, threshold):
         source, score = v
         yield source, dest, score
 
+def findrenames(repo, added, removed, threshold):
+    '''find renamed files -- yields (before, after, score) tuples'''
+    parentctx = repo['.']
+    workingctx = repo[None]
+
+    # Zero length files will be frequently unrelated to each other, and
+    # tracking the deletion/addition of such a file will probably cause more
+    # harm than good. We strip them out here to avoid matching them later on.
+    addedfiles = set([workingctx[fp] for fp in added
+            if workingctx[fp].size() > 0])
+    removedfiles = set([parentctx[fp] for fp in removed
+            if fp in parentctx and parentctx[fp].size() > 0])
+
+    # Find exact matches.
+    for (a, b) in _findexactmatches(repo,
+            sorted(addedfiles),sorted( removedfiles)):
+        addedfiles.remove(b)
+        yield (a.path(), b.path(), 1.0)
+
+    # If the user requested similar files to be matched, search for them also.
+    if threshold < 1.0:
+        for (a, b, score) in _findsimilarmatches(repo,
+                sorted(addedfiles), sorted(removedfiles), threshold):
+            yield (a.path(), b.path(), score)
 
