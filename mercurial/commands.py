@@ -3822,7 +3822,7 @@ table = {
           ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
           ('E', 'errorlog', '', _('name of error log file to write to')),
           # use string type, then we can check if something was passed
-          ('p', 'port', '', _('port to listen on (default: 8000')),
+          ('p', 'port', '', _('port to listen on (default: 8000)')),
           ('a', 'address', '',
            _('address to listen on (default: all interfaces)')),
           ('', 'prefix', '',
