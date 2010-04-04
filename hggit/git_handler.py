@@ -710,24 +710,25 @@ class GitHandler(object):
                          ' bookmarks enabled?\n'))
 
     def update_remote_branches(self, remote_name, refs):
-        heads = dict([(ref[11:],refs[ref]) for ref in refs
-                      if ref.startswith('refs/heads/')])
-
-        for head, sha in heads.iteritems():
+        def _set_hg_tag(head, sha):
             # refs contains all the refs in the server, not just the ones
             # we are pulling
             if sha not in self.git.object_store:
-                continue
+                return
             hgsha = bin(self.map_hg_get(sha))
             tag = '%s/%s' % (remote_name, head)
             self.repo.tag(tag, hgsha, '', True, None, None)
 
-        for ref_name in refs:
+        for ref_name, sha in refs.iteritems():
             if ref_name.startswith('refs/heads'):
-                new_ref = 'refs/remotes/%s/%s' % (remote_name, ref_name[10:])
-                self.git.refs[new_ref] = refs[ref_name]
-            elif ref_name.startswith('refs/tags'):
-                self.git.refs[ref_name] = refs[ref_name]
+                head = ref_name[11:]
+                _set_hg_tag(head, sha)
+
+                new_ref = 'refs/remotes/%s/%s' % (remote_name, head)
+                self.git.refs[new_ref] = sha
+            elif ref_name.startswith('refs/tags') and \
+                not ref_name.endswith('^{}'):
+                self.git.refs[ref_name] = sha
 
 
     ## UTILITY FUNCTIONS
