@@ -568,6 +568,30 @@ class GitHandler(object):
                 raise hgutil.Abort("revision %s cannot be pushed since"
                                    " it doesn't have a ref" % ctx)
 
+            # Check if the tags the server is advertising are annotated tags,
+            # by attempting to retrieve it from the our git repo, and building a
+            # list of these tags.
+            #
+            # This is possible, even though (currently) annotated tags are
+            # dereferenced and stored as lightweight ones, as the annotated tag
+            # is still stored in the git repo.
+            uptodate_annotated_tags = []
+            for r in tags:
+                ref = 'refs/tags/'+r
+                # Check tag.
+                if not ref in refs:
+                    continue
+                try:
+                    # We're not using Repo.tag(), as it's deprecated.
+                    tag = self.git.get_object(refs[ref])
+                    if not isinstance(tag, Tag):
+                        continue
+                except KeyError:
+                    continue
+
+                # If we've reached here, the tag's good.
+                uptodate_annotated_tags.append(ref)
+
             for r in heads + tags:
                 if r in heads:
                     ref = 'refs/heads/'+r
@@ -583,6 +607,9 @@ class GitHandler(object):
                     else:
                         raise hgutil.Abort("pushing %s overwrites %s"
                                            % (ref, ctx))
+                elif ref in uptodate_annotated_tags:
+                    # we already have the annotated tag.
+                    pass
                 else:
                     raise hgutil.Abort("%s changed on the server, please pull "
                                        "and merge before pushing" % ref)
