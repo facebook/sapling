@@ -944,7 +944,7 @@ class changeset_templater(changeset_printer):
             msg = _("%s: no key named '%s'")
             raise util.Abort(msg % (self.t.mapfile, inst.args[0]))
         except SyntaxError, inst:
-            raise util.Abort(_('%s: %s') % (self.t.mapfile, inst.args[0]))
+            raise util.Abort('%s: %s' % (self.t.mapfile, inst.args[0]))
 
 def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
     """show one changeset using template or regular display.
