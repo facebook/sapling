@@ -98,14 +98,14 @@
         <ComponentRef Id='COPYING' />
         <ComponentRef Id='mercurial.rc' />
         <ComponentRef Id='mergetools.rc' />
-        <ComponentGroupRef Id='helpFolder' />
+        <ComponentRef Id='helpFolder' />
         <ComponentGroupRef Id='templatesFolder' />
         <MergeRef Id='VCRuntime' />
         <MergeRef Id='VCRuntimePolicy' />
       </Feature>
       <Feature Id='Locales' Title='Translations' Description='Translations' Level='1'>
         <ComponentGroupRef Id='localeFolder' />
-        <ComponentGroupRef Id='i18nFolder' />
+        <ComponentRef Id='i18nFolder' />
       </Feature>
       <Feature Id='Documentation' Title='Documentation' Description='HTML man pages' Level='1'>
         <ComponentGroupRef Id='docFolder' />

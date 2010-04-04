@@ -1,0 +1,35 @@
+<Include>
+  <!-- These are component GUIDs used for Mercurial installers.
+       YOU MUST CHANGE ALL GUIDs below when copying this file
+       and replace 'Mercurial' in this notice with the name of
+       your project. Component GUIDs have global namespace!      -->
+
+  <!-- contrib.wxs -->
+  <?define contrib.guid = {B2EB15EA-F5F2-40c7-97EB-944DBED85F83} ?>
+  <?define contrib.vim.guid = {56B49B46-6657-405d-9E91-3FA68D011471} ?>
+
+  <!-- doc.wxs -->
+  <?define doc.hg.1.html.guid = {AAAA3FDA-EDC5-4220-B59D-D342722358A2} ?>
+  <?define doc.hgignore.5.html.guid = {AA9118C4-F3A0-4429-A5F4-5A1906B2D67F} ?>
+  <?define doc.hgrc.5.html = {E0CEA1EB-FA01-408c-844B-EE5965165BAE} ?>
+  <?define doc.style.css = {172F8262-98E0-4711-BD39-4DAE0D77EF05} ?>
+
+  <!-- help.wxs -->
+  <?define helpFolder.guid = {FA1546C1-5730-4e55-8542-76F5830841EE} ?>
+  
+  <!-- i18n.wxs -->
+  <?define i18nFolder.guid = {EADFA693-A0B5-4f31-87C9-3997CFAC1B42} ?>
+
+  <!-- templates.wxs -->
+  <?define templates.root.guid = {111509CB-4C96-4035-80BC-F66A99CD5ACB} ?>
+  <?define templates.atom.guid = {45FCDF84-DE27-44f4-AF6C-C41F5994AE0D} ?>
+  <?define templates.coal.guid = {B63CCAAB-4EAF-43b4-901E-4BD13F5B78FC} ?>
+  <?define templates.gitweb.guid = {5B8DF9A1-F475-45a5-B8F0-FCEA04A3B074} ?>
+  <?define templates.monoblue.guid = {7BA492F4-98F3-4943-A981-0BFE1690CF6E} ?>
+  <?define templates.paper.guid = {294F69D5-EC96-4fa7-8569-DD76C9993F47} ?>
+  <?define templates.raw.guid = {04DE03A2-FBFD-4c5f-8DEA-5436DDF4689D} ?>
+  <?define templates.rss.guid = {A7D608DE-0CF6-44f4-AF1E-EE30CC237FDA} ?>
+  <?define templates.spartan.guid = {80222625-FA8F-44b1-86CE-1781EF375D09} ?>
+  <?define templates.static.guid = {68C9F843-DE7E-480f-9DA2-D220B19D02C3} ?>
+
+</Include>

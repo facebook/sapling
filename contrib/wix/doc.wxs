@@ -1,33 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Fragment>
-        <ComponentGroup Id="docFolder">
-            <Component Id="cmpD8AD113FB988F56EF745AF287E14D1BE" Directory="dir7C3635117912185773B74CE69A101DF6" Guid="{F7DDE641-6FD6-48B9-B869-C92927437CF0}">
-                <File Id="filFC7EC893C906DE77DE4D96687109D8E9" KeyPath="yes" Source="$(var.SourceDir)\hg.1.html">
-                  <Shortcut Id="hg1StartMenu" Directory="ProgramMenuDir" Name="Mercurial Command Reference"
-                            Icon="hgIcon.ico" IconIndex="0" Advertise="yes"/>
-                </File>
-            </Component>
-            <Component Id="cmpB89B9653438B9A899D3AF741EF3D50E7" Directory="dir7C3635117912185773B74CE69A101DF6" Guid="{6289969D-8286-47AE-97B2-2DCB3B6A9EE3}">
-                <File Id="filA7A1E3181858EAEA214687DBA9AEFB27" KeyPath="yes" Source="$(var.SourceDir)\hgignore.5.html" >
-                  <Shortcut Id="hgignore5StartMenu" Directory="ProgramMenuDir" Name="Mercurial Ignore Files"
-                            Icon="hgIcon.ico" IconIndex="0" Advertise="yes"/>
-                </File>
-            </Component>
-            <Component Id="cmp2759E68E80E0FCEA1ACE704650E93C2A" Directory="dir7C3635117912185773B74CE69A101DF6" Guid="{2B13EF1C-5B3A-4A36-85B8-59D8155FB454}">
-                <File Id="fil4B171255CC318D73C35538CAA0AFFC24" KeyPath="yes" Source="$(var.SourceDir)\hgrc.5.html" >
-                  <Shortcut Id="hgrc5StartMenu" Directory="ProgramMenuDir" Name="Mercurial Configuration Files"
-                            Icon="hgIcon.ico" IconIndex="0" Advertise="yes"/>
-                </File>
-            </Component>
-            <Component Id="cmp9ADC9EFD76613D01E16146107BBE6590" Directory="dir7C3635117912185773B74CE69A101DF6" Guid="{673C6217-F669-4845-B5A6-56EA061C38AF}">
-                <File Id="fil7994C9041F416FEA568FA98CA6891FB6" KeyPath="yes" Source="$(var.SourceDir)\style.css" />
-            </Component>
-        </ComponentGroup>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="INSTALLDIR">
-            <Directory Id="dir7C3635117912185773B74CE69A101DF6" Name="doc" />
-        </DirectoryRef>
-    </Fragment>
+
+  <?include guids.wxi ?>
+
+  <Fragment>
+    <DirectoryRef Id="INSTALLDIR">
+      <Directory Id="docdir" Name="doc" />
+    </DirectoryRef>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="docFolder">
+      <Component Id="doc.hg.1.html" Directory="docdir"
+                 Guid="$(var.doc.hg.1.html.guid)"
+      >
+        <File Source="$(var.SourceDir)\hg.1.html" KeyPath="yes">
+          <Shortcut Id="hg1StartMenu" Directory="ProgramMenuDir"
+                    Name="Mercurial Command Reference"
+                    Icon="hgIcon.ico" IconIndex="0" Advertise="yes"
+          />
+        </File>
+      </Component>
+      <Component Id="doc.hgignore.5.html" Directory="docdir"
+                 Guid="$(var.doc.hgignore.5.html.guid)"
+      >
+        <File Source="$(var.SourceDir)\hgignore.5.html" KeyPath="yes">
+          <Shortcut Id="hgignore5StartMenu" Directory="ProgramMenuDir"
+                    Name="Mercurial Ignore Files"
+                    Icon="hgIcon.ico" IconIndex="0" Advertise="yes"
+          />
+        </File>
+      </Component>
+      <Component Id="doc.hgrc.5.html" Directory="docdir" 
+                 Guid="$(var.doc.hgrc.5.html)"
+      >
+        <File Source="$(var.SourceDir)\hgrc.5.html" KeyPath="yes">
+          <Shortcut Id="hgrc5StartMenu" Directory="ProgramMenuDir"
+                    Name="Mercurial Configuration Files"
+                    Icon="hgIcon.ico" IconIndex="0" Advertise="yes"
+          />
+        </File>
+      </Component>
+      <Component Id="doc.style.css" Directory="docdir"
+                 Guid="$(var.doc.style.css)"
+      >
+        <File Source="$(var.SourceDir)\style.css" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
 </Wix>

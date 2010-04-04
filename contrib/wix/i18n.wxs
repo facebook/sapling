@@ -1,78 +1,25 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Fragment>
-        <ComponentGroup Id="i18nFolder">
-            <Component Id="cmp34947721B29BBB2D9942A0FC95D1F588" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{511A94DD-0893-4E5B-A1CF-6DD9CDB1F797}">
-                <File Id="filF2E58DD4817D0D0AF53F4B8AB9836B47" KeyPath="yes" Source="$(var.SourceDir)\da.po" />
-            </Component>
-            <Component Id="cmpDC59717569F92122A034EC7E35A4F80D" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{F6FD5F94-81D6-49AD-9D91-563E56224408}">
-                <File Id="fil39753E48327D06086C63EFA7711BB750" KeyPath="yes" Source="$(var.SourceDir)\de.po" />
-            </Component>
-            <Component Id="cmp7E5E80C4438C32CF7A419FDC63FB002D" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{861DE2B9-B47D-4ACA-AEB2-645C69148B6B}">
-                <File Id="fil9B0C044DD27F2EE57B045B48BB697C0D" KeyPath="yes" Source="$(var.SourceDir)\el.po" />
-            </Component>
-            <Component Id="cmpA9C546113FA1B46B0C9498FA69F29B13" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{756F0EEF-18AE-496F-A037-A063442CFE29}">
-                <File Id="fil6DF0C7BA972338067807AE385588F48A" KeyPath="yes" Source="$(var.SourceDir)\fr.po" />
-            </Component>
-            <Component Id="cmp6046EB31B43E28CD554FDD8D8E8AD420" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{0404483D-818E-459B-902B-956D84869AE1}">
-                <File Id="filE99CA9E94849D4956606F72FD0B5FC5E" KeyPath="yes" Source="$(var.SourceDir)\hggettext" />
-            </Component>
-            <Component Id="cmp6133B01CC2B9B358CBF9327F700BD00A" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{9B5289AE-FD8B-48ED-9E1C-2DB8BB495D0E}">
-                <File Id="filC69EEB86E4ED9073F34871B19155FED5" KeyPath="yes" Source="$(var.SourceDir)\it.po" />
-            </Component>
-            <Component Id="cmp97F2EE7A098F00025CB2FB889C5F6253" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{9139E885-C29E-41C4-A9A5-52B3D1A2D0A0}">
-                <File Id="filA39E9F30340253C998EC80AE177CE43C" KeyPath="yes" Source="$(var.SourceDir)\ja.po" />
-            </Component>
-            <Component Id="cmpF3727AA82BA7F68310A26BB75A6647AD" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{721683B1-6F5D-4F4F-A7FC-A134B4023B00}">
-                <File Id="fil80CA8EF53276179809903975CB3979F3" KeyPath="yes" Source="$(var.SourceDir)\pt_BR.po" />
-            </Component>
-            <Component Id="cmp939C74001F1FBEB147E5ADCED4770AC8" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{69358529-D448-48EE-AD75-ADC7342F5EB2}">
-                <File Id="fil8F5BDF00539EE96B5270F71C7923CDC6" KeyPath="yes" Source="$(var.SourceDir)\sv.po" />
-            </Component>
-            <Component Id="cmpE23A15AD782608B1EDD835CF6B829378" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{BB6C915D-20F7-4A90-91CA-F95629AF9992}">
-                <File Id="filC2CD3385CC6C9F85A582C8BEFF6A36FD" KeyPath="yes" Source="$(var.SourceDir)\zh_CN.po" />
-            </Component>
-            <Component Id="cmp3C3523DBA0ED9315E204C24B28BBECB1" Directory="dirE238460D44340499CA44F8E5739FEA52" Guid="{9A57C9EE-3A56-461C-A2B9-5CCB89080339}">
-                <File Id="fil717A0C3D62D332C48BAC66536FC1B6A0" KeyPath="yes" Source="$(var.SourceDir)\zh_TW.po" />
-            </Component>
-        </ComponentGroup>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="INSTALLDIR">
-            <Directory Id="dirE238460D44340499CA44F8E5739FEA52" Name="i18n" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirE238460D44340499CA44F8E5739FEA52" />
-    </Fragment>
+
+  <?include guids.wxi ?>
+
+  <?define hg_po_langs = 
+    da;de;el;fr;it;ja;pt_BR;sv;zh_CN;zh_TW
+  ?>
+
+  <Fragment>
+    <DirectoryRef Id="INSTALLDIR">
+      <Directory Id="i18ndir" Name="i18n" FileSource="$(var.SourceDir)">
+        <Component Id="i18nFolder" Guid="$(var.i18nFolder.guid)">
+          <File Name="hggettext" KeyPath="yes" />
+          <?foreach LANG in $(var.hg_po_langs) ?>
+            <File Id="hg.$(var.LANG).po" 
+                  Name="$(var.LANG).po" 
+            />
+          <?endforeach?>
+        </Component>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+
 </Wix>

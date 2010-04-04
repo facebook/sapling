@@ -1,72 +1,25 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Fragment>
-        <ComponentGroup Id="helpFolder">
-            <Component Id="cmpC57BF45B775FC47D736ECD6944E64F6A" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{7189D54F-D55A-420C-9B2E-65A1CC522329}">
-                <File Id="filA01F5D0329BE64B4368A85C0B3671502" KeyPath="yes" Source="$(var.SourceDir)\config.txt" />
-            </Component>
-            <Component Id="cmp06DE93F7EEC0B3D1B698D92336E2AB11" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{15D85D50-B81D-41A7-9BDB-0DB57F655E83}">
-                <File Id="fil340415BFF8DB5A5977A364C422E731FF" KeyPath="yes" Source="$(var.SourceDir)\dates.txt" />
-            </Component>
-            <Component Id="cmp19C67CC3F7666886D7413E6F81DF923C" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{AA3D9BAB-C337-4726-9DAA-3EAAF3563378}">
-                <File Id="filDF5D1C01F4E5DFDF9ADC1B35D27FD592" KeyPath="yes" Source="$(var.SourceDir)\diffs.txt" />
-            </Component>
-            <Component Id="cmp0A78423CDE879648435F77671E14A6C3" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{EDFD63E7-69F6-4330-8226-07E5C3C5403D}">
-                <File Id="fil826C9369DF9AD54F6EBD9A10CA302D19" KeyPath="yes" Source="$(var.SourceDir)\environment.txt" />
-            </Component>
-            <Component Id="cmpA2B37D3B1AF89288970F0714F8A9AF39" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{B0D96B76-52E7-4D4E-A91D-24EC66373500}">
-                <File Id="filE8F682CC0E4F56B880D18017BC38DE50" KeyPath="yes" Source="$(var.SourceDir)\extensions.txt" />
-            </Component>
-            <Component Id="cmp417868B7DC07F14CE6B327271D65E5CC" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{0D01D7B8-8418-4FE6-9D37-0685FCB5DEE1}">
-                <File Id="filA0E27F4B12C85FA269523DC3A3CDC575" KeyPath="yes" Source="$(var.SourceDir)\multirevs.txt" />
-            </Component>
-            <Component Id="cmp339A70D8F3BF8B3AD679BE214A1984C7" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{EF91B612-EC51-4FC2-B3B1-C00ECBC13A4A}">
-                <File Id="fil6B14DD18C2EEDDDE767B9D83279A2ADA" KeyPath="yes" Source="$(var.SourceDir)\patterns.txt" />
-            </Component>
-            <Component Id="cmp177C53DE57B01391F4C5FDD15FA14EC6" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{AE7781B5-0F6E-4CF6-943D-B63F9511F274}">
-                <File Id="fil824583354419DB2A4F0AD312B3331FBB" KeyPath="yes" Source="$(var.SourceDir)\revisions.txt" />
-            </Component>
-            <Component Id="cmp69860FA1CEA8FE029A13DEF05E4832DF" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{895AB77F-A66E-42EF-B3FB-66E96737713D}">
-                <File Id="filF26222C0B0B107CF754108CD2B1C8CCF" KeyPath="yes" Source="$(var.SourceDir)\templates.txt" />
-            </Component>
-            <Component Id="cmpC1E444987188E87D749757D6E686B596" Directory="dirFC9FDBD71FA305BA6ECD4D639DB49784" Guid="{88938242-3A31-4F8E-9074-3B859DE150CD}">
-                <File Id="filCE7C1FF1BA40B646398A71851EB1EF7C" KeyPath="yes" Source="$(var.SourceDir)\urls.txt" />
-            </Component>
-        </ComponentGroup>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="INSTALLDIR">
-            <Directory Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" Name="help" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirFC9FDBD71FA305BA6ECD4D639DB49784" />
-    </Fragment>
+
+  <?include guids.wxi ?>
+
+  <Fragment>
+    <DirectoryRef Id="INSTALLDIR">
+      <Directory Id="helpdir" Name="help" FileSource="$(var.SourceDir)">
+        <Component Id="helpFolder" Guid="$(var.helpFolder.guid)">
+          <File Name="config.txt" KeyPath="yes" />
+          <File Name="dates.txt" />
+          <File Name="diffs.txt" />
+          <File Name="environment.txt" />
+          <File Name="extensions.txt" />
+          <File Name="multirevs.txt" />
+          <File Name="patterns.txt" />
+          <File Name="revisions.txt" />
+          <File Name="templates.txt" />
+          <File Name="urls.txt" />
+        </Component>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+
 </Wix>

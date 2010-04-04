@@ -1,801 +1,206 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Fragment>
-        <ComponentGroup Id="templatesFolder">
-            <Component Id="cmp245D27C2F7D49A9E8A10E551A4913BD8" Directory="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" Guid="{67C4810A-F6CA-4512-9A43-43DD72A525BF}">
-                <File Id="filC46EB4977E850DDE52085CD81647B147" KeyPath="yes" Source="$(var.SourceDir)\map-cmdline.changelog" />
-            </Component>
-            <Component Id="cmpC6E57D5F80AEF6636B609AFDDC1B34C3" Directory="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" Guid="{212A9079-1B49-4DB7-A49E-BACCBCD8AA33}">
-                <File Id="fil66141877E998E34A73C78F52F5525D79" KeyPath="yes" Source="$(var.SourceDir)\map-cmdline.compact" />
-            </Component>
-            <Component Id="cmp3E8935E93A2F8142E0F30B7654DEDB7B" Directory="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" Guid="{70544E9C-F575-4039-94F9-19DAA12BA38B}">
-                <File Id="filB6CE3FEEF27A46E979CF71DFD5071876" KeyPath="yes" Source="$(var.SourceDir)\map-cmdline.default" />
-            </Component>
-            <Component Id="cmpA98C695C9A852CA08358744DE71BBCB4" Directory="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" Guid="{A0123134-AB72-4793-BAAC-109F78D4A35B}">
-                <File Id="fil603AB867DCF6C98CF4E8C908F627AD53" KeyPath="yes" Source="$(var.SourceDir)\map-cmdline.xml" />
-            </Component>
-            <Component Id="cmpDE1FEC5413B37B6300493CAF819462DC" Directory="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" Guid="{F89E0BE4-DEAF-4132-BE18-86A171111051}">
-                <File Id="filFFC56D533BF5BA670CAD613427C30029" KeyPath="yes" Source="$(var.SourceDir)\template-vars.txt" />
-            </Component>
-            <Component Id="cmpD7A2B04E9CF5E810D00331B0D14890C1" Directory="dir35F8598B197DFC5580317F5E7C2E9AE9" Guid="{EEB7B220-90C2-4049-BE87-592C3B5A23D4}">
-                <File Id="filAF2A94DF56A6D0C95DE82C39C151A195" KeyPath="yes" Source="$(var.SourceDir)\atom\changelog.tmpl" />
-            </Component>
-            <Component Id="cmpB2016007359D825073A8ED67A1827DF9" Directory="dir35F8598B197DFC5580317F5E7C2E9AE9" Guid="{EDD3F2A2-160D-4C2C-9C92-E41FA1B5D474}">
-                <File Id="fil417417DF06043E5780F4B5C267352CF9" KeyPath="yes" Source="$(var.SourceDir)\atom\changelogentry.tmpl" />
-            </Component>
-            <Component Id="cmp4AF55640C671810FB1ADF0351BB90E17" Directory="dir35F8598B197DFC5580317F5E7C2E9AE9" Guid="{E15B5539-56E0-4D48-A89A-4E6E286AAC68}">
-                <File Id="filABC1E3A8F08963D46947F5DD71204159" KeyPath="yes" Source="$(var.SourceDir)\atom\error.tmpl" />
-            </Component>
-            <Component Id="cmpEAFBDC0898D5AB411B21780B0B8F2C65" Directory="dir35F8598B197DFC5580317F5E7C2E9AE9" Guid="{3F4C35A0-3860-4C9C-9C4F-96D601C60B0F}">
-                <File Id="filFD94D63312BF0A454BCC74F559F26AC5" KeyPath="yes" Source="$(var.SourceDir)\atom\filelog.tmpl" />
-            </Component>
-            <Component Id="cmp09A2C49717F147CA23C43FA4BE19CB89" Directory="dir35F8598B197DFC5580317F5E7C2E9AE9" Guid="{EFDA7618-5C27-449F-BBDF-13B512CA774D}">
-                <File Id="filD79697217EB1368CCFBAC93891022BA4" KeyPath="yes" Source="$(var.SourceDir)\atom\header.tmpl" />
-            </Component>
-            <Component Id="cmpA1BD3C8A4A8B57A1A224DC625A939716" Directory="dir35F8598B197DFC5580317F5E7C2E9AE9" Guid="{8AFBBBD2-D743-4C72-9C4C-8EB7F9F5E4BD}">
-                <File Id="filC93C0483D9AB074A860A448C8AE7A311" KeyPath="yes" Source="$(var.SourceDir)\atom\map" />
-            </Component>
-            <Component Id="cmp1F8380EC4EB90B7E2893B8ABAFBA3C6C" Directory="dir35F8598B197DFC5580317F5E7C2E9AE9" Guid="{691B5260-2697-43AC-8D71-7E6CBC9784BA}">
-                <File Id="fil38C516EE8F0ED4FFB814F8A78FE04B5B" KeyPath="yes" Source="$(var.SourceDir)\atom\tagentry.tmpl" />
-            </Component>
-            <Component Id="cmp87896A208C9063C4E0F127D6C124A97A" Directory="dir35F8598B197DFC5580317F5E7C2E9AE9" Guid="{BB5DECFE-313E-44FD-B354-FB8DB781199E}">
-                <File Id="fil01F9F5804BA8E9E7D37A07043B4EE7B7" KeyPath="yes" Source="$(var.SourceDir)\atom\tags.tmpl" />
-            </Component>
-            <Component Id="cmpF5D9AB7FE9A07C307EE33CD2AFA719AD" Directory="dir2EDFFCA56732C858816EF19F127E8D0F" Guid="{5D4CD000-740A-445D-B22A-413D27B2D424}">
-                <File Id="fil1B50FD60A3ADF7A829E34C97198D1D52" KeyPath="yes" Source="$(var.SourceDir)\coal\header.tmpl" />
-            </Component>
-            <Component Id="cmpC34DFD4C8EBD5BCABA6F10B70B1D28B1" Directory="dir2EDFFCA56732C858816EF19F127E8D0F" Guid="{5FC3B465-E22F-4B49-8733-2D6D8D5457C4}">
-                <File Id="fil483848B756E76EE840BFB45A62C00DB3" KeyPath="yes" Source="$(var.SourceDir)\coal\map" />
-            </Component>
-            <Component Id="cmpC5067895295DA39B9B11AD3DD4E21B52" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{4061F72F-DA6A-4A2E-B917-0179C577EC91}">
-                <File Id="filAB35B91E5DC594F9F0BE979B5C938650" KeyPath="yes" Source="$(var.SourceDir)\gitweb\branches.tmpl" />
-            </Component>
-            <Component Id="cmp7F9AD93FB91A0E4622F452B0EF9352C2" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{1B73BD55-F6F1-40B7-99F6-7BFB9252CC85}">
-                <File Id="filB65F6983E85F6327A20D92F0E50C8F3A" KeyPath="yes" Source="$(var.SourceDir)\gitweb\changelog.tmpl" />
-            </Component>
-            <Component Id="cmpB186C4D7FF025E46CE87EA66461F775C" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{0F9A4AAA-B82D-4DE4-B475-BDCCA08A81BB}">
-                <File Id="filBBAE80D203E7C7DE353764E8D8ED5CF4" KeyPath="yes" Source="$(var.SourceDir)\gitweb\changelogentry.tmpl" />
-            </Component>
-            <Component Id="cmp4C205C07FEA1B04A79AB62A672FB7034" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{0BB9DA75-8FE3-48B1-9F7A-E377C36F7EBB}">
-                <File Id="filD737DB25A84CF6BAC537C01A4C1FD441" KeyPath="yes" Source="$(var.SourceDir)\gitweb\changeset.tmpl" />
-            </Component>
-            <Component Id="cmp4F1AEA9E1182AA3FEB959501A4524E2C" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{4CA8A2C5-2401-476C-8863-2AEAC3178B87}">
-                <File Id="filAC2F74FB38AD114EE60B8A858195AAA5" KeyPath="yes" Source="$(var.SourceDir)\gitweb\error.tmpl" />
-            </Component>
-            <Component Id="cmp6D28475C0E5C0EF2C7368197A2543E04" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{3E7A0738-9ADA-409F-82D7-63C5212D9FEF}">
-                <File Id="fil7E719E65B937150669EC7A65D931A42E" KeyPath="yes" Source="$(var.SourceDir)\gitweb\fileannotate.tmpl" />
-            </Component>
-            <Component Id="cmp41DDE65FBD7F6C62DE2F904E8BB70D52" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{D82ECE81-F30E-4A32-BB33-A5ED30242266}">
-                <File Id="filE5314FDBD1A83FD2071ABDBEB5D75966" KeyPath="yes" Source="$(var.SourceDir)\gitweb\filediff.tmpl" />
-            </Component>
-            <Component Id="cmp73B2345AE1A62971C248A4200125105E" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{88E6B5AF-F996-4676-9DD2-755803ED6ADD}">
-                <File Id="fil813DE4E9B8637CB0C9DEEE04871B7154" KeyPath="yes" Source="$(var.SourceDir)\gitweb\filelog.tmpl" />
-            </Component>
-            <Component Id="cmp74429C97DF03C076BB1976374DB4393A" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{12709310-806B-443B-8A7D-49A7C2AC83AA}">
-                <File Id="fil80D6BDD10936FB214225A8A9C385CE36" KeyPath="yes" Source="$(var.SourceDir)\gitweb\filerevision.tmpl" />
-            </Component>
-            <Component Id="cmpAC64876FBE3380283CFA6A488C4610E5" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{FC6F127E-4BB9-40AE-B3AC-0B0EB4F8315D}">
-                <File Id="fil05FF66A70E6AC220F28CCC9C93327329" KeyPath="yes" Source="$(var.SourceDir)\gitweb\footer.tmpl" />
-            </Component>
-            <Component Id="cmp30DB23C31D0DD655BA9E3F2D0D6C8582" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{55E52857-56BD-46E3-BC4D-597CA09CB6C5}">
-                <File Id="filEE919C1EA37972DA70DECD2DE78563C2" KeyPath="yes" Source="$(var.SourceDir)\gitweb\graph.tmpl" />
-            </Component>
-            <Component Id="cmp1D6387539D230EC1EE3F68EC430EAB56" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{F6E15E2E-80A2-4194-9763-EA900D9D4517}">
-                <File Id="filD3FF2C0986F56DE61C70A80D6FCD2963" KeyPath="yes" Source="$(var.SourceDir)\gitweb\header.tmpl" />
-            </Component>
-            <Component Id="cmpF4CB95EC9E3B863756FEBD0A4AE3B573" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{7098B211-3164-4303-B719-8897458E7474}">
-                <File Id="fil02B1E9DBF857B7D72BF76AADDDB1C11D" KeyPath="yes" Source="$(var.SourceDir)\gitweb\index.tmpl" />
-            </Component>
-            <Component Id="cmp4BFEAC2B08F975649AC2660D56EFA4B7" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{BFB237EE-79F5-45E5-B182-61BC41FD366D}">
-                <File Id="fil95099724846977404F6A38059E39F6EE" KeyPath="yes" Source="$(var.SourceDir)\gitweb\manifest.tmpl" />
-            </Component>
-            <Component Id="cmpEF1EB2713EEA62B1F81C5872116A1CEC" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{210BD2AF-E37E-4506-9723-AB284A0A2105}">
-                <File Id="fil15115F4F87328A9540B3644B3475A878" KeyPath="yes" Source="$(var.SourceDir)\gitweb\map" />
-            </Component>
-            <Component Id="cmp9F186B6C977DFA7712F92E9FB2DE3891" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{5A4A880B-F777-4C4F-96AD-AD18787A2DA1}">
-                <File Id="fil7F7A105718DAA19575A155EBE946F511" KeyPath="yes" Source="$(var.SourceDir)\gitweb\notfound.tmpl" />
-            </Component>
-            <Component Id="cmp1DA3F0160E3BCFE235A3C6F752FB2D12" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{85C86EC9-8328-4FDC-9DA4-009A3CBE1421}">
-                <File Id="fil645D98D0A60CFDC1C5D6AABEFCF7F120" KeyPath="yes" Source="$(var.SourceDir)\gitweb\search.tmpl" />
-            </Component>
-            <Component Id="cmpECF912909627794036B7DF5594B928F4" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{5F0E4FE5-59D6-48EA-9BBF-0D1D8381E270}">
-                <File Id="fil7A9B36B1AAC6F76DB84BD2DA8FFF44C6" KeyPath="yes" Source="$(var.SourceDir)\gitweb\shortlog.tmpl" />
-            </Component>
-            <Component Id="cmpDA71A47B23710A56F1A612AC01E1A0D7" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{D913EF9E-0F02-4C11-B0E9-9F8945854F6E}">
-                <File Id="fil1EDFE0E741E8E14C9A1DB7E66BCC4C9C" KeyPath="yes" Source="$(var.SourceDir)\gitweb\summary.tmpl" />
-            </Component>
-            <Component Id="cmp209D055DDBF11DC7688C0A8765559E32" Directory="dir3D22B249045A1473460D0D5D104478F2" Guid="{9BD8D802-796C-4347-9D21-3D2FC568DA94}">
-                <File Id="fil604852E1873B9EB0D5E2F7A8680CB3D2" KeyPath="yes" Source="$(var.SourceDir)\gitweb\tags.tmpl" />
-            </Component>
-            <Component Id="cmp1823075725AEFF65DFA5A8216B1BBAD1" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{4F380BC7-0658-46A2-8309-6179462CFBA3}">
-                <File Id="filDA3E8C8E479D5D924DD741002D22369B" KeyPath="yes" Source="$(var.SourceDir)\monoblue\branches.tmpl" />
-            </Component>
-            <Component Id="cmpDBF9A5ECD1ABDCF5C28F35FB7B4F7001" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{2522DE9A-08A5-425F-8AF5-499FA6205B85}">
-                <File Id="fil8E8F17BD7047E2FA8D6D83E3C561A136" KeyPath="yes" Source="$(var.SourceDir)\monoblue\changelog.tmpl" />
-            </Component>
-            <Component Id="cmp88FAE67F5F5D776AB06D0DFD7AF6B321" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{7F1857A6-1AB6-40BA-ADD9-D9AD10E86F86}">
-                <File Id="filB923707738590DC420DC9EC081FCD19E" KeyPath="yes" Source="$(var.SourceDir)\monoblue\changelogentry.tmpl" />
-            </Component>
-            <Component Id="cmpD9CA247FB5FD87215801EF6FA1862855" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{DE0C16EC-89C1-4553-9FC2-08BDD881411C}">
-                <File Id="fil40ED0CD11F2D78CC17557BADFA4CE6C7" KeyPath="yes" Source="$(var.SourceDir)\monoblue\changeset.tmpl" />
-            </Component>
-            <Component Id="cmp4BE8112F99779C0F09A4F1FC00C2EF1E" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{31991907-3468-41C5-8B9B-73730BBE6064}">
-                <File Id="fil6D7DFED2D3692BBD082FB0D28D889EA6" KeyPath="yes" Source="$(var.SourceDir)\monoblue\error.tmpl" />
-            </Component>
-            <Component Id="cmp7ABEE036B7DAAD0D1600DDBB43F2C671" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{F9F8FADE-2F02-457B-899E-BB18DFD0AE44}">
-                <File Id="filF2B59AD2AB4DE9C3101DC96F8867A4D5" KeyPath="yes" Source="$(var.SourceDir)\monoblue\fileannotate.tmpl" />
-            </Component>
-            <Component Id="cmpE4F3DB56FD3C5BB582CA58C7BACB0506" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{6E0D083A-19BE-4C8F-8CCF-339395DC638D}">
-                <File Id="fil6BBA7BBD0890DFCC52E62A948092EFB6" KeyPath="yes" Source="$(var.SourceDir)\monoblue\filediff.tmpl" />
-            </Component>
-            <Component Id="cmpEE32268B28EEC3EB3A572522C71905AE" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{493A745D-5342-4436-8C27-A8A6F6AC88EA}">
-                <File Id="filA85CD6E3008BD751106AB7B9A480C492" KeyPath="yes" Source="$(var.SourceDir)\monoblue\filelog.tmpl" />
-            </Component>
-            <Component Id="cmpC761C78428E72FFB5558162BB37B61BD" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{3083DBF6-1661-4722-B30B-1E3B3B90595D}">
-                <File Id="fil0BBD8320FE88C3AC548D940A0C435A05" KeyPath="yes" Source="$(var.SourceDir)\monoblue\filerevision.tmpl" />
-            </Component>
-            <Component Id="cmp17DC3C81B3ABC398360C2007A40ED1E6" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{E3059DE2-D513-473A-9720-DC7FDE13C29F}">
-                <File Id="filCA536CAA1C01B426565F20331B68760B" KeyPath="yes" Source="$(var.SourceDir)\monoblue\footer.tmpl" />
-            </Component>
-            <Component Id="cmp7F175F65C4834FE6069C99E338BDA7E5" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{F04EEDB1-0506-48A8-A4CB-B6A17188FDFE}">
-                <File Id="filC02F1442F76CB500AEB3840EF7356FD6" KeyPath="yes" Source="$(var.SourceDir)\monoblue\graph.tmpl" />
-            </Component>
-            <Component Id="cmpFC525BC58FC3D5CBABF272044899809D" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{2830CCC3-2E3A-4F54-9834-88E61755FDC1}">
-                <File Id="fil8B196B20D79CED85511A9369E5410E12" KeyPath="yes" Source="$(var.SourceDir)\monoblue\header.tmpl" />
-            </Component>
-            <Component Id="cmp5D58BCED0887E9ABCF56A03A3F766C05" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{67B47C67-E7C2-4D2E-BF1E-35072896BF66}">
-                <File Id="fil0F66655D0D9C0515498C736CA70EF2E7" KeyPath="yes" Source="$(var.SourceDir)\monoblue\index.tmpl" />
-            </Component>
-            <Component Id="cmp069EBBE6EAC918EFD74E47E30707A6B1" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{578111BD-AB5C-4E97-8873-F13EF2AB50A6}">
-                <File Id="filB70BAB1BDAC9E692CBD3DF2107E53358" KeyPath="yes" Source="$(var.SourceDir)\monoblue\manifest.tmpl" />
-            </Component>
-            <Component Id="cmp7B96FAA138AD6D0C5632C9AC08396CC7" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{0765336B-6756-4F68-804E-593D19D85696}">
-                <File Id="fil28523FA8BEB5DBE9EB187AC3D8FDFEBA" KeyPath="yes" Source="$(var.SourceDir)\monoblue\map" />
-            </Component>
-            <Component Id="cmp2F6A7B795CB0B56C4FA02196BB6C7DC6" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{A97A84F4-6360-405E-AB51-6604AD513107}">
-                <File Id="fil7AF04A6D9109C9B041BB38DC59E17AF9" KeyPath="yes" Source="$(var.SourceDir)\monoblue\notfound.tmpl" />
-            </Component>
-            <Component Id="cmp0ABEB61C4B9DB9E2FA98E5CD114D7BF3" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{4F97F211-D002-4241-A3F7-A39987524C82}">
-                <File Id="fil0D19104380B37D9A5821C8F0E7C5E77E" KeyPath="yes" Source="$(var.SourceDir)\monoblue\search.tmpl" />
-            </Component>
-            <Component Id="cmp113433EEDE668F21E50B0BFE83C69EEA" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{130A1D16-509D-442B-A990-8E9013D8BD05}">
-                <File Id="filB23212E48881879A57ACC2C8D328E43A" KeyPath="yes" Source="$(var.SourceDir)\monoblue\shortlog.tmpl" />
-            </Component>
-            <Component Id="cmp7F0B6DB5B3B965F203EF66F4BCA0CE8C" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{C452F9A9-67C4-43DC-B0B1-1A833A4F9095}">
-                <File Id="fil696E3BCDF3D23D04000016B5E5B255A2" KeyPath="yes" Source="$(var.SourceDir)\monoblue\summary.tmpl" />
-            </Component>
-            <Component Id="cmpE504AE3BC09BD33B8042C57812C4D1ED" Directory="dirA4D7AC0F636AD49029D4D19861392983" Guid="{9126CF0F-8EE1-4136-B27D-F1773EE2E2AB}">
-                <File Id="filC76BB94267C1E4FFF294F47D87A298D0" KeyPath="yes" Source="$(var.SourceDir)\monoblue\tags.tmpl" />
-            </Component>
-            <Component Id="cmp6A1BCBCE2BB6301A8437B67971E31BBD" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{C1507C7D-9D45-4A0E-AF3F-8E52F60E9A49}">
-                <File Id="filE8D51B053A29EE93BF3E1B0AEE6B5604" KeyPath="yes" Source="$(var.SourceDir)\paper\branches.tmpl" />
-            </Component>
-            <Component Id="cmp7FCF7EC491FB8A8C77281BBF71B21092" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{8F619F2F-A83A-4B76-986E-7B10826E0EEB}">
-                <File Id="filC65F1E9916A7F8ADC2E07A192FBC5E48" KeyPath="yes" Source="$(var.SourceDir)\paper\changeset.tmpl" />
-            </Component>
-            <Component Id="cmp2601220A329A40F193104A27B1EDD50F" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{2CA3DD6E-1BCD-4ED0-95B3-69BD2C723E8F}">
-                <File Id="fil5883423E0C42B6B99C9E22DAEFAEE97D" KeyPath="yes" Source="$(var.SourceDir)\paper\error.tmpl" />
-            </Component>
-            <Component Id="cmp6D80FA8F113931AFEDE452F25CE759C0" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{D5E5A96F-CE04-4FA2-82ED-0BB7AEFFEC4A}">
-                <File Id="filFDEDF9406F5102D8471419766BE46784" KeyPath="yes" Source="$(var.SourceDir)\paper\fileannotate.tmpl" />
-            </Component>
-            <Component Id="cmpF4FCB6A530B40B81345B2FF34128015E" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{D3307DF3-96CA-4E8B-95C2-5636EC9A71B2}">
-                <File Id="filCB283DE6BE999D0B91EC88F1F05380BA" KeyPath="yes" Source="$(var.SourceDir)\paper\filediff.tmpl" />
-            </Component>
-            <Component Id="cmp928B9D51180E9D420CFB1EDBAE91A65B" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{0157773E-9259-41AA-81A0-B032B8114DB0}">
-                <File Id="fil480C6A2482FB8457C07B0B4982C6B2F3" KeyPath="yes" Source="$(var.SourceDir)\paper\filelog.tmpl" />
-            </Component>
-            <Component Id="cmp7294A4A1FDA1C3BABFE78197A25A369D" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{DA8F5765-9DFB-425C-964B-7E6EB38BADB3}">
-                <File Id="filE64DC2B6DF6C1636DC6EB3F0EF988F23" KeyPath="yes" Source="$(var.SourceDir)\paper\filelogentry.tmpl" />
-            </Component>
-            <Component Id="cmp3F36EF7AE95420BC80A34E9C24293791" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{AB07E3D8-7276-416C-85A6-06555FF945EA}">
-                <File Id="filCDB52360E0BEB00BEE8776FA76441783" KeyPath="yes" Source="$(var.SourceDir)\paper\filerevision.tmpl" />
-            </Component>
-            <Component Id="cmpCFCDDD5FA4AE732AA051C60F8787554D" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{C900C800-0660-4B36-ACA3-BDD3BB783CE1}">
-                <File Id="filEF3D2835F8AB4488B82C88BFE4A69D6E" KeyPath="yes" Source="$(var.SourceDir)\paper\footer.tmpl" />
-            </Component>
-            <Component Id="cmp30B241A606B4AD5E3162C0B2CC09DDF9" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{71501492-BCD0-4B2F-B653-83D27CCEFAAD}">
-                <File Id="filE02A4F87D721B4B6B68235AF4A8863A6" KeyPath="yes" Source="$(var.SourceDir)\paper\graph.tmpl" />
-            </Component>
-            <Component Id="cmpB668F2549A35840953001CE413A4C827" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{CDE48712-F5C9-4BCC-9790-B2910F87992A}">
-                <File Id="filD235AD247D72C6F35605F9AD3D3ACFE6" KeyPath="yes" Source="$(var.SourceDir)\paper\header.tmpl" />
-            </Component>
-            <Component Id="cmp2E517204CC91CC55F5080C62F8C74CB3" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{C2BDB761-525B-436D-946D-8327ADCB0762}">
-                <File Id="filE647110321294198E994033415240DE2" KeyPath="yes" Source="$(var.SourceDir)\paper\index.tmpl" />
-            </Component>
-            <Component Id="cmp1169DE962AAC1A97C8820F60C85C2AB5" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{8AA0022C-9AE2-41D8-9F43-8AC426DCF7F0}">
-                <File Id="fil3A3927F8011BABF73AF2BF55FD2B9FD2" KeyPath="yes" Source="$(var.SourceDir)\paper\manifest.tmpl" />
-            </Component>
-            <Component Id="cmp563BA8E85BA6CABCF9AEBD11CB585EBD" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{74408780-F9AE-4067-B1F8-0A1B12BB1826}">
-                <File Id="fil1FCC19A801EB82E395B5A8EF7E869C62" KeyPath="yes" Source="$(var.SourceDir)\paper\map" />
-            </Component>
-            <Component Id="cmpA9A7FE93F240404E1161E70007AC6A78" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{CAE40619-B777-4C7A-8622-CB2DD6756FAA}">
-                <File Id="filFEBD530E5D4F4F2FD23A9E746297721D" KeyPath="yes" Source="$(var.SourceDir)\paper\notfound.tmpl" />
-            </Component>
-            <Component Id="cmpBA354AABF9A7304F201B7C71121A7900" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{23095279-8206-46CB-82E4-AFC007E16C63}">
-                <File Id="fil9F42800F509E8B8E019992B77410F683" KeyPath="yes" Source="$(var.SourceDir)\paper\search.tmpl" />
-            </Component>
-            <Component Id="cmp3AB3B632EBF9F9FD18D38605C343A6B0" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{107E31F0-B7AB-4757-A1F6-86C17E8C384B}">
-                <File Id="filD59540CF5AFFFD872F212B2B1AE6212A" KeyPath="yes" Source="$(var.SourceDir)\paper\shortlog.tmpl" />
-            </Component>
-            <Component Id="cmpB3F6B93705B00E2E3B0459048506D283" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{2F3B2692-5B58-40F8-AE29-844BA58FB312}">
-                <File Id="fil03DA9AB1567E165864A87437FEE91FB8" KeyPath="yes" Source="$(var.SourceDir)\paper\shortlogentry.tmpl" />
-            </Component>
-            <Component Id="cmpEF4594F7D285174D5A356ADEAAFC61ED" Directory="dirCCAE13CC8442C655BA01764423E1EBB7" Guid="{1BE60A48-7183-4886-BC75-3CFF6C51EC3F}">
-                <File Id="fil671A5C071B2BE506FA431651133EFE0A" KeyPath="yes" Source="$(var.SourceDir)\paper\tags.tmpl" />
-            </Component>
-            <Component Id="cmpB25518BB895E3CB4186909EBE6E99C4C" Directory="dir10F9FCD5760425E499FA92F2CAA7A3EA" Guid="{DBB01FA1-EFC7-42E3-81F2-190C060DC035}">
-                <File Id="fil475FD65FC1DCA47748FF999739657468" KeyPath="yes" Source="$(var.SourceDir)\raw\changeset.tmpl" />
-            </Component>
-            <Component Id="cmp17DC05518B1190BEEF5761C10C71854A" Directory="dir10F9FCD5760425E499FA92F2CAA7A3EA" Guid="{4501B072-4375-4458-94C1-2C4E9E991ACD}">
-                <File Id="filFA9899D1B1C1E72B406307FDB9AF7BAF" KeyPath="yes" Source="$(var.SourceDir)\raw\error.tmpl" />
-            </Component>
-            <Component Id="cmpECA65D83D6634896FDB8534E4175FD4F" Directory="dir10F9FCD5760425E499FA92F2CAA7A3EA" Guid="{747870B2-1590-41D5-9112-EB5FFBF50796}">
-                <File Id="fil3CDE49640C240CF6C2C4E1660F904DE9" KeyPath="yes" Source="$(var.SourceDir)\raw\fileannotate.tmpl" />
-            </Component>
-            <Component Id="cmp20CF2D57316DC85D6C9A5B3475F84E80" Directory="dir10F9FCD5760425E499FA92F2CAA7A3EA" Guid="{01ACEDCC-BACF-4D06-B875-0520723B9D37}">
-                <File Id="fil988220F2BAD1CE4CBC544A29C02E82E6" KeyPath="yes" Source="$(var.SourceDir)\raw\filediff.tmpl" />
-            </Component>
-            <Component Id="cmp43DB97D87FF0A11266474A5725C84AC1" Directory="dir10F9FCD5760425E499FA92F2CAA7A3EA" Guid="{CBAFB505-70F0-40BD-9415-AAE3C3FE5C88}">
-                <File Id="fil5066029ABD205C7759437E120CB7018C" KeyPath="yes" Source="$(var.SourceDir)\raw\index.tmpl" />
-            </Component>
-            <Component Id="cmp0C3504452BA0E5A32AE919D1FB100BD3" Directory="dir10F9FCD5760425E499FA92F2CAA7A3EA" Guid="{2EBF0786-F18F-4787-9863-4075D16CAB8F}">
-                <File Id="filAAC49A49F4D6E3A6EAB4EDE1EE2A5808" KeyPath="yes" Source="$(var.SourceDir)\raw\manifest.tmpl" />
-            </Component>
-            <Component Id="cmpE610EB581D7A11C798F107E00759EE30" Directory="dir10F9FCD5760425E499FA92F2CAA7A3EA" Guid="{8834AC2E-11C2-4890-A49B-59BD5CB34953}">
-                <File Id="fil985E1967B655AE5DA8779D2A8E69D986" KeyPath="yes" Source="$(var.SourceDir)\raw\map" />
-            </Component>
-            <Component Id="cmp708C16629B8102ED107B6C79265E1A61" Directory="dir10F9FCD5760425E499FA92F2CAA7A3EA" Guid="{C78C08CA-6F0D-4E00-ADDF-94DA6BFD385A}">
-                <File Id="fil52C7F355B2B8B57D8D8D26F373EED4A4" KeyPath="yes" Source="$(var.SourceDir)\raw\notfound.tmpl" />
-            </Component>
-            <Component Id="cmpEED23BA7882C00E45C04648CCF07C72A" Directory="dirCB380721FE38FED97C74A9E48945B5BC" Guid="{6AFE12A7-D858-4D04-A263-AF21890783F2}">
-                <File Id="fil38EF6BFECB3EA61C18AD8510C540E030" KeyPath="yes" Source="$(var.SourceDir)\rss\changelog.tmpl" />
-            </Component>
-            <Component Id="cmp9293236C7475213E8741C193885BC370" Directory="dirCB380721FE38FED97C74A9E48945B5BC" Guid="{FF79D239-640A-4337-8DC8-C7710DCF6952}">
-                <File Id="fil124495614FA234F165FDFAFB5FCC8B41" KeyPath="yes" Source="$(var.SourceDir)\rss\changelogentry.tmpl" />
-            </Component>
-            <Component Id="cmpF300C87CBE61D8E4F9139A655CC77F2A" Directory="dirCB380721FE38FED97C74A9E48945B5BC" Guid="{76C2B1FF-C1F8-49FC-BEC7-8689FB2676D7}">
-                <File Id="fil975AA04A3938C6B3FA67DE73AD8D8A62" KeyPath="yes" Source="$(var.SourceDir)\rss\error.tmpl" />
-            </Component>
-            <Component Id="cmp3EFC01264101EB280A920E7543FC6BA7" Directory="dirCB380721FE38FED97C74A9E48945B5BC" Guid="{7A44A6EA-6ECB-4235-8EFC-0EFEB2F82E1C}">
-                <File Id="fil15C5D0A18D58A500E90E198CD25799D2" KeyPath="yes" Source="$(var.SourceDir)\rss\filelog.tmpl" />
-            </Component>
-            <Component Id="cmpE86BFF1FA4FE20689AD82969DFD9EF04" Directory="dirCB380721FE38FED97C74A9E48945B5BC" Guid="{F3DE2D70-217D-4DDB-A8F8-C973AAF85D06}">
-                <File Id="fil4516B6122DFF1FAD28410E4F68D37FB4" KeyPath="yes" Source="$(var.SourceDir)\rss\filelogentry.tmpl" />
-            </Component>
-            <Component Id="cmpA55F157640DFAA982E2410BFF396F838" Directory="dirCB380721FE38FED97C74A9E48945B5BC" Guid="{4A467D62-3231-4A5C-B455-EF3C962B1F46}">
-                <File Id="fil0F3AAA97082D3FB22338711F77A7C8C4" KeyPath="yes" Source="$(var.SourceDir)\rss\header.tmpl" />
-            </Component>
-            <Component Id="cmp69196B3D4F0DAC971FC2D765F781B671" Directory="dirCB380721FE38FED97C74A9E48945B5BC" Guid="{26329996-79F4-4E76-8553-1BDFC0873639}">
-                <File Id="filA937974673590803746240DB3A232A66" KeyPath="yes" Source="$(var.SourceDir)\rss\map" />
-            </Component>
-            <Component Id="cmpC696B6493CA1B63C192B073B0D728564" Directory="dirCB380721FE38FED97C74A9E48945B5BC" Guid="{E0719339-E59A-428B-8600-845314285599}">
-                <File Id="filAA576F47CA9747367AF8C4528FD8A217" KeyPath="yes" Source="$(var.SourceDir)\rss\tagentry.tmpl" />
-            </Component>
-            <Component Id="cmp47B99ED43B673977AE8606E3451D8674" Directory="dirCB380721FE38FED97C74A9E48945B5BC" Guid="{F785D87D-0BE0-41C5-BF47-4A7B23CE7BB1}">
-                <File Id="filF3D72D7B79A517201EA2B568C64C19C8" KeyPath="yes" Source="$(var.SourceDir)\rss\tags.tmpl" />
-            </Component>
-            <Component Id="cmp8C4153B109FF248C582A307E7575BDC7" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{2C281D9F-09BD-43C7-BEB8-89F63217D01E}">
-                <File Id="fil45D9BD7CD3073F10FED6A9FDD57C6303" KeyPath="yes" Source="$(var.SourceDir)\spartan\branches.tmpl" />
-            </Component>
-            <Component Id="cmp258992A63D8561862F924B2F445F480E" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{9640D202-3867-49AF-B648-6F8B515376FD}">
-                <File Id="filDCE126EE702579CD325AFA89C6040B3D" KeyPath="yes" Source="$(var.SourceDir)\spartan\changelog.tmpl" />
-            </Component>
-            <Component Id="cmpCBC90D7649B7D877F5A4BBAD723F7F2F" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{DF2B7556-BBFB-489D-908B-6220191EC620}">
-                <File Id="fil9FBF8720F94C113556DDE1C97DF9DDE3" KeyPath="yes" Source="$(var.SourceDir)\spartan\changelogentry.tmpl" />
-            </Component>
-            <Component Id="cmp983EB84EE3C3FA79C2B4B0E126900FF8" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{78ED06E6-41D9-4598-9697-2142016885D7}">
-                <File Id="filE54688ED547D1CF7DF8EB2E53E47C1C0" KeyPath="yes" Source="$(var.SourceDir)\spartan\changeset.tmpl" />
-            </Component>
-            <Component Id="cmp87B16F191F9EE8A923BD50FFAB5AF8A1" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{0002AF55-6A71-4F51-8C50-B39F6215F2B0}">
-                <File Id="filCF590744894C82D12672745CA8694FDA" KeyPath="yes" Source="$(var.SourceDir)\spartan\error.tmpl" />
-            </Component>
-            <Component Id="cmp24FC541496FA7F2BB64E40CE1881E9BD" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{F2E08FF3-744B-4D45-AFA1-5C33A1604F91}">
-                <File Id="filD8A4D1634CFB34AE2A52DD98EFE22B29" KeyPath="yes" Source="$(var.SourceDir)\spartan\fileannotate.tmpl" />
-            </Component>
-            <Component Id="cmp942F916336F4CBA936A065A28D3EADD3" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{905E4307-E9B4-45E3-AE1C-E7D01A4120F4}">
-                <File Id="fil568DC2C47109CC77F23F9593A16B44F0" KeyPath="yes" Source="$(var.SourceDir)\spartan\filediff.tmpl" />
-            </Component>
-            <Component Id="cmp597CDAFF17F11DA3FED725E5829DD73C" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{84FBA0CE-7E2C-4504-94D5-9C383DA4BFDE}">
-                <File Id="fil580676C3E18FDF8919786C15B92FDBD2" KeyPath="yes" Source="$(var.SourceDir)\spartan\filelog.tmpl" />
-            </Component>
-            <Component Id="cmpC4ACD09B8854124364CBB8CDAD38FB08" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{0D0E0B26-EA07-4ADE-96F3-3F30DBC4AA9D}">
-                <File Id="filC736FBCC66C5D91989FC91C2E5931182" KeyPath="yes" Source="$(var.SourceDir)\spartan\filelogentry.tmpl" />
-            </Component>
-            <Component Id="cmpEB22906EBBA0857AECD19E74CE893749" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{A588ED57-CDFE-4316-AF15-C81E40A67343}">
-                <File Id="filDA153719D47EE0165DB1A908ECF1D9CF" KeyPath="yes" Source="$(var.SourceDir)\spartan\filerevision.tmpl" />
-            </Component>
-            <Component Id="cmp30475C52A92194CBC64BED509F7D7B64" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{B795B3F2-394E-4F23-B0B7-BD6191E17714}">
-                <File Id="filBAF07E4ACAECCC417DCF35B01D053357" KeyPath="yes" Source="$(var.SourceDir)\spartan\footer.tmpl" />
-            </Component>
-            <Component Id="cmp679ECC15E459B542AA894CD7F0B3690D" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{82E57B98-1C5F-43D5-81FF-7952EFAAAB62}">
-                <File Id="filABBF8D15F4DE387F2648004FAB23B078" KeyPath="yes" Source="$(var.SourceDir)\spartan\graph.tmpl" />
-            </Component>
-            <Component Id="cmp31A95170275A0F3CEA2EFA0B3EE699EA" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{382BA9AC-67BC-44BA-8004-F72EFEB68007}">
-                <File Id="fil69E45EBB4E4C69CD7482C487DF64C3D8" KeyPath="yes" Source="$(var.SourceDir)\spartan\header.tmpl" />
-            </Component>
-            <Component Id="cmp4363ACEAD4BD8845B0C9AC2D03465A5E" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{CF8B8556-687B-4E82-BC6B-62A4916A7E4A}">
-                <File Id="fil5FE55A8E4659024B58AA7C8256CA9439" KeyPath="yes" Source="$(var.SourceDir)\spartan\index.tmpl" />
-            </Component>
-            <Component Id="cmp1B77757C5443F6AA7EED502370927E92" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{0AB066EA-64CF-4434-9752-2E900396EFFF}">
-                <File Id="filE71CF1D4A57966CE89FED594B3D9E430" KeyPath="yes" Source="$(var.SourceDir)\spartan\manifest.tmpl" />
-            </Component>
-            <Component Id="cmp269E53402BD0050DE38109E3BF5C3945" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{6B03B3A5-49D5-413B-9DA5-A32BA30F88BC}">
-                <File Id="fil9D51DC7A5EB908A1EECA883E06EB8B31" KeyPath="yes" Source="$(var.SourceDir)\spartan\map" />
-            </Component>
-            <Component Id="cmp73F5CB8A13C8C57CD15DB9064BD9E2BF" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{3B9DB632-BDDC-4DDF-81FD-1DC6751A3467}">
-                <File Id="filE079FF0AA52D0BCCDB9A5B49A80D5504" KeyPath="yes" Source="$(var.SourceDir)\spartan\notfound.tmpl" />
-            </Component>
-            <Component Id="cmpECE54442CE4E6FD27717A8D578125A2B" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{886E4B52-C284-4493-B2E5-FA35A9CD3ABA}">
-                <File Id="filE14A89B3EA724AAB48354DEE70DF69C8" KeyPath="yes" Source="$(var.SourceDir)\spartan\search.tmpl" />
-            </Component>
-            <Component Id="cmpFF1D26AC267CDED40E1D2AC476D7F09F" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{6359A1B3-48B2-4092-A7C4-BE53F05870AB}">
-                <File Id="fil868AF4DF25AC25F53793411E9365297D" KeyPath="yes" Source="$(var.SourceDir)\spartan\shortlog.tmpl" />
-            </Component>
-            <Component Id="cmp2D8D54467D34BA5055A5FF2E67254EAD" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{F26E20E2-7A04-489B-8F83-183D898174DD}">
-                <File Id="filF4ABFCC411E50C0042C1848016EE5327" KeyPath="yes" Source="$(var.SourceDir)\spartan\shortlogentry.tmpl" />
-            </Component>
-            <Component Id="cmp83ECAEFDCC6805EEFC78A54EF1000146" Directory="dirB8FE74E96715E770736FEAFA391ABF15" Guid="{7A021045-DA97-4A34-87AB-0882F071573C}">
-                <File Id="fil1D8DB7506E3BBD7449459C9BAB25CDAD" KeyPath="yes" Source="$(var.SourceDir)\spartan\tags.tmpl" />
-            </Component>
-            <Component Id="cmpBFBB6F3B9C29C43E991077D6BFC33944" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{5883A510-590E-4ADE-85A7-B94F373B63CA}">
-                <File Id="filF8DE93E9297B5CAE60372749245F15B2" KeyPath="yes" Source="$(var.SourceDir)\static\background.png" />
-            </Component>
-            <Component Id="cmp0F63F938946462583D4DEE74873DC408" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{A0C70D4C-E2BE-4173-A95F-A2FB690A65D5}">
-                <File Id="fil00A8D7AEA87233FED8A360F2D862572E" KeyPath="yes" Source="$(var.SourceDir)\static\coal-file.png" />
-            </Component>
-            <Component Id="cmpDE70C42580801A22F32CFD04C7EF4CF9" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{81A48619-3740-4874-83C3-AE58D74E30A6}">
-                <File Id="fil42C97A38CD59CED3713E93E6CBCDBFFE" KeyPath="yes" Source="$(var.SourceDir)\static\coal-folder.png" />
-            </Component>
-            <Component Id="cmpA45BEDD14DCA07C7A92A417386445E25" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{030E40CB-67A6-4EB5-ACC2-18B14BC31178}">
-                <File Id="filCC692DA67C62144B4AF34F10014F83FD" KeyPath="yes" Source="$(var.SourceDir)\static\excanvas.js" />
-            </Component>
-            <Component Id="cmp72015354E78AA8A481B54F81AD8F9682" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{894DAD59-0224-4CD1-8984-CBCB1464E44A}">
-                <File Id="fil690EAE877AB9F8C70C93E471115C52F2" KeyPath="yes" Source="$(var.SourceDir)\static\graph.js" />
-            </Component>
-            <Component Id="cmpB467CD481FE78A9CD052183FE5F3D0C6" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{DC08B50D-F37D-42FF-A382-037D7DE80008}">
-                <File Id="fil28C1A9E02AE19A9988E8F1BAFDBEAD91" KeyPath="yes" Source="$(var.SourceDir)\static\hgicon.png" />
-            </Component>
-            <Component Id="cmp6B247043D5188A72BAFBCC81DB10B97C" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{4EC7856F-BA03-4DE8-A84B-7DCF12A9393C}">
-                <File Id="fil8860DD8D5DA074A5BE9F314F442285EC" KeyPath="yes" Source="$(var.SourceDir)\static\hglogo.png" />
-            </Component>
-            <Component Id="cmp4F8B4BF7E8F4DDF9C224F45A94BAE0AA" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{2363D738-3F01-4C02-95A1-AF17841FC087}">
-                <File Id="filA6C8F4FB422C911ABE0F82752E383E99" KeyPath="yes" Source="$(var.SourceDir)\static\style-coal.css" />
-            </Component>
-            <Component Id="cmpF69080B6DF1E2AA23990F61B4ED884EB" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{5ED9E813-DE59-45C9-9CCB-1A3248E348E5}">
-                <File Id="fil5078818944548B0CCE1C317796CF7D4A" KeyPath="yes" Source="$(var.SourceDir)\static\style-gitweb.css" />
-            </Component>
-            <Component Id="cmp39B7B1D88ED5B2E8E878FEF7FB7D0F89" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{5F49B8D0-F497-4848-B95D-040BE4CC3296}">
-                <File Id="filB788208E124431C056B605A46EC7A643" KeyPath="yes" Source="$(var.SourceDir)\static\style-monoblue.css" />
-            </Component>
-            <Component Id="cmp08A2992654457D67292FF9C2B96B5172" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{474A04D3-84A1-435F-99DB-21BA3079CE55}">
-                <File Id="filE567FA56A8009FB9853EA69E01A0A410" KeyPath="yes" Source="$(var.SourceDir)\static\style-paper.css" />
-            </Component>
-            <Component Id="cmpDABBFD12710BF06B024350932B45E606" Directory="dirC5A30981F5453B69928F61CEC4F6D629" Guid="{54BB78EA-5B06-42EA-8F30-9C5277A8590E}">
-                <File Id="filE018265028110198DEF0E278341C9EB3" KeyPath="yes" Source="$(var.SourceDir)\static\style.css" />
-            </Component>
-        </ComponentGroup>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="INSTALLDIR">
-            <Directory Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" Name="templates" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir35F8598B197DFC5580317F5E7C2E9AE9" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir10F9FCD5760425E499FA92F2CAA7A3EA" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir10F9FCD5760425E499FA92F2CAA7A3EA" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir35F8598B197DFC5580317F5E7C2E9AE9" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir10F9FCD5760425E499FA92F2CAA7A3EA" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCB380721FE38FED97C74A9E48945B5BC" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir10F9FCD5760425E499FA92F2CAA7A3EA" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCB380721FE38FED97C74A9E48945B5BC" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir35F8598B197DFC5580317F5E7C2E9AE9" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCB380721FE38FED97C74A9E48945B5BC" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir10F9FCD5760425E499FA92F2CAA7A3EA" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir35F8598B197DFC5580317F5E7C2E9AE9" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCB380721FE38FED97C74A9E48945B5BC" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir35F8598B197DFC5580317F5E7C2E9AE9" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCB380721FE38FED97C74A9E48945B5BC" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir35F8598B197DFC5580317F5E7C2E9AE9" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir10F9FCD5760425E499FA92F2CAA7A3EA" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir2EDFFCA56732C858816EF19F127E8D0F" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCB380721FE38FED97C74A9E48945B5BC" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir35F8598B197DFC5580317F5E7C2E9AE9" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir10F9FCD5760425E499FA92F2CAA7A3EA" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCB380721FE38FED97C74A9E48945B5BC" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir35F8598B197DFC5580317F5E7C2E9AE9" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir10F9FCD5760425E499FA92F2CAA7A3EA" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCB380721FE38FED97C74A9E48945B5BC" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCB380721FE38FED97C74A9E48945B5BC" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir3D22B249045A1473460D0D5D104478F2" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirCCAE13CC8442C655BA01764423E1EBB7" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dir2EDFFCA56732C858816EF19F127E8D0F" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirC5A30981F5453B69928F61CEC4F6D629" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirA4D7AC0F636AD49029D4D19861392983" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirB8FE74E96715E770736FEAFA391ABF15" />
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8">
-            <Directory Id="dir10F9FCD5760425E499FA92F2CAA7A3EA" Name="raw" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8">
-            <Directory Id="dir2EDFFCA56732C858816EF19F127E8D0F" Name="coal" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8">
-            <Directory Id="dir35F8598B197DFC5580317F5E7C2E9AE9" Name="atom" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8">
-            <Directory Id="dir3D22B249045A1473460D0D5D104478F2" Name="gitweb" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8">
-            <Directory Id="dirA4D7AC0F636AD49029D4D19861392983" Name="monoblue" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8">
-            <Directory Id="dirB8FE74E96715E770736FEAFA391ABF15" Name="spartan" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8">
-            <Directory Id="dirC5A30981F5453B69928F61CEC4F6D629" Name="static" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8">
-            <Directory Id="dirCB380721FE38FED97C74A9E48945B5BC" Name="rss" />
-        </DirectoryRef>
-    </Fragment>
-    <Fragment>
-        <DirectoryRef Id="dirBFB9D3FD33CE2C696D390C94E4E1B4D8">
-            <Directory Id="dirCCAE13CC8442C655BA01764423E1EBB7" Name="paper" />
-        </DirectoryRef>
-    </Fragment>
-</Wix>
+
+  <?include guids.wxi ?>
+
+  <Fragment>
+    <ComponentGroup Id="templatesFolder">
+
+      <ComponentRef Id="templates.root" />
+
+      <ComponentRef Id="templates.atom" />
+      <ComponentRef Id="templates.coal" />
+      <ComponentRef Id="templates.gitweb" />
+      <ComponentRef Id="templates.monoblue" />
+      <ComponentRef Id="templates.paper" />
+      <ComponentRef Id="templates.raw" />
+      <ComponentRef Id="templates.rss" />
+      <ComponentRef Id="templates.spartan" />
+      <ComponentRef Id="templates.static" />
+
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <DirectoryRef Id="INSTALLDIR">
+
+      <Directory Id="templatesdir" Name="templates" FileSource="$(var.SourceDir)">
+
+        <Component Id="templates.root" Guid="$(var.templates.root.guid)">
+          <File Name="map-cmdline.changelog" KeyPath="yes" />
+          <File Name="map-cmdline.compact" />
+          <File Name="map-cmdline.default" />
+          <File Name="map-cmdline.xml" />
+          <File Name="template-vars.txt" />
+        </Component>
+
+        <Directory Id="templates.atomdir" Name="atom">
+          <Component Id="templates.atom" Guid="$(var.templates.atom.guid)">
+            <File Id="atom.changelog.tmpl"      Name="changelog.tmpl" KeyPath="yes" />
+            <File Id="atom.changelogentry.tmpl" Name="changelogentry.tmpl" />
+            <File Id="atom.error.tmpl"          Name="error.tmpl" />
+            <File Id="atom.filelog.tmpl"        Name="filelog.tmpl" />
+            <File Id="atom.header.tmpl"         Name="header.tmpl" />
+            <File Id="atom.map"                 Name="map" />
+            <File Id="atom.tagentry.tmpl"       Name="tagentry.tmpl" />
+            <File Id="atom.tags.tmpl"           Name="tags.tmpl" />
+          </Component>
+        </Directory>
+
+        <Directory Id="templates.coaldir" Name="coal">
+          <Component Id="templates.coal" Guid="$(var.templates.coal.guid)">
+            <File Id="coal.header.tmpl" Name="header.tmpl" KeyPath="yes" />
+            <File Id="coal.map"         Name="map" />
+          </Component>
+        </Directory>
+
+        <Directory Id="templates.gitwebdir" Name="gitweb">
+          <Component Id="templates.gitweb" Guid="$(var.templates.gitweb.guid)">
+            <File Id="gitweb.branches.tmpl"       Name="branches.tmpl" KeyPath="yes" />
+            <File Id="gitweb.changelog.tmpl"      Name="changelog.tmpl" />
+            <File Id="gitweb.changelogentry.tmpl" Name="changelogentry.tmpl" />
+            <File Id="gitweb.changeset.tmpl"      Name="changeset.tmpl" />
+            <File Id="gitweb.error.tmpl"          Name="error.tmpl" />
+            <File Id="gitweb.fileannotate.tmpl"   Name="fileannotate.tmpl" />
+            <File Id="gitweb.filediff.tmpl"       Name="filediff.tmpl" />
+            <File Id="gitweb.filelog.tmpl"        Name="filelog.tmpl" />
+            <File Id="gitweb.filerevision.tmpl"   Name="filerevision.tmpl" />
+            <File Id="gitweb.footer.tmpl"         Name="footer.tmpl" />
+            <File Id="gitweb.graph.tmpl"          Name="graph.tmpl" />
+            <File Id="gitweb.header.tmpl"         Name="header.tmpl" />
+            <File Id="gitweb.index.tmpl"          Name="index.tmpl" />
+            <File Id="gitweb.manifest.tmpl"       Name="manifest.tmpl" />
+            <File Id="gitweb.map"                 Name="map" />
+            <File Id="gitweb.notfound.tmpl"       Name="notfound.tmpl" />
+            <File Id="gitweb.search.tmpl"         Name="search.tmpl" />
+            <File Id="gitweb.shortlog.tmpl"       Name="shortlog.tmpl" />
+            <File Id="gitweb.summary.tmpl"        Name="summary.tmpl" />
+            <File Id="gitweb.tags.tmpl"           Name="tags.tmpl" />
+          </Component>
+        </Directory>
+
+        <Directory Id="templates.monobluedir" Name="monoblue">
+          <Component Id="templates.monoblue" Guid="$(var.templates.monoblue.guid)">
+            <File Id="monoblue.branches.tmpl"       Name="branches.tmpl" KeyPath="yes" />
+            <File Id="monoblue.changelog.tmpl"      Name="changelog.tmpl" />
+            <File Id="monoblue.changelogentry.tmpl" Name="changelogentry.tmpl" />
+            <File Id="monoblue.changeset.tmpl"      Name="changeset.tmpl" />
+            <File Id="monoblue.error.tmpl"          Name="error.tmpl" />
+            <File Id="monoblue.fileannotate.tmpl"   Name="fileannotate.tmpl" />
+            <File Id="monoblue.filediff.tmpl"       Name="filediff.tmpl" />
+            <File Id="monoblue.filelog.tmpl"        Name="filelog.tmpl" />
+            <File Id="monoblue.filerevision.tmpl"   Name="filerevision.tmpl" />
+            <File Id="monoblue.footer.tmpl"         Name="footer.tmpl" />
+            <File Id="monoblue.graph.tmpl"          Name="graph.tmpl" />
+            <File Id="monoblue.header.tmpl"         Name="header.tmpl" />
+            <File Id="monoblue.index.tmpl"          Name="index.tmpl" />
+            <File Id="monoblue.manifest.tmpl"       Name="manifest.tmpl" />
+            <File Id="monoblue.map"                 Name="map" />
+            <File Id="monoblue.notfound.tmpl"       Name="notfound.tmpl" />
+            <File Id="monoblue.search.tmpl"         Name="search.tmpl" />
+            <File Id="monoblue.shortlog.tmpl"       Name="shortlog.tmpl" />
+            <File Id="monoblue.summary.tmpl"        Name="summary.tmpl" />
+            <File Id="monoblue.tags.tmpl"           Name="tags.tmpl" />
+          </Component>
+        </Directory>
+
+        <Directory Id="templates.paperdir" Name="paper">
+          <Component Id="templates.paper" Guid="$(var.templates.paper.guid)">
+            <File Id="paper.branches.tmpl"      Name="branches.tmpl" KeyPath="yes" />
+            <File Id="paper.changeset.tmpl"     Name="changeset.tmpl" />
+            <File Id="paper.error.tmpl"         Name="error.tmpl" />
+            <File Id="paper.fileannotate.tmpl"  Name="fileannotate.tmpl" />
+            <File Id="paper.filediff.tmpl"      Name="filediff.tmpl" />
+            <File Id="paper.filelog.tmpl"       Name="filelog.tmpl" />
+            <File Id="paper.filelogentry.tmpl"  Name="filelogentry.tmpl" />
+            <File Id="paper.filerevision.tmpl"  Name="filerevision.tmpl" />
+            <File Id="paper.footer.tmpl"        Name="footer.tmpl" />
+            <File Id="paper.graph.tmpl"         Name="graph.tmpl" />
+            <File Id="paper.header.tmpl"        Name="header.tmpl" />
+            <File Id="paper.index.tmpl"         Name="index.tmpl" />
+            <File Id="paper.manifest.tmpl"      Name="manifest.tmpl" />
+            <File Id="paper.map"                Name="map" />
+            <File Id="paper.notfound.tmpl"      Name="notfound.tmpl" />
+            <File Id="paper.search.tmpl"        Name="search.tmpl" />
+            <File Id="paper.shortlog.tmpl"      Name="shortlog.tmpl" />
+            <File Id="paper.shortlogentry.tmpl" Name="shortlogentry.tmpl" />
+            <File Id="paper.tags.tmpl"          Name="tags.tmpl" />
+          </Component>
+        </Directory>
+
+        <Directory Id="templates.rawdir" Name="raw">
+          <Component Id="templates.raw" Guid="$(var.templates.raw.guid)">
+            <File Id="raw.changeset.tmpl"    Name="changeset.tmpl" KeyPath="yes" />
+            <File Id="raw.error.tmpl"        Name="error.tmpl" />
+            <File Id="raw.fileannotate.tmpl" Name="fileannotate.tmpl" />
+            <File Id="raw.filediff.tmpl"     Name="filediff.tmpl" />
+            <File Id="raw.index.tmpl"        Name="index.tmpl" />
+            <File Id="raw.manifest.tmpl"     Name="manifest.tmpl" />
+            <File Id="raw.map"               Name="map" />
+            <File Id="raw.notfound.tmpl"     Name="notfound.tmpl" />
+          </Component>
+        </Directory>
+
+        <Directory Id="templates.rssdir" Name="rss">
+          <Component Id="templates.rss" Guid="$(var.templates.rss.guid)">
+            <File Id="rss.changelog.tmpl"      Name="changelog.tmpl" KeyPath="yes" />
+            <File Id="rss.changelogentry.tmpl" Name="changelogentry.tmpl" />
+            <File Id="rss.error.tmpl"          Name="error.tmpl" />
+            <File Id="rss.filelog.tmpl"        Name="filelog.tmpl" />
+            <File Id="rss.filelogentry.tmpl"   Name="filelogentry.tmpl" />
+            <File Id="rss.header.tmpl"         Name="header.tmpl" />
+            <File Id="rss.map"                 Name="map" />
+            <File Id="rss.tagentry.tmpl"       Name="tagentry.tmpl" />
+            <File Id="rss.tags.tmpl"           Name="tags.tmpl" />
+          </Component>
+        </Directory>
+
+        <Directory Id="templates.spartandir" Name="spartan">
+          <Component Id="templates.spartan" Guid="$(var.templates.spartan.guid)">
+            <File Id="spartan.branches.tmpl"       Name="branches.tmpl" KeyPath="yes" />
+            <File Id="spartan.changelog.tmpl"      Name="changelog.tmpl" />
+            <File Id="spartan.changelogentry.tmpl" Name="changelogentry.tmpl" />
+            <File Id="spartan.changeset.tmpl"      Name="changeset.tmpl" />
+            <File Id="spartan.error.tmpl"          Name="error.tmpl" />
+            <File Id="spartan.fileannotate.tmpl"   Name="fileannotate.tmpl" />
+            <File Id="spartan.filediff.tmpl"       Name="filediff.tmpl" />
+            <File Id="spartan.filelog.tmpl"        Name="filelog.tmpl" />
+            <File Id="spartan.filelogentry.tmpl"   Name="filelogentry.tmpl" />
+            <File Id="spartan.filerevision.tmpl"   Name="filerevision.tmpl" />
+            <File Id="spartan.footer.tmpl"         Name="footer.tmpl" />
+            <File Id="spartan.graph.tmpl"          Name="graph.tmpl" />
+            <File Id="spartan.header.tmpl"         Name="header.tmpl" />
+            <File Id="spartan.index.tmpl"          Name="index.tmpl" />
+            <File Id="spartan.manifest.tmpl"       Name="manifest.tmpl" />
+            <File Id="spartan.map"                 Name="map" />
+            <File Id="spartan.notfound.tmpl"       Name="notfound.tmpl" />
+            <File Id="spartan.search.tmpl"         Name="search.tmpl" />
+            <File Id="spartan.shortlog.tmpl"       Name="shortlog.tmpl" />
+            <File Id="spartan.shortlogentry.tmpl"  Name="shortlogentry.tmpl" />
+            <File Id="spartan.tags.tmpl"           Name="tags.tmpl" />
+          </Component>
+        </Directory>
+
+        <Directory Id="templates.staticdir" Name="static">
+          <Component Id="templates.static" Guid="$(var.templates.static.guid)">
+            <File Id="static.background.png"     Name="background.png" KeyPath="yes" />
+            <File Id="static.coal.file.png"      Name="coal-file.png" />
+            <File Id="static.coal.folder.png"    Name="coal-folder.png" />
+            <File Id="static.excanvas.js"        Name="excanvas.js" />
+            <File Id="static.graph.js"           Name="graph.js" />
+            <File Id="static.hgicon.png"         Name="hgicon.png" />
+            <File Id="static.hglogo.png"         Name="hglogo.png" />
+            <File Id="static.style.coal.css"     Name="style-coal.css" />
+            <File Id="static.style.gitweb.css"   Name="style-gitweb.css" />
+            <File Id="static.style.monoblue.css" Name="style-monoblue.css" />
+            <File Id="static.style.paper.css"    Name="style-paper.css" />
+            <File Id="static.style.css"          Name="style.css" />
+          </Component>
+        </Directory>
+
+      </Directory>
+
+    </DirectoryRef>
+  </Fragment>
+
+ </Wix>
