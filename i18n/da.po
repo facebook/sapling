@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-04-04 23:48+0200\n"
-"PO-Revision-Date: 2010-04-05 00:12+0200\n"
+"PO-Revision-Date: 2010-04-05 01:09+0200\n"
 "Last-Translator:  <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -166,7 +166,7 @@ msgid "a bookmark cannot have the name of an existing branch"
 msgstr "et bogmærke kan ikke hedde det samme som en eksisterende gren"
 
 msgid "no bookmarks set\n"
-msgstr ""
+msgstr "der er ingen bogmærker\n"
 
 msgid "force"
 msgstr "gennemtving"
@@ -1072,7 +1072,7 @@ msgid "%d bytes missing from remote file"
 msgstr "%d byte mangler i fjernfilen"
 
 msgid "malformed response from CVS"
-msgstr ""
+msgstr "misdannet svar fra CVS"
 
 #, python-format
 msgid "cvs server: %s\n"
@@ -2172,7 +2172,7 @@ msgid "unhooked all commit hooks\n"
 msgstr ""
 
 msgid "hg keyword configuration and expansion example"
-msgstr ""
+msgstr "eksempel på konfiguration og ekspansion af nøgleord"
 
 msgid ""
 "\n"
@@ -2344,7 +2344,7 @@ msgstr ""
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
-msgstr ""
+msgstr "mq.git indstillingen kan være auto/keep/yes/no, fik %s"
 
 #, python-format
 msgid "%s appears more than once in %s"
@@ -2391,7 +2391,7 @@ msgstr "springer %s over - ingen matchende filtre\n"
 
 #, python-format
 msgid "error removing undo: %s\n"
-msgstr ""
+msgstr "fejl ved fjernelse af undo: %s\n"
 
 #, python-format
 msgid "apply failed for patch %s"
@@ -2507,7 +2507,7 @@ msgstr "ingen patches i serien\n"
 
 #, python-format
 msgid "cannot push to a previous patch: %s"
-msgstr ""
+msgstr "kan ikke skubbe til en tidligere rettelse: %s"
 
 #, python-format
 msgid "qpush: %s is already at the top\n"
@@ -3795,6 +3795,8 @@ msgstr "angiv mindst en ændring med -r eller -o"
 
 msgid "--outgoing mode always on with --bundle; do not re-specify --outgoing"
 msgstr ""
+"--outgoing tilvalget er altid aktivt med --bundle; undlad at angive --"
+"outgoing igen"
 
 msgid "too many destinations"
 msgstr "for mange destinationer"
@@ -4322,35 +4324,35 @@ msgstr "Hårde lænker er ikke supporteret på dette system"
 
 #, python-format
 msgid "relinking %s to %s\n"
-msgstr ""
+msgstr "kæder %s og %s sammen igen\n"
 
 #, python-format
 msgid "collected %d candidate storage files\n"
-msgstr ""
+msgstr "opsamlede %d kandidatfiler\n"
 
 msgid "source and destination are on different devices"
 msgstr "kilden og destinationen er på forskellige enheder"
 
 #, python-format
 msgid "not linkable: %s\n"
-msgstr ""
+msgstr "kan ikke sammenkædes: %s\n"
 
 #, python-format
 msgid "pruned down to %d probably relinkable files\n"
-msgstr ""
+msgstr "beskåret til %d filer der potentielt kan sammenkædes\n"
 
 msgid " files"
 msgstr " filer"
 
 msgid "relinking"
-msgstr ""
+msgstr "sammenkæder"
 
 #, python-format
 msgid "relinked %d files (%d bytes reclaimed)\n"
 msgstr ""
 
 msgid "[ORIGIN]"
-msgstr ""
+msgstr "[KILDE]"
 
 msgid ""
 "extend schemes with shortcuts to repository swarms\n"
@@ -4391,7 +4393,7 @@ msgid ""
 msgstr ""
 
 msgid "share a common history between several working directories"
-msgstr ""
+msgstr "del en fælles historie mellem flere arbejdsbiblioteker"
 
 msgid ""
 "create a new shared repository\n"
@@ -4415,7 +4417,7 @@ msgid "do not create a working copy"
 msgstr "opret ikke en arbejdskopi"
 
 msgid "[-U] SOURCE [DEST]"
-msgstr ""
+msgstr "[-U] KILDE [DESTINATION]"
 
 msgid ""
 "command to transplant changesets from another branch\n"
@@ -4428,15 +4430,15 @@ msgstr ""
 
 #, python-format
 msgid "skipping already applied revision %s\n"
-msgstr ""
+msgstr "springer allerede anvendt revision %s over\n"
 
 #, python-format
 msgid "skipping merge changeset %s:%s\n"
-msgstr ""
+msgstr "springer sammenføjning over: %s:%s\n"
 
 #, python-format
 msgid "%s merged at %s\n"
-msgstr ""
+msgstr "%s sammenføjet ved %s\n"
 
 #, python-format
 msgid "%s transplanted to %s\n"
@@ -4457,7 +4459,7 @@ msgid "%s: empty changeset"
 msgstr "%s: tom ændring"
 
 msgid "Fix up the merge and run hg transplant --continue"
-msgstr ""
+msgstr "Ret sammenføjningen og kør hg transplant --continue"
 
 #, python-format
 msgid "%s transplanted as %s\n"
@@ -4564,10 +4566,10 @@ msgid "merge at REV"
 msgstr "sammenføj ved REV"
 
 msgid "append transplant info to log message"
-msgstr ""
+msgstr "tilføj information on transplantationen i deponeringsbeskeden"
 
 msgid "continue last transplant session after repair"
-msgstr ""
+msgstr "fortsæt sidste transplantation efter reparation"
 
 msgid "filter changesets through FILTER"
 msgstr "filtrer ændringer igennem FILTER"
@@ -4614,10 +4616,10 @@ msgstr ""
 
 #, python-format
 msgid "[win32mbcs] filename conversion failed with %s encoding\n"
-msgstr ""
+msgstr "[win32mbcs] konvertering af filnavn fejlede med %s tegnkodning\n"
 
 msgid "[win32mbcs] cannot activate on this platform.\n"
-msgstr ""
+msgstr "[win32mbcs] kan ikke aktiveres på denn platform.\n"
 
 msgid ""
 "perform automatic newline conversion\n"
@@ -4660,10 +4662,11 @@ msgstr ""
 #, python-format
 msgid "Attempt to commit or push text file(s) using %s line endings\n"
 msgstr ""
+"Forsøg på at deponere eller skubbe tekstfiler som bruge %s linieskift\n"
 
 #, python-format
 msgid "in %s: %s\n"
-msgstr ""
+msgstr "i %s: %s\n"
 
 #, python-format
 msgid ""
@@ -4714,7 +4717,7 @@ msgid "unknown archive type '%s'"
 msgstr "ukendt depottype '%s'"
 
 msgid "invalid changegroup"
-msgstr ""
+msgstr "ugyldig changegroup"
 
 msgid "unknown parent"
 msgstr "ukendt forælder"
@@ -4754,24 +4757,24 @@ msgid "the name '%s' is reserved"
 msgstr "navnet '%s' er reserveret"
 
 msgid "options --message and --logfile are mutually exclusive"
-msgstr ""
+msgstr "tilvalgene --message og --logfile udelukker hinanden"
 
 #, python-format
 msgid "can't read commit message '%s': %s"
 msgstr "kan ikke læse deponeringsbesked '%s': %s"
 
 msgid "limit must be a positive integer"
-msgstr ""
+msgstr "grænsen skal være et positivt heltal"
 
 msgid "limit must be positive"
-msgstr ""
+msgstr "grænsen skal være positiv"
 
 msgid "too many revisions specified"
 msgstr "der er specificeret for mange revisioner"
 
 #, python-format
 msgid "invalid format spec '%%%s' in output filename"
-msgstr ""
+msgstr "ugyldig formatspecifikation '%%%s' i output filnavn"
 
 #, python-format
 msgid "adding %s\n"
@@ -4864,7 +4867,7 @@ msgstr "forælder:    %d:%s\n"
 
 #, python-format
 msgid "manifest:    %d:%s\n"
-msgstr ""
+msgstr "manifest:    %d:%s\n"
 
 #, python-format
 msgid "user:        %s\n"
@@ -4908,21 +4911,21 @@ msgstr ""
 
 #, python-format
 msgid "%s: %s"
-msgstr ""
+msgstr "%s: %s"
 
 #, python-format
 msgid "Found revision %s from %s\n"
-msgstr ""
+msgstr "Fandt revision %s fra %s\n"
 
 msgid "revision matching date not found"
-msgstr ""
+msgstr "fandt ingen revision på datoen"
 
 #, python-format
 msgid "cannot follow nonexistent file: \"%s\""
-msgstr ""
+msgstr "kan ikke følge ikke-eksisterende fil: \"%s\""
 
 msgid "can only follow copies/renames for explicit filenames"
-msgstr ""
+msgstr "kan kun følge kopier/omdøbninger for eksplicitte filnavne"
 
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
 msgstr ""
@@ -5242,10 +5245,10 @@ msgstr ""
 "hvilken som helst af:\n"
 
 msgid "cannot bisect (no known good revisions)"
-msgstr ""
+msgstr "kan ikke halvere (kender ingen gode revisioner)"
 
 msgid "cannot bisect (no known bad revisions)"
-msgstr ""
+msgstr "kan ikke halvere (kender ingen dårlige revisioner)"
 
 msgid "(use of 'hg bisect <cmd>' is deprecated)\n"
 msgstr "(formen 'hg bisect <kommando>' er forældet)\n"
@@ -5313,7 +5316,9 @@ msgstr "nulstil arbejdskataloget til gren %s\n"
 
 msgid ""
 "a branch of the same name already exists (use 'hg update' to switch to it)"
-msgstr "en gren af samme navn eksisterer allerede (brug 'hg update' for at skifte til den)"
+msgstr ""
+"en gren af samme navn eksisterer allerede (brug 'hg update' for at skifte "
+"til den)"
 
 #, python-format
 msgid "marked working directory as branch %s\n"
@@ -5380,7 +5385,7 @@ msgid "--base is incompatible with specifying a destination"
 msgstr "--base er inkompatibelt med at angive en destination"
 
 msgid "unknown bundle type specified with --type"
-msgstr ""
+msgstr "ukendt bundt-type angivet med --type"
 
 msgid ""
 "output the current or given revision of files\n"
@@ -5611,7 +5616,7 @@ msgid ""
 msgstr ""
 
 msgid "find the ancestor revision of two revisions in a given index"
-msgstr ""
+msgstr "find forfader-revisionen til to revisioner i det angivne indeks"
 
 msgid "either two or three arguments required"
 msgstr "kræver enten to eller tre argumenter"
@@ -5620,10 +5625,10 @@ msgid "returns the completion list associated with the given command"
 msgstr ""
 
 msgid "rebuild the dirstate as it would look like for the given revision"
-msgstr ""
+msgstr "genopbygger dirstate som den ville se ud for den angivne revision"
 
 msgid "validate the correctness of the current dirstate"
-msgstr ""
+msgstr "valider korrektheden af den nuværende dirstate"
 
 #, python-format
 msgid "%s in state %s, but not in manifest1\n"
@@ -5643,6 +5648,7 @@ msgstr ""
 
 msgid ".hg/dirstate inconsistent with current parent's manifest"
 msgstr ""
+".hg/dirstate er inkonsistent i forhold til den nuværende forælders manifest"
 
 msgid ""
 "show combined config settings from all hgrc files\n"
@@ -5672,7 +5678,7 @@ msgid ""
 msgstr ""
 
 msgid "show the contents of the current dirstate"
-msgstr ""
+msgstr "vil indholdet af den nuværende dirstate"
 
 #, python-format
 msgid "copy: %s -> %s\n"
@@ -5686,26 +5692,26 @@ msgid "invalid revision identifier %s"
 msgstr "ugyldig revisionsidentification %s"
 
 msgid "parse and display a date"
-msgstr ""
+msgstr "fortolk og vis en dato"
 
 msgid "dump the contents of an index file"
-msgstr ""
+msgstr "dump indholdet af en indeksfil"
 
 msgid "dump an index DAG as a graphviz dot file"
-msgstr ""
+msgstr "dump en indeks-DAG som en graphviz dot-fil"
 
 msgid "test Mercurial installation"
 msgstr "test Mercurial installationen"
 
 #, python-format
 msgid "Checking encoding (%s)...\n"
-msgstr ""
+msgstr "Kontrollerer tegnsæt (%s)...\n"
 
 msgid " (check that your locale is properly set)\n"
 msgstr ""
 
 msgid "Checking extensions...\n"
-msgstr ""
+msgstr "Kontrollerer udvidelser...\n"
 
 msgid " One or more extensions could not be found"
 msgstr ""
@@ -7324,7 +7330,7 @@ msgid "[OPTION]... [-r] REV"
 msgstr "[TILVALG]... [-r] REV"
 
 msgid "reset bisect state"
-msgstr "nulstil bisect"
+msgstr "nulstil tilstand for halvering"
 
 msgid "mark changeset good"
 msgstr "marker ændring som god"
@@ -8111,11 +8117,11 @@ msgstr "sammenføjning af %s fejlede!\n"
 
 #, python-format
 msgid "Inconsistent state, %s:%s is good and bad"
-msgstr ""
+msgstr "Inkonsistent tilstant, %s:%s er god og dårlig"
 
 #, python-format
 msgid "unknown bisect kind %s"
-msgstr ""
+msgstr "ukendt halverings-type %s"
 
 msgid "disabled extensions:"
 msgstr "deaktiverede udvidelser:"
