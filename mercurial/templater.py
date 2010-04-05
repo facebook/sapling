@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import re, sys, os
+import sys, os
 import util, config, templatefilters
 
 path = ['templates', '../templates']
@@ -41,8 +41,6 @@ class engine(object):
 
     filter uses function to transform value. syntax is
     {key|filter1|filter2|...}.'''
-
-    template_re = re.compile(r'{([\w\|%]+)}')
 
     def __init__(self, loader, filters={}, defaults={}):
         self.loader = loader
@@ -113,19 +111,29 @@ class engine(object):
                 v = v(**map)
             return v
 
-        while tmpl:
-            m = self.template_re.search(tmpl)
-            if not m:
-                yield tmpl
+        pos, stop = 0, len(tmpl)
+        while pos < stop:
+            n = tmpl.find('{', pos)
+            if n < 0:
+                yield tmpl[pos:stop]
+                break
+            if n > 0 and tmpl[n - 1] == '\\':
+                # escaped
+                yield tmpl[pos:n + 1]
+                pos = n + 1
+                continue
+            if n > pos:
+                yield tmpl[pos:n]
+
+            pos = n
+            n = tmpl.find('}', pos)
+            if n < 0:
+                # no closing
+                yield tmpl[pos:stop]
                 break
 
-            start, end = m.span(0)
-            variants = m.groups()
-            expr = variants[0] or variants[1]
-
-            if start:
-                yield tmpl[:start]
-            tmpl = tmpl[end:]
+            expr = tmpl[pos + 1:n]
+            pos = n + 1
 
             if '%' in expr:
                 yield self._format(expr, get, map)
