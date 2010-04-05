@@ -72,95 +72,86 @@ class engine(object):
             else:
                 yield str(item)
 
-    def _format(self, expr, get, map):
-        key, format = expr.split('%')
-        v = get(key)
-        if not hasattr(v, '__iter__'):
-            raise SyntaxError(_("error expanding '%s%%%s'") % (key, format))
-        lm = map.copy()
-        for i in v:
-            if isinstance(i, dict):
-                lm.update(i)
-                yield self.process(format, lm)
-            else:
-                # v is not an iterable of dicts, this happen when 'key'
-                # has been fully expanded already and format is useless.
-                # If so, return the expanded value.
-                yield i
-
-    def _filter(self, expr, get, map):
-        if expr not in self.cache:
-            parts = expr.split('|')
-            val = parts[0]
-            try:
-                filters = [self.filters[f] for f in parts[1:]]
-            except KeyError, i:
-                raise SyntaxError(_("unknown filter '%s'") % i[0])
-            def apply(get):
-                x = get(val)
-                for f in filters:
-                    x = f(x)
-                return x
-            self.cache[expr] = apply
-        return self.cache[expr](get)
-
     def _parse(self, tmpl):
         '''preparse a template'''
+
+        def getter(mapping, key):
+            v = mapping.get(key)
+            if v is None:
+                v = self.defaults.get(key, '')
+            if hasattr(v, '__call__'):
+                v = v(**mapping)
+            return v
+
+        def raw(mapping, x):
+            return x
+        def filt(mapping, parts):
+            filters, val = parts
+            x = getter(mapping, val)
+            for f in filters:
+                x = f(x)
+            return x
+        def formatter(mapping, args):
+            key, format = args
+            v = getter(mapping, key)
+            if not hasattr(v, '__iter__'):
+                raise SyntaxError(_("error expanding '%s%%%s'")
+                                  % (key, format))
+            lm = mapping.copy()
+            for i in v:
+                if isinstance(i, dict):
+                    lm.update(i)
+                    yield self.process(format, lm)
+                else:
+                    # v is not an iterable of dicts, this happen when 'key'
+                    # has been fully expanded already and format is useless.
+                    # If so, return the expanded value.
+                    yield i
 
         parsed = []
         pos, stop = 0, len(tmpl)
         while pos < stop:
             n = tmpl.find('{', pos)
             if n < 0:
-                parsed.append(('', tmpl[pos:stop]))
+                parsed.append((raw, tmpl[pos:stop]))
                 break
             if n > 0 and tmpl[n - 1] == '\\':
                 # escaped
-                parsed.append(('', tmpl[pos:n + 1]))
+                parsed.append((raw, tmpl[pos:n + 1]))
                 pos = n + 1
                 continue
             if n > pos:
-                parsed.append(('', tmpl[pos:n]))
+                parsed.append((raw, tmpl[pos:n]))
 
             pos = n
             n = tmpl.find('}', pos)
             if n < 0:
                 # no closing
-                parsed.append(('', tmpl[pos:stop]))
+                parsed.append((raw, tmpl[pos:stop]))
                 break
 
             expr = tmpl[pos + 1:n]
             pos = n + 1
 
             if '%' in expr:
-                parsed.append(('%', expr))
+                parsed.append((formatter, expr.split('%')))
             elif '|' in expr:
-                parsed.append(('|', expr))
+                parts = expr.split('|')
+                val = parts[0]
+                try:
+                    filters = [self.filters[f] for f in parts[1:]]
+                except KeyError, i:
+                    raise SyntaxError(_("unknown filter '%s'") % i[0])
+                parsed.append((filt, (filters, val)))
             else:
-                parsed.append(('g', expr))
+                parsed.append((getter, expr))
 
         return parsed
 
-    def _process(self, parsed, map):
+    def _process(self, parsed, mapping):
         '''Render a template. Returns a generator.'''
-
-        def get(key):
-            v = map.get(key)
-            if v is None:
-                v = self.defaults.get(key, '')
-            if hasattr(v, '__call__'):
-                v = v(**map)
-            return v
-
-        for t, e in parsed:
-            if not t:
-                yield e
-            elif t is '|':
-                yield self._filter(e, get, map)
-            elif t is '%':
-                yield self._format(e, get, map)
-            elif t is 'g':
-                yield get(e)
+        for f, e in parsed:
+            yield f(mapping, e)
 
 engines = {'default': engine}
 
