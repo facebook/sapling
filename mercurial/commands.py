@@ -3078,7 +3078,6 @@ def summary(ui, repo, **opts):
     tags = repo.tags()
 
     for p in parents:
-        t = ' '.join([t for t in tags if tags[t] == p.node()])
         message = ''
         if p.rev() == -1:
             if not len(repo):
@@ -3089,7 +3088,7 @@ def summary(ui, repo, **opts):
         # shows a working directory parent *changeset*:
         ui.write(_('parent: %d:%s ') % (p.rev(), str(p)),
                  label='log.changeset')
-        ui.write(t, label='log.tag')
+        ui.write(' '.join(p.tags()), label='log.tag')
         if message:
             ui.write(message)
         ui.write('\n')
