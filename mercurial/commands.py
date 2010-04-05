@@ -3075,7 +3075,6 @@ def summary(ui, repo, **opts):
     ctx = repo[None]
     parents = ctx.parents()
     pnode = parents[0].node()
-    tags = repo.tags()
 
     for p in parents:
         # label with log.changeset (instead of log.parent) since this
