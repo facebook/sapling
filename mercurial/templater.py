@@ -66,18 +66,17 @@ class engine(object):
         self._defaults = defaults
         self._cache = {}
 
+    def process(self, t, mapping):
+        '''Perform expansion. t is name of map element to expand.
+        mapping contains added elements for use during expansion. Is a
+        generator.'''
+        return _flatten(self._process(self._load(t), mapping))
+
     def _load(self, t):
         '''load, parse, and cache a template'''
         if t not in self._cache:
             self._cache[t] = self._parse(self._loader(t))
         return self._cache[t]
-
-    def process(self, t, mapping):
-        '''Perform expansion. t is name of map element to expand.
-        mapping contains added elements for use during expansion. Is a
-        generator.'''
-
-        return _flatten(self._process(self._load(t), mapping))
 
     def _get(self, mapping, key):
         v = mapping.get(key)
@@ -86,9 +85,6 @@ class engine(object):
         if hasattr(v, '__call__'):
             v = v(**mapping)
         return v
-
-    def _raw(self, mapping, x):
-        return x
 
     def _filter(self, mapping, parts):
         filters, val = parts
@@ -116,27 +112,26 @@ class engine(object):
 
     def _parse(self, tmpl):
         '''preparse a template'''
-
         parsed = []
         pos, stop = 0, len(tmpl)
         while pos < stop:
             n = tmpl.find('{', pos)
             if n < 0:
-                parsed.append((self._raw, tmpl[pos:stop]))
+                parsed.append((None, tmpl[pos:stop]))
                 break
             if n > 0 and tmpl[n - 1] == '\\':
                 # escaped
-                parsed.append((self._raw, tmpl[pos:n + 1]))
+                parsed.append((None, tmpl[pos:n + 1]))
                 pos = n + 1
                 continue
             if n > pos:
-                parsed.append((self._raw, tmpl[pos:n]))
+                parsed.append((None, tmpl[pos:n]))
 
             pos = n
             n = tmpl.find('}', pos)
             if n < 0:
                 # no closing
-                parsed.append((self._raw, tmpl[pos:stop]))
+                parsed.append((None, tmpl[pos:stop]))
                 break
 
             expr = tmpl[pos + 1:n]
@@ -161,7 +156,10 @@ class engine(object):
     def _process(self, parsed, mapping):
         '''Render a template. Returns a generator.'''
         for f, e in parsed:
-            yield f(mapping, e)
+            if f:
+                yield f(mapping, e)
+            else:
+                yield e
 
 engines = {'default': engine}
 
