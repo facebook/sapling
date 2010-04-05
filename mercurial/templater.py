@@ -121,7 +121,7 @@ class engine(object):
                 break
             if n > 0 and tmpl[n - 1] == '\\':
                 # escaped
-                parsed.append((None, tmpl[pos:n + 1]))
+                parsed.append((None, tmpl[pos:n - 1] + "{"))
                 pos = n + 1
                 continue
             if n > pos:
