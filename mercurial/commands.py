@@ -3079,29 +3079,42 @@ def summary(ui, repo, **opts):
 
     for p in parents:
         t = ' '.join([t for t in tags if tags[t] == p.node()])
+        message = ''
         if p.rev() == -1:
             if not len(repo):
-                t += _(' (empty repository)')
+                message = _(' (empty repository)')
             else:
-                t += _(' (no revision checked out)')
-        ui.write(_('parent: %d:%s %s\n') % (p.rev(), str(p), t))
+                message = _(' (no revision checked out)')
+        # label with log.changeset (instead of log.parent) since this
+        # shows a working directory parent *changeset*:
+        ui.write(_('parent: %d:%s ') % (p.rev(), str(p)),
+                 label='log.changeset')
+        ui.write(t, label='log.tag')
+        if message:
+            ui.write(message)
+        ui.write('\n')
         if p.description():
-            ui.status(' ' + p.description().splitlines()[0].strip() + '\n')
+            ui.status(' ' + p.description().splitlines()[0].strip() + '\n',
+                      label='log.summary')
 
     branch = ctx.branch()
     bheads = repo.branchheads(branch)
     m = _('branch: %s\n') % branch
     if branch != 'default':
-        ui.write(m)
+        ui.write(m, label='log.branch')
     else:
-        ui.status(m)
+        ui.status(m, label='log.branch')
 
     st = list(repo.status(unknown=True))[:6]
     ms = mergemod.mergestate(repo)
     st.append([f for f in ms if ms[f] == 'u'])
-    labels = [_('%d modified'), _('%d added'), _('%d removed'),
-              _('%d deleted'), _('%d unknown'), _('%d ignored'),
-              _('%d unresolved')]
+    labels = [ui.label(_('%d modified'), 'status.modified'),
+              ui.label(_('%d added'), 'status.added'),
+              ui.label(_('%d removed'), 'status.removed'),
+              ui.label(_('%d deleted'), 'status.deleted'),
+              ui.label(_('%d unknown'), 'status.unknown'),
+              ui.label(_('%d ignored'), 'status.ignored'),
+              ui.label(_('%d unresolved'), 'resolve.unresolved')]
     t = []
     for s, l in zip(st, labels):
         if s:
