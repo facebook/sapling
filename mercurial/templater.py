@@ -49,14 +49,14 @@ class engine(object):
         self.cache = {}
         self.parsecache = {}
 
-    def process(self, t, map):
-        '''Perform expansion. t is name of map element to expand. map contains
+    def process(self, t, mapping):
+        '''Perform expansion. t is name of map element to expand. mapping contains
         added elements for use during expansion. Is a generator.'''
         if t not in self.parsecache:
             tmpl = self.loader(t)
             self.parsecache[t] = self._parse(tmpl)
         parsed = self.parsecache[t]
-        iters = [self._process(parsed, map)]
+        iters = [self._process(parsed, mapping)]
         while iters:
             try:
                 item = iters[0].next()
@@ -207,14 +207,14 @@ class templater(object):
                               (self.map[t][1], inst.args[1]))
         return self.cache[t]
 
-    def __call__(self, t, **map):
+    def __call__(self, t, **mapping):
         ttype = t in self.map and self.map[t][0] or 'default'
         proc = self.engines.get(ttype)
         if proc is None:
             proc = engines[ttype](self.load, self.filters, self.defaults)
             self.engines[ttype] = proc
 
-        stream = proc.process(t, map)
+        stream = proc.process(t, mapping)
         if self.minchunk:
             stream = util.increasingchunks(stream, min=self.minchunk,
                                            max=self.maxchunk)
