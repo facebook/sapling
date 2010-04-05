@@ -43,19 +43,17 @@ class engine(object):
     {key|filter1|filter2|...}.'''
 
     def __init__(self, loader, filters={}, defaults={}):
-        self.loader = loader
-        self.filters = filters
-        self.defaults = defaults
-        self.cache = {}
-        self.parsecache = {}
+        self._loader = loader
+        self._filters = filters
+        self._defaults = defaults
+        self._cache = {}
 
     def process(self, t, mapping):
         '''Perform expansion. t is name of map element to expand. mapping contains
         added elements for use during expansion. Is a generator.'''
-        if t not in self.parsecache:
-            tmpl = self.loader(t)
-            self.parsecache[t] = self._parse(tmpl)
-        parsed = self.parsecache[t]
+        if t not in self._cache:
+            self._cache[t] = self._parse(self._loader(t))
+        parsed = self._cache[t]
         iters = [self._process(parsed, mapping)]
         while iters:
             try:
@@ -139,7 +137,7 @@ class engine(object):
                 parts = expr.split('|')
                 val = parts[0]
                 try:
-                    filters = [self.filters[f] for f in parts[1:]]
+                    filters = [self._filters[f] for f in parts[1:]]
                 except KeyError, i:
                     raise SyntaxError(_("unknown filter '%s'") % i[0])
                 parsed.append((filt, (filters, val)))
