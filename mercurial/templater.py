@@ -139,17 +139,18 @@ class engine(object):
 
             if '%' in expr:
                 key, t = expr.split('%')
-                parsed.append((self._format, (key, self._load(t))))
+                parsed.append((self._format, (key.strip(),
+                                              self._load(t.strip()))))
             elif '|' in expr:
                 parts = expr.split('|')
-                val = parts[0]
+                val = parts[0].strip()
                 try:
-                    filters = [self._filters[f] for f in parts[1:]]
+                    filters = [self._filters[f.strip()] for f in parts[1:]]
                 except KeyError, i:
                     raise SyntaxError(_("unknown filter '%s'") % i[0])
                 parsed.append((self._filter, (filters, val)))
             else:
-                parsed.append((self._get, expr))
+                parsed.append((self._get, expr.strip()))
 
         return parsed
 
