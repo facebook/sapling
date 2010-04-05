@@ -12,6 +12,22 @@ import util, config, templatefilters
 path = ['templates', '../templates']
 stringify = templatefilters.stringify
 
+def _flatten(thing):
+    '''yield a single stream from a possibly nested set of iterators'''
+    if isinstance(thing, str):
+        yield thing
+    elif not hasattr(thing, '__iter__'):
+        yield str(thing)
+    elif thing is not None:
+        for i in thing:
+            if isinstance(i, str):
+                yield i
+            elif not hasattr(i, '__iter__'):
+                yield str(i)
+            elif i is not None:
+                for j in _flatten(i):
+                    yield j
+
 def parsestring(s, quoted=True):
     '''parse a string using simple c-like syntax.
     string must be in quotes if quoted is True.'''
@@ -53,22 +69,7 @@ class engine(object):
         added elements for use during expansion. Is a generator.'''
         if t not in self._cache:
             self._cache[t] = self._parse(self._loader(t))
-        parsed = self._cache[t]
-        iters = [self._process(parsed, mapping)]
-        while iters:
-            try:
-                item = iters[0].next()
-            except StopIteration:
-                iters.pop(0)
-                continue
-            if isinstance(item, str):
-                yield item
-            elif item is None:
-                yield ''
-            elif hasattr(item, '__iter__'):
-                iters.insert(0, iter(item))
-            else:
-                yield str(item)
+        return _flatten(self._process(self._cache[t], mapping))
 
     def _parse(self, tmpl):
         '''preparse a template'''
