@@ -1454,14 +1454,14 @@ class localrepository(repo.repository):
         try:
             common, fetch, rheads = self.findcommonincoming(remote, heads=heads,
                                                             force=force)
-            if fetch == [nullid]:
-                self.ui.status(_("requesting all changes\n"))
-
             if not fetch:
                 self.ui.status(_("no changes found\n"))
                 return 0
 
-            if heads is None and remote.capable('changegroupsubset'):
+            if fetch == [nullid]:
+                self.ui.status(_("requesting all changes\n"))
+            elif heads is None and remote.capable('changegroupsubset'):
+                # issue1320, avoid a race if remote changed after discovery
                 heads = rheads
 
             if heads is None:
