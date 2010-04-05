@@ -59,7 +59,7 @@ var data = {jsdata|json};
 var graph = new Graph();
 graph.scale({bg_height});
 
-graph.edge = function(x0, y0, x1, y1, color) {
+graph.edge = function(x0, y0, x1, y1, color) \{
 	
 	this.setColor(color, 0.0, 0.65);
 	this.ctx.beginPath();
@@ -73,7 +73,7 @@ var revlink = '<li style="_STYLE"><span class="desc">';
 revlink += '<a href="{url}rev/_NODEID{sessionvars%urlparameter}" title="_NODEID">_DESC</a>';
 revlink += '</span>_TAGS<span class="info">_DATE, by _USER</span></li>';
 
-graph.vertex = function(x, y, color, parity, cur) {
+graph.vertex = function(x, y, color, parity, cur) \{
 	
 	this.ctx.beginPath();
 	color = this.setColor(color, 0.25, 0.75);
@@ -92,17 +92,17 @@ graph.vertex = function(x, y, color, parity, cur) {
 	item = item.replace(/_DATE/, cur[5]);
 
 	var tagspan = '';
-	if (cur[7].length || (cur[6][0] != 'default' || cur[6][1])) {
+	if (cur[7].length || (cur[6][0] != 'default' || cur[6][1])) \{
 		tagspan = '<span class="logtags">';
-		if (cur[6][1]) {
+		if (cur[6][1]) \{
 			tagspan += '<span class="branchhead" title="' + cur[6][0] + '">';
 			tagspan += cur[6][0] + '</span> ';
-		} else if (!cur[6][1] && cur[6][0] != 'default') {
+		} else if (!cur[6][1] && cur[6][0] != 'default') \{
 			tagspan += '<span class="branchname" title="' + cur[6][0] + '">';
 			tagspan += cur[6][0] + '</span> ';
 		}
-		if (cur[7].length) {
-			for (var t in cur[7]) {
+		if (cur[7].length) \{
+			for (var t in cur[7]) \{
 				var tag = cur[7][t];
 				tagspan += '<span class="tag">' + tag + '</span> ';
 			}

@@ -43,7 +43,7 @@ var data = {jsdata|json};
 var graph = new Graph();
 graph.scale({bg_height});
 
-graph.edge = function(x0, y0, x1, y1, color) {
+graph.edge = function(x0, y0, x1, y1, color) \{
 	
 	this.setColor(color, 0.0, 0.65);
 	this.ctx.beginPath();
@@ -57,7 +57,7 @@ var revlink = '<li style="_STYLE"><span class="desc">';
 revlink += '<a href="{url}rev/_NODEID{sessionvars%urlparameter}" title="_NODEID">_DESC</a>';
 revlink += '</span><span class="info">_DATE, by _USER</span></li>';
 
-graph.vertex = function(x, y, color, parity, cur) {
+graph.vertex = function(x, y, color, parity, cur) \{
 	
 	this.ctx.beginPath();
 	color = this.setColor(color, 0.25, 0.75);
