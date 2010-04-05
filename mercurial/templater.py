@@ -47,12 +47,16 @@ class engine(object):
         self.filters = filters
         self.defaults = defaults
         self.cache = {}
+        self.parsecache = {}
 
     def process(self, t, map):
         '''Perform expansion. t is name of map element to expand. map contains
         added elements for use during expansion. Is a generator.'''
-        tmpl = self.loader(t)
-        iters = [self._process(tmpl, map)]
+        if t not in self.parsecache:
+            tmpl = self.loader(t)
+            self.parsecache[t] = self._parse(tmpl)
+        parsed = self.parsecache[t]
+        iters = [self._process(parsed, map)]
         while iters:
             try:
                 item = iters[0].next()
@@ -100,7 +104,44 @@ class engine(object):
             self.cache[expr] = apply
         return self.cache[expr](get)
 
-    def _process(self, tmpl, map):
+    def _parse(self, tmpl):
+        '''preparse a template'''
+
+        parsed = []
+        pos, stop = 0, len(tmpl)
+        while pos < stop:
+            n = tmpl.find('{', pos)
+            if n < 0:
+                parsed.append(('', tmpl[pos:stop]))
+                break
+            if n > 0 and tmpl[n - 1] == '\\':
+                # escaped
+                parsed.append(('', tmpl[pos:n + 1]))
+                pos = n + 1
+                continue
+            if n > pos:
+                parsed.append(('', tmpl[pos:n]))
+
+            pos = n
+            n = tmpl.find('}', pos)
+            if n < 0:
+                # no closing
+                parsed.append(('', tmpl[pos:stop]))
+                break
+
+            expr = tmpl[pos + 1:n]
+            pos = n + 1
+
+            if '%' in expr:
+                parsed.append(('%', expr))
+            elif '|' in expr:
+                parsed.append(('|', expr))
+            else:
+                parsed.append(('g', expr))
+
+        return parsed
+
+    def _process(self, parsed, map):
         '''Render a template. Returns a generator.'''
 
         def get(key):
@@ -111,36 +152,15 @@ class engine(object):
                 v = v(**map)
             return v
 
-        pos, stop = 0, len(tmpl)
-        while pos < stop:
-            n = tmpl.find('{', pos)
-            if n < 0:
-                yield tmpl[pos:stop]
-                break
-            if n > 0 and tmpl[n - 1] == '\\':
-                # escaped
-                yield tmpl[pos:n + 1]
-                pos = n + 1
-                continue
-            if n > pos:
-                yield tmpl[pos:n]
-
-            pos = n
-            n = tmpl.find('}', pos)
-            if n < 0:
-                # no closing
-                yield tmpl[pos:stop]
-                break
-
-            expr = tmpl[pos + 1:n]
-            pos = n + 1
-
-            if '%' in expr:
-                yield self._format(expr, get, map)
-            elif '|' in expr:
-                yield self._filter(expr, get, map)
-            else:
-                yield get(expr)
+        for t, e in parsed:
+            if not t:
+                yield e
+            elif t is '|':
+                yield self._filter(e, get, map)
+            elif t is '%':
+                yield self._format(e, get, map)
+            elif t is 'g':
+                yield get(e)
 
 engines = {'default': engine}
 
