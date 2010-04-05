@@ -1,0 +1,5 @@
+% creating repo
+% add and commit
+C test.py
+% change
+M test.py
