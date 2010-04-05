@@ -73,10 +73,11 @@ class engine(object):
     def _parse(self, tmpl):
         '''preparse a template'''
 
+        defget = self._defaults.get
         def getter(mapping, key):
             v = mapping.get(key)
             if v is None:
-                v = self.defaults.get(key, '')
+                v = defget(key, '')
             if hasattr(v, '__call__'):
                 v = v(**mapping)
             return v
