@@ -135,13 +135,13 @@ class kwtemplater(object):
         self.re_kw = re.compile(kwpat)
 
         templatefilters.filters['utcdate'] = utcdate
-        self.ct = cmdutil.changeset_templater(self.ui, self.repo,
-                                              False, None, '', False)
 
     def substitute(self, data, path, ctx, subfunc):
         '''Replaces keywords in data with expanded template.'''
         def kwsub(mobj):
             kw = mobj.group(1)
+            self.ct = cmdutil.changeset_templater(self.ui, self.repo,
+                                                  False, None, '', False)
             self.ct.use_template(self.templates[kw])
             self.ui.pushbuffer()
             self.ct.show(ctx, root=self.repo.root, file=path)
