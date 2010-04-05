@@ -3078,19 +3078,16 @@ def summary(ui, repo, **opts):
     tags = repo.tags()
 
     for p in parents:
-        message = ''
-        if p.rev() == -1:
-            if not len(repo):
-                message = _(' (empty repository)')
-            else:
-                message = _(' (no revision checked out)')
         # label with log.changeset (instead of log.parent) since this
         # shows a working directory parent *changeset*:
         ui.write(_('parent: %d:%s ') % (p.rev(), str(p)),
                  label='log.changeset')
         ui.write(' '.join(p.tags()), label='log.tag')
-        if message:
-            ui.write(message)
+        if p.rev() == -1:
+            if not len(repo):
+                ui.write(_(' (empty repository)'))
+            else:
+                ui.write(_(' (no revision checked out)'))
         ui.write('\n')
         if p.description():
             ui.status(' ' + p.description().splitlines()[0].strip() + '\n',
