@@ -134,9 +134,12 @@ def configstyles(ui):
 
 _buffers = None
 def style(msg, label):
-    effects = ''
+    effects = []
     for l in label.split():
-        effects += _styles.get(l, '')
+        s = _styles.get(l, '')
+        if s:
+            effects.append(s)
+    effects = ''.join(effects)
     if effects:
         return '\n'.join([render_effects(s, effects)
                           for s in msg.split('\n')])
