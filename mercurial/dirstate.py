@@ -391,8 +391,13 @@ class dirstate(object):
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
         now = int(util.fstat(st).st_mtime)
-        for f in self._map.keys():
-            e = self._map[f]
+
+        cs = cStringIO.StringIO()
+        copymap = self._copymap
+        pack = struct.pack
+        write = cs.write
+        write("".join(self._pl))
+        for f, e in self._map.iteritems():
             if e[0] == 'n' and e[3] == now:
                 # The file was last modified "simultaneously" with the current
                 # write to dirstate (i.e. within the same second for file-
@@ -403,14 +408,9 @@ class dirstate(object):
                 # dirstate, forcing future 'status' calls to compare the
                 # contents of the file. This prevents mistakenly treating such
                 # files as clean.
-                self._map[f] = (e[0], 0, -1, -1)   # mark entry as 'unset'
+                e = (e[0], 0, -1, -1)   # mark entry as 'unset'
+                self._map[f] = e
 
-        cs = cStringIO.StringIO()
-        copymap = self._copymap
-        pack = struct.pack
-        write = cs.write
-        write("".join(self._pl))
-        for f, e in self._map.iteritems():
             if f in copymap:
                 f = "%s\0%s" % (f, copymap[f])
             e = pack(_format, e[0], e[1], e[2], e[3], len(f))
