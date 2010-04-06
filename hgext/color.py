@@ -61,6 +61,15 @@ Default effects may be overridden from the .hgrc file::
   resolve.resolved = green bold
 
   bookmarks.current = green
+
+The color extension will try to detect whether to use ANSI codes or
+Win32 console APIs, unless it is made explicit::
+
+  [color]
+  mode = ansi
+
+Any value other than 'ansi', 'win32', or 'auto' will disable color.
+
 '''
 
 import os, sys
@@ -150,19 +159,43 @@ def popbuffer(orig, labeled=False):
         return ''.join(style(a, label) for a, label in _buffers.pop())
     return ''.join(a for a, label in _buffers.pop())
 
+mode = 'ansi'
 def write(orig, *args, **opts):
     label = opts.get('label', '')
     global _buffers
     if _buffers:
         _buffers[-1].extend([(str(a), label) for a in args])
+    elif mode == 'win32':
+        for a in args:
+            win32print(a, orig, **opts)
     else:
         return orig(*[style(str(a), label) for a in args], **opts)
 
 def write_err(orig, *args, **opts):
     label = opts.get('label', '')
-    return orig(*[style(str(a), label) for a in args], **opts)
+    if mode == 'win32':
+        for a in args:
+            win32print(a, orig, **opts)
+    else:
+        return orig(*[style(str(a), label) for a in args], **opts)
 
 def uisetup(ui):
+    global mode
+    mode = ui.config('color', 'mode', 'auto')
+    if mode == 'auto':
+        if os.name == 'nt' and 'TERM' not in os.environ:
+            # looks line a cmd.exe console, use win32 API or nothing
+            mode = w32effects and 'win32' or 'none'
+        else:
+            mode = 'ansi'
+    if mode == 'win32':
+        if w32effects is None:
+            # only warn if color.mode is explicitly set to win32
+            ui.warn(_('win32console not found, please install pywin32\n'))
+            return
+        _effects.update(w32effects)
+    elif mode != 'ansi':
+        return
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
         if (opts['color'] == 'always' or
             (opts['color'] == 'auto' and (os.environ.get('TERM') != 'dumb'
@@ -180,3 +213,64 @@ def uisetup(ui):
 
 commands.globalopts.append(('', 'color', 'auto',
                             _("when to colorize (always, auto, or never)")))
+
+try:
+    import re
+    from win32console import *
+
+    # http://msdn.microsoft.com/en-us/library/ms682088%28VS.85%29.aspx
+    w32effects = {
+        'none': 0,
+        'black': 0,
+        'red': FOREGROUND_RED,
+        'green': FOREGROUND_GREEN,
+        'yellow': FOREGROUND_RED | FOREGROUND_GREEN,
+        'blue': FOREGROUND_BLUE,
+        'magenta': FOREGROUND_BLUE | FOREGROUND_RED,
+        'cyan': FOREGROUND_BLUE | FOREGROUND_GREEN,
+        'white': FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
+        'bold': FOREGROUND_INTENSITY,
+        'black_background': 0,
+        'red_background': BACKGROUND_RED,
+        'green_background': BACKGROUND_GREEN,
+        'blue_background': BACKGROUND_BLUE,
+        'cyan_background': BACKGROUND_BLUE | BACKGROUND_GREEN,
+        'bold_background': FOREGROUND_INTENSITY,
+        'underline': COMMON_LVB_UNDERSCORE,     # double-byte charsets only
+        'inverse': COMMON_LVB_REVERSE_VIDEO,    # double-byte charsets only
+    }
+
+    stdout = GetStdHandle(STD_OUTPUT_HANDLE)
+    origattr = stdout.GetConsoleScreenBufferInfo()['Attributes']
+    ansire = re.compile('\033\[([^m]*)m([^\033]*)(.*)', re.MULTILINE | re.DOTALL)
+
+    def win32print(text, orig, **opts):
+        label = opts.get('label', '')
+        attr = 0
+
+        # determine console attributes based on labels
+        for l in label.split():
+            style = _styles.get(l, '')
+            for effect in style.split():
+                attr |= w32effects[effect]
+
+        # hack to ensure regexp finds data
+        if not text.startswith('\033['):
+            text = '\033[m' + text
+
+        # Look for ANSI-like codes embedded in text
+        m = re.match(ansire, text)
+        while m:
+            for sattr in m.group(1).split(';'):
+                if sattr:
+                    val = int(sattr)
+                    attr = val and attr|val or 0
+            stdout.SetConsoleTextAttribute(attr or origattr)
+            orig(m.group(2), **opts)
+            m = re.match(ansire, m.group(3))
+
+        # Explicity reset original attributes
+        stdout.SetConsoleTextAttribute(origattr)
+
+except ImportError:
+    w32effects = None
