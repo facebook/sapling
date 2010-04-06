@@ -701,6 +701,30 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
     for seqno, rev in enumerate(revs):
         single(rev, seqno + 1, fp)
 
+def diffordiffstat(ui, repo, diffopts, node1, node2, match,
+                   changes=None, stat=False, fp=None):
+    '''show diff or diffstat.'''
+    if fp is None:
+        write = ui.write
+    else:
+        def write(s, **kw):
+            fp.write(s)
+
+    if stat:
+        diffopts.context = 0
+        width = 80
+        if not ui.plain():
+            width = util.termwidth()
+        chunks = patch.diff(repo, node1, node2, match, changes, diffopts)
+        for chunk, label in patch.diffstatui(util.iterlines(chunks),
+                                             width=width,
+                                             git=diffopts.git):
+            write(chunk, label=label)
+    else:
+        for chunk, label in patch.diffui(repo, node1, node2, match,
+                                         changes, diffopts):
+            write(chunk, label=label)
+
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 

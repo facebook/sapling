@@ -477,25 +477,9 @@ class queue(object):
     def printdiff(self, repo, diffopts, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
         stat = opts.get('stat')
-
         m = cmdutil.match(repo, files, opts)
-        if fp is None:
-            write = repo.ui.write
-        else:
-            def write(s, **kw):
-                fp.write(s)
-        if stat:
-            diffopts.context = 0
-            width = self.ui.interactive() and util.termwidth() or 80
-            chunks = patch.diff(repo, node1, node2, m, changes, diffopts)
-            for chunk, label in patch.diffstatui(util.iterlines(chunks),
-                                                 width=width,
-                                                 git=diffopts.git):
-                write(chunk, label=label)
-        else:
-            for chunk, label in patch.diffui(repo, node1, node2, m, changes,
-                                              diffopts):
-                write(chunk, label=label)
+        cmdutil.diffordiffstat(self.ui, repo, diffopts, node1, node2,  m,
+                               changes, stat, fp)
 
     def mergeone(self, repo, mergeq, head, patch, rev, diffopts):
         # first try just applying the patch

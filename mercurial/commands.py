@@ -1172,23 +1172,9 @@ def diff(ui, repo, *pats, **opts):
     if reverse:
         node1, node2 = node2, node1
 
-    if stat:
-        opts['unified'] = '0'
     diffopts = patch.diffopts(ui, opts)
-
     m = cmdutil.match(repo, pats, opts)
-    if stat:
-        it = patch.diff(repo, node1, node2, match=m, opts=diffopts)
-        width = 80
-        if not ui.plain():
-            width = util.termwidth()
-        for chunk, label in patch.diffstatui(util.iterlines(it), width=width,
-                                             git=diffopts.git):
-            ui.write(chunk, label=label)
-    else:
-        it = patch.diffui(repo, node1, node2, match=m, opts=diffopts)
-        for chunk, label in it:
-            ui.write(chunk, label=label)
+    cmdutil.diffordiffstat(ui, repo, diffopts, node1, node2, m, stat=stat)
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
