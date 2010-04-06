@@ -41,21 +41,20 @@ Now that you have an Hg repository that can push/pull to/from a Git repository, 
 
 That will pull down any commits that have been pushed to the server in the meantime and give you a new head that you can merge in.
 
-Hg-Git can also be used to convert a Mercurial repository to Git.  As Dulwich doesn't support local repositories yet, the easiest way is to setup up a local SSH server.  Then use the following commands to convert the repository.
+Hg-Git can also be used to convert a Mercurial repository to Git.  As Dulwich doesn't support local repositories yet, the easiest way is to setup up a local SSH server.  Then use the following commands to convert the repository (it assumes your running this in $HOME).
 
         $ mkdir git-repo; cd git-repo; git init; cd ..
         $ cd hg-repo
-        $ hg push git+ssh://localhost/absolute/path/to/git-repo
+        $ hg bookmarks hg
+        $ hg push git+ssh://localhost:git-repo
 
-To import new changesets into the Git repository you can run the last command as often as you want, only new changes will be pushed.
+The hg bookmark is necessary to prevent problems as otherwise hg-git pushes to the currently checked out branch confusing Git. This will create a branch named hg in the Git repository. To get the changes in master use the following command (only necessary in the first run, later just use git merge or rebase).
 
-If the you get the following warning you should setup a bookmark so Git doesn't have to push to the currently checked out branch.
+        $ cd git-repo
+        $ git checkout -b master hg
 
-        warning: updating the current branch
+To import new changesets into the Git repository just rerun the hg push command and then use git merge or git rebase in your Git repository.
 
-To fix this run the following command in the Git repository.  Warning: All local changes are destroyed!
-
-        $ git reset --hard
 
 Hg Bookmarks Integration
 ========================
