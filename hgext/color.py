@@ -67,7 +67,6 @@ import os, sys
 
 from mercurial import commands, dispatch, extensions
 from mercurial.i18n import _
-from mercurial.ui import ui as uicls
 
 # start and stop parameters for effects
 _effects = {'none': 0, 'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
