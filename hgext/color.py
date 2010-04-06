@@ -180,6 +180,8 @@ def write_err(orig, *args, **opts):
         return orig(*[style(str(a), label) for a in args], **opts)
 
 def uisetup(ui):
+    if ui.plain():
+        return
     global mode
     mode = ui.config('color', 'mode', 'auto')
     if mode == 'auto':
