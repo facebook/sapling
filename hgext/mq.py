@@ -477,8 +477,6 @@ class queue(object):
     def printdiff(self, repo, diffopts, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
         stat = opts.get('stat')
-        if stat:
-            opts['unified'] = '0'
 
         m = cmdutil.match(repo, files, opts)
         if fp is None:
@@ -487,6 +485,7 @@ class queue(object):
             def write(s, **kw):
                 fp.write(s)
         if stat:
+            diffopts.context = 0
             width = self.ui.interactive() and util.termwidth() or 80
             chunks = patch.diff(repo, node1, node2, m, changes, diffopts)
             for chunk, label in patch.diffstatui(util.iterlines(chunks),

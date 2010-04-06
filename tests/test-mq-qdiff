@@ -68,3 +68,5 @@ hg qrefresh --git
 echo a >> lines
 hg qdiff
 
+echo % qdiff --stat
+hg qdiff --stat

@@ -122,3 +122,6 @@ diff --git a/lines b/lines
  8
  9
 +a
+% qdiff --stat
+ lines |  7 +++++--
+ 1 files changed, 5 insertions(+), 2 deletions(-)
