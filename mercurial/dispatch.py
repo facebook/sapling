@@ -33,10 +33,13 @@ def _runcatch(ui, args):
     def catchterm(*args):
         raise error.SignalInterrupt
 
-    for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
-        num = getattr(signal, name, None)
-        if num:
-            signal.signal(num, catchterm)
+    try:
+        for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
+            num = getattr(signal, name, None)
+            if num:
+                signal.signal(num, catchterm)
+    except ValueError:
+        pass # happens if called in a thread
 
     try:
         try:
