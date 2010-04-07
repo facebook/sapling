@@ -72,10 +72,11 @@ def buildmatch(ui, repo, user, key):
 
 
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
-    if hooktype != 'pretxnchangegroup':
+    if hooktype not in ['pretxnchangegroup', 'pretxncommit']:
         raise util.Abort(_('config error - hook type "%s" cannot stop '
-                           'incoming changesets') % hooktype)
-    if source not in ui.config('acl', 'sources', 'serve').split():
+                           'incoming changesets nor commits') % hooktype)
+    if (hooktype == 'pretxnchangegroup' and
+        source not in ui.config('acl', 'sources', 'serve').split()):
         ui.debug('acl: changes have source "%s" - skipping\n' % source)
         return
 
