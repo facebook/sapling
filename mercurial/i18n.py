@@ -36,7 +36,7 @@ def gettext(message):
     if message is None:
         return message
 
-    u = t.ugettext(message)
+    u = u'\n\n'.join([t.ugettext(m) for m in message.split('\n\n')])
     try:
         # encoding.tolocal cannot be used since it will first try to
         # decode the Unicode string. Calling u.decode(enc) really

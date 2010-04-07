@@ -100,6 +100,7 @@ i18n/hg.pot: $(PYTHON_FILES) mercurial/help/*.txt
 	  --copyright-holder "Matt Mackall <mpm@selenic.com> and others" \
 	  --from-code ISO-8859-1 --join --sort-by-file \
 	  -d hg -p i18n -o hg.pot
+	$(PYTHON) i18n/posplit i18n/hg.pot
 
 %.po: i18n/hg.pot
 	msgmerge --no-location --update $@ $^
