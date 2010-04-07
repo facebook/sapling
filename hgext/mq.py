@@ -1179,12 +1179,10 @@ class queue(object):
                     raise util.Abort(_("deletions found between repo revs"))
                 for f in a:
                     try:
-                        os.unlink(repo.wjoin(f))
+                        util.unlink(repo.wjoin(f))
                     except OSError, e:
                         if e.errno != errno.ENOENT:
                             raise
-                    try: os.removedirs(os.path.dirname(repo.wjoin(f)))
-                    except: pass
                     repo.dirstate.forget(f)
                 for f in m:
                     getfile(f, mmap[f], mmap.flags(f))
