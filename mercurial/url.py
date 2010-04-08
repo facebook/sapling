@@ -11,17 +11,28 @@ import urllib, urllib2, urlparse, httplib, os, re, socket, cStringIO
 from i18n import _
 import keepalive, util
 
+def _urlunparse(scheme, netloc, path, params, query, fragment, url):
+    '''Handle cases where urlunparse(urlparse(x://)) doesn't preserve the "//"'''
+    result = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
+    if (scheme and
+        result.startswith(scheme + ':') and
+        not result.startswith(scheme + '://') and
+        url.startswith(scheme + '://')
+       ):
+        result = scheme + '://' + result[len(scheme + ':'):]
+    return result
+
 def hidepassword(url):
     '''hide user credential in a url string'''
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
     netloc = re.sub('([^:]*):([^@]*)@(.*)', r'\1:***@\3', netloc)
-    return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
+    return _urlunparse(scheme, netloc, path, params, query, fragment, url)
 
 def removeauth(url):
     '''remove all authentication information from a url string'''
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
     netloc = netloc[netloc.find('@')+1:]
-    return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
+    return _urlunparse(scheme, netloc, path, params, query, fragment, url)
 
 def netlocsplit(netloc):
     '''split [user[:passwd]@]host[:port] into 4-tuple.'''
