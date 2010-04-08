@@ -175,3 +175,82 @@ pushing to ../l
 searching for changes
 abort: push creates new remote heads on branch 'a'!
 (did you forget to merge? use push -f to force)
+% check prepush with new branch head on former topo non-head
+marked working directory as branch A
+adding a
+marked working directory as branch B
+adding b
+updating to branch B
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+adding b1
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding a2
+created new head
+%% glog of local
+@  2: A a2
+|
+| o  1: B b
+|/
+o  0: A a
+
+%% glog of remote
+@  2: B b1
+|
+o  1: B b
+|
+o  0: A a
+
+%% outgoing
+comparing with inner
+searching for changes
+2: A a2
+pushing to inner
+searching for changes
+note: unsynced remote changes!
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
+% check prepush with new branch head on former topo head
+marked working directory as branch A
+adding a
+marked working directory as branch B
+adding b
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding a1
+created new head
+updating to branch A
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding b1
+adding a2
+%% glog of local
+@  3: A a2
+|
+o  2: A a1
+|
+| o  1: B b
+|/
+o  0: A a
+
+%% glog of remote
+@  3: B b1
+|
+| o  2: A a1
+| |
+o |  1: B b
+|/
+o  0: A a
+
+%% outgoing
+comparing with inner
+searching for changes
+3: A a2
+pushing to inner
+searching for changes
+note: unsynced remote changes!
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
