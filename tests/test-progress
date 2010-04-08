@@ -8,6 +8,8 @@ def loop(ui, loops, **opts):
     total = None
     if loops >= 0:
         total = loops
+    if opts.get('total', None):
+        total = int(opts.get('total'))
     loops = abs(loops)
 
     for i in range(loops):
@@ -17,7 +19,8 @@ def loop(ui, loops, **opts):
 commands.norepo += " loop"
 
 cmdtable = {
-    "loop": (loop, [], 'hg loop LOOPS'),
+    "loop": (loop, [('', 'total', '', 'override for total')],
+             'hg loop LOOPS'),
 }
 EOF
 
@@ -54,6 +57,9 @@ hg -y --config 'progress.format=number item-3 bar' loop 2 2>&1 | python filtercr
 
 echo '% test format options and indeterminate progress'
 hg -y --config 'progress.format=number item bar' loop -- -2 2>&1 | python filtercr.py
+
+echo "% make sure things don't fall over if count > total"
+hg -y loop --total 4 6 2>&1 | python filtercr.py
 
 echo '% test immediate progress completion'
 hg -y loop 0 2>&1 | python filtercr.py

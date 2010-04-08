@@ -114,7 +114,7 @@ class progbar(object):
             if tail:
                 used += len(tail) + 1
             progwidth = termwidth - used - 3
-            if total:
+            if total and pos <= total:
                 amt = pos * progwidth // total
                 bar = '=' * (amt - 1)
                 if amt > 0:
