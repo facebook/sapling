@@ -1517,8 +1517,15 @@ class localrepository(repo.repository):
             if len(lheads) > len(rheads):
                 warn = 1
             else:
+                # add local heads involved in the push
+                updatelheads = [self.changelog.heads(x, lheads)
+                                for x in update]
+                newheads = set(sum(updatelheads, [])) & set(lheads)
+
+                if not newheads:
+                    return True
+
                 # add heads we don't have or that are not involved in the push
-                newheads = set(lheads)
                 for r in rheads:
                     if r in self.changelog.nodemap:
                         desc = self.changelog.heads(r, heads)
