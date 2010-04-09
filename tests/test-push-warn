@@ -1,5 +1,8 @@
 #!/bin/sh
 
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+
 mkdir a
 cd a
 hg init
@@ -193,5 +196,72 @@ hg -q ci -d '0 0' -mb2
 hg -q merge 3
 hg -q ci -d '0 0' -mma
 hg push ../l -b b
+cd ..
+
+echo % check prepush with new branch head on former topo non-head
+hg init n
+cd n
+hg branch A
+echo a >a
+hg ci -Ama
+hg branch B
+echo b >b
+hg ci -Amb
+# b is now branch head of B, and a topological head
+# a is now branch head of A, but not a topological head
+hg clone . inner
+cd inner
+hg up B
+echo b1 >b1
+hg ci -Amb1
+# in the clone b1 is now the head of B
+cd ..
+hg up 0
+echo a2 >a2
+hg ci -Ama2
+# a2 is now the new branch head of A, and a new topological head
+# it replaces a former inner branch head, so it should at most warn about A, not B
+echo %% glog of local
+hg glog --template "{rev}: {branches} {desc}\n"
+echo %% glog of remote
+hg glog -R inner --template "{rev}: {branches} {desc}\n"
+echo %% outgoing
+hg out inner --template "{rev}: {branches} {desc}\n"
+hg push inner
+cd ..
+
+echo % check prepush with new branch head on former topo head
+hg init o
+cd o
+hg branch A
+echo a >a
+hg ci -Ama
+hg branch B
+echo b >b
+hg ci -Amb
+# b is now branch head of B, and a topological head
+hg up 0
+echo a1 >a1
+hg ci -Ama1
+# a1 is now branch head of A, and a topological head
+hg clone . inner
+cd inner
+hg up B
+echo b1 >b1
+hg ci -Amb1
+# in the clone b1 is now the head of B
+cd ..
+echo a2 >a2
+hg ci -Ama2
+# a2 is now the new branch head of A, and a topological head
+# it replaces a former topological and branch head, so this should not warn
+echo %% glog of local
+hg glog --template "{rev}: {branches} {desc}\n"
+echo %% glog of remote
+hg glog -R inner --template "{rev}: {branches} {desc}\n"
+echo %% outgoing
+hg out inner --template "{rev}: {branches} {desc}\n"
+hg push inner
+cd ..
 
 exit 0

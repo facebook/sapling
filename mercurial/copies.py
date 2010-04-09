@@ -117,8 +117,23 @@ def copies(repo, c1, c2, ca, checkdirs=False):
     diverge = {}
 
     def related(f1, f2, limit):
+        # Walk back to common ancestor to see if the two files originate
+        # from the same file. Since workingfilectx's rev() is None it messes
+        # up the integer comparison logic, hence the pre-step check for
+        # None (f1 and f2 can only be workingfilectx's initially).
+
+        if f1 == f2:
+            return f1 # a match
+
         g1, g2 = f1.ancestors(), f2.ancestors()
         try:
+            f1r, f2r = f1.rev(), f2.rev()
+
+            if f1r is None:
+                f1 = g1.next()
+            if f2r is None:
+                f2 = g2.next()
+
             while 1:
                 f1r, f2r = f1.rev(), f2.rev()
                 if f1r > f2r:

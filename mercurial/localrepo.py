@@ -1500,8 +1500,13 @@ class localrepository(repo.repository):
         remote_heads = remote.heads()
         inc = self.findincoming(remote, common, remote_heads, force=force)
 
+        cl = self.changelog
         update, updated_heads = self.findoutgoing(remote, common, remote_heads)
-        msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
+        msng_cl, bases, heads = cl.nodesbetween(update, revs)
+
+        outgoingnodeset = set(msng_cl)
+        # compute set of nodes which, if they were a head before, no longer are
+        nolongeraheadnodeset = set(p for n in msng_cl for p in cl.parents(n))
 
         def checkbranch(lheads, rheads, branchname=None):
             '''
@@ -1511,26 +1516,10 @@ class localrepository(repo.repository):
             lheads: local branch heads
             rheads: remote branch heads
             '''
-
-            warn = 0
-
-            if len(lheads) > len(rheads):
-                warn = 1
-            else:
-                # add heads we don't have or that are not involved in the push
-                newheads = set(lheads)
-                for r in rheads:
-                    if r in self.changelog.nodemap:
-                        desc = self.changelog.heads(r, heads)
-                        l = [h for h in heads if h in desc]
-                        if not l:
-                            newheads.add(r)
-                    else:
-                        newheads.add(r)
-                if len(newheads) > len(rheads):
-                    warn = 1
-
-            if warn:
+            newlheads = [n for n in lheads if n in outgoingnodeset]
+            formerrheads = [n for n in rheads if n in nolongeraheadnodeset]
+            if len(newlheads) > len(formerrheads):
+                # we add more new heads than we demote former heads to non-head
                 if branchname is not None:
                     msg = _("abort: push creates new remote heads"
                             " on branch '%s'!\n") % branchname
@@ -1594,7 +1583,7 @@ class localrepository(repo.repository):
 
         if revs is None:
             # use the fast path, no race possible on push
-            nodes = self.changelog.findmissing(common.keys())
+            nodes = cl.findmissing(common.keys())
             cg = self._changegroup(nodes, 'push')
         else:
             cg = self.changegroupsubset(update, revs, 'push')
