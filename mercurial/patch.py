@@ -47,6 +47,9 @@ def split(stream):
         if inheader and line[0] in (' ', '\t'):
             # continuation
             return True
+        if line[0] in (' ', '-', '+'):
+            # diff line - don't check for header pattern in there
+            return False
         l = line.split(': ', 1)
         return len(l) == 2 and ' ' not in l[0]
 

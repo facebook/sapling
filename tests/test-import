@@ -474,3 +474,24 @@ EOF
 hg sum
 hg diff --git -c tip
 cd ..
+
+echo '% diff lines looking like headers'
+hg init difflineslikeheaders
+cd difflineslikeheaders
+echo a >a
+echo b >b
+echo c >c
+hg ci -Am1
+
+echo "key: value" >>a
+echo "key: value" >>b
+echo "foo" >>c
+hg ci -m2
+
+hg up -C 0
+hg diff --git -c1 >want
+hg diff -c1 | hg import --no-commit -
+hg diff --git >have
+diff want have
+cd ..
+
