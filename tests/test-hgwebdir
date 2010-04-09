@@ -53,11 +53,11 @@ echo % should give a 404 - repo is not published
 
 echo % atom-log without basedir
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/a/atom-log' \
-    | grep '<link' | sed 's|//[.a-zA-Z0-9\-_]*:[0-9][0-9]*/|//example.com:8080/|'
+    | grep '<link' | sed 's|//[.a-zA-Z0-9_-]*:[0-9][0-9]*/|//example.com:8080/|'
 
 echo % rss-log without basedir
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/a/rss-log' \
-    | grep '<guid' | sed 's|//[.a-zA-Z0-9\-_]*:[0-9][0-9]*/|//example.com:8080/|'
+    | grep '<guid' | sed 's|//[.a-zA-Z0-9_-]*:[0-9][0-9]*/|//example.com:8080/|'
 
 cat > paths.conf <<EOF
 [paths]
@@ -128,11 +128,11 @@ echo % collections: should succeed
 
 echo % atom-log with basedir /
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/a/atom-log' \
-    | grep '<link' | sed 's|//[.a-zA-Z0-9\-_]*:[0-9][0-9]*/|//example.com:8080/|'
+    | grep '<link' | sed 's|//[.a-zA-Z0-9_-]*:[0-9][0-9]*/|//example.com:8080/|'
 
 echo % rss-log with basedir /
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/a/rss-log' \
-    | grep '<guid' | sed 's|//[.a-zA-Z0-9\-_]*:[0-9][0-9]*/|//example.com:8080/|'
+    | grep '<guid' | sed 's|//[.a-zA-Z0-9_-]*:[0-9][0-9]*/|//example.com:8080/|'
 
 "$TESTDIR/killdaemons.py"
 
@@ -143,11 +143,11 @@ cat hg.pid >> $DAEMON_PIDS
 
 echo % atom-log with basedir /foo/
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/a/atom-log' \
-    | grep '<link' | sed 's|//[.a-zA-Z0-9\-_]*:[0-9][0-9]*/|//example.com:8080/|'
+    | grep '<link' | sed 's|//[.a-zA-Z0-9_-]*:[0-9][0-9]*/|//example.com:8080/|'
 
 echo % rss-log with basedir /foo/
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/a/rss-log' \
-    | grep '<guid' | sed 's|//[.a-zA-Z0-9\-_]*:[0-9][0-9]*/|//example.com:8080/|'
+    | grep '<guid' | sed 's|//[.a-zA-Z0-9_-]*:[0-9][0-9]*/|//example.com:8080/|'
 
 echo % paths errors 1
 cat error-paths-1.log
