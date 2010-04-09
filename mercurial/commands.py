@@ -2854,7 +2854,7 @@ def revert(ui, repo, *pats, **opts):
     finally:
         wlock.release()
 
-def rollback(ui, repo):
+def rollback(ui, repo, **opts):
     """roll back the last transaction
 
     This command should be used with care. There is only one level of
@@ -2881,7 +2881,7 @@ def rollback(ui, repo):
     repository; for example an in-progress pull from the repository
     may fail if a rollback is performed.
     """
-    repo.rollback()
+    repo.rollback(opts.get('dry_run'))
 
 def root(ui, repo):
     """print the root (top) of the current working directory
@@ -3821,7 +3821,7 @@ table = {
           ('', 'no-backup', None, _('do not save backup copies of files')),
          ] + walkopts + dryrunopts,
          _('[OPTION]... [-r REV] [NAME]...')),
-    "rollback": (rollback, []),
+    "rollback": (rollback, dryrunopts),
     "root": (root, []),
     "^serve":
         (serve,

@@ -62,7 +62,7 @@ abort: cannot use --parent on non-merge changeset
 # backout with valid parent should be ok
 removing d
 changeset 5:10e5328c8435 backs out changeset 4:b2f3bb92043e
-rolling back last transaction
+rolling back commit to revision 5
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 removing c
 changeset 5:033590168430 backs out changeset 4:b2f3bb92043e

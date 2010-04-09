@@ -62,7 +62,7 @@ foo
 default
 bar
 % test for invalid branch cache
-rolling back last transaction
+rolling back commit to revision 5
 changeset:   4:4909a3732169
 branch:      foo
 tag:         tip

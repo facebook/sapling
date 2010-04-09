@@ -220,7 +220,7 @@ recover:
 rename: after, force, include, exclude, dry-run
 resolve: all, list, mark, unmark, no-status, include, exclude
 revert: all, date, rev, no-backup, include, exclude, dry-run
-rollback: 
+rollback: dry-run
 root: 
 showconfig: untrusted
 tag: force, local, rev, remove, message, date, user

@@ -241,10 +241,10 @@ def reposetup(ui, repo):
                 file.close()
             return mark
 
-        def rollback(self):
+        def rollback(self, *args):
             if os.path.exists(self.join('undo.bookmarks')):
                 util.rename(self.join('undo.bookmarks'), self.join('bookmarks'))
-            return super(bookmark_repo, self).rollback()
+            return super(bookmark_repo, self).rollback(*args)
 
         def lookup(self, key):
             if key in self._bookmarks:

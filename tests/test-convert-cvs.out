@@ -45,7 +45,7 @@ converting...
 2 Initial revision
 1 import
 filtering out empty revision
-rolling back last transaction
+rolling back commit to revision 1
 0 ci0
 updating tags
 c

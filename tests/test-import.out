@@ -182,7 +182,7 @@ parent: 0
 applying ../patch1
 applying ../patch2
 applied 1d4bd90af0e4
-rolling back last transaction
+rolling back commit to revision 2
 parent: 1
 % hg import in a subdirectory
 requesting all changes

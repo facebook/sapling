@@ -111,7 +111,7 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     Removed tag bar
 
 % rollback undoes tag operation
-rolling back last transaction
+rolling back commit to revision 5
 tip                                4:0c192d7d5e6b
 bar                                1:78391a272241
 tip                                4:0c192d7d5e6b

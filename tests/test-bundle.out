@@ -37,7 +37,7 @@ adding file changes
 added 9 changesets with 7 changes to 4 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 ====== Rollback empty
-rolling back last transaction
+rolling back pull to revision 0
 ====== Pull full.hg into empty again (using --cwd)
 pulling from ../full.hg
 requesting all changes
@@ -55,7 +55,7 @@ pulling from full.hg
 searching for changes
 no changes found
 ====== Rollback empty
-rolling back last transaction
+rolling back pull to revision 0
 ====== Pull full.hg into empty again (using -R)
 pulling from full.hg
 requesting all changes
@@ -123,7 +123,7 @@ adding file changes
 added 9 changesets with 7 changes to 4 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
 ====== Rollback empty
-rolling back last transaction
+rolling back pull to revision 0
 ====== Log -R bundle:empty+full.hg
 8 7 6 5 4 3 2 1 0 
 ====== Pull full.hg into empty again (using -R; with hook)

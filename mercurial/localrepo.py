@@ -599,13 +599,25 @@ class localrepository(repo.repository):
         finally:
             lock.release()
 
-    def rollback(self):
+    def rollback(self, dryrun=False):
         wlock = lock = None
         try:
             wlock = self.wlock()
             lock = self.lock()
             if os.path.exists(self.sjoin("undo")):
-                self.ui.status(_("rolling back last transaction\n"))
+                try:
+                    args = self.opener("undo.desc", "r").read().split(",")
+                    if len(args) == 3 and self.ui.verbose:
+                        desc = _("rolling back %s (%s) to revision %s\n") % (
+                                 args[1], args[2], args[0])
+                    else:
+                        desc = _("rolling back %s to revision %s\n") % (
+                                 args[1], args[0])
+                except (IOError, IndexError):
+                    desc = _("rolling back unknown transaction\n")
+                self.ui.status(desc)
+                if dryrun:
+                    return
                 transaction.rollback(self.sopener, self.sjoin("undo"),
                                      self.ui.warn)
                 util.rename(self.join("undo.dirstate"), self.join("dirstate"))

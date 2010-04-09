@@ -95,10 +95,10 @@ diff -r cb9a9f314b8b -r 0647d048b600 a
 +a
 (run 'hg update' to get a working copy)
 % fail for config file is missing
-rolling back last transaction
+rolling back pull to revision 1
 pull failed
 % pull
-rolling back last transaction
+rolling back pull to revision 1
 pulling from ../a
 searching for changes
 adding changesets
@@ -129,7 +129,7 @@ diff -r cb9a9f314b8b -r 0647d048b600 a
 +a
 (run 'hg update' to get a working copy)
 % pull
-rolling back last transaction
+rolling back pull to revision 1
 pulling from ../a
 searching for changes
 adding changesets

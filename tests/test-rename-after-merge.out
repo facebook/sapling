@@ -34,7 +34,7 @@ created new head
 (branch merge, don't forget to commit)
 % commit issue 1476
 copies:      c2 (c1)
-rolling back last transaction
+rolling back commit to revision 3
 2 files updated, 0 files merged, 2 files removed, 0 files unresolved
 % merge heads again
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved

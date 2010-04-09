@@ -198,7 +198,7 @@ diff -r ef63ca68695b c
 +do not process $Id:
 +xxx $
 % rollback
-rolling back last transaction
+rolling back commit to revision 2
 % status
 A c
 % update -C
@@ -266,7 +266,7 @@ committed changeset 3:d14c712653769de926994cf7fbb06c8fbd68f012
 % status
 ? c
 % rollback
-rolling back last transaction
+rolling back commit to revision 3
 % status
 R a
 ? c
@@ -308,7 +308,7 @@ $Xinfo: User Name <user@example.com>: rejects? $
 ignore $Id$
 
 % rollback
-rolling back last transaction
+rolling back commit to revision 3
 % clean update
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % kwexpand/kwshrink on selected files

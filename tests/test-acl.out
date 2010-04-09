@@ -71,7 +71,7 @@ adding quux/file.py revisions
 files: 3 chunks
 added 3 changesets with 3 changes to 3 files
 updating the branch cache
-rolling back last transaction
+rolling back push to revision 1
 0:6675d58eff77
 
 Extension disabled for lack of acl.sources
@@ -143,7 +143,7 @@ added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: changes have source "push" - skipping
 updating the branch cache
-rolling back last transaction
+rolling back push to revision 1
 0:6675d58eff77
 
 No [acl.allow]/[acl.deny]
@@ -221,7 +221,7 @@ acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: allowing changeset 911600dab2ae
 updating the branch cache
-rolling back last transaction
+rolling back push to revision 1
 0:6675d58eff77
 
 Empty [acl.allow]
@@ -799,7 +799,7 @@ acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: allowing changeset 911600dab2ae
 updating the branch cache
-rolling back last transaction
+rolling back push to revision 1
 0:6675d58eff77
 
 wilma can change files with a .txt extension
@@ -1160,6 +1160,6 @@ acl: allowing changeset ef1ea85a6374
 acl: allowing changeset f9cafe1212c8
 acl: allowing changeset 911600dab2ae
 updating the branch cache
-rolling back last transaction
+rolling back push to revision 1
 0:6675d58eff77
 
