@@ -610,7 +610,7 @@ class queue(object):
         try:
             wlock = repo.wlock()
             lock = repo.lock()
-            tr = repo.transaction()
+            tr = repo.transaction("qpush")
             try:
                 ret = self._apply(repo, series, list, update_status,
                                   strict, patchdir, merge, all_files=all_files)

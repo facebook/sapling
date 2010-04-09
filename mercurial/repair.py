@@ -114,7 +114,7 @@ def strip(ui, repo, node, backup="all"):
 
     mfst = repo.manifest
 
-    tr = repo.transaction()
+    tr = repo.transaction("strip")
     offset = len(tr.entries)
 
     tr.startgroup()

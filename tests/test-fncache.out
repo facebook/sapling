@@ -54,6 +54,7 @@ adding tst.d/foo
 .hg/requires
 .hg/undo
 .hg/undo.branch
+.hg/undo.desc
 .hg/undo.dirstate
 % non fncache repo
 adding tst.d/Foo
@@ -70,4 +71,5 @@ adding tst.d/Foo
 .hg/store/data/tst.d.hg/_foo.i
 .hg/store/undo
 .hg/undo.branch
+.hg/undo.desc
 .hg/undo.dirstate

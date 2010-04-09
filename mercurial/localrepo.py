@@ -554,7 +554,7 @@ class localrepository(repo.repository):
     def wwritedata(self, filename, data):
         return self._filter("decode", filename, data)
 
-    def transaction(self):
+    def transaction(self, desc):
         tr = self._transref and self._transref() or None
         if tr and tr.running():
             return tr.nest()
@@ -571,10 +571,12 @@ class localrepository(repo.repository):
             ds = ""
         self.opener("journal.dirstate", "w").write(ds)
         self.opener("journal.branch", "w").write(self.dirstate.branch())
+        self.opener("journal.desc", "w").write("%d,%s" % (len(self), desc))
 
         renames = [(self.sjoin("journal"), self.sjoin("undo")),
                    (self.join("journal.dirstate"), self.join("undo.dirstate")),
-                   (self.join("journal.branch"), self.join("undo.branch"))]
+                   (self.join("journal.branch"), self.join("undo.branch")),
+                   (self.join("journal.desc"), self.join("undo.desc"))]
         tr = transaction.transaction(self.ui.warn, self.sopener,
                                      self.sjoin("journal"),
                                      aftertrans(renames),
@@ -890,7 +892,7 @@ class localrepository(repo.repository):
 
         lock = self.lock()
         try:
-            tr = self.transaction()
+            tr = self.transaction("commit")
             trp = weakref.proxy(tr)
 
             # check in files
@@ -2003,7 +2005,7 @@ class localrepository(repo.repository):
         cl.delayupdate()
         oldheads = len(cl.heads())
 
-        tr = self.transaction()
+        tr = self.transaction(",".join([srctype, url]))
         try:
             trp = weakref.proxy(tr)
             # pull off the changeset group
