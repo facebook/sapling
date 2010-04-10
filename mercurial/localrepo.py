@@ -2011,6 +2011,7 @@ class localrepository(repo.repository):
         self.hook('prechangegroup', throw=True, source=srctype, url=url)
 
         changesets = files = revisions = 0
+        efiles = set()
 
         # write changelog data to temp files so concurrent readers will not see
         # inconsistent view
@@ -2028,8 +2029,10 @@ class localrepository(repo.repository):
                 step = _('changesets')
                 count = 1
                 ui = self.ui
+                total = None
                 def __call__(self):
-                    self.ui.progress(self.step, self.count, unit=_('chunks'))
+                    self.ui.progress(self.step, self.count, unit=_('chunks'),
+                                     total=self.total)
                     self.count += 1
             pr = prog()
             chunkiter = changegroup.chunkiter(source, progress=pr)
@@ -2037,12 +2040,16 @@ class localrepository(repo.repository):
                 raise util.Abort(_("received changelog group is empty"))
             clend = len(cl)
             changesets = clend - clstart
+            for c in xrange(clstart, clend):
+                efiles.update(self[c].files())
+            efiles = len(efiles)
             self.ui.progress(_('changesets'), None)
 
             # pull off the manifest group
             self.ui.status(_("adding manifests\n"))
             pr.step = _('manifests')
             pr.count = 1
+            pr.total = changesets # manifests <= changesets
             chunkiter = changegroup.chunkiter(source, progress=pr)
             # no need to check for empty manifest group here:
             # if the result of the merge of 1 and 2 is the same in 3 and 4,
@@ -2065,14 +2072,16 @@ class localrepository(repo.repository):
             self.ui.status(_("adding file changes\n"))
             pr.step = 'files'
             pr.count = 1
+            pr.total = efiles
             while 1:
                 f = changegroup.getchunk(source)
                 if not f:
                     break
                 self.ui.debug("adding %s revisions\n" % f)
+                pr()
                 fl = self.file(f)
                 o = len(fl)
-                chunkiter = changegroup.chunkiter(source, progress=pr)
+                chunkiter = changegroup.chunkiter(source)
                 if fl.addgroup(chunkiter, revmap, trp) is None:
                     raise util.Abort(_("received file revlog group is empty"))
                 revisions += len(fl) - o
