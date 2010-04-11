@@ -18,10 +18,10 @@ basic commands:
  pull       pull changes from the specified source
  push       push changes to the specified destination
  remove     remove the specified files on the next commit
- serve      export the repository via HTTP
+ serve      start stand-alone webserver
  status     show changed files in the working directory
  summary    summarize working directory state
- update     update working directory
+ update     update working directory (or switch revisions)
 
 use "hg help" for the full list of commands or "hg -v" for details
 0: a

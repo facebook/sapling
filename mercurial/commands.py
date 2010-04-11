@@ -2855,7 +2855,7 @@ def revert(ui, repo, *pats, **opts):
         wlock.release()
 
 def rollback(ui, repo, **opts):
-    """roll back the last transaction
+    """roll back the last transaction (dangerous)
 
     This command should be used with care. There is only one level of
     rollback, and there is no way to undo a rollback. It will also
@@ -2891,7 +2891,7 @@ def root(ui, repo):
     ui.write(repo.root + "\n")
 
 def serve(ui, repo, **opts):
-    """export the repository via HTTP
+    """start stand-alone webserver
 
     Start a local HTTP repository browser and pull server.
 
@@ -3316,7 +3316,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     return postincoming(ui, repo, modheads, opts.get('update'), None)
 
 def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
-    """update working directory
+    """update working directory (or switch revisions)
 
     Update the repository's working directory to the specified
     changeset.
