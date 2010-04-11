@@ -2710,7 +2710,7 @@ cmdtable = {
           ('n', 'none', None, _('drop all guards'))],
          _('hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]')),
     'qheader': (header, [], _('hg qheader [PATCH]')),
-    "^qimport":
+    "qimport":
         (qimport,
          [('e', 'existing', None, _('import file in patch directory')),
           ('n', 'name', '', _('name of patch file')),
@@ -2723,7 +2723,7 @@ cmdtable = {
         (init,
          [('c', 'create-repo', None, _('create queue repository'))],
          _('hg qinit [-c]')),
-    "qnew":
+    "^qnew":
         (new,
          [('e', 'edit', None, _('edit commit message')),
           ('f', 'force', None, _('import uncommitted changes (DEPRECATED)')),
@@ -2792,7 +2792,7 @@ cmdtable = {
          [('m', 'missing', None, _('print patches not in series')),
          ] + seriesopts,
          _('hg qseries [-ms]')),
-    "^strip":
+    "strip":
         (strip,
          [('f', 'force', None, _('force removal with local changes')),
           ('b', 'backup', None, _('bundle unrelated changesets')),

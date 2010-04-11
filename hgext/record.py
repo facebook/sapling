@@ -555,7 +555,7 @@ def uisetup(ui):
         (qrecord,
 
          # add qnew options, except '--force'
-         [opt for opt in mq.cmdtable['qnew'][1] if opt[1] != 'force'],
+         [opt for opt in mq.cmdtable['^qnew'][1] if opt[1] != 'force'],
 
          _('hg qrecord [OPTION]... PATCH [FILE]...')),
     }
