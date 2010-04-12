@@ -62,4 +62,7 @@ hg convert a b
 echo % "contents of fncache file:"
 cat b/.hg/store/fncache
 
+echo '% test bogus URL'
+hg convert -q bzr+ssh://foobar@selenic.com/baz baz
+
 true
