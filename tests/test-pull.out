@@ -19,9 +19,10 @@ checking files
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 foo
 2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   foo
-pulling from http://localhost:$HGPORT/
+pulling from http://foo:***@localhost:$HGPORT/
 searching for changes
 no changes found
+rolling back pull (http://foo:***@localhost:$HGPORT/) to revision 0
 % issue 622
 pulling from ../test
 requesting all changes

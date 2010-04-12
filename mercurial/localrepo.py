@@ -14,6 +14,7 @@ import util, extensions, hook, error
 import match as matchmod
 import merge as mergemod
 import tags as tagsmod
+import url as urlmod
 from lock import release
 import weakref, stat, errno, os, time, inspect
 propertycache = util.propertycache
@@ -2017,7 +2018,7 @@ class localrepository(repo.repository):
         cl.delayupdate()
         oldheads = len(cl.heads())
 
-        tr = self.transaction(",".join([srctype, url]))
+        tr = self.transaction(",".join([srctype, urlmod.hidepassword(url)]))
         try:
             trp = weakref.proxy(tr)
             # pull off the changeset group
