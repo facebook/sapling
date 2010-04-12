@@ -178,7 +178,7 @@ def issvnurl(ui, url):
         path = os.path.abspath(url)
     if proto == 'file':
         path = path.replace(os.sep, '/')
-    check = protomap.get(proto, lambda p, p2: False)
+    check = protomap.get(proto, lambda *args: False)
     while '/' in path:
         if check(ui, path, proto):
             return True

@@ -287,3 +287,5 @@ converting...
 % contents of fncache file:
 data/a.i
 data/b.i
+% test bogus URL
+abort: bzr+ssh://foobar@selenic.com/baz: missing or unsupported repository
