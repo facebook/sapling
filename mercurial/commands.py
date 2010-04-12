@@ -2160,6 +2160,7 @@ def log(ui, repo, *pats, **opts):
         df = util.matchdate(opts["date"])
 
     opts['branch'] += opts.get('only_branch')
+    opts['branch'] = [repo.lookupbranch(b) for b in opts['branch']]
 
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
     def prep(ctx, fns):

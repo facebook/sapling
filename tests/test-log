@@ -162,7 +162,19 @@ hg log -b test
 echo '% log -b dummy'
 hg log -b dummy
 
+echo '% log -b .'
+hg log -b .
+
 echo '% log -b default -b test'
 hg log -b default -b test
+
+echo '% log -b default -b .'
+hg log -b default -b .
+
+echo '% log -b . -b test'
+hg log -b . -b test
+
+echo '% log -b 2'
+hg log -b 2
 
 exit 0

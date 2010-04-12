@@ -455,6 +455,14 @@ class localrepository(repo.repository):
             pass
         raise error.RepoLookupError(_("unknown revision '%s'") % key)
 
+    def lookupbranch(self, key, remote=None):
+        repo = remote or self
+        if key in repo.branchmap():
+            return key
+
+        repo = (remote and remote.local()) and remote or self
+        return repo[key].branch()
+
     def local(self):
         return True
 
