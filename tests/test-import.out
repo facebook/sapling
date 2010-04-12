@@ -373,3 +373,9 @@ new file mode 100644
 diff --git a/src/cmd/gc/mksys.bash b/src/cmd/gc/mksys.bash
 old mode 100644
 new mode 100755
+% diff lines looking like headers
+adding a
+adding b
+adding c
+3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+applying patch from stdin
