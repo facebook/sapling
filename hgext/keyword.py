@@ -140,11 +140,11 @@ class kwtemplater(object):
         '''Replaces keywords in data with expanded template.'''
         def kwsub(mobj):
             kw = mobj.group(1)
-            self.ct = cmdutil.changeset_templater(self.ui, self.repo,
-                                                  False, None, '', False)
-            self.ct.use_template(self.templates[kw])
+            ct = cmdutil.changeset_templater(self.ui, self.repo,
+                                             False, None, '', False)
+            ct.use_template(self.templates[kw])
             self.ui.pushbuffer()
-            self.ct.show(ctx, root=self.repo.root, file=path)
+            ct.show(ctx, root=self.repo.root, file=path)
             ekw = templatefilters.firstline(self.ui.popbuffer())
             return '$%s: %s $' % (kw, ekw)
         return subfunc(kwsub, data)
