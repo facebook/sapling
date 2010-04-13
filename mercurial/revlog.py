@@ -845,6 +845,32 @@ class revlog(object):
                 c.append(self.node(r))
         return c
 
+    def descendant(self, start, end):
+        for i in self.descendants(start):
+            if i == end:
+                return True
+            elif i > end:
+                break
+        return False
+
+    def ancestor(self, a, b):
+        """calculate the least common ancestor of nodes a and b"""
+
+        # fast path, check if it is a descendant
+        a, b = self.rev(a), self.rev(b)
+        start, end = sorted((a, b))
+        if self.descendant(start, end):
+            return self.node(start)
+
+        def parents(rev):
+            return [p for p in self.parentrevs(rev) if p != nullrev]
+
+        c = ancestor.ancestor(a, b, parents)
+        if c is None:
+            return nullid
+
+        return self.node(c)
+
     def _match(self, id):
         if isinstance(id, (long, int)):
             # rev
@@ -1118,32 +1144,6 @@ class revlog(object):
         if type(text) == str: # only accept immutable objects
             self._cache = (node, curr, text)
         return node
-
-    def descendant(self, start, end):
-        for i in self.descendants(start):
-            if i == end:
-                return True
-            elif i > end:
-                break
-        return False
-
-    def ancestor(self, a, b):
-        """calculate the least common ancestor of nodes a and b"""
-
-        # fast path, check if it is a descendant
-        a, b = self.rev(a), self.rev(b)
-        start, end = sorted((a, b))
-        if self.descendant(start, end):
-            return self.node(start)
-
-        def parents(rev):
-            return [p for p in self.parentrevs(rev) if p != nullrev]
-
-        c = ancestor.ancestor(a, b, parents)
-        if c is None:
-            return nullid
-
-        return self.node(c)
 
     def group(self, nodelist, lookup, infocollect=None):
         """Calculate a delta group, yielding a sequence of changegroup chunks
