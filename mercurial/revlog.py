@@ -33,6 +33,8 @@ REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 
 _prereadsize = 1048576
 
+_maxinline = 131072                     # max size of revlog with inline data
+
 RevlogError = error.RevlogError
 LookupError = error.LookupError
 
@@ -1036,7 +1038,7 @@ class revlog(object):
         return text
 
     def checkinlinesize(self, tr, fp=None):
-        if not self._inline or (self.start(-2) + self.length(-2)) < 131072:
+        if not self._inline or (self.start(-2) + self.length(-2)) < _maxinline:
             return
 
         trinfo = tr.find(self.indexfile)
