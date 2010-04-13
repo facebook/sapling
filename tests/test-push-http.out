@@ -25,7 +25,7 @@ remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
 % serve errors
 changegroup hook: HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_URL=remote:http 
-rolling back serve to revision 1
+rolling back to revision 1 (undo serve)
 % expect authorization error: all users denied
 abort: authorization failed
 pushing to http://localhost:$HGPORT/

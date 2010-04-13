@@ -609,11 +609,12 @@ class localrepository(repo.repository):
                 try:
                     args = self.opener("undo.desc", "r").read().splitlines()
                     if len(args) >= 3 and self.ui.verbose:
-                        desc = _("rolling back %s (%s) to revision %s\n") % (
-                                 args[1], args[2], args[0])
+                        desc = _("rolling back to revision %s"
+                                 " (undo %s: %s)\n") % (
+                                 args[0], args[1], args[2])
                     elif len(args) >= 2:
-                        desc = _("rolling back %s to revision %s\n") % (
-                                 args[1], args[0])
+                        desc = _("rolling back to revision %s (undo %s)\n") % (
+                                 args[0], args[1])
                 except IOError:
                     desc = _("rolling back unknown transaction\n")
                 self.ui.status(desc)
