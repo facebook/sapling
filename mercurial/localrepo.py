@@ -572,7 +572,7 @@ class localrepository(repo.repository):
             ds = ""
         self.opener("journal.dirstate", "w").write(ds)
         self.opener("journal.branch", "w").write(self.dirstate.branch())
-        self.opener("journal.desc", "w").write("%d,%s" % (len(self), desc))
+        self.opener("journal.desc", "w").write("%d\n%s\n" % (len(self), desc))
 
         renames = [(self.sjoin("journal"), self.sjoin("undo")),
                    (self.join("journal.dirstate"), self.join("undo.dirstate")),
@@ -607,14 +607,14 @@ class localrepository(repo.repository):
             lock = self.lock()
             if os.path.exists(self.sjoin("undo")):
                 try:
-                    args = self.opener("undo.desc", "r").read().split(",")
-                    if len(args) == 3 and self.ui.verbose:
+                    args = self.opener("undo.desc", "r").read().splitlines()
+                    if len(args) >= 3 and self.ui.verbose:
                         desc = _("rolling back %s (%s) to revision %s\n") % (
                                  args[1], args[2], args[0])
-                    else:
+                    elif len(args) >= 2:
                         desc = _("rolling back %s to revision %s\n") % (
                                  args[1], args[0])
-                except (IOError, IndexError):
+                except IOError:
                     desc = _("rolling back unknown transaction\n")
                 self.ui.status(desc)
                 if dryrun:
@@ -2019,7 +2019,7 @@ class localrepository(repo.repository):
         cl.delayupdate()
         oldheads = len(cl.heads())
 
-        tr = self.transaction(",".join([srctype, urlmod.hidepassword(url)]))
+        tr = self.transaction("\n".join([srctype, urlmod.hidepassword(url)]))
         try:
             trp = weakref.proxy(tr)
             # pull off the changeset group
