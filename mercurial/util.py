@@ -664,7 +664,7 @@ def checkexec(path):
 
     try:
         EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-        fh, fn = tempfile.mkstemp("", "", path)
+        fh, fn = tempfile.mkstemp(dir=path, prefix='hg-checkexec-')
         try:
             os.close(fh)
             m = os.stat(fn).st_mode & 0777
