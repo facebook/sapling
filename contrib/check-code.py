@@ -8,6 +8,7 @@
 # GNU General Public License version 2 or any later version.
 
 import sys, re, glob
+import optparse
 
 def repquote(m):
     t = re.sub(r"\w", "x", m.group('text'))
@@ -99,7 +100,8 @@ pypats = [
     (r'\s(\+=|-=|!=|<>|<=|>=|<<=|>>=)\S', "missing whitespace around operator"),
     (r'[^+=*!<>&| -](\s=|=\s)[^= ]', "wrong whitespace around ="),
     (r'raise Exception', "don't raise generic exceptions"),
-    (r'ui\.(status|progress|write|note)\([\'\"]x', "unwrapped ui message"),
+    (r'ui\.(status|progress|write|note)\([\'\"]x',
+     "warning: unwrapped ui message"),
 ]
 
 pyfilters = [
@@ -164,7 +166,7 @@ class norepeatlogger(object):
 
 _defaultlogger = norepeatlogger()
 
-def checkfile(f, logfunc=_defaultlogger.log, maxerr=None):
+def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False):
     """checks style and portability of a given file
 
     :f: filepath
@@ -191,6 +193,8 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None):
             if "check-code" + "-ignore" in l[0]:
                 continue
             for p, msg in pats:
+                if not warnings and msg.startswith("warning"):
+                    continue
                 if re.search(p, l[1]):
                     logfunc(f, n + 1, l[0], msg)
                     fc += 1
@@ -203,10 +207,19 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
+    parser = optparse.OptionParser("%prog [options] [files]")
+    parser.add_option("-w", "--warnings", action="store_true",
+                      help="include warning-level checks")
+    parser.add_option("-p", "--per-file", type="int",
+                      help="max warnings per file")
+
+    parser.set_defaults(per_file=15, warnings=False)
+    (options, args) = parser.parse_args()
+
+    if len(args) == 0:
         check = glob.glob("*")
     else:
-        check = sys.argv[1:]
+        check = args
 
     for f in check:
-        checkfile(f, maxerr=15)
+        checkfile(f, maxerr=options.per_file, warnings=options.warnings)
