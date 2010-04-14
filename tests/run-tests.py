@@ -657,6 +657,7 @@ def runchildren(options, tests):
 
     optcopy = dict(options.__dict__)
     optcopy['jobs'] = 1
+    del optcopy['blacklist']
     if optcopy['with_hg'] is None:
         optcopy['with_hg'] = os.path.join(BINDIR, "hg")
     optcopy.pop('anycoverage', None)
