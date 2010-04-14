@@ -264,4 +264,40 @@ hg out inner --template "{rev}: {branches} {desc}\n"
 hg push inner
 cd ..
 
+echo % check prepush with new branch head and new child of former branch head
+echo % but child is on different branch
+hg init p
+cd p
+hg branch A
+echo a0 >a
+hg ci -Ama0
+echo a1 >a
+hg ci -ma1
+hg up null
+hg branch B
+echo b0 >b
+hg ci -Amb0
+echo b1 >b
+hg ci -mb1
+
+hg clone . inner
+
+hg up A
+hg branch -f B
+echo a3 >a
+hg ci -ma3
+hg up 3
+hg branch -f A
+echo b3 >b
+hg ci -mb3
+
+echo %% glog of local
+hg glog --template "{rev}: {branches} {desc}\n"
+echo %% glog of remote
+hg glog -R inner --template "{rev}: {branches} {desc}\n"
+echo %% outgoing
+hg out inner --template "{rev}: {branches} {desc}\n"
+hg push inner
+cd ..
+
 exit 0

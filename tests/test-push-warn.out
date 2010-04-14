@@ -258,3 +258,48 @@ adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
+% check prepush with new branch head and new child of former branch head
+% but child is on different branch
+marked working directory as branch A
+adding a
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+marked working directory as branch B
+adding b
+created new head
+updating to branch B
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+marked working directory as branch B
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+marked working directory as branch A
+%% glog of local
+@  5: A b3
+|
+| o  4: B a3
+| |
+o |  3: B b1
+| |
+o |  2: B b0
+ /
+o  1: A a1
+|
+o  0: A a0
+
+%% glog of remote
+@  3: B b1
+|
+o  2: B b0
+
+o  1: A a1
+|
+o  0: A a0
+
+%% outgoing
+comparing with inner
+searching for changes
+4: B a3
+5: A b3
+pushing to inner
+searching for changes
+abort: push creates new remote heads on branch 'A'!
+(did you forget to merge? use push -f to force)
