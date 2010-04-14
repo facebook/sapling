@@ -2347,6 +2347,11 @@ def paths(ui, repo, search=None):
     Path names are defined in the [paths] section of /etc/mercurial/hgrc
     and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.
 
+    The names 'default' and 'default-push' have a special meaning.
+    They are the locations used when pulling and pushing respectively
+    unless a location is specified. When cloning a repository, the
+    clone source is written as 'default' in .hg/hgrc.
+
     See 'hg help urls' for more information.
     """
     if search:
