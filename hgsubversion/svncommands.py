@@ -243,8 +243,7 @@ def help_(ui, args=None, **opts):
             if len(candidates) == 1:
                 subcommand = candidates[0]
             elif len(candidates) > 1:
-                ui.status('Ambiguous command. Could have been:\n%s\n' %
-                          ' '.join(candidates))
+                raise error.AmbiguousCommand(subcommand, candidates)
                 return
         doc = table[subcommand].__doc__
         if doc is None:
