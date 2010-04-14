@@ -56,15 +56,15 @@ hg push -r 3 ../c; echo $?
 hg push -r 3 -r 4 ../c; echo $?
 hg push -f -r 3 -r 4 ../c; echo $?
 hg push -r 5 ../c; echo $?
+hg in ../c
 
-# issue 450
+echo % issue 450
 hg init ../e
 hg push -r 0 ../e ; echo $?
 hg push -r 1 ../e ; echo $?
 
 cd ..
 
-# issue 736
 echo % issue 736
 hg init f
 cd f
