@@ -46,9 +46,8 @@ import difflib
 import errno
 import optparse
 import os
-import signal
-import subprocess
 import shutil
+import subprocess
 import signal
 import sys
 import tempfile

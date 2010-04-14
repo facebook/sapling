@@ -10,7 +10,7 @@ from i18n import _
 from node import hex, nullid, short
 import base85, cmdutil, mdiff, util, diffhelpers, copies
 import cStringIO, email.Parser, os, re
-import sys, tempfile, zlib
+import tempfile, zlib
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 

@@ -10,7 +10,6 @@ import os
 from mercurial import ui, hg, hook, error, encoding, templater
 from common import get_mtime, ErrorResponse, permhooks
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
-from common import HTTP_UNAUTHORIZED, HTTP_METHOD_NOT_ALLOWED
 from request import wsgirequest
 import webcommands, protocol, webutil
 

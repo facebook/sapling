@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer, traceback
-from mercurial import hg, util, error
+from mercurial import util, error
 from mercurial.i18n import _
 
 def _splitURI(uri):

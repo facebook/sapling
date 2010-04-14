@@ -6,7 +6,6 @@
 # GNU General Public License version 2 or any later version.
 
 import util, error
-from i18n import _
 
 from mercurial import store
 

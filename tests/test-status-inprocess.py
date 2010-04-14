@@ -1,5 +1,4 @@
 #!/usr/bin/python
-import os
 from mercurial.ui import ui
 from mercurial.localrepo import localrepository
 from mercurial.commands import add, commit, status

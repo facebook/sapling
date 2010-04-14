@@ -45,14 +45,9 @@ by the command whatis or apropos.
 
 __docformat__ = 'reStructuredText'
 
-import sys
-import os
-import time
 import re
-from types import ListType
 
-import docutils
-from docutils import nodes, utils, writers, languages
+from docutils import nodes, writers, languages
 import roman
 
 FIELD_LIST_INDENT = 7

@@ -37,7 +37,6 @@ import shutil
 import tempfile
 from distutils.core import setup, Extension
 from distutils.dist import Distribution
-from distutils.command.install_data import install_data
 from distutils.command.build import build
 from distutils.command.build_py import build_py
 from distutils.spawn import spawn, find_executable

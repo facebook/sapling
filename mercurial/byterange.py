@@ -25,11 +25,6 @@ import urllib
 import urllib2
 import email.Utils
 
-try:
-    from cStringIO import StringIO
-except ImportError, msg:
-    from StringIO import StringIO
-
 class RangeError(IOError):
     """Error raised when an unsatisfiable range is requested."""
     pass
