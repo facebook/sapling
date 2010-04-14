@@ -1519,13 +1519,14 @@ class localrepository(repo.repository):
         update, updated_heads = self.findoutgoing(remote, common, remote_heads)
         msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
 
-        def checkbranch(lheads, rheads, branchname=None):
+        def checkbranch(lheads, rheads, lheadcnt, branchname=None):
             '''
             check whether there are more local heads than remote heads on
             a specific branch.
 
             lheads: local branch heads
             rheads: remote branch heads
+            lheadcnt: total number of local branch heads
             '''
 
             warn = 0
@@ -1560,7 +1561,7 @@ class localrepository(repo.repository):
                 else:
                     msg = _("abort: push creates new remote heads!\n")
                 self.ui.warn(msg)
-                if len(lheads) > len(rheads):
+                if lheadcnt > len(rheads):
                     self.ui.status(_("(did you forget to merge?"
                                      " use push -f to force)\n"))
                 else:
@@ -1586,12 +1587,16 @@ class localrepository(repo.repository):
                 if remote.capable('branchmap'):
                     remotebrheads = remote.branchmap()
 
+                    lbrmap = self.branchmap()
+                    localbrheads = {}
                     if not revs:
-                        localbrheads = self.branchmap()
+                        for br, hds in lbrmap.iteritems():
+                            localbrheads[br] = (len(hds), hds)
                     else:
-                        localbrheads = {}
                         ctxgen = (self[n] for n in msng_cl)
                         self._updatebranchcache(localbrheads, ctxgen)
+                        for br, hds in localbrheads.iteritems():
+                            localbrheads[br] = (len(lbrmap[br]), hds)
 
                     newbranches = list(set(localbrheads) - set(remotebrheads))
                     if newbranches: # new branch requires --force
@@ -1602,13 +1607,14 @@ class localrepository(repo.repository):
                         # propose 'push -b .' in the msg too?
                         self.ui.status(_("(use 'hg push -f' to force)\n"))
                         return None, 0
-                    for branch, lheads in localbrheads.iteritems():
+                    for branch, x in localbrheads.iteritems():
                         if branch in remotebrheads:
+                            headcnt, lheads = x
                             rheads = remotebrheads[branch]
-                            if not checkbranch(lheads, rheads, branch):
+                            if not checkbranch(lheads, rheads, headcnt, branch):
                                 return None, 0
                 else:
-                    if not checkbranch(heads, remote_heads):
+                    if not checkbranch(heads, remote_heads, len(heads)):
                         return None, 0
 
             if inc:

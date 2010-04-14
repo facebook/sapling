@@ -56,15 +56,15 @@ hg push -r 3 ../c; echo $?
 hg push -r 3 -r 4 ../c; echo $?
 hg push -f -r 3 -r 4 ../c; echo $?
 hg push -r 5 ../c; echo $?
+hg in ../c
 
-# issue 450
+echo % issue 450
 hg init ../e
 hg push -r 0 ../e ; echo $?
 hg push -r 1 ../e ; echo $?
 
 cd ..
 
-# issue 736
 echo % issue 736
 hg init f
 cd f
@@ -255,6 +255,42 @@ echo a2 >a2
 hg ci -Ama2
 # a2 is now the new branch head of A, and a topological head
 # it replaces a former topological and branch head, so this should not warn
+echo %% glog of local
+hg glog --template "{rev}: {branches} {desc}\n"
+echo %% glog of remote
+hg glog -R inner --template "{rev}: {branches} {desc}\n"
+echo %% outgoing
+hg out inner --template "{rev}: {branches} {desc}\n"
+hg push inner
+cd ..
+
+echo % check prepush with new branch head and new child of former branch head
+echo % but child is on different branch
+hg init p
+cd p
+hg branch A
+echo a0 >a
+hg ci -Ama0
+echo a1 >a
+hg ci -ma1
+hg up null
+hg branch B
+echo b0 >b
+hg ci -Amb0
+echo b1 >b
+hg ci -mb1
+
+hg clone . inner
+
+hg up A
+hg branch -f B
+echo a3 >a
+hg ci -ma3
+hg up 3
+hg branch -f A
+echo b3 >b
+hg ci -mb3
+
 echo %% glog of local
 hg glog --template "{rev}: {branches} {desc}\n"
 echo %% glog of remote
