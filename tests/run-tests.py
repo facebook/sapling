@@ -844,6 +844,11 @@ def main():
     os.environ['COLUMNS'] = '80'
     os.environ['http_proxy'] = ''
 
+    # unset env related to hooks
+    for k in os.environ.keys():
+        if k.startswith('HG_'):
+            del os.environ[k]
+
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
     if options.tmpdir:
