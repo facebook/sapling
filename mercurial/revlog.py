@@ -31,9 +31,11 @@ REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 
+# amount of data read unconditionally, should be >= 4
+# when not inline: threshold for using lazy index
 _prereadsize = 1048576
-
-_maxinline = 131072                     # max size of revlog with inline data
+# max size of revlog with inline data
+_maxinline = 131072
 
 RevlogError = error.RevlogError
 LookupError = error.LookupError
