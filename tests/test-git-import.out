@@ -1,29 +1,37 @@
 % new file
 applying patch from stdin
+0:ae3ee40d2079
 % new empty file
 applying patch from stdin
+1:ab199dc869b5
 empty
 % chmod +x
 applying patch from stdin
+2:3a34410f282e
 % copy
 applying patch from stdin
+3:37bacb7ca14d
 a
 a
 % rename
 applying patch from stdin
+4:47b81a94361d
 copyx
 empty
 new
 rename
 % delete
 applying patch from stdin
+5:d9b001d98336
 empty
 new
 rename
 % regular diff
 applying patch from stdin
+6:ebe901e7576b
 % copy and modify
 applying patch from stdin
+7:18f368958ecd
 a
 a
 b
@@ -31,6 +39,7 @@ a
 a
 % rename and modify
 applying patch from stdin
+8:c32b0d7e6f44
 a
 a
 b
@@ -38,6 +47,7 @@ c
 a
 % one file renamed multiple times
 applying patch from stdin
+9:034a6bf95330
 9 rename2 rename3 rename3-2 / rename3 (rename2)rename3-2 (rename2)
 rename3
 rename3-2
@@ -54,15 +64,19 @@ c
 a
 % binary files and regular patch hunks
 applying patch from stdin
+11:c39bce63e786
 foo
 045c85ba38952325e126c70962cc0f9d9077bc67 644   binary
 % many binary files
 applying patch from stdin
+12:30b530085242
 045c85ba38952325e126c70962cc0f9d9077bc67 644   mbinary1
 a874b471193996e7cb034bb301cac7bdaf3e3f46 644   mbinary2
 % filenames with spaces
 applying patch from stdin
+13:04750ef42fb3
 foo
 % copy then modify the original file
 applying patch from stdin
+14:c4cd9cdeaa74
 foo
