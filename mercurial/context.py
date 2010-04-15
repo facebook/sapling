@@ -589,12 +589,23 @@ class workingctx(changectx):
 
         man = self._parents[0].manifest().copy()
         copied = self._repo.dirstate.copies()
-        cf = lambda x: man.flags(copied.get(x, x))
+        if len(self._parents) > 1:
+            man2 = self.p2().manifest()
+            def getman(f):
+                if f in man:
+                    return man
+                return man2
+        else:
+            getman = lambda f: man
+        def cf(f):
+            f = copied.get(f, f)
+            return getman(f).flags(f)
         ff = self._repo.dirstate.flagfunc(cf)
         modified, added, removed, deleted, unknown = self._status[:5]
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
-                man[f] = man.get(copied.get(f, f), nullid) + i
+                orig = copied.get(f, f)
+                man[f] = getman(orig).get(orig, nullid) + i
                 try:
                     man.set(f, ff(f))
                 except OSError:
@@ -669,16 +680,21 @@ class workingctx(changectx):
             except KeyError:
                 return ''
 
-        pnode = self._parents[0].changeset()[0]
         orig = self._repo.dirstate.copies().get(path, path)
-        node, flag = self._repo.manifest.find(pnode, orig)
-        try:
-            ff = self._repo.dirstate.flagfunc(lambda x: flag or '')
-            return ff(path)
-        except OSError:
-            pass
 
-        if not node or path in self.deleted() or path in self.removed():
+        def findflag(ctx):
+            mnode = ctx.changeset()[0]
+            node, flag = self._repo.manifest.find(mnode, orig)
+            ff = self._repo.dirstate.flagfunc(lambda x: flag or None)
+            try:
+                return ff(orig)
+            except OSError:
+                pass
+
+        flag = findflag(self._parents[0])
+        if flag is None and len(self.parents()) > 1:
+            flag = findflag(self._parents[1])
+        if flag is None or self._repo.dirstate[path] == 'r':
             return ''
         return flag
 
