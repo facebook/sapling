@@ -1,14 +1,12 @@
 % setup
 adding a
-new tip: 685c8b50a4fa
-adding b
-new tip: 0dc3f194257e
+new tip: 553596fad57b
 
 % test that new changesets are visible to repo.lookup()
-new tip: 76721648e605
-changeset:   2:76721648e605
+new tip: 799ae3599e0e
+changeset:   1:799ae3599e0e
 tag:         tip
-user:        test test test test test test test test test test test
+user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     one more commit to demonstrate the bug
 
