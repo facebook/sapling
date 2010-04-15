@@ -1,0 +1,52 @@
+#!/bin/sh
+
+echo "% setup"
+
+# create a little extension that has 3 side-effects:
+#   1) ensure changelog data is not inlined
+#   2) make revlog to use lazyparser
+#   3) test that repo.lookup() works
+# 1 and 2 are preconditions for the bug; 3 is the bug.
+cat > commitwrapper.py <<EOF
+from mercurial import extensions, node, revlog
+
+def reposetup(ui, repo):
+    def wrapcommit(orig, *args, **kwargs):
+        result = orig(*args, **kwargs)
+        tip1 = node.short(repo.changelog.tip())
+        tip2 = node.short(repo.lookup(tip1))
+        assert tip1 == tip2
+        ui.write('new tip: %s\n' % tip1)
+        return result
+
+    extensions.wrapfunction(repo, 'commit', wrapcommit)
+
+def extsetup(ui):
+    revlog._maxinline = 128             # split out 00changelog.d early
+    revlog._prereadsize = 128           # use revlog.lazyparser
+EOF
+
+cat >> $HGRCPATH <<EOF
+[extensions]
+commitwrapper = $PWD/commitwrapper.py
+EOF
+
+# use a long username to make sure the changelog is bigger than 128 bytes
+export HGUSER='test test test test test test test test test test test'
+
+hg init repo1
+cd repo1
+echo a > a
+hg commit -A -m'add a with a long commit message to make the changelog a bit bigger'
+
+# This commit puts 00changelog.i over the 128-byte threshold to split
+# out 00changelog.d, which is a precondition for reproducing the bug
+# with the next commit.
+echo b > b
+hg commit -A -m'add b and ramble on a bit here too for the same reason'
+
+echo ""
+echo "% test that new changesets are visible to repo.lookup()"
+echo a >> a
+hg commit -m'one more commit to demonstrate the bug'
+hg tip

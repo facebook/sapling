@@ -294,8 +294,7 @@ class lazymap(object):
         return key in self.p.map
     def __iter__(self):
         yield nullid
-        for i in xrange(self.p.l):
-            ret = self.p.index[i]
+        for i, ret in enumerate(self.p.index):
             if not ret:
                 self.p.loadindex(i)
                 ret = self.p.index[i]
