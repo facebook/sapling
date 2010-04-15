@@ -687,7 +687,7 @@ class workingctx(changectx):
             node, flag = self._repo.manifest.find(mnode, orig)
             ff = self._repo.dirstate.flagfunc(lambda x: flag or None)
             try:
-                return ff(orig)
+                return ff(path)
             except OSError:
                 pass
 
