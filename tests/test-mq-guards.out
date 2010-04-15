@@ -131,10 +131,10 @@ now at: c.patch
 2 A c.patch
 3 U d.patch
 % qseries again, but with color
-[0;30;1m0 G new.patch[0m
-[0;30;1m1 G b.patch[0m
-[0;34;1;4m2 A c.patch[0m
-[0;30;1m3 U d.patch[0m
+0 G [0;30;1mnew.patch[0m
+1 G [0;30;1mb.patch[0m
+2 A [0;34;1;4mc.patch[0m
+3 U [0;30;1md.patch[0m
 % new.patch, b.patch: Guarded. c.patch: Applied. d.patch: Guarded.
 0 G new.patch
 1 G b.patch

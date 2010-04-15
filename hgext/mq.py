@@ -1415,6 +1415,8 @@ class queue(object):
     def qseries(self, repo, missing=None, start=0, length=None, status=None,
                 summary=False):
         def displayname(pfx, patchname, state):
+            if pfx:
+                self.ui.write(pfx)
             if summary:
                 ph = patchheader(self.join(patchname), self.plainmode)
                 msg = ph.message and ph.message[0] or ''
@@ -1424,10 +1426,12 @@ class queue(object):
                         msg = util.ellipsis(msg, width)
                     else:
                         msg = ''
-                msg = "%s%s: %s" % (pfx, patchname, msg)
+                self.ui.write(patchname, label='qseries.' + state)
+                self.ui.write(': ')
+                self.ui.write(msg, label='qseries.message.' + state)
             else:
-                msg = pfx + patchname
-            self.ui.write(msg + '\n', label='qseries.' + state)
+                self.ui.write(patchname, label='qseries.' + state)
+            self.ui.write('\n')
 
         applied = set([p.name for p in self.applied])
         if length is None:
