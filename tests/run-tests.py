@@ -848,6 +848,8 @@ def main():
     # unset env related to hooks
     for k in os.environ.keys():
         if k.startswith('HG_'):
+            # can't remove on solaris
+            os.environ[k] = ''
             del os.environ[k]
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
