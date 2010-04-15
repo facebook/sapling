@@ -298,6 +298,8 @@ hg glog -R inner --template "{rev}: {branches} {desc}\n"
 echo %% outgoing
 hg out inner --template "{rev}: {branches} {desc}\n"
 hg push inner
+hg push inner -r4 -r5
+hg in inner
 cd ..
 
 exit 0
