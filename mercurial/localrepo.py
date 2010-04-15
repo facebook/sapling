@@ -411,9 +411,8 @@ class localrepository(repo.repository):
         for branch, newnodes in newbranches.iteritems():
             bheads = partial.setdefault(branch, [])
             bheads.extend(newnodes)
-            if len(bheads) < 2:
+            if len(bheads) <= 1:
                 continue
-            newbheads = []
             # starting from tip means fewer passes over reachable
             while newnodes:
                 latest = newnodes.pop()
@@ -421,9 +420,8 @@ class localrepository(repo.repository):
                     continue
                 minbhrev = self[min([self[bh].rev() for bh in bheads])].node()
                 reachable = self.changelog.reachable(latest, minbhrev)
+                reachable.remove(latest)
                 bheads = [b for b in bheads if b not in reachable]
-                newbheads.insert(0, latest)
-            bheads.extend(newbheads)
             partial[branch] = bheads
 
     def lookup(self, key):
