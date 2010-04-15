@@ -211,7 +211,6 @@ searching for changes
 2: A a2
 pushing to inner
 searching for changes
-note: unsynced remote changes!
 adding changesets
 adding manifests
 adding file changes
@@ -253,7 +252,6 @@ searching for changes
 3: A a2
 pushing to inner
 searching for changes
-note: unsynced remote changes!
 adding changesets
 adding manifests
 adding file changes
@@ -303,3 +301,10 @@ pushing to inner
 searching for changes
 abort: push creates new remote heads on branch 'A'!
 (did you forget to merge? use push -f to force)
+pushing to inner
+searching for changes
+abort: push creates new remote heads on branch 'A'!
+(did you forget to merge? use push -f to force)
+comparing with inner
+searching for changes
+no changes found

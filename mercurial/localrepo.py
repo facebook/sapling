@@ -1500,110 +1500,106 @@ class localrepository(repo.repository):
         remote_heads = remote.heads()
         inc = self.findincoming(remote, common, remote_heads, force=force)
 
+        cl = self.changelog
         update, updated_heads = self.findoutgoing(remote, common, remote_heads)
-        msng_cl, bases, heads = self.changelog.nodesbetween(update, revs)
-
-        def checkbranch(lheads, rheads, lheadcnt, branchname=None):
-            '''
-            check whether there are more local heads than remote heads on
-            a specific branch.
-
-            lheads: local branch heads
-            rheads: remote branch heads
-            lheadcnt: total number of local branch heads
-            '''
-
-            warn = 0
-
-            if len(lheads) > len(rheads):
-                warn = 1
-            else:
-                # add local heads involved in the push
-                updatelheads = [self.changelog.heads(x, lheads)
-                                for x in update]
-                newheads = set(sum(updatelheads, [])) & set(lheads)
-
-                if not newheads:
-                    return True
-
-                # add heads we don't have or that are not involved in the push
-                for r in rheads:
-                    if r in self.changelog.nodemap:
-                        desc = self.changelog.heads(r, heads)
-                        l = [h for h in heads if h in desc]
-                        if not l:
-                            newheads.add(r)
-                    else:
-                        newheads.add(r)
-                if len(newheads) > len(rheads):
-                    warn = 1
-
-            if warn:
-                if branchname is not None:
-                    msg = _("abort: push creates new remote heads"
-                            " on branch '%s'!\n") % branchname
-                else:
-                    msg = _("abort: push creates new remote heads!\n")
-                self.ui.warn(msg)
-                if lheadcnt > len(rheads):
-                    self.ui.status(_("(did you forget to merge?"
-                                     " use push -f to force)\n"))
-                else:
-                    self.ui.status(_("(you should pull and merge or"
-                                     " use push -f to force)\n"))
-                return False
-            return True
+        outg, bases, heads = cl.nodesbetween(update, revs)
 
         if not bases:
             self.ui.status(_("no changes found\n"))
             return None, 1
-        elif not force:
-            # Check for each named branch if we're creating new remote heads.
-            # To be a remote head after push, node must be either:
-            # - unknown locally
-            # - a local outgoing head descended from update
-            # - a remote head that's known locally and not
-            #   ancestral to an outgoing head
-            #
-            # New named branches cannot be created without --force.
 
-            if remote_heads != [nullid]:
-                if remote.capable('branchmap'):
-                    remotebrheads = remote.branchmap()
+        if not force and remote_heads != [nullid]:
 
-                    lbrmap = self.branchmap()
-                    localbrheads = {}
-                    if not revs:
-                        for br, hds in lbrmap.iteritems():
-                            localbrheads[br] = (len(hds), hds)
-                    else:
-                        ctxgen = (self[n] for n in msng_cl)
-                        self._updatebranchcache(localbrheads, ctxgen)
-                        for br, hds in localbrheads.iteritems():
-                            localbrheads[br] = (len(lbrmap[br]), hds)
-
-                    newbranches = list(set(localbrheads) - set(remotebrheads))
-                    if newbranches: # new branch requires --force
-                        branchnames = ', '.join("%s" % b for b in newbranches)
-                        self.ui.warn(_("abort: push creates "
-                                       "new remote branches: %s!\n")
-                                     % branchnames)
-                        # propose 'push -b .' in the msg too?
-                        self.ui.status(_("(use 'hg push -f' to force)\n"))
-                        return None, 0
-                    for branch, x in localbrheads.iteritems():
-                        if branch in remotebrheads:
-                            headcnt, lheads = x
-                            rheads = remotebrheads[branch]
-                            if not checkbranch(lheads, rheads, headcnt, branch):
-                                return None, 0
+            def fail_multiple_heads(unsynced, branch=None):
+                if branch:
+                    msg = _("abort: push creates new remote heads"
+                            " on branch '%s'!\n") % branch
                 else:
-                    if not checkbranch(heads, remote_heads, len(heads)):
-                        return None, 0
+                    msg = _("abort: push creates new remote heads!\n")
+                self.ui.warn(msg)
+                if unsynced:
+                    self.ui.status(_("(you should pull and merge or"
+                                     " use push -f to force)\n"))
+                else:
+                    self.ui.status(_("(did you forget to merge?"
+                                     " use push -f to force)\n"))
+                return None, 0
 
-            if inc:
-                self.ui.warn(_("note: unsynced remote changes!\n"))
+            if remote.capable('branchmap'):
+                # Check for each named branch if we're creating new remote heads.
+                # To be a remote head after push, node must be either:
+                # - unknown locally
+                # - a local outgoing head descended from update
+                # - a remote head that's known locally and not
+                #   ancestral to an outgoing head
+                #
+                # New named branches cannot be created without --force.
 
+                # 1. Create set of branches involved in the push.
+                branches = set(self[n].branch() for n in outg)
+
+                # 2. Check for new branches on the remote.
+                remotemap = remote.branchmap()
+                newbranches = branches - set(remotemap)
+                if newbranches: # new branch requires --force
+                    branchnames = ', '.join("%s" % b for b in newbranches)
+                    self.ui.warn(_("abort: push creates "
+                                   "new remote branches: %s!\n")
+                                 % branchnames)
+                    self.ui.status(_("(use 'hg push -f' to force)\n"))
+                    return None, 0
+
+                # 3. Construct the initial oldmap and newmap dicts.
+                # They contain information about the remote heads before and
+                # after the push, respectively.
+                # Heads not found locally are not included in either dict,
+                # since they won't be affected by the push.
+                # unsynced contains all branches with incoming changesets.
+                oldmap = {}
+                newmap = {}
+                unsynced = set()
+                for branch in branches:
+                    remoteheads = remotemap[branch]
+                    prunedheads = [h for h in remoteheads if h in cl.nodemap]
+                    oldmap[branch] = prunedheads
+                    newmap[branch] = list(prunedheads)
+                    if len(remoteheads) > len(prunedheads):
+                        unsynced.add(branch)
+
+                # 4. Update newmap with outgoing changes.
+                # This will possibly add new heads and remove existing ones.
+                ctxgen = (self[n] for n in outg)
+                self._updatebranchcache(newmap, ctxgen)
+
+                # 5. Check for new heads.
+                # If there are more heads after the push than before, a suitable
+                # warning, depending on unsynced status, is displayed.
+                for branch in branches:
+                    if len(newmap[branch]) > len(oldmap[branch]):
+                        return fail_multiple_heads(branch in unsynced, branch)
+
+                # 6. Check for unsynced changes on involved branches.
+                if unsynced:
+                    self.ui.warn(_("note: unsynced remote changes!\n"))
+
+            else:
+                # Old servers: Check for new topological heads.
+                # Code based on _updatebranchcache.
+                newheads = set(h for h in remote_heads if h in cl.nodemap)
+                oldheadcnt = len(newheads)
+                newheads.update(outg)
+                if len(newheads) > 1:
+                    for latest in reversed(outg):
+                        if latest not in newheads:
+                            continue
+                        minhrev = min(cl.rev(h) for h in newheads)
+                        reachable = cl.reachable(latest, cl.node(minhrev))
+                        reachable.remove(latest)
+                        newheads.difference_update(reachable)
+                if len(newheads) > oldheadcnt:
+                    return fail_multiple_heads(inc)
+                if inc:
+                    self.ui.warn(_("note: unsynced remote changes!\n"))
 
         if revs is None:
             # use the fast path, no race possible on push
