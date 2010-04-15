@@ -1430,7 +1430,7 @@ class queue(object):
             if summary:
                 ph = patchheader(self.join(patchname), self.plainmode)
                 msg = ph.message and ph.message[0] or ''
-                if self.ui.interactive():
+                if not self.ui.plain():
                     width = util.termwidth() - len(pfx) - len(patchname) - 2
                     if width > 0:
                         msg = util.ellipsis(msg, width)
