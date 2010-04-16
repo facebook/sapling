@@ -37,6 +37,10 @@ y
 EOF
 echo; hg tip -p
 
+echo % summary shows we updated to the new cset
+hg summary
+echo
+
 echo % rename empty file
 
 hg mv empty-rw empty-rename
@@ -315,4 +319,3 @@ y
 y
 EOF
 echo; hg tip -p
-

@@ -72,6 +72,13 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     empty
 
 
+% summary shows we updated to the new cset
+parent: 0:c0708cf4e46e tip
+ empty
+branch: default
+commit: (clean)
+update: (current)
+
 % rename empty file
 diff --git a/empty-rw b/empty-rename
 rename from empty-rw
