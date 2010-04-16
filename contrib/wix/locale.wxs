@@ -15,24 +15,18 @@
 
   <Fragment>
     <DirectoryRef Id="INSTALLDIR">
-      <Directory Id="localedir" Name="locale" />
+      <Directory Id="localedir" Name="locale" FileSource="$(var.SourceDir)">
+        <?foreach LOC in $(var.hglocales) ?>
+          <Directory Id="hg.locale.$(var.LOC)" Name="$(var.LOC)">
+            <Directory Id="hg.locale.$(var.LOC).LC_MESSAGES" Name="LC_MESSAGES">
+              <Component Id="hg.locale.$(var.LOC)" Guid="*">
+                <File Id="hg.mo.$(var.LOC)" Name="hg.mo" KeyPath="yes" />
+              </Component>
+            </Directory>
+          </Directory>
+        <?endforeach?>
+      </Directory>
     </DirectoryRef>
   </Fragment>
-
-  <?foreach LOC in $(var.hglocales) ?>
-    <Fragment>
-      <DirectoryRef Id="localedir">
-        <Directory Id="hg.locale.$(var.LOC)" Name="$(var.LOC)">
-          <Directory Id="hg.locale.$(var.LOC).LC_MESSAGES" Name="LC_MESSAGES">
-            <Component Id="hg.locale.$(var.LOC)" Guid="*">
-              <File Id="hg.mo.$(var.LOC)" KeyPath="yes" 
-                    Source="$(var.SourceDir)\$(var.LOC)\LC_MESSAGES\hg.mo"
-              />
-            </Component>
-          </Directory>
-        </Directory>
-      </DirectoryRef>
-    </Fragment>
-  <?endforeach?>
 
 </Wix>
