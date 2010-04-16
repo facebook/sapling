@@ -11,7 +11,6 @@ import util, ignore, osutil, parsers
 import struct, os, stat, errno
 import cStringIO
 
-_unknown = ('?', 0, 0, 0)
 _format = ">cllll"
 propertycache = util.propertycache
 
