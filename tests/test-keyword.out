@@ -132,9 +132,9 @@ do not process $Id:
 xxx $
 $Id: c,v 40a904bbbe4c 1970/01/01 00:00:01 user $
 tests for different changenodes
-% qinit -c
+% init --mq
 % qimport
-% qcommit
+% commit --mq
 % keywords should not be expanded in patch
 # HG changeset patch
 # User User Name <user@example.com>

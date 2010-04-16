@@ -139,12 +139,12 @@ hg -v kwexpand
 echo % compare changenodes in a c
 cat a c
 
-echo % qinit -c
-hg qinit -c
+echo % init --mq
+hg init --mq
 echo % qimport
 hg qimport -r tip -n mqtest.diff
-echo % qcommit
-hg qcommit -mqtest
+echo % commit --mq
+hg commit --mq -m mqtest
 echo % keywords should not be expanded in patch
 cat .hg/patches/mqtest.diff
 echo % qpop
