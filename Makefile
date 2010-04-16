@@ -51,7 +51,7 @@ clean:
 install: install-bin install-doc
 
 install-bin: build
-	$(PYTHON) setup.py $(PURE) install --prefix="$(PREFIX)" --force
+	$(PYTHON) setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
 
 install-doc: doc
 	cd doc && $(MAKE) $(MFLAGS) install
