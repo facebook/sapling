@@ -6,11 +6,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import cStringIO, email.Parser, os, re
+import tempfile, zlib
+
 from i18n import _
 from node import hex, nullid, short
 import base85, cmdutil, mdiff, util, diffhelpers, copies
-import cStringIO, email.Parser, os, re
-import tempfile, zlib
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 
