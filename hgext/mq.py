@@ -2742,7 +2742,7 @@ cmdtable = {
           ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
           ('d', 'date', '', _('add "Date: <given date>" to patch'))
           ] + commands.walkopts + commands.commitopts,
-         _('hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]...')),
+         _('hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]...')),
     "qnext": (next, [] + seriesopts, _('hg qnext [-s]')),
     "qprev": (prev, [] + seriesopts, _('hg qprev [-s]')),
     "^qpop":
