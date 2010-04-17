@@ -308,7 +308,7 @@ def reposetup(ui, repo):
                 super(bookmark_repo, self).invalidate()
                 for attr in ('_bookmarks', '_bookmarkcurrent'):
                     if attr in self.__dict__:
-                        delattr(repo, attr)
+                        delattr(self, attr)
 
     repo.__class__ = bookmark_repo
 
