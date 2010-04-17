@@ -1126,9 +1126,9 @@ def iterhunks(ui, fp, sourcefile=None):
     if (empty is None and not gitworkdone) or empty:
         raise NoHunks
 
+
 def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
-    """
-    Reads a patch from fp and tries to apply it.
+    """Reads a patch from fp and tries to apply it.
 
     The dict 'changed' is filled in with all of the filenames changed
     by the patch. Returns 0 for a clean patch, -1 if any rejects were
@@ -1137,7 +1137,17 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
     If 'eolmode' is 'strict', the patch content and patched file are
     read in binary mode. Otherwise, line endings are ignored when
     patching then normalized according to 'eolmode'.
+
+    Callers probably want to call 'updatedir' after this to apply
+    certain categories of changes not done by this function.
     """
+    return _applydiff(
+        ui, fp, patchfile, copyfile,
+        changed, strip=strip, sourcefile=sourcefile, eolmode=eolmode)
+
+
+def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
+               sourcefile=None, eolmode='strict'):
     rejects = 0
     err = 0
     current_file = None
@@ -1165,13 +1175,13 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
             afile, bfile, first_hunk = values
             try:
                 if sourcefile:
-                    current_file = patchfile(ui, sourcefile, opener,
-                                             eolmode=eolmode)
+                    current_file = patcher(ui, sourcefile, opener,
+                                           eolmode=eolmode)
                 else:
                     current_file, missing = selectfile(afile, bfile,
                                                        first_hunk, strip)
-                    current_file = patchfile(ui, current_file, opener,
-                                             missing, eolmode)
+                    current_file = patcher(ui, current_file, opener,
+                                           missing=missing, eolmode=eolmode)
             except PatchError, err:
                 ui.warn(str(err) + '\n')
                 current_file, current_hunk = None, None
@@ -1182,7 +1192,7 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
             cwd = os.getcwd()
             for gp in gitpatches:
                 if gp.op in ('COPY', 'RENAME'):
-                    copyfile(gp.oldpath, gp.path, cwd)
+                    copyfn(gp.oldpath, gp.path, cwd)
                 changed[gp.path] = gp
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
