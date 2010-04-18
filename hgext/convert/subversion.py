@@ -995,7 +995,8 @@ class svn_sink(converter_sink, commandline):
                     path = '/' + path
                 path = 'file://' + path
 
-            ui.status(_('initializing svn wc %r\n') % os.path.basename(wcpath))
+            ui.status(_('initializing svn working copy %r\n')
+                      % os.path.basename(wcpath))
             self.run0('checkout', path, wcpath)
 
             self.wc = wcpath
