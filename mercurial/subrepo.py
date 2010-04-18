@@ -273,7 +273,8 @@ class svnsubrepo(object):
         self._ui = ctx._repo.ui
 
     def _svncommand(self, commands):
-        cmd = ['svn'] + commands + [self._path]
+        path = os.path.join(self._ctx._repo.origroot, self._path)
+        cmd = ['svn'] + commands + [path]
         cmd = [util.shellquote(arg) for arg in cmd]
         cmd = util.quotecommand(' '.join(cmd))
         env = dict(os.environ)

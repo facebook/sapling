@@ -16,7 +16,8 @@ if [ $? -ne 0 ]; then
 fi
 escapedwd=`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$escapedwd"`
 filterpath="s|$escapedwd|/root|"
-filtersvn='s/ in transaction.*/ is out of date/;s/Out of date: /File /'
+filteroutofdate='s/ in transaction.*/ is out of date/;s/Out of date: /File /'
+filterexternal="s|Fetching external item into '.*/s/externals'|Fetching external item into 's/externals'|g"
 
 echo % create subversion repo
 
@@ -62,7 +63,7 @@ echo
 echo % change file in svn and hg, commit
 echo a >> a
 echo alpha >> s/alpha
-hg commit -m 'Message!'
+hg commit -m 'Message!' | sed "$filterexternal"
 hg debugsub | sed "$filterpath"
 
 echo
@@ -81,12 +82,12 @@ cd ../../sub/t
 
 echo % this commit from hg will fail
 echo zzz >> s/alpha
-hg ci -m 'amend alpha from hg' 2>&1 | sed "$filtersvn"
+hg ci -m 'amend alpha from hg' 2>&1 | sed "$filteroutofdate"
 svn revert -q s/alpha
 
 echo % this commit fails because of meta changes
 svn propset svn:mime-type 'text/html' s/alpha
-hg ci -m 'amend alpha from hg' 2>&1 | sed "$filtersvn"
+hg ci -m 'amend alpha from hg' 2>&1 | sed "$filteroutofdate"
 svn revert -q s/alpha
 
 echo % this commit fails because of externals changes
@@ -106,3 +107,6 @@ hg clone t tc | fix_path
 cd tc
 echo % debugsub in clone
 hg debugsub | sed "$filterpath"
+
+echo % verify subrepo is contained within the repo directory
+python -c "import os.path; print os.path.exists('s')"

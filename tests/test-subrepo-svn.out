@@ -72,11 +72,11 @@ abort: cannot commit svn externals
 
 % clone
 updating to branch default
-A    s/alpha
- U   s
+A    tc/s/alpha
+ U   tc/s
 
-Fetching external item into 's/externals'
-A    s/externals/other
+Fetching external item into 'tc/s/externals'
+A    tc/s/externals/other
 Checked out external at revision 1.
 
 Checked out revision 3.
@@ -85,3 +85,5 @@ Checked out revision 3.
 path s
  source   file:///root/svn-repo/src
  revision 3
+% verify subrepo is contained within the repo directory
+True
