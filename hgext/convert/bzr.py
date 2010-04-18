@@ -37,7 +37,7 @@ class bzr_source(converter_source):
         super(bzr_source, self).__init__(ui, path, rev=rev)
 
         if not os.path.exists(os.path.join(path, '.bzr')):
-            raise NoRepo('%s does not look like a Bazaar repo' % path)
+            raise NoRepo('%s does not look like a Bazaar repository' % path)
 
         try:
             # access bzrlib stuff

@@ -4,7 +4,7 @@ adding d1/d2/b
 % modify
 1:e0e2b8a9156b
 assuming destination a-hg
-initializing svn repo 'a-hg'
+initializing svn repository 'a-hg'
 initializing svn wc 'a-hg-wc'
 scanning source...
 sorting...
@@ -196,7 +196,7 @@ executable
 % executable in new directory
 adding d1/a
 assuming destination a-hg
-initializing svn repo 'a-hg'
+initializing svn repository 'a-hg'
 initializing svn wc 'a-hg-wc'
 scanning source...
 sorting...
@@ -267,7 +267,7 @@ merging b failed!
 2 files updated, 0 files merged, 0 files removed, 1 files unresolved
 use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
 assuming destination b-hg
-initializing svn repo 'b-hg'
+initializing svn repository 'b-hg'
 initializing svn wc 'b-hg-wc'
 scanning source...
 sorting...

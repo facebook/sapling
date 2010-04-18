@@ -207,7 +207,7 @@ class svn_source(converter_source):
                 (os.path.exists(url) and
                  os.path.exists(os.path.join(url, '.svn'))) or
                 issvnurl(ui, url)):
-            raise NoRepo("%s does not look like a Subversion repo" % url)
+            raise NoRepo("%s does not look like a Subversion repository" % url)
 
         try:
             SubversionException
@@ -252,7 +252,8 @@ class svn_source(converter_source):
             self.uuid = svn.ra.get_uuid(self.ra)
         except SubversionException:
             ui.traceback()
-            raise NoRepo("%s does not look like a Subversion repo" % self.url)
+            raise NoRepo("%s does not look like a Subversion repository"
+                         % self.url)
 
         if rev:
             try:
@@ -984,7 +985,7 @@ class svn_sink(converter_sink, commandline):
 
             if os.path.isdir(os.path.dirname(path)):
                 if not os.path.exists(os.path.join(path, 'db', 'fs-type')):
-                    ui.status(_('initializing svn repo %r\n') %
+                    ui.status(_('initializing svn repository %r\n') %
                               os.path.basename(path))
                     commandline(ui, 'svnadmin').run0('create', path)
                     created = path

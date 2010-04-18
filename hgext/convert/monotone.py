@@ -20,7 +20,8 @@ class monotone_source(converter_source, commandline):
         self.ui = ui
         self.path = path
 
-        norepo = NoRepo (_("%s does not look like a monotone repo") % path)
+        norepo = NoRepo(_("%s does not look like a monotone repository")
+                        % path)
         if not os.path.exists(os.path.join(path, '_MTN')):
             # Could be a monotone repository (SQLite db file)
             try:
