@@ -289,7 +289,7 @@ def formatblock(block, width):
         return "%s\n%s" % (term, textwrap.fill(text, width=width,
                                                initial_indent=defindent,
                                                subsequent_indent=defindent))
-    initindent = subindent = indent
+    subindent = indent
     if block['type'] == 'bullet':
         if block['lines'][0].startswith('| '):
             # Remove bullet for line blocks and add no extra
@@ -321,7 +321,7 @@ def formatblock(block, width):
 
     text = ' '.join(map(str.strip, block['lines']))
     return textwrap.fill(text, width=width,
-                         initial_indent=initindent,
+                         initial_indent=indent,
                          subsequent_indent=subindent)
 
 
