@@ -135,4 +135,34 @@ hg log -u "User One <user1@example.org>"
 hg log -u "user1" -u "user2"
 hg log -u "user3"
 
+cd ..
+
+hg init branches
+cd branches
+
+echo a > a
+hg ci -A -m "commit on default"
+hg branch test
+echo b > b
+hg ci -A -m "commit on test"
+
+hg up default
+echo c > c
+hg ci -A -m "commit on default"
+hg up test
+echo c > c
+hg ci -A -m "commit on test"
+
+echo '% log -b default'
+hg log -b default
+
+echo '% log -b test'
+hg log -b test
+
+echo '% log -b dummy'
+hg log -b dummy
+
+echo '% log -b default -b test'
+hg log -b default -b test
+
 exit 0

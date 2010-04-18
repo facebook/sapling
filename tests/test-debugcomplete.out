@@ -171,7 +171,7 @@ diff: rev, change, text, git, nodates, show-function, reverse, ignore-all-space,
 export: output, switch-parent, rev, text, git, nodates
 forget: include, exclude
 init: ssh, remotecmd
-log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, prune, patch, git, limit, no-merges, style, template, include, exclude
+log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, patch, git, limit, no-merges, style, template, include, exclude
 merge: force, rev, preview
 pull: update, force, rev, branch, ssh, remotecmd
 push: force, rev, branch, ssh, remotecmd

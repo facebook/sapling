@@ -2157,6 +2157,8 @@ def log(ui, repo, *pats, **opts):
     if opts["date"]:
         df = util.matchdate(opts["date"])
 
+    opts['branch'] += opts.get('only_branch')
+
     displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
     def prep(ctx, fns):
         rev = ctx.rev()
@@ -2166,7 +2168,7 @@ def log(ui, repo, *pats, **opts):
             return
         if opts.get('only_merges') and len(parents) != 2:
             return
-        if opts.get('only_branch') and ctx.branch() not in opts['only_branch']:
+        if opts.get('branch') and ctx.branch() not in opts['branch']:
             return
         if df and not df(ctx.date()[0]):
             return
@@ -3739,8 +3741,10 @@ table = {
           ('', 'removed', None, _('include revisions where files were removed')),
           ('m', 'only-merges', None, _('show only merges')),
           ('u', 'user', [], _('revisions committed by user')),
-          ('b', 'only-branch', [],
-            _('show only changesets within the given named branch')),
+          ('', 'only-branch', [],
+            _('show only changesets within the given named branch (DEPRECATED)')),
+          ('b', 'branch', [],
+            _('show changesets within the given named branch')),
           ('P', 'prune', [],
            _('do not display revision or any of its ancestors')),
          ] + logopts + walkopts,
