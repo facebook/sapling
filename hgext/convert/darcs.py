@@ -34,10 +34,10 @@ class darcs_source(converter_source, commandline):
         # check for _darcs, ElementTree, _darcs/inventory so that we can
         # easily skip test-convert-darcs if ElementTree is not around
         if not os.path.exists(os.path.join(path, '_darcs', 'inventories')):
-            raise NoRepo("%s does not look like a darcs repository" % path)
+            raise NoRepo(_("%s does not look like a darcs repository") % path)
 
         if not os.path.exists(os.path.join(path, '_darcs')):
-            raise NoRepo("%s does not look like a darcs repository" % path)
+            raise NoRepo(_("%s does not look like a darcs repository") % path)
 
         checktool('darcs')
         version = self.run0('--version').splitlines()[0].strip()

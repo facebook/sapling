@@ -129,7 +129,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             if prefix == ".":
                 prefix = ""
         except IOError:
-            raise logerror('Not a CVS sandbox')
+            raise logerror(_('not a CVS sandbox'))
 
         if prefix and not prefix.endswith(os.sep):
             prefix += os.sep
@@ -435,8 +435,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             log.sort(key=lambda x: x.date)
 
             if oldlog and oldlog[-1].date >= log[0].date:
-                raise logerror('Log cache overlaps with new log entries,'
-                               ' re-run without cache.')
+                raise logerror(_('log cache overlaps with new log entries,'
+                                 ' re-run without cache.'))
 
             log = oldlog + log
 

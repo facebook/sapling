@@ -207,7 +207,8 @@ class svn_source(converter_source):
                 (os.path.exists(url) and
                  os.path.exists(os.path.join(url, '.svn'))) or
                 issvnurl(ui, url)):
-            raise NoRepo("%s does not look like a Subversion repository" % url)
+            raise NoRepo(_("%s does not look like a Subversion repository")
+                         % url)
 
         try:
             SubversionException
@@ -252,7 +253,7 @@ class svn_source(converter_source):
             self.uuid = svn.ra.get_uuid(self.ra)
         except SubversionException:
             ui.traceback()
-            raise NoRepo("%s does not look like a Subversion repository"
+            raise NoRepo(_("%s does not look like a Subversion repository")
                          % self.url)
 
         if rev:
