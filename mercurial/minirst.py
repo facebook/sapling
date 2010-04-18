@@ -261,7 +261,7 @@ def addmargins(blocks):
     i = 1
     while i < len(blocks):
         if (blocks[i]['type'] == blocks[i - 1]['type'] and
-            blocks[i]['type'] in ('bullet', 'option', 'field', 'definition')):
+            blocks[i]['type'] in ('bullet', 'option', 'field')):
             i += 1
         else:
             blocks.insert(i, dict(lines=[''], indent=0, type='margin'))

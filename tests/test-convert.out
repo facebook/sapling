@@ -103,8 +103,10 @@ convert a foreign SCM repository to a Mercurial one.
         ignore integrity errors when reading. Use it to fix Mercurial
         repositories with missing revlogs, by converting from and to
         Mercurial.
+
     --config convert.hg.saverev=False         (boolean)
         store original revision ID in changeset (forces target IDs to change)
+
     --config convert.hg.startrev=0            (hg revision identifier)
         convert start revision and its descendants
 
@@ -125,25 +127,30 @@ convert a foreign SCM repository to a Mercurial one.
     --config convert.cvsps.cache=True         (boolean)
         Set to False to disable remote log caching, for testing and debugging
         purposes.
+
     --config convert.cvsps.fuzz=60            (integer)
         Specify the maximum time (in seconds) that is allowed between commits
         with identical user and log message in a single changeset. When very
         large files were checked in as part of a changeset then the default
         may not be long enough.
+
     --config convert.cvsps.mergeto='{{mergetobranch ([-\w]+)}}'
         Specify a regular expression to which commit log messages are matched.
         If a match occurs, then the conversion process will insert a dummy
         revision merging the branch on which this log message occurs to the
         branch indicated in the regex.
+
     --config convert.cvsps.mergefrom='{{mergefrombranch ([-\w]+)}}'
         Specify a regular expression to which commit log messages are matched.
         If a match occurs, then the conversion process will add the most
         recent revision on the branch indicated in the regex as the second
         parent of the changeset.
+
     --config hook.cvslog
         Specify a Python function to be called at the end of gathering the CVS
         log. The function is passed a list with the log entries, and can
         modify the entries in-place, or add or delete them.
+
     --config hook.cvschangesets
         Specify a Python function to be called after the changesets are
         calculated from the the CVS log. The function is passed a list with
@@ -170,8 +177,10 @@ convert a foreign SCM repository to a Mercurial one.
 
     --config convert.svn.branches=branches    (directory name)
         specify the directory containing branches
+
     --config convert.svn.tags=tags            (directory name)
         specify the directory containing tags
+
     --config convert.svn.trunk=trunk          (directory name)
         specify the name of the trunk branch
 
@@ -202,8 +211,10 @@ convert a foreign SCM repository to a Mercurial one.
 
     --config convert.hg.clonebranches=False   (boolean)
         dispatch source branches in separate clones.
+
     --config convert.hg.tagsbranch=default    (branch name)
         tag revisions branch name
+
     --config convert.hg.usebranchnames=True   (boolean)
         preserve branch names
 

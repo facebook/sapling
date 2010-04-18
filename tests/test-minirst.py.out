@@ -25,10 +25,12 @@ definitions formatted to fit within 60 characters:
 ----------------------------------------------------------------------
 A Term
   Definition. The indented lines make up the definition.
+
 Another Term
     Another definition. The final line in the definition
     determines the indentation, so this will be indented
     with four spaces.
+
   A Nested/Indented Term
     Definition.
 ----------------------------------------------------------------------
@@ -39,6 +41,7 @@ A Term
   Definition. The indented
   lines make up the
   definition.
+
 Another Term
     Another definition. The
     final line in the
@@ -46,6 +49,7 @@ Another Term
     indentation, so this will
     be indented with four
     spaces.
+
   A Nested/Indented Term
     Definition.
 ----------------------------------------------------------------------
