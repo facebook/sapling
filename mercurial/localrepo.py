@@ -164,9 +164,13 @@ class localrepository(repo.repository):
             if c in allchars:
                 raise util.Abort(_('%r cannot be used in a tag name') % c)
 
+        branches = self.branchmap()
         for name in names:
             self.hook('pretag', throw=True, node=hex(node), tag=name,
                       local=local)
+            if name in branches:
+                self.ui.warn(_("warning: tag %s conflicts with existing"
+                " branch name\n") % name)
 
         def writetags(fp, names, munge, prevtags):
             fp.seek(0, 2)

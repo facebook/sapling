@@ -68,3 +68,8 @@ hg ci -d '1000000 0' -m'broken manual edit of .hgtags'
 cat .hgtags
 hg tag -d '1000000 0' newline
 cat .hgtags
+
+echo % tag and branch using same name
+hg branch tag-and-branch-same-name
+hg ci -m"discouraged"
+hg tag tag-and-branch-same-name

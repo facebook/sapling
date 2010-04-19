@@ -3209,6 +3209,9 @@ def tag(ui, repo, name1, *names, **opts):
     shared among repositories).
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
+
+    Since tag names have priority over branch names during revision
+    lookup, using an existing branch name as a tag name is discouraged.
     """
 
     rev_ = "."
