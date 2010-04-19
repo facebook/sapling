@@ -44,8 +44,6 @@ make install-doc DESTDIR=$RPM_BUILD_ROOT MANDIR=%{_mandir}
 install contrib/hgk          $RPM_BUILD_ROOT%{_bindir}
 install contrib/convert-repo $RPM_BUILD_ROOT%{_bindir}/mercurial-convert-repo
 install contrib/hg-ssh       $RPM_BUILD_ROOT%{_bindir}
-install contrib/git-viz/hg-viz $RPM_BUILD_ROOT%{_bindir}
-install contrib/git-viz/git-rev-tree $RPM_BUILD_ROOT%{_bindir}
 
 bash_completion_dir=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
 mkdir -p $bash_completion_dir
@@ -77,8 +75,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/hg
 %{_bindir}/hgk
 %{_bindir}/hg-ssh
-%{_bindir}/hg-viz
-%{_bindir}/git-rev-tree
 %{_bindir}/mercurial-convert-repo
 %dir %{_sysconfdir}/bash_completion.d/
 %dir %{_datadir}/zsh/site-functions/
