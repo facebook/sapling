@@ -135,6 +135,9 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     if not fco.cmp(fcd.data()): # files identical?
         return None
 
+    if fca == fco: # backwards, use working dir parent as ancestor
+        fca = fcd.parents()[0]
+
     ui = repo.ui
     fd = fcd.path()
     binary = isbin(fcd) or isbin(fco) or isbin(fca)
