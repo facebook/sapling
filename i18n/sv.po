@@ -14,7 +14,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-04-19 18:26+0200\n"
-"PO-Revision-Date: 2010-04-19 18:39+0100\n"
+"PO-Revision-Date: 2010-04-19 18:57+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -8796,40 +8796,42 @@ msgid ""
 msgstr ""
 
 msgid "dirstate branch not accessible"
-msgstr ""
+msgstr "dirstate-grenen inte åtkomlig"
 
 msgid "can only share local repositories"
-msgstr ""
+msgstr "kan bara dela lokala arkiv"
 
 msgid "destination already exists"
-msgstr ""
+msgstr "destinationen finns redan"
 
 msgid "updating working directory\n"
-msgstr ""
+msgstr "uppdaterar arbetskatalog\n"
 
 #, python-format
 msgid "destination directory: %s\n"
-msgstr ""
+msgstr "destinationskatalog: %s\n"
 
 #, python-format
 msgid "destination '%s' already exists"
-msgstr ""
+msgstr "destinationen '%s' finns redan"
 
 #, python-format
 msgid "destination '%s' is not empty"
-msgstr ""
+msgstr "destinationen '%s är inte tom"
 
 msgid ""
 "src repository does not support revision lookup and so doesn't support clone "
 "by revision"
 msgstr ""
+"källarkivet stödjer inte revisionsuppslag, och stödjer därför inte kloning "
+"av angivna revisioner"
 
 msgid "clone from remote to remote not supported"
-msgstr ""
+msgstr "kloning från fjärr till fjärr stödjs inte"
 
 #, python-format
 msgid "updating to branch %s\n"
-msgstr ""
+msgstr "uppdaterar till grenen %s\n"
 
 #, python-format
 msgid ""
@@ -9896,14 +9898,14 @@ msgstr "kontrollerar manifest\n"
 
 #, python-format
 msgid "%s not in changesets"
-msgstr ""
+msgstr "%s inte i ändringarna"
 
 msgid "file without name in manifest"
-msgstr ""
+msgstr "fil utan namn i manifest"
 
 #, python-format
 msgid "reading manifest delta %s"
-msgstr ""
+msgstr "läser manifestdelta %s"
 
 msgid "crosschecking files in changesets and manifests\n"
 msgstr "korskontrollerar filer i ändringar och manifest\n"
@@ -9913,63 +9915,63 @@ msgstr "korskontrollerar"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
-msgstr ""
+msgstr "ändring refererar till okänt manifest %s"
 
 msgid "in changeset but not in manifest"
-msgstr ""
+msgstr "i ändring men inte i manifest"
 
 msgid "in manifest but not in changeset"
-msgstr ""
+msgstr "i manifest men inte i ändring"
 
 msgid "checking files\n"
 msgstr "kontrollerar filer\n"
 
 #, python-format
 msgid "cannot decode filename '%s'"
-msgstr ""
+msgstr "kan inte avkoda filnamnet '%s'"
 
 #, python-format
 msgid "broken revlog! (%s)"
-msgstr ""
+msgstr "skadad revlog! (%s)"
 
 msgid "missing revlog!"
-msgstr ""
+msgstr "saknad revlog!"
 
 #, python-format
 msgid "%s not in manifests"
-msgstr ""
+msgstr "%s inte i manifest"
 
 #, python-format
 msgid "unpacked size is %s, %s expected"
-msgstr ""
+msgstr "uppackad storlek är %s, %s förväntades"
 
 #, python-format
 msgid "unpacking %s"
-msgstr ""
+msgstr "packar upp %s"
 
 #, python-format
 msgid "warning: copy source of '%s' not in parents of %s"
-msgstr ""
+msgstr "varning: kopieringskällan för '%s' inte i föräldrar till %s"
 
 #, python-format
 msgid "empty or missing copy source revlog %s:%s"
-msgstr ""
+msgstr "tom eller saknar kopieringskälla för revlog %s:%s"
 
 #, python-format
 msgid "warning: %s@%s: copy source revision is nullid %s:%s\n"
-msgstr ""
+msgstr "varning: %s@%s: kopieringskällrevision är nullid %s:%s\n"
 
 #, python-format
 msgid "checking rename of %s"
-msgstr ""
+msgstr "kontrollerar namnbytet på %s"
 
 #, python-format
 msgid "%s in manifests not found"
-msgstr ""
+msgstr "%s i manifest hittades inte"
 
 #, python-format
 msgid "warning: orphan revlog '%s'"
-msgstr ""
+msgstr "varning: övergiven revlog '%s'"
 
 #, python-format
 msgid "%d files, %d changesets, %d total revisions\n"
@@ -9977,15 +9979,15 @@ msgstr "%d filer, %d ändringar, %d totala revisioner\n"
 
 #, python-format
 msgid "%d warnings encountered!\n"
-msgstr ""
+msgstr "%d varningar påträffades!\n"
 
 #, python-format
 msgid "%d integrity errors encountered!\n"
-msgstr ""
+msgstr "%d integritetsfel påträffades!\n"
 
 #, python-format
 msgid "(first damaged changeset appears to be %d)\n"
-msgstr ""
+msgstr "(första skadade ändringen verkar vara %d)\n"
 
 msgid "user name not available - set USERNAME environment variable"
-msgstr ""
+msgstr "användarnamnet är inte tillgängligt - sätt miljövariabeln USERNAME"
