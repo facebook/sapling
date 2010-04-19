@@ -276,14 +276,14 @@ class filectx(object):
 
     def __hash__(self):
         try:
-            return hash((self._path, self._fileid))
+            return hash((self._path, self._filenode))
         except AttributeError:
             return id(self)
 
     def __eq__(self, other):
         try:
             return (self._path == other._path
-                    and self._fileid == other._fileid)
+                    and self._filenode == other._filenode)
         except AttributeError:
             return False
 
