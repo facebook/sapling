@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-04-19 18:26+0200\n"
-"PO-Revision-Date: 2010-04-19 18:57+0100\n"
+"POT-Creation-Date: 2010-04-19 18:58+0200\n"
+"PO-Revision-Date: 2010-04-19 19:49+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -411,9 +411,8 @@ msgstr ""
 msgid "Revision %d is a merge, ignoring...\n"
 msgstr ""
 
-#, python-format
-msgid "generating stats: %d%%"
-msgstr ""
+msgid "analyzing"
+msgstr "analyserar"
 
 msgid ""
 "histogram of changes to the repository\n"
@@ -476,11 +475,8 @@ msgstr "visa tillagda/raderade rader separat"
 msgid "file with email aliases"
 msgstr ""
 
-msgid "show progress"
-msgstr ""
-
-msgid "hg churn [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]"
-msgstr ""
+msgid "hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]"
+msgstr "hg churn [-d DATUM] [-r REV] [--aliases FIL] [FIL]"
 
 msgid ""
 "colorize output from some commands\n"
@@ -529,6 +525,15 @@ msgid ""
 "  resolve.resolved = green bold\n"
 "\n"
 "  bookmarks.current = green\n"
+"\n"
+"The color extension will try to detect whether to use ANSI codes or\n"
+"Win32 console APIs, unless it is made explicit::\n"
+"\n"
+"  [color]\n"
+"  mode = ansi\n"
+"\n"
+"Any value other than 'ansi', 'win32', or 'auto' will disable color.\n"
+"\n"
 msgstr ""
 "färglägg utmatning från vissa kommandon\n"
 "\n"
@@ -575,16 +580,25 @@ msgstr ""
 "  resolve.resolved = green bold\n"
 "\n"
 "  bookmarks.current = green\n"
-
-msgid "when to colorize (always, auto, or never)"
-msgstr "när färgläggning ska ske (always, auto eller never)"
-
-msgid "don't colorize output (DEPRECATED)"
-msgstr "färglägg inte utmatning (FÖRLEGAD)"
+"\n"
+"Utökningen color försöker att upptäcka om ANSI-koder eller APIer för\n"
+"konsolen i Win32 om det inte anges explicit::\n"
+"\n"
+"  [color]\n"
+"  mode = ansi\n"
+"\n"
+"Ett värde skilt från 'ansi', 'win32', eller 'auto' stänger av färg.\n"
+"\n"
 
 #, python-format
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
-msgstr ""
+msgstr "ignorerar okänd färg/effekt %r (konfigurerad i color.%s)\n"
+
+msgid "win32console not found, please install pywin32\n"
+msgstr "win32console hittades inte, installera pywin32\n"
+
+msgid "when to colorize (always, auto, or never)"
+msgstr "när färgläggning ska ske (always, auto eller never)"
 
 msgid "import revisions from foreign VCS repositories into Mercurial"
 msgstr ""
@@ -2055,9 +2069,6 @@ msgid ""
 "keywords written to %s:\n"
 msgstr ""
 
-msgid "unhooked all commit hooks\n"
-msgstr ""
-
 msgid "hg keyword configuration and expansion example"
 msgstr "exempel på nyckelordskonfiguration och -expansion i hg"
 
@@ -2128,12 +2139,6 @@ msgstr ""
 
 msgid "only show unknown (not tracked) files"
 msgstr "visa bara okända (ospårade) filer"
-
-msgid "show keyword status flags of all files (DEPRECATED)"
-msgstr "visa statusflaggor för alla filer (FÖRLEGAD)"
-
-msgid "only show untracked files (DEPRECATED)"
-msgstr "visa bara ospårade filer (FÖRLEGAD)"
 
 msgid "hg kwfiles [OPTION]... [FILE]..."
 msgstr ""
@@ -4417,6 +4422,9 @@ msgstr ""
 msgid "invalid format spec '%%%s' in output filename"
 msgstr ""
 
+msgid "searching"
+msgstr "söker"
+
 #, python-format
 msgid "adding %s\n"
 msgstr ""
@@ -4548,12 +4556,8 @@ msgid "%s: no key named '%s'"
 msgstr ""
 
 #, python-format
-msgid "%s: %s"
-msgstr ""
-
-#, python-format
 msgid "Found revision %s from %s\n"
-msgstr ""
+msgstr "Hittade revision %s från %s\n"
 
 msgid "revision matching date not found"
 msgstr ""
@@ -4738,8 +4742,10 @@ msgid ""
 "    By default, the revision used is the parent of the working\n"
 "    directory; use -r/--rev to specify a different revision.\n"
 "\n"
-"    To specify the type of archive to create, use -t/--type. Valid\n"
-"    types are:\n"
+"    The archive type is automatically detected based on file\n"
+"    extension (or override using -t/--type).\n"
+"\n"
+"    Valid types are:\n"
 "\n"
 "    :``files``: a directory full of files (default)\n"
 "    :``tar``:   tar archive, uncompressed\n"
@@ -4762,8 +4768,10 @@ msgstr ""
 "    Som standard används revisonen för arbetskatalogens förälder; använd\n"
 "    -r/--rev för att specificera en annan revision.\n"
 "\n"
-"    För att definiera vilken typ av arkiv som ska skapas, använd -t/--type.\n"
-"    Giltiga typer är::\n"
+"    Arkivtypen upptäcks automatiskt baserat på filändelsen (eller tvinga\n"
+"    med hjälp av -t/--type).\n"
+"\n"
+"    Giltiga typer är:\n"
 "\n"
 "    :``files``: en katalog fylld med filer (standard)\n"
 "    :``tar``:   tar-arkiv, okomprimerad\n"
@@ -6630,7 +6638,7 @@ msgid "no changes needed to %s\n"
 msgstr "inga ändringar behövs för %s\n"
 
 msgid ""
-"roll back the last transaction\n"
+"roll back the last transaction (dangerous)\n"
 "\n"
 "    This command should be used with care. There is only one level of\n"
 "    rollback, and there is no way to undo a rollback. It will also\n"
@@ -6657,7 +6665,7 @@ msgid ""
 "    may fail if a rollback is performed.\n"
 "    "
 msgstr ""
-"återgång från den senaste transaktionen\n"
+"återgång från den senaste transaktionen (farligt)\n"
 "\n"
 "    Detta kommando bör användas med försiktighet. Det finns bara en nivå\n"
 "    av återgång, och det finns inget sätt att ångra en återgång.\n"
@@ -6696,22 +6704,29 @@ msgstr ""
 "    "
 
 msgid ""
-"export the repository via HTTP\n"
+"start stand-alone webserver\n"
 "\n"
 "    Start a local HTTP repository browser and pull server.\n"
 "\n"
 "    By default, the server logs accesses to stdout and errors to\n"
 "    stderr. Use the -A/--accesslog and -E/--errorlog options to log to\n"
 "    files.\n"
+"\n"
+"    To have the server choose a free port number to listen on, specify\n"
+"    a port number of 0; in this case, the server will print the port\n"
+"    number it uses.\n"
 "    "
 msgstr ""
-"exportera arkivet via HTTP\n"
+"starta fristående webbserver\n"
 "\n"
 "    Startar en lokal HTTP-arkivbläddrare och pull-server.\n"
 "\n"
 "    Som standard loggar servern anslutningar till stdout och fel till\n"
 "    stderr. Använd flaggorna -A/--accesslog och -E/--errorlog för att logga\n"
 "    till filer.\n"
+"\n"
+"    För att låta servern välja ett ledigt portnummer att lyssna på, ange 0\n"
+"    som portnummer; då visar servern det portnummer som används.\n"
 "    "
 
 #, python-format
@@ -6805,6 +6820,10 @@ msgstr ""
 "    för att hitta inkommande och utgående ändringar. Detta kan ta lång tid.\n"
 "    "
 
+#, python-format
+msgid "parent: %d:%s "
+msgstr "förälder: %d:%s "
+
 msgid " (empty repository)"
 msgstr " (tomt arkiv)"
 
@@ -6812,20 +6831,16 @@ msgid " (no revision checked out)"
 msgstr " (ingen revision uthämtad)"
 
 #, python-format
-msgid "parent: %d:%s %s\n"
-msgstr "förälder: %d:%s %s\n"
-
-#, python-format
 msgid "branch: %s\n"
 msgstr "gren: %s\n"
 
 #, python-format
-msgid "%d added"
-msgstr "%d tillagd"
-
-#, python-format
 msgid "%d modified"
 msgstr "%d modifierad"
+
+#, python-format
+msgid "%d added"
+msgstr "%d tillagd"
 
 #, python-format
 msgid "%d removed"
@@ -6836,12 +6851,12 @@ msgid "%d deleted"
 msgstr "%d raderad"
 
 #, python-format
-msgid "%d ignored"
-msgstr "%d ignorerad"
-
-#, python-format
 msgid "%d unknown"
 msgstr "%d okänd"
+
+#, python-format
+msgid "%d ignored"
+msgstr "%d ignorerad"
 
 #, python-format
 msgid "%d unresolved"
@@ -7002,7 +7017,7 @@ msgstr ""
 "    "
 
 msgid ""
-"update working directory\n"
+"update working directory (or switch revisions)\n"
 "\n"
 "    Update the repository's working directory to the specified\n"
 "    changeset.\n"
@@ -7038,7 +7053,7 @@ msgid ""
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
-"uppdatera arbetskatalogen\n"
+"uppdatera arbetskatalogen (eller växla mellan revisioner)\n"
 "\n"
 "    Uppdatera arkivets arbetskatalog till den specificerade ändringen.\n"
 "\n"
@@ -9032,8 +9047,16 @@ msgstr ""
 msgid "no interrupted transaction available\n"
 msgstr ""
 
-msgid "rolling back last transaction\n"
-msgstr "återkallar den senaste transaktionen\n"
+#, python-format
+msgid "rolling back to revision %s (undo %s: %s)\n"
+msgstr "återgår till revisionen %s (ångra %s: %s)\n"
+
+#, python-format
+msgid "rolling back to revision %s (undo %s)\n"
+msgstr "återgår till revisionen %s (ångra %s)\n"
+
+msgid "rolling back unknown transaction\n"
+msgstr "återkallar okänd transaktion\n"
 
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
@@ -9126,9 +9149,6 @@ msgstr "söker efter ändringar\n"
 
 msgid "queries"
 msgstr "frågor"
-
-msgid "searching"
-msgstr "söker"
 
 msgid "already have changeset "
 msgstr "har redan ändringen "
@@ -9463,6 +9483,15 @@ msgstr ""
 msgid "Unsupported line endings type: %s"
 msgstr ""
 
+msgid ""
+"internal patcher failed\n"
+"please report details to http://mercurial.selenic.com/bts/\n"
+"or mercurial@selenic.com\n"
+msgstr ""
+"den interna patcharen misslyckades\n"
+"rapportera detaljer till http://mercurial.selenic.com/bts/\n"
+"eller mercurial@selenic.com\n"
+
 #, python-format
 msgid " %d files changed, %d insertions(+), %d deletions(-)\n"
 msgstr ""
@@ -9610,8 +9639,8 @@ msgid "removing subrepo %s\n"
 msgstr ""
 
 #, python-format
-msgid "pulling subrepo %s\n"
-msgstr ""
+msgid "pulling subrepo %s from %s\n"
+msgstr "drar subarkivet %s från %s\n"
 
 #, python-format
 msgid "pushing subrepo %s\n"
@@ -9886,12 +9915,9 @@ msgstr "arkivet använder revlog-format %d\n"
 msgid "checking changesets\n"
 msgstr "kontrollerar ändringar\n"
 
-msgid "checking"
-msgstr "kontrollerar"
-
 #, python-format
 msgid "unpacking changeset %s"
-msgstr ""
+msgstr "packar upp ändringen %s"
 
 msgid "checking manifests\n"
 msgstr "kontrollerar manifest\n"
@@ -9929,6 +9955,9 @@ msgstr "kontrollerar filer\n"
 #, python-format
 msgid "cannot decode filename '%s'"
 msgstr "kan inte avkoda filnamnet '%s'"
+
+msgid "checking"
+msgstr "kontrollerar"
 
 #, python-format
 msgid "broken revlog! (%s)"
