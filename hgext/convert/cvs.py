@@ -19,7 +19,7 @@ class convert_cvs(converter_source):
 
         cvs = os.path.join(path, "CVS")
         if not os.path.exists(cvs):
-            raise NoRepo("%s does not look like a CVS checkout" % path)
+            raise NoRepo(_("%s does not look like a CVS checkout") % path)
 
         checktool('cvs')
 

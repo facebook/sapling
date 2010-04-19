@@ -7,6 +7,7 @@
 
 import os
 from mercurial import util
+from mercurial.i18n import _
 
 from common import NoRepo, commit, converter_source, checktool
 
@@ -35,7 +36,7 @@ class convert_git(converter_source):
         if os.path.isdir(path + "/.git"):
             path += "/.git"
         if not os.path.exists(path + "/objects"):
-            raise NoRepo("%s does not look like a Git repo" % path)
+            raise NoRepo(_("%s does not look like a Git repository") % path)
 
         checktool('git', 'git')
 

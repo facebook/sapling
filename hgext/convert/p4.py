@@ -28,7 +28,7 @@ class p4_source(converter_source):
         super(p4_source, self).__init__(ui, path, rev=rev)
 
         if "/" in path and not path.startswith('//'):
-            raise NoRepo('%s does not look like a P4 repo' % path)
+            raise NoRepo(_('%s does not look like a P4 repository') % path)
 
         checktool('p4', abort=False)
 
