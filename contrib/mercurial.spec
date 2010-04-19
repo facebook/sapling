@@ -38,8 +38,7 @@ make all
 
 %install
 rm -rf $RPM_BUILD_ROOT
-python setup.py install --root $RPM_BUILD_ROOT --prefix %{_prefix}
-make install-doc DESTDIR=$RPM_BUILD_ROOT MANDIR=%{_mandir}
+make install DESTDIR=$RPM_BUILD_ROOT PREFIX=%{_prefix} MANDIR=%{_mandir}
 
 install contrib/hgk          $RPM_BUILD_ROOT%{_bindir}
 install contrib/convert-repo $RPM_BUILD_ROOT%{_bindir}/mercurial-convert-repo
