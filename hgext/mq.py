@@ -1420,7 +1420,7 @@ class queue(object):
             if summary:
                 ph = patchheader(self.join(patchname), self.plainmode)
                 msg = ph.message and ph.message[0] or ''
-                if self.ui.interactive():
+                if not self.ui.plain():
                     width = util.termwidth() - len(pfx) - len(patchname) - 2
                     if width > 0:
                         msg = util.ellipsis(msg, width)
@@ -2737,7 +2737,7 @@ cmdtable = {
           ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
           ('d', 'date', '', _('add "Date: <given date>" to patch'))
           ] + commands.walkopts + commands.commitopts,
-         _('hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]...')),
+         _('hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]...')),
     "qnext": (next, [] + seriesopts, _('hg qnext [-s]')),
     "qprev": (prev, [] + seriesopts, _('hg qprev [-s]')),
     "^qpop":

@@ -402,6 +402,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             branchpoints = set()
             for branch, revision in branchmap.iteritems():
                 revparts = tuple([int(i) for i in revision.split('.')])
+                if len(revparts) < 2: # bad tags
+                    continue
                 if revparts[-2] == 0 and revparts[-1] % 2 == 0:
                     # normal branch
                     if revparts[:-2] == e.revision:

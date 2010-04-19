@@ -1178,7 +1178,9 @@ def diff(ui, repo, *pats, **opts):
     m = cmdutil.match(repo, pats, opts)
     if stat:
         it = patch.diff(repo, node1, node2, match=m, opts=diffopts)
-        width = ui.interactive() and util.termwidth() or 80
+        width = 80
+        if not ui.plain():
+            width = util.termwidth()
         for chunk, label in patch.diffstatui(util.iterlines(it), width=width,
                                              git=diffopts.git):
             ui.write(chunk, label=label)

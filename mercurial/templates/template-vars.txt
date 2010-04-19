@@ -28,6 +28,10 @@ diff          a diff of one or more files
 annotate      an annotated file
 entries       the entries relevant to the page
 
+url           base url of hgweb interface
+staticurl     base url for static resources
+
+
 Templates and commands:
   changelog(rev) - a page for browsing changesets
     naventry - a link for jumping to a changeset number
