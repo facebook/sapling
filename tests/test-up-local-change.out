@@ -48,8 +48,7 @@ removing b
 update: a 2/2 files (100.00%)
 picked tool 'true' for a (binary False symlink False)
 merging a
-my a@802f095af299+ other a@33aaa84a386b ancestor a@33aaa84a386b
- premerge successful
+my a@802f095af299+ other a@33aaa84a386b ancestor a@802f095af299
 0 files updated, 1 files merged, 1 files removed, 0 files unresolved
 changeset:   0:33aaa84a386b
 user:        test

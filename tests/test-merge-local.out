@@ -24,16 +24,20 @@ merging zzz2_merge_bad failed!
 use 'hg resolve' to retry unresolved file merges
 merging zzz1_merge_ok
 merging zzz2_merge_bad
-2 files updated, 2 files merged, 3 files removed, 0 files unresolved
+warning: conflicts during merge.
+merging zzz2_merge_bad failed!
+2 files updated, 1 files merged, 3 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
 --- a/zzz1_merge_ok
 +++ b/zzz1_merge_ok
-+new first line
 +new last line
 --- a/zzz2_merge_bad
 +++ b/zzz2_merge_bad
 +another last line
++=======
 M zzz1_merge_ok
 M zzz2_merge_bad
+? zzz2_merge_bad.orig
 # local merge with conflicts
 merging zzz1_merge_ok
 merging zzz2_merge_bad
@@ -43,18 +47,23 @@ merging zzz2_merge_bad failed!
 use 'hg resolve' to retry unresolved file merges
 merging zzz1_merge_ok
 merging zzz2_merge_bad
-2 files updated, 2 files merged, 3 files removed, 0 files unresolved
+warning: conflicts during merge.
+merging zzz2_merge_bad failed!
+2 files updated, 1 files merged, 3 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges
 --- a/zzz1_merge_ok
 +++ b/zzz1_merge_ok
-+new first line
 +new last line
 --- a/zzz2_merge_bad
 +++ b/zzz2_merge_bad
 +another last line
 +=======
++=======
 +new last line
++=======
 M zzz1_merge_ok
 M zzz2_merge_bad
+? zzz2_merge_bad.orig
 # local merge without conflicts
 merging zzz1_merge_ok
 4 files updated, 1 files merged, 2 files removed, 0 files unresolved

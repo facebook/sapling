@@ -82,7 +82,7 @@ hg st
 echo c >> a
 hg st
 
-hg up 0
+HGMERGE=internal:local hg up 0
 hg st
 
 HGMERGE=internal:local hg up
