@@ -802,6 +802,8 @@ def debugcomplete(ui, cmd='', **opts):
             otables.append(entry[1])
         for t in otables:
             for o in t:
+                if "(DEPRECATED)" in o[3]:
+                    continue
                 if o[0]:
                     options.append('-%s' % o[0])
                 options.append('--%s' % o[1])
