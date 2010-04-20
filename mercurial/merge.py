@@ -364,7 +364,7 @@ def recordupdates(repo, action, branchmerge):
             repo.dirstate.normallookup(f)
         elif m == "g": # get
             if branchmerge:
-                repo.dirstate.normaldirty(f)
+                repo.dirstate.otherparent(f)
             else:
                 repo.dirstate.normal(f)
         elif m == "m": # merge
@@ -507,8 +507,8 @@ def update(repo, node, branchmerge, force, partial):
         stats = applyupdates(repo, action, wc, p2)
 
         if not partial:
-            recordupdates(repo, action, branchmerge)
             repo.dirstate.setparents(fp1, fp2)
+            recordupdates(repo, action, branchmerge)
             if not branchmerge and not fastforward:
                 repo.dirstate.setbranch(p2.branch())
     finally:

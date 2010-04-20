@@ -285,14 +285,15 @@ class dirstate(object):
         '''Mark a file normal, but possibly dirty.'''
         if self._pl[1] != nullid and f in self._map:
             # if there is a merge going on and the file was either
-            # in state 'm' or dirty before being removed, restore that state.
+            # in state 'm' (-1) or coming from other parent (-2) before
+            # being removed, restore that state.
             entry = self._map[f]
             if entry[0] == 'r' and entry[2] in (-1, -2):
                 source = self._copymap.get(f)
                 if entry[2] == -1:
                     self.merge(f)
                 elif entry[2] == -2:
-                    self.normaldirty(f)
+                    self.otherparent(f)
                 if source:
                     self.copy(source, f)
                 return
@@ -304,8 +305,11 @@ class dirstate(object):
         if f in self._copymap:
             del self._copymap[f]
 
-    def normaldirty(self, f):
-        '''Mark a file normal, but dirty.'''
+    def otherparent(self, f):
+        '''Mark as coming from the other parent, always dirty.'''
+        if self._pl[1] == nullid:
+            raise util.Abort(_("setting %r to other parent "
+                               "only allowed in merges") % f)
         self._dirty = True
         self._addpath(f)
         self._map[f] = ('n', 0, -2, -1)
@@ -326,10 +330,11 @@ class dirstate(object):
         self._droppath(f)
         size = 0
         if self._pl[1] != nullid and f in self._map:
+            # backup the previous state
             entry = self._map[f]
-            if entry[0] == 'm':
+            if entry[0] == 'm': # merge
                 size = -1
-            elif entry[0] == 'n' and entry[2] == -2:
+            elif entry[0] == 'n' and entry[2] == -2: # other parent
                 size = -2
         self._map[f] = ('r', 0, size, 0)
         if size == 0 and f in self._copymap:
@@ -638,7 +643,7 @@ class dirstate(object):
                 if (size >= 0 and
                     (size != st.st_size
                      or ((mode ^ st.st_mode) & 0100 and self._checkexec))
-                    or size == -2
+                    or size == -2 # other parent
                     or fn in self._copymap):
                     madd(fn)
                 elif time != int(st.st_mtime):
