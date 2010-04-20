@@ -539,15 +539,14 @@ class filectx(object):
 class workingctx(changectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
-    parents - a pair of parent nodeids, or None to use the dirstate.
     date - any valid date string or (unixtime, offset), or None.
     user - username string, or None.
     extra - a dictionary of extra values, or None.
     changes - a list of file lists as returned by localrepo.status()
                or None to use the repository status.
     """
-    def __init__(self, repo, parents=None, text="", user=None, date=None,
-                 extra=None, changes=None):
+    def __init__(self, repo, text="", user=None, date=None, extra=None,
+                 changes=None):
         self._repo = repo
         self._rev = None
         self._node = None
@@ -556,8 +555,6 @@ class workingctx(changectx):
             self._date = util.parsedate(date)
         if user:
             self._user = user
-        if parents:
-            self._parents = [changectx(self._repo, p) for p in parents]
         if changes:
             self._status = list(changes)
 

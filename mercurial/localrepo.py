@@ -852,8 +852,7 @@ class localrepository(repo.repository):
                     raise util.Abort(_("unresolved merge conflicts "
                                                     "(see hg resolve)"))
 
-            cctx = context.workingctx(self, (p1, p2), text, user, date,
-                                      extra, changes)
+            cctx = context.workingctx(self, text, user, date, extra, changes)
             if editor:
                 cctx._text = editor(self, cctx, subs)
             edited = (text != cctx._text)
