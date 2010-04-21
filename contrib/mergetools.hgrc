@@ -13,7 +13,7 @@ gvimdiff.regname=path
 gvimdiff.priority=-9
 
 merge.checkconflicts=True
-merge.priority=-10
+merge.priority=-100
 
 gpyfm.gui=True
 
