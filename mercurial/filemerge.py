@@ -7,7 +7,7 @@
 
 from node import short
 from i18n import _
-import util, simplemerge, match
+import util, simplemerge, match, error
 import os, tempfile, re, filecmp
 
 def _toolstr(ui, tool, part, default=""):
@@ -176,7 +176,18 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
     # do we attempt to simplemerge first?
-    if _toolbool(ui, tool, "premerge", not (binary or symlink)):
+    try:
+        premerge = _toolbool(ui, tool, "premerge", not (binary or symlink))
+    except error.ConfigError:
+        premerge = _toolstr(ui, tool, "premerge").lower()
+        valid = 'keep'.split()
+        if premerge not in valid:
+            _valid = ', '.join(["'" + v + "'" for v in valid])
+            raise error.ConfigError(_("%s.premerge not valid "
+                                      "('%s' is neither boolean nor %s)") %
+                                    (tool, premerge, _valid))
+
+    if premerge:
         r = simplemerge.simplemerge(ui, a, b, c, quiet=True)
         if not r:
             ui.debug(" premerge successful\n")
@@ -184,7 +195,8 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
             os.unlink(b)
             os.unlink(c)
             return 0
-        util.copyfile(back, a) # restore from backup and try again
+        if premerge != 'keep':
+            util.copyfile(back, a) # restore from backup and try again
 
     env = dict(HG_FILE=fd,
                HG_MY_NODE=short(mynode),

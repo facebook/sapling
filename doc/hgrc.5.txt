@@ -454,7 +454,8 @@ Supported arguments:
   Default: ``$local $base $other``
 ``premerge``
   Attempt to run internal non-interactive 3-way merge tool before
-  launching external tool.
+  launching external tool.  Options are ``true``, ``false``, or ``keep``
+  to leave markers in the file if the premerge fails.
   Default: True
 ``binary``
   This tool can merge binary files. Defaults to False, unless tool
