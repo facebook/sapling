@@ -6,7 +6,6 @@ PREFIX=/usr/local
 MANDIR=$(PREFIX)/share/man
 INSTALL=install -c -m 644
 PYTHON=python
-RST2HTML=$(shell which rst2html 2> /dev/null || echo rst2html.py)
 
 export LANGUAGE=C
 export LC_ALL=C
@@ -25,11 +24,11 @@ hg.1.gendoc.txt: $(GENDOC)
 	mv $@.tmp $@
 
 %: %.txt common.txt
-	$(PYTHON) rst2man.py --halt warning \
+	$(PYTHON) runrst manpage --halt warning \
 	  --strip-elements-with-class htmlonly $*.txt $*
 
 %.html: %.txt common.txt
-	$(RST2HTML) --halt warning \
+	$(PYTHON) runrst html --halt warning \
 	  --link-stylesheet --stylesheet-path style.css $*.txt $*.html
 
 MANIFEST: man html

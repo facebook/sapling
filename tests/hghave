@@ -120,12 +120,12 @@ def has_lsprof():
 def has_git():
     return matchoutput('git --version 2>&1', r'^git version')
 
-def has_rst2html():
-    for name in ('rst2html', 'rst2html.py'):
-        name = name + ' --version 2>&1'
-        if matchoutput(name, r'^rst2html(?:\.py)? \(Docutils'):
-            return True
-    return False
+def has_docutils():
+    try:
+        from docutils.core import publish_cmdline
+        return True
+    except ImportError:
+        return False
 
 def has_svn():
     return matchoutput('svn --version 2>&1', r'^svn, version') and \
@@ -198,7 +198,7 @@ checks = {
     "outer-repo": (has_outer_repo, "outer repo"),
     "p4": (has_p4, "Perforce server and client"),
     "pygments": (has_pygments, "Pygments source highlighting library"),
-    "rst2html": (has_rst2html, "Docutils rst2html tool"),
+    "docutils": (has_docutils, "Docutils text processing library"),
     "svn": (has_svn, "subversion client and admin tools"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),

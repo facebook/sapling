@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+#
+# runrst - register custom roles and run correct writer
+#
+# Copyright 2010 Matt Mackall <mpm@selenic.com> and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
+"""usage: %s WRITER args...
+
+where WRITER is the name of a Docutils writer such as 'html' or 'manpage'
+"""
+
+import sys
+from docutils.core import publish_cmdline
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.stderr.write(__doc__ % sys.argv[0])
+        sys.exit(1)
+
+    writer = sys.argv[1]
+    del sys.argv[1]
+
+    publish_cmdline(writer_name=writer)
