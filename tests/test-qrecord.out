@@ -28,7 +28,7 @@ hg qrecord [OPTION]... PATCH [FILE]...
 
 interactively record a new patch
 
-    See 'hg help qnew' & 'hg help record' for more information and usage.
+    See "hg help qnew" & "hg help record" for more information and usage.
 
 options:
 

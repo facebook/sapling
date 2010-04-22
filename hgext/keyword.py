@@ -49,25 +49,25 @@ NOTE: the more specific you are in your filename patterns the less you
 lose speed in huge repositories.
 
 For [keywordmaps] template mapping and expansion demonstration and
-control run "hg kwdemo". See "hg help templates" for a list of
+control run :hg:`kwdemo`. See :hg:`help templates` for a list of
 available templates and filters.
 
 An additional date template filter {date|utcdate} is provided. It
 returns a date like "2006/09/18 15:13:13".
 
-The default template mappings (view with "hg kwdemo -d") can be
-replaced with customized keywords and templates. Again, run "hg
-kwdemo" to control the results of your config changes.
+The default template mappings (view with :hg:`kwdemo -d`) can be
+replaced with customized keywords and templates. Again, run
+:hg:`kwdemo` to control the results of your config changes.
 
-Before changing/disabling active keywords, run "hg kwshrink" to avoid
+Before changing/disabling active keywords, run :hg:`kwshrink` to avoid
 the risk of inadvertently storing expanded keywords in the change
 history.
 
 To force expansion after enabling it, or a configuration change, run
-"hg kwexpand".
+:hg:`kwexpand`.
 
 Also, when committing with the record extension or using mq's qrecord,
-be aware that keywords cannot be updated. Again, run "hg kwexpand" on
+be aware that keywords cannot be updated. Again, run :hg:`kwexpand` on
 the files in question to update keyword expansions after all changes
 have been checked in.
 
@@ -361,7 +361,7 @@ def files(ui, repo, *pats, **opts):
     execution by including only files that are actual candidates for
     expansion.
 
-    See "hg help keyword" on how to construct patterns both for
+    See :hg:`help keyword` on how to construct patterns both for
     inclusion and exclusion of files.
 
     With -A/--all and -v/--verbose the codes used to show the status
@@ -398,7 +398,7 @@ def shrink(ui, repo, *pats, **opts):
     '''revert expanded keywords in the working directory
 
     Run before changing/disabling active keywords or if you experience
-    problems with "hg import" or "hg merge".
+    problems with :hg:`import` or :hg:`merge`.
 
     kwshrink refuses to run if given files contain local changes.
     '''

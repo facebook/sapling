@@ -391,7 +391,7 @@ diff repository (or selected files)
     with undesirable results.
 
     Use the -g/--git option to generate diffs in the git extended diff format.
-    For more information, read 'hg help diffs'.
+    For more information, read "hg help diffs".
 
 options:
 

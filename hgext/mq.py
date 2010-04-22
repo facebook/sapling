@@ -14,7 +14,7 @@ applied patches (subset of known patches).
 Known patches are represented as patch files in the .hg/patches
 directory. Applied patches are both patch files and changesets.
 
-Common tasks (use "hg help command" for more details)::
+Common tasks (use :hg:`help command` for more details)::
 
   create new patch                          qnew
   import existing patch                     qimport
@@ -2041,9 +2041,9 @@ def diff(ui, repo, *pats, **opts):
     last refresh (thus showing what the current patch would become
     after a qrefresh).
 
-    Use 'hg diff' if you only want to see the changes made since the
-    last qrefresh, or 'hg export qtip' if you want to see changes made
-    by the current patch without including changes made since the
+    Use :hg:`diff` if you only want to see the changes made since the
+    last qrefresh, or :hg:`export qtip` if you want to see changes
+    made by the current patch without including changes made since the
     qrefresh.
     """
     repo.mq.diff(repo, pats, opts)

@@ -16,7 +16,7 @@ by default because a few widespread tools still do not understand this
 format.
 
 This means that when generating diffs from a Mercurial repository
-(e.g. with "hg export"), you should be careful about things like file
+(e.g. with :hg:`export`), you should be careful about things like file
 copies and renames or other things mentioned above, because when
 applying a standard diff to a different repository, this extra
 information is lost. Mercurial's internal operations (like push and

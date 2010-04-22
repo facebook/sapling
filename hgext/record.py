@@ -360,10 +360,10 @@ def filterpatch(ui, chunks):
 def record(ui, repo, *pats, **opts):
     '''interactively select changes to commit
 
-    If a list of files is omitted, all changes reported by "hg status"
+    If a list of files is omitted, all changes reported by :hg:`status`
     will be candidates for recording.
 
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    See :hg:`help dates` for a list of formats valid for -d/--date.
 
     You will be prompted for whether to record changes to each
     modified file, and for files with multiple changes, for each
@@ -388,7 +388,7 @@ def record(ui, repo, *pats, **opts):
 def qrecord(ui, repo, patch, *pats, **opts):
     '''interactively record a new patch
 
-    See 'hg help qnew' & 'hg help record' for more information and
+    See :hg:`help qnew` & :hg:`help record` for more information and
     usage.
     '''
 

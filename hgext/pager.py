@@ -45,8 +45,8 @@ paged.
 
 If pager.attend is present, pager.ignore will be ignored.
 
-To ignore global commands like "hg version" or "hg help", you have to
-specify them in the global .hgrc
+To ignore global commands like :hg:`version` or :hg:`help`, you have
+to specify them in the global .hgrc
 '''
 
 import sys, os, signal

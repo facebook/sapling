@@ -28,7 +28,7 @@ def fetch(ui, repo, source='default', **opts):
     parent, with local changes as the second. To switch the merge
     order, use --switch-parent.
 
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    See :hg:`help dates` for a list of formats valid for -d/--date.
     '''
 
     date = opts.get('date')

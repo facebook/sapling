@@ -32,7 +32,7 @@ def add(ui, repo, *pats, **opts):
     .. container:: verbose
 
        An example showing how new (unknown) files are added
-       automatically by ``hg add``::
+       automatically by :hg:`add`::
 
          $ ls
          foo.c
@@ -171,7 +171,7 @@ def archive(ui, repo, dest, **opts):
     :``zip``:   zip archive, compressed using deflate
 
     The exact name of the destination archive or directory is given
-    using a format string; see 'hg help export' for details.
+    using a format string; see :hg:`help export` for details.
 
     Each member added to an archive file has a directory prefix
     prepended. Use -p/--prefix to specify a format string for the
@@ -230,7 +230,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     changeset afterwards. This saves you from doing the merge by hand.
     The result of this merge is not committed, as with a normal merge.
 
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    See :hg:`help dates` for a list of formats valid for -d/--date.
     '''
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
@@ -456,8 +456,8 @@ def branch(ui, repo, label=None, **opts):
     the parent of the working directory, negating a previous branch
     change.
 
-    Use the command 'hg update' to switch to an existing branch. Use
-    'hg commit --close-branch' to mark this branch as closed.
+    Use the command :hg:`update` to switch to an existing branch. Use
+    :hg:`commit --close-branch` to mark this branch as closed.
     """
 
     if opts.get('clean'):
@@ -485,7 +485,7 @@ def branches(ui, repo, active=False, closed=False):
     If -a/--active is specified, only show active branches. A branch
     is considered active if it contains repository heads.
 
-    Use the command 'hg update' to switch to an existing branch.
+    Use the command :hg:`update` to switch to an existing branch.
     """
 
     hexfunc = ui.debugflag and hex or short
@@ -637,11 +637,11 @@ def clone(ui, source, dest=None, **opts):
     The location of the source is added to the new repository's
     .hg/hgrc file, as the default to be used for future pulls.
 
-    See 'hg help urls' for valid source format details.
+    See :hg:`help urls` for valid source format details.
 
     It is possible to specify an ``ssh://`` URL as the destination, but no
     .hg/hgrc and working directory will be created on the remote side.
-    Please see 'hg help urls' for important details about ``ssh://`` URLs.
+    Please see :hg:`help urls` for important details about ``ssh://`` URLs.
 
     A set of changesets (tags, or branch names) to pull may be specified
     by listing each changeset (tag, or branch name) with -r/--rev.
@@ -705,7 +705,7 @@ def commit(ui, repo, *pats, **opts):
     centralized RCS, this operation is a local operation. See hg push
     for a way to actively distribute your changes.
 
-    If a list of files is omitted, all changes reported by "hg status"
+    If a list of files is omitted, all changes reported by :hg:`status`
     will be committed.
 
     If you are committing the result of a merge, do not provide any
@@ -714,7 +714,7 @@ def commit(ui, repo, *pats, **opts):
     If no commit message is specified, the configured editor is
     started to prompt you for a message.
 
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    See :hg:`help dates` for a list of formats valid for -d/--date.
     """
     extra = {}
     if opts.get('close_branch'):
@@ -1151,7 +1151,7 @@ def diff(ui, repo, *pats, **opts):
     anyway, probably with undesirable results.
 
     Use the -g/--git option to generate diffs in the git extended diff
-    format. For more information, read 'hg help diffs'.
+    format. For more information, read :hg:`help diffs`.
     """
 
     revs = opts.get('rev')
@@ -1219,7 +1219,7 @@ def export(ui, repo, *changesets, **opts):
     diff anyway, probably with undesirable results.
 
     Use the -g/--git option to generate diffs in the git extended diff
-    format. See 'hg help diffs' for more information.
+    format. See :hg:`help diffs` for more information.
 
     With the --switch-parent option, the diff will be against the
     second parent. It can be useful to review a merge.
@@ -1878,7 +1878,7 @@ def import_(ui, repo, patch1, *patches, **opts):
 
     To read a patch from standard input, use "-" as the patch name. If
     a URL is specified, the patch will be downloaded from it.
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    See :hg:`help dates` for a list of formats valid for -d/--date.
     """
     patches = (patch1,) + patches
 
@@ -2081,7 +2081,7 @@ def init(ui, dest=".", **opts):
     If no directory is given, the current directory is used.
 
     It is possible to specify an ``ssh://`` URL as the destination.
-    See 'hg help urls' for more information.
+    See :hg:`help urls` for more information.
     """
     hg.repository(cmdutil.remoteui(ui, opts), dest, create=1)
 
@@ -2136,7 +2136,7 @@ def log(ui, repo, *pats, **opts):
     --follow is set, in which case the working directory parent is
     used as the starting revision.
 
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    See :hg:`help dates` for a list of formats valid for -d/--date.
 
     By default this command prints revision number and changeset id,
     tags, non-trivial parents, user, date and time, and a summary for
@@ -2387,7 +2387,7 @@ def paths(ui, repo, search=None):
     unless a location is specified. When cloning a repository, the
     clone source is written as 'default' in .hg/hgrc.
 
-    See 'hg help urls' for more information.
+    See :hg:`help urls` for more information.
     """
     if search:
         for name, path in ui.configitems("paths"):
@@ -2429,7 +2429,7 @@ def pull(ui, repo, source="default", **opts):
     where X is the last changeset listed by hg incoming.
 
     If SOURCE is omitted, the 'default' path will be used.
-    See 'hg help urls' for more information.
+    See :hg:`help urls` for more information.
     """
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     other = hg.repository(cmdutil.remoteui(repo, opts), source)
@@ -2465,7 +2465,7 @@ def push(ui, repo, dest=None, **opts):
     If -r/--rev is used, the named revision and all its ancestors will
     be pushed to the remote repository.
 
-    Please see 'hg help urls' for important details about ``ssh://``
+    Please see :hg:`help urls` for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
@@ -2663,8 +2663,8 @@ def revert(ui, repo, *pats, **opts):
 
     Using the -r/--rev option, revert the given files or directories
     to their contents as of a specific revision. This can be helpful
-    to "roll back" some or all of an earlier change. See 'hg help
-    dates' for a list of formats valid for -d/--date.
+    to "roll back" some or all of an earlier change. See :hg:`help
+    dates` for a list of formats valid for -d/--date.
 
     Revert modifies the working directory. It does not commit any
     changes, or change the parent of the working directory. If you
@@ -3213,7 +3213,7 @@ def tag(ui, repo, name1, *names, **opts):
     necessary. The file '.hg/localtags' is used for local tags (not
     shared among repositories).
 
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    See :hg:`help dates` for a list of formats valid for -d/--date.
     """
 
     rev_ = "."
@@ -3355,12 +3355,12 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     3. With the -C/--clean option, uncommitted changes are discarded and
        the working directory is updated to the requested changeset.
 
-    Use null as the changeset to remove the working directory (like 'hg
-    clone -U').
+    Use null as the changeset to remove the working directory (like
+    :hg:`clone -U`).
 
-    If you want to update just one file to an older changeset, use 'hg revert'.
+    If you want to update just one file to an older changeset, use :hg:`revert`.
 
-    See 'hg help dates' for a list of formats valid for -d/--date.
+    See :hg:`help dates` for a list of formats valid for -d/--date.
     """
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
