@@ -13,7 +13,16 @@ where WRITER is the name of a Docutils writer such as 'html' or 'manpage'
 """
 
 import sys
+from docutils.parsers.rst import roles
 from docutils.core import publish_cmdline
+from docutils import nodes, utils
+
+def role_hg(name, rawtext, text, lineno, inliner,
+            options={}, content=[]):
+    node = nodes.literal(rawtext, "hg " + utils.unescape(text, True))
+    return [node], []
+
+roles.register_local_role("hg", role_hg)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

@@ -178,3 +178,6 @@ debugformat('containers (verbose)', containers, 60, keep=['verbose'])
 debugformat('containers (debug)', containers, 60, keep=['debug'])
 debugformat('containers (verbose debug)', containers, 60,
             keep=['verbose', 'debug'])
+
+roles = """Please see :hg:`add`."""
+debugformat('roles', roles, 60)

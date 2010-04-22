@@ -252,6 +252,15 @@ def inlineliterals(blocks):
     return blocks
 
 
+_hgrolere = re.compile(r':hg:`([^`]+)`')
+
+def hgrole(blocks):
+    for b in blocks:
+        if b['type'] == 'paragraph':
+            b['lines'] = [_hgrolere.sub(r'"hg \1"', l) for l in b['lines']]
+    return blocks
+
+
 def addmargins(blocks):
     """Adds empty blocks for vertical spacing.
 
@@ -333,6 +342,7 @@ def format(text, width, indent=0, keep=None):
     blocks = findliteralblocks(blocks)
     blocks, pruned = prunecontainers(blocks, keep or [])
     blocks = inlineliterals(blocks)
+    blocks = hgrole(blocks)
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
     blocks = findsections(blocks)
