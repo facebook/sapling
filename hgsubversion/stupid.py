@@ -54,9 +54,10 @@ def mempatchproxy(parentctx, files):
     # Avoid circular references patch.patchfile -> mempatch
     patchfile = patch.patchfile
 
+    # TODO(durin42): make this a compat path for hg < 1.6.
     class mempatch(patchfile):
-        def __init__(self, ui, fname, opener, missing=False, eol=None):
-            patchfile.__init__(self, ui, fname, None, False, eol)
+        def __init__(self, ui, fname, opener, missing=False, eolmode=None):
+            patchfile.__init__(self, ui, fname, None, False, eolmode)
 
         def readlines(self, fname):
             if fname not in parentctx:
