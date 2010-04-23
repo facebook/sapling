@@ -263,8 +263,8 @@ or if you only want to translate certain files::
 Use the ``[defaults]`` section to define command defaults, i.e. the
 default options/arguments to pass to the specified commands.
 
-The following example makes ``hg log`` run in verbose mode, and ``hg
-status`` show only the modified files, by default::
+The following example makes :hg:`log` run in verbose mode, and :hg:`hg
+status` show only the modified files, by default::
 
   [defaults]
   log = -v
@@ -752,7 +752,7 @@ User interface controls.
 ``archivemeta``
     Whether to include the .hg_archival.txt file containing meta data
     (hashes for the repository base and for tip) in archives created
-    by the hg archive command or downloaded via hgweb.
+    by the :hg:`archive` command or downloaded via hgweb.
     Default is True.
 ``askusername``
     Whether to prompt for a username when committing. If True, and
