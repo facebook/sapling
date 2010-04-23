@@ -217,7 +217,7 @@ commands.globalopts.append(('', 'color', 'auto',
                             _("when to colorize (always, auto, or never)")))
 
 try:
-    import re
+    import re, pywintypes
     from win32console import *
 
     # http://msdn.microsoft.com/en-us/library/ms682088%28VS.85%29.aspx
@@ -243,7 +243,13 @@ try:
     }
 
     stdout = GetStdHandle(STD_OUTPUT_HANDLE)
-    origattr = stdout.GetConsoleScreenBufferInfo()['Attributes']
+    try:
+        origattr = stdout.GetConsoleScreenBufferInfo()['Attributes']
+    except pywintypes.error:
+        # stdout may be defined but not support
+        # GetConsoleScreenBufferInfo(), when called from subprocess or
+        # redirected.
+        raise ImportError()
     ansire = re.compile('\033\[([^m]*)m([^\033]*)(.*)', re.MULTILINE | re.DOTALL)
 
     def win32print(text, orig, **opts):
