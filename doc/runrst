@@ -19,7 +19,14 @@ from docutils import nodes, utils
 
 def role_hg(name, rawtext, text, lineno, inliner,
             options={}, content=[]):
-    node = nodes.literal(rawtext, "hg " + utils.unescape(text, True))
+    text = "hg " + utils.unescape(text)
+    linktext = nodes.literal(rawtext, text)
+    parts = text.split()
+    cmd, args = parts[1], parts[2:]
+    if cmd == 'help' and args:
+        cmd = args[0] # link to 'dates' for 'hg help dates'
+    node = nodes.reference(rawtext, '', linktext,
+                           refuri="hg.1.html#%s" % cmd)
     return [node], []
 
 roles.register_local_role("hg", role_hg)
