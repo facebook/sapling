@@ -198,7 +198,6 @@ msgid ""
 "branching.\n"
 msgstr ""
 "rastreia uma linha de desenvolvimento com marcadores móveis\n"
-"marcadores do Mercurial\n"
 "\n"
 "Marcadores são ponteiros locais móveis para revisões. Todo\n"
 "marcador aponta para uma revisão identificada por seu hash. Se você\n"
@@ -1422,6 +1421,13 @@ msgstr "ignorada para compatibilidade"
 msgid "hg debugcvsps [OPTION]... [PATH]..."
 msgstr "hg debugcvsps [OPÇÃO]... [CAMINHO]..."
 
+#, python-format
+msgid "%s does not look like a Bazaar repository"
+msgstr "%s não parece ser um repositório do Bazaar"
+
+msgid "Bazaar modules could not be loaded"
+msgstr "os módulos do Bazaar não puderam ser carregados"
+
 msgid ""
 "warning: lightweight checkouts may cause conversion failures, try with a "
 "regular branch instead.\n"
@@ -1535,6 +1541,10 @@ msgid "--sourcesort is not supported by this data source"
 msgstr "--sourcesort não é suportado para esta origem de dados"
 
 #, python-format
+msgid "%s does not look like a CVS checkout"
+msgstr "%s não parece ser uma cópia de trabalho do CVS"
+
+#, python-format
 msgid "revision %s is not a patchset number"
 msgstr "revisão %s não é um número de patchset"
 
@@ -1555,6 +1565,9 @@ msgstr ""
 msgid "%d bytes missing from remote file"
 msgstr "%d bytes faltando no arquivo remoto"
 
+msgid "malformed response from CVS"
+msgstr "resposta malformada do CVS"
+
 #, python-format
 msgid "cvs server: %s\n"
 msgstr "servidor cvs: %s\n"
@@ -1565,6 +1578,9 @@ msgstr "resposta do CVS desconhecida: %s"
 
 msgid "collecting CVS rlog\n"
 msgstr "coletando rlog do CVS\n"
+
+msgid "not a CVS sandbox"
+msgstr "não é uma sandbox do CVS"
 
 #, python-format
 msgid "reading cvs log cache %s\n"
@@ -1594,6 +1610,11 @@ msgstr "número de revisão esperado"
 msgid "revision must be followed by date line"
 msgstr "revisão deve ser seguida por uma linha de data"
 
+msgid "log cache overlaps with new log entries, re-run without cache."
+msgstr ""
+"o cache do log se sobrepõe a novas entradas do log, execute "
+"novamente sem o cache."
+
 #, python-format
 msgid "writing cvs log cache %s\n"
 msgstr "escrevendo cache do log do CVS %s\n"
@@ -1621,6 +1642,10 @@ msgid "%d changeset entries\n"
 msgstr "%d entradas de revisão\n"
 
 #, python-format
+msgid "%s does not look like a darcs repository"
+msgstr "%s não parece ser um repositório do darcs"
+
+#, python-format
 msgid "darcs version 2.1 or newer needed (found %r)"
 msgstr "necessária versão do darcs 2.1 ou posterior (%r encontrada)"
 
@@ -1645,7 +1670,11 @@ msgid "source repository doesn't support --filemap"
 msgstr "repositório de origem não suporta --filemap"
 
 #, python-format
-msgid "%s does not look like a GNU Arch repo"
+msgid "%s does not look like a Git repository"
+msgstr "%s não parece ser um repositório do Git"
+
+#, python-format
+msgid "%s does not look like a GNU Arch repository"
 msgstr "%s não parece ser um repositório do GNU Arch"
 
 msgid "cannot find a GNU Arch tool"
@@ -1666,12 +1695,16 @@ msgid "could not parse cat-log of %s"
 msgstr "não foi possível decodificar cat-log de %s"
 
 #, python-format
-msgid "%s is not a local Mercurial repo"
+msgid "%s is not a local Mercurial repository"
 msgstr "%s não é um repositório local do Mercurial"
 
 #, python-format
 msgid "initializing destination %s repository\n"
 msgstr "iniciando repositório de destino %s\n"
+
+#, python-format
+msgid "could not create hg repository %s as sink"
+msgstr "não foi possível criar repositório hg %s como destino"
 
 #, python-format
 msgid "pulling from %s into %s\n"
@@ -1692,12 +1725,16 @@ msgid "ignoring: %s\n"
 msgstr "ignorando: %s\n"
 
 #, python-format
-msgid "%s does not look like a monotone repo"
-msgstr "%s não parece um repositório do Monotone"
+msgid "%s does not look like a monotone repository"
+msgstr "%s não parece ser um repositório do Monotone"
 
 #, python-format
 msgid "copying file in renamed directory from '%s' to '%s'"
 msgstr "copiando arquivo em diretório renomeado de '%s' para '%s'"
+
+#, python-format
+msgid "%s does not look like a P4 repository"
+msgstr "%s não parece ser um repositório do P4"
 
 msgid "reading p4 views\n"
 msgstr "lendo 'p4 views'\n"
@@ -1716,6 +1753,10 @@ msgid ""
 msgstr ""
 "svn: não é possível sondar o repositório remoto; a conversão irá assumir que "
 "é um repositório remoto do Subversion. Use --source-type se necessário.\n"
+
+#, python-format
+msgid "%s does not look like a Subversion repository"
+msgstr "%s não parece ser um repositório do Subversion"
 
 msgid "Subversion python bindings could not be loaded"
 msgstr "Os módulos Python para o Subversion não puderam ser carregados"
@@ -1787,12 +1828,12 @@ msgid "svn: branch has no revision %s"
 msgstr "svn: ramo não tem a revisão %s"
 
 #, python-format
-msgid "initializing svn repo %r\n"
+msgid "initializing svn repository %r\n"
 msgstr "iniciando repositório svn %r\n"
 
 #, python-format
-msgid "initializing svn wc %r\n"
-msgstr "iniciando svn wc %r\n"
+msgid "initializing svn working copy %r\n"
+msgstr "iniciando cópia de trabalho do svn %r\n"
 
 msgid "unexpected svn output:\n"
 msgstr "saída do svn inesperada:\n"
@@ -4159,8 +4200,8 @@ msgstr "adiciona \"Date: <data atual>\" ao patch"
 msgid "add \"Date: <given date>\" to patch"
 msgstr "adiciona \"Date: <data fornecida>\" ao patch"
 
-msgid "hg qnew [-e] [-m TEXT] [-l FILE] [-f] PATCH [FILE]..."
-msgstr "hg qnew [-e] [-m TEXTO] [-l ARQUIVO] [-f] PATCH [ARQUIVO]..."
+msgid "hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]..."
+msgstr "hg qnew [-e] [-m TEXTO] [-l ARQUIVO] PATCH [ARQUIVO]..."
 
 msgid "hg qnext [-s]"
 msgstr "hg qnext [-s]"
@@ -5612,40 +5653,6 @@ msgid ""
 "    "
 msgstr ""
 "cria um novo repositório compartilhado\n"
-"\n"
-"    Inicializa um novo repositório e diretório de trabalho que\n"
-"    compartilha seu histórico com outro repositório.\n"
-"\n"
-"    NOTA: o uso de rollback ou extensões que destroem ou modificam\n"
-"    o histórico (mq, rebase, etc) pode causar confusão considerável\n"
-"    com clones compartilhados. Em particular, se dois clones\n"
-"    compartilhados forem atualizados para a mesma revisão, e um\n"
-"    deles destruir essa revisão usando rollback, o outro clone irá\n"
-"    deixar de funcionar: todas as operações irão falhar com\n"
-"    \"abortado: diretório de trabalho tem pai desconhecido\". A\n"
-"    única correção conhecida é o uso do comando debugsetparents no\n"
-"    clone quebrado para reposicioná-lo para uma revisão que ainda\n"
-"    exista (por exemplo, a tip).\n"
-"    "
-
-msgid ""
-"create a new shared repository (experimental)\n"
-"\n"
-"    Initialize a new repository and working directory that shares its\n"
-"    history with another repository.\n"
-"\n"
-"    NOTE: using rollback or extensions that destroy/modify history\n"
-"    (mq, rebase, etc.) can cause considerable confusion with shared\n"
-"    clones. In particular, if two shared clones are both updated to\n"
-"    the same changeset, and one of them destroys that changeset with\n"
-"    rollback, the other clone will suddenly stop working: all\n"
-"    operations will fail with \"abort: working directory has unknown\n"
-"    parent\". The only known workaround is to use debugsetparents on\n"
-"    the broken clone to reset it to a changeset that still exists\n"
-"    (e.g. tip).\n"
-"    "
-msgstr ""
-"cria um novo repositório compartilhado (experimental)\n"
 "\n"
 "    Inicializa um novo repositório e diretório de trabalho que\n"
 "    compartilha seu histórico com outro repositório.\n"
@@ -8092,6 +8099,11 @@ msgid ""
 "    Path names are defined in the [paths] section of /etc/mercurial/hgrc\n"
 "    and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.\n"
 "\n"
+"    The names 'default' and 'default-push' have a special meaning.\n"
+"    They are the locations used when pulling and pushing respectively\n"
+"    unless a location is specified. When cloning a repository, the\n"
+"    clone source is written as 'default' in .hg/hgrc.\n"
+"\n"
 "    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
@@ -8103,6 +8115,11 @@ msgstr ""
 "    Nomes de caminho são definidos na seção [paths] de\n"
 "    /etc/mercurial/hgrc e $HOME/.hgrc. Se executado em um\n"
 "    repositório, .hg/hgrc também será usado.\n"
+"\n"
+"    Os nomes 'default' e 'default-push' têm significado especial. Eles\n"
+"    são as localizações usadas nos comandos pull e push respectivamente\n"
+"    a não ser que uma localização seja especificada. Ao clonar um\n"
+"    repositório, a origem do clone é escrita como 'default' no .hg/hgrc.\n"
 "\n"
 "    Veja 'hg help urls' para mais informações.\n"
 "    "
@@ -11477,11 +11494,11 @@ msgstr "abortado: push cria novas cabeças remotas no ramo '%s'!\n"
 msgid "abort: push creates new remote heads!\n"
 msgstr "abortado: push cria novas cabeças remotas!\n"
 
-msgid "(did you forget to merge? use push -f to force)\n"
-msgstr "(você esqueceu de mesclar? Use push -f para forçar)\n"
-
 msgid "(you should pull and merge or use push -f to force)\n"
 msgstr "(você deve fazer o pull e mesclar ou usar push -f para forçar)\n"
+
+msgid "(did you forget to merge? use push -f to force)\n"
+msgstr "(você esqueceu de mesclar? Use push -f para forçar)\n"
 
 #, python-format
 msgid "abort: push creates new remote branches: %s!\n"
