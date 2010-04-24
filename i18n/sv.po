@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-03-28 19:48+0200\n"
-"PO-Revision-Date: 2010-03-28 20:26+0100\n"
+"POT-Creation-Date: 2010-04-19 18:58+0200\n"
+"PO-Revision-Date: 2010-04-19 19:49+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -411,9 +411,8 @@ msgstr ""
 msgid "Revision %d is a merge, ignoring...\n"
 msgstr ""
 
-#, python-format
-msgid "generating stats: %d%%"
-msgstr ""
+msgid "analyzing"
+msgstr "analyserar"
 
 msgid ""
 "histogram of changes to the repository\n"
@@ -476,11 +475,8 @@ msgstr "visa tillagda/raderade rader separat"
 msgid "file with email aliases"
 msgstr ""
 
-msgid "show progress"
-msgstr ""
-
-msgid "hg churn [-d DATE] [-r REV] [--aliases FILE] [--progress] [FILE]"
-msgstr ""
+msgid "hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]"
+msgstr "hg churn [-d DATUM] [-r REV] [--aliases FIL] [FIL]"
 
 msgid ""
 "colorize output from some commands\n"
@@ -529,6 +525,15 @@ msgid ""
 "  resolve.resolved = green bold\n"
 "\n"
 "  bookmarks.current = green\n"
+"\n"
+"The color extension will try to detect whether to use ANSI codes or\n"
+"Win32 console APIs, unless it is made explicit::\n"
+"\n"
+"  [color]\n"
+"  mode = ansi\n"
+"\n"
+"Any value other than 'ansi', 'win32', or 'auto' will disable color.\n"
+"\n"
 msgstr ""
 "färglägg utmatning från vissa kommandon\n"
 "\n"
@@ -575,16 +580,25 @@ msgstr ""
 "  resolve.resolved = green bold\n"
 "\n"
 "  bookmarks.current = green\n"
-
-msgid "when to colorize (always, auto, or never)"
-msgstr "när färgläggning ska ske (always, auto eller never)"
-
-msgid "don't colorize output (DEPRECATED)"
-msgstr "färglägg inte utmatning (FÖRLEGAD)"
+"\n"
+"Utökningen color försöker att upptäcka om ANSI-koder eller APIer för\n"
+"konsolen i Win32 om det inte anges explicit::\n"
+"\n"
+"  [color]\n"
+"  mode = ansi\n"
+"\n"
+"Ett värde skilt från 'ansi', 'win32', eller 'auto' stänger av färg.\n"
+"\n"
 
 #, python-format
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
-msgstr ""
+msgstr "ignorerar okänd färg/effekt %r (konfigurerad i color.%s)\n"
+
+msgid "win32console not found, please install pywin32\n"
+msgstr "win32console hittades inte, installera pywin32\n"
+
+msgid "when to colorize (always, auto, or never)"
+msgstr "när färgläggning ska ske (always, auto eller never)"
 
 msgid "import revisions from foreign VCS repositories into Mercurial"
 msgstr ""
@@ -1019,6 +1033,9 @@ msgstr ""
 #, python-format
 msgid "%d bytes missing from remote file"
 msgstr ""
+
+msgid "malformed response from CVS"
+msgstr "förvrängt svar från CVS"
 
 #, python-format
 msgid "cvs server: %s\n"
@@ -2052,9 +2069,6 @@ msgid ""
 "keywords written to %s:\n"
 msgstr ""
 
-msgid "unhooked all commit hooks\n"
-msgstr ""
-
 msgid "hg keyword configuration and expansion example"
 msgstr "exempel på nyckelordskonfiguration och -expansion i hg"
 
@@ -2125,12 +2139,6 @@ msgstr ""
 
 msgid "only show unknown (not tracked) files"
 msgstr "visa bara okända (ospårade) filer"
-
-msgid "show keyword status flags of all files (DEPRECATED)"
-msgstr "visa statusflaggor för alla filer (FÖRLEGAD)"
-
-msgid "only show untracked files (DEPRECATED)"
-msgstr "visa bara ospårade filer (FÖRLEGAD)"
 
 msgid "hg kwfiles [OPTION]... [FILE]..."
 msgstr ""
@@ -2624,9 +2632,8 @@ msgid ""
 "create a new patch\n"
 "\n"
 "    qnew creates a new patch on top of the currently-applied patch (if\n"
-"    any). It will refuse to run if there are any outstanding changes\n"
-"    unless -f/--force is specified, in which case the patch will be\n"
-"    initialized with them. You may also use -I/--include,\n"
+"    any). The patch will be initialized with any outstanding changes\n"
+"    in the working directory. You may also use -I/--include,\n"
 "    -X/--exclude, and/or a list of files after the patch name to add\n"
 "    only changes to matching files to the new patch, leaving the rest\n"
 "    as uncommitted modifications.\n"
@@ -3584,6 +3591,8 @@ msgid ""
 "                 # (that is, min(width, term width) will be used)\n"
 "  clear-complete = True # clear the progress bar after it's done\n"
 "  disable = False # if true, don't show a progress bar\n"
+"  assume-tty = False # if true, ALWAYS show a progress bar, unless\n"
+"                     # disable is given\n"
 "\n"
 "Valid entries for the format field are topic, bar, number, unit, and\n"
 "item. item defaults to the last 20 characters of the item, but this\n"
@@ -4017,6 +4026,7 @@ msgid ""
 "  bb = https://bitbucket.org/\n"
 "  bb+ssh = ssh://hg@bitbucket.org/\n"
 "  gcode = https://{1}.googlecode.com/hg/\n"
+"  kiln = https://{1}.kilnhg.com/Repo/\n"
 "\n"
 "You can override a predefined scheme by defining a new scheme with the\n"
 "same name.\n"
@@ -4026,7 +4036,7 @@ msgid "share a common history between several working directories"
 msgstr ""
 
 msgid ""
-"create a new shared repository (experimental)\n"
+"create a new shared repository\n"
 "\n"
 "    Initialize a new repository and working directory that shares its\n"
 "    history with another repository.\n"
@@ -4412,6 +4422,9 @@ msgstr ""
 msgid "invalid format spec '%%%s' in output filename"
 msgstr ""
 
+msgid "searching"
+msgstr "söker"
+
 #, python-format
 msgid "adding %s\n"
 msgstr ""
@@ -4543,12 +4556,8 @@ msgid "%s: no key named '%s'"
 msgstr ""
 
 #, python-format
-msgid "%s: %s"
-msgstr ""
-
-#, python-format
 msgid "Found revision %s from %s\n"
-msgstr ""
+msgstr "Hittade revision %s från %s\n"
 
 msgid "revision matching date not found"
 msgstr ""
@@ -4733,8 +4742,10 @@ msgid ""
 "    By default, the revision used is the parent of the working\n"
 "    directory; use -r/--rev to specify a different revision.\n"
 "\n"
-"    To specify the type of archive to create, use -t/--type. Valid\n"
-"    types are:\n"
+"    The archive type is automatically detected based on file\n"
+"    extension (or override using -t/--type).\n"
+"\n"
+"    Valid types are:\n"
 "\n"
 "    :``files``: a directory full of files (default)\n"
 "    :``tar``:   tar archive, uncompressed\n"
@@ -4757,8 +4768,10 @@ msgstr ""
 "    Som standard används revisonen för arbetskatalogens förälder; använd\n"
 "    -r/--rev för att specificera en annan revision.\n"
 "\n"
-"    För att definiera vilken typ av arkiv som ska skapas, använd -t/--type.\n"
-"    Giltiga typer är::\n"
+"    Arkivtypen upptäcks automatiskt baserat på filändelsen (eller tvinga\n"
+"    med hjälp av -t/--type).\n"
+"\n"
+"    Giltiga typer är:\n"
 "\n"
 "    :``files``: en katalog fylld med filer (standard)\n"
 "    :``tar``:   tar-arkiv, okomprimerad\n"
@@ -6227,6 +6240,11 @@ msgid ""
 "    Path names are defined in the [paths] section of /etc/mercurial/hgrc\n"
 "    and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.\n"
 "\n"
+"    The names 'default' and 'default-push' have a special meaning.\n"
+"    They are the locations used when pulling and pushing respectively\n"
+"    unless a location is specified. When cloning a repository, the\n"
+"    clone source is written as 'default' in .hg/hgrc.\n"
+"\n"
 "    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
@@ -6237,6 +6255,10 @@ msgstr ""
 "\n"
 "    Sökvägar definieras i sektionen [paths] i /etc/mercurial/hgrc och\n"
 "    $HOME/.hgrc. Om det körs i ett arkiv, så används .hg/hgrc också.\n"
+"\n"
+"    Namnen 'default' och 'default-push' har en särskild innebörd. De är\n"
+"    platserna som används vid push eller pull om ingen plats anges. När\n"
+"    ett arkiv klonas, skrivs klonkällan som 'default' i .hg/hgrc.\n"
 "\n"
 "    Se 'hg help urls' för mer information.\n"
 "    "
@@ -6616,7 +6638,7 @@ msgid "no changes needed to %s\n"
 msgstr "inga ändringar behövs för %s\n"
 
 msgid ""
-"roll back the last transaction\n"
+"roll back the last transaction (dangerous)\n"
 "\n"
 "    This command should be used with care. There is only one level of\n"
 "    rollback, and there is no way to undo a rollback. It will also\n"
@@ -6643,7 +6665,7 @@ msgid ""
 "    may fail if a rollback is performed.\n"
 "    "
 msgstr ""
-"återgång från den senaste transaktionen\n"
+"återgång från den senaste transaktionen (farligt)\n"
 "\n"
 "    Detta kommando bör användas med försiktighet. Det finns bara en nivå\n"
 "    av återgång, och det finns inget sätt att ångra en återgång.\n"
@@ -6682,22 +6704,29 @@ msgstr ""
 "    "
 
 msgid ""
-"export the repository via HTTP\n"
+"start stand-alone webserver\n"
 "\n"
 "    Start a local HTTP repository browser and pull server.\n"
 "\n"
 "    By default, the server logs accesses to stdout and errors to\n"
 "    stderr. Use the -A/--accesslog and -E/--errorlog options to log to\n"
 "    files.\n"
+"\n"
+"    To have the server choose a free port number to listen on, specify\n"
+"    a port number of 0; in this case, the server will print the port\n"
+"    number it uses.\n"
 "    "
 msgstr ""
-"exportera arkivet via HTTP\n"
+"starta fristående webbserver\n"
 "\n"
 "    Startar en lokal HTTP-arkivbläddrare och pull-server.\n"
 "\n"
 "    Som standard loggar servern anslutningar till stdout och fel till\n"
 "    stderr. Använd flaggorna -A/--accesslog och -E/--errorlog för att logga\n"
 "    till filer.\n"
+"\n"
+"    För att låta servern välja ett ledigt portnummer att lyssna på, ange 0\n"
+"    som portnummer; då visar servern det portnummer som används.\n"
 "    "
 
 #, python-format
@@ -6791,6 +6820,10 @@ msgstr ""
 "    för att hitta inkommande och utgående ändringar. Detta kan ta lång tid.\n"
 "    "
 
+#, python-format
+msgid "parent: %d:%s "
+msgstr "förälder: %d:%s "
+
 msgid " (empty repository)"
 msgstr " (tomt arkiv)"
 
@@ -6798,20 +6831,16 @@ msgid " (no revision checked out)"
 msgstr " (ingen revision uthämtad)"
 
 #, python-format
-msgid "parent: %d:%s %s\n"
-msgstr "förälder: %d:%s %s\n"
-
-#, python-format
 msgid "branch: %s\n"
 msgstr "gren: %s\n"
 
 #, python-format
-msgid "%d added"
-msgstr "%d tillagd"
-
-#, python-format
 msgid "%d modified"
 msgstr "%d modifierad"
+
+#, python-format
+msgid "%d added"
+msgstr "%d tillagd"
 
 #, python-format
 msgid "%d removed"
@@ -6822,12 +6851,12 @@ msgid "%d deleted"
 msgstr "%d raderad"
 
 #, python-format
-msgid "%d ignored"
-msgstr "%d ignorerad"
-
-#, python-format
 msgid "%d unknown"
 msgstr "%d okänd"
+
+#, python-format
+msgid "%d ignored"
+msgstr "%d ignorerad"
 
 #, python-format
 msgid "%d unresolved"
@@ -6988,7 +7017,7 @@ msgstr ""
 "    "
 
 msgid ""
-"update working directory\n"
+"update working directory (or switch revisions)\n"
 "\n"
 "    Update the repository's working directory to the specified\n"
 "    changeset.\n"
@@ -7024,7 +7053,7 @@ msgid ""
 "    See 'hg help dates' for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
-"uppdatera arbetskatalogen\n"
+"uppdatera arbetskatalogen (eller växla mellan revisioner)\n"
 "\n"
 "    Uppdatera arkivets arbetskatalog till den specificerade ändringen.\n"
 "\n"
@@ -8782,40 +8811,42 @@ msgid ""
 msgstr ""
 
 msgid "dirstate branch not accessible"
-msgstr ""
+msgstr "dirstate-grenen inte åtkomlig"
 
 msgid "can only share local repositories"
-msgstr ""
+msgstr "kan bara dela lokala arkiv"
 
 msgid "destination already exists"
-msgstr ""
+msgstr "destinationen finns redan"
 
 msgid "updating working directory\n"
-msgstr ""
+msgstr "uppdaterar arbetskatalog\n"
 
 #, python-format
 msgid "destination directory: %s\n"
-msgstr ""
+msgstr "destinationskatalog: %s\n"
 
 #, python-format
 msgid "destination '%s' already exists"
-msgstr ""
+msgstr "destinationen '%s' finns redan"
 
 #, python-format
 msgid "destination '%s' is not empty"
-msgstr ""
+msgstr "destinationen '%s är inte tom"
 
 msgid ""
 "src repository does not support revision lookup and so doesn't support clone "
 "by revision"
 msgstr ""
+"källarkivet stödjer inte revisionsuppslag, och stödjer därför inte kloning "
+"av angivna revisioner"
 
 msgid "clone from remote to remote not supported"
-msgstr ""
+msgstr "kloning från fjärr till fjärr stödjs inte"
 
 #, python-format
 msgid "updating to branch %s\n"
-msgstr ""
+msgstr "uppdaterar till grenen %s\n"
 
 #, python-format
 msgid ""
@@ -9016,8 +9047,16 @@ msgstr ""
 msgid "no interrupted transaction available\n"
 msgstr ""
 
-msgid "rolling back last transaction\n"
-msgstr "återkallar den senaste transaktionen\n"
+#, python-format
+msgid "rolling back to revision %s (undo %s: %s)\n"
+msgstr "återgår till revisionen %s (ångra %s: %s)\n"
+
+#, python-format
+msgid "rolling back to revision %s (undo %s)\n"
+msgstr "återgår till revisionen %s (ångra %s)\n"
+
+msgid "rolling back unknown transaction\n"
+msgstr "återkallar okänd transaktion\n"
 
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
@@ -9111,9 +9150,6 @@ msgstr "söker efter ändringar\n"
 msgid "queries"
 msgstr "frågor"
 
-msgid "searching"
-msgstr "söker"
-
 msgid "already have changeset "
 msgstr "har redan ändringen "
 
@@ -9140,12 +9176,11 @@ msgstr "avbryter: push skapar nya fjärrhuvuden på grenen '%s'!\n"
 msgid "abort: push creates new remote heads!\n"
 msgstr "avbryter: push skapar nya fjärrhuvuden!\n"
 
+msgid "(you should pull and merge or use push -f to force)\n"
+msgstr "(du kan dra och sammanfoga eller använda push -f för att tvinga)\n"
+
 msgid "(did you forget to merge? use push -f to force)\n"
 msgstr "(glömde du att sammanfoga? använd push -f för att tvinga)\n"
-
-msgid "(you should pull and merge or use push -f to force)\n"
-msgstr ""
-"(du kan dra och sammanfoga eller eller använda push -f för att tvinga)\n"
 
 #, python-format
 msgid "abort: push creates new remote branches: %s!\n"
@@ -9448,6 +9483,15 @@ msgstr ""
 msgid "Unsupported line endings type: %s"
 msgstr ""
 
+msgid ""
+"internal patcher failed\n"
+"please report details to http://mercurial.selenic.com/bts/\n"
+"or mercurial@selenic.com\n"
+msgstr ""
+"den interna patcharen misslyckades\n"
+"rapportera detaljer till http://mercurial.selenic.com/bts/\n"
+"eller mercurial@selenic.com\n"
+
 #, python-format
 msgid " %d files changed, %d insertions(+), %d deletions(-)\n"
 msgstr ""
@@ -9595,8 +9639,8 @@ msgid "removing subrepo %s\n"
 msgstr ""
 
 #, python-format
-msgid "pulling subrepo %s\n"
-msgstr ""
+msgid "pulling subrepo %s from %s\n"
+msgstr "drar subarkivet %s från %s\n"
 
 #, python-format
 msgid "pushing subrepo %s\n"
@@ -9871,26 +9915,23 @@ msgstr "arkivet använder revlog-format %d\n"
 msgid "checking changesets\n"
 msgstr "kontrollerar ändringar\n"
 
-msgid "checking"
-msgstr "kontrollerar"
-
 #, python-format
 msgid "unpacking changeset %s"
-msgstr ""
+msgstr "packar upp ändringen %s"
 
 msgid "checking manifests\n"
 msgstr "kontrollerar manifest\n"
 
 #, python-format
 msgid "%s not in changesets"
-msgstr ""
+msgstr "%s inte i ändringarna"
 
 msgid "file without name in manifest"
-msgstr ""
+msgstr "fil utan namn i manifest"
 
 #, python-format
 msgid "reading manifest delta %s"
-msgstr ""
+msgstr "läser manifestdelta %s"
 
 msgid "crosschecking files in changesets and manifests\n"
 msgstr "korskontrollerar filer i ändringar och manifest\n"
@@ -9900,63 +9941,66 @@ msgstr "korskontrollerar"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
-msgstr ""
+msgstr "ändring refererar till okänt manifest %s"
 
 msgid "in changeset but not in manifest"
-msgstr ""
+msgstr "i ändring men inte i manifest"
 
 msgid "in manifest but not in changeset"
-msgstr ""
+msgstr "i manifest men inte i ändring"
 
 msgid "checking files\n"
 msgstr "kontrollerar filer\n"
 
 #, python-format
 msgid "cannot decode filename '%s'"
-msgstr ""
+msgstr "kan inte avkoda filnamnet '%s'"
+
+msgid "checking"
+msgstr "kontrollerar"
 
 #, python-format
 msgid "broken revlog! (%s)"
-msgstr ""
+msgstr "skadad revlog! (%s)"
 
 msgid "missing revlog!"
-msgstr ""
+msgstr "saknad revlog!"
 
 #, python-format
 msgid "%s not in manifests"
-msgstr ""
+msgstr "%s inte i manifest"
 
 #, python-format
 msgid "unpacked size is %s, %s expected"
-msgstr ""
+msgstr "uppackad storlek är %s, %s förväntades"
 
 #, python-format
 msgid "unpacking %s"
-msgstr ""
+msgstr "packar upp %s"
 
 #, python-format
 msgid "warning: copy source of '%s' not in parents of %s"
-msgstr ""
+msgstr "varning: kopieringskällan för '%s' inte i föräldrar till %s"
 
 #, python-format
 msgid "empty or missing copy source revlog %s:%s"
-msgstr ""
+msgstr "tom eller saknar kopieringskälla för revlog %s:%s"
 
 #, python-format
 msgid "warning: %s@%s: copy source revision is nullid %s:%s\n"
-msgstr ""
+msgstr "varning: %s@%s: kopieringskällrevision är nullid %s:%s\n"
 
 #, python-format
 msgid "checking rename of %s"
-msgstr ""
+msgstr "kontrollerar namnbytet på %s"
 
 #, python-format
 msgid "%s in manifests not found"
-msgstr ""
+msgstr "%s i manifest hittades inte"
 
 #, python-format
 msgid "warning: orphan revlog '%s'"
-msgstr ""
+msgstr "varning: övergiven revlog '%s'"
 
 #, python-format
 msgid "%d files, %d changesets, %d total revisions\n"
@@ -9964,15 +10008,15 @@ msgstr "%d filer, %d ändringar, %d totala revisioner\n"
 
 #, python-format
 msgid "%d warnings encountered!\n"
-msgstr ""
+msgstr "%d varningar påträffades!\n"
 
 #, python-format
 msgid "%d integrity errors encountered!\n"
-msgstr ""
+msgstr "%d integritetsfel påträffades!\n"
 
 #, python-format
 msgid "(first damaged changeset appears to be %d)\n"
-msgstr ""
+msgstr "(första skadade ändringen verkar vara %d)\n"
 
 msgid "user name not available - set USERNAME environment variable"
-msgstr ""
+msgstr "användarnamnet är inte tillgängligt - sätt miljövariabeln USERNAME"
