@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-03-28 19:48+0200\n"
-"PO-Revision-Date: 2010-03-28 20:26+0100\n"
+"POT-Creation-Date: 2010-04-19 18:26+0200\n"
+"PO-Revision-Date: 2010-04-19 18:57+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -1019,6 +1019,9 @@ msgstr ""
 #, python-format
 msgid "%d bytes missing from remote file"
 msgstr ""
+
+msgid "malformed response from CVS"
+msgstr "förvrängt svar från CVS"
 
 #, python-format
 msgid "cvs server: %s\n"
@@ -2624,9 +2627,8 @@ msgid ""
 "create a new patch\n"
 "\n"
 "    qnew creates a new patch on top of the currently-applied patch (if\n"
-"    any). It will refuse to run if there are any outstanding changes\n"
-"    unless -f/--force is specified, in which case the patch will be\n"
-"    initialized with them. You may also use -I/--include,\n"
+"    any). The patch will be initialized with any outstanding changes\n"
+"    in the working directory. You may also use -I/--include,\n"
 "    -X/--exclude, and/or a list of files after the patch name to add\n"
 "    only changes to matching files to the new patch, leaving the rest\n"
 "    as uncommitted modifications.\n"
@@ -3584,6 +3586,8 @@ msgid ""
 "                 # (that is, min(width, term width) will be used)\n"
 "  clear-complete = True # clear the progress bar after it's done\n"
 "  disable = False # if true, don't show a progress bar\n"
+"  assume-tty = False # if true, ALWAYS show a progress bar, unless\n"
+"                     # disable is given\n"
 "\n"
 "Valid entries for the format field are topic, bar, number, unit, and\n"
 "item. item defaults to the last 20 characters of the item, but this\n"
@@ -4017,6 +4021,7 @@ msgid ""
 "  bb = https://bitbucket.org/\n"
 "  bb+ssh = ssh://hg@bitbucket.org/\n"
 "  gcode = https://{1}.googlecode.com/hg/\n"
+"  kiln = https://{1}.kilnhg.com/Repo/\n"
 "\n"
 "You can override a predefined scheme by defining a new scheme with the\n"
 "same name.\n"
@@ -4026,7 +4031,7 @@ msgid "share a common history between several working directories"
 msgstr ""
 
 msgid ""
-"create a new shared repository (experimental)\n"
+"create a new shared repository\n"
 "\n"
 "    Initialize a new repository and working directory that shares its\n"
 "    history with another repository.\n"
@@ -6227,6 +6232,11 @@ msgid ""
 "    Path names are defined in the [paths] section of /etc/mercurial/hgrc\n"
 "    and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.\n"
 "\n"
+"    The names 'default' and 'default-push' have a special meaning.\n"
+"    They are the locations used when pulling and pushing respectively\n"
+"    unless a location is specified. When cloning a repository, the\n"
+"    clone source is written as 'default' in .hg/hgrc.\n"
+"\n"
 "    See 'hg help urls' for more information.\n"
 "    "
 msgstr ""
@@ -6237,6 +6247,10 @@ msgstr ""
 "\n"
 "    Sökvägar definieras i sektionen [paths] i /etc/mercurial/hgrc och\n"
 "    $HOME/.hgrc. Om det körs i ett arkiv, så används .hg/hgrc också.\n"
+"\n"
+"    Namnen 'default' och 'default-push' har en särskild innebörd. De är\n"
+"    platserna som används vid push eller pull om ingen plats anges. När\n"
+"    ett arkiv klonas, skrivs klonkällan som 'default' i .hg/hgrc.\n"
 "\n"
 "    Se 'hg help urls' för mer information.\n"
 "    "
@@ -8782,40 +8796,42 @@ msgid ""
 msgstr ""
 
 msgid "dirstate branch not accessible"
-msgstr ""
+msgstr "dirstate-grenen inte åtkomlig"
 
 msgid "can only share local repositories"
-msgstr ""
+msgstr "kan bara dela lokala arkiv"
 
 msgid "destination already exists"
-msgstr ""
+msgstr "destinationen finns redan"
 
 msgid "updating working directory\n"
-msgstr ""
+msgstr "uppdaterar arbetskatalog\n"
 
 #, python-format
 msgid "destination directory: %s\n"
-msgstr ""
+msgstr "destinationskatalog: %s\n"
 
 #, python-format
 msgid "destination '%s' already exists"
-msgstr ""
+msgstr "destinationen '%s' finns redan"
 
 #, python-format
 msgid "destination '%s' is not empty"
-msgstr ""
+msgstr "destinationen '%s är inte tom"
 
 msgid ""
 "src repository does not support revision lookup and so doesn't support clone "
 "by revision"
 msgstr ""
+"källarkivet stödjer inte revisionsuppslag, och stödjer därför inte kloning "
+"av angivna revisioner"
 
 msgid "clone from remote to remote not supported"
-msgstr ""
+msgstr "kloning från fjärr till fjärr stödjs inte"
 
 #, python-format
 msgid "updating to branch %s\n"
-msgstr ""
+msgstr "uppdaterar till grenen %s\n"
 
 #, python-format
 msgid ""
@@ -9140,12 +9156,11 @@ msgstr "avbryter: push skapar nya fjärrhuvuden på grenen '%s'!\n"
 msgid "abort: push creates new remote heads!\n"
 msgstr "avbryter: push skapar nya fjärrhuvuden!\n"
 
+msgid "(you should pull and merge or use push -f to force)\n"
+msgstr "(du kan dra och sammanfoga eller använda push -f för att tvinga)\n"
+
 msgid "(did you forget to merge? use push -f to force)\n"
 msgstr "(glömde du att sammanfoga? använd push -f för att tvinga)\n"
-
-msgid "(you should pull and merge or use push -f to force)\n"
-msgstr ""
-"(du kan dra och sammanfoga eller eller använda push -f för att tvinga)\n"
 
 #, python-format
 msgid "abort: push creates new remote branches: %s!\n"
@@ -9883,14 +9898,14 @@ msgstr "kontrollerar manifest\n"
 
 #, python-format
 msgid "%s not in changesets"
-msgstr ""
+msgstr "%s inte i ändringarna"
 
 msgid "file without name in manifest"
-msgstr ""
+msgstr "fil utan namn i manifest"
 
 #, python-format
 msgid "reading manifest delta %s"
-msgstr ""
+msgstr "läser manifestdelta %s"
 
 msgid "crosschecking files in changesets and manifests\n"
 msgstr "korskontrollerar filer i ändringar och manifest\n"
@@ -9900,63 +9915,63 @@ msgstr "korskontrollerar"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
-msgstr ""
+msgstr "ändring refererar till okänt manifest %s"
 
 msgid "in changeset but not in manifest"
-msgstr ""
+msgstr "i ändring men inte i manifest"
 
 msgid "in manifest but not in changeset"
-msgstr ""
+msgstr "i manifest men inte i ändring"
 
 msgid "checking files\n"
 msgstr "kontrollerar filer\n"
 
 #, python-format
 msgid "cannot decode filename '%s'"
-msgstr ""
+msgstr "kan inte avkoda filnamnet '%s'"
 
 #, python-format
 msgid "broken revlog! (%s)"
-msgstr ""
+msgstr "skadad revlog! (%s)"
 
 msgid "missing revlog!"
-msgstr ""
+msgstr "saknad revlog!"
 
 #, python-format
 msgid "%s not in manifests"
-msgstr ""
+msgstr "%s inte i manifest"
 
 #, python-format
 msgid "unpacked size is %s, %s expected"
-msgstr ""
+msgstr "uppackad storlek är %s, %s förväntades"
 
 #, python-format
 msgid "unpacking %s"
-msgstr ""
+msgstr "packar upp %s"
 
 #, python-format
 msgid "warning: copy source of '%s' not in parents of %s"
-msgstr ""
+msgstr "varning: kopieringskällan för '%s' inte i föräldrar till %s"
 
 #, python-format
 msgid "empty or missing copy source revlog %s:%s"
-msgstr ""
+msgstr "tom eller saknar kopieringskälla för revlog %s:%s"
 
 #, python-format
 msgid "warning: %s@%s: copy source revision is nullid %s:%s\n"
-msgstr ""
+msgstr "varning: %s@%s: kopieringskällrevision är nullid %s:%s\n"
 
 #, python-format
 msgid "checking rename of %s"
-msgstr ""
+msgstr "kontrollerar namnbytet på %s"
 
 #, python-format
 msgid "%s in manifests not found"
-msgstr ""
+msgstr "%s i manifest hittades inte"
 
 #, python-format
 msgid "warning: orphan revlog '%s'"
-msgstr ""
+msgstr "varning: övergiven revlog '%s'"
 
 #, python-format
 msgid "%d files, %d changesets, %d total revisions\n"
@@ -9964,15 +9979,15 @@ msgstr "%d filer, %d ändringar, %d totala revisioner\n"
 
 #, python-format
 msgid "%d warnings encountered!\n"
-msgstr ""
+msgstr "%d varningar påträffades!\n"
 
 #, python-format
 msgid "%d integrity errors encountered!\n"
-msgstr ""
+msgstr "%d integritetsfel påträffades!\n"
 
 #, python-format
 msgid "(first damaged changeset appears to be %d)\n"
-msgstr ""
+msgstr "(första skadade ändringen verkar vara %d)\n"
 
 msgid "user name not available - set USERNAME environment variable"
-msgstr ""
+msgstr "användarnamnet är inte tillgängligt - sätt miljövariabeln USERNAME"
