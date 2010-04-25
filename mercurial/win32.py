@@ -16,7 +16,7 @@ used.
 import win32api
 
 import errno, os, sys, pywintypes, win32con, win32file, win32process
-import winerror, win32gui
+import winerror, win32gui, win32console
 import osutil, encoding
 from win32com.shell import shell, shellcon
 
@@ -189,3 +189,16 @@ def hidewindow():
 
     pid =  win32process.GetCurrentProcessId()
     win32gui.EnumWindows(callback, pid)
+
+def termwidth_():
+    try:
+        # Query stderr to avoid problems with redirections
+        screenbuf = win32console.GetStdHandle(win32console.STD_ERROR_HANDLE)
+        try:
+            window = screenbuf.GetConsoleScreenBufferInfo()['Window']
+            width = window.Right - window.Left
+            return width
+        finally:
+            screenbuf.Detach()
+    except pywintypes.error:
+        return 79
