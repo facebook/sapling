@@ -94,6 +94,8 @@ class convert_git(converter_source):
                 self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
                 changes.append((f, h))
             entry = None
+        if fh.close():
+            raise util.Abort(_('cannot read changes in %s') % version)
         return (changes, {})
 
     def getcommit(self, version):
@@ -144,6 +146,8 @@ class convert_git(converter_source):
                 continue
             tag = tag[len(prefix):-3]
             tags[tag] = node
+        if fh.close():
+            raise util.Abort(_('cannot read tags from %s') % self.path)
 
         return tags
 
@@ -156,11 +160,11 @@ class convert_git(converter_source):
                     continue
                 m, f = l[:-1].split("\t")
                 changes.append(f)
-            fh.close()
         else:
             fh = self.gitopen('git diff-tree --name-only --root -r %s "%s^%s" --'
                              % (version, version, i + 1))
             changes = [f.rstrip('\n') for f in fh]
-            fh.close()
+        if fh.close():
+            raise util.Abort(_('cannot read changes in %s') % version)
 
         return changes
