@@ -181,3 +181,10 @@ debugformat('containers (verbose debug)', containers, 60,
 
 roles = """Please see :hg:`add`."""
 debugformat('roles', roles, 60)
+
+
+sections = """
+A Somewhat Wide Section Header
+------------------------------
+"""
+debugformat('sections', sections, 20)
