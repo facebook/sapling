@@ -30,6 +30,11 @@ class convert_git(converter_source):
         def gitopen(self, s):
             return util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
 
+    def gitread(self, s):
+        fh = self.gitopen(s)
+        data = fh.read()
+        return data, fh.close()
+
     def __init__(self, ui, path, rev=None):
         super(convert_git, self).__init__(ui, path, rev=rev)
 
@@ -44,17 +49,22 @@ class convert_git(converter_source):
 
     def getheads(self):
         if not self.rev:
-            fh = self.gitopen('git rev-parse --branches --remotes')
-            return fh.read().splitlines()
+            heads, ret = self.gitread('git rev-parse --branches --remotes')
+            heads = heads.splitlines()
         else:
-            fh = self.gitopen("git rev-parse --verify %s" % self.rev)
-            return [fh.read()[:-1]]
+            heads, ret = self.gitread("git rev-parse --verify %s" % self.rev)
+            heads = [heads[:-1]]
+        if ret:
+            raise util.Abort(_('cannot retrieve git heads'))
+        return heads
 
     def catfile(self, rev, type):
         if rev == "0" * 40:
             raise IOError()
-        fh = self.gitopen("git cat-file %s %s" % (type, rev))
-        return fh.read()
+        data, ret = self.gitread("git cat-file %s %s" % (type, rev))
+        if ret:
+            raise util.Abort(_('cannot read %r object at %s') % (type, rev))
+        return data
 
     def getfile(self, name, rev):
         return self.catfile(rev, "blob")
