@@ -110,6 +110,11 @@ the configuration file in which the ``%include`` directive is found.
 A line with ``%unset name`` will remove ``name`` from the current
 section, if it has been set previously.
 
+The values are either free-form text strings or Boolean values.
+Boolean values can be set to true using any of "1", "yes", "true", or
+"on" and to false using "0", "no", "false", or "off" (all case
+insensitive).
+
 
 Sections
 --------
