@@ -111,10 +111,18 @@ A line with ``%unset name`` will remove ``name`` from the current
 section, if it has been set previously.
 
 The values are either free-form text strings, lists of text strings,
-or Boolean values. Lists are split on whitespace and commas. Boolean
-values can be set to true using any of "1", "yes", "true", or "on" and
-to false using "0", "no", "false", or "off" (all case insensitive).
+or Boolean values. Boolean values can be set to true using any of "1",
+"yes", "true", or "on" and to false using "0", "no", "false", or "off"
+(all case insensitive).
 
+List values are separated by whitespace or comma, except when values are
+placed in double quotation marks::
+
+  allow_read = "John Doe, PhD", brian, betty
+
+Quotation marks can be escaped by prefixing them with a backslash. Only
+quotation marks at the beginning of a word is counted as a quotation
+(e.g., ``foo"bar baz`` is the list of ``foo"bar`` and ``baz``).
 
 Sections
 --------
@@ -867,20 +875,18 @@ Web interface configuration.
     push is not allowed. If the special value ``*``, any remote user can
     push, including unauthenticated users. Otherwise, the remote user
     must have been authenticated, and the authenticated user name must
-    be present in this list (separated by whitespace or ``,``). The
-    contents of the allow_push list are examined after the deny_push
-    list.
+    be present in this list. The contents of the allow_push list are
+    examined after the deny_push list.
 ``allow_read``
     If the user has not already been denied repository access due to
     the contents of deny_read, this list determines whether to grant
     repository access to the user. If this list is not empty, and the
-    user is unauthenticated or not present in the list (separated by
-    whitespace or ``,``), then access is denied for the user. If the
-    list is empty or not set, then access is permitted to all users by
-    default. Setting allow_read to the special value ``*`` is equivalent
-    to it not being set (i.e. access is permitted to all users). The
-    contents of the allow_read list are examined after the deny_read
-    list.
+    user is unauthenticated or not present in the list, then access is
+    denied for the user. If the list is empty or not set, then access
+    is permitted to all users by default. Setting allow_read to the
+    special value ``*`` is equivalent to it not being set (i.e. access
+    is permitted to all users). The contents of the allow_read list are
+    examined after the deny_read list.
 ``allowzip``
     (DEPRECATED) Whether to allow .zip downloading of repository
     revisions. Default is False. This feature creates temporary files.
@@ -915,17 +921,15 @@ Web interface configuration.
     Whether to deny pushing to the repository. If empty or not set,
     push is not denied. If the special value ``*``, all remote users are
     denied push. Otherwise, unauthenticated users are all denied, and
-    any authenticated user name present in this list (separated by
-    whitespace or ``,``) is also denied. The contents of the deny_push
-    list are examined before the allow_push list.
+    any authenticated user name present in this list is also denied. The
+    contents of the deny_push list are examined before the allow_push list.
 ``deny_read``
     Whether to deny reading/viewing of the repository. If this list is
     not empty, unauthenticated users are all denied, and any
-    authenticated user name present in this list (separated by
-    whitespace or ``,``) is also denied access to the repository. If set
-    to the special value ``*``, all remote users are denied access
-    (rarely needed ;). If deny_read is empty or not set, the
-    determination of repository access depends on the presence and
+    authenticated user name present in this list is also denied access to
+    the repository. If set to the special value ``*``, all remote users
+    are denied access (rarely needed ;). If deny_read is empty or not set,
+    the determination of repository access depends on the presence and
     content of the allow_read list (see description). If both
     deny_read and allow_read are empty or not set, then access is
     permitted to all users by default. If the repository is being

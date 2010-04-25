@@ -154,11 +154,82 @@ class ui(object):
 
     def configlist(self, section, name, default=None, untrusted=False):
         """Return a list of comma/space separated strings"""
+
+        def _parse_plain(parts, s, offset):
+            whitespace = False
+            while offset < len(s) and (s[offset].isspace() or s[offset] == ','):
+                whitespace = True
+                offset += 1
+            if offset >= len(s):
+                return None, parts, offset
+            if whitespace:
+                parts.append('')
+            if s[offset] == '"' and not parts[-1]:
+                return _parse_quote, parts, offset + 1
+            elif s[offset] == '"' and parts[-1][-1] == '\\':
+                parts[-1] = parts[-1][:-1] + s[offset]
+                return _parse_plain, parts, offset + 1
+            parts[-1] += s[offset]
+            return _parse_plain, parts, offset + 1
+
+        def _parse_quote(parts, s, offset):
+            if offset < len(s) and s[offset] == '"': # ""
+                parts.append('')
+                offset += 1
+                while offset < len(s) and (s[offset].isspace() or
+                        s[offset] == ','):
+                    offset += 1
+                return _parse_plain, parts, offset
+
+            while offset < len(s) and s[offset] != '"':
+                if s[offset] == '\\' and offset + 1 < len(s) and s[offset + 1] == '"':
+                    offset += 1
+                    parts[-1] += '"'
+                else:
+                    parts[-1] += s[offset]
+                offset += 1
+
+            if offset >= len(s):
+                real_parts = _configlist(parts[-1])
+                if not real_parts:
+                    parts[-1] = '"'
+                else:
+                    real_parts[0] = '"' + real_parts[0]
+                    parts = parts[:-1]
+                    parts.extend(real_parts)
+                return None, parts, offset
+
+            offset += 1
+            while offset < len(s) and s[offset] in [' ', ',']:
+                offset += 1
+
+            if offset < len(s):
+                if offset + 1 == len(s) and s[offset] == '"':
+                    parts[-1] += '"'
+                    offset += 1
+                else:
+                    parts.append('')
+            else:
+                return None, parts, offset
+
+            return _parse_plain, parts, offset
+
+        def _configlist(s):
+            s = s.rstrip(' ,')
+            if not s:
+                return None
+            parser, parts, offset = _parse_plain, [''], 0
+            while parser:
+                parser, parts, offset = parser(parts, s, offset)
+            return parts
+
         result = self.config(section, name, untrusted=untrusted)
         if result is None:
             result = default or []
         if isinstance(result, basestring):
-            result = result.replace(",", " ").split()
+            result = _configlist(result)
+            if result is None:
+                result = default or []
         return result
 
     def has_section(self, section, untrusted=False):
