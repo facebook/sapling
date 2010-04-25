@@ -225,6 +225,8 @@ def prunecontainers(blocks, keep):
     return blocks, pruned
 
 
+_sectionre = re.compile(r"""^([-=`:.'"~^_*+#])\1+$""")
+
 def findsections(blocks):
     """Finds sections.
 
@@ -240,7 +242,8 @@ def findsections(blocks):
         # +------------------------------+
         if (block['type'] == 'paragraph' and
             len(block['lines']) == 2 and
-            block['lines'][1] == '-' * len(block['lines'][0])):
+            len(block['lines'][0]) == len(block['lines'][1]) and
+            _sectionre.match(block['lines'][1])):
             block['underline'] = block['lines'][1][0]
             block['type'] = 'section'
             del block['lines'][1]

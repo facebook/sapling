@@ -184,8 +184,14 @@ debugformat('roles', roles, 60)
 
 
 sections = """
-A Somewhat Wide Section Header
-------------------------------
+Title
+=====
+
+Section
+-------
+
+Subsection
+''''''''''
 
 Markup: ``foo`` and :hg:`help`
 ------------------------------
