@@ -16,7 +16,7 @@ class convert_git(converter_source):
     # cannot remove environment variable. Just assume none have
     # both issues.
     if hasattr(os, 'unsetenv'):
-        def gitcmd(self, s):
+        def gitopen(self, s):
             prevgitdir = os.environ.get('GIT_DIR')
             os.environ['GIT_DIR'] = self.path
             try:
@@ -27,7 +27,7 @@ class convert_git(converter_source):
                 else:
                     os.environ['GIT_DIR'] = prevgitdir
     else:
-        def gitcmd(self, s):
+        def gitopen(self, s):
             return util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
 
     def __init__(self, ui, path, rev=None):
@@ -44,16 +44,16 @@ class convert_git(converter_source):
 
     def getheads(self):
         if not self.rev:
-            fh = self.gitcmd('git rev-parse --branches --remotes')
+            fh = self.gitopen('git rev-parse --branches --remotes')
             return fh.read().splitlines()
         else:
-            fh = self.gitcmd("git rev-parse --verify %s" % self.rev)
+            fh = self.gitopen("git rev-parse --verify %s" % self.rev)
             return [fh.read()[:-1]]
 
     def catfile(self, rev, type):
         if rev == "0" * 40:
             raise IOError()
-        fh = self.gitcmd("git cat-file %s %s" % (type, rev))
+        fh = self.gitopen("git cat-file %s %s" % (type, rev))
         return fh.read()
 
     def getfile(self, name, rev):
@@ -64,7 +64,7 @@ class convert_git(converter_source):
 
     def getchanges(self, version):
         self.modecache = {}
-        fh = self.gitcmd("git diff-tree -z --root -m -r %s" % version)
+        fh = self.gitopen("git diff-tree -z --root -m -r %s" % version)
         changes = []
         seen = set()
         entry = None
@@ -123,7 +123,7 @@ class convert_git(converter_source):
 
     def gettags(self):
         tags = {}
-        fh = self.gitcmd('git ls-remote --tags "%s"' % self.path)
+        fh = self.gitopen('git ls-remote --tags "%s"' % self.path)
         prefix = 'refs/tags/'
         for line in fh:
             line = line.strip()
@@ -140,7 +140,7 @@ class convert_git(converter_source):
     def getchangedfiles(self, version, i):
         changes = []
         if i is None:
-            fh = self.gitcmd("git diff-tree --root -m -r %s" % version)
+            fh = self.gitopen("git diff-tree --root -m -r %s" % version)
             for l in fh:
                 if "\t" not in l:
                     continue
@@ -148,7 +148,7 @@ class convert_git(converter_source):
                 changes.append(f)
             fh.close()
         else:
-            fh = self.gitcmd('git diff-tree --name-only --root -r %s "%s^%s" --'
+            fh = self.gitopen('git diff-tree --name-only --root -r %s "%s^%s" --'
                              % (version, version, i + 1))
             changes = [f.rstrip('\n') for f in fh]
             fh.close()
