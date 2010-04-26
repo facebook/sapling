@@ -1252,35 +1252,6 @@ def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')
 
-def termwidth():
-    if 'COLUMNS' in os.environ:
-        try:
-            return int(os.environ['COLUMNS'])
-        except ValueError:
-            pass
-    try:
-        import termios, array, fcntl
-        for dev in (sys.stderr, sys.stdout, sys.stdin):
-            try:
-                try:
-                    fd = dev.fileno()
-                except AttributeError:
-                    continue
-                if not os.isatty(fd):
-                    continue
-                arri = fcntl.ioctl(fd, termios.TIOCGWINSZ, '\0' * 8)
-                return array.array('h', arri)[1]
-            except ValueError:
-                pass
-            except IOError, e:
-                if e[0] == errno.EINVAL:
-                    pass
-                else:
-                    raise
-    except ImportError:
-        pass
-    return 80
-
 def wrap(line, hangindent, width=None):
     if width is None:
         width = termwidth() - 2
@@ -1364,3 +1335,11 @@ except NameError:
             if not i:
                 return False
         return True
+
+def termwidth():
+    if 'COLUMNS' in os.environ:
+        try:
+            return int(os.environ['COLUMNS'])
+        except ValueError:
+            pass
+    return termwidth_()
