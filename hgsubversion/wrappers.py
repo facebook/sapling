@@ -270,7 +270,7 @@ def pull(repo, source, heads=[], force=False):
                             msg = [s.strip() for s in msg.splitlines() if s][0]
                         w = hgutil.termwidth()
                         bits = (r.revnum, r.author, msg)
-                        ui.status(('[r%d] %s: %s\n' % bits)[:w])
+                        ui.status(('[r%d] %s: %s' % bits)[:w] + '\n')
                         util.progress(ui, 'pull', r.revnum - start, total=total)
 
                         meta.save_tbdelta(tbdelta)
