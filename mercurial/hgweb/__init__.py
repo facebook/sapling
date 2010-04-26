@@ -8,8 +8,8 @@
 
 import hgweb_mod, hgwebdir_mod
 
-def hgweb(repo, name=None):
-    return hgweb_mod.hgweb(repo, name=name)
+def hgweb(repo, name=None, baseui=None):
+    return hgweb_mod.hgweb(repo, name=name, baseui=baseui)
 
 def hgwebdir(config, baseui=None):
     return hgwebdir_mod.hgwebdir(config, baseui=baseui)
