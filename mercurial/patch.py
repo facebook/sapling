@@ -910,16 +910,17 @@ def parsefilename(str):
     return s[:i]
 
 def selectfile(afile_orig, bfile_orig, hunk, strip):
-    def pathstrip(path, count=1):
+    def pathstrip(path, strip):
         pathlen = len(path)
         i = 0
-        if count == 0:
+        if strip == 0:
             return '', path.rstrip()
+        count = strip
         while count > 0:
             i = path.find('/', i)
             if i == -1:
-                raise PatchError(_("unable to strip away %d dirs from %s") %
-                                 (count, path))
+                raise PatchError(_("unable to strip away %d of %d dirs from %s") %
+                                 (count, strip, path))
             i += 1
             # consume '//' in the path
             while i < pathlen - 1 and path[i] == '/':
