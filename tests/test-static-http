@@ -43,6 +43,8 @@ cat bar
 cd ../remote
 echo baz > quux
 hg commit -A -mtest2 -d '100000000 0'
+# check for HTTP opener failures when cachefile does not exist
+rm .hg/*.cache
 
 cd ../local
 echo '[hooks]' >> .hg/hgrc
@@ -55,8 +57,12 @@ echo more foo >> bar
 hg commit -m"test" -d "100000000 0"
 hg push | sed -e "s,:$HGPORT/,:\$HGPORT/,"
 
-echo '% test with "/" URI (issue 747)'
+echo '% trying clone -r'
 cd ..
+hg clone -r donotexist static-http://localhost:$HGPORT/remote local0 | sed -e "s,:$HGPORT/,:\$HGPORT/,"
+hg clone -r 0 static-http://localhost:$HGPORT/remote local0 | sed -e "s,:$HGPORT/,:\$HGPORT/,"
+
+echo '% test with "/" URI (issue 747)'
 hg init
 echo a > a
 hg add a

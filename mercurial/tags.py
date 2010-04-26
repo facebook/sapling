@@ -197,6 +197,8 @@ def _readtagcache(ui, repo):
 
     try:
         cachefile = repo.opener('tags.cache', 'r')
+        # force reading the file for static-http
+        cachelines = iter(cachefile)
         _debug(ui, 'reading tag cache from %s\n' % cachefile.name)
     except IOError:
         cachefile = None
@@ -217,7 +219,7 @@ def _readtagcache(ui, repo):
     cacheheads = []                     # list of headnode
     cachefnode = {}                     # map headnode to filenode
     if cachefile:
-        for line in cachefile:
+        for line in cachelines:
             if line == "\n":
                 break
             line = line.rstrip().split()
@@ -237,7 +239,7 @@ def _readtagcache(ui, repo):
     # have been destroyed by strip or rollback.)
     if cacheheads and cacheheads[0] == tipnode and cacherevs[0] == tiprev:
         _debug(ui, "tag cache: tip unchanged\n")
-        tags = _readtags(ui, repo, cachefile, cachefile.name)
+        tags = _readtags(ui, repo, cachelines, cachefile.name)
         cachefile.close()
         return (None, None, tags, False)
     if cachefile:
