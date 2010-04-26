@@ -1,0 +1,46 @@
+Mercurial's internal web server, hgweb, can serve either a single
+repository, or a collection of them. In the latter case, a special
+configuration file can be used to specify the repository paths to use
+and global web configuration options.
+
+This file uses the same syntax as hgrc configuration files, but only
+the following sections are recognized:
+
+  - web
+  - paths
+  - collections
+
+The ``web`` section can specify all the settings described in the web
+section of the hgrc documentation.
+
+The ``paths`` section provides mappings of physical repository
+paths to virtual ones. For instance::
+
+  [paths]
+  projects/a = /foo/bar
+  projects/b = /baz/quux
+  web/root = /real/root/*
+  / = /real/root2/*
+  virtual/root2 = /real/root2/**
+
+- The first two entries make two repositories in different directories
+  appear under the same directory in the web interface
+- The third entry maps every Mercurial repository found in '/real/root'
+  into 'web/root'. This format is preferred over the [collections] one,
+  since using absolute paths as configuration keys is not supported on every
+  platform (especially on Windows).
+- The fourth entry is a special case mapping all repositories in
+  '/real/root2' in the root of the virtual directory.
+- The fifth entry recursively finds all repositories under the real
+  root, and maps their relative paths under the virtual root.
+
+The ``collections`` section provides mappings of trees of physical
+repositories paths to virtual ones, though the paths syntax is generally
+preferred. For instance::
+
+  [collections]
+  /foo = /foo
+
+Here, the left side will be stripped off all repositories found in the
+right side. Thus ``/foo/bar`` and ``foo/quux/baz`` will be listed as
+``bar`` and ``quux/baz`` respectively.
