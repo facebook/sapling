@@ -110,10 +110,10 @@ examine changes to 'dir/a.txt'? [Ynsfdaq?]
 
 % after qrecord a.patch 'tip'
 changeset:   1:5d1ca63427ee
-tag:         qtip
-tag:         tip
 tag:         a.patch
 tag:         qbase
+tag:         qtip
+tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     aaa
@@ -185,9 +185,9 @@ record change 3/3 to 'dir/a.txt'? [Ynsfdaq?]
 
 % after qrecord b.patch 'tip'
 changeset:   2:b056198bf878
+tag:         b.patch
 tag:         qtip
 tag:         tip
-tag:         b.patch
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     bbb

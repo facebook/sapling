@@ -49,9 +49,9 @@ abort: '\n' cannot be used in a tag name
 abort: ':' cannot be used in a tag name
 % cloning local tags
 changeset:   0:0acdaf898367
-tag:         foobar
 tag:         bleah
 tag:         bleah0
+tag:         foobar
 user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     test

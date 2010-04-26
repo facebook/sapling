@@ -1,5 +1,5 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  3 P1 tags: qtip tip f2.patch
+@  3 P1 tags: f2.patch qtip tip
 |
 o  2 P0 tags: f.patch qbase
 |
@@ -34,7 +34,7 @@ adding manifests
 adding file changes
 added 2 changesets with 2 changes to 1 files
 rebase completed
-@  3 P1 tags: qtip tip f2.patch
+@  3 P1 tags: f2.patch qtip tip
 |
 o  2 P0 tags: f.patch qbase
 |

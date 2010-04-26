@@ -315,6 +315,8 @@ class localrepository(repo.repository):
             self.nodetagscache = {}
             for t, n in self.tags().iteritems():
                 self.nodetagscache.setdefault(n, []).append(t)
+            for tags in self.nodetagscache.itervalues():
+                tags.sort()
         return self.nodetagscache.get(node, [])
 
     def _branchtags(self, partial, lrev):

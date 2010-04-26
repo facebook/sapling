@@ -13,7 +13,7 @@ adding manifests
 adding file changes
 added 2 changesets with 2 changes to 2 files
 rebase completed
-@  3 P0 tags: p0.patch qtip tip qbase
+@  3 P0 tags: p0.patch qbase qtip tip
 |
 o  2 P1 tags: qparent
 |

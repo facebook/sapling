@@ -6,10 +6,10 @@ applying email
 now at: email
 % hg tip -v
 changeset:   0:1a706973a7d8
-tag:         qtip
-tag:         tip
 tag:         email
 tag:         qbase
+tag:         qtip
+tag:         tip
 user:        Username in patch <test@example.net>
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       x
