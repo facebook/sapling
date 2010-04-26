@@ -11,6 +11,7 @@ foo.bar=a\nb\nc\nde\nfg
 foo.baz=bif cb
 hg: config error at $HGRCPATH:1: cannot include /no-such-file (No such file or directory)
 % customized hgrc
+read config from: .../.hgrc
 .../.hgrc:13: alias.log=log -g
 .../.hgrc:11: defaults.identify=-n
 .../.hgrc:2: ui.debug=true
@@ -22,6 +23,7 @@ hg: config error at $HGRCPATH:1: cannot include /no-such-file (No such file or d
 .../.hgrc:8: ui.style=~/.hgstyle
 .../.hgrc:9: ui.logtemplate={node}
 % plain hgrc
+read config from: .../.hgrc
 none: ui.traceback=True
 none: ui.verbose=False
 none: ui.debug=True

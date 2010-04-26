@@ -873,6 +873,8 @@ def showconfig(ui, repo, *values, **opts):
     for each config item.
     """
 
+    for f in util.rcpath():
+        ui.debug(_('read config from: %s\n') % f)
     untrusted = bool(opts.get('untrusted'))
     if values:
         if len([v for v in values if '.' in v]) > 1:
