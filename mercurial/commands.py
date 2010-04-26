@@ -2938,8 +2938,9 @@ def serve(ui, repo, **opts):
         if repo and repo.ui != baseui:
             repo.ui.setconfig("web", o, val)
 
-    if opts.get('webdir_conf'):
-        app = hgwebdir_mod.hgwebdir(opts['webdir_conf'], baseui=ui)
+    o = opts.get('web_conf') or opts.get('webdir_conf')
+    if o:
+        app = hgwebdir_mod.hgwebdir(o, baseui=ui)
     elif repo is not None:
         app = hgweb_mod.hgweb(hg.repository(repo.ui, repo.root))
     else:
@@ -3851,8 +3852,10 @@ table = {
            _('prefix path to serve from (default: server root)')),
           ('n', 'name', '',
            _('name to show in web pages (default: working directory)')),
-          ('', 'webdir-conf', '', _('name of the webdir config file'
+          ('', 'web-conf', '', _('name of the hgweb config file'
                                     ' (serve more than one repository)')),
+          ('', 'webdir-conf', '', _('name of the hgweb config file'
+                                    ' (DEPRECATED)')),
           ('', 'pid-file', '', _('name of file to write process ID to')),
           ('', 'stdio', None, _('for remote clients')),
           ('t', 'templates', '', _('web templates to use')),
