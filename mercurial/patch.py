@@ -1153,8 +1153,8 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
     rejects = 0
     err = 0
     current_file = None
-    gitpatches = None
-    opener = util.opener(os.getcwd())
+    cwd = os.getcwd()
+    opener = util.opener(cwd)
 
     def closefile():
         if not current_file:
@@ -1166,8 +1166,7 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
         if state == 'hunk':
             if not current_file:
                 continue
-            current_hunk = values
-            ret = current_file.apply(current_hunk)
+            ret = current_file.apply(values)
             if ret >= 0:
                 changed.setdefault(current_file.fname, None)
                 if ret > 0:
@@ -1186,13 +1185,11 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
                                            missing=missing, eolmode=eolmode)
             except PatchError, err:
                 ui.warn(str(err) + '\n')
-                current_file, current_hunk = None, None
+                current_file = None
                 rejects += 1
                 continue
         elif state == 'git':
-            gitpatches = values
-            cwd = os.getcwd()
-            for gp in gitpatches:
+            for gp in values:
                 if gp.op in ('COPY', 'RENAME'):
                     copyfn(gp.oldpath, gp.path, cwd)
                 changed[gp.path] = gp
