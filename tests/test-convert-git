@@ -181,6 +181,6 @@ for root, dirs, files in os.walk('git-repo4/.git/objects'):
 EOF
 python damage.py
 hg convert git-repo4 git-repo4-broken-hg 2>&1 | \
-    sed 's/fatal:.*/fatal: git error/g'
+    grep 'abort:' | sed 's/abort:.*/abort:/g'
 
 true
