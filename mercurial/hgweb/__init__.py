@@ -8,9 +8,9 @@
 
 import hgweb_mod, hgwebdir_mod
 
-def hgweb(*args, **kwargs):
-    return hgweb_mod.hgweb(*args, **kwargs)
+def hgweb(repo, name=None):
+    return hgweb_mod.hgweb(repo, name=name)
 
-def hgwebdir(*args, **kwargs):
-    return hgwebdir_mod.hgwebdir(*args, **kwargs)
+def hgwebdir(config, baseui=None):
+    return hgwebdir_mod.hgwebdir(config, baseui=baseui)
 
