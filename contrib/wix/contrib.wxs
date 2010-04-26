@@ -16,8 +16,8 @@
         <Component Id="contrib" Guid="$(var.contrib.guid)">
           <File Name="bash_completion" KeyPath="yes" />
           <File Name="hgk" />
-          <File Name="hgwebdir.fcgi" />
-          <File Name="hgwebdir.wsgi" />
+          <File Name="hgweb.fcgi" />
+          <File Name="hgweb.wsgi" />
           <File Name="logo-droplets.svg" />
           <File Name="mercurial.el" />
           <File Name="sample.hgrc" />
