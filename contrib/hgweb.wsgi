@@ -1,0 +1,16 @@
+# An example WSGI for use with mod_wsgi, edit as necessary
+
+# Path to repo or hgweb config to serve (see 'hg help hgweb')
+config = "/path/to/repo/or/config"
+
+# Uncomment and adjust if Mercurial is not installed system-wide:
+#import sys; sys.path.insert(0, "/path/to/python/lib")
+
+# Uncomment to send python tracebacks to the browser if an error occurs:
+#import cgitb; cgitb.enable()
+
+# enable demandloading to reduce startup time
+from mercurial import demandimport; demandimport.enable()
+
+from mercurial.hgweb import hgweb
+application = hgweb(config)
