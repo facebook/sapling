@@ -128,10 +128,4 @@ addfoo
 initializing destination git-repo4-sourcesort-hg repository
 abort: --sourcesort is not supported by this data source
 % damage git repository and convert again
-fatal: git error
-initializing destination git-repo4-broken-hg repository
-scanning source...
-sorting...
-converting...
-1 addfoo
-abort: cannot read changes in 6a101ac3f6d8b2524a64295ffd9be87ed927bfeb
+abort:
