@@ -54,7 +54,21 @@ is. ::
 
 from mercurial.i18n import _
 from mercurial import util, match
-import getpass, urllib
+import getpass, urllib, grp
+
+def _getusers(group):
+    return grp.getgrnam(group).gr_mem
+
+def _usermatch(user, usersorgroups):
+
+    if usersorgroups == '*':
+        return True
+
+    for ug in usersorgroups.replace(',', ' ').split():
+        if user == ug or ug.find('@') == 0 and user in _getusers(ug[1:]):
+            return True
+
+    return False
 
 def buildmatch(ui, repo, user, key):
     '''return tuple of (match function, list enabled).'''
@@ -63,7 +77,7 @@ def buildmatch(ui, repo, user, key):
         return None
 
     pats = [pat for pat, users in ui.configitems(key)
-            if users == '*' or user in users.replace(',', ' ').split()]
+            if _usermatch(user, users)]
     ui.debug('acl: %s enabled, %d entries for user %s\n' %
              (key, len(pats), user))
     if pats:
