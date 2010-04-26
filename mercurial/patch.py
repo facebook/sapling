@@ -347,8 +347,6 @@ def readgitpatch(lr):
                 gp.path = line[8:]
             elif line.startswith('deleted file'):
                 gp.op = 'DELETE'
-                # is the deleted file a symlink?
-                gp.setmode(int(line[-6:], 8))
             elif line.startswith('new file mode '):
                 gp.op = 'ADD'
                 gp.setmode(int(line[-6:], 8))
@@ -1241,8 +1239,7 @@ def updatedir(ui, repo, patches, similarity=0):
             if gp.op == 'ADD' and not os.path.exists(dst):
                 flags = (isexec and 'x' or '') + (islink and 'l' or '')
                 repo.wwrite(gp.path, '', flags)
-            elif gp.op != 'DELETE':
-                util.set_flags(dst, islink, isexec)
+            util.set_flags(dst, islink, isexec)
     cmdutil.addremove(repo, cfiles, similarity=similarity)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
