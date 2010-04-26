@@ -2939,7 +2939,7 @@ def serve(ui, repo, **opts):
             repo.ui.setconfig("web", o, val)
 
     if opts.get('webdir_conf'):
-        app = hgwebdir_mod.hgwebdir(opts['webdir_conf'], ui)
+        app = hgwebdir_mod.hgwebdir(opts['webdir_conf'], baseui=ui)
     elif repo is not None:
         app = hgweb_mod.hgweb(hg.repository(repo.ui, repo.root))
     else:

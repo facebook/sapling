@@ -107,7 +107,7 @@ class hgwebzc(hgweb_mod.hgweb):
 
 class hgwebdirzc(hgwebdir_mod.hgwebdir):
     def __init__(self, conf, baseui=None):
-        super(hgwebdirzc, self).__init__(conf, baseui)
+        super(hgwebdirzc, self).__init__(conf, baseui=baseui)
         prefix = self.ui.config("web", "prefix", "").strip('/') + '/'
         for repo, path in self.repos:
             u = self.ui.copy()
