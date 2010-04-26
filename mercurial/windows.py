@@ -356,6 +356,13 @@ def spawndetached(args):
 def gethgcmd():
     return [sys.executable] + sys.argv[:1]
 
+def termwidth_():
+    # cmd.exe does not handle CR like a unix console, the CR is
+    # counted in the line length. On 80 columns consoles, if 80
+    # characters are written, the following CR won't apply on the
+    # current line but on the new one. Keep room for it.
+    return 79
+
 try:
     # override functions with win32 versions if possible
     from win32 import *
