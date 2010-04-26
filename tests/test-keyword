@@ -21,7 +21,7 @@ hg --quiet kwdemo "Branch = {branches}"
 
 cat <<EOF >> $HGRCPATH
 [keyword]
-* =
+** =
 b = ignore
 [hooks]
 commit=
@@ -153,6 +153,10 @@ echo % qgoto - should imply qpush
 hg qgoto mqtest.diff
 echo % cat
 cat c
+echo % hg cat
+hg cat c
+echo % keyword should not be expanded in filelog
+hg --config 'extensions.keyword=!' cat c
 echo % qpop and move on
 hg qpop
 

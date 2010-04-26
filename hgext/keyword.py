@@ -92,8 +92,7 @@ nokwcommands = ('add addremove annotate bundle copy export grep incoming init'
 
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
-restricted = ('merge record resolve qfold qimport qnew qpush qrefresh qrecord'
-              ' transplant')
+restricted = 'merge record qrecord resolve transplant'
 
 # provide cvs-like UTC date filter
 utcdate = lambda x: util.datestr((x[0], 0), '%Y/%m/%d %H:%M:%S')
