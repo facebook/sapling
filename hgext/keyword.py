@@ -66,11 +66,6 @@ history.
 To force expansion after enabling it, or a configuration change, run
 :hg:`kwexpand`.
 
-Also, when committing with the record extension or using mq's qrecord,
-be aware that keywords cannot be updated. Again, run :hg:`kwexpand` on
-the files in question to update keyword expansions after all changes
-have been checked in.
-
 Expansions spanning more than one line and incremental expansions,
 like CVS' $Log$, are not supported. A keyword template map "Log =
 {desc}" expands to the first line of the changeset description.
@@ -93,6 +88,9 @@ nokwcommands = ('add addremove annotate bundle copy export grep incoming init'
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
 restricted = 'merge record qrecord resolve transplant'
+
+# commands using dorecord
+recordcommands = 'record qrecord'
 
 # provide cvs-like UTC date filter
 utcdate = lambda x: util.datestr((x[0], 0), '%Y/%m/%d %H:%M:%S')
@@ -124,6 +122,7 @@ class kwtemplater(object):
         self.match = match.match(repo.root, '', [],
                                  kwtools['inc'], kwtools['exc'])
         self.restrict = kwtools['hgcmd'] in restricted.split()
+        self.record = kwtools['hgcmd'] in recordcommands.split()
 
         kwmaps = self.ui.configitems('keywordmaps')
         if kwmaps: # override default templates
@@ -161,11 +160,14 @@ class kwtemplater(object):
         Caveat: localrepository._link fails on Windows.'''
         return self.match(path) and not 'l' in flagfunc(path)
 
-    def overwrite(self, node, expand, candidates):
+    def overwrite(self, node, expand, candidates, recctx=None):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        ctx = self.repo[node]
+        if recctx is None:
+            ctx = self.repo[node]
+        else:
+            ctx = recctx
         mf = ctx.manifest()
-        if node is not None:     # commit
+        if node is not None:     # commit, record
             candidates = [f for f in ctx.files() if f in mf]
         candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
         if candidates:
@@ -173,8 +175,10 @@ class kwtemplater(object):
             msg = (expand and _('overwriting %s expanding keywords\n')
                    or _('overwriting %s shrinking keywords\n'))
             for f in candidates:
-                fp = self.repo.file(f)
-                data = fp.read(mf[f])
+                if recctx is None:
+                    data = self.repo.file(f).read(mf[f])
+                else:
+                    data = self.repo.wread(f)
                 if util.binary(data):
                     continue
                 if expand:
@@ -465,7 +469,8 @@ def reposetup(ui, repo):
         def kwcommitctx(self, ctx, error=False):
             n = super(kwrepo, self).commitctx(ctx, error)
             # no lock needed, only called from repo.commit() which already locks
-            kwt.overwrite(n, True, None)
+            if not kwt.record:
+                kwt.overwrite(n, True, None)
             return n
 
     # monkeypatches
@@ -492,6 +497,21 @@ def reposetup(ui, repo):
         kwt.match = util.never
         return orig(web, req, tmpl)
 
+    def kw_dorecord(orig, ui, repo, commitfunc, *pats, **opts):
+        '''Wraps record.dorecord expanding keywords after recording.'''
+        wlock = repo.wlock()
+        try:
+            # record returns 0 even when nothing has changed
+            # therefore compare nodes before and after
+            ctx = repo['.']
+            ret = orig(ui, repo, commitfunc, *pats, **opts)
+            recctx = repo['.']
+            if ctx != recctx:
+                kwt.overwrite('.',  True, None, recctx)
+            return ret
+        finally:
+            wlock.release()
+
     repo.__class__ = kwrepo
 
     extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
@@ -499,6 +519,11 @@ def reposetup(ui, repo):
         extensions.wrapfunction(patch, 'diff', kw_diff)
     for c in 'annotate changeset rev filediff diff'.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)
+    try:
+        record = extensions.find('record')
+        extensions.wrapfunction(record, 'dorecord', kw_dorecord)
+    except KeyError:
+        pass
 
 cmdtable = {
     'kwdemo':
