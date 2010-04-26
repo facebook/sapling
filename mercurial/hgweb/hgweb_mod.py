@@ -27,12 +27,12 @@ class hgweb(object):
                 u = baseui.copy()
             else:
                 u = ui.ui()
-            u.setconfig('ui', 'report_untrusted', 'off')
-            u.setconfig('ui', 'interactive', 'off')
             self.repo = hg.repository(u, repo)
         else:
             self.repo = repo
 
+        self.repo.ui.setconfig('ui', 'report_untrusted', 'off')
+        self.repo.ui.setconfig('ui', 'interactive', 'off')
         hook.redirect(True)
         self.mtime = -1
         self.reponame = name
