@@ -29,7 +29,7 @@ and followed by ``name = value`` entries::
   username = Firstname Lastname <firstname.lastname@example.net>
   verbose = True
 
-This above entries will be referred to as ``ui.username`` and
+The above entries will be referred to as ``ui.username`` and
 ``ui.verbose``, respectively. Please see the hgrc man page for a full
 description of the possible configuration values:
 
