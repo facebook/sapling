@@ -303,6 +303,9 @@ class patchmeta(object):
         isexec = mode & 0100
         self.mode = (islink, isexec)
 
+    def __repr__(self):
+        return "<patchmeta %s %r>" % (self.op, self.path)
+
 def readgitpatch(lr):
     """extract git-style metadata about patches from <patchname>"""
 
