@@ -5,7 +5,10 @@ cat <<EOF >> $HGRCPATH
 keyword =
 mq =
 notify =
+record =
 transplant =
+[ui]
+interactive = true
 EOF
 
 # demo before [keyword] files are set up
@@ -138,6 +141,25 @@ echo % force expansion
 hg -v kwexpand
 echo % compare changenodes in a c
 cat a c
+
+echo % record
+cp "$HGRCPATH" $HGRCPATH.bak
+sed -e '1 a \foo' a > a.tmp
+mv a.tmp a
+echo bar >> a
+hg record -d '1 10' -m rectest<<EOF
+y
+y
+n
+EOF
+echo
+hg identify
+hg status
+echo % cat modified file
+cat a
+hg diff | grep -v 'b/a'
+hg rollback
+hg update -C
 
 echo % init --mq
 hg init --mq
