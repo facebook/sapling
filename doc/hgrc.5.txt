@@ -945,7 +945,7 @@ Web interface configuration.
     Textual description of the repository's purpose or contents.
     Default is "unknown".
 ``encoding``
-    Character encoding name.
+    Character encoding name. Default is the current locale charset.
     Example: "UTF-8"
 ``errorlog``
     Where to output the error log. Default is stderr.
