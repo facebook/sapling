@@ -11,8 +11,7 @@ from i18n import _, gettext
 import os, re, sys, difflib, time, tempfile
 import hg, util, revlog, bundlerepo, extensions, copies, error
 import patch, help, mdiff, url, encoding, templatekw
-import archival, changegroup, cmdutil, sshserver, hbisect
-from hgweb import server, hgweb_mod, hgwebdir_mod
+import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
 import minirst
 
@@ -2939,18 +2938,18 @@ def serve(ui, repo, **opts):
             repo.ui.setconfig("web", o, val)
 
     o = opts.get('web_conf') or opts.get('webdir_conf')
-    if o:
-        app = hgwebdir_mod.hgwebdir(o, baseui=ui)
-    elif repo is not None:
-        app = hgweb_mod.hgweb(hg.repository(repo.ui, repo.root))
-    else:
-        raise error.RepoError(_("There is no Mercurial repository"
-                                " here (.hg not found)"))
+    if not o:
+        if not repo:
+            raise error.RepoError(_("There is no Mercurial repository"
+                                    " here (.hg not found)"))
+        o = repo.root
+
+    app = hgweb.hgweb(o, baseui=ui)
 
     class service(object):
         def init(self):
             util.set_signal_handler()
-            self.httpd = server.create_server(ui, app)
+            self.httpd = hgweb.server.create_server(ui, app)
 
             if opts['port'] and not ui.verbose:
                 return
