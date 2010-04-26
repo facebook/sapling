@@ -1,28 +1,17 @@
 #!/usr/bin/env python
 #
-# An example CGI script to use hgweb, edit as necessary
+# An example hgweb CGI script, edit as necessary
 
-# adjust python path if not a system-wide install:
-#import sys
-#sys.path.insert(0, "/path/to/python/lib")
+# Path to repo or hgweb config to serve (see 'hg help hgweb')
+config = "/path/to/repo/or/config"
 
-# enable importing on demand to reduce startup time
-from mercurial import demandimport; demandimport.enable()
+# Uncomment and adjust if Mercurial is not installed system-wide:
+#import sys; sys.path.insert(0, "/path/to/python/lib")
 
 # Uncomment to send python tracebacks to the browser if an error occurs:
-#import cgitb
-#cgitb.enable()
+#import cgitb; cgitb.enable()
 
-# If you'd like to serve pages with UTF-8 instead of your default
-# locale charset, you can do so by uncommenting the following lines.
-# Note that this will cause your .hgrc files to be interpreted in
-# UTF-8 and all your repo files to be displayed using UTF-8.
-#
-#import os
-#os.environ["HGENCODING"] = "UTF-8"
-
-from mercurial.hgweb.hgweb_mod import hgweb
-import mercurial.hgweb.wsgicgi as wsgicgi
-
-application = hgweb("/path/to/repo", "repository name")
+from mercurial import demandimport; demandimport.enable()
+from mercurial.hgweb import hgweb, wsgicgi
+application = hgweb(config)
 wsgicgi.launch(application)
