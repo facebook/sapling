@@ -907,25 +907,25 @@ def parsefilename(str):
             return s
     return s[:i]
 
-def selectfile(afile_orig, bfile_orig, hunk, strip):
-    def pathstrip(path, strip):
-        pathlen = len(path)
-        i = 0
-        if strip == 0:
-            return '', path.rstrip()
-        count = strip
-        while count > 0:
-            i = path.find('/', i)
-            if i == -1:
-                raise PatchError(_("unable to strip away %d of %d dirs from %s") %
-                                 (count, strip, path))
+def pathstrip(path, strip):
+    pathlen = len(path)
+    i = 0
+    if strip == 0:
+        return '', path.rstrip()
+    count = strip
+    while count > 0:
+        i = path.find('/', i)
+        if i == -1:
+            raise PatchError(_("unable to strip away %d of %d dirs from %s") %
+                             (count, strip, path))
+        i += 1
+        # consume '//' in the path
+        while i < pathlen - 1 and path[i] == '/':
             i += 1
-            # consume '//' in the path
-            while i < pathlen - 1 and path[i] == '/':
-                i += 1
-            count -= 1
-        return path[:i].lstrip(), path[i:].rstrip()
+        count -= 1
+    return path[:i].lstrip(), path[i:].rstrip()
 
+def selectfile(afile_orig, bfile_orig, hunk, strip):
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
     abase, afile = pathstrip(afile_orig, strip)
@@ -1190,6 +1190,9 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
                 continue
         elif state == 'git':
             for gp in values:
+                gp.path = pathstrip(gp.path, strip - 1)[1]
+                if gp.oldpath:
+                    gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
                 if gp.op in ('COPY', 'RENAME'):
                     copyfn(gp.oldpath, gp.path, cwd)
                 changed[gp.path] = gp
