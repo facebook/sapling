@@ -8,7 +8,8 @@
 '''hooks for controlling repository access
 
 This hook makes it possible to allow or deny write access to portions
-of a repository when receiving incoming changesets.
+of a repository when receiving incoming changesets via pretxnchangegroup and
+pretxncommit.
 
 The authorization is matched based on the local user name on the
 system where the hook runs, and not the committer of the original
@@ -21,12 +22,31 @@ interactive shell access, as they can then disable the hook.
 Nor is it safe if remote users share an account, because then there
 is no way to distinguish them.
 
-To use this hook, configure the acl extension in your hgrc like this::
+The deny list is checked before the allow list is.
+
+The allow and deny sections take key-value pairs, having a subtree pattern
+as key (with a glob syntax by default). The corresponding value can be either:
+1) an asterisk, to match everyone;
+2) a comma-separated list containing users and groups.
+
+Group names must be prefixed with an @ symbol.
+Specifying a group name has the same effect as specifying all the users in
+that group.
+The set of users for a group is taken from "grp.getgrnam"
+(see http://docs.python.org/library/grp.html#grp.getgrnam).
+
+To use this hook, configure the acl extension in your hgrc like this:
 
   [extensions]
   acl =
 
   [hooks]
+
+  # Use this if you want to check access restrictions at commit time
+  pretxncommit.acl = python:hgext.acl.hook
+  
+  # Use this if you want to check access restrictions for pull, push, bundle
+  # and serve.
   pretxnchangegroup.acl = python:hgext.acl.hook
 
   [acl]
@@ -34,22 +54,43 @@ To use this hook, configure the acl extension in your hgrc like this::
   # ("serve" == ssh or http, "push", "pull", "bundle")
   sources = serve
 
-The allow and deny sections take a subtree pattern as key (with a glob
-syntax by default), and a comma separated list of users as the
-corresponding value. The deny list is checked before the allow list
-is. ::
+  [acl.deny]
+  # This list is checked first. If a match is found, 'acl.allow' will not be
+  # checked.
+  # if acl.deny is not present, no users denied by default
+  # empty acl.deny = all users allowed
+  # Format for both lists: glob pattern = user4, user5, @group1
+
+  # To match everyone, use an asterisk for the user:
+  # my/glob/pattern = *
+
+  # user6 will not have write access to any file:
+  ** = user6
+
+  # Group "hg-denied" will not have write access to any file:
+  ** = @hg-denied
+
+  # Nobody will be able to change "DONT-TOUCH-THIS.txt", despite everyone being
+  # able to change all other files. See below.
+  src/main/resources/DONT-TOUCH-THIS.txt = *
 
   [acl.allow]
-  # If acl.allow is not present, all users are allowed by default.
-  # An empty acl.allow section means no users allowed.
+  # if acl.allow not present, all users allowed by default
+  # empty acl.allow = no users allowed
+
+  # User "doc_writer" has write access to any file under the "docs" folder:
   docs/** = doc_writer
+
+  # User "jack" and group "designers" have write access to any file under the
+  # "images" folder:
+  images/** = jack, @designers
+
+  # Everyone (except for "user6" - see "acl.deny" above) will have write access
+  to any file under the "resources" folder (except for 1 file. See "acl.deny"):
+  src/main/resources/** = *
+
   .hgtags = release_engineer
 
-  [acl.deny]
-  # If acl.deny is not present, no users are refused by default.
-  # An empty acl.deny section means all users allowed.
-  glob pattern = user4, user5
-   ** = user6
 '''
 
 from mercurial.i18n import _
