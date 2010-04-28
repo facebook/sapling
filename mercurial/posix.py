@@ -264,3 +264,27 @@ def spawndetached(args):
 
 def gethgcmd():
     return sys.argv[:1]
+
+def termwidth_():
+    try:
+        import termios, array, fcntl
+        for dev in (sys.stderr, sys.stdout, sys.stdin):
+            try:
+                try:
+                    fd = dev.fileno()
+                except AttributeError:
+                    continue
+                if not os.isatty(fd):
+                    continue
+                arri = fcntl.ioctl(fd, termios.TIOCGWINSZ, '\0' * 8)
+                return array.array('h', arri)[1]
+            except ValueError:
+                pass
+            except IOError, e:
+                if e[0] == errno.EINVAL:
+                    pass
+                else:
+                    raise
+    except ImportError:
+        pass
+    return 80

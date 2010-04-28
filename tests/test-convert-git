@@ -170,4 +170,17 @@ hg -R git-repo4-hg log -v
 echo '% --sourceorder should fail'
 hg convert --sourcesort git-repo4 git-repo4-sourcesort-hg
 
+echo '% damage git repository and convert again'
+cat > damage.py <<EOF
+import os
+for root, dirs, files in os.walk('git-repo4/.git/objects'):
+    if files:
+        path = os.path.join(root, files[0])
+        os.remove(path)
+        break
+EOF
+python damage.py
+hg convert git-repo4 git-repo4-broken-hg 2>&1 | \
+    grep 'abort:' | sed 's/abort:.*/abort:/g'
+
 true

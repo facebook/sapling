@@ -16,7 +16,7 @@ class convert_git(converter_source):
     # cannot remove environment variable. Just assume none have
     # both issues.
     if hasattr(os, 'unsetenv'):
-        def gitcmd(self, s):
+        def gitopen(self, s):
             prevgitdir = os.environ.get('GIT_DIR')
             os.environ['GIT_DIR'] = self.path
             try:
@@ -27,8 +27,13 @@ class convert_git(converter_source):
                 else:
                     os.environ['GIT_DIR'] = prevgitdir
     else:
-        def gitcmd(self, s):
+        def gitopen(self, s):
             return util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
+
+    def gitread(self, s):
+        fh = self.gitopen(s)
+        data = fh.read()
+        return data, fh.close()
 
     def __init__(self, ui, path, rev=None):
         super(convert_git, self).__init__(ui, path, rev=rev)
@@ -44,17 +49,22 @@ class convert_git(converter_source):
 
     def getheads(self):
         if not self.rev:
-            fh = self.gitcmd('git rev-parse --branches --remotes')
-            return fh.read().splitlines()
+            heads, ret = self.gitread('git rev-parse --branches --remotes')
+            heads = heads.splitlines()
         else:
-            fh = self.gitcmd("git rev-parse --verify %s" % self.rev)
-            return [fh.read()[:-1]]
+            heads, ret = self.gitread("git rev-parse --verify %s" % self.rev)
+            heads = [heads[:-1]]
+        if ret:
+            raise util.Abort(_('cannot retrieve git heads'))
+        return heads
 
     def catfile(self, rev, type):
         if rev == "0" * 40:
             raise IOError()
-        fh = self.gitcmd("git cat-file %s %s" % (type, rev))
-        return fh.read()
+        data, ret = self.gitread("git cat-file %s %s" % (type, rev))
+        if ret:
+            raise util.Abort(_('cannot read %r object at %s') % (type, rev))
+        return data
 
     def getfile(self, name, rev):
         return self.catfile(rev, "blob")
@@ -64,7 +74,7 @@ class convert_git(converter_source):
 
     def getchanges(self, version):
         self.modecache = {}
-        fh = self.gitcmd("git diff-tree -z --root -m -r %s" % version)
+        fh = self.gitopen("git diff-tree -z --root -m -r %s" % version)
         changes = []
         seen = set()
         entry = None
@@ -84,6 +94,8 @@ class convert_git(converter_source):
                 self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
                 changes.append((f, h))
             entry = None
+        if fh.close():
+            raise util.Abort(_('cannot read changes in %s') % version)
         return (changes, {})
 
     def getcommit(self, version):
@@ -123,7 +135,7 @@ class convert_git(converter_source):
 
     def gettags(self):
         tags = {}
-        fh = self.gitcmd('git ls-remote --tags "%s"' % self.path)
+        fh = self.gitopen('git ls-remote --tags "%s"' % self.path)
         prefix = 'refs/tags/'
         for line in fh:
             line = line.strip()
@@ -134,23 +146,25 @@ class convert_git(converter_source):
                 continue
             tag = tag[len(prefix):-3]
             tags[tag] = node
+        if fh.close():
+            raise util.Abort(_('cannot read tags from %s') % self.path)
 
         return tags
 
     def getchangedfiles(self, version, i):
         changes = []
         if i is None:
-            fh = self.gitcmd("git diff-tree --root -m -r %s" % version)
+            fh = self.gitopen("git diff-tree --root -m -r %s" % version)
             for l in fh:
                 if "\t" not in l:
                     continue
                 m, f = l[:-1].split("\t")
                 changes.append(f)
-            fh.close()
         else:
-            fh = self.gitcmd('git diff-tree --name-only --root -r %s "%s^%s" --'
+            fh = self.gitopen('git diff-tree --name-only --root -r %s "%s^%s" --'
                              % (version, version, i + 1))
             changes = [f.rstrip('\n') for f in fh]
-            fh.close()
+        if fh.close():
+            raise util.Abort(_('cannot read changes in %s') % version)
 
         return changes
