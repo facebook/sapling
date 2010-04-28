@@ -1113,7 +1113,7 @@ def walkchangerevs(repo, match, opts, prepare):
                     fncache.setdefault(rev, [])
                     fncache[rev].append(file_)
                     wanted.add(rev)
-                    if follow and copied:
+                    if copied:
                         copies.append(copied)
     if slowpath:
         if follow:

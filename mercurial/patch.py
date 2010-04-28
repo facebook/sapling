@@ -303,6 +303,9 @@ class patchmeta(object):
         isexec = mode & 0100
         self.mode = (islink, isexec)
 
+    def __repr__(self):
+        return "<patchmeta %s %r>" % (self.op, self.path)
+
 def readgitpatch(lr):
     """extract git-style metadata about patches from <patchname>"""
 
@@ -344,8 +347,6 @@ def readgitpatch(lr):
                 gp.path = line[8:]
             elif line.startswith('deleted file'):
                 gp.op = 'DELETE'
-                # is the deleted file a symlink?
-                gp.setmode(int(line[-6:], 8))
             elif line.startswith('new file mode '):
                 gp.op = 'ADD'
                 gp.setmode(int(line[-6:], 8))
@@ -906,24 +907,25 @@ def parsefilename(str):
             return s
     return s[:i]
 
-def selectfile(afile_orig, bfile_orig, hunk, strip):
-    def pathstrip(path, count=1):
-        pathlen = len(path)
-        i = 0
-        if count == 0:
-            return '', path.rstrip()
-        while count > 0:
-            i = path.find('/', i)
-            if i == -1:
-                raise PatchError(_("unable to strip away %d dirs from %s") %
-                                 (count, path))
+def pathstrip(path, strip):
+    pathlen = len(path)
+    i = 0
+    if strip == 0:
+        return '', path.rstrip()
+    count = strip
+    while count > 0:
+        i = path.find('/', i)
+        if i == -1:
+            raise PatchError(_("unable to strip away %d of %d dirs from %s") %
+                             (count, strip, path))
+        i += 1
+        # consume '//' in the path
+        while i < pathlen - 1 and path[i] == '/':
             i += 1
-            # consume '//' in the path
-            while i < pathlen - 1 and path[i] == '/':
-                i += 1
-            count -= 1
-        return path[:i].lstrip(), path[i:].rstrip()
+        count -= 1
+    return path[:i].lstrip(), path[i:].rstrip()
 
+def selectfile(afile_orig, bfile_orig, hunk, strip):
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
     abase, afile = pathstrip(afile_orig, strip)
@@ -1151,8 +1153,8 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
     rejects = 0
     err = 0
     current_file = None
-    gitpatches = None
-    opener = util.opener(os.getcwd())
+    cwd = os.getcwd()
+    opener = util.opener(cwd)
 
     def closefile():
         if not current_file:
@@ -1164,8 +1166,7 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
         if state == 'hunk':
             if not current_file:
                 continue
-            current_hunk = values
-            ret = current_file.apply(current_hunk)
+            ret = current_file.apply(values)
             if ret >= 0:
                 changed.setdefault(current_file.fname, None)
                 if ret > 0:
@@ -1184,13 +1185,14 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
                                            missing=missing, eolmode=eolmode)
             except PatchError, err:
                 ui.warn(str(err) + '\n')
-                current_file, current_hunk = None, None
+                current_file = None
                 rejects += 1
                 continue
         elif state == 'git':
-            gitpatches = values
-            cwd = os.getcwd()
-            for gp in gitpatches:
+            for gp in values:
+                gp.path = pathstrip(gp.path, strip - 1)[1]
+                if gp.oldpath:
+                    gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
                 if gp.op in ('COPY', 'RENAME'):
                     copyfn(gp.oldpath, gp.path, cwd)
                 changed[gp.path] = gp
@@ -1237,8 +1239,7 @@ def updatedir(ui, repo, patches, similarity=0):
             if gp.op == 'ADD' and not os.path.exists(dst):
                 flags = (isexec and 'x' or '') + (islink and 'l' or '')
                 repo.wwrite(gp.path, '', flags)
-            elif gp.op != 'DELETE':
-                util.set_flags(dst, islink, isexec)
+            util.set_flags(dst, islink, isexec)
     cmdutil.addremove(repo, cfiles, similarity=similarity)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])

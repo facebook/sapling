@@ -181,3 +181,19 @@ debugformat('containers (verbose debug)', containers, 60,
 
 roles = """Please see :hg:`add`."""
 debugformat('roles', roles, 60)
+
+
+sections = """
+Title
+=====
+
+Section
+-------
+
+Subsection
+''''''''''
+
+Markup: ``foo`` and :hg:`help`
+------------------------------
+"""
+debugformat('sections', sections, 20)

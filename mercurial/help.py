@@ -97,4 +97,5 @@ helptable = (
      loaddoc('templates')),
     (['urls'], _('URL Paths'), loaddoc('urls')),
     (["extensions"], _("Using additional features"), extshelp),
+    (["hgweb"], _("Configuring hgweb"), loaddoc('hgweb')),
 )

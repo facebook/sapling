@@ -11,6 +11,19 @@ parsed = dispatch._parseconfig(testui, [
     'lists.list2=foo bar baz',
     'lists.list3=alice, bob',
     'lists.list4=foo bar baz alice, bob',
+    'lists.list5=abc d"ef"g "hij def"',
+    'lists.list6="hello world", "how are you?"',
+    'lists.list7=Do"Not"Separate',
+    'lists.list8="Do"Separate',
+    'lists.list9="Do\\"NotSeparate"',
+    'lists.list10=string "with extraneous" quotation mark"',
+    'lists.list11=x, y',
+    'lists.list12="x", "y"',
+    'lists.list13=""" key = "x", "y" """',
+    'lists.list14=,,,,     ',
+    'lists.list15=" just with starting quotation',
+    'lists.list16="longer quotation" with "no ending quotation',
+    'lists.list17=this is \\" "not a quotation mark"',
 ])
 
 print repr(testui.configitems('values'))
@@ -36,6 +49,19 @@ print repr(testui.configlist('lists', 'list2'))
 print repr(testui.configlist('lists', 'list3'))
 print repr(testui.configlist('lists', 'list4'))
 print repr(testui.configlist('lists', 'list4', ['foo']))
+print repr(testui.configlist('lists', 'list5'))
+print repr(testui.configlist('lists', 'list6'))
+print repr(testui.configlist('lists', 'list7'))
+print repr(testui.configlist('lists', 'list8'))
+print repr(testui.configlist('lists', 'list9'))
+print repr(testui.configlist('lists', 'list10'))
+print repr(testui.configlist('lists', 'list11'))
+print repr(testui.configlist('lists', 'list12'))
+print repr(testui.configlist('lists', 'list13'))
+print repr(testui.configlist('lists', 'list14'))
+print repr(testui.configlist('lists', 'list15'))
+print repr(testui.configlist('lists', 'list16'))
+print repr(testui.configlist('lists', 'list17'))
 print repr(testui.configlist('lists', 'unknown'))
 print repr(testui.configlist('lists', 'unknown', ''))
 print repr(testui.configlist('lists', 'unknown', 'foo'))

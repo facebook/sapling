@@ -5,12 +5,13 @@ On Windows, these configuration files are read:
 
 - ``<repo>\.hg\hgrc``
 - ``%USERPROFILE%\.hgrc``
-- ``%USERPROFILE%\Mercurial.ini``
+- ``%USERPROFILE%\mercurial.ini``
 - ``%HOME%\.hgrc``
-- ``%HOME%\Mercurial.ini``
-- ``C:\Mercurial\Mercurial.ini``
-- ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial``
-- ``<install-dir>\Mercurial.ini``
+- ``%HOME%\mercurial.ini``
+- ``C:\mercurial\mercurial.ini`` (unless regkey or hgrc.d\ or mercurial.ini found)
+- ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial`` (unless hgrc.d\ or mercurial.ini found)
+- ``<hg.exe-dir>\hgrc.d\*.rc`` (unless mercurial.ini found)
+- ``<hg.exe-dir>\mercurial.ini``
 
 On Unix, these files are read:
 
@@ -29,7 +30,7 @@ and followed by ``name = value`` entries::
   username = Firstname Lastname <firstname.lastname@example.net>
   verbose = True
 
-This above entries will be referred to as ``ui.username`` and
+The above entries will be referred to as ``ui.username`` and
 ``ui.verbose``, respectively. Please see the hgrc man page for a full
 description of the possible configuration values:
 

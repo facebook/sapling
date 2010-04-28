@@ -11,8 +11,7 @@ from i18n import _, gettext
 import os, re, sys, difflib, time, tempfile
 import hg, util, revlog, bundlerepo, extensions, copies, error
 import patch, help, mdiff, url, encoding, templatekw
-import archival, changegroup, cmdutil, sshserver, hbisect
-from hgweb import server, hgweb_mod, hgwebdir_mod
+import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
 import minirst
 
@@ -2379,13 +2378,20 @@ def paths(ui, repo, search=None):
     Show definition of symbolic path name NAME. If no name is given,
     show definition of all available names.
 
-    Path names are defined in the [paths] section of /etc/mercurial/hgrc
-    and $HOME/.hgrc. If run inside a repository, .hg/hgrc is used, too.
+    Path names are defined in the [paths] section of
+    ``/etc/mercurial/hgrc`` and ``$HOME/.hgrc``. If run inside a
+    repository, ``.hg/hgrc`` is used, too.
 
-    The names 'default' and 'default-push' have a special meaning.
-    They are the locations used when pulling and pushing respectively
-    unless a location is specified. When cloning a repository, the
-    clone source is written as 'default' in .hg/hgrc.
+    The path names ``default`` and ``default-push`` have a special
+    meaning.  When performing a push or pull operation, they are used
+    as fallbacks if no location is specified on the command-line.
+    When ``default-push`` is set, it will be used for push and
+    ``default`` will be used for pull; otherwise ``default`` is used
+    as the fallback for both.  When cloning a repository, the clone
+    source is written as ``default`` in ``.hg/hgrc``.  Note that
+    ``default`` and ``default-push`` apply to all inbound (e.g.
+    :hg:`incoming`) and outbound (e.g. :hg:`outgoing`, :hg:`email` and
+    :hg:`bundle`) operations.
 
     See :hg:`help urls` for more information.
     """
@@ -2938,18 +2944,19 @@ def serve(ui, repo, **opts):
         if repo and repo.ui != baseui:
             repo.ui.setconfig("web", o, val)
 
-    if opts.get('webdir_conf'):
-        app = hgwebdir_mod.hgwebdir(opts['webdir_conf'], ui)
-    elif repo is not None:
-        app = hgweb_mod.hgweb(hg.repository(repo.ui, repo.root))
-    else:
-        raise error.RepoError(_("There is no Mercurial repository"
-                                " here (.hg not found)"))
+    o = opts.get('web_conf') or opts.get('webdir_conf')
+    if not o:
+        if not repo:
+            raise error.RepoError(_("There is no Mercurial repository"
+                                    " here (.hg not found)"))
+        o = repo.root
+
+    app = hgweb.hgweb(o, baseui=ui)
 
     class service(object):
         def init(self):
             util.set_signal_handler()
-            self.httpd = server.create_server(ui, app)
+            self.httpd = hgweb.server.create_server(ui, app)
 
             if opts['port'] and not ui.verbose:
                 return
@@ -3851,8 +3858,10 @@ table = {
            _('prefix path to serve from (default: server root)')),
           ('n', 'name', '',
            _('name to show in web pages (default: working directory)')),
-          ('', 'webdir-conf', '', _('name of the webdir config file'
+          ('', 'web-conf', '', _('name of the hgweb config file'
                                     ' (serve more than one repository)')),
+          ('', 'webdir-conf', '', _('name of the hgweb config file'
+                                    ' (DEPRECATED)')),
           ('', 'pid-file', '', _('name of file to write process ID to')),
           ('', 'stdio', None, _('for remote clients')),
           ('t', 'templates', '', _('web templates to use')),

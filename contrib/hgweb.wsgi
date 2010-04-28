@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-#
-# An example hgweb CGI script, edit as necessary
+# An example WSGI for use with mod_wsgi, edit as necessary
 
 # Path to repo or hgweb config to serve (see 'hg help hgweb')
 config = "/path/to/repo/or/config"
@@ -11,7 +9,8 @@ config = "/path/to/repo/or/config"
 # Uncomment to send python tracebacks to the browser if an error occurs:
 #import cgitb; cgitb.enable()
 
+# enable demandloading to reduce startup time
 from mercurial import demandimport; demandimport.enable()
-from mercurial.hgweb import hgweb, wsgicgi
+
+from mercurial.hgweb import hgweb
 application = hgweb(config)
-wsgicgi.launch(application)

@@ -1,5 +1,5 @@
 [('string', 'string value'), ('bool1', 'true'), ('bool2', 'false')]
-[('list1', 'foo'), ('list2', 'foo bar baz'), ('list3', 'alice, bob'), ('list4', 'foo bar baz alice, bob')]
+[('list1', 'foo'), ('list2', 'foo bar baz'), ('list3', 'alice, bob'), ('list4', 'foo bar baz alice, bob'), ('list5', 'abc d"ef"g "hij def"'), ('list6', '"hello world", "how are you?"'), ('list7', 'Do"Not"Separate'), ('list8', '"Do"Separate'), ('list9', '"Do\\"NotSeparate"'), ('list10', 'string "with extraneous" quotation mark"'), ('list11', 'x, y'), ('list12', '"x", "y"'), ('list13', '""" key = "x", "y" """'), ('list14', ',,,,     '), ('list15', '" just with starting quotation'), ('list16', '"longer quotation" with "no ending quotation'), ('list17', 'this is \\" "not a quotation mark"')]
 ---
 'string value'
 'true'
@@ -18,6 +18,19 @@ True
 ['alice', 'bob']
 ['foo', 'bar', 'baz', 'alice', 'bob']
 ['foo', 'bar', 'baz', 'alice', 'bob']
+['abc', 'd"ef"g', 'hij def']
+['hello world', 'how are you?']
+['Do"Not"Separate']
+['Do', 'Separate']
+['Do"NotSeparate']
+['string', 'with extraneous', 'quotation', 'mark"']
+['x', 'y']
+['x', 'y']
+['', ' key = ', 'x"', 'y', '', '"']
+[]
+['"', 'just', 'with', 'starting', 'quotation']
+['longer quotation', 'with', '"no', 'ending', 'quotation']
+['this', 'is', '"', 'not a quotation mark']
 []
 []
 ['foo']

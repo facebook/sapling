@@ -143,7 +143,7 @@ root
 --traceback
 --verbose
 --version
---webdir-conf
+--web-conf
 -6
 -A
 -E
@@ -176,7 +176,7 @@ merge: force, rev, preview
 pull: update, force, rev, branch, ssh, remotecmd
 push: force, rev, branch, ssh, remotecmd
 remove: after, force, include, exclude
-serve: accesslog, daemon, daemon-pipefds, errorlog, port, address, prefix, name, webdir-conf, pid-file, stdio, templates, style, ipv6, certificate
+serve: accesslog, daemon, daemon-pipefds, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, templates, style, ipv6, certificate
 status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, change, include, exclude
 summary: remote
 update: clean, check, date, rev

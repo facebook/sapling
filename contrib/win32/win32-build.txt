@@ -82,16 +82,10 @@ following files:
     Microsoft.VC90.MFC.manifest)
 
 Before building the installer, you have to build Mercurial HTML documentation 
-(or fix mercurial.iss to not reference the doc directory). Docutils does not
-come with a ready-made script for rst2html.py, so you will have to write your
-own and put it in %PATH% like:
-
-  @python c:\pythonXX\scripts\rst2html.py %*
-
-Then build the documentation with:
+(or fix mercurial.iss to not reference the doc directory):
 
   cd doc
-  mingw32-make RST2HTML=rst2html.bat html
+  mingw32-make html
   cd ..
 
 If you use ISTool, you open the C:\hg\hg-release\contrib\win32\mercurial.iss
@@ -113,7 +107,7 @@ following:
   echo compiler=mingw32 >> setup.cfg
   python setup.py py2exe -b 1
   cd doc
-  mingw32-make RST2HTML=rst2html.bat html
+  mingw32-make html
   cd ..
   iscc contrib\win32\mercurial.iss /DVERSION=snapshot
 

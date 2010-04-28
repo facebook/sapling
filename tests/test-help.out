@@ -105,6 +105,7 @@ additional help topics:
  templating   Template Usage
  urls         URL Paths
  extensions   Using additional features
+ hgweb        Configuring hgweb
 
 use "hg -v help" to show aliases and global options
  add          add the specified files on the next commit
@@ -170,6 +171,7 @@ additional help topics:
  templating   Template Usage
  urls         URL Paths
  extensions   Using additional features
+ hgweb        Configuring hgweb
 %% test short command list with verbose option
 Mercurial Distributed SCM (version xxx)
 
@@ -595,6 +597,7 @@ additional help topics:
  templating   Template Usage
  urls         URL Paths
  extensions   Using additional features
+ hgweb        Configuring hgweb
 
 use "hg -v help" to show aliases and global options
 %% test list of commands with command with no help text

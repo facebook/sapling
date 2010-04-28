@@ -98,16 +98,17 @@ def publish(name, desc, path, port):
     server.registerService(svc)
 
 class hgwebzc(hgweb_mod.hgweb):
-    def __init__(self, repo, name=None):
-        super(hgwebzc, self).__init__(repo, name)
-        name = self.reponame or os.path.basename(repo.root)
+    def __init__(self, repo, name=None, baseui=None):
+        super(hgwebzc, self).__init__(repo, name=name, baseui=baseui)
+        name = self.reponame or os.path.basename(self.repo.root)
         path = self.repo.ui.config("web", "prefix", "").strip('/')
         desc = self.repo.ui.config("web", "description", name)
-        publish(name, desc, path, int(repo.ui.config("web", "port", 8000)))
+        publish(name, desc, path,
+                int(self.repo.ui.config("web", "port", 8000)))
 
 class hgwebdirzc(hgwebdir_mod.hgwebdir):
     def __init__(self, conf, baseui=None):
-        super(hgwebdirzc, self).__init__(conf, baseui)
+        super(hgwebdirzc, self).__init__(conf, baseui=baseui)
         prefix = self.ui.config("web", "prefix", "").strip('/') + '/'
         for repo, path in self.repos:
             u = self.ui.copy()

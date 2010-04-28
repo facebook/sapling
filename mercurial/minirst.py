@@ -225,6 +225,8 @@ def prunecontainers(blocks, keep):
     return blocks, pruned
 
 
+_sectionre = re.compile(r"""^([-=`:.'"~^_*+#])\1+$""")
+
 def findsections(blocks):
     """Finds sections.
 
@@ -240,14 +242,17 @@ def findsections(blocks):
         # +------------------------------+
         if (block['type'] == 'paragraph' and
             len(block['lines']) == 2 and
-            block['lines'][1] == '-' * len(block['lines'][0])):
+            len(block['lines'][0]) == len(block['lines'][1]) and
+            _sectionre.match(block['lines'][1])):
+            block['underline'] = block['lines'][1][0]
             block['type'] = 'section'
+            del block['lines'][1]
     return blocks
 
 
 def inlineliterals(blocks):
     for b in blocks:
-        if b['type'] == 'paragraph':
+        if b['type'] in ('paragraph', 'section'):
             b['lines'] = [l.replace('``', '"') for l in b['lines']]
     return blocks
 
@@ -256,7 +261,7 @@ _hgrolere = re.compile(r':hg:`([^`]+)`')
 
 def hgrole(blocks):
     for b in blocks:
-        if b['type'] == 'paragraph':
+        if b['type'] in ('paragraph', 'section'):
             b['lines'] = [_hgrolere.sub(r'"hg \1"', l) for l in b['lines']]
     return blocks
 
@@ -289,7 +294,8 @@ def formatblock(block, width):
         indent += '  '
         return indent + ('\n' + indent).join(block['lines'])
     if block['type'] == 'section':
-        return indent + ('\n' + indent).join(block['lines'])
+        underline = len(block['lines'][0]) * block['underline']
+        return "%s%s\n%s%s" % (indent, block['lines'][0],indent, underline)
     if block['type'] == 'definition':
         term = indent + block['lines'][0]
         hang = len(block['lines'][-1]) - len(block['lines'][-1].lstrip())
@@ -341,11 +347,11 @@ def format(text, width, indent=0, keep=None):
         b['indent'] += indent
     blocks = findliteralblocks(blocks)
     blocks, pruned = prunecontainers(blocks, keep or [])
+    blocks = findsections(blocks)
     blocks = inlineliterals(blocks)
     blocks = hgrole(blocks)
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
-    blocks = findsections(blocks)
     blocks = addmargins(blocks)
     text = '\n'.join(formatblock(b, width) for b in blocks)
     if keep is None:
