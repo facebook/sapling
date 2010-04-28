@@ -7,7 +7,7 @@ do_push()
 
     echo "Pushing as user $user"
     echo 'hgrc = """'
-    sed -e 1,2d b/.hg/hgrc
+    sed -e 1,2d b/.hg/hgrc | grep -v /tmp/
     echo '"""'
     if test -f acl.config; then
 	echo 'acl.config = """'
@@ -22,6 +22,24 @@ do_push()
     hg --cwd b rollback
     hg --cwd b --quiet tip
     echo
+}
+
+init_config()
+{
+cat > fakegroups.py <<EOF
+from hgext import acl
+acl._getusers = lambda x: ["fred", "betty"]
+EOF
+
+rm -f acl.config
+cat > $config <<EOF
+[hooks]
+pretxnchangegroup.acl = python:hgext.acl.hook
+[acl]
+sources = push
+[extensions]
+f=$PWD/fakegroups.py
+EOF
 }
 
 hg init a
@@ -110,4 +128,35 @@ echo 'acl.config can set only [acl.allow]/[acl.deny]'
 echo '[hooks]' >> acl.config
 echo 'changegroup.acl = false' >> acl.config
 do_push barney
+
+# asterisk
+
+init_config
+
+echo 'asterisk test'
+echo '[acl.allow]' >> $config
+echo "** = fred" >> $config
+echo "fred is always allowed"
+do_push fred
+
+echo '[acl.deny]' >> $config
+echo "foo/Bar/** = *" >> $config
+echo "no one is allowed inside foo/Bar/"
+do_push fred
+
+# Groups
+
+init_config
+
+echo 'OS-level groups'
+echo '[acl.allow]' >> $config
+echo "** = @group1" >> $config
+echo "@group1 is always allowed"
+do_push fred
+
+echo '[acl.deny]' >> $config
+echo "foo/Bar/** = @group1" >> $config
+echo "@group is allowed inside anything but foo/Bar/"
+do_push fred
+
 
