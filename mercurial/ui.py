@@ -182,7 +182,8 @@ class ui(object):
                 return _parse_plain, parts, offset
 
             while offset < len(s) and s[offset] != '"':
-                if s[offset] == '\\' and offset + 1 < len(s) and s[offset + 1] == '"':
+                if (s[offset] == '\\' and offset + 1 < len(s)
+                        and s[offset + 1] == '"'):
                     offset += 1
                     parts[-1] += '"'
                 else:
