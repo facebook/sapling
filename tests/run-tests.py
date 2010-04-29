@@ -126,7 +126,7 @@ def parseargs():
         metavar="HG",
         help="test using specified hg script rather than a "
              "temporary installation")
-    parser.add_option("--local", action="store_true",
+    parser.add_option("-l", "--local", action="store_true",
         help="shortcut for --with-hg=<testdir>/../hg")
     parser.add_option("--pure", action="store_true",
         help="use pure Python code instead of C extensions")
