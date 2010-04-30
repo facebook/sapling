@@ -132,6 +132,8 @@ def parseargs():
              " (implies --keep-tmpdir)")
     parser.add_option("-v", "--verbose", action="store_true",
         help="output verbose messages")
+    parser.add_option("--view", type="string",
+        help="external diff viewer")
     parser.add_option("--with-hg", type="string",
         metavar="HG",
         help="test using specified hg script rather than a "
@@ -573,6 +575,7 @@ def runone(options, test, skips, fails):
     mark = '.'
 
     skipped = (ret == SKIPPED_STATUS)
+
     # If we're not in --debug mode and reference output file exists,
     # check test output against it.
     if options.debug:
@@ -583,6 +586,13 @@ def runone(options, test, skips, fails):
         f.close()
     else:
         refout = []
+
+    if (ret != 0 or out != refout) and not skipped and not options.debug:
+        # Save errors to a file for diagnosis
+        f = open(err, "wb")
+        for line in out:
+            f.write(line)
+        f.close()
 
     if skipped:
         mark = 's'
@@ -605,7 +615,10 @@ def runone(options, test, skips, fails):
         else:
             fail("output changed")
         if not options.nodiff:
-            showdiff(refout, out, ref, err)
+            if options.view:
+                os.system("%s %s %s" % (options.view, ref, err))
+            else:
+                showdiff(refout, out, ref, err)
         ret = 1
     elif ret:
         mark = '!'
@@ -614,13 +627,6 @@ def runone(options, test, skips, fails):
     if not options.verbose:
         sys.stdout.write(mark)
         sys.stdout.flush()
-
-    if ret != 0 and not skipped and not options.debug:
-        # Save errors to a file for diagnosis
-        f = open(err, "wb")
-        for line in out:
-            f.write(line)
-        f.close()
 
     killdaemons()
 
