@@ -219,6 +219,19 @@ hg qpop test2.patch-1
 hg qpop test2.patch-2
 hg qpush test1b.patch+1
 
+echo % qpush --move
+hg qpop -a
+hg qpush --move test2.patch # move to front
+hg qpush --move test1b.patch
+hg qpush --move test.patch # noop move
+hg qseries -v
+hg qpop -a
+hg qpush --move test.patch # cleaning up
+hg qpush --move test1b.patch
+hg qpush --move bogus # nonexistent patch
+hg qpush --move test.patch # already applied
+hg qpush
+
 echo % pop, qapplied, qunapplied
 hg qseries -v
 echo % qapplied -1 test.patch

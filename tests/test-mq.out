@@ -193,6 +193,32 @@ now at: test.patch
 applying test1b.patch
 applying test2.patch
 now at: test2.patch
+% qpush --move
+popping test2.patch
+popping test1b.patch
+popping test.patch
+patch queue now empty
+applying test2.patch
+now at: test2.patch
+applying test1b.patch
+now at: test1b.patch
+applying test.patch
+now at: test.patch
+0 A test2.patch
+1 A test1b.patch
+2 A test.patch
+popping test.patch
+popping test1b.patch
+popping test2.patch
+patch queue now empty
+applying test.patch
+now at: test.patch
+applying test1b.patch
+now at: test1b.patch
+abort: patch bogus not in series
+abort: cannot push to a previous patch: test.patch
+applying test2.patch
+now at: test2.patch
 % pop, qapplied, qunapplied
 0 A test.patch
 1 A test1b.patch

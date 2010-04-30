@@ -978,7 +978,7 @@ class queue(object):
         raise util.Abort(_("patch %s not in series") % patch)
 
     def push(self, repo, patch=None, force=False, list=False,
-             mergeq=None, all=False):
+             mergeq=None, all=False, move=False):
         diffopts = self.diffopts()
         wlock = repo.wlock()
         try:
@@ -1033,6 +1033,15 @@ class queue(object):
                 return 1
             if not force:
                 self.check_localchanges(repo)
+
+            if move:
+                try:
+                    del self.full_series[self.full_series.index(patch, start)]
+                except ValueError:
+                    raise util.Abort(_("patch '%s' not found") % patch)
+                self.full_series.insert(start, patch)
+                self.parse_series()
+                self.series_dirty = 1
 
             self.applied_dirty = 1
             if start > 0:
@@ -2222,7 +2231,7 @@ def push(ui, repo, patch=None, **opts):
         mergeq = queue(ui, repo.join(""), newpath)
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
     ret = q.push(repo, patch, force=opts['force'], list=opts['list'],
-                 mergeq=mergeq, all=opts.get('all'))
+                 mergeq=mergeq, all=opts.get('all'), move=opts.get('move'))
     return ret
 
 def pop(ui, repo, patch=None, **opts):
@@ -2735,8 +2744,9 @@ cmdtable = {
           ('l', 'list', None, _('list patch name in commit text')),
           ('a', 'all', None, _('apply all patches')),
           ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
-          ('n', 'name', '', _('merge queue name (DEPRECATED)'))],
-         _('hg qpush [-f] [-l] [-a] [-m] [-n NAME] [PATCH | INDEX]')),
+          ('n', 'name', '', _('merge queue name (DEPRECATED)')),
+          ('', 'move', None, _('reorder patch series and apply only the patch'))],
+         _('hg qpush [-f] [-l] [-a] [-m] [-n NAME] [--move] [PATCH | INDEX]')),
     "^qrefresh":
         (refresh,
          [('e', 'edit', None, _('edit commit message')),
