@@ -2453,7 +2453,8 @@ def push(ui, repo, dest=None, **opts):
     c = repo['']
     subs = c.substate # only repos that are committed
     for s in sorted(subs):
-        c.sub(s).push(opts.get('force'))
+        if not c.sub(s).push(opts.get('force')):
+            return False
 
     r = repo.push(other, opts.get('force'), revs=revs)
     return r == 0
