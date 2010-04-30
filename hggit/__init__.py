@@ -17,7 +17,7 @@ Try hg clone git:// or hg clone git+ssh://
 
 import os
 
-from mercurial import commands, extensions, hg, util
+from mercurial import commands, extensions, hg, util as hgutil
 from mercurial.i18n import _
 
 import gitrepo, hgrepo
@@ -32,7 +32,7 @@ hg.schemes['git+ssh'] = gitrepo
 _oldlocal = hg.schemes['file']
 
 def _local(path):
-    p = util.drop_scheme('file', path)
+    p = hgutil.drop_scheme('file', path)
     if (os.path.exists(os.path.join(p, '.git')) and
         not os.path.exists(os.path.join(p, '.hg'))):
         return gitrepo
