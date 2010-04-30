@@ -105,8 +105,8 @@ def _runcatch(ui, args):
     except util.Abort, inst:
         ui.warn(_("abort: %s\n") % inst)
     except ImportError, inst:
+        ui.warn(_("abort: %s!\n") % inst)
         m = str(inst).split()[-1]
-        ui.warn(_("abort: could not import module %s!\n") % m)
         if m in "mpatch bdiff".split():
             ui.warn(_("(did you forget to compile extensions?)\n"))
         elif m in "zlib".split():
