@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, re, xml.dom.minidom, shutil
+import errno, os, re, xml.dom.minidom, shutil, urlparse, posixpath
 from i18n import _
 import config, util, node, error
 hg = None
@@ -135,8 +135,12 @@ def _abssource(repo, push=False):
         if '://' in parent:
             if parent[-1] == '/':
                 parent = parent[:-1]
-            return parent + '/' + source
-        return os.path.join(parent, repo._subsource)
+            r = urlparse.urlparse(parent + '/' + source)
+            r = urlparse.urlunparse((r[0], r[1],
+                                     posixpath.normpath(r.path),
+                                     r[3], r[4], r[5]))
+            return r
+        return posixpath.normpath(os.path.join(parent, repo._subsource))
     if push and repo.ui.config('paths', 'default-push'):
         return repo.ui.config('paths', 'default-push', repo.root)
     return repo.ui.config('paths', 'default', repo.root)

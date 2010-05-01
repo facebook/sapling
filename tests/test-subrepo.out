@@ -275,7 +275,7 @@ updating to branch default
 [paths]
 default = $HGTMP/test-subrepo/sub/mercurial/nested_absolute
 [paths]
-default = $HGTMP/test-subrepo/sub/mercurial/main/../nested_relative
+default = $HGTMP/test-subrepo/sub/mercurial/nested_relative
 % issue 1977
 adding a
 adding .hgsub
