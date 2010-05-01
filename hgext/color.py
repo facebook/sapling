@@ -237,7 +237,7 @@ try:
         'green_background': BACKGROUND_GREEN,
         'blue_background': BACKGROUND_BLUE,
         'cyan_background': BACKGROUND_BLUE | BACKGROUND_GREEN,
-        'bold_background': FOREGROUND_INTENSITY,
+        'bold_background': BACKGROUND_INTENSITY,
         'underline': COMMON_LVB_UNDERSCORE,     # double-byte charsets only
         'inverse': COMMON_LVB_REVERSE_VIDEO,    # double-byte charsets only
     }
