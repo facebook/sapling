@@ -26,6 +26,7 @@ The deny list is checked before the allow list is.
 
 The allow and deny sections take key-value pairs, having a subtree pattern
 as key (with a glob syntax by default). The corresponding value can be either:
+
 1) an asterisk, to match everyone;
 2) a comma-separated list containing users and groups.
 
@@ -35,7 +36,7 @@ that group.
 The set of users for a group is taken from "grp.getgrnam"
 (see http://docs.python.org/library/grp.html#grp.getgrnam).
 
-To use this hook, configure the acl extension in your hgrc like this:
+To use this hook, configure the acl extension in your hgrc like this::
 
   [extensions]
   acl =
