@@ -126,6 +126,14 @@ def submerge(repo, wctx, mctx, actx):
     # record merged .hgsubstate
     writestate(repo, sm)
 
+def relpath(sub):
+    if not hasattr(sub, '_repo'):
+        return sub._path
+    parent = sub._repo
+    while hasattr(parent, '_subparent'):
+        parent = parent._subparent
+    return sub._repo.root[len(parent.root)+1:]
+
 def _abssource(repo, push=False):
     if hasattr(repo, '_subparent'):
         source = repo._subsource
@@ -214,7 +222,7 @@ class hgsubrepo(object):
         return w.dirty() # working directory changed
 
     def commit(self, text, user, date):
-        self._repo.ui.debug("committing subrepo %s\n" % self._path)
+        self._repo.ui.debug("committing subrepo %s\n" % relpath(self))
         n = self._repo.commit(text, user, date)
         if not n:
             return self._repo['.'].hex() # different version checked out
@@ -223,7 +231,7 @@ class hgsubrepo(object):
     def remove(self):
         # we can't fully delete the repository as it may contain
         # local-only history
-        self._repo.ui.note(_('removing subrepo %s\n') % self._path)
+        self._repo.ui.note(_('removing subrepo %s\n') % relpath(self))
         hg.clean(self._repo, node.nullid, False)
 
     def _get(self, state):
@@ -234,7 +242,7 @@ class hgsubrepo(object):
             self._repo._subsource = source
             srcurl = _abssource(self._repo)
             self._repo.ui.status(_('pulling subrepo %s from %s\n')
-                                 % (self._path, srcurl))
+                                 % (relpath(self), srcurl))
             other = hg.repository(self._repo.ui, srcurl)
             self._repo.pull(other)
 
@@ -250,12 +258,12 @@ class hgsubrepo(object):
         dst = self._repo[state[1]]
         anc = dst.ancestor(cur)
         if anc == cur:
-            self._repo.ui.debug("updating subrepo %s\n" % self._path)
+            self._repo.ui.debug("updating subrepo %s\n" % relpath(self))
             hg.update(self._repo, state[1])
         elif anc == dst:
-            self._repo.ui.debug("skipping subrepo %s\n" % self._path)
+            self._repo.ui.debug("skipping subrepo %s\n" % relpath(self))
         else:
-            self._repo.ui.debug("merging subrepo %s\n" % self._path)
+            self._repo.ui.debug("merging subrepo %s\n" % relpath(self))
             hg.merge(self._repo, state[1], remind=False)
 
     def push(self, force):
@@ -268,7 +276,7 @@ class hgsubrepo(object):
 
         dsturl = _abssource(self._repo, True)
         self._repo.ui.status(_('pushing subrepo %s to %s\n') %
-            (self._path, dsturl))
+            (relpath(self), dsturl))
         other = hg.repository(self._repo.ui, dsturl)
         return self._repo.push(other, force)
 

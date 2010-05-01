@@ -867,8 +867,10 @@ class localrepository(repo.repository):
             if subs or removedsubs:
                 state = wctx.substate.copy()
                 for s in subs:
-                    self.ui.status(_('committing subrepository %s\n') % s)
-                    sr = wctx.sub(s).commit(cctx._text, user, date)
+                    sub = wctx.sub(s)
+                    self.ui.status(_('committing subrepository %s\n') %
+                        subrepo.relpath(sub))
+                    sr = sub.commit(cctx._text, user, date)
                     state[s] = (state[s][0], sr)
                 subrepo.writestate(self, state)
 

@@ -50,7 +50,7 @@ path sub2
  revision c57a0840e3badd667ef3c3ef65471609acb2ba3c
 % Modifying deeply nested sub2
 committing subrepository sub1
-committing subrepository sub2
+committing subrepository sub1/sub2
 % Checking modified node ids
 cloned ffe6649062fe tip
 cloned/sub1 2ecb03bf44a9 tip
