@@ -145,7 +145,7 @@ def do_relink(src, dst, files, ui):
         except OSError, inst:
             ui.warn('%s: %s\n' % (tgt, str(inst)))
 
-    ui.progress(_('relinking'), None, f, _(' files'), total)
+    ui.progress(_('relinking'), None, unit=_(' files'), total=total)
 
     ui.status(_('relinked %d files (%d bytes reclaimed)\n') %
               (relinked, savedbytes))
