@@ -935,12 +935,16 @@ class memctx(object):
         """get a file context from the working directory"""
         return self._filectxfn(self._repo, self, path)
 
+    def commit(self):
+        """commit context to the repo"""
+        return self._repo.commitctx(self)
+
 class memfilectx(object):
     """memfilectx represents an in-memory file to commit.
 
     See memctx for more details.
     """
-    def __init__(self, path, data, islink, isexec, copied):
+    def __init__(self, path, data, islink=False, isexec=False, copied=None):
         """
         path is the normalized file path relative to repository root.
         data is the file content as a string.
