@@ -22,7 +22,7 @@ interactive shell access, as they can then disable the hook.
 Nor is it safe if remote users share an account, because then there
 is no way to distinguish them.
 
-The deny list is checked before the allow list is.
+The deny list is checked before the allow list.
 
 The allow and deny sections take key-value pairs, having a subtree pattern
 as key (with a glob syntax by default). The corresponding value can be either:
@@ -30,11 +30,9 @@ as key (with a glob syntax by default). The corresponding value can be either:
 1) an asterisk, to match everyone;
 2) a comma-separated list containing users and groups.
 
-Group names must be prefixed with an @ symbol.
+Group names must be prefixed with an ``@`` symbol.
 Specifying a group name has the same effect as specifying all the users in
 that group.
-The set of users for a group is taken from "grp.getgrnam"
-(see http://docs.python.org/library/grp.html#grp.getgrnam).
 
 To use this hook, configure the acl extension in your hgrc like this::
 
@@ -43,7 +41,7 @@ To use this hook, configure the acl extension in your hgrc like this::
 
   [hooks]
 
-  # Use this if you want to check access restrictions at commit time
+  # Use this if you want to check access restrictions at commit time.
   pretxncommit.acl = python:hgext.acl.hook
   
   # Use this if you want to check access restrictions for pull, push, bundle
@@ -51,16 +49,15 @@ To use this hook, configure the acl extension in your hgrc like this::
   pretxnchangegroup.acl = python:hgext.acl.hook
 
   [acl]
-  # Check whether the source of incoming changes is in this list
-  # ("serve" == ssh or http, "push", "pull", "bundle")
+  # Check whether the source of incoming changes is in this list where
+  # "serve" == ssh or http, and "push", "pull" and "bundle" are the
+  # corresponding hg commands.
   sources = serve
 
   [acl.deny]
   # This list is checked first. If a match is found, 'acl.allow' will not be
-  # checked.
-  # if acl.deny is not present, no users denied by default
-  # empty acl.deny = all users allowed
-  # Format for both lists: glob pattern = user4, user5, @group1
+  # checked. All users are granted access if acl.deny is not present.
+  # Format for both lists: glob pattern = user, ..., @group, ...
 
   # To match everyone, use an asterisk for the user:
   # my/glob/pattern = *
@@ -87,7 +84,7 @@ To use this hook, configure the acl extension in your hgrc like this::
   images/** = jack, @designers
 
   # Everyone (except for "user6" - see "acl.deny" above) will have write access
-  to any file under the "resources" folder (except for 1 file. See "acl.deny"):
+  # to any file under the "resources" folder (except for 1 file. See "acl.deny"):
   src/main/resources/** = *
 
   .hgtags = release_engineer
