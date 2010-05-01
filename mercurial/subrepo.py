@@ -259,12 +259,13 @@ class hgsubrepo(object):
         c = self._repo['']
         subs = c.substate # only repos that are committed
         for s in sorted(subs):
-            c.sub(s).push(force)
+            if not c.sub(s).push(force):
+                return False
 
         self._repo.ui.status(_('pushing subrepo %s\n') % self._path)
         dsturl = _abssource(self._repo, True)
         other = hg.repository(self._repo.ui, dsturl)
-        self._repo.push(other, force)
+        return self._repo.push(other, force)
 
 class svnsubrepo(object):
     def __init__(self, ctx, path, state):

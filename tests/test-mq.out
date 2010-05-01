@@ -55,7 +55,7 @@ list of commands:
  qseries      print the entire series file
  qtop         print the name of the current patch
  qunapplied   print the patches not yet applied
- strip        strip a revision and all its descendants from the repository
+ strip        strip a changeset and all its descendants from the repository
 
 use "hg -v help mq" to show aliases and global options
 adding a

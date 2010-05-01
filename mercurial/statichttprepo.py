@@ -18,6 +18,7 @@ class httprangereader(object):
         self.url = url
         self.pos = 0
         self.opener = opener
+        self.name = url
     def seek(self, pos):
         self.pos = pos
     def read(self, bytes=None):
@@ -56,6 +57,10 @@ class httprangereader(object):
             data = data[:bytes]
         self.pos += len(data)
         return data
+    def __iter__(self):
+        return iter(self.read().splitlines(1))
+    def close(self):
+        pass
 
 def build_opener(ui, authinfo):
     # urllib cannot handle URLs with embedded user or passwd
@@ -65,7 +70,9 @@ def build_opener(ui, authinfo):
     def opener(base):
         """return a function that opens files over http"""
         p = base
-        def o(path, mode="r"):
+        def o(path, mode="r", atomictemp=None):
+            if 'a' in mode or 'w' in mode:
+                raise IOError('Permission denied')
             f = "/".join((p, urllib.quote(path)))
             return httprangereader(f, urlopener)
         return o
@@ -77,6 +84,7 @@ class statichttprepository(localrepo.localrepository):
         self._url = path
         self.ui = ui
 
+        self.root = path
         self.path, authinfo = url.getauthinfo(path.rstrip('/') + "/.hg")
 
         opener = build_opener(ui, authinfo)
@@ -116,6 +124,8 @@ class statichttprepository(localrepo.localrepository):
         self.changelog = changelog.changelog(self.sopener)
         self._tags = None
         self.nodetagscache = None
+        self._branchcache = None
+        self._branchcachetip = None
         self.encodepats = None
         self.decodepats = None
 

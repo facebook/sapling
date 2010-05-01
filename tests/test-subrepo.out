@@ -163,14 +163,6 @@ no changes found
 pushing ...subrepo s
 searching for changes
 (did you forget to merge? use push -f to force)
-pushing ...subrepo t
-searching for changes
-no changes found
-searching for changes
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 1 files
 pushing ...sub/t
 pushing ...subrepo ss
 searching for changes
@@ -185,7 +177,10 @@ pushing ...subrepo t
 searching for changes
 no changes found
 searching for changes
-no changes found
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
 % update
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 committing subrepository t
@@ -266,3 +261,20 @@ updating to branch default
 default = $HGTMP/test-subrepo/sub/mercurial/nested_absolute
 [paths]
 default = $HGTMP/test-subrepo/sub/mercurial/main/../nested_relative
+% issue 1977
+adding a
+adding .hgsub
+committing subrepository s
+updating to branch default
+pulling subrepo s
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+committing subrepository s
+abort: push creates new remote heads on branch 'default'!
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved

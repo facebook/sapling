@@ -2357,11 +2357,28 @@ def save(ui, repo, **opts):
     return 0
 
 def strip(ui, repo, rev, **opts):
-    """strip a revision and all its descendants from the repository
+    """strip a changeset and all its descendants from the repository
 
-    If one of the working directory's parent revisions is stripped, the
-    working directory will be updated to the parent of the stripped
-    revision.
+    The strip command removes all changesets whose local revision
+    number is greater than or equal to REV, and then restores any
+    changesets that are not descendants of REV. If the working
+    directory has uncommitted changes, the operation is aborted unless
+    the --force flag is supplied.
+
+    If a parent of the working directory is stripped, then the working
+    directory will automatically be updated to the most recent
+    available ancestor of the stripped parent after the operation
+    completes.
+
+    Any stripped changesets are stored in ``.hg/strip-backup`` as a
+    bundle (see ``hg help bundle`` and ``hg help unbundle``). They can
+    be restored by running ``hg unbundle .hg/strip-backup/BUNDLE``,
+    where BUNDLE is the bundle file created by the strip. Note that
+    the local revision numbers will in general be different after the
+    restore.
+
+    Use the --nobackup option to discard the backup bundle once the
+    operation completes.
     """
     backup = 'all'
     if opts['backup']:
@@ -2788,14 +2805,17 @@ cmdtable = {
         (series,
          [('m', 'missing', None, _('print patches not in series')),
          ] + seriesopts,
-         _('hg qseries [-ms]')),
-    "strip":
-        (strip,
-         [('f', 'force', None, _('force removal with local changes')),
-          ('b', 'backup', None, _('bundle unrelated changesets')),
-          ('n', 'nobackup', None, _('no backups'))],
-         _('hg strip [-f] [-b] [-n] REV')),
-    "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
+          _('hg qseries [-ms]')),
+     "strip":
+         (strip,
+         [('f', 'force', None, _('force removal of changesets even if the '
+                                 'working directory has uncommitted changes')),
+          ('b', 'backup', None, _('bundle only changesets with local revision'
+                                  ' number greater than REV which are not'
+                                  ' descendants of REV (DEPRECATED)')),
+           ('n', 'nobackup', None, _('no backups'))],
+          _('hg strip [-f] [-b] [-n] REV')),
+     "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
     "qunapplied":
         (unapplied,
          [('1', 'first', None, _('show only the first patch'))] + seriesopts,
