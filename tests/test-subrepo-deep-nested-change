@@ -1,0 +1,57 @@
+#!/bin/sh
+
+echo % Preparing the subrepository 'sub2'
+hg init sub2
+echo sub2 > sub2/sub2
+hg add -R sub2
+hg commit -R sub2 -m "sub2 import"
+
+echo % Preparing the 'sub1' repo which depends on the subrepo 'sub2'
+hg init sub1
+echo sub1 > sub1/sub1
+echo "sub2 = ../sub2" > sub1/.hgsub
+hg clone sub2 sub1/sub2 | sed 's/ .*sub/ ...sub/g'
+hg add -R sub1
+hg commit -R sub1 -m "sub1 import"
+
+echo % Preparing the 'main' repo which depends on the subrepo 'sub1'
+hg init main
+echo main > main/main
+echo "sub1 = ../sub1" > main/.hgsub
+hg clone sub1 main/sub1  | sed 's/ .*sub/ ...sub/g'
+hg add -R main
+hg commit -R main -m "main import"
+
+echo % Cleaning both repositories, just as a clone -U
+hg up -C -R sub2 null
+hg up -C -R sub1 null
+hg up -C -R main null
+rm -rf main/sub1
+rm -rf sub1/sub2
+
+echo % Clone main
+hg clone main cloned | sed 's/ .*sub/ ...sub/g' 
+
+echo % Checking cloned repo ids
+printf "cloned " ; hg id -R cloned
+printf "cloned/sub1 " ; hg id -R cloned/sub1
+printf "cloned/sub1/sub2 " ; hg id -R cloned/sub1/sub2
+
+echo % debugsub output for main and sub1
+hg debugsub -R cloned
+hg debugsub -R cloned/sub1
+
+echo % Modifying deeply nested 'sub2'
+echo modified > cloned/sub1/sub2/sub2
+hg commit -m "deep nested modif should trigger a commit" -R cloned
+
+echo % Checking modified node ids
+printf "cloned " ; hg id -R cloned
+printf "cloned/sub1 " ; hg id -R cloned/sub1
+printf "cloned/sub1/sub2 " ; hg id -R cloned/sub1/sub2
+
+echo % debugsub output for main and sub1
+hg debugsub -R cloned
+hg debugsub -R cloned/sub1
+
+exit 0

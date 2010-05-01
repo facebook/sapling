@@ -752,7 +752,11 @@ class workingctx(changectx):
 
     def dirty(self, missing=False):
         "check whether a working directory is modified"
-
+        # check subrepos first
+        for s in self.substate:
+            if self.sub(s).dirty():
+                return True
+        # check current working dir
         return (self.p2() or self.branch() != self.p1().branch() or
                 self.modified() or self.added() or self.removed() or
                 (missing and self.deleted()))
