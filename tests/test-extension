@@ -156,6 +156,7 @@ hg debugextensions
 
 echo '% disabled extension commands'
 HGRCPATH=
+export HGRCPATH
 hg help email
 hg qdel
 hg churn
