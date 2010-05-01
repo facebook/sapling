@@ -116,7 +116,6 @@ def do_relink(src, dst, files, ui):
     CHUNKLEN = 65536
     relinked = 0
     savedbytes = 0
-    f = ''
 
     pos = 0
     total = len(files)
