@@ -656,14 +656,10 @@ class svn_source(converter_source):
                 if fromkind == svn.core.svn_node_file:
                     entries.append(self.recode(entrypath))
                 elif fromkind == svn.core.svn_node_dir:
-                    if ent.action == 'C':
-                        children = self._find_children(path, prevnum)
-                    else:
-                        oroot = parentpath.strip('/')
-                        nroot = path.strip('/')
-                        children = self._find_children(oroot, prevnum)
-                        children = [s.replace(oroot, nroot) for s in children]
-
+                    oroot = parentpath.strip('/')
+                    nroot = path.strip('/')
+                    children = self._find_children(oroot, prevnum)
+                    children = [s.replace(oroot, nroot) for s in children]
                     for child in children:
                         childpath = self.getrelpath("/" + child, pmodule)
                         if not childpath:
