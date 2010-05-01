@@ -143,10 +143,8 @@ echo % compare changenodes in a c
 cat a c
 
 echo % record
-cp "$HGRCPATH" $HGRCPATH.bak
-sed -e '1 a \foo' a > a.tmp
-mv a.tmp a
-echo bar >> a
+python -c \
+'l=open("a").readlines();l.insert(1,"foo\n");l.append("bar\n");open("a","w").writelines(l);'
 hg record -d '1 10' -m rectest<<EOF
 y
 y
