@@ -28,7 +28,7 @@ EOF
 
 cat >> $HGRCPATH <<EOF
 [extensions]
-commitwrapper = $PWD/commitwrapper.py
+commitwrapper = `pwd`/commitwrapper.py
 EOF
 
 hg init repo1
