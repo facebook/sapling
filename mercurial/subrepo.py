@@ -266,8 +266,9 @@ class hgsubrepo(object):
             if not c.sub(s).push(force):
                 return False
 
-        self._repo.ui.status(_('pushing subrepo %s\n') % self._path)
         dsturl = _abssource(self._repo, True)
+        self._repo.ui.status(_('pushing subrepo %s to %s\n') %
+            (self._path, dsturl))
         other = hg.repository(self._repo.ui, dsturl)
         return self._repo.push(other, force)
 

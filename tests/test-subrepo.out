@@ -151,13 +151,13 @@ path t
 % push
 committing subrepository t
 pushing ...sub/t
-pushing ...subrepo ss
+pushing ...sub/t/s/ss
 searching for changes
 no changes found
-pushing ...subrepo s
+pushing ...sub/t/s
 searching for changes
 no changes found
-pushing ...subrepo t
+pushing ...sub/t/t
 searching for changes
 adding changesets
 adding manifests
@@ -172,23 +172,23 @@ added 1 changesets with 1 changes to 1 files
 committing subrepository s
 abort: push creates new remote heads on branch 'default'!
 pushing ...sub/t
-pushing ...subrepo ss
+pushing ...sub/t/s/ss
 searching for changes
 no changes found
-pushing ...subrepo s
+pushing ...sub/t/s
 searching for changes
 (did you forget to merge? use push -f to force)
 pushing ...sub/t
-pushing ...subrepo ss
+pushing ...sub/t/s/ss
 searching for changes
 no changes found
-pushing ...subrepo s
+pushing ...sub/t/s
 searching for changes
 adding changesets
 adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
-pushing ...subrepo t
+pushing ...sub/t/t
 searching for changes
 no changes found
 searching for changes
