@@ -23,6 +23,9 @@ hg status -C
 hg update -C
 rm d2/c
 
+echo "# rename --after a single file to a nonexistant target filename"
+hg rename --after d1/a dummy
+
 echo "# move a single file to an existing directory"
 hg rename d1/d11/a1 d2
 hg status -C

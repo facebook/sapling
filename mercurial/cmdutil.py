@@ -396,6 +396,12 @@ def copy(ui, repo, pats, opts, rename=False):
 
         if after:
             if not exists:
+                if rename:
+                    ui.warn(_('%s: not recording move - %s does not exist\n') %
+                            (relsrc, reltarget))
+                else:
+                    ui.warn(_('%s: not recording copy - %s does not exist\n') %
+                            (relsrc, reltarget))
                 return
         elif not dryrun:
             try:

@@ -8,6 +8,8 @@ A d2/c
   d1/d11/a1
 R d1/d11/a1
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+# rename --after a single file to a nonexistant target filename
+d1/a: not recording move - dummy does not exist
 # move a single file to an existing directory
 A d2/a1
   d1/d11/a1
@@ -170,6 +172,8 @@ R d1/d11/a1
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 # move --after some files under d1 to d2/d21 (glob)
 moving d1/a to d2/d21/a
+d1/b: not recording move - d2/d21/b does not exist
+d1/ba: not recording move - d2/d21/ba does not exist
 moving d1/d11/a1 to d2/d21/a1
 A d2/d21/a
   d1/a

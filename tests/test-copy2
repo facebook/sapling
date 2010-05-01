@@ -19,6 +19,9 @@ rm bar
 hg st -A
 hg commit -m1
 
+echo "# copy --after to a nonexistant target filename"
+hg cp -A foo dummy
+
 echo "# dry-run; should show that foo is clean"
 hg copy --dry-run foo bar
 hg st -A

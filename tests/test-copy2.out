@@ -11,6 +11,8 @@ A bar
 # should print a warning that this is not a real copy; foo is added
 bar has not been committed yet, so no copy data will be stored for foo.
 A foo
+# copy --after to a nonexistant target filename
+foo: not recording copy - dummy does not exist
 # dry-run; should show that foo is clean
 C foo
 # should show copy
