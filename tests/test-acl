@@ -7,7 +7,7 @@ do_push()
 
     echo "Pushing as user $user"
     echo 'hgrc = """'
-    sed -e 1,2d b/.hg/hgrc | grep -v /tmp/
+    sed -e 1,2d b/.hg/hgrc | grep -v "$HGTMP"
     echo '"""'
     if test -f acl.config; then
 	echo 'acl.config = """'
