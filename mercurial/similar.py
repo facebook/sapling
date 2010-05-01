@@ -91,7 +91,7 @@ def findrenames(repo, added, removed, threshold):
 
     # Find exact matches.
     for (a, b) in _findexactmatches(repo,
-            sorted(addedfiles),sorted( removedfiles)):
+            sorted(addedfiles), sorted(removedfiles)):
         addedfiles.remove(b)
         yield (a.path(), b.path(), 1.0)
 
