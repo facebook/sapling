@@ -215,7 +215,7 @@ echo a > repo/s/a
 hg -R repo/s ci -Am0
 echo s = s > repo/.hgsub
 hg -R repo ci -Am1
-hg clone repo repo2
+hg clone repo repo2 | sed 's|from .*/sub|from .../sub|g'
 hg -q -R repo2 pull -u
 echo 1 > repo2/s/a
 hg -R repo2/s ci -m2

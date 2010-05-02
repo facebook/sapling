@@ -266,7 +266,7 @@ adding a
 adding .hgsub
 committing subrepository s
 updating to branch default
-pulling subrepo s
+pulling subrepo s from .../sub/repo/s
 requesting all changes
 adding changesets
 adding manifests
