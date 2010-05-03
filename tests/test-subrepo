@@ -16,6 +16,7 @@ hg add .hgsub
 hg init s
 echo a > s/a
 hg -R s ci -Ams0
+hg sum
 hg ci -m1
 
 echo % add sub sub
@@ -24,7 +25,9 @@ hg init s/ss
 echo a > s/ss/a
 hg -R s add s/.hgsub
 hg -R s/ss add s/ss/a
+hg sum
 hg ci -m2
+hg sum
 
 echo % bump sub rev
 echo b > s/a

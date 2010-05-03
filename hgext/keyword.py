@@ -160,12 +160,9 @@ class kwtemplater(object):
         Caveat: localrepository._link fails on Windows.'''
         return self.match(path) and not 'l' in flagfunc(path)
 
-    def overwrite(self, node, expand, candidates, recctx=None):
+    def overwrite(self, node, expand, candidates):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        if recctx is None:
-            ctx = self.repo[node]
-        else:
-            ctx = recctx
+        ctx = self.repo[node]
         mf = ctx.manifest()
         if node is not None:     # commit, record
             candidates = [f for f in ctx.files() if f in mf]
@@ -175,7 +172,7 @@ class kwtemplater(object):
             msg = (expand and _('overwriting %s expanding keywords\n')
                    or _('overwriting %s shrinking keywords\n'))
             for f in candidates:
-                if recctx is None:
+                if not self.record:
                     data = self.repo.file(f).read(mf[f])
                 else:
                     data = self.repo.wread(f)
@@ -507,7 +504,7 @@ def reposetup(ui, repo):
             ret = orig(ui, repo, commitfunc, *pats, **opts)
             recctx = repo['.']
             if ctx != recctx:
-                kwt.overwrite('.',  True, None, recctx)
+                kwt.overwrite('.',  True, None)
             return ret
         finally:
             wlock.release()
