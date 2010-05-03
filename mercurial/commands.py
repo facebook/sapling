@@ -3666,7 +3666,7 @@ table = {
           ('l', 'files-with-matches', None,
            _('print only filenames and revisions that match')),
           ('n', 'line-number', None, _('print matching line numbers')),
-          ('r', 'rev', [], _('search in given revision range')),
+          ('r', 'rev', [], _('only search files changed within revision range')),
           ('u', 'user', None, _('list the author (long with -v)')),
           ('d', 'date', None, _('list the date (short with -q)')),
          ] + walkopts,
