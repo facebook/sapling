@@ -3109,15 +3109,21 @@ def summary(ui, repo, **opts):
         ui.status(m, label='log.branch')
 
     st = list(repo.status(unknown=True))[:6]
+
     ms = mergemod.mergestate(repo)
     st.append([f for f in ms if ms[f] == 'u'])
+
+    subs = [s for s in ctx.substate if ctx.sub(s).dirty()]
+    st.append(subs)
+
     labels = [ui.label(_('%d modified'), 'status.modified'),
               ui.label(_('%d added'), 'status.added'),
               ui.label(_('%d removed'), 'status.removed'),
               ui.label(_('%d deleted'), 'status.deleted'),
               ui.label(_('%d unknown'), 'status.unknown'),
               ui.label(_('%d ignored'), 'status.ignored'),
-              ui.label(_('%d unresolved'), 'resolve.unresolved')]
+              ui.label(_('%d unresolved'), 'resolve.unresolved'),
+              ui.label(_('%d subrepos'), 'status.modified')]
     t = []
     for s, l in zip(st, labels):
         if s:
@@ -3130,7 +3136,7 @@ def summary(ui, repo, **opts):
         t += _(' (merge)')
     elif branch != parents[0].branch():
         t += _(' (new branch)')
-    elif (not st[0] and not st[1] and not st[2]):
+    elif (not st[0] and not st[1] and not st[2] and not st[7]):
         t += _(' (clean)')
         cleanworkdir = True
     elif pnode not in bheads:
