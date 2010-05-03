@@ -333,11 +333,14 @@ def extsetup(ui):
 
 def _setupcmd(ui, cmd, table, func, effectsmap):
     '''patch in command to command table and load effect map'''
+    # check isatty() before anything else changes it (like pager)
+    isatty = sys.__stdout__.isatty()
+
     def nocolor(orig, *args, **opts):
 
         if (opts['no_color'] or opts['color'] == 'never' or
             (opts['color'] == 'auto' and (os.environ.get('TERM') == 'dumb'
-                                          or not sys.__stdout__.isatty()))):
+                                          or not isatty))):
             del opts['no_color']
             del opts['color']
             return orig(*args, **opts)
