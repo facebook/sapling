@@ -208,6 +208,12 @@ class httprepository(repo.repository):
         return util.chunkbuffer(zgenerator(f))
 
     def unbundle(self, cg, heads, source):
+        '''Send cg (a readable file-like object representing the
+        changegroup to push, typically a chunkbuffer object) to the
+        remote server as a bundle. Return an integer response code:
+        non-zero indicates a successful push (see
+        localrepository.addchangegroup()), and zero indicates either
+        error or nothing to push.'''
         # have to stream bundle to a temp file because we do not have
         # http 1.1 chunked transfer.
 

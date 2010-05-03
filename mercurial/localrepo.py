@@ -1507,6 +1507,13 @@ class localrepository(repo.repository):
             lock.release()
 
     def push(self, remote, force=False, revs=None):
+        '''Push outgoing changesets (limited by revs) from the current
+        repository to remote. Return an integer:
+          - 0 means HTTP error *or* nothing to push
+          - 1 means we pushed and remote head count is unchanged *or*
+            we have outgoing changesets but refused to push
+          - other values as described by addchangegroup()
+        '''
         # there are two ways to push to remote repo:
         #
         # addchangegroup assumes local user can lock remote
@@ -1521,11 +1528,18 @@ class localrepository(repo.repository):
 
     def prepush(self, remote, force, revs):
         '''Analyze the local and remote repositories and determine which
-        changesets need to be pushed to the remote.  Return a tuple
-        (changegroup, remoteheads).  changegroup is a readable file-like
-        object whose read() returns successive changegroup chunks ready to
-        be sent over the wire.  remoteheads is the list of remote heads.
-        '''
+        changesets need to be pushed to the remote. Return value depends
+        on circumstances:
+
+        If we are not going to push anything, return a tuple (None,
+        outgoing) where outgoing is 0 if there are no outgoing
+        changesets and 1 if there are, but we refuse to push them
+        (e.g. would create new remote heads).
+
+        Otherwise, return a tuple (changegroup, remoteheads), where
+        changegroup is a readable file-like object whose read() returns
+        successive changegroup chunks ready to be sent over the wire and
+        remoteheads is the list of remote heads.'''
         common = {}
         remote_heads = remote.heads()
         inc = self.findincoming(remote, common, remote_heads, force=force)
@@ -1640,17 +1654,26 @@ class localrepository(repo.repository):
         return cg, remote_heads
 
     def push_addchangegroup(self, remote, force, revs):
+        '''Push a changegroup by locking the remote and sending the
+        addchangegroup command to it. Used for local and old SSH repos.
+        Return an integer: see push().
+        '''
         lock = remote.lock()
         try:
             ret = self.prepush(remote, force, revs)
             if ret[0] is not None:
                 cg, remote_heads = ret
+                # here, we return an integer indicating remote head count change
                 return remote.addchangegroup(cg, 'push', self.url())
+            # and here we return 0 for "nothing to push" or 1 for
+            # "something to push but I refuse"
             return ret[1]
         finally:
             lock.release()
 
     def push_unbundle(self, remote, force, revs):
+        '''Push a changegroup by unbundling it on the remote.  Used for new
+        SSH and HTTP repos. Return an integer: see push().'''
         # local repo finds heads on server, finds out what revs it
         # must push.  once revs transferred, if server finds it has
         # different heads (someone else won commit/push race), server
@@ -1661,7 +1684,10 @@ class localrepository(repo.repository):
             cg, remote_heads = ret
             if force:
                 remote_heads = ['force']
+            # ssh: return remote's addchangegroup()
+            # http: return remote's addchangegroup() or 0 for error
             return remote.unbundle(cg, remote_heads, 'push')
+        # as in push_addchangegroup()
         return ret[1]
 
     def changegroupinfo(self, nodes, source):
@@ -2025,12 +2051,14 @@ class localrepository(repo.repository):
         return util.chunkbuffer(gengroup())
 
     def addchangegroup(self, source, srctype, url, emptyok=False):
-        """add changegroup to repo.
+        """Add the changegroup returned by source.read() to this repo.
+        srctype is a string like 'push', 'pull', or 'unbundle'.  url is
+        the URL of the repo where this changegroup is coming from.
 
-        return values:
+        Return an integer summarizing the change to this repo:
         - nothing changed or no source: 0
         - more heads than before: 1+added heads (2..n)
-        - less heads than before: -1-removed heads (-2..-n)
+        - fewer heads than before: -1-removed heads (-2..-n)
         - number of heads stays the same: 1
         """
         def csmap(x):

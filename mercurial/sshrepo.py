@@ -217,6 +217,10 @@ class sshrepository(repo.repository):
         return self.do_cmd("changegroupsubset", bases=bases, heads=heads)
 
     def unbundle(self, cg, heads, source):
+        '''Send cg (a readable file-like object representing the
+        changegroup to push, typically a chunkbuffer object) to the
+        remote server as a bundle. Return an integer indicating the
+        result of the push (see localrepository.addchangegroup()).'''
         d = self.call("unbundle", heads=' '.join(map(hex, heads)))
         if d:
             # remote may send "unsynced changes"
@@ -242,6 +246,9 @@ class sshrepository(repo.repository):
             self.abort(error.ResponseError(_("unexpected response:"), r))
 
     def addchangegroup(self, cg, source, url):
+        '''Send a changegroup to the remote server.  Return an integer
+        similar to unbundle(). DEPRECATED, since it requires locking the
+        remote.'''
         d = self.call("addchangegroup")
         if d:
             self.abort(error.RepoError(_("push refused: %s") % d))
