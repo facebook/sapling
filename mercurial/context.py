@@ -642,6 +642,15 @@ class workingctx(changectx):
         self._parents = [changectx(self._repo, x) for x in p]
         return self._parents
 
+    def status(self, ignored=False, clean=False, unknown=False):
+        """Explicit status query
+        Unless this method is used to query the working copy status, the
+        _status property will implicitly read the status using its default
+        arguments."""
+        self._status = self._repo.status(ignored=ignored, clean=clean,
+                                         unknown=unknown)
+        return self._status
+
     def manifest(self):
         return self._manifest
     def user(self):
@@ -663,8 +672,10 @@ class workingctx(changectx):
         return self._status[3]
     def unknown(self):
         return self._status[4]
-    def clean(self):
+    def ignored(self):
         return self._status[5]
+    def clean(self):
+        return self._status[6]
     def branch(self):
         return self._extra['branch']
     def extra(self):
@@ -878,8 +889,10 @@ class memctx(object):
         return self._status[3]
     def unknown(self):
         return self._status[4]
-    def clean(self):
+    def ignored(self):
         return self._status[5]
+    def clean(self):
+        return self._status[6]
     def branch(self):
         return self._extra['branch']
     def extra(self):
