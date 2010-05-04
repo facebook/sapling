@@ -680,12 +680,10 @@ class workingctx(changectx):
     def unknown(self):
         return self._status[4]
     def ignored(self):
-        if self._ignored is None:
-            raise util.Abort(_("Ignored files requested without prior query\n"))
+        assert self._ignored is not None  # must call status first
         return self._ignored
     def clean(self):
-        if self._clean is None:
-            raise util.Abort(_("Clean files requested without prior query\n"))
+        assert self._clean is not None  # must call status first
         return self._clean
     def branch(self):
         return self._extra['branch']
