@@ -7,9 +7,9 @@
 
 '''hooks for controlling repository access
 
-This hook makes it possible to allow or deny write access to portions
-of a repository when receiving incoming changesets via pretxnchangegroup and
-pretxncommit.
+This hook makes it possible to allow or deny write access to given branches and
+paths of a repository when receiving incoming changesets via pretxnchangegroup
+and pretxncommit.
 
 The authorization is matched based on the local user name on the
 system where the hook runs, and not the committer of the original
@@ -22,26 +22,46 @@ interactive shell access, as they can then disable the hook.
 Nor is it safe if remote users share an account, because then there
 is no way to distinguish them.
 
-The deny list is checked before the allow list.
+The order in which access checks are performed is:
+1) Deny  list for branches (section [acl.deny.branches])
+2) Allow list for branches (section [acl.allow.branches])
+3) Deny  list for paths    (section [acl.deny])
+4) Allow list for paths    (section [acl.allow])
 
-The allow and deny sections take key-value pairs, having a subtree pattern
-as key (with a glob syntax by default). The corresponding value can be either:
+The allow and deny sections take key-value pairs.
 
-1) an asterisk, to match everyone;
-2) a comma-separated list containing users and groups.
+--- Branch-based Access Control ---
 
-Group names must be prefixed with an ``@`` symbol.
+Use the [acl.deny.branches] and [acl.allow.branches] sections to have
+branch-based access control.
+
+Keys in these sections can be either:
+1) a branch name
+2) an asterisk, to match any branch;
+
+The corresponding values can be either:
+1) a comma-separated list containing users and groups.
+2) an asterisk, to match anyone;
+
+--- Path-based Access Control ---
+
+Use the [acl.deny] and [acl.allow] sections to have path-based access control.
+Keys in these sections accept a subtree pattern (with a glob syntax by default).
+The corresponding values follow the same syntax as the other sections above.
+
+--- Groups ---
+
+Group names must be prefixed with an @ symbol.
 Specifying a group name has the same effect as specifying all the users in
 that group.
+The set of users for a group is taken from "grp.getgrnam"
+(see http://docs.python.org/library/grp.html#grp.getgrnam).
 
-To use this hook, configure the acl extension in your hgrc like this::
-
-  [extensions]
-  acl =
+--- Example Configuration ---
 
   [hooks]
 
-  # Use this if you want to check access restrictions at commit time.
+  # Use this if you want to check access restrictions at commit time
   pretxncommit.acl = python:hgext.acl.hook
   
   # Use this if you want to check access restrictions for pull, push, bundle
@@ -49,15 +69,37 @@ To use this hook, configure the acl extension in your hgrc like this::
   pretxnchangegroup.acl = python:hgext.acl.hook
 
   [acl]
-  # Check whether the source of incoming changes is in this list where
-  # "serve" == ssh or http, and "push", "pull" and "bundle" are the
-  # corresponding hg commands.
+  # Check whether the source of incoming changes is in this list
+  # ("serve" == ssh or http, "push", "pull", "bundle")
   sources = serve
 
+  [acl.deny.branches] 
+  
+  # Everyone is denied to the frozen branch: 
+  frozen-branch = * 
+  
+  # A bad user is denied on all branches: 
+  * = bad-user 
+  
+  [acl.allow.branches] 
+  
+  # A few users are allowed on branch-a: 
+  branch-a = user-1, user-2, user-3 
+  
+  # Only one user is allowed on branch-b: 
+  branch-b = user-1 
+  
+  # The super user is allowed on any branch: 
+  * = super-user 
+  
+  # Everyone is allowed on branch-for-tests: 
+  branch-for-tests = * 
+
   [acl.deny]
-  # This list is checked first. If a match is found, 'acl.allow' will not be
-  # checked. All users are granted access if acl.deny is not present.
-  # Format for both lists: glob pattern = user, ..., @group, ...
+  # If a match is found, "acl.allow" will not be checked.
+  # if acl.deny is not present, no users denied by default
+  # empty acl.deny = all users allowed
+  # Format for both lists: glob pattern = user4, user5, @group1
 
   # To match everyone, use an asterisk for the user:
   # my/glob/pattern = *
@@ -84,7 +126,7 @@ To use this hook, configure the acl extension in your hgrc like this::
   images/** = jack, @designers
 
   # Everyone (except for "user6" - see "acl.deny" above) will have write access
-  # to any file under the "resources" folder (except for 1 file. See "acl.deny"):
+  to any file under the "resources" folder (except for 1 file. See "acl.deny"):
   src/main/resources/** = *
 
   .hgtags = release_engineer
@@ -119,6 +161,12 @@ def buildmatch(ui, repo, user, key):
             if _usermatch(user, users)]
     ui.debug('acl: %s enabled, %d entries for user %s\n' %
              (key, len(pats), user))
+
+    if not repo:
+        if pats:
+            return lambda b: '*' in pats or b in pats
+        return lambda b: False
+
     if pats:
         return match.match(repo.root, '', pats)
     return match.exact(repo.root, '', [])
@@ -144,12 +192,28 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
 
     cfg = ui.config('acl', 'config')
     if cfg:
-        ui.readconfig(cfg, sections = ['acl.allow', 'acl.deny'])
+        ui.readconfig(cfg, sections = ['acl.allow.branches',
+        'acl.deny.branches', 'acl.allow', 'acl.deny'])
+
+    allowbranches = buildmatch(ui, None, user, 'acl.allow.branches')
+    denybranches = buildmatch(ui, None, user, 'acl.deny.branches')
     allow = buildmatch(ui, repo, user, 'acl.allow')
     deny = buildmatch(ui, repo, user, 'acl.deny')
 
     for rev in xrange(repo[node], len(repo)):
         ctx = repo[rev]
+        branch = ctx.branch()
+        if denybranches and denybranches(branch):
+            raise util.Abort(_('acl: user "%s" denied on branch "%s"'
+                               ' (changeset "%s")')
+                               % (user, branch, ctx))
+        if allowbranches and not allowbranches(branch):
+            raise util.Abort(_('acl: user "%s" not allowed on branch "%s"'
+                               ' (changeset "%s")')
+                               % (user, branch, ctx))
+        ui.debug('acl: branch access granted: "%s" on branch "%s"\n'
+        % (ctx, branch))
+
         for f in ctx.files():
             if deny and deny(f):
                 ui.debug('acl: user %s denied on %s\n' % (user, f))
