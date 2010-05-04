@@ -215,10 +215,15 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow not enabled
 acl: acl.deny not enabled
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: allowing changeset f9cafe1212c8
+acl: branch access granted: "911600dab2ae" on branch "default"
 acl: allowing changeset 911600dab2ae
 updating the branch cache
 rolling back to revision 1 (undo push)
@@ -294,8 +299,11 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 0 entries for user fred
 acl: acl.deny not enabled
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: user fred not allowed on foo/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset ef1ea85a6374
 transaction abort!
@@ -374,10 +382,15 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user fred
 acl: acl.deny not enabled
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: allowing changeset f9cafe1212c8
+acl: branch access granted: "911600dab2ae" on branch "default"
 acl: user fred not allowed on quux/file.py
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
 transaction abort!
@@ -457,8 +470,11 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 0 entries for user barney
 acl: acl.deny enabled, 0 entries for user barney
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: user barney not allowed on foo/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset ef1ea85a6374
 transaction abort!
@@ -539,10 +555,15 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user fred
 acl: acl.deny enabled, 1 entries for user fred
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: allowing changeset f9cafe1212c8
+acl: branch access granted: "911600dab2ae" on branch "default"
 acl: user fred not allowed on quux/file.py
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
 transaction abort!
@@ -624,9 +645,13 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user fred
 acl: acl.deny enabled, 2 entries for user fred
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: user fred denied on foo/Bar/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset f9cafe1212c8
 transaction abort!
@@ -708,8 +733,11 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 0 entries for user barney
 acl: acl.deny enabled, 0 entries for user barney
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: user barney not allowed on foo/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset ef1ea85a6374
 transaction abort!
@@ -793,10 +821,15 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user barney
 acl: acl.deny enabled, 0 entries for user barney
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: allowing changeset f9cafe1212c8
+acl: branch access granted: "911600dab2ae" on branch "default"
 acl: allowing changeset 911600dab2ae
 updating the branch cache
 rolling back to revision 1 (undo push)
@@ -879,10 +912,15 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user wilma
 acl: acl.deny enabled, 0 entries for user wilma
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: allowing changeset f9cafe1212c8
+acl: branch access granted: "911600dab2ae" on branch "default"
 acl: user wilma not allowed on quux/file.py
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
 transaction abort!
@@ -1058,10 +1096,15 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user betty
 acl: acl.deny enabled, 0 entries for user betty
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: allowing changeset f9cafe1212c8
+acl: branch access granted: "911600dab2ae" on branch "default"
 acl: user betty not allowed on quux/file.py
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
 transaction abort!
@@ -1154,10 +1197,15 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user barney
 acl: acl.deny enabled, 0 entries for user barney
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: allowing changeset f9cafe1212c8
+acl: branch access granted: "911600dab2ae" on branch "default"
 acl: allowing changeset 911600dab2ae
 updating the branch cache
 rolling back to revision 1 (undo push)
@@ -1234,10 +1282,15 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user fred
 acl: acl.deny not enabled
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: allowing changeset f9cafe1212c8
+acl: branch access granted: "911600dab2ae" on branch "default"
 acl: allowing changeset 911600dab2ae
 updating the branch cache
 rolling back to revision 1 (undo push)
@@ -1315,9 +1368,13 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user fred
 acl: acl.deny enabled, 1 entries for user fred
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: user fred denied on foo/Bar/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset f9cafe1212c8
 transaction abort!
@@ -1396,10 +1453,15 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user fred
 acl: acl.deny not enabled
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: allowing changeset f9cafe1212c8
+acl: branch access granted: "911600dab2ae" on branch "default"
 acl: allowing changeset 911600dab2ae
 updating the branch cache
 rolling back to revision 1 (undo push)
@@ -1477,9 +1539,13 @@ adding quux/file.py revisions
 files: 3/3 chunks (100.00%)
 added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
+acl: acl.allow.branches not enabled
+acl: acl.deny.branches not enabled
 acl: acl.allow enabled, 1 entries for user fred
 acl: acl.deny enabled, 1 entries for user fred
+acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
+acl: branch access granted: "f9cafe1212c8" on branch "default"
 acl: user fred denied on foo/Bar/file.txt
 error: pretxnchangegroup.acl hook failed: acl: access denied for changeset f9cafe1212c8
 transaction abort!
