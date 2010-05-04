@@ -564,7 +564,12 @@ class workingctx(changectx):
         if user:
             self._user = user
         if changes:
-            self._status = list(changes)
+            self._status = list(changes[:5])
+            self._ignored = changes[5]
+            self._clean = changes[6]
+        else:
+            self._ignored = None
+            self._clean = None
 
         self._extra = {}
         if extra:
@@ -624,7 +629,7 @@ class workingctx(changectx):
 
     @propertycache
     def _status(self):
-        return self._repo.status(unknown=True)
+        return self._repo.status(unknown=True)[:5]
 
     @propertycache
     def _user(self):
@@ -647,8 +652,10 @@ class workingctx(changectx):
         Unless this method is used to query the working copy status, the
         _status property will implicitly read the status using its default
         arguments."""
-        self._status = self._repo.status(ignored=ignored, clean=clean,
-                                         unknown=unknown)
+        stat = self._repo.status(ignored=ignored, clean=clean, unknown=unknown)
+        self._ignored = ignored and stat[5] or None
+        self._clean = clean and stat[6] or None
+        self._status = stat[:5]
         return self._status
 
     def manifest(self):
@@ -673,9 +680,13 @@ class workingctx(changectx):
     def unknown(self):
         return self._status[4]
     def ignored(self):
-        return self._status[5]
+        if self._ignored is None:
+            raise util.Abort(_("Ignored files requested without prior query\n"))
+        return self._ignored
     def clean(self):
-        return self._status[6]
+        if self._clean is None:
+            raise util.Abort(_("Clean files requested without prior query\n"))
+        return self._clean
     def branch(self):
         return self._extra['branch']
     def extra(self):
