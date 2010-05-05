@@ -502,8 +502,7 @@ def reposetup(ui, repo):
             # therefore compare nodes before and after
             ctx = repo['.']
             ret = orig(ui, repo, commitfunc, *pats, **opts)
-            recctx = repo['.']
-            if ctx != recctx:
+            if ctx != repo['.']:
                 kwt.overwrite('.',  True, None)
             return ret
         finally:
