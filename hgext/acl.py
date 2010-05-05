@@ -23,41 +23,50 @@ Nor is it safe if remote users share an account, because then there
 is no way to distinguish them.
 
 The order in which access checks are performed is:
-1) Deny  list for branches (section [acl.deny.branches])
-2) Allow list for branches (section [acl.allow.branches])
-3) Deny  list for paths    (section [acl.deny])
-4) Allow list for paths    (section [acl.allow])
+
+1) Deny  list for branches (section ``acl.deny.branches``)
+2) Allow list for branches (section ``acl.allow.branches``)
+3) Deny  list for paths    (section ``acl.deny``)
+4) Allow list for paths    (section ``acl.allow``)
 
 The allow and deny sections take key-value pairs.
 
---- Branch-based Access Control ---
+Branch-based Access Control
+---------------------------
 
-Use the [acl.deny.branches] and [acl.allow.branches] sections to have
+Use the ``acl.deny.branches`` and ``acl.allow.branches`` sections to have
 branch-based access control.
 
 Keys in these sections can be either:
+
 1) a branch name
 2) an asterisk, to match any branch;
 
 The corresponding values can be either:
+
 1) a comma-separated list containing users and groups.
 2) an asterisk, to match anyone;
 
---- Path-based Access Control ---
+Path-based Access Control
+-------------------------
 
-Use the [acl.deny] and [acl.allow] sections to have path-based access control.
+Use the ``acl.deny`` and ``acl.allow`` sections to have path-based access control.
 Keys in these sections accept a subtree pattern (with a glob syntax by default).
 The corresponding values follow the same syntax as the other sections above.
 
---- Groups ---
+Groups
+------
 
-Group names must be prefixed with an @ symbol.
+Group names must be prefixed with an ``@`` symbol.
 Specifying a group name has the same effect as specifying all the users in
 that group.
 The set of users for a group is taken from "grp.getgrnam"
 (see http://docs.python.org/library/grp.html#grp.getgrnam).
 
---- Example Configuration ---
+Example Configuration
+---------------------
+
+::
 
   [hooks]
 
