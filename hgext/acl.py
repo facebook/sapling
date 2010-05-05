@@ -7,20 +7,20 @@
 
 '''hooks for controlling repository access
 
-This hook makes it possible to allow or deny write access to given branches and
-paths of a repository when receiving incoming changesets via pretxnchangegroup
-and pretxncommit.
+This hook makes it possible to allow or deny write access to given
+branches and paths of a repository when receiving incoming changesets
+via pretxnchangegroup and pretxncommit.
 
 The authorization is matched based on the local user name on the
 system where the hook runs, and not the committer of the original
 changeset (since the latter is merely informative).
 
 The acl hook is best used along with a restricted shell like hgsh,
-preventing authenticating users from doing anything other than
-pushing or pulling. The hook is not safe to use if users have
-interactive shell access, as they can then disable the hook.
-Nor is it safe if remote users share an account, because then there
-is no way to distinguish them.
+preventing authenticating users from doing anything other than pushing
+or pulling. The hook is not safe to use if users have interactive
+shell access, as they can then disable the hook. Nor is it safe if
+remote users share an account, because then there is no way to
+distinguish them.
 
 The order in which access checks are performed is:
 
@@ -34,34 +34,31 @@ The allow and deny sections take key-value pairs.
 Branch-based Access Control
 ---------------------------
 
-Use the ``acl.deny.branches`` and ``acl.allow.branches`` sections to have
-branch-based access control.
+Use the ``acl.deny.branches`` and ``acl.allow.branches`` sections to
+have branch-based access control. Keys in these sections can be
+either:
 
-Keys in these sections can be either:
-
-1) a branch name
-2) an asterisk, to match any branch;
+- a branch name, or
+- an asterisk, to match any branch;
 
 The corresponding values can be either:
 
-1) a comma-separated list containing users and groups.
-2) an asterisk, to match anyone;
+- a comma-separated list containing users and groups, or
+- an asterisk, to match anyone;
 
 Path-based Access Control
 -------------------------
 
-Use the ``acl.deny`` and ``acl.allow`` sections to have path-based access control.
-Keys in these sections accept a subtree pattern (with a glob syntax by default).
-The corresponding values follow the same syntax as the other sections above.
+Use the ``acl.deny`` and ``acl.allow`` sections to have path-based
+access control. Keys in these sections accept a subtree pattern (with
+a glob syntax by default). The corresponding values follow the same
+syntax as the other sections above.
 
 Groups
 ------
 
-Group names must be prefixed with an ``@`` symbol.
-Specifying a group name has the same effect as specifying all the users in
-that group.
-The set of users for a group is taken from "grp.getgrnam"
-(see http://docs.python.org/library/grp.html#grp.getgrnam).
+Group names must be prefixed with an ``@`` symbol. Specifying a group
+name has the same effect as specifying all the users in that group.
 
 Example Configuration
 ---------------------
@@ -73,13 +70,14 @@ Example Configuration
   # Use this if you want to check access restrictions at commit time
   pretxncommit.acl = python:hgext.acl.hook
   
-  # Use this if you want to check access restrictions for pull, push, bundle
-  # and serve.
+  # Use this if you want to check access restrictions for pull, push,
+  # bundle and serve.
   pretxnchangegroup.acl = python:hgext.acl.hook
 
   [acl]
-  # Check whether the source of incoming changes is in this list
-  # ("serve" == ssh or http, "push", "pull", "bundle")
+  # Check whether the source of incoming changes is in this list where
+  # "serve" == ssh or http, and "push", "pull" and "bundle" are the
+  # corresponding hg commands.
   sources = serve
 
   [acl.deny.branches] 
@@ -105,10 +103,9 @@ Example Configuration
   branch-for-tests = * 
 
   [acl.deny]
-  # If a match is found, "acl.allow" will not be checked.
-  # if acl.deny is not present, no users denied by default
-  # empty acl.deny = all users allowed
-  # Format for both lists: glob pattern = user4, user5, @group1
+  # This list is checked first. If a match is found, acl.allow is not
+  # checked. All users are granted access if acl.deny is not present.
+  # Format for both lists: glob pattern = user, ..., @group, ...
 
   # To match everyone, use an asterisk for the user:
   # my/glob/pattern = *
@@ -119,23 +116,25 @@ Example Configuration
   # Group "hg-denied" will not have write access to any file:
   ** = @hg-denied
 
-  # Nobody will be able to change "DONT-TOUCH-THIS.txt", despite everyone being
-  # able to change all other files. See below.
+  # Nobody will be able to change "DONT-TOUCH-THIS.txt", despite
+  # everyone being able to change all other files. See below.
   src/main/resources/DONT-TOUCH-THIS.txt = *
 
   [acl.allow]
   # if acl.allow not present, all users allowed by default
   # empty acl.allow = no users allowed
 
-  # User "doc_writer" has write access to any file under the "docs" folder:
+  # User "doc_writer" has write access to any file under the "docs"
+  # folder:
   docs/** = doc_writer
 
-  # User "jack" and group "designers" have write access to any file under the
-  # "images" folder:
+  # User "jack" and group "designers" have write access to any file
+  # under the "images" folder:
   images/** = jack, @designers
 
-  # Everyone (except for "user6" - see "acl.deny" above) will have write access
-  to any file under the "resources" folder (except for 1 file. See "acl.deny"):
+  # Everyone (except for "user6" - see acl.deny above) will have write
+  # access to any file under the "resources" folder (except for 1
+  # file. See acl.deny):
   src/main/resources/** = *
 
   .hgtags = release_engineer
