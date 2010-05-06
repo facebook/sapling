@@ -60,6 +60,11 @@ Groups
 Group names must be prefixed with an ``@`` symbol. Specifying a group
 name has the same effect as specifying all the users in that group.
 
+You can define group members in the ``acl.groups`` section.
+If a group name is not defined there, and Mercurial is running under
+a Unix-like system, the list of users will be taken from the OS.
+Otherwise, an exception will be raised.
+
 Example Configuration
 ---------------------
 
