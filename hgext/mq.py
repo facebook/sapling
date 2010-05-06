@@ -2662,10 +2662,26 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
         raise util.Abort('no queue repository')
     return orig(r.ui, r, *args, **kwargs)
 
+def summary(orig, ui, repo, *args, **kwargs):
+    r = orig(ui, repo, *args, **kwargs)
+    q = repo.mq
+    m = []
+    a, u = len(q.applied), len(q.unapplied(repo))
+    if a:
+        m.append(_("%d applied") % a)
+    if u:
+        m.append(_("%d unapplied") % u)
+    if m:
+        ui.write("mq:     %s\n" % ', '.join(m))
+    else:
+        ui.note("mq:     (empty queue)\n")
+    return r
+
 def uisetup(ui):
     mqopt = [('', 'mq', None, _("operate on patch repository"))]
 
     extensions.wrapcommand(commands.table, 'import', mqimport)
+    extensions.wrapcommand(commands.table, 'summary', summary)
 
     entry = extensions.wrapcommand(commands.table, 'init', mqinit)
     entry[1].extend(mqopt)

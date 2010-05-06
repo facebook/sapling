@@ -151,8 +151,20 @@ popping test2.patch
 now at: test.patch
 0 A test.patch: foo bar
 1 U test2.patch: 
+parent: 2:1d611e5a7244 qbase qtip test.patch tip
+ foo bar
+branch: default
+commit: (clean)
+update: (current)
+mq:     1 applied, 1 unapplied
 applying test2.patch
 now at: test2.patch
+parent: 3:333b5cb98635 qtip test2.patch tip
+ imported patch test2.patch
+branch: default
+commit: (clean)
+update: (current)
+mq:     2 applied
 % qapplied
 test.patch
 test2.patch
