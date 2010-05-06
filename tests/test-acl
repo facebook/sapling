@@ -28,7 +28,13 @@ init_config()
 {
 cat > fakegroups.py <<EOF
 from hgext import acl
-acl._getusers = lambda x: ["fred", "betty"]
+def fakegetusers(ui, group):
+    try:
+        return acl._getusersorig(ui, group)
+    except:
+        return ["fred", "betty"]
+acl._getusersorig = acl._getusers
+acl._getusers = fakegetusers
 EOF
 
 rm -f acl.config

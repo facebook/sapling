@@ -145,16 +145,24 @@ from mercurial.i18n import _
 from mercurial import util, match
 import getpass, urllib, grp
 
-def _getusers(group):
+def _getusers(ui, group):
+
+    # First, try to use group definition from section [acl.groups]
+    hgrcusers = ui.configlist('acl.groups', group)
+    if hgrcusers:
+        return hgrcusers
+
+    ui.debug('acl: "%s" not defined in [acl.groups]\n' % group)
+    # If no users found in group definition, get users from OS-level group
     return grp.getgrnam(group).gr_mem
 
-def _usermatch(user, usersorgroups):
+def _usermatch(ui, user, usersorgroups):
 
     if usersorgroups == '*':
         return True
 
     for ug in usersorgroups.replace(',', ' ').split():
-        if user == ug or ug.find('@') == 0 and user in _getusers(ug[1:]):
+        if user == ug or ug.find('@') == 0 and user in _getusers(ui, ug[1:]):
             return True
 
     return False
@@ -166,7 +174,7 @@ def buildmatch(ui, repo, user, key):
         return None
 
     pats = [pat for pat, users in ui.configitems(key)
-            if _usermatch(user, users)]
+            if _usermatch(ui, user, users)]
     ui.debug('acl: %s enabled, %d entries for user %s\n' %
              (key, len(pats), user))
 
@@ -200,7 +208,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
 
     cfg = ui.config('acl', 'config')
     if cfg:
-        ui.readconfig(cfg, sections = ['acl.allow.branches',
+        ui.readconfig(cfg, sections = ['acl.groups', 'acl.allow.branches',
         'acl.deny.branches', 'acl.allow', 'acl.deny'])
 
     allowbranches = buildmatch(ui, None, user, 'acl.allow.branches')
