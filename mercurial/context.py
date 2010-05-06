@@ -564,10 +564,12 @@ class workingctx(changectx):
         if user:
             self._user = user
         if changes:
-            self._status = list(changes[:5])
+            self._status = list(changes[:4])
+            self._unknown = changes[4]
             self._ignored = changes[5]
             self._clean = changes[6]
         else:
+            self._unknown = None
             self._ignored = None
             self._clean = None
 
@@ -597,6 +599,9 @@ class workingctx(changectx):
     def _manifest(self):
         """generate a manifest corresponding to the working directory"""
 
+        if self._unknown is None:
+            self.status(unknown=True)
+
         man = self._parents[0].manifest().copy()
         copied = self._repo.dirstate.copies()
         if len(self._parents) > 1:
@@ -611,7 +616,8 @@ class workingctx(changectx):
             f = copied.get(f, f)
             return getman(f).flags(f)
         ff = self._repo.dirstate.flagfunc(cf)
-        modified, added, removed, deleted, unknown = self._status[:5]
+        modified, added, removed, deleted = self._status
+        unknown = self._unknown
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
             for f in l:
                 orig = copied.get(f, f)
@@ -629,7 +635,7 @@ class workingctx(changectx):
 
     @propertycache
     def _status(self):
-        return self._repo.status(unknown=True)[:5]
+        return self._repo.status()[:4]
 
     @propertycache
     def _user(self):
@@ -653,10 +659,15 @@ class workingctx(changectx):
         _status property will implicitly read the status using its default
         arguments."""
         stat = self._repo.status(ignored=ignored, clean=clean, unknown=unknown)
-        self._ignored = ignored and stat[5] or None
-        self._clean = clean and stat[6] or None
-        self._status = stat[:5]
-        return self._status
+        self._unknown = self._ignored = self._clean = None
+        if unknown:
+            self._unknown = stat[4]
+        if ignored:
+            self._ignored = stat[5]
+        if clean:
+            self._clean = stat[6]
+        self._status = stat[:4]
+        return stat
 
     def manifest(self):
         return self._manifest
@@ -678,7 +689,8 @@ class workingctx(changectx):
     def deleted(self):
         return self._status[3]
     def unknown(self):
-        return self._status[4]
+        assert self._unknown is not None  # must call status first
+        return self._unknown
     def ignored(self):
         assert self._ignored is not None  # must call status first
         return self._ignored

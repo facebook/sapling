@@ -491,6 +491,7 @@ def update(repo, node, branchmerge, force, partial):
 
         ### calculate phase
         action = []
+        wc.status(unknown=True) # prime cache
         if not force:
             _checkunknown(wc, p2)
         if not util.checkcase(repo.path):
