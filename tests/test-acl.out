@@ -1455,6 +1455,7 @@ added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow.branches not enabled
 acl: acl.deny.branches not enabled
+acl: "group1" not defined in [acl.groups]
 acl: acl.allow enabled, 1 entries for user fred
 acl: acl.deny not enabled
 acl: branch access granted: "ef1ea85a6374" on branch "default"
@@ -1541,7 +1542,9 @@ added 3 changesets with 3 changes to 3 files
 calling hook pretxnchangegroup.acl: hgext.acl.hook
 acl: acl.allow.branches not enabled
 acl: acl.deny.branches not enabled
+acl: "group1" not defined in [acl.groups]
 acl: acl.allow enabled, 1 entries for user fred
+acl: "group1" not defined in [acl.groups]
 acl: acl.deny enabled, 1 entries for user fred
 acl: branch access granted: "ef1ea85a6374" on branch "default"
 acl: allowing changeset ef1ea85a6374
