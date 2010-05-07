@@ -204,13 +204,15 @@ class changectx(object):
     def sub(self, path):
         return subrepo.subrepo(self, path)
 
-    def diff(self, ctx2=None, match=None):
+    def diff(self, ctx2=None, match=None, opts=None):
         """Returns a diff generator for the given contexts and matcher"""
         if ctx2 is None:
             ctx2 = self.p1()
         if ctx2 is not None and not isinstance(ctx2, changectx):
             ctx2 = self._repo[ctx2]
-        return patch.diff(self._repo, ctx2.node(), self.node(), match=match)
+        diffopts = patch.diffopts(self._repo.ui, opts)
+        return patch.diff(self._repo, ctx2.node(), self.node(),
+                          match=match, opts=diffopts)
 
 class filectx(object):
     """A filecontext object makes access to data related to a particular
