@@ -2877,7 +2877,10 @@ def root(ui, repo):
 def serve(ui, repo, **opts):
     """export the repository via HTTP
 
-    Start a local HTTP repository browser and pull server.
+    Start a local HTTP repository browser and pull server. You can use
+    this for ad-hoc sharing and browing of repositories. It is
+    recommended to use a real web server to serve a repository for
+    longer periods of time.
 
     By default, the server logs accesses to stdout and errors to
     stderr. Use the -A/--accesslog and -E/--errorlog options to log to
