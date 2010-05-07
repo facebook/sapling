@@ -112,7 +112,7 @@ def patchedsize(orig, delta):
         outlen += length
 
     if bin != binend:
-        raise Exception("patch cannot be decoded")
+        raise ValueError("patch cannot be decoded")
 
     outlen += orig - last
     return outlen
