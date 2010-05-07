@@ -2900,7 +2900,16 @@ def root(ui, repo):
 def serve(ui, repo, **opts):
     """start stand-alone webserver
 
-    Start a local HTTP repository browser and pull server.
+    Start a local HTTP repository browser and pull server. You can use
+    this for ad-hoc sharing and browing of repositories. It is
+    recommended to use a real web server to serve a repository for
+    longer periods of time.
+
+    Please note that the server does not implement access control.
+    This means that, by default, anybody can read from the server and
+    nobody can write to it by default. Set the ``web.allow_push``
+    option to ``*`` to allow everybody to push to the server. You
+    should use a real web server if you need to authenticate users.
 
     By default, the server logs accesses to stdout and errors to
     stderr. Use the -A/--accesslog and -E/--errorlog options to log to
