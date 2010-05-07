@@ -235,8 +235,11 @@ try:
         'black_background': 0,
         'red_background': BACKGROUND_RED,
         'green_background': BACKGROUND_GREEN,
+        'yellow_background': BACKGROUND_RED | BACKGROUND_GREEN,
         'blue_background': BACKGROUND_BLUE,
+        'purple_background': BACKGROUND_BLUE | BACKGROUND_RED,
         'cyan_background': BACKGROUND_BLUE | BACKGROUND_GREEN,
+        'white_background': BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE,
         'bold_background': BACKGROUND_INTENSITY,
         'underline': COMMON_LVB_UNDERSCORE,     # double-byte charsets only
         'inverse': COMMON_LVB_REVERSE_VIDEO,    # double-byte charsets only
