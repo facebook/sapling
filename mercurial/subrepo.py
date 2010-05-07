@@ -145,7 +145,7 @@ def _abssource(repo, push=False):
                 parent = parent[:-1]
             r = urlparse.urlparse(parent + '/' + source)
             r = urlparse.urlunparse((r[0], r[1],
-                                     posixpath.normpath(r.path),
+                                     posixpath.normpath(r[2]),
                                      r[3], r[4], r[5]))
             return r
         return posixpath.normpath(os.path.join(parent, repo._subsource))
