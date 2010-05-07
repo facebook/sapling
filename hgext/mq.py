@@ -2668,9 +2668,9 @@ def summary(orig, ui, repo, *args, **kwargs):
     m = []
     a, u = len(q.applied), len(q.unapplied(repo))
     if a:
-        m.append(_("%d applied") % a)
+        m.append(ui.label(_("%d applied"), 'qseries.applied') % a)
     if u:
-        m.append(_("%d unapplied") % u)
+        m.append(ui.label(_("%d unapplied"), 'qseries.unapplied') % u)
     if m:
         ui.write("mq:     %s\n" % ', '.join(m))
     else:
