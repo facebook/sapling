@@ -170,9 +170,9 @@ COLUMNS=4 hg qseries --config ui.interactive=true
 COLUMNS=20 hg qseries --config ui.interactive=true -vs
 hg qpop
 hg qseries -vs
-hg sum
+hg sum | grep mq
 hg qpush
-hg sum
+hg sum | grep mq
 
 echo % qapplied
 hg qapplied
