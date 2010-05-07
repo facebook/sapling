@@ -2659,7 +2659,7 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
     q = repo.mq
     r = q.qrepo()
     if not r:
-        raise util.Abort('no queue repository')
+        raise util.Abort(_('no queue repository'))
     return orig(r.ui, r, *args, **kwargs)
 
 def summary(orig, ui, repo, *args, **kwargs):
