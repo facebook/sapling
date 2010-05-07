@@ -15,7 +15,7 @@ branch: default
 commit: 1 subrepos
 update: (current)
 committing subrepository s
-committing subrepository ss
+committing subrepository s/ss
 parent: 2:df30734270ae tip
  2
 branch: default
