@@ -204,7 +204,7 @@ class changectx(object):
     def sub(self, path):
         return subrepo.subrepo(self, path)
 
-    def diff(self, ctx2=None, match=None, opts=None):
+    def diff(self, ctx2=None, match=None, **opts):
         """Returns a diff generator for the given contexts and matcher"""
         if ctx2 is None:
             ctx2 = self.p1()
