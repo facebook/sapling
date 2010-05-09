@@ -649,10 +649,10 @@ class svn_source(converter_source):
                 elif fromkind == svn.core.svn_node_dir:
                     oroot = parentpath.strip('/')
                     nroot = path.strip('/')
-                    children = self._find_children(oroot, prevnum)
-                    children = [s.replace(oroot, nroot) for s in children]
-                    for child in children:
-                        childpath = self.getrelpath("/" + child, pmodule)
+                    children = self._listfiles(oroot, prevnum)
+                    for childpath in children:
+                        childpath = childpath.replace(oroot, nroot)
+                        childpath = self.getrelpath("/" + childpath, pmodule)
                         if childpath:
                             removed.add(self.recode(childpath))
                 else:
@@ -671,18 +671,11 @@ class svn_source(converter_source):
                     if pkind == svn.core.svn_node_file:
                         removed.add(self.recode(entrypath))
 
-                children = sorted(self._find_children(path, revnum))
-                for child in children:
-                    # Can we move a child directory and its
-                    # parent in the same commit? (probably can). Could
-                    # cause problems if instead of revnum -1,
-                    # we have to look in (copyfrom_path, revnum - 1)
-                    entrypath = self.getrelpath("/" + child)
-                    if entrypath:
-                        # Need to filter out directories here...
-                        kind = self._checkpath(entrypath, revnum)
-                        if kind != svn.core.svn_node_dir:
-                            changed.add(self.recode(entrypath))
+                children = sorted(self._listfiles(path, revnum))
+                for childpath in children:
+                    childpath = self.getrelpath("/" + childpath)
+                    if childpath:
+                        changed.add(self.recode(childpath))
 
                 # Handle directory copies
                 if not ent.copyfrom_path or not parents:
@@ -697,15 +690,15 @@ class svn_source(converter_source):
                     continue
                 self.ui.debug("mark %s came from %s:%d\n"
                               % (path, copyfrompath, ent.copyfrom_rev))
-                children = self._find_children(ent.copyfrom_path, ent.copyfrom_rev)
+                children = self._listfiles(ent.copyfrom_path, ent.copyfrom_rev)
                 children.sort()
-                for child in children:
-                    entrypath = self.getrelpath("/" + child, pmodule)
-                    if not entrypath:
+                for childpath in children:
+                    childpath = self.getrelpath("/" + childpath, pmodule)
+                    if not childpath:
                         continue
-                    copytopath = path + entrypath[len(copyfrompath):]
+                    copytopath = path + childpath[len(copyfrompath):]
                     copytopath = self.getrelpath(copytopath)
-                    copies[self.recode(copytopath)] = self.recode(entrypath)
+                    copies[self.recode(copytopath)] = self.recode(childpath)
 
         changed.update(removed)
         return (list(changed), removed, copies)
@@ -867,12 +860,14 @@ class svn_source(converter_source):
                 data = data[len(link_prefix):]
         return data, mode
 
-    def _find_children(self, path, revnum):
+    def _listfiles(self, path, revnum):
+        """List all files in path at revnum, recursively."""
         path = path.strip('/')
         pool = Pool()
         rpath = '/'.join([self.baseurl, urllib.quote(path)]).strip('/')
-        return ['%s/%s' % (path, x) for x in
-                svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool).keys()]
+        entries = svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool)
+        return [(path + '/' + p) for p, e in entries.iteritems()
+                if e.kind == svn.core.svn_node_file]
 
     def getrelpath(self, path, module=None):
         if module is None:
