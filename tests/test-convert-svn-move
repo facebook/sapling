@@ -33,3 +33,21 @@ hg st --rev 12:13 --copies
 echo '% check branches'
 hg branches | sed 's/:.*/:/'
 cd ..
+
+mkdir test-replace
+cd test-replace
+svnadmin create svn-repo
+cat "$TESTDIR/svn/replace.svndump" | svnadmin load svn-repo > /dev/null
+
+echo '% convert files being replaced by directories'
+hg convert svn-repo hg-repo
+cd hg-repo
+echo '% manifest before'
+hg -v manifest -r 1
+echo '% manifest after clobber1'
+hg -v manifest -r 2
+echo '% manifest after clobber2'
+hg -v manifest -r 3
+echo '% try updating'
+hg up -qC default
+cd ..

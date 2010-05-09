@@ -52,3 +52,31 @@ R d4old/g
 % check branches
 default                       13:
 d1                             6:
+% convert files being replaced by directories
+initializing destination hg-repo repository
+scanning source...
+sorting...
+converting...
+3 initial
+2 clobber symlink
+1 clobber1
+0 clobber2
+% manifest before
+644   a
+644   d/b
+644 @ dlink
+644 @ dlink2
+644   dlink3
+% manifest after clobber1
+644   a/b
+644   d/b
+644   dlink/b
+644 @ dlink2
+644   dlink3
+% manifest after clobber2
+644   a/b
+644   d/b
+644   dlink/b
+644 @ dlink2
+644 @ dlink3
+% try updating
