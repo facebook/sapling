@@ -91,6 +91,8 @@ restricted = 'merge record qrecord resolve transplant'
 
 # commands using dorecord
 recordcommands = 'record qrecord'
+# names of extensions using dorecord
+recordextensions = 'record'
 
 # provide cvs-like UTC date filter
 utcdate = lambda x: util.datestr((x[0], 0), '%Y/%m/%d %H:%M:%S')
@@ -515,11 +517,12 @@ def reposetup(ui, repo):
         extensions.wrapfunction(patch, 'diff', kw_diff)
     for c in 'annotate changeset rev filediff diff'.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)
-    try:
-        record = extensions.find('record')
-        extensions.wrapfunction(record, 'dorecord', kw_dorecord)
-    except KeyError:
-        pass
+    for name in recordextensions.split():
+        try:
+            record = extensions.find(name)
+            extensions.wrapfunction(record, 'dorecord', kw_dorecord)
+        except KeyError:
+            pass
 
 cmdtable = {
     'kwdemo':
