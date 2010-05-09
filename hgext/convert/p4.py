@@ -41,7 +41,6 @@ class p4_source(converter_source):
         self.parent = {}
         self.encoding = "latin_1"
         self.depotname = {}           # mapping from local name to depot name
-        self.modecache = {}
         self.re_type = re.compile(
             "([a-z]+)?(text|binary|symlink|apple|resource|unicode|utf\d+)"
             "(\+\w+)?$")
@@ -183,17 +182,12 @@ class p4_source(converter_source):
         if mode is None:
             raise IOError(0, "bad stat")
 
-        self.modecache[(name, rev)] = mode
-
         if keywords:
             contents = keywords.sub("$\\1$", contents)
         if mode == "l" and contents.endswith("\n"):
             contents = contents[:-1]
 
-        return contents
-
-    def getmode(self, name, rev):
-        return self.modecache[(name, rev)]
+        return contents, mode
 
     def getchanges(self, rev):
         return self.files[rev], {}

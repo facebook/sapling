@@ -67,10 +67,9 @@ class convert_git(converter_source):
         return data
 
     def getfile(self, name, rev):
-        return self.catfile(rev, "blob")
-
-    def getmode(self, name, rev):
-        return self.modecache[(name, rev)]
+        data = self.catfile(rev, "blob")
+        mode = self.modecache[(name, rev)]
+        return data, mode
 
     def getchanges(self, version):
         self.modecache = {}

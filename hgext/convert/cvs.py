@@ -200,7 +200,7 @@ class convert_cvs(converter_source):
         self._parse()
         return self.heads
 
-    def _getfile(self, name, rev):
+    def getfile(self, name, rev):
 
         def chunkedread(fp, count):
             # file-objects returned by socked.makefile() do not handle
@@ -216,6 +216,7 @@ class convert_cvs(converter_source):
                 output.write(data)
             return output.getvalue()
 
+        self._parse()
         if rev.endswith("(DEAD)"):
             raise IOError
 
@@ -255,18 +256,8 @@ class convert_cvs(converter_source):
                 else:
                     raise util.Abort(_("unknown CVS response: %s") % line)
 
-    def getfile(self, file, rev):
-        self._parse()
-        data, mode = self._getfile(file, rev)
-        self.modecache[(file, rev)] = mode
-        return data
-
-    def getmode(self, file, rev):
-        return self.modecache[(file, rev)]
-
     def getchanges(self, rev):
         self._parse()
-        self.modecache = {}
         return sorted(self.files[rev].iteritems()), {}
 
     def getcommit(self, rev):

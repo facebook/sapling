@@ -77,15 +77,10 @@ class converter_source(object):
         raise NotImplementedError()
 
     def getfile(self, name, rev):
-        """Return file contents as a string. rev is the identifier returned
-        by a previous call to getchanges(). Raise IOError to indicate that
-        name was deleted in rev.
-        """
-        raise NotImplementedError()
-
-    def getmode(self, name, rev):
-        """Return file mode, eg. '', 'x', or 'l'. rev is the identifier
-        returned by a previous call to getchanges().
+        """Return a pair (data, mode) where data is the file content
+        as a string and mode one of '', 'x' or 'l'. rev is the
+        identifier returned by a previous call to getchanges(). Raise
+        IOError to indicate that name was deleted in rev.
         """
         raise NotImplementedError()
 
@@ -192,8 +187,8 @@ class converter_sink(object):
         changeset.  'files' is a list of (path, version) tuples,
         'copies' is a dictionary mapping destinations to sources,
         'source' is the source repository, and 'revmap' is a mapfile
-        of source revisions to converted revisions. Only getfile(),
-        getmode(), and lookuprev() should be called on 'source'.
+        of source revisions to converted revisions. Only getfile() and
+        lookuprev() should be called on 'source'.
 
         Note that the sink repository is not told to update itself to
         a particular revision (or even what that revision would be)

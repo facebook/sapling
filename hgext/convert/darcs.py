@@ -157,11 +157,11 @@ class darcs_source(converter_source, commandline):
     def getfile(self, name, rev):
         if rev != self.lastrev:
             raise util.Abort(_('internal calling inconsistency'))
-        return open(os.path.join(self.tmppath, name), 'rb').read()
-
-    def getmode(self, name, rev):
-        mode = os.lstat(os.path.join(self.tmppath, name)).st_mode
-        return (mode & 0111) and 'x' or ''
+        path = os.path.join(self.tmppath, name)
+        data = open(path, 'rb').read()
+        mode = os.lstat(path).st_mode
+        mode = (mode & 0111) and 'x' or ''
+        return data, mode
 
     def gettags(self):
         return self.tags

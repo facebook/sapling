@@ -192,18 +192,16 @@ class monotone_source(converter_source, commandline):
 
         return (files.items(), copies)
 
-    def getmode(self, name, rev):
-        self.mtnloadmanifest(rev)
-        node, attr = self.files.get(name, (None, ""))
-        return attr
-
     def getfile(self, name, rev):
         if not self.mtnisfile(name, rev):
             raise IOError() # file was deleted or renamed
         try:
-            return self.mtnrun("get_file_of", name, r=rev)
+            data = self.mtnrun("get_file_of", name, r=rev)
         except:
             raise IOError() # file was deleted or renamed
+        self.mtnloadmanifest(rev)
+        node, attr = self.files.get(name, (None, ""))
+        return data, attr
 
     def getcommit(self, rev):
         certs   = self.mtngetcerts(rev)

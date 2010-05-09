@@ -371,19 +371,10 @@ class svn_source(converter_source):
 
         return self.heads
 
-    def getfile(self, file, rev):
-        data, mode = self._getfile(file, rev)
-        self.modecache[(file, rev)] = mode
-        return data
-
-    def getmode(self, file, rev):
-        return self.modecache[(file, rev)]
-
     def getchanges(self, rev):
         if self._changescache and self._changescache[0] == rev:
             return self._changescache[1]
         self._changescache = None
-        self.modecache = {}
         (paths, parents) = self.paths[rev]
         if parents:
             files, self.removed, copies = self.expandpaths(rev, paths, parents)
@@ -826,10 +817,10 @@ class svn_source(converter_source):
                 raise util.Abort(_('svn: branch has no revision %s') % to_revnum)
             raise
 
-    def _getfile(self, file, rev):
+    def getfile(self, file, rev):
         # TODO: ra.get_file transmits the whole file instead of diffs.
         if file in self.removed:
-            raise IOError()
+            raise IOError()         
         mode = ''
         try:
             new_module, revnum = self.revsplit(rev)[1:]
@@ -1100,12 +1091,11 @@ class svn_sink(converter_sink, commandline):
         # Apply changes to working copy
         for f, v in files:
             try:
-                data = source.getfile(f, v)
+                data, mode = source.getfile(f, v)
             except IOError:
                 self.delete.append(f)
             else:
-                e = source.getmode(f, v)
-                self.putfile(f, e, data)
+                self.putfile(f, mode, data)
                 if f in copies:
                     self.copies.append([copies[f], f])
         files = [f[0] for f in files]

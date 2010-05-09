@@ -54,7 +54,6 @@ class gnuarch_source(converter_source, commandline):
         self.changes = {}
         self.parents = {}
         self.tags = {}
-        self.modecache = {}
         self.catlogparser = Parser()
         self.locale = locale.getpreferredencoding()
         self.archives = []
@@ -142,16 +141,9 @@ class gnuarch_source(converter_source, commandline):
         if not os.path.exists(os.path.join(self.tmppath, name)):
             raise IOError
 
-        data, mode = self._getfile(name, rev)
-        self.modecache[(name, rev)] = mode
-
-        return data
-
-    def getmode(self, name, rev):
-        return self.modecache[(name, rev)]
+        return self._getfile(name, rev)
 
     def getchanges(self, rev):
-        self.modecache = {}
         self._update(rev)
         changes = []
         copies = {}
