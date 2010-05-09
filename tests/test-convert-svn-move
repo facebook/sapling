@@ -28,5 +28,8 @@ hg convert --datesort "$svnurl"/subproject A-hg
 
 cd A-hg
 hg glog --template '{rev} {desc|firstline} files: {files}\n'
+echo '% check move copy records'
+hg st --rev 12:13 --copies
+echo '% check branches'
 hg branches | sed 's/:.*/:/'
 cd ..
