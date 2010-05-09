@@ -80,9 +80,11 @@ Example Configuration
   pretxnchangegroup.acl = python:hgext.acl.hook
 
   [acl]
-  # Check whether the source of incoming changes is in this list where
-  # "serve" == ssh or http, and "push", "pull" and "bundle" are the
-  # corresponding hg commands.
+  # Allow or deny access for incoming changes only if their source is
+  # listed here, let them pass otherwise. Source is "serve" for all
+  # remote access (http or ssh), "push", "pull" or "bundle" when the
+  # related commands are run locally.
+  # Default: serve
   sources = serve
 
   [acl.deny.branches] 
@@ -126,7 +128,7 @@ Example Configuration
   src/main/resources/DONT-TOUCH-THIS.txt = *
 
   [acl.allow]
-  # if acl.allow not present, all users allowed by default
+  # if acl.allow is not present, all users are allowed by default
   # empty acl.allow = no users allowed
 
   # User "doc_writer" has write access to any file under the "docs"
