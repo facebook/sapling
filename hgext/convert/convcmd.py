@@ -111,11 +111,13 @@ class converter(object):
             if n in known or n in self.map:
                 continue
             known.add(n)
+            self.ui.progress(_('scanning'), len(known), unit=_('revisions'))
             commit = self.cachecommit(n)
             parents[n] = []
             for p in commit.parents:
                 parents[n].append(p)
                 visit.append(p)
+        self.ui.progress(_('scanning'), None)
 
         return parents
 
@@ -321,7 +323,7 @@ class converter(object):
             c = None
 
             self.ui.status(_("converting...\n"))
-            for c in t:
+            for i, c in enumerate(t):                
                 num -= 1
                 desc = self.commitcache[c].desc
                 if "\n" in desc:
@@ -331,7 +333,10 @@ class converter(object):
                 # 'utf-8'
                 self.ui.status("%d %s\n" % (num, recode(desc)))
                 self.ui.note(_("source: %s\n") % recode(c))
+                self.ui.progress(_('converting'), i, unit=_('revisions'),
+                                 total=len(t))
                 self.copy(c)
+            self.ui.progress(_('converting'), None)
 
             tags = self.source.gettags()
             ctags = {}

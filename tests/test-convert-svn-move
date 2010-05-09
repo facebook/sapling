@@ -51,3 +51,20 @@ hg -v manifest -r 3
 echo '% try updating'
 hg up -qC default
 cd ..
+
+echo '% test convert progress bar'
+
+echo "progress=" >> $HGRCPATH
+echo "[progress]" >> $HGRCPATH
+echo "assume-tty=1" >> $HGRCPATH
+echo "delay=0" >> $HGRCPATH
+echo "refresh=0" >> $HGRCPATH
+
+cat > filtercr.py <<EOF
+import sys, re
+for line in sys.stdin:
+    line = re.sub(r'\r+[^\n]', lambda m: '\n' + m.group()[-1:], line)
+    sys.stdout.write(line)
+EOF
+
+hg convert svn-repo hg-progress 2>&1 | python filtercr.py

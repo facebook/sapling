@@ -80,3 +80,26 @@ converting...
 644 @ dlink2
 644 @ dlink3
 % try updating
+% test convert progress bar
+
+scanning [ <=>                                                              ] 1
+scanning [  <=>                                                             ] 2
+scanning [   <=>                                                            ] 3
+scanning [    <=>                                                           ] 4
+                                                                                
+converting [                                                              ] 0/4
+                                                                                
+converting [==============>                                               ] 1/4
+                                                                                
+converting [==============================>                               ] 2/4
+                                                                                
+converting [=============================================>                ] 3/4
+                                                                                
+initializing destination hg-progress repository
+scanning source...
+sorting...
+converting...
+3 initial
+2 clobber symlink
+1 clobber1
+0 clobber2
