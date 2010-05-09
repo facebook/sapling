@@ -612,9 +612,6 @@ class svn_source(converter_source):
 
     def expandpaths(self, rev, paths, parents):
         changed, removed = set(), set()
-        # Map of entrypath, revision for finding source of deleted
-        # revisions.
-        copyfrom = {}
         copies = {}
 
         new_module, revnum = self.revsplit(rev)[1:]
@@ -698,7 +695,6 @@ class svn_source(converter_source):
                 copyfrompath = self.getrelpath(ent.copyfrom_path, pmodule)
                 if not copyfrompath:
                     continue
-                copyfrom[path] = ent
                 self.ui.debug("mark %s came from %s:%d\n"
                               % (path, copyfrompath, ent.copyfrom_rev))
                 children = self._find_children(ent.copyfrom_path, ent.copyfrom_rev)
