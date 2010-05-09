@@ -662,11 +662,8 @@ class svn_source(converter_source):
                     children = [s.replace(oroot, nroot) for s in children]
                     for child in children:
                         childpath = self.getrelpath("/" + child, pmodule)
-                        if not childpath:
-                            continue
-                        if childpath in copies:
-                            del copies[childpath]
-                        entries.append(childpath)
+                        if childpath:
+                            entries.append(childpath)
                 else:
                     self.ui.debug('unknown path in revision %d: %s\n' % \
                                   (revnum, path))
