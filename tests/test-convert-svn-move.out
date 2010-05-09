@@ -3,18 +3,24 @@ initializing destination A-hg repository
 scanning source...
 sorting...
 converting...
-11 createtrunk
-10 moved1
-9 moved1
-8 moved2
-7 changeb and rm d2
-6 changeb and rm d2
-5 moved1again
-4 moved1again
-3 copyfilefrompast
-2 copydirfrompast
-1 add d3
-0 copy dir and remove subdir
+13 createtrunk
+12 moved1
+11 moved1
+10 moved2
+9 changeb and rm d2
+8 changeb and rm d2
+7 moved1again
+6 moved1again
+5 copyfilefrompast
+4 copydirfrompast
+3 add d3
+2 copy dir and remove subdir
+1 add d4old
+0 rename d4old into d4new
+o  13 rename d4old into d4new files: d4new/g d4old/g
+|
+o  12 add d4old files: d4old/g
+|
 o  11 copy dir and remove subdir files: d3/d31/e d4/d31/e d4/f
 |
 o  10 add d3 files: d3/d31/e d3/f
@@ -39,5 +45,38 @@ o |  2 moved1 files: d1/b d1/c
 |
 o  0 createtrunk files:
 
-default                       11:
+% check move copy records
+A d4new/g
+  d4old/g
+R d4old/g
+% check branches
+default                       13:
 d1                             6:
+% convert files being replaced by directories
+initializing destination hg-repo repository
+scanning source...
+sorting...
+converting...
+3 initial
+2 clobber symlink
+1 clobber1
+0 clobber2
+% manifest before
+644   a
+644   d/b
+644 @ dlink
+644 @ dlink2
+644   dlink3
+% manifest after clobber1
+644   a/b
+644   d/b
+644   dlink/b
+644 @ dlink2
+644   dlink3
+% manifest after clobber2
+644   a/b
+644   d/b
+644   dlink/b
+644 @ dlink2
+644 @ dlink3
+% try updating

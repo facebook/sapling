@@ -68,6 +68,16 @@ svn ci -m "add d3"
 svn copy subproject/trunk/d3 subproject/trunk/d4
 svn rm subproject/trunk/d3/d31
 svn ci -m "copy dir and remove subdir"
+
+# Test directory moves
+svn up
+mkdir -p subproject/trunk/d4old
+echo g > subproject/trunk/d4old/g
+svn add subproject/trunk/d4old
+svn ci -m "add d4old"
+svn mv subproject/trunk/d4old subproject/trunk/d4new
+svn ci -m "rename d4old into d4new"
+
 cd ..
 
 svnadmin dump svn-repo > ../move.svndump

@@ -386,7 +386,7 @@ class svn_source(converter_source):
         self.modecache = {}
         (paths, parents) = self.paths[rev]
         if parents:
-            files, copies = self.expandpaths(rev, paths, parents)
+            files, self.removed, copies = self.expandpaths(rev, paths, parents)
         else:
             # Perform a full checkout on roots
             uuid, module, revnum = self.revsplit(rev)
@@ -395,6 +395,7 @@ class svn_source(converter_source):
             files = [n for n, e in entries.iteritems()
                      if e.kind == svn.core.svn_node_file]
             copies = {}
+            self.removed = set()
 
         files.sort()
         files = zip(files, [rev] * len(files))
@@ -610,7 +611,7 @@ class svn_source(converter_source):
         return prevmodule
 
     def expandpaths(self, rev, paths, parents):
-        entries = []
+        changed, removed = set(), set()
         # Map of entrypath, revision for finding source of deleted
         # revisions.
         copyfrom = {}
@@ -626,7 +627,7 @@ class svn_source(converter_source):
 
             kind = self._checkpath(entrypath, revnum)
             if kind == svn.core.svn_node_file:
-                entries.append(self.recode(entrypath))
+                changed.add(self.recode(entrypath))
                 if not ent.copyfrom_path or not parents:
                     continue
                 # Copy sources not in parent revisions cannot be
@@ -644,41 +645,34 @@ class svn_source(converter_source):
                 self.ui.debug("gone from %s\n" % ent.copyfrom_rev)
                 pmodule, prevnum = self.revsplit(parents[0])[1:]
                 parentpath = pmodule + "/" + entrypath
-                self.ui.debug("entry %s\n" % parentpath)
-
-                # We can avoid the reparent calls if the module has
-                # not changed but it probably does not worth the pain.
-                prevmodule = self.reparent('')
-                fromkind = svn.ra.check_path(self.ra, parentpath.strip('/'),
-                                             prevnum)
-                self.reparent(prevmodule)
+                fromkind = self._checkpath(entrypath, prevnum, pmodule)
 
                 if fromkind == svn.core.svn_node_file:
-                    entries.append(self.recode(entrypath))
+                    removed.add(self.recode(entrypath))
                 elif fromkind == svn.core.svn_node_dir:
-                    if ent.action == 'C':
-                        children = self._find_children(path, prevnum)
-                    else:
-                        oroot = parentpath.strip('/')
-                        nroot = path.strip('/')
-                        children = self._find_children(oroot, prevnum)
-                        children = [s.replace(oroot, nroot) for s in children]
-
+                    oroot = parentpath.strip('/')
+                    nroot = path.strip('/')
+                    children = self._find_children(oroot, prevnum)
+                    children = [s.replace(oroot, nroot) for s in children]
                     for child in children:
                         childpath = self.getrelpath("/" + child, pmodule)
-                        if not childpath:
-                            continue
-                        if childpath in copies:
-                            del copies[childpath]
-                        entries.append(childpath)
+                        if childpath:
+                            removed.add(self.recode(childpath))
                 else:
                     self.ui.debug('unknown path in revision %d: %s\n' % \
                                   (revnum, path))
-            elif kind == svn.core.svn_node_dir:
-                # If the directory just had a prop change,
-                # then we shouldn't need to look for its children.
+            elif kind == svn.core.svn_node_dir:                
                 if ent.action == 'M':
+                    # If the directory just had a prop change,
+                    # then we shouldn't need to look for its children.
                     continue
+                elif ent.action == 'R' and parents:
+                    # If a directory is replacing a file, mark the previous
+                    # file as deleted
+                    pmodule, prevnum = self.revsplit(parents[0])[1:]
+                    pkind = self._checkpath(entrypath, prevnum, pmodule)
+                    if pkind == svn.core.svn_node_file:
+                        removed.add(self.recode(entrypath))
 
                 children = sorted(self._find_children(path, revnum))
                 for child in children:
@@ -691,7 +685,7 @@ class svn_source(converter_source):
                         # Need to filter out directories here...
                         kind = self._checkpath(entrypath, revnum)
                         if kind != svn.core.svn_node_dir:
-                            entries.append(self.recode(entrypath))
+                            changed.add(self.recode(entrypath))
 
                 # Handle directory copies
                 if not ent.copyfrom_path or not parents:
@@ -717,7 +711,8 @@ class svn_source(converter_source):
                     copytopath = self.getrelpath(copytopath)
                     copies[self.recode(copytopath)] = self.recode(entrypath)
 
-        return (list(set(entries)), copies)
+        changed.update(removed)
+        return (list(changed), removed, copies)
 
     def _fetch_revisions(self, from_revnum, to_revnum):
         if from_revnum < to_revnum:
@@ -846,6 +841,8 @@ class svn_source(converter_source):
 
     def _getfile(self, file, rev):
         # TODO: ra.get_file transmits the whole file instead of diffs.
+        if file in self.removed:
+            raise IOError()
         mode = ''
         try:
             new_module, revnum = self.revsplit(rev)[1:]
@@ -901,11 +898,18 @@ class svn_source(converter_source):
         self.ui.debug('%r is not under %r, ignoring\n' % (path, module))
         return None
 
-    def _checkpath(self, path, revnum):
-        # ra.check_path does not like leading slashes very much, it leads
-        # to PROPFIND subversion errors
-        return svn.ra.check_path(self.ra, path.strip('/'), revnum)
-
+    def _checkpath(self, path, revnum, module=None):
+        if module is not None:
+            prevmodule = self.reparent('')
+            path = module + '/' + path
+        try:
+            # ra.check_path does not like leading slashes very much, it leads
+            # to PROPFIND subversion errors
+            return svn.ra.check_path(self.ra, path.strip('/'), revnum)
+        finally:
+            if module is not None:
+                self.reparent(prevmodule)
+    
     def _getlog(self, paths, start, end, limit=0, discover_changed_paths=True,
                 strict_node_history=False):
         # Normalize path names, svn >= 1.5 only wants paths relative to
