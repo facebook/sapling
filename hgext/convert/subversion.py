@@ -649,7 +649,7 @@ class svn_source(converter_source):
                 elif fromkind == svn.core.svn_node_dir:
                     oroot = parentpath.strip('/')
                     nroot = path.strip('/')
-                    children = self._listfiles(oroot, prevnum)
+                    children = self._iterfiles(oroot, prevnum)
                     for childpath in children:
                         childpath = childpath.replace(oroot, nroot)
                         childpath = self.getrelpath("/" + childpath, pmodule)
@@ -671,8 +671,7 @@ class svn_source(converter_source):
                     if pkind == svn.core.svn_node_file:
                         removed.add(self.recode(entrypath))
 
-                children = sorted(self._listfiles(path, revnum))
-                for childpath in children:
+                for childpath in self._iterfiles(path, revnum):
                     childpath = self.getrelpath("/" + childpath)
                     if childpath:
                         changed.add(self.recode(childpath))
@@ -690,8 +689,7 @@ class svn_source(converter_source):
                     continue
                 self.ui.debug("mark %s came from %s:%d\n"
                               % (path, copyfrompath, ent.copyfrom_rev))
-                children = self._listfiles(ent.copyfrom_path, ent.copyfrom_rev)
-                children.sort()
+                children = self._iterfiles(ent.copyfrom_path, ent.copyfrom_rev)
                 for childpath in children:
                     childpath = self.getrelpath("/" + childpath, pmodule)
                     if not childpath:
@@ -860,14 +858,14 @@ class svn_source(converter_source):
                 data = data[len(link_prefix):]
         return data, mode
 
-    def _listfiles(self, path, revnum):
-        """List all files in path at revnum, recursively."""
+    def _iterfiles(self, path, revnum):
+        """Enumerate all files in path at revnum, recursively."""
         path = path.strip('/')
         pool = Pool()
         rpath = '/'.join([self.baseurl, urllib.quote(path)]).strip('/')
-        entries = svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool)
-        return [(path + '/' + p) for p, e in entries.iteritems()
-                if e.kind == svn.core.svn_node_file]
+        entries = svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool)            
+        return ((path + '/' + p) for p, e in entries.iteritems()
+                if e.kind == svn.core.svn_node_file)
 
     def getrelpath(self, path, module=None):
         if module is None:
