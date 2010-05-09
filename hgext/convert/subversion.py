@@ -386,7 +386,7 @@ class svn_source(converter_source):
         self.modecache = {}
         (paths, parents) = self.paths[rev]
         if parents:
-            files, copies = self.expandpaths(rev, paths, parents)
+            files, self.removed, copies = self.expandpaths(rev, paths, parents)
         else:
             # Perform a full checkout on roots
             uuid, module, revnum = self.revsplit(rev)
@@ -395,6 +395,7 @@ class svn_source(converter_source):
             files = [n for n, e in entries.iteritems()
                      if e.kind == svn.core.svn_node_file]
             copies = {}
+            self.removed = set()
 
         files.sort()
         files = zip(files, [rev] * len(files))
@@ -610,7 +611,7 @@ class svn_source(converter_source):
         return prevmodule
 
     def expandpaths(self, rev, paths, parents):
-        entries = []
+        changed, removed = set(), set()
         # Map of entrypath, revision for finding source of deleted
         # revisions.
         copyfrom = {}
@@ -626,7 +627,7 @@ class svn_source(converter_source):
 
             kind = self._checkpath(entrypath, revnum)
             if kind == svn.core.svn_node_file:
-                entries.append(self.recode(entrypath))
+                changed.add(self.recode(entrypath))
                 if not ent.copyfrom_path or not parents:
                     continue
                 # Copy sources not in parent revisions cannot be
@@ -654,7 +655,7 @@ class svn_source(converter_source):
                 self.reparent(prevmodule)
 
                 if fromkind == svn.core.svn_node_file:
-                    entries.append(self.recode(entrypath))
+                    removed.add(self.recode(entrypath))
                 elif fromkind == svn.core.svn_node_dir:
                     oroot = parentpath.strip('/')
                     nroot = path.strip('/')
@@ -663,7 +664,7 @@ class svn_source(converter_source):
                     for child in children:
                         childpath = self.getrelpath("/" + child, pmodule)
                         if childpath:
-                            entries.append(self.recode(childpath))
+                            removed.add(self.recode(childpath))
                 else:
                     self.ui.debug('unknown path in revision %d: %s\n' % \
                                   (revnum, path))
@@ -684,7 +685,7 @@ class svn_source(converter_source):
                         # Need to filter out directories here...
                         kind = self._checkpath(entrypath, revnum)
                         if kind != svn.core.svn_node_dir:
-                            entries.append(self.recode(entrypath))
+                            changed.add(self.recode(entrypath))
 
                 # Handle directory copies
                 if not ent.copyfrom_path or not parents:
@@ -710,7 +711,8 @@ class svn_source(converter_source):
                     copytopath = self.getrelpath(copytopath)
                     copies[self.recode(copytopath)] = self.recode(entrypath)
 
-        return (list(set(entries)), copies)
+        changed.update(removed)
+        return (list(changed), removed, copies)
 
     def _fetch_revisions(self, from_revnum, to_revnum):
         if from_revnum < to_revnum:
@@ -839,6 +841,8 @@ class svn_source(converter_source):
 
     def _getfile(self, file, rev):
         # TODO: ra.get_file transmits the whole file instead of diffs.
+        if file in self.removed:
+            raise IOError()
         mode = ''
         try:
             new_module, revnum = self.revsplit(rev)[1:]
