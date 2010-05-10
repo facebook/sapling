@@ -3154,6 +3154,9 @@ def summary(ui, repo, **opts):
         t += _(' (merge)')
     elif branch != parents[0].branch():
         t += _(' (new branch)')
+    elif (parents[0].extra().get('close') and
+          pnode in repo.branchheads(branch, closed=True)):
+        t += _(' (head closed)')
     elif (not st[0] and not st[1] and not st[2] and not st[7]):
         t += _(' (clean)')
         cleanworkdir = True
