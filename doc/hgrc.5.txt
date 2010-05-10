@@ -470,6 +470,8 @@ Supported arguments:
     Ask whether merge was successful when the merged file shows no changes.
   ``conflicts``
     Check whether there are conflicts even though the tool reported success.
+  ``prompt``
+    Always prompt for merge success, regardless of success reported by tool.
 
 ``checkchanged``
   True is equivalent to ``check = changed``.

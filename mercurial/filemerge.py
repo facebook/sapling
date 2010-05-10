@@ -231,8 +231,15 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         if re.match("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data()):
             r = 1
 
-    if not r and (_toolbool(ui, tool, "checkchanged") or
-                  'changed' in _toollist(ui, tool, "check")):
+    checked = False
+    if 'prompt' in _toollist(ui, tool, "check"):
+        checked = True
+        if ui.promptchoice(_("was merge of '%s' successful (yn)?") % fd,
+                           (_("&Yes"), _("&No")), 1):
+            r = 1
+
+    if not r and not checked and (_toolbool(ui, tool, "checkchanged") or
+                                  'changed' in _toollist(ui, tool, "check")):
         if filecmp.cmp(repo.wjoin(fd), back):
             if ui.promptchoice(_(" output file %s appears unchanged\n"
                                  "was merge successful (yn)?") % fd,
