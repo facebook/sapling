@@ -165,4 +165,12 @@ echo "foo/Bar/** = @group1" >> $config
 echo "@group is allowed inside anything but foo/Bar/"
 do_push fred
 
+echo 'Invalid group'
+# Disable the fakegroups trick to get real failures
+grep -v fakegroups $config > config.tmp
+mv config.tmp $config
+echo '[acl.allow]' >> $config
+echo "** = @unlikelytoexist" >> $config
+do_push fred 2>&1 | grep unlikelytoexist
 
+true

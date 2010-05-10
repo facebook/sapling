@@ -161,7 +161,10 @@ def _getusers(ui, group):
 
     ui.debug('acl: "%s" not defined in [acl.groups]\n' % group)
     # If no users found in group definition, get users from OS-level group
-    return util.groupmembers(group)
+    try:
+        return util.groupmembers(group)
+    except KeyError:
+        raise util.Abort(_("group '%s' is undefined") % group)
 
 def _usermatch(ui, user, usersorgroups):
 

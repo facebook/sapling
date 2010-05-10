@@ -1557,3 +1557,8 @@ abort: acl: access denied for changeset f9cafe1212c8
 no rollback information available
 0:6675d58eff77
 
+Invalid group
+** = @unlikelytoexist
+acl: "unlikelytoexist" not defined in [acl.groups]
+error: pretxnchangegroup.acl hook failed: group 'unlikelytoexist' is undefined
+abort: group 'unlikelytoexist' is undefined
