@@ -2,6 +2,8 @@
 
 echo "[extensions]" >> $HGRCPATH
 echo "color=" >> $HGRCPATH
+echo "[color]" >> $HGRCPATH
+echo "mode=ansi" >> $HGRCPATH
 
 hg init repo1
 cd repo1

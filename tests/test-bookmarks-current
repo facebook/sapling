@@ -18,7 +18,8 @@ echo % list bookmarks
 hg bookmark
 
 echo % list bookmarks with color
-hg --config extensions.color= bookmark --color=always
+hg --config extensions.color= --config color.mode=ansi \
+    bookmark --color=always
 
 echo % update to bookmark X
 hg update X

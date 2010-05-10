@@ -119,7 +119,8 @@ echo '% log -d -1'
 hg log -d -1
 
 echo '% log -p -l2 --color=always'
-hg --config extensions.color= log -p -l2 --color=always
+hg --config extensions.color= --config color.mode=ansi \
+    log -p -l2 --color=always
 
 echo '% log -r tip --stat'
 hg log -r tip --stat
