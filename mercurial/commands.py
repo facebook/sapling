@@ -745,6 +745,11 @@ def commit(ui, repo, *pats, **opts):
           (parents[1] == nullrev or len(cl.heads(cl.node(parents[1]))) > 1)):
         ui.status(_('created new head\n'))
 
+    if not opts.get('close_branch'):
+        for r in parents:
+            if repo[r].extra().get('close'):
+                ui.status(_('reopening closed branch head %d\n') % r)
+
     if ui.debugflag:
         ui.write(_('committed changeset %d:%s\n') % (rev, hex(node)))
     elif ui.verbose:
