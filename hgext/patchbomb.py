@@ -34,6 +34,7 @@ file::
   to = recipient1, recipient2, ...
   cc = cc1, cc2, ...
   bcc = bcc1, bcc2, ...
+  reply-to = address1, address2, ...
 
 Use ``[patchbomb]`` as configuration section name if you need to
 override global ``[email]`` address settings.
@@ -390,8 +391,9 @@ def patchbomb(ui, repo, *revs, **opts):
         msgs = getpatchmsgs(list(getpatches(revs)))
 
     def getaddrs(opt, prpt=None, default=None):
-        if opts.get(opt):
-            return mail.addrlistencode(ui, opts.get(opt), _charsets,
+        addrs = opts.get(opt.replace('-', '_'))
+        if addrs:
+            return mail.addrlistencode(ui, addrs, _charsets,
                                        opts.get('test'))
 
         addrs = (ui.config('email', opt) or
@@ -404,6 +406,7 @@ def patchbomb(ui, repo, *revs, **opts):
     to = getaddrs('to', 'To')
     cc = getaddrs('cc', 'Cc', '')
     bcc = getaddrs('bcc')
+    replyto = getaddrs('reply-to')
 
     ui.write('\n')
 
@@ -442,6 +445,8 @@ def patchbomb(ui, repo, *revs, **opts):
             m['Cc']  = ', '.join(cc)
         if bcc:
             m['Bcc'] = ', '.join(bcc)
+        if replyto:
+            m['Reply-To'] = ', '.join(replyto)
         if opts.get('test'):
             ui.status(_('Displaying '), subj, ' ...\n')
             ui.flush()
@@ -493,6 +498,7 @@ emailopts = [
           ('n', 'test', None, _('print messages that would be sent')),
           ('m', 'mbox', '',
            _('write messages to mbox file instead of sending them')),
+          ('', 'reply-to', [], _('email addresses replies should be sent to')),
           ('s', 'subject', '',
            _('subject of first message (intro or single patch)')),
           ('', 'in-reply-to', '',
