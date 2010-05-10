@@ -63,7 +63,8 @@ echo
 echo % change file in svn and hg, commit
 echo a >> a
 echo alpha >> s/alpha
-hg commit -m 'Message!' | sed "$filterexternal"
+hg commit -m 'Message!' | sed "$filterexternal" \
+    | sed 's:Sending.*s/alpha:Sending        s/alpha:g'
 hg debugsub | sed "$filterpath"
 
 echo
