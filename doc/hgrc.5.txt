@@ -463,13 +463,19 @@ Supported arguments:
 ``symlink``
   This tool can merge symlinks. Defaults to False, even if tool was
   selected by file pattern match.
-``checkconflicts``
-  Check whether there are conflicts even though the tool reported
-  success.
-  Default: False
+``check``
+  A list of merge success-checking options:
+
+  ``changed``
+    Ask whether merge was successful when the merged file shows no changes.
+  ``conflicts``
+    Check whether there are conflicts even though the tool reported success.
+
 ``checkchanged``
-  Check whether outputs were written even though the tool reported
-  success.
+  True is equivalent to ``check = changed``.
+  Default: False
+``checkconflicts``
+  True is equivalent to ``check = conflicts``.
   Default: False
 ``fixeol``
   Attempt to fix up EOL changes caused by the merge tool.

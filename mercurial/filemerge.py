@@ -16,6 +16,9 @@ def _toolstr(ui, tool, part, default=""):
 def _toolbool(ui, tool, part, default=False):
     return ui.configbool("merge-tools", tool + "." + part, default)
 
+def _toollist(ui, tool, part, default=[]):
+    return ui.configlist("merge-tools", tool + "." + part, default)
+
 _internal = ['internal:' + s
              for s in 'fail local other merge prompt dump'.split()]
 
@@ -223,11 +226,13 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
             lambda x: '"%s"' % util.localpath(replace[x.group()[1:]]), args)
         r = util.system(toolpath + ' ' + args, cwd=repo.root, environ=env)
 
-    if not r and _toolbool(ui, tool, "checkconflicts"):
+    if not r and (_toolbool(ui, tool, "checkconflicts") or
+                  'conflicts' in _toollist(ui, tool, "check")):
         if re.match("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data()):
             r = 1
 
-    if not r and _toolbool(ui, tool, "checkchanged"):
+    if not r and (_toolbool(ui, tool, "checkchanged") or
+                  'changed' in _toollist(ui, tool, "check")):
         if filecmp.cmp(repo.wjoin(fd), back):
             if ui.promptchoice(_(" output file %s appears unchanged\n"
                                  "was merge successful (yn)?") % fd,
