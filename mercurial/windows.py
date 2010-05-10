@@ -363,6 +363,10 @@ def termwidth_():
     # current line but on the new one. Keep room for it.
     return 79
 
+def groupmembers(name):
+    # Don't support groups on Windows for now
+    raise KeyError()
+
 try:
     # override functions with win32 versions if possible
     from win32 import *

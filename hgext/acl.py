@@ -150,7 +150,7 @@ Example Configuration
 
 from mercurial.i18n import _
 from mercurial import util, match
-import getpass, urllib, grp
+import getpass, urllib
 
 def _getusers(ui, group):
 
@@ -161,7 +161,7 @@ def _getusers(ui, group):
 
     ui.debug('acl: "%s" not defined in [acl.groups]\n' % group)
     # If no users found in group definition, get users from OS-level group
-    return grp.getgrnam(group).gr_mem
+    return util.groupmembers(group)
 
 def _usermatch(ui, user, usersorgroups):
 

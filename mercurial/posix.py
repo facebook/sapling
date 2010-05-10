@@ -259,6 +259,12 @@ def groupname(gid=None):
     except KeyError:
         return str(gid)
 
+def groupmembers(name):
+    """Return the list of members of the group with the given
+    name, KeyError if the group does not exist.
+    """
+    return list(grp.getgrnam(name).gr_mem)
+
 def spawndetached(args):
     return os.spawnvp(os.P_NOWAIT | getattr(os, 'P_DETACH', 0),
                       args[0], args)
