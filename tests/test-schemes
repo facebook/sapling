@@ -7,6 +7,7 @@ schemes=
 [schemes]
 l = http://localhost:$HGPORT/
 parts = http://{1}:$HGPORT/
+z = file:\$PWD/
 EOF
 
 hg init test
@@ -21,6 +22,9 @@ hg incoming l://
 
 echo % check that {1} syntax works
 hg incoming --debug parts://localhost | sed 's/[0-9]//g'
+
+echo % check that paths are expanded
+PWD=`pwd` hg incoming z://
 
 echo % errors
 cat errors.log
