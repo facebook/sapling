@@ -724,7 +724,7 @@ class workingctx(changectx):
         def findflag(ctx):
             mnode = ctx.changeset()[0]
             node, flag = self._repo.manifest.find(mnode, orig)
-            ff = self._repo.dirstate.flagfunc(lambda x: flag or None)
+            ff = self._repo.dirstate.flagfunc(lambda x: flag or '')
             try:
                 return ff(path)
             except OSError:
