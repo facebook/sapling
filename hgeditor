@@ -25,7 +25,7 @@ cleanup_exit() {
 
 # Remove temporary files even if we get interrupted
 trap "cleanup_exit" 0 # normal exit
-trap "exit 255" 1 2 3 6 15 # HUP INT QUIT ABRT TERM
+trap "exit 255" HUP INT QUIT ABRT TERM
 
 HGTMP="${TMPDIR-/tmp}/hgeditor.$RANDOM.$RANDOM.$RANDOM.$$"
 (umask 077 && mkdir "$HGTMP") || {
