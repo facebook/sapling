@@ -239,12 +239,12 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                 continue
             match = re_01.match(line)
             if match:
-                raise Exception(match.group(1))
+                raise logerror(match.group(1))
             match = re_02.match(line)
             if match:
-                raise Exception(match.group(2))
+                raise logerror(match.group(2))
             if re_03.match(line):
-                raise Exception(line)
+                raise logerror(line)
 
         elif state == 1:
             # expect 'Working file' (only when using log instead of rlog)
