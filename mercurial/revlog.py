@@ -444,7 +444,10 @@ class revlog(object):
         i = ''
         try:
             f = self.opener(self.indexfile)
-            i = f.read(_prereadsize)
+            if "nonlazy" in getattr(self.opener, 'options', {}):
+                i = f.read()
+            else:
+                i = f.read(_prereadsize)
             if len(i) > 0:
                 v = struct.unpack(versionformat, i[:4])[0]
         except IOError, inst:
