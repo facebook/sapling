@@ -857,7 +857,7 @@ class svn_source(converter_source):
         path = path.strip('/')
         pool = Pool()
         rpath = '/'.join([self.baseurl, urllib.quote(path)]).strip('/')
-        entries = svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool)            
+        entries = svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool)
         return ((path + '/' + p) for p, e in entries.iteritems()
                 if e.kind == svn.core.svn_node_file)
 
