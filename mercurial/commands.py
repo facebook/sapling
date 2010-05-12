@@ -3243,7 +3243,7 @@ def tag(ui, repo, name1, *names, **opts):
     """
 
     rev_ = "."
-    names = (name1,) + names
+    names = [t.strip() for t in (name1,) + names]
     if len(names) != len(set(names)):
         raise util.Abort(_('tag names must be unique'))
     for n in names:
