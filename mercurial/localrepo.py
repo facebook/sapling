@@ -623,10 +623,10 @@ class localrepository(repo.repository):
                     if len(args) >= 3 and self.ui.verbose:
                         desc = _("rolling back to revision %s"
                                  " (undo %s: %s)\n") % (
-                                 args[0], args[1], args[2])
+                                 int(args[0]) - 1, args[1], args[2])
                     elif len(args) >= 2:
                         desc = _("rolling back to revision %s (undo %s)\n") % (
-                                 args[0], args[1])
+                                 int(args[0]) - 1, args[1])
                 except IOError:
                     desc = _("rolling back unknown transaction\n")
                 self.ui.status(desc)
