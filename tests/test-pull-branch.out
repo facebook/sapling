@@ -11,7 +11,6 @@ added 2 changesets with 2 changes to 1 files
 % create branch B
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 marked working directory as branch branchB
-created new head
 % a new branch is there
 pulling from ../t
 searching for changes

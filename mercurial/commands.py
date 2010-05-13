@@ -730,30 +730,29 @@ def commit(ui, repo, *pats, **opts):
         return repo.commit(message, opts.get('user'), opts.get('date'), match,
                            editor=e, extra=extra)
 
+    branch = repo[None].branch()
+    bheads = repo.branchheads(branch)
+
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
         ui.status(_("nothing changed\n"))
         return
-    cl = repo.changelog
-    rev = cl.rev(node)
-    parents = cl.parentrevs(rev)
-    if rev - 1 in parents:
-        # one of the parents was the old tip
-        pass
-    elif (parents == (nullrev, nullrev) or
-          len(cl.heads(cl.node(parents[0]))) > 1 and
-          (parents[1] == nullrev or len(cl.heads(cl.node(parents[1]))) > 1)):
+
+    ctx = repo[node]
+    parents = ctx.parents()
+
+    if bheads and [x for x in parents if x.node() not in bheads]:
         ui.status(_('created new head\n'))
 
     if not opts.get('close_branch'):
         for r in parents:
-            if repo[r].extra().get('close'):
+            if r.extra().get('close'):
                 ui.status(_('reopening closed branch head %d\n') % r)
 
     if ui.debugflag:
-        ui.write(_('committed changeset %d:%s\n') % (rev, hex(node)))
+        ui.write(_('committed changeset %d:%s\n') % (int(ctx), ctx.hex()))
     elif ui.verbose:
-        ui.write(_('committed changeset %d:%s\n') % (rev, short(node)))
+        ui.write(_('committed changeset %d:%s\n') % (int(ctx), ctx))
 
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit

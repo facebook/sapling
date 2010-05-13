@@ -1644,7 +1644,6 @@ diff -r 000000000000 -r 8580ff50825a a
 % test outgoing
 0 files updated, 0 files merged, 6 files removed, 0 files unresolved
 marked working directory as branch test
-created new head
 comparing with ../t
 searching for changes
 This patch series consists of 8 patches.

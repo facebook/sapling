@@ -169,6 +169,7 @@ marked working directory as branch b
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+created new head
 pushing to j
 searching for changes
 abort: push creates new remote branches: b!
@@ -190,7 +191,6 @@ updating to branch B
 adding b1
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding a2
-created new head
 %% glog of local
 @  2: A a2
 |
@@ -222,7 +222,6 @@ marked working directory as branch B
 adding b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding a1
-created new head
 updating to branch A
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -263,13 +262,14 @@ adding a
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 marked working directory as branch B
 adding b
-created new head
 updating to branch B
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 marked working directory as branch B
+created new head
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 marked working directory as branch A
+created new head
 %% glog of local
 @  5: A b3
 |

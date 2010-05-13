@@ -86,7 +86,6 @@ marked working directory as branch a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 marked working directory as branch b
 adding b
-created new head
 
 % pull in change on foreign branch
 updating to branch default
@@ -156,8 +155,8 @@ updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -184,6 +183,7 @@ marked working directory as branch second
 adding b
 marked working directory as branch default
 adding c
+created new head
 updating to branch default
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % fetch should succeed

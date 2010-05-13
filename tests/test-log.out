@@ -339,7 +339,6 @@ marked working directory as branch test
 adding b
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding c
-created new head
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding c
 % log -b default

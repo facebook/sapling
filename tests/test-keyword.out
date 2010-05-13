@@ -462,7 +462,6 @@ bar
 % test restricted mode with transplant -b
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 marked working directory as branch foo
-created new head
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying 4aa30d025d50
 4aa30d025d50 transplanted to 5a4da427c162

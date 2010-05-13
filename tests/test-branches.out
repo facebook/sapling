@@ -3,7 +3,6 @@ marked working directory as branch q
 reset working directory to branch a
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 marked working directory as branch b
-created new head
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 marked working directory as branch c
 abort: the name 'tip' is reserved

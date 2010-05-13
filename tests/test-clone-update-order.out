@@ -4,11 +4,9 @@ adding bar
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 marked working directory as branch mine
 adding world
-created new head
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 marked working directory as branch other
 adding bye
-created new head
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 % test -U -u
 abort: cannot specify both --noupdate and --updaterev
