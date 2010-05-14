@@ -51,6 +51,9 @@ if __name__ == '__main__':
     parser.add_option("-v", "--verbose",
                       dest="verbose", action="store_true", default=False,
                       help="enable verbose output")
+    parser.add_option("", "--no-demandimport",
+                      dest="demandimport", action="store_false", default=True,
+                      help="disable Mercurial demandimport loading")
 
     (options, args) = parser.parse_args()
 
@@ -58,6 +61,10 @@ if __name__ == '__main__':
         testargs = { 'descriptions': 3, 'verbosity': 2 }
     else:
         testargs = {'descriptions': 2}
+
+    if options.demandimport:
+        from mercurial import demandimport
+        demandimport.enable()
 
     # silence output when running outside nose
     sys.stdout = os.tmpfile()
