@@ -14,8 +14,6 @@ warnings.filterwarnings('ignore',
                         module='svn.core',
                         category=DeprecationWarning)
 
-from mercurial import util as hgutil
-
 required_bindings = (1, 5, 0)
 
 try:
@@ -423,10 +421,11 @@ class SubversionRepo(object):
                            self.pool)
             except core.SubversionException, e:
                 if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
-                    raise hgutil.Abort('%s not found at revision %d!'
-                                       % (self.subdir.rstrip('/'), stop))
+                    msg = ('%s not found at revision %d!'
+                           % (self.subdir.rstrip('/'), stop))
+                    raise SubversionConnectionException(msg)
                 elif e.apr_err == core.SVN_ERR_FS_NO_SUCH_REVISION:
-                    raise hgutil.Abort(e.message)
+                    raise SubversionConnectionException(e.message)
                 else:
                     raise
 
