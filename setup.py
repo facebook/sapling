@@ -93,21 +93,15 @@ if os.path.exists(verfile):
 if not version:
     version = 'unknown'
 
-try:
-    from svn import core
-    assert core.SVN_VER_MAJOR == 1
-    assert core.SVN_VER_MINOR >= 5
-except ImportError:
-    raise Exception('You need to install the SWIG'
-                    ' bindings for Subversion to use this package.')
-except AssertionError:
-    raise Exception('You need at least Subversion 1.5 to use this package.')
-
 requires = []
 try:
     import mercurial
 except ImportError:
     requires.append('mercurial')
+
+# Ensure that the Subversion bindings are present
+sys.path.insert(0, 'hgsubversion')
+import svnwrap
 
 setup(
     name = 'hgsubversion',
