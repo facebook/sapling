@@ -44,6 +44,11 @@ class SubversionRepoCanNotDiff(Exception):
     """Exception raised when the svn API diff3() command cannot be used
     """
 
+class SubversionConnectionException(Exception):
+    """Exception raised when a generic error occurs when connecting to a
+       repository.
+    """
+
 '''Default chunk size used in fetch_history_at_paths() and revisions().'''
 _chunk_size = 1000
 
@@ -252,9 +257,22 @@ class SubversionRepo(object):
             path=urllib.quote(path)
             url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
             self.ra = ra.open2(url, callbacks,
-                               svn_config, self.pool)
+                              svn_config, self.pool)
         except core.SubversionException, e:
-            raise hgutil.Abort(e.args[0])
+            if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
+                msg = ('Subversion does not trust the SSL certificate for this '
+                       'site; please try running \'svn ls %s\' first.'
+                       % self.svn_url)
+            elif e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED:
+                msg = ('Failed to open Subversion repository; please try '
+                       'running \'svn ls %s\' for details.' % self.svn_url)
+            else:
+                msg = e.args[0]
+                for k, v in vars(core).iteritems():
+                    if k.startswith('SVN_ERR_') and v == e.apr_err:
+                        msg = '%s (%s)' % (msg, k)
+                        break
+            raise SubversionConnectionException(msg)
 
     def HEAD(self):
         return ra.get_latest_revnum(self.ra, self.pool)

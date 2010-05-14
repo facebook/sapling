@@ -93,7 +93,11 @@ class svnremoterepo(mercurial.repo.repository):
 
     @propertycache
     def svn(self):
-        return svnwrap.SubversionRepo(*self.svnauth)
+        try:
+            return svnwrap.SubversionRepo(*self.svnauth)
+        except svnwrap.SubversionConnectionException, e:
+            self.ui.traceback()
+            raise hgutil.Abort(e)
 
     @property
     def svnuuid(self):

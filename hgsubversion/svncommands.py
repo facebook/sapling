@@ -8,8 +8,6 @@ from mercurial import node
 from mercurial import util as hgutil
 from mercurial import error
 
-from svn import core
-
 import maps
 import svnwrap
 import svnrepo
@@ -420,11 +418,8 @@ def svn(ui, repo, subcommand, *args, **opts):
     try:
         commandfunc = table[subcommand]
         return commandfunc(ui, args=args, repo=repo, **opts)
-    except core.SubversionException, e:
-        if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
-            raise hgutil.Abort('It appears svn does not trust the ssl cert for this site.\n'
-                     'Please try running svn ls on that url first.')
-        raise
+    except svnwrap.SubversionConnectionException, e:
+        raise hgutil.Abort(*e.args)
     except TypeError:
         tb = traceback.extract_tb(sys.exc_info()[2])
         if len(tb) == 1:
