@@ -63,7 +63,7 @@ foo
 default
 bar
 % test for invalid branch cache
-rolling back to revision 5 (undo commit)
+rolling back to revision 4 (undo commit)
 changeset:   4:4909a3732169
 branch:      foo
 tag:         tip

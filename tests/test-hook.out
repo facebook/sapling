@@ -101,7 +101,7 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
-rolling back to revision 4 (undo pull)
+rolling back to revision 3 (undo pull)
 preoutgoing hook: HG_SOURCE=pull 
 preoutgoing.forbid hook: HG_SOURCE=pull 
 pulling from ../a

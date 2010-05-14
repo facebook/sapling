@@ -22,7 +22,7 @@ foo
 pulling from http://foo:***@localhost:$HGPORT/
 searching for changes
 no changes found
-rolling back to revision 0 (undo pull: http://foo:***@localhost:$HGPORT/)
+rolling back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/)
 % issue 622
 pulling from ../test
 requesting all changes

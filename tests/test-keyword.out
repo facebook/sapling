@@ -163,7 +163,7 @@ diff -r d17e03c92c97 a
  do not process $Id:
  xxx $
 +bar
-rolling back to revision 3 (undo commit)
+rolling back to revision 2 (undo commit)
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % init --mq
 % qimport
@@ -237,7 +237,7 @@ diff -r ef63ca68695b c
 +do not process $Id:
 +xxx $
 % rollback
-rolling back to revision 2 (undo commit)
+rolling back to revision 1 (undo commit)
 % status
 A c
 % update -C
@@ -305,7 +305,7 @@ committed changeset 3:d14c712653769de926994cf7fbb06c8fbd68f012
 % status
 ? c
 % rollback
-rolling back to revision 3 (undo commit)
+rolling back to revision 2 (undo commit)
 % status
 R a
 ? c
@@ -347,7 +347,7 @@ $Xinfo: User Name <user@example.com>: rejects? $
 ignore $Id$
 
 % rollback
-rolling back to revision 3 (undo commit)
+rolling back to revision 2 (undo commit)
 % clean update
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % kwexpand/kwshrink on selected files

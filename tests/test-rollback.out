@@ -9,7 +9,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     test
 
-rolling back to revision 0 (undo commit)
+rolling back to revision -1 (undo commit)
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
@@ -18,14 +18,14 @@ checking files
 A a
 % Test issue 902
 marked working directory as branch test
-rolling back to revision 0 (undo commit)
+rolling back to revision -1 (undo commit)
 default
 % Test issue 1635 (commit message saved)
 .hg/last-message.txt:
 test2
 % Test rollback of hg before issue 902 was fixed
 marked working directory as branch test
-rolling back to revision 0 (undo commit)
+rolling back to revision -1 (undo commit)
 Named branch could not be reset, current branch still is: test
 test
 % rollback by pretxncommit saves commit message (issue 1635)

@@ -43,7 +43,7 @@ examine changes to 'a'? [Ynsfdaq?]
  c
 record this change to 'a'? [Ynsfdaq?] 
 
-rolling back to revision 1 (undo commit)
+rolling back to revision 0 (undo commit)
 % qrecord
 [0;1mdiff --git a/a b/a[0m
 [0;36;1mold mode 100644[0m
