@@ -3823,7 +3823,7 @@ table = {
           ('c', 'closed', False,
            _('show normal and closed branch heads')),
          ] + templateopts,
-         _('[-ac] [-r STARTREV] [REV]...')),
+         _('[-ac] [-r REV] [REV]...')),
     "help": (help_, [], _('[TOPIC]')),
     "identify|id":
         (identify,
