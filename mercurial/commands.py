@@ -2501,7 +2501,7 @@ def pull(ui, repo, source="default", **opts):
 
     Use hg incoming if you want to see what would have been added by a
     pull at the time you issued this command. If you then decide to
-    added those changes to the repository, you should use pull -r X
+    add those changes to the repository, you should use pull -r X
     where X is the last changeset listed by hg incoming.
 
     If SOURCE is omitted, the 'default' path will be used.
