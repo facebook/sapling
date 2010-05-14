@@ -5,7 +5,13 @@ import unittest
 from mercurial import hg
 from mercurial import ui
 
-from tests import test_util
+# wrapped in a try/except because of weirdness in how
+# run.py works as compared to nose.
+try:
+    import test_util
+except ImportError:
+    from tests import test_util
+
 from hgsubversion import wrappers
 
 
