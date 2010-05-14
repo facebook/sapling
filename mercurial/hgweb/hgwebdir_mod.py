@@ -56,21 +56,33 @@ class hgwebdir(object):
             return
 
         if self.baseui:
-            self.ui = self.baseui.copy()
+            u = self.baseui.copy()
         else:
-            self.ui = ui.ui()
-            self.ui.setconfig('ui', 'report_untrusted', 'off')
-            self.ui.setconfig('ui', 'interactive', 'off')
+            u = ui.ui()
+            u.setconfig('ui', 'report_untrusted', 'off')
+            u.setconfig('ui', 'interactive', 'off')
 
         if not isinstance(self.conf, (dict, list, tuple)):
             map = {'paths': 'hgweb-paths'}
-            self.ui.readconfig(self.conf, remap=map, trust=True)
-            paths = self.ui.configitems('hgweb-paths')
+            u.readconfig(self.conf, remap=map, trust=True)
+            paths = u.configitems('hgweb-paths')
         elif isinstance(self.conf, (list, tuple)):
             paths = self.conf
         elif isinstance(self.conf, dict):
             paths = self.conf.items()
 
+        repos = findrepos(paths)
+        for prefix, root in u.configitems('collections'):
+            prefix = util.pconvert(prefix)
+            for path in util.walkrepos(root, followsym=True):
+                repo = os.path.normpath(path)
+                name = util.pconvert(repo)
+                if name.startswith(prefix):
+                    name = name[len(prefix):]
+                repos.append((name.lstrip('/'), repo))
+
+        self.repos = repos
+        self.ui = u
         encoding.encoding = self.ui.config('web', 'encoding',
                                            encoding.encoding)
         self.style = self.ui.config('web', 'style', 'paper')
@@ -78,17 +90,6 @@ class hgwebdir(object):
         if self.stripecount:
             self.stripecount = int(self.stripecount)
         self._baseurl = self.ui.config('web', 'baseurl')
-
-        self.repos = findrepos(paths)
-        for prefix, root in self.ui.configitems('collections'):
-            prefix = util.pconvert(prefix)
-            for path in util.walkrepos(root, followsym=True):
-                repo = os.path.normpath(path)
-                name = util.pconvert(repo)
-                if name.startswith(prefix):
-                    name = name[len(prefix):]
-                self.repos.append((name.lstrip('/'), repo))
-
         self.lastrefresh = time.time()
 
     def run(self):
