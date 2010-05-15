@@ -367,6 +367,8 @@ verify the integrity of the repository
     manifest, and tracked files, as well as the integrity of their crosslinks
     and indices.
 
+    Returns 0 on success, 1 if errors are encountered.
+
 use "hg -v help verify" to show global options
 hg diff [OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...
 
@@ -394,6 +396,8 @@ diff repository (or selected files)
 
     Use the -g/--git option to generate diffs in the git extended diff format.
     For more information, read "hg help diffs".
+
+    Returns 0 on success.
 
 options:
 
@@ -448,6 +452,8 @@ show changed files in the working directory
       ? = not tracked
       I = ignored
         = origin of the previous file listed as A (added)
+
+    Returns 0 on success.
 
 options:
 

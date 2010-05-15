@@ -75,6 +75,8 @@ def addremove(ui, repo, *pats, **opts):
     option takes a percentage between 0 (disabled) and 100 (files must
     be identical) as its parameter. Detecting renamed files this way
     can be expensive.
+
+    Returns 0 if all files are successfully added.
     """
     try:
         sim = float(opts.get('similarity') or 0)
@@ -97,6 +99,8 @@ def annotate(ui, repo, *pats, **opts):
     it detects as binary. With -a, annotate will annotate the file
     anyway, although the results will probably be neither useful
     nor desirable.
+
+    Returns 0 on success.
     """
     if opts.get('follow'):
         # --follow is deprecated and now just an alias for -f/--file
@@ -176,6 +180,8 @@ def archive(ui, repo, dest, **opts):
     prepended. Use -p/--prefix to specify a format string for the
     prefix. The default is the basename of the archive, with suffixes
     removed.
+
+    Returns 0 on success.
     '''
 
     ctx = repo[opts.get('rev')]
@@ -230,6 +236,8 @@ def backout(ui, repo, node=None, rev=None, **opts):
     The result of this merge is not committed, as with a normal merge.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
+
+    Returns 0 on success.
     '''
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
@@ -323,6 +331,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     status 0 means good, 125 means to skip the revision, 127
     (command not found) will abort the bisection, and any other
     non-zero exit status means the revision is bad.
+
+    Returns 0 on success.
     """
     def print_result(nodes, good):
         displayer = cmdutil.show_changeset(ui, repo, {})
@@ -404,7 +414,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 hg.clean(repo, nodes[0], show_stats=False)
         finally:
             hbisect.save_state(repo, state)
-        return print_result(nodes, good)
+        print_result(nodes, good)
+        return
 
     # update state
     node = repo.lookup(rev or '.')
@@ -457,6 +468,8 @@ def branch(ui, repo, label=None, **opts):
 
     Use the command :hg:`update` to switch to an existing branch. Use
     :hg:`commit --close-branch` to mark this branch as closed.
+
+    Returns 0 on success.
     """
 
     if opts.get('clean'):
@@ -485,6 +498,8 @@ def branches(ui, repo, active=False, closed=False):
     is considered active if it contains repository heads.
 
     Use the command :hg:`update` to switch to an existing branch.
+
+    Returns 0.
     """
 
     hexfunc = ui.debugflag and hex or short
@@ -538,6 +553,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
     Applying bundles preserves all changeset contents including
     permissions, copy/rename information, and revision history.
+
+    Returns 0 on success, 1 if no changes found.
     """
     revs = opts.get('rev') or None
     if revs:
@@ -583,7 +600,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
     if not o:
         ui.status(_("no changes found\n"))
-        return
+        return 1
 
     if revs:
         cg = repo.changegroupsubset(o, revs, 'bundle')
@@ -612,6 +629,8 @@ def cat(ui, repo, file1, *pats, **opts):
     :``%s``: basename of file being printed
     :``%d``: dirname of file being printed, or '.' if in repository root
     :``%p``: root-relative path name of file being printed
+
+    Returns 0 on success.
     """
     ctx = repo[opts.get('rev')]
     err = 1
@@ -686,16 +705,20 @@ def clone(ui, source, dest=None, **opts):
     f) the tipmost head specified with the url#branch source syntax
     g) the tipmost head of the default branch
     h) tip
+
+    Returns 0 on success.
     """
     if opts.get('noupdate') and opts.get('updaterev'):
         raise util.Abort(_("cannot specify both --noupdate and --updaterev"))
 
-    hg.clone(cmdutil.remoteui(ui, opts), source, dest,
-             pull=opts.get('pull'),
-             stream=opts.get('uncompressed'),
-             rev=opts.get('rev'),
-             update=opts.get('updaterev') or not opts.get('noupdate'),
-             branch=opts.get('branch'))
+    r = hg.clone(cmdutil.remoteui(ui, opts), source, dest,
+                 pull=opts.get('pull'),
+                 stream=opts.get('uncompressed'),
+                 rev=opts.get('rev'),
+                 update=opts.get('updaterev') or not opts.get('noupdate'),
+                 branch=opts.get('branch'))
+
+    return r is None
 
 def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
@@ -714,6 +737,8 @@ def commit(ui, repo, *pats, **opts):
     started to prompt you for a message.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
+
+    Returns 0 on success, 1 if nothing changed.
     """
     extra = {}
     if opts.get('close_branch'):
@@ -736,7 +761,7 @@ def commit(ui, repo, *pats, **opts):
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
         ui.status(_("nothing changed\n"))
-        return
+        return 1
 
     ctx = repo[node]
     parents = ctx.parents()
@@ -767,6 +792,8 @@ def copy(ui, repo, *pats, **opts):
 
     This command takes effect with the next commit. To undo a copy
     before that, see hg revert.
+
+    Returns 0 on success, 1 if errors are encountered.
     """
     wlock = repo.wlock(False)
     try:
@@ -793,6 +820,7 @@ def debugancestor(ui, repo, *args):
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
 def debugcommands(ui, cmd='', *args):
+    """list all available commands and options"""
     for cmd, vals in sorted(table.iteritems()):
         cmd = cmd.split('|')[0].strip('^')
         opts = ', '.join([i[1] for i in vals[1]])
@@ -823,6 +851,7 @@ def debugcomplete(ui, cmd='', **opts):
     ui.write("%s\n" % "\n".join(sorted(cmdlist)))
 
 def debugfsinfo(ui, path = "."):
+    """show information detected about current filesystem"""
     open('.debugfsinfo', 'w').write('')
     ui.write('exec: %s\n' % (util.checkexec(path) and 'yes' or 'no'))
     ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
@@ -879,6 +908,8 @@ def showconfig(ui, repo, *values, **opts):
 
     With --debug, the source (filename and line number) is printed
     for each config item.
+
+    Returns 0 on success.
     """
 
     for f in util.rcpath():
@@ -909,6 +940,8 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 
     This is useful for writing repository conversion tools, but should
     be used with care.
+
+    Returns 0 on success.
     """
 
     if not rev2:
@@ -1000,7 +1033,10 @@ def debugindexdot(ui, file_):
     ui.write("}\n")
 
 def debuginstall(ui):
-    '''test Mercurial installation'''
+    '''test Mercurial installation
+
+    Returns 0 on success.
+    '''
 
     def writetemp(contents):
         (fd, name) = tempfile.mkstemp(prefix="hg-debuginstall-")
@@ -1161,6 +1197,8 @@ def diff(ui, repo, *pats, **opts):
 
     Use the -g/--git option to generate diffs in the git extended diff
     format. For more information, read :hg:`help diffs`.
+
+    Returns 0 on success.
     """
 
     revs = opts.get('rev')
@@ -1218,6 +1256,8 @@ def export(ui, repo, *changesets, **opts):
 
     With the --switch-parent option, the diff will be against the
     second parent. It can be useful to review a merge.
+
+    Returns 0 on success.
     """
     changesets += tuple(opts.get('rev', []))
     if not changesets:
@@ -1242,6 +1282,8 @@ def forget(ui, repo, *pats, **opts):
     working directory.
 
     To undo a forget before the next commit, see hg add.
+
+    Returns 0 on success.
     """
 
     if not pats:
@@ -1250,17 +1292,20 @@ def forget(ui, repo, *pats, **opts):
     m = cmdutil.match(repo, pats, opts)
     s = repo.status(match=m, clean=True)
     forget = sorted(s[0] + s[1] + s[3] + s[6])
+    errs = 0
 
     for f in m.files():
         if f not in repo.dirstate and not os.path.isdir(m.rel(f)):
             ui.warn(_('not removing %s: file is already untracked\n')
                     % m.rel(f))
+            errs = 1
 
     for f in forget:
         if ui.verbose or not m.exact(f):
             ui.status(_('removing %s\n') % m.rel(f))
 
     repo.remove(forget, unlink=False)
+    return errs
 
 def grep(ui, repo, pattern, *pats, **opts):
     """search for a pattern in specified files and revisions
@@ -1277,6 +1322,8 @@ def grep(ui, repo, pattern, *pats, **opts):
     that contains a change in match status ("-" for a match that
     becomes a non-match, or "+" for a non-match that becomes a match),
     use the --all flag.
+
+    Returns 0 if a match is found, 1 otherwise.
     """
     reflags = 0
     if opts.get('ignore_case'):
@@ -1285,7 +1332,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         regexp = re.compile(pattern, reflags)
     except Exception, inst:
         ui.warn(_("grep: invalid match pattern: %s\n") % inst)
-        return None
+        return 1
     sep, eol = ':', '\n'
     if opts.get('print0'):
         sep = eol = '\0'
@@ -1443,6 +1490,8 @@ def grep(ui, repo, pattern, *pats, **opts):
         del matches[rev]
         del revfiles[rev]
 
+    return not found
+
 def heads(ui, repo, *branchrevs, **opts):
     """show current repository heads or show branch heads
 
@@ -1464,6 +1513,8 @@ def heads(ui, repo, *branchrevs, **opts):
 
     If -t/--topo is specified, named branch mechanics will be ignored and only
     changesets without children will be shown.
+
+    Returns 0 if matching heads are found, 1 if not.
     """
 
     if opts.get('rev'):
@@ -1521,7 +1572,10 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
     With no arguments, print a list of commands with short help messages.
 
     Given a topic, extension, or command name, print help for that
-    topic."""
+    topic.
+
+    Returns 0 if successful.
+    """
     option_lists = []
     textwidth = util.termwidth() - 2
 
@@ -1779,6 +1833,8 @@ def identify(ui, repo, source=None,
     parent hash identifiers, followed by a "+" if there are
     uncommitted changes in the working directory, a list of tags for
     this revision and a branch name for non-default branches.
+
+    Returns 0 if successful.
     """
 
     if not repo and not source:
@@ -1874,6 +1930,8 @@ def import_(ui, repo, patch1, *patches, **opts):
     To read a patch from standard input, use "-" as the patch name. If
     a URL is specified, the patch will be downloaded from it.
     See :hg:`help dates` for a list of formats valid for -d/--date.
+
+    Returns 0 on success.
     """
     patches = (patch1,) + patches
 
@@ -2007,6 +2065,8 @@ def incoming(ui, repo, source="default", **opts):
     changesets twice if the incoming is followed by a pull.
 
     See pull for valid source format details.
+
+    Returns 0 if there are incoming changes, 1 otherwise.
     """
     limit = cmdutil.loglimit(opts)
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
@@ -2077,6 +2137,8 @@ def init(ui, dest=".", **opts):
 
     It is possible to specify an ``ssh://`` URL as the destination.
     See :hg:`help urls` for more information.
+
+    Returns 0 on success.
     """
     hg.repository(cmdutil.remoteui(ui, opts), dest, create=1)
 
@@ -2097,6 +2159,8 @@ def locate(ui, repo, *pats, **opts):
     command, use the -0 option to both this command and "xargs". This
     will avoid the problem of "xargs" treating single filenames that
     contain whitespace as multiple filenames.
+
+    Returns 0 if a match is found, 1 otherwise.
     """
     end = opts.get('print0') and '\0' or '\n'
     rev = opts.get('rev') or None
@@ -2142,6 +2206,8 @@ def log(ui, repo, *pats, **opts):
     changesets, as it will only compare the merge changeset against
     its first parent. Also, only files different from BOTH parents
     will appear in files:.
+
+    Returns 0 on success.
     """
 
     matchfn = cmdutil.match(repo, pats, opts)
@@ -2210,6 +2276,8 @@ def manifest(ui, repo, node=None, rev=None):
 
     With -v, print file permissions, symlink and executable bits.
     With --debug, print file revision hashes.
+
+    Returns 0 on success.
     """
 
     if rev and node:
@@ -2242,6 +2310,8 @@ def merge(ui, repo, node=None, **opts):
     head revision, and the current branch contains exactly one other
     head, the other head is merged with by default. Otherwise, an
     explicit revision with which to merge with must be provided.
+
+    Returns 0 on success, 1 if there are unresolved files.
     """
 
     if opts.get('rev') and node:
@@ -2298,6 +2368,8 @@ def outgoing(ui, repo, dest=None, **opts):
     be pushed if a push was requested.
 
     See pull for details of valid destination formats.
+
+    Returns 0 if there are outgoing changes, 1 otherwise.
     """
     limit = cmdutil.loglimit(opts)
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
@@ -2335,6 +2407,8 @@ def parents(ui, repo, file_=None, **opts):
     If a file argument is given, the revision in which the file was
     last changed (before the working directory revision or the
     argument to --rev if given) is printed.
+
+    Returns 0 on success.
     """
     rev = opts.get('rev')
     if rev:
@@ -2432,6 +2506,8 @@ def pull(ui, repo, source="default", **opts):
 
     If SOURCE is omitted, the 'default' path will be used.
     See :hg:`help urls` for more information.
+
+    Returns 0 on success, 1 if an update had unresolved files.
     """
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     other = hg.repository(cmdutil.remoteui(repo, opts), source)
@@ -2469,6 +2545,8 @@ def push(ui, repo, dest=None, **opts):
 
     Please see :hg:`help urls` for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
+
+    Returns 0 if push was successful, 1 if nothing to push.
     """
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest, opts.get('branch'))
@@ -2496,6 +2574,8 @@ def recover(ui, repo):
     This command tries to fix the repository status after an
     interrupted operation. It should only be necessary when Mercurial
     suggests it.
+
+    Returns 0 if successful, 1 if nothing to recover or verify fails.
     """
     if repo.recover():
         return hg.verify(repo)
@@ -2526,8 +2606,11 @@ def remove(ui, repo, *pats, **opts):
 
     This command schedules the files to be removed at the next commit.
     To undo a remove before that, see hg revert.
+
+    Returns 0 on success, 1 if any warnings encountered.
     """
 
+    ret = 0
     after, force = opts.get('after'), opts.get('force')
     if not pats and not after:
         raise util.Abort(_('no files specified'))
@@ -2539,11 +2622,13 @@ def remove(ui, repo, *pats, **opts):
     for f in m.files():
         if f not in repo.dirstate and not os.path.isdir(m.rel(f)):
             ui.warn(_('not removing %s: file is untracked\n') % m.rel(f))
+            ret = 1
 
     def warn(files, reason):
         for f in files:
             ui.warn(_('not removing %s: file %s (use -f to force removal)\n')
                     % (m.rel(f), reason))
+            ret = 1
 
     if force:
         remove, forget = modified + deleted + clean, added
@@ -2561,6 +2646,7 @@ def remove(ui, repo, *pats, **opts):
 
     repo.forget(forget)
     repo.remove(remove, unlink=not after)
+    return ret
 
 def rename(ui, repo, *pats, **opts):
     """rename files; equivalent of copy + remove
@@ -2575,6 +2661,8 @@ def rename(ui, repo, *pats, **opts):
 
     This command takes effect at the next commit. To undo a rename
     before that, see hg revert.
+
+    Returns 0 on success, 1 if errors are encountered.
     """
     wlock = repo.wlock(False)
     try:
@@ -2608,6 +2696,8 @@ def resolve(ui, repo, *pats, **opts):
     Note that Mercurial will not let you commit files with unresolved merge
     conflicts.  You must use ``hg resolve -m ...`` before you can commit
     after a conflicting merge.
+
+    Returns 0 on success, 1 if any files fail a resolve attempt.
     """
 
     all, mark, unmark, show, nostatus = \
@@ -2623,6 +2713,7 @@ def resolve(ui, repo, *pats, **opts):
 
     ms = mergemod.mergestate(repo)
     m = cmdutil.match(repo, pats, opts)
+    ret = 0
 
     for f in ms:
         if m(f):
@@ -2646,10 +2737,12 @@ def resolve(ui, repo, *pats, **opts):
                 util.copyfile(a, a + ".resolve")
 
                 # resolve file
-                ms.resolve(f, wctx, mctx)
+                if ms.resolve(f, wctx, mctx):
+                    ret = 1
 
                 # replace filemerge's .orig file with our resolve file
                 util.rename(a + ".resolve", a + ".orig")
+    return ret
 
 def revert(ui, repo, *pats, **opts):
     """restore individual files or directories to an earlier state
@@ -2683,6 +2776,8 @@ def revert(ui, repo, *pats, **opts):
 
     Modified files are saved with a .orig suffix before reverting.
     To disable these backups, use --no-backup.
+
+    Returns 0 on success.
     """
 
     if opts["date"]:
@@ -2895,13 +2990,17 @@ def rollback(ui, repo, **opts):
     the changes). Furthermore, a race is possible with readers of the
     repository; for example an in-progress pull from the repository
     may fail if a rollback is performed.
+
+    Returns 0 on success, 1 if no rollback data is available.
     """
-    repo.rollback(opts.get('dry_run'))
+    return repo.rollback(opts.get('dry_run'))
 
 def root(ui, repo):
     """print the root (top) of the current working directory
 
     Print the root directory of the current repository.
+
+    Returns 0 on success.
     """
     ui.write(repo.root + "\n")
 
@@ -2926,6 +3025,8 @@ def serve(ui, repo, **opts):
     To have the server choose a free port number to listen on, specify
     a port number of 0; in this case, the server will print the port
     number it uses.
+
+    Returns 0 on success.
     """
 
     if opts["stdio"]:
@@ -3032,6 +3133,8 @@ def status(ui, repo, *pats, **opts):
       ? = not tracked
       I = ignored
         = origin of the previous file listed as A (added)
+
+    Returns 0 on success.
     """
 
     revs = opts.get('rev')
@@ -3095,6 +3198,8 @@ def summary(ui, repo, **opts):
 
     With the --remote option, this will check the default paths for
     incoming and outgoing changes. This can be time-consuming.
+
+    Returns 0 on success.
     """
 
     ctx = repo[None]
@@ -3239,6 +3344,8 @@ def tag(ui, repo, name1, *names, **opts):
 
     Since tag names have priority over branch names during revision
     lookup, using an existing branch name as a tag name is discouraged.
+
+    Returns 0 on success.
     """
 
     rev_ = "."
@@ -3293,6 +3400,8 @@ def tags(ui, repo):
 
     This lists both regular and local tags. When the -v/--verbose
     switch is used, a third column "local" is printed for local tags.
+
+    Returns 0 on success.
     """
 
     hexfunc = ui.debugflag and hex or short
@@ -3328,6 +3437,8 @@ def tip(ui, repo, **opts):
     you have just pulled changes from another repository, the tip of
     that repository becomes the current tip. The "tip" tag is special
     and cannot be renamed or assigned to a different changeset.
+
+    Returns 0 on success.
     """
     displayer = cmdutil.show_changeset(ui, repo, opts)
     displayer.show(repo[len(repo) - 1])
@@ -3338,6 +3449,8 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
 
     Apply one or more compressed changegroup files generated by the
     bundle command.
+
+    Returns 0 on success, 1 if an update has unresolved files.
     """
     fnames = (fname1,) + fnames
 
@@ -3386,6 +3499,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     If you want to update just one file to an older changeset, use :hg:`revert`.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
+
+    Returns 0 on success, 1 if there are unresolved files.
     """
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
@@ -3421,6 +3536,8 @@ def verify(ui, repo):
     integrity, validating the hashes and checksums of each entry in
     the changelog, manifest, and tracked files, as well as the
     integrity of their crosslinks and indices.
+
+    Returns 0 on success, 1 if errors are encountered.
     """
     return hg.verify(repo)
 

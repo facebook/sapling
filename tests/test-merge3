@@ -8,3 +8,4 @@ touch b
 hg add b
 rm b
 hg commit -A -m"comment #1" -d "1000000 0"
+exit 0

@@ -647,6 +647,7 @@ class localrepository(repo.repository):
                 self.destroyed()
             else:
                 self.ui.warn(_("no rollback information available\n"))
+                return 1
         finally:
             release(lock, wlock)
 

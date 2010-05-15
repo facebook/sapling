@@ -17,6 +17,8 @@ output the current or given revision of files
     "%d"  dirname of file being printed, or '.' if in repository root
     "%p"  root-relative path name of file being printed
 
+    Returns 0 on success.
+
 options:
 
  -o --output   print output to file with formatted name
