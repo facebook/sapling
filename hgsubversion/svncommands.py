@@ -1,6 +1,8 @@
 import os
 import posixpath
 import cPickle as pickle
+import sys
+import traceback
 
 from mercurial import commands
 from mercurial import hg
