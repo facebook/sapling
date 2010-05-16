@@ -226,13 +226,11 @@ adding b
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
-created new head
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding c
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
-created new head
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 adding .hgsub
 committing subrepository s
@@ -245,7 +243,6 @@ adding c
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
-created new head
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding d

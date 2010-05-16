@@ -4,7 +4,6 @@ marked working directory as branch bar
 % branch shadowing
 abort: a branch of the same name already exists (use 'hg update' to switch to it)
 marked working directory as branch default
-created new head
 % there should be only one default branch head
 changeset:   3:bf1bc2f45e83
 tag:         tip
@@ -17,7 +16,6 @@ foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 foo
-created new head
 changeset:   5:5f8fb06e083e
 branch:      foo
 tag:         tip
@@ -113,7 +111,6 @@ adding ff
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 foo
-created new head
 changeset:   6:f0c74f92a385
 branch:      foo
 tag:         tip

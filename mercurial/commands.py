@@ -766,7 +766,8 @@ def commit(ui, repo, *pats, **opts):
     ctx = repo[node]
     parents = ctx.parents()
 
-    if bheads and [x for x in parents if x.node() not in bheads]:
+    if bheads and [x for x in parents
+                   if x.node() not in bheads and x.branch() == branch]:
         ui.status(_('created new head\n'))
 
     if not opts.get('close_branch'):
