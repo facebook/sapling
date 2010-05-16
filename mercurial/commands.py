@@ -3394,6 +3394,9 @@ def tag(ui, repo, name1, *names, **opts):
     if date:
         date = util.parsedate(date)
 
+    if opts.get('edit'):
+        message = ui.edit(message, ui.username())
+
     repo.tag(names, r, message, opts.get('local'), opts.get('user'), date)
 
 def tags(ui, repo):
@@ -4038,6 +4041,7 @@ table = {
           ('r', 'rev', '', _('revision to tag')),
           ('', 'remove', None, _('remove a tag')),
           # -l/--local is already there, commitopts cannot be used
+          ('e', 'edit', None, _('edit commit message')),
           ('m', 'message', '', _('use <text> as commit message')),
          ] + commitopts2,
          _('[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...')),

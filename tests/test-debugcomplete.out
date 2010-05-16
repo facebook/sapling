@@ -223,7 +223,7 @@ revert: all, date, rev, no-backup, include, exclude, dry-run
 rollback: dry-run
 root: 
 showconfig: untrusted
-tag: force, local, rev, remove, message, date, user
+tag: force, local, rev, remove, edit, message, date, user
 tags: 
 tip: patch, git, style, template
 unbundle: update
