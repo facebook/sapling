@@ -450,7 +450,7 @@ def patchbomb(ui, repo, *revs, **opts):
         if opts.get('test'):
             ui.status(_('Displaying '), subj, ' ...\n')
             ui.flush()
-            if 'PAGER' in os.environ:
+            if 'PAGER' in os.environ and not ui.plain():
                 fp = util.popen(os.environ['PAGER'], 'w')
             else:
                 fp = ui
