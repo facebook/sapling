@@ -14,7 +14,7 @@ non-option arguments: paths to directories containing snapshots of
 files to compare.
 
 The extdiff extension also allows to configure new diff commands, so
-you do not need to type "hg extdiff -p kdiff3" always. ::
+you do not need to type :hg:`extdiff -p kdiff3` always. ::
 
   [extdiff]
   # add new command that runs GNU diff(1) in 'context diff' mode
@@ -35,7 +35,7 @@ you do not need to type "hg extdiff -p kdiff3" always. ::
   # your .vimrc
   vimdiff = gvim -f '+next' '+execute "DirDiff" argv(0) argv(1)'
 
-Tool arguments can include variables that are expanded at runtime:
+Tool arguments can include variables that are expanded at runtime::
 
   $parent1, $plabel1 - filename, descriptive label of first parent
   $child,   $clabel  - filename, descriptive label of child revision
@@ -45,16 +45,18 @@ Tool arguments can include variables that are expanded at runtime:
 The extdiff extension will look in your [diff-tools] and [merge-tools]
 sections for diff tool arguments, when none are specified in [extdiff].
 
+::
+
   [extdiff]
-  kdiff3 = 
+  kdiff3 =
 
   [diff-tools]
   kdiff3.diffargs=--L1 '$plabel1' --L2 '$clabel' $parent $child
 
-You can use -I/-X and list of file or directory names like normal "hg
-diff" command. The extdiff extension makes snapshots of only needed
-files, so running the external diff program will actually be pretty
-fast (at least faster than having to compare the entire tree).
+You can use -I/-X and list of file or directory names like normal
+:hg:`diff` command. The extdiff extension makes snapshots of only
+needed files, so running the external diff program will actually be
+pretty fast (at least faster than having to compare the entire tree).
 '''
 
 from mercurial.i18n import _
