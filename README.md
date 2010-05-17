@@ -74,6 +74,20 @@ Clone this repository somewhere and make the 'extensions' section in your `~/.hg
 
 That will enable the Hg-Git extension for you.  The bookmarks section is not compulsory, but it makes some things a bit nicer for you.
 
+Configuration
+=============
+
+git.intree
+----------
+
+hg-git keeps a git repository clone for reading and updating. By default, the
+git clone is the subdirectory `git` in your local Mercurial repository. If you
+would like this git clone to be at the same level of your Mercurial repository
+instead (named `.git`), add the following to your `hgrc`:
+
+    [git]
+    intree = True
+
 Authors
 ========
 
