@@ -18,9 +18,13 @@ This plugin is implemented entirely in Python - there are no Git binary dependen
 Commands
 =========
 
-You can clone a Git repository from Hg by running `hg clone [url]`.  For example, if you were to run `hg clone git://github.com/schacon/munger.git` it would clone the repository down into the directory 'munger.git', then convert it to an Hg repository for you.
+You can clone a Git repository from Hg by running `hg clone [url]`.  For
+example, if you were to run
 
     $ hg clone git://github.com/schacon/hg-git.git
+
+hg-git would clone the repository down into the directory 'munger.git', then
+convert it to an Hg repository for you.
 
 If you want to clone a github repository for later pushing (or any other repository you access via ssh), you need to convert the ssh url to a format with explicit protocol prefix (mind the switch from colon to slash after the host!):
 
