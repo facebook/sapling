@@ -26,9 +26,19 @@ example, if you were to run
 hg-git would clone the repository down into the directory 'munger.git', then
 convert it to an Hg repository for you.
 
-If you want to clone a github repository for later pushing (or any other repository you access via ssh), you need to convert the ssh url to a format with an explicit protocol prefix (mind the switch from colon to slash after the host!):
+If you want to clone a github repository for later pushing (or any other repository you access via ssh), you need to convert the ssh url to a format with an explicit protocol prefix. For example, the git url with push
+access
 
-    $ git clone git@github.com:schacon/hg-git.git
+    git@github.com:schacon/hg-git.git
+
+would read
+
+    git+ssh://git@github.com/schacon/hg-git.git
+
+(Mind the switch from colon to slash after the host!)
+
+Your clone command would thus look like this:
+
     $ hg clone git+ssh://git@github.com/schacon/hg-git.git
 
 If you are starting from an existing Hg repository, you have to setup a Git repository somewhere that you have push access to, add it as default path or default-push path in your .hg/hgrc and then run `hg push` from within your project.  For example:
