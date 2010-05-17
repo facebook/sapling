@@ -20,38 +20,38 @@ Commands
 
 You can clone a Git repository from Hg by running `hg clone [url]`.  For example, if you were to run `hg clone git://github.com/schacon/munger.git` it would clone the repository down into the directory 'munger.git', then convert it to an Hg repository for you.
 
-        hg clone git://github.com/schacon/hg-git.git
+    hg clone git://github.com/schacon/hg-git.git
 
 If you want to clone a github repository for later pushing (or any other repository you access via ssh), you need to convert the ssh url to a format with explicit protocol prefix (mind the switch from colon to slash after the host!):
 
-        git clone git@github.com:schacon/hg-git.git
-        hg clone git+ssh://git@github.com/schacon/hg-git.git
+    git clone git@github.com:schacon/hg-git.git
+    hg clone git+ssh://git@github.com/schacon/hg-git.git
 
 If you are starting from an existing Hg repository, you have to setup a Git repository somewhere that you have push access to, add it as default path or default-push path in your .hg/hgrc and then run `hg push` from within your project.  For example:
 
-        cd hg-git # (an Hg repository)
-        (edit .hg/hgrc and add the target git url in the paths section)
-        hg push
+    cd hg-git # (an Hg repository)
+    (edit .hg/hgrc and add the target git url in the paths section)
+    hg push
 
 This will convert all your Hg data into Git objects and push them up to the Git server.
 
 Now that you have an Hg repository that can push/pull to/from a Git repository, you can fetch updates with `hg pull`.
 
-        $ hg pull
+    $ hg pull
 
 That will pull down any commits that have been pushed to the server in the meantime and give you a new head that you can merge in.
 
 Hg-Git can also be used to convert a Mercurial repository to Git.  As Dulwich doesn't support local repositories yet, the easiest way is to setup up a local SSH server.  Then use the following commands to convert the repository (it assumes your running this in $HOME).
 
-        $ mkdir git-repo; cd git-repo; git init; cd ..
-        $ cd hg-repo
-        $ hg bookmarks hg
-        $ hg push git+ssh://localhost:git-repo
+    $ mkdir git-repo; cd git-repo; git init; cd ..
+    $ cd hg-repo
+    $ hg bookmarks hg
+    $ hg push git+ssh://localhost:git-repo
 
 The hg bookmark is necessary to prevent problems as otherwise hg-git pushes to the currently checked out branch confusing Git. This will create a branch named hg in the Git repository. To get the changes in master use the following command (only necessary in the first run, later just use git merge or rebase).
 
-        $ cd git-repo
-        $ git checkout -b master hg
+    $ cd git-repo
+    $ git checkout -b master hg
 
 To import new changesets into the Git repository just rerun the hg push command and then use git merge or git rebase in your Git repository.
 
@@ -68,9 +68,9 @@ Installing
 
 Clone this repository somewhere and make the 'extensions' section in your `~/.hgrc` file look something like this:
 
-        [extensions]
-        hgext.bookmarks =
-        hggit = [path-to]/hg-git/hggit
+    [extensions]
+    hgext.bookmarks =
+    hggit = [path-to]/hg-git/hggit
 
 That will enable the Hg-Git extension for you.  The bookmarks section is not compulsory, but it makes some things a bit nicer for you.
 
