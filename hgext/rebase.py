@@ -29,8 +29,13 @@ def rebase(ui, repo, **opts):
 
     Rebase uses repeated merging to graft changesets from one part of
     history (the source) onto another (the destination). This can be
-    useful for linearizing local changes relative to a master
+    useful for linearizing *local* changes relative to a master
     development tree.
+
+    You should not rebase changesets that have already been shared
+    with others. Doing so will force everybody else to perform the
+    same rebase or they will end up with duplicated changesets after
+    pulling in your rebased changesets.
 
     If you don't specify a destination changeset (``-d/--dest``),
     rebase uses the tipmost head of the current named branch as the

@@ -373,7 +373,7 @@ if __name__ == "__main__":
     text = open(sys.argv[1]).read()
     blocks = debug(findblocks, text)
     blocks = debug(findliteralblocks, blocks)
-    blocks = debug(prunecontainers, blocks, sys.argv[2:])
+    blocks, pruned = debug(prunecontainers, blocks, sys.argv[2:])
     blocks = debug(inlineliterals, blocks)
     blocks = debug(splitparagraphs, blocks)
     blocks = debug(updatefieldlists, blocks)
