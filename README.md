@@ -69,6 +69,28 @@ The hg bookmark is necessary to prevent problems as otherwise hg-git pushes to t
 
 To import new changesets into the Git repository just rerun the hg push command and then use git merge or git rebase in your Git repository.
 
+Commands
+========
+
+gclear
+------
+
+TODO
+
+gimport
+-------
+
+TODO
+
+gexport
+-------
+
+TODO
+
+git-cleanup
+-----------
+
+TODO
 
 Hg Bookmarks Integration
 ========================
