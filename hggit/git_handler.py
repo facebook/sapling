@@ -23,7 +23,7 @@ class GitHandler(object):
         self.repo = dest_repo
         self.ui = ui
 
-        if ui.config('git', 'intree'):
+        if ui.configbool('git', 'intree'):
             self.gitdir = self.repo.wjoin('.git')
         else:
             self.gitdir = self.repo.join('git')
