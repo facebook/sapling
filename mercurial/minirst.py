@@ -257,12 +257,15 @@ def inlineliterals(blocks):
     return blocks
 
 
-_hgrolere = re.compile(r':hg:`([^`]+)`')
-
 def hgrole(blocks):
     for b in blocks:
         if b['type'] in ('paragraph', 'section'):
-            b['lines'] = [_hgrolere.sub(r'"hg \1"', l) for l in b['lines']]
+            # Turn :hg:`command` into "hg command". This also works
+            # when there is a line break in the command and relies on
+            # the fact that we have no stray back-quotes in the input
+            # (run the blocks through inlineliterals first).
+            b['lines'] = [l.replace(':hg:`', '"hg ').replace('`', '"')
+                          for l in b['lines']]
     return blocks
 
 
