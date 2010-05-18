@@ -35,8 +35,8 @@ Keywords are only expanded in local repositories and not stored in the
 change history. The mechanism can be regarded as a convenience for the
 current user or for archive distribution.
 
-Configuration is done in the [keyword] and [keywordmaps] sections of
-hgrc files.
+Configuration is done in the [keyword], [keywordset] and [keywordmaps]
+sections of hgrc files.
 
 Example::
 
@@ -44,6 +44,10 @@ Example::
     # expand keywords in every python file except those matching "x*"
     **.py =
     x*    = ignore
+
+    [keywordset]
+    # prefer svn- over cvs-like default keywordmaps
+    svn = True
 
 NOTE: the more specific you are in your filename patterns the less you
 lose speed in huge repositories.
@@ -108,14 +112,13 @@ svnutcdate = lambda x: util.datestr((x[0], 0), '%Y-%m-%d %H:%M:%SZ')
 kwtools = {'templater': None, 'hgcmd': '', 'inc': [], 'exc': ['.hg*']}
 
 
-class kwtemplater(object):
-    '''
-    Sets up keyword templates, corresponding keyword regex, and
-    provides keyword substitution functions.
-    '''
+def _defaultkwmaps(ui):
+    '''Returns default keywordmaps according to keywordset configuration.'''
     templates = {
         'Revision': '{node|short}',
         'Author': '{author|user}',
+    }
+    kwsets = ({
         'Date': '{date|utcdate}',
         'RCSfile': '{file|basename},v',
         'RCSFile': '{file|basename},v', # kept for backwards compatibility
@@ -123,7 +126,21 @@ class kwtemplater(object):
         'Source': '{root}/{file},v',
         'Id': '{file|basename},v {node|short} {date|utcdate} {author|user}',
         'Header': '{root}/{file},v {node|short} {date|utcdate} {author|user}',
-    }
+    }, {
+        'Date': '{date|svnisodate}',
+        'Id': '{file|basename},v {node|short} {date|svnutcdate} {author|user}',
+        'LastChangedRevision': '{node|short}',
+        'LastChangedBy': '{author|user}',
+        'LastChangedDate': '{date|svnisodate}',
+    })
+    templates.update(kwsets[ui.configbool('keywordset', 'svn')])
+    return templates
+
+class kwtemplater(object):
+    '''
+    Sets up keyword templates, corresponding keyword regex, and
+    provides keyword substitution functions.
+    '''
 
     def __init__(self, ui, repo):
         self.ui = ui
@@ -137,6 +154,8 @@ class kwtemplater(object):
         if kwmaps: # override default templates
             self.templates = dict((k, templater.parsestring(v, False))
                                   for k, v in kwmaps)
+        else:
+            self.templates = _defaultkwmaps(self.ui)
         escaped = map(re.escape, self.templates.keys())
         kwpat = r'\$(%s)(: [^$\n\r]*? )??\$' % '|'.join(escaped)
         self.re_kw = re.compile(kwpat)
@@ -322,14 +341,14 @@ def demo(ui, repo, *args, **opts):
         kwmaps = dict(ui.configitems('keywordmaps'))
     elif opts.get('default'):
         ui.status(_('\n\tconfiguration using default keyword template maps\n'))
-        kwmaps = kwtemplater.templates
+        kwmaps = _defaultkwmaps(ui)
         if uikwmaps:
             ui.status(_('\tdisabling current template maps\n'))
             for k, v in kwmaps.iteritems():
                 ui.setconfig('keywordmaps', k, v)
     else:
         ui.status(_('\n\tconfiguration using current keyword template maps\n'))
-        kwmaps = dict(uikwmaps) or kwtemplater.templates
+        kwmaps = dict(uikwmaps) or _defaultkwmaps(ui)
 
     uisetup(ui)
     reposetup(ui, repo)
