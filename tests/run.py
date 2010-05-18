@@ -62,6 +62,9 @@ if __name__ == '__main__':
     else:
         testargs = {'descriptions': 2}
 
+    # make sure our copy of hgsubversion gets imported
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
     if options.demandimport:
         from mercurial import demandimport
         demandimport.enable()
