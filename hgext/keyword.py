@@ -52,8 +52,11 @@ For [keywordmaps] template mapping and expansion demonstration and
 control run :hg:`kwdemo`. See :hg:`help templates` for a list of
 available templates and filters.
 
-An additional date template filter {date|utcdate} is provided. It
-returns a date like "2006/09/18 15:13:13".
+Three additional date template filters are provided::
+
+    utcdate      "2006/09/18 15:13:13"
+    svnutcdate   "2006-09-18 15:13:13Z"
+    svnisodate   "2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)"
 
 The default template mappings (view with :hg:`kwdemo -d`) can be
 replaced with customized keywords and templates. Again, run
@@ -94,8 +97,12 @@ recordcommands = 'record qrecord'
 # names of extensions using dorecord
 recordextensions = 'record'
 
-# provide cvs-like UTC date filter
+# date like in cvs' $Date
 utcdate = lambda x: util.datestr((x[0], 0), '%Y/%m/%d %H:%M:%S')
+# date like in svn's $Date
+svnisodate = lambda x: util.datestr(x, '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
+# date like in svn's $Id
+svnutcdate = lambda x: util.datestr((x[0], 0), '%Y-%m-%d %H:%M:%SZ')
 
 # make keyword tools accessible
 kwtools = {'templater': None, 'hgcmd': '', 'inc': [], 'exc': ['.hg*']}
@@ -135,6 +142,8 @@ class kwtemplater(object):
         self.re_kw = re.compile(kwpat)
 
         templatefilters.filters['utcdate'] = utcdate
+        templatefilters.filters['svnisodate'] = svnisodate
+        templatefilters.filters['svnutcdate'] = svnutcdate
 
     def substitute(self, data, path, ctx, subfunc):
         '''Replaces keywords in data with expanded template.'''
