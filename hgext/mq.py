@@ -1836,7 +1836,7 @@ def init(ui, repo, **opts):
     qcommit to commit changes to this queue repository.
 
     This command is deprecated. Without -c, it's implied by other relevant
-    commands. With -c, use hg init --mq instead."""
+    commands. With -c, use :hg:`init --mq` instead."""
     return qinit(ui, repo, create=opts['create_repo'])
 
 def clone(ui, source, dest=None, **opts):
@@ -1852,7 +1852,7 @@ def clone(ui, source, dest=None, **opts):
     default. Use -p <url> to change.
 
     The patch directory must be a nested Mercurial repository, as
-    would be created by init --mq.
+    would be created by :hg:`init --mq`.
     '''
     def patchdir(repo):
         url = repo.url()
@@ -1906,7 +1906,7 @@ def clone(ui, source, dest=None, **opts):
 def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository (DEPRECATED)
 
-    This command is deprecated; use hg commit --mq instead."""
+    This command is deprecated; use :hg:`commit --mq` instead."""
     q = repo.mq
     r = q.qrepo()
     if not r:
@@ -2371,8 +2371,8 @@ def strip(ui, repo, rev, **opts):
     completes.
 
     Any stripped changesets are stored in ``.hg/strip-backup`` as a
-    bundle (see ``hg help bundle`` and ``hg help unbundle``). They can
-    be restored by running ``hg unbundle .hg/strip-backup/BUNDLE``,
+    bundle (see :hg:`help bundle` and :hg:`help unbundle`). They can
+    be restored by running :hg:`unbundle .hg/strip-backup/BUNDLE`,
     where BUNDLE is the bundle file created by the strip. Note that
     the local revision numbers will in general be different after the
     restore.

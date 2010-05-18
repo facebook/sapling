@@ -453,7 +453,7 @@ def transplant(ui, repo, *revs, **opts):
     transplanted, otherwise you will be prompted to select the
     changesets you want.
 
-    hg transplant --branch REVISION --all will rebase the selected
+    :hg:`transplant --branch REVISION --all` will rebase the selected
     branch (up to the named revision) onto your current working
     directory.
 
@@ -462,12 +462,12 @@ def transplant(ui, repo, *revs, **opts):
     of a merged transplant, and you can merge descendants of them
     normally instead of transplanting them.
 
-    If no merges or revisions are provided, hg transplant will start
-    an interactive changeset browser.
+    If no merges or revisions are provided, :hg:`transplant` will
+    start an interactive changeset browser.
 
     If a changeset application fails, you can fix the merge by hand
-    and then resume where you left off by calling hg transplant
-    --continue/-c.
+    and then resume where you left off by calling :hg:`transplant
+    --continue/-c`.
     '''
     def getremotechanges(repo, url):
         sourcerepo = ui.expandpath(url)

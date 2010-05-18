@@ -281,7 +281,7 @@ def demo(ui, repo, *args, **opts):
 
     Use -d/--default to disable current configuration.
 
-    See "hg help templates" for information on templates and filters.
+    See :hg:`help templates` for information on templates and filters.
     '''
     def demoitems(section, items):
         ui.write('[%s]\n' % section)

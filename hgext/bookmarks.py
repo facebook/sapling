@@ -12,8 +12,8 @@ points to a changeset identified by its hash. If you commit a
 changeset that is based on a changeset that has a bookmark on it, the
 bookmark shifts to the new changeset.
 
-It is possible to use bookmark names in every revision lookup (e.g. hg
-merge, hg update).
+It is possible to use bookmark names in every revision lookup (e.g.
+:hg:`merge`, :hg:`update`).
 
 By default, when several bookmarks point to the same changeset, they
 will all move forward together. It is possible to obtain a more
