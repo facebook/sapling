@@ -49,7 +49,7 @@ To ignore global commands like "hg version" or "hg help", you have to
 specify them in the global .hgrc
 '''
 
-import sys, os, signal, shlex
+import sys, os, signal, shlex, errno
 from mercurial import dispatch, util, extensions
 
 def _runpager(p):
@@ -67,8 +67,15 @@ def _runpager(p):
     os.dup2(fdin, sys.stdin.fileno())
     os.close(fdin)
     os.close(fdout)
-    args = shlex.split(p)
-    os.execvp(args[0], args)
+    try:
+        os.execvp('/bin/sh', ['/bin/sh', '-c', p])
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            # no /bin/sh, try executing the pager directly
+            args = shlex.split(p)
+            os.execvp(args[0], args)
+        else:
+            raise
 
 def uisetup(ui):
     def pagecmd(orig, ui, options, cmd, cmdfunc):
