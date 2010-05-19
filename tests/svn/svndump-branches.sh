@@ -10,7 +10,6 @@ mkdir project-orig
 cd project-orig
 mkdir trunk
 mkdir branches
-mkdir tags
 cd ..
 
 svnadmin create svn-repo

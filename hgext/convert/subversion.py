@@ -448,79 +448,76 @@ class svn_source(converter_source):
         pendings = []
         tagspath = self.tags
         start = svn.ra.get_latest_revnum(self.ra)
-        try:
-            for entry in self._getlog([self.tags], start, self.startrev):
-                origpaths, revnum, author, date, message = entry
-                copies = [(e.copyfrom_path, e.copyfrom_rev, p) for p, e
-                          in origpaths.iteritems() if e.copyfrom_path]
-                # Apply moves/copies from more specific to general
-                copies.sort(reverse=True)
+        for entry in self._getlog([self.tags], start, self.startrev):
+            origpaths, revnum, author, date, message = entry
+            copies = [(e.copyfrom_path, e.copyfrom_rev, p) for p, e
+                      in origpaths.iteritems() if e.copyfrom_path]
+            # Apply moves/copies from more specific to general
+            copies.sort(reverse=True)
 
-                srctagspath = tagspath
-                if copies and copies[-1][2] == tagspath:
-                    # Track tags directory moves
-                    srctagspath = copies.pop()[0]
+            srctagspath = tagspath
+            if copies and copies[-1][2] == tagspath:
+                # Track tags directory moves
+                srctagspath = copies.pop()[0]
 
-                for source, sourcerev, dest in copies:
-                    if not dest.startswith(tagspath + '/'):
-                        continue
-                    for tag in pendings:
-                        if tag[0].startswith(dest):
-                            tagpath = source + tag[0][len(dest):]
-                            tag[:2] = [tagpath, sourcerev]
-                            break
-                    else:
-                        pendings.append([source, sourcerev, dest])
-
-                # Filter out tags with children coming from different
-                # parts of the repository like:
-                # /tags/tag.1 (from /trunk:10)
-                # /tags/tag.1/foo (from /branches/foo:12)
-                # Here/tags/tag.1 discarded as well as its children.
-                # It happens with tools like cvs2svn. Such tags cannot
-                # be represented in mercurial.
-                addeds = dict((p, e.copyfrom_path) for p, e
-                              in origpaths.iteritems()
-                              if e.action == 'A' and e.copyfrom_path)
-                badroots = set()
-                for destroot in addeds:
-                    for source, sourcerev, dest in pendings:
-                        if (not dest.startswith(destroot + '/')
-                            or source.startswith(addeds[destroot] + '/')):
-                            continue
-                        badroots.add(destroot)
+            for source, sourcerev, dest in copies:
+                if not dest.startswith(tagspath + '/'):
+                    continue
+                for tag in pendings:
+                    if tag[0].startswith(dest):
+                        tagpath = source + tag[0][len(dest):]
+                        tag[:2] = [tagpath, sourcerev]
                         break
+                else:
+                    pendings.append([source, sourcerev, dest])
 
-                for badroot in badroots:
-                    pendings = [p for p in pendings if p[2] != badroot
-                                and not p[2].startswith(badroot + '/')]
-
-                # Tell tag renamings from tag creations
-                remainings = []
+            # Filter out tags with children coming from different
+            # parts of the repository like:
+            # /tags/tag.1 (from /trunk:10)
+            # /tags/tag.1/foo (from /branches/foo:12)
+            # Here/tags/tag.1 discarded as well as its children.
+            # It happens with tools like cvs2svn. Such tags cannot
+            # be represented in mercurial.
+            addeds = dict((p, e.copyfrom_path) for p, e
+                          in origpaths.iteritems()
+                          if e.action == 'A' and e.copyfrom_path)
+            badroots = set()
+            for destroot in addeds:
                 for source, sourcerev, dest in pendings:
-                    tagname = dest.split('/')[-1]
-                    if source.startswith(srctagspath):
-                        remainings.append([source, sourcerev, tagname])
+                    if (not dest.startswith(destroot + '/')
+                        or source.startswith(addeds[destroot] + '/')):
                         continue
-                    if tagname in tags:
-                        # Keep the latest tag value
-                        continue
-                    # From revision may be fake, get one with changes
-                    try:
-                        tagid = self.latest(source, sourcerev)
-                        if tagid and tagname not in tags:
-                            tags[tagname] = tagid
-                    except SvnPathNotFound:
-                        # It happens when we are following directories
-                        # we assumed were copied with their parents
-                        # but were really created in the tag
-                        # directory.
-                        pass
-                pendings = remainings
-                tagspath = srctagspath
+                    badroots.add(destroot)
+                    break
 
-        except SubversionException:
-            self.ui.note(_('no tags found at revision %d\n') % start)
+            for badroot in badroots:
+                pendings = [p for p in pendings if p[2] != badroot
+                            and not p[2].startswith(badroot + '/')]
+
+            # Tell tag renamings from tag creations
+            remainings = []
+            for source, sourcerev, dest in pendings:
+                tagname = dest.split('/')[-1]
+                if source.startswith(srctagspath):
+                    remainings.append([source, sourcerev, tagname])
+                    continue
+                if tagname in tags:
+                    # Keep the latest tag value
+                    continue
+                # From revision may be fake, get one with changes
+                try:
+                    tagid = self.latest(source, sourcerev)
+                    if tagid and tagname not in tags:
+                        tags[tagname] = tagid
+                except SvnPathNotFound:
+                    # It happens when we are following directories
+                    # we assumed were copied with their parents
+                    # but were really created in the tag
+                    # directory.
+                    pass
+            pendings = remainings
+            tagspath = srctagspath
+
         return tags
 
     def converted(self, rev, destrev):

@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: 3c3c228a-b3dd-467c-a766-896f4b7cd0af
+UUID: 9ccdebd5-40da-43b4-a9c9-c2857851ccaf
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2009-06-21T12:38:53.023457Z
+2010-05-19T19:36:21.767874Z
 PROPS-END
 
 Revision-number: 1
@@ -27,19 +27,10 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:38:53.111986Z
+2010-05-19T19:36:21.795557Z
 PROPS-END
 
 Node-path: branches
-Node-kind: dir
-Node-action: add
-Prop-content-length: 10
-Content-length: 10
-
-PROPS-END
-
-
-Node-path: tags
 Node-kind: dir
 Node-action: add
 Prop-content-length: 10
@@ -72,7 +63,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:38:54.182594Z
+2010-05-19T19:36:22.069417Z
 PROPS-END
 
 Node-path: branches/notinbranch
@@ -164,7 +155,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:38:57.166484Z
+2010-05-19T19:36:25.067407Z
 PROPS-END
 
 Node-path: branches/old
@@ -197,7 +188,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:38:59.084420Z
+2010-05-19T19:36:27.042834Z
 PROPS-END
 
 Node-path: trunk/a
@@ -227,7 +218,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:39:00.093201Z
+2010-05-19T19:36:28.045031Z
 PROPS-END
 
 Node-path: branches/old/b
@@ -257,7 +248,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:39:02.078633Z
+2010-05-19T19:36:30.049884Z
 PROPS-END
 
 Node-path: branches/old/c
@@ -295,7 +286,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:39:03.065537Z
+2010-05-19T19:36:31.044711Z
 PROPS-END
 
 Node-path: branches/old/b
@@ -326,7 +317,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:39:06.070275Z
+2010-05-19T19:36:34.043552Z
 PROPS-END
 
 Node-path: branches/old2
@@ -355,7 +346,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:39:08.082539Z
+2010-05-19T19:36:36.042680Z
 PROPS-END
 
 Node-path: branches/old
@@ -384,7 +375,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:39:09.073290Z
+2010-05-19T19:36:37.043714Z
 PROPS-END
 
 Node-path: trunk/a
@@ -413,7 +404,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-06-21T12:39:11.070264Z
+2010-05-19T19:36:39.044703Z
 PROPS-END
 
 Node-path: branches/old3
