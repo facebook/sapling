@@ -439,8 +439,9 @@ class svn_source(converter_source):
         pendings = []
         tagspath = self.tags
         start = svn.ra.get_latest_revnum(self.ra)
+        stream = self._getlog([self.tags], start, self.startrev)
         try:
-            for entry in self._getlog([self.tags], start, self.startrev):
+            for entry in stream:
                 origpaths, revnum, author, date, message = entry
                 copies = [(e.copyfrom_path, e.copyfrom_rev, p) for p, e
                           in origpaths.iteritems() if e.copyfrom_path]
@@ -509,9 +510,8 @@ class svn_source(converter_source):
                         pass
                 pendings = remainings
                 tagspath = srctagspath
-
-        except SubversionException:
-            self.ui.note(_('no tags found at revision %d\n') % start)
+        finally:
+            stream.close()
         return tags
 
     def converted(self, rev, destrev):
