@@ -2830,7 +2830,7 @@ cmdtable = {
                                   ' number greater than REV which are not'
                                   ' descendants of REV (DEPRECATED)')),
            ('n', 'nobackup', None, _('no backups'))],
-          _('hg strip [-f] [-b] [-n] REV')),
+          _('hg strip [-f] [-n] REV')),
      "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
     "qunapplied":
         (unapplied,
