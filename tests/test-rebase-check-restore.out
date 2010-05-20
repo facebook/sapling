@@ -55,7 +55,6 @@ merging A failed!
 abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
 
 % - Solve the conflict and go on
-saving bundle to 
 adding branch
 adding changesets
 adding manifests

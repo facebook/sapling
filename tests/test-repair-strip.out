@@ -4,10 +4,11 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     a
 
-saving bundle to 
+saving bundle
 transaction abort!
 failed to truncate data/b.i
 rollback failed - please run hg recover
+strip failed, full bundle
 abort: Permission denied .hg/store/data/b.i
 % after update 0, strip 2
 abandoned transaction found - run hg recover
@@ -54,10 +55,11 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     a
 
-saving bundle to 
+saving bundle
 transaction abort!
 failed to truncate 00manifest.i
 rollback failed - please run hg recover
+strip failed, full bundle
 abort: Permission denied .hg/store/00manifest.i
 % after update 0, strip 2
 abandoned transaction found - run hg recover

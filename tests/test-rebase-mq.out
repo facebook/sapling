@@ -27,7 +27,6 @@ merging f failed!
 abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
 
 % Fix the 2nd conflict
-saving bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -107,7 +106,6 @@ diff -r x p
 +mq2
 
 % Rebase the applied mq patches
-saving bundle to 
 % And the patches are correct
 % Git patch
 # HG changeset patch

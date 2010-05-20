@@ -32,7 +32,6 @@ default                        0:1994f17a630e (inactive)
 0:1994f17a630e A branch: 
 
 % Rebase part of branch2 (5-6) onto branch3 (8)
-saving bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -90,7 +89,6 @@ o  7:33c9da881988 Branch3 branch: branch3
 |/
 o  0:1994f17a630e A branch:
 
-saving bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -149,7 +147,6 @@ o  7:33c9da881988 Branch3 branch: branch3
 |/
 o  0:1994f17a630e A branch:
 
-saving bundle to 
 adding branch
 adding changesets
 adding manifests

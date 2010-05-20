@@ -10,7 +10,6 @@ rename from a
 rename to a-renamed
 
 % Rebase the revision containing the rename
-saving bundle to 
 
 % Rename is not lost
 2:rename A
@@ -30,7 +29,6 @@ copy from a
 copy to a-copied
 
 % Rebase the revision containing the copy
-saving bundle to 
 
 % Copy is not lost
 2:copy A
