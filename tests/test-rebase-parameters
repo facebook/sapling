@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
 
@@ -62,7 +64,7 @@ echo "% These work"
 echo
 echo "% Rebase with no arguments (from 3 onto 7)"
 hg update -C 5
-hg rebase 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase 2>&1 | hidebackup
 
 echo "% Try to rollback after a rebase (fail)"
 hg rollback
@@ -71,38 +73,38 @@ createrepo > /dev/null 2>&1
 echo
 echo "% Rebase with base == '.' => same as no arguments (from 3 onto 7)"
 hg update -C 5
-hg rebase --base . 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --base . | hidebackup
 
 createrepo > /dev/null 2>&1
 echo
 echo "% Rebase with dest == `hg branch` => same as no arguments (from 3 onto 7)"
 hg update -C 5
-hg rebase --dest `hg branch` 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --dest `hg branch` | hidebackup
 
 createrepo > /dev/null 2>&1
 echo
 echo "% Specify only source (from 4 onto 7)"
-hg rebase --source 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --source 4 | hidebackup
 
 createrepo > /dev/null 2>&1
 echo
 echo "% Specify only dest (from 3 onto 6)"
 hg update -C 5
-hg rebase --dest 6 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --dest 6 | hidebackup
 
 createrepo > /dev/null 2>&1
 echo
 echo "% Specify only base (from 3 onto 7)"
-hg rebase --base 5 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --base 5 | hidebackup
 
 createrepo > /dev/null 2>&1
 echo
 echo "% Specify source and dest (from 4 onto 6)"
-hg rebase --source 4 --dest 6 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --source 4 --dest 6 | hidebackup
 
 createrepo > /dev/null 2>&1
 echo
 echo "% Specify base and dest (from 3 onto 6)"
-hg rebase --base 4 --dest 6 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --base 4 --dest 6 | hidebackup
 
 exit 0

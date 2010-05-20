@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -42,32 +44,32 @@ hg glog  --template '{rev}: {desc}\n'
 
 echo '% Rebasing'
 echo '% B onto F - simple rebase'
-hg rebase -s 1 -d 5 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 1 -d 5 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 
 createrepo > /dev/null 2>&1
 echo '% B onto D - intermediate point'
-hg rebase -s 1 -d 3 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 1 -d 3 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 
 createrepo > /dev/null 2>&1
 echo '% C onto F - skip of E'
-hg rebase -s 2 -d 5 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 2 -d 5 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 
 createrepo > /dev/null 2>&1
 echo '% D onto C - rebase of a branching point (skip E)'
-hg rebase -s 3 -d 2 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 3 -d 2 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 
 createrepo > /dev/null 2>&1
 echo '% E onto F - merged revision having a parent in ancestors of target'
-hg rebase -s 4 -d 5 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 4 -d 5 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 
 createrepo > /dev/null 2>&1
 echo '% D onto B - E maintains C as parent'
-hg rebase -s 3 -d 1 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 3 -d 1 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 
 echo '% These will fail (using --source)'

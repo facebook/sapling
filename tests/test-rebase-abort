@@ -1,14 +1,10 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
-
-cleanoutput () {
-    sed -e 's/\(Rebase status stored to\).*/\1/'  \
-        -e 's/\(Rebase status restored from\).*/\1/' \
-        -e 's/\(saving bundle to \).*/\1/'
-}
 
 hg init a
 cd a
@@ -35,10 +31,10 @@ hg glog  --template '{rev}: {desc}\n'
 
 echo
 echo '% Conflicting rebase'
-hg rebase -s 3 -d 2 2>&1 | cleanoutput
+hg rebase -s 3 -d 2 | cleanrebase
 
 echo
 echo '% Abort'
-hg rebase --abort 2>&1 | cleanoutput
+hg rebase --abort | cleanrebase
 
 hg glog  --template '{rev}: {desc}\n'

@@ -1,5 +1,6 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -38,7 +39,7 @@ hg glog  --template '{rev}: {desc}\n'
 
 echo
 echo "% - Rebasing B onto E"
-hg rebase -s 1 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 1 -d 4 | hidebackup
 
 echo
 echo "% - Force a commit on C during the interruption"
@@ -66,7 +67,7 @@ hg glog  --template '{rev}: {desc}\n'
 
 echo
 echo "% Rebasing B onto E"
-hg rebase -s 1 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 1 -d 4 | hidebackup
 
 echo
 echo "% Force a commit on B' during the interruption"

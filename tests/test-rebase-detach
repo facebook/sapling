@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -33,7 +35,7 @@ createrepo () {
 createrepo > /dev/null 2>&1
 hg glog  --template '{rev}: {desc}\n'
 echo '% Rebasing D onto E detaching from C'
-hg rebase --detach -s 3 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --detach -s 3 -d 4 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 echo "Expected A, D, E"
 hg manifest
@@ -42,7 +44,7 @@ echo
 createrepo > /dev/null 2>&1
 hg glog  --template '{rev}: {desc}\n'
 echo '% Rebasing C onto E detaching from B'
-hg rebase --detach -s 2 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --detach -s 2 -d 4 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 echo "Expected A, C, D, E"
 hg manifest
@@ -51,7 +53,7 @@ echo
 createrepo > /dev/null 2>&1
 hg glog  --template '{rev}: {desc}\n'
 echo '% Rebasing B onto E using detach (same as not using it)'
-hg rebase --detach -s 1 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --detach -s 1 -d 4 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 echo "Expected A, B, C, D, E"
 hg manifest
@@ -60,7 +62,7 @@ echo
 createrepo > /dev/null 2>&1
 hg glog  --template '{rev}: {desc}\n'
 echo '% Rebasing C onto E detaching from B and collapsing'
-hg rebase --detach --collapse -s 2 -d 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --detach --collapse -s 2 -d 4 | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 echo "Expected A, C, D, E"
 hg manifest

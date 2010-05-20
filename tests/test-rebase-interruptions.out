@@ -11,10 +11,10 @@ o  0: A
 
 
 % - Rebasing B onto E
-merging A
 warning: conflicts during merge.
 merging A failed!
 abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+merging A
 
 % - Force a commit on C during the interruption
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -73,10 +73,10 @@ o  0: A
 
 
 % Rebasing B onto E
-merging A
 warning: conflicts during merge.
 merging A failed!
 abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+merging A
 
 % Force a commit on B' during the interruption
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved

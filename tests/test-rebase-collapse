@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -43,7 +45,7 @@ createrepo > /dev/null 2>&1
 hg glog  --template '{rev}: {desc}\n'
 echo '% Rebasing B onto H'
 hg up -C 3
-hg rebase --collapse --keepbranches 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --collapse --keepbranches | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 echo "Expected A, B, C, D, F, H"
 hg manifest
@@ -51,7 +53,7 @@ hg manifest
 createrepo > /dev/null 2>&1
 echo
 echo '% Rebasing G onto H'
-hg rebase --base 6 --collapse 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --base 6 --collapse | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 echo "Expected A, E, F, H"
 hg manifest
@@ -91,7 +93,7 @@ hg rebase -s 2 --collapse
 
 echo
 echo '% Rebase and collapse - E onto H'
-hg rebase -s 4 --collapse 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 4 --collapse | hidebackup
 hg glog  --template '{rev}: {desc}\n'
 echo "Expected A, B, C, E, F, H"
 hg manifest
@@ -130,7 +132,7 @@ hg glog  --template '{rev}: {desc}\n'
 
 echo
 echo '% Rebase and collapse - E onto I'
-hg rebase -s 4 --collapse 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 4 --collapse | hidebackup
 
 hg glog  --template '{rev}: {desc}\n'
 
@@ -166,7 +168,7 @@ hg glog  --template '{rev}: {desc}\n'
 
 echo
 echo '% Rebase and collapse - B onto F'
-hg rebase -s 1 --collapse 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 1 --collapse | hidebackup
 
 hg glog  --template '{rev}: {desc}\n'
 

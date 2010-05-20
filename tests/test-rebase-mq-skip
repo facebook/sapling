@@ -2,6 +2,8 @@
 # This emulates the effects of an hg pull --rebase in which the remote repo 
 # already has one local mq patch
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -40,5 +42,5 @@ rm p1.patch
 echo
 echo '% Rebase'
 hg up -C qtip
-hg rebase  2>&1 | sed -e 's/\(saving bundle to \).*/\1/'
+hg rebase | hidebackup
 hg glog  --template '{rev} {desc} tags: {tags}\n'

@@ -12,10 +12,10 @@
 |/
 o  0:A:
 
-merging A
 warning: conflicts during merge.
 merging A failed!
 abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+merging A
 
 % - Solve the conflict and go on
 rebase completed
@@ -49,10 +49,10 @@ o  0:A:
 |/
 o  0:A:
 
-merging A
 warning: conflicts during merge.
 merging A failed!
 abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+merging A
 
 % - Solve the conflict and go on
 adding branch

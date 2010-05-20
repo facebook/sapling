@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -25,7 +27,7 @@ echo D >> a
 hg commit -AmAD -u test -d '3 0'
 
 hg glog --template '{rev}:{desc} {node|short}\n'
-hg rebase -q -s 1 -d 3 2>&1 | grep -v 'saving bundle'
+hg rebase -q -s 1 -d 3 | hidebackup
 hg glog --template '{rev}:{desc} {node|short}\n'
 
 exit 0

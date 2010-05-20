@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -25,7 +27,7 @@ hg glog --template '{rev}:{desc}\n'
 echo
 echo '% Rebase with no arguments - single revision in source branch'
 hg update -C 2
-hg rebase 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase | hidebackup
 hg glog --template '{rev}:{desc}\n'
 
 cd ..
@@ -45,5 +47,5 @@ hg glog --template '{rev}:{desc}\n'
 echo
 echo '% Rebase with no arguments - single revision in target branch'
 hg update -C 3
-hg rebase 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase 2>&1 | hidebackup
 hg glog --template '{rev}:{desc}\n'

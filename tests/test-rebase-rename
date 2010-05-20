@@ -1,17 +1,13 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
 echo "[diff]" >> $HGRCPATH
 echo "git=1" >> $HGRCPATH
 
 BASE=`pwd`
-
-cleanoutput () {
-    sed -e 's/\(Rebase status stored to\).*/\1/'  \
-        -e 's/\(Rebase status restored from\).*/\1/' \
-        -e 's/\(saving bundle to \).*/\1/'
-}
 
 hg init repo1
 cd repo1
@@ -28,7 +24,7 @@ echo '% Rename is tracked'
 hg log -p -r tip --template '{rev}:{desc}\n'
 
 echo '% Rebase the revision containing the rename'
-hg rebase -s 2 -d 1 --quiet 2>&1 | cleanoutput
+hg rebase -s 2 -d 1 --quiet | cleanrebase
 
 echo
 echo '% Rename is not lost'
@@ -51,7 +47,7 @@ echo '% Copy is tracked'
 hg log -p -r tip --template '{rev}:{desc}\n'
 
 echo '% Rebase the revision containing the copy'
-hg rebase -s 2 -d 1 --quiet 2>&1 | cleanoutput
+hg rebase -s 2 -d 1 --quiet | cleanrebase
 
 echo
 echo '% Copy is not lost'

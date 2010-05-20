@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -34,14 +36,13 @@ addcommit "R1" 3
 cd ../b
 echo
 echo "% Now b has one revision to be pulled from a"
-hg pull --rebase 2>&1 | sed -e 's/\(saving bundle to \).*/\1/' \
-                -e 's/\(pulling from \).*/\1/'
+hg pull --rebase | hidebackup | sed -e 's/\(pulling from \).*/\1/'
 
 hg glog --template '{rev}:{desc}\n'
 
 echo
 echo "% Re-run pull --rebase"
-hg pull --rebase 2>&1 | sed 's/\(pulling from \).*/\1/'
+hg pull --rebase | sed 's/\(pulling from \).*/\1/'
 
 echo
 echo "% Invoke pull --rebase and nothing to rebase"

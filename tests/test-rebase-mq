@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -58,13 +60,13 @@ echo
 echo '% Fix the 1st conflict'
 echo 'mq1r1' > f
 hg resolve -m f
-hg rebase -c 2>&1 | sed -e 's/\(saving bundle to \).*/\1/'
+hg rebase -c | hidebackup
 
 echo
 echo '% Fix the 2nd conflict'
 echo 'mq1r1mq2' > f
 hg resolve -m f
-hg rebase -c 2>&1 | sed -e 's/\(saving bundle to \).*/\1/'
+hg rebase -c | hidebackup
 
 hg glog  --template '{rev} {desc} tags: {tags}\n'
 
@@ -109,7 +111,7 @@ cat .hg/patches/f.patch | filterpatch
 
 echo
 echo '% Rebase the applied mq patches'
-hg rebase -s 2 -d 1 --quiet 2>&1 | sed -e 's/\(saving bundle to \).*/\1/'
+hg rebase -s 2 -d 1 --quiet
 
 echo '% And the patches are correct'
 echo '% Git patch'

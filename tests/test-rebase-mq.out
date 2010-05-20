@@ -21,10 +21,10 @@ merging f failed!
 abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
 
 % Fix the 1st conflict
-merging f
 warning: conflicts during merge.
 merging f failed!
 abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+merging f
 
 % Fix the 2nd conflict
 adding branch

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH
@@ -41,28 +43,28 @@ echo
 echo "% - Rebasing B onto E - check keep"
 createrepo > /dev/null 2>&1
 hg glog  --template '{rev}:{desc}:{branches}\n'
-hg rebase -s 1 -d 4 --keep 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 1 -d 4 --keep | hidebackup
 
 echo
 echo "% - Solve the conflict and go on"
 echo 'conflict solved' > A
 rm A.orig
 hg resolve -m A
-hg rebase --continue 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --continue | hidebackup
 hg glog  --template '{rev}:{desc}:{branches}\n'
 
 echo
 echo "% - Rebase F onto E - check keepbranches"
 createrepo > /dev/null 2>&1
 hg glog  --template '{rev}:{desc}:{branches}\n'
-hg rebase -s 5 -d 4 --keepbranches 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase -s 5 -d 4 --keepbranches | hidebackup
 
 echo
 echo "% - Solve the conflict and go on"
 echo 'conflict solved' > A
 rm A.orig
 hg resolve -m A
-hg rebase --continue 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg rebase --continue 2>&1 | hidebackup
 hg glog  --template '{rev}:{desc}:{branches}\n'
 
 exit 0
