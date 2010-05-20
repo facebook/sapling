@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 checkundo()
 {
     if [ -f .hg/store/undo ]; then
@@ -318,16 +320,16 @@ echo % strip
 cd ../../b
 echo x>x
 hg ci -Ama
-hg strip tip 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg strip tip | hidebackup
 hg unbundle .hg/strip-backup/*
 
 echo % strip with local changes, should complain
 hg up
 echo y>y
 hg add y
-hg strip tip | sed 's/\(saving bundle to \).*/\1/'
+hg strip tip | hidebackup
 echo % --force strip with local changes
-hg strip -f tip 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg strip -f tip | hidebackup
 
 echo '% cd b; hg qrefresh'
 hg init refresh
@@ -502,7 +504,7 @@ hg ci -m 'change foo 2'
 HGMERGE=true hg merge
 hg ci -m merge
 hg log
-hg strip 1 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg strip 1 | hidebackup
 checkundo strip
 hg log
 cd ..

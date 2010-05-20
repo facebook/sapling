@@ -1,5 +1,6 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
 echo "[extensions]" >> $HGRCPATH
 echo "bookmarks=" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
@@ -37,7 +38,7 @@ echo % bookmarks updated?
 hg book
 
 echo % strip to revision 1
-hg strip 1 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg strip 1 | hidebackup
 
 echo % list bookmarks
 hg book

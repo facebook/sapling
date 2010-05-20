@@ -12,7 +12,7 @@ created new head
    test                      1:16b24da7e457
    test2                     1:16b24da7e457
 % strip to revision 1
-saving bundle to 
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests

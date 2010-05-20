@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source $TESTDIR/helpers.sh
+
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
 
@@ -7,7 +9,7 @@ teststrip() {
     hg up -C $1
     echo % before update $1, strip $2
     hg parents
-    hg strip $2 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+    hg strip $2 | hidebackup
     echo % after update $1, strip $2
     hg parents
     hg unbundle -q .hg/strip-backup/*
@@ -48,6 +50,6 @@ hg up -C 2
 hg merge 4
 echo % before strip of merge parent
 hg parents
-hg strip 4 2>&1 | sed 's/\(saving bundle to \).*/\1/'
+hg strip 4 2>&1 | hidebackup
 echo % after strip of merge parent
 hg parents

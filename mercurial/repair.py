@@ -108,7 +108,7 @@ def strip(ui, repo, node, backup="all"):
     backupfile = None
     if backup == "all":
         backupfile = _bundle(repo, [node], cl.heads(), node, 'backup')
-        repo.ui.status(_("saving bundle to %s\n") % backupfile)
+        repo.ui.status(_("saved backup bundle to %s\n") % backupfile)
     if saveheads or extranodes:
         chgrpfile = _bundle(repo, savebases, saveheads, node, 'temp',
                             extranodes)

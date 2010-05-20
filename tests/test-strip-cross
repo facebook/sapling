@@ -2,16 +2,12 @@
 
 # test stripping of filelogs where the linkrev doesn't always increase
 
+source $TESTDIR/helpers.sh
 echo '[extensions]' >> $HGRCPATH
 echo 'hgext.mq =' >> $HGRCPATH
 
 hg init orig
 cd orig
-
-hidefilename()
-{
-    sed -e 's/saving bundle to .*strip-backup/saving bundle to strip-backup/'
-}
 
 commit()
 {
@@ -60,7 +56,7 @@ done
 for i in 0 1 2 3 4; do
     hg clone -q -U --pull crossed $i
     echo "% Trying to strip revision $i"
-    hg --cwd $i strip $i 2>&1 | hidefilename
+    hg --cwd $i strip $i | hidebackup
     echo "% Verifying"
     hg --cwd $i verify
     echo

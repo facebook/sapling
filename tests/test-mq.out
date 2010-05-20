@@ -334,7 +334,7 @@ qpush: test2.patch is already at the top
 % strip
 adding x
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-saving bundle to 
+saved backup bundle to 
 adding changesets
 adding manifests
 adding file changes
@@ -345,7 +345,7 @@ added 1 changesets with 1 changes to 1 files
 abort: local changes found
 % --force strip with local changes
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-saving bundle to 
+saved backup bundle to 
 % cd b; hg qrefresh
 adding a
 foo
@@ -529,7 +529,7 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add foo
 
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-saving bundle to 
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
