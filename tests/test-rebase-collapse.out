@@ -17,7 +17,6 @@ o  0: A
 % Rebasing B onto H
 3 files updated, 0 files merged, 2 files removed, 0 files unresolved
 saved backup bundle to 
-rebase completed
 @  5: Collapsed revision
 |  * B
 |  * C
@@ -42,7 +41,6 @@ H
 
 % Rebasing G onto H
 saved backup bundle to 
-rebase completed
 @  6: Collapsed revision
 |  * E
 |  * G
@@ -86,7 +84,6 @@ abort: unable to collapse, there is more than one external parent
 
 % Rebase and collapse - E onto H
 saved backup bundle to 
-rebase completed
 @    5: Collapsed revision
 |\   * E
 | |  * F
@@ -131,7 +128,6 @@ o  0: A
 % Rebase and collapse - E onto I
 merging E
 saved backup bundle to 
-rebase completed
 @    5: Collapsed revision
 |\   * E
 | |  * F
@@ -172,7 +168,6 @@ o  0: A
 
 % Rebase and collapse - B onto F
 saved backup bundle to 
-rebase completed
 @  2: Collapsed revision
 |  * B
 |  * C

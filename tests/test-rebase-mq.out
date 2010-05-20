@@ -28,7 +28,6 @@ merging f
 
 % Fix the 2nd conflict
 saved backup bundle to 
-rebase completed
 @  3 P1 tags: f2.patch qtip tip
 |
 o  2 P0 tags: f.patch qbase

@@ -212,7 +212,7 @@ def rebase(ui, repo, **opts):
                     repair.strip(ui, repo, repo[min(rebased)].node(), "all")
 
         clearstatus(repo)
-        ui.status(_("rebase completed\n"))
+        ui.note(_("rebase completed\n"))
         if os.path.exists(repo.sjoin('undo')):
             util.unlink(repo.sjoin('undo'))
         if skipped:

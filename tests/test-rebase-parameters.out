@@ -268,37 +268,29 @@ nothing to rebase
 % Rebase with no arguments (from 3 onto 7)
 3 files updated, 0 files merged, 2 files removed, 0 files unresolved
 saved backup bundle to 
-rebase completed
 % Try to rollback after a rebase (fail)
 no rollback information available
 
 % Rebase with base == '.' => same as no arguments (from 3 onto 7)
 3 files updated, 0 files merged, 3 files removed, 0 files unresolved
 saved backup bundle to 
-rebase completed
 
 % Rebase with dest == default => same as no arguments (from 3 onto 7)
 3 files updated, 0 files merged, 3 files removed, 0 files unresolved
 saved backup bundle to 
-rebase completed
 
 % Specify only source (from 4 onto 7)
 saved backup bundle to 
-rebase completed
 
 % Specify only dest (from 3 onto 6)
 3 files updated, 0 files merged, 3 files removed, 0 files unresolved
 saved backup bundle to 
-rebase completed
 
 % Specify only base (from 3 onto 7)
 saved backup bundle to 
-rebase completed
 
 % Specify source and dest (from 4 onto 6)
 saved backup bundle to 
-rebase completed
 
 % Specify base and dest (from 3 onto 6)
 saved backup bundle to 
-rebase completed

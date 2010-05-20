@@ -27,7 +27,6 @@ abort: unresolved merge conflicts (see hg resolve)
 
 % Conclude rebase
 saved backup bundle to 
-rebase completed
 @  5: L3
 |
 o  4: L2

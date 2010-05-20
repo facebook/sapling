@@ -18,7 +18,6 @@ abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
 merging A
 
 % - Solve the conflict and go on
-rebase completed
 @  7:C:
 |
 o  6:B:
@@ -56,7 +55,6 @@ merging A
 
 % - Solve the conflict and go on
 saved backup bundle to 
-rebase completed
 @  5:F:notdefault
 |
 o  4:E:

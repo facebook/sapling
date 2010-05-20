@@ -13,7 +13,6 @@ o  0: A
 % Rebasing
 % B onto F - simple rebase
 saved backup bundle to 
-rebase completed
 @  5: B
 |
 o  4: F
@@ -28,7 +27,6 @@ o  0: A
 
 % B onto D - intermediate point
 saved backup bundle to 
-rebase completed
 @  5: B
 |
 | o  4: F
@@ -43,7 +41,6 @@ o  0: A
 
 % C onto F - skip of E
 saved backup bundle to 
-rebase completed
 @  4: C
 |
 o  3: F
@@ -56,7 +53,6 @@ o  0: A
 
 % D onto C - rebase of a branching point (skip E)
 saved backup bundle to 
-rebase completed
 @  4: F
 |
 o  3: D
@@ -69,7 +65,6 @@ o  0: A
 
 % E onto F - merged revision having a parent in ancestors of target
 saved backup bundle to 
-rebase completed
 @    5: E
 |\
 | o  4: F
@@ -84,7 +79,6 @@ o  0: A
 
 % D onto B - E maintains C as parent
 saved backup bundle to 
-rebase completed
 @  5: F
 |
 | o  4: E

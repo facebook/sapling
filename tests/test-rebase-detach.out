@@ -10,7 +10,6 @@ o  0: A
 
 % Rebasing D onto E detaching from C
 saved backup bundle to 
-rebase completed
 @  4: D
 |
 o  3: E
@@ -38,7 +37,6 @@ o  0: A
 
 % Rebasing C onto E detaching from B
 saved backup bundle to 
-rebase completed
 @  4: D
 |
 o  3: C
@@ -67,7 +65,6 @@ o  0: A
 
 % Rebasing B onto E using detach (same as not using it)
 saved backup bundle to 
-rebase completed
 @  4: D
 |
 o  3: C
@@ -97,7 +94,6 @@ o  0: A
 
 % Rebasing C onto E detaching from B and collapsing
 saved backup bundle to 
-rebase completed
 @  3: Collapsed revision
 |  * C
 |  * D
