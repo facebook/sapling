@@ -47,6 +47,8 @@ move changeset (and descendants) to a different branch
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
+    Returns 0 on success, 1 if nothing to rebase.
+
 options:
 
  -s --source        rebase from the specified changeset
@@ -110,6 +112,8 @@ move changeset (and descendants) to a different branch
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
+
+    Returns 0 on success, 1 if nothing to rebase.
 
 options:
 
@@ -175,6 +179,8 @@ move changeset (and descendants) to a different branch
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
+    Returns 0 on success, 1 if nothing to rebase.
+
 options:
 
  -s --source        rebase from the specified changeset
@@ -238,6 +244,8 @@ move changeset (and descendants) to a different branch
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
+
+    Returns 0 on success, 1 if nothing to rebase.
 
 options:
 

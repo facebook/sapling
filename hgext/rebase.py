@@ -69,6 +69,8 @@ def rebase(ui, repo, **opts):
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
+
+    Returns 0 on success, 1 if nothing to rebase.
     """
     originalwd = target = None
     external = nullrev
@@ -115,8 +117,7 @@ def rebase(ui, repo, **opts):
             (originalwd, target, state, collapsef, keepf,
                                 keepbranchesf, external) = restorestatus(repo)
             if abortf:
-                abort(repo, originalwd, target, state)
-                return
+                return abort(repo, originalwd, target, state)
         else:
             if srcf and basef:
                 raise error.ParseError('rebase', _('cannot specify both a '
@@ -134,7 +135,7 @@ def rebase(ui, repo, **opts):
             if not result:
                 # Empty state built, nothing to rebase
                 ui.status(_('nothing to rebase\n'))
-                return
+                return 1
             else:
                 originalwd, target, state = result
                 if collapsef:
@@ -428,6 +429,7 @@ def abort(repo, originalwd, target, state):
     if set(repo.changelog.descendants(target)) - set(state.values()):
         repo.ui.warn(_("warning: new changesets detected on target branch, "
                                                     "can't abort\n"))
+        return -1
     else:
         # Strip from the first rebased revision
         merge.update(repo, repo[originalwd].rev(), False, True, False)
@@ -438,6 +440,7 @@ def abort(repo, originalwd, target, state):
             repair.strip(repo.ui, repo, repo[strippoint].node())
         clearstatus(repo)
         repo.ui.status(_('rebase aborted\n'))
+        return 0
 
 def buildstate(repo, dest, src, base, detach):
     'Define which revisions are going to be rebased and where'
