@@ -10,11 +10,6 @@ o  0: A
 
 % Rebasing D onto E detaching from C
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 2 changesets with 2 changes to 2 files (+1 heads)
 rebase completed
 @  4: D
 |
@@ -43,11 +38,6 @@ o  0: A
 
 % Rebasing C onto E detaching from B
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 3 changesets with 3 changes to 3 files (+1 heads)
 rebase completed
 @  4: D
 |
@@ -77,11 +67,6 @@ o  0: A
 
 % Rebasing B onto E using detach (same as not using it)
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 4 changesets with 4 changes to 4 files
 rebase completed
 @  4: D
 |
@@ -112,11 +97,6 @@ o  0: A
 
 % Rebasing C onto E detaching from B and collapsing
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 2 changesets with 3 changes to 3 files (+1 heads)
 rebase completed
 @  3: Collapsed revision
 |  * C

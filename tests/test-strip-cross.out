@@ -49,11 +49,6 @@ crossed/.hg/store/data/manifest-file.i
 
 % Trying to strip revision 0
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 4 changesets with 15 changes to 7 files (+3 heads)
 % Verifying
 checking changesets
 checking manifests
@@ -63,11 +58,6 @@ checking files
 
 % Trying to strip revision 1
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 3 changesets with 12 changes to 7 files (+3 heads)
 % Verifying
 checking changesets
 checking manifests
@@ -77,11 +67,6 @@ checking files
 
 % Trying to strip revision 2
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 2 changesets with 8 changes to 6 files (+2 heads)
 % Verifying
 checking changesets
 checking manifests
@@ -91,11 +76,6 @@ checking files
 
 % Trying to strip revision 3
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 2 files (+1 heads)
 % Verifying
 checking changesets
 checking manifests

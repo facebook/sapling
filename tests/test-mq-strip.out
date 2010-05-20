@@ -85,11 +85,6 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     e
 
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 2 changesets with 2 changes to 1 files
 % after update 4, strip 2
 changeset:   3:443431ffac4f
 tag:         tip

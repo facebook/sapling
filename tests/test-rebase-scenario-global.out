@@ -13,11 +13,6 @@ o  0: A
 % Rebasing
 % B onto F - simple rebase
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 5 changesets with 4 changes to 4 files (+1 heads)
 rebase completed
 @  5: B
 |
@@ -33,11 +28,6 @@ o  0: A
 
 % B onto D - intermediate point
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 5 changesets with 4 changes to 4 files (+2 heads)
 rebase completed
 @  5: B
 |
@@ -53,11 +43,6 @@ o  0: A
 
 % C onto F - skip of E
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 3 changesets with 3 changes to 3 files (+1 heads)
 rebase completed
 @  4: C
 |
@@ -71,11 +56,6 @@ o  0: A
 
 % D onto C - rebase of a branching point (skip E)
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 2 changesets with 2 changes to 2 files
 rebase completed
 @  4: F
 |
@@ -89,11 +69,6 @@ o  0: A
 
 % E onto F - merged revision having a parent in ancestors of target
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 2 changesets with 1 changes to 1 files (-1 heads)
 rebase completed
 @    5: E
 |\
@@ -109,11 +84,6 @@ o  0: A
 
 % D onto B - E maintains C as parent
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 3 changesets with 2 changes to 2 files
 rebase completed
 @  5: F
 |

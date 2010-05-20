@@ -271,11 +271,6 @@ diff -r 000000000000 b
 +a
 % issue2025: qrefresh does not honor filtering options when tip != qtip
 % refresh with tip != qtip
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 1 files
 % status after refresh
 M a
 % b after refresh

@@ -28,11 +28,6 @@ merging f
 
 % Fix the 2nd conflict
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 2 changesets with 2 changes to 1 files
 rebase completed
 @  3 P1 tags: f2.patch qtip tip
 |

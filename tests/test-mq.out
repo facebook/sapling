@@ -427,11 +427,6 @@ copy to copy
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 created new head
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 1 files
 diff --git a/bar b/bar
 new file mode 100644
 --- /dev/null
@@ -457,11 +452,6 @@ diff --git a/foo b/baz
 % test file move chains in the slow path
 1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 1 files
 diff --git a/foo b/bleh
 rename from foo
 rename to bleh
@@ -530,11 +520,6 @@ summary:     add foo
 
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 1 files
 changeset:   1:20cbbe65cff7
 tag:         tip
 user:        test

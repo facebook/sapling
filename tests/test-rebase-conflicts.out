@@ -27,11 +27,6 @@ abort: unresolved merge conflicts (see hg resolve)
 
 % Conclude rebase
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 3 changesets with 3 changes to 3 files
 rebase completed
 @  5: L3
 |

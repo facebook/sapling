@@ -13,11 +13,6 @@ created new head
    test2                     1:16b24da7e457
 % strip to revision 1
 saved backup bundle to 
-adding branch
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 1 files
 % list bookmarks
  * test                      1:9f1b7e78eff8
  * test2                     1:9f1b7e78eff8

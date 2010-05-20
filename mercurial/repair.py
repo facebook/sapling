@@ -136,10 +136,15 @@ def strip(ui, repo, node, backup="all"):
             raise
 
         if saveheads or extranodes:
-            ui.status(_("adding branch\n"))
+            ui.note(_("adding branch\n"))
             f = open(chgrpfile, "rb")
             gen = changegroup.readbundle(f, chgrpfile)
+            if not repo.ui.verbose:
+                # silence internal shuffling chatter
+                repo.ui.pushbuffer()
             repo.addchangegroup(gen, 'strip', 'bundle:' + chgrpfile, True)
+            if not repo.ui.verbose:
+                repo.ui.popbuffer()
             f.close()
             if backup != "strip":
                 os.unlink(chgrpfile)
