@@ -12,6 +12,7 @@ o  0: A
 
 % Rebasing
 % B onto F - simple rebase
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -31,6 +32,7 @@ o |  2: D
 o  0: A
 
 % B onto D - intermediate point
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -50,6 +52,7 @@ o |  2: D
 o  0: A
 
 % C onto F - skip of E
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -67,6 +70,7 @@ o  2: D
 o  0: A
 
 % D onto C - rebase of a branching point (skip E)
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -84,6 +88,7 @@ o  2: C
 o  0: A
 
 % E onto F - merged revision having a parent in ancestors of target
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -103,6 +108,7 @@ o |  2: C
 o  0: A
 
 % D onto B - E maintains C as parent
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests

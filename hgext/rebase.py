@@ -208,7 +208,8 @@ def rebase(ui, repo, **opts):
                     ui.warn(_("warning: new changesets detected "
                               "on source branch, not stripping\n"))
                 else:
-                    repair.strip(ui, repo, repo[min(rebased)].node(), "strip")
+                    # backup the old csets by default
+                    repair.strip(ui, repo, repo[min(rebased)].node(), "all")
 
         clearstatus(repo)
         ui.status(_("rebase completed\n"))
@@ -433,7 +434,8 @@ def abort(repo, originalwd, target, state):
         rebased = filter(lambda x: x > -1, state.values())
         if rebased:
             strippoint = min(rebased)
-            repair.strip(repo.ui, repo, repo[strippoint].node(), "strip")
+            # no backup of rebased cset versions needed
+            repair.strip(repo.ui, repo, repo[strippoint].node())
         clearstatus(repo)
         repo.ui.status(_('rebase aborted\n'))
 

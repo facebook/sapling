@@ -9,6 +9,7 @@
 o  0: A
 
 % Rebasing D onto E detaching from C
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -41,6 +42,7 @@ E
 o  0: A
 
 % Rebasing C onto E detaching from B
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -74,6 +76,7 @@ E
 o  0: A
 
 % Rebasing B onto E using detach (same as not using it)
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
@@ -108,6 +111,7 @@ E
 o  0: A
 
 % Rebasing C onto E detaching from B and collapsing
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests

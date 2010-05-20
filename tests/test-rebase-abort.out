@@ -18,6 +18,7 @@ abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
 merging common
 
 % Abort
+saved backup bundle to 
 rebase aborted
 @  4: L2
 |

@@ -26,6 +26,7 @@ abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
 abort: unresolved merge conflicts (see hg resolve)
 
 % Conclude rebase
+saved backup bundle to 
 adding branch
 adding changesets
 adding manifests
