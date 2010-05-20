@@ -427,7 +427,7 @@ def abort(repo, originalwd, target, state):
     'Restore the repository to its original state'
     if set(repo.changelog.descendants(target)) - set(state.values()):
         repo.ui.warn(_("warning: new changesets detected on target branch, "
-                                                    "not stripping\n"))
+                                                    "can't abort\n"))
     else:
         # Strip from the first rebased revision
         merge.update(repo, repo[originalwd].rev(), False, True, False)

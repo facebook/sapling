@@ -95,7 +95,7 @@ o  0: A
 
 
 % Abort the rebasing
-warning: new changesets detected on target branch, not stripping
+warning: new changesets detected on target branch, can't abort
 @  6: Extra
 |
 o  5: B
