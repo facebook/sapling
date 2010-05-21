@@ -157,6 +157,7 @@ def _runcatch(ui, args):
         ui.warn(_("** report bug details to "
                  "http://mercurial.selenic.com/bts/\n"))
         ui.warn(_("** or mercurial@selenic.com\n"))
+        ui.warn(_("** Python %s\n") % sys.version.replace('\n', ''))
         ui.warn(_("** Mercurial Distributed SCM (version %s)\n")
                % util.version())
         ui.warn(_("** Extensions loaded: %s\n")
