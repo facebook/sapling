@@ -61,6 +61,7 @@ testpats = [
     (r'[^\n]\Z', "no trailing newline"),
     (r'export.*=', "don't export and assign at once"),
     ('^([^"\']|("[^"]*")|(\'[^\']*\'))*\\^', "^ must be quoted"),
+    (r'^source\b', "don't use 'source', use '.'"),
 ]
 
 testfilters = [
