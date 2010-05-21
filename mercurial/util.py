@@ -772,7 +772,7 @@ class atomictempfile(object):
     file.  When rename is called, the copy is renamed to the original
     name, making the changes visible.
     """
-    def __init__(self, name, mode, createmode):
+    def __init__(self, name, mode='w+b', createmode=None):
         self.__name = name
         self._fp = None
         self.temp = mktempcopy(name, emptyok=('w' in mode),
