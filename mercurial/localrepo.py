@@ -1507,7 +1507,7 @@ class localrepository(repo.repository):
         finally:
             lock.release()
 
-    def push(self, remote, force=False, revs=None):
+    def push(self, remote, force=False, revs=None, newbranch=False):
         '''Push outgoing changesets (limited by revs) from the current
         repository to remote. Return an integer:
           - 0 means HTTP error *or* nothing to push
@@ -1524,10 +1524,10 @@ class localrepository(repo.repository):
         # servers, http servers).
 
         if remote.capable('unbundle'):
-            return self.push_unbundle(remote, force, revs)
-        return self.push_addchangegroup(remote, force, revs)
+            return self.push_unbundle(remote, force, revs, newbranch)
+        return self.push_addchangegroup(remote, force, revs, newbranch)
 
-    def prepush(self, remote, force, revs):
+    def prepush(self, remote, force, revs, newbranch):
         '''Analyze the local and remote repositories and determine which
         changesets need to be pushed to the remote. Return value depends
         on circumstances:
@@ -1586,13 +1586,15 @@ class localrepository(repo.repository):
                 # 2. Check for new branches on the remote.
                 remotemap = remote.branchmap()
                 newbranches = branches - set(remotemap)
-                if newbranches: # new branch requires --force
+                if newbranches and not newbranch: # new branch requires --new-branch
                     branchnames = ', '.join("%s" % b for b in newbranches)
                     self.ui.warn(_("abort: push creates "
                                    "new remote branches: %s!\n")
                                  % branchnames)
-                    self.ui.status(_("(use 'hg push -f' to force)\n"))
+                    self.ui.status(_("(use 'hg push --new-branch' to create new "
+                                     "remote branches)\n"))
                     return None, 0
+                branches.difference_update(newbranches)
 
                 # 3. Construct the initial oldmap and newmap dicts.
                 # They contain information about the remote heads before and
@@ -1654,14 +1656,14 @@ class localrepository(repo.repository):
             cg = self.changegroupsubset(update, revs, 'push')
         return cg, remote_heads
 
-    def push_addchangegroup(self, remote, force, revs):
+    def push_addchangegroup(self, remote, force, revs, newbranch):
         '''Push a changegroup by locking the remote and sending the
         addchangegroup command to it. Used for local and old SSH repos.
         Return an integer: see push().
         '''
         lock = remote.lock()
         try:
-            ret = self.prepush(remote, force, revs)
+            ret = self.prepush(remote, force, revs, newbranch)
             if ret[0] is not None:
                 cg, remote_heads = ret
                 # here, we return an integer indicating remote head count change
@@ -1672,7 +1674,7 @@ class localrepository(repo.repository):
         finally:
             lock.release()
 
-    def push_unbundle(self, remote, force, revs):
+    def push_unbundle(self, remote, force, revs, newbranch):
         '''Push a changegroup by unbundling it on the remote.  Used for new
         SSH and HTTP repos. Return an integer: see push().'''
         # local repo finds heads on server, finds out what revs it
@@ -1680,7 +1682,7 @@ class localrepository(repo.repository):
         # different heads (someone else won commit/push race), server
         # aborts.
 
-        ret = self.prepush(remote, force, revs)
+        ret = self.prepush(remote, force, revs, newbranch)
         if ret[0] is not None:
             cg, remote_heads = ret
             if force:

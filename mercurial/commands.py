@@ -2564,7 +2564,8 @@ def push(ui, repo, dest=None, **opts):
         if not c.sub(s).push(opts.get('force')):
             return False
 
-    r = repo.push(other, opts.get('force'), revs=revs)
+    r = repo.push(other, opts.get('force'), revs=revs,
+                  newbranch=opts.get('new_branch'))
     return r == 0
 
 def recover(ui, repo):
@@ -3948,6 +3949,7 @@ table = {
            _('a changeset intended to be included in the destination')),
           ('b', 'branch', [],
            _('a specific branch you would like to push')),
+          ('', 'new-branch', False, _('allow pushing a new branch')),
          ] + remoteopts,
          _('[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]')),
     "recover": (recover, []),

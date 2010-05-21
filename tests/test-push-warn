@@ -135,6 +135,18 @@ echo 12 > foo
 hg -q ci -d "1000000 0" -m 12
 hg push -r 11 -r 12 ../f; echo $?
 
+echo % failed push of new named branch
+echo 12 > foo
+hg -q ci -d "1000000 0" -m 12a
+hg -q up 11
+echo 13 > foo
+hg -q branch e
+hg -q ci -d "1000000 0" -m 13d
+hg push -r 12 -r 13 ../f; echo $?
+
+echo % using --new-branch to push new named branch
+hg push --new-branch -r 12 -r 13 ../f; echo $?
+
 echo % checking prepush logic does not allow silently pushing multiple new heads
 cd ..
 hg init h

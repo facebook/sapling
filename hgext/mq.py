@@ -2555,10 +2555,10 @@ def reposetup(ui, repo):
             return super(mqrepo, self).commit(text, user, date, match, force,
                                               editor, extra)
 
-        def push(self, remote, force=False, revs=None):
+        def push(self, remote, force=False, revs=None, newbranch=False):
             if self.mq.applied and not force and not revs:
                 raise util.Abort(_('source has mq patches applied'))
-            return super(mqrepo, self).push(remote, force, revs)
+            return super(mqrepo, self).push(remote, force, revs, newbranch)
 
         def _findtags(self):
             '''augment tags from base class with patch tags'''
