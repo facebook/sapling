@@ -2,7 +2,7 @@
 
 # test stripping of filelogs where the linkrev doesn't always increase
 
-source $TESTDIR/helpers.sh
+. $TESTDIR/helpers.sh
 echo '[extensions]' >> $HGRCPATH
 echo 'hgext.mq =' >> $HGRCPATH
 

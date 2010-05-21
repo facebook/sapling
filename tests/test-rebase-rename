@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source $TESTDIR/helpers.sh
+. $TESTDIR/helpers.sh
 
 echo "[extensions]" >> $HGRCPATH
 echo "rebase=" >> $HGRCPATH

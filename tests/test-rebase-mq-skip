@@ -2,7 +2,7 @@
 # This emulates the effects of an hg pull --rebase in which the remote repo 
 # already has one local mq patch
 
-source $TESTDIR/helpers.sh
+. $TESTDIR/helpers.sh
 
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
