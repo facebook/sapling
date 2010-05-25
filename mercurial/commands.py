@@ -2541,6 +2541,10 @@ def push(ui, repo, dest=None, **opts):
     to use. In this situation, it is recommended to pull and merge
     before pushing.
 
+    Use --new-branch if you want to allow push to create a new named
+    branch that is not present at the destination. This allows you to
+    only create a new branch without forcing other changes.
+
     Use -f/--force to override the default behavior and push all
     changesets on all branches.
 
