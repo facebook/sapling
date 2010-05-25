@@ -2530,19 +2530,22 @@ def pull(ui, repo, source="default", **opts):
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
 
-    Push changes from the local repository to the specified destination.
+    Push changesets from the local repository to the specified
+    destination.
 
-    This is the symmetrical operation for pull. It moves changes from
-    the current repository to a different one. If the destination is
-    local this is identical to a pull in that directory from the
-    current one.
+    This operation is symmetrical to pull: it is identical to a pull
+    in the destination repository from the current one.
 
-    By default, push will refuse to run if it detects the result would
-    increase the number of remote heads. This generally indicates the
-    user forgot to pull and merge before pushing.
+    By default, push will not allow creation of new heads at the
+    destination, since multiple heads would make it unclear which head
+    to use. In this situation, it is recommended to pull and merge
+    before pushing.
 
-    If -r/--rev is used, the named revision and all its ancestors will
-    be pushed to the remote repository.
+    Use -f/--force to override the default behavior and push all
+    changesets on all branches.
+
+    If -r/--rev is used, the specified revision and all its ancestors
+    will be pushed to the remote repository.
 
     Please see :hg:`help urls` for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
