@@ -90,7 +90,8 @@ Syntax
 ------
 
 A configuration file consists of sections, led by a ``[section]`` header
-and followed by ``name = value`` entries::
+and followed by ``name = value`` entries (sometimes called
+``configuration keys``)::
 
     [spam]
     eggs=ham
@@ -101,6 +102,16 @@ Each line contains one entry. If the lines that follow are indented,
 they are treated as continuations of that entry. Leading whitespace is
 removed from values. Empty lines are skipped. Lines beginning with
 ``#`` or ``;`` are ignored and may be used to provide comments.
+
+Configuration keys can be set multiple times, in which case mercurial
+will use the value that was configured last. As an example::
+
+    [spam]
+    eggs=large
+    ham=serrano
+    eggs=small
+
+This would set the configuration key named ``eggs`` to ``small``.
 
 A line of the form ``%include file`` will include ``file`` into the
 current configuration file. The inclusion is recursive, which means
