@@ -9,7 +9,7 @@ paths.default=.../foo%bar
 hg: config error at $HGRCPATH:2: '  x = y'
 foo.bar=a\nb\nc\nde\nfg
 foo.baz=bif cb
-hg: config error at $HGRCPATH:1: cannot include /no-such-file (No such file or directory)
+hg: config error at $HGRCPATH:1: cannot include /path/to/nowhere/no-such-file (No such file or directory)
 % customized hgrc
 read config from: .../.hgrc
 .../.hgrc:13: alias.log=log -g

@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import error
+import error, util
 import re, os
 
 class sortdict(dict):
@@ -96,7 +96,7 @@ class config(object):
                 cont = False
             m = includere.match(l)
             if m:
-                inc = m.group(1)
+                inc = util.expandpath(m.group(1))
                 base = os.path.dirname(src)
                 inc = os.path.normpath(os.path.join(base, inc))
                 if include:
