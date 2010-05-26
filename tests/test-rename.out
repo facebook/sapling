@@ -8,6 +8,13 @@ A d2/c
   d1/d11/a1
 R d1/d11/a1
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+# rename --after a single file when src and tgt already tracked
+removing d1/d11/a1
+adding d2/c
+A d2/c
+  d1/d11/a1
+R d1/d11/a1
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 # rename --after a single file to a nonexistant target filename
 d1/a: not recording move - dummy does not exist
 # move a single file to an existing directory
