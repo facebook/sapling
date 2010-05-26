@@ -266,6 +266,8 @@ class ui(object):
         user = os.environ.get("HGUSER")
         if user is None:
             user = self.config("ui", "username")
+            if user is not None:
+                user = os.path.expandvars(user)
         if user is None:
             user = os.environ.get("EMAIL")
         if user is None and self.configbool("ui", "askusername"):
