@@ -613,8 +613,7 @@ class queue(object):
                     repo.dirstate.invalidate()
                 raise
         finally:
-            del tr
-            release(lock, wlock)
+            release(tr, lock, wlock)
             self.removeundo(repo)
 
     def _apply(self, repo, series, list=False, update_status=True,

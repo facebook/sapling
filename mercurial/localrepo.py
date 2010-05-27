@@ -971,7 +971,8 @@ class localrepository(repo.repository):
                 self.branchtags()
             return n
         finally:
-            del tr
+            if tr:
+                tr.release()
             lock.release()
 
     def destroyed(self):
@@ -2194,7 +2195,7 @@ class localrepository(repo.repository):
 
             tr.close()
         finally:
-            del tr
+            tr.release()
 
         if changesets > 0:
             # forcefully update the on-disk branch cache

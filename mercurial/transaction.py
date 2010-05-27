@@ -43,6 +43,7 @@ def _playback(journal, report, opener, entries, unlink=True):
 class transaction(object):
     def __init__(self, report, opener, journal, after=None, createmode=None):
         self.count = 1
+        self.usages = 1
         self.report = report
         self.opener = opener
         self.after = after
@@ -108,7 +109,15 @@ class transaction(object):
     @active
     def nest(self):
         self.count += 1
+        self.usages += 1
         return self
+
+    def release(self):
+        if self.count > 0:
+            self.usages -= 1
+        # of the transaction scopes are left without being closed, fail
+        if self.count > 0 and self.usages == 0:
+            self._abort()
 
     def running(self):
         return self.count > 0
@@ -136,6 +145,7 @@ class transaction(object):
 
     def _abort(self):
         self.count = 0
+        self.usages = 0
         self.file.close()
 
         try:
