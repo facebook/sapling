@@ -9,7 +9,7 @@
 '''command to display statistics about repository history'''
 
 from mercurial.i18n import _
-from mercurial import patch, cmdutil, util, templater
+from mercurial import patch, cmdutil, util, templater, commands
 import os
 import time, datetime
 
@@ -182,6 +182,6 @@ cmdtable = {
           ('s', 'sort', False, _('sort by key (default: sort by count)')),
           ('', 'diffstat', False, _('display added/removed lines separately')),
           ('', 'aliases', '', _('file with email aliases')),
-          ],
+          ] + commands.walkopts,
          _("hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]")),
 }

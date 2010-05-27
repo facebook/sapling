@@ -30,6 +30,8 @@ cd d
 hg churn e
 echo % churn all
 hg churn
+echo % churn excluding one dir
+hg churn -X e
 echo % churn up to rev 2
 hg churn -r :2
 cd ..
