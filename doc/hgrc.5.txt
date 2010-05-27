@@ -146,6 +146,12 @@ A line of the form ``%include file`` will include ``file`` into the
 current configuration file. The inclusion is recursive, which means
 that included files can include other files. Filenames are relative to
 the configuration file in which the ``%include`` directive is found.
+Environment variables and ``~user`` constructs are expanded in
+``file``. This lets you do something like::
+
+  %include ~/.hgrc.d/$HOST.rc
+
+to include a different configuration file on each computer you use.
 
 A line with ``%unset name`` will remove ``name`` from the current
 section, if it has been set previously.
@@ -893,7 +899,8 @@ merge-tools_ section.
     <fred@example.com>``. Default is ``$EMAIL`` or ``username@hostname``. If
     the username in hgrc is empty, it has to be specified manually or
     in a different hgrc file (e.g. ``$HOME/.hgrc``, if the admin set
-    ``username =``  in the system hgrc).
+    ``username =``  in the system hgrc). Environment variables in the
+    username are expanded.
 ``verbose``
     Increase the amount of output printed. True or False. Default is False.
 
