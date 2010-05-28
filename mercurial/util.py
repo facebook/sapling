@@ -458,7 +458,7 @@ def copyfiles(src, dst, hardlink=None):
         for name, kind in osutil.listdir(src):
             srcname = os.path.join(src, name)
             dstname = os.path.join(dst, name)
-            copyfiles(srcname, dstname, hardlink)
+            hardlink = copyfiles(srcname, dstname, hardlink)
     else:
         if hardlink:
             try:
@@ -468,6 +468,8 @@ def copyfiles(src, dst, hardlink=None):
                 shutil.copy(src, dst)
         else:
             shutil.copy(src, dst)
+
+    return hardlink
 
 class path_auditor(object):
     '''ensure that a filesystem path contains no banned components.
