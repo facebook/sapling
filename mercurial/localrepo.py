@@ -1010,7 +1010,9 @@ class localrepository(repo.repository):
             match.bad = bad
 
         if working: # we need to scan the working dir
-            subrepos = ctx1.substate.keys()
+            subrepos = []
+            if '.hgsub' in self.dirstate:
+                subrepos = ctx1.substate.keys()
             s = self.dirstate.status(match, subrepos, listignored,
                                      listclean, listunknown)
             cmp, modified, added, removed, deleted, unknown, ignored, clean = s
