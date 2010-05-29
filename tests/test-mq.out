@@ -49,6 +49,7 @@ list of commands:
  qpop         pop the current patch off the stack
  qprev        print the name of the previous patch
  qpush        push the next patch onto the stack
+ qqueue       manage multiple patch queues
  qrefresh     update the current patch
  qrename      rename a patch
  qselect      set or print guarded patches to push

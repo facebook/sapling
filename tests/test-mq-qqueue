@@ -1,0 +1,47 @@
+#!/bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "mq=" >> $HGRCPATH
+
+hg init foo
+cd foo
+echo a > a
+hg ci -qAm a
+
+echo %% default queue
+hg qqueue
+
+echo b > a
+hg qnew -fgDU somestuff
+
+echo %% applied patches in default queue
+hg qap
+
+echo %% try to change patch \(create succeeds, switch fails\)
+hg qqueue foo --create
+hg qqueue
+
+echo %% empty default queue
+hg qpop
+
+echo %% switch queue
+hg qqueue foo
+hg qqueue
+
+echo %% unapplied patches
+hg qun
+echo c > a
+hg qnew -fgDU otherstuff
+
+echo %% fail switching back
+hg qqueue patches
+
+echo %% fail deleting current
+hg qqueue foo --delete
+
+echo %% switch back and delete foo
+hg qpop -a
+hg qqueue patches
+hg qqueue foo --delete
+hg qqueue
+cd ..

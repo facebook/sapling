@@ -234,7 +234,12 @@ class patchheader(object):
 class queue(object):
     def __init__(self, ui, path, patchdir=None):
         self.basepath = path
-        self.path = patchdir or os.path.join(path, "patches")
+        try:
+            fh = open(os.path.join(path, '.queue'))
+            curpath = os.path.join(path, fh.read().rstrip())
+        except IOError:
+            curpath = os.path.join(path, 'patches')
+        self.path = patchdir or curpath
         self.opener = util.opener(self.path)
         self.ui = ui
         self.applied_dirty = 0
@@ -2533,6 +2538,107 @@ def finish(ui, repo, *revrange, **opts):
     q.save_dirty()
     return 0
 
+def qqueue(ui, repo, name=None, **opts):
+    '''manage multiple patch queues
+
+    Supports switching between different patch queues, as well as creating
+    new patch queues and deleting existing ones.
+
+    Omitting a queue name or specifying -l/--list will show you the registered
+    queues - by default the "normal" patches queue is registered. The currently
+    active queue will be marked with "(active)".
+
+    To create a new queue, use -c/--create. The queue is automatically made
+    active, except in the case where there are applied patches from the
+    currently active queue in the repository. Then the queue will only be
+    created and switching will fail.
+
+    To delete an existing queue, use --delete. You cannot delete the currently
+    active queue.
+    '''
+
+    q = repo.mq
+
+    _defaultqueue = 'patches'
+    _allqueues = '.queues'
+    _activequeue = '.queue'
+
+    def _getcurrent():
+        return os.path.basename(q.path)
+
+    def _noqueues():
+        try:
+            fh = repo.opener(_allqueues, 'r')
+            fh.close()
+        except IOError:
+            return True
+
+        return False
+
+    def _getqueues():
+        current = _getcurrent()
+
+        try:
+            fh = repo.opener(_allqueues, 'r')
+            queues = [queue.strip() for queue in fh if queue.strip()]
+            if current not in queues:
+                queues.append(current)
+        except IOError:
+            queues = [_defaultqueue]
+
+        return sorted(queues)
+
+    def _setactive(name):
+        if q.applied:
+            raise util.Abort(_('patches applied - cannot set new queue active'))
+
+        fh = repo.opener(_activequeue, 'w')
+        fh.write(name)
+        fh.close()
+
+    def _addqueue(name):
+        fh = repo.opener(_allqueues, 'a')
+        fh.write('%s\n' % (name,))
+        fh.close()
+
+    if not name or opts.get('list'):
+        current = _getcurrent()
+        for queue in _getqueues():
+            ui.write('%s' % (queue,))
+            if queue == current:
+                ui.write(_(' (active)\n'))
+            else:
+                ui.write('\n')
+        return
+
+    existing = _getqueues()
+
+    if name not in existing and opts.get('delete'):
+        raise util.Abort(_('cannot delete queue that does not exist'))
+    elif name not in existing and not opts.get('create'):
+        raise util.Abort(_('use --create to create a new queue'))
+
+    if opts.get('create'):
+        if _noqueues():
+            _addqueue(_defaultqueue)
+        _addqueue(name)
+        _setactive(name)
+    elif opts.get('delete'):
+        current = _getcurrent()
+
+        if name == current:
+            raise util.Abort(_('cannot delete currently active queue'))
+
+        fh = repo.opener('.queues.new', 'w')
+        for queue in existing:
+            if queue == name:
+                continue
+            fh.write('%s\n' % (queue,))
+        fh.close()
+        util.rename(repo.join('.queues.new'), repo.join(_allqueues))
+    else:
+        _setactive(name)
+
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
         @util.propertycache
@@ -2839,6 +2945,14 @@ cmdtable = {
         (finish,
          [('a', 'applied', None, _('finish all applied changesets'))],
          _('hg qfinish [-a] [REV]...')),
+    'qqueue':
+        (qqueue,
+         [
+             ('l', 'list', False, _('list all available queues')),
+             ('c', 'create', False, _('create new queue')),
+             ('', 'delete', False, _('delete reference to queue')),
+         ],
+         _('[OPTION] [QUEUE]')),
 }
 
 colortable = {'qguard.negative': 'red',

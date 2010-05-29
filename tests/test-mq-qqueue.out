@@ -1,0 +1,23 @@
+%% default queue
+patches (active)
+%% applied patches in default queue
+somestuff
+%% try to change patch (create succeeds, switch fails)
+abort: patches applied - cannot set new queue active
+foo
+patches (active)
+%% empty default queue
+popping somestuff
+patch queue now empty
+%% switch queue
+foo (active)
+patches
+%% unapplied patches
+%% fail switching back
+abort: patches applied - cannot set new queue active
+%% fail deleting current
+abort: cannot delete currently active queue
+%% switch back and delete foo
+popping otherstuff
+patch queue now empty
+patches (active)
