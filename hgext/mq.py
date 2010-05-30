@@ -37,6 +37,9 @@ If set to 'keep', mq will obey the [diff] section configuration while
 preserving existing git patches upon qrefresh. If set to 'yes' or
 'no', mq will override the [diff] section and always generate git or
 regular patches, possibly losing data in the second case.
+
+You will by default be managing a patch queue named "patches". You can
+create other, independent patch queues with the :hg:`qqueue` command.
 '''
 
 from mercurial.i18n import _
