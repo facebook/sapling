@@ -1,0 +1,73 @@
+#!/bin/sh
+
+cat > $HGRCPATH <<EOF
+[diff]
+git = 1
+EOF
+
+seteol () {
+    if [ $1 = "LF" ]; then
+        EOL='\n'
+    else
+        EOL='\r\n'
+    fi
+}
+
+makerepo () {
+    echo
+    echo "# ==== setup repository ===="
+    echo '% hg init'
+    hg init repo
+    cd repo
+
+    printf "first\nsecond\nthird\n" > a.txt
+    hg commit -d '100 0' --addremove -m 'LF commit'
+    cd ..
+}
+
+dotest () {
+    seteol $1
+
+    echo
+    echo "% hg clone repo repo-$1"
+    hg clone repo repo-$1
+    cd repo-$1
+
+    cat > .hg/hgrc <<EOF
+[extensions]
+eol =
+
+[eol]
+native = LF
+EOF
+
+    cat > .hgeol <<EOF
+[patterns]
+**.txt = native
+
+[repository]
+native = $1
+EOF
+
+    echo '% hg add .hgeol'
+    hg add .hgeol
+    echo '% hg status'
+    hg status
+
+    echo '% hg commit'
+    hg commit -d '200 0' -m 'Added .hgeol file'
+
+    echo '% hg status'
+    hg status
+
+    echo '% hg tip -p'
+    hg tip -p | python $TESTDIR/printrepr.py
+
+    cd ..
+    rm -r repo-$1
+}
+
+makerepo
+dotest LF
+dotest CRLF
+rm -r repo
