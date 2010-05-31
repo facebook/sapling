@@ -295,9 +295,9 @@ def filterpatch(ui, chunks):
             r = ui.promptchoice("%s %s" % (query, resps), choices)
             if r == 7: # ?
                 doc = gettext(record.__doc__)
-                c = doc.find(_('y - record this change'))
+                c = doc.find('::') + 2
                 for l in doc[c:].splitlines():
-                    if l:
+                    if l.startswith('      '):
                         ui.write(l.strip(), '\n')
                 continue
             elif r == 0: # yes
