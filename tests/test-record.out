@@ -24,6 +24,8 @@ interactively select changes to commit
 
       ? - display help
 
+    This command is not available when committing a merge.
+
 options:
 
  -A --addremove     mark new/missing files as added/removed before committing
@@ -569,6 +571,16 @@ new mode 100644
  b
 +c
 
+% abort early when a merge is in progress
+1 files updated, 0 files merged, 5 files removed, 0 files unresolved
+marked working directory as branch thatbranch
+created new head
+5 files updated, 0 files merged, 2 files removed, 0 files unresolved
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+
+abort: cannot partially commit a merge (use hg commit instead)
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 % with win32ext
 diff --git a/subdir/f1 b/subdir/f1
 1 hunks, 1 lines changed
@@ -578,8 +590,9 @@ examine changes to 'subdir/f1'? [Ynsfdaq?] @@ -3,3 +3,4 @@
  c
 +d
 record this change to 'subdir/f1'? [Ynsfdaq?] 
-changeset:   25:5bacc1f6e9cf
+changeset:   26:5bacc1f6e9cf
 tag:         tip
+parent:      24:1460f6e47966
 user:        test
 date:        Thu Jan 01 00:00:23 1970 +0000
 summary:     w1
