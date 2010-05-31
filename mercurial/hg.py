@@ -278,6 +278,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 raise
 
             hardlink = None
+            num = 0
             for f in src_repo.store.copylist():
                 src = os.path.join(src_repo.sharedpath, f)
                 dst = os.path.join(dest_path, f)
@@ -288,7 +289,12 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                     if dst.endswith('data'):
                         # lock to avoid premature writing to the target
                         dest_lock = lock.lock(os.path.join(dstbase, "lock"))
-                    hardlink = util.copyfiles(src, dst, hardlink)
+                    hardlink, n = util.copyfiles(src, dst, hardlink)
+                    num += n
+            if hardlink:
+                ui.debug("linked %d files\n" % num)
+            else:
+                ui.debug("copied %d files\n" % num)
 
             # we need to re-init the repo after manually copying the data
             # into it
