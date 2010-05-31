@@ -142,7 +142,7 @@ hg -v kwexpand
 echo % compare changenodes in a c
 cat a c
 
-echo % record
+echo % record chunk
 python -c \
 'l=open("a").readlines();l.insert(1,"foo\n");l.append("bar\n");open("a","w").writelines(l);'
 hg record -d '1 10' -m rectest<<EOF
@@ -156,6 +156,19 @@ hg status
 echo % cat modified file
 cat a
 hg diff | grep -v 'b/a'
+hg rollback
+
+echo % record file
+echo foo > msg
+# do not use "hg record -m" here!
+hg record -l msg -d '1 11'<<EOF
+y
+y
+y
+EOF
+echo % a should be clean
+hg status -A a
+rm msg
 hg rollback
 hg update -C
 

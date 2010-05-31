@@ -220,6 +220,8 @@ class kwtemplater(object):
                     self.repo.wwrite(f, data, mf.flags(f))
                     if node is None:
                         self.repo.dirstate.normal(f)
+                    elif self.record:
+                        self.repo.dirstate.normallookup(f)
             self.restrict = False
 
     def shrinktext(self, text):
