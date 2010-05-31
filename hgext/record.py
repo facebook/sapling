@@ -418,7 +418,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         After the actual job is done by non-interactive command, working dir
         state is restored to original.
 
-        In the end we'll record intresting changes, and everything else will be
+        In the end we'll record interesting changes, and everything else will be
         left in place, so the user can continue his work.
         """
 
