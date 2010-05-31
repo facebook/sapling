@@ -296,9 +296,9 @@ def filterpatch(ui, chunks):
             ui.write("\n")
             if r == 7: # ?
                 doc = gettext(record.__doc__)
-                c = doc.find(_('y - record this change'))
+                c = doc.find('::') + 2
                 for l in doc[c:].splitlines():
-                    if l:
+                    if l.startswith('      '):
                         ui.write(l.strip(), '\n')
                 continue
             elif r == 0: # yes
@@ -380,7 +380,9 @@ def record(ui, repo, *pats, **opts):
       a - record all changes to all remaining files
       q - quit, recording no changes
 
-      ? - display help'''
+      ? - display help
+
+    This command is not available when committing a merge.'''
 
     dorecord(ui, repo, commands.commit, *pats, **opts)
 
@@ -419,9 +421,14 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         After the actual job is done by non-interactive command, working dir
         state is restored to original.
 
-        In the end we'll record intresting changes, and everything else will be
+        In the end we'll record interesting changes, and everything else will be
         left in place, so the user can continue his work.
         """
+
+        merge = len(repo[None].parents()) > 1
+        if merge:
+            raise util.Abort(_('cannot partially commit a merge '
+                               '(use hg commit instead)'))
 
         changes = repo.status(match=match)[:3]
         diffopts = mdiff.diffopts(git=True, nodates=True)
