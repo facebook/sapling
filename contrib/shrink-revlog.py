@@ -202,9 +202,14 @@ def shrink(ui, repo, **opts):
             # copy files
             util.os_link(indexfn, oldindexfn)
             ignoremissing(util.os_link)(datafn, olddatafn)
+
+            # mkstemp() creates files only readable by the owner
+            os.chmod(tmpindexfn, os.stat(indexfn).st_mode)
+
             # rename
             util.rename(tmpindexfn, indexfn)
             try:
+                os.chmod(tmpdatafn, os.stat(datafn).st_mode)
                 util.rename(tmpdatafn, datafn)
             except OSError, inst:
                 if inst.errno != errno.ENOENT:
