@@ -1,0 +1,79 @@
+# parser.py - simple top-down operator precedence parser for mercurial
+#
+# Copyright 2010 Matt Mackall <mpm@selenic.com>
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
+# see http://effbot.org/zone/simple-top-down-parsing.txt and
+# http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/
+# for background
+
+# takes a tokenizer and elements
+# tokenizer is an iterator that returns type, value pairs
+# elements is a mapping of types to binding strength, prefix and infix actions
+# an action is a tree node name, a tree label, and an optional match
+# __call__(program) parses program into a labelled tree
+
+class parser(object):
+    def __init__(self, tokenizer, elements, methods=None):
+        self._tokenizer = tokenizer
+        self._elements = elements
+        self._methods = methods
+    def _advance(self):
+        'advance the tokenizer'
+        t = self.current
+        self.current = self._iter.next()
+        return t
+    def _match(self, m):
+        'make sure the tokenizer matches an end condition'
+        if self.current[0] != m:
+            raise SyntaxError(self.current)
+        self._advance()
+    def _parse(self, bind=0):
+        token, value = self._advance()
+        # handle prefix rules on current token
+        prefix = self._elements[token][1]
+        if not prefix:
+            raise SyntaxError("not a prefix: %s" % token)
+        if len(prefix) == 1:
+            expr = (prefix[0], value)
+        else:
+            if len(prefix) > 2 and prefix[2] == self.current[0]:
+                self._match(prefix[2])
+                expr = (prefix[0], None)
+            else:
+                expr = (prefix[0], self._parse(prefix[1]))
+                if len(prefix) > 2:
+                    self._match(prefix[2])
+        # gather tokens until we meet a lower binding strength
+        while bind < self._elements[self.current[0]][0]:
+            token, value = self._advance()
+            # handle infix rules
+            infix = self._elements[token][2]
+            if len(infix) == 3 and infix[2] == self.current[0]:
+                self._match(infix[2])
+                expr = (infix[0], expr, (None))
+            else:
+                if not infix[0]:
+                    raise SyntaxError("not an infix")
+                expr = (infix[0], expr, self._parse(infix[1]))
+                if len(infix) == 3:
+                    self._match(infix[2])
+        return expr
+    def parse(self, message):
+        'generate a parse tree from a message'
+        self._iter = self._tokenizer(message)
+        self.current = self._iter.next()
+        return self._parse()
+    def eval(self, tree):
+        'recursively evaluate a parse tree using node methods'
+        if not isinstance(tree, tuple):
+            return tree
+        return self._methods[tree[0]](*[self.eval(t) for t in tree[1:]])
+    def __call__(self, message):
+        'parse a message into a parse tree and evaluate if methods given'
+        t = self.parse(message)
+        if self._methods:
+            return self.eval(t)
+        return t
