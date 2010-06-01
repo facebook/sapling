@@ -194,7 +194,7 @@ class kwtemplater(object):
         '''Overwrites selected files expanding/shrinking keywords.'''
         ctx = self.repo[node]
         mf = ctx.manifest()
-        if node is not None:     # commit, record
+        if self.record:
             candidates = [f for f in ctx.files() if f in mf]
         candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
         if candidates:
@@ -209,7 +209,7 @@ class kwtemplater(object):
                 if util.binary(data):
                     continue
                 if expand:
-                    if node is None:
+                    if node is None: # kwexpand/kwshrink
                         ctx = self.repo.filectx(f, fileid=mf[f]).changectx()
                     data, found = self.substitute(data, f, ctx,
                                                   self.re_kw.subn)
@@ -499,7 +499,7 @@ def reposetup(ui, repo):
             n = super(kwrepo, self).commitctx(ctx, error)
             # no lock needed, only called from repo.commit() which already locks
             if not kwt.record:
-                kwt.overwrite(n, True, None)
+                kwt.overwrite(n, True, sorted(ctx.added() + ctx.modified()))
             return n
 
     # monkeypatches
