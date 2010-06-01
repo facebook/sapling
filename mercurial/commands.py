@@ -13,7 +13,7 @@ import hg, util, revlog, bundlerepo, extensions, copies, error
 import patch, help, mdiff, url, encoding, templatekw
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
-import minirst
+import minirst, revset
 
 # Commands start here, listed alphabetically
 
@@ -935,6 +935,15 @@ def showconfig(ui, repo, *values, **opts):
             ui.debug('%s: ' %
                      ui.configsource(section, name, untrusted))
             ui.write('%s=%s\n' % (sectname, value))
+
+def debugrevspec(ui, repo, expr):
+    '''parse and apply a revision specification'''
+    if ui.verbose:
+        tree = revset.parse(expr)
+        ui.note(tree, "\n")
+    func = revset.match(expr)
+    for c in func(repo, range(len(repo))):
+        ui.write("%s\n" % c)
 
 def debugsetparents(ui, repo, rev1, rev2=None):
     """manually set the parents of the current working directory
@@ -3782,6 +3791,8 @@ table = {
         (debugrename,
          [('r', 'rev', '', _('revision to debug'))],
          _('[-r REV] FILE')),
+    "debugrevspec":
+        (debugrevspec, [], ('REVSPEC')),
     "debugsetparents":
         (debugsetparents, [], _('REV1 [REV2]')),
     "debugstate":

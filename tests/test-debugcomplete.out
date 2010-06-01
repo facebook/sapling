@@ -73,6 +73,7 @@ debugindexdot
 debuginstall
 debugrebuildstate
 debugrename
+debugrevspec
 debugsetparents
 debugstate
 debugsub
@@ -201,6 +202,7 @@ debugindexdot:
 debuginstall: 
 debugrebuildstate: rev
 debugrename: rev
+debugrevspec: 
 debugsetparents: 
 debugstate: nodates
 debugsub: rev
