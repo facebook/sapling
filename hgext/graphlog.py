@@ -279,7 +279,7 @@ def goutgoing(ui, repo, dest=None, **opts):
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest, opts.get('branch'))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
-    other = hg.repository(cmdutil.remoteui(ui, opts), dest)
+    other = hg.repository(hg.remoteui(ui, opts), dest)
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
     ui.status(_('comparing with %s\n') % url.hidepassword(dest))
@@ -306,7 +306,7 @@ def gincoming(ui, repo, source="default", **opts):
 
     check_unsupported_flags(opts)
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-    other = hg.repository(cmdutil.remoteui(repo, opts), source)
+    other = hg.repository(hg.remoteui(repo, opts), source)
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
     ui.status(_('comparing with %s\n') % url.hidepassword(source))
     if revs:

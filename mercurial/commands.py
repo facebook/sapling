@@ -594,7 +594,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
-        other = hg.repository(cmdutil.remoteui(repo, opts), dest)
+        other = hg.repository(hg.remoteui(repo, opts), dest)
         revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
         o = repo.findoutgoing(other, force=opts.get('force'))
 
@@ -711,7 +711,7 @@ def clone(ui, source, dest=None, **opts):
     if opts.get('noupdate') and opts.get('updaterev'):
         raise util.Abort(_("cannot specify both --noupdate and --updaterev"))
 
-    r = hg.clone(cmdutil.remoteui(ui, opts), source, dest,
+    r = hg.clone(hg.remoteui(ui, opts), source, dest,
                  pull=opts.get('pull'),
                  stream=opts.get('uncompressed'),
                  rev=opts.get('rev'),
@@ -2071,7 +2071,7 @@ def incoming(ui, repo, source="default", **opts):
     """
     limit = cmdutil.loglimit(opts)
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-    other = hg.repository(cmdutil.remoteui(repo, opts), source)
+    other = hg.repository(hg.remoteui(repo, opts), source)
     ui.status(_('comparing with %s\n') % url.hidepassword(source))
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
     if revs:
@@ -2141,7 +2141,7 @@ def init(ui, dest=".", **opts):
 
     Returns 0 on success.
     """
-    hg.repository(cmdutil.remoteui(ui, opts), dest, create=1)
+    hg.repository(hg.remoteui(ui, opts), dest, create=1)
 
 def locate(ui, repo, *pats, **opts):
     """locate files matching specific patterns
@@ -2379,7 +2379,7 @@ def outgoing(ui, repo, dest=None, **opts):
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
-    other = hg.repository(cmdutil.remoteui(repo, opts), dest)
+    other = hg.repository(hg.remoteui(repo, opts), dest)
     ui.status(_('comparing with %s\n') % url.hidepassword(dest))
     o = repo.findoutgoing(other, force=opts.get('force'))
     if not o:
@@ -2511,7 +2511,7 @@ def pull(ui, repo, source="default", **opts):
     Returns 0 on success, 1 if an update had unresolved files.
     """
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-    other = hg.repository(cmdutil.remoteui(repo, opts), source)
+    other = hg.repository(hg.remoteui(repo, opts), source)
     ui.status(_('pulling from %s\n') % url.hidepassword(source))
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
     if revs:
@@ -2559,7 +2559,7 @@ def push(ui, repo, dest=None, **opts):
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest, opts.get('branch'))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
-    other = hg.repository(cmdutil.remoteui(repo, opts), dest)
+    other = hg.repository(hg.remoteui(repo, opts), dest)
     ui.status(_('pushing to %s\n') % url.hidepassword(dest))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
@@ -3306,7 +3306,7 @@ def summary(ui, repo, **opts):
     if opts.get('remote'):
         t = []
         source, branches = hg.parseurl(ui.expandpath('default'))
-        other = hg.repository(cmdutil.remoteui(repo, {}), source)
+        other = hg.repository(hg.remoteui(repo, {}), source)
         revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
         ui.debug('comparing with %s\n' % url.hidepassword(source))
         repo.ui.pushbuffer()
@@ -3317,7 +3317,7 @@ def summary(ui, repo, **opts):
 
         dest, branches = hg.parseurl(ui.expandpath('default-push', 'default'))
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
-        other = hg.repository(cmdutil.remoteui(repo, {}), dest)
+        other = hg.repository(hg.remoteui(repo, {}), dest)
         ui.debug('comparing with %s\n' % url.hidepassword(dest))
         repo.ui.pushbuffer()
         o = repo.findoutgoing(other)

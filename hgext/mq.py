@@ -1871,7 +1871,7 @@ def clone(ui, source, dest=None, **opts):
         return url + '/.hg/patches'
     if dest is None:
         dest = hg.defaultdest(source)
-    sr = hg.repository(cmdutil.remoteui(ui, opts), ui.expandpath(source))
+    sr = hg.repository(hg.remoteui(ui, opts), ui.expandpath(source))
     if opts['patches']:
         patchespath = ui.expandpath(opts['patches'])
     else:

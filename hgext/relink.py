@@ -39,7 +39,7 @@ def relink(ui, repo, origin=None, **opts):
     if not hasattr(util, 'samefile') or not hasattr(util, 'samedevice'):
         raise util.Abort(_('hardlinks are not supported on this system'))
     src = hg.repository(
-        cmdutil.remoteui(repo, opts),
+        hg.remoteui(repo, opts),
         ui.expandpath(origin or 'default-relink', origin or 'default'))
     if not src.local():
         raise util.Abort('must specify local origin repository')

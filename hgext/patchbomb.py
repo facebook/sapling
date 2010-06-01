@@ -242,7 +242,7 @@ def patchbomb(ui, repo, *revs, **opts):
         revs, checkout = hg.addbranchrevs(repo, repo, branches, revs)
         if revs:
             revs = [repo.lookup(rev) for rev in revs]
-        other = hg.repository(cmdutil.remoteui(repo, opts), dest)
+        other = hg.repository(hg.remoteui(repo, opts), dest)
         ui.status(_('comparing with %s\n') % dest)
         o = repo.findoutgoing(other)
         if not o:

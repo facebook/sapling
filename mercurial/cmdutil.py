@@ -111,32 +111,6 @@ def loglimit(opts):
         limit = None
     return limit
 
-def remoteui(src, opts):
-    'build a remote ui from ui or repo and opts'
-    if hasattr(src, 'baseui'): # looks like a repository
-        dst = src.baseui.copy() # drop repo-specific config
-        src = src.ui # copy target options from repo
-    else: # assume it's a global ui object
-        dst = src.copy() # keep all global options
-
-    # copy ssh-specific options
-    for o in 'ssh', 'remotecmd':
-        v = opts.get(o) or src.config('ui', o)
-        if v:
-            dst.setconfig("ui", o, v)
-
-    # copy bundle-specific options
-    r = src.config('bundle', 'mainreporoot')
-    if r:
-        dst.setconfig('bundle', 'mainreporoot', r)
-
-    # copy auth and http_proxy section settings
-    for sect in ('auth', 'http_proxy'):
-        for key, val in src.configitems(sect):
-            dst.setconfig(sect, key, val)
-
-    return dst
-
 def revpair(repo, revs):
     '''return pair of nodes, given list of revisions. second item can
     be None, meaning use working dir.'''

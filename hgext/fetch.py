@@ -61,7 +61,7 @@ def fetch(ui, repo, source='default', **opts):
             raise util.Abort(_('multiple heads in this branch '
                                '(use "hg heads ." and "hg merge" to merge)'))
 
-        other = hg.repository(cmdutil.remoteui(repo, opts),
+        other = hg.repository(hg.remoteui(repo, opts),
                               ui.expandpath(source))
         ui.status(_('pulling from %s\n') %
                   url.hidepassword(ui.expandpath(source)))
