@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, glob, tempfile
 import util, templater, patch, error, encoding, templatekw
 import match as _match
-import similar
+import similar, revset
 
 revrangesep = ':'
 
@@ -149,7 +149,13 @@ def revrange(repo, revs):
 
     seen, l = set(), []
     for spec in revs:
-        if revrangesep in spec:
+        if spec and not (
+            spec.startswith(revrangesep) or spec.endswith(revrangesep)):
+            m = revset.match(spec)
+            for r in m(repo, range(len(repo))):
+                l.append(r)
+            seen.update(l)
+        elif revrangesep in spec:
             start, end = spec.split(revrangesep, 1)
             start = revfix(repo, start, 0)
             end = revfix(repo, end, len(repo) - 1)
