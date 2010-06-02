@@ -238,8 +238,12 @@ class queue(object):
     def __init__(self, ui, path, patchdir=None):
         self.basepath = path
         try:
-            fh = open(os.path.join(path, '.queue'))
-            curpath = os.path.join(path, fh.read().rstrip())
+            fh = open(os.path.join(path, 'patches.queue'))
+            cur = fh.read().rstrip()
+            if not cur:
+                curpath = os.path.join(path, 'patches')
+            else:
+                curpath = os.path.join(path, 'patches-' + cur)
         except IOError:
             curpath = os.path.join(path, 'patches')
         self.path = patchdir or curpath
@@ -2562,11 +2566,14 @@ def qqueue(ui, repo, name=None, **opts):
     q = repo.mq
 
     _defaultqueue = 'patches'
-    _allqueues = '.queues'
-    _activequeue = '.queue'
+    _allqueues = 'patches.queues'
+    _activequeue = 'patches.queue'
 
     def _getcurrent():
-        return os.path.basename(q.path)
+        cur = os.path.basename(q.path)
+        if cur.startswith('patches-'):
+            cur = cur[8:]
+        return cur
 
     def _noqueues():
         try:
@@ -2595,13 +2602,20 @@ def qqueue(ui, repo, name=None, **opts):
             raise util.Abort(_('patches applied - cannot set new queue active'))
 
         fh = repo.opener(_activequeue, 'w')
-        fh.write(name)
+        if name != 'patches':
+            fh.write(name)
         fh.close()
 
     def _addqueue(name):
         fh = repo.opener(_allqueues, 'a')
         fh.write('%s\n' % (name,))
         fh.close()
+
+    def _validname(name):
+        for n in name:
+            if n in ':\\/.':
+                return False
+        return True
 
     if not name or opts.get('list'):
         current = _getcurrent()
@@ -2612,6 +2626,10 @@ def qqueue(ui, repo, name=None, **opts):
             else:
                 ui.write('\n')
         return
+
+    if not _validname(name):
+        raise util.Abort(
+                _('invalid queue name, may not contain the characters ":\\/."'))
 
     existing = _getqueues()
 
@@ -2631,13 +2649,13 @@ def qqueue(ui, repo, name=None, **opts):
         if name == current:
             raise util.Abort(_('cannot delete currently active queue'))
 
-        fh = repo.opener('.queues.new', 'w')
+        fh = repo.opener('patches.queues.new', 'w')
         for queue in existing:
             if queue == name:
                 continue
             fh.write('%s\n' % (queue,))
         fh.close()
-        util.rename(repo.join('.queues.new'), repo.join(_allqueues))
+        util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
     else:
         _setactive(name)
 

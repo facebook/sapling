@@ -21,3 +21,12 @@ abort: cannot delete currently active queue
 popping otherstuff
 patch queue now empty
 patches (active)
+%% tricky cases
+patches
+store (active)
+popping test
+patch queue now empty
+somestuff
+%% invalid names
+abort: invalid queue name, may not contain the characters ":\/."
+abort: invalid queue name, may not contain the characters ":\/."

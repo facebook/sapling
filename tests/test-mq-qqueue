@@ -44,4 +44,17 @@ hg qpop -a
 hg qqueue patches
 hg qqueue foo --delete
 hg qqueue
+
+echo %% tricky cases
+hg qqueue store --create
+hg qnew test
+hg qqueue
+hg qpop -a
+hg qqueue patches
+hg qun
+
+echo %% invalid names
+hg qqueue test/../../bar --create
+hg qqueue . --create
+
 cd ..
