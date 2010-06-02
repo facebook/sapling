@@ -624,8 +624,13 @@ class GitHandler(object):
         def determine_wants(refs):
             if heads:
                 want = []
+                # contains pairs of ('refs/(heads|tags|...)/foo', 'foo')
+                # if ref is just '<foo>', then we get ('foo', 'foo')
+                stripped_refs = [
+                    (r, r[r.find('/', r.find('/')+1)+1:])
+                        for r in refs]
                 for h in heads:
-                    r = [ref for ref in refs if ref.endswith('/'+h)]
+                    r = [pair[0] for pair in stripped_refs if pair[1] == h]
                     if not r:
                         raise hgutil.Abort("ref %s not found on remote server" % h)
                     elif len(r) == 1:
