@@ -73,9 +73,9 @@
 
 # hgext.churn = /home/user/hg/hg/contrib/churn.py
 
-### win32text - line ending conversion filters for the Windows platform
+### eol - automatic management of line endings
 
-# hgext.win32text =
+# hgext.eol =
 
 ### --- hgk additional configuration
 

@@ -294,24 +294,9 @@ the command.
    where the standard shell I/O redirection operators often have
    strange effects and may corrupt the contents of your files.
 
-The most common usage is for LF <-> CRLF translation on Windows. For
-this, use the "smart" converters which check for binary files::
-
-  [extensions]
-  hgext.win32text =
-  [encode]
-  ** = cleverencode:
-  [decode]
-  ** = cleverdecode:
-
-or if you only want to translate certain files::
-
-  [extensions]
-  hgext.win32text =
-  [encode]
-  **.txt = dumbencode:
-  [decode]
-  **.txt = dumbdecode:
+This filter mechanism is used internally by the ``eol`` extension to
+translate line ending characters between Windows (CRLF) and Unix (LF)
+format. We suggest you use the ``eol`` extension for convenience.
 
 
 ``defaults``
