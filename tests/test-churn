@@ -59,6 +59,12 @@ hg --config extensions.color= churn --config color.mode=ansi \
 echo % changeset number churn
 hg churn -c
 
+echo 'with space = no-space' >> ../aliases
+echo a >> a
+hg commit -m a -u 'with space' -d 15:00
+echo % churn with space in alias
+hg churn --aliases ../aliases -r tip
+
 cd ..
 
 # issue 833: ZeroDivisionError

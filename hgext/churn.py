@@ -115,7 +115,7 @@ def churn(ui, repo, *pats, **opts):
     It is possible to map alternate email addresses to a main address
     by providing a file using the following format::
 
-      <alias email> <actual email>
+      <alias email> = <actual email>
 
     Such a file may be specified with the --aliases option, otherwise
     a .hgchurn file will be looked for in the working directory root.
@@ -129,9 +129,8 @@ def churn(ui, repo, *pats, **opts):
         aliases = repo.wjoin('.hgchurn')
     if aliases:
         for l in open(aliases, "r"):
-            l = l.strip()
-            alias, actual = l.split()
-            amap[alias] = actual
+            alias, actual = l.split('=' in l and '=' or None, 1)
+            amap[alias.strip()] = actual.strip()
 
     rate = countrate(ui, repo, amap, *pats, **opts).items()
     if not rate:
