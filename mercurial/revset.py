@@ -12,8 +12,11 @@ import match as _match
 elements = {
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
     "-": (19, ("negate", 19), ("minus", 19)),
-    "..": (17, None, ("dagrange", 17)),
-    ":": (15, None, ("range", 15)),
+    "::": (17, ("dagrangepre", 17), ("dagrange", 17),
+           ("dagrangepost", 17)),
+    "..": (17, ("dagrangepre", 17), ("dagrange", 17),
+           ("dagrangepost", 17)),
+    ":": (15, ("rangepre", 15), ("range", 15), ("rangepost", 15)),
     "not": (10, ("not", 10)),
     "!": (10, ("not", 10)),
     "and": (5, None, ("and", 5)),
@@ -36,11 +39,14 @@ def tokenize(program):
         c = program[pos]
         if c.isspace(): # skip inter-token whitespace
             pass
-        elif c in "():,-|&+!": # handle simple operators
-            yield (c, None)
+        elif c == ':' and program[pos:pos + 2] == '::': # look ahead carefully
+            yield ('::', None)
+            pos += 1 # skip ahead
         elif c == '.' and program[pos:pos + 2] == '..': # look ahead carefully
             yield ('..', None)
             pos += 1 # skip ahead
+        elif c in "():,-|&+!": # handle simple operators
+            yield (c, None)
         elif c in '"\'': # handle quoted strings
             pos += 1
             s = pos
@@ -125,6 +131,12 @@ def rangeset(repo, subset, x, y):
     if m < n:
         return range(m, n + 1)
     return range(m, n - 1, -1)
+
+def rangepreset(repo, subset, x):
+    return range(0, getset(repo, subset, x)[-1] + 1)
+
+def rangepostset(repo, subset, x):
+    return range(getset(repo, subset, x)[0], len(repo))
 
 def dagrangeset(repo, subset, x, y):
     return andset(repo, subset,
@@ -469,7 +481,11 @@ methods = {
     "negate": negate,
     "minus": minusset,
     "range": rangeset,
+    "rangepre": rangepreset,
+    "rangepost": rangepostset,
     "dagrange": dagrangeset,
+    "dagrangepre": ancestors,
+    "dagrangepost": descendants,
     "string": stringset,
     "symbol": symbolset,
     "and": andset,
