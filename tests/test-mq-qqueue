@@ -51,7 +51,7 @@ hg qqueue
 
 echo %% tricky cases
 hg qqueue store --create
-hg qnew test
+hg qnew journal
 hg qqueue
 hg qpop -a
 hg qqueue patches

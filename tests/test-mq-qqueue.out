@@ -28,7 +28,7 @@ patches (active)
 %% tricky cases
 patches
 store (active)
-popping test
+popping journal
 patch queue now empty
 somestuff
 %% invalid names
