@@ -132,25 +132,10 @@ def rangeset(repo, subset, x, y):
         return range(m, n + 1)
     return range(m, n - 1, -1)
 
-def rangepreset(repo, subset, x):
-    return range(0, getset(repo, subset, x)[-1] + 1)
-
-def rangepostset(repo, subset, x):
-    return range(getset(repo, subset, x)[0], len(repo))
-
-def dagrangeset(repo, subset, x, y):
-    return andset(repo, subset,
-                  ('func', ('symbol', 'descendants'), x),
-                  ('func', ('symbol', 'ancestors'), y))
-
 def andset(repo, subset, x, y):
-    if weight(x, True) > weight(y, True):
-        x, y = y, x
     return getset(repo, getset(repo, subset, x), y)
 
 def orset(repo, subset, x, y):
-    if weight(y, False) < weight(x, False):
-        x, y = y, x
     s = set(getset(repo, subset, x))
     s |= set(getset(repo, [r for r in subset if r not in s], y))
     return [r for r in subset if r in s]
@@ -158,11 +143,6 @@ def orset(repo, subset, x, y):
 def notset(repo, subset, x):
     s = set(getset(repo, subset, x))
     return [r for r in subset if r not in s]
-
-def minusset(repo, subset, x, y):
-    if weight(x, True) > weight(y, True):
-        return getset(repo, notset(repo, subset, y), x)
-    return notset(repo, getset(repo, subset, x), y)
 
 def listset(repo, subset, a, b):
     raise "can't use a list in this context"
@@ -479,13 +459,7 @@ symbols = {
 
 methods = {
     "negate": negate,
-    "minus": minusset,
     "range": rangeset,
-    "rangepre": rangepreset,
-    "rangepost": rangepostset,
-    "dagrange": dagrangeset,
-    "dagrangepre": ancestors,
-    "dagrangepost": descendants,
     "string": stringset,
     "symbol": symbolset,
     "and": andset,
@@ -493,54 +467,82 @@ methods = {
     "not": notset,
     "list": listset,
     "func": func,
-    "group": lambda r, s, x: getset(r, s, x),
 }
 
-def weight(x, small):
+def optimize(x, small):
+    if x == None:
+        return 0, x
+
     smallbonus = 1
     if small:
         smallbonus = .5
 
     op = x[0]
-    if op in 'string symbol negate':
-        return smallbonus # single revisions are small
+    if op == '-':
+        return optimize(('and', x[1], ('not', x[2])), small)
+    elif op == 'dagrange':
+        return optimize(('and', ('func', ('symbol', 'descendants'), x[1]),
+                         ('func', ('symbol', 'ancestors'), x[2])), small)
+    elif op == 'dagrangepre':
+        return optimize(('func', ('symbol', 'ancestors'), x[1]), small)
+    elif op == 'dagrangepost':
+        return optimize(('func', ('symbol', 'descendants'), x[1]), small)
+    elif op == 'rangepre':
+        return optimize(('range', ('string', '0'), x[1]), small)
+    elif op == 'rangepost':
+        return optimize(('range', x[1], ('string', 'tip')), small)
+    elif op in 'string symbol negate':
+        return smallbonus, x # single revisions are small
     elif op == 'and' or op == 'dagrange':
-        return min(weight(x[1], True), weight(x[2], True))
-    elif op in 'or -':
-        return max(weight(x[1], False), weight(x[2], False))
+        wa, ta = optimize(x[1], True)
+        wb, tb = optimize(x[2], True)
+        w = min(wa, wb)
+        if wa > wb:
+            return w, (op, tb, ta)
+        return w, (op, ta, tb)
+    elif op == 'or':
+        wa, ta = optimize(x[1], False)
+        wb, tb = optimize(x[2], False)
+        if wb < wa:
+            wb, wa = wa, wb
+        return max(wa, wb), (op, ta, tb)
     elif op == 'not':
-        return weight(x[1], not small)
+        o = optimize(x[1], not small)
+        return o[0], (op, o[1])
     elif op == 'group':
-        return weight(x[1], small)
-    elif op == 'range':
-        return weight(x[1], small) + weight(x[2], small)
+        return optimize(x[1], small)
+    elif op in 'rangepre rangepost dagrangepre dagrangepost':
+        wa, ta = optimize(x[1], small)
+        return wa + 1, (op, ta)
+    elif op in 'range list':
+        wa, ta = optimize(x[1], small)
+        wb, tb = optimize(x[2], small)
+        return wa + wb, (op, ta, tb)
     elif op == 'func':
         f = getstring(x[1], "not a symbol")
+        wa, ta = optimize(x[2], small)
         if f in "grep date user author keyword branch file":
-            return 10 # slow
-        elif f in "modifies adds removes":
-            return 30 # slower
+            w = 10 # slow
+        elif f in "modifies adds removes outgoing":
+            w = 30 # slower
         elif f == "contains":
-            return 100 # very slow
+            w = 100 # very slow
         elif f == "ancestor":
-            return (weight(x[1][1], small) +
-                    weight(x[1][2], small)) * smallbonus
+            w = 1 * smallbonus
         elif f == "reverse limit":
-            return weight(x[1], small)
+            w = 0
         elif f in "sort":
-            base = x[1]
-            spec = "rev"
-            if x[1][0] == 'list':
-                base = x[1][1]
-                spec = x[1][2]
-            return max(weight(base, small), 10)
+            w = 10 # assume most sorts look at changelog
         else:
-            return 1
+            w = 1
+        return w + wa, (op, x[1], ta)
+    return 1, x
 
 parse = parser.parser(tokenize, elements).parse
 
 def match(spec):
     tree = parse(spec)
+    weight, tree = optimize(tree, True)
     def mfunc(repo, subset):
         return getset(repo, subset, tree)
     return mfunc
