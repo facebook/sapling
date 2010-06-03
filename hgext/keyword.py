@@ -81,7 +81,6 @@ like CVS' $Log$, are not supported. A keyword template map "Log =
 from mercurial import commands, cmdutil, dispatch, filelog, revlog, extensions
 from mercurial import patch, localrepo, templater, templatefilters, util, match
 from mercurial.hgweb import webcommands
-from mercurial.node import nullid
 from mercurial.i18n import _
 import re, shutil, tempfile
 
@@ -287,7 +286,7 @@ def _status(ui, repo, kwt, *pats, **opts):
 
 def _kwfwrite(ui, repo, expand, *pats, **opts):
     '''Selects files and passes them to kwtemplater.overwrite.'''
-    if repo.dirstate.parents()[1] != nullid:
+    if len(repo[None].parents()) > 1:
         raise util.Abort(_('outstanding uncommitted merge'))
     kwt = kwtools['templater']
     wlock = repo.wlock()
