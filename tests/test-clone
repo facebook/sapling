@@ -29,8 +29,8 @@ cat a
 hg verify
 
 echo
-echo % no update
-hg clone -U . ../c
+echo % no update, with debug option
+hg --debug clone -U . ../c
 cd ../c
 cat a 2>/dev/null || echo "a not present"
 hg verify

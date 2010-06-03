@@ -15,7 +15,8 @@ crosschecking files in changesets and manifests
 checking files
 2 files, 11 changesets, 11 total revisions
 
-% no update
+% no update, with debug option
+linked 8 files
 a not present
 checking changesets
 checking manifests
