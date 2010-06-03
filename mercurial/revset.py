@@ -424,6 +424,11 @@ def outgoing(repo, subset, x):
     print 'out', dest, o
     return [r for r in subset if r in o]
 
+def tagged(repo, subset, x):
+    cl = repo.changelog
+    s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
+    return [r for r in subset if r in s]
+
 symbols = {
     "ancestor": ancestor,
     "ancestors": ancestors,
@@ -455,6 +460,7 @@ symbols = {
     "adds": adds,
     "removes": removes,
     "outgoing": outgoing,
+    "tagged": tagged,
 }
 
 methods = {
