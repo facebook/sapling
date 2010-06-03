@@ -12,6 +12,10 @@ patch queue now empty
 %% switch queue
 foo (active)
 patches
+%% fail creating queue with already existing name
+abort: queue "foo" already exists
+foo (active)
+patches
 %% unapplied patches
 %% fail switching back
 abort: patches applied - cannot set new queue active

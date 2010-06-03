@@ -2633,17 +2633,17 @@ def qqueue(ui, repo, name=None, **opts):
 
     existing = _getqueues()
 
-    if name not in existing and opts.get('delete'):
-        raise util.Abort(_('cannot delete queue that does not exist'))
-    elif name not in existing and not opts.get('create'):
-        raise util.Abort(_('use --create to create a new queue'))
-
     if opts.get('create'):
+        if name in existing:
+            raise util.Abort(_('queue "%s" already exists') % name)
         if _noqueues():
             _addqueue(_defaultqueue)
         _addqueue(name)
         _setactive(name)
     elif opts.get('delete'):
+        if name not in existing:
+            raise util.Abort(_('cannot delete queue that does not exist'))
+
         current = _getcurrent()
 
         if name == current:
@@ -2657,6 +2657,8 @@ def qqueue(ui, repo, name=None, **opts):
         fh.close()
         util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
     else:
+        if name not in existing:
+            raise util.Abort(_('use --create to create a new queue'))
         _setactive(name)
 
 def reposetup(ui, repo):
