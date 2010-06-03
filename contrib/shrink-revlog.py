@@ -190,10 +190,7 @@ def shrink(ui, repo, **opts):
 
     ui.write(_('shrinking %s\n') % indexfn)
     prefix = os.path.basename(indexfn)[:-1]
-    (tmpfd, tmpindexfn) = tempfile.mkstemp(dir=os.path.dirname(indexfn),
-                                           prefix=prefix,
-                                           suffix='.i')
-    os.close(tmpfd)
+    tmpindexfn = util.mktempcopy(indexfn, emptyok=True)
 
     r1 = revlog.revlog(util.opener(os.getcwd(), audit=False), indexfn)
     r2 = revlog.revlog(util.opener(os.getcwd(), audit=False), tmpindexfn)
@@ -254,9 +251,6 @@ def shrink(ui, repo, **opts):
             # copy files
             util.os_link(indexfn, oldindexfn)
             ignoremissing(util.os_link)(datafn, olddatafn)
-
-            # mkstemp() creates files only readable by the owner
-            os.chmod(tmpindexfn, os.stat(indexfn).st_mode)
 
             # rename
             util.rename(tmpindexfn, indexfn)
