@@ -1024,6 +1024,8 @@ def walkchangerevs(repo, match, opts, prepare):
     else:
         defrange = '-1:0'
     revs = revrange(repo, opts['rev'] or [defrange])
+    if not revs:
+        return []
     wanted = set()
     slowpath = match.anypats() or (match.files() and opts.get('removed'))
     fncache = {}
