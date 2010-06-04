@@ -82,7 +82,7 @@ echo % list bookmarks
 hg bookmarks
 
 echo % look up stripped bookmark name
-hg log -r 'x  y'
+hg log -r '"x  y"'
 
 echo % reject bookmark name with newline
 hg bookmark '

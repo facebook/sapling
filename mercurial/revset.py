@@ -116,6 +116,8 @@ def negate(repo, subset, x):
 
 def stringset(repo, subset, x):
     x = repo[x].rev()
+    if x == -1 and len(subset) == len(repo):
+        return [-1]
     if x in subset:
         return [x]
     return []
@@ -517,9 +519,6 @@ def optimize(x, small):
         return o[0], (op, o[1])
     elif op == 'group':
         return optimize(x[1], small)
-    elif op in 'rangepre rangepost dagrangepre dagrangepost':
-        wa, ta = optimize(x[1], small)
-        return wa + 1, (op, ta)
     elif op in 'range list':
         wa, ta = optimize(x[1], small)
         wb, tb = optimize(x[2], small)
