@@ -100,18 +100,14 @@ def rebase(ui, repo, **opts):
 
         if contf or abortf:
             if contf and abortf:
-                raise error.ParseError('rebase',
-                                       _('cannot use both abort and continue'))
+                raise util.Abort(_('cannot use both abort and continue'))
             if collapsef:
-                raise error.ParseError(
-                    'rebase', _('cannot use collapse with continue or abort'))
-
+                raise util.Abort(
+                    _('cannot use collapse with continue or abort'))
             if detachf:
-                raise error.ParseError(
-                    'rebase', _('cannot use detach with continue or abort'))
-
+                raise util.Abort(_('cannot use detach with continue or abort'))
             if srcf or basef or destf:
-                raise error.ParseError('rebase',
+                raise util.Abort(
                     _('abort and continue do not allow specifying revisions'))
 
             (originalwd, target, state, collapsef, keepf,
@@ -120,15 +116,14 @@ def rebase(ui, repo, **opts):
                 return abort(repo, originalwd, target, state)
         else:
             if srcf and basef:
-                raise error.ParseError('rebase', _('cannot specify both a '
-                                                   'revision and a base'))
+                raise util.Abort(_('cannot specify both a '
+                                   'revision and a base'))
             if detachf:
                 if not srcf:
-                    raise error.ParseError(
-                      'rebase', _('detach requires a revision to be specified'))
+                    raise util.Abort(
+                        _('detach requires a revision to be specified'))
                 if basef:
-                    raise error.ParseError(
-                        'rebase', _('cannot specify a base with detach'))
+                    raise util.Abort(_('cannot specify a base with detach'))
 
             cmdutil.bail_if_changed(repo)
             result = buildstate(repo, destf, srcf, basef, detachf)
@@ -144,8 +139,7 @@ def rebase(ui, repo, **opts):
 
         if keepbranchesf:
             if extrafn:
-                raise error.ParseError(
-                    'rebase', _('cannot use both keepbranches and extrafn'))
+                raise util.Abort(_('cannot use both keepbranches and extrafn'))
             def extrafn(ctx, extra):
                 extra['branch'] = ctx.branch()
 
