@@ -108,7 +108,9 @@ _styles = {'grep.match': 'red bold',
            'status.ignored': 'black bold',
            'status.modified': 'blue bold',
            'status.removed': 'red bold',
-           'status.unknown': 'magenta bold underline'}
+           'status.unknown': 'magenta bold underline',
+           'ui.labeled': 'none',
+           'ui.plain': 'none'}
 
 
 def render_effects(text, effects):
@@ -142,6 +144,8 @@ def configstyles(ui):
 
 _buffers = None
 def style(msg, label):
+    if label in ('ui.plain', 'ui.labeled'):
+        return msg
     effects = []
     for l in label.split():
         s = _styles.get(l, '')

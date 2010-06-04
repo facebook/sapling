@@ -546,5 +546,9 @@ class ui(object):
 
         ui.write(s, 'label') is equivalent to
         ui.write(ui.label(s, 'label')).
+
+        Callers of ui.label() should pass labeled text back to
+        ui.write() with a label of 'ui.labeled' so implementations know
+        that the text has already been escaped and marked up.
         '''
         return msg

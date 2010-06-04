@@ -3280,22 +3280,22 @@ def summary(ui, repo, **opts):
     cleanworkdir = False
 
     if len(parents) > 1:
-        t += _(' (merge)')
+        t += ui.label(_(' (merge)'), 'ui.plain')
     elif branch != parents[0].branch():
-        t += _(' (new branch)')
+        t += ui.label(_(' (new branch)'), 'ui.plain')
     elif (parents[0].extra().get('close') and
           pnode in repo.branchheads(branch, closed=True)):
-        t += _(' (head closed)')
+        t += ui.label(_(' (head closed)'), 'ui.plain')
     elif (not st[0] and not st[1] and not st[2] and not st[7]):
-        t += _(' (clean)')
+        t += ui.label(_(' (clean)'), 'ui.plain')
         cleanworkdir = True
     elif pnode not in bheads:
-        t += _(' (new branch head)')
+        t += ui.label(_(' (new branch head)'), 'ui.plain')
 
     if cleanworkdir:
-        ui.status(_('commit: %s\n') % t.strip())
+        ui.status(_('commit: %s\n') % t.strip(), label='ui.labeled')
     else:
-        ui.write(_('commit: %s\n') % t.strip())
+        ui.write(_('commit: %s\n') % t.strip(), label='ui.labeled')
 
     # all ancestors of branch heads - all ancestors of parent = new csets
     new = [0] * len(repo)
