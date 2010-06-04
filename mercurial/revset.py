@@ -486,7 +486,7 @@ def optimize(x, small):
         smallbonus = .5
 
     op = x[0]
-    if op == '-':
+    if op == 'minus':
         return optimize(('and', x[1], ('not', x[2])), small)
     elif op == 'dagrange':
         return optimize(('and', ('func', ('symbol', 'descendants'), x[1]),
