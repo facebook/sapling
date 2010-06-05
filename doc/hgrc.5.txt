@@ -781,15 +781,20 @@ Controls generic server settings.
 
 ``trusted``
 """""""""""
-For security reasons, Mercurial will not use the settings in the
+
+Mercurial will not use the settings in the
 ``.hg/hgrc`` file from a repository if it doesn't belong to a trusted
-user or to a trusted group. The main exception is the web interface,
-which automatically uses some safe settings, since it's common to
-serve repositories from different users.
+user or to a trusted group, as various hgrc features allow arbitrary
+commands to be run. This issue is often encountered when configuring
+hooks or extensions for shared repositories or servers. However,
+the web interface will use some safe settings from the ``[web]``
+section.
 
 This section specifies what users and groups are trusted. The
 current user is always trusted. To trust everybody, list a user or a
-group with name ``*``.
+group with name ``*``. These settings must be placed in an
+*already-trusted file* to take effect, such as ``$HOME/.hgrc`` of the
+user or service running Mercurial.
 
 ``users``
   Comma-separated list of trusted users.
