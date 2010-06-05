@@ -1,4 +1,4 @@
-hg: config error at $HGRCPATH:1: 'invalid'
+hg: parse error at $HGRCPATH:1: invalid
 updating to branch default
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 [paths]
@@ -6,10 +6,10 @@ default = .../foo%bar
 default = .../foo%bar
 bundle.mainreporoot=.../foobar
 paths.default=.../foo%bar
-hg: config error at $HGRCPATH:2: '  x = y'
+hg: parse error at $HGRCPATH:2:   x = y
 foo.bar=a\nb\nc\nde\nfg
 foo.baz=bif cb
-hg: config error at $HGRCPATH:1: cannot include /path/to/nowhere/no-such-file (No such file or directory)
+hg: parse error at $HGRCPATH:1: cannot include /path/to/nowhere/no-such-file (No such file or directory)
 % username expansion
 John Doe
 ui.username=$FAKEUSER

@@ -36,7 +36,7 @@ class Abort(Exception):
 class ConfigError(Abort):
     'Exception raised when parsing config files'
 
-class ParseError(Abort):
+class ParseError(Exception):
     'Exception raised when parsing config files (msg[, pos])'
 
 class RepoError(Exception):

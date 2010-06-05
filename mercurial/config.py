@@ -103,10 +103,9 @@ class config(object):
                     try:
                         include(inc, remap=remap, sections=sections)
                     except IOError, inst:
-                        raise error.ParseError(
-                            _("cannot include %s (%s)")
-                            % (inc, inst.strerror),
-                            msg, "%s:%s" % (src, line))
+                        raise error.ParseError(_("cannot include %s (%s)")
+                                               % (inc, inst.strerror),
+                                               "%s:%s" % (src, line))
                 continue
             if emptyre.match(l):
                 continue
