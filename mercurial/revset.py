@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import parser, util, hg, error
+import parser, util, error
 import match as _match
 
 elements = {
@@ -410,6 +410,7 @@ def roots(repo, subset, x):
     return [r for r in s if r not in cs]
 
 def outgoing(repo, subset, x):
+    import hg # avoid start-up nasties
     l = getlist(x)
     if len(l) == 1:
         dest = getstring(l[0], "outgoing wants a repo path")
