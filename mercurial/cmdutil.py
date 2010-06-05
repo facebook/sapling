@@ -153,7 +153,8 @@ def revrange(repo, revs):
             spec.startswith(revrangesep) or spec.endswith(revrangesep)):
             m = revset.match(spec)
             for r in m(repo, range(len(repo))):
-                l.append(r)
+                if r not in seen:
+                    l.append(r)
             seen.update(l)
         elif revrangesep in spec:
             start, end = spec.split(revrangesep, 1)
