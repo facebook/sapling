@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import parser, util, hg
+import parser, util, hg, error
 import match as _match
 
 elements = {
@@ -40,13 +40,13 @@ def tokenize(program):
         if c.isspace(): # skip inter-token whitespace
             pass
         elif c == ':' and program[pos:pos + 2] == '::': # look ahead carefully
-            yield ('::', None)
+            yield ('::', None, pos)
             pos += 1 # skip ahead
         elif c == '.' and program[pos:pos + 2] == '..': # look ahead carefully
-            yield ('..', None)
+            yield ('..', None, pos)
             pos += 1 # skip ahead
         elif c in "():,-|&+!": # handle simple operators
-            yield (c, None)
+            yield (c, None, pos)
         elif c in '"\'': # handle quoted strings
             pos += 1
             s = pos
@@ -56,11 +56,11 @@ def tokenize(program):
                     pos += 2
                     continue
                 if d == c:
-                    yield ('string', program[s:pos].decode('string-escape'))
+                    yield ('string', program[s:pos].decode('string-escape'), s)
                     break
                 pos += 1
             else:
-                raise "unterminated string"
+                raise error.ParseError("unterminated string", s)
         elif c.isalnum() or c in '.': # gather up a symbol/keyword
             s = pos
             pos += 1
@@ -74,21 +74,21 @@ def tokenize(program):
                 pos += 1
             sym = program[s:pos]
             if sym in keywords: # operator keywords
-                yield (sym, None)
+                yield (sym, None, s)
             else:
-                yield ('symbol', sym)
+                yield ('symbol', sym, s)
             pos -= 1
         else:
-            raise "syntax error at %d" % pos
+            raise error.ParseError("syntax error", pos)
         pos += 1
-    yield ('end', None)
+    yield ('end', None, pos)
 
 # helpers
 
 def getstring(x, err):
     if x[0] == 'string' or x[0] == 'symbol':
         return x[1]
-    raise err
+    raise error.ParseError(err)
 
 def getlist(x):
     if not x:
@@ -100,12 +100,12 @@ def getlist(x):
 def getpair(x, err):
     l = getlist(x)
     if len(l) != 2:
-        raise err
+        raise error.ParseError(err)
     return l
 
 def getset(repo, subset, x):
     if not x:
-        raise "missing argument"
+        raise error.ParseError("missing argument")
     return methods[x[0]](repo, subset, *x[1:])
 
 # operator methods
@@ -124,7 +124,7 @@ def stringset(repo, subset, x):
 
 def symbolset(repo, subset, x):
     if x in symbols:
-        raise "can't use %s here" % x
+        raise error.ParseError("can't use %s here" % x)
     return stringset(repo, subset, x)
 
 def rangeset(repo, subset, x, y):
@@ -147,12 +147,12 @@ def notset(repo, subset, x):
     return [r for r in subset if r not in s]
 
 def listset(repo, subset, a, b):
-    raise "can't use a list in this context"
+    raise error.ParseError("can't use a list in this context")
 
 def func(repo, subset, a, b):
     if a[0] == 'symbol' and a[1] in symbols:
         return symbols[a[1]](repo, subset, b)
-    raise "that's not a function: %s" % a[1]
+    raise error.ParseError("not a function: %s" % a[1])
 
 # functions
 
@@ -190,7 +190,7 @@ def limit(repo, subset, x):
     try:
         lim = int(getstring(l[1], "limit wants a number"))
     except ValueError:
-        raise "wants a number"
+        raise error.ParseError("limit expects a number")
     return getset(repo, subset, l[0])[:lim]
 
 def children(repo, subset, x):
@@ -216,7 +216,7 @@ def ancestor(repo, subset, x):
     a = getset(repo, subset, l[0])
     b = getset(repo, subset, l[1])
     if len(a) > 1 or len(b) > 1:
-        raise "arguments to ancestor must be single revisions"
+        raise error.ParseError("ancestor args must be single revisions")
     return [repo[a[0]].ancestor(repo[b[0]]).rev()]
 
 def ancestors(repo, subset, x):
@@ -231,7 +231,7 @@ def descendants(repo, subset, x):
 
 def follow(repo, subset, x):
     if x:
-        raise "follow takes no args"
+        raise error.ParseError("follow takes no args")
     p = repo['.'].rev()
     s = set(repo.changelog.ancestors(p)) | set([p])
     return [r for r in subset if r in s]
@@ -336,7 +336,7 @@ def removes(repo, subset, x):
 
 def merge(repo, subset, x):
     if x:
-        raise "merge takes no args"
+        raise error.ParseError("merge takes no args")
     cl = repo.changelog
     return [r for r in subset if cl.parentrevs(r)[1] != -1]
 
@@ -390,7 +390,7 @@ def sort(repo, subset, x):
             elif k == '-date':
                 e.append(-c.date()[0])
             else:
-                raise "unknown sort key %r" % k
+                raise error.ParseError("unknown sort key %r" % k)
         e.append(r)
         l.append(e)
     l.sort()

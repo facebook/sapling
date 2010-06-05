@@ -15,6 +15,8 @@
 # an action is a tree node name, a tree label, and an optional match
 # __call__(program) parses program into a labelled tree
 
+import error
+
 class parser(object):
     def __init__(self, tokenizer, elements, methods=None):
         self._tokenizer = tokenizer
@@ -31,14 +33,15 @@ class parser(object):
     def _match(self, m):
         'make sure the tokenizer matches an end condition'
         if self.current[0] != m:
-            raise SyntaxError(self.current)
+            raise error.ParseError("unexpected token: %s" % self.current[2],
+                                   pos)
         self._advance()
     def _parse(self, bind=0):
-        token, value = self._advance()
+        token, value, pos = self._advance()
         # handle prefix rules on current token
         prefix = self._elements[token][1]
         if not prefix:
-            raise SyntaxError("not a prefix: %s" % token)
+            raise error.ParseError("not a prefix: %s" % token, pos)
         if len(prefix) == 1:
             expr = (prefix[0], value)
         else:
@@ -51,7 +54,7 @@ class parser(object):
                     self._match(prefix[2])
         # gather tokens until we meet a lower binding strength
         while bind < self._elements[self.current[0]][0]:
-            token, value = self._advance()
+            token, value, pos = self._advance()
             e = self._elements[token]
             # check for suffix - next token isn't a valid prefix
             if len(e) == 4 and not self._elements[self.current[0]][1]:
@@ -65,7 +68,7 @@ class parser(object):
                     expr = (infix[0], expr, (None))
                 else:
                     if not infix[0]:
-                        raise SyntaxError("not an infix")
+                        raise error.ParseError("not an infix: %s" % token, pos)
                     expr = (infix[0], expr, self._parse(infix[1]))
                     if len(infix) == 3:
                         self._match(infix[2])
