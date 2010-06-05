@@ -103,10 +103,10 @@ class config(object):
                     try:
                         include(inc, remap=remap, sections=sections)
                     except IOError, inst:
-                        msg = _("config error at %s:%d: "
-                                "cannot include %s (%s)") \
-                            % (src, line, inc, inst.strerror)
-                        raise error.ConfigError(msg)
+                        raise error.ParseError(
+                            _("cannot include %s (%s)")
+                            % (inc, inst.strerror),
+                            msg, "%s:%s" % (src, line))
                 continue
             if emptyre.match(l):
                 continue
@@ -135,8 +135,7 @@ class config(object):
                     del self._data[section][name]
                 continue
 
-            raise error.ConfigError(_("config error at %s:%d: '%s'")
-                                    % (src, line, l.rstrip()))
+            raise error.ParseError(l.rstrip(), ("%s:%s" % (src, line)))
 
     def read(self, path, fp=None, sections=None, remap=None):
         if not fp:

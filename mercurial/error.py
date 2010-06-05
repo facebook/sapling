@@ -30,8 +30,14 @@ class LookupError(RevlogError, KeyError):
 class CommandError(Exception):
     """Exception raised on errors in parsing the command line."""
 
-class ConfigError(Exception):
+class Abort(Exception):
+    """Raised if a command needs to print an error and exit."""
+
+class ConfigError(Abort):
     'Exception raised when parsing config files'
+
+class ParseError(Abort):
+    'Exception raised when parsing config files (msg[, pos])'
 
 class RepoError(Exception):
     pass
@@ -70,6 +76,3 @@ class SignalInterrupt(KeyboardInterrupt):
 
 class SignatureError(Exception):
     pass
-
-class Abort(Exception):
-    """Raised if a command needs to print an error and exit."""

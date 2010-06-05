@@ -24,8 +24,12 @@ def dispatch(args):
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         return -1
-    except error.ConfigError, inst:
-        sys.stderr.write(_("hg: %s\n") % inst)
+    except error.ParseError, inst:
+        if len(inst.args) > 1:
+            sys.stderr.write(_("hg: parse error at %s: %s\n") %
+                             (inst.args[1], inst.args[0]))
+        else:
+            sys.stderr.write(_("hg: parse error: %s\n") % ints.args[0])
         return -1
     return _runcatch(u, args)
 
@@ -62,8 +66,13 @@ def _runcatch(ui, args):
     except error.AmbiguousCommand, inst:
         ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
-    except error.ConfigError, inst:
-        ui.warn(_("hg: %s\n") % inst.args[0])
+    except error.ParseError, inst:
+        if len(inst.args) > 1:
+            ui.warn(_("hg: parse error at %s: %s\n") %
+                             (inst.args[1], inst.args[0]))
+        else:
+            ui.warn(_("hg: parse error: %s\n") % inst.args[0])
+        return -1
     except error.LockHeld, inst:
         if inst.errno == errno.ETIMEDOUT:
             reason = _('timed out waiting for lock held by %s') % inst.locker
