@@ -27,7 +27,7 @@ class LookupError(RevlogError, KeyError):
     def __str__(self):
         return RevlogError.__str__(self)
 
-class ParseError(Exception):
+class CommandError(Exception):
     """Exception raised on errors in parsing the command line."""
 
 class ConfigError(Exception):

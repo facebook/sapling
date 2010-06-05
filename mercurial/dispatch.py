@@ -73,7 +73,7 @@ def _runcatch(ui, args):
     except error.LockUnavailable, inst:
         ui.warn(_("abort: could not lock %s: %s\n") %
                (inst.desc or inst.filename, inst.strerror))
-    except error.ParseError, inst:
+    except error.CommandError, inst:
         if inst.args[0]:
             ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
             commands.help_(ui, inst.args[0])
@@ -258,7 +258,7 @@ def _parse(ui, args):
     try:
         args = fancyopts.fancyopts(args, commands.globalopts, options)
     except fancyopts.getopt.GetoptError, inst:
-        raise error.ParseError(None, inst)
+        raise error.CommandError(None, inst)
 
     if args:
         cmd, args = args[0], args[1:]
@@ -281,7 +281,7 @@ def _parse(ui, args):
     try:
         args = fancyopts.fancyopts(args, c, cmdoptions, True)
     except fancyopts.getopt.GetoptError, inst:
-        raise error.ParseError(cmd, inst)
+        raise error.CommandError(cmd, inst)
 
     # separate global options back out
     for o in commands.globalopts:
@@ -475,7 +475,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
         try:
             return cmdfunc()
         except error.SignatureError:
-            raise error.ParseError(cmd, _("invalid arguments"))
+            raise error.CommandError(cmd, _("invalid arguments"))
 
     if options['profile']:
         format = ui.config('profiling', 'format', default='text')
