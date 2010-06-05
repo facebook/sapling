@@ -180,10 +180,10 @@ f.close()
 
 try:
     testui(user='abc', group='def', silent=True)
-except error.ConfigError, inst:
+except error.ParseError, inst:
     print inst
 
 try:
     testui(debug=True, silent=True)
-except error.ConfigError, inst:
+except error.ParseError, inst:
     print inst

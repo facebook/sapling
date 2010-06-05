@@ -155,6 +155,6 @@ quux
 # parse error
 # different user, different group
 Not trusting file .hg/hgrc from untrusted user abc, group def
-Ignored: config error at .hg/hgrc:1: 'foo'
+('foo', '.hg/hgrc:1')
 # same user, same group
-config error at .hg/hgrc:1: 'foo'
+('foo', '.hg/hgrc:1')
