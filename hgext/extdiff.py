@@ -259,10 +259,14 @@ def extdiff(ui, repo, *pats, **opts):
 cmdtable = {
     "extdiff":
     (extdiff,
-     [('p', 'program', '', _('comparison program to run')),
-      ('o', 'option', [], _('pass option to comparison program')),
-      ('r', 'rev', [], _('revision')),
-      ('c', 'change', '', _('change made by revision')),
+     [('p', 'program', '',
+       _('comparison program to run'), _('CMD')),
+      ('o', 'option', [],
+       _('pass option to comparison program'), _('OPT')),
+      ('r', 'rev', [],
+       _('revision'), _('REV')),
+      ('c', 'change', '',
+       _('change made by revision'), _('REV')),
      ] + commands.walkopts,
      _('hg extdiff [OPT]... [FILE]...')),
     }

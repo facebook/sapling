@@ -334,9 +334,9 @@ cmdtable = {
     "bookmarks":
         (bookmark,
          [('f', 'force', False, _('force')),
-          ('r', 'rev', '', _('revision')),
+          ('r', 'rev', '', _('revision'), _('REV')),
           ('d', 'delete', False, _('delete a given bookmark')),
-          ('m', 'rename', '', _('rename a given bookmark'))],
+          ('m', 'rename', '', _('rename a given bookmark'), _('NAME'))],
          _('hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]')),
 }
 

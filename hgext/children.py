@@ -38,7 +38,8 @@ def children(ui, repo, file_=None, **opts):
 cmdtable = {
     "children":
         (children,
-         [('r', 'rev', '', _('show children of the specified revision')),
+         [('r', 'rev', '',
+           _('show children of the specified revision'), _('REV')),
          ] + templateopts,
          _('hg children [-r REV] [FILE]')),
 }

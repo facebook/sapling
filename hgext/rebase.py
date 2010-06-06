@@ -538,10 +538,14 @@ cmdtable = {
 "rebase":
         (rebase,
         [
-        ('s', 'source', '', _('rebase from the specified changeset')),
-        ('b', 'base', '', _('rebase from the base of the specified changeset '
-                            '(up to greatest common ancestor of base and dest)')),
-        ('d', 'dest', '', _('rebase onto the specified changeset')),
+        ('s', 'source', '',
+         _('rebase from the specified changeset'), _('REV')),
+        ('b', 'base', '',
+         _('rebase from the base of the specified changeset '
+           '(up to greatest common ancestor of base and dest)'),
+         _('REV')),
+        ('d', 'dest', '',
+         _('rebase onto the specified changeset'), _('REV')),
         ('', 'collapse', False, _('collapse the rebased changesets')),
         ('', 'keep', False, _('keep original changesets')),
         ('', 'keepbranches', False, _('keep original branch names')),

@@ -17,11 +17,13 @@ use 'echo' to diff repository (or selected files)
 
 options:
 
- -o --option   pass option to comparison program
- -r --rev      revision
- -c --change   change made by revision
- -I --include  include names matching the given patterns
- -X --exclude  exclude names matching the given patterns
+ -o --option OPT [+]       pass option to comparison program
+ -r --rev REV [+]          revision
+ -c --change REV           change made by revision
+ -I --include PATTERN [+]  include names matching the given patterns
+ -X --exclude PATTERN [+]  exclude names matching the given patterns
+
+[+] marked option can be specified multiple times
 
 use "hg -v help falabala" to show global options
 diffing a.8a5febb7f867/a a.34eed99112ab/a

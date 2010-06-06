@@ -25,7 +25,11 @@ def get_desc(docstr):
     return (shortdesc, desc)
 
 def get_opts(opts):
-    for shortopt, longopt, default, desc in opts:
+    for opt in opts:
+        if len(opt) == 5:
+            shortopt, longopt, default, desc, optlabel = opt
+        else:
+            shortopt, longopt, default, desc = opt
         allopts = []
         if shortopt:
             allopts.append("-%s" % shortopt)

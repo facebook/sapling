@@ -28,14 +28,18 @@ interactively select changes to commit
 
 options:
 
- -A --addremove     mark new/missing files as added/removed before committing
-    --close-branch  mark a branch as closed, hiding it from the branch list
- -I --include       include names matching the given patterns
- -X --exclude       exclude names matching the given patterns
- -m --message       use <text> as commit message
- -l --logfile       read commit message from <file>
- -d --date          record datecode as commit date
- -u --user          record the specified user as committer
+ -A --addremove            mark new/missing files as added/removed before
+                           committing
+    --close-branch         mark a branch as closed, hiding it from the branch
+                           list
+ -I --include PATTERN [+]  include names matching the given patterns
+ -X --exclude PATTERN [+]  exclude names matching the given patterns
+ -m --message TEXT         use text as commit message
+ -l --logfile FILE         read commit message from file
+ -d --date DATE            record datecode as commit date
+ -u --user USER            record the specified user as committer
+
+[+] marked option can be specified multiple times
 
 use "hg -v help record" to show global options
 % select no files

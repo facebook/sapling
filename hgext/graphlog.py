@@ -370,9 +370,11 @@ def _wrapcmd(ui, cmd, table, wrapfn):
 cmdtable = {
     "glog":
         (graphlog,
-         [('l', 'limit', '', _('limit number of changes displayed')),
+         [('l', 'limit', '',
+           _('limit number of changes displayed'), _('NUM')),
           ('p', 'patch', False, _('show patch')),
-          ('r', 'rev', [], _('show the specified revision or range')),
+          ('r', 'rev', [],
+           _('show the specified revision or range'), _('REV')),
          ] + templateopts,
          _('hg glog [OPTION]... [FILE]')),
 }

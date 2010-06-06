@@ -314,7 +314,8 @@ def view(ui, repo, *etc, **opts):
 cmdtable = {
     "^view":
         (view,
-         [('l', 'limit', '', _('limit number of changes displayed'))],
+         [('l', 'limit', '',
+           _('limit number of changes displayed'), _('NUM'))],
          _('hg view [-l LIMIT] [REVRANGE]')),
     "debug-diff-tree":
         (difftree,

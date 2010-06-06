@@ -43,6 +43,7 @@ def fancyopts(args, options, state, gnu=False):
       long option
       default value
       description
+      option value label(optional)
 
     option types include:
 
@@ -59,7 +60,11 @@ def fancyopts(args, options, state, gnu=False):
     argmap = {}
     defmap = {}
 
-    for short, name, default, comment in options:
+    for option in options:
+        if len(option) == 5:
+            short, name, default, comment, dummy = option
+        else:
+            short, name, default, comment = option
         # convert opts to getopt format
         oname = name
         name = name.replace('-', '_')

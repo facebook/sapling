@@ -21,11 +21,13 @@ output the current or given revision of files
 
 options:
 
- -o --output   print output to file with formatted name
- -r --rev      print the given revision
-    --decode   apply any matching decode filter
- -I --include  include names matching the given patterns
- -X --exclude  exclude names matching the given patterns
+ -o --output FORMAT        print output to file with formatted name
+ -r --rev REV              print the given revision
+    --decode               apply any matching decode filter
+ -I --include PATTERN [+]  include names matching the given patterns
+ -X --exclude PATTERN [+]  exclude names matching the given patterns
+
+[+] marked option can be specified multiple times
 
 use "hg -v help cat" to show global options
 % [defaults]

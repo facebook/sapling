@@ -559,7 +559,8 @@ cmdtable = {
     'kwdemo':
         (demo,
          [('d', 'default', None, _('show default keyword template maps')),
-          ('f', 'rcfile', '', _('read maps from rcfile'))],
+          ('f', 'rcfile', '',
+           _('read maps from rcfile'), _('FILE'))],
          _('hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]...')),
     'kwexpand': (expand, commands.walkopts,
                  _('hg kwexpand [OPTION]... [FILE]...')),

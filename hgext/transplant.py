@@ -592,15 +592,20 @@ def transplant(ui, repo, *revs, **opts):
 cmdtable = {
     "transplant":
         (transplant,
-         [('s', 'source', '', _('pull patches from REPOSITORY')),
-          ('b', 'branch', [], _('pull patches from branch BRANCH')),
+         [('s', 'source', '',
+           _('pull patches from REPO'), _('REPO')),
+          ('b', 'branch', [],
+           _('pull patches from branch BRANCH'), _('BRANCH')),
           ('a', 'all', None, _('pull all changesets up to BRANCH')),
-          ('p', 'prune', [], _('skip over REV')),
-          ('m', 'merge', [], _('merge at REV')),
+          ('p', 'prune', [],
+           _('skip over REV'), _('REV')),
+          ('m', 'merge', [],
+           _('merge at REV'), _('REV')),
           ('', 'log', None, _('append transplant info to log message')),
           ('c', 'continue', None, _('continue last transplant session '
                                     'after repair')),
-          ('', 'filter', '', _('filter changesets through FILTER'))],
-         _('hg transplant [-s REPOSITORY] [-b BRANCH [-a]] [-p REV] '
+          ('', 'filter', '',
+           _('filter changesets through command'), _('CMD'))],
+         _('hg transplant [-s REPO] [-b BRANCH [-a]] [-p REV] '
            '[-m REV] [REV]...'))
 }

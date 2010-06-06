@@ -1829,17 +1829,39 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
 
     # list all option lists
     opt_output = []
+    multioccur = False
     for title, options in option_lists:
         opt_output.append(("\n%s" % title, None))
-        for shortopt, longopt, default, desc in options:
+        for option in options:
+            if len(option) == 5:
+                shortopt, longopt, default, desc, optlabel = option
+            else:
+                shortopt, longopt, default, desc = option
+                optlabel = _("VALUE") # default label
+
             if _("DEPRECATED") in desc and not ui.verbose:
                 continue
-            opt_output.append(("%2s%s" % (shortopt and "-%s" % shortopt,
-                                          longopt and " --%s" % longopt),
+            if isinstance(default, list):
+                numqualifier = " %s [+]" % optlabel
+                multioccur = True
+            elif (default is not None) and not isinstance(default, bool):
+                numqualifier = " %s" % optlabel
+            else:
+                numqualifier = ""
+            opt_output.append(("%2s%s" %
+                               (shortopt and "-%s" % shortopt,
+                                longopt and " --%s%s" %
+                                (longopt, numqualifier)),
                                "%s%s" % (desc,
                                          default
                                          and _(" (default: %s)") % default
                                          or "")))
+    if multioccur:
+        msg = _("\n[+] marked option can be specified multiple times")
+        if ui.verbose and name != 'shortlist':
+            opt_output.append((msg, ()))
+        else:
+            opt_output.insert(-1, (msg, ()))
 
     if not name:
         ui.write(_("\nadditional help topics:\n\n"))
@@ -3612,19 +3634,23 @@ def version_(ui):
 
 globalopts = [
     ('R', 'repository', '',
-     _('repository root directory or name of overlay bundle file')),
-    ('', 'cwd', '', _('change working directory')),
+     _('repository root directory or name of overlay bundle file'),
+     _('REPO')),
+    ('', 'cwd', '',
+     _('change working directory'), _('DIR')),
     ('y', 'noninteractive', None,
      _('do not prompt, assume \'yes\' for any required answers')),
     ('q', 'quiet', None, _('suppress output')),
     ('v', 'verbose', None, _('enable additional output')),
     ('', 'config', [],
-     _('set/override config option (use \'section.name=value\')')),
+     _('set/override config option (use \'section.name=value\')'),
+     _('CONFIG')),
     ('', 'debug', None, _('enable debugging output')),
     ('', 'debugger', None, _('start debugger')),
-    ('', 'encoding', encoding.encoding, _('set the charset encoding')),
+    ('', 'encoding', encoding.encoding, _('set the charset encoding'),
+     _('ENCODE')),
     ('', 'encodingmode', encoding.encodingmode,
-     _('set the charset encoding mode')),
+     _('set the charset encoding mode'), _('MODE')),
     ('', 'traceback', None, _('always print a traceback on exception')),
     ('', 'time', None, _('time how long the command takes')),
     ('', 'profile', None, _('print command execution profile')),
@@ -3636,34 +3662,45 @@ dryrunopts = [('n', 'dry-run', None,
                _('do not perform actions, just print output'))]
 
 remoteopts = [
-    ('e', 'ssh', '', _('specify ssh command to use')),
-    ('', 'remotecmd', '', _('specify hg command to run on the remote side')),
+    ('e', 'ssh', '',
+     _('specify ssh command to use'), _('CMD')),
+    ('', 'remotecmd', '',
+     _('specify hg command to run on the remote side'), _('CMD')),
 ]
 
 walkopts = [
-    ('I', 'include', [], _('include names matching the given patterns')),
-    ('X', 'exclude', [], _('exclude names matching the given patterns')),
+    ('I', 'include', [],
+     _('include names matching the given patterns'), _('PATTERN')),
+    ('X', 'exclude', [],
+     _('exclude names matching the given patterns'), _('PATTERN')),
 ]
 
 commitopts = [
-    ('m', 'message', '', _('use <text> as commit message')),
-    ('l', 'logfile', '', _('read commit message from <file>')),
+    ('m', 'message', '',
+     _('use text as commit message'), _('TEXT')),
+    ('l', 'logfile', '',
+     _('read commit message from file'), _('FILE')),
 ]
 
 commitopts2 = [
-    ('d', 'date', '', _('record datecode as commit date')),
-    ('u', 'user', '', _('record the specified user as committer')),
+    ('d', 'date', '',
+     _('record datecode as commit date'), _('DATE')),
+    ('u', 'user', '',
+     _('record the specified user as committer'), _('USER')),
 ]
 
 templateopts = [
-    ('', 'style', '', _('display using template map file')),
-    ('', 'template', '', _('display with template')),
+    ('', 'style', '',
+     _('display using template map file'), _('STYLE')),
+    ('', 'template', '',
+     _('display with template'), _('TEMPLATE')),
 ]
 
 logopts = [
     ('p', 'patch', None, _('show patch')),
     ('g', 'git', None, _('use git extended diff format')),
-    ('l', 'limit', '', _('limit number of changes displayed')),
+    ('l', 'limit', '',
+     _('limit number of changes displayed'), _('NUM')),
     ('M', 'no-merges', None, _('do not show merges')),
     ('', 'stat', None, _('output diffstat-style summary of changes')),
 ] + templateopts
@@ -3683,13 +3720,14 @@ diffopts2 = [
      _('ignore changes in the amount of white space')),
     ('B', 'ignore-blank-lines', None,
      _('ignore changes whose lines are all blank')),
-    ('U', 'unified', '', _('number of lines of context to show')),
+    ('U', 'unified', '',
+     _('number of lines of context to show'), _('NUM')),
     ('', 'stat', None, _('output diffstat-style summary of changes')),
 ]
 
 similarityopts = [
     ('s', 'similarity', '',
-           _('guess renamed files by similarity (0<=s<=100)'))
+     _('guess renamed files by similarity (0<=s<=100)'), _('SIMILARITY'))
 ]
 
 table = {
@@ -3699,7 +3737,8 @@ table = {
          _('[OPTION]... [FILE]...')),
     "^annotate|blame":
         (annotate,
-         [('r', 'rev', '', _('annotate the specified revision')),
+         [('r', 'rev', '',
+           _('annotate the specified revision'), _('REV')),
           ('', 'follow', None,
            _('follow copies/renames and list the filename (DEPRECATED)')),
           ('', 'no-follow', None, _("don't follow copies and renames")),
@@ -3716,17 +3755,22 @@ table = {
     "archive":
         (archive,
          [('', 'no-decode', None, _('do not pass files through decoders')),
-          ('p', 'prefix', '', _('directory prefix for files in archive')),
-          ('r', 'rev', '', _('revision to distribute')),
-          ('t', 'type', '', _('type of distribution to create')),
+          ('p', 'prefix', '',
+           _('directory prefix for files in archive'), _('PREFIX')),
+          ('r', 'rev', '',
+           _('revision to distribute'), _('REV')),
+          ('t', 'type', '',
+           _('type of distribution to create'), _('TYPE')),
          ] + walkopts,
          _('[OPTION]... DEST')),
     "backout":
         (backout,
          [('', 'merge', None,
            _('merge with old dirstate parent after backout')),
-          ('', 'parent', '', _('parent to choose when backing out merge')),
-          ('r', 'rev', '', _('revision to backout')),
+          ('', 'parent', '',
+           _('parent to choose when backing out merge'), _('REV')),
+          ('r', 'rev', '',
+           _('revision to backout'), _('REV')),
          ] + walkopts + commitopts + commitopts2,
          _('[OPTION]... [-r] REV')),
     "bisect":
@@ -3735,7 +3779,8 @@ table = {
           ('g', 'good', False, _('mark changeset good')),
           ('b', 'bad', False, _('mark changeset bad')),
           ('s', 'skip', False, _('skip testing changeset')),
-          ('c', 'command', '', _('use command to check changeset state')),
+          ('c', 'command', '',
+           _('use command to check changeset state'), _('CMD')),
           ('U', 'noupdate', False, _('do not update to target'))],
          _("[-gbsr] [-U] [-c CMD] [REV]")),
     "branch":
@@ -3756,19 +3801,25 @@ table = {
          [('f', 'force', None,
            _('run even when the destination is unrelated')),
           ('r', 'rev', [],
-           _('a changeset intended to be added to the destination')),
+           _('a changeset intended to be added to the destination'),
+           _('REV')),
           ('b', 'branch', [],
-           _('a specific branch you would like to bundle')),
+           _('a specific branch you would like to bundle'),
+           _('BRANCH')),
           ('', 'base', [],
-           _('a base changeset assumed to be available at the destination')),
+           _('a base changeset assumed to be available at the destination'),
+           _('REV')),
           ('a', 'all', None, _('bundle all changesets in the repository')),
-          ('t', 'type', 'bzip2', _('bundle compression type to use')),
+          ('t', 'type', 'bzip2',
+           _('bundle compression type to use'), _('TYPE')),
          ] + remoteopts,
          _('[-f] [-t TYPE] [-a] [-r REV]... [--base REV]... FILE [DEST]')),
     "cat":
         (cat,
-         [('o', 'output', '', _('print output to file with formatted name')),
-          ('r', 'rev', '', _('print the given revision')),
+         [('o', 'output', '',
+          _('print output to file with formatted name'), _('FORMAT')),
+          ('r', 'rev', '',
+           _('print the given revision'), _('REV')),
           ('', 'decode', None, _('apply any matching decode filter')),
          ] + walkopts,
          _('[OPTION]... FILE...')),
@@ -3777,11 +3828,11 @@ table = {
          [('U', 'noupdate', None,
           _('the clone will include an empty working copy (only a repository)')),
           ('u', 'updaterev', '',
-           _('revision, tag or branch to check out')),
+           _('revision, tag or branch to check out'), _('REV')),
           ('r', 'rev', [],
-           _('include the specified changeset')),
+           _('include the specified changeset'), _('REV')),
           ('b', 'branch', [],
-           _('clone only the specified branch')),
+           _('clone only the specified branch'), _('BRANCH')),
           ('', 'pull', None, _('use pull protocol to copy metadata')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
@@ -3820,11 +3871,13 @@ table = {
     "debuginstall": (debuginstall, [], ''),
     "debugrebuildstate":
         (debugrebuildstate,
-         [('r', 'rev', '', _('revision to rebuild to'))],
+         [('r', 'rev', '',
+           _('revision to rebuild to'), _('REV'))],
          _('[-r REV] [REV]')),
     "debugrename":
         (debugrename,
-         [('r', 'rev', '', _('revision to debug'))],
+         [('r', 'rev', '',
+           _('revision to debug'), _('REV'))],
          _('[-r REV] FILE')),
     "debugrevspec":
         (debugrevspec, [], ('REVSPEC')),
@@ -3836,20 +3889,25 @@ table = {
          _('[OPTION]...')),
     "debugsub":
         (debugsub,
-         [('r', 'rev', '', _('revision to check'))],
+         [('r', 'rev', '',
+           _('revision to check'), _('REV'))],
          _('[-r REV] [REV]')),
     "debugwalk": (debugwalk, walkopts, _('[OPTION]... [FILE]...')),
     "^diff":
         (diff,
-         [('r', 'rev', [], _('revision')),
-          ('c', 'change', '', _('change made by revision'))
+         [('r', 'rev', [],
+           _('revision'), _('REV')),
+          ('c', 'change', '',
+           _('change made by revision'), _('REV'))
          ] + diffopts + diffopts2 + walkopts,
          _('[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...')),
     "^export":
         (export,
-         [('o', 'output', '', _('print output to file with formatted name')),
+         [('o', 'output', '',
+           _('print output to file with formatted name'), _('FORMAT')),
           ('', 'switch-parent', None, _('diff against the second parent')),
-          ('r', 'rev', [], _('revisions to export')),
+          ('r', 'rev', [],
+           _('revisions to export'), _('REV')),
           ] + diffopts,
          _('[OPTION]... [-o OUTFILESPEC] REV...')),
     "^forget":
@@ -3867,14 +3925,16 @@ table = {
           ('l', 'files-with-matches', None,
            _('print only filenames and revisions that match')),
           ('n', 'line-number', None, _('print matching line numbers')),
-          ('r', 'rev', [], _('only search files changed within revision range')),
+          ('r', 'rev', [],
+           _('only search files changed within revision range'), _('REV')),
           ('u', 'user', None, _('list the author (long with -v)')),
           ('d', 'date', None, _('list the date (short with -q)')),
          ] + walkopts,
          _('[OPTION]... PATTERN [FILE]...')),
     "heads":
         (heads,
-         [('r', 'rev', '', _('show only heads which are descendants of REV')),
+         [('r', 'rev', '',
+           _('show only heads which are descendants of REV'), _('REV')),
           ('t', 'topo', False, _('show topological heads only')),
           ('a', 'active', False,
            _('show active branchheads only [DEPRECATED]')),
@@ -3885,7 +3945,8 @@ table = {
     "help": (help_, [], _('[TOPIC]')),
     "identify|id":
         (identify,
-         [('r', 'rev', '', _('identify the specified revision')),
+         [('r', 'rev', '',
+           _('identify the specified revision'), _('REV')),
           ('n', 'num', None, _('show local revision number')),
           ('i', 'id', None, _('show global revision id')),
           ('b', 'branch', None, _('show branch')),
@@ -3895,8 +3956,10 @@ table = {
         (import_,
          [('p', 'strip', 1,
            _('directory strip option for patch. This has the same '
-             'meaning as the corresponding patch option')),
-          ('b', 'base', '', _('base path')),
+             'meaning as the corresponding patch option'),
+           _('NUM')),
+          ('b', 'base', '',
+           _('base path'), _('PATH')),
           ('f', 'force', None,
            _('skip check for outstanding uncommitted changes')),
           ('', 'no-commit', None,
@@ -3912,11 +3975,12 @@ table = {
          [('f', 'force', None,
            _('run even if remote repository is unrelated')),
           ('n', 'newest-first', None, _('show newest record first')),
-          ('', 'bundle', '', _('file to store the bundles into')),
+          ('', 'bundle', '',
+           _('file to store the bundles into'), _('FILE')),
           ('r', 'rev', [],
-           _('a remote changeset intended to be added')),
+           _('a remote changeset intended to be added'), _('REV')),
           ('b', 'branch', [],
-           _('a specific branch you would like to pull')),
+           _('a specific branch you would like to pull'), _('BRANCH')),
          ] + logopts + remoteopts,
          _('[-p] [-n] [-M] [-f] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
@@ -3926,7 +3990,8 @@ table = {
          _('[-e CMD] [--remotecmd CMD] [DEST]')),
     "locate":
         (locate,
-         [('r', 'rev', '', _('search the repository as it is in REV')),
+         [('r', 'rev', '',
+           _('search the repository as it is in REV'), _('REV')),
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),
           ('f', 'fullpath', None,
@@ -3940,29 +4005,36 @@ table = {
              ' or file history across copies and renames')),
           ('', 'follow-first', None,
            _('only follow the first parent of merge changesets')),
-          ('d', 'date', '', _('show revisions matching date spec')),
+          ('d', 'date', '',
+           _('show revisions matching date spec'), _('DATE')),
           ('C', 'copies', None, _('show copied files')),
-          ('k', 'keyword', [], _('do case-insensitive search for a keyword')),
-          ('r', 'rev', [], _('show the specified revision or range')),
+          ('k', 'keyword', [],
+           _('do case-insensitive search for a given text'), _('TEXT')),
+          ('r', 'rev', [],
+           _('show the specified revision or range'), _('REV')),
           ('', 'removed', None, _('include revisions where files were removed')),
           ('m', 'only-merges', None, _('show only merges')),
-          ('u', 'user', [], _('revisions committed by user')),
+          ('u', 'user', [],
+           _('revisions committed by user'), _('USER')),
           ('', 'only-branch', [],
-            _('show only changesets within the given named branch (DEPRECATED)')),
+           _('show only changesets within the given named branch (DEPRECATED)'),
+           _('BRANCH')),
           ('b', 'branch', [],
-            _('show changesets within the given named branch')),
+           _('show changesets within the given named branch'), _('BRANCH')),
           ('P', 'prune', [],
-           _('do not display revision or any of its ancestors')),
+           _('do not display revision or any of its ancestors'), _('REV')),
          ] + logopts + walkopts,
          _('[OPTION]... [FILE]')),
     "manifest":
         (manifest,
-         [('r', 'rev', '', _('revision to display'))],
+         [('r', 'rev', '',
+           _('revision to display'), _('REV'))],
          _('[-r REV]')),
     "^merge":
         (merge,
          [('f', 'force', None, _('force a merge with outstanding changes')),
-          ('r', 'rev', '', _('revision to merge')),
+          ('r', 'rev', '',
+           _('revision to merge'), _('REV')),
           ('P', 'preview', None,
            _('review revisions to merge (no merge is performed)'))],
          _('[-P] [-f] [[-r] REV]')),
@@ -3971,15 +4043,17 @@ table = {
          [('f', 'force', None,
            _('run even when the destination is unrelated')),
           ('r', 'rev', [],
-           _('a changeset intended to be included in the destination')),
+           _('a changeset intended to be included in the destination'),
+           _('REV')),
           ('n', 'newest-first', None, _('show newest record first')),
           ('b', 'branch', [],
-           _('a specific branch you would like to push')),
+           _('a specific branch you would like to push'), _('BRANCH')),
          ] + logopts + remoteopts,
          _('[-M] [-p] [-n] [-f] [-r REV]... [DEST]')),
     "parents":
         (parents,
-         [('r', 'rev', '', _('show parents of the specified revision')),
+         [('r', 'rev', '',
+           _('show parents of the specified revision'), _('REV')),
          ] + templateopts,
          _('[-r REV] [FILE]')),
     "paths": (paths, [], _('[NAME]')),
@@ -3990,18 +4064,19 @@ table = {
           ('f', 'force', None,
            _('run even when remote repository is unrelated')),
           ('r', 'rev', [],
-           _('a remote changeset intended to be added')),
+           _('a remote changeset intended to be added'), _('REV')),
           ('b', 'branch', [],
-           _('a specific branch you would like to pull')),
+           _('a specific branch you would like to pull'), _('BRANCH')),
          ] + remoteopts,
          _('[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]')),
     "^push":
         (push,
          [('f', 'force', None, _('force push')),
           ('r', 'rev', [],
-           _('a changeset intended to be included in the destination')),
+           _('a changeset intended to be included in the destination'),
+           _('REV')),
           ('b', 'branch', [],
-           _('a specific branch you would like to push')),
+           _('a specific branch you would like to push'), _('BRANCH')),
           ('', 'new-branch', False, _('allow pushing a new branch')),
          ] + remoteopts,
          _('[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]')),
@@ -4032,8 +4107,10 @@ table = {
     "revert":
         (revert,
          [('a', 'all', None, _('revert all changes when no arguments given')),
-          ('d', 'date', '', _('tipmost revision matching date')),
-          ('r', 'rev', '', _('revert to the specified revision')),
+          ('d', 'date', '',
+           _('tipmost revision matching date'), _('DATE')),
+          ('r', 'rev', '',
+           _('revert to the specified revision'), _('REV')),
           ('', 'no-backup', None, _('do not save backup copies of files')),
          ] + walkopts + dryrunopts,
          _('[OPTION]... [-r REV] [NAME]...')),
@@ -4041,28 +4118,38 @@ table = {
     "root": (root, []),
     "^serve":
         (serve,
-         [('A', 'accesslog', '', _('name of access log file to write to')),
+         [('A', 'accesslog', '',
+           _('name of access log file to write to'), _('FILE')),
           ('d', 'daemon', None, _('run server in background')),
-          ('', 'daemon-pipefds', '', _('used internally by daemon mode')),
-          ('E', 'errorlog', '', _('name of error log file to write to')),
+          ('', 'daemon-pipefds', '',
+           _('used internally by daemon mode'), _('NUM')),
+          ('E', 'errorlog', '',
+           _('name of error log file to write to'), _('FILE')),
           # use string type, then we can check if something was passed
-          ('p', 'port', '', _('port to listen on (default: 8000)')),
+          ('p', 'port', '',
+           _('port to listen on (default: 8000)'), _('PORT')),
           ('a', 'address', '',
-           _('address to listen on (default: all interfaces)')),
+           _('address to listen on (default: all interfaces)'), _('ADDR')),
           ('', 'prefix', '',
-           _('prefix path to serve from (default: server root)')),
+           _('prefix path to serve from (default: server root)'), _('PREFIX')),
           ('n', 'name', '',
-           _('name to show in web pages (default: working directory)')),
-          ('', 'web-conf', '', _('name of the hgweb config file'
-                                    ' (serve more than one repository)')),
-          ('', 'webdir-conf', '', _('name of the hgweb config file'
-                                    ' (DEPRECATED)')),
-          ('', 'pid-file', '', _('name of file to write process ID to')),
+           _('name to show in web pages (default: working directory)'),
+           _('NAME')),
+          ('', 'web-conf', '',
+           _('name of the hgweb config file (serve more than one repository)'),
+           _('FILE')),
+          ('', 'webdir-conf', '',
+           _('name of the hgweb config file (DEPRECATED)'), _('FILE')),
+          ('', 'pid-file', '',
+           _('name of file to write process ID to'), _('FILE')),
           ('', 'stdio', None, _('for remote clients')),
-          ('t', 'templates', '', _('web templates to use')),
-          ('', 'style', '', _('template style to use')),
+          ('t', 'templates', '',
+           _('web templates to use'), _('TEMPLATE')),
+          ('', 'style', '',
+           _('template style to use'), _('STYLE')),
           ('6', 'ipv6', None, _('use IPv6 in addition to IPv4')),
-          ('', 'certificate', '', _('SSL certificate file'))],
+          ('', 'certificate', '',
+           _('SSL certificate file'), _('FILE'))],
          _('[OPTION]...')),
     "showconfig|debugconfig":
         (showconfig,
@@ -4085,19 +4172,23 @@ table = {
           ('C', 'copies', None, _('show source of copied files')),
           ('0', 'print0', None,
            _('end filenames with NUL, for use with xargs')),
-          ('', 'rev', [], _('show difference from revision')),
-          ('', 'change', '', _('list the changed files of a revision')),
+          ('', 'rev', [],
+           _('show difference from revision'), _('REV')),
+          ('', 'change', '',
+           _('list the changed files of a revision'), _('REV')),
          ] + walkopts,
          _('[OPTION]... [FILE]...')),
     "tag":
         (tag,
          [('f', 'force', None, _('replace existing tag')),
           ('l', 'local', None, _('make the tag local')),
-          ('r', 'rev', '', _('revision to tag')),
+          ('r', 'rev', '',
+           _('revision to tag'), _('REV')),
           ('', 'remove', None, _('remove a tag')),
           # -l/--local is already there, commitopts cannot be used
           ('e', 'edit', None, _('edit commit message')),
-          ('m', 'message', '', _('use <text> as commit message')),
+          ('m', 'message', '',
+           _('use <text> as commit message'), _('TEXT')),
          ] + commitopts2,
          _('[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...')),
     "tags": (tags, [], ''),
@@ -4116,8 +4207,10 @@ table = {
         (update,
          [('C', 'clean', None, _('discard uncommitted changes (no backup)')),
           ('c', 'check', None, _('check for uncommitted changes')),
-          ('d', 'date', '', _('tipmost revision matching date')),
-          ('r', 'rev', '', _('revision'))],
+          ('d', 'date', '',
+           _('tipmost revision matching date'), _('DATE')),
+          ('r', 'rev', '',
+           _('revision'), _('REV'))],
          _('[-c] [-C] [-d DATE] [[-r] REV]')),
     "verify": (verify, []),
     "version": (version_, []),

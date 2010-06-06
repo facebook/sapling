@@ -2835,7 +2835,8 @@ cmdtable = {
           ('U', 'noupdate', None, _('do not update the new working directories')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
-          ('p', 'patches', '', _('location of source patch repository')),
+          ('p', 'patches', '',
+           _('location of source patch repository'), _('REPO')),
          ] + commands.remoteopts,
          _('hg qclone [OPTION]... SOURCE [DEST]')),
     "qcommit|qci":
@@ -2849,7 +2850,8 @@ cmdtable = {
     "qdelete|qremove|qrm":
         (delete,
          [('k', 'keep', None, _('keep patch file')),
-          ('r', 'rev', [], _('stop managing a revision (DEPRECATED)'))],
+          ('r', 'rev', [],
+           _('stop managing a revision (DEPRECATED)'), _('REV'))],
          _('hg qdelete [-k] [-r REV]... [PATCH]...')),
     'qfold':
         (fold,
@@ -2870,9 +2872,11 @@ cmdtable = {
     "qimport":
         (qimport,
          [('e', 'existing', None, _('import file in patch directory')),
-          ('n', 'name', '', _('name of patch file')),
+          ('n', 'name', '',
+           _('name of patch file'), _('NAME')),
           ('f', 'force', None, _('overwrite existing files')),
-          ('r', 'rev', [], _('place existing revisions under mq control')),
+          ('r', 'rev', [],
+           _('place existing revisions under mq control'), _('REV')),
           ('g', 'git', None, _('use git extended diff format')),
           ('P', 'push', None, _('qpush after importing'))],
          _('hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE...')),
@@ -2886,9 +2890,11 @@ cmdtable = {
           ('f', 'force', None, _('import uncommitted changes (DEPRECATED)')),
           ('g', 'git', None, _('use git extended diff format')),
           ('U', 'currentuser', None, _('add "From: <current user>" to patch')),
-          ('u', 'user', '', _('add "From: <given user>" to patch')),
+          ('u', 'user', '',
+           _('add "From: <USER>" to patch'), _('USER')),
           ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
-          ('d', 'date', '', _('add "Date: <given date>" to patch'))
+          ('d', 'date', '',
+           _('add "Date: <DATE>" to patch'), _('DATE'))
           ] + commands.walkopts + commands.commitopts,
          _('hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]...')),
     "qnext": (next, [] + seriesopts, _('hg qnext [-s]')),
@@ -2896,7 +2902,8 @@ cmdtable = {
     "^qpop":
         (pop,
          [('a', 'all', None, _('pop all patches')),
-          ('n', 'name', '', _('queue name to pop (DEPRECATED)')),
+          ('n', 'name', '',
+           _('queue name to pop (DEPRECATED)'), _('NAME')),
           ('f', 'force', None, _('forget any local changes to patched files'))],
          _('hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]')),
     "^qpush":
@@ -2905,7 +2912,8 @@ cmdtable = {
           ('l', 'list', None, _('list patch name in commit text')),
           ('a', 'all', None, _('apply all patches')),
           ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
-          ('n', 'name', '', _('merge queue name (DEPRECATED)')),
+          ('n', 'name', '',
+           _('merge queue name (DEPRECATED)'), _('NAME')),
           ('', 'move', None, _('reorder patch series and apply only the patch'))],
          _('hg qpush [-f] [-l] [-a] [-m] [-n NAME] [--move] [PATCH | INDEX]')),
     "^qrefresh":
@@ -2917,11 +2925,11 @@ cmdtable = {
           ('U', 'currentuser', None,
            _('add/update author field in patch with current user')),
           ('u', 'user', '',
-           _('add/update author field in patch with given user')),
+           _('add/update author field in patch with given user'), _('USER')),
           ('D', 'currentdate', None,
            _('add/update date field in patch with current date')),
           ('d', 'date', '',
-           _('add/update date field in patch with given date'))
+           _('add/update date field in patch with given date'), _('DATE'))
           ] + commands.walkopts + commands.commitopts,
          _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...')),
     'qrename|qmv':
@@ -2934,7 +2942,8 @@ cmdtable = {
     "qsave":
         (save,
          [('c', 'copy', None, _('copy patch directory')),
-          ('n', 'name', '', _('copy directory name')),
+          ('n', 'name', '',
+           _('copy directory name'), _('NAME')),
           ('e', 'empty', None, _('clear queue status file')),
           ('f', 'force', None, _('force copy'))] + commands.commitopts,
          _('hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]')),

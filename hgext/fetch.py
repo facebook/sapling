@@ -138,7 +138,8 @@ def fetch(ui, repo, source='default', **opts):
 cmdtable = {
     'fetch':
         (fetch,
-        [('r', 'rev', [], _('a specific revision you would like to pull')),
+        [('r', 'rev', [],
+          _('a specific revision you would like to pull'), _('REV')),
          ('e', 'edit', None, _('edit commit message')),
          ('', 'force-editor', None, _('edit commit message (DEPRECATED)')),
          ('', 'switch-parent', None, _('switch parents when merging')),

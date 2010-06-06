@@ -218,7 +218,8 @@ def uisetup(ui):
     extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
 
 commands.globalopts.append(('', 'color', 'auto',
-                            _("when to colorize (always, auto, or never)")))
+                            _("when to colorize (always, auto, or never)"),
+                            _('TYPE')))
 
 try:
     import re, pywintypes

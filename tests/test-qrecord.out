@@ -32,16 +32,18 @@ interactively record a new patch
 
 options:
 
- -e --edit         edit commit message
- -g --git          use git extended diff format
- -U --currentuser  add "From: <current user>" to patch
- -u --user         add "From: <given user>" to patch
- -D --currentdate  add "Date: <current date>" to patch
- -d --date         add "Date: <given date>" to patch
- -I --include      include names matching the given patterns
- -X --exclude      exclude names matching the given patterns
- -m --message      use <text> as commit message
- -l --logfile      read commit message from <file>
+ -e --edit                 edit commit message
+ -g --git                  use git extended diff format
+ -U --currentuser          add "From: <current user>" to patch
+ -u --user USER            add "From: <USER>" to patch
+ -D --currentdate          add "Date: <current date>" to patch
+ -d --date DATE            add "Date: <DATE>" to patch
+ -I --include PATTERN [+]  include names matching the given patterns
+ -X --exclude PATTERN [+]  exclude names matching the given patterns
+ -m --message TEXT         use text as commit message
+ -l --logfile FILE         read commit message from file
+
+[+] marked option can be specified multiple times
 
 use "hg -v help qrecord" to show global options
 % base commit
