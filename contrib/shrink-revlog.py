@@ -92,7 +92,7 @@ def toposort_postorderreverse(ui, rl):
     finally:
         ui.progress(_('reading'), None)
 
-    root = list(roots)
+    roots = list(roots)
     roots.sort()
 
     ui.status(_('sorting revs\n'))
