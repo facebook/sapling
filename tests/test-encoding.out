@@ -121,18 +121,18 @@ tip                                5:db5520b4645f
 ?                                  3:770b9b11621d
 % hg tags (latin-1)
 tip                                5:db5520b4645f
-é                                  3:770b9b11621d
+é                                 3:770b9b11621d
 % hg tags (utf-8)
 tip                                5:db5520b4645f
-Ã©                                  3:770b9b11621d
+Ã©                                 3:770b9b11621d
 % hg branches (ascii)
 ?                              5:db5520b4645f
 default                        4:9cff3c980b58 (inactive)
 % hg branches (latin-1)
-é                              5:db5520b4645f
+é                             5:db5520b4645f
 default                        4:9cff3c980b58 (inactive)
 % hg branches (utf-8)
-Ã©                              5:db5520b4645f
+Ã©                             5:db5520b4645f
 default                        4:9cff3c980b58 (inactive)
 % hg log (utf-8)
 changeset:   5:db5520b4645f

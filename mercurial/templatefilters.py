@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import cgi, re, os, time, urllib, textwrap
+import cgi, re, os, time, urllib
 import util, encoding
 
 def stringify(thing):
@@ -61,15 +61,17 @@ def fill(text, width):
         while True:
             m = para_re.search(text, start)
             if not m:
-                w = len(text)
-                while w > start and text[w - 1].isspace():
+                uctext = unicode(text[start:], encoding.encoding)
+                w = len(uctext)
+                while 0 < w and uctext[w - 1].isspace():
                     w -= 1
-                yield text[start:w], text[w:]
+                yield (uctext[:w].encode(encoding.encoding),
+                       uctext[w:].encode(encoding.encoding))
                 break
             yield text[start:m.start(0)], m.group(1)
             start = m.end(1)
 
-    return "".join([space_re.sub(' ', textwrap.fill(para, width)) + rest
+    return "".join([space_re.sub(' ', util.wrap(para, width=width)) + rest
                     for para, rest in findparas()])
 
 def firstline(text):

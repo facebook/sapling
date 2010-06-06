@@ -16,7 +16,7 @@ hide platform-specific details from the core.
 from i18n import _
 import error, osutil, encoding
 import cStringIO, errno, re, shutil, sys, tempfile, traceback
-import os, stat, time, calendar, textwrap, signal
+import os, stat, time, calendar, textwrap, unicodedata, signal
 import imp
 
 # Python compatibility
@@ -1257,21 +1257,49 @@ def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')
 
-def wrap(line, hangindent, width=None):
+#### naming convention of below implementation follows 'textwrap' module
+
+class MBTextWrapper(textwrap.TextWrapper):
+    def __init__(self, **kwargs):
+        textwrap.TextWrapper.__init__(self, **kwargs)
+
+    def _cutdown(self, str, space_left):
+        l = 0
+        ucstr = unicode(str, encoding.encoding)
+        w = unicodedata.east_asian_width
+        for i in xrange(len(ucstr)):
+            l += w(ucstr[i]) in 'WFA' and 2 or 1
+            if space_left < l:
+                return (ucstr[:i].encode(encoding.encoding),
+                        ucstr[i:].encode(encoding.encoding))
+        return str, ''
+
+    # ----------------------------------------
+    # overriding of base class
+
+    def _handle_long_word(self, reversed_chunks, cur_line, cur_len, width):
+        space_left = max(width - cur_len, 1)
+
+        if self.break_long_words:
+            cut, res = self._cutdown(reversed_chunks[-1], space_left)
+            cur_line.append(cut)
+            reversed_chunks[-1] = res
+        elif not cur_line:
+            cur_line.append(reversed_chunks.pop())
+
+#### naming convention of above implementation follows 'textwrap' module
+
+def wrap(line, width=None, initindent='', hangindent=''):
     if width is None:
         width = termwidth() - 2
-    if width <= hangindent:
+    maxindent = max(len(hangindent), len(initindent))
+    if width <= maxindent:
         # adjust for weird terminal size
-        width = max(78, hangindent + 1)
-    padding = '\n' + ' ' * hangindent
-    # To avoid corrupting multi-byte characters in line, we must wrap
-    # a Unicode string instead of a bytestring.
-    try:
-        u = line.decode(encoding.encoding)
-        w = padding.join(textwrap.wrap(u, width=width - hangindent))
-        return w.encode(encoding.encoding)
-    except UnicodeDecodeError:
-        return padding.join(textwrap.wrap(line, width=width - hangindent))
+        width = max(78, maxindent + 1)
+    wrapper = MBTextWrapper(width=width,
+                            initial_indent=initindent,
+                            subsequent_indent=hangindent)
+    return wrapper.fill(line)
 
 def iterlines(iterator):
     for chunk in iterator:

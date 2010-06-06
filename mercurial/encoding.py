@@ -72,6 +72,6 @@ def colwidth(s):
     d = s.decode(encoding, 'replace')
     if hasattr(unicodedata, 'east_asian_width'):
         w = unicodedata.east_asian_width
-        return sum([w(c) in 'WF' and 2 or 1 for c in d])
+        return sum([w(c) in 'WFA' and 2 or 1 for c in d])
     return len(d)
 

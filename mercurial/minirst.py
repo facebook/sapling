@@ -35,8 +35,8 @@ It only supports a small subset of reStructuredText:
 - inline literals (no other inline markup is not recognized)
 """
 
-import re, sys, textwrap
-
+import re, sys
+import util
 
 def findblocks(text):
     """Find continuous blocks of lines in text.
@@ -304,9 +304,9 @@ def formatblock(block, width):
         hang = len(block['lines'][-1]) - len(block['lines'][-1].lstrip())
         defindent = indent + hang * ' '
         text = ' '.join(map(str.strip, block['lines'][1:]))
-        return "%s\n%s" % (term, textwrap.fill(text, width=width,
-                                               initial_indent=defindent,
-                                               subsequent_indent=defindent))
+        return '%s\n%s' % (term, util.wrap(text, width=width,
+                                           initindent=defindent,
+                                           hangindent=defindent))
     subindent = indent
     if block['type'] == 'bullet':
         if block['lines'][0].startswith('| '):
@@ -338,9 +338,9 @@ def formatblock(block, width):
         subindent = indent + (len(option) + len(arg)) * ' '
 
     text = ' '.join(map(str.strip, block['lines']))
-    return textwrap.fill(text, width=width,
-                         initial_indent=indent,
-                         subsequent_indent=subindent)
+    return util.wrap(text, width=width,
+                     initindent=indent,
+                     hangindent=subindent)
 
 
 def format(text, width, indent=0, keep=None):
