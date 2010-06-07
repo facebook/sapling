@@ -166,10 +166,10 @@ echo % pop/push -a in subdir
 hg qpop -a
 hg --traceback qpush -a
 
-# setting columns & interactive tests truncating (issue1912)
+# setting columns & formatted tests truncating (issue1912)
 echo % qseries
-COLUMNS=4 hg qseries --config ui.interactive=true
-COLUMNS=20 hg qseries --config ui.interactive=true -vs
+COLUMNS=4 hg qseries --config ui.formatted=true
+COLUMNS=20 hg qseries --config ui.formatted=true -vs
 hg qpop
 hg qseries -vs
 hg sum | grep mq
