@@ -705,7 +705,7 @@ class queue(object):
         if not keep:
             r = self.qrepo()
             if r:
-                r.remove(patches, True)
+                r[None].remove(patches, True)
             else:
                 for p in patches:
                     os.unlink(self.join(p))
@@ -874,7 +874,7 @@ class queue(object):
                     wlock = None
                     r = self.qrepo()
                     if r:
-                        r.add([patchfn])
+                        r[None].add([patchfn])
                 except:
                     repo.rollback()
                     raise
@@ -1713,7 +1713,7 @@ class queue(object):
         self.series_dirty = 1
         qrepo = self.qrepo()
         if qrepo:
-            qrepo.add(added)
+            qrepo[None].add(added)
 
 def delete(ui, repo, *patches, **opts):
     """remove patches from queue
@@ -1832,7 +1832,7 @@ def qinit(ui, repo, create):
             fp.close()
         if not os.path.exists(r.wjoin('series')):
             r.wopener('series', 'w').close()
-        r.add(['.hgignore', 'series'])
+        r[None].add(['.hgignore', 'series'])
         commands.add(ui, r)
     return 0
 
@@ -2308,6 +2308,7 @@ def rename(ui, repo, patch, name=None, **opts):
     util.rename(q.join(patch), absdest)
     r = q.qrepo()
     if r:
+        wctx = r[None]
         wlock = r.wlock()
         try:
             if r.dirstate[patch] == 'a':
@@ -2315,9 +2316,9 @@ def rename(ui, repo, patch, name=None, **opts):
                 r.dirstate.add(name)
             else:
                 if r.dirstate[name] == 'r':
-                    r.undelete([name])
-                r.copy(patch, name)
-                r.remove([patch], False)
+                    wctx.undelete([name])
+                wctx.copy(patch, name)
+                wctx.remove([patch], False)
         finally:
             wlock.release()
 

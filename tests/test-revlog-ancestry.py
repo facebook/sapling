@@ -13,7 +13,7 @@ def addcommit(name, time):
     f = open(name, 'w')
     f.write('%s\n' % name)
     f.close()
-    repo.add([name])
+    repo[None].add([name])
     commit(name, time)
 
 def update(rev):

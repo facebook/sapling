@@ -8,7 +8,7 @@
 from node import nullid, nullrev, short, hex
 from i18n import _
 import ancestor, bdiff, error, util, subrepo, patch
-import os, errno
+import os, errno, stat
 
 propertycache = util.propertycache
 
@@ -760,6 +760,103 @@ class workingctx(changectx):
         return (self.p2() or self.branch() != self.p1().branch() or
                 self.modified() or self.added() or self.removed() or
                 (missing and self.deleted()))
+
+    def add(self, list):
+        wlock = self._repo.wlock()
+        ui, ds = self._repo.ui, self._repo.dirstate
+        try:
+            rejected = []
+            for f in list:
+                p = self._repo.wjoin(f)
+                try:
+                    st = os.lstat(p)
+                except:
+                    ui.warn(_("%s does not exist!\n") % f)
+                    rejected.append(f)
+                    continue
+                if st.st_size > 10000000:
+                    ui.warn(_("%s: up to %d MB of RAM may be required "
+                              "to manage this file\n"
+                              "(use 'hg revert %s' to cancel the "
+                              "pending addition)\n")
+                              % (f, 3 * st.st_size // 1000000, f))
+                if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
+                    ui.warn(_("%s not added: only files and symlinks "
+                              "supported currently\n") % f)
+                    rejected.append(p)
+                elif ds[f] in 'amn':
+                    ui.warn(_("%s already tracked!\n") % f)
+                elif ds[f] == 'r':
+                    ds.normallookup(f)
+                else:
+                    ds.add(f)
+            return rejected
+        finally:
+            wlock.release()
+
+    def forget(self, list):
+        wlock = self._repo.wlock()
+        try:
+            for f in list:
+                if self._repo.dirstate[f] != 'a':
+                    self._repo.ui.warn(_("%s not added!\n") % f)
+                else:
+                    self._repo.dirstate.forget(f)
+        finally:
+            wlock.release()
+
+    def remove(self, list, unlink=False):
+        if unlink:
+            for f in list:
+                try:
+                    util.unlink(self._repo.wjoin(f))
+                except OSError, inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
+        wlock = self._repo.wlock()
+        try:
+            for f in list:
+                if unlink and os.path.exists(self._repo.wjoin(f)):
+                    self._repo.ui.warn(_("%s still exists!\n") % f)
+                elif self._repo.dirstate[f] == 'a':
+                    self._repo.dirstate.forget(f)
+                elif f not in self._repo.dirstate:
+                    self._repo.ui.warn(_("%s not tracked!\n") % f)
+                else:
+                    self._repo.dirstate.remove(f)
+        finally:
+            wlock.release()
+
+    def undelete(self, list):
+        pctxs = self.parents()
+        wlock = self._repo.wlock()
+        try:
+            for f in list:
+                if self._repo.dirstate[f] != 'r':
+                    self._repo.ui.warn(_("%s not removed!\n") % f)
+                else:
+                    fctx = f in pctxs[0] and pctxs[0] or pctxs[1]
+                    t = fctx.data()
+                    self._repo.wwrite(f, t, fctx.flags())
+                    self._repo.dirstate.normal(f)
+        finally:
+            wlock.release()
+
+    def copy(self, source, dest):
+        p = self._repo.wjoin(dest)
+        if not (os.path.exists(p) or os.path.islink(p)):
+            self._repo.ui.warn(_("%s does not exist!\n") % dest)
+        elif not (os.path.isfile(p) or os.path.islink(p)):
+            self._repo.ui.warn(_("copy failed: %s is not a file or a "
+                                 "symbolic link\n") % dest)
+        else:
+            wlock = self._repo.wlock()
+            try:
+                if self._repo.dirstate[dest] in '?r':
+                    self._repo.dirstate.add(dest)
+                self._repo.dirstate.copy(source, dest)
+            finally:
+                wlock.release()
 
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular

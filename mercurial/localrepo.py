@@ -16,7 +16,7 @@ import merge as mergemod
 import tags as tagsmod
 import url as urlmod
 from lock import release
-import weakref, stat, errno, os, time, inspect
+import weakref, errno, os, time, inspect
 propertycache = util.propertycache
 
 class localrepository(repo.repository):
@@ -210,7 +210,7 @@ class localrepository(repo.repository):
         writetags(fp, names, encoding.fromlocal, prevtags)
 
         if '.hgtags' not in self.dirstate:
-            self.add(['.hgtags'])
+            self[None].add(['.hgtags'])
 
         m = matchmod.exact(self.root, '', ['.hgtags'])
         tagnode = self.commit(message, user, date, extra=extra, match=m)
@@ -1111,103 +1111,6 @@ class localrepository(repo.repository):
         r = modified, added, removed, deleted, unknown, ignored, clean
         [l.sort() for l in r]
         return r
-
-    def add(self, list):
-        wlock = self.wlock()
-        try:
-            rejected = []
-            for f in list:
-                p = self.wjoin(f)
-                try:
-                    st = os.lstat(p)
-                except:
-                    self.ui.warn(_("%s does not exist!\n") % f)
-                    rejected.append(f)
-                    continue
-                if st.st_size > 10000000:
-                    self.ui.warn(_("%s: up to %d MB of RAM may be required "
-                                   "to manage this file\n"
-                                   "(use 'hg revert %s' to cancel the "
-                                   "pending addition)\n")
-                                   % (f, 3 * st.st_size // 1000000, f))
-                if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
-                    self.ui.warn(_("%s not added: only files and symlinks "
-                                   "supported currently\n") % f)
-                    rejected.append(p)
-                elif self.dirstate[f] in 'amn':
-                    self.ui.warn(_("%s already tracked!\n") % f)
-                elif self.dirstate[f] == 'r':
-                    self.dirstate.normallookup(f)
-                else:
-                    self.dirstate.add(f)
-            return rejected
-        finally:
-            wlock.release()
-
-    def forget(self, list):
-        wlock = self.wlock()
-        try:
-            for f in list:
-                if self.dirstate[f] != 'a':
-                    self.ui.warn(_("%s not added!\n") % f)
-                else:
-                    self.dirstate.forget(f)
-        finally:
-            wlock.release()
-
-    def remove(self, list, unlink=False):
-        if unlink:
-            for f in list:
-                try:
-                    util.unlink(self.wjoin(f))
-                except OSError, inst:
-                    if inst.errno != errno.ENOENT:
-                        raise
-        wlock = self.wlock()
-        try:
-            for f in list:
-                if unlink and os.path.exists(self.wjoin(f)):
-                    self.ui.warn(_("%s still exists!\n") % f)
-                elif self.dirstate[f] == 'a':
-                    self.dirstate.forget(f)
-                elif f not in self.dirstate:
-                    self.ui.warn(_("%s not tracked!\n") % f)
-                else:
-                    self.dirstate.remove(f)
-        finally:
-            wlock.release()
-
-    def undelete(self, list):
-        manifests = [self.manifest.read(self.changelog.read(p)[0])
-                     for p in self.dirstate.parents() if p != nullid]
-        wlock = self.wlock()
-        try:
-            for f in list:
-                if self.dirstate[f] != 'r':
-                    self.ui.warn(_("%s not removed!\n") % f)
-                else:
-                    m = f in manifests[0] and manifests[0] or manifests[1]
-                    t = self.file(f).read(m[f])
-                    self.wwrite(f, t, m.flags(f))
-                    self.dirstate.normal(f)
-        finally:
-            wlock.release()
-
-    def copy(self, source, dest):
-        p = self.wjoin(dest)
-        if not (os.path.exists(p) or os.path.islink(p)):
-            self.ui.warn(_("%s does not exist!\n") % dest)
-        elif not (os.path.isfile(p) or os.path.islink(p)):
-            self.ui.warn(_("copy failed: %s is not a file or a "
-                           "symbolic link\n") % dest)
-        else:
-            wlock = self.wlock()
-            try:
-                if self.dirstate[dest] in '?r':
-                    self.dirstate.add(dest)
-                self.dirstate.copy(source, dest)
-            finally:
-                wlock.release()
 
     def heads(self, start=None):
         heads = self.changelog.heads(start)

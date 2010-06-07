@@ -1226,10 +1226,13 @@ def updatedir(ui, repo, patches, similarity=0):
             copies.append((gp.oldpath, gp.path))
         elif gp.op == 'DELETE':
             removes.add(gp.path)
+
+    wctx = repo[None]
     for src, dst in copies:
-        repo.copy(src, dst)
+        wctx.copy(src, dst)
     if (not similarity) and removes:
-        repo.remove(sorted(removes), True)
+        wctx.remove(sorted(removes), True)
+
     for f in patches:
         gp = patches[f]
         if gp and gp.mode:

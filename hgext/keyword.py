@@ -358,7 +358,7 @@ def demo(ui, repo, *args, **opts):
     demoitems('keywordmaps', kwmaps.iteritems())
     keywords = '$' + '$\n$'.join(sorted(kwmaps.keys())) + '$\n'
     repo.wopener(fn, 'w').write(keywords)
-    repo.add([fn])
+    repo[None].add([fn])
     ui.note(_('\nkeywords written to %s:\n') % fn)
     ui.note(keywords)
     repo.dirstate.setbranch('demobranch')

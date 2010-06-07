@@ -311,12 +311,13 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             copies[new] = old
 
     if not dry_run:
+        wctx = repo[None]
         wlock = repo.wlock()
         try:
-            repo.remove(deleted)
-            repo.add(unknown)
+            wctx.remove(deleted)
+            wctx.add(unknown)
             for new, old in copies.iteritems():
-                repo.copy(old, new)
+                wctx.copy(old, new)
         finally:
             wlock.release()
 
@@ -329,6 +330,7 @@ def copy(ui, repo, pats, opts, rename=False):
     targets = {}
     after = opts.get("after")
     dryrun = opts.get("dry_run")
+    wctx = repo[None]
 
     def walkpat(pat):
         srcs = []
@@ -421,12 +423,12 @@ def copy(ui, repo, pats, opts, rename=False):
                               "data will be stored for %s.\n")
                             % (repo.pathto(origsrc, cwd), reltarget))
                 if repo.dirstate[abstarget] in '?r' and not dryrun:
-                    repo.add([abstarget])
+                    wctx.add([abstarget])
             elif not dryrun:
-                repo.copy(origsrc, abstarget)
+                wctx.copy(origsrc, abstarget)
 
         if rename and not dryrun:
-            repo.remove([abssrc], not after)
+            wctx.remove([abssrc], not after)
 
     # pat: ossep
     # dest ossep

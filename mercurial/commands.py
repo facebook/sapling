@@ -56,7 +56,7 @@ def add(ui, repo, *pats, **opts):
             if ui.verbose or not exact:
                 ui.status(_('adding %s\n') % m.rel(f))
     if not opts.get('dry_run'):
-        bad += [f for f in repo.add(names) if f in m.files()]
+        bad += [f for f in repo[None].add(names) if f in m.files()]
     return bad and 1 or 0
 
 def addremove(ui, repo, *pats, **opts):
@@ -1314,7 +1314,7 @@ def forget(ui, repo, *pats, **opts):
         if ui.verbose or not m.exact(f):
             ui.status(_('removing %s\n') % m.rel(f))
 
-    repo.remove(forget, unlink=False)
+    repo[None].remove(forget, unlink=False)
     return errs
 
 def grep(ui, repo, pattern, *pats, **opts):
@@ -2669,8 +2669,8 @@ def remove(ui, repo, *pats, **opts):
         if ui.verbose or not m.exact(f):
             ui.status(_('removing %s\n') % m.rel(f))
 
-    repo.forget(forget)
-    repo.remove(remove, unlink=not after)
+    repo[None].forget(forget)
+    repo[None].remove(remove, unlink=not after)
     return ret
 
 def rename(ui, repo, *pats, **opts):

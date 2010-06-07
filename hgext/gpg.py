@@ -247,7 +247,7 @@ def sign(ui, repo, *revs, **opts):
     repo.wfile(".hgsigs", "ab").write(sigmessage)
 
     if '.hgsigs' not in repo.dirstate:
-        repo.add([".hgsigs"])
+        repo[None].add([".hgsigs"])
 
     if opts["no_commit"]:
         return

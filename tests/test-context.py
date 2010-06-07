@@ -13,7 +13,7 @@ f.close()
 os.utime('foo', (1000, 1000))
 
 # add+commit 'foo'
-repo.add(['foo'])
+repo[None].add(['foo'])
 repo.commit(text='commit1', date="0 0")
 
 print "workingfilectx.date =", repo[None]['foo'].date()
