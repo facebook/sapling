@@ -84,6 +84,7 @@ def uisetup(ui):
             attend = ui.configlist('pager', 'attend', attended)
             if (cmd in attend or
                 (cmd not in ui.configlist('pager', 'ignore') and not attend)):
+                ui.setconfig('ui', 'formatted', ui.formatted())
                 ui.setconfig('ui', 'interactive', False)
                 _runpager(p)
                 if ui.configbool('pager', 'quiet'):
