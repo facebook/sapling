@@ -253,6 +253,16 @@ class ui(object):
                 yield section, name, str(value).replace('\n', '\\n')
 
     def plain(self):
+        '''is plain mode active?
+
+        Plain mode means that all configuration variables which affect the
+        behavior and output of Mercurial should be ignored. Additionally, the
+        output should be stable, reproducible and suitable for use in scripts or
+        applications.
+
+        The only way to trigger plain mode is by setting the `HGPLAIN'
+        environment variable.
+        '''
         return 'HGPLAIN' in os.environ
 
     def username(self):
@@ -369,6 +379,19 @@ class ui(object):
         except: pass
 
     def interactive(self):
+        '''is interactive input allowed?
+
+        An interactive session is a session where input can be reasonably read
+        from `sys.stdin'. If this function returns false, any attempt to read
+        from stdin should fail with an error, unless a sensible default has been
+        specified.
+
+        Interactiveness is triggered by the value of the `ui.interactive'
+        configuration variable or - if it is unset - when `sys.stdin' points
+        to a terminal device.
+
+        This function refers to input only; for output, see `ui.formatted()'.
+        '''
         i = self.configbool("ui", "interactive", None)
         if i is None:
             try:
@@ -381,6 +404,22 @@ class ui(object):
         return i
 
     def formatted(self):
+        '''should formatted output be used?
+
+        It is often desirable to format the output to suite the output medium.
+        Examples of this are truncating long lines or colorizing messages.
+        However, this is not often not desirable when piping output into other
+        utilities, e.g. `grep'.
+
+        Formatted output is triggered by the value of the `ui.formatted'
+        configuration variable or - if it is unset - when `sys.stdout' points
+        to a terminal device. Please note that `ui.formatted' should be
+        considered an implementation detail; it is not intended for use outside
+        Mercurial or its extensions.
+
+        This function refers to output only; for input, see `ui.interactive()'.
+        This function always returns false when in plain mode, see `ui.plain()'.
+        '''
         if self.plain():
             return False
 
