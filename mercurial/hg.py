@@ -30,13 +30,12 @@ def addbranchrevs(lrepo, repo, branches, revs):
         if branch == '.':
             if not lrepo or not lrepo.local():
                 raise util.Abort(_("dirstate branch not accessible"))
-            revs.append(lrepo.dirstate.branch())
+            branch = lrepo.dirstate.branch()
+        butf8 = encoding.fromlocal(branch)
+        if butf8 in branchmap:
+            revs.extend(node.hex(r) for r in reversed(branchmap[butf8]))
         else:
-            butf8 = encoding.fromlocal(branch)
-            if butf8 in branchmap:
-                revs.extend(node.hex(r) for r in reversed(branchmap[butf8]))
-            else:
-                revs.append(branch)
+            revs.append(branch)
     return revs, revs[0]
 
 def parseurl(url, branches=None):
