@@ -16,7 +16,7 @@ map from a changeset hash to its hash in the source repository.
 from mercurial.i18n import _
 import os, tempfile
 from mercurial import bundlerepo, changegroup, cmdutil, hg, merge, match
-from mercurial import patch, revlog, util, error
+from mercurial import patch, revlog, util, error, discovery
 
 class transplantentry(object):
     def __init__(self, lnode, rnode):
@@ -472,7 +472,8 @@ def transplant(ui, repo, *revs, **opts):
     def getremotechanges(repo, url):
         sourcerepo = ui.expandpath(url)
         source = hg.repository(ui, sourcerepo)
-        common, incoming, rheads = repo.findcommonincoming(source, force=True)
+        tmp = discovery.findcommonincoming(repo, source, force=True)
+        common, incoming, rheads = tmp
         if not incoming:
             return (source, None, None)
 

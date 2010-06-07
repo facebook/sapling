@@ -76,7 +76,7 @@ hgrc(5) for details.
 import os, errno, socket, tempfile, cStringIO, time
 import email.MIMEMultipart, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
-from mercurial import cmdutil, commands, hg, mail, patch, util
+from mercurial import cmdutil, commands, hg, mail, patch, util, discovery
 from mercurial.i18n import _
 from mercurial.node import bin
 
@@ -244,7 +244,7 @@ def patchbomb(ui, repo, *revs, **opts):
             revs = [repo.lookup(rev) for rev in revs]
         other = hg.repository(hg.remoteui(repo, opts), dest)
         ui.status(_('comparing with %s\n') % dest)
-        o = repo.findoutgoing(other)
+        o = discovery.findoutgoing(repo, other)
         if not o:
             ui.status(_("no changes found\n"))
             return []

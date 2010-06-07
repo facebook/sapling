@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import parser, util, error
+import parser, util, error, discovery
 import match as _match
 
 elements = {
@@ -420,7 +420,7 @@ def outgoing(repo, subset, x):
     dest, branches = hg.parseurl(dest)
     other = hg.repository(hg.remoteui(repo, {}), dest)
     repo.ui.pushbuffer()
-    o = repo.findoutgoing(other)
+    o = discovery.findoutgoing(repo, other)
     repo.ui.popbuffer()
     cl = repo.changelog
     o = set([cl.rev(r) for r in repo.changelog.nodesbetween(o, None)[0]])

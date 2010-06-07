@@ -18,7 +18,7 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import bundlerepo, changegroup, cmdutil, commands, extensions
-from mercurial import hg, url, util, graphmod
+from mercurial import hg, url, util, graphmod, discovery
 
 ASCIIDATA = 'ASC'
 
@@ -283,7 +283,7 @@ def goutgoing(ui, repo, dest=None, **opts):
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
     ui.status(_('comparing with %s\n') % url.hidepassword(dest))
-    o = repo.findoutgoing(other, force=opts.get('force'))
+    o = discovery.findoutgoing(repo, other, force=opts.get('force'))
     if not o:
         ui.status(_("no changes found\n"))
         return
@@ -311,7 +311,8 @@ def gincoming(ui, repo, source="default", **opts):
     ui.status(_('comparing with %s\n') % url.hidepassword(source))
     if revs:
         revs = [other.lookup(rev) for rev in revs]
-    incoming = repo.findincoming(other, heads=revs, force=opts["force"])
+    incoming = discovery.findincoming(repo, other, heads=revs,
+                                      force=opts["force"])
     if not incoming:
         try:
             os.unlink(opts["bundle"])

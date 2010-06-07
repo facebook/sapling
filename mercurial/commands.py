@@ -10,7 +10,7 @@ from lock import release
 from i18n import _, gettext
 import os, re, sys, difflib, time, tempfile
 import hg, util, revlog, bundlerepo, extensions, copies, error
-import patch, help, mdiff, url, encoding, templatekw
+import patch, help, mdiff, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
 import minirst, revset
@@ -596,7 +596,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), dest)
         revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
-        o = repo.findoutgoing(other, force=opts.get('force'))
+        o = discovery.findoutgoing(repo, other, force=opts.get('force'))
 
     if not o:
         ui.status(_("no changes found\n"))
@@ -2090,8 +2090,10 @@ def incoming(ui, repo, source="default", **opts):
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
     if revs:
         revs = [other.lookup(rev) for rev in revs]
-    common, incoming, rheads = repo.findcommonincoming(other, heads=revs,
-                                                       force=opts["force"])
+
+    tmp = discovery.findcommonincoming(repo, other, heads=revs,
+                                       force=opts.get('force'))
+    common, incoming, rheads = tmp
     if not incoming:
         try:
             os.unlink(opts["bundle"])
@@ -2395,7 +2397,7 @@ def outgoing(ui, repo, dest=None, **opts):
 
     other = hg.repository(hg.remoteui(repo, opts), dest)
     ui.status(_('comparing with %s\n') % url.hidepassword(dest))
-    o = repo.findoutgoing(other, force=opts.get('force'))
+    o = discovery.findoutgoing(repo, other, force=opts.get('force'))
     if not o:
         ui.status(_("no changes found\n"))
         return 1
@@ -3324,7 +3326,7 @@ def summary(ui, repo, **opts):
         revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
         ui.debug('comparing with %s\n' % url.hidepassword(source))
         repo.ui.pushbuffer()
-        common, incoming, rheads = repo.findcommonincoming(other)
+        common, incoming, rheads = discovery.findcommonincoming(repo, other)
         repo.ui.popbuffer()
         if incoming:
             t.append(_('1 or more incoming'))
@@ -3334,7 +3336,7 @@ def summary(ui, repo, **opts):
         other = hg.repository(hg.remoteui(repo, {}), dest)
         ui.debug('comparing with %s\n' % url.hidepassword(dest))
         repo.ui.pushbuffer()
-        o = repo.findoutgoing(other)
+        o = discovery.findoutgoing(repo, other)
         repo.ui.popbuffer()
         o = repo.changelog.nodesbetween(o, None)[0]
         if o:
