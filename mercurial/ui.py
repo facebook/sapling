@@ -380,6 +380,21 @@ class ui(object):
 
         return i
 
+    def formatted(self):
+        if self.plain():
+            return False
+
+        i = self.configbool("ui", "formatted", None)
+        if i is None:
+            try:
+                return sys.stdout.isatty()
+            except AttributeError:
+                # some environments replace stdout without implementing isatty
+                # usually those are non-interactive
+                return False
+
+        return i
+
     def _readline(self, prompt=''):
         if sys.stdin.isatty():
             try:
