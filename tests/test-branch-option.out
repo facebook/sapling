@@ -19,7 +19,9 @@ in rev c branch a
 1:dd6e60a716c6
 2:f25d57ab0566
 out branch .
+1:b84708d77ab7
 2:65511d0e2b55
+1:b84708d77ab7
 2:65511d0e2b55
 clone branch b
 requesting all changes
