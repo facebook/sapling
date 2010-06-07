@@ -198,14 +198,10 @@ def uisetup(ui):
         _effects.update(w32effects)
     elif mode != 'ansi':
         return
-
-    # check isatty() before anything else changes it (like pager)
-    isatty = sys.__stdout__.isatty()
-
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
         if (opts['color'] == 'always' or
             (opts['color'] == 'auto' and (os.environ.get('TERM') != 'dumb'
-                                          and isatty))):
+                                          and ui_.formatted()))):
             global _buffers
             _buffers = ui_._buffers
             extensions.wrapfunction(ui_, 'popbuffer', popbuffer)
