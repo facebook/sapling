@@ -20,6 +20,14 @@ hg branch b
 echo b > foo
 hg ci -d '0 0' -mb
 hg up 0
+hg --encoding utf-8 branch æ
+echo ae1 > foo
+hg ci -d '0 0' -mae1
+hg up 0
+hg --encoding utf-8 branch -f æ
+echo ae2 > foo
+hg ci -d '0 0' -mae2
+hg up 0
 hg branch -f b
 echo b2 > foo
 hg ci -d '0 0' -mb2
@@ -30,6 +38,10 @@ hg in -qr c -b a
 echo out branch .
 hg out -q ../branch#.
 hg out -q -b .
+echo out branch . non-ascii
+hg --encoding utf-8 up æ
+hg --encoding latin1 out -q ../branch#.
+hg --encoding latin1 out -q -b .
 echo clone branch b
 cd ..
 hg clone branch2#b branch3
