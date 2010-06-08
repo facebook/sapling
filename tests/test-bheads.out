@@ -179,3 +179,31 @@ abort: unknown revision 'z'!
 7: Adding c branch (c)
 3: Adding b branch head 1 (b)
 1: Adding a branch (a)
+______________
+% created new head message
+% init: no msg
+adding a
+marked working directory as branch b
+adding b
+% case NN: msg
+marked working directory as branch b
+adding B
+created new head
+% case HN: no msg
+% case BN: msg
+marked working directory as branch default
+adding A
+created new head
+% case CN: msg
+adding BB
+created new head
+% case BB: msg
+marked working directory as branch default
+created new head
+% case CB: msg
+created new head
+% case HB: no msg
+% case CC: msg
+created new head
+% case CH: no msg
+% case HH: no msg
