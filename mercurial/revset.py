@@ -288,7 +288,6 @@ def contains(repo, subset, x):
                 continue
     else:
         for r in subset:
-            c = repo[r]
             for f in repo[r].manifest():
                 if m(f):
                     s.append(r)

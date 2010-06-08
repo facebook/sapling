@@ -32,7 +32,7 @@ def os_link(src, dst):
                 pass
             # Fake hardlinking error
             raise OSError(errno.EINVAL, 'Hardlinking not supported')
-    except pywintypes.error, details:
+    except pywintypes.error:
         raise OSError(errno.EINVAL, 'target implements hardlinks improperly')
     except NotImplementedError: # Another fake error win Win98
         raise OSError(errno.EINVAL, 'Hardlinking not supported')
