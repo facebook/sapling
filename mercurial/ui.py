@@ -228,7 +228,7 @@ class ui(object):
         if result is None:
             result = default or []
         if isinstance(result, basestring):
-            result = _configlist(result)
+            result = _configlist(result.lstrip(' ,\n'))
             if result is None:
                 result = default or []
         return result

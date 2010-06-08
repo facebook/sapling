@@ -24,6 +24,7 @@ parsed = dispatch._parseconfig(testui, [
     'lists.list15=" just with starting quotation',
     'lists.list16="longer quotation" with "no ending quotation',
     'lists.list17=this is \\" "not a quotation mark"',
+    'lists.list18=\n \n\nding\ndong',
 ])
 
 print repr(testui.configitems('values'))
@@ -62,6 +63,7 @@ print repr(testui.configlist('lists', 'list14'))
 print repr(testui.configlist('lists', 'list15'))
 print repr(testui.configlist('lists', 'list16'))
 print repr(testui.configlist('lists', 'list17'))
+print repr(testui.configlist('lists', 'list18'))
 print repr(testui.configlist('lists', 'unknown'))
 print repr(testui.configlist('lists', 'unknown', ''))
 print repr(testui.configlist('lists', 'unknown', 'foo'))
