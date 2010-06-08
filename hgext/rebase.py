@@ -427,7 +427,7 @@ def abort(repo, originalwd, target, state):
     else:
         # Strip from the first rebased revision
         merge.update(repo, repo[originalwd].rev(), False, True, False)
-        rebased = filter(lambda x: x > -1, state.values())
+        rebased = filter(lambda x: x > -1 and x != target, state.values())
         if rebased:
             strippoint = min(rebased)
             # no backup of rebased cset versions needed
