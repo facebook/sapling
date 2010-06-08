@@ -101,3 +101,12 @@ diffuse.priority=-3
 diffuse.args=$local $base $other
 diffuse.gui=True
 diffuse.diffargs=$parent $child
+
+UltraCompare.regkey=Software\Microsoft\Windows\CurrentVersion\App Paths\UC.exe
+UltraCompare.args = $base $local $other -title1 base -title3 other
+UltraCompare.priority = -2
+UltraCompare.gui = True
+UltraCompare.binary = True
+UltraCompare.checkconflicts = True
+UltraCompare.checkchanged = True
+UltraCompare.diffargs=$child $parent -title1 $clabel -title2 $plabel1
