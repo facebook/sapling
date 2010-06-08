@@ -150,10 +150,8 @@ def churn(ui, repo, *pats, **opts):
     if opts.get('diffstat'):
         width -= 15
         def format(name, (added, removed)):
-            return "%s %15s %s%s\n" % (ui.label(pad(name, maxname),
-                                                'ui.plain'),
-                                       ui.label('+%d/-%d' % (added, removed),
-                                                'ui.plain'),
+            return "%s %15s %s%s\n" % (pad(name, maxname),
+                                       '+%d/-%d' % (added, removed),
                                        ui.label('+' * charnum(added),
                                                 'diffstat.inserted'),
                                        ui.label('-' * charnum(removed),
@@ -161,14 +159,14 @@ def churn(ui, repo, *pats, **opts):
     else:
         width -= 6
         def format(name, count):
-            return ui.label("%s %6d %s\n" % (pad(name, maxname), sum(count),
-                            '*' * charnum(sum(count))), 'ui.plain')
+            return "%s %6d %s\n" % (pad(name, maxname), sum(count),
+                                    '*' * charnum(sum(count)))
 
     def charnum(count):
         return int(round(count * width / maxcount))
 
     for name, count in rate:
-        ui.write(format(name, count), label='ui.labeled')
+        ui.write(format(name, count))
 
 
 cmdtable = {

@@ -2145,17 +2145,17 @@ def guard(ui, repo, *args, **opts):
     '''
     def status(idx):
         guards = q.series_guards[idx] or ['unguarded']
-        out = ['%s: ' % ui.label(q.series[idx], 'qguard.patch')]
+        ui.write('%s: ' % ui.label(q.series[idx], 'qguard.patch'))
         for i, guard in enumerate(guards):
             if guard.startswith('+'):
-                out.append(ui.label(guard, 'qguard.positive'))
+                ui.write(guard, label='qguard.positive')
             elif guard.startswith('-'):
-                out.append(ui.label(guard, 'qguard.negative'))
+                ui.write(guard, label='qguard.negative')
             else:
-                out.append(ui.label(guard, 'qguard.unguarded'))
+                ui.write(guard, label='qguard.unguarded')
             if i != len(guards) - 1:
-                out.append(ui.label(' ', 'ui.plain'))
-        ui.write(''.join(out) + '\n', label='ui.labeled')
+                ui.write(' ')
+        ui.write('\n')
     q = repo.mq
     patch = None
     args = list(args)
@@ -2799,8 +2799,7 @@ def summary(orig, ui, repo, *args, **kwargs):
     if u:
         m.append(ui.label(_("%d unapplied"), 'qseries.unapplied') % u)
     if m:
-        ui.write("mq:     ")
-        ui.write(', '.join(m) + '\n', label='ui.labeled')
+        ui.write("mq:     %s\n" % ', '.join(m))
     else:
         ui.note(_("mq:     (empty queue)\n"))
     return r
