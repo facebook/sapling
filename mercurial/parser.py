@@ -33,8 +33,8 @@ class parser(object):
     def _match(self, m):
         'make sure the tokenizer matches an end condition'
         if self.current[0] != m:
-            raise error.ParseError("unexpected token: %s" % self.current[2],
-                                   pos)
+            raise error.ParseError("unexpected token: %s" % self.current[0],
+                                   self.current[2])
         self._advance()
     def _parse(self, bind=0):
         token, value, pos = self._advance()

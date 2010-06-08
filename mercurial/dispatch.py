@@ -29,7 +29,7 @@ def dispatch(args):
             sys.stderr.write(_("hg: parse error at %s: %s\n") %
                              (inst.args[1], inst.args[0]))
         else:
-            sys.stderr.write(_("hg: parse error: %s\n") % ints.args[0])
+            sys.stderr.write(_("hg: parse error: %s\n") % inst.args[0])
         return -1
     return _runcatch(u, args)
 

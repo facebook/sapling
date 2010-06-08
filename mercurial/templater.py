@@ -17,7 +17,7 @@ def _flatten(thing):
     if isinstance(thing, str):
         yield thing
     elif not hasattr(thing, '__iter__'):
-        if i is not None:
+        if thing is not None:
             yield str(thing)
     else:
         for i in thing:
