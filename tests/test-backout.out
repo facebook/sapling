@@ -73,6 +73,7 @@ adding file1
 marked working directory as branch branch2
 adding file2
 removing file1
+created new head
 changeset 3:d4e8f6db59fb backs out changeset 1:bf1602f437f3
 the backout changeset is a new head - do not forget to merge
 (use "backout --merge" if you want to auto-merge)

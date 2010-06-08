@@ -4,6 +4,7 @@ marked working directory as branch bar
 % branch shadowing
 abort: a branch of the same name already exists (use 'hg update' to switch to it)
 marked working directory as branch default
+created new head
 % there should be only one default branch head
 changeset:   3:bf1bc2f45e83
 tag:         tip

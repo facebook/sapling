@@ -90,7 +90,6 @@ path t
  source   t
  revision 6747d179aa9a688023c4b0cad32e4c92bb7f34ad
 committing subrepository t
-created new head
   searching for copies back to rev 2
 resolving manifests
  overwrite None partial False

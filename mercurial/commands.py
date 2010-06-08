@@ -766,9 +766,37 @@ def commit(ui, repo, *pats, **opts):
     ctx = repo[node]
     parents = ctx.parents()
 
-    if bheads and [x for x in parents
-                   if x.node() not in bheads and x.branch() == branch]:
+    if bheads and not [x for x in parents
+                       if x.node() in bheads and x.branch() == branch]:
         ui.status(_('created new head\n'))
+        # The message is not printed for initial roots. For the other
+        # changesets, it is printed in the following situations:
+        #
+        # Par column: for the 2 parents with ...
+        #   N: null or no parent
+        #   B: parent is on another named branch
+        #   C: parent is a regular non head changeset
+        #   H: parent was a branch head of the current branch
+        # Msg column: whether we print "created new head" message
+        # In the following, it is assumed that there already exists some
+        # initial branch heads of the current branch, otherwise nothing is
+        # printed anyway.
+        #
+        # Par Msg Comment
+        # NN   y  additional topo root
+        #
+        # BN   y  additional branch root
+        # CN   y  additional topo head
+        # HN   n  usual case
+        #
+        # BB   y  weird additional branch root
+        # CB   y  branch merge
+        # HB   n  merge with named branch
+        #
+        # CC   y  additional head from merge
+        # CH   n  merge with a head
+        #
+        # HH   n  head merge: head count decreases
 
     if not opts.get('close_branch'):
         for r in parents:
