@@ -30,8 +30,10 @@ def addbranchrevs(lrepo, repo, branches, revs):
         if branch == '.':
             if not lrepo or not lrepo.local():
                 raise util.Abort(_("dirstate branch not accessible"))
-            branch = lrepo.dirstate.branch()
-        butf8 = encoding.fromlocal(branch)
+            butf8 = lrepo.dirstate.branch()
+            branch = encoding.tolocal(butf8)
+        else:
+            butf8 = encoding.fromlocal(branch)
         if butf8 in branchmap:
             revs.extend(node.hex(r) for r in reversed(branchmap[butf8]))
         else:

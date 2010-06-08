@@ -13,6 +13,12 @@ updating to branch a
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 marked working directory as branch b
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+marked working directory as branch æ
+created new head
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+marked working directory as branch æ
+created new head
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 marked working directory as branch b
 created new head
 in rev c branch a
@@ -22,9 +28,15 @@ in rev c branch a
 2:f25d57ab0566
 out branch .
 1:b84708d77ab7
-2:65511d0e2b55
+4:65511d0e2b55
 1:b84708d77ab7
-2:65511d0e2b55
+4:65511d0e2b55
+out branch . non-ascii
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+2:df5a44224d4e
+3:4f4a5125ca10
+2:df5a44224d4e
+3:4f4a5125ca10
 clone branch b
 requesting all changes
 adding changesets
