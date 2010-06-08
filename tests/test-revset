@@ -1,0 +1,38 @@
+#!/bin/sh
+
+try() {
+	echo '% hg debugrevspec' $@
+	hg debugrevspec $@
+}
+
+hg init repo
+cd repo
+hg branch a
+hg ci -m "plain name"
+hg branch b
+hg ci -m "another plain name"
+hg branch a-b-c-
+hg ci -m "with dashes"
+hg branch -- -a-b-c-
+hg ci -m "with leading dash"
+hg branch +a+b+c+
+hg ci -m "with plusses"
+hg branch /a/b/c/
+hg ci -m "with slashes"
+hg branch _a_b_c_
+hg ci -m "with underscores"
+hg branch .a.b.c.
+hg ci -m "with dots"
+
+# names that should work without quoting
+try a
+try b-a
+try _a_b_c_
+try _a_b_c_-a
+try .a.b.c.
+try .a.b.c.-a
+
+# quoting needed
+try '"-a-b-c-"'
+try '"-a-b-c-"-a'
+
