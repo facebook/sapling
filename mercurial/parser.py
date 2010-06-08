@@ -30,7 +30,7 @@ class parser(object):
         except StopIteration:
             pass
         return t
-    def _match(self, m):
+    def _match(self, m, pos):
         'make sure the tokenizer matches an end condition'
         if self.current[0] != m:
             raise error.ParseError("unexpected token: %s" % self.current[0],
@@ -46,12 +46,12 @@ class parser(object):
             expr = (prefix[0], value)
         else:
             if len(prefix) > 2 and prefix[2] == self.current[0]:
-                self._match(prefix[2])
+                self._match(prefix[2], pos)
                 expr = (prefix[0], None)
             else:
                 expr = (prefix[0], self._parse(prefix[1]))
                 if len(prefix) > 2:
-                    self._match(prefix[2])
+                    self._match(prefix[2], pos)
         # gather tokens until we meet a lower binding strength
         while bind < self._elements[self.current[0]][0]:
             token, value, pos = self._advance()
@@ -64,14 +64,14 @@ class parser(object):
                 # handle infix rules
                 infix = self._elements[token][2]
                 if len(infix) == 3 and infix[2] == self.current[0]:
-                    self._match(infix[2])
+                    self._match(infix[2], pos)
                     expr = (infix[0], expr, (None))
                 else:
                     if not infix[0]:
                         raise error.ParseError("not an infix: %s" % token, pos)
                     expr = (infix[0], expr, self._parse(infix[1]))
                     if len(infix) == 3:
-                        self._match(infix[2])
+                        self._match(infix[2], pos)
         return expr
     def parse(self, message):
         'generate a parse tree from a message'
