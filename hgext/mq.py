@@ -1722,7 +1722,7 @@ def delete(ui, repo, *patches, **opts):
     -k/--keep, the patch files are preserved in the patch directory.
 
     To stop managing a patch and move it into permanent history,
-    use the qfinish command."""
+    use the :hg:`qfinish` command."""
     q = repo.mq
     q.delete(repo, patches, opts)
     q.save_dirty()
@@ -2131,8 +2131,8 @@ def guard(ui, repo, *args, **opts):
 
     Guards control whether a patch can be pushed. A patch with no
     guards is always pushed. A patch with a positive guard ("+foo") is
-    pushed only if the qselect command has activated it. A patch with
-    a negative guard ("-foo") is never pushed if the qselect command
+    pushed only if the :hg:`qselect` command has activated it. A patch with
+    a negative guard ("-foo") is never pushed if the :hg:`qselect` command
     has activated it.
 
     With no arguments, print the currently active guards.
@@ -2414,7 +2414,7 @@ def strip(ui, repo, rev, **opts):
 def select(ui, repo, *args, **opts):
     '''set or print guarded patches to push
 
-    Use the qguard command to set or print guards on patch, then use
+    Use the :hg:`qguard` command to set or print guards on patch, then use
     qselect to tell mq which guards to use. A patch will be pushed if
     it has no guards or any positive guards match the currently
     selected guard, but will not be pushed if any negative guards
