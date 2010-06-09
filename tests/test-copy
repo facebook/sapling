@@ -7,6 +7,7 @@ hg commit -m "1" -d "1000000 0"
 hg status
 hg copy a b
 hg status
+hg sum
 hg --debug commit -m "2" -d "1000000 0"
 echo "we should see two history entries"
 hg history -v

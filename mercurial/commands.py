@@ -3307,6 +3307,19 @@ def summary(ui, repo, **opts):
 
     st = list(repo.status(unknown=True))[:6]
 
+    c = repo.dirstate.copies()
+    copied, renamed = [], []
+    for d, s in c.iteritems():
+        if s in st[2]:
+            st[2].remove(s)
+            renamed.append(d)
+        else:
+            copied.append(d)
+        if d in st[1]:
+            st[1].remove(d)
+    st.insert(3, renamed)
+    st.insert(4, copied)
+
     ms = mergemod.mergestate(repo)
     st.append([f for f in ms if ms[f] == 'u'])
 
@@ -3316,6 +3329,8 @@ def summary(ui, repo, **opts):
     labels = [ui.label(_('%d modified'), 'status.modified'),
               ui.label(_('%d added'), 'status.added'),
               ui.label(_('%d removed'), 'status.removed'),
+              ui.label(_('%d renamed'), 'status.copied'),
+              ui.label(_('%d copied'), 'status.copied'),
               ui.label(_('%d deleted'), 'status.deleted'),
               ui.label(_('%d unknown'), 'status.unknown'),
               ui.label(_('%d ignored'), 'status.ignored'),
@@ -3336,7 +3351,7 @@ def summary(ui, repo, **opts):
     elif (parents[0].extra().get('close') and
           pnode in repo.branchheads(branch, closed=True)):
         t += _(' (head closed)')
-    elif (not st[0] and not st[1] and not st[2] and not st[7]):
+    elif not (st[0] or st[1] or st[2] or st[3] or st[4] or st[9]):
         t += _(' (clean)')
         cleanworkdir = True
     elif pnode not in bheads:

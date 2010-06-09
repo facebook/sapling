@@ -12,6 +12,7 @@ hg commit -m "1" -d "1000000 0"
 
 echo "# rename a single file"
 hg rename d1/d11/a1 d2/c
+hg sum
 hg status -C
 hg update -C
 rm d2/c

@@ -1,4 +1,9 @@
 A b
+parent: 0:33aaa84a386b tip
+ 1
+branch: default
+commit: 1 copied
+update: (current)
 b
  b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 committed changeset 1:76973b01f66a012648546c979ea4c41de9e7d8cd

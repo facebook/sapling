@@ -1,4 +1,9 @@
 # rename a single file
+parent: 0:6f9914c7a010 tip
+ 1
+branch: default
+commit: 1 renamed
+update: (current)
 A d2/c
   d1/d11/a1
 R d1/d11/a1
