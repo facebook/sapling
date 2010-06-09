@@ -189,15 +189,14 @@ class kwtemplater(object):
         Caveat: localrepository._link fails on Windows.'''
         return self.match(path) and not 'l' in flagfunc(path)
 
-    def overwrite(self, node, expand, candidates):
+    def overwrite(self, ctx, candidates, iswctx, expand):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        ctx = self.repo[node]
         mf = ctx.manifest()
         if self.record:
             candidates = [f for f in ctx.files() if f in mf]
         candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
         if candidates:
-            self.restrict = True # do not expand when reading
+            self.restrict = True        # do not expand when reading
             msg = (expand and _('overwriting %s expanding keywords\n')
                    or _('overwriting %s shrinking keywords\n'))
             for f in candidates:
@@ -208,7 +207,7 @@ class kwtemplater(object):
                 if util.binary(data):
                     continue
                 if expand:
-                    if node is None: # kwexpand/kwshrink
+                    if iswctx:
                         ctx = self.repo.filectx(f, fileid=mf[f]).changectx()
                     data, found = self.substitute(data, f, ctx,
                                                   self.re_kw.subn)
@@ -217,7 +216,7 @@ class kwtemplater(object):
                 if found:
                     self.ui.note(msg % f)
                     self.repo.wwrite(f, data, mf.flags(f))
-                    if node is None:
+                    if iswctx:
                         self.repo.dirstate.normal(f)
                     elif self.record:
                         self.repo.dirstate.normallookup(f)
@@ -286,7 +285,8 @@ def _status(ui, repo, kwt, *pats, **opts):
 
 def _kwfwrite(ui, repo, expand, *pats, **opts):
     '''Selects files and passes them to kwtemplater.overwrite.'''
-    if len(repo[None].parents()) > 1:
+    wctx = repo[None]
+    if len(wctx.parents()) > 1:
         raise util.Abort(_('outstanding uncommitted merge'))
     kwt = kwtools['templater']
     wlock = repo.wlock()
@@ -295,7 +295,7 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
         modified, added, removed, deleted, unknown, ignored, clean = status
         if modified or added or removed or deleted:
             raise util.Abort(_('outstanding uncommitted changes'))
-        kwt.overwrite(None, expand, clean)
+        kwt.overwrite(wctx, clean, True, expand)
     finally:
         wlock.release()
 
@@ -498,7 +498,8 @@ def reposetup(ui, repo):
             n = super(kwrepo, self).commitctx(ctx, error)
             # no lock needed, only called from repo.commit() which already locks
             if not kwt.record:
-                kwt.overwrite(n, True, sorted(ctx.added() + ctx.modified()))
+                kwt.overwrite(self[n], sorted(ctx.added() + ctx.modified()),
+                              False, True)
             return n
 
     # monkeypatches
@@ -533,8 +534,9 @@ def reposetup(ui, repo):
             # therefore compare nodes before and after
             ctx = repo['.']
             ret = orig(ui, repo, commitfunc, *pats, **opts)
-            if ctx != repo['.']:
-                kwt.overwrite('.',  True, None)
+            recordctx = repo['.']
+            if ctx != recordctx:
+                kwt.overwrite(recordctx, None, False, True)
             return ret
         finally:
             wlock.release()
