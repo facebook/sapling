@@ -7,7 +7,7 @@
 
 import os, mimetypes, re, cgi, copy
 import webutil
-from mercurial import error, archival, templater, templatefilters
+from mercurial import error, encoding, archival, templater, templatefilters
 from mercurial.node import short, hex
 from mercurial.util import binary
 from common import paritygen, staticfile, get_contact, ErrorResponse
@@ -51,6 +51,8 @@ def rawfile(web, req, tmpl):
     mt = mimetypes.guess_type(path)[0]
     if mt is None:
         mt = binary(text) and 'application/octet-stream' or 'text/plain'
+    if mt.startswith('text/'):
+        mt += '; charset="%s"' % encoding.encoding
 
     req.respond(HTTP_OK, mt, path, len(text))
     return [text]
