@@ -1,6 +1,6 @@
-# localrepo.py - read/write repository class for mercurial
+# discovery.py - protocol changeset discovery functions
 #
-# Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
+# Copyright 2010 Matt Mackall <mpm@selenic.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
