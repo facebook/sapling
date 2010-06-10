@@ -65,6 +65,7 @@ debugcheckstate
 debugcommands
 debugcomplete
 debugconfig
+debugdag
 debugdata
 debugdate
 debugfsinfo
@@ -194,6 +195,7 @@ debugancestor:
 debugcheckstate: 
 debugcommands: 
 debugcomplete: options
+debugdag: tags, branches, dots, spaces
 debugdata: 
 debugdate: extended
 debugfsinfo: 
