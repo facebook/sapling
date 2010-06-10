@@ -15,5 +15,8 @@ doctest.testmod(mercurial.httprepo)
 import mercurial.util
 doctest.testmod(mercurial.util)
 
+import mercurial.dagparser
+doctest.testmod(mercurial.dagparser)
+
 import hgext.convert.cvsps
 doctest.testmod(hgext.convert.cvsps)
