@@ -1,5 +1,5 @@
 200 Script output follows
-content-type: text/plain
+content-type: text/plain; charset="ascii"
 content-length: 157
 content-disposition: inline; filename="some \"text\".txt"
 
