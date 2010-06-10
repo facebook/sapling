@@ -24,10 +24,10 @@ pretxncommit hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1
 3:4c52fb2e4022
 commit hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 
 commit.b hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 
-pre-identify hook: HG_ARGS=id 
+pre-identify hook: HG_ARGS=id HG_OPTS={'tags': None, 'rev': '', 'num': None, 'branch': None, 'id': None} HG_PATS=[] 
 warning: pre-identify hook exited with status 1
-pre-cat hook: HG_ARGS=cat b 
-post-cat hook: HG_ARGS=cat b HG_RESULT=0 
+pre-cat hook: HG_ARGS=cat b HG_OPTS={'rev': '', 'decode': None, 'exclude': [], 'output': '', 'include': []} HG_PATS=['b'] 
+post-cat hook: HG_ARGS=cat b HG_OPTS={'rev': '', 'decode': None, 'exclude': [], 'output': '', 'include': []} HG_PATS=['b'] HG_RESULT=0 
 b
 prechangegroup hook: HG_SOURCE=pull HG_URL=file: 
 changegroup hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_SOURCE=pull HG_URL=file: 

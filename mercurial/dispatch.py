@@ -342,15 +342,16 @@ def _earlygetopt(aliases, args):
             pos += 1
     return values
 
-def runcommand(lui, repo, cmd, fullargs, ui, options, d):
+def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # run pre-hook, and abort if it fails
-    ret = hook.hook(lui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs))
+    ret = hook.hook(lui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs),
+                    pats=cmdpats, opts=cmdoptions)
     if ret:
         return ret
     ret = _runcommand(ui, options, cmd, d)
     # run post-hook, passing command result
     hook.hook(lui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
-              result = ret)
+              result=ret, pats=cmdpats, opts=cmdoptions)
     return ret
 
 _loaded = set()
@@ -454,6 +455,7 @@ def _dispatch(ui, args):
         return commands.help_(ui, 'shortlist')
 
     repo = None
+    cmdpats = args[:]
     if cmd not in commands.norepo.split():
         try:
             repo = hg.repository(ui, path=path)
@@ -477,7 +479,8 @@ def _dispatch(ui, args):
         ui.warn("warning: --repository ignored\n")
 
     d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
-    return runcommand(lui, repo, cmd, fullargs, ui, options, d)
+    return runcommand(lui, repo, cmd, fullargs, ui, options, d,
+                      cmdpats, cmdoptions)
 
 def _runcommand(ui, options, cmd, cmdfunc):
     def checkargs():

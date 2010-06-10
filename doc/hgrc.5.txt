@@ -570,11 +570,19 @@ variables it is passed are listed with names of the form ``$HG_foo``.
 ``post-<command>``
   Run after successful invocations of the associated command. The
   contents of the command line are passed as ``$HG_ARGS`` and the result
-  code in ``$HG_RESULT``. Hook failure is ignored.
+  code in ``$HG_RESULT``. Parsed command line arguments are passed as 
+  ``$HG_PATS`` and ``$HG_OPTS``. These contain string representations of
+  the python data internally passed to <command>. ``$HG_OPTS`` is a 
+  dictionary of options (with unspecified options set to their defaults).
+  ``$HG_PATS`` is a list of arguments. Hook failure is ignored.
 ``pre-<command>``
   Run before executing the associated command. The contents of the
-  command line are passed as ``$HG_ARGS``. If the hook returns failure,
-  the command doesn't execute and Mercurial returns the failure
+  command line are passed as ``$HG_ARGS``. Parsed command line arguments
+  are passed as ``$HG_PATS`` and ``$HG_OPTS``. These contain string
+  representations of the data internally passed to <command>. ``$HG_OPTS``
+  is a  dictionary of options (with unspecified options set to their
+  defaults). ``$HG_PATS`` is a list of arguments. If the hook returns 
+  failure, the command doesn't execute and Mercurial returns the failure
   code.
 ``prechangegroup``
   Run before a changegroup is added via push, pull or unbundle. Exit
