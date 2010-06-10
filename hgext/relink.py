@@ -90,7 +90,10 @@ def prune(candidates, src, dst, ui):
         return st
 
     targets = []
+    total = len(candidates)
+    pos = 0
     for fn, st in candidates:
+        pos += 1
         srcpath = os.path.join(src, fn)
         tgt = os.path.join(dst, fn)
         ts = linkfilter(srcpath, tgt, st)
@@ -98,7 +101,9 @@ def prune(candidates, src, dst, ui):
             ui.debug(_('not linkable: %s\n') % fn)
             continue
         targets.append((fn, ts.st_size))
+        ui.progress(_('pruning'), pos, fn, _(' files'), total)
 
+    ui.progress(_('pruning'), None)
     ui.status(_('pruned down to %d probably relinkable files\n') % len(targets))
     return targets
 
