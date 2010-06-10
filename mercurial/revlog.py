@@ -353,14 +353,14 @@ class revlogoldio(object):
         return _pack(indexformatv0, *e2)
 
 # index ng:
-# 6 bytes offset
-# 2 bytes flags
-# 4 bytes compressed length
-# 4 bytes uncompressed length
-# 4 bytes: base rev
-# 4 bytes link rev
-# 4 bytes parent 1 rev
-# 4 bytes parent 2 rev
+#  6 bytes: offset
+#  2 bytes: flags
+#  4 bytes: compressed length
+#  4 bytes: uncompressed length
+#  4 bytes: base rev
+#  4 bytes: link rev
+#  4 bytes: parent 1 rev
+#  4 bytes: parent 2 rev
 # 32 bytes: nodeid
 indexformatng = ">Qiiiiii20s12x"
 ngshaoffset = 32
