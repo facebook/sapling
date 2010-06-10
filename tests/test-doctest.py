@@ -16,7 +16,7 @@ import mercurial.util
 doctest.testmod(mercurial.util)
 
 import mercurial.dagparser
-doctest.testmod(mercurial.dagparser)
+doctest.testmod(mercurial.dagparser, optionflags=doctest.NORMALIZE_WHITESPACE)
 
 import hgext.convert.cvsps
 doctest.testmod(hgext.convert.cvsps)

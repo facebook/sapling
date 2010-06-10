@@ -61,6 +61,7 @@ diff
 
 % Show debug commands if there are no other candidates
 debugancestor
+debugbuilddag
 debugcheckstate
 debugcommands
 debugcomplete
@@ -192,6 +193,7 @@ bundle: force, rev, branch, base, all, type, ssh, remotecmd
 cat: output, rev, decode, include, exclude
 copy: after, force, include, exclude, dry-run
 debugancestor: 
+debugbuilddag: mergeable-file, appended-file, overwritten-file, new-file
 debugcheckstate: 
 debugcommands: 
 debugcomplete: options

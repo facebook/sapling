@@ -1,0 +1,70 @@
+#! /bin/sh
+
+echo "[extensions]" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
+
+
+
+echo ---- overwritten and appended files
+
+rm -rf repo
+hg init repo
+cd repo
+hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' -q -oa
+echo -- dag
+hg debugdag -t -b
+echo -- glog
+hg glog --template '{rev}: {desc} [{branches}] @ {date}\n'
+echo -- glog of
+hg glog --template '{rev}: {desc} [{branches}]\n' of
+echo -- glog af
+hg glog --template '{rev}: {desc} [{branches}]\n' af
+echo -- tags
+hg tags -v
+echo -- cat of
+hg cat of
+echo -- cat af
+hg cat af
+cd ..
+
+echo ---- new and mergeable files
+
+rm -rf repo
+hg init repo
+cd repo
+hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' -q -mn
+echo -- dag
+hg debugdag -t -b
+echo -- glog
+hg glog --template '{rev}: {desc} [{branches}] @ {date}\n'
+echo -- glog mf
+hg glog --template '{rev}: {desc} [{branches}]\n' mf
+
+echo -- man r4
+hg manifest -r4
+echo -- cat r4 mf
+hg cat -r4 mf
+echo -- man r8
+hg manifest -r8
+echo -- cat r8 mf
+hg cat -r8 mf
+echo -- man
+hg manifest
+echo -- cat mf
+hg cat mf
+cd ..
+
+echo ---- command
+
+rm -rf repo
+hg init repo
+cd repo
+hg debugbuilddag '+2 !"touch X" +2' -q -o
+echo -- dag
+hg debugdag -t -b
+echo -- glog
+hg glog --template '{rev}: {desc} [{branches}]\n'
+echo -- glog X
+hg glog --template '{rev}: {desc} [{branches}]\n' X
+cd ..
+

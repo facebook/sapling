@@ -849,6 +849,123 @@ def debugancestor(ui, repo, *args):
     a = r.ancestor(lookup(rev1), lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
+def debugbuilddag(ui, repo, text,
+                  mergeable_file=False,
+                  appended_file=False,
+                  overwritten_file=False,
+                  new_file=False):
+    """builds a repo with a given dag from scratch in the current empty repo
+
+    Elements:
+
+     - "+n" is a linear run of n nodes based on the current default parent
+     - "." is a single node based on the current default parent
+     - "$" resets the default parent to null (implied at the start);
+           otherwise the default parent is always the last node created
+     - "<p" sets the default parent to the backref p
+     - "*p" is a fork at parent p, which is a backref
+     - "*p1/p2" is a merge of parents p1 and p2, which are backrefs
+     - "/p2" is a merge of the preceding node and p2
+     - ":tag" defines a local tag for the preceding node
+     - "@branch" sets the named branch for subsequent nodes
+     - "!command" runs the command using your shell
+     - "!!my command\\n" is like "!", but to the end of the line
+     - "#...\\n" is a comment up to the end of the line
+
+    Whitespace between the above elements is ignored.
+
+    A backref is either
+
+     - a number n, which references the node curr-n, where curr is the current
+       node, or
+     - the name of a local tag you placed earlier using ":tag", or
+     - empty to denote the default parent.
+
+    All string valued-elements are either strictly alphanumeric, or must
+    be enclosed in double quotes ("..."), with "\" as escape character.
+
+    Note that the --overwritten-file and --appended-file options imply the
+    use of "HGMERGE=internal:local" during DAG buildup.
+    """
+
+    if not (mergeable_file or appended_file or overwritten_file or new_file):
+        raise Exception(_('need at least one of -m, -a, -o, -n'))
+
+    if len(repo.changelog) > 0:
+        raise Exception(_('repository is not empty'))
+
+    if overwritten_file or appended_file:
+        # we don't want to fail in merges during buildup
+        os.environ['HGMERGE'] = 'internal:local'
+
+    def writefile(fname, text, fmode="w"):
+        f = open(fname, fmode)
+        try:
+            f.write(text)
+        finally:
+            f.close()
+
+    if mergeable_file:
+        linesperrev = 2
+        # determine number of revs in DAG
+        n = 0
+        for type, data in dagparser.parsedag(text):
+            if type == 'n':
+                n += 1
+        # make a file with k lines per rev
+        writefile("mf", "\n".join(str(i) for i in xrange(0, n * linesperrev))
+                  + "\n")
+
+    at = -1
+    atbranch = 'default'
+    for type, data in dagparser.parsedag(text):
+        if type == 'n':
+            ui.status('node %s\n' % format(data))
+            id, ps = data
+            p1 = ps[0]
+            if p1 != at:
+                update(ui, repo, node=p1, clean=True)
+                at = p1
+            if repo.dirstate.branch() != atbranch:
+                branch(ui, repo, atbranch, force=True)
+            if len(ps) > 1:
+                p2 = ps[1]
+                merge(ui, repo, node=p2)
+
+            if mergeable_file:
+                f = open("mf", "r+")
+                try:
+                    lines = f.read().split("\n")
+                    lines[id * linesperrev] += " r%i" % id
+                    f.seek(0)
+                    f.write("\n".join(lines))
+                finally:
+                    f.close()
+
+            if appended_file:
+                writefile("af", "r%i\n" % id, "a")
+
+            if overwritten_file:
+                writefile("of", "r%i\n" % id)
+
+            if new_file:
+                writefile("nf%i" % id, "r%i\n" % id)
+
+            commit(ui, repo, addremove=True, message="r%i" % id, date=(id, 0))
+            at = id
+        elif type == 'l':
+            id, name = data
+            ui.status('tag %s\n' % name)
+            tag(ui, repo, name, local=True)
+        elif type == 'a':
+            ui.status('branch %s\n' % data)
+            atbranch = data
+        elif type in 'cC':
+            r = util.system(data, cwd=repo.root)
+            if r:
+                desc, r = util.explain_exit(r)
+                raise util.Abort(_('%s command %s') % (data, desc))
+
 def debugcommands(ui, cmd='', *args):
     """list all available commands and options"""
     for cmd, vals in sorted(table.iteritems()):
@@ -3923,6 +4040,14 @@ table = {
          ] + walkopts + dryrunopts,
          _('[OPTION]... [SOURCE]... DEST')),
     "debugancestor": (debugancestor, [], _('[INDEX] REV1 REV2')),
+    "debugbuilddag":
+        (debugbuilddag,
+         [('m', 'mergeable-file', None, _('add single file mergeable changes')),
+          ('a', 'appended-file', None, _('add single file all revs append to')),
+          ('o', 'overwritten-file', None, _('add single file all revs overwrite')),
+          ('n', 'new-file', None, _('add new file at each rev')),
+         ],
+         _('[OPTION]... TEXT')),
     "debugcheckstate": (debugcheckstate, [], ''),
     "debugcommands": (debugcommands, [], _('[COMMAND]')),
     "debugcomplete":
