@@ -17,7 +17,7 @@ def _bundle(repo, bases, heads, node, suffix, extranodes=None):
     backupdir = repo.join("strip-backup")
     if not os.path.isdir(backupdir):
         os.mkdir(backupdir)
-    name = os.path.join(backupdir, "%s-%s" % (short(node), suffix))
+    name = os.path.join(backupdir, "%s-%s.hg" % (short(node), suffix))
     return changegroup.writebundle(cg, name, "HG10BZ")
 
 def _collectfiles(repo, striprev):
