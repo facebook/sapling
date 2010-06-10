@@ -1,5 +1,5 @@
-http://example.com/no/anchor, branches: []
-http://example.com/an/anchor, branches: ['foo']
-http://example.com/no/anchor/branches, branches: ['foo']
-http://example.com/an/anchor/branches, branches: ['foo', 'bar']
-http://example.com/an/anchor/branches-None, branches: ['foo']
+http://example.com/no/anchor, branches: (None, [])
+http://example.com/an/anchor, branches: ('foo', [])
+http://example.com/no/anchor/branches, branches: (None, ['foo'])
+http://example.com/an/anchor/branches, branches: ('bar', ['foo'])
+http://example.com/an/anchor/branches-None, branches: ('foo', [])

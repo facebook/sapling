@@ -19,34 +19,45 @@ def _local(path):
     return (os.path.isfile(path) and bundlerepo or localrepo)
 
 def addbranchrevs(lrepo, repo, branches, revs):
-    if not branches:
+    hashbranch, branches = branches
+    if not hashbranch and not branches:
         return revs or None, revs and revs[0] or None
     revs = revs and list(revs) or []
     if not repo.capable('branchmap'):
-        revs.extend(branches)
+        if branches:
+            raise util.Abort(_("remote branch lookup not supported"))
+        revs.append(hashbranch)
         return revs, revs[0]
     branchmap = repo.branchmap()
-    for branch in branches:
-        if branch == '.':
+
+    def primary(butf8):
+        if butf8 == '.':
             if not lrepo or not lrepo.local():
                 raise util.Abort(_("dirstate branch not accessible"))
             butf8 = lrepo.dirstate.branch()
-            branch = encoding.tolocal(butf8)
-        else:
-            butf8 = encoding.fromlocal(branch)
         if butf8 in branchmap:
             revs.extend(node.hex(r) for r in reversed(branchmap[butf8]))
+            return True
         else:
-            revs.append(branch)
+            return False
+
+    for branch in branches:
+        butf8 = encoding.fromlocal(branch)
+        if not primary(butf8):
+            raise error.RepoLookupError(_("unknown branch '%s'") % branch)
+    if hashbranch:
+        butf8 = encoding.fromlocal(hashbranch)
+        if not primary(butf8):
+            revs.append(hashbranch)
     return revs, revs[0]
 
 def parseurl(url, branches=None):
-    '''parse url#branch, returning url, branches+[branch]'''
+    '''parse url#branch, returning (url, (branch, branches))'''
 
     if '#' not in url:
-        return url, branches or []
+        return url, (None, branches or [])
     url, branch = url.split('#', 1)
-    return url, (branches or []) + [branch]
+    return url, (branch, branches or [])
 
 schemes = {
     'bundle': bundlerepo,

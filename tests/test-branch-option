@@ -12,6 +12,7 @@ hg up 0
 hg branch c
 echo c > foo
 hg ci -d '0 0' -mc
+hg tag -l z
 cd ..
 hg clone -r 0 branch branch2
 cd branch2
@@ -32,6 +33,10 @@ hg branch -f b
 echo b2 > foo
 hg ci -d '0 0' -mb2
 
+echo unknown branch and fallback
+hg in -qbz
+hg in -q ../branch#z
+hg out -qbz
 echo in rev c branch a
 hg in -qr c ../branch#a
 hg in -qr c -b a

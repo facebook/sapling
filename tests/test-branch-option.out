@@ -15,9 +15,14 @@ marked working directory as branch b
 marked working directory as branch æ
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 marked working directory as branch æ
+created new head
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 marked working directory as branch b
 created new head
+unknown branch and fallback
+abort: unknown branch 'z'!
+2:f25d57ab0566
+abort: unknown branch 'z'!
 in rev c branch a
 1:dd6e60a716c6
 2:f25d57ab0566
