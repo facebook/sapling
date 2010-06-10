@@ -48,7 +48,7 @@ def relink(ui, repo, origin=None, **opts):
     try:
         remotelock = src.lock()
         try:
-            candidates = sorted(collect(src.store.path, ui))
+            candidates = sorted(collect(src, ui))
             targets = prune(candidates, src.store.path, repo.store.path, ui)
             do_relink(src.store.path, repo.store.path, targets, ui)
         finally:
@@ -59,6 +59,18 @@ def relink(ui, repo, origin=None, **opts):
 def collect(src, ui):
     seplen = len(os.path.sep)
     candidates = []
+    live = len(src['tip'].manifest())
+    # Your average repository has some files which were deleted before
+    # the tip revision. We account for that by assuming that there are
+    # 3 tracked files for every 2 live files as of the tip version of
+    # the repository.
+    #
+    # mozilla-central as of 2010-06-10 had a ratio of just over 7:5.
+    total = live * 3 // 2
+    src = src.store.path
+    pos = 0
+    ui.status(_("tip has %d files, estimated total number of files: %s\n")
+              % (live, total))
     for dirpath, dirnames, filenames in os.walk(src):
         relpath = dirpath[len(src) + seplen:]
         for filename in filenames:
@@ -67,8 +79,11 @@ def collect(src, ui):
             st = os.stat(os.path.join(dirpath, filename))
             if not stat.S_ISREG(st.st_mode):
                 continue
+            pos += 1
             candidates.append((os.path.join(relpath, filename), st))
+            ui.progress(_('collecting'), pos, filename, _('files'), total)
 
+    ui.progress(_('collecting'), None)
     ui.status(_('collected %d candidate storage files\n') % len(candidates))
     return candidates
 
