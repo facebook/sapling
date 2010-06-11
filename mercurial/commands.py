@@ -920,7 +920,7 @@ def debugbuilddag(ui, repo, text,
     atbranch = 'default'
     for type, data in dagparser.parsedag(text):
         if type == 'n':
-            ui.status('node %s\n' % format(data))
+            ui.status('node %s\n' % str(data))
             id, ps = data
             p1 = ps[0]
             if p1 != at:
