@@ -97,9 +97,9 @@ def getlist(x):
         return getlist(x[1]) + [x[2]]
     return [x]
 
-def getpair(x, err):
+def getargs(x, min, max, err):
     l = getlist(x)
-    if len(l) != 2:
+    if len(l) < min or len(l) > max:
         raise error.ParseError(err)
     return l
 
@@ -186,7 +186,7 @@ def maxrev(repo, subset, x):
     return []
 
 def limit(repo, subset, x):
-    l = getpair(x, "limit wants two args")
+    l = getargs(x, 2, 2, "limit wants two args")
     try:
         lim = int(getstring(l[1], "limit wants a number"))
     except ValueError:
@@ -212,7 +212,7 @@ def branch(repo, subset, x):
     return [r for r in subset if r in s or repo[r].branch() in b]
 
 def ancestor(repo, subset, x):
-    l = getpair(x, "ancestor wants two args")
+    l = getargs(x, 2, 2, "ancestor wants two args")
     a = getset(repo, subset, l[0])
     b = getset(repo, subset, l[1])
     if len(a) > 1 or len(b) > 1:
@@ -230,8 +230,7 @@ def descendants(repo, subset, x):
     return [r for r in subset if r in s]
 
 def follow(repo, subset, x):
-    if x:
-        raise error.ParseError("follow takes no args")
+    getargs(x, 0, 0, "follow takes no arguments")
     p = repo['.'].rev()
     s = set(repo.changelog.ancestors(p)) | set([p])
     return [r for r in subset if r in s]
@@ -334,15 +333,16 @@ def removes(repo, subset, x):
     return checkstatus(repo, subset, pat, 2)
 
 def merge(repo, subset, x):
-    if x:
-        raise error.ParseError("merge takes no args")
+    getargs(x, 0, 0, "merge takes no arguments")
     cl = repo.changelog
     return [r for r in subset if cl.parentrevs(r)[1] != -1]
 
 def closed(repo, subset, x):
+    getargs(x, 0, 0, "closed takes no arguments")
     return [r for r in subset if repo[r].extra('close')]
 
 def head(repo, subset, x):
+    getargs(x, 0, 0, "head takes no arguments")
     hs = set()
     for b, ls in repo.branchmap().iteritems():
         hs.update(repo[h].rev() for h in ls)
@@ -354,7 +354,7 @@ def reverse(repo, subset, x):
     return l
 
 def sort(repo, subset, x):
-    l = getlist(x)
+    l = getargs(x, 1, 2, "sort wants one or two arguments")
     keys = "rev"
     if len(l) == 2:
         keys = getstring(l[1], "sort spec must be a string")
@@ -396,6 +396,7 @@ def sort(repo, subset, x):
     return [e[-1] for e in l]
 
 def getall(repo, subset, x):
+    getargs(x, 0, 0, "all takes no arguments")
     return subset
 
 def heads(repo, subset, x):
@@ -410,11 +411,8 @@ def roots(repo, subset, x):
 
 def outgoing(repo, subset, x):
     import hg # avoid start-up nasties
-    l = getlist(x)
-    if len(l) == 1:
-        dest = getstring(l[0], "outgoing wants a repo path")
-    else:
-        dest = ''
+    l = getargs(x, 0, 1, "outgoing wants a repo path")
+    dest = l[1:] or ''
     dest = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest)
     other = hg.repository(hg.remoteui(repo, {}), dest)
@@ -427,6 +425,7 @@ def outgoing(repo, subset, x):
     return [r for r in subset if r in o]
 
 def tagged(repo, subset, x):
+    getargs(x, 0, 0, "tagged takes no arguments")
     cl = repo.changelog
     s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
     return [r for r in subset if r in s]
