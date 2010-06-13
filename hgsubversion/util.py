@@ -96,6 +96,9 @@ def parseurl(url, heads=[]):
         svn_url, heads, checkout = parsed
     else:
         svn_url, heads = parsed
+        if isinstance(heads, tuple) and len(heads) == 2:
+            # hg 1.6 or later
+            _junk, heads = heads
         if heads:
             checkout = heads[0]
         else:
