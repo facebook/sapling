@@ -19,6 +19,8 @@ class gitrepo(repo.repository):
     def local(self):
         if not self.path:
             raise RepoError
+    def heads(self):
+        return []
 
 
 instance = gitrepo

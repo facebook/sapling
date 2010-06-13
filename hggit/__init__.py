@@ -103,6 +103,20 @@ def sortednodetags(orig, *args, **kwargs):
     return ret
 extensions.wrapfunction(localrepo.localrepository, 'nodetags', sortednodetags)
 
+try:
+    from mercurial import discovery
+    def findoutgoing(orig, local, remote, base=None, heads=None, force=False):
+        if isinstance(remote, gitrepo.gitrepo):
+            git = GitHandler(local, local.ui)
+            base, heads = git.get_refs(remote.path)
+            r = orig(local, remote, base=base, heads=heads,
+                        force=force)
+            return [x[0] for x in r]
+        return orig(local, remote, base=base, heads=heads, force=force)
+    extensions.wrapfunction(discovery, 'findoutgoing', findoutgoing)
+except ImportError:
+    pass
+
 cmdtable = {
   "gimport":
         (gimport, [], _('hg gimport')),
