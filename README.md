@@ -1,8 +1,3 @@
-*Warning: This plugin is not yet stabilized. Use to help me identify bugs, but it will be a few weeks before its fully stable.*
-
-*Project status as of 5/27:*  Pretty solid, but a bit slow - can losslessly convert most major scenarios and can handle projects up to several thousand commits. Submodules in Git are not handled. See TODO.txt for full list of things I'm working on.
-
-
 Hg-Git Mercurial Plugin
 =======================
 
@@ -13,7 +8,7 @@ The Hg-Git plugin can convert commits/changesets losslessly from one system to a
 Dependencies
 ============
 
-This plugin is implemented entirely in Python - there are no Git binary dependencies, you do not need to have Git installed on your system.  The only dependencies are Mercurial and Dulwich.  The plugin is known to work on Hg versions 1.1 through 1.3 and requires at least Dulwich 0.3.2.
+This plugin is implemented entirely in Python - there are no Git binary dependencies, you do not need to have Git installed on your system.  The only dependencies are Mercurial and Dulwich.  The plugin is known to work on Hg versions 1.3 through 1.5 and requires at least Dulwich 0.6.0.
 
 Usage
 =====
