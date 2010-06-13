@@ -75,6 +75,20 @@ wrapcmds = { # cmd: generic, target, fixdoc, ppopts, opts
     ]),
 }
 
+
+# only need the discovery variant of this code when we drop hg < 1.6
+try:
+    from mercurial import discovery
+    def findoutgoing(orig, *args, **opts):
+        capable = getattr(args[1], 'capable', lambda x: False)
+        if capable('subversion'):
+            return wrappers.outgoing(*args, **opts)
+        else:
+            return orig(*args, **opts)
+    extensions.wrapfunction(discovery, 'findoutgoing', findoutgoing)
+except ImportError:
+    pass
+
 def uisetup(ui):
     """insert command wrappers for a bunch of commands"""
     docvals = {'extension': 'hgsubversion'}
