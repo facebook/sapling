@@ -2,6 +2,7 @@ import re
 import os
 import urllib
 
+from mercurial import cmdutil
 from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
@@ -88,6 +89,11 @@ def normalize_url(url):
 def progress(ui, *args, **kwargs):
     if getattr(ui, 'progress', False):
         return ui.progress(*args, **kwargs)
+
+# TODO remove when we drop 1.5 support
+remoteui = getattr(cmdutil, 'remoteui', getattr(hg, 'remoteui', False))
+if not remoteui:
+    raise ImportError('Failed to import remoteui')
 
 def parseurl(url, heads=[]):
     parsed = hg.parseurl(url, heads)

@@ -383,7 +383,7 @@ def clone(orig, ui, source, dest=None, **opts):
             ui.setconfig(section, name, str(opts.pop(opt)))
 
     # this must be kept in sync with mercurial/commands.py
-    srcrepo, dstrepo = hg.clone(cmdutil.remoteui(ui, opts), source, dest,
+    srcrepo, dstrepo = hg.clone(util.remoteui(ui, opts), source, dest,
                                 pull=opts.get('pull'),
                                 stream=opts.get('uncompressed'),
                                 rev=opts.get('rev'),
