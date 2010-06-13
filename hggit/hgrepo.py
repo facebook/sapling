@@ -13,7 +13,8 @@ def generate_repo_subclass(baseclass):
             else: #pragma: no cover
                 return super(hgrepo, self).pull(remote, heads, force)
 
-        def push(self, remote, force=False, revs=None):
+        # TODO figure out something useful to do with the newbranch param
+        def push(self, remote, force=False, revs=None, newbranch=None):
             if isinstance(remote, gitrepo):
                 git = GitHandler(self, self.ui)
                 git.push(remote.path, revs, force)
