@@ -154,22 +154,3 @@ instead (named `.git`), add the following to your `hgrc`:
 
     [git]
     intree = True
-
-Authors
-========
-
-* Scott Chacon <schacon@gmail.com> - main development
-* Augie Fackler <durin42@gmail.com> - testing and moral support, janitor
-* Sverre Rabbelier <sverre@rabbelier.nl> - gexport, mode and i18n stuff and misc fixes
-* Abderrahim Kitouni <a.kitouni@gmail.com> - more "mercurialistic" UI
-* Kevin Bullock <kbullock@ringworld.org> - proper packaging for PyPI
-
-* Dulwich Developers - most of this code depends on the awesome work they did.
-
-Sponsorship
-===========
-
-GitHub let me (Scott) work on this full time for several days, which
-is why this got done at all.  If you're looking for a free Git host to
-push your open source Hg projects to, do try us out
-(http://github.com).
