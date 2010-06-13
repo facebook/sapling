@@ -18,9 +18,9 @@ creating and sending data
     default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:2b9ec6a4
 @  changeset:   2:92d33c0dd6e1
+|  tag:         default/master
 |  tag:         master
 |  tag:         tip
-|  tag:         default/master
 |  user:        test <test@example.com> (comment)
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  summary:     modify beta
@@ -31,8 +31,8 @@ o  changeset:   1:0564f526fb0f
 |  summary:     add beta
 |
 o  changeset:   0:3442585be8a6
-   tag:         not-master
    tag:         default/not-master
+   tag:         not-master
    user:        test <test@example.org>
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha
@@ -44,9 +44,9 @@ Total 9 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   2:92d33c0dd6e1
+|  tag:         default/master
 |  tag:         master
 |  tag:         tip
-|  tag:         default/master
 |  user:        test <test@example.com> (comment)
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  summary:     modify beta
@@ -57,8 +57,8 @@ o  changeset:   1:0564f526fb0f
 |  summary:     add beta
 |
 o  changeset:   0:3442585be8a6
-   tag:         not-master
    tag:         default/not-master
+   tag:         not-master
    user:        test <test@example.org>
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha

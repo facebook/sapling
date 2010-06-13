@@ -14,17 +14,17 @@ creating and sending data
     default::refs/tags/alpha => GIT:7eeab2ea
     default::refs/heads/master => GIT:9a2616b9
 @  changeset:   1:d529e9229f6d
+|  tag:         default/master
 |  tag:         master
 |  tag:         tip
-|  tag:         default/master
 |  user:        test
 |  date:        Mon Jan 01 00:00:11 2007 +0000
 |  summary:     Added tag alpha for changeset 3442585be8a6
 |
 o  changeset:   0:3442585be8a6
-   tag:         not-master
    tag:         alpha
    tag:         default/not-master
+   tag:         not-master
    user:        test <test@example.org>
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha
@@ -38,17 +38,17 @@ Total 6 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   1:d529e9229f6d
+|  tag:         default/master
 |  tag:         master
 |  tag:         tip
-|  tag:         default/master
 |  user:        test
 |  date:        Mon Jan 01 00:00:11 2007 +0000
 |  summary:     Added tag alpha for changeset 3442585be8a6
 |
 o  changeset:   0:3442585be8a6
-   tag:         not-master
    tag:         alpha
    tag:         default/not-master
+   tag:         not-master
    user:        test <test@example.org>
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha

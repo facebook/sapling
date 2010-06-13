@@ -7,10 +7,10 @@ Total 7 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   1:99dcc15b7b07
-|  tag:         default/master
-|  tag:         tip
 |  tag:         beta
+|  tag:         default/master
 |  tag:         master
+|  tag:         tip
 |  user:        test <test@example.org>
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  summary:     add beta

@@ -17,7 +17,11 @@ Try hg clone git:// or hg clone git+ssh://
 
 import os
 
-from mercurial import commands, extensions, hg, util as hgutil
+from mercurial import commands
+from mercurial import extensions
+from mercurial import hg
+from mercurial import localrepo
+from mercurial import util as hgutil
 from mercurial.i18n import _
 
 import gitrepo, hgrepo
@@ -91,6 +95,13 @@ def git_cleanup(ui, repo):
     f = repo.opener(GitHandler.mapfile, 'wb')
     map(f.write, new_map)
     ui.status(_('git commit map cleaned\n'))
+
+# drop this when we're 1.6-only, this just backports new behavior
+def sortednodetags(orig, *args, **kwargs):
+    ret = orig(*args, **kwargs)
+    ret.sort()
+    return ret
+extensions.wrapfunction(localrepo.localrepository, 'nodetags', sortednodetags)
 
 cmdtable = {
   "gimport":

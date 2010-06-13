@@ -15,8 +15,8 @@ Total 12 (delta 1), reused 0 (delta 0)
 importing Git objects into Hg
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   3:8549ee7fe0801b2dafc06047ca6f66d36da709f5
-|  tag:         master
 |  tag:         default/master
+|  tag:         master
 |  tag:         tip
 |  parent:      2:0422fbb4ec39fb69e87b94a3874ac890333de11a
 |  parent:      -1:0000000000000000000000000000000000000000
