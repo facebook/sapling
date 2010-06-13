@@ -86,7 +86,7 @@ commit -m 'add to beta'
 
 cd ..
 cd hgrepo-b
-hg strip tip 2>&1 | grep -v saving
+hg strip tip 2>&1 | grep -v saving | grep -v backup
 hg pull -r beta
 hg git-cleanup
 echo % pull works after \'hg git-cleanup\'
