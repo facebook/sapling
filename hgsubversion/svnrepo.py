@@ -48,8 +48,9 @@ def generate_repo_class(ui, repo):
         return wrapper
 
     class svnlocalrepo(superclass):
+        # TODO use newbranch to allow branch creation in Subversion?
         @remotesvn
-        def push(self, remote, force=False, revs=None):
+        def push(self, remote, force=False, revs=None, newbranch=None):
             return wrappers.push(self, remote, force, revs)
 
         @remotesvn
