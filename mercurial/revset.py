@@ -339,7 +339,7 @@ def merge(repo, subset, x):
 
 def closed(repo, subset, x):
     getargs(x, 0, 0, "closed takes no arguments")
-    return [r for r in subset if repo[r].extra('close')]
+    return [r for r in subset if repo[r].extra().get('close')]
 
 def head(repo, subset, x):
     getargs(x, 0, 0, "head takes no arguments")
