@@ -23,7 +23,9 @@ You can discover zeroconf enabled repositories by running "hg paths"::
   zc-test = http://example.com:8000/test
 '''
 
-import Zeroconf, socket, time, os
+import socket, time, os
+
+import Zeroconf
 from mercurial import ui, hg, encoding
 from mercurial import extensions
 from mercurial.hgweb import hgweb_mod
