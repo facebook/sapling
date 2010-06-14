@@ -2561,19 +2561,20 @@ def merge(ui, repo, node=None, **opts):
         branch = repo.changectx(None).branch()
         bheads = repo.branchheads(branch)
         if len(bheads) > 2:
-            ui.warn(_("abort: branch '%s' has %d heads - "
-                      "please merge with an explicit rev\n")
-                    % (branch, len(bheads)))
-            ui.status(_("(run 'hg heads .' to see heads)\n"))
-            return False
+            raise util.Abort(_(
+                'branch \'%s\' has %d heads - '
+                'please merge with an explicit rev\n'
+                '(run \'hg heads .\' to see heads)')
+                % (branch, len(bheads)))
 
         parent = repo.dirstate.parents()[0]
         if len(bheads) == 1:
             if len(repo.heads()) > 1:
-                ui.warn(_("abort: branch '%s' has one head - "
-                          "please merge with an explicit rev\n" % branch))
-                ui.status(_("(run 'hg heads' to see all heads)\n"))
-                return False
+                raise util.Abort(_(
+                    'branch \'%s\' has one head - '
+                    'please merge with an explicit rev\n'
+                    '(run \'hg heads\' to see all heads)')
+                    % branch)
             msg = _('there is nothing to merge')
             if parent != repo.lookup(repo[None].branch()):
                 msg = _('%s - use "hg update" instead') % msg
