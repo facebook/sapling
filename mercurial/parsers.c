@@ -11,6 +11,8 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "util.h"
+
 static int hexdigit(char c)
 {
 	if (c >= '0' && c <= '9')
@@ -33,11 +35,13 @@ static PyObject *unhexlify(const char *str, int len)
 	const char *c;
 	char *d;
 
-	ret = PyString_FromStringAndSize(NULL, len / 2);
+	ret = PyBytes_FromStringAndSize(NULL, len / 2);
+
 	if (!ret)
 		return NULL;
 
-	d = PyString_AS_STRING(ret);
+	d = PyBytes_AsString(ret);
+
 	for (c = str; c < str + len;) {
 		int hi = hexdigit(*c++);
 		int lo = hexdigit(*c++);
@@ -81,7 +85,8 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 			goto quit;
 		}
 
-		file = PyString_FromStringAndSize(start, zero - start);
+		file = PyBytes_FromStringAndSize(start, zero - start);
+
 		if (!file)
 			goto bail;
 
@@ -92,7 +97,7 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 			goto bail;
 
 		if (nlen > 40) {
-			flags = PyString_FromStringAndSize(zero + 41,
+			flags = PyBytes_FromStringAndSize(zero + 41,
 							   nlen - 40);
 			if (!flags)
 				goto bail;
@@ -206,8 +211,8 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 
 		cpos = memchr(cur, 0, flen);
 		if (cpos) {
-			fname = PyString_FromStringAndSize(cur, cpos - cur);
-			cname = PyString_FromStringAndSize(cpos + 1,
+			fname = PyBytes_FromStringAndSize(cur, cpos - cur);
+			cname = PyBytes_FromStringAndSize(cpos + 1,
 							   flen - (cpos - cur) - 1);
 			if (!fname || !cname ||
 			    PyDict_SetItem(cmap, fname, cname) == -1 ||
@@ -215,7 +220,7 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 				goto quit;
 			Py_DECREF(cname);
 		} else {
-			fname = PyString_FromStringAndSize(cur, flen);
+			fname = PyBytes_FromStringAndSize(cur, flen);
 			if (!fname ||
 			    PyDict_SetItem(dmap, fname, entry) == -1)
 				goto quit;
@@ -248,8 +253,9 @@ static PyObject * _build_idx_entry(PyObject *nodemap, int n, uint64_t offset_fla
 	int err;
 	PyObject *entry, *node_id, *n_obj;
 
-	node_id = PyString_FromStringAndSize(c_node_id, 20);
+	node_id = PyBytes_FromStringAndSize(c_node_id, 20);
 	n_obj = PyInt_FromLong(n);
+
 	if (!node_id || !n_obj)
 		err = -1;
 	else
@@ -427,7 +433,23 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+#ifdef IS_PY3K
+static struct PyModuleDef parsers_module = {
+	PyModuleDef_HEAD_INIT,
+	"parsers",
+	parsers_doc,
+	-1,
+	methods
+};
+
+PyMODINIT_FUNC PyInit_parsers(void)
+{
+	return PyModule_Create(&parsers_module);
+}
+#else
 PyMODINIT_FUNC initparsers(void)
 {
 	Py_InitModule3("parsers", methods, parsers_doc);
 }
+#endif
+
