@@ -369,7 +369,7 @@ class ui(object):
             if not getattr(sys.stderr, 'closed', False):
                 sys.stderr.flush()
         except IOError, inst:
-            if inst.errno != errno.EPIPE:
+            if inst.errno not in (errno.EPIPE, errno.EIO):
                 raise
 
     def flush(self):
