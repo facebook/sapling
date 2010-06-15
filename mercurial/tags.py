@@ -15,18 +15,6 @@ from i18n import _
 import encoding
 import error
 
-def _debugalways(ui, *msg):
-    ui.write(*msg)
-
-def _debugconditional(ui, *msg):
-    ui.debug(*msg)
-
-def _debugnever(ui, *msg):
-    pass
-
-_debug = _debugalways
-_debug = _debugnever
-
 def findglobaltags(ui, repo, alltags, tagtypes):
     '''Find global tags in repo by reading .hgtags from every head that
     has a distinct version of it, using a cache to avoid excess work.
@@ -47,8 +35,6 @@ def findglobaltags(ui, repo, alltags, tagtypes):
         _updatetags(cachetags, 'global', alltags, tagtypes)
         return
 
-    _debug(ui, "reading tags from %d head(s): %s\n"
-           % (len(heads), map(short, reversed(heads))))
     seen = set()                    # set of fnode
     fctx = None
     for head in reversed(heads):        # oldest to newest
@@ -171,7 +157,6 @@ def _readtagcache(ui, repo):
         cachefile = repo.opener('tags.cache', 'r')
         # force reading the file for static-http
         cachelines = iter(cachefile)
-        _debug(ui, 'reading tag cache from %s\n' % cachefile.name)
     except IOError:
         cachefile = None
 
@@ -210,7 +195,6 @@ def _readtagcache(ui, repo):
     # But, thanks to localrepository.destroyed(), it also means none
     # have been destroyed by strip or rollback.)
     if cacheheads and cacheheads[0] == tipnode and cacherevs[0] == tiprev:
-        _debug(ui, "tag cache: tip unchanged\n")
         tags = _readtags(ui, repo, cachelines, cachefile.name)
         cachefile.close()
         return (None, None, tags, False)
@@ -224,36 +208,21 @@ def _readtagcache(ui, repo):
         return ([], {}, {}, False)
 
     # Case 3 (uncommon): cache file missing or empty.
-    if not cacheheads:
-        _debug(ui, 'tag cache: cache file missing or empty\n')
 
     # Case 4 (uncommon): tip rev decreased.  This should only happen
     # when we're called from localrepository.destroyed().  Refresh the
     # cache so future invocations will not see disappeared heads in the
     # cache.
-    elif cacheheads and tiprev < cacherevs[0]:
-        _debug(ui,
-               'tag cache: tip rev decremented (from %d to %d), '
-               'so we must be destroying nodes\n'
-               % (cacherevs[0], tiprev))
 
     # Case 5 (common): tip has changed, so we've added/replaced heads.
-    else:
-        _debug(ui,
-               'tag cache: tip has changed (%d:%s); must find new heads\n'
-               % (tiprev, short(tipnode)))
 
-    # Luckily, the code to handle cases 3, 4, 5 is the same.  So the
-    # above if/elif/else can disappear once we're confident this thing
-    # actually works and we don't need the debug output.
+    # As it happens, the code to handle cases 3, 4, 5 is the same.
 
     # N.B. in case 4 (nodes destroyed), "new head" really means "newly
     # exposed".
     newheads = [head
                 for head in repoheads
                 if head not in set(cacheheads)]
-    _debug(ui, 'tag cache: found %d head(s) not in cache: %s\n'
-           % (len(newheads), map(short, newheads)))
 
     # Now we have to lookup the .hgtags filenode for every new head.
     # This is the most expensive part of finding tags, so performance
@@ -278,7 +247,6 @@ def _writetagcache(ui, repo, heads, tagfnode, cachetags):
         cachefile = repo.opener('tags.cache', 'w', atomictemp=True)
     except (OSError, IOError):
         return
-    _debug(ui, 'writing cache file %s\n' % cachefile.name)
 
     realheads = repo.heads()            # for sanity checks below
     for head in heads:
