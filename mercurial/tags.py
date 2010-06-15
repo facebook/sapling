@@ -27,37 +27,12 @@ def _debugnever(ui, *msg):
 _debug = _debugalways
 _debug = _debugnever
 
-def findglobaltags1(ui, repo, alltags, tagtypes):
+def findglobaltags(ui, repo, alltags, tagtypes):
     '''Find global tags in repo by reading .hgtags from every head that
-    has a distinct version of it.  Updates the dicts alltags, tagtypes
-    in place: alltags maps tag name to (node, hist) pair (see _readtags()
-    below), and tagtypes maps tag name to tag type ('global' in this
-    case).'''
-
-    seen = set()
-    fctx = None
-    ctxs = []                       # list of filectx
-    for node in repo.heads():
-        try:
-            fnode = repo[node].filenode('.hgtags')
-        except error.LookupError:
-            continue
-        if fnode not in seen:
-            seen.add(fnode)
-            if not fctx:
-                fctx = repo.filectx('.hgtags', fileid=fnode)
-            else:
-                fctx = fctx.filectx(fnode)
-            ctxs.append(fctx)
-
-    # read the tags file from each head, ending with the tip
-    for fctx in reversed(ctxs):
-        filetags = _readtags(
-            ui, repo, fctx.data().splitlines(), fctx)
-        _updatetags(filetags, "global", alltags, tagtypes)
-
-def findglobaltags2(ui, repo, alltags, tagtypes):
-    '''Same as findglobaltags1(), but with caching.'''
+    has a distinct version of it, using a cache to avoid excess work.
+    Updates the dicts alltags, tagtypes in place: alltags maps tag name
+    to (node, hist) pair (see _readtags() below), and tagtypes maps tag
+    name to tag type ("global" in this case).'''
     # This is so we can be lazy and assume alltags contains only global
     # tags when we pass it to _writetagcache().
     assert len(alltags) == len(tagtypes) == 0, \
@@ -94,9 +69,6 @@ def findglobaltags2(ui, repo, alltags, tagtypes):
     # and update the cache (if necessary)
     if shouldwrite:
         _writetagcache(ui, repo, heads, tagfnode, alltags)
-
-# Set this to findglobaltags1 to disable tag caching.
-findglobaltags = findglobaltags2
 
 def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo.  Update alltags and tagtypes.'''
