@@ -23,6 +23,8 @@
 #include <unistd.h>
 #endif
 
+#include "util.h"
+
 /* some platforms lack the PATH_MAX definition (eg. GNU/Hurd) */
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -95,8 +97,7 @@ static void listdir_stat_dealloc(PyObject *o)
 }
 
 static PyTypeObject listdir_stat_type = {
-	PyObject_HEAD_INIT(NULL)
-	0,                         /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"osutil.stat",             /*tp_name*/
 	sizeof(struct listdir_stat), /*tp_basicsize*/
 	0,                         /*tp_itemsize*/
@@ -392,7 +393,7 @@ static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
 	wantstat = statobj && PyObject_IsTrue(statobj);
 
 	if (skipobj && skipobj != Py_None) {
-		skip = PyString_AsString(skipobj);
+		skip = PyBytes_AsString(skipobj);
 		if (!skip)
 			return NULL;
 	}
@@ -486,12 +487,13 @@ static PyObject *posixfile(PyObject *self, PyObject *args, PyObject *kwds)
 	}
 
 	fd = _open_osfhandle((intptr_t)handle, flags);
+
 	if (fd == -1) {
 		CloseHandle(handle);
 		PyErr_SetFromErrnoWithFilename(PyExc_IOError, name);
 		goto bail;
 	}
-
+#ifndef IS_PY3K
 	fp = _fdopen(fd, fpmode);
 	if (fp == NULL) {
 		_close(fd);
@@ -506,6 +508,11 @@ static PyObject *posixfile(PyObject *self, PyObject *args, PyObject *kwds)
 	}
 
 	PyFile_SetBufSize(file_obj, bufsize);
+#else
+	file_obj = PyFile_FromFd(fd, name, mode, bufsize, NULL, NULL, NULL, 1);
+	if (file_obj == NULL)
+		goto bail;
+#endif
 bail:
 	PyMem_Free(name);
 	return file_obj;
@@ -525,6 +532,23 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+#ifdef IS_PY3K
+static struct PyModuleDef osutil_module = {
+	PyModuleDef_HEAD_INIT,
+	"osutil",
+	osutil_doc,
+	-1,
+	methods
+};
+
+PyMODINIT_FUNC PyInit_osutil(void)
+{
+	if (PyType_Ready(&listdir_stat_type) < 0)
+		return NULL;
+
+	return PyModule_Create(&osutil_module);
+}
+#else
 PyMODINIT_FUNC initosutil(void)
 {
 	if (PyType_Ready(&listdir_stat_type) == -1)
@@ -532,3 +556,4 @@ PyMODINIT_FUNC initosutil(void)
 
 	Py_InitModule3("osutil", methods, osutil_doc);
 }
+#endif
