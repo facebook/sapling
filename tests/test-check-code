@@ -22,5 +22,15 @@ but """\\''' and finally''',
 a, '\\\\\\\\', "\\\\\\" x-2", "c-1"
 EOF
 
+cat > non-py24.py <<EOF
+# Using builtins that does not exist in Python 2.4
+if any():
+    x = all()
+
+# Do not complain about our own definition
+def any(x):
+    pass
+EOF
+
 check_code=`dirname $0`/../contrib/check-code.py
-${check_code} ./wrong.py ./correct.py ./quote.py
+${check_code} ./wrong.py ./correct.py ./quote.py ./non-py24.py

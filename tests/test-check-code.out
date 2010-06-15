@@ -11,3 +11,9 @@
 ./quote.py:5:
  > '"""', 42+1, """and
  missing whitespace in expression
+./non-py24.py:2:
+ > if any():
+ any/all not available in Python 2.4
+./non-py24.py:3:
+ >     x = all()
+ any/all not available in Python 2.4
