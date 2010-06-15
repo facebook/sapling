@@ -889,10 +889,10 @@ def debugbuilddag(ui, repo, text,
     """
 
     if not (mergeable_file or appended_file or overwritten_file or new_file):
-        raise Exception(_('need at least one of -m, -a, -o, -n'))
+        raise util.Abort(_('need at least one of -m, -a, -o, -n'))
 
     if len(repo.changelog) > 0:
-        raise Exception(_('repository is not empty'))
+        raise util.Abort(_('repository is not empty'))
 
     if overwritten_file or appended_file:
         # we don't want to fail in merges during buildup
