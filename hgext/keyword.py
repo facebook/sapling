@@ -191,12 +191,12 @@ class kwtemplater(object):
 
     def overwrite(self, ctx, candidates, iswctx, expand):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        mf = ctx.manifest()
         if self.record:
-            candidates = [f for f in ctx.files() if f in mf]
+            candidates = [f for f in ctx.files() if f in ctx]
         candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
         if candidates:
             self.restrict = True        # do not expand when reading
+            mf = ctx.manifest()
             msg = (expand and _('overwriting %s expanding keywords\n')
                    or _('overwriting %s shrinking keywords\n'))
             for f in candidates:
