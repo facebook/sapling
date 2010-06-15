@@ -363,8 +363,8 @@ def dagtextlines(events,
                     yield '#' + data
                     yield '\n'
                 else:
-                    raise util.Abort("invalid event type in dag: "
-                                     + format((type, data)))
+                    raise util.Abort(_("invalid event type in dag: %s")
+                                     % str((type, data)))
         if run:
             yield '+' + str(run)
 
