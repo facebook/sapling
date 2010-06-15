@@ -124,6 +124,38 @@ def wrapcommand(table, command, wrapper):
     return entry
 
 def wrapfunction(container, funcname, wrapper):
+    '''Wrap the function named funcname in container
+
+    It is replacing with your wrapper. The container is typically a
+    module, class, or instance.
+
+    The wrapper will be called like
+
+      wrapper(orig, *args, **kwargs)
+
+    where orig is the original (wrapped) function, and *args, **kwargs
+    are the arguments passed to it.
+
+    Wrapping methods of the repository object is not recommended since
+    it conflicts with extensions that extend the repository by
+    subclassing. All extensions that need to extend methods of
+    localrepository should use this subclassing trick: namely,
+    reposetup() should look like
+
+      def reposetup(ui, repo):
+          class myrepo(repo.__class__):
+              def whatever(self, *args, **kwargs):
+                  [...extension stuff...]
+                  super(myrepo, self).whatever(*args, **kwargs)
+                  [...extension stuff...]
+
+          repo.__class__ = myrepo
+
+    In general, combining wrapfunction() with subclassing does not
+    work. Since you cannot control what other extensions are loaded by
+    your end users, you should play nicely with others by using the
+    subclass trick.
+    '''
     def wrap(*args, **kwargs):
         return wrapper(origfn, *args, **kwargs)
 
