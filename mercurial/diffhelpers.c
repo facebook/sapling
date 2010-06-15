@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "util.h"
+
 static char diffhelpers_doc[] = "Efficient diff parsing";
 static PyObject *diffhelpers_Error;
 
@@ -20,20 +22,21 @@ static void _fix_newline(PyObject *hunk, PyObject *a, PyObject *b)
 {
 	int hunksz = PyList_Size(hunk);
 	PyObject *s = PyList_GET_ITEM(hunk, hunksz-1);
-	char *l = PyString_AS_STRING(s);
+	char *l = PyBytes_AsString(s);
 	int alen = PyList_Size(a);
 	int blen = PyList_Size(b);
 	char c = l[0];
 	PyObject *hline;
-	int sz = PyString_GET_SIZE(s);
+	int sz = PyBytes_GET_SIZE(s);
 
 	if (sz > 1 && l[sz-2] == '\r')
 		/* tolerate CRLF in last line */
 		sz -= 1;
-	hline = PyString_FromStringAndSize(l, sz-1);
+
+	hline = PyBytes_FromStringAndSize(l, sz-1);
 
 	if (c == ' ' || c == '+') {
-		PyObject *rline = PyString_FromStringAndSize(l + 1, sz - 2);
+		PyObject *rline = PyBytes_FromStringAndSize(l + 1, sz - 2);
 		PyList_SetItem(b, blen-1, rline);
 	}
 	if (c == ' ' || c == '-') {
@@ -82,7 +85,7 @@ addlines(PyObject *self, PyObject *args)
 		    break;
 		for (i = 0; i < num; i++) {
 			x = PyFile_GetLine(fp, 0);
-			s = PyString_AS_STRING(x);
+			s = PyBytes_AsString(x);
 			c = *s;
 			if (strcmp(s, "\\ No newline at end of file\n") == 0) {
 				_fix_newline(hunk, a, b);
@@ -92,17 +95,17 @@ addlines(PyObject *self, PyObject *args)
 				/* Some patches may be missing the control char
 				 * on empty lines. Supply a leading space. */
 				Py_DECREF(x);
-				x = PyString_FromString(" \n");
+				x = PyBytes_FromString(" \n");
 			}
 			PyList_Append(hunk, x);
 			if (c == '+') {
-				l = PyString_FromString(s + 1);
+				l = PyBytes_FromString(s + 1);
 				PyList_Append(b, l);
 				Py_DECREF(l);
 			} else if (c == '-') {
 				PyList_Append(a, x);
 			} else {
-				l = PyString_FromString(s + 1);
+				l = PyBytes_FromString(s + 1);
 				PyList_Append(b, l);
 				Py_DECREF(l);
 				PyList_Append(a, x);
@@ -136,8 +139,8 @@ testhunk(PyObject *self, PyObject *args)
 		return Py_BuildValue("l", -1);
 	}
 	for (i = 0; i < alen; i++) {
-		sa = PyString_AS_STRING(PyList_GET_ITEM(a, i));
-		sb = PyString_AS_STRING(PyList_GET_ITEM(b, i + bstart));
+		sa = PyBytes_AsString(PyList_GET_ITEM(a, i));
+		sb = PyBytes_AsString(PyList_GET_ITEM(b, i + bstart));
 		if (strcmp(sa + 1, sb) != 0)
 			return Py_BuildValue("l", -1);
 	}
@@ -151,6 +154,31 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+#ifdef IS_PY3K
+static struct PyModuleDef diffhelpers_module = {
+	PyModuleDef_HEAD_INIT,
+	"diffhelpers",
+	diffhelpers_doc,
+	-1,
+	methods
+};
+
+PyMODINIT_FUNC PyInit_diffhelpers(void)
+{
+	PyObject *m;
+
+	m = PyModule_Create(&diffhelpers_module);
+	if (m == NULL)
+		return NULL;
+
+	diffhelpers_Error = PyErr_NewException("diffhelpers.diffhelpersError",
+											NULL, NULL);
+	Py_INCREF(diffhelpers_Error);
+	PyModule_AddObject(m, "diffhelpersError", diffhelpers_Error);
+
+	return m;
+}
+#else
 PyMODINIT_FUNC
 initdiffhelpers(void)
 {
@@ -158,4 +186,5 @@ initdiffhelpers(void)
 	diffhelpers_Error = PyErr_NewException("diffhelpers.diffhelpersError",
 	                                        NULL, NULL);
 }
+#endif
 
