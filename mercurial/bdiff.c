@@ -46,6 +46,8 @@ static uint32_t htonl(uint32_t x)
 #include <inttypes.h>
 #endif
 
+#include "util.h"
+
 struct line {
 	int h, len, n, e;
 	const char *l;
@@ -309,8 +311,9 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "SS:bdiff", &sa, &sb))
 		return NULL;
 
-	an = splitlines(PyString_AsString(sa), PyString_Size(sa), &a);
-	bn = splitlines(PyString_AsString(sb), PyString_Size(sb), &b);
+	an = splitlines(PyBytes_AsString(sa), PyBytes_Size(sa), &a);
+	bn = splitlines(PyBytes_AsString(sb), PyBytes_Size(sb), &b);
+
 	if (!a || !b)
 		goto nomem;
 
@@ -363,12 +366,13 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 		lb = h->b2;
 	}
 
-	result = PyString_FromStringAndSize(NULL, len);
+	result = PyBytes_FromStringAndSize(NULL, len);
+
 	if (!result)
 		goto nomem;
 
 	/* build binary patch */
-	rb = PyString_AsString(result);
+	rb = PyBytes_AsString(result);
 	la = lb = 0;
 
 	for (h = l.base; h != l.head; h++) {
@@ -400,8 +404,23 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+#ifdef IS_PY3K
+static struct PyModuleDef bdiff_module = {
+	PyModuleDef_HEAD_INIT,
+	"bdiff",
+	mdiff_doc,
+	-1,
+	methods
+};
+
+PyMODINIT_FUNC PyInit_bdiff(void)
+{
+	return PyModule_Create(&bdiff_module);
+}
+#else
 PyMODINIT_FUNC initbdiff(void)
 {
 	Py_InitModule3("bdiff", methods, mdiff_doc);
 }
+#endif
 
