@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "util.h"
+
 /* Definitions to get compatibility with python 2.4 and earlier which
    does not have Py_ssize_t. See also PEP 353.
    Note: msvc (8 or earlier) does not have ssize_t, so we use Py_ssize_t.
@@ -373,12 +375,12 @@ patches(PyObject *self, PyObject *args)
 		result = NULL;
 		goto cleanup;
 	}
-	result = PyString_FromStringAndSize(NULL, outlen);
+	result = PyBytes_FromStringAndSize(NULL, outlen);
 	if (!result) {
 		result = NULL;
 		goto cleanup;
 	}
-	out = PyString_AsString(result);
+	out = PyBytes_AsString(result);
 	if (!apply(out, in, inlen, patch)) {
 		Py_DECREF(result);
 		result = NULL;
@@ -435,10 +437,34 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+#ifdef IS_PY3K
+static struct PyModuleDef mpatch_module = {
+	PyModuleDef_HEAD_INIT,
+	"mpatch",
+	mpatch_doc,
+	-1,
+	methods
+};
+
+PyMODINIT_FUNC PyInit_mpatch(void)
+{
+	PyObject *m;
+
+	m = PyModule_Create(&mpatch_module);
+	if (m == NULL)
+		return NULL;
+
+	mpatch_Error = PyErr_NewException("mpatch.mpatchError", NULL, NULL);
+	Py_INCREF(mpatch_Error);
+	PyModule_AddObject(m, "mpatchError", mpatch_Error);
+
+	return m;
+}
+#else
 PyMODINIT_FUNC
 initmpatch(void)
 {
 	Py_InitModule3("mpatch", methods, mpatch_doc);
 	mpatch_Error = PyErr_NewException("mpatch.mpatchError", NULL, NULL);
 }
-
+#endif
