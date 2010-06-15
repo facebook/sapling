@@ -148,7 +148,8 @@ class p4_source(converter_source):
         return self.heads
 
     def getfile(self, name, rev):
-        cmd = 'p4 -G print %s' % util.shellquote("%s#%s"%(self.depotname[name], rev))
+        cmd = 'p4 -G print %s' \
+            % util.shellquote("%s#%s" % (self.depotname[name], rev))
         stdout = util.popen(cmd, mode='rb')
 
         mode = None
