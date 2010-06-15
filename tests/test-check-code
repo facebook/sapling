@@ -26,6 +26,7 @@ cat > non-py24.py <<EOF
 # Using builtins that does not exist in Python 2.4
 if any():
     x = all()
+    y = format(x)
 
 # Do not complain about our own definition
 def any(x):
