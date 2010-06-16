@@ -296,31 +296,31 @@ rename to bar
 EOF
 cd ..
 
-echo '% test import with similarity (issue295)'
+echo '% test import with similarity and git and strip (issue295 et al.)'
 hg init sim
 cd sim
 echo 'this is a test' > a
 hg ci -Ama
 cat > ../rename.diff <<EOF
-diff --git a/a b/a
+diff --git a/foo/a b/foo/a
 deleted file mode 100644
---- a/a
+--- a/foo/a
 +++ /dev/null
 @@ -1,1 +0,0 @@
 -this is a test
-diff --git a/b b/b
+diff --git a/foo/b b/foo/b
 new file mode 100644
 --- /dev/null
-+++ b/b
++++ b/foo/b
 @@ -0,0 +1,2 @@
 +this is a test
 +foo
 EOF
-hg import --no-commit -v -s 1 ../rename.diff
+hg import --no-commit -v -s 1 ../rename.diff -p2
 hg st -C
 hg revert -a
 rm b
-hg import --no-commit -v -s 100 ../rename.diff
+hg import --no-commit -v -s 100 ../rename.diff -p2
 hg st -C
 cd ..
 
