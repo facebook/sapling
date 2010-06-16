@@ -7,7 +7,7 @@
 
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
-import repo, changegroup, subrepo, discovery
+import repo, changegroup, subrepo, discovery, pushkey
 import changelog, dirstate, filelog, manifest, context
 import lock, transaction, store, encoding
 import util, extensions, hook, error
@@ -20,7 +20,7 @@ import weakref, errno, os, time, inspect
 propertycache = util.propertycache
 
 class localrepository(repo.repository):
-    capabilities = set(('lookup', 'changegroupsubset', 'branchmap'))
+    capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey'))
     supported = set('revlogv1 store fncache shared'.split())
 
     def __init__(self, baseui, path=None, create=0):
@@ -1845,6 +1845,12 @@ class localrepository(repo.repository):
         if stream and not heads and remote.capable('stream'):
             return self.stream_in(remote)
         return self.pull(remote, heads)
+
+    def pushkey(self, namespace, key, old, new):
+        return pushkey.push(self, namespace, key, old, new)
+
+    def listkeys(self, namespace):
+        return pushkey.list(self, namespace)
 
 # used to avoid circular references so destructors work
 def aftertrans(files):
