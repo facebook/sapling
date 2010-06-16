@@ -845,7 +845,7 @@ graph.render(data);
 % capabilities
 200 Script output follows
 
-lookup changegroupsubset branchmap unbundle=HG10GZ,HG10BZ,HG10UN% heads
+lookup changegroupsubset branchmap pushkey unbundle=HG10GZ,HG10BZ,HG10UN% heads
 200 Script output follows
 
 1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe

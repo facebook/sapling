@@ -16,8 +16,10 @@ import webcommands, protocol, webutil
 perms = {
     'changegroup': 'pull',
     'changegroupsubset': 'pull',
-    'unbundle': 'push',
     'stream_out': 'pull',
+    'listkeys': 'pull',
+    'unbundle': 'push',
+    'pushkey': 'push',
 }
 
 class hgweb(object):

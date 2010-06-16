@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import cStringIO, zlib, tempfile, errno, os, sys, urllib, copy
-from mercurial import util, streamclone
+from mercurial import util, streamclone, pushkey
 from mercurial.node import bin, hex
 from mercurial import changegroup as changegroupmod
 from common import ErrorResponse, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
@@ -17,11 +17,11 @@ from common import ErrorResponse, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 __all__ = [
    'lookup', 'heads', 'branches', 'between', 'changegroup',
    'changegroupsubset', 'capabilities', 'unbundle', 'stream_out',
-   'branchmap',
+   'branchmap', 'pushkey', 'listkeys'
 ]
 
 HGTYPE = 'application/mercurial-0.1'
-basecaps = 'lookup changegroupsubset branchmap'.split()
+basecaps = 'lookup changegroupsubset branchmap pushkey'.split()
 
 def lookup(repo, req):
     try:
@@ -204,3 +204,22 @@ def stream_out(repo, req):
             yield chunk
     except streamclone.StreamException, inst:
         yield str(inst)
+
+def pushkey(repo, req):
+    namespace = req.form['namespace'][0]
+    key = req.form['key'][0]
+    old = req.form['old'][0]
+    new = req.form['new'][0]
+
+    r = repo.pushkey(namespace, key, old, new)
+    r = '%d\n' % int(r)
+    req.respond(HTTP_OK, HGTYPE, length=len(r))
+    yield r
+
+def listkeys(repo, req):
+    namespace = req.form['namespace'][0]
+    d = repo.listkeys(namespace).items()
+    t = '\n'.join(['%s\t%s' % (k.encode('string-escape'),
+                               v.encode('string-escape')) for k, v in d])
+    req.respond(HTTP_OK, HGTYPE, length=len(t))
+    yield t

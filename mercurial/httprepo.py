@@ -8,7 +8,7 @@
 
 from node import bin, hex, nullid
 from i18n import _
-import repo, changegroup, statichttprepo, error, url, util
+import repo, changegroup, statichttprepo, error, url, util, pushkey
 import os, urllib, urllib2, urlparse, zlib, httplib
 import errno, socket
 import encoding
@@ -258,6 +258,31 @@ class httprepository(repo.repository):
 
     def stream_out(self):
         return self.do_cmd('stream_out')
+
+    def pushkey(self, namespace, key, old, new):
+        if not self.capable('pushkey'):
+            return False
+        d = self.do_cmd("pushkey", data="", # force a POST
+                        namespace=namespace, key=key, old=old, new=new).read()
+        code, output = d.split('\n', 1)
+        try:
+            ret = bool(int(code))
+        except ValueError, err:
+            raise error.ResponseError(
+                _('push failed (unexpected response):'), d)
+        for l in output.splitlines(True):
+            self.ui.status(_('remote: '), l)
+        return ret
+
+    def listkeys(self, namespace):
+        if not self.capable('pushkey'):
+            return {}
+        d = self.do_cmd("listkeys", namespace=namespace).read()
+        r = {}
+        for l in d.splitlines():
+            k, v = l.split('\t')
+            r[k.decode('string-escape')] = v.decode('string-escape')
+        return r
 
 class httpsrepository(httprepository):
     def __init__(self, ui, path):
