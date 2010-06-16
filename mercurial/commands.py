@@ -1082,6 +1082,26 @@ def showconfig(ui, repo, *values, **opts):
                      ui.configsource(section, name, untrusted))
             ui.write('%s=%s\n' % (sectname, value))
 
+def debugpushkey(ui, repopath, namespace, *keyinfo):
+    '''access the pushkey key/value protocol
+
+    With two args, list the keys in the given namespace.
+
+    With five args, set a key to new if it currently is set to old.
+    Reports success or failure.
+    '''
+
+    target = hg.repository(ui, repopath)
+    if keyinfo:
+        key, old, new = keyinfo
+        r = target.pushkey(namespace, key, old, new)
+        ui.status(str(r) + '\n')
+        return not(r)
+    else:
+        for k, v in target.listkeys(namespace).iteritems():
+            ui.write("%s\t%s\n" % (k.encode('string-escape'),
+                                   v.encode('string-escape')))
+
 def debugrevspec(ui, repo, expr):
     '''parse and apply a revision specification'''
     if ui.verbose:
@@ -4072,6 +4092,7 @@ table = {
     "debugindex": (debugindex, [], _('FILE')),
     "debugindexdot": (debugindexdot, [], _('FILE')),
     "debuginstall": (debuginstall, [], ''),
+    "debugpushkey": (debugpushkey, [], _('REPO NAMESPACE [KEY OLD NEW]')),
     "debugrebuildstate":
         (debugrebuildstate,
          [('r', 'rev', '',
@@ -4420,5 +4441,6 @@ table = {
 }
 
 norepo = ("clone init version help debugcommands debugcomplete debugdata"
-          " debugindex debugindexdot debugdate debuginstall debugfsinfo")
+          " debugindex debugindexdot debugdate debuginstall debugfsinfo"
+          " debugpushkey")
 optionalrepo = ("identify paths serve showconfig debugancestor debugdag")

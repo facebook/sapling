@@ -73,6 +73,7 @@ debugfsinfo
 debugindex
 debugindexdot
 debuginstall
+debugpushkey
 debugrebuildstate
 debugrename
 debugrevspec
@@ -204,6 +205,7 @@ debugfsinfo:
 debugindex: 
 debugindexdot: 
 debuginstall: 
+debugpushkey: 
 debugrebuildstate: rev
 debugrename: rev
 debugrevspec: 
