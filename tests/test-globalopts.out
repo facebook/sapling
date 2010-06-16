@@ -213,6 +213,7 @@ additional help topics:
  urls         URL Paths
  extensions   Using additional features
  hgweb        Configuring hgweb
+ glossary     Glossary
 
 use "hg -v help" to show aliases and global options
 Mercurial Distributed SCM
@@ -283,6 +284,7 @@ additional help topics:
  urls         URL Paths
  extensions   Using additional features
  hgweb        Configuring hgweb
+ glossary     Glossary
 
 use "hg -v help" to show aliases and global options
 %% not tested: --debugger
