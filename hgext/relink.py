@@ -72,8 +72,9 @@ def collect(src, ui):
     ui.status(_("tip has %d files, estimated total number of files: %s\n")
               % (live, total))
     for dirpath, dirnames, filenames in os.walk(src):
+        dirnames.sort()
         relpath = dirpath[len(src) + seplen:]
-        for filename in filenames:
+        for filename in sorted(filenames):
             if not filename[-2:] in ('.d', '.i'):
                 continue
             st = os.stat(os.path.join(dirpath, filename))
