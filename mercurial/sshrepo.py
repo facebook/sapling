@@ -273,4 +273,21 @@ class sshrepository(repo.repository):
     def stream_out(self):
         return self.do_cmd('stream_out')
 
+    def pushkey(self, namespace, key, old, new):
+        if not self.capable('pushkey'):
+            return False
+        d = self.call("pushkey",
+                      namespace=namespace, key=key, old=old, new=new)
+        return bool(int(d))
+
+    def listkeys(self, namespace):
+        if not self.capable('pushkey'):
+            return {}
+        d = self.call("listkeys", namespace=namespace)
+        r = {}
+        for l in d.splitlines():
+            k, v = l.split('\t')
+            r[k.decode('string-escape')] = v.decode('string-escape')
+        return r
+
 instance = sshrepository
