@@ -752,6 +752,7 @@ class queue(object):
             raise util.Abort(_('qdelete requires at least one revision or '
                                'patch name'))
 
+        realpatches = []
         for patch in patches:
             patch = self.lookup(patch, strict=True)
             info = self.isapplied(patch)
@@ -759,8 +760,8 @@ class queue(object):
                 raise util.Abort(_("cannot delete applied patch %s") % patch)
             if patch not in self.series:
                 raise util.Abort(_("patch %s not in series file") % patch)
+            realpatches.append(patch)
 
-        patches = list(patches)
         numrevs = 0
         if opts.get('rev'):
             if not self.applied:
@@ -769,10 +770,10 @@ class queue(object):
             if len(revs) > 1 and revs[0] > revs[1]:
                 revs.reverse()
             revpatches = self._revpatches(repo, revs)
-            patches += revpatches
+            realpatches += revpatches
             numrevs = len(revpatches)
 
-        self._cleanup(patches, numrevs, opts.get('keep'))
+        self._cleanup(realpatches, numrevs, opts.get('keep'))
 
     def check_toppatch(self, repo):
         if self.applied:

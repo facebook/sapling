@@ -21,7 +21,7 @@ hg qdel c
 hg qseries
 ls .hg/patches
 hg qpop
-hg qdel -k b
+hg qdel -k 1
 ls .hg/patches
 hg qdel -r a
 hg qapplied
