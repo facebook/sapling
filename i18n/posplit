@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+#
+# posplit - split messages in paragraphs on .po/.pot files
+#
+# license: MIT/X11/Expat
+#
+
+import sys
+import polib
+
+def addentry(po, entry, cache):
+    e = cache.get(entry.msgid)
+    if e:
+        e.occurrences.extend(entry.occurrences)
+    else:
+        po.append(entry)
+        cache[entry.msgid] = entry
+
+def mkentry(orig, delta, msgid, msgstr):
+    entry = polib.POEntry()
+    entry.merge(orig)
+    entry.msgid = msgid or orig.msgid
+    entry.msgstr = msgstr or orig.msgstr
+    entry.occurrences = [(p, int(l) + delta) for (p, l) in orig.occurrences]
+    return entry
+
+if __name__ == "__main__":
+    po = polib.pofile(sys.argv[1])
+
+    cache = {}
+    entries = po[:]
+    po[:] = []
+    for entry in entries:
+        msgids = entry.msgid.split(u'\n\n')
+        if entry.msgstr:
+            msgstrs = entry.msgstr.split(u'\n\n')
+        else:
+            msgstrs = [u''] * len(msgids)
+
+        if len(msgids) != len(msgstrs):
+            # places the whole existing translation as a fuzzy
+            # translation for each paragraph, to give the
+            # translator a chance to recover part of the old
+            # translation - erasing extra paragraphs is
+            # probably better than retranslating all from start
+            if 'fuzzy' not in entry.flags:
+                entry.flags.append('fuzzy')
+            msgstrs = [entry.msgstr] * len(msgids)
+
+        delta = 0
+        for msgid, msgstr in zip(msgids, msgstrs):
+            if msgid:
+                newentry = mkentry(entry, delta, msgid, msgstr)
+                addentry(po, newentry, cache)
+            delta += 2 + msgid.count('\n')
+    po.save()
