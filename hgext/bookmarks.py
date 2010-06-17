@@ -310,6 +310,28 @@ def reposetup(ui, repo):
 
             return result
 
+        def push(self, remote, force=False, revs=None, newbranch=False):
+            result = super(bookmark_repo, self).push(remote, force, revs,
+                                                     newbranch)
+
+            self.ui.debug("checking for updated bookmarks\n")
+            rb = remote.listkeys('bookmarks')
+            for k in rb.keys():
+                if k in self._bookmarks:
+                    nr, nl = rb[k], self._bookmarks[k]
+                    if nr in self:
+                        cr = self[nr]
+                        cl = self[nl]
+                        if cl in cr.descendants():
+                            r = remote.pushkey('bookmarks', k, nr, nl)
+                            if r:
+                                self.ui.status(_("updating bookmark %s\n") % k)
+                            else:
+                                self.ui.warn(_("failed to update bookmark"
+                                                  " %s!\n") % k)
+
+            return result
+
         def addchangegroup(self, source, srctype, url, emptyok=False):
             parents = self.dirstate.parents()
 
