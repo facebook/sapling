@@ -409,6 +409,42 @@ def pull(oldpull, ui, repo, source="default", **opts):
 
     return result
 
+def push(oldpush, ui, repo, dest=None, **opts):
+    dopush = True
+    if opts.get('bookmark'):
+        dopush = False
+        for b in opts['bookmark']:
+            if b in repo._bookmarks:
+                dopush = True
+                opts.setdefault('rev', []).append(b)
+
+    result = 0
+    if dopush:
+        result = oldpush(ui, repo, dest, **opts)
+
+    if opts.get('bookmark'):
+        # this is an unpleasant hack as push will do this internally
+        dest = ui.expandpath(dest or 'default-push', dest or 'default')
+        dest, branches = hg.parseurl(dest, opts.get('branch'))
+        other = hg.repository(hg.remoteui(repo, opts), dest)
+        rb = other.listkeys('bookmarks')
+        for b in opts['bookmark']:
+            # explicit push overrides remote bookmark if any
+            if b in repo._bookmarks:
+                ui.status(_("exporting bookmark %s\n") % b)
+                new = repo[b].hex()
+            else:
+                ui.status(_("deleting remote bookmark %s\n") % b)
+                new = '' # delete
+            old = rb.get(b, '')
+            r = other.pushkey('bookmarks', b, old, new)
+            if not r:
+                ui.warn(_('updating bookmark %s failed!\n') % b)
+                if not result:
+                    result = 2
+
+    return result
+
 def uisetup(ui):
     extensions.wrapfunction(repair, "strip", strip)
     if ui.configbool('bookmarks', 'track.current'):
@@ -417,6 +453,9 @@ def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'pull', pull)
     entry[1].append(('B', 'bookmark', [],
                      _("bookmark to import")))
+    entry = extensions.wrapcommand(commands.table, 'push', push)
+    entry[1].append(('B', 'bookmark', [],
+                     _("bookmark to export")))
 
     pushkey.register('bookmarks', pushbookmark, listbookmarks)
 
