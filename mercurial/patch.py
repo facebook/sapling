@@ -534,10 +534,6 @@ class patchfile(object):
             dest = self.fname
         self.writelines(dest, self.lines)
 
-    def close(self):
-        self.write()
-        self.write_rej()
-
     def apply(self, h):
         if not h.complete():
             raise PatchError(_("bad hunk #%d %s (%d %d %d %d)") %
@@ -1159,7 +1155,8 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
     def closefile():
         if not current_file:
             return 0
-        current_file.close()
+        current_file.write()
+        current_file.write_rej()
         return len(current_file.rej)
 
     for state, values in iterhunks(ui, fp, sourcefile):
