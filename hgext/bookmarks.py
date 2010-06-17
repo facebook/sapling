@@ -30,7 +30,7 @@ branching.
 
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, hex, short
-from mercurial import util, commands, repair, extensions
+from mercurial import util, commands, repair, extensions, pushkey
 import os
 
 def write(repo):
@@ -312,10 +312,34 @@ def reposetup(ui, repo):
 
     repo.__class__ = bookmark_repo
 
+def listbookmarks(repo):
+    d = {}
+    for k, v in repo._bookmarks.iteritems():
+        d[k] = hex(v)
+    return d
+
+def pushbookmark(repo, key, old, new):
+    w = repo.wlock()
+    try:
+        marks = repo._bookmarks
+        if hex(marks.get(key, '')) != old:
+            return False
+        if new == '':
+            del marks[key]
+        else:
+            if new not in repo:
+                return False
+            marks[key] = repo[new].node()
+        write(repo)
+        return True
+    finally:
+        w.release()
+
 def uisetup(ui):
     extensions.wrapfunction(repair, "strip", strip)
     if ui.configbool('bookmarks', 'track.current'):
         extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
+    pushkey.register('bookmarks', pushbookmark, listbookmarks)
 
 def updatecurbookmark(orig, ui, repo, *args, **opts):
     '''Set the current bookmark
