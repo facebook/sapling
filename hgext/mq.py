@@ -58,8 +58,7 @@ normname = util.normpath
 class statusentry(object):
     def __init__(self, node, name):
         self.node, self.name = node, name
-
-    def __str__(self):
+    def __repr__(self):
         return hex(self.node) + ':' + self.name
 
 class patchheader(object):
