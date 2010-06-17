@@ -1,0 +1,166 @@
+Mercurial supports a functional language for selecting a set of
+revisions.
+
+The language supports a number of predicates which are joined by infix
+operators. Parenthesis can be used for grouping.
+
+Identifiers such as branch names must be quoted with single or double
+quotes if they contain characters outside of ``[a-zA-Z0-9]`` or if
+they match one of the predefined predicates. Special characters can be
+used in the identifiers by quoting them, e.g., ``\n`` is interpreted
+as a newline.
+
+There is a single prefix operator:
+
+``not x``
+  Changesets not in x. Short form is ``! x``.
+
+These are the supported infix operators:
+
+``x::y``
+  A DAG range, meaning all changesets that are descendants of x and
+  ancestors of y, including x and y themselves. If the first endpoint
+  is left out, this is equivalent to ``ancestors(y)``, if the second
+  is left out it is equivalent to ``descendents(x)``.
+
+  An alternative syntax is ``x..y``.
+
+``x:y``
+  All changesets with revision numbers between x and y, both
+  inclusive. Either endpoint can be left out, they default to 0 and
+  tip.
+
+``x and y``
+  The intersection of changesets in x and y. Short form is ``x & y``.
+
+``x or y``
+  The union of changesets in x and y. There are two alternative short
+  forms: ``x | y`` and ``x + y``.
+
+``x - y``
+  Changesets in x but not in y.
+
+The following predicates are supported:
+
+``adds(pattern)``
+  Changesets that add a file matching pattern.
+
+``all()``
+  All changesets, the same as ``0:tip``.
+
+``ancestor(single, single)``
+  Greatest common ancestor of the two changesets.
+
+``ancestors(set)``
+  Changesets that are ancestors of a changeset in set.
+
+``author(string)``
+  Alias for ``user(string)``.
+
+``branch(set)``
+  The branch names are found for changesets in set, and the result is
+  all changesets belonging to one those branches.
+
+``children(set)``
+  Child changesets of changesets in set.
+
+``closed()``
+  Changeset is closed.
+
+``contains(pattern)``
+  Revision contains pattern.
+
+``date(interval)``
+  Changesets within the interval, see :hg:`help dates`.
+
+``descendants(set)``
+  Changesets which are decendants of changesets in set.
+
+``file(pattern)``
+  Changesets which manually affected files matching pattern.
+
+``follow()``
+  An alias for ``::.`` (ancestors of the working copy's first parent).
+
+``grep(regex)``
+  Like ``keyword(string)`` but accepts a regex.
+
+``head()``
+  Changeset is a head.
+
+``heads(set)``
+  Members of set with no children in set.
+
+``keyword(string)``
+  Search commit message, user name, and names of changed files for
+  string.
+
+``limit(set, n)``
+  First n members of set.
+
+``max(set)``
+  Changeset with highest revision number in set.
+
+``merge()``
+  Changeset is a merge changeset.
+
+``modifies(pattern)``
+  Changesets which modify files matching pattern.
+
+``outgoing([path])``
+  Changesets missing in path.
+
+``p1(set)``
+  First parent of changesets in set.
+
+``p2(set)``
+  Second parent of changesets in set.
+
+``parents(set)``
+  The set of all parents for all changesets in set.
+
+``removes(pattern)``
+  Changesets which remove files matching pattern.
+
+``reverse(set)``
+  Reverse order of set.
+
+``roots(set)``
+  Changesets with no parent changeset in set.
+
+``sort(set[, [-]key...])``
+  Sort set by keys. The default sort order is ascending, specify a key
+  as ``-key`` to sort in descending order.
+
+  The keys can be:
+
+  - ``rev`` for the revision number,
+  - ``branch`` for the branch name,
+  - ``desc`` for the commit message (description),
+  - ``user`` for user name (``author`` can be used as an alias),
+  - ``date`` for the commit date
+
+``tagged()``
+  Changeset is tagged.
+
+``user(string)``
+  User name is string.
+
+Command line equivalents for :hg:`log`::
+
+  -f    ->  ::.
+  -d x  ->  date(x)
+  -k x  ->  keyword(x)
+  -m    ->  merge()
+  -u x  ->  user(x)
+  -b x  ->  branch(x)
+  -P x  ->  !::x
+  -l x  ->  limit(expr, x)
+
+Some sample queries::
+
+  hg log -r 'branch(default)'
+  hg log -r 'branch(default) and 1.5:: and not merge()'
+  hg log -r '1.3::1.5 and keyword(bug) and file("hgext/*")'
+  hg log -r 'sort(date("May 2008"), user)'
+  hg log -r '(keyword(bug) or keyword(issue)) and not ancestors(tagged())'

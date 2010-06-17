@@ -92,6 +92,7 @@ helptable = (
      loaddoc('revisions')),
     (['mrevs', 'multirevs'], _('Specifying Multiple Revisions'),
      loaddoc('multirevs')),
+    (['revsets'], _("Specifying Revision Sets"), loaddoc('revsets')),
     (['diffs'], _('Diff Formats'), loaddoc('diffs')),
     (['templating', 'templates'], _('Template Usage'),
      loaddoc('templates')),

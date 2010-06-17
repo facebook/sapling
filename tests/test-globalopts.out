@@ -208,6 +208,7 @@ additional help topics:
  environment  Environment Variables
  revisions    Specifying Single Revisions
  multirevs    Specifying Multiple Revisions
+ revsets      Specifying Revision Sets
  diffs        Diff Formats
  templating   Template Usage
  urls         URL Paths
@@ -279,6 +280,7 @@ additional help topics:
  environment  Environment Variables
  revisions    Specifying Single Revisions
  multirevs    Specifying Multiple Revisions
+ revsets      Specifying Revision Sets
  diffs        Diff Formats
  templating   Template Usage
  urls         URL Paths
