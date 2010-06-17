@@ -284,6 +284,32 @@ def reposetup(ui, repo):
             finally:
                 wlock.release()
 
+        def pull(self, remote, heads=None, force=False):
+            result = super(bookmark_repo, self).pull(remote, heads, force)
+
+            self.ui.debug("checking for updated bookmarks\n")
+            rb = remote.listkeys('bookmarks')
+            changes = 0
+            for k in rb.keys():
+                if k in self._bookmarks:
+                    nr, nl = rb[k], self._bookmarks[k]
+                    if nr in self:
+                        cr = self[nr]
+                        cl = self[nl]
+                        if cl.rev() >= cr.rev():
+                            continue
+                        if cr in cl.descendants():
+                            self._bookmarks[k] = cr.node()
+                            changes += 1
+                            self.ui.status(_("updating bookmark %s\n") % k)
+                        else:
+                            self.ui.warn(_("not updating divergent"
+                                           " bookmark %s\n") % k)
+            if changes:
+                write(repo)
+
+            return result
+
         def addchangegroup(self, source, srctype, url, emptyok=False):
             parents = self.dirstate.parents()
 
