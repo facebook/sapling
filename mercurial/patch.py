@@ -527,13 +527,6 @@ class patchfile(object):
 
         self.writelines(fname, rejlines())
 
-    def write(self, dest=None):
-        if not self.dirty:
-            return
-        if not dest:
-            dest = self.fname
-        self.writelines(dest, self.lines)
-
     def apply(self, h):
         if not h.complete():
             raise PatchError(_("bad hunk #%d %s (%d %d %d %d)") %
@@ -1155,7 +1148,8 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
     def closefile():
         if not current_file:
             return 0
-        current_file.write()
+        if current_file.dirty:
+            current_file.writelines(current_file.fname, current_file.lines)
         current_file.write_rej()
         return len(current_file.rej)
 
