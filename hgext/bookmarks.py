@@ -30,7 +30,7 @@ branching.
 
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, hex, short
-from mercurial import util, commands, repair, extensions, pushkey
+from mercurial import util, commands, repair, extensions, pushkey, hg
 import os
 
 def write(repo):
@@ -383,10 +383,80 @@ def pushbookmark(repo, key, old, new):
     finally:
         w.release()
 
+def pull(oldpull, ui, repo, source="default", **opts):
+    # translate bookmark args to rev args for actual pull
+    if opts.get('bookmark'):
+        # this is an unpleasant hack as pull will do this internally
+        source, branches = hg.parseurl(ui.expandpath(source),
+                                       opts.get('branch'))
+        other = hg.repository(hg.remoteui(repo, opts), source)
+        rb = other.listkeys('bookmarks')
+
+        for b in opts['bookmark']:
+            if b not in rb:
+                raise util.Abort(_('remote bookmark %s not found!') % b)
+            opts.setdefault('rev', []).append(b)
+
+    result = oldpull(ui, repo, source, **opts)
+
+    # update specified bookmarks
+    if opts.get('bookmark'):
+        for b in opts['bookmark']:
+            # explicit pull overrides local bookmark if any
+            ui.status(_("importing bookmark %s\n") % b)
+            repo._bookmarks[b] = repo[rb[b]].node()
+        write(repo)
+
+    return result
+
+def push(oldpush, ui, repo, dest=None, **opts):
+    dopush = True
+    if opts.get('bookmark'):
+        dopush = False
+        for b in opts['bookmark']:
+            if b in repo._bookmarks:
+                dopush = True
+                opts.setdefault('rev', []).append(b)
+
+    result = 0
+    if dopush:
+        result = oldpush(ui, repo, dest, **opts)
+
+    if opts.get('bookmark'):
+        # this is an unpleasant hack as push will do this internally
+        dest = ui.expandpath(dest or 'default-push', dest or 'default')
+        dest, branches = hg.parseurl(dest, opts.get('branch'))
+        other = hg.repository(hg.remoteui(repo, opts), dest)
+        rb = other.listkeys('bookmarks')
+        for b in opts['bookmark']:
+            # explicit push overrides remote bookmark if any
+            if b in repo._bookmarks:
+                ui.status(_("exporting bookmark %s\n") % b)
+                new = repo[b].hex()
+            else:
+                ui.status(_("deleting remote bookmark %s\n") % b)
+                new = '' # delete
+            old = rb.get(b, '')
+            r = other.pushkey('bookmarks', b, old, new)
+            if not r:
+                ui.warn(_('updating bookmark %s failed!\n') % b)
+                if not result:
+                    result = 2
+
+    return result
+
 def uisetup(ui):
     extensions.wrapfunction(repair, "strip", strip)
     if ui.configbool('bookmarks', 'track.current'):
         extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
+
+    entry = extensions.wrapcommand(commands.table, 'pull', pull)
+    entry[1].append(('B', 'bookmark', [],
+                     _("bookmark to import")))
+    entry = extensions.wrapcommand(commands.table, 'push', push)
+    entry[1].append(('B', 'bookmark', [],
+                     _("bookmark to export")))
+
     pushkey.register('bookmarks', pushbookmark, listbookmarks)
 
 def updatecurbookmark(orig, ui, repo, *args, **opts):
