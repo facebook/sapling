@@ -25,6 +25,7 @@ doc/*.[0-9].{x,ht}ml
 MANIFEST
 patches
 mercurial/__version__.py
+mercurial.egg-info
 Output/Mercurial-*.exe
 .DS_Store
 tags
