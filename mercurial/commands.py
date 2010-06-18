@@ -2451,7 +2451,8 @@ def log(ui, repo, *pats, **opts):
 
     If no revision range is specified, the default is tip:0 unless
     --follow is set, in which case the working directory parent is
-    used as the starting revision.
+    used as the starting revision. You can specify a revision set for
+    log, see :hg:`help revsets` for more information.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
