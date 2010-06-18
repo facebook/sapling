@@ -19,7 +19,8 @@ def generate_repo_subclass(baseclass):
                 git = GitHandler(self, self.ui)
                 git.push(remote.path, revs, force)
             else: #pragma: no cover
-                return super(hgrepo, self).push(remote, force, revs)
+                return super(hgrepo, self).push(remote, force, revs,
+                                                newbranch=newbranch)
 
         def findoutgoing(self, remote, base=None, heads=None, force=False):
             if isinstance(remote, gitrepo):
