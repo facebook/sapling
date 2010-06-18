@@ -546,6 +546,8 @@ def optimize(x, small):
 parse = parser.parser(tokenize, elements).parse
 
 def match(spec):
+    if not spec:
+        raise error.ParseError(_("empty query"))
     tree = parse(spec)
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset):
