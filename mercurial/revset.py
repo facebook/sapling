@@ -62,12 +62,12 @@ def tokenize(program):
                 pos += 1
             else:
                 raise error.ParseError(_("unterminated string"), s)
-        elif c.isalnum() or c in '.': # gather up a symbol/keyword
+        elif c.isalnum() or c in '._' or ord(c) > 127: # gather up a symbol/keyword
             s = pos
             pos += 1
             while pos < l: # find end of symbol
                 d = program[pos]
-                if not (d.isalnum() or d in "._"):
+                if not (d.isalnum() or d in "._" or ord(d) > 127):
                     break
                 if d == '.' and program[pos - 1] == '.': # special case for ..
                     pos -= 1
