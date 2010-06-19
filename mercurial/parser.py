@@ -62,13 +62,13 @@ class parser(object):
                 expr = (suffix[0], expr)
             else:
                 # handle infix rules
-                infix = self._elements[token][2]
+                if len(e) < 3 or not e[2]:
+                    raise error.ParseError("not an infix: %s" % token, pos)
+                infix = e[2]
                 if len(infix) == 3 and infix[2] == self.current[0]:
                     self._match(infix[2], pos)
                     expr = (infix[0], expr, (None))
                 else:
-                    if not infix[0]:
-                        raise error.ParseError("not an infix: %s" % token, pos)
                     expr = (infix[0], expr, self._parse(infix[1]))
                     if len(infix) == 3:
                         self._match(infix[2], pos)
