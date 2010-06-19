@@ -149,29 +149,35 @@ def revrange(repo, revs):
 
     seen, l = set(), []
     for spec in revs:
-        if spec and not (
-            spec.startswith(revrangesep) or spec.endswith(revrangesep)):
-            m = revset.match(spec)
-            for r in m(repo, range(len(repo))):
-                if r not in seen:
-                    l.append(r)
-            seen.update(l)
-        elif revrangesep in spec:
-            start, end = spec.split(revrangesep, 1)
-            start = revfix(repo, start, 0)
-            end = revfix(repo, end, len(repo) - 1)
-            step = start > end and -1 or 1
-            for rev in xrange(start, end + step, step):
+        # attempt to parse old-style ranges first to deal with
+        # things like old-tag which contain query metacharacters
+        try:
+            if revrangesep in spec:
+                start, end = spec.split(revrangesep, 1)
+                start = revfix(repo, start, 0)
+                end = revfix(repo, end, len(repo) - 1)
+                step = start > end and -1 or 1
+                for rev in xrange(start, end + step, step):
+                    if rev in seen:
+                        continue
+                    seen.add(rev)
+                    l.append(rev)
+                continue
+            elif spec in repo: # single unquoted rev
+                rev = revfix(repo, spec, None)
                 if rev in seen:
                     continue
                 seen.add(rev)
                 l.append(rev)
-        else:
-            rev = revfix(repo, spec, None)
-            if rev in seen:
-                continue
-            seen.add(rev)
-            l.append(rev)
+        except error.RepoLookupError:
+            pass
+
+        # fall through to new-style queries if old-style fails
+        m = revset.match(spec)
+        for r in m(repo, range(len(repo))):
+            if r not in seen:
+                l.append(r)
+        seen.update(l)
 
     return l
 

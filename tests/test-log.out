@@ -269,7 +269,7 @@ diff --git a/b1 b/b1
 +postm
 
 % log -r ""
-abort: 00changelog.i@: ambiguous identifier!
+hg: parse error: empty query
 % log -r <some unknown node id>
 abort: unknown revision '1000000000000000000000000000000000000000'!
 % log -k r1
