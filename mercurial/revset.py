@@ -87,7 +87,7 @@ def tokenize(program):
 # helpers
 
 def getstring(x, err):
-    if x[0] == 'string' or x[0] == 'symbol':
+    if x and (x[0] == 'string' or x[0] == 'symbol'):
         return x[1]
     raise error.ParseError(err)
 
@@ -278,7 +278,7 @@ def hasfile(repo, subset, x):
     return s
 
 def contains(repo, subset, x):
-    pat = getstring(x, _("file wants a pattern"))
+    pat = getstring(x, _("contains wants a pattern"))
     m = _match.match(repo.root, repo.getcwd(), [pat])
     s = []
     if m.files() == [pat]:
