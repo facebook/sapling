@@ -341,7 +341,7 @@ class transplanter(object):
                 node = revlog.bin(line[10:])
             elif line.startswith('# Parent '):
                 parents.append(revlog.bin(line[9:]))
-            elif not line.startswith('#'):
+            elif not line.startswith('# '):
                 inmsg = True
                 message.append(line)
         return (node, user, date, '\n'.join(message), parents)
