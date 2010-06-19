@@ -42,6 +42,7 @@ import codecs
 import struct
 import textwrap
 import types
+import re
 
 default_encoding = 'utf-8'
 
@@ -243,18 +244,21 @@ def unescape(st):
     '\\n'
     >>> unescape(r'\\\\n')
     '\\\\n'
+    >>> unescape(r'\\\\n\\n')
+    '\\\\n\\n'
     """
-    raw_strings = [
-        (r'\\n', r'\n', '\n'),
-        (r'\\r', r'\r', '\r'),
-        (r'\\t', r'\t', '\t'),
-    ]
-    for a, b, c in raw_strings:
-        if a in st:
-            st = st.replace(a, b)
-        else:
-            st = st.replace(b, c)
-    return st.replace(r'\"', '"').replace(r'\\', '\\')
+    def unescape_repl(m):
+        m = m.group(1)
+        if m == 'n':
+            return '\n'
+        if m == 't':
+            return '\t'
+        if m == 'r':
+            return '\r'
+        if m == '\\':
+            return '\\'
+        return m # handles escaped double quote
+    return re.sub(r'\\(\\|n|t|r|")', unescape_repl, st)
 
 # }}}
 # class _BaseFile {{{
