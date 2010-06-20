@@ -1,0 +1,24 @@
+marked working directory as branch a
+marked working directory as branch b
+marked working directory as branch a-b-c-
+marked working directory as branch -a-b-c-
+marked working directory as branch +a+b+c+
+marked working directory as branch /a/b/c/
+marked working directory as branch _a_b_c_
+marked working directory as branch .a.b.c.
+% hg debugrevspec a
+0
+% hg debugrevspec b-a
+1
+% hg debugrevspec _a_b_c_
+6
+% hg debugrevspec _a_b_c_-a
+6
+% hg debugrevspec .a.b.c.
+7
+% hg debugrevspec .a.b.c.-a
+7
+% hg debugrevspec "-a-b-c-"
+3
+% hg debugrevspec "-a-b-c-"-a
+3

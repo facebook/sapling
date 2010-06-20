@@ -163,12 +163,13 @@ def revrange(repo, revs):
                     seen.add(rev)
                     l.append(rev)
                 continue
-            elif spec in repo: # single unquoted rev
+            elif spec and spec in repo: # single unquoted rev
                 rev = revfix(repo, spec, None)
                 if rev in seen:
                     continue
                 seen.add(rev)
                 l.append(rev)
+                continue
         except error.RepoLookupError:
             pass
 

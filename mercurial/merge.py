@@ -467,7 +467,8 @@ def update(repo, node, branchmerge, force, partial):
             raise util.Abort(_("outstanding uncommitted merges"))
         if branchmerge:
             if pa == p2:
-                raise util.Abort(_("can't merge with ancestor"))
+                raise util.Abort(_("merging with a working directory ancestor"
+                                   " has no effect"))
             elif pa == p1:
                 if p1.branch() != p2.branch():
                     fastforward = True

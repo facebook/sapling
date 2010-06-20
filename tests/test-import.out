@@ -279,7 +279,7 @@ bb
 % test paths outside repo root
 applying patch from stdin
 abort: ../outside/foo not under root
-% test import with similarity (issue295)
+% test import with similarity and git and strip (issue295 et al.)
 adding a
 applying ../rename.diff
 patching file a

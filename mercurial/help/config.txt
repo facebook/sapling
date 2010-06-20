@@ -22,6 +22,19 @@ On Unix, these files are read:
 - ``<install-root>/etc/mercurial/hgrc``
 - ``<install-root>/etc/mercurial/hgrc.d/*.rc``
 
+If there is a per-repository configuration file which is not owned by
+the active user, Mercurial will warn you that the file is skipped::
+
+  not trusting file <repo>/.hg/hgrc from untrusted user USER, group GROUP
+
+If this bothers you, the warning can be silenced (the file would still
+be ignored) or trust can be established. Use one of the following
+settings, the syntax is explained below:
+
+- ``ui.report_untrusted = False``
+- ``trusted.users = USER``
+- ``trusted.groups = GROUP``
+
 The configuration files for Mercurial use a simple ini-file format. A
 configuration file consists of sections, led by a ``[section]`` header
 and followed by ``name = value`` entries::

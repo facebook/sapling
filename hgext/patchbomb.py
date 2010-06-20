@@ -235,7 +235,15 @@ def patchbomb(ui, repo, *revs, **opts):
 
     _charsets = mail._charsets(ui)
 
-    def outgoing(dest, revs):
+    bundle = opts.get('bundle')
+    date = opts.get('date')
+    mbox = opts.get('mbox')
+    outgoing = opts.get('outgoing')
+    rev = opts.get('rev')
+    # internal option used by pbranches
+    patches = opts.get('patches')
+
+    def getoutgoing(dest, revs):
         '''Return the revisions present locally but not in dest'''
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest)
@@ -271,38 +279,36 @@ def patchbomb(ui, repo, *revs, **opts):
                 pass
             os.rmdir(tmpdir)
 
-    if not (opts.get('test') or opts.get('mbox')):
+    if not (opts.get('test') or mbox):
         # really sending
         mail.validateconfig(ui)
 
-    if not (revs or opts.get('rev')
-            or opts.get('outgoing') or opts.get('bundle')
-            or opts.get('patches')):
+    if not (revs or rev or outgoing or bundle or patches):
         raise util.Abort(_('specify at least one changeset with -r or -o'))
 
-    if opts.get('outgoing') and opts.get('bundle'):
+    if outgoing and bundle:
         raise util.Abort(_("--outgoing mode always on with --bundle;"
                            " do not re-specify --outgoing"))
 
-    if opts.get('outgoing') or opts.get('bundle'):
+    if outgoing or bundle:
         if len(revs) > 1:
             raise util.Abort(_("too many destinations"))
         dest = revs and revs[0] or None
         revs = []
 
-    if opts.get('rev'):
+    if rev:
         if revs:
             raise util.Abort(_('use only one form to specify the revision'))
-        revs = opts.get('rev')
+        revs = rev
 
-    if opts.get('outgoing'):
-        revs = outgoing(dest, opts.get('rev'))
-    if opts.get('bundle'):
+    if outgoing:
+        revs = getoutgoing(dest, rev)
+    if bundle:
         opts['revs'] = revs
 
     # start
-    if opts.get('date'):
-        start_time = util.parsedate(opts.get('date'))
+    if date:
+        start_time = util.parsedate(date)
     else:
         start_time = util.makedate()
 
@@ -381,11 +387,9 @@ def patchbomb(ui, repo, *revs, **opts):
               ui.config('patchbomb', 'from') or
               prompt(ui, 'From', ui.username()))
 
-    # internal option used by pbranches
-    patches = opts.get('patches')
     if patches:
         msgs = getpatchmsgs(patches, opts.get('patchnames'))
-    elif opts.get('bundle'):
+    elif bundle:
         msgs = getbundlemsgs(getbundle(dest))
     else:
         msgs = getpatchmsgs(list(getpatches(revs)))
@@ -463,9 +467,9 @@ def patchbomb(ui, repo, *revs, **opts):
                     raise
             if fp is not ui:
                 fp.close()
-        elif opts.get('mbox'):
+        elif mbox:
             ui.status(_('Writing '), subj, ' ...\n')
-            fp = open(opts.get('mbox'), 'In-Reply-To' in m and 'ab+' or 'wb+')
+            fp = open(mbox, 'In-Reply-To' in m and 'ab+' or 'wb+')
             generator = email.Generator.Generator(fp, mangle_from_=True)
             # Should be time.asctime(), but Windows prints 2-characters day
             # of month instead of one. Make them print the same thing.

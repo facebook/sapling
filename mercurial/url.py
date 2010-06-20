@@ -556,6 +556,13 @@ class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
                 return
             raise
 
+    # Python 2.6.5 will keep resetting the retry count on redirects, for
+    # example when the server returns 401 on failing auth (like google code
+    # currently does). We stop the endless recursion by not resetting the
+    # count.
+    def reset_retry_count(self):
+        pass
+
 def getauthinfo(path):
     scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
     if not urlpath:

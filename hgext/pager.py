@@ -78,6 +78,9 @@ def _runpager(p):
             raise
 
 def uisetup(ui):
+    if ui.plain():
+        return
+
     def pagecmd(orig, ui, options, cmd, cmdfunc):
         p = ui.config("pager", "pager", os.environ.get("PAGER"))
         if p and sys.stdout.isatty() and '--debugger' not in sys.argv:
