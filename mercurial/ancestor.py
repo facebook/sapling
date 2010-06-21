@@ -19,6 +19,8 @@ def ancestor(a, b, pfunc):
     if a == b:
         return a
 
+    a, b = sorted([a, b])
+
     # find depth from root of all ancestors
     parentcache = {}
     visit = [a, b]
