@@ -1,28 +1,61 @@
 #!/bin/sh
 
+HGENCODING=utf-8
+export HGENCODING
+
 try() {
 	echo '% hg debugrevspec' $@
-	hg debugrevspec $@
+	hg debugrevspec --debug $@
+}
+
+log() {
+    echo "% log '$1'"
+    hg log --template '{rev}\n' -r "$1"
 }
 
 hg init repo
 cd repo
+
+echo a > a
 hg branch a
-hg ci -m "plain name"
+hg ci -Aqm0
+
+echo b > b
 hg branch b
-hg ci -m "another plain name"
+hg ci -Aqm1
+
+rm a
 hg branch a-b-c-
-hg ci -m "with dashes"
-hg branch -- -a-b-c-
-hg ci -m "with leading dash"
+hg ci -Aqm2 -u Bob
+
+hg co 1
 hg branch +a+b+c+
-hg ci -m "with plusses"
+hg ci -Aqm3
+
+hg co 2  # interleave
+echo bb > b
+hg branch -- -a-b-c-
+hg ci -Aqm4 -d "May 12 2005"
+
+hg co 3
 hg branch /a/b/c/
-hg ci -m "with slashes"
+hg ci -Aqm"5 bug"
+
+hg merge 4
 hg branch _a_b_c_
-hg ci -m "with underscores"
+hg ci -Aqm"6 issue619"
+
 hg branch .a.b.c.
-hg ci -m "with dots"
+hg ci -Aqm7
+
+hg branch all
+hg ci --close-branch -Aqm8
+
+hg co 4
+hg branch é
+hg ci -Aqm9
+
+hg tag -r6 1.0
 
 # names that should work without quoting
 try a
@@ -31,8 +64,65 @@ try _a_b_c_
 try _a_b_c_-a
 try .a.b.c.
 try .a.b.c.-a
+try -- '-a-b-c-' # complains
+log -a-b-c- # succeeds with fallback
+try -- -a-b-c--a # complains
+try é
 
 # quoting needed
-try '"-a-b-c-"'
 try '"-a-b-c-"-a'
 
+log '1 or 2'
+log '1|2'
+log '1 and 2'
+log '1&2'
+try '1&2|3' # precedence - and is higher
+try '1|2&3' 
+try '1&2&3' # associativity
+try '1|(2|3)'
+log '1.0' # tag
+log 'a' # branch
+log '2785f51ee' 
+log 'date(2005)'
+log 'date(this is a test)'
+log 'date()'
+log 'date'
+log 'date(' 
+log 'date(tip)'
+log '"date"'
+log 'date(2005) and 1::'
+
+log 'ancestor(1)'
+log 'ancestor(4,5)'
+log 'ancestors(5)'
+log 'author(bob)'
+log 'branch(é)'
+log 'children(ancestor(4,5))'
+log 'closed()'
+log 'contains(a)'
+log 'descendants(2 or 3)'
+log 'file(b)'
+log 'follow()'
+log 'grep("issue\d+")'
+log 'head()'
+log 'heads(6::)'
+log 'keyword(issue)'
+log 'limit(head(), 1)'
+log 'max(contains(a))'
+log 'merge()'
+log 'modifies(b)'
+log 'p1(merge())'
+log 'p2(merge())'
+log 'parents(merge())'
+log 'removes(a)'
+log 'roots(all())'
+log 'reverse(2 or 3 or 4 or 5)'
+log 'sort(limit(reverse(all()), 3))'
+log 'sort(2 or 3 or 4 or 5, date)'
+log 'tagged()'
+log 'user(bob)'
+
+log '4::8'
+log '4:8'
+
+log 'sort(!merge() & (modifies(b) | user(bob) | keyword(bug) | keyword(issue) & 1::9), "-date")'
