@@ -30,7 +30,7 @@ branching.
 
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, hex, short
-from mercurial import util, commands, repair, extensions, pushkey, hg
+from mercurial import util, commands, repair, extensions, pushkey, hg, url
 import os
 
 def write(repo):
@@ -445,6 +445,37 @@ def push(oldpush, ui, repo, dest=None, **opts):
 
     return result
 
+def diffbookmarks(ui, repo, remote):
+    ui.status(_("searching for changes\n"))
+
+    lmarks = repo.listkeys('bookmarks')
+    rmarks = remote.listkeys('bookmarks')
+
+    diff = set(rmarks) - set(lmarks)
+    for k in diff:
+        ui.write("   %-25s %s\n" % (k, rmarks[k][:12]))
+
+    if len(diff) <= 0:
+        ui.status(_("no changes found\n"))
+
+def incoming(oldincoming, ui, repo, source="default", **opts):
+    if opts.get('bookmarks'):
+        source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
+        other = hg.repository(hg.remoteui(repo, opts), source)
+        ui.status(_('comparing with %s\n') % url.hidepassword(source))
+        diffbookmarks(ui, repo, other)
+    else:
+        oldincoming(ui, repo, source, **opts)
+
+def outgoing(oldoutgoing, ui, repo, source="default", **opts):
+    if opts.get('bookmarks'):
+        source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
+        other = hg.repository(hg.remoteui(repo, opts), source)
+        ui.status(_('comparing with %s\n') % url.hidepassword(source))
+        diffbookmarks(ui, other, repo)
+    else:
+        oldoutgoing(ui, repo, source, **opts)
+
 def uisetup(ui):
     extensions.wrapfunction(repair, "strip", strip)
     if ui.configbool('bookmarks', 'track.current'):
@@ -456,6 +487,12 @@ def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'push', push)
     entry[1].append(('B', 'bookmark', [],
                      _("bookmark to export")))
+    entry = extensions.wrapcommand(commands.table, 'incoming', incoming)
+    entry[1].append(('B', 'bookmarks', False,
+                     _("compare bookmark")))
+    entry = extensions.wrapcommand(commands.table, 'outgoing', outgoing)
+    entry[1].append(('B', 'bookmarks', False,
+                     _("compare bookmark")))
 
     pushkey.register('bookmarks', pushbookmark, listbookmarks)
 
