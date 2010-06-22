@@ -1017,7 +1017,7 @@ class queue(object):
                             _("cannot push to a previous patch: %s") % patch)
                     self.ui.warn(
                         _('qpush: %s is already at the top\n') % patch)
-                    return
+                    return 0
                 pushable, reason = self.pushable(patch)
                 if not pushable:
                     if reason:
