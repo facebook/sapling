@@ -298,6 +298,22 @@ class TestBase(unittest.TestCase):
                 copy = ctx[dest].renamed()
                 self.assertEqual(copy[0], source)
 
+    def assertMultiLineEqual(self, first, second, msg=None):
+        """Assert that two multi-line strings are equal. (Based on Py3k code.)
+        """
+        self.assert_(isinstance(first, str),
+                     ('First argument is not a string'))
+        self.assert_(isinstance(second, str),
+                     ('Second argument is not a string'))
+
+        if first != second:
+            diff = ''.join(difflib.unified_diff(first.splitlines(True),
+                                                second.splitlines(True),
+                                                fromfile='a',
+                                                tofile='b'))
+            msg = '%s\n%s' % (msg or '', diff)
+            raise self.failureException, msg
+
     def draw(self, repo):
         """Helper function displaying a repository graph, especially
         useful when debugging comprehensive tests.
