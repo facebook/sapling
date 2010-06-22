@@ -588,7 +588,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                 ui, svn, meta, b, branches[b], r, parentctx)
         except BadPatchApply, e:
             # Either this revision or the previous one does not exist.
-            ui.status("Fetching entire revision: %s.\n" % e.args[0])
+            ui.note("Fetching entire revision: %s.\n" % e.args[0])
             files_touched, filectxfn2 = fetch_branchrev(
                 svn, meta, b, branches[b], r, parentctx)
 
