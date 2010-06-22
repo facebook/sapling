@@ -1046,10 +1046,12 @@ class queue(object):
 
             if move:
                 try:
-                    del self.full_series[self.full_series.index(patch, start)]
+                    index = self.series.index(patch, start)
+                    fullpatch = self.full_series[index]
+                    del self.full_series[index]
                 except ValueError:
                     raise util.Abort(_("patch '%s' not found") % patch)
-                self.full_series.insert(start, patch)
+                self.full_series.insert(start, fullpatch)
                 self.parse_series()
                 self.series_dirty = 1
 
