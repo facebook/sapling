@@ -74,7 +74,7 @@ Example Configuration
 
   # Use this if you want to check access restrictions at commit time
   pretxncommit.acl = python:hgext.acl.hook
-  
+
   # Use this if you want to check access restrictions for pull, push,
   # bundle and serve.
   pretxnchangegroup.acl = python:hgext.acl.hook
@@ -87,27 +87,27 @@ Example Configuration
   # Default: serve
   sources = serve
 
-  [acl.deny.branches] 
-  
-  # Everyone is denied to the frozen branch: 
-  frozen-branch = * 
-  
-  # A bad user is denied on all branches: 
-  * = bad-user 
-  
-  [acl.allow.branches] 
-  
-  # A few users are allowed on branch-a: 
-  branch-a = user-1, user-2, user-3 
-  
-  # Only one user is allowed on branch-b: 
-  branch-b = user-1 
-  
-  # The super user is allowed on any branch: 
-  * = super-user 
-  
-  # Everyone is allowed on branch-for-tests: 
-  branch-for-tests = * 
+  [acl.deny.branches]
+
+  # Everyone is denied to the frozen branch:
+  frozen-branch = *
+
+  # A bad user is denied on all branches:
+  * = bad-user
+
+  [acl.allow.branches]
+
+  # A few users are allowed on branch-a:
+  branch-a = user-1, user-2, user-3
+
+  # Only one user is allowed on branch-b:
+  branch-b = user-1
+
+  # The super user is allowed on any branch:
+  * = super-user
+
+  # Everyone is allowed on branch-for-tests:
+  branch-for-tests = *
 
   [acl.deny]
   # This list is checked first. If a match is found, acl.allow is not
