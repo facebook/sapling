@@ -280,7 +280,7 @@ def prepush(repo, remote, force, revs, newbranch):
             remotemap = remote.branchmap()
             newbranches = branches - set(remotemap)
             if newbranches and not newbranch: # new branch requires --new-branch
-                branchnames = ', '.join("%s" % b for b in newbranches)
+                branchnames = ', '.join(sorted(newbranches))
                 repo.ui.warn(_("abort: push creates "
                                "new remote branches: %s!\n")
                              % branchnames)
