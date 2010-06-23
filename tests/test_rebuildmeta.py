@@ -35,9 +35,7 @@ def _do_case(self, name, stupid, single):
         dtf = os.path.join(dest.path, 'svn', tf)
         self.assertTrue(os.path.isfile(dtf), '%r is missing!' % tf)
         old, new = open(stf).read(), open(dtf).read()
-        # uncomment next line for easy-ish debugging.
-        # os.system('diff -u %s %s' % (stf, dtf))
-        self.assertEqual(old, new)
+        self.assertMultiLineEqual(old, new)
         self.assertEqual(src.branchtags(), dest.branchtags())
     srcbi = pickle.load(open(os.path.join(src.path, 'svn', 'branch_info')))
     destbi = pickle.load(open(os.path.join(dest.path, 'svn', 'branch_info')))
