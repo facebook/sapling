@@ -327,8 +327,8 @@ def reposetup(ui, repo):
                             if r:
                                 self.ui.status(_("updating bookmark %s\n") % k)
                             else:
-                                self.ui.warn(_("failed to update bookmark"
-                                                  " %s!\n") % k)
+                                self.ui.warn(_('updating bookmark %s'
+                                               ' failed!\n') % k)
 
             return result
 
