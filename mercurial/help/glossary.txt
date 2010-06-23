@@ -55,8 +55,8 @@ Branch, named
     collection of disjoint subsets. A named branch is not necessarily
     a topological branch. If a new named branch is created from the
     head of another named branch, or the default branch, but no
-    further changesets are added to that previous branch, then the new
-    named branch will be a branch in name only.
+    further changesets are added to that previous branch, then that
+    previous branch will be a branch in name only.
 
 Branch tip
     See 'Tip, branch'.
