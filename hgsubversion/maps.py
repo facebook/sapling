@@ -111,7 +111,6 @@ class TagMap(dict):
     def __init__(self, repo, endrev=None):
         dict.__init__(self)
         self.path = self.filepath(repo)
-        self.seen = 0
         self.endrev=endrev
         if os.path.isfile(self.path):
             self._load(repo)
