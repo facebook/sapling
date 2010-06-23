@@ -53,6 +53,13 @@ def write(repo):
         for refspec, node in refs.iteritems():
             file.write("%s %s\n" % (hex(node), refspec))
         file.rename()
+
+        # touch 00changelog.i so hgweb reloads bookmarks (no lock needed)
+        try:
+            os.utime(repo.sjoin('00changelog.i'), None)
+        except OSError:
+            pass
+
     finally:
         wlock.release()
 
