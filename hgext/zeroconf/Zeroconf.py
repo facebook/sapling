@@ -204,6 +204,13 @@ class AbstractMethodException(Exception):
 class BadTypeInNameException(Exception):
 	pass
 
+class BadDomainName(Exception):
+	def __init__(self, pos):
+		Exception.__init__(self, "at position %s" % pos)
+
+class BadDomainNameCircular(BadDomainName):
+	pass
+
 # implementation classes
 
 class DNSEntry(object):
@@ -598,10 +605,10 @@ class DNSIncoming(object):
 					next = off + 1
 				off = ((len & 0x3F) << 8) | ord(self.data[off])
 				if off >= first:
-					raise "Bad domain name (circular) at " + str(off)
+					raise BadDomainNameCircular(off)
 				first = off
 			else:
-				raise "Bad domain name at " + str(off)
+				raise BadDomainName(off)
 
 		if next >= 0:
 			self.offset = next
