@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-06-21 20:17+0200\n"
-"PO-Revision-Date: 2010-06-22 09:42+0200\n"
+"POT-Creation-Date: 2010-06-23 09:05+0200\n"
+"PO-Revision-Date: 2010-06-23 09:10+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -374,11 +374,24 @@ msgstr "raderar fjärrbokmärket %s\n"
 msgid "updating bookmark %s failed!\n"
 msgstr "uppdatering av bokmärket %s misslyckades!\n"
 
+msgid "searching for changes\n"
+msgstr "söker efter ändringar\n"
+
+msgid "no changes found\n"
+msgstr "inga ändringar hittades\n"
+
+#, python-format
+msgid "comparing with %s\n"
+msgstr "jämför med %s\n"
+
 msgid "bookmark to import"
 msgstr "bokmärke att importera"
 
 msgid "bookmark to export"
 msgstr "bokmärke att exportera"
+
+msgid "compare bookmark"
+msgstr "jämför bokmärke"
 
 msgid "force"
 msgstr "tvinga"
@@ -2199,13 +2212,6 @@ msgid ""
 msgstr ""
 "    Noder visade som ett @-tecken är föräldrar till arbetskatalogen.\n"
 "    "
-
-#, python-format
-msgid "comparing with %s\n"
-msgstr "jämför med %s\n"
-
-msgid "no changes found\n"
-msgstr "inga ändringar hittades\n"
 
 msgid "show the revision DAG"
 msgstr "visa revisionsdiagram"
@@ -6529,7 +6535,6 @@ msgid ""
 msgstr ""
 "    Det här kommandot får effekt vid nästa arkivering. För att ångra ett\n"
 "    namnbyte innan det, se :hg:`revert`."
-"    "
 
 msgid ""
 "    Returns 0 on success, 1 if errors are encountered.\n"
@@ -7495,7 +7500,8 @@ msgstr ""
 msgid ""
 "branch '%s' has one head - please merge with an explicit rev\n"
 "(run 'hg heads' to see all heads)"
-msgstr "grenen '%s' har ett huvud - sammanfoga med en specifik rev\n"
+msgstr ""
+"grenen '%s' har ett huvud - sammanfoga med en specifik rev\n"
 "(kör 'hg heads .' för att se alla huvuden)"
 
 msgid "there is nothing to merge"
@@ -9367,9 +9373,6 @@ msgstr ""
 msgid "unsupported file type (type is %s)"
 msgstr ""
 
-msgid "searching for changes\n"
-msgstr "söker efter ändringar\n"
-
 msgid "queries"
 msgstr "frågor"
 
@@ -10837,10 +10840,10 @@ msgstr ""
 
 msgid ""
 "Identifiers such as branch names must be quoted with single or double\n"
-"quotes if they contain characters outside of ``[a-zA-Z0-9]`` or if\n"
-"they match one of the predefined predicates. Special characters can be\n"
-"used in the identifiers by quoting them, e.g., ``\\n`` is interpreted\n"
-"as a newline."
+"quotes if they contain characters outside of\n"
+"``[._a-zA-Z0-9\\x80-\\xff]`` or if they match one of the predefined\n"
+"predicates. Special characters can be used in quoted identifiers by\n"
+"escaping them, e.g., ``\\n`` is interpreted as a newline."
 msgstr ""
 
 msgid "There is a single prefix operator:"
