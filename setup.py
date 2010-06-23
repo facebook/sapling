@@ -35,12 +35,15 @@ except:
 import os, subprocess, time
 import shutil
 import tempfile
+from distutils import log
 from distutils.core import setup, Extension
 from distutils.dist import Distribution
 from distutils.command.build import build
+from distutils.command.build_ext import build_ext
 from distutils.command.build_py import build_py
 from distutils.spawn import spawn, find_executable
 from distutils.ccompiler import new_compiler
+from distutils.errors import CCompilerError
 
 scripts = ['hg']
 if os.name == 'nt':
@@ -209,6 +212,17 @@ Distribution.pure = 0
 Distribution.global_options.append(('pure', None, "use pure (slow) Python "
                                     "code instead of C extensions"))
 
+class hgbuildext(build_ext):
+
+    def build_extension(self, ext):
+        try:
+            build_ext.build_extension(self, ext)
+        except CCompilerError:
+            if not hasattr(ext, 'optional') or not ext.optional:
+                raise
+            log.warn("Failed to build optional extension '%s' (skipping)",
+                     ext.name)
+
 class hgbuildpy(build_py):
 
     def finalize_options(self):
@@ -232,6 +246,7 @@ class hgbuildpy(build_py):
                 yield module
 
 cmdclass = {'build_mo': hgbuildmo,
+            'build_ext': hgbuildext,
             'build_py': hgbuildpy}
 
 packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert',
@@ -256,10 +271,13 @@ else:
 if sys.platform == 'linux2' and os.uname()[2] > '2.6':
     # The inotify extension is only usable with Linux 2.6 kernels.
     # You also need a reasonably recent C library.
+    # In any case, if it fails to build the error will be skipped ('optional').
     cc = new_compiler()
     if hasfunction(cc, 'inotify_add_watch'):
-        extmodules.append(Extension('hgext.inotify.linux._inotify',
-                                     ['hgext/inotify/linux/_inotify.c']))
+        inotify = Extension('hgext.inotify.linux._inotify',
+                            ['hgext/inotify/linux/_inotify.c'])
+        inotify.optional = True
+        extmodules.append(inotify)
         packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
 
 packagedata = {'mercurial': ['locale/*/LC_MESSAGES/hg.mo',
