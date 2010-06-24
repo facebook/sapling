@@ -21,7 +21,7 @@ These are the supported infix operators:
   A DAG range, meaning all changesets that are descendants of x and
   ancestors of y, including x and y themselves. If the first endpoint
   is left out, this is equivalent to ``ancestors(y)``, if the second
-  is left out it is equivalent to ``descendents(x)``.
+  is left out it is equivalent to ``descendants(x)``.
 
   An alternative syntax is ``x..y``.
 
