@@ -100,6 +100,9 @@ echo '# issue338'
 hg log --style=changelog > changelog
 cat changelog
 
+echo '# issue 2130'
+hg heads --style changelog
+
 echo "# keys work"
 for key in author branches date desc file_adds file_dels file_mods \
         file_copies file_copies_switch files \

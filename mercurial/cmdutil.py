@@ -687,7 +687,6 @@ class changeset_printer(object):
         self.patch = patch
         self.diffopts = diffopts
         self.header = {}
-        self.doneheader = False
         self.hunk = {}
         self.lastheader = None
         self.footer = None
@@ -906,9 +905,9 @@ class changeset_templater(changeset_printer):
                 if self.buffered:
                     self.header[ctx.rev()] = h
                 else:
-                    if not self.doneheader:
+                    if self.lastheader != h:
+                        self.lastheader = h
                         self.ui.write(h)
-                        self.doneheader = True
 
             # write changeset metadata, then patch if requested
             key = types['changeset']
