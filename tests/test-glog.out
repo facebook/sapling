@@ -548,6 +548,7 @@ hg glog [OPTION]... [FILE]
 
 show revision history alongside an ASCII revision graph
 failed
+% empty revision range - display nothing
 % from outer space
 @  changeset:   34:fea3ac5810e0
 |  tag:         tip
