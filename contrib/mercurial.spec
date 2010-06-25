@@ -41,7 +41,6 @@ rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT PREFIX=%{_prefix} MANDIR=%{_mandir}
 
 install contrib/hgk          $RPM_BUILD_ROOT%{_bindir}
-install contrib/convert-repo $RPM_BUILD_ROOT%{_bindir}/mercurial-convert-repo
 install contrib/hg-ssh       $RPM_BUILD_ROOT%{_bindir}
 
 bash_completion_dir=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
@@ -74,7 +73,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/hg
 %{_bindir}/hgk
 %{_bindir}/hg-ssh
-%{_bindir}/mercurial-convert-repo
 %dir %{_sysconfdir}/bash_completion.d/
 %dir %{_datadir}/zsh/site-functions/
 %dir %{_sysconfdir}/mercurial
