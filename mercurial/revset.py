@@ -422,7 +422,6 @@ def outgoing(repo, subset, x):
     repo.ui.popbuffer()
     cl = repo.changelog
     o = set([cl.rev(r) for r in repo.changelog.nodesbetween(o, None)[0]])
-    print 'out', dest, o
     return [r for r in subset if r in o]
 
 def tagged(repo, subset, x):
