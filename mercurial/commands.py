@@ -3745,7 +3745,8 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         for fname in fnames:
             f = url.open(ui, fname)
             gen = changegroup.readbundle(f, fname)
-            modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
+            modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname,
+                                           lock=lock)
     finally:
         lock.release()
 

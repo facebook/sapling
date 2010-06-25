@@ -164,7 +164,7 @@ def unbundle(repo, req):
                           urllib.quote(req.env.get('REMOTE_HOST', '')),
                           urllib.quote(req.env.get('REMOTE_USER', '')))
                     try:
-                        ret = repo.addchangegroup(gen, 'serve', url)
+                        ret = repo.addchangegroup(gen, 'serve', url, lock=lock)
                     except util.Abort, inst:
                         sys.stdout.write("abort: %s\n" % inst)
                         ret = 0
