@@ -473,14 +473,15 @@ def incoming(oldincoming, ui, repo, source="default", **opts):
     else:
         oldincoming(ui, repo, source, **opts)
 
-def outgoing(oldoutgoing, ui, repo, source="default", **opts):
+def outgoing(oldoutgoing, ui, repo, dest=None, **opts):
     if opts.get('bookmarks'):
-        source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-        other = hg.repository(hg.remoteui(repo, opts), source)
-        ui.status(_('comparing with %s\n') % url.hidepassword(source))
+        dest = ui.expandpath(dest or 'default-push', dest or 'default')
+        dest, branches = hg.parseurl(dest, opts.get('branch'))
+        other = hg.repository(hg.remoteui(repo, opts), dest)
+        ui.status(_('comparing with %s\n') % url.hidepassword(dest))
         diffbookmarks(ui, other, repo)
     else:
-        oldoutgoing(ui, repo, source, **opts)
+        oldoutgoing(ui, repo, dest, **opts)
 
 def uisetup(ui):
     extensions.wrapfunction(repair, "strip", strip)
