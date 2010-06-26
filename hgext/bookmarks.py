@@ -463,15 +463,17 @@ def diffbookmarks(ui, repo, remote):
 
     if len(diff) <= 0:
         ui.status(_("no changes found\n"))
+        return 1
+    return 0
 
 def incoming(oldincoming, ui, repo, source="default", **opts):
     if opts.get('bookmarks'):
         source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), source)
         ui.status(_('comparing with %s\n') % url.hidepassword(source))
-        diffbookmarks(ui, repo, other)
+        return diffbookmarks(ui, repo, other)
     else:
-        oldincoming(ui, repo, source, **opts)
+        return oldincoming(ui, repo, source, **opts)
 
 def outgoing(oldoutgoing, ui, repo, dest=None, **opts):
     if opts.get('bookmarks'):
@@ -479,9 +481,9 @@ def outgoing(oldoutgoing, ui, repo, dest=None, **opts):
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), dest)
         ui.status(_('comparing with %s\n') % url.hidepassword(dest))
-        diffbookmarks(ui, other, repo)
+        return diffbookmarks(ui, other, repo)
     else:
-        oldoutgoing(ui, repo, dest, **opts)
+        return oldoutgoing(ui, repo, dest, **opts)
 
 def uisetup(ui):
     extensions.wrapfunction(repair, "strip", strip)
