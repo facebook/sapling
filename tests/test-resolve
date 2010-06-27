@@ -25,3 +25,9 @@ hg commit -m 'resolved'
 
 echo % resolve -l, should be empty
 hg resolve -l
+
+# test crashed merge with empty mergestate
+mkdir .hg/merge
+touch .hg/merge/state
+echo % resolve -l, should be empty
+hg resolve -l

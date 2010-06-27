@@ -23,15 +23,13 @@ class mergestate(object):
     def _read(self):
         self._state = {}
         try:
-            localnode = None
             f = self._repo.opener("merge/state")
             for i, l in enumerate(f):
                 if i == 0:
-                    localnode = l[:-1]
+                    self._local = bin(l[:-1])
                 else:
                     bits = l[:-1].split("\0")
                     self._state[bits[0]] = bits[1:]
-            self._local = bin(localnode)
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
