@@ -1199,7 +1199,7 @@ class localrepository(repo.repository):
                                        "other repository doesn't support "
                                        "changegroupsubset."))
                 cg = remote.changegroupsubset(fetch, heads, 'pull')
-            return self.addchangegroup(cg, 'pull', remote.url())
+            return self.addchangegroup(cg, 'pull', remote.url(), lock=lock)
         finally:
             lock.release()
 
@@ -1233,8 +1233,8 @@ class localrepository(repo.repository):
             ret = discovery.prepush(self, remote, force, revs, newbranch)
             if ret[0] is not None:
                 cg, remote_heads = ret
-                # here, we return an integer indicating remote head count change
-                return remote.addchangegroup(cg, 'push', self.url())
+                # we return an integer indicating remote head count change
+                return remote.addchangegroup(cg, 'push', self.url(), lock=lock)
             # and here we return 0 for "nothing to push" or 1 for
             # "something to push but I refuse"
             return ret[1]
@@ -1620,7 +1620,7 @@ class localrepository(repo.repository):
 
         return util.chunkbuffer(gengroup())
 
-    def addchangegroup(self, source, srctype, url, emptyok=False):
+    def addchangegroup(self, source, srctype, url, emptyok=False, lock=None):
         """Add the changegroup returned by source.read() to this repo.
         srctype is a string like 'push', 'pull', or 'unbundle'.  url is
         the URL of the repo where this changegroup is coming from.
@@ -1760,6 +1760,8 @@ class localrepository(repo.repository):
             tr.close()
         finally:
             tr.release()
+            if lock:
+                lock.release()
 
         if changesets > 0:
             # forcefully update the on-disk branch cache

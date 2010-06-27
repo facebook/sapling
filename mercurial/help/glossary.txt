@@ -8,7 +8,7 @@ Ancestor
 Branch
     (Noun) A child changeset that has been created from a parent that
     is not a head. These are known as topological branches, see
-    'Branch, topological'.If a topological branch is named, it becomes
+    'Branch, topological'. If a topological branch is named, it becomes
     a named branch. If a topological branch is not named, it becomes
     an anonymous branch. See 'Branch, anonymous' and 'Branch, named'.
 
@@ -55,8 +55,8 @@ Branch, named
     collection of disjoint subsets. A named branch is not necessarily
     a topological branch. If a new named branch is created from the
     head of another named branch, or the default branch, but no
-    further changesets are added to that previous branch, then the new
-    named branch will be a branch in name only.
+    further changesets are added to that previous branch, then that
+    previous branch will be a branch in name only.
 
 Branch tip
     See 'Tip, branch'.
@@ -151,7 +151,7 @@ DAG
     consisting of nodes and edges, where nodes correspond to
     changesets and edges imply a parent -> child relation. This graph
     can be visualized by graphical tools such as :hg:`glog`
-    (graphlog). In mercurial, the DAG is limited by the requirement
+    (graphlog). In Mercurial, the DAG is limited by the requirement
     for children to have at most two parents.
 
 Default branch
@@ -322,7 +322,7 @@ Revlog
     pointing to the data.
 
 Rewriting history
-    See  'History, rewriting'.
+    See 'History, rewriting'.
 
 Root
     A changeset that has only the null changeset as its parent. Most
@@ -342,7 +342,7 @@ Tip, branch
 Update
     (Noun) Another synonym of changeset.
 
-    Example:  "I've pushed an update".
+    Example: "I've pushed an update".
 
     (Verb) This term is usually used to describe updating the state of
     the working directory to that of a specific changeset. See
@@ -354,4 +354,4 @@ Working directory
     See 'Directory, working'.
 
 Working directory parent
-    See  'Parent, working directory'.
+    See 'Parent, working directory'.

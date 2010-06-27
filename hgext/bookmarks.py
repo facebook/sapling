@@ -53,6 +53,13 @@ def write(repo):
         for refspec, node in refs.iteritems():
             file.write("%s %s\n" % (hex(node), refspec))
         file.rename()
+
+        # touch 00changelog.i so hgweb reloads bookmarks (no lock needed)
+        try:
+            os.utime(repo.sjoin('00changelog.i'), None)
+        except OSError:
+            pass
+
     finally:
         wlock.release()
 
@@ -327,16 +334,15 @@ def reposetup(ui, repo):
                             if r:
                                 self.ui.status(_("updating bookmark %s\n") % k)
                             else:
-                                self.ui.warn(_("failed to update bookmark"
-                                                  " %s!\n") % k)
+                                self.ui.warn(_('updating bookmark %s'
+                                               ' failed!\n') % k)
 
             return result
 
-        def addchangegroup(self, source, srctype, url, emptyok=False):
+        def addchangegroup(self, *args, **kwargs):
             parents = self.dirstate.parents()
 
-            result = super(bookmark_repo, self).addchangegroup(
-                source, srctype, url, emptyok)
+            result = super(bookmark_repo, self).addchangegroup(*args, **kwargs)
             if result > 1:
                 # We have more heads than before
                 return result
@@ -457,24 +463,27 @@ def diffbookmarks(ui, repo, remote):
 
     if len(diff) <= 0:
         ui.status(_("no changes found\n"))
+        return 1
+    return 0
 
 def incoming(oldincoming, ui, repo, source="default", **opts):
     if opts.get('bookmarks'):
         source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), source)
         ui.status(_('comparing with %s\n') % url.hidepassword(source))
-        diffbookmarks(ui, repo, other)
+        return diffbookmarks(ui, repo, other)
     else:
-        oldincoming(ui, repo, source, **opts)
+        return oldincoming(ui, repo, source, **opts)
 
-def outgoing(oldoutgoing, ui, repo, source="default", **opts):
+def outgoing(oldoutgoing, ui, repo, dest=None, **opts):
     if opts.get('bookmarks'):
-        source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-        other = hg.repository(hg.remoteui(repo, opts), source)
-        ui.status(_('comparing with %s\n') % url.hidepassword(source))
-        diffbookmarks(ui, other, repo)
+        dest = ui.expandpath(dest or 'default-push', dest or 'default')
+        dest, branches = hg.parseurl(dest, opts.get('branch'))
+        other = hg.repository(hg.remoteui(repo, opts), dest)
+        ui.status(_('comparing with %s\n') % url.hidepassword(dest))
+        return diffbookmarks(ui, other, repo)
     else:
-        oldoutgoing(ui, repo, source, **opts)
+        return oldoutgoing(ui, repo, dest, **opts)
 
 def uisetup(ui):
     extensions.wrapfunction(repair, "strip", strip)
