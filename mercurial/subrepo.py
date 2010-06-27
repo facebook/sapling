@@ -379,8 +379,8 @@ class svnsubrepo(object):
             self.get(state)
 
     def push(self, force):
-        # nothing for svn
-        pass
+        # push is a no-op for SVN
+        return True
 
 types = {
     'hg': hgsubrepo,
