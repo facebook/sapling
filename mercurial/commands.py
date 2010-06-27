@@ -2570,6 +2570,10 @@ def merge(ui, repo, node=None, **opts):
     head, the other head is merged with by default. Otherwise, an
     explicit revision with which to merge with must be provided.
 
+    To undo an uncommitted merge, use :hg:`update --clean .` which
+    will check out a clean copy of the original merge parent, losing
+    all changes.
+
     Returns 0 on success, 1 if there are unresolved files.
     """
 
