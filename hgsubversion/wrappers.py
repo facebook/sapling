@@ -129,21 +129,21 @@ def push(repo, dest, force, revs):
     # 1. Find all outgoing commits from this head
     if len(repo.parents()) != 1:
         ui.status('Cowardly refusing to push branch merge\n')
-        return 1
+        return 0 # results in nonzero exit status, see hg's commands.py
     workingrev = repo.parents()[0]
     ui.status('searching for changes\n')
     hashes = meta.revmap.hashes()
     outgoing = util.outgoing_revisions(repo, hashes, workingrev.node())
     if not (outgoing and len(outgoing)):
         ui.status('no changes found\n')
-        return 0
+        return 1 # so we get a sane exit status, see hg's commands.push
     while outgoing:
         oldest = outgoing.pop(-1)
         old_ctx = repo[oldest]
         if len(old_ctx.parents()) != 1:
             ui.status('Found a branch merge, this needs discussion and '
                       'implementation.\n')
-            return 1
+            return 0 # results in nonzero exit status, see hg's commands.py
         base_n = old_ctx.parents()[0].node()
         old_children = repo[base_n].children()
         svnbranch = repo[base_n].branch()
@@ -198,7 +198,7 @@ def push(repo, dest, force, revs):
         meta = repo.svnmeta(svn.uuid)
         hashes = meta.revmap.hashes()
     util.swap_out_encoding(old_encoding)
-    return 0
+    return 1 # so we get a sane exit status, see hg's commands.push
 
 
 def pull(repo, source, heads=[], force=False):

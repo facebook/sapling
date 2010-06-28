@@ -271,7 +271,8 @@ class PushTests(test_util.TestBase):
         wc2path = self.wc_path + '_clone'
         u = self.repo.ui
         hg.clone(self.repo.ui, self.wc_path, wc2path, update=False)
-        self.pushrevisions()
+        res = self.pushrevisions()
+        self.assertEqual(0, res)
         oldf = open(os.path.join(self.wc_path, '.hg', 'hgrc'))
         hgrc = oldf.read()
         oldf.close()
