@@ -51,6 +51,9 @@ from mercurial import util
 def spacejoin(*args):
     return ' '.join(s for s in args if s)
 
+def shouldprint(ui):
+    return sys.stderr.isatty() or ui.configbool('progress', 'assume-tty')
+
 class progbar(object):
     def __init__(self, ui):
         self.ui = ui
@@ -69,6 +72,8 @@ class progbar(object):
             default=['topic', 'bar', 'number'])
 
     def show(self, topic, pos, item, unit, total):
+        if not shouldprint(self.ui):
+            return
         termwidth = self.width()
         self.printed = True
         head = ''
@@ -137,9 +142,13 @@ class progbar(object):
         sys.stderr.flush()
 
     def clear(self):
+        if not shouldprint(self.ui):
+            return
         sys.stderr.write('\r%s\r' % (' ' * self.width()))
 
     def complete(self):
+        if not shouldprint(self.ui):
+            return
         if self.ui.configbool('progress', 'clear-complete', default=True):
             self.clear()
         else:
@@ -177,8 +186,7 @@ def uisetup(ui):
     # setconfig('progress', 'disable', 'True') to disable this extension
     if ui.configbool('progress', 'disable'):
         return
-    if ((sys.stderr.isatty() or ui.configbool('progress', 'assume-tty'))
-        and not ui.debugflag and not ui.quiet):
+    if shouldprint(ui) and not ui.debugflag and not ui.quiet:
         # we instantiate one globally shared progress bar to avoid
         # competing progress bars when multiple UI objects get created
         global sharedprog
