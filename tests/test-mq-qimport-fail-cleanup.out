@@ -1,0 +1,10 @@
+adding a
+
+#empty series
+
+#qimport valid patch followed by invalid patch
+adding b.patch to series file
+abort: unable to read fakepatch
+
+#valid patches before fail added to series
+b.patch
