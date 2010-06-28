@@ -266,7 +266,7 @@ class PushTests(test_util.TestBase):
             self.assertEqual(tip['adding_file'].data(), 'foo')
             self.assertEqual(tip.branch(), 'the_branch')
 
-    def push_to_non_tip(self):
+    def test_push_to_non_tip(self):
         self.test_push_to_branch(push=False)
         wc2path = self.wc_path + '_clone'
         u = self.repo.ui
@@ -289,7 +289,6 @@ class PushTests(test_util.TestBase):
         from hgsubversion import svncommands
         svncommands.rebuildmeta(u,
                                 self.repo,
-                                os.path.dirname(self.repo.path),
                                 args=[test_util.fileurl(self.repo_path)])
 
 
