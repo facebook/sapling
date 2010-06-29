@@ -2570,6 +2570,10 @@ def merge(ui, repo, node=None, **opts):
     head, the other head is merged with by default. Otherwise, an
     explicit revision with which to merge with must be provided.
 
+    To undo an uncommitted merge, use :hg:`update --clean .` which
+    will check out a clean copy of the original merge parent, losing
+    all changes.
+
     Returns 0 on success, 1 if there are unresolved files.
     """
 
@@ -3015,8 +3019,11 @@ def resolve(ui, repo, *pats, **opts):
 def revert(ui, repo, *pats, **opts):
     """restore individual files or directories to an earlier state
 
-    (Use update -r to check out earlier revisions, revert does not
-    change the working directory parents.)
+    NOTE: This command is most likely not what you are looking for. revert
+    will partially overwrite content in the working directory without changing
+    the working directory parents. Use :hg:`update -r rev` to check out earlier
+    revisions, or :hg:`update --clean .` to undo a merge which has added
+    another parent.
 
     With no revision specified, revert the named files or directories
     to the contents they had in the parent of the working directory.

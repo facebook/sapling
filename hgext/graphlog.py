@@ -209,6 +209,8 @@ def ascii(ui, state, type, char, text, coldata):
 def get_revs(repo, rev_opt):
     if rev_opt:
         revs = revrange(repo, rev_opt)
+        if len(revs) == 0:
+            return (nullrev, nullrev)
         return (max(revs), min(revs))
     else:
         return (len(repo) - 1, 0)

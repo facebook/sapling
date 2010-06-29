@@ -129,11 +129,24 @@ def symbolset(repo, subset, x):
     return stringset(repo, subset, x)
 
 def rangeset(repo, subset, x, y):
-    m = getset(repo, subset, x)[0]
-    n = getset(repo, subset, y)[-1]
+    m = getset(repo, subset, x)
+    if not m:
+        m = getset(repo, range(len(repo)), x)
+
+    n = getset(repo, subset, y)
+    if not n:
+        n = getset(repo, range(len(repo)), y)
+
+    if not m or not n:
+        return []
+    m, n = m[0], n[-1]
+
     if m < n:
-        return range(m, n + 1)
-    return range(m, n - 1, -1)
+        r = range(m, n + 1)
+    else:
+        r = range(m, n - 1, -1)
+    s = set(subset)
+    return [x for x in r if x in s]
 
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
@@ -222,11 +235,15 @@ def ancestor(repo, subset, x):
 
 def ancestors(repo, subset, x):
     args = getset(repo, range(len(repo)), x)
+    if not args:
+        return []
     s = set(repo.changelog.ancestors(*args)) | set(args)
     return [r for r in subset if r in s]
 
 def descendants(repo, subset, x):
     args = getset(repo, range(len(repo)), x)
+    if not args:
+        return []
     s = set(repo.changelog.descendants(*args)) | set(args)
     return [r for r in subset if r in s]
 
@@ -422,7 +439,6 @@ def outgoing(repo, subset, x):
     repo.ui.popbuffer()
     cl = repo.changelog
     o = set([cl.rev(r) for r in repo.changelog.nodesbetween(o, None)[0]])
-    print 'out', dest, o
     return [r for r in subset if r in o]
 
 def tagged(repo, subset, x):

@@ -44,7 +44,7 @@ pretxnchangegroup.acl = python:hgext.acl.hook
 [acl]
 sources = push
 [extensions]
-f=$PWD/fakegroups.py
+f=`pwd`/fakegroups.py
 EOF
 }
 

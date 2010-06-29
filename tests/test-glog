@@ -146,6 +146,9 @@ hg glog a
 echo % unused arguments
 hg glog -q foo bar || echo failed
 
+echo % empty revision range - display nothing
+hg glog -r 1..0
+
 echo % from outer space
 cd ..
 hg glog -l1 repo

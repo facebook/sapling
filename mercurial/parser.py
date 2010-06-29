@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-# see http://effbot.org/zone/simple-top-down-parsing.txt and
+# see http://effbot.org/zone/simple-top-down-parsing.htm and
 # http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/
 # for background
 

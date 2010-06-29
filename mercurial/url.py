@@ -542,11 +542,25 @@ if has_https:
             conn.ui = self.ui
             return conn
 
-# In python < 2.5 AbstractDigestAuthHandler raises a ValueError if
-# it doesn't know about the auth type requested.  This can happen if
-# somebody is using BasicAuth and types a bad password.
 class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
+    def __init__(self, *args, **kwargs):
+        urllib2.HTTPDigestAuthHandler.__init__(self, *args, **kwargs)
+        self.retried_req = None
+
+    def reset_retry_count(self):
+        # Python 2.6.5 will call this on 401 or 407 errors and thus loop
+        # forever. We disable reset_retry_count completely and reset in
+        # http_error_auth_reqed instead.
+        pass
+
     def http_error_auth_reqed(self, auth_header, host, req, headers):
+        # Reset the retry counter once for each request.
+        if req is not self.retried_req:
+            self.retried_req = req
+            self.retried = 0
+        # In python < 2.5 AbstractDigestAuthHandler raises a ValueError if
+        # it doesn't know about the auth type requested. This can happen if
+        # somebody is using BasicAuth and types a bad password.
         try:
             return urllib2.HTTPDigestAuthHandler.http_error_auth_reqed(
                         self, auth_header, host, req, headers)
@@ -555,13 +569,6 @@ class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
             if arg.startswith("AbstractDigestAuthHandler doesn't know "):
                 return
             raise
-
-    # Python 2.6.5 will keep resetting the retry count on redirects, for
-    # example when the server returns 401 on failing auth (like google code
-    # currently does). We stop the endless recursion by not resetting the
-    # count.
-    def reset_retry_count(self):
-        pass
 
 def getauthinfo(path):
     scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
