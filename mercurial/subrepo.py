@@ -67,19 +67,21 @@ def submerge(repo, wctx, mctx, actx):
         repo.ui.debug("  subrepo %s: %s %s\n" % (s, msg, r))
 
     for s, l in s1.items():
+        ld = l # local state with possible dirty flag for compares
         if wctx != actx and wctx.sub(s).dirty():
-            l = (l[0], l[1] + "+")
+            ld = (l[0], l[1] + "+")
+
         a = sa.get(s, nullstate)
         if s in s2:
             r = s2[s]
-            if l == r or r == a: # no change or local is newer
+            if ld == r or r == a: # no change or local is newer
                 sm[s] = l
                 continue
-            elif l == a: # other side changed
+            elif ld == a: # other side changed
                 debug(s, "other changed, get", r)
                 wctx.sub(s).get(r)
                 sm[s] = r
-            elif l[0] != r[0]: # sources differ
+            elif ld[0] != r[0]: # sources differ
                 if repo.ui.promptchoice(
                     _(' subrepository sources for %s differ\n'
                       'use (l)ocal source (%s) or (r)emote source (%s)?')
@@ -88,7 +90,7 @@ def submerge(repo, wctx, mctx, actx):
                     debug(s, "prompt changed, get", r)
                     wctx.sub(s).get(r)
                     sm[s] = r
-            elif l[1] == a[1]: # local side is unchanged
+            elif ld[1] == a[1]: # local side is unchanged
                 debug(s, "other side changed, get", r)
                 wctx.sub(s).get(r)
                 sm[s] = r
@@ -96,7 +98,7 @@ def submerge(repo, wctx, mctx, actx):
                 debug(s, "both sides changed, merge with", r)
                 wctx.sub(s).merge(r)
                 sm[s] = l
-        elif l == a: # remote removed, local unchanged
+        elif ld == a: # remote removed, local unchanged
             debug(s, "remote removed, remove")
             wctx.sub(s).remove()
         else:
