@@ -2484,7 +2484,7 @@ def log(ui, repo, *pats, **opts):
     branches = opts.get('branch', []) + opts.get('only_branch', [])
     opts['branch'] = [repo.lookupbranch(b) for b in branches]
 
-    displayer = cmdutil.show_changeset(ui, repo, opts, True, matchfn)
+    displayer = cmdutil.show_changeset(ui, repo, opts, True)
     def prep(ctx, fns):
         rev = ctx.rev()
         parents = [p for p in repo.changelog.parentrevs(rev)
@@ -2517,7 +2517,11 @@ def log(ui, repo, *pats, **opts):
                 if rename:
                     copies.append((fn, rename[0]))
 
-        displayer.show(ctx, copies=copies)
+        revmatchfn = None
+        if opts.get('patch') or opts.get('stat'):
+            revmatchfn = cmdutil.match(repo, fns)
+
+        displayer.show(ctx, copies=copies, matchfn=revmatchfn)
 
     for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
         if count == limit:
