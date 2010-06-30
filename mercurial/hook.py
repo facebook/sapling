@@ -98,7 +98,10 @@ def _exthook(ui, repo, name, cmd, args, throw):
         cwd = repo.root
     else:
         cwd = os.getcwd()
-    r = util.system(cmd, environ=env, cwd=cwd)
+    if 'HG_URL' in env and env['HG_URL'].startswith('remote:http'):
+        r = util.system(cmd, environ=env, cwd=cwd, out=ui)
+    else:
+        r = util.system(cmd, environ=env, cwd=cwd)
     if r:
         desc, r = util.explain_exit(r)
         if throw:

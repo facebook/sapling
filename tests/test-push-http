@@ -39,10 +39,8 @@ req
 echo % expect success
 echo 'allow_push = *' >> .hg/hgrc
 echo '[hooks]' >> .hg/hgrc
-echo 'changegroup = python ../printenv.py changegroup 0 ../urls' >> .hg/hgrc
+echo 'changegroup = python ../printenv.py changegroup 0' >> .hg/hgrc
 req
-
-cat ../urls
 
 hg rollback
 echo % expect authorization error: all users denied

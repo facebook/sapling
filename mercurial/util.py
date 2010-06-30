@@ -366,13 +366,16 @@ def set_hgexecutable(path):
     global _hgexecutable
     _hgexecutable = path
 
-def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
+def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
     '''enhanced shell command execution.
     run with environment maybe modified, maybe in different dir.
 
     if command fails and onerr is None, return status.  if ui object,
     print error message and return status, else raise onerr object as
-    exception.'''
+    exception.
+
+    if out is specified, it is assumed to be a file-like object that has a
+    write() method. stdout and stderr will be redirected to out.'''
     def py2shell(val):
         'convert python object into string that is useful to shell'
         if val is None or val is False:
@@ -386,8 +389,17 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None):
     env = dict(os.environ)
     env.update((k, py2shell(v)) for k, v in environ.iteritems())
     env['HG'] = hgexecutable()
-    rc = subprocess.call(cmd, shell=True, close_fds=closefds,
-                         env=env, cwd=cwd)
+    if out is None:
+        rc = subprocess.call(cmd, shell=True, close_fds=closefds,
+                             env=env, cwd=cwd)
+    else:
+        proc = subprocess.Popen(cmd, shell=True, close_fds=closefds,
+                                env=env, cwd=cwd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        for line in proc.stdout:
+            out.write(line)
+        proc.wait()
+        rc = proc.returncode
     if sys.platform == 'OpenVMS' and rc & 1:
         rc = 0
     if rc and onerr:
