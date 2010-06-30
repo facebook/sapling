@@ -36,7 +36,13 @@ It only supports a small subset of reStructuredText:
 """
 
 import re, sys
-import util
+import util, encoding
+
+def replace(text, substs):
+    utext = text.decode(encoding.encoding)
+    for f, t in substs:
+        utext = utext.replace(f, t)
+    return utext.encode(encoding.encoding)
 
 def findblocks(text):
     """Find continuous blocks of lines in text.
@@ -251,21 +257,22 @@ def findsections(blocks):
 
 
 def inlineliterals(blocks):
+    substs = [('``', '"')]
     for b in blocks:
         if b['type'] in ('paragraph', 'section'):
-            b['lines'] = [l.replace('``', '"') for l in b['lines']]
+            b['lines'] = [replace(l, substs) for l in b['lines']]
     return blocks
 
 
 def hgrole(blocks):
+    substs = [(':hg:`', '"hg '), ('`', '"')]
     for b in blocks:
         if b['type'] in ('paragraph', 'section'):
             # Turn :hg:`command` into "hg command". This also works
             # when there is a line break in the command and relies on
             # the fact that we have no stray back-quotes in the input
             # (run the blocks through inlineliterals first).
-            b['lines'] = [l.replace(':hg:`', '"hg ').replace('`', '"')
-                          for l in b['lines']]
+            b['lines'] = [replace(l, substs) for l in b['lines']]
     return blocks
 
 
