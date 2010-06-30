@@ -182,7 +182,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             rflags = fmerge(f, f, f)
             a = ma.get(f, nullid)
             if n == m2[f] or m2[f] == a: # same or local newer
-                if m1.flags(f) != rflags:
+                # is file locally modified or flags need changing?
+                # dirstate flags may need to be made current
+                if m1.flags(f) != rflags or n[20:]:
                     act("update permissions", "e", f, rflags)
             elif n == a: # remote newer
                 act("remote is newer", "g", f, rflags)
