@@ -111,10 +111,6 @@ def getset(repo, subset, x):
 
 # operator methods
 
-def negate(repo, subset, x):
-    return getset(repo, subset,
-                  ('string', '-' + getstring(x, _("can't negate that"))))
-
 def stringset(repo, subset, x):
     x = repo[x].rev()
     if x == -1 and len(subset) == len(repo):
@@ -482,7 +478,6 @@ symbols = {
 }
 
 methods = {
-    "negate": negate,
     "range": rangeset,
     "string": stringset,
     "symbol": symbolset,
@@ -515,6 +510,9 @@ def optimize(x, small):
         return optimize(('range', ('string', '0'), x[1]), small)
     elif op == 'rangepost':
         return optimize(('range', x[1], ('string', 'tip')), small)
+    elif op == 'negate':
+        return optimize(('string',
+                         '-' + getstring(x[1], _("can't negate that"))), small)
     elif op in 'string symbol negate':
         return smallbonus, x # single revisions are small
     elif op == 'and' or op == 'dagrange':
