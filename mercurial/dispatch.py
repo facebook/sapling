@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import os, sys, atexit, signal, pdb, socket, errno, shlex, time
+import os, sys, atexit, signal, pdb, socket, errno, shlex, time, traceback
 import util, commands, hg, fancyopts, extensions, hook, error
 import cmdutil, encoding
 import ui as uimod
@@ -57,6 +57,7 @@ def _runcatch(ui, args):
         except:
             # enter the debugger when we hit an exception
             if '--debugger' in args:
+                traceback.print_exc()
                 pdb.post_mortem(sys.exc_info()[2])
             ui.traceback()
             raise
