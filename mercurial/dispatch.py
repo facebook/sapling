@@ -49,6 +49,8 @@ def _runcatch(ui, args):
         try:
             # enter the debugger before command execution
             if '--debugger' in args:
+                ui.warn(_("entering debugger - "
+                        "type c to continue starting hg or h for help\n"))
                 pdb.set_trace()
             try:
                 return _dispatch(ui, args)
