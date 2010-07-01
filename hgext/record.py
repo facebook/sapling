@@ -186,7 +186,8 @@ def parsepatch(fp):
             self.hunk = []
             self.stream = []
 
-        def addrange(self, (fromstart, fromend, tostart, toend, proc)):
+        def addrange(self, limits):
+            fromstart, fromend, tostart, toend, proc = limits
             self.fromline = int(fromstart)
             self.toline = int(tostart)
             self.proc = proc
