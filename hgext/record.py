@@ -10,7 +10,7 @@
 from mercurial.i18n import gettext, _
 from mercurial import cmdutil, commands, extensions, hg, mdiff, patch
 from mercurial import util
-import copy, cStringIO, errno, operator, os, re, tempfile
+import copy, cStringIO, errno, os, re, tempfile
 
 lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
 
@@ -355,8 +355,8 @@ def filterpatch(ui, chunks):
                 applied[chunk.filename()].append(chunk)
             else:
                 fixoffset += chunk.removed - chunk.added
-    return reduce(operator.add, [h for h in applied.itervalues()
-                                 if h[0].special() or len(h) > 1], [])
+    return sum([h for h in applied.itervalues()
+               if h[0].special() or len(h) > 1], [])
 
 def record(ui, repo, *pats, **opts):
     '''interactively select changes to commit
