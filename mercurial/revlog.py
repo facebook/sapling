@@ -131,7 +131,7 @@ class lazyparser(object):
         self.dataf = dataf
         self.s = struct.calcsize(indexformatng)
         self.datasize = size
-        self.l = size / self.s
+        self.l = size // self.s
         self.index = [None] * self.l
         self.map = {nullid: nullrev}
         self.allmap = 0
@@ -176,8 +176,8 @@ class lazyparser(object):
                 # limit blocksize so that we don't get too much data.
                 blocksize = max(self.datasize - blockstart, 0)
             data = self.dataf.read(blocksize)
-        lend = len(data) / self.s
-        i = blockstart / self.s
+        lend = len(data) // self.s
+        i = blockstart // self.s
         off = 0
         # lazyindex supports __delitem__
         if lend > len(self.index) - i:
