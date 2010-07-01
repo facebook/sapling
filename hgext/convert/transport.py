@@ -98,9 +98,8 @@ class SvnRaTransport(object):
             svn.ra.reparent(self.ra, self.svn_url.encode('utf8'))
 
     class Reporter(object):
-        def __init__(self, (reporter, report_baton)):
-            self._reporter = reporter
-            self._baton = report_baton
+        def __init__(self, reporter_data):
+            self._reporter, self._baton = reporter_data
 
         def set_path(self, path, revnum, start_empty, lock_token, pool=None):
             svn.ra.reporter2_invoke_set_path(self._reporter, self._baton,
