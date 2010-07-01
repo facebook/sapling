@@ -826,8 +826,13 @@ class localrepository(repo.repository):
                 removedsubs.discard(s)
                 if match(s) and wctx.sub(s).dirty():
                     subs.append(s)
-            if (subs or removedsubs) and '.hgsubstate' not in changes[0]:
-                changes[0].insert(0, '.hgsubstate')
+            if (subs or removedsubs):
+                # is hgsub modified and not included?
+                if (not match('.hgsub') and
+                    '.hgsub' in (wctx.modified() + wctx.added())):
+                    raise util.Abort("can't commit subrepos without .hgsub")
+                if '.hgsubstate' not in changes[0]:
+                    changes[0].insert(0, '.hgsubstate')
 
             # make sure all explicit patterns are matched
             if not force and match.files():

@@ -1,6 +1,7 @@
 % first revision, no sub
 adding a
 % add first sub
+abort: can't commit subrepos without .hgsub
 adding a
 parent: 0:f7b1eb17ad24 tip
  0
