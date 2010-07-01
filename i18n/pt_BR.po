@@ -13958,6 +13958,9 @@ msgstr "diretório de trabalho de %s"
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr "não é possível consolidar parcialmente uma mesclagem (não especifique arquivos ou padrões)"
 
+msgid "can't commit subrepos without .hgsub"
+msgstr "não é possível consolidar sub-repositórios sem o arquivo .hgsub"
+
 msgid "file not found!"
 msgstr "arquivo não encontrado!"
 
@@ -14365,9 +14368,6 @@ msgstr "erro de sintaxe"
 msgid "missing argument"
 msgstr "argumento faltando"
 
-msgid "can't negate that"
-msgstr "não é possível negar essa expressão"
-
 #, python-format
 msgid "can't use %s here"
 msgstr "não se pode usar %s aqui"
@@ -14451,6 +14451,9 @@ msgstr "outgoing exige um caminho para um repositório"
 
 msgid "tagged takes no arguments"
 msgstr "tagged não tem argumentos"
+
+msgid "can't negate that"
+msgstr "não é possível negar essa expressão"
 
 msgid "not a symbol"
 msgstr "não é um símbolo"
