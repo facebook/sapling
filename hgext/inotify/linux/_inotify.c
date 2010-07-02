@@ -327,7 +327,7 @@ static void event_dealloc(struct event *evt)
 	Py_XDECREF(evt->cookie);
 	Py_XDECREF(evt->name);
 
-	(*evt->ob_type->tp_free)(evt);
+	Py_TYPE(evt)->tp_free(evt);
 }
 
 static PyObject *event_repr(struct event *evt)
