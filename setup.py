@@ -9,6 +9,17 @@ import sys
 if not hasattr(sys, 'version_info') or sys.version_info < (2, 4, 0, 'final'):
     raise SystemExit("Mercurial requires Python 2.4 or later.")
 
+if sys.version_info[0] >= 3:
+    def b(s):
+        '''A helper function to emulate 2.6+ bytes literals using string
+        literals.'''
+        return s.encode('latin1')
+else:
+    def b(s):
+        '''A helper function to emulate 2.6+ bytes literals using string
+        literals.'''
+        return s
+
 # Solaris Python packaging brain damage
 try:
     import hashlib
@@ -114,8 +125,8 @@ def runcmd(cmd, env):
     # fine, we don't want to load it anyway.  Python may warn about
     # a missing __init__.py in mercurial/locale, we also ignore that.
     err = [e for e in err.splitlines()
-           if not e.startswith('Not trusting file') \
-              and not e.startswith('warning: Not importing')]
+           if not e.startswith(b('Not trusting file')) \
+              and not e.startswith(b('warning: Not importing'))]
     if err:
         return ''
     return out
