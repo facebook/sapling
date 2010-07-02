@@ -2521,7 +2521,7 @@ def log(ui, repo, *pats, **opts):
 
         revmatchfn = None
         if opts.get('patch') or opts.get('stat'):
-            revmatchfn = cmdutil.match(repo, fns)
+            revmatchfn = cmdutil.match(repo, fns, default='path')
 
         displayer.show(ctx, copies=copies, matchfn=revmatchfn)
 
