@@ -45,7 +45,6 @@ num characters, or ``+<num>`` for the first num characters.
 import sys
 import time
 
-from mercurial import extensions
 from mercurial import util
 
 def spacejoin(*args):
@@ -159,7 +158,7 @@ class progbar(object):
         tw = util.termwidth()
         return min(int(self.ui.config('progress', 'width', default=tw)), tw)
 
-    def progress(self, orig, topic, pos, item='', unit='', total=None):
+    def progress(self, topic, pos, item='', unit='', total=None):
         if pos is None:
             if self.topics and self.topics[-1] == topic and self.printed:
                 self.complete()
@@ -172,29 +171,35 @@ class progbar(object):
                 and topic == self.topics[-1]):
                 self.lastprint = now
                 self.show(topic, pos, item, unit, total)
-        return orig(topic, pos, item=item, unit=unit, total=total)
-
-    def write(self, orig, *args, **opts):
-        if self.printed:
-            self.clear()
-        return orig(*args, **opts)
-
-sharedprog = None
 
 def uisetup(ui):
+    class progressui(ui.__class__):
+        _progbar = None
+
+        def progress(self, *args, **opts):
+            self._progbar.progress(*args, **opts)
+            return super(progressui, self).progress(*args, **opts)
+
+        def write(self, *args, **opts):
+            if self._progbar.printed:
+                self._progbar.clear()
+            return super(progressui, self).write(*args, **opts)
+
+        def write_err(self, *args, **opts):
+            if self._progbar.printed:
+                self._progbar.clear()
+            return super(progressui, self).write_err(*args, **opts)
+
     # Apps that derive a class from ui.ui() can use
     # setconfig('progress', 'disable', 'True') to disable this extension
     if ui.configbool('progress', 'disable'):
         return
     if shouldprint(ui) and not ui.debugflag and not ui.quiet:
+        ui.__class__ = progressui
         # we instantiate one globally shared progress bar to avoid
         # competing progress bars when multiple UI objects get created
-        global sharedprog
-        if not sharedprog:
-            sharedprog = progbar(ui)
-        extensions.wrapfunction(ui, 'progress', sharedprog.progress)
-        extensions.wrapfunction(ui, 'write', sharedprog.write)
-        extensions.wrapfunction(ui, 'write_err', sharedprog.write)
+        if not progressui._progbar:
+            progressui._progbar = progbar(ui)
 
 def reposetup(ui, repo):
     uisetup(repo.ui)

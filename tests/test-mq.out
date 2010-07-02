@@ -93,6 +93,11 @@ bleh
   series:
 A
 B
+% status --mq with color (issue2096)
+[0;32;1mA .hgignore[0m
+[0;32;1mA A[0m
+[0;32;1mA B[0m
+[0;32;1mA series[0m
 % init --mq without repo
 abort: There is no Mercurial repository here (.hg not found)
 % init --mq with repo path

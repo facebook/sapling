@@ -388,6 +388,8 @@ def _dispatch(ui, args):
     # times so we keep track of configured extensions in _loaded.
     extensions.loadall(lui)
     exts = [ext for ext in extensions.extensions() if ext[0] not in _loaded]
+    # Propagate any changes to lui.__class__ by extensions
+    ui.__class__ = lui.__class__
 
     # (uisetup and extsetup are handled in extensions.loadall)
 

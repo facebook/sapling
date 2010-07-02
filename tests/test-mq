@@ -80,6 +80,9 @@ echo '  .hgignore:'
 cat .hg/patches/.hgignore
 echo '  series:'
 cat .hg/patches/series
+
+echo '% status --mq with color (issue2096)'
+hg status --mq --config extensions.color= --color=always
 cd ..
 
 echo '% init --mq without repo'
