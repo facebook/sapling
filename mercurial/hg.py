@@ -221,7 +221,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         src_repo = repository(ui, source)
     else:
         src_repo = source
-        branch = (None, [])
+        branch = (None, branch or [])
         origsource = source = src_repo.url()
     rev, checkout = addbranchrevs(src_repo, src_repo, branch, rev)
 
