@@ -15,6 +15,8 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include <util.h>
+
 /* Variables used in the event string representation */
 static PyObject *join;
 static PyObject *er_wm;
@@ -394,8 +396,7 @@ done:
 }
 
 static PyTypeObject event_type = {
-	PyObject_HEAD_INIT(NULL)
-	0,                         /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_inotify.event",             /*tp_name*/
 	sizeof(struct event), /*tp_basicsize*/
 	0,                         /*tp_itemsize*/
@@ -600,6 +601,35 @@ static PyMethodDef methods[] = {
 	{NULL},
 };
 
+#ifdef IS_PY3K
+static struct PyModuleDef _inotify_module = {
+	PyModuleDef_HEAD_INIT,
+	"_inotify",
+	doc,
+	-1,
+	methods
+};
+
+PyMODINIT_FUNC PyInit__inotify(void)
+{
+	PyObject *mod, *dict;
+
+	mod = PyModule_Create(&_inotify_module);
+
+	if (mod == NULL)
+		return NULL;
+
+	if (!init_globals())
+		return;
+
+	dict = PyModule_GetDict(mod);
+
+	if (dict)
+		define_consts(dict);
+
+	return mod;
+}
+#else
 void init_inotify(void)
 {
 	PyObject *mod, *dict;
@@ -617,3 +647,4 @@ void init_inotify(void)
 	if (dict)
 		define_consts(dict);
 }
+#endif
