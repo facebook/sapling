@@ -286,7 +286,8 @@ if sys.platform == 'linux2' and os.uname()[2] > '2.6':
     cc = new_compiler()
     if hasfunction(cc, 'inotify_add_watch'):
         inotify = Extension('hgext.inotify.linux._inotify',
-                            ['hgext/inotify/linux/_inotify.c'])
+                            ['hgext/inotify/linux/_inotify.c'],
+                            ['mercurial'])
         inotify.optional = True
         extmodules.append(inotify)
         packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
