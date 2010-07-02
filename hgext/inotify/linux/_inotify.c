@@ -15,6 +15,13 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+/* Variables used in the event string representation */
+static PyObject *join;
+static PyObject *er_wm;
+static PyObject *er_wmc;
+static PyObject *er_wmn;
+static PyObject *er_wmcn;
+
 static PyObject *init(PyObject *self, PyObject *args)
 {
 	PyObject *ret = NULL;
@@ -312,8 +319,8 @@ static struct PyGetSetDef event_getsets[] = {
 };
 
 PyDoc_STRVAR(
-    event_doc,
-    "event: Structure describing an inotify event.");
+	event_doc,
+	"event: Structure describing an inotify event.");
 
 static PyObject *event_new(PyTypeObject *t, PyObject *a, PyObject *k)
 {
@@ -332,15 +339,10 @@ static void event_dealloc(struct event *evt)
 
 static PyObject *event_repr(struct event *evt)
 {
-	int wd = PyInt_AsLong(evt->wd);
 	int cookie = evt->cookie == Py_None ? -1 : PyInt_AsLong(evt->cookie);
 	PyObject *ret = NULL, *pymasks = NULL, *pymask = NULL;
-	PyObject *join = NULL;
 	char *maskstr;
-
-	join = PyString_FromString("|");
-	if (join == NULL)
-		goto bail;
+	PyObject *tuple = NULL, *formatstr = NULL;
 
 	pymasks = decode_mask(PyInt_AsLong(evt->mask));
 	if (pymasks == NULL)
@@ -350,32 +352,34 @@ static PyObject *event_repr(struct event *evt)
 	if (pymask == NULL)
 		goto bail;
 
-	maskstr = PyString_AsString(pymask);
-
 	if (evt->name != Py_None) {
-		PyObject *pyname = PyString_Repr(evt->name, 1);
-		char *name = pyname ? PyString_AsString(pyname) : "???";
-
-		if (cookie == -1)
-			ret = PyString_FromFormat(
-				"event(wd=%d, mask=%s, name=%s)",
-				wd, maskstr, name);
-		else
-			ret = PyString_FromFormat("event(wd=%d, mask=%s, "
-						  "cookie=0x%x, name=%s)",
-						  wd, maskstr, cookie, name);
-
-		Py_XDECREF(pyname);
-	} else {
-		if (cookie == -1)
-			ret = PyString_FromFormat("event(wd=%d, mask=%s)",
-						  wd, maskstr);
+		if (cookie == -1) {
+			formatstr = er_wmn;
+			tuple = PyTuple_Pack(3, evt->wd, pymask, evt->name);
+		}
 		else {
-			ret = PyString_FromFormat(
-				"event(wd=%d, mask=%s, cookie=0x%x)",
-				wd, maskstr, cookie);
+			formatstr = er_wmcn;
+			tuple = PyTuple_Pack(4, evt->wd, pymask,
+					     evt->cookie, evt->name);
+		}
+	} else {
+		if (cookie == -1) {
+			formatstr = er_wm;
+			tuple = PyTuple_Pack(2, evt->wd, pymask);
+		}
+		else {
+			formatstr = er_wmc;
+			tuple = PyTuple_Pack(3, evt->wd, pymask, evt->cookie);
 		}
 	}
+
+	if (tuple == NULL)
+		goto bail;
+
+	ret = PyNumber_Remainder(formatstr, tuple);
+
+	if (ret == NULL)
+		goto bail;
 
 	goto done;
 bail:
@@ -384,7 +388,7 @@ bail:
 done:
 	Py_XDECREF(pymask);
 	Py_XDECREF(pymasks);
-	Py_XDECREF(join);
+	Py_XDECREF(tuple);
 
 	return ret;
 }
@@ -561,6 +565,17 @@ done:
 	return ret;
 }
 
+static int init_globals(void)
+{
+	join = PyString_FromString("|");
+	er_wm = PyString_FromString("event(wd=%d, mask=%s)");
+	er_wmn = PyString_FromString("event(wd=%d, mask=%s, name=%s)");
+	er_wmc = PyString_FromString("event(wd=%d, mask=%s, cookie=0x%x)");
+	er_wmcn = PyString_FromString("event(wd=%d, mask=%s, cookie=0x%x, name=%s)");
+
+	return join && er_wm && er_wmn && er_wmc && er_wmcn;
+}
+
 PyDoc_STRVAR(
 	read_doc,
 	"read(fd, bufsize[=65536]) -> list_of_events\n"
@@ -590,6 +605,9 @@ void init_inotify(void)
 	PyObject *mod, *dict;
 
 	if (PyType_Ready(&event_type) == -1)
+		return;
+
+	if (!init_globals())
 		return;
 
 	mod = Py_InitModule3("_inotify", methods, doc);
