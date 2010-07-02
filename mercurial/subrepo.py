@@ -67,11 +67,13 @@ def submerge(repo, wctx, mctx, actx):
         repo.ui.debug("  subrepo %s: %s %s\n" % (s, msg, r))
 
     for s, l in s1.items():
-        ld = l # local state with possible dirty flag for compares
-        if wctx != actx and wctx.sub(s).dirty():
-            ld = (l[0], l[1] + "+")
-
         a = sa.get(s, nullstate)
+        ld = l # local state with possible dirty flag for compares
+        if wctx.sub(s).dirty():
+            ld = (l[0], l[1] + "+")
+        if wctx == actx: # overwrite
+            a = ld
+
         if s in s2:
             r = s2[s]
             if ld == r or r == a: # no change or local is newer

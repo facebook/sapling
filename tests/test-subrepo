@@ -15,9 +15,19 @@ echo s = s > .hgsub
 hg add .hgsub
 hg init s
 echo a > s/a
+
+# issue2232 - committing a subrepo without .hgsub
+hg ci -mbad s
+
 hg -R s ci -Ams0
 hg sum
 hg ci -m1
+
+# issue 2022 - update -C
+echo b > s/a
+hg sum
+hg co -C 1
+hg sum
 
 echo % add sub sub
 echo ss = ss > s/.hgsub

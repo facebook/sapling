@@ -12,9 +12,12 @@
           <File Name="diffs.txt" />
           <File Name="environment.txt" />
           <File Name="extensions.txt" />
+          <File Name="glossary.txt" />
+          <File Name="hgweb.txt" />
           <File Name="multirevs.txt" />
           <File Name="patterns.txt" />
           <File Name="revisions.txt" />
+          <File Name="revsets.txt" />
           <File Name="templates.txt" />
           <File Name="urls.txt" />
         </Component>

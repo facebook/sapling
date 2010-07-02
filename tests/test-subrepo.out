@@ -1,6 +1,7 @@
 % first revision, no sub
 adding a
 % add first sub
+abort: can't commit subrepos without .hgsub
 adding a
 parent: 0:f7b1eb17ad24 tip
  0
@@ -8,6 +9,17 @@ branch: default
 commit: 1 added, 1 subrepos
 update: (current)
 committing subrepository s
+parent: 1:7cf8cfea66e4 tip
+ 1
+branch: default
+commit: 1 subrepos
+update: (current)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+parent: 1:7cf8cfea66e4 tip
+ 1
+branch: default
+commit: (clean)
+update: (current)
 % add sub sub
 parent: 1:7cf8cfea66e4 tip
  1

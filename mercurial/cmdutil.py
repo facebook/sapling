@@ -708,15 +708,15 @@ class changeset_printer(object):
         if self.footer:
             self.ui.write(self.footer)
 
-    def show(self, ctx, copies=None, **props):
+    def show(self, ctx, copies=None, matchfn=None, **props):
         if self.buffered:
             self.ui.pushbuffer()
-            self._show(ctx, copies, props)
+            self._show(ctx, copies, matchfn, props)
             self.hunk[ctx.rev()] = self.ui.popbuffer(labeled=True)
         else:
-            self._show(ctx, copies, props)
+            self._show(ctx, copies, matchfn, props)
 
-    def _show(self, ctx, copies, props):
+    def _show(self, ctx, copies, matchfn, props):
         '''show a single changeset or file revision'''
         changenode = ctx.node()
         rev = ctx.rev()
@@ -796,15 +796,17 @@ class changeset_printer(object):
                               label='log.summary')
         self.ui.write("\n")
 
-        self.showpatch(changenode)
+        self.showpatch(changenode, matchfn)
 
-    def showpatch(self, node):
-        if self.patch:
+    def showpatch(self, node, matchfn):
+        if not matchfn:
+            matchfn = self.patch
+        if matchfn:
             stat = self.diffopts.get('stat')
             diffopts = patch.diffopts(self.ui, self.diffopts)
             prev = self.repo.changelog.parents(node)[0]
             diffordiffstat(self.ui, self.repo, diffopts, prev, node,
-                           match=self.patch, stat=stat)
+                           match=matchfn, stat=stat)
             self.ui.write("\n")
 
     def _meaningful_parentrevs(self, log, rev):
@@ -857,7 +859,7 @@ class changeset_templater(changeset_printer):
             return []
         return parents
 
-    def _show(self, ctx, copies, props):
+    def _show(self, ctx, copies, matchfn, props):
         '''show a single changeset or file revision'''
 
         showlist = templatekw.showlist
@@ -912,7 +914,7 @@ class changeset_templater(changeset_printer):
             # write changeset metadata, then patch if requested
             key = types['changeset']
             self.ui.write(templater.stringify(self.t(key, **props)))
-            self.showpatch(ctx.node())
+            self.showpatch(ctx.node(), matchfn)
 
             if types['footer']:
                 if not self.footer:
@@ -925,7 +927,7 @@ class changeset_templater(changeset_printer):
         except SyntaxError, inst:
             raise util.Abort('%s: %s' % (self.t.mapfile, inst.args[0]))
 
-def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
+def show_changeset(ui, repo, opts, buffered=False):
     """show one changeset using template or regular display.
 
     Display format will be the first non-empty hit of:
@@ -939,7 +941,7 @@ def show_changeset(ui, repo, opts, buffered=False, matchfn=False):
     # options
     patch = False
     if opts.get('patch') or opts.get('stat'):
-        patch = matchfn or matchall(repo)
+        patch = matchall(repo)
 
     tmpl = opts.get('template')
     style = None
