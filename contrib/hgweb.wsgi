@@ -1,4 +1,5 @@
 # An example WSGI for use with mod_wsgi, edit as necessary
+# See http://mercurial.selenic.com/wiki/modwsgi for more information
 
 # Path to repo or hgweb config to serve (see 'hg help hgweb')
 config = "/path/to/repo/or/config"

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
 # An example hgweb CGI script, edit as necessary
+# See also http://mercurial.selenic.com/wiki/PublishingRepositories
 
 # Path to repo or hgweb config to serve (see 'hg help hgweb')
 config = "/path/to/repo/or/config"
