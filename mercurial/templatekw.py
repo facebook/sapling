@@ -151,6 +151,11 @@ def showbranches(**args):
         branch = encoding.tolocal(branch)
         return showlist('branch', [branch], plural='branches', **args)
 
+def showchildren(**args):
+    ctx = args['ctx']
+    childrevs = ['%d:%s' % (cctx, cctx) for cctx in ctx.children()]
+    return showlist('children', childrevs, **args)
+
 def showdate(repo, ctx, templ, **args):
     return ctx.date()
 
@@ -245,6 +250,7 @@ def showtags(**args):
 keywords = {
     'author': showauthor,
     'branches': showbranches,
+    'children': showchildren,
     'date': showdate,
     'desc': showdescription,
     'diffstat': showdiffstat,

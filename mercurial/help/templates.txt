@@ -28,6 +28,8 @@ keywords are usually available for templating a log-like command:
 :branches: String. The name of the branch on which the changeset was
     committed. Will be empty if the branch name was default.
 
+:children: List of strings. The children of the changeset.
+
 :date: Date information. The date when the changeset was committed.
 
 :desc: String. The text of the changeset description.
