@@ -1051,6 +1051,7 @@ def walkchangerevs(repo, match, opts, prepare):
     copies = []
 
     if not slowpath:
+        minrev, maxrev = min(revs), max(revs)
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog, last):
             cl_count = len(repo)
@@ -1061,16 +1062,20 @@ def walkchangerevs(repo, match, opts, prepare):
                     revs.append((filelog.linkrev(j),
                                  follow and filelog.renamed(n)))
                 for rev in reversed(revs):
+                    linkrev = rev[0]
+                    if linkrev > maxrev:
+                        continue
+                    if linkrev < minrev:
+                        return
                     # only yield rev for which we have the changelog, it can
                     # happen while doing "hg log" during a pull or commit
-                    if rev[0] < cl_count:
+                    if linkrev < cl_count:
                         yield rev
         def iterfiles():
             for filename in match.files():
                 yield filename, None
             for filename_node in copies:
                 yield filename_node
-        minrev, maxrev = min(revs), max(revs)
         for file_, node in iterfiles():
             filelog = repo.file(file_)
             if not len(filelog):
@@ -1091,14 +1096,11 @@ def walkchangerevs(repo, match, opts, prepare):
                 last = filelog.rev(node)
 
             for rev, copied in filerevgen(filelog, last):
-                if rev <= maxrev:
-                    if rev < minrev:
-                        break
-                    fncache.setdefault(rev, [])
-                    fncache[rev].append(file_)
-                    wanted.add(rev)
-                    if copied:
-                        copies.append(copied)
+                fncache.setdefault(rev, [])
+                fncache[rev].append(file_)
+                wanted.add(rev)
+                if copied:
+                    copies.append(copied)
     if slowpath:
         if follow:
             raise util.Abort(_('can only follow copies/renames for explicit '
