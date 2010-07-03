@@ -125,6 +125,7 @@ hg log --template '{date|rfc822date}\n'
 hg log --template '{desc|firstline}\n'
 hg log --template '{node|short}\n'
 hg log --template '<changeset author="{author|xmlescape}"/>\n'
+hg log --template '{rev}: {children}\n'
 
 echo '# formatnode filter works'
 echo '#  quiet'
