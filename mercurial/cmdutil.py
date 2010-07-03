@@ -1052,12 +1052,8 @@ def walkchangerevs(repo, match, opts, prepare):
 
     if not slowpath:
         # Only files, no patterns.  Check the history of each file.
-        def filerevgen(filelog, node):
+        def filerevgen(filelog, last):
             cl_count = len(repo)
-            if node is None:
-                last = len(filelog) - 1
-            else:
-                last = filelog.rev(node)
             for i, window in increasing_windows(last, nullrev):
                 revs = []
                 for j in xrange(i - window, i + 1):
@@ -1088,7 +1084,13 @@ def walkchangerevs(repo, match, opts, prepare):
                     break
                 else:
                     continue
-            for rev, copied in filerevgen(filelog, node):
+
+            if node is None:
+                last = len(filelog) - 1
+            else:
+                last = filelog.rev(node)
+
+            for rev, copied in filerevgen(filelog, last):
                 if rev <= maxrev:
                     if rev < minrev:
                         break
