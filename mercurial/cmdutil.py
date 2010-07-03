@@ -1055,22 +1055,21 @@ def walkchangerevs(repo, match, opts, prepare):
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog, last):
             cl_count = len(repo)
-            for i, window in increasing_windows(last, nullrev):
-                revs = []
-                for j in xrange(i - window, i + 1):
-                    n = filelog.node(j)
-                    revs.append((filelog.linkrev(j),
-                                 follow and filelog.renamed(n)))
-                for rev in reversed(revs):
-                    linkrev = rev[0]
-                    if linkrev > maxrev:
-                        continue
-                    if linkrev < minrev:
-                        return
-                    # only yield rev for which we have the changelog, it can
-                    # happen while doing "hg log" during a pull or commit
-                    if linkrev < cl_count:
-                        yield rev
+            revs = []
+            for j in xrange(0, last+1):
+                linkrev = filelog.linkrev(j)
+                if linkrev < minrev:
+                    continue
+                # only yield rev for which we have the changelog, it can
+                # happen while doing "hg log" during a pull or commit
+                if linkrev > maxrev or linkrev >= cl_count:
+                    break
+                n = filelog.node(j)
+                revs.append((filelog.linkrev(j),
+                             follow and filelog.renamed(n)))
+
+            for rev in reversed(revs):
+                yield rev
         def iterfiles():
             for filename in match.files():
                 yield filename, None
