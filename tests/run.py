@@ -70,7 +70,8 @@ if __name__ == '__main__':
         demandimport.enable()
 
     # silence output when running outside nose
-    sys.stdout = os.tmpfile()
+    import tempfile
+    sys.stdout = tempfile.TemporaryFile()
 
     all = tests()
     del all['test_util']
