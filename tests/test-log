@@ -185,4 +185,9 @@ echo '% log -p --cwd dir (in subdir)'
 mkdir dir
 hg log -p --cwd dir
 
+echo '% log -p -R repo'
+cd dir
+hg log -p -R .. ../a
+
+
 exit 0
