@@ -42,6 +42,8 @@ def add(ui, repo, *pats, **opts):
          adding foo.c
          $ hg status
          A foo.c
+
+    Returns 0 if all files are successfully added.
     """
 
     bad = []
@@ -2732,6 +2734,8 @@ def paths(ui, repo, search=None):
     :hg:`bundle`) operations.
 
     See :hg:`help urls` for more information.
+
+    Returns 0 on success.
     """
     if search:
         for name, path in ui.configitems("paths"):
