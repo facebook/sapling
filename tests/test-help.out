@@ -252,6 +252,8 @@ add the specified files on the next commit
 
     If no names are given, add all files to the repository.
 
+    Returns 0 if all files are successfully added.
+
 use "hg -v help add" to show verbose help
 
 options:
@@ -286,6 +288,8 @@ add the specified files on the next commit
       adding foo.c
       $ hg status
       A foo.c
+
+    Returns 0 if all files are successfully added.
 
 options:
 
@@ -332,6 +336,8 @@ add the specified files on the next commit
 
     If no names are given, add all files to the repository.
 
+    Returns 0 if all files are successfully added.
+
 use "hg -v help add" to show verbose help
 
 options:
@@ -354,6 +360,8 @@ add the specified files on the next commit
     add before that, see "hg forget".
 
     If no names are given, add all files to the repository.
+
+    Returns 0 if all files are successfully added.
 
 use "hg -v help add" to show verbose help
 

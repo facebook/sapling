@@ -464,3 +464,65 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     commit on default
 
+% log -p --cwd dir (in subdir)
+changeset:   3:f5d8de11c2e2
+branch:      test
+tag:         tip
+parent:      1:d32277701ccb
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     commit on test
+
+diff -r d32277701ccb -r f5d8de11c2e2 c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++c
+
+changeset:   2:c3a4f03cc9a7
+parent:      0:24427303d56f
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     commit on default
+
+diff -r 24427303d56f -r c3a4f03cc9a7 c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/c	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++c
+
+changeset:   1:d32277701ccb
+branch:      test
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     commit on test
+
+diff -r 24427303d56f -r d32277701ccb b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++b
+
+changeset:   0:24427303d56f
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     commit on default
+
+diff -r 000000000000 -r 24427303d56f a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+% log -p -R repo
+changeset:   0:24427303d56f
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     commit on default
+
+diff -r 000000000000 -r 24427303d56f a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
