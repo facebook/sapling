@@ -125,6 +125,12 @@ class svnremoterepo(mercurial.repo.repository):
         """
         raise hgutil.Abort('command unavailable for Subversion repositories')
 
+    def pushkey(self, namespace, key, old, new):
+        return False
+
+    def listkeys(self, namespace):
+        return {}
+
 def instance(ui, url, create):
     if url.startswith('http://') or url.startswith('https://'):
         try:
