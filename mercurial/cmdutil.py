@@ -1106,16 +1106,20 @@ def walkchangerevs(repo, match, opts, prepare):
                                'filenames'))
 
         # The slow path checks files modified in every changeset.
-        def changerevgen():
-            for i, window in increasing_windows(len(repo) - 1, nullrev):
-                for j in xrange(i - window, i + 1):
-                    yield change(j)
-
-        for ctx in changerevgen():
+        if opts.get('removed'):
+            # --removed wants to yield the changes where the file
+            # was removed, this means that we have to explore all
+            # changesets, effectively ignoring the revisions that
+            # had been passed as arguments
+            revrange = xrange(nullrev, len(repo) - 1)
+        else:
+            revrange = sorted(revs)
+        for i in revrange:
+            ctx = change(i)
             matches = filter(match, ctx.files())
             if matches:
-                fncache[ctx.rev()] = matches
-                wanted.add(ctx.rev())
+                fncache[i] = matches
+                wanted.add(i)
 
     class followfilter(object):
         def __init__(self, onlyfirst=False):
