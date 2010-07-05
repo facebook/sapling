@@ -53,6 +53,7 @@ class filelog(revlog.revlog):
         if self.renamed(node):
             return len(self.read(node))
 
+        # XXX if self.read(node).startswith("\1\n"), this returns (size+4)
         return revlog.revlog.size(self, rev)
 
     def cmp(self, node, text):
