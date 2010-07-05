@@ -45,7 +45,10 @@ class TestUrlParsing(object):
         url = "git://github.com/webjam/webjam.git"
         client, path = self.handler.get_transport_and_path(url)
         self.assertEquals(path, '/webjam/webjam.git')
-        self.assertEquals(client.host, 'github.com')
+        try:
+            self.assertEquals(client._host, 'github.com')
+        except AttributeError:
+            self.assertEquals(client.host, 'github.com')
 
 
 if __name__ == '__main__':
