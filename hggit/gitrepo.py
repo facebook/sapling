@@ -8,19 +8,29 @@ from git_handler import GitHandler
 
 class gitrepo(repo.repository):
     capabilities = ['lookup']
+
     def __init__(self, ui, path, create):
         if create: # pragma: no cover
             raise util.Abort('Cannot create a git repository.')
         self.ui = ui
         self.path = path
+
     def lookup(self, key):
         if isinstance(key, str):
             return key
+
     def local(self):
         if not self.path:
             raise RepoError
+
     def heads(self):
         return []
+
+    def listkeys(self, namespace):
+        return {}
+
+    def pushkey(self, namespace, key, old, new):
+        return False
 
 
 instance = gitrepo
