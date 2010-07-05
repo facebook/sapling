@@ -62,9 +62,18 @@ class filelog(revlog.revlog):
         returns True if text is different than what is stored.
         """
 
-        # for renames, we have to go the slow way
-        if text.startswith('\1\n') or self.renamed(node):
+        t = text
+        if text.startswith('\1\n'):
+            t = '\1\n\1\n' + text
+
+        samehashes = not revlog.revlog.cmp(self, node, t)
+        if samehashes:
+            return False
+
+        # renaming a file produces a different hash, even if the data
+        # remains unchanged. Check if it's the case (slow):
+        if self.renamed(node):
             t2 = self.read(node)
             return t2 != text
 
-        return revlog.revlog.cmp(self, node, text)
+        return True
