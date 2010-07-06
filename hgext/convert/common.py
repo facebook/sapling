@@ -151,6 +151,13 @@ class converter_source(object):
         """
         return None
 
+    def getbookmarks(self):
+        """Return the bookmarks as a dictionary of name: revision
+
+        Bookmark names are to be UTF-8 strings.
+        """
+        return {}
+
 class converter_sink(object):
     """Conversion sink (target) interface"""
 
@@ -228,6 +235,13 @@ class converter_sink(object):
     def after(self):
         pass
 
+    def putbookmarks(self, bookmarks):
+        """Put bookmarks into sink.
+
+        bookmarks: {bookmarkname: sink_rev_id, ...}
+        where bookmarkname is an UTF-8 string.
+        """
+        pass
 
 class commandline(object):
     def __init__(self, ui, command):
