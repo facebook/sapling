@@ -137,21 +137,21 @@ hg ci -m "b3 (HN)"
 echo '% case NN: msg'
 hg up -q null
 hg branch -f b
-echo 1 > B
+echo 1 > bb
 hg ci -Am "b4 (NN): new topo root for branch b"
 
 echo '% case HN: no msg'
-echo 2 >> B
+echo 2 >> bb
 hg ci -m "b5 (HN)"
 
 echo '% case BN: msg'
 hg branch -f default
-echo 1 > A
+echo 1 > aa
 hg ci -Am "a6 (BN): new branch root"
 
 echo '% case CN: msg'
 hg up -q 4
-echo 3 >> BB
+echo 3 >> bbb
 hg ci -Am "b7 (CN): regular new head"
 
 echo '% case BB: msg'
