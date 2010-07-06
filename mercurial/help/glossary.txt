@@ -185,7 +185,7 @@ Directory, working
     Mercurial, that will be recorded in the next commit. The working
     directory initially corresponds to the snapshot at an existing
     changeset, known as the parent of the working directory. See
-    'Parents, working directory'. The state may be modified by changes
+    'Parent, working directory'. The state may be modified by changes
     to the files introduced manually or by a merge. The repository
     metadata exists in the .hg directory inside the working directory.
 
