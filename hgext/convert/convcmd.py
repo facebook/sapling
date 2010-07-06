@@ -378,6 +378,16 @@ class converter(object):
                     if tagsparents:
                         self.map[tagsparents[0][0]] = nrev
 
+            bookmarks = self.source.getbookmarks()
+            cbookmarks = {}
+            for k in bookmarks:
+                v = bookmarks[k]
+                if self.map.get(v, SKIPREV) != SKIPREV:
+                    cbookmarks[k] = self.map[v]
+
+            if c and cbookmarks:
+                self.dest.putbookmarks(cbookmarks)
+
             self.writeauthormap()
         finally:
             self.cleanup()
