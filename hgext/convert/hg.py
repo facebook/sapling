@@ -21,7 +21,7 @@
 import os, time, cStringIO
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
-from mercurial import hg, util, context, error
+from mercurial import hg, util, context, bookmarks, error
 
 from common import NoRepo, commit, converter_source, converter_sink
 
@@ -213,6 +213,16 @@ class mercurial_sink(converter_sink):
 
     def setfilemapmode(self, active):
         self.filemapmode = active
+
+    def putbookmarks(self, updatedbookmark):
+        if not len(updatedbookmark):
+            return
+
+        self.ui.status(_("updating bookmarks\n"))
+        for bookmark in updatedbookmark:
+            self.repo._bookmarks[bookmark] = bin(updatedbookmark[bookmark])
+            bookmarks.write(self.repo)
+
 
 class mercurial_source(converter_source):
     def __init__(self, ui, path, rev=None):
