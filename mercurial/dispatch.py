@@ -208,6 +208,13 @@ class cmdalias(object):
 
             return
 
+        if self.definition.startswith('!'):
+            def fn(ui, *args):
+                cmd = '%s %s' % (self.definition[1:], ' '.join(args))
+                return util.system(cmd)
+            self.fn = fn
+            return
+
         args = shlex.split(self.definition)
         cmd = args.pop(0)
         args = map(util.expandpath, args)

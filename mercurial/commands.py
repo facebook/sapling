@@ -1866,7 +1866,10 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
         if not doc:
             doc = _("(no help text available)")
         if hasattr(entry[0], 'definition'):  # aliased command
-            doc = _('alias for: hg %s\n\n%s') % (entry[0].definition, doc)
+            if entry[0].definition.startswith('!'):  # shell alias
+                doc = _('shell alias for::\n\n    %s') % entry[0].definition[1:]
+            else:
+                doc = _('alias for: hg %s\n\n%s') % (entry[0].definition, doc)
         if ui.quiet:
             doc = doc.splitlines()[0]
         keep = ui.verbose and ['verbose'] or []

@@ -43,3 +43,5 @@ diff -r 000000000000 -r e63c23eaa88a foo
 +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
 @@ -0,0 +1,1 @@
 +foo
+% shell aliases
+foo
