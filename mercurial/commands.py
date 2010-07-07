@@ -803,7 +803,7 @@ def commit(ui, repo, *pats, **opts):
 
     if not opts.get('close_branch'):
         for r in parents:
-            if r.extra().get('close'):
+            if r.extra().get('close') and r.branch() == branch:
                 ui.status(_('reopening closed branch head %d\n') % r)
 
     if ui.debugflag:
