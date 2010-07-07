@@ -48,4 +48,26 @@ hg up -C good
 hg merge
 hgcommit -m 'merged heads'
 
+echo '% hg update -C 8'
+hg update -C 8
 
+echo '% hg branch some-branch'
+hg branch some-branch
+echo '% hg commit'
+hgcommit -m 'started some-branch'
+echo '% hg commit --close-branch'
+hgcommit --close-branch -m 'closed some-branch'
+
+echo '% hg update default'
+hg update default
+echo '% hg merge some-branch'
+hg merge some-branch
+echo '% hg commit (no reopening of some-branch)'
+hgcommit -m 'merge with closed branch'
+
+cat >> $HGRCPATH <<EOF
+[extensions]
+graphlog =
+EOF
+
+#hg glog

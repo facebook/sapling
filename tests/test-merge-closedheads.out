@@ -16,3 +16,15 @@ abort: branch 'default' has 3 heads - please merge with an explicit rev
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
+% hg update -C 8
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% hg branch some-branch
+marked working directory as branch some-branch
+% hg commit
+% hg commit --close-branch
+% hg update default
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% hg merge some-branch
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+% hg commit (no reopening of some-branch)
