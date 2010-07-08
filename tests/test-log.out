@@ -76,6 +76,65 @@ description:
 a
 
 
+% log -pf dir/b
+changeset:   2:41dd4284081e
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+summary:     c
+
+diff -r 784de7cef101 -r 41dd4284081e dir/b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/dir/b	Thu Jan 01 00:00:03 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+changeset:   1:784de7cef101
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+summary:     b
+
+diff -r 8580ff50825a -r 784de7cef101 b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:02 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+summary:     a
+
+diff -r 000000000000 -r 8580ff50825a a
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:01 1970 +0000
+@@ -0,0 +1,1 @@
++a
+
+% log -vf dir/b
+changeset:   2:41dd4284081e
+user:        test
+date:        Thu Jan 01 00:00:03 1970 +0000
+files:       b dir/b
+description:
+c
+
+
+changeset:   1:784de7cef101
+user:        test
+date:        Thu Jan 01 00:00:02 1970 +0000
+files:       b
+description:
+b
+
+
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+files:       a
+description:
+a
+
+
 % log copies with --copies
 4 e (dir/b)
 3 b (a)
