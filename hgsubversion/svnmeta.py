@@ -424,8 +424,10 @@ class SVNMeta(object):
         """
         if ctx is None:
             ctx = self.repo[changeid]
-        extra = ctx.extra()['convert_revision']
-        branchpath, revnum = extra[40:].rsplit('@', 1)
+        extra = ctx.extra()
+        if 'convert_revision' not in extra:
+            raise KeyError('%s has no conversion record' % ctx)
+        branchpath, revnum = extra['convert_revision'][40:].rsplit('@', 1)
         branch = self.localname(self.normalize(branchpath))
         if self.layout == 'single':
             branchpath = ''
