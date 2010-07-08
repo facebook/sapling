@@ -1,3 +1,4 @@
+import errno
 import cStringIO
 import sys
 
@@ -330,10 +331,18 @@ class HgEditor(svnwrap.Editor):
         base = ''
         if not self.meta.is_path_valid(self.current.file):
             return lambda x: None
-        assert self.current.file not in self.current.deleted, (
-            'Cannot apply_textdelta to a deleted file: %s' % self.current.file)
-        assert (self.current.file in self.current.files
-                or self.current.file in self.current.missing), '%s not found' % self.current.file
+
+        if self.current.file in self.current.deleted:
+            msg = ('cannot apply textdelta to %s: file is deleted'
+                   % self.current.file)
+            raise IOError(errno.ENOENT, msg)
+
+        if (self.current.file not in self.current.files and
+            self.current.file not in self.current.missing):
+            msg = ('cannot apply textdelta to %s: file not found'
+                   % self.current.file)
+            raise IOError(errno.ENOENT, msg)
+
         if self.current.file in self.current.missing:
             return lambda x: None
         base = self.current.files[self.current.file]
