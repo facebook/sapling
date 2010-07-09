@@ -109,8 +109,32 @@ def rebuildmeta(ui, repo, args, **opts):
     layout = None
 
     skipped = set()
+    closed = set()
 
     numrevs = len(repo)
+
+    # ctx.children() visits all revisions in the repository after ctx. Calling
+    # it would make us use O(revisions^2) time, so we perform an extra traversal
+    # of the repository instead. During this traversal, we find all converted
+    # changesets that close a branch, and store their first parent
+    for rev in repo:
+        util.progress(ui, 'prepare', rev, total=numrevs)
+        ctx = repo[rev]
+        extra = ctx.extra()
+        convinfo = extra.get('convert_revision', None)
+
+        if not convinfo or not extra.get('close', None):
+            continue
+
+        droprev = lambda x: x.rsplit('@', 1)[0]
+        parentctx = ctx.parents()[0]
+        parentinfo = parentctx.extra().get('convert_revision', '@')
+
+        if droprev(parentinfo) == droprev(convinfo):
+            closed.add(parentctx.rev())
+
+    util.progress(ui, 'prepare', None, total=numrevs)
+
     for rev in repo:
         util.progress(ui, 'rebuild', rev, total=numrevs)
         ctx = repo[rev]
@@ -200,7 +224,11 @@ def rebuildmeta(ui, repo, args, **opts):
         branch = ctx.branch()
         if branch == 'default':
             branch = None
-        if branch not in branchinfo:
+
+        if rev in closed:
+            # a direct child of this changeset closes the branch; drop it
+            branchinfo.pop(branch, None)
+        elif branch not in branchinfo:
             parent = ctx.parents()[0]
             if (parent.node() in noderevnums
                 and parent.branch() != ctx.branch()):
@@ -212,16 +240,7 @@ def rebuildmeta(ui, repo, args, **opts):
             branchinfo[branch] = (parentbranch,
                                   noderevnums.get(parent.node(), 0),
                                   revision)
-        droprev = lambda x: x.rsplit('@', 1)[0]
-        for cctx in ctx.children():
-            # check if a child of this change closes this branch
-            # that's true if the close flag is set and the svn revision
-            # path is the same. droprev removes the revnumber so we
-            # can verify it is the same branch easily
-            if (cctx.extra().get('close')
-                and droprev(cctx.extra().get('convert_revision', '@')) == droprev(convinfo)):
-                branchinfo.pop(branch, None)
-                break
+
     util.progress(ui, 'rebuild', None, total=numrevs)
 
     # save off branch info
