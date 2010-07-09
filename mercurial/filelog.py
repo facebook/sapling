@@ -56,7 +56,10 @@ class filelog(revlog.revlog):
         return revlog.revlog.size(self, rev)
 
     def cmp(self, node, text):
-        """compare text with a given file revision"""
+        """compare text with a given file revision
+
+        returns True if text is different than what is stored.
+        """
 
         # for renames, we have to go the slow way
         if text.startswith('\1\n') or self.renamed(node):
