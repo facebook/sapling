@@ -932,7 +932,7 @@ class workingfilectx(filectx):
             return (t, tz)
 
     def cmp(self, text):
-        return self._repo.wread(self._path) == text
+        return self._repo.wread(self._path) != text
 
 class memctx(object):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
