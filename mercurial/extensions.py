@@ -104,6 +104,18 @@ def loadall(ui):
                 extsetup() # old extsetup with no ui argument
 
 def wrapcommand(table, command, wrapper):
+    '''Wrap the command named `command' in table
+
+    Replace command in the command table with wrapper. The wrapped command will
+    be inserted into the command table specified by the table argument.
+
+    The wrapper will be called like
+
+      wrapper(orig, *args, **kwargs)
+
+    where orig is the original (wrapped) function, and *args, **kwargs
+    are the arguments passed to it.
+    '''
     aliases, entry = cmdutil.findcmd(command, table)
     for alias, e in table.iteritems():
         if e is entry:
