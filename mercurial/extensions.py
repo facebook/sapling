@@ -138,8 +138,8 @@ def wrapcommand(table, command, wrapper):
 def wrapfunction(container, funcname, wrapper):
     '''Wrap the function named funcname in container
 
-    It is replacing with your wrapper. The container is typically a
-    module, class, or instance.
+    Replace the funcname member in the given container with the specified
+    wrapper. The container is typically a module, class, or instance.
 
     The wrapper will be called like
 
