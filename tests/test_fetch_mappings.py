@@ -134,5 +134,22 @@ class MapTests(test_util.TestBase):
     def test_branchmap_tagging_stupid(self):
         self.test_branchmap_tagging(True)
 
+    def test_branchmap_empty_commit(self, stupid=False):
+        '''test mapping an empty commit on a renamed branch'''
+        test_util.load_svndump_fixture(self.repo_path, 'propset-branch.svndump')
+        branchmap = open(self.branchmap, 'w')
+        branchmap.write("the-branch = bob\n")
+        branchmap.close()
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
+                       self.wc_path, branchmap=self.branchmap)
+        branches = set(self.repo[i].branch() for i in self.repo)
+        self.assertEquals(sorted(branches), ['bob', 'default'])
+
+    def test_branchmap_empty_commit_stupid(self):
+        '''test mapping an empty commit on a renamed branch (stupid)'''
+        self.test_branchmap_empty_commit(True)
+
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(MapTests)

@@ -198,9 +198,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                                'Please report this issue.')
 
         extra = meta.genextra(rev.revnum, branch)
-
-        if not meta.usebranchnames:
-            extra.pop('branch', None)
+        meta.mapbranch(extra)
 
         current_ctx = context.memctx(meta.repo,
                                      (ha, node.nullid),
