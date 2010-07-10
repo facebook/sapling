@@ -4,6 +4,8 @@ import unittest
 
 import test_util
 
+from mercurial import context
+from mercurial import extensions
 from mercurial import hg
 from mercurial import ui
 
@@ -20,10 +22,23 @@ def _do_case(self, name, stupid, single):
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
     src, dest = hg.clone(u, self.wc_path, wc2_path, update=False)
-    svncommands.rebuildmeta(u,
-                            dest,
-                            args=[test_util.fileurl(self.repo_path +
-                                                    subdir), ])
+
+    # insert a wrapper that prevents calling changectx.children()
+    def failfn(orig, ctx):
+        self.fail('calling %s is forbidden; it can cause massive slowdowns '
+                  'when rebuilding large repositories' % orig)
+
+    origchildren = getattr(context.changectx, 'children')
+    extensions.wrapfunction(context.changectx, 'children', failfn)
+
+    try:
+        svncommands.rebuildmeta(u, dest,
+                                args=[test_util.fileurl(self.repo_path +
+                                                        subdir), ])
+    finally:
+        # remove the wrapper
+        context.changectx.children = origchildren
+
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
                     'no .hg/svn directory in the source!')
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
