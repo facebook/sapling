@@ -107,6 +107,11 @@ cd a
 
 hg qnew -m 'foo bar' test.patch
 
+echo '# comment' > .hg/patches/series.tmp
+echo >> .hg/patches/series.tmp # empty line
+cat .hg/patches/series >> .hg/patches/series.tmp
+mv .hg/patches/series.tmp .hg/patches/series
+
 echo % qrefresh
 
 echo a >> a
@@ -228,16 +233,28 @@ hg qpush test1b.patch+1
 
 echo % qpush --move
 hg qpop -a
+hg qguard test1b.patch -- -negguard
+hg qguard test2.patch -- +posguard
+hg qpush --move test2.patch # can't move guarded patch
+hg qselect posguard
 hg qpush --move test2.patch # move to front
-hg qpush --move test1b.patch
+hg qpush --move test1b.patch # negative guard unselected
 hg qpush --move test.patch # noop move
 hg qseries -v
 hg qpop -a
-hg qpush --move test.patch # cleaning up
+# cleaning up
+hg qselect --none
+hg qguard --none test1b.patch
+hg qguard --none test2.patch
+hg qpush --move test.patch
 hg qpush --move test1b.patch
 hg qpush --move bogus # nonexistent patch
+hg qpush --move # no patch
 hg qpush --move test.patch # already applied
 hg qpush
+
+echo % series after move
+cat `hg root`/.hg/patches/series
 
 echo % pop, qapplied, qunapplied
 hg qseries -v
