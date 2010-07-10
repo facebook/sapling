@@ -104,6 +104,19 @@ def loadall(ui):
                 extsetup() # old extsetup with no ui argument
 
 def wrapcommand(table, command, wrapper):
+    '''Wrap the command named `command' in table
+
+    Replace command in the command table with wrapper. The wrapped command will
+    be inserted into the command table specified by the table argument.
+
+    The wrapper will be called like
+
+      wrapper(orig, *args, **kwargs)
+
+    where orig is the original (wrapped) function, and *args, **kwargs
+    are the arguments passed to it.
+    '''
+    assert hasattr(wrapper, '__call__')
     aliases, entry = cmdutil.findcmd(command, table)
     for alias, e in table.iteritems():
         if e is entry:
@@ -126,8 +139,8 @@ def wrapcommand(table, command, wrapper):
 def wrapfunction(container, funcname, wrapper):
     '''Wrap the function named funcname in container
 
-    It is replacing with your wrapper. The container is typically a
-    module, class, or instance.
+    Replace the funcname member in the given container with the specified
+    wrapper. The container is typically a module, class, or instance.
 
     The wrapper will be called like
 
@@ -156,10 +169,12 @@ def wrapfunction(container, funcname, wrapper):
     your end users, you should play nicely with others by using the
     subclass trick.
     '''
+    assert hasattr(wrapper, '__call__')
     def wrap(*args, **kwargs):
         return wrapper(origfn, *args, **kwargs)
 
     origfn = getattr(container, funcname)
+    assert hasattr(origfn, '__call__')
     setattr(container, funcname, wrap)
     return origfn
 

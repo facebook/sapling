@@ -94,6 +94,8 @@ pypats = [
     (r'^\s*with\s+', "with not available in Python 2.4"),
     (r'(?<!def)\s+(any|all|format)\(',
      "any/all/format not available in Python 2.4"),
+    (r'(?<!def)\s+(callable)\(',
+     "callable not available in Python 3, use hasattr(f, '__call__')"),
     (r'if\s.*\selse', "if ... else form not available in Python 2.4"),
     (r'([\(\[]\s\S)|(\S\s[\)\]])', "gratuitous whitespace in () or []"),
 #    (r'\s\s=', "gratuitous whitespace before ="),

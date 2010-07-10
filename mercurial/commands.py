@@ -77,7 +77,8 @@ def addremove(ui, repo, *pats, **opts):
     every added file and records those similar enough as renames. This
     option takes a percentage between 0 (disabled) and 100 (files must
     be identical) as its parameter. Detecting renamed files this way
-    can be expensive.
+    can be expensive. After using this option, :hg:`status -C` can be
+    used to check which files were identified as moved or renamed.
 
     Returns 0 if all files are successfully added.
     """
