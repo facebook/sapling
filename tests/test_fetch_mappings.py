@@ -5,6 +5,7 @@ import unittest
 
 from mercurial import commands
 from mercurial import node
+from mercurial import util as hgutil
 
 import test_util
 
@@ -150,6 +151,21 @@ class MapTests(test_util.TestBase):
     def test_branchmap_empty_commit_stupid(self):
         '''test mapping an empty commit on a renamed branch (stupid)'''
         self.test_branchmap_empty_commit(True)
+
+    def test_branchmap_no_replacement(self):
+        '''
+        test that empty mappings are rejected
+
+        Empty mappings are lines like 'this ='. The most sensible thing to do
+        is to not convert the 'this' branches. Until we can do that, we settle
+        with aborting.
+        '''
+        test_util.load_svndump_fixture(self.repo_path, 'propset-branch.svndump')
+        branchmap = open(self.branchmap, 'w')
+        branchmap.write("closeme =\n")
+        branchmap.close()
+        self.assertRaises(hgutil.Abort,
+                          maps.BranchMap, self.ui(), self.branchmap)
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(MapTests)
