@@ -229,13 +229,14 @@ class SVNMeta(object):
     def mapbranch(self, extra, close=False):
         if close:
             extra['close'] = 1
-        if extra.get('branch') == 'default':
-            extra.pop('branch', None)
-        mapped = self.branchmap.get(extra.get('branch'))
+        mapped = self.branchmap.get(extra.get('branch', 'default'))
         if not self.usebranchnames or mapped == 'default':
             extra.pop('branch', None)
         elif mapped:
             extra['branch'] = mapped
+
+        if extra.get('branch') == 'default':
+            extra.pop('branch', None)
 
     def normalize(self, path):
         '''Normalize a path to strip of leading slashes and our subdir if we
@@ -555,11 +556,16 @@ class SVNMeta(object):
             del self.branches[br]
         self.branches.update(tbdelta['branches'][0])
 
-    def movetag(self, tag, hash, branch, rev, date):
+    def movetag(self, tag, hash, rev, date):
         if tag in self.tags and self.tags[tag] == hash:
             return
-        if branch == 'default':
-            branch = None
+
+        # determine branch from earliest unclosed ancestor
+        branchparent = self.repo[hash]
+        while branchparent.extra().get('close'):
+            branchparent = branchparent.parents()[0]
+        branch = self.get_source_rev(ctx=branchparent)[1]
+
         parentctx = self.repo[self.get_parent_revision(rev.revnum+1, branch)]
         if '.hgtags' in parentctx:
             tagdata = parentctx.filectx('.hgtags').data()

@@ -178,7 +178,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         if (rev.revnum, branch) not in meta.revmap and not tag:
             meta.revmap[rev.revnum, branch] = new_hash
         if tag:
-            meta.movetag(tag, new_hash, parentctx.extra().get('branch', None), rev, date)
+            meta.movetag(tag, new_hash, rev, date)
             meta.addedtags.pop(tag, None)
 
     # 2. handle branches that need to be committed without any files

@@ -658,7 +658,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                 meta.branches[branch] = None, 0, r.revnum
             meta.revmap[r.revnum, b] = ha
         else:
-            meta.movetag(tag, ha, parentctx.extra().get('branch', None), r, date)
+            meta.movetag(tag, ha, r, date)
             meta.addedtags.pop(tag, None)
         util.describe_commit(ui, ha, b)
 

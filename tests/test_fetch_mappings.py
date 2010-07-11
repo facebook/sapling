@@ -118,6 +118,21 @@ class MapTests(test_util.TestBase):
     def test_branchmap_stupid(self):
         self.test_branchmap(True)
 
+    def test_branchmap_tagging(self, stupid=False):
+        '''test tagging a renamed branch, which used to raise an exception'''
+        test_util.load_svndump_fixture(self.repo_path, 'commit-to-tag.svndump')
+        branchmap = open(self.branchmap, 'w')
+        branchmap.write("magic = art\n")
+        branchmap.close()
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
+                       self.wc_path, branchmap=self.branchmap)
+        branches = set(self.repo[i].branch() for i in self.repo)
+        self.assertEquals(sorted(branches), ['art', 'closeme'])
+
+    def test_branchmap_tagging_stupid(self):
+        self.test_branchmap_tagging(True)
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(MapTests)
