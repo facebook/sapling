@@ -1623,7 +1623,6 @@ class queue(object):
         if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
                                'patches'))
-        self.added = []
         if rev:
             # If mq patches are applied, we can only import revisions
             # that form a linear path to qbase.
@@ -1813,6 +1812,7 @@ def qimport(ui, repo, *filename, **opts):
         qrepo = q.qrepo()
         if qrepo:
             qrepo[None].add(q.added)
+        q.added = []
 
     if opts.get('push') and not opts.get('rev'):
         return q.push(repo, None)
