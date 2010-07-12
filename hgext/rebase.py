@@ -271,9 +271,9 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, extrafn=None):
     'Commit the changes and store useful information in extra'
     try:
         repo.dirstate.setparents(repo[p1].node(), repo[p2].node())
-        if commitmsg is None:
-            commitmsg = repo[rev].description()
         ctx = repo[rev]
+        if commitmsg is None:
+            commitmsg = ctx.description()
         extra = {'rebase_source': ctx.hex()}
         if extrafn:
             extrafn(ctx, extra)
@@ -347,27 +347,29 @@ def isagitpatch(repo, patchname):
 def updatemq(repo, state, skipped, **opts):
     'Update rebased mq patches - finalize and then import them'
     mqrebase = {}
-    for p in repo.mq.applied:
-        if repo[p.node].rev() in state:
+    mq = repo.mq
+    for p in mq.applied:
+        rev = repo[p.node].rev()
+        if rev in state:
             repo.ui.debug('revision %d is an mq patch (%s), finalize it.\n' %
-                                        (repo[p.node].rev(), p.name))
-            mqrebase[repo[p.node].rev()] = (p.name, isagitpatch(repo, p.name))
+                                        (rev, p.name))
+            mqrebase[rev] = (p.name, isagitpatch(repo, p.name))
 
     if mqrebase:
-        repo.mq.finish(repo, mqrebase.keys())
+        mq.finish(repo, mqrebase.keys())
 
         # We must start import from the newest revision
         for rev in sorted(mqrebase, reverse=True):
             if rev not in skipped:
-                repo.ui.debug('import mq patch %d (%s)\n'
-                              % (state[rev], mqrebase[rev][0]))
-                repo.mq.qimport(repo, (), patchname=mqrebase[rev][0],
-                            git=mqrebase[rev][1],rev=[str(state[rev])])
-        repo.mq.save_dirty()
-        qrepo = repo.mq.qrepo()
+                name, isgit = mqrebase[rev]
+                repo.ui.debug('import mq patch %d (%s)\n' % (state[rev], name))
+                mq.qimport(repo, (), patchname=name, git=isgit,
+                                rev=[str(state[rev])])
+        mq.save_dirty()
+        qrepo = mq.qrepo()
         if qrepo:
-            qrepo[None].add(repo.mq.added)
-        repo.mq.added = []
+            qrepo[None].add(mq.added)
+        mq.added = []
 
 def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
                                                                 external):
