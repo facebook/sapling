@@ -86,6 +86,7 @@ class hgwebdir(object):
         encoding.encoding = self.ui.config('web', 'encoding',
                                            encoding.encoding)
         self.style = self.ui.config('web', 'style', 'paper')
+        self.templatepath = self.ui.config('web', 'templates', None)
         self.stripecount = self.ui.config('web', 'stripes', 1)
         if self.stripecount:
             self.stripecount = int(self.stripecount)
@@ -315,7 +316,7 @@ class hgwebdir(object):
             config('web', 'style'),
             'paper'
         )
-        style, mapfile = templater.stylemap(styles)
+        style, mapfile = templater.stylemap(styles, self.templatepath)
         if style == styles[0]:
             vars['style'] = style
 
