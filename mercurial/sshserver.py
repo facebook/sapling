@@ -29,11 +29,29 @@ class sshserver(object):
         util.set_binary(self.fin)
         util.set_binary(self.fout)
 
-    def getarg(self):
-        argline = self.fin.readline()[:-1]
-        arg, l = argline.split()
-        val = self.fin.read(int(l))
-        return arg, val
+    def getargs(self, args):
+        data = {}
+        keys = args.split()
+        count = len(keys)
+        for n in xrange(len(keys)):
+            argline = self.fin.readline()[:-1]
+            arg, l = argline.split()
+            val = self.fin.read(int(l))
+            if arg not in keys:
+                raise util.Abort("unexpected parameter %r" % arg)
+            if arg == '*':
+                star = {}
+                for n in xrange(int(l)):
+                    arg, l = argline.split()
+                    val = self.fin.read(int(l))
+                    star[arg] = val
+                data['*'] = star
+            else:
+                data[arg] = val
+        return [data[k] for k in keys]
+
+    def getarg(self, name):
+        return self.getargs(name)[0]
 
     def respond(self, v):
         self.fout.write("%d\n" % len(v))
@@ -59,8 +77,7 @@ class sshserver(object):
         return cmd != ''
 
     def do_lookup(self):
-        arg, key = self.getarg()
-        assert arg == 'key'
+        key = self.getarg('key')
         try:
             r = hex(self.repo.lookup(key))
             success = 1
@@ -110,7 +127,7 @@ class sshserver(object):
         self.respond("")
 
     def do_branches(self):
-        arg, nodes = self.getarg()
+        nodes = self.getarg('nodes')
         nodes = map(bin, nodes.split(" "))
         r = []
         for b in self.repo.branches(nodes):
@@ -118,7 +135,7 @@ class sshserver(object):
         self.respond("".join(r))
 
     def do_between(self):
-        arg, pairs = self.getarg()
+        pairs = self.getarg('pairs')
         pairs = [map(bin, p.split("-")) for p in pairs.split(" ")]
         r = []
         for b in self.repo.between(pairs):
@@ -127,7 +144,7 @@ class sshserver(object):
 
     def do_changegroup(self):
         nodes = []
-        arg, roots = self.getarg()
+        roots = self.getarg('roots')
         nodes = map(bin, roots.split(" "))
 
         cg = self.repo.changegroup(nodes, 'serve')
@@ -140,9 +157,9 @@ class sshserver(object):
         self.fout.flush()
 
     def do_changegroupsubset(self):
-        argmap = dict([self.getarg(), self.getarg()])
-        bases = [bin(n) for n in argmap['bases'].split(' ')]
-        heads = [bin(n) for n in argmap['heads'].split(' ')]
+        bases, heads = self.getargs('bases heads')
+        bases = [bin(n) for n in bases.split(' ')]
+        heads = [bin(n) for n in heads.split(' ')]
 
         cg = self.repo.changegroupsubset(bases, heads, 'serve')
         while True:
@@ -170,7 +187,7 @@ class sshserver(object):
         return 'remote:ssh:' + client
 
     def do_unbundle(self):
-        their_heads = self.getarg()[1].split()
+        their_heads = self.getarg('heads').split()
 
         def check_heads():
             heads = map(hex, self.repo.heads())
@@ -227,15 +244,12 @@ class sshserver(object):
             self.fout.flush()
 
     def do_pushkey(self):
-        arg, key = self.getarg()
-        arg, namespace = self.getarg()
-        arg, new = self.getarg()
-        arg, old = self.getarg()
+        namespace, key, old, new = self.getargs('namespace key old new')
         r = pushkey.push(self.repo, namespace, key, old, new)
         self.respond('%s\n' % int(r))
 
     def do_listkeys(self):
-        arg, namespace = self.getarg()
+        namespace = self.getarg('namespace')
         d = pushkey.list(self.repo, namespace).items()
         t = '\n'.join(['%s\t%s' % (k.encode('string-escape'),
                                    v.encode('string-escape')) for k, v in d])
