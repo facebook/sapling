@@ -35,7 +35,7 @@ chmod -x unsetexec
 python -c "file('binary', 'wb').write('\0\0')"
 python -c "file('newbinary', 'wb').write('\0')"
 rm rmbinary
-hg addremove
+hg addremove -s 0
 
 echo '% git=no: regular diff for all files'
 hg autodiff --git=no

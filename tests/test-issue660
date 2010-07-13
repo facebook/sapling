@@ -56,7 +56,7 @@ mkdir a
 echo a > a/a
 echo b > b
 
-hg addremove
+hg addremove -s 0
 hg st
 
 echo % commit
