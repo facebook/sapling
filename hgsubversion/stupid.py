@@ -640,6 +640,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             extra.update({'branch': parentctx.extra().get('branch', None),
                           'close': 1})
 
+        origbranch = extra.get('branch', None)
         meta.mapbranch(extra)
         current_ctx = context.memctx(meta.repo,
                                      [parentctx.node(), revlog.nullid],
@@ -651,11 +652,10 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                                      extra)
         ha = meta.repo.commitctx(current_ctx)
 
-        branch = extra.get('branch', None)
         if not tag:
-            if (not branch in meta.branches
-                and not meta.get_path_tag(meta.remotename(branch))):
-                meta.branches[branch] = None, 0, r.revnum
+            if (not origbranch in meta.branches
+                and not meta.get_path_tag(meta.remotename(origbranch))):
+                meta.branches[origbranch] = None, 0, r.revnum
             meta.revmap[r.revnum, b] = ha
         else:
             meta.movetag(tag, ha, r, date)
