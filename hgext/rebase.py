@@ -366,10 +366,6 @@ def updatemq(repo, state, skipped, **opts):
                 mq.qimport(repo, (), patchname=name, git=isgit,
                                 rev=[str(state[rev])])
         mq.save_dirty()
-        qrepo = mq.qrepo()
-        if qrepo:
-            qrepo[None].add(mq.added)
-        mq.added = []
 
 def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
                                                                 external):

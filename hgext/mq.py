@@ -476,6 +476,11 @@ class queue(object):
             write_list(self.full_series, self.series_path)
         if self.guards_dirty:
             write_list(self.active_guards, self.guards_path)
+        if self.added:
+            qrepo = self.qrepo()
+            if qrepo:
+                qrepo[None].add(self.added)
+            self.added = []
 
     def removeundo(self, repo):
         undo = repo.sjoin('undo')
@@ -1809,10 +1814,6 @@ def qimport(ui, repo, *filename, **opts):
               git=opts['git'])
     finally:
         q.save_dirty()
-        qrepo = q.qrepo()
-        if qrepo:
-            qrepo[None].add(q.added)
-        q.added = []
 
     if opts.get('push') and not opts.get('rev'):
         return q.push(repo, None)
