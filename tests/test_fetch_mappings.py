@@ -4,12 +4,14 @@ import os
 import unittest
 
 from mercurial import commands
+from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
 
 import test_util
 
 from hgsubversion import maps
+from hgsubversion import svncommands
 
 class MapTests(test_util.TestBase):
     @property
@@ -176,6 +178,35 @@ class MapTests(test_util.TestBase):
     def test_branchmap_combine_stupid(self):
         '''test combining two branches, but retaining heads (stupid)'''
         self.test_branchmap_combine(True)
+
+    def test_branchmap_rebuildmeta(self, stupid=False):
+        '''test rebuildmeta on a branchmapped clone'''
+        test_util.load_svndump_fixture(self.repo_path, 'branchmap.svndump')
+        branchmap = open(self.branchmap, 'w')
+        branchmap.write("badname = dit\n")
+        branchmap.write("feature = dah\n")
+        branchmap.close()
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
+                       self.wc_path, branchmap=self.branchmap)
+        originfo = self.repo.svnmeta().branches
+
+        # clone & rebuild
+        ui = self.ui(stupid)
+        src, dest = hg.clone(ui, self.wc_path, self.wc_path + '_clone',
+                             update=False)
+        svncommands.rebuildmeta(ui, dest,
+                                args=[test_util.fileurl(self.repo_path)])
+
+        # just check the keys; assume the contents are unaffected by the branch
+        # map and thus properly tested by other tests
+        self.assertEquals(sorted(src.svnmeta().branches),
+                          sorted(dest.svnmeta().branches))
+
+    def test_branchmap_rebuildmeta_stupid(self):
+        '''test rebuildmeta on a branchmapped clone (stupid)'''
+        self.test_branchmap_rebuildmeta(True)
 
     def test_branchmap_no_replacement(self):
         '''

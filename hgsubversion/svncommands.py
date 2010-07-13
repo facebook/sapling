@@ -219,15 +219,36 @@ def rebuildmeta(ui, repo, args, **opts):
             last_rev = revision
 
         # deal with branches
-        if ctx.extra().get('close'):
-            continue
-        branch = ctx.branch()
-        if branch == 'default':
+        if not commitpath:
             branch = None
+        elif not commitpath.startswith('../'):
+            branch = commitpath
+        elif ctx.parents()[0].node() != node.nullid:
+            parent = ctx
+            while parent.node() != node.nullid:
+                parentextra = parent.extra()
+                parentinfo = parentextra.get('convert_revision')
+                assert parentinfo
+                parent = parent.parents()[0]
+
+                parentpath = parentinfo[40:].split('@')[0][len(subdir) + 1:]
+
+                if parentpath.startswith('tags/') and parentextra.get('close'):
+                    continue
+                elif parentpath.startswith('branches/'):                    branch = parentpath[len('branches/'):]
+                elif parentpath == 'trunk':
+                    branch = None
+                else:
+                    branch = '../' + parentpath
+                break
+        else:
+            branch = commitpath
 
         if rev in closed:
             # a direct child of this changeset closes the branch; drop it
             branchinfo.pop(branch, None)
+        elif ctx.extra().get('close'):
+            pass
         elif branch not in branchinfo:
             parent = ctx.parents()[0]
             if (parent.node() in noderevnums
