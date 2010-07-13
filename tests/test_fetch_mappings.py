@@ -152,6 +152,31 @@ class MapTests(test_util.TestBase):
         '''test mapping an empty commit on a renamed branch (stupid)'''
         self.test_branchmap_empty_commit(True)
 
+    def test_branchmap_combine(self, stupid=False):
+        '''test combining two branches, but retaining heads'''
+        test_util.load_svndump_fixture(self.repo_path, 'branchmap.svndump')
+        branchmap = open(self.branchmap, 'w')
+        branchmap.write("badname = default\n")
+        branchmap.write("feature = default\n")
+        branchmap.close()
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
+                       self.wc_path, branchmap=self.branchmap)
+        branches = set(self.repo[i].branch() for i in self.repo)
+        self.assertEquals(sorted(branches), ['default'])
+        self.assertEquals(len(self.repo.heads()), 2)
+        self.assertEquals(len(self.repo.branchheads('default')), 2)
+
+        # test that the mapping does not affect branch info
+        branches = self.repo.svnmeta().branches
+        self.assertEquals(sorted(branches.keys()),
+                          [None, 'badname', 'feature'])
+
+    def test_branchmap_combine_stupid(self):
+        '''test combining two branches, but retaining heads (stupid)'''
+        self.test_branchmap_combine(True)
+
     def test_branchmap_no_replacement(self):
         '''
         test that empty mappings are rejected
