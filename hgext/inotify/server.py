@@ -213,7 +213,9 @@ class repowatcher(object):
             if time != int(st_mtime):
                 return 'l'
             return 'n'
-        if type_ == '?' and self.dirstate._ignore(fn):
+        if type_ == '?' and self.dirstate._dirignore(fn):
+            # we must check not only if the file is ignored, but if any part
+            # of its path match an ignore pattern
             return 'i'
         return type_
 
