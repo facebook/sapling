@@ -7,8 +7,84 @@
 
 from i18n import _
 from node import bin, hex
-import urllib, streamclone
+import urllib
+import streamclone, repo, error, encoding
 import pushkey as pushkey_
+
+# client side
+
+class wirerepository(repo.repository):
+    def lookup(self, key):
+        self.requirecap('lookup', _('look up remote revision'))
+        d = self._call("lookup", key=key)
+        success, data = d[:-1].split(" ", 1)
+        if int(success):
+            return bin(data)
+        self._abort(error.RepoError(data))
+
+    def heads(self):
+        d = self._call("heads")
+        try:
+            return map(bin, d[:-1].split(" "))
+        except:
+            self.abort(error.ResponseError(_("unexpected response:"), d))
+
+    def branchmap(self):
+        d = self._call("branchmap")
+        try:
+            branchmap = {}
+            for branchpart in d.splitlines():
+                branchheads = branchpart.split(' ')
+                branchname = urllib.unquote(branchheads[0])
+                # Earlier servers (1.3.x) send branch names in (their) local
+                # charset. The best we can do is assume it's identical to our
+                # own local charset, in case it's not utf-8.
+                try:
+                    branchname.decode('utf-8')
+                except UnicodeDecodeError:
+                    branchname = encoding.fromlocal(branchname)
+                branchheads = [bin(x) for x in branchheads[1:]]
+                branchmap[branchname] = branchheads
+            return branchmap
+        except TypeError:
+            self._abort(error.ResponseError(_("unexpected response:"), d))
+
+    def branches(self, nodes):
+        n = " ".join(map(hex, nodes))
+        d = self._call("branches", nodes=n)
+        try:
+            br = [tuple(map(bin, b.split(" "))) for b in d.splitlines()]
+            return br
+        except:
+            self._abort(error.ResponseError(_("unexpected response:"), d))
+
+    def between(self, pairs):
+        n = " ".join(["-".join(map(hex, p)) for p in pairs])
+        d = self._call("between", pairs=n)
+        try:
+            p = [l and map(bin, l.split(" ")) or [] for l in d.splitlines()]
+            return p
+        except:
+            self._abort(error.ResponseError(_("unexpected response:"), d))
+
+    def pushkey(self, namespace, key, old, new):
+        if not self.capable('pushkey'):
+            return False
+        d = self._call("pushkey",
+                      namespace=namespace, key=key, old=old, new=new)
+        return bool(int(d))
+
+    def listkeys(self, namespace):
+        if not self.capable('pushkey'):
+            return {}
+        d = self._call("listkeys", namespace=namespace)
+        r = {}
+        for l in d.splitlines():
+            k, v = l.split('\t')
+            r[k.decode('string-escape')] = v.decode('string-escape')
+        return r
+
+# server side
 
 def dispatch(repo, proto, command):
     if command not in commands:

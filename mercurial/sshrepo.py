@@ -7,7 +7,7 @@
 
 from node import bin, hex
 from i18n import _
-import repo, util, error, encoding
+import repo, util, error, encoding, wireproto
 import re, urllib
 
 class remotelock(object):
@@ -20,7 +20,7 @@ class remotelock(object):
         if self.repo:
             self.release()
 
-class sshrepository(repo.repository):
+class sshrepository(wireproto.wirerepository):
     def __init__(self, ui, path, create=0):
         self._url = path
         self.ui = ui
@@ -101,6 +101,10 @@ class sshrepository(repo.repository):
         self.cleanup()
         raise exception
 
+    def _abort(self, exception):
+        self.cleanup()
+        raise exception
+
     def cleanup(self):
         try:
             self.pipeo.close()
@@ -128,6 +132,10 @@ class sshrepository(repo.repository):
         self.do_cmd(cmd, **args)
         return self._recv()
 
+    def _call(self, cmd, **args):
+        self.do_cmd(cmd, **args)
+        return self._recv()
+
     def _recv(self):
         l = self.pipei.readline()
         self.readerr()
@@ -151,60 +159,6 @@ class sshrepository(repo.repository):
 
     def unlock(self):
         self.call("unlock")
-
-    def lookup(self, key):
-        self.requirecap('lookup', _('look up remote revision'))
-        d = self.call("lookup", key=key)
-        success, data = d[:-1].split(" ", 1)
-        if int(success):
-            return bin(data)
-        else:
-            self.abort(error.RepoError(data))
-
-    def heads(self):
-        d = self.call("heads")
-        try:
-            return map(bin, d[:-1].split(" "))
-        except:
-            self.abort(error.ResponseError(_("unexpected response:"), d))
-
-    def branchmap(self):
-        d = self.call("branchmap")
-        try:
-            branchmap = {}
-            for branchpart in d.splitlines():
-                branchheads = branchpart.split(' ')
-                branchname = urllib.unquote(branchheads[0])
-                # Earlier servers (1.3.x) send branch names in (their) local
-                # charset. The best we can do is assume it's identical to our
-                # own local charset, in case it's not utf-8.
-                try:
-                    branchname.decode('utf-8')
-                except UnicodeDecodeError:
-                    branchname = encoding.fromlocal(branchname)
-                branchheads = [bin(x) for x in branchheads[1:]]
-                branchmap[branchname] = branchheads
-            return branchmap
-        except:
-            raise error.ResponseError(_("unexpected response:"), d)
-
-    def branches(self, nodes):
-        n = " ".join(map(hex, nodes))
-        d = self.call("branches", nodes=n)
-        try:
-            br = [tuple(map(bin, b.split(" "))) for b in d.splitlines()]
-            return br
-        except:
-            self.abort(error.ResponseError(_("unexpected response:"), d))
-
-    def between(self, pairs):
-        n = " ".join(["-".join(map(hex, p)) for p in pairs])
-        d = self.call("between", pairs=n)
-        try:
-            p = [l and map(bin, l.split(" ")) or [] for l in d.splitlines()]
-            return p
-        except:
-            self.abort(error.ResponseError(_("unexpected response:"), d))
 
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
@@ -272,22 +226,5 @@ class sshrepository(repo.repository):
 
     def stream_out(self):
         return self.do_cmd('stream_out')
-
-    def pushkey(self, namespace, key, old, new):
-        if not self.capable('pushkey'):
-            return False
-        d = self.call("pushkey",
-                      namespace=namespace, key=key, old=old, new=new)
-        return bool(int(d))
-
-    def listkeys(self, namespace):
-        if not self.capable('pushkey'):
-            return {}
-        d = self.call("listkeys", namespace=namespace)
-        r = {}
-        for l in d.splitlines():
-            k, v = l.split('\t')
-            r[k.decode('string-escape')] = v.decode('string-escape')
-        return r
 
 instance = sshrepository
