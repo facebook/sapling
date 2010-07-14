@@ -172,22 +172,49 @@ def subrepo(ctx, path):
         raise util.Abort(_('unknown subrepo type %s') % state[2])
     return types[state[2]](ctx, path, state[:2])
 
-# subrepo classes need to implement the following methods:
-# __init__(self, ctx, path, state)
-# dirty(self): returns true if the dirstate of the subrepo
-#   does not match current stored state
-# commit(self, text, user, date): commit the current changes
-#   to the subrepo with the given log message. Use given
-#   user and date if possible. Return the new state of the subrepo.
-# remove(self): remove the subrepo (should verify the dirstate
-#   is not dirty first)
-# get(self, state): run whatever commands are needed to put the
-#   subrepo into this state
-# merge(self, state): merge currently-saved state with the new state.
-# push(self, force): perform whatever action is analagous to 'hg push'
-#   This may be a no-op on some systems.
+# subrepo classes need to implement the following abstract class:
 
-class hgsubrepo(object):
+class abstractsubrepo(object):
+
+    def dirty(self):
+        """returns true if the dirstate of the subrepo does not match
+        current stored state
+        """
+        raise NotImplementedError
+
+    def commit(self, text, user, date):
+        """commit the current changes to the subrepo with the given
+        log message. Use given user and date if possible. Return the
+        new state of the subrepo.
+        """
+        raise NotImplementedError
+
+    def remove(self):
+        """remove the subrepo
+
+        (should verify the dirstate is not dirty first)
+        """
+        raise NotImplementedError
+
+    def get(self, state):
+        """run whatever commands are needed to put the subrepo into
+        this state
+        """
+        raise NotImplementedError
+
+    def merge(self, state):
+        """merge currently-saved state with the new state."""
+        raise NotImplementedError
+
+    def push(self, force):
+        """perform whatever action is analagous to 'hg push'
+
+        This may be a no-op on some systems.
+        """
+        raise NotImplementedError
+
+
+class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
         self._state = state
@@ -284,7 +311,7 @@ class hgsubrepo(object):
         other = hg.repository(self._repo.ui, dsturl)
         return self._repo.push(other, force)
 
-class svnsubrepo(object):
+class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
         self._state = state
