@@ -74,7 +74,7 @@ Any value other than 'ansi', 'win32', or 'auto' will disable color.
 
 import os, sys
 
-from mercurial import commands, dispatch, extensions
+from mercurial import commands, dispatch, extensions, ui as uimod
 from mercurial.i18n import _
 
 # start and stop parameters for effects
@@ -140,49 +140,50 @@ def configstyles(ui):
                             % (e, status))
             _styles[status] = ' '.join(good)
 
-_buffers = None
-def style(msg, label):
-    effects = []
-    for l in label.split():
-        s = _styles.get(l, '')
-        if s:
-            effects.append(s)
-    effects = ''.join(effects)
-    if effects:
-        return '\n'.join([render_effects(s, effects)
-                          for s in msg.split('\n')])
-    return msg
+class colorui(uimod.ui):
+    def popbuffer(self, labeled=False):
+        if labeled:
+            return ''.join(self.label(a, label) for a, label
+                           in self._buffers.pop())
+        return ''.join(a for a, label in self._buffers.pop())
 
-def popbuffer(orig, labeled=False):
-    global _buffers
-    if labeled:
-        return ''.join(style(a, label) for a, label in _buffers.pop())
-    return ''.join(a for a, label in _buffers.pop())
+    _colormode = 'ansi'
+    def write(self, *args, **opts):
+        label = opts.get('label', '')
+        if self._buffers:
+            self._buffers[-1].extend([(str(a), label) for a in args])
+        elif self._colormode == 'win32':
+            for a in args:
+                win32print(a, orig, **opts)
+        else:
+            return super(colorui, self).write(
+                *[self.label(str(a), label) for a in args], **opts)
 
-mode = 'ansi'
-def write(orig, *args, **opts):
-    label = opts.get('label', '')
-    global _buffers
-    if _buffers:
-        _buffers[-1].extend([(str(a), label) for a in args])
-    elif mode == 'win32':
-        for a in args:
-            win32print(a, orig, **opts)
-    else:
-        return orig(*[style(str(a), label) for a in args], **opts)
+    def write_err(self, *args, **opts):
+        label = opts.get('label', '')
+        if self._colormode == 'win32':
+            for a in args:
+                win32print(a, orig, **opts)
+        else:
+            return super(colorui, self).write(
+                *[self.label(str(a), label) for a in args], **opts)
 
-def write_err(orig, *args, **opts):
-    label = opts.get('label', '')
-    if mode == 'win32':
-        for a in args:
-            win32print(a, orig, **opts)
-    else:
-        return orig(*[style(str(a), label) for a in args], **opts)
+    def label(self, msg, label):
+        effects = []
+        for l in label.split():
+            s = _styles.get(l, '')
+            if s:
+                effects.append(s)
+        effects = ''.join(effects)
+        if effects:
+            return '\n'.join([render_effects(s, effects)
+                              for s in msg.split('\n')])
+        return msg
+
 
 def uisetup(ui):
     if ui.plain():
         return
-    global mode
     mode = ui.config('color', 'mode', 'auto')
     if mode == 'auto':
         if os.name == 'nt' and 'TERM' not in os.environ:
@@ -202,14 +203,11 @@ def uisetup(ui):
         if (opts['color'] == 'always' or
             (opts['color'] == 'auto' and (os.environ.get('TERM') != 'dumb'
                                           and ui_.formatted()))):
-            global _buffers
-            _buffers = ui_._buffers
-            extensions.wrapfunction(ui_, 'popbuffer', popbuffer)
-            extensions.wrapfunction(ui_, 'write', write)
-            extensions.wrapfunction(ui_, 'write_err', write_err)
-            ui_.label = style
+            colorui._colormode = mode
+            colorui.__bases__ = (ui_.__class__,)
+            ui_.__class__ = colorui
             extstyles()
-            configstyles(ui)
+            configstyles(ui_)
         return orig(ui_, opts, cmd, cmdfunc)
     extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
 
