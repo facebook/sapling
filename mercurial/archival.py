@@ -35,6 +35,20 @@ def tidyprefix(dest, prefix, suffixes):
         raise util.Abort(_('archive prefix contains illegal components'))
     return prefix
 
+exts = {
+    'tar': ['.tar'],
+    'tbz2': ['.tbz2', '.tar.bz2'],
+    'tgz': ['.tgz', '.tar.gz'],
+    'zip': ['.zip'],
+    }
+
+def guesskind(dest):
+    for kind, extensions in exts.iteritems():
+        if util.any(dest.endswith(ext) for ext in extensions):
+            return kind
+    return None
+
+
 class tarit(object):
     '''write archive to tar file or stream.  can write uncompressed,
     or compress with gzip or bzip2.'''
