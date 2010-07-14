@@ -142,9 +142,29 @@ def rmtree(path):
                 os.chmod(f, s.st_mode | stat.S_IWRITE)
     shutil.rmtree(path)
 
+def _verify_our_modules():
+    '''
+    Verify that hgsubversion was imported from the correct location.
+
+    The correct location is any location within the parent directory of the
+    directory containing this file.
+    '''
+
+    for modname, module in sys.modules.iteritems():
+        if not module or not modname.startswith('hgsubversion.'):
+            continue
+
+        modloc = module.__file__
+        cp = os.path.commonprefix((os.path.abspath(__file__), modloc))
+        assert cp.rstrip(os.sep) == _rootdir, (
+            'Module location verification failed: hgsubversion was imported '
+            'from the wrong path!'
+        )
 
 class TestBase(unittest.TestCase):
     def setUp(self):
+        _verify_our_modules()
+
         self.oldenv = dict([(k, os.environ.get(k, None), ) for k in
                            ('LANG', 'LC_ALL', 'HGRCPATH', )])
         self.oldt = i18n.t
@@ -181,6 +201,8 @@ class TestBase(unittest.TestCase):
         rmtree(self.tmpdir)
         os.chdir(self.oldwd)
         setattr(ui.ui, self.patch[0].func_name, self.patch[0])
+
+        _verify_our_modules()
 
     def assertStringEqual(self, l, r):
         try:
