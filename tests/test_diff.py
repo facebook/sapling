@@ -1,7 +1,6 @@
 import test_util
 
 import unittest
-import tests
 
 from mercurial import ui
 

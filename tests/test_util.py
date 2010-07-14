@@ -12,7 +12,8 @@ import tempfile
 import unittest
 import urllib
 
-import __init__
+_rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _rootdir)
 
 from mercurial import commands
 from mercurial import context

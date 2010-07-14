@@ -4,7 +4,6 @@ import sys
 import unittest
 
 def tests():
-    import test_util
     import test_binaryfiles
     import test_diff
     import test_externals
@@ -62,19 +61,21 @@ if __name__ == '__main__':
     else:
         testargs = {'descriptions': 2}
 
-    # make sure our copy of hgsubversion gets imported
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
     if options.demandimport:
         from mercurial import demandimport
         demandimport.enable()
 
+    # make sure our copy of hgsubversion gets imported by loading test_util
+    import test_util
+    test_util.TestBase
+
     # silence output when running outside nose
     import tempfile
     sys.stdout = tempfile.TemporaryFile()
 
     all = tests()
-    del all['test_util']
 
     args = [i.split('.py')[0].replace('-', '_') for i in args]
 
