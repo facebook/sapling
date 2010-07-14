@@ -15,17 +15,17 @@ def dispatch(repo, proto, command):
         return False
     func, spec = commands[command]
     args = proto.getargs(spec)
-    proto.respond(func(repo, *args))
+    proto.respond(func(repo, proto, *args))
     return True
 
-def between(repo, pairs):
+def between(repo, proto, pairs):
     pairs = [map(bin, p.split("-")) for p in pairs.split(" ")]
     r = []
     for b in repo.between(pairs):
         r.append(" ".join(map(hex, b)) + "\n")
     return "".join(r)
 
-def branchmap(repo):
+def branchmap(repo, proto):
     branchmap = repo.branchmap()
     heads = []
     for branch, nodes in branchmap.iteritems():
@@ -34,24 +34,24 @@ def branchmap(repo):
         heads.append('%s %s' % (branchname, ' '.join(branchnodes)))
     return '\n'.join(heads)
 
-def branches(repo, nodes):
+def branches(repo, proto, nodes):
     nodes = map(bin, nodes.split(" "))
     r = []
     for b in repo.branches(nodes):
         r.append(" ".join(map(hex, b)) + "\n")
     return "".join(r)
 
-def heads(repo):
+def heads(repo, proto):
     h = repo.heads()
     return " ".join(map(hex, h)) + "\n"
 
-def listkeys(repo, namespace):
+def listkeys(repo, proto, namespace):
     d = pushkey_.list(repo, namespace).items()
     t = '\n'.join(['%s\t%s' % (k.encode('string-escape'),
                                v.encode('string-escape')) for k, v in d])
     return t
 
-def lookup(repo, key):
+def lookup(repo, proto, key):
     try:
         r = hex(repo.lookup(key))
         success = 1
@@ -60,7 +60,7 @@ def lookup(repo, key):
         success = 0
     return "%s %s\n" % (success, r)
 
-def pushkey(repo, namespace, key, old, new):
+def pushkey(repo, proto, namespace, key, old, new):
     r = pushkey_.push(repo, namespace, key, old, new)
     return '%s\n' % int(r)
 
