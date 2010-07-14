@@ -141,6 +141,9 @@ class httprepository(wireproto.wirerepository):
     def _call(self, cmd, **args):
         return self.do_read(cmd, **args)
 
+    def _callstream(self, cmd, **args):
+        return self.do_cmd(cmd, **args)
+
     def _abort(self, exception):
         raise exception
 
@@ -204,9 +207,6 @@ class httprepository(wireproto.wirerepository):
         finally:
             fp.close()
             os.unlink(tempname)
-
-    def stream_out(self):
-        return self.do_cmd('stream_out')
 
 class httpsrepository(httprepository):
     def __init__(self, ui, path):

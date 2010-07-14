@@ -136,6 +136,9 @@ class sshrepository(wireproto.wirerepository):
         self.do_cmd(cmd, **args)
         return self._recv()
 
+    def _callstream(self, cmd, **args):
+        return self.do_cmd(cmd, **args)
+
     def _recv(self):
         l = self.pipei.readline()
         self.readerr()
@@ -223,8 +226,5 @@ class sshrepository(wireproto.wirerepository):
             return int(r)
         except:
             self.abort(error.ResponseError(_("unexpected response:"), r))
-
-    def stream_out(self):
-        return self.do_cmd('stream_out')
 
 instance = sshrepository

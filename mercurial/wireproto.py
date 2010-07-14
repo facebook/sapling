@@ -88,6 +88,9 @@ class wirerepository(repo.repository):
             r[k.decode('string-escape')] = v.decode('string-escape')
         return r
 
+    def stream_out(self):
+        return self._callstream('stream_out')
+
 # server side
 
 def dispatch(repo, proto, command):
