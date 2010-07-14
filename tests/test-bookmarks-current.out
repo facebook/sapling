@@ -25,3 +25,6 @@ no bookmarks set
 no bookmarks set
 % update to tip
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% set bookmark Y using -r .
+% list bookmarks
+ * Y                         0:719295282060
