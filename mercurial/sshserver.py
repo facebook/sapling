@@ -72,7 +72,9 @@ class sshserver(object):
         if cmd:
             impl = getattr(self, 'do_' + cmd, None)
             if impl:
-                impl()
+                r = impl()
+                if r is not None:
+                    self.respond(r)
             else: self.respond("")
         return cmd != ''
 
@@ -84,7 +86,7 @@ class sshserver(object):
         except Exception, inst:
             r = str(inst)
             success = 0
-        self.respond("%s %s\n" % (success, r))
+        return "%s %s\n" % (success, r)
 
     def do_branchmap(self):
         branchmap = self.repo.branchmap()
@@ -93,11 +95,11 @@ class sshserver(object):
             branchname = urllib.quote(branch)
             branchnodes = [hex(node) for node in nodes]
             heads.append('%s %s' % (branchname, ' '.join(branchnodes)))
-        self.respond('\n'.join(heads))
+        return '\n'.join(heads)
 
     def do_heads(self):
         h = self.repo.heads()
-        self.respond(" ".join(map(hex, h)) + "\n")
+        return " ".join(map(hex, h)) + "\n"
 
     def do_hello(self):
         '''the hello command returns a set of lines describing various
@@ -110,13 +112,13 @@ class sshserver(object):
         caps = copy.copy(self.caps)
         if streamclone.allowed(self.repo.ui):
             caps.append('stream=%d' % self.repo.changelog.version)
-        self.respond("capabilities: %s\n" % (' '.join(caps),))
+        return "capabilities: %s\n" % (' '.join(caps),)
 
     def do_lock(self):
         '''DEPRECATED - allowing remote client to lock repo is not safe'''
 
         self.lock = self.repo.lock()
-        self.respond("")
+        return ""
 
     def do_unlock(self):
         '''DEPRECATED'''
@@ -124,7 +126,7 @@ class sshserver(object):
         if self.lock:
             self.lock.release()
         self.lock = None
-        self.respond("")
+        return ""
 
     def do_branches(self):
         nodes = self.getarg('nodes')
@@ -132,7 +134,7 @@ class sshserver(object):
         r = []
         for b in self.repo.branches(nodes):
             r.append(" ".join(map(hex, b)) + "\n")
-        self.respond("".join(r))
+        return "".join(r)
 
     def do_between(self):
         pairs = self.getarg('pairs')
@@ -140,7 +142,7 @@ class sshserver(object):
         r = []
         for b in self.repo.between(pairs):
             r.append(" ".join(map(hex, b)) + "\n")
-        self.respond("".join(r))
+        return "".join(r)
 
     def do_changegroup(self):
         nodes = []
@@ -180,7 +182,7 @@ class sshserver(object):
         self.respond("")
         r = self.repo.addchangegroup(self.fin, 'serve', self.client_url(),
                                      lock=self.lock)
-        self.respond(str(r))
+        return str(r)
 
     def client_url(self):
         client = os.environ.get('SSH_CLIENT', '').split(' ', 1)[0]
@@ -246,11 +248,11 @@ class sshserver(object):
     def do_pushkey(self):
         namespace, key, old, new = self.getargs('namespace key old new')
         r = pushkey.push(self.repo, namespace, key, old, new)
-        self.respond('%s\n' % int(r))
+        return '%s\n' % int(r)
 
     def do_listkeys(self):
         namespace = self.getarg('namespace')
         d = pushkey.list(self.repo, namespace).items()
         t = '\n'.join(['%s\t%s' % (k.encode('string-escape'),
                                    v.encode('string-escape')) for k, v in d])
-        self.respond(t)
+        return t
