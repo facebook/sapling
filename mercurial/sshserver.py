@@ -8,7 +8,7 @@
 
 from i18n import _
 from node import bin, hex
-import streamclone, util, hook, pushkey
+import streamclone, util, hook, pushkey, wireproto
 import os, sys, tempfile, urllib, copy
 
 class sshserver(object):
@@ -69,7 +69,7 @@ class sshserver(object):
 
     def serve_one(self):
         cmd = self.fin.readline()[:-1]
-        if cmd:
+        if cmd and not wireproto.dispatch(self.repo, self, cmd):
             impl = getattr(self, 'do_' + cmd, None)
             if impl:
                 r = impl()
@@ -77,29 +77,6 @@ class sshserver(object):
                     self.respond(r)
             else: self.respond("")
         return cmd != ''
-
-    def do_lookup(self):
-        key = self.getarg('key')
-        try:
-            r = hex(self.repo.lookup(key))
-            success = 1
-        except Exception, inst:
-            r = str(inst)
-            success = 0
-        return "%s %s\n" % (success, r)
-
-    def do_branchmap(self):
-        branchmap = self.repo.branchmap()
-        heads = []
-        for branch, nodes in branchmap.iteritems():
-            branchname = urllib.quote(branch)
-            branchnodes = [hex(node) for node in nodes]
-            heads.append('%s %s' % (branchname, ' '.join(branchnodes)))
-        return '\n'.join(heads)
-
-    def do_heads(self):
-        h = self.repo.heads()
-        return " ".join(map(hex, h)) + "\n"
 
     def do_hello(self):
         '''the hello command returns a set of lines describing various
@@ -127,22 +104,6 @@ class sshserver(object):
             self.lock.release()
         self.lock = None
         return ""
-
-    def do_branches(self):
-        nodes = self.getarg('nodes')
-        nodes = map(bin, nodes.split(" "))
-        r = []
-        for b in self.repo.branches(nodes):
-            r.append(" ".join(map(hex, b)) + "\n")
-        return "".join(r)
-
-    def do_between(self):
-        pairs = self.getarg('pairs')
-        pairs = [map(bin, p.split("-")) for p in pairs.split(" ")]
-        r = []
-        for b in self.repo.between(pairs):
-            r.append(" ".join(map(hex, b)) + "\n")
-        return "".join(r)
 
     def do_changegroup(self):
         nodes = []
@@ -244,15 +205,3 @@ class sshserver(object):
         except streamclone.StreamException, inst:
             self.fout.write(str(inst))
             self.fout.flush()
-
-    def do_pushkey(self):
-        namespace, key, old, new = self.getargs('namespace key old new')
-        r = pushkey.push(self.repo, namespace, key, old, new)
-        return '%s\n' % int(r)
-
-    def do_listkeys(self):
-        namespace = self.getarg('namespace')
-        d = pushkey.list(self.repo, namespace).items()
-        t = '\n'.join(['%s\t%s' % (k.encode('string-escape'),
-                                   v.encode('string-escape')) for k, v in d])
-        return t
