@@ -103,6 +103,26 @@ class wirerepository(repo.repository):
         return self._decompress(self._callstream("changegroupsubset",
                                                  bases=bases, heads=heads))
 
+    def unbundle(self, cg, heads, source):
+        '''Send cg (a readable file-like object representing the
+        changegroup to push, typically a chunkbuffer object) to the
+        remote server as a bundle. Return an integer indicating the
+        result of the push (see localrepository.addchangegroup()).'''
+
+        ret, output = self._callpush("unbundle", cg, heads=' '.join(map(hex, heads)))
+        if ret == "":
+            raise error.ResponseError(
+                _('push failed:'), output)
+        try:
+            ret = int(ret)
+        except ValueError, err:
+            raise error.ResponseError(
+                _('push failed (unexpected response):'), ret)
+
+        for l in output.splitlines(True):
+            self.ui.status(_('remote: '), l)
+        return ret
+
 # server side
 
 def dispatch(repo, proto, command):

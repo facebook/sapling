@@ -138,19 +138,7 @@ class httprepository(wireproto.wirerepository):
             # if using keepalive, allow connection to be reused
             fp.close()
 
-    def _abort(self, exception):
-        raise exception
-
-    def _decompress(self, stream):
-        return util.chunkbuffer(zgenerator(stream))
-
-    def unbundle(self, cg, heads, source):
-        '''Send cg (a readable file-like object representing the
-        changegroup to push, typically a chunkbuffer object) to the
-        remote server as a bundle. Return an integer response code:
-        non-zero indicates a successful push (see
-        localrepository.addchangegroup()), and zero indicates either
-        error or nothing to push.'''
+    def _callpush(self, cmd, cg, **args):
         # have to stream bundle to a temp file because we do not have
         # http 1.1 chunked transfer.
 
@@ -170,21 +158,12 @@ class httprepository(wireproto.wirerepository):
 
         tempname = changegroup.writebundle(cg, None, type)
         fp = url.httpsendfile(tempname, "rb")
+        headers = {'Content-Type': 'application/mercurial-0.1'}
+
         try:
             try:
-                resp = self._call(
-                     'unbundle', data=fp,
-                     headers={'Content-Type': 'application/mercurial-0.1'},
-                     heads=' '.join(map(hex, heads)))
-                resp_code, output = resp.split('\n', 1)
-                try:
-                    ret = int(resp_code)
-                except ValueError, err:
-                    raise error.ResponseError(
-                            _('push failed (unexpected response):'), resp)
-                for l in output.splitlines(True):
-                    self.ui.status(_('remote: '), l)
-                return ret
+                r = self._call(cmd, data=fp, headers=headers, **args)
+                return r.split('\n', 1)
             except socket.error, err:
                 if err.args[0] in (errno.ECONNRESET, errno.EPIPE):
                     raise util.Abort(_('push failed: %s') % err.args[1])
@@ -192,6 +171,12 @@ class httprepository(wireproto.wirerepository):
         finally:
             fp.close()
             os.unlink(tempname)
+
+    def _abort(self, exception):
+        raise exception
+
+    def _decompress(self, stream):
+        return util.chunkbuffer(zgenerator(stream))
 
 class httpsrepository(httprepository):
     def __init__(self, ui, path):

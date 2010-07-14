@@ -128,6 +128,21 @@ class sshrepository(wireproto.wirerepository):
         self._callstream(cmd, **args)
         return self._recv()
 
+    def _callpush(self, cmd, fp, **args):
+        r = self._call(cmd, **args)
+        if r:
+            return '', r
+        while 1:
+            d = fp.read(4096)
+            if not d:
+                break
+            self._send(d)
+        self._send("", flush=True)
+        r = self._recv()
+        if r:
+            return '', r
+        return self._recv(), ''
+
     def _decompress(self, stream):
         return stream
 
@@ -154,35 +169,6 @@ class sshrepository(wireproto.wirerepository):
 
     def unlock(self):
         self._call("unlock")
-
-    def unbundle(self, cg, heads, source):
-        '''Send cg (a readable file-like object representing the
-        changegroup to push, typically a chunkbuffer object) to the
-        remote server as a bundle. Return an integer indicating the
-        result of the push (see localrepository.addchangegroup()).'''
-        d = self._call("unbundle", heads=' '.join(map(hex, heads)))
-        if d:
-            # remote may send "unsynced changes"
-            self._abort(error.RepoError(_("push refused: %s") % d))
-
-        while 1:
-            d = cg.read(4096)
-            if not d:
-                break
-            self._send(d)
-
-        self._send("", flush=True)
-
-        r = self._recv()
-        if r:
-            # remote may send "unsynced changes"
-            self._abort(error.RepoError(_("push failed: %s") % r))
-
-        r = self._recv()
-        try:
-            return int(r)
-        except:
-            self._abort(error.ResponseError(_("unexpected response:"), r))
 
     def addchangegroup(self, cg, source, url):
         '''Send a changegroup to the remote server.  Return an integer
