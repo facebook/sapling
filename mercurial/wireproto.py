@@ -91,6 +91,18 @@ class wirerepository(repo.repository):
     def stream_out(self):
         return self._callstream('stream_out')
 
+    def changegroup(self, nodes, kind):
+        n = " ".join(map(hex, nodes))
+        f = self._callstream("changegroup", roots=n)
+        return self._decompress(f)
+
+    def changegroupsubset(self, bases, heads, kind):
+        self.requirecap('changegroupsubset', _('look up remote changes'))
+        bases = " ".join(map(hex, bases))
+        heads = " ".join(map(hex, heads))
+        return self._decompress(self._callstream("changegroupsubset",
+                                                 bases=bases, heads=heads))
+
 # server side
 
 def dispatch(repo, proto, command):

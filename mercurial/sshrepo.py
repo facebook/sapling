@@ -128,6 +128,9 @@ class sshrepository(wireproto.wirerepository):
         self._callstream(cmd, **args)
         return self._recv()
 
+    def _decompress(self, stream):
+        return stream
+
     def _recv(self):
         l = self.pipei.readline()
         self.readerr()
@@ -151,16 +154,6 @@ class sshrepository(wireproto.wirerepository):
 
     def unlock(self):
         self._call("unlock")
-
-    def changegroup(self, nodes, kind):
-        n = " ".join(map(hex, nodes))
-        return self._callstream("changegroup", roots=n)
-
-    def changegroupsubset(self, bases, heads, kind):
-        self.requirecap('changegroupsubset', _('look up remote changes'))
-        bases = " ".join(map(hex, bases))
-        heads = " ".join(map(hex, heads))
-        return self._callstream("changegroupsubset", bases=bases, heads=heads)
 
     def unbundle(self, cg, heads, source):
         '''Send cg (a readable file-like object representing the

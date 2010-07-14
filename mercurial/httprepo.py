@@ -141,17 +141,8 @@ class httprepository(wireproto.wirerepository):
     def _abort(self, exception):
         raise exception
 
-    def changegroup(self, nodes, kind):
-        n = " ".join(map(hex, nodes))
-        f = self._callstream("changegroup", roots=n)
-        return util.chunkbuffer(zgenerator(f))
-
-    def changegroupsubset(self, bases, heads, source):
-        self.requirecap('changegroupsubset', _('look up remote changes'))
-        baselst = " ".join([hex(n) for n in bases])
-        headlst = " ".join([hex(n) for n in heads])
-        f = self._callstream("changegroupsubset", bases=baselst, heads=headlst)
-        return util.chunkbuffer(zgenerator(f))
+    def _decompress(self, stream):
+        return util.chunkbuffer(zgenerator(stream))
 
     def unbundle(self, cg, heads, source):
         '''Send cg (a readable file-like object representing the
