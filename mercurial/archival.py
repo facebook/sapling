@@ -12,7 +12,7 @@ import util
 import cStringIO, os, stat, tarfile, time, zipfile
 import zlib, gzip
 
-def tidyprefix(dest, prefix, suffixes):
+def tidyprefix(dest, kind, prefix):
     '''choose prefix to use for names in archive.  make sure prefix is
     safe for consumers.'''
 
@@ -23,7 +23,7 @@ def tidyprefix(dest, prefix, suffixes):
             raise ValueError('dest must be string if no prefix')
         prefix = os.path.basename(dest)
         lower = prefix.lower()
-        for sfx in suffixes:
+        for sfx in exts.get(kind, []):
             if lower.endswith(sfx):
                 prefix = prefix[:-len(sfx)]
                 break
@@ -80,9 +80,7 @@ class tarit(object):
             if fname:
                 self.fileobj.write(fname + '\000')
 
-    def __init__(self, dest, prefix, mtime, kind=''):
-        self.prefix = tidyprefix(dest, prefix, ['.tar', '.tar.bz2', '.tar.gz',
-                                                '.tgz', '.tbz2'])
+    def __init__(self, dest, mtime, kind=''):
         self.mtime = mtime
 
         def taropen(name, mode, fileobj=None):
@@ -104,7 +102,7 @@ class tarit(object):
             self.z = taropen(name='', mode='w|', fileobj=dest)
 
     def addfile(self, name, mode, islink, data):
-        i = tarfile.TarInfo(self.prefix + name)
+        i = tarfile.TarInfo(name)
         i.mtime = self.mtime
         i.size = len(data)
         if islink:
@@ -143,8 +141,7 @@ class zipit(object):
     '''write archive to zip file or stream.  can write uncompressed,
     or compressed with deflate.'''
 
-    def __init__(self, dest, prefix, mtime, compress=True):
-        self.prefix = tidyprefix(dest, prefix, ('.zip',))
+    def __init__(self, dest, mtime, compress=True):
         if not isinstance(dest, str):
             try:
                 dest.tell()
@@ -156,7 +153,7 @@ class zipit(object):
         self.date_time = time.gmtime(mtime)[:6]
 
     def addfile(self, name, mode, islink, data):
-        i = zipfile.ZipInfo(self.prefix + name, self.date_time)
+        i = zipfile.ZipInfo(name, self.date_time)
         i.compress_type = self.z.compression
         # unzip will not honor unix file modes unless file creator is
         # set to unix (id 3).
@@ -174,9 +171,7 @@ class zipit(object):
 class fileit(object):
     '''write archive as files in directory.'''
 
-    def __init__(self, name, prefix, mtime):
-        if prefix:
-            raise util.Abort(_('cannot give prefix when archiving to files'))
+    def __init__(self, name, mtime):
         self.basedir = name
         self.opener = util.opener(self.basedir)
 
@@ -196,9 +191,9 @@ class fileit(object):
 archivers = {
     'files': fileit,
     'tar': tarit,
-    'tbz2': lambda name, prefix, mtime: tarit(name, prefix, mtime, 'bz2'),
-    'tgz': lambda name, prefix, mtime: tarit(name, prefix, mtime, 'gz'),
-    'uzip': lambda name, prefix, mtime: zipit(name, prefix, mtime, False),
+    'tbz2': lambda name, mtime: tarit(name, mtime, 'bz2'),
+    'tgz': lambda name, mtime: tarit(name, mtime, 'gz'),
+    'uzip': lambda name, mtime: zipit(name, mtime, False),
     'zip': zipit,
     }
 
@@ -218,19 +213,25 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
 
     prefix is name of path to put before every archive member.'''
 
+    if kind == 'files':
+        if prefix:
+            raise util.Abort(_('cannot give prefix when archiving to files'))
+    else:
+        prefix = tidyprefix(dest, kind, prefix)
+
     def write(name, mode, islink, getdata):
         if matchfn and not matchfn(name):
             return
         data = getdata()
         if decode:
             data = repo.wwritedata(name, data)
-        archiver.addfile(name, mode, islink, data)
+        archiver.addfile(prefix + name, mode, islink, data)
 
     if kind not in archivers:
         raise util.Abort(_("unknown archive type '%s'") % kind)
 
     ctx = repo[node]
-    archiver = archivers[kind](dest, prefix, mtime or ctx.date()[0])
+    archiver = archivers[kind](dest, mtime or ctx.date()[0])
 
     if repo.ui.configbool("ui", "archivemeta", True):
         def metadata():
