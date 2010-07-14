@@ -59,13 +59,17 @@ class wirerepository(repo.repository):
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
     def between(self, pairs):
-        n = " ".join(["-".join(map(hex, p)) for p in pairs])
-        d = self._call("between", pairs=n)
-        try:
-            p = [l and map(bin, l.split(" ")) or [] for l in d.splitlines()]
-            return p
-        except:
-            self._abort(error.ResponseError(_("unexpected response:"), d))
+        batch = 8 # avoid giant requests
+        r = []
+        for i in xrange(0, len(pairs), batch):
+            n = " ".join(["-".join(map(hex, p)) for p in pairs[i:i + batch]])
+            d = self._call("between", pairs=n)
+            try:
+                r += [l and map(bin, l.split(" ")) or []
+                      for l in d.splitlines()]
+            except:
+                self._abort(error.ResponseError(_("unexpected response:"), d))
+        return r
 
     def pushkey(self, namespace, key, old, new):
         if not self.capable('pushkey'):
