@@ -27,7 +27,7 @@ class sshrepository(wireproto.wirerepository):
 
         m = re.match(r'^ssh://(([^@]+)@)?([^:/]+)(:(\d+))?(/(.*))?$', path)
         if not m:
-            self.abort(error.RepoError(_("couldn't parse location %s") % path))
+            self._abort(error.RepoError(_("couldn't parse location %s") % path))
 
         self.user = m.group(2)
         self.host = m.group(3)
@@ -46,7 +46,7 @@ class sshrepository(wireproto.wirerepository):
             ui.note(_('running %s\n') % cmd)
             res = util.system(cmd)
             if res != 0:
-                self.abort(error.RepoError(_("could not create remote repo")))
+                self._abort(error.RepoError(_("could not create remote repo")))
 
         self.validate_repo(ui, sshcmd, args, remotecmd)
 
@@ -79,7 +79,7 @@ class sshrepository(wireproto.wirerepository):
             lines.append(l)
             max_noise -= 1
         else:
-            self.abort(error.RepoError(_("no suitable response from remote hg")))
+            self._abort(error.RepoError(_("no suitable response from remote hg")))
 
         self.capabilities = set()
         for l in reversed(lines):
@@ -96,10 +96,6 @@ class sshrepository(wireproto.wirerepository):
             if not l:
                 break
             self.ui.status(_("remote: "), l)
-
-    def abort(self, exception):
-        self.cleanup()
-        raise exception
 
     def _abort(self, exception):
         self.cleanup()
@@ -138,7 +134,7 @@ class sshrepository(wireproto.wirerepository):
         try:
             l = int(l)
         except:
-            self.abort(error.ResponseError(_("unexpected response:"), l))
+            self._abort(error.ResponseError(_("unexpected response:"), l))
         return self.pipei.read(l)
 
     def _send(self, data, flush=False):
@@ -174,7 +170,7 @@ class sshrepository(wireproto.wirerepository):
         d = self._call("unbundle", heads=' '.join(map(hex, heads)))
         if d:
             # remote may send "unsynced changes"
-            self.abort(error.RepoError(_("push refused: %s") % d))
+            self._abort(error.RepoError(_("push refused: %s") % d))
 
         while 1:
             d = cg.read(4096)
@@ -187,13 +183,13 @@ class sshrepository(wireproto.wirerepository):
         r = self._recv()
         if r:
             # remote may send "unsynced changes"
-            self.abort(error.RepoError(_("push failed: %s") % r))
+            self._abort(error.RepoError(_("push failed: %s") % r))
 
         r = self._recv()
         try:
             return int(r)
         except:
-            self.abort(error.ResponseError(_("unexpected response:"), r))
+            self._abort(error.ResponseError(_("unexpected response:"), r))
 
     def addchangegroup(self, cg, source, url):
         '''Send a changegroup to the remote server.  Return an integer
@@ -201,7 +197,7 @@ class sshrepository(wireproto.wirerepository):
         remote.'''
         d = self._call("addchangegroup")
         if d:
-            self.abort(error.RepoError(_("push refused: %s") % d))
+            self._abort(error.RepoError(_("push refused: %s") % d))
         while 1:
             d = cg.read(4096)
             if not d:
@@ -218,6 +214,6 @@ class sshrepository(wireproto.wirerepository):
         try:
             return int(r)
         except:
-            self.abort(error.ResponseError(_("unexpected response:"), r))
+            self._abort(error.ResponseError(_("unexpected response:"), r))
 
 instance = sshrepository
