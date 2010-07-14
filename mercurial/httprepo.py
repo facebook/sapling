@@ -54,7 +54,7 @@ class httprepository(wireproto.wirerepository):
     def get_caps(self):
         if self.caps is None:
             try:
-                self.caps = set(self.do_read('capabilities').split())
+                self.caps = set(self._call('capabilities').split())
             except error.RepoError:
                 self.caps = set()
             self.ui.debug('capabilities: %s\n' %
@@ -66,7 +66,7 @@ class httprepository(wireproto.wirerepository):
     def lock(self):
         raise util.Abort(_('operation not supported over http'))
 
-    def do_cmd(self, cmd, **args):
+    def _callstream(self, cmd, **args):
         data = args.pop('data', None)
         headers = args.pop('headers', {})
         self.ui.debug("sending %s command\n" % cmd)
@@ -130,33 +130,27 @@ class httprepository(wireproto.wirerepository):
 
         return resp
 
-    def do_read(self, cmd, **args):
-        fp = self.do_cmd(cmd, **args)
+    def _call(self, cmd, **args):
+        fp = self._callstream(cmd, **args)
         try:
             return fp.read()
         finally:
             # if using keepalive, allow connection to be reused
             fp.close()
 
-    def _call(self, cmd, **args):
-        return self.do_read(cmd, **args)
-
-    def _callstream(self, cmd, **args):
-        return self.do_cmd(cmd, **args)
-
     def _abort(self, exception):
         raise exception
 
     def changegroup(self, nodes, kind):
         n = " ".join(map(hex, nodes))
-        f = self.do_cmd("changegroup", roots=n)
+        f = self._callstream("changegroup", roots=n)
         return util.chunkbuffer(zgenerator(f))
 
     def changegroupsubset(self, bases, heads, source):
         self.requirecap('changegroupsubset', _('look up remote changes'))
         baselst = " ".join([hex(n) for n in bases])
         headlst = " ".join([hex(n) for n in heads])
-        f = self.do_cmd("changegroupsubset", bases=baselst, heads=headlst)
+        f = self._callstream("changegroupsubset", bases=baselst, heads=headlst)
         return util.chunkbuffer(zgenerator(f))
 
     def unbundle(self, cg, heads, source):
@@ -187,7 +181,7 @@ class httprepository(wireproto.wirerepository):
         fp = url.httpsendfile(tempname, "rb")
         try:
             try:
-                resp = self.do_read(
+                resp = self._call(
                      'unbundle', data=fp,
                      headers={'Content-Type': 'application/mercurial-0.1'},
                      heads=' '.join(map(hex, heads)))
