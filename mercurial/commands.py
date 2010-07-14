@@ -3779,8 +3779,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     Update the repository's working directory to the specified
     changeset.
 
-    If no changeset is specified, attempt to update to the head of the
-    current branch. If this head is a descendant of the working
+    If no changeset is specified, attempt to update to the tip of the
+    current branch. If this changeset is a descendant of the working
     directory's parent, update to it, otherwise abort.
 
     The following rules apply when the working directory contains
