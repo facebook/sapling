@@ -31,6 +31,11 @@ hg log -vf a
 echo % many renames
 hg log -vf e
 
+echo % log -pf dir/b
+hg log -pf dir/b
+echo % log -vf dir/b
+hg log -vf dir/b
+
 echo '% log copies with --copies'
 hg log -vC --template '{rev} {file_copies}\n'
 echo '% log copies switch without --copies, with old filecopy template'

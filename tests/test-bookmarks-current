@@ -57,3 +57,8 @@ hg bookmark
 echo % update to tip
 hg update tip
 
+echo % set bookmark Y using -r .
+hg bookmark -r . Y
+
+echo % list bookmarks
+hg bookmark
