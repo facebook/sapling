@@ -318,8 +318,8 @@ class svnsubrepo(abstractsubrepo):
         self._ctx = ctx
         self._ui = ctx._repo.ui
 
-    def _svncommand(self, commands):
-        path = os.path.join(self._ctx._repo.origroot, self._path)
+    def _svncommand(self, commands, filename=''):
+        path = os.path.join(self._ctx._repo.origroot, self._path, filename)
         cmd = ['svn'] + commands + [path]
         cmd = [util.shellquote(arg) for arg in cmd]
         cmd = util.quotecommand(' '.join(cmd))
