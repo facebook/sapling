@@ -1,8 +1,7 @@
-import sys
-import unittest
-
 import test_util
 
+import sys
+import unittest
 
 class TestFetchRenames(test_util.TestBase):
     def _debug_print_copies(self, repo):

@@ -1,7 +1,6 @@
-import unittest
-
 import test_util
 
+import unittest
 
 class TestFetchSymlinks(test_util.TestBase):
     def _load_fixture_and_fetch(self, fixture_name, stupid):

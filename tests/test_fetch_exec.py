@@ -1,8 +1,8 @@
+import test_util
+
 import unittest
 
 from mercurial import node
-
-import test_util
 
 class TestFetchExec(test_util.TestBase):
     def _load_fixture_and_fetch(self, fixture_name, stupid):

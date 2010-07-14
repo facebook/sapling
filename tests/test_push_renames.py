@@ -1,7 +1,7 @@
+import test_util
+
 import sys
 import unittest
-
-import test_util
 
 class TestPushRenames(test_util.TestBase):
     def setUp(self):

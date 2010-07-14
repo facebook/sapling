@@ -1,3 +1,5 @@
+import test_util
+
 import atexit
 import errno
 import os
@@ -14,7 +16,6 @@ from mercurial import node
 from mercurial import revlog
 from mercurial import util as hgutil
 
-import test_util
 import time
 
 

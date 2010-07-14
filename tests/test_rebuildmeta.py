@@ -1,8 +1,8 @@
+import test_util
+
 import os
 import pickle
 import unittest
-
-import test_util
 
 from mercurial import context
 from mercurial import extensions

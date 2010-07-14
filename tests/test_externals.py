@@ -1,9 +1,10 @@
+import test_util
+
 import os, unittest
 
 from mercurial import commands
 
 from hgsubversion import svnexternals
-import test_util
 
 class TestFetchExternals(test_util.TestBase):
     def test_externalsfile(self):

@@ -1,3 +1,5 @@
+import test_util
+
 import errno
 import shutil
 import unittest
@@ -7,9 +9,6 @@ from mercurial import context
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
-
-import test_util
-
 
 class TestSingleDir(test_util.TestBase):
     def test_clone_single_dir_simple(self):

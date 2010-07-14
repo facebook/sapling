@@ -1,3 +1,5 @@
+import test_util
+
 import os, sys, cStringIO, difflib
 import unittest
 
@@ -5,8 +7,6 @@ from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
-
-import test_util
 
 from hgsubversion import svncommands
 from hgsubversion import svnrepo

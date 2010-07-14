@@ -1,11 +1,11 @@
+import test_util
+
 import imp
 import os
 import subprocess
 import shutil
 import tempfile
 import unittest
-
-import test_util
 
 from hgsubversion import svnwrap
 

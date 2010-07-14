@@ -1,3 +1,5 @@
+import test_util
+
 import os
 import unittest
 
@@ -10,7 +12,6 @@ from mercurial import commands
 
 from hgsubversion import util
 from hgsubversion import svncommands
-import test_util
 from hgsubversion import wrappers
 
 expected_info_output = '''URL: %(repourl)s/%(branch)s

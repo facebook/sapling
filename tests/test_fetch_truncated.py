@@ -1,9 +1,9 @@
+import test_util
+
 import unittest
 
 from mercurial import commands
 from mercurial import hg
-
-import test_util
 
 class TestFetchTruncatedHistory(test_util.TestBase):
     def test_truncated_history(self, stupid=False):

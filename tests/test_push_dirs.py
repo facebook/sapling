@@ -1,6 +1,6 @@
-import unittest
-
 import test_util
+
+import unittest
 
 class TestPushDirectories(test_util.TestBase):
     def setUp(self):

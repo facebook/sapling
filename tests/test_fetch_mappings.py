@@ -1,5 +1,7 @@
 """Tests for author maps and file maps.
 """
+import test_util
+
 import os
 import unittest
 
@@ -7,8 +9,6 @@ from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
-
-import test_util
 
 from hgsubversion import maps
 from hgsubversion import svncommands

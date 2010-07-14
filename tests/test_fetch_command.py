@@ -1,10 +1,10 @@
+import test_util
+
 import unittest
 
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
-
-import test_util
 
 class TestBasicRepoLayout(test_util.TestBase):
 

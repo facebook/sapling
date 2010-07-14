@@ -1,11 +1,10 @@
+import test_util
+
 import unittest
 
 from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
-
-import test_util
-
 
 class TestFetchBranches(test_util.TestBase):
     def _load_fixture_and_fetch(self, fixture_name, stupid, noupdate=True,

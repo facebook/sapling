@@ -1,6 +1,6 @@
-import unittest
-
 import test_util
+
+import unittest
 
 class TestFetchBinaryFiles(test_util.TestBase):
     def test_binaryfiles(self, stupid=False):
