@@ -26,7 +26,7 @@ rm d2/c
 
 echo '# rename --after a single file when src and tgt already tracked'
 mv d1/d11/a1 d2/c
-hg addrem
+hg addrem -s 0
 hg rename --after d1/d11/a1 d2/c
 hg status -C
 hg update -C

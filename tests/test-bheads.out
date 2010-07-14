@@ -187,15 +187,15 @@ marked working directory as branch b
 adding b
 % case NN: msg
 marked working directory as branch b
-adding B
+adding bb
 created new head
 % case HN: no msg
 % case BN: msg
 marked working directory as branch default
-adding A
+adding aa
 created new head
 % case CN: msg
-adding BB
+adding bbb
 created new head
 % case BB: msg
 marked working directory as branch default

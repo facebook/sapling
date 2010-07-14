@@ -573,7 +573,7 @@ Displaying [PATCH 3 of 3] charset=utf-8; content-transfer-encoding: quoted-print
 Content-Type: multipart/mixed; boundary="===
 MIME-Version: 1.0
 Subject: [PATCH 3 of 3] charset=utf-8;
-	content-transfer-encoding: quoted-printable
+ content-transfer-encoding: quoted-printable
 X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
 Message-Id: <c655633f8c87700bb38c.63@
 In-Reply-To: <patchbomb.60@
@@ -836,7 +836,7 @@ Displaying [PATCH 3 of 3] charset=utf-8; content-transfer-encoding: quoted-print
 Content-Type: multipart/mixed; boundary="===
 MIME-Version: 1.0
 Subject: [PATCH 3 of 3] charset=utf-8;
-	content-transfer-encoding: quoted-printable
+ content-transfer-encoding: quoted-printable
 X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
 Message-Id: <c655633f8c87700bb38c.63@
 In-Reply-To: <patchbomb.60@
@@ -1730,7 +1730,7 @@ Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
 Subject: [PATCH 3 of 8] charset=utf-8;
-	content-transfer-encoding: quoted-printable
+ content-transfer-encoding: quoted-printable
 X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
 Message-Id: <c655633f8c87700bb38c.315532863@
 In-Reply-To: <patchbomb.315532860@

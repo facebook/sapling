@@ -943,7 +943,10 @@ class revlog(object):
         raise LookupError(id, self.indexfile, _('no match found'))
 
     def cmp(self, node, text):
-        """compare text with a given file revision"""
+        """compare text with a given file revision
+
+        returns True if text is different than what is stored.
+        """
         p1, p2 = self.parents(node)
         return hash(text, p1, p2) != node
 

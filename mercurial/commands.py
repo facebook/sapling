@@ -83,7 +83,7 @@ def addremove(ui, repo, *pats, **opts):
     Returns 0 if all files are successfully added.
     """
     try:
-        sim = float(opts.get('similarity') or 0)
+        sim = float(opts.get('similarity') or 100)
     except ValueError:
         raise util.Abort(_('similarity must be a number'))
     if sim < 0 or sim > 100:

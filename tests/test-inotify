@@ -97,4 +97,17 @@ hg ci -m 'working'
 echo b >> 1844/foo
 hg ci 1844 -m 'broken'
 
+# Test for issue884: "Build products not ignored until .hgignore is touched"
+echo '^build$' > .hgignore
+hg add .hgignore
+hg ci .hgignore -m 'ignorelist'
+
+# Now, lets add some build products...
+mkdir build
+touch build/x
+touch build/y
+
+# build/x & build/y shouldn't appear in "hg st"
+hg st
+
 kill `cat hg.pid`

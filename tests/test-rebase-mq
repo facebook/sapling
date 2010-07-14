@@ -101,6 +101,11 @@ hg qref --git -m 'P0 (git)'
 hg qnew f.patch
 echo 'mq2' > p
 hg qref -m 'P1'
+hg qcommit -m 'save patch state'
+echo '% patch series step 1/2'
+hg qseries -s
+echo '% patch queue manifest step 1/2'
+hg -R .hg/patches manifest
 
 echo '% Git patch'
 cat .hg/patches/f_git.patch  | filterpatch
@@ -112,6 +117,11 @@ cat .hg/patches/f.patch | filterpatch
 echo
 echo '% Rebase the applied mq patches'
 hg rebase -s 2 -d 1 --quiet
+hg qcommit -m 'save patch state'
+echo '% patch series step 2/2'
+hg qseries -s
+echo '% patch queue manifest step 2/2'
+hg -R .hg/patches manifest
 
 echo '% And the patches are correct'
 echo '% Git patch'
