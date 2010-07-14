@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os
-from mercurial import ui, hg, hook, error, encoding, templater
+from mercurial import ui, hg, hook, error, encoding, templater, wireproto
 from common import get_mtime, ErrorResponse, permhooks
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
@@ -21,6 +21,33 @@ perms = {
     'unbundle': 'push',
     'pushkey': 'push',
 }
+
+class webproto(object):
+    def __init__(self, req):
+        self.req = req
+        self.response = ''
+    def getargs(self, args):
+        data = {}
+        keys = args.split()
+        for k in keys:
+            if k == '*':
+                star = {}
+                for key in self.req.form.keys():
+                    if key not in keys:
+                        star[key] = self.req.form[key][0]
+                data['*'] = star
+            else:
+                data[k] = self.req.form[k][0]
+        return [data[k] for k in keys]
+    def respond(self, s):
+        HGTYPE = 'application/mercurial-0.1'
+        self.req.respond(HTTP_OK, HGTYPE, length=len(s))
+        self.response = s
+
+def callproto(repo, req, cmd):
+    p = webproto(req)
+    r = wireproto.dispatch(repo, p, cmd)
+    yield p.response
 
 class hgweb(object):
     def __init__(self, repo, name=None, baseui=None):
@@ -123,6 +150,8 @@ class hgweb(object):
                         if cmd == 'unbundle':
                             req.drain()
                         raise
+                if cmd in wireproto.commands:
+                    return callproto(self.repo, req, cmd)
                 method = getattr(protocol, cmd)
                 return method(self.repo, req)
             except ErrorResponse, inst:

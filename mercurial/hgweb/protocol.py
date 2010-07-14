@@ -23,51 +23,6 @@ __all__ = [
 HGTYPE = 'application/mercurial-0.1'
 basecaps = 'lookup changegroupsubset branchmap pushkey'.split()
 
-def lookup(repo, req):
-    try:
-        r = hex(repo.lookup(req.form['key'][0]))
-        success = 1
-    except Exception, inst:
-        r = str(inst)
-        success = 0
-    resp = "%s %s\n" % (success, r)
-    req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    yield resp
-
-def heads(repo, req):
-    resp = " ".join(map(hex, repo.heads())) + "\n"
-    req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    yield resp
-
-def branchmap(repo, req):
-    branches = repo.branchmap()
-    heads = []
-    for branch, nodes in branches.iteritems():
-        branchname = urllib.quote(branch)
-        branchnodes = [hex(node) for node in nodes]
-        heads.append('%s %s' % (branchname, ' '.join(branchnodes)))
-    resp = '\n'.join(heads)
-    req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    yield resp
-
-def branches(repo, req):
-    nodes = []
-    if 'nodes' in req.form:
-        nodes = map(bin, req.form['nodes'][0].split(" "))
-    resp = cStringIO.StringIO()
-    for b in repo.branches(nodes):
-        resp.write(" ".join(map(hex, b)) + "\n")
-    resp = resp.getvalue()
-    req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    yield resp
-
-def between(repo, req):
-    pairs = [map(bin, p.split("-"))
-             for p in req.form['pairs'][0].split(" ")]
-    resp = ''.join(" ".join(map(hex, b)) + "\n" for b in repo.between(pairs))
-    req.respond(HTTP_OK, HGTYPE, length=len(resp))
-    yield resp
-
 def changegroup(repo, req):
     req.respond(HTTP_OK, HGTYPE)
     nodes = []
@@ -204,22 +159,3 @@ def stream_out(repo, req):
             yield chunk
     except streamclone.StreamException, inst:
         yield str(inst)
-
-def pushkey(repo, req):
-    namespace = req.form['namespace'][0]
-    key = req.form['key'][0]
-    old = req.form['old'][0]
-    new = req.form['new'][0]
-
-    r = repo.pushkey(namespace, key, old, new)
-    r = '%d\n' % int(r)
-    req.respond(HTTP_OK, HGTYPE, length=len(r))
-    yield r
-
-def listkeys(repo, req):
-    namespace = req.form['namespace'][0]
-    d = repo.listkeys(namespace).items()
-    t = '\n'.join(['%s\t%s' % (k.encode('string-escape'),
-                               v.encode('string-escape')) for k, v in d])
-    req.respond(HTTP_OK, HGTYPE, length=len(t))
-    yield t
