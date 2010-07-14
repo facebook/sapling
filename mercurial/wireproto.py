@@ -7,7 +7,7 @@
 
 from i18n import _
 from node import bin, hex
-import urllib
+import urllib, streamclone
 import pushkey as pushkey_
 
 def dispatch(repo, proto, command):
@@ -77,6 +77,12 @@ def pushkey(repo, proto, namespace, key, old, new):
     r = pushkey_.push(repo, namespace, key, old, new)
     return '%s\n' % int(r)
 
+def stream(repo, proto):
+    try:
+        proto.sendstream(streamclone.stream_out(repo))
+    except streamclone.StreamException, inst:
+        return str(inst)
+
 commands = {
     'between': (between, 'pairs'),
     'branchmap': (branchmap, ''),
@@ -87,4 +93,5 @@ commands = {
     'listkeys': (listkeys, 'namespace'),
     'lookup': (lookup, 'key'),
     'pushkey': (pushkey, 'namespace key old new'),
+    'stream_out': (stream, ''),
 }

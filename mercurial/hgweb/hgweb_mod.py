@@ -49,7 +49,10 @@ class webproto(object):
                 break
             self.req.write(z.compress(chunk))
         self.req.write(z.flush())
-
+    def sendstream(self, source):
+        self.req.respond(HTTP_OK, HGTYPE)
+        for chunk in source:
+            self.req.write(chunk)
     def respond(self, s):
         self.req.respond(HTTP_OK, HGTYPE, length=len(s))
         self.response = s

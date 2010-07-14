@@ -114,11 +114,3 @@ def unbundle(repo, req):
     finally:
         fp.close()
         os.unlink(tempname)
-
-def stream_out(repo, req):
-    req.respond(HTTP_OK, HGTYPE)
-    try:
-        for chunk in streamclone.stream_out(repo):
-            yield chunk
-    except streamclone.StreamException, inst:
-        yield str(inst)

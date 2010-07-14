@@ -67,6 +67,11 @@ class sshserver(object):
 
         self.fout.flush()
 
+    def sendstream(self, source):
+        for chunk in source:
+            self.fout.write(chunk)
+        self.fout.flush()
+
     def serve_forever(self):
         try:
             while self.serve_one():
@@ -177,12 +182,3 @@ class sshserver(object):
         finally:
             fp.close()
             os.unlink(tempname)
-
-    def do_stream_out(self):
-        try:
-            for chunk in streamclone.stream_out(self.repo):
-                self.fout.write(chunk)
-            self.fout.flush()
-        except streamclone.StreamException, inst:
-            self.fout.write(str(inst))
-            self.fout.flush()
