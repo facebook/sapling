@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os
+import os, zlib
 from mercurial import ui, hg, hook, error, encoding, templater, wireproto
 from common import get_mtime, ErrorResponse, permhooks
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
@@ -22,6 +22,7 @@ perms = {
     'pushkey': 'push',
 }
 
+HGTYPE = 'application/mercurial-0.1'
 class webproto(object):
     def __init__(self, req):
         self.req = req
@@ -39,8 +40,17 @@ class webproto(object):
             else:
                 data[k] = self.req.form[k][0]
         return [data[k] for k in keys]
+    def sendchangegroup(self, cg):
+        self.req.respond(HTTP_OK, HGTYPE)
+        z = zlib.compressobj()
+        while 1:
+            chunk = cg.read(4096)
+            if not chunk:
+                break
+            self.req.write(z.compress(chunk))
+        self.req.write(z.flush())
+
     def respond(self, s):
-        HGTYPE = 'application/mercurial-0.1'
         self.req.respond(HTTP_OK, HGTYPE, length=len(s))
         self.response = s
 

@@ -55,7 +55,7 @@ SERVER_SIGNATURE="<address>Apache/2.0.53 (Fedora) Server at hg.omnifarious.org P
 SERVER_SOFTWARE="Apache/2.0.53 (Fedora)"; export SERVER_SOFTWARE
 
 echo % try hgweb request
-QUERY_STRING="cmd=changegroup"; export QUERY_STRING
+QUERY_STRING="cmd=changegroup&roots=0000000000000000000000000000000000000000"; export QUERY_STRING
 python hgweb.cgi >page1 2>&1 ; echo $?
 python "$TESTDIR/md5sum.py" page1
 

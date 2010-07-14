@@ -23,43 +23,6 @@ __all__ = [
 HGTYPE = 'application/mercurial-0.1'
 basecaps = 'lookup changegroupsubset branchmap pushkey'.split()
 
-def changegroup(repo, req):
-    req.respond(HTTP_OK, HGTYPE)
-    nodes = []
-
-    if 'roots' in req.form:
-        nodes = map(bin, req.form['roots'][0].split(" "))
-
-    z = zlib.compressobj()
-    f = repo.changegroup(nodes, 'serve')
-    while 1:
-        chunk = f.read(4096)
-        if not chunk:
-            break
-        yield z.compress(chunk)
-
-    yield z.flush()
-
-def changegroupsubset(repo, req):
-    req.respond(HTTP_OK, HGTYPE)
-    bases = []
-    heads = []
-
-    if 'bases' in req.form:
-        bases = [bin(x) for x in req.form['bases'][0].split(' ')]
-    if 'heads' in req.form:
-        heads = [bin(x) for x in req.form['heads'][0].split(' ')]
-
-    z = zlib.compressobj()
-    f = repo.changegroupsubset(bases, heads, 'serve')
-    while 1:
-        chunk = f.read(4096)
-        if not chunk:
-            break
-        yield z.compress(chunk)
-
-    yield z.flush()
-
 def capabilities(repo, req):
     caps = copy.copy(basecaps)
     if streamclone.allowed(repo.ui):

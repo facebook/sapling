@@ -15,7 +15,9 @@ def dispatch(repo, proto, command):
         return False
     func, spec = commands[command]
     args = proto.getargs(spec)
-    proto.respond(func(repo, proto, *args))
+    r = func(repo, proto, *args)
+    if r != None:
+        proto.respond(r)
     return True
 
 def between(repo, proto, pairs):
@@ -40,6 +42,17 @@ def branches(repo, proto, nodes):
     for b in repo.branches(nodes):
         r.append(" ".join(map(hex, b)) + "\n")
     return "".join(r)
+
+def changegroup(repo, proto, roots):
+    nodes = map(bin, roots.split(" "))
+    cg = repo.changegroup(nodes, 'serve')
+    proto.sendchangegroup(cg)
+
+def changegroupsubset(repo, proto, bases, heads):
+    bases = [bin(n) for n in bases.split(' ')]
+    heads = [bin(n) for n in heads.split(' ')]
+    cg = repo.changegroupsubset(bases, heads, 'serve')
+    proto.sendchangegroup(cg)
 
 def heads(repo, proto):
     h = repo.heads()
@@ -68,6 +81,8 @@ commands = {
     'between': (between, 'pairs'),
     'branchmap': (branchmap, ''),
     'branches': (branches, 'nodes'),
+    'changegroup': (changegroup, 'roots'),
+    'changegroupsubset': (changegroupsubset, 'bases heads'),
     'heads': (heads, ''),
     'listkeys': (listkeys, 'namespace'),
     'lookup': (lookup, 'key'),

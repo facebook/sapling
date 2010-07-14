@@ -58,6 +58,15 @@ class sshserver(object):
         self.fout.write(v)
         self.fout.flush()
 
+    def sendchangegroup(self, changegroup):
+        while True:
+            d = changegroup.read(4096)
+            if not d:
+                break
+            self.fout.write(d)
+
+        self.fout.flush()
+
     def serve_forever(self):
         try:
             while self.serve_one():
@@ -104,34 +113,6 @@ class sshserver(object):
             self.lock.release()
         self.lock = None
         return ""
-
-    def do_changegroup(self):
-        nodes = []
-        roots = self.getarg('roots')
-        nodes = map(bin, roots.split(" "))
-
-        cg = self.repo.changegroup(nodes, 'serve')
-        while True:
-            d = cg.read(4096)
-            if not d:
-                break
-            self.fout.write(d)
-
-        self.fout.flush()
-
-    def do_changegroupsubset(self):
-        bases, heads = self.getargs('bases heads')
-        bases = [bin(n) for n in bases.split(' ')]
-        heads = [bin(n) for n in heads.split(' ')]
-
-        cg = self.repo.changegroupsubset(bases, heads, 'serve')
-        while True:
-            d = cg.read(4096)
-            if not d:
-                break
-            self.fout.write(d)
-
-        self.fout.flush()
 
     def do_addchangegroup(self):
         '''DEPRECATED'''
