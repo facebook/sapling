@@ -5,10 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import bin, hex
 from i18n import _
-import repo, util, error, encoding, wireproto
-import re, urllib
+import repo, util, error, wireproto
+import re
 
 class remotelock(object):
     def __init__(self, repo):

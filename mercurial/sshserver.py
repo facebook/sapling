@@ -7,9 +7,8 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-from node import bin, hex
-import streamclone, util, hook, pushkey, wireproto
-import os, sys, tempfile, urllib, copy
+import util, hook, wireproto
+import os, sys
 
 class sshserver(object):
     def __init__(self, ui, repo):
