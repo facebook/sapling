@@ -27,11 +27,11 @@ def start_server(function):
         except (OSError, socket.error), err:
             autostart = self.ui.configbool('inotify', 'autostart', True)
 
-            if err[0] == errno.ECONNREFUSED:
+            if err.args[0] == errno.ECONNREFUSED:
                 self.ui.warn(_('inotify-client: found dead inotify server '
                                'socket; removing it\n'))
                 os.unlink(os.path.join(self.root, '.hg', 'inotify.sock'))
-            if err[0] in (errno.ECONNREFUSED, errno.ENOENT) and autostart:
+            if err.args[0] in (errno.ECONNREFUSED, errno.ENOENT) and autostart:
                 self.ui.debug('(starting inotify server)\n')
                 try:
                     try:
@@ -49,13 +49,13 @@ def start_server(function):
                         return function(self, *args)
                     except socket.error, err:
                         self.ui.warn(_('inotify-client: could not talk to new '
-                                       'inotify server: %s\n') % err[-1])
-            elif err[0] in (errno.ECONNREFUSED, errno.ENOENT):
+                                       'inotify server: %s\n') % err.args[-1])
+            elif err.args[0] in (errno.ECONNREFUSED, errno.ENOENT):
                 # silently ignore normal errors if autostart is False
                 self.ui.debug('(inotify server not running)\n')
             else:
                 self.ui.warn(_('inotify-client: failed to contact inotify '
-                               'server: %s\n') % err[-1])
+                               'server: %s\n') % err.args[-1])
 
         self.ui.traceback()
         raise QueryFailed('inotify query failed')
@@ -75,7 +75,7 @@ class client(object):
         try:
             self.sock.connect(sockpath)
         except socket.error, err:
-            if err[0] == "AF_UNIX path too long":
+            if err.args[0] == "AF_UNIX path too long":
                 sockpath = os.readlink(sockpath)
                 self.sock.connect(sockpath)
             else:

@@ -437,5 +437,5 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
                 bz.update(id, ctx)
             bz.notify(ids, util.email(ctx.user()))
     except MySQLdb.MySQLError, err:
-        raise util.Abort(_('database error: %s') % err[1])
+        raise util.Abort(_('database error: %s') % err.args[1])
 

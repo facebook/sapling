@@ -117,7 +117,7 @@ class pollable(object):
             try:
                 events = cls.poll.poll(timeout)
             except select.error, err:
-                if err[0] == errno.EINTR:
+                if err.args[0] == errno.EINTR:
                     continue
                 raise
             if events:
