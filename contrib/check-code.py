@@ -70,6 +70,10 @@ testfilters = [
 ]
 
 pypats = [
+    (r'^\s*def\s*\w+\s*\(.*,\s*\(',
+     "tuple parameter unpacking not available in Python 3+"),
+    (r'lambda\s*\(.*,.*\)',
+     "tuple parameter unpacking not available in Python 3+"),
     (r'^\s*\t', "don't use tabs"),
     (r'\S;\s*\n', "semicolon"),
     (r'\w,\w', "missing whitespace after ,"),
