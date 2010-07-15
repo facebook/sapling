@@ -12,6 +12,14 @@ import changegroup as changegroupmod
 import streamclone, repo, error, encoding, util
 import pushkey as pushkey_
 
+# list of nodes encoding / decoding
+
+def decodelist(l, sep=' '):
+    return map(bin, l.split(sep))
+
+def encodelist(l, sep=' '):
+    return sep.join(map(hex, l))
+
 # client side
 
 class wirerepository(repo.repository):
@@ -26,7 +34,7 @@ class wirerepository(repo.repository):
     def heads(self):
         d = self._call("heads")
         try:
-            return map(bin, d[:-1].split(" "))
+            return decodelist(d[:-1])
         except:
             self.abort(error.ResponseError(_("unexpected response:"), d))
 
@@ -35,8 +43,8 @@ class wirerepository(repo.repository):
         try:
             branchmap = {}
             for branchpart in d.splitlines():
-                branchheads = branchpart.split(' ')
-                branchname = urllib.unquote(branchheads[0])
+                branchname, branchheads = branchpart.split(' ', 1)
+                branchname = urllib.unquote(branchname)
                 # Earlier servers (1.3.x) send branch names in (their) local
                 # charset. The best we can do is assume it's identical to our
                 # own local charset, in case it's not utf-8.
@@ -44,17 +52,17 @@ class wirerepository(repo.repository):
                     branchname.decode('utf-8')
                 except UnicodeDecodeError:
                     branchname = encoding.fromlocal(branchname)
-                branchheads = [bin(x) for x in branchheads[1:]]
+                branchheads = decodelist(branchheads)
                 branchmap[branchname] = branchheads
             return branchmap
         except TypeError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
     def branches(self, nodes):
-        n = " ".join(map(hex, nodes))
+        n = encodelist(nodes)
         d = self._call("branches", nodes=n)
         try:
-            br = [tuple(map(bin, b.split(" "))) for b in d.splitlines()]
+            br = [tuple(decodelist(b)) for b in d.splitlines()]
             return br
         except:
             self._abort(error.ResponseError(_("unexpected response:"), d))
@@ -63,11 +71,10 @@ class wirerepository(repo.repository):
         batch = 8 # avoid giant requests
         r = []
         for i in xrange(0, len(pairs), batch):
-            n = " ".join(["-".join(map(hex, p)) for p in pairs[i:i + batch]])
+            n = " ".join([encodelist(p, '-') for p in pairs[i:i + batch]])
             d = self._call("between", pairs=n)
             try:
-                r += [l and map(bin, l.split(" ")) or []
-                      for l in d.splitlines()]
+                r.extend(l and decodelist(l) or [] for l in d.splitlines())
             except:
                 self._abort(error.ResponseError(_("unexpected response:"), d))
         return r
@@ -93,14 +100,14 @@ class wirerepository(repo.repository):
         return self._callstream('stream_out')
 
     def changegroup(self, nodes, kind):
-        n = " ".join(map(hex, nodes))
+        n = encodelist(nodes)
         f = self._callstream("changegroup", roots=n)
         return self._decompress(f)
 
     def changegroupsubset(self, bases, heads, kind):
         self.requirecap('changegroupsubset', _('look up remote changes'))
-        bases = " ".join(map(hex, bases))
-        heads = " ".join(map(hex, heads))
+        bases = encodelist(bases)
+        heads = encodelist(heads)
         return self._decompress(self._callstream("changegroupsubset",
                                                  bases=bases, heads=heads))
 
@@ -110,7 +117,7 @@ class wirerepository(repo.repository):
         remote server as a bundle. Return an integer indicating the
         result of the push (see localrepository.addchangegroup()).'''
 
-        ret, output = self._callpush("unbundle", cg, heads=' '.join(map(hex, heads)))
+        ret, output = self._callpush("unbundle", cg, heads=encodelist(heads))
         if ret == "":
             raise error.ResponseError(
                 _('push failed:'), output)
@@ -137,10 +144,10 @@ def dispatch(repo, proto, command):
     return True
 
 def between(repo, proto, pairs):
-    pairs = [map(bin, p.split("-")) for p in pairs.split(" ")]
+    pairs = [decodelist(p, '-') for p in pairs.split(" ")]
     r = []
     for b in repo.between(pairs):
-        r.append(" ".join(map(hex, b)) + "\n")
+        r.append(encodelist(b) + "\n")
     return "".join(r)
 
 def branchmap(repo, proto):
@@ -148,15 +155,15 @@ def branchmap(repo, proto):
     heads = []
     for branch, nodes in branchmap.iteritems():
         branchname = urllib.quote(branch)
-        branchnodes = [hex(node) for node in nodes]
-        heads.append('%s %s' % (branchname, ' '.join(branchnodes)))
+        branchnodes = encodelist(nodes)
+        heads.append('%s %s' % (branchname, branchnodes))
     return '\n'.join(heads)
 
 def branches(repo, proto, nodes):
-    nodes = map(bin, nodes.split(" "))
+    nodes = decodelist(nodes)
     r = []
     for b in repo.branches(nodes):
-        r.append(" ".join(map(hex, b)) + "\n")
+        r.append(encodelist(b) + "\n")
     return "".join(r)
 
 def capabilities(repo, proto):
@@ -167,19 +174,19 @@ def capabilities(repo, proto):
     return ' '.join(caps)
 
 def changegroup(repo, proto, roots):
-    nodes = map(bin, roots.split(" "))
+    nodes = decodelist(roots)
     cg = repo.changegroup(nodes, 'serve')
     proto.sendchangegroup(cg)
 
 def changegroupsubset(repo, proto, bases, heads):
-    bases = [bin(n) for n in bases.split(' ')]
-    heads = [bin(n) for n in heads.split(' ')]
+    bases = decodelist(bases)
+    heads = decodelist(heads)
     cg = repo.changegroupsubset(bases, heads, 'serve')
     proto.sendchangegroup(cg)
 
 def heads(repo, proto):
     h = repo.heads()
-    return " ".join(map(hex, h)) + "\n"
+    return encodelist(h) + "\n"
 
 def hello(repo, proto):
     '''the hello command returns a set of lines describing various
@@ -217,11 +224,11 @@ def stream(repo, proto):
         return str(inst)
 
 def unbundle(repo, proto, heads):
-    their_heads = heads.split()
+    their_heads = decodelist(heads)
 
     def check_heads():
-        heads = map(hex, repo.heads())
-        return their_heads == [hex('force')] or their_heads == heads
+        heads = repo.heads()
+        return their_heads == ['force'] or their_heads == heads
 
     # fail early if possible
     if not check_heads():
