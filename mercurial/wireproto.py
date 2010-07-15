@@ -159,6 +159,13 @@ def branches(repo, proto, nodes):
         r.append(" ".join(map(hex, b)) + "\n")
     return "".join(r)
 
+def capabilities(repo, proto):
+    caps = 'lookup changegroupsubset branchmap pushkey'.split()
+    if streamclone.allowed(repo.ui):
+        caps.append('stream=%d' % repo.changelog.version)
+    caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
+    return ' '.join(caps)
+
 def changegroup(repo, proto, roots):
     nodes = map(bin, roots.split(" "))
     cg = repo.changegroup(nodes, 'serve')
@@ -173,6 +180,16 @@ def changegroupsubset(repo, proto, bases, heads):
 def heads(repo, proto):
     h = repo.heads()
     return " ".join(map(hex, h)) + "\n"
+
+def hello(repo, proto):
+    '''the hello command returns a set of lines describing various
+    interesting things about the server, in an RFC822-like format.
+    Currently the only one defined is "capabilities", which
+    consists of a line in the form:
+
+    capabilities: space separated list of tokens
+    '''
+    return "capabilities: %s\n" % (capabilities(repo, proto))
 
 def listkeys(repo, proto, namespace):
     d = pushkey_.list(repo, namespace).items()
@@ -253,9 +270,11 @@ commands = {
     'between': (between, 'pairs'),
     'branchmap': (branchmap, ''),
     'branches': (branches, 'nodes'),
+    'capabilities': (capabilities, ''),
     'changegroup': (changegroup, 'roots'),
     'changegroupsubset': (changegroupsubset, 'bases heads'),
     'heads': (heads, ''),
+    'hello': (hello, ''),
     'listkeys': (listkeys, 'namespace'),
     'lookup': (lookup, 'key'),
     'pushkey': (pushkey, 'namespace key old new'),

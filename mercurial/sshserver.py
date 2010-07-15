@@ -12,9 +12,6 @@ import streamclone, util, hook, pushkey, wireproto
 import os, sys, tempfile, urllib, copy
 
 class sshserver(object):
-
-    caps = 'unbundle lookup changegroupsubset branchmap pushkey'.split()
-
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
@@ -105,19 +102,6 @@ class sshserver(object):
                     self.respond(r)
             else: self.respond("")
         return cmd != ''
-
-    def do_hello(self):
-        '''the hello command returns a set of lines describing various
-        interesting things about the server, in an RFC822-like format.
-        Currently the only one defined is "capabilities", which
-        consists of a line in the form:
-
-        capabilities: space separated list of tokens
-        '''
-        caps = copy.copy(self.caps)
-        if streamclone.allowed(self.repo.ui):
-            caps.append('stream=%d' % self.repo.changelog.version)
-        return "capabilities: %s\n" % (' '.join(caps),)
 
     def do_lock(self):
         '''DEPRECATED - allowing remote client to lock repo is not safe'''

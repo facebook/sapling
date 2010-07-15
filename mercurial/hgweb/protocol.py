@@ -21,14 +21,3 @@ __all__ = [
 ]
 
 HGTYPE = 'application/mercurial-0.1'
-basecaps = 'lookup changegroupsubset branchmap pushkey'.split()
-
-def capabilities(repo, req):
-    caps = copy.copy(basecaps)
-    if streamclone.allowed(repo.ui):
-        caps.append('stream=%d' % repo.changelog.version)
-    if changegroupmod.bundlepriority:
-        caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
-    rsp = ' '.join(caps)
-    req.respond(HTTP_OK, HGTYPE, length=len(rsp))
-    yield rsp
