@@ -40,7 +40,9 @@ import __builtin__
 
 def fakebuffer(sliceable, offset=0):
     return sliceable[offset:]
-if not hasattr(__builtin__, 'buffer'):
+try:
+    buffer
+except NameError:
     __builtin__.buffer = fakebuffer
 
 import subprocess
