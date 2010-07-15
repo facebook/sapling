@@ -226,18 +226,18 @@ def prepush(repo, remote, force, revs, newbranch):
     successive changegroup chunks ready to be sent over the wire and
     remoteheads is the list of remote heads.'''
     common = {}
-    remote_heads = remote.heads()
-    inc = findincoming(repo, remote, common, remote_heads, force=force)
+    remoteheads = remote.heads()
+    inc = findincoming(repo, remote, common, remoteheads, force=force)
 
     cl = repo.changelog
-    update = findoutgoing(repo, remote, common, remote_heads)
+    update = findoutgoing(repo, remote, common, remoteheads)
     outg, bases, heads = cl.nodesbetween(update, revs)
 
     if not bases:
         repo.ui.status(_("no changes found\n"))
         return None, 1
 
-    if not force and remote_heads != [nullid]:
+    if not force and remoteheads != [nullid]:
 
         def fail_multiple_heads(unsynced, branch=None):
             if branch:
@@ -286,11 +286,11 @@ def prepush(repo, remote, force, revs, newbranch):
             newmap = {}
             unsynced = set()
             for branch in branches:
-                remoteheads = remotemap[branch]
-                prunedheads = [h for h in remoteheads if h in cl.nodemap]
-                oldmap[branch] = prunedheads
-                newmap[branch] = list(prunedheads)
-                if len(remoteheads) > len(prunedheads):
+                remotebrheads = remotemap[branch]
+                prunedbrheads = [h for h in remotebrheads if h in cl.nodemap]
+                oldmap[branch] = prunedbrheads
+                newmap[branch] = list(prunedbrheads)
+                if len(remotebrheads) > len(prunedbrheads):
                     unsynced.add(branch)
 
             # 4. Update newmap with outgoing changes.
@@ -312,7 +312,7 @@ def prepush(repo, remote, force, revs, newbranch):
         else:
             # Old servers: Check for new topological heads.
             # Code based on _updatebranchcache.
-            newheads = set(h for h in remote_heads if h in cl.nodemap)
+            newheads = set(h for h in remoteheads if h in cl.nodemap)
             oldheadcnt = len(newheads)
             newheads.update(outg)
             if len(newheads) > 1:
@@ -334,4 +334,4 @@ def prepush(repo, remote, force, revs, newbranch):
         cg = repo._changegroup(nodes, 'push')
     else:
         cg = repo.changegroupsubset(update, revs, 'push')
-    return cg, remote_heads
+    return cg, remoteheads
