@@ -35,7 +35,9 @@ def findcommonincoming(repo, remote, base=None, heads=None, force=False):
     exist on the remote side and that no child of a node of base exists
     in both remote and repo.
     Furthermore base will be updated to include the nodes that exists
-    in repo and remote but no children exists in repo and remote.
+    in repo and remote but no children exists in both repo and remote.
+    In other words, base is the set of heads of the DAG resulting from
+    the intersection of the nodes from repo and remote.
     If a list of heads is specified, return only nodes which are heads
     or ancestors of these heads.
 
