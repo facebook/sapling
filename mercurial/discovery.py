@@ -252,18 +252,16 @@ def prepush(repo, remote, force, revs, newbranch):
 
         def fail_multiple_heads(unsynced, branch=None):
             if branch:
-                msg = _("abort: push creates new remote heads"
-                        " on branch '%s'!\n") % branch
+                msg = _("push creates new remote heads "
+                        "on branch '%s'!") % branch
             else:
-                msg = _("abort: push creates new remote heads!\n")
-            repo.ui.warn(msg)
+                msg = _("push creates new remote heads!")
+
             if unsynced:
-                repo.ui.status(_("(you should pull and merge or"
-                                 " use push -f to force)\n"))
+                hint = _("you should pull and merge or use push -f to force")
             else:
-                repo.ui.status(_("(did you forget to merge?"
-                                 " use push -f to force)\n"))
-            return None, 0
+                hint = _("did you forget to merge? use push -f to force")
+            raise util.Abort(msg, hint=hint)
 
         if remote.capable('branchmap'):
             # Check for each named branch if we're creating new remote heads.
@@ -283,12 +281,10 @@ def prepush(repo, remote, force, revs, newbranch):
             newbranches = branches - set(remotemap)
             if newbranches and not newbranch: # new branch requires --new-branch
                 branchnames = ', '.join(sorted(newbranches))
-                repo.ui.warn(_("abort: push creates "
-                               "new remote branches: %s!\n")
-                             % branchnames)
-                repo.ui.status(_("(use 'hg push --new-branch' to create new "
-                                 "remote branches)\n"))
-                return None, 0
+                raise util.Abort(_("push creates new remote branches: %s!")
+                                   % branchnames,
+                                 hint=_("use 'hg push --new-branch' to create"
+                                        " new remote branches"))
             branches.difference_update(newbranches)
 
             # 3. Construct the initial oldmap and newmap dicts.

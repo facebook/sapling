@@ -37,7 +37,7 @@ pushing to ../c
 searching for changes
 abort: push creates new remote heads on branch 'default'!
 (did you forget to merge? use push -f to force)
-1
+255
 pushing to ../c
 searching for changes
 no changes found
@@ -46,12 +46,12 @@ pushing to ../c
 searching for changes
 abort: push creates new remote heads on branch 'default'!
 (did you forget to merge? use push -f to force)
-1
+255
 pushing to ../c
 searching for changes
 abort: push creates new remote heads on branch 'default'!
 (did you forget to merge? use push -f to force)
-1
+255
 pushing to ../c
 searching for changes
 adding changesets
@@ -90,29 +90,29 @@ pushing to ../f
 searching for changes
 abort: push creates new remote branches: c!
 (use 'hg push --new-branch' to create new remote branches)
-1
+255
 pushing to ../f
 searching for changes
 abort: push creates new remote branches: c!
 (use 'hg push --new-branch' to create new remote branches)
-1
+255
 % multiple new branches
 pushing to ../f
 searching for changes
 abort: push creates new remote branches: c, d!
 (use 'hg push --new-branch' to create new remote branches)
-1
+255
 pushing to ../f
 searching for changes
 abort: push creates new remote branches: c, d!
 (use 'hg push --new-branch' to create new remote branches)
-1
+255
 % fail on multiple head push
 pushing to ../f
 searching for changes
 abort: push creates new remote heads on branch 'a'!
 (did you forget to merge? use push -f to force)
-1
+255
 % push replacement head on existing branches
 pushing to ../f
 searching for changes
@@ -149,7 +149,7 @@ pushing to ../f
 searching for changes
 abort: push creates new remote branches: e!
 (use 'hg push --new-branch' to create new remote branches)
-1
+255
 % using --new-branch to push new named branch
 pushing to ../f
 searching for changes
