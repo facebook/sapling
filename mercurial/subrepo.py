@@ -12,7 +12,7 @@ hg = None
 
 nullstate = ('', '', 'empty')
 
-def state(ctx):
+def state(ctx, ui):
     """return a state dict, mapping subrepo paths configured in .hgsub
     to tuple: (source from .hgsub, revision from .hgsubstate, kind
     (key in types dict))
@@ -26,6 +26,9 @@ def state(ctx):
 
     if '.hgsub' in ctx:
         read('.hgsub')
+
+    for path, src in ui.configitems('subpaths'):
+        p.set('subpaths', path, src, ui.configsource('subpaths', path))
 
     rev = {}
     if '.hgsubstate' in ctx:
@@ -45,6 +48,14 @@ def state(ctx):
                 raise util.Abort(_('missing ] in subrepo source'))
             kind, src = src.split(']', 1)
             kind = kind[1:]
+
+        for pattern, repl in p.items('subpaths'):
+            try:
+                src = re.sub(pattern, repl, src, 1)
+            except re.error, e:
+                raise util.Abort(_("bad subrepository pattern in %s: %s")
+                                 % (p.source('subpaths', pattern), e))
+
         state[path] = (src.strip(), rev.get(path, ''), kind)
 
     return state

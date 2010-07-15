@@ -1,0 +1,27 @@
+#!/bin/sh
+
+hg init outer
+cd outer
+
+echo 'sub = http://example.net/libfoo' > .hgsub
+hg add .hgsub
+
+echo '% hg debugsub with no remapping'
+hg debugsub
+
+cat > .hg/hgrc <<EOF
+[subpaths]
+http://example.net = ssh://localhost
+EOF
+
+echo '% hg debugsub with remapping'
+hg debugsub
+
+echo '% test bad subpaths pattern'
+cat > .hg/hgrc <<EOF
+[subpaths]
+.* = \1
+EOF
+hg debugsub 2>&1 | "$TESTDIR/filtertmp.py"
+
+exit 0
