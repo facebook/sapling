@@ -70,6 +70,10 @@ runtest() {
     HGUSER= hg qnew -u blue red
     catpatch ../.hg/patches/red
 
+    echo '% qnew -e -u with no username configured'
+    HGUSER= hg qnew -e -u chartreuse fucsia
+    catpatch ../.hg/patches/fucsia
+
     echo '% fail when trying to import a merge'
     hg init merge
     cd merge

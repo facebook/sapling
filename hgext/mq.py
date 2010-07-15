@@ -1999,7 +1999,7 @@ def new(ui, repo, patch, *args, **opts):
     """
     msg = cmdutil.logmessage(opts)
     def getmsg():
-        return ui.edit(msg, ui.username())
+        return ui.edit(msg, opts['user'] or ui.username())
     q = repo.mq
     opts['msg'] = msg
     if opts.get('edit'):

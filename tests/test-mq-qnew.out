@@ -42,6 +42,9 @@ diff --git a/d/b b/d/b
 % qnew -u with no username configured
 From: blue
 
+% qnew -e -u with no username configured
+From: chartreuse
+
 % fail when trying to import a merge
 adding a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -101,6 +104,10 @@ diff --git a/d/b b/d/b
 # HG changeset patch
 # Parent 
 # User blue
+% qnew -e -u with no username configured
+# HG changeset patch
+# Parent 
+# User chartreuse
 % fail when trying to import a merge
 adding a
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
