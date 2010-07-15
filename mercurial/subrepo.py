@@ -13,6 +13,10 @@ hg = None
 nullstate = ('', '', 'empty')
 
 def state(ctx):
+    """return a state dict, mapping subrepo paths configured in .hgsub
+    to tuple: (source from .hgsub, revision from .hgsubstate, kind
+    (key in types dict))
+    """
     p = config.config()
     def read(f, sections=None, remap=None):
         if f in ctx:
@@ -46,12 +50,14 @@ def state(ctx):
     return state
 
 def writestate(repo, state):
+    """rewrite .hgsubstate in (outer) repo with these subrepo states"""
     repo.wwrite('.hgsubstate',
                 ''.join(['%s %s\n' % (state[s][1], s)
                          for s in sorted(state)]), '')
 
 def submerge(repo, wctx, mctx, actx):
-    # working context, merging context, ancestor context
+    """delegated from merge.applyupdates: merging of .hgsubstate file
+    in working context, merging context and ancestor context"""
     if mctx == actx: # backwards?
         actx = wctx.p1()
     s1 = wctx.substate
@@ -131,6 +137,7 @@ def submerge(repo, wctx, mctx, actx):
     writestate(repo, sm)
 
 def relpath(sub):
+    """return path to this subrepo as seen from outermost repo"""
     if not hasattr(sub, '_repo'):
         return sub._path
     parent = sub._repo
@@ -139,6 +146,8 @@ def relpath(sub):
     return sub._repo.root[len(parent.root)+1:]
 
 def _abssource(repo, push=False):
+    """return pull/push path of repo - either based on parent repo
+    .hgsub info or on the subrepos own config"""
     if hasattr(repo, '_subparent'):
         source = repo._subsource
         if source.startswith('/') or '://' in source:
@@ -158,6 +167,7 @@ def _abssource(repo, push=False):
     return repo.ui.config('paths', 'default', repo.root)
 
 def subrepo(ctx, path):
+    """return instance of the right subrepo class for subrepo in path"""
     # subrepo inherently violates our import layering rules
     # because it wants to make repo objects from deep inside the stack
     # so we manually delay the circular imports to not break
@@ -184,7 +194,7 @@ def subrepo(ctx, path):
 # get(self, state): run whatever commands are needed to put the
 #   subrepo into this state
 # merge(self, state): merge currently-saved state with the new state.
-# push(self, force): perform whatever action is analagous to 'hg push'
+# push(self, force): perform whatever action is analogous to 'hg push'
 #   This may be a no-op on some systems.
 
 class hgsubrepo(object):
