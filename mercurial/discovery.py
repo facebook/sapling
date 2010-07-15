@@ -174,18 +174,17 @@ def findcommonincoming(repo, remote, base=None, heads=None, force=False):
 
     return base.keys(), list(fetch), heads
 
-def findoutgoing(repo, remote, base=None, heads=None, force=False):
+def findoutgoing(repo, remote, base=None, remoteheads=None, force=False):
     """Return list of nodes that are roots of subsets not in remote
 
     If base dict is specified, assume that these nodes and their parents
     exist on the remote side.
-    If a list of heads is specified, return only nodes which are heads
-    or ancestors of these heads, and return a second element which
-    contains all remote heads which get new children.
+    If remotehead is specified, assume it is the list of the heads from
+    the remote repository.
     """
     if base is None:
         base = {}
-        findincoming(repo, remote, base, heads, force=force)
+        findincoming(repo, remote, base, remoteheads, force=force)
 
     repo.ui.debug("common changesets up to "
                   + " ".join(map(short, base.keys())) + "\n")
@@ -205,22 +204,12 @@ def findoutgoing(repo, remote, base=None, heads=None, force=False):
     # find every node whose parents have been pruned
     subset = []
     # find every remote head that will get new children
-    updated_heads = set()
     for n in remain:
         p1, p2 = repo.changelog.parents(n)
         if p1 not in remain and p2 not in remain:
             subset.append(n)
-        if heads:
-            if p1 in heads:
-                updated_heads.add(p1)
-            if p2 in heads:
-                updated_heads.add(p2)
 
-    # this is the set of all roots we have to push
-    if heads:
-        return subset, list(updated_heads)
-    else:
-        return subset
+    return subset
 
 def prepush(repo, remote, force, revs, newbranch):
     '''Analyze the local and remote repositories and determine which
@@ -241,7 +230,7 @@ def prepush(repo, remote, force, revs, newbranch):
     inc = findincoming(repo, remote, common, remote_heads, force=force)
 
     cl = repo.changelog
-    update, updated_heads = findoutgoing(repo, remote, common, remote_heads)
+    update = findoutgoing(repo, remote, common, remote_heads)
     outg, bases, heads = cl.nodesbetween(update, revs)
 
     if not bases:
