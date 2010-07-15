@@ -6,8 +6,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, zlib, sys, cStringIO, urllib
-from mercurial import ui, hg, hook, error, encoding, templater, wireproto, util
+import os, sys, urllib
+from mercurial import ui, hg, hook, error, encoding, templater, util
 from common import get_mtime, ErrorResponse, permhooks
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
@@ -21,63 +21,6 @@ perms = {
     'unbundle': 'push',
     'pushkey': 'push',
 }
-
-HGTYPE = 'application/mercurial-0.1'
-class webproto(object):
-    def __init__(self, req):
-        self.req = req
-        self.response = ''
-    def getargs(self, args):
-        data = {}
-        keys = args.split()
-        for k in keys:
-            if k == '*':
-                star = {}
-                for key in self.req.form.keys():
-                    if key not in keys:
-                        star[key] = self.req.form[key][0]
-                data['*'] = star
-            else:
-                data[k] = self.req.form[k][0]
-        return [data[k] for k in keys]
-    def sendchangegroup(self, cg):
-        self.req.respond(HTTP_OK, HGTYPE)
-        z = zlib.compressobj()
-        while 1:
-            chunk = cg.read(4096)
-            if not chunk:
-                break
-            self.req.write(z.compress(chunk))
-        self.req.write(z.flush())
-    def sendstream(self, source):
-        self.req.respond(HTTP_OK, HGTYPE)
-        for chunk in source:
-            self.req.write(chunk)
-    def respond(self, s):
-        self.req.respond(HTTP_OK, HGTYPE, length=len(s))
-        self.response = s
-    def getfile(self, fp):
-        length = int(self.req.env['CONTENT_LENGTH'])
-        for s in util.filechunkiter(self.req, limit=length):
-            fp.write(s)
-    def redirect(self):
-        self.oldio = sys.stdout, sys.stderr
-        sys.stderr = sys.stdout = cStringIO.StringIO()
-    def respondpush(self, ret):
-        val = sys.stdout.getvalue()
-        sys.stdout, sys.stderr = self.oldio
-        self.req.respond(HTTP_OK, HGTYPE)
-        self.response = '%d\n%s' % (ret, val)
-    def _client(self):
-        return 'remote:%s:%s:%s' % (
-            self.req.env.get('wsgi.url_scheme') or 'http',
-            urllib.quote(self.req.env.get('REMOTE_HOST', '')),
-            urllib.quote(self.req.env.get('REMOTE_USER', '')))
-
-def callproto(repo, req, cmd):
-    p = webproto(req)
-    r = wireproto.dispatch(repo, p, cmd)
-    yield p.response
 
 class hgweb(object):
     def __init__(self, repo, name=None, baseui=None):
@@ -169,26 +112,18 @@ class hgweb(object):
         # and the clients always use the old URL structure
 
         cmd = req.form.get('cmd', [''])[0]
-        if cmd and cmd in protocol.__all__:
+        if protocol.iscmd(cmd):
             if query:
                 raise ErrorResponse(HTTP_NOT_FOUND)
-            try:
-                if cmd in perms:
-                    try:
-                        self.check_perm(req, perms[cmd])
-                    except ErrorResponse, inst:
-                        if cmd == 'unbundle':
-                            req.drain()
-                        raise
-                if cmd in wireproto.commands:
-                    return callproto(self.repo, req, cmd)
-                method = getattr(protocol, cmd)
-                return method(self.repo, req)
-            except ErrorResponse, inst:
-                req.respond(inst, protocol.HGTYPE)
-                if not inst.message:
-                    return []
-                return '0\n%s\n' % inst.message,
+            if cmd in perms:
+                try:
+                    self.check_perm(req, perms[cmd])
+                except ErrorResponse, inst:
+                    if cmd == 'unbundle':
+                        req.drain()
+                    req.respond(inst, protocol.HGTYPE)
+                    return '0\n%s\n' % inst.message
+            return protocol.call(self.repo, req, cmd)
 
         # translate user-visible url structure to internal structure
 
