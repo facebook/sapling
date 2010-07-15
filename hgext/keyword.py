@@ -159,9 +159,9 @@ class kwtemplater(object):
         kwpat = r'\$(%s)(: [^$\n\r]*? )??\$' % '|'.join(escaped)
         self.re_kw = re.compile(kwpat)
 
-        templatefilters.filters['utcdate'] = utcdate
-        templatefilters.filters['svnisodate'] = svnisodate
-        templatefilters.filters['svnutcdate'] = svnutcdate
+        templatefilters.filters.update({'utcdate': utcdate,
+                                        'svnisodate': svnisodate,
+                                        'svnutcdate': svnutcdate})
 
     def substitute(self, data, path, ctx, subfunc):
         '''Replaces keywords in data with expanded template.'''
