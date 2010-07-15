@@ -72,6 +72,20 @@ class sshserver(object):
             self.fout.write(chunk)
         self.fout.flush()
 
+    def getfile(self, fpout):
+        self.respond('')
+        count = int(self.fin.readline())
+        while count:
+            fpout.write(self.fin.read(count))
+            count = int(self.fin.readline())
+
+    def redirect(self):
+        pass
+
+    def respondpush(self, ret):
+        self.respond('')
+        self.respond(str(ret))
+
     def serve_forever(self):
         try:
             while self.serve_one():
@@ -127,58 +141,10 @@ class sshserver(object):
             return
 
         self.respond("")
-        r = self.repo.addchangegroup(self.fin, 'serve', self.client_url(),
+        r = self.repo.addchangegroup(self.fin, 'serve', self._client(),
                                      lock=self.lock)
         return str(r)
 
-    def client_url(self):
+    def _client(self):
         client = os.environ.get('SSH_CLIENT', '').split(' ', 1)[0]
         return 'remote:ssh:' + client
-
-    def do_unbundle(self):
-        their_heads = self.getarg('heads').split()
-
-        def check_heads():
-            heads = map(hex, self.repo.heads())
-            return their_heads == [hex('force')] or their_heads == heads
-
-        # fail early if possible
-        if not check_heads():
-            self.respond(_('unsynced changes'))
-            return
-
-        self.respond('')
-
-        # write bundle data to temporary file because it can be big
-        fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
-        fp = os.fdopen(fd, 'wb+')
-        try:
-            count = int(self.fin.readline())
-            while count:
-                fp.write(self.fin.read(count))
-                count = int(self.fin.readline())
-
-            was_locked = self.lock is not None
-            if not was_locked:
-                self.lock = self.repo.lock()
-            try:
-                if not check_heads():
-                    # someone else committed/pushed/unbundled while we
-                    # were transferring data
-                    self.respond(_('unsynced changes'))
-                    return
-                self.respond('')
-
-                # push can proceed
-
-                fp.seek(0)
-                r = self.repo.addchangegroup(fp, 'serve', self.client_url(),
-                                             lock=self.lock)
-                self.respond(str(r))
-            finally:
-                if not was_locked:
-                    self.lock.release()
-                    self.lock = None
-        finally:
-            fp.close()
-            os.unlink(tempname)

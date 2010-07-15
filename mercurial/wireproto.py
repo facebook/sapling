@@ -5,10 +5,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import urllib, tempfile, os
 from i18n import _
 from node import bin, hex
-import urllib
-import streamclone, repo, error, encoding
+import changegroup as changegroupmod
+import streamclone, repo, error, encoding, util
 import pushkey as pushkey_
 
 # client side
@@ -198,6 +199,56 @@ def stream(repo, proto):
     except streamclone.StreamException, inst:
         return str(inst)
 
+def unbundle(repo, proto, heads):
+    their_heads = heads.split()
+
+    def check_heads():
+        heads = map(hex, repo.heads())
+        return their_heads == [hex('force')] or their_heads == heads
+
+    # fail early if possible
+    if not check_heads():
+        repo.respond(_('unsynced changes'))
+        return
+
+    # write bundle data to temporary file because it can be big
+    fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
+    fp = os.fdopen(fd, 'wb+')
+    r = 0
+    proto.redirect()
+    try:
+        proto.getfile(fp)
+        lock = repo.lock()
+        try:
+            if not check_heads():
+                # someone else committed/pushed/unbundled while we
+                # were transferring data
+                proto.respond(_('unsynced changes'))
+                return
+
+            # push can proceed
+            fp.seek(0)
+            header = fp.read(6)
+            if header.startswith('HG'):
+                if not header.startswith('HG10'):
+                    raise ValueError('unknown bundle version')
+                elif header not in changegroupmod.bundletypes:
+                    raise ValueError('unknown bundle compression type')
+            gen = changegroupmod.unbundle(header, fp)
+
+            try:
+                r = repo.addchangegroup(gen, 'serve', proto._client(),
+                                        lock=lock)
+            except util.Abort, inst:
+                sys.stderr.write("abort: %s\n" % inst)
+        finally:
+            lock.release()
+            proto.respondpush(r)
+
+    finally:
+        fp.close()
+        os.unlink(tempname)
+
 commands = {
     'between': (between, 'pairs'),
     'branchmap': (branchmap, ''),
@@ -209,4 +260,5 @@ commands = {
     'lookup': (lookup, 'key'),
     'pushkey': (pushkey, 'namespace key old new'),
     'stream_out': (stream, ''),
+    'unbundle': (unbundle, 'heads'),
 }

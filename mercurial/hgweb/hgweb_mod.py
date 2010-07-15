@@ -6,8 +6,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, zlib
-from mercurial import ui, hg, hook, error, encoding, templater, wireproto
+import os, zlib, sys, cStringIO, urllib
+from mercurial import ui, hg, hook, error, encoding, templater, wireproto, util
 from common import get_mtime, ErrorResponse, permhooks
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
@@ -56,6 +56,23 @@ class webproto(object):
     def respond(self, s):
         self.req.respond(HTTP_OK, HGTYPE, length=len(s))
         self.response = s
+    def getfile(self, fp):
+        length = int(self.req.env['CONTENT_LENGTH'])
+        for s in util.filechunkiter(self.req, limit=length):
+            fp.write(s)
+    def redirect(self):
+        self.oldio = sys.stdout, sys.stderr
+        sys.stderr = sys.stdout = cStringIO.StringIO()
+    def respondpush(self, ret):
+        val = sys.stdout.getvalue()
+        sys.stdout, sys.stderr = self.oldio
+        self.req.respond(HTTP_OK, HGTYPE)
+        self.response = '%d\n%s' % (ret, val)
+    def _client(self):
+        return 'remote:%s:%s:%s' % (
+            self.req.env.get('wsgi.url_scheme') or 'http',
+            urllib.quote(self.req.env.get('REMOTE_HOST', '')),
+            urllib.quote(self.req.env.get('REMOTE_USER', '')))
 
 def callproto(repo, req, cmd):
     p = webproto(req)
