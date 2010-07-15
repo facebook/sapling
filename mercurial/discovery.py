@@ -238,20 +238,6 @@ def prepush(repo, remote, force, revs, newbranch):
         return None, 1
 
     if not force and remoteheads != [nullid]:
-
-        def fail_multiple_heads(unsynced, branch=None):
-            if branch:
-                msg = _("push creates new remote heads "
-                        "on branch '%s'!") % branch
-            else:
-                msg = _("push creates new remote heads!")
-
-            if unsynced:
-                hint = _("you should pull and merge or use push -f to force")
-            else:
-                hint = _("did you forget to merge? use push -f to force")
-            raise util.Abort(msg, hint=hint)
-
         if remote.capable('branchmap'):
             # Check for each named branch if we're creating new remote heads.
             # To be a remote head after push, node must be either:
@@ -298,23 +284,12 @@ def prepush(repo, remote, force, revs, newbranch):
             ctxgen = (repo[n] for n in outg)
             repo._updatebranchcache(newmap, ctxgen)
 
-            # 5. Check for new heads.
-            # If there are more heads after the push than before, a suitable
-            # warning, depending on unsynced status, is displayed.
-            for branch in branches:
-                if len(newmap[branch]) > len(oldmap[branch]):
-                    return fail_multiple_heads(branch in unsynced, branch)
-
-            # 6. Check for unsynced changes on involved branches.
-            if unsynced:
-                repo.ui.warn(_("note: unsynced remote changes!\n"))
-
         else:
-            # Old servers: Check for new topological heads.
-            # Code based on _updatebranchcache.
-            newheads = set(h for h in remoteheads if h in cl.nodemap)
-            oldheadcnt = len(newheads)
-            newheads.update(outg)
+            # 1-4b. old servers: Check for new topological heads.
+            # Construct {old,new}map with branch = None (topological branch).
+            # (code based on _updatebranchcache)
+            oldheads = set(h for h in remoteheads if h in cl.nodemap)
+            newheads = oldheads.union(outg)
             if len(newheads) > 1:
                 for latest in reversed(outg):
                     if latest not in newheads:
@@ -323,10 +298,31 @@ def prepush(repo, remote, force, revs, newbranch):
                     reachable = cl.reachable(latest, cl.node(minhrev))
                     reachable.remove(latest)
                     newheads.difference_update(reachable)
-            if len(newheads) > oldheadcnt:
-                return fail_multiple_heads(inc)
-            if inc:
-                repo.ui.warn(_("note: unsynced remote changes!\n"))
+            branches = set([None])
+            newmap = {None: newheads}
+            oldmap = {None: oldheads}
+            unsynced = inc and branches or set()
+
+        # 5. Check for new heads.
+        # If there are more heads after the push than before, a suitable
+        # warning, depending on unsynced status, is displayed.
+        for branch in branches:
+            if len(newmap[branch]) > len(oldmap[branch]):
+                if branch:
+                    msg = _("push creates new remote heads "
+                            "on branch '%s'!") % branch
+                else:
+                    msg = _("push creates new remote heads!")
+
+                if branch in unsynced:
+                    hint = _("you should pull and merge or use push -f to force")
+                else:
+                    hint = _("did you forget to merge? use push -f to force")
+                raise util.Abort(msg, hint=hint)
+
+        # 6. Check for unsynced changes on involved branches.
+        if unsynced:
+            repo.ui.warn(_("note: unsynced remote changes!\n"))
 
     if revs is None:
         # use the fast path, no race possible on push
