@@ -4,16 +4,20 @@
 
 echo "[extensions]" >> $HGRCPATH
 echo "mq=" >> $HGRCPATH
+echo "graphlog=" >> $HGRCPATH
 
+restore() {
+    hg unbundle -q .hg/strip-backup/*
+    rm .hg/strip-backup/*
+}
 teststrip() {
     hg up -C $1
     echo % before update $1, strip $2
     hg parents
-    hg strip $2 | hidebackup
+    hg --traceback strip $2 | hidebackup
     echo % after update $1, strip $2
     hg parents
-    hg unbundle -q .hg/strip-backup/*
-    rm .hg/strip-backup/*
+    restore
 }
 
 hg init test
@@ -53,6 +57,25 @@ hg parents
 hg strip 4 2>&1 | hidebackup
 echo % after strip of merge parent
 hg parents
+restore
+
+hg up
+hg glog
+echo % 2 is parent of 3, only one strip should happen
+hg strip 2 3 | hidebackup
+hg glog
+restore
+hg glog
+echo % 2 different branches: 2 strips
+hg strip 2 4 | hidebackup
+hg glog
+restore
+echo % 2 different branches and a common ancestor: 1 strip
+hg strip 1 2 4 | hidebackup
+restore
+
+# remove branchy history for qimport tests
+hg strip 3 | hidebackup
 
 #strip of applied mq should cleanup status file
 hg up -C 3

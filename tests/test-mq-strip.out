@@ -166,6 +166,103 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     b
 
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  changeset:   4:264128213d29
+|  tag:         tip
+|  parent:      1:ef3a871183d7
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     c
+|
+| o  changeset:   3:443431ffac4f
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:00 1970 +0000
+| |  summary:     e
+| |
+| o  changeset:   2:65bd5f99a4a3
+|/   user:        test
+|    date:        Thu Jan 01 00:00:00 1970 +0000
+|    summary:     d
+|
+o  changeset:   1:ef3a871183d7
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     b
+|
+o  changeset:   0:9ab35a2d17cb
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     a
+
+% 2 is parent of 3, only one strip should happen
+saved backup bundle to 
+@  changeset:   2:264128213d29
+|  tag:         tip
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     c
+|
+o  changeset:   1:ef3a871183d7
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     b
+|
+o  changeset:   0:9ab35a2d17cb
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     a
+
+o  changeset:   4:443431ffac4f
+|  tag:         tip
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     e
+|
+o  changeset:   3:65bd5f99a4a3
+|  parent:      1:ef3a871183d7
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     d
+|
+| @  changeset:   2:264128213d29
+|/   user:        test
+|    date:        Thu Jan 01 00:00:00 1970 +0000
+|    summary:     c
+|
+o  changeset:   1:ef3a871183d7
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     b
+|
+o  changeset:   0:9ab35a2d17cb
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     a
+
+% 2 different branches: 2 strips
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+saved backup bundle to 
+saved backup bundle to 
+@  changeset:   2:65bd5f99a4a3
+|  tag:         tip
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     d
+|
+o  changeset:   1:ef3a871183d7
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     b
+|
+o  changeset:   0:9ab35a2d17cb
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     a
+
+% 2 different branches and a common ancestor: 1 strip
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+saved backup bundle to 
+saved backup bundle to 
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % applied patches before strip
 2.diff
 3.diff

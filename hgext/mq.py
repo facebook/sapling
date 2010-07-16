@@ -513,7 +513,7 @@ class queue(object):
 
         # apply failed, strip away that rev and merge.
         hg.clean(repo, head)
-        self.strip(repo, n, update=False, backup='strip')
+        self.strip(repo, [n], update=False, backup='strip')
 
         ctx = repo[rev]
         ret = hg.merge(repo, rev)
@@ -895,7 +895,7 @@ class queue(object):
         finally:
             release(wlock)
 
-    def strip(self, repo, rev, update=True, backup="all", force=None):
+    def strip(self, repo, revs, update=True, backup="all", force=None):
         wlock = lock = None
         try:
             wlock = repo.wlock()
@@ -903,12 +903,13 @@ class queue(object):
 
             if update:
                 self.check_localchanges(repo, force=force, refresh=False)
-                urev = self.qparents(repo, rev)
+                urev = self.qparents(repo, revs[0])
                 hg.clean(repo, urev)
                 repo.dirstate.write()
 
             self.removeundo(repo)
-            repair.strip(self.ui, repo, rev, backup)
+            for rev in revs:
+                repair.strip(self.ui, repo, rev, backup)
             # strip may have unbundled a set of backed up revisions after
             # the actual strip
             self.removeundo(repo)
@@ -1197,7 +1198,7 @@ class queue(object):
             for patch in reversed(self.applied[start:end]):
                 self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
-            self.strip(repo, rev, update=False, backup='strip')
+            self.strip(repo, [rev], update=False, backup='strip')
             if self.applied:
                 self.ui.write(_("now at: %s\n") % self.applied[-1].name)
             else:
@@ -1377,7 +1378,7 @@ class queue(object):
                 repo.dirstate.setparents(*cparents)
                 self.applied.pop()
                 self.applied_dirty = 1
-                self.strip(repo, top, update=False,
+                self.strip(repo, [top], update=False,
                            backup='strip')
             except:
                 repo.dirstate.invalidate()
@@ -1532,7 +1533,7 @@ class queue(object):
                     update = True
                 else:
                     update = False
-                self.strip(repo, rev, update=update, backup='strip')
+                self.strip(repo, [rev], update=update, backup='strip')
         if qpp:
             self.ui.warn(_("saved queue repository parents: %s %s\n") %
                          (short(qpp[0]), short(qpp[1])))
@@ -1934,7 +1935,7 @@ def clone(ui, source, dest=None, **opts):
         if qbase:
             ui.note(_('stripping applied patches from destination '
                       'repository\n'))
-            dr.mq.strip(dr, qbase, update=False, backup=None)
+            dr.mq.strip(dr, [qbase], update=False, backup=None)
         if not opts['noupdate']:
             ui.note(_('updating destination repository\n'))
             hg.update(dr, dr.changelog.tip())
@@ -2396,14 +2397,12 @@ def save(ui, repo, **opts):
             pass
     return 0
 
-def strip(ui, repo, rev, **opts):
-    """strip a changeset and all its descendants from the repository
+def strip(ui, repo, *revs, **opts):
+    """strip changesets and all their descendants from the repository
 
-    The strip command removes all changesets whose local revision
-    number is greater than or equal to REV, and then restores any
-    changesets that are not descendants of REV. If the working
-    directory has uncommitted changes, the operation is aborted unless
-    the --force flag is supplied.
+    The strip command removes the specified changesets and all their
+    descendants. If the working directory has uncommitted changes,
+    the operation is aborted unless the --force flag is supplied.
 
     If a parent of the working directory is stripped, then the working
     directory will automatically be updated to the most recent
@@ -2426,30 +2425,42 @@ def strip(ui, repo, rev, **opts):
     elif opts['nobackup']:
         backup = 'none'
 
-    rev = repo.lookup(rev)
-    p = repo.dirstate.parents()
     cl = repo.changelog
-    update = True
-    if p[0] == nullid:
-        update = False
-    elif p[1] == nullid and rev != cl.ancestor(p[0], rev):
-        update = False
-    elif rev not in (cl.ancestor(p[0], rev), cl.ancestor(p[1], rev)):
-        update = False
+    revs = set(cl.rev(repo.lookup(r)) for r in revs)
+
+    descendants = set(cl.descendants(*revs))
+    strippedrevs = revs.union(descendants)
+    roots = revs.difference(descendants)
+
+    update = False
+    # if one of the wdir parent is stripped we'll need
+    # to update away to an earlier revision
+    for p in repo.dirstate.parents():
+        if p != nullid and cl.rev(p) in strippedrevs:
+            update = True
+            break
+
+    rootnodes = set(cl.node(r) for r in roots)
 
     q = repo.mq
     if q.applied:
-        if rev == cl.ancestor(repo.lookup('qtip'), rev):
+        # refresh queue state if we're about to strip
+        # applied patches
+        if cl.rev(repo.lookup('qtip')) in strippedrevs:
             q.applied_dirty = True
             start = 0
             end = len(q.applied)
-            applied_list = [i.node for i in q.applied]
-            if rev in applied_list:
-                start = applied_list.index(rev)
+            for i, statusentry in enumerate(q.applied):
+                if statusentry.node in rootnodes:
+                    # if one of the stripped roots is an applied
+                    # patch, only part of the queue is stripped
+                    start = i
+                    break
             del q.applied[start:end]
             q.save_dirty()
 
-    repo.mq.strip(repo, rev, backup=backup, update=update, force=opts['force'])
+    repo.mq.strip(repo, list(rootnodes), backup=backup, update=update,
+                  force=opts['force'])
     return 0
 
 def select(ui, repo, *args, **opts):
@@ -3008,7 +3019,7 @@ cmdtable = {
                                   ' number greater than REV which are not'
                                   ' descendants of REV (DEPRECATED)')),
            ('n', 'nobackup', None, _('no backups'))],
-          _('hg strip [-f] [-n] REV')),
+          _('hg strip [-f] [-n] REV...')),
      "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
     "qunapplied":
         (unapplied,
