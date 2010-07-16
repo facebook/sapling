@@ -150,9 +150,10 @@ def strip(ui, repo, node, backup="all"):
                 os.unlink(chgrpfile)
     except:
         if backupfile:
-            ui.warn("strip failed, full bundle stored in '%s'\n" % backupfile)
+            ui.warn(_("strip failed, full bundle stored in '%s'\n")
+                    % backupfile)
         elif saveheads:
-            ui.warn("strip failed, partial bundle stored in '%s'\n"
+            ui.warn(_("strip failed, partial bundle stored in '%s'\n")
                     % chgrpfile)
         raise
 

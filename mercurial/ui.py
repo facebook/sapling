@@ -304,7 +304,7 @@ class ui(object):
         p = self.config('paths', loc)
         if p:
             if '%%' in p:
-                self.warn("(deprecated '%%' in path %s=%s from %s)\n" %
+                self.warn(_("(deprecated '%%' in path %s=%s from %s)\n") %
                           (loc, p, self.configsource('paths', loc)))
                 p = p.replace('%%', '%')
             p = util.expandpath(p)
