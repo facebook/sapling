@@ -1313,7 +1313,6 @@ class localrepository(repo.repository):
         for n in bases:
             knownheads.update(cl.parents(n))
         knownheads.discard(nullid)
-        knownheads = list(knownheads)
         if knownheads:
             # Now that we know what heads are known, we can compute which
             # changesets are known.  The recipient must know about all
