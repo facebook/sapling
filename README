@@ -48,8 +48,14 @@ Real example::
 
  $ hg clone http://python-nose.googlecode.com/svn nose-hg
 
-Note, you should pull from the root subversion directory, not specific
-folders (such as trunk).
+Note: there are two slightly different ways of cloning
+repositories. The most common desire is to have all the
+branches/tags/trunk from the svn repo, in which case you should clone
+from one level above trunk (as in the example above.) If you instead
+want to clone just a single directory rather than the complete
+branches/tags/trunk structure of the repo, clone the specific
+directory path. In the example above, to get *only* trunk, you would
+clone `http://python-nose.googlecode.com/svn/trunk`.
 
 Pull new revisions into an already-converted repo::
 
