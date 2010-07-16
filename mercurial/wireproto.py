@@ -138,7 +138,7 @@ def dispatch(repo, proto, command):
     args = proto.getargs(spec)
     r = func(repo, proto, *args)
     if r != None:
-        proto.respond(r)
+        proto.sendresponse(r)
 
 def between(repo, proto, pairs):
     pairs = [decodelist(p, '-') for p in pairs.split(" ")]
@@ -262,7 +262,7 @@ def unbundle(repo, proto, heads):
                 sys.stderr.write("abort: %s\n" % inst)
         finally:
             lock.release()
-            proto.respondpush(r)
+            proto.sendpushresponse(r)
 
     finally:
         fp.close()

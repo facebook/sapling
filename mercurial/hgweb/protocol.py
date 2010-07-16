@@ -35,7 +35,7 @@ class webproto(object):
     def redirect(self):
         self.oldio = sys.stdout, sys.stderr
         sys.stderr = sys.stdout = cStringIO.StringIO()
-    def respond(self, s):
+    def sendresponse(self, s):
         self.req.respond(HTTP_OK, HGTYPE, length=len(s))
         self.response = s
     def sendchangegroup(self, cg):
@@ -51,7 +51,7 @@ class webproto(object):
         self.req.respond(HTTP_OK, HGTYPE)
         for chunk in source:
             self.req.write(chunk)
-    def respondpush(self, ret):
+    def sendpushresponse(self, ret):
         val = sys.stdout.getvalue()
         sys.stdout, sys.stderr = self.oldio
         self.req.respond(HTTP_OK, HGTYPE)

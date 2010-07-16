@@ -50,7 +50,7 @@ class sshserver(object):
         return self.getargs(name)[0]
 
     def getfile(self, fpout):
-        self.respond('')
+        self.sendresponse('')
         count = int(self.fin.readline())
         while count:
             fpout.write(self.fin.read(count))
@@ -59,7 +59,7 @@ class sshserver(object):
     def redirect(self):
         pass
 
-    def respond(self, v):
+    def sendresponse(self, v):
         self.fout.write("%d\n" % len(v))
         self.fout.write(v)
         self.fout.flush()
@@ -78,9 +78,9 @@ class sshserver(object):
             self.fout.write(chunk)
         self.fout.flush()
 
-    def respondpush(self, ret):
-        self.respond('')
-        self.respond(str(ret))
+    def sendpushresponse(self, ret):
+        self.sendresponse('')
+        self.sendresponse(str(ret))
 
     def serve_forever(self):
         try:
@@ -100,8 +100,8 @@ class sshserver(object):
             if impl:
                 r = impl()
                 if r is not None:
-                    self.respond(r)
-            else: self.respond("")
+                    self.sendresponse(r)
+            else: self.sendresponse("")
         return cmd != ''
 
     def do_lock(self):
@@ -122,10 +122,10 @@ class sshserver(object):
         '''DEPRECATED'''
 
         if not self.lock:
-            self.respond("not locked")
+            self.sendresponse("not locked")
             return
 
-        self.respond("")
+        self.sendresponse("")
         r = self.repo.addchangegroup(self.fin, 'serve', self._client(),
                                      lock=self.lock)
         return str(r)
