@@ -6,15 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import util, error
-
 from mercurial import store
-
-class StreamException(Exception):
-    def __init__(self, code):
-        Exception.__init__(self)
-        self.code = code
-    def __str__(self):
-        return '%i\n' % self.code
 
 # if server supports streaming clone, it advertises "stream"
 # capability with value that is version+flags of repo it is serving.
@@ -40,7 +32,8 @@ def stream_out(repo):
     writes to file-like object, must support write() and optional flush().'''
 
     if not allowed(repo.ui):
-        raise StreamException(1)
+        yield '1\n' # error: 1
+        return
 
     entries = []
     total_bytes = 0
@@ -55,9 +48,10 @@ def stream_out(repo):
         finally:
             lock.release()
     except error.LockError:
-        raise StreamException(2)
+        yield '2\n' # error: 2
+        return
 
-    yield '0\n'
+    yield '0\n' # success
     repo.ui.debug('%d files, %d bytes to transfer\n' %
                   (len(entries), total_bytes))
     yield '%d %d\n' % (len(entries), total_bytes)
