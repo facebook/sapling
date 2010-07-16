@@ -28,6 +28,16 @@ class webproto(object):
             else:
                 data[k] = self.req.form[k][0]
         return [data[k] for k in keys]
+    def getfile(self, fp):
+        length = int(self.req.env['CONTENT_LENGTH'])
+        for s in util.filechunkiter(self.req, limit=length):
+            fp.write(s)
+    def redirect(self):
+        self.oldio = sys.stdout, sys.stderr
+        sys.stderr = sys.stdout = cStringIO.StringIO()
+    def respond(self, s):
+        self.req.respond(HTTP_OK, HGTYPE, length=len(s))
+        self.response = s
     def sendchangegroup(self, cg):
         self.req.respond(HTTP_OK, HGTYPE)
         z = zlib.compressobj()
@@ -41,16 +51,6 @@ class webproto(object):
         self.req.respond(HTTP_OK, HGTYPE)
         for chunk in source:
             self.req.write(chunk)
-    def respond(self, s):
-        self.req.respond(HTTP_OK, HGTYPE, length=len(s))
-        self.response = s
-    def getfile(self, fp):
-        length = int(self.req.env['CONTENT_LENGTH'])
-        for s in util.filechunkiter(self.req, limit=length):
-            fp.write(s)
-    def redirect(self):
-        self.oldio = sys.stdout, sys.stderr
-        sys.stderr = sys.stdout = cStringIO.StringIO()
     def respondpush(self, ret):
         val = sys.stdout.getvalue()
         sys.stdout, sys.stderr = self.oldio

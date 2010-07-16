@@ -49,6 +49,16 @@ class sshserver(object):
     def getarg(self, name):
         return self.getargs(name)[0]
 
+    def getfile(self, fpout):
+        self.respond('')
+        count = int(self.fin.readline())
+        while count:
+            fpout.write(self.fin.read(count))
+            count = int(self.fin.readline())
+
+    def redirect(self):
+        pass
+
     def respond(self, v):
         self.fout.write("%d\n" % len(v))
         self.fout.write(v)
@@ -67,16 +77,6 @@ class sshserver(object):
         for chunk in source:
             self.fout.write(chunk)
         self.fout.flush()
-
-    def getfile(self, fpout):
-        self.respond('')
-        count = int(self.fin.readline())
-        while count:
-            fpout.write(self.fin.read(count))
-            count = int(self.fin.readline())
-
-    def redirect(self):
-        pass
 
     def respondpush(self, ret):
         self.respond('')
