@@ -229,8 +229,7 @@ def unbundle(repo, proto, heads):
 
     # fail early if possible
     if not check_heads():
-        repo.respond(_('unsynced changes'))
-        return
+        return _('unsynced changes')
 
     # write bundle data to temporary file because it can be big
     fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
@@ -244,8 +243,7 @@ def unbundle(repo, proto, heads):
             if not check_heads():
                 # someone else committed/pushed/unbundled while we
                 # were transferring data
-                proto.respond(_('unsynced changes'))
-                return
+                return _('unsynced changes')
 
             # push can proceed
             fp.seek(0)
