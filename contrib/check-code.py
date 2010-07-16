@@ -108,7 +108,7 @@ pypats = [
     (r'[^+=*!<>&| -](\s=|=\s)[^= ]',
      "wrong whitespace around ="),
     (r'raise Exception', "don't raise generic exceptions"),
-    (r'ui\.(status|progress|write|note)\([\'\"]x',
+    (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "warning: unwrapped ui message"),
 ]
 
