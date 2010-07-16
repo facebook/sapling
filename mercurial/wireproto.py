@@ -134,14 +134,11 @@ class wirerepository(repo.repository):
 # server side
 
 def dispatch(repo, proto, command):
-    if command not in commands:
-        return False
     func, spec = commands[command]
     args = proto.getargs(spec)
     r = func(repo, proto, *args)
     if r != None:
         proto.respond(r)
-    return True
 
 def between(repo, proto, pairs):
     pairs = [decodelist(p, '-') for p in pairs.split(" ")]

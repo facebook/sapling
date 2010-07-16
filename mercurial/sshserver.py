@@ -93,7 +93,9 @@ class sshserver(object):
 
     def serve_one(self):
         cmd = self.fin.readline()[:-1]
-        if cmd and not wireproto.dispatch(self.repo, self, cmd):
+        if cmd and cmd in wireproto.commands:
+            wireproto.dispatch(self.repo, self, cmd)
+        elif cmd:
             impl = getattr(self, 'do_' + cmd, None)
             if impl:
                 r = impl()

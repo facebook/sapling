@@ -67,5 +67,5 @@ def iscmd(cmd):
 
 def call(repo, req, cmd):
     p = webproto(req)
-    r = wireproto.dispatch(repo, p, cmd)
+    wireproto.dispatch(repo, p, cmd)
     yield p.response
