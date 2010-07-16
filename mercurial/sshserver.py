@@ -59,18 +59,16 @@ class sshserver(object):
     def redirect(self):
         pass
 
-    def sendresponse(self, v):
-        self.fout.write("%d\n" % len(v))
-        self.fout.write(v)
-        self.fout.flush()
-
-    def sendchangegroup(self, changegroup):
+    def groupchunks(self, changegroup):
         while True:
             d = changegroup.read(4096)
             if not d:
                 break
-            self.fout.write(d)
+            yield d
 
+    def sendresponse(self, v):
+        self.fout.write("%d\n" % len(v))
+        self.fout.write(v)
         self.fout.flush()
 
     def sendstream(self, source):

@@ -35,22 +35,21 @@ class webproto(object):
     def redirect(self):
         self.oldio = sys.stdout, sys.stderr
         sys.stderr = sys.stdout = cStringIO.StringIO()
-    def sendresponse(self, s):
-        self.req.respond(HTTP_OK, HGTYPE, length=len(s))
-        self.response = s
-    def sendchangegroup(self, cg):
-        self.req.respond(HTTP_OK, HGTYPE)
+    def groupchunks(self, cg):
         z = zlib.compressobj()
         while 1:
             chunk = cg.read(4096)
             if not chunk:
                 break
-            self.req.write(z.compress(chunk))
-        self.req.write(z.flush())
+            yield z.compress(chunk)
+        yield z.flush()
+    def sendresponse(self, s):
+        self.req.respond(HTTP_OK, HGTYPE, length=len(s))
+        self.response = s
     def sendstream(self, source):
         self.req.respond(HTTP_OK, HGTYPE)
         for chunk in source:
-            self.req.write(chunk)
+            self.req.write(str(chunk))
     def sendpushresponse(self, ret):
         val = sys.stdout.getvalue()
         sys.stdout, sys.stderr = self.oldio

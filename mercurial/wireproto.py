@@ -173,13 +173,13 @@ def capabilities(repo, proto):
 def changegroup(repo, proto, roots):
     nodes = decodelist(roots)
     cg = repo.changegroup(nodes, 'serve')
-    proto.sendchangegroup(cg)
+    proto.sendstream(proto.groupchunks(cg))
 
 def changegroupsubset(repo, proto, bases, heads):
     bases = decodelist(bases)
     heads = decodelist(heads)
     cg = repo.changegroupsubset(bases, heads, 'serve')
-    proto.sendchangegroup(cg)
+    proto.sendstream(proto.groupchunks(cg))
 
 def heads(repo, proto):
     h = repo.heads()
@@ -215,10 +215,7 @@ def pushkey(repo, proto, namespace, key, old, new):
     return '%s\n' % int(r)
 
 def stream(repo, proto):
-    try:
-        proto.sendstream(streamclone.stream_out(repo))
-    except streamclone.StreamException, inst:
-        return str(inst)
+    proto.sendstream(streamclone.stream_out(repo))
 
 def unbundle(repo, proto, heads):
     their_heads = decodelist(heads)
