@@ -492,7 +492,7 @@ def _dispatch(ui, args):
                 raise
         args.insert(0, repo)
     elif rpath:
-        ui.warn("warning: --repository ignored\n")
+        ui.warn(_("warning: --repository ignored\n"))
 
     d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
     return runcommand(lui, repo, cmd, fullargs, ui, options, d,
