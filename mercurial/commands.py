@@ -152,8 +152,9 @@ def annotate(ui, repo, *pats, **opts):
         for f in funcmap:
             l = [f(n) for n, dummy in lines]
             if l:
-                ml = max(map(len, l))
-                pieces.append(["%*s" % (ml, x) for x in l])
+                sized = [(x, encoding.colwidth(x)) for x in l]
+                ml = max([w for x, w in sized])
+                pieces.append(["%s%s" % (' ' * (ml - w), x) for x, w in sized])
 
         if pieces:
             for p, l in zip(zip(*pieces), lines):
@@ -2053,9 +2054,9 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
     if multioccur:
         msg = _("\n[+] marked option can be specified multiple times")
         if ui.verbose and name != 'shortlist':
-            opt_output.append((msg, ()))
+            opt_output.append((msg, None))
         else:
-            opt_output.insert(-1, (msg, ()))
+            opt_output.insert(-1, (msg, None))
 
     if not name:
         ui.write(_("\nadditional help topics:\n\n"))
@@ -2067,16 +2068,20 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
             ui.write(" %-*s  %s\n" % (topics_len, t, desc))
 
     if opt_output:
-        opts_len = max([len(line[0]) for line in opt_output if line[1]] or [0])
-        for first, second in opt_output:
-            if second:
-                initindent = ' %-*s  ' % (opts_len, first)
-                hangindent = ' ' * (opts_len + 3)
-                ui.write('%s\n' % (util.wrap(second,
+        colwidth = encoding.colwidth
+        # normalize: (opt or message, desc or None, width of opt)
+        entries = [desc and (opt, desc, colwidth(opt)) or (opt, None, 0)
+                   for opt, desc in opt_output]
+        hanging = max([e[2] for e in entries])
+        for opt, desc, width in entries:
+            if desc:
+                initindent = ' %s%s  ' % (opt, ' ' * (hanging - width))
+                hangindent = ' ' * (hanging + 3)
+                ui.write('%s\n' % (util.wrap(desc,
                                              initindent=initindent,
                                              hangindent=hangindent)))
             else:
-                ui.write("%s\n" % first)
+                ui.write("%s\n" % opt)
 
 def identify(ui, repo, source=None,
              rev=None, num=None, id=None, branch=None, tags=None):

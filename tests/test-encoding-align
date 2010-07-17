@@ -1,0 +1,123 @@
+#!/bin/sh
+
+########################################
+
+HGENCODING=utf-8
+export HGENCODING
+
+hg init t
+cd t
+
+python << EOF
+# (byte, width) = (6, 4)
+s = "\xe7\x9f\xad\xe5\x90\x8d"
+# (byte, width) = (7, 7): odd width is good for alignment test
+m = "MIDDLE_"
+# (byte, width) = (18, 12)
+l = "\xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d"
+
+f = file('s', 'w'); f.write(s); f.close()
+f = file('m', 'w'); f.write(m); f.close()
+f = file('l', 'w'); f.write(l); f.close()
+
+# instant extension to show list of options
+f = file('showoptlist.py', 'w'); f.write("""# encoding: utf-8
+def showoptlist(ui, repo, *pats, **opts):
+    '''dummy command to show option descriptions'''
+    return 0
+
+cmdtable = {
+    'showoptlist':
+        (showoptlist,
+         [('s', 'opt1', '', 'short width',  '""" + s + """'),
+          ('m', 'opt2', '', 'middle width', '""" + m + """'),
+          ('l', 'opt3', '', 'long width',   '""" + l + """')
+         ],
+         ""
+        )
+}
+""")
+f.close()
+EOF
+
+S=`cat s`
+M=`cat m`
+L=`cat l`
+
+########################################
+#### alignment of:
+####     - option descriptions in help
+
+cat <<EOF > .hg/hgrc
+[extensions]
+ja_ext = `pwd`/showoptlist.py
+EOF
+echo '% check alignment of option descriptions in help'
+hg help showoptlist
+
+########################################
+#### alignment of:
+####     - user names in annotate
+####     - file names in diffstat
+
+#### add files
+
+touch $S
+hg add $S
+touch $M
+hg add $M
+touch $L
+hg add $L
+
+#### commit(1)
+
+echo 'first line(1)' >> $S
+echo 'first line(2)' >> $M
+echo 'first line(3)' >> $L
+hg commit -m 'first commit' -u $S -d "1000000 0"
+
+#### commit(2)
+
+echo 'second line(1)' >> $S
+echo 'second line(2)' >> $M
+echo 'second line(3)' >> $L
+hg commit -m 'second commit' -u $M -d "1000000 0"
+
+#### commit(3)
+
+echo 'third line(1)' >> $S
+echo 'third line(2)' >> $M
+echo 'third line(3)' >> $L
+hg commit -m 'third commit' -u $L -d "1000000 0"
+
+#### check
+
+echo '% check alignment of user names in annotate'
+hg annotate -u $M
+echo '% check alignment of filenames in diffstat'
+hg diff -c tip --stat
+
+########################################
+#### alignment of:
+####     - branch names in list
+####     - tag names in list
+
+#### add branches/tags
+
+hg branch $S
+hg tag -d "1000000 0" $S
+hg branch $M
+hg tag -d "1000000 0" $M
+hg branch $L
+hg tag -d "1000000 0" $L
+
+#### check
+
+echo '% check alignment of branches'
+hg tags
+echo '% check alignment of tags'
+hg tags
+
+########################################
+
+exit 0
