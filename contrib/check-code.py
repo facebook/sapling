@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import re, glob
+import re, glob, os
 import optparse
 
 def repquote(m):
@@ -160,7 +160,7 @@ class norepeatlogger(object):
     def __init__(self):
         self._lastseen = None
 
-    def log(self, fname, lineno, line, msg):
+    def log(self, fname, lineno, line, msg, blame):
         """print error related a to given line of a given file.
 
         The faulty line will also be printed but only once in the case
@@ -173,14 +173,26 @@ class norepeatlogger(object):
         """
         msgid = fname, lineno, line
         if msgid != self._lastseen:
-            print "%s:%d:" % (fname, lineno)
+            if blame:
+                print "%s:%d (%s):" % (fname, lineno, blame)
+            else:
+                print "%s:%d:" % (fname, lineno)
             print " > %s" % line
             self._lastseen = msgid
         print " " + msg
 
 _defaultlogger = norepeatlogger()
 
-def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False):
+def getblame(f):
+    lines = []
+    for l in os.popen('hg annotate -un %s' % f):
+        start, line = l.split(':', 1)
+        user, rev = start.split()
+        lines.append((line[1:-1], user, rev))
+    return lines
+
+def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
+              blame=False):
     """checks style and portability of a given file
 
     :f: filepath
@@ -191,6 +203,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False):
 
     return True if no error is found, False otherwise.
     """
+    blamecache = None
     result = True
     for name, match, filters, pats in checks:
         fc = 0
@@ -210,7 +223,16 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False):
                 if not warnings and msg.startswith("warning"):
                     continue
                 if re.search(p, l[1]):
-                    logfunc(f, n + 1, l[0], msg)
+                    bd = ""
+                    if blame:
+                        bd = 'working directory'
+                        if not blamecache:
+                            blamecache = getblame(f)
+                        if n < len(blamecache):
+                            bl, bu, br = blamecache[n]
+                            if bl == l[0]:
+                                bd = '%s@%s' % (bu, br)
+                    logfunc(f, n + 1, l[0], msg, bd)
                     fc += 1
                     result = False
             if maxerr is not None and fc >= maxerr:
@@ -219,15 +241,16 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False):
         break
     return result
 
-
 if __name__ == "__main__":
     parser = optparse.OptionParser("%prog [options] [files]")
     parser.add_option("-w", "--warnings", action="store_true",
                       help="include warning-level checks")
     parser.add_option("-p", "--per-file", type="int",
                       help="max warnings per file")
+    parser.add_option("-b", "--blame", action="store_true",
+                      help="use annotate to generate blame info")
 
-    parser.set_defaults(per_file=15, warnings=False)
+    parser.set_defaults(per_file=15, warnings=False, blame=False)
     (options, args) = parser.parse_args()
 
     if len(args) == 0:
@@ -236,4 +259,5 @@ if __name__ == "__main__":
         check = args
 
     for f in check:
-        checkfile(f, maxerr=options.per_file, warnings=options.warnings)
+        checkfile(f, maxerr=options.per_file, warnings=options.warnings,
+                  blame=options.blame)
