@@ -925,7 +925,7 @@ class workingfilectx(filectx):
         return []
 
     def size(self):
-        return os.stat(self._repo.wjoin(self._path)).st_size
+        return os.lstat(self._repo.wjoin(self._path)).st_size
     def date(self):
         t, tz = self._changectx.date()
         try:
