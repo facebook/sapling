@@ -1111,10 +1111,10 @@ def walkchangerevs(repo, match, opts, prepare):
             # was removed, this means that we have to explore all
             # changesets, effectively ignoring the revisions that
             # had been passed as arguments
-            revrange = xrange(nullrev, len(repo) - 1)
+            revlist = xrange(nullrev, len(repo) - 1)
         else:
-            revrange = sorted(revs)
-        for i in revrange:
+            revlist = sorted(revs)
+        for i in revlist:
             ctx = change(i)
             matches = filter(match, ctx.files())
             if matches:
