@@ -562,8 +562,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
     Returns 0 on success, 1 if no changes found.
     """
     revs = opts.get('rev') or None
-    if revs:
-        revs = [repo.lookup(rev) for rev in revs]
     if opts.get('all'):
         base = ['null']
     else:
@@ -580,8 +578,9 @@ def bundle(ui, repo, fname, dest=None, **opts):
         for n in base:
             has.update(repo.changelog.reachable(n))
         if revs:
-            visit = list(revs)
-            has.difference_update(revs)
+            revs = [repo.lookup(rev) for rev in revs]
+            visit = revs[:]
+            has.difference_update(visit)
         else:
             visit = repo.changelog.heads()
         seen = {}
@@ -601,6 +600,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), dest)
         revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
+        if revs:
+            revs = [repo.lookup(rev) for rev in revs]
         o = discovery.findoutgoing(repo, other, force=opts.get('force'))
 
     if not o:
