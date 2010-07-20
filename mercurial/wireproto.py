@@ -133,12 +133,18 @@ class wirerepository(repo.repository):
 
 # server side
 
+class streamres(object):
+    def __init__(self, gen):
+        self.gen = gen
+
+class pushres(object):
+    def __init__(self, res):
+        self.res = res
+
 def dispatch(repo, proto, command):
     func, spec = commands[command]
     args = proto.getargs(spec)
-    r = func(repo, proto, *args)
-    if r != None:
-        proto.sendresponse(r)
+    return func(repo, proto, *args)
 
 def between(repo, proto, pairs):
     pairs = [decodelist(p, '-') for p in pairs.split(" ")]
@@ -173,13 +179,13 @@ def capabilities(repo, proto):
 def changegroup(repo, proto, roots):
     nodes = decodelist(roots)
     cg = repo.changegroup(nodes, 'serve')
-    proto.sendstream(proto.groupchunks(cg))
+    return streamres(proto.groupchunks(cg))
 
 def changegroupsubset(repo, proto, bases, heads):
     bases = decodelist(bases)
     heads = decodelist(heads)
     cg = repo.changegroupsubset(bases, heads, 'serve')
-    proto.sendstream(proto.groupchunks(cg))
+    return streamres(proto.groupchunks(cg))
 
 def heads(repo, proto):
     h = repo.heads()
@@ -215,7 +221,7 @@ def pushkey(repo, proto, namespace, key, old, new):
     return '%s\n' % int(r)
 
 def stream(repo, proto):
-    proto.sendstream(streamclone.stream_out(repo))
+    return streamres(streamclone.stream_out(repo))
 
 def unbundle(repo, proto, heads):
     their_heads = decodelist(heads)
@@ -259,7 +265,7 @@ def unbundle(repo, proto, heads):
                 sys.stderr.write("abort: %s\n" % inst)
         finally:
             lock.release()
-            proto.sendpushresponse(r)
+            return pushres(r)
 
     finally:
         fp.close()

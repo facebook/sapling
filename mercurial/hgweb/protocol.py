@@ -48,13 +48,20 @@ class webproto(object):
         self.response = s
     def sendstream(self, source):
         self.req.respond(HTTP_OK, HGTYPE)
-        for chunk in source:
-            self.req.write(str(chunk))
-    def sendpushresponse(self, ret):
+        for chunk in source.gen:
+            self.req.write(chunk)
+    def sendpushresponse(self, rsp):
         val = sys.stdout.getvalue()
         sys.stdout, sys.stderr = self.oldio
         self.req.respond(HTTP_OK, HGTYPE)
-        self.response = '%d\n%s' % (ret, val)
+        self.response = '%d\n%s' % (rsp.res, val)
+
+    handlers = {
+        str: sendresponse,
+        wireproto.streamres: sendstream,
+        wireproto.pushres: sendpushresponse,
+    }
+
     def _client(self):
         return 'remote:%s:%s:%s' % (
             self.req.env.get('wsgi.url_scheme') or 'http',
@@ -66,5 +73,6 @@ def iscmd(cmd):
 
 def call(repo, req, cmd):
     p = webproto(req)
-    wireproto.dispatch(repo, p, cmd)
-    yield p.response
+    rsp = wireproto.dispatch(repo, p, cmd)
+    webproto.handlers[rsp.__class__](p, rsp)
+    return [p.response]

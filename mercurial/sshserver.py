@@ -72,13 +72,13 @@ class sshserver(object):
         self.fout.flush()
 
     def sendstream(self, source):
-        for chunk in source:
+        for chunk in source.gen:
             self.fout.write(chunk)
         self.fout.flush()
 
-    def sendpushresponse(self, ret):
+    def sendpushresponse(self, rsp):
         self.sendresponse('')
-        self.sendresponse(str(ret))
+        self.sendresponse(str(rsp.res))
 
     def serve_forever(self):
         try:
@@ -89,10 +89,17 @@ class sshserver(object):
                 self.lock.release()
         sys.exit(0)
 
+    handlers = {
+        str: sendresponse,
+        wireproto.streamres: sendstream,
+        wireproto.pushres: sendpushresponse,
+    }
+
     def serve_one(self):
         cmd = self.fin.readline()[:-1]
         if cmd and cmd in wireproto.commands:
-            wireproto.dispatch(self.repo, self, cmd)
+            rsp = wireproto.dispatch(self.repo, self, cmd)
+            self.handlers[rsp.__class__](self, rsp)
         elif cmd:
             impl = getattr(self, 'do_' + cmd, None)
             if impl:
