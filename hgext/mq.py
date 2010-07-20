@@ -2418,6 +2418,18 @@ def strip(ui, repo, rev, **opts):
     elif rev not in (cl.ancestor(p[0], rev), cl.ancestor(p[1], rev)):
         update = False
 
+    q = repo.mq
+    if q.applied:
+        if rev == cl.ancestor(repo.lookup('qtip'), rev):
+            q.applied_dirty = True
+            start = 0
+            end = len(q.applied)
+            applied_list = [i.node for i in q.applied]
+            if rev in applied_list:
+                start = applied_list.index(rev)
+            del q.applied[start:end]
+            q.save_dirty()
+
     repo.mq.strip(repo, rev, backup=backup, update=update, force=opts['force'])
     return 0
 

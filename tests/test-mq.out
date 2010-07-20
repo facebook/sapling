@@ -400,15 +400,13 @@ errors during apply, please fix and refresh bar
 popping bar
 now at: foo
 changeset:   0:cb9a9f314b8b
-mq status file refers to unknown node
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     a
 
-mq status file refers to unknown node
 default                        0:cb9a9f314b8b
-abort: trying to pop unknown node
+no patches applied
 new file
 
 diff --git a/new b/new
