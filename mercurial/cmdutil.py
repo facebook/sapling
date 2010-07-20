@@ -1106,15 +1106,7 @@ def walkchangerevs(repo, match, opts, prepare):
                                'filenames'))
 
         # The slow path checks files modified in every changeset.
-        if opts.get('removed'):
-            # --removed wants to yield the changes where the file
-            # was removed, this means that we have to explore all
-            # changesets, effectively ignoring the revisions that
-            # had been passed as arguments
-            revlist = xrange(nullrev, len(repo) - 1)
-        else:
-            revlist = sorted(revs)
-        for i in revlist:
+        for i in sorted(revs):
             ctx = change(i)
             matches = filter(match, ctx.files())
             if matches:

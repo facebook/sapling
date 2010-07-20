@@ -196,6 +196,32 @@ diff -r 41dd4284081e -r 7c6c671bb7cc d
 @@ -0,0 +1,1 @@
 +a
 
+% log --removed file
+changeset:   3:7c6c671bb7cc
+user:        test
+date:        Thu Jan 01 00:00:04 1970 +0000
+files:       a b d
+description:
+d
+
+
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+files:       a
+description:
+a
+
+
+% log --removed revrange file
+changeset:   0:8580ff50825a
+user:        test
+date:        Thu Jan 01 00:00:01 1970 +0000
+files:       a
+description:
+a
+
+
 adding base
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding b1

@@ -62,6 +62,11 @@ hg log -v --template '{rev} {file_copies}\n' -r 6
 echo '% log -p d'
 hg log -pv d
 
+echo '% log --removed file'
+hg log --removed -v a
+echo '% log --removed revrange file'
+hg log --removed -v -r0:2 a
+
 # log --follow tests
 hg init ../follow
 cd ../follow
