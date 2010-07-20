@@ -9,7 +9,7 @@ import urllib, tempfile, os
 from i18n import _
 from node import bin, hex
 import changegroup as changegroupmod
-import streamclone, repo, error, encoding, util
+import repo, error, encoding, util, store
 import pushkey as pushkey_
 
 # list of nodes encoding / decoding
@@ -171,7 +171,7 @@ def branches(repo, proto, nodes):
 
 def capabilities(repo, proto):
     caps = 'lookup changegroupsubset branchmap pushkey'.split()
-    if streamclone.allowed(repo.ui):
+    if _allowstream(repo.ui):
         caps.append('stream=%d' % repo.changelog.version)
     caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
     return ' '.join(caps)
@@ -220,8 +220,52 @@ def pushkey(repo, proto, namespace, key, old, new):
     r = pushkey_.push(repo, namespace, key, old, new)
     return '%s\n' % int(r)
 
+def _allowstream(ui):
+    return ui.configbool('server', 'uncompressed', True, untrusted=True)
+
 def stream(repo, proto):
-    return streamres(streamclone.stream_out(repo))
+    '''If the server supports streaming clone, it advertises the "stream"
+    capability with a value representing the version and flags of the repo
+    it is serving. Client checks to see if it understands the format.
+
+    The format is simple: the server writes out a line with the amount
+    of files, then the total amount of bytes to be transfered (separated
+    by a space). Then, for each file, the server first writes the filename
+    and filesize (separated by the null character), then the file contents.
+    '''
+
+    if not _allowstream(repo.ui):
+        return '1\n'
+
+    entries = []
+    total_bytes = 0
+    try:
+        # get consistent snapshot of repo, lock during scan
+        lock = repo.lock()
+        try:
+            repo.ui.debug('scanning\n')
+            for name, ename, size in repo.store.walk():
+                entries.append((name, size))
+                total_bytes += size
+        finally:
+            lock.release()
+    except error.LockError:
+        return '2\n' # error: 2
+
+    def streamer(repo, entries, total):
+        '''stream out all metadata files in repository.'''
+        yield '0\n' # success
+        repo.ui.debug('%d files, %d bytes to transfer\n' %
+                      (len(entries), total_bytes))
+        yield '%d %d\n' % (len(entries), total_bytes)
+        for name, size in entries:
+            repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+            # partially encode name over the wire for backwards compat
+            yield '%s\0%d\n' % (store.encodedir(name), size)
+            for chunk in util.filechunkiter(repo.sopener(name), limit=size):
+                yield chunk
+
+    return streamres(streamer(repo, entries, total_bytes))
 
 def unbundle(repo, proto, heads):
     their_heads = decodelist(heads)
