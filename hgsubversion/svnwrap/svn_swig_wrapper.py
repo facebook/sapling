@@ -549,6 +549,17 @@ class SubversionRepo(object):
             else:
                 raise
 
+    def get_revision(self, revision, editor):
+        ''' feed the contents of the given revision to the given editor '''
+
+        e_ptr, e_baton = delta.make_editor(editor)
+
+        reporter, reporter_baton = ra.do_update(self.ra, revision, "", True,
+                                                e_ptr, e_baton)
+
+        reporter.set_path(reporter_baton, "", revision, True, None)
+        reporter.finish_report(reporter_baton)
+
     def get_unified_diff(self, path, revision, other_path=None, other_rev=None,
                          deleted=True, ignore_type=False):
         """Gets a unidiff of path at revision against revision-1.
