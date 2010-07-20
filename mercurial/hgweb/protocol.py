@@ -43,25 +43,6 @@ class webproto(object):
                 break
             yield z.compress(chunk)
         yield z.flush()
-    def sendresponse(self, s):
-        self.req.respond(HTTP_OK, HGTYPE, length=len(s))
-        self.response = s
-    def sendstream(self, source):
-        self.req.respond(HTTP_OK, HGTYPE)
-        for chunk in source.gen:
-            self.req.write(chunk)
-    def sendpushresponse(self, rsp):
-        val = sys.stdout.getvalue()
-        sys.stdout, sys.stderr = self.oldio
-        self.req.respond(HTTP_OK, HGTYPE)
-        self.response = '%d\n%s' % (rsp.res, val)
-
-    handlers = {
-        str: sendresponse,
-        wireproto.streamres: sendstream,
-        wireproto.pushres: sendpushresponse,
-    }
-
     def _client(self):
         return 'remote:%s:%s:%s' % (
             self.req.env.get('wsgi.url_scheme') or 'http',
@@ -74,5 +55,14 @@ def iscmd(cmd):
 def call(repo, req, cmd):
     p = webproto(req)
     rsp = wireproto.dispatch(repo, p, cmd)
-    webproto.handlers[rsp.__class__](p, rsp)
-    return [p.response]
+    if isinstance(rsp, str):
+        req.respond(HTTP_OK, HGTYPE, length=len(rsp))
+        return [rsp]
+    elif isinstance(rsp, wireproto.streamres):
+        req.respond(HTTP_OK, HGTYPE)
+        return rsp.gen
+    elif isinstance(rsp, wireproto.pushres):
+        val = sys.stdout.getvalue()
+        sys.stdout, sys.stderr = p.oldio
+        req.respond(HTTP_OK, HGTYPE)
+        return ['%d\n%s' % (rsp.res, val)]
