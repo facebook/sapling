@@ -70,11 +70,11 @@ relink
   collected 5 candidate storage files
   not linkable: 00changelog.i
   not linkable: 00manifest.i
-  pruning: data/a.i 3/5  files (60.00%)
+  pruning: data/a.i 3/5 files (60.00%)
   not linkable: data/b.i
-  pruning: data/dummy.i 5/5  files (100.00%)
+  pruning: data/dummy.i 5/5 files (100.00%)
   pruned down to 2 probably relinkable files
-  relinking: data/a.i 1/2  files (50.00%)
+  relinking: data/a.i 1/2 files (50.00%)
   not linkable: data/dummy.i
   relinked 1 files (136 bytes reclaimed)
   $ cd ..
