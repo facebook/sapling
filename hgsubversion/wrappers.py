@@ -210,8 +210,6 @@ def pull(repo, source, heads=[], force=False):
     svn_url, heads, checkout = util.parseurl(svn_url, heads)
     old_encoding = util.swap_out_encoding()
 
-    # TODO implement skipto support
-    skipto_rev = 0
     try:
         stopat_rev = int(checkout or 0)
     except ValueError:
@@ -235,13 +233,30 @@ def pull(repo, source, heads=[], force=False):
         repo.ui.setconfig('hgsubversion', 'layout', layout)
         repo.ui.note('using %s layout\n' % layout)
 
-    start = max(meta.revmap.youngest, skipto_rev)
-    initializing_repo = meta.revmap.youngest <= 0
     ui = repo.ui
+    start = meta.revmap.youngest
+    origrevcount = len(meta.revmap)
 
-    if initializing_repo and start > 0:
-        raise hgutil.Abort('Revision skipping at repository initialization '
-                           'remains unimplemented.')
+    if start <= 0:
+        # we are initializing a new repository
+        start = repo.ui.config('hgsubversion', 'startrev', 0)
+        if isinstance(start, str) and start.upper() == 'HEAD':
+            start = svn.HEAD
+        else:
+            start = int(start)
+
+        if start > 0:
+            if layout == 'standard':
+                raise hgutil.Abort('non-zero start revisions are only '
+                                   'supported for single-directory clones.')
+            ui.note('starting at revision %d; any prior will be ignored\n'
+                    % start)
+            # fetch all revisions *including* the one specified...
+            start -= 1
+
+        # anything less than zero makes no sense
+        if start < 0:
+            start = 0
 
     oldrevisions = len(meta.revmap)
     if stopat_rev:
@@ -367,6 +382,7 @@ optionmap = {
     'defaultauthors': ('hgsubversion', 'defaultauthors'),
     'usebranchnames': ('hgsubversion', 'usebranchnames'),
     'layout': ('hgsubversion', 'layout'),
+    'startrev': ('hgsubversion', 'startrev'),
 }
 
 dontretain = { 'hgsubversion': set(['authormap', 'filemap', 'layout', ]) }
