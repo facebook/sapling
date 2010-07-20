@@ -128,3 +128,14 @@ echo 'copied:'
 hg --cwd source cat copied
 echo 'copied2:'
 hg --cwd renames.repo cat copied2
+
+echo % filemap errors
+cat > errors.fmap <<EOF
+include dir/ # beware that comments changes error line numbers!
+exclude /dir
+rename dir//dir /dir//dir/ "out of sync"
+include
+EOF
+hg -q convert --filemap errors.fmap source errors.repo
+
+true # happy ending

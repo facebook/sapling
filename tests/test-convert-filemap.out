@@ -157,3 +157,11 @@ copied:
 foo
 copied2:
 foo
+% filemap errors
+errors.fmap:1: superfluous / in exclude 'dir/'
+errors.fmap:3: superfluous / in include '/dir'
+errors.fmap:3: superfluous / in rename '/dir'
+errors.fmap:3: superfluous / in exclude 'dir//dir'
+errors.fmap:4: unknown directive 'out of sync'
+errors.fmap:5: path to exclude is missing
+abort: errors in filemap
