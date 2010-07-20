@@ -583,12 +583,17 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                 deleted_branches[b] = parentctx.node()
             continue
 
-        try:
-            files_touched, filectxfn2 = diff_branchrev(
-                ui, svn, meta, b, branches[b], r, parentctx)
-        except BadPatchApply, e:
-            # Either this revision or the previous one does not exist.
-            ui.note("Fetching entire revision: %s.\n" % e.args[0])
+        incremental = (meta.revmap.oldest > 0)
+
+        if incremental:
+            try:
+                files_touched, filectxfn2 = diff_branchrev(
+                    ui, svn, meta, b, branches[b], r, parentctx)
+            except BadPatchApply, e:
+                # Either this revision or the previous one does not exist.
+                ui.note("Fetching entire revision: %s.\n" % e.args[0])
+                incremental = False
+        if not incremental:
             files_touched, filectxfn2 = fetch_branchrev(
                 svn, meta, b, branches[b], r, parentctx)
 
