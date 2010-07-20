@@ -62,7 +62,7 @@ def incoming(orig, ui, repo, source='default', **opts):
     meta = repo.svnmeta()
 
     ui.status('incoming changes from %s\n' % other.svnurl)
-    for r in other.svn.revisions(start=meta.revmap.seen):
+    for r in other.svn.revisions(start=meta.revmap.youngest):
         ui.status('\n')
         for label, attr in revmeta:
             l1 = label + ':'
@@ -235,8 +235,8 @@ def pull(repo, source, heads=[], force=False):
         repo.ui.setconfig('hgsubversion', 'layout', layout)
         repo.ui.note('using %s layout\n' % layout)
 
-    start = max(meta.revmap.seen, skipto_rev)
-    initializing_repo = meta.revmap.seen <= 0
+    start = max(meta.revmap.youngest, skipto_rev)
+    initializing_repo = meta.revmap.youngest <= 0
     ui = repo.ui
 
     if initializing_repo and start > 0:

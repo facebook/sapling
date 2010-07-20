@@ -178,7 +178,8 @@ class RevMap(dict):
     def __init__(self, repo):
         dict.__init__(self)
         self.path = os.path.join(repo.path, 'svn', 'rev_map')
-        self.seen = 0
+        self.youngest = 0
+        self.oldest = 0
         if os.path.isfile(self.path):
             self._load()
         else:
@@ -204,7 +205,10 @@ class RevMap(dict):
             else:
                 branch = branch[:-1]
             revnum = int(revnum)
-            self.seen = max(self.seen, revnum)
+            if revnum > self.youngest or not self.youngest:
+                self.youngest = revnum
+            if revnum < self.oldest or not self.oldest:
+                self.oldest = revnum
             dict.__setitem__(self, (revnum, branch), node.bin(hash))
         f.close()
 
@@ -221,7 +225,10 @@ class RevMap(dict):
         f.write(str(revnum) + ' ' + node.hex(hash) + ' ' + b + '\n')
         f.flush()
         f.close()
-        self.seen = max(self.seen, revnum)
+        if revnum > self.youngest or not self.youngest:
+            self.youngest = revnum
+        if revnum < self.oldest or not self.oldest:
+            self.oldest = revnum
         dict.__setitem__(self, (revnum, branch), hash)
 
 
