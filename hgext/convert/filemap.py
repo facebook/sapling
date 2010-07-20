@@ -33,9 +33,19 @@ class filemapper(object):
     def parse(self, path):
         errs = 0
         def check(name, mapping, listname):
+            if not name:
+                self.ui.warn(_('%s:%d: path to %s is missing\n') %
+                             (lex.infile, lex.lineno, listname))
+                return 1
             if name in mapping:
                 self.ui.warn(_('%s:%d: %r already in %s list\n') %
                              (lex.infile, lex.lineno, name, listname))
+                return 1
+            if (name.startswith('/') or
+                name.endswith('/') or
+                '//' in name):
+                self.ui.warn(_('%s:%d: superfluous / in %s %r\n') %
+                             (lex.infile, lex.lineno, listname, name))
                 return 1
             return 0
         lex = shlex.shlex(open(path), path, True)
