@@ -1182,7 +1182,6 @@ def walkchangerevs(repo, match, opts, prepare):
                 return rev in wanted
 
         for i, window in increasing_windows(0, len(revs)):
-            change = util.cachefunc(repo.changectx)
             nrevs = [rev for rev in revs[i:i + window] if want(rev)]
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)
