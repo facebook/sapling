@@ -154,7 +154,7 @@ class client(object):
                 if names:
                     return filter(match, names.split('\0'))
             return []
-        results = map(readnames, resphdr[:-1])
+        results = tuple(map(readnames, resphdr[:-1]))
 
         if names:
             nbytes = resphdr[-1]

@@ -3157,7 +3157,7 @@ def revert(ui, repo, *pats, **opts):
                     ui.note(_('saving current version of %s as %s\n') %
                             (rel, bakname))
                     if not opts.get('dry_run'):
-                        util.copyfile(target, bakname)
+                        util.rename(target, bakname)
                 if ui.verbose or not exact:
                     msg = xlist[1]
                     if not isinstance(msg, basestring):
