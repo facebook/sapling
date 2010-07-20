@@ -98,12 +98,13 @@ def fileurl(path):
     url = 'file://%s%s' % (drive, path)
     return url
 
-def testui(stupid=False, layout='auto'):
+def testui(stupid=False, layout='auto', startrev=0):
     u = ui.ui()
     bools = {True: 'true', False: 'false'}
     u.setconfig('ui', 'quiet', bools[True])
     u.setconfig('hgsubversion', 'stupid', bools[stupid])
     u.setconfig('hgsubversion', 'layout', layout)
+    u.setconfig('hgsubversion', 'startrev', startrev)
     return u
 
 def load_svndump_fixture(path, fixture_name):
@@ -118,12 +119,13 @@ def load_svndump_fixture(path, fixture_name):
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     proc.communicate()
 
-def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False, subdir='',
-                           noupdate=True, layout='auto'):
+def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False,
+                           subdir='', noupdate=True, layout='auto',
+                           startrev=0):
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
-    _ui = testui(stupid=stupid, layout=layout)
+    _ui = testui(stupid=stupid, layout=layout, startrev=startrev)
     commands.clone(_ui, fileurl(repo_path), wc_path, noupdate=noupdate)
     return hg.repository(testui(), wc_path)
 
@@ -218,7 +220,8 @@ class TestBase(unittest.TestCase):
     def ui(self, stupid=False, layout='auto'):
         return testui(stupid, layout)
 
-    def _load_fixture_and_fetch(self, fixture_name, subdir=None, stupid=False, layout='auto'):
+    def _load_fixture_and_fetch(self, fixture_name, subdir=None, stupid=False,
+                                layout='auto', startrev=0):
         if layout == 'single':
             if subdir is None:
                 subdir = 'trunk'
@@ -226,7 +229,8 @@ class TestBase(unittest.TestCase):
             subdir = ''
         return load_fixture_and_fetch(fixture_name, self.repo_path,
                                       self.wc_path, subdir=subdir,
-                                      stupid=stupid, layout=layout)
+                                      stupid=stupid, layout=layout,
+                                      startrev=startrev)
 
     # define this as a property so that it reloads anytime we need it
     @property
