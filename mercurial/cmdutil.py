@@ -1045,12 +1045,19 @@ def walkchangerevs(repo, match, opts, prepare):
     fncache = {}
     change = util.cachefunc(repo.changectx)
 
+    # First step is to fill wanted, the set of revisions that we want to yield.
+    # When it does not induce extra cost, we also fill fncache for revisions in
+    # wanted: a cache of filenames that were changed (ctx.files()) and that
+    # match the file filtering conditions.
+
     if not slowpath and not match.files():
         # No files, no patterns.  Display all revs.
         wanted = set(revs)
     copies = []
 
     if not slowpath:
+        # We only have to read through the filelog to find wanted revisions
+
         minrev, maxrev = min(revs), max(revs)
         # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog, last):
@@ -1101,6 +1108,9 @@ def walkchangerevs(repo, match, opts, prepare):
                 if copied:
                     copies.append(copied)
     if slowpath:
+        # We have to read the changelog to match filenames against
+        # changed files
+
         if follow:
             raise util.Abort(_('can only follow copies/renames for explicit '
                                'filenames'))
@@ -1160,6 +1170,8 @@ def walkchangerevs(repo, match, opts, prepare):
             if ff.match(x):
                 wanted.discard(x)
 
+    # Now that wanted is correctly initialized, we can iterate over the
+    # revision range, yielding only revisions in wanted.
     def iterate():
         if follow and not match.files():
             ff = followfilter(onlyfirst=opts.get('follow_first'))
