@@ -25,7 +25,13 @@ def convert_rev(ui, meta, svn, r, tbdelta):
     editor = meta.editor
     editor.current.clear()
     editor.current.rev = r
-    svn.get_replay(r.revnum, editor)
+
+    if meta.revmap.oldest <= 0:
+        # no prior revisions are known, so fetch the entire revision contents
+        svn.get_revision(r.revnum, editor)
+    else:
+        svn.get_replay(r.revnum, editor, meta.revmap.oldest)
+
     current = editor.current
     current.findmissing(svn)
 
