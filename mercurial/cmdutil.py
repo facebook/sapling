@@ -1063,7 +1063,7 @@ def walkchangerevs(repo, match, opts, prepare):
         def filerevgen(filelog, last):
             cl_count = len(repo)
             revs = []
-            for j in xrange(0, last+1):
+            for j in xrange(0, last + 1):
                 linkrev = filelog.linkrev(j)
                 if linkrev < minrev:
                     continue
