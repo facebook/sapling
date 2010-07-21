@@ -1687,11 +1687,22 @@ class queue(object):
             if existing:
                 if filename == '-':
                     raise util.Abort(_('-e is incompatible with import from -'))
-                if not patchname:
-                    patchname = normname(filename)
-                self.check_reserved_name(patchname)
-                if not os.path.isfile(self.join(patchname)):
-                    raise util.Abort(_("patch %s does not exist") % patchname)
+                filename = normname(filename)
+                self.check_reserved_name(filename)
+                originpath = self.join(filename)
+                if not os.path.isfile(originpath):
+                    raise util.Abort(_("patch %s does not exist") % filename)
+
+                if patchname:
+                    self.check_reserved_name(patchname)
+                    checkfile(patchname)
+
+                    self.ui.write(_('renaming %s to %s\n')
+                                        % (filename, patchname))
+                    os.rename(originpath, self.join(patchname))
+                else:
+                    patchname = filename
+
             else:
                 try:
                     if filename == '-':

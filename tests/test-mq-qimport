@@ -109,3 +109,12 @@ hg up -C
 hg qimport --push another.diff
 hg qfin -a
 hg qimport -rtip -P
+
+hg qpop -a
+hg qdel -k 2.diff
+echo % qimport -e
+hg qimport -e 2.diff
+hg qdel -k 2.diff
+echo % qimport -e --name newname oldexisitingpatch
+hg qimport -e --name this-name-is-better 2.diff
+hg qser
