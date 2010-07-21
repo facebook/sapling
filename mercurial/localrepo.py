@@ -42,7 +42,7 @@ class localrepository(repo.repository):
         if not os.path.isdir(self.path):
             if create:
                 if not os.path.exists(path):
-                    os.mkdir(path)
+                    util.makedirs(path)
                 os.mkdir(self.path)
                 requirements = ["revlogv1"]
                 if self.ui.configbool('format', 'usestore', True):
