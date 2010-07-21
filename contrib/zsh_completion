@@ -377,8 +377,7 @@ _hg_remote_opts=(
   '--remotecmd[specify hg command to run on the remote side]:')
 
 _hg_cmd() {
-  _call_program hg hg --config ui.verbose=0 --config defaults."$1"= \
-    "$_hg_cmd_globals[@]" "$@" 2> /dev/null
+  _call_program hg HGPLAIN=1 hg "$_hg_cmd_globals[@]" "$@" 2> /dev/null
 }
 
 _hg_cmd_add() {
