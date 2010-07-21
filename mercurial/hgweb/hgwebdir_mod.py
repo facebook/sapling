@@ -32,7 +32,7 @@ def findrepos(paths):
         except KeyError:
             repos.append((prefix, root))
             continue
-        roothead = os.path.normpath(roothead)
+        roothead = os.path.normpath(os.path.abspath(roothead))
         for path in util.walkrepos(roothead, followsym=True, recurse=recurse):
             path = os.path.normpath(path)
             name = util.pconvert(path[len(roothead):]).strip('/')
