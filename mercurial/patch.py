@@ -174,7 +174,7 @@ def extract(ui, fileobj):
 
     patch can be a normal patch or contained in an email message.
 
-    return tuple (filename, message, user, date, node, p1, p2).
+    return tuple (filename, message, user, date, branch, node, p1, p2).
     Any item in the returned tuple can be None. If filename is None,
     fileobj did not contain a patch. Caller must unlink filename when done.'''
 

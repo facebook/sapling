@@ -54,16 +54,21 @@
 
 shopt -s extglob
 
+_hg_cmd()
+{
+    HGPLAIN=1 "$hg" "$@" 2>/dev/null
+}
+
 _hg_commands()
 {
     local commands
-    commands="$("$hg" debugcomplete "$cur" 2>/dev/null)" || commands=""
+    commands="$(_hg_cmd debugcomplete "$cur")" || commands=""
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$commands' -- "$cur"))
 }
 
 _hg_paths()
 {
-    local paths="$("$hg" paths 2>/dev/null | sed -e 's/ = .*$//')"
+    local paths="$(_hg_cmd paths | sed -e 's/ = .*$//')"
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$paths' -- "$cur"))
 }
 
@@ -77,21 +82,21 @@ _hg_repos()
 
 _hg_status()
 {
-    local files="$("$hg" status -n$1 . 2>/dev/null)"
+    local files="$(_hg_cmd status -n$1 .)"
     local IFS=$'\n'
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
 _hg_tags()
 {
-    local tags="$("$hg" tags -q 2>/dev/null)"
+    local tags="$(_hg_cmd tags -q)"
     local IFS=$'\n'
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$tags' -- "$cur"))
 }
 
 _hg_branches()
 {
-    local branches="$("$hg" branches -q 2>/dev/null)"
+    local branches="$(_hg_cmd branches -q)"
     local IFS=$'\n'
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$branches' -- "$cur"))
 }
@@ -144,7 +149,7 @@ _hg()
 	    return
 	fi
 
-	opts=$("$hg" debugcomplete --options "$cmd" 2>/dev/null)
+	opts=$(_hg_cmd debugcomplete --options "$cmd")
 
 	COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur"))
 	return
@@ -175,7 +180,7 @@ _hg()
     fi
 
     # canonicalize the command name and try again
-    help=$("$hg" help "$cmd" 2>/dev/null)
+    help=$(_hg_cmd help "$cmd")
     if [ $? -ne 0 ]; then
 	# Probably either the command doesn't exist or it's ambiguous
 	return
@@ -272,7 +277,7 @@ _hg_command_specific()
     return 0
 }
 
-complete -o bashdefault -o default -F _hg hg 2>/dev/null \
+complete -o bashdefault -o default -F _hg hg \
     || complete -o default -F _hg hg
 
 
@@ -281,7 +286,7 @@ complete -o bashdefault -o default -F _hg hg 2>/dev/null \
 # bookmarks
 _hg_bookmarks()
 {
-    local bookmarks="$("$hg" bookmarks --quiet 2>/dev/null )"
+    local bookmarks="$(_hg_cmd bookmarks --quiet )"
     local IFS=$'\n'
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$bookmarks' -- "$cur"))
 }
@@ -298,7 +303,7 @@ _hg_cmd_bookmarks()
 _hg_ext_mq_patchlist()
 {
     local patches
-    patches=$("$hg" $1 2>/dev/null)
+    patches=$(_hg_cmd $1)
     if [ $? -eq 0 ] && [ "$patches" ]; then
 	COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$patches' -- "$cur"))
 	return 0
@@ -308,7 +313,7 @@ _hg_ext_mq_patchlist()
 
 _hg_ext_mq_queues()
 {
-    local root=$("$hg" root 2>/dev/null)
+    local root=$(_hg_cmd root)
     local n
     for n in $(cd "$root"/.hg && compgen -d -- "$cur"); do
 	# I think we're usually not interested in the regular "patches" queue
@@ -379,10 +384,9 @@ _hg_cmd_strip()
 
 _hg_cmd_qcommit()
 {
-    local root=$("$hg" root 2>/dev/null)
+    local root=$(_hg_cmd root)
     # this is run in a sub-shell, so we can't use _hg_status
-    local files=$(cd "$root/.hg/patches" 2>/dev/null &&
-                  "$hg" status -nmar 2>/dev/null)
+    local files=$(cd "$root/.hg/patches" && _hg_cmd status -nmar)
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
@@ -412,7 +416,7 @@ _hg_cmd_qclone()
 
 _hg_ext_mq_guards()
 {
-    "$hg" qselect --series 2>/dev/null | sed -e 's/^.//'
+    _hg_cmd qselect --series | sed -e 's/^.//'
 }
 
 _hg_cmd_qselect()
@@ -557,7 +561,7 @@ _hg_cmd_transplant()
 # shelve
 _hg_shelves()
 {
-    local shelves="$("$hg" unshelve -l . 2>/dev/null)"
+    local shelves="$(_hg_cmd unshelve -l .)"
     local IFS=$'\n'
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$shelves' -- "$cur"))
 }
