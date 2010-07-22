@@ -1398,6 +1398,8 @@ class localrepository(repo.repository):
                 clnode = cl.node(revlog.linkrev(revlog.rev(n)))
                 if clnode in has_cl_set:
                     hasset.add(n)
+            for n in hasset:
+                missingnodes.pop(n, None)
             for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
                 missingnodes.pop(revlog.node(r), None)
 
