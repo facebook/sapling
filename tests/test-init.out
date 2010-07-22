@@ -73,3 +73,9 @@ ok
 ok
 # hg init "with space"
 ok
+# creating 'local/sub/repo'
+store created
+00changelog.i created
+revlogv1
+store
+fncache

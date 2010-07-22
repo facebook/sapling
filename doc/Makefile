@@ -24,7 +24,7 @@ hg.1.gendoc.txt: $(GENDOC)
 	mv $@.tmp $@
 
 %: %.txt common.txt
-	$(PYTHON) runrst manpage --halt warning \
+	$(PYTHON) runrst hgmanpage --halt warning \
 	  --strip-elements-with-class htmlonly $*.txt $*
 
 %.html: %.txt common.txt

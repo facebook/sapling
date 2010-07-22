@@ -84,3 +84,6 @@ for i in bundle file hg http https old-http ssh static-http " " "with space"; do
   test -d "$i" -a -d "$i/.hg" && echo "ok" || echo "failed"
 done
 
+echo "# creating 'local/sub/repo'"
+hg init local/sub/repo
+checknewrepo local/sub/repo

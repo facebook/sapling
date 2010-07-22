@@ -53,3 +53,19 @@ hg parents
 hg strip 4 2>&1 | hidebackup
 echo % after strip of merge parent
 hg parents
+
+#strip of applied mq should cleanup status file
+hg up -C 3
+echo fooagain >> bar
+hg ci -mf
+hg qimport -r tip:2
+echo % applied patches before strip
+hg qapplied
+echo % stripping revision in queue
+hg strip 3 | hidebackup
+echo % applied patches after stripping rev in queue
+hg qapplied
+echo % stripping ancestor of queue
+hg strip 1 | hidebackup
+echo % applied patches after stripping ancestor of queue
+hg qapplied

@@ -165,3 +165,17 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     b
 
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% applied patches before strip
+2.diff
+3.diff
+4.diff
+% stripping revision in queue
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+saved backup bundle to 
+% applied patches after stripping rev in queue
+2.diff
+% stripping ancestor of queue
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+saved backup bundle to 
+% applied patches after stripping ancestor of queue

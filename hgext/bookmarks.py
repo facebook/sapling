@@ -218,8 +218,8 @@ def reposetup(ui, repo):
             '''Parse .hg/bookmarks file and return a dictionary
 
             Bookmarks are stored as {HASH}\\s{NAME}\\n (localtags format) values
-            in the .hg/bookmarks file. They are read returned as a dictionary
-            with name => hash values.
+            in the .hg/bookmarks file.
+            Read the file and return a (name=>nodeid) dictionary
             '''
             try:
                 bookmarks = {}
