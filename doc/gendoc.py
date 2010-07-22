@@ -110,7 +110,7 @@ def show_doc(ui):
             ui.write(".. _%s:\n" % name)
         ui.write("\n")
         section(sec)
-        if callable(doc):
+        if hasattr(doc, '__call__'):
             doc = doc()
         ui.write(doc)
         ui.write("\n")
