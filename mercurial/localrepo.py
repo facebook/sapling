@@ -1350,11 +1350,6 @@ class localrepository(repo.repository):
             for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
                 msngset.pop(revlog.node(r), None)
 
-        # Use the information collected in changegroup.collector() to say
-        # which changenode any manifestnode belongs to.
-        def lookup_manifest_link(mnfstnode):
-            return msng_mnfst_set[mnfstnode]
-
         # A function generating function that sets up the initial environment
         # the inner function.
         def filenode_collector(changedfiles):
@@ -1400,26 +1395,16 @@ class localrepository(repo.repository):
 
         # We have a list of filenodes we think we need for a file, lets remove
         # all those we know the recipient must have.
-        def prune_filenodes(f, filerevlog):
-            msngset = msng_filenode_set[f]
+        def prune_filenodes(f, filerevlog, missingnodes):
             hasset = set()
             # If a 'missing' filenode thinks it belongs to a changenode we
             # assume the recipient must have, then the recipient must have
             # that filenode.
-            for n in msngset:
+            for n in missingnodes:
                 clnode = cl.node(filerevlog.linkrev(filerevlog.rev(n)))
                 if clnode in has_cl_set:
                     hasset.add(n)
-            prune_parents(filerevlog, hasset, msngset)
-
-        # A function generator function that sets up the a context for the
-        # inner function.
-        def lookup_filenode_link_func(fname):
-            msngset = msng_filenode_set[fname]
-            # Lookup the changenode the filenode belongs to.
-            def lookup_filenode_link(fnode):
-                return msngset[fnode]
-            return lookup_filenode_link
+            prune_parents(filerevlog, hasset, missingnodes)
 
         # Add the nodes that were explicitly requested.
         def add_extra_nodes(name, nodes):
@@ -1466,7 +1451,8 @@ class localrepository(repo.repository):
             msng_mnfst_lst.sort(key=mnfst.rev)
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
-            group = mnfst.group(msng_mnfst_lst, lookup_manifest_link,
+            group = mnfst.group(msng_mnfst_lst,
+                                lambda mnode: msng_mnfst_set[mnode],
                                 filenode_collector(changedfiles))
             cnt = 0
             for chnk in group:
@@ -1494,32 +1480,27 @@ class localrepository(repo.repository):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 # Toss out the filenodes that the recipient isn't really
                 # missing.
-                if fname in msng_filenode_set:
-                    prune_filenodes(fname, filerevlog)
-                    add_extra_nodes(fname, msng_filenode_set[fname])
-                    msng_filenode_lst = msng_filenode_set[fname].keys()
-                else:
-                    msng_filenode_lst = []
+                missingfnodes = msng_filenode_set.pop(fname, {})
+                prune_filenodes(fname, filerevlog, missingfnodes)
+                add_extra_nodes(fname, missingfnodes)
                 # If any filenodes are left, generate the group for them,
                 # otherwise don't bother.
-                if len(msng_filenode_lst) > 0:
+                if missingfnodes:
                     yield changegroup.chunkheader(len(fname))
                     yield fname
-                    # Sort the filenodes by their revision #
-                    msng_filenode_lst.sort(key=filerevlog.rev)
+                    # Sort the filenodes by their revision # (topological order)
+                    nodeiter = list(missingfnodes)
+                    nodeiter.sort(key=filerevlog.rev)
                     # Create a group generator and only pass in a changenode
                     # lookup function as we need to collect no information
                     # from filenodes.
-                    group = filerevlog.group(msng_filenode_lst,
-                                             lookup_filenode_link_func(fname))
+                    group = filerevlog.group(nodeiter,
+                                             lambda fnode: missingfnodes[fnode])
                     for chnk in group:
                         self.ui.progress(
                             _('bundling files'), cnt, item=fname, unit=_('chunks'))
                         cnt += 1
                         yield chnk
-                if fname in msng_filenode_set:
-                    # Don't need this anymore, toss it to free memory.
-                    del msng_filenode_set[fname]
             # Signal that no more groups are left.
             yield changegroup.closechunk()
             self.ui.progress(_('bundling files'), None)
