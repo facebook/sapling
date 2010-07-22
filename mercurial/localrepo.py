@@ -1350,7 +1350,7 @@ class localrepository(repo.repository):
             for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
                 msngset.pop(revlog.node(r), None)
 
-        # Use the information collected in collect_manifests_and_files to say
+        # Use the information collected in changegroup.collector() to say
         # which changenode any manifestnode belongs to.
         def lookup_manifest_link(mnfstnode):
             return msng_mnfst_set[mnfstnode]
