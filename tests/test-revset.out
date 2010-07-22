@@ -93,6 +93,7 @@ abort: unknown revision 'date'!
 hg: parse error: ancestor wants two arguments
 % log 'ancestor(4,5)'
 1
+% log 'ancestor(4,5) and 4'
 % log 'ancestors(5)'
 0
 1
