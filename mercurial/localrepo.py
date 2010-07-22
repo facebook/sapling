@@ -1342,14 +1342,6 @@ class localrepository(repo.repository):
         def identity(x):
             return x
 
-        # If we determine that a particular file or manifest node must be a
-        # node that the recipient of the changegroup will already have, we can
-        # also assume the recipient will have all the parents.  This function
-        # prunes them from the set of missing nodes.
-        def prune_parents(revlog, hasset, msngset):
-            for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
-                msngset.pop(revlog.node(r), None)
-
         # A function generating function that sets up the initial environment
         # the inner function.
         def filenode_collector(changedfiles):
@@ -1393,18 +1385,22 @@ class localrepository(repo.repository):
                             ndset.setdefault(fnode, clnode)
             return collect_msng_filenodes
 
-        # We have a list of filenodes we think we need for a file, lets remove
-        # all those we know the recipient must have.
-        def prune_filenodes(f, filerevlog, missingnodes):
+        # If we determine that a particular file or manifest node must be a
+        # node that the recipient of the changegroup will already have, we can
+        # also assume the recipient will have all the parents.  This function
+        # prunes them from the set of missing nodes.
+        # XXX is it even useful? the testsuite doesn't trigger it
+        def prune(revlog, missingnodes):
             hasset = set()
             # If a 'missing' filenode thinks it belongs to a changenode we
             # assume the recipient must have, then the recipient must have
             # that filenode.
             for n in missingnodes:
-                clnode = cl.node(filerevlog.linkrev(filerevlog.rev(n)))
+                clnode = cl.node(revlog.linkrev(revlog.rev(n)))
                 if clnode in has_cl_set:
                     hasset.add(n)
-            prune_parents(filerevlog, hasset, missingnodes)
+            for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
+                missingnodes.pop(revlog.node(r), None)
 
         # Add the nodes that were explicitly requested.
         def add_extra_nodes(name, nodes):
@@ -1432,19 +1428,7 @@ class localrepository(repo.repository):
                 cnt += 1
             self.ui.progress(_('bundling changes'), None)
 
-
-            # Figure out which manifest nodes (of the ones we think might be
-            # part of the changegroup) the recipient must know about and
-            # remove them from the changegroup.
-            has_mnfst_set = set()
-            for n in msng_mnfst_set:
-                # If a 'missing' manifest thinks it belongs to a changenode
-                # the recipient is assumed to have, obviously the recipient
-                # must have that manifest.
-                linknode = cl.node(mnfst.linkrev(mnfst.rev(n)))
-                if linknode in has_cl_set:
-                    has_mnfst_set.add(n)
-            prune_parents(mnfst, has_mnfst_set, msng_mnfst_set)
+            prune(mnfst, msng_mnfst_set)
             add_extra_nodes(1, msng_mnfst_set)
             msng_mnfst_lst = msng_mnfst_set.keys()
             # Sort the manifestnodes by revision number.
@@ -1481,7 +1465,7 @@ class localrepository(repo.repository):
                 # Toss out the filenodes that the recipient isn't really
                 # missing.
                 missingfnodes = msng_filenode_set.pop(fname, {})
-                prune_filenodes(fname, filerevlog, missingfnodes)
+                prune(filerevlog, missingfnodes)
                 add_extra_nodes(fname, missingfnodes)
                 # If any filenodes are left, generate the group for them,
                 # otherwise don't bother.
