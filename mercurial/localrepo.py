@@ -1373,10 +1373,9 @@ class localrepository(repo.repository):
                     deltamf = mnfst.readdelta(mnfstnode)
                     # For each line in the delta
                     for f, fnode in deltamf.iteritems():
-                        f = changedfiles.get(f, None)
                         # And if the file is in the list of files we care
                         # about.
-                        if f is not None:
+                        if f in changedfiles:
                             # Get the changenode this manifest belongs to
                             clnode = msng_mnfst_set[mnfstnode]
                             # Create the set of filenodes for the file if
@@ -1435,7 +1434,7 @@ class localrepository(repo.repository):
         # logically divide up the task, generate the group.
         def gengroup():
             # The set of changed files starts empty.
-            changedfiles = {}
+            changedfiles = set()
             collect = changegroup.collector(cl, msng_mnfst_set, changedfiles)
 
             # Create a changenode group generator that will call our functions
@@ -1486,7 +1485,7 @@ class localrepository(repo.repository):
                     if isinstance(fname, int):
                         continue
                     msng_filenode_set.setdefault(fname, {})
-                    changedfiles[fname] = 1
+                    changedfiles.add(fname)
             # Go through all our files in order sorted by name.
             cnt = 0
             for fname in sorted(changedfiles):
@@ -1566,7 +1565,7 @@ class localrepository(repo.repository):
         def gengroup():
             '''yield a sequence of changegroup chunks (strings)'''
             # construct a list of all changed files
-            changedfiles = {}
+            changedfiles = set()
             mmfs = {}
             collect = changegroup.collector(cl, mmfs, changedfiles)
 

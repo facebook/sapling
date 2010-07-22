@@ -61,8 +61,7 @@ def collector(cl, mmfs, files):
     # We want to gather manifests needed and filelogs affected.
     def collect(node):
         c = cl.read(node)
-        for fn in c[3]:
-            files.setdefault(fn, fn)
+        files.update(c[3])
         mmfs.setdefault(c[0], node)
     return collect
 
