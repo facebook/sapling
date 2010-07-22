@@ -94,6 +94,7 @@ log 'date(2005) and 1::'
 
 log 'ancestor(1)'
 log 'ancestor(4,5)'
+log 'ancestor(4,5) and 4'
 log 'ancestors(5)'
 log 'author(bob)'
 log 'branch(é)'

@@ -223,11 +223,14 @@ def branch(repo, subset, x):
 
 def ancestor(repo, subset, x):
     l = getargs(x, 2, 2, _("ancestor wants two arguments"))
-    a = getset(repo, subset, l[0])
-    b = getset(repo, subset, l[1])
-    if len(a) > 1 or len(b) > 1:
+    r = range(len(repo))
+    a = getset(repo, r, l[0])
+    b = getset(repo, r, l[1])
+    if len(a) != 1 or len(b) != 1:
         raise error.ParseError(_("ancestor arguments must be single revisions"))
-    return [repo[a[0]].ancestor(repo[b[0]]).rev()]
+    an = [repo[a[0]].ancestor(repo[b[0]]).rev()]
+
+    return [r for r in an if r in subset]
 
 def ancestors(repo, subset, x):
     args = getset(repo, range(len(repo)), x)
