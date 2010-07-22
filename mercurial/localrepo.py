@@ -1305,26 +1305,8 @@ class localrepository(repo.repository):
 
         self.changegroupinfo(msng_cl_lst, source)
 
-        # Known heads are the list of heads that it is assumed the recipient
-        # of this changegroup will know about.
-        knownheads = set()
-        # We assume that all parents of bases are known heads.
-        for n in bases:
-            knownheads.update(cl.parents(n))
-        knownheads.discard(nullid)
-        if knownheads:
-            # Now that we know what heads are known, we can compute which
-            # changesets are known.  The recipient must know about all
-            # changesets required to reach the known heads from the null
-            # changeset.
-            has_cl_set, junk, junk = cl.nodesbetween(None, knownheads)
-            junk = None
-            # Transform the list into a set.
-            has_cl_set = set(has_cl_set)
-        else:
-            # If there were no known heads, the recipient cannot be assumed to
-            # know about any changesets.
-            has_cl_set = set()
+        # We assume that all ancestors of bases are known
+        commonrevs = set(cl.ancestors(*[cl.rev(n) for n in bases]))
 
         # Make it easy to refer to self.manifest
         mnfst = self.manifest
@@ -1395,8 +1377,8 @@ class localrepository(repo.repository):
             # assume the recipient must have, then the recipient must have
             # that filenode.
             for n in missingnodes:
-                clnode = cl.node(revlog.linkrev(revlog.rev(n)))
-                if clnode in has_cl_set:
+                clrev = revlog.linkrev(revlog.rev(n))
+                if clrev in commonrevs:
                     hasset.add(n)
             for n in hasset:
                 missingnodes.pop(n, None)
