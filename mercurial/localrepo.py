@@ -1284,8 +1284,10 @@ class localrepository(repo.repository):
         # Set up some initial variables
         # Make it easy to refer to self.changelog
         cl = self.changelog
-        # msng is short for missing - compute the list of changesets in this
-        # changegroup.
+        # Compute the list of changesets in this changegroup.
+        # Some bases may turn out to be superfluous, and some heads may be
+        # too.  nodesbetween will return the minimal set of bases and heads
+        # necessary to re-create the changegroup.
         if not bases:
             bases = [nullid]
         msng_cl_lst, bases, heads = cl.nodesbetween(bases, heads)
@@ -1302,9 +1304,6 @@ class localrepository(repo.repository):
         self.hook('preoutgoing', throw=True, source=source)
 
         self.changegroupinfo(msng_cl_lst, source)
-        # Some bases may turn out to be superfluous, and some heads may be
-        # too.  nodesbetween will return the minimal set of bases and heads
-        # necessary to re-create the changegroup.
 
         # Known heads are the list of heads that it is assumed the recipient
         # of this changegroup will know about.
