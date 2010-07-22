@@ -82,7 +82,7 @@ def loaddoc(topic):
         return gettext(open(path).read())
     return loader
 
-helptable = (
+helptable = [
     (["config"], _("Configuration Files"), loaddoc('config')),
     (["dates"], _("Date Formats"), loaddoc('dates')),
     (["patterns"], _("File Name Patterns"), loaddoc('patterns')),
@@ -100,4 +100,4 @@ helptable = (
     (["extensions"], _("Using additional features"), extshelp),
     (["hgweb"], _("Configuring hgweb"), loaddoc('hgweb')),
     (["glossary"], _("Glossary"), loaddoc('glossary')),
-)
+]
