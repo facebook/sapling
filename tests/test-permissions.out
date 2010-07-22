@@ -1,26 +1,36 @@
+% hg init t
+% hg add a
+% hg commit
+% hg verify
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
+% hg verify
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 verify failed
+% hg verify
 checking changesets
 checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
+% hg commit
 commit failed
+% hg diff
 diff -r c1fab96507ef a
 --- a/a
 +++ b/a
 @@ -1,1 +1,1 @@
 -foo
 +barber
+% hg status
 M a
 ? dir/a
+% hg status
 dir: Permission denied
 M a
