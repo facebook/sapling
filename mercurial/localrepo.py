@@ -1557,10 +1557,10 @@ class localrepository(repo.repository):
                 if log.linkrev(r) in revset:
                     yield log.node(r)
 
-        def lookuprevlink_func(revlog):
-            def lookuprevlink(n):
+        def lookuplinkrev_func(revlog):
+            def lookuplinkrev(n):
                 return cl.node(revlog.linkrev(revlog.rev(n)))
-            return lookuprevlink
+            return lookuplinkrev
 
         def gengroup():
             '''yield a sequence of changegroup chunks (strings)'''
@@ -1579,7 +1579,7 @@ class localrepository(repo.repository):
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
             cnt = 0
-            for chnk in mnfst.group(nodeiter, lookuprevlink_func(mnfst)):
+            for chnk in mnfst.group(nodeiter, lookuplinkrev_func(mnfst)):
                 self.ui.progress(_('bundling manifests'), cnt, unit=_('chunks'))
                 cnt += 1
                 yield chnk
@@ -1595,7 +1595,7 @@ class localrepository(repo.repository):
                 if nodeiter:
                     yield changegroup.chunkheader(len(fname))
                     yield fname
-                    lookup = lookuprevlink_func(filerevlog)
+                    lookup = lookuplinkrev_func(filerevlog)
                     for chnk in filerevlog.group(nodeiter, lookup):
                         self.ui.progress(
                             _('bundling files'), cnt, item=fname, unit=_('chunks'))
