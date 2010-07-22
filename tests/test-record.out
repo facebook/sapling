@@ -222,7 +222,7 @@ examine changes to 'plain'? [Ynsfdaq?]
 record this change to 'plain'? [Ynsfdaq?] 
 % modify end of plain file, add EOL
 diff --git a/plain b/plain
-1 hunks, 2 lines changed
+1 hunks, 1 lines changed
 examine changes to 'plain'? [Ynsfdaq?] 
 @@ -9,4 +9,4 @@
  9
@@ -234,7 +234,7 @@ examine changes to 'plain'? [Ynsfdaq?]
 record this change to 'plain'? [Ynsfdaq?] 
 % modify beginning, trim end, record both
 diff --git a/plain b/plain
-2 hunks, 4 lines changed
+2 hunks, 3 lines changed
 examine changes to 'plain'? [Ynsfdaq?] 
 @@ -1,4 +1,4 @@
 -1
@@ -276,7 +276,7 @@ diff -r cd07d48e8cbe -r efca65c9b09e plain
 % trim beginning, modify end
 % record end
 diff --git a/plain b/plain
-2 hunks, 5 lines changed
+2 hunks, 4 lines changed
 examine changes to 'plain'? [Ynsfdaq?] 
 @@ -1,9 +1,6 @@
 -2
