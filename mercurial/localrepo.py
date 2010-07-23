@@ -510,7 +510,7 @@ class localrepository(repo.repository):
     def _link(self, f):
         return os.path.islink(self.wjoin(f))
 
-    def _filter(self, filter, filename, data):
+    def _loadfilter(self, filter):
         if filter not in self.filterpats:
             l = []
             for pat, cmd in self.ui.configitems(filter):
@@ -532,6 +532,9 @@ class localrepository(repo.repository):
                     fn = lambda s, c, **kwargs: oldfn(s, c)
                 l.append((mf, fn, params))
             self.filterpats[filter] = l
+
+    def _filter(self, filter, filename, data):
+        self._loadfilter(filter)
 
         for mf, fn, cmd in self.filterpats[filter]:
             if mf(filename):
