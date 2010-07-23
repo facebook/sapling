@@ -366,7 +366,12 @@ def _dispatch(ui, args):
         os.chdir(cwd[-1])
 
     # read the local repository .hgrc into a local ui object
-    path = cmdutil.findrepo(os.getcwd()) or ""
+    try:
+        wd = os.getcwd()
+    except OSError, e:
+        raise util.Abort(_("error getting current working directory: %s") % 
+                         e.strerror)
+    path = cmdutil.findrepo(wd) or ""
     if not path:
         lui = ui
     else:
