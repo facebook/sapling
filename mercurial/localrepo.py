@@ -1370,7 +1370,6 @@ class localrepository(repo.repository):
         # node that the recipient of the changegroup will already have, we can
         # also assume the recipient will have all the parents.  This function
         # prunes them from the set of missing nodes.
-        # XXX is it even useful? the testsuite doesn't trigger it
         def prune(revlog, missingnodes):
             hasset = set()
             # If a 'missing' filenode thinks it belongs to a changenode we
