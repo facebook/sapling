@@ -1817,6 +1817,11 @@ def qimport(ui, repo, *filename, **opts):
     To import a patch from standard input, pass - as the patch file.
     When importing from standard input, a patch name must be specified
     using the --name flag.
+
+    You can import a patch existing inside the patch repository and
+    rename it on the go::
+
+      hg qimport -e existing-patch -n new-name
     """
     q = repo.mq
     try:
