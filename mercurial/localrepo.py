@@ -1403,11 +1403,9 @@ class localrepository(repo.repository):
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
             group = cl.group(msng_cl_lst, identity, collect)
-            cnt = 0
-            for chnk in group:
+            for cnt, chnk in enumerate(group):
                 yield chnk
                 self.ui.progress(_('bundling changes'), cnt, unit=_('chunks'))
-                cnt += 1
             self.ui.progress(_('bundling changes'), None)
 
             prune(mnfst, msng_mnfst_set)
@@ -1420,11 +1418,9 @@ class localrepository(repo.repository):
             group = mnfst.group(msng_mnfst_lst,
                                 lambda mnode: msng_mnfst_set[mnode],
                                 filenode_collector(changedfiles))
-            cnt = 0
-            for chnk in group:
+            for cnt, chnk in enumerate(group):
                 yield chnk
                 self.ui.progress(_('bundling manifests'), cnt, unit=_('chunks'))
-                cnt += 1
             self.ui.progress(_('bundling manifests'), None)
 
             # These are no longer needed, dereference and toss the memory for
@@ -1516,19 +1512,16 @@ class localrepository(repo.repository):
             mmfs = {}
             collect = changegroup.collector(cl, mmfs, changedfiles)
 
-            cnt = 0
-            for chnk in cl.group(nodes, identity, collect):
+            for cnt, chnk in enumerate(cl.group(nodes, identity, collect)):
                 self.ui.progress(_('bundling changes'), cnt, unit=_('chunks'))
-                cnt += 1
                 yield chnk
             self.ui.progress(_('bundling changes'), None)
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
-            cnt = 0
-            for chnk in mnfst.group(nodeiter, lookuplinkrev_func(mnfst)):
+            for cnt, chnk in enumerate(mnfst.group(nodeiter,
+                                                   lookuplinkrev_func(mnfst))):
                 self.ui.progress(_('bundling manifests'), cnt, unit=_('chunks'))
-                cnt += 1
                 yield chnk
             self.ui.progress(_('bundling manifests'), None)
 
