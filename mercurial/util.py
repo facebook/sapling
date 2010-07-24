@@ -15,7 +15,7 @@ hide platform-specific details from the core.
 
 from i18n import _
 import error, osutil, encoding
-import cStringIO, errno, re, shutil, sys, tempfile, traceback
+import errno, re, shutil, sys, tempfile, traceback
 import os, stat, time, calendar, textwrap, unicodedata, signal
 import imp
 
@@ -924,17 +924,16 @@ class chunkbuffer(object):
         if l > len(self.buf) and self.iter:
             # Clamp to a multiple of self.targetsize
             targetsize = max(l, self.targetsize)
-            collector = cStringIO.StringIO()
-            collector.write(self.buf)
+            collector = [str(self.buf)]
             collected = len(self.buf)
             for chunk in self.iter:
-                collector.write(chunk)
+                collector.append(chunk)
                 collected += len(chunk)
                 if collected >= targetsize:
                     break
             else:
                 self.iter = False
-            self.buf = collector.getvalue()
+            self.buf = ''.join(collector)
         if len(self.buf) == l:
             s, self.buf = str(self.buf), ''
         else:
