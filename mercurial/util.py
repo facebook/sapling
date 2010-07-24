@@ -916,14 +916,13 @@ class chunkbuffer(object):
         targetsize is how big a buffer to try to maintain."""
         self.iter = iter(in_iter)
         self.buf = ''
-        self.targetsize = 2**16
 
     def read(self, l):
         """Read L bytes of data from the iterator of chunks of data.
         Returns less than L bytes if the iterator runs dry."""
         if l > len(self.buf) and self.iter:
-            # Clamp to a multiple of self.targetsize
-            targetsize = max(l, self.targetsize)
+            # Clamp to a multiple of 2**16
+            targetsize = max(l, 2**16)
             collector = [str(self.buf)]
             collected = len(self.buf)
             for chunk in self.iter:
