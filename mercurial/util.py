@@ -932,7 +932,7 @@ class chunkbuffer(object):
                 collected += len(chunk)
                 if collected >= targetsize:
                     break
-            if collected < targetsize:
+            else:
                 self.iter = False
             self.buf = collector.getvalue()
         if len(self.buf) == l:
