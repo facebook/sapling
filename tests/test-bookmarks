@@ -100,4 +100,7 @@ hg bookmark
 echo % revision but no bookmark name
 hg bookmark -r .
 
+echo % bookmark name with whitespace only
+hg bookmark ' '
+
 true

@@ -74,3 +74,5 @@ abort: a bookmark of the same name already exists
  * x  y                      2:0316ce92851d
 % revision but no bookmark name
 abort: bookmark name required
+% bookmark name with whitespace only
+abort: bookmark names cannot consist entirely of whitespace
