@@ -343,7 +343,6 @@ static PyObject *event_repr(struct event *evt)
 {
 	int cookie = evt->cookie == Py_None ? -1 : PyInt_AsLong(evt->cookie);
 	PyObject *ret = NULL, *pymasks = NULL, *pymask = NULL;
-	char *maskstr;
 	PyObject *tuple = NULL, *formatstr = NULL;
 
 	pymasks = decode_mask(PyInt_AsLong(evt->mask));
