@@ -1064,11 +1064,11 @@ class localrepository(repo.repository):
                     else:
                         fixup.append(f)
 
-                if listclean:
-                    clean += fixup
-
                 # update dirstate for files that are actually clean
                 if fixup:
+                    if listclean:
+                        clean += fixup
+
                     try:
                         # updating the dirstate is optional
                         # so we don't wait on the lock
