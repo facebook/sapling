@@ -7,16 +7,19 @@ merging foo and baz to baz
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 created new head
+marked working directory as branch foo
 initializing destination new repository
 scanning source...
 sorting...
 converting...
-5 add foo bar
-4 change foo
-3 make bar and baz copies of foo
-2 merge local copy
-1 merge remote copy
-0 mark baz executable
+7 add foo bar
+6 change foo
+5 make bar and baz copies of foo
+4 merge local copy
+3 merge remote copy
+2 mark baz executable
+1 branch foo
+0 close
 comparing with ../orig
 searching for changes
 no changes found
