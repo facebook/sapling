@@ -10,7 +10,7 @@ changegroup.notify = python:hgext.notify.hook
 [notify]
 sources = push
 diffstat = False
-maxsubject = 200
+maxsubject = 10
 
 [usersubs]
 foo@bar = *
@@ -37,7 +37,7 @@ hg --traceback --cwd b push ../a 2>&1 |
     python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),' |
     sed -e 's/\(Message-Id:\).*/\1/' \
         -e 's/changeset \([0-9a-f]* *\)in .*test-notif/changeset \1in test-notif/' \
-        -e 's/^Subject: .*test-notify/Subject: test-notify/' \
+        -e 's/^Subject: .*/Subject: test-notify-changegroup/' \
         -e 's/^details: .*test-notify/details: test-notify/' \
         -e 's/^Date:.*/Date:/'
 

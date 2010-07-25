@@ -15,7 +15,7 @@ Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
 Date:
-Subject: test-notify-changegroup/a: 2 new changesets
+Subject: test-notify-changegroup
 From: test
 X-Hg-Notification: changeset cb9a9f314b8b
 Message-Id:
