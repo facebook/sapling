@@ -298,7 +298,9 @@ class filemap_source(converter_source):
 
         self.origparents[rev] = parents
 
-        if len(mparents) < 2 and not self.wanted(rev, wp):
+        closed = 'close' in self.commits[rev].extra
+
+        if len(mparents) < 2 and not closed and not self.wanted(rev, wp):
             # We don't want this revision.
             # Update our state and tell the convert process to map this
             # revision to the same revision its parent as mapped to.

@@ -175,7 +175,8 @@ class mercurial_sink(converter_sink):
         if self.filemapmode and nparents == 1:
             man = self.repo.manifest
             mnode = self.repo.changelog.read(bin(p2))[0]
-            if not man.cmp(m1node, man.revision(mnode)):
+            closed = 'close' in commit.extra
+            if not closed and not man.cmp(m1node, man.revision(mnode)):
                 self.ui.status(_("filtering out empty revision\n"))
                 self.repo.rollback()
                 return parent
