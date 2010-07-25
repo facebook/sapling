@@ -82,6 +82,7 @@ pypats = [
     (r'\w[+/*\-<>]\w', "missing whitespace in expression"),
     (r'^\s+\w+=\w+[^,)]$', "missing whitespace in assignment"),
     (r'.{85}', "line too long"),
+    (r'.{81}', "warning: line over 80 characters"),
     (r'[^\n]\Z', "no trailing newline"),
 #    (r'^\s+[^_ ][^_. ]+_[^_]+\s*=', "don't use underbars in identifiers"),
 #    (r'\w*[a-z][A-Z]\w*\s*=', "don't use camelcase in identifiers"),
