@@ -262,7 +262,7 @@ class cmdalias(object):
         if self.shadows:
             ui.debug("alias '%s' shadows command\n" % self.name)
 
-        return self.fn(ui, *args, **opts)
+        return util.checksignature(self.fn)(ui, *args, **opts)
 
 def addaliases(ui, cmdtable):
     # aliases are processed after extensions have been loaded, so they
@@ -380,7 +380,12 @@ def _dispatch(ui, args):
         os.chdir(cwd[-1])
 
     # read the local repository .hgrc into a local ui object
-    path = cmdutil.findrepo(os.getcwd()) or ""
+    try:
+        wd = os.getcwd()
+    except OSError, e:
+        raise util.Abort(_("error getting current working directory: %s") % 
+                         e.strerror)
+    path = cmdutil.findrepo(wd) or ""
     if not path:
         lui = ui
     else:

@@ -45,3 +45,16 @@ diff -r 000000000000 -r e63c23eaa88a foo
 +foo
 % shell aliases
 foo
+% invalid arguments
+hg rt: invalid arguments
+hg rt 
+
+alias for: hg root
+
+print the root (top) of the current working directory
+
+    Print the root directory of the current repository.
+
+    Returns 0 on success.
+
+use "hg -v help rt" to show global options

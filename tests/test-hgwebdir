@@ -65,6 +65,8 @@ t/a/=$root/a
 b=$root/b
 coll=$root/*
 rcoll=$root/**
+star=*
+starstar=**
 EOF
 
 hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
