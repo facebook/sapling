@@ -890,7 +890,7 @@ def debugbuilddag(ui, repo, text,
         # we don't want to fail in merges during buildup
         os.environ['HGMERGE'] = 'internal:local'
 
-    def writefile(fname, text, fmode="w"):
+    def writefile(fname, text, fmode="wb"):
         f = open(fname, fmode)
         try:
             f.write(text)
@@ -925,7 +925,7 @@ def debugbuilddag(ui, repo, text,
                 merge(ui, repo, node=p2)
 
             if mergeable_file:
-                f = open("mf", "r+")
+                f = open("mf", "rb+")
                 try:
                     lines = f.read().split("\n")
                     lines[id * linesperrev] += " r%i" % id
@@ -935,7 +935,7 @@ def debugbuilddag(ui, repo, text,
                     f.close()
 
             if appended_file:
-                writefile("af", "r%i\n" % id, "a")
+                writefile("af", "r%i\n" % id, "ab")
 
             if overwritten_file:
                 writefile("of", "r%i\n" % id)
