@@ -33,5 +33,7 @@ use "hg -v help cat" to show global options
 % [defaults]
 a
 a: No such file in rev 000000000000
+% working directory removed
+abort: error getting current working directory: No such file or directory
 % no repo
 abort: There is no Mercurial repository here (.hg not found)!

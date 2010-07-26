@@ -333,6 +333,17 @@ expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
 do not process $Id:
 xxx $
 $Xinfo: User Name <user@example.com>: firstline $
+% clone
+% expansion in dest
+expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
+do not process $Id:
+xxx $
+$Xinfo: User Name <user@example.com>: firstline $
+% no expansion in dest
+expand $Id$
+do not process $Id:
+xxx $
+$Xinfo$
 % clone to test incoming
 requesting all changes
 adding changesets

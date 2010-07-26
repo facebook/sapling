@@ -15,6 +15,7 @@ dln = lognull --debug
 nousage = rollback
 put = export -r 0 -o "\$FOO/%R.diff"
 echo = !echo
+rt = root
 
 [defaults]
 mylog = -q
@@ -68,3 +69,7 @@ cat 0.diff
 
 echo '% shell aliases'
 hg echo foo
+echo '% invalid arguments'
+hg rt foo
+
+exit 0

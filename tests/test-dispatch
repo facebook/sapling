@@ -3,6 +3,8 @@
 
 "$TESTDIR/hghave" no-outer-repo || exit 80
 
+dir=`pwd`
+
 hg init a
 cd a
 echo a > a
@@ -19,8 +21,12 @@ cat = -r null
 EOF
 hg cat a
 
+echo '% working directory removed'
+rm -rf $dir/a
+hg --version
+
 echo '% no repo'
-cd ..
+cd $dir
 hg cat
 
 exit 0
