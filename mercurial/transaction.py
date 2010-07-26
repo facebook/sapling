@@ -115,7 +115,7 @@ class transaction(object):
     def release(self):
         if self.count > 0:
             self.usages -= 1
-        # of the transaction scopes are left without being closed, fail
+        # if the transaction scopes are left without being closed, fail
         if self.count > 0 and self.usages == 0:
             self._abort()
 

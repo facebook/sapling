@@ -16,7 +16,7 @@ Branch
     a remote repository, since new heads may be created by these
     operations. Note that the term branch can also be used informally
     to describe a development process in which certain development is
-    done independently of other development.This is sometimes done
+    done independently of other development. This is sometimes done
     explicitly with a named branch, but it can also be done locally,
     using bookmarks or clones and anonymous branches.
 
