@@ -533,6 +533,8 @@ class revlog(object):
         return self.index[rev][1]
     def base(self, rev):
         return self.index[rev][3]
+    def flags(self, rev):
+        return self.index[rev][0] & 0xFFFF
 
     def size(self, rev):
         """return the length of the uncompressed text for a given revision"""
@@ -1020,9 +1022,9 @@ class revlog(object):
         base = self.base(rev)
 
         # check rev flags
-        if self.index[rev][0] & 0xFFFF:
+        if self.flags(rev):
             raise RevlogError(_('incompatible revision flag %x') %
-                              (self.index[rev][0] & 0xFFFF))
+                              (self.flags(rev)))
 
         # do we have useful data cached?
         if self._cache and self._cache[1] >= base and self._cache[1] < rev:
