@@ -223,6 +223,18 @@ class cmdalias(object):
         cmd = args.pop(0)
         args = map(util.expandpath, args)
 
+        for invalidarg in ("--cwd", "-R", "--repository", "--repo"):
+            if _earlygetopt([invalidarg], args):
+                def fn(ui, *args):
+                    ui.warn(_("error in definition for alias '%s': %s may only "
+                              "be given on the command line\n")
+                            % (self.name, invalidarg))
+                    return 1
+
+                self.fn = fn
+                self.badalias = True
+                return
+
         try:
             tableentry = cmdutil.findcmd(cmd, cmdtable, False)[1]
             if len(tableentry) > 2:

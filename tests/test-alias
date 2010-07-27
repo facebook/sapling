@@ -8,6 +8,10 @@ unknown = bargle
 ambiguous = s
 recursive = recursive
 nodefinition =
+no--cwd = status --cwd elsewhere
+no-R = status -R elsewhere
+no--repo = status --repo elsewhere
+no--repository = status --repository elsewhere
 mylog = log
 lognull = log -r null
 shortlog = log --template '{rev} {node|short} | {date|isodate}\n'
@@ -41,6 +45,16 @@ hg help recursive
 echo '% no definition'
 hg nodef
 hg help nodef
+
+echo '% invalid options'
+hg no--cwd
+hg help no--cwd
+hg no-R
+hg help no-R
+hg no--repo
+hg help no--repo
+hg no--repository
+hg help no--repository
 
 cd alias
 
