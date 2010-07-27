@@ -3650,6 +3650,8 @@ def tag(ui, repo, name1, *names, **opts):
     for n in names:
         if n in ['tip', '.', 'null']:
             raise util.Abort(_('the name \'%s\' is reserved') % n)
+        if not n:
+            raise util.Abort(_('tag names cannot consist entirely of whitespace'))
     if opts.get('rev') and opts.get('remove'):
         raise util.Abort(_("--rev and --remove are incompatible"))
     if opts.get('rev'):
