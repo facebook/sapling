@@ -4,6 +4,7 @@ user:        test
 date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     test
 
+abort: tag names cannot consist entirely of whitespace
 changeset:   1:3ecf002a1c57
 tag:         tip
 user:        test
