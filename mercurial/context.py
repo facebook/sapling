@@ -357,6 +357,9 @@ class filectx(object):
 
         returns True if different than fctx.
         """
+        if not self._repo._encodefilterpats and self.size() != fctx.size():
+            return True
+
         return self._filelog.cmp(self._filenode, fctx.data())
 
     def renamed(self):

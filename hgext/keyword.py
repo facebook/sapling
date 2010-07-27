@@ -82,7 +82,7 @@ like CVS' $Log$, are not supported. A keyword template map "Log =
 {desc}" expands to the first line of the changeset description.
 '''
 
-from mercurial import commands, cmdutil, dispatch, filelog, extensions
+from mercurial import commands, context, cmdutil, dispatch, filelog, extensions
 from mercurial import localrepo, match, patch, templatefilters, templater, util
 from mercurial.hgweb import webcommands
 from mercurial.i18n import _
@@ -585,6 +585,12 @@ def reposetup(ui, repo):
             wlock.release()
 
     repo.__class__ = kwrepo
+
+    def kwfilectx_cmp(orig, self, fctx):
+        # keyword affects data size, comparing wdir and filelog size does
+        # not make sense
+        return self._filelog.cmp(self._filenode, fctx.data())
+    extensions.wrapfunction(context.filectx, 'cmp', kwfilectx_cmp)
 
     extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
     extensions.wrapfunction(patch, 'diff', kw_diff)
