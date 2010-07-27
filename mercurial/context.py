@@ -352,12 +352,12 @@ class filectx(object):
     def size(self):
         return self._filelog.size(self._filerev)
 
-    def cmp(self, text):
-        """compare text with stored file revision
+    def cmp(self, fctx):
+        """compare with other file context
 
-        returns True if text is different than what is stored.
+        returns True if different than fctx.
         """
-        return self._filelog.cmp(self._filenode, text)
+        return self._filelog.cmp(self._filenode, fctx.data())
 
     def renamed(self):
         """check if file was actually renamed in this changeset revision
@@ -935,12 +935,12 @@ class workingfilectx(filectx):
                 raise
             return (t, tz)
 
-    def cmp(self, text):
-        """compare text with disk content
+    def cmp(self, fctx):
+        """compare with other file context
 
-        returns True if text is different than what is on disk.
+        returns True if different than fctx.
         """
-        return self._repo.wread(self._path) != text
+        return self._repo.wread(self._path) != fctx.data()
 
 class memctx(object):
     """Use memctx to perform in-memory commits via localrepo.commitctx().

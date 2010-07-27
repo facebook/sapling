@@ -135,7 +135,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         except IOError:
             return False
 
-    if not fco.cmp(fcd.data()): # files identical?
+    if not fco.cmp(fcd): # files identical?
         return None
 
     if fca == fco: # backwards, use working dir parent as ancestor
