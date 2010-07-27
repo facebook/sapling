@@ -133,6 +133,16 @@ def perfdiffwd(ui, repo):
         title = 'diffopts: %s' % (diffopt and ('-' + diffopt) or 'none')
         timer(d, title)
 
+def perfrevlog(ui, repo, file_, **opts):
+    from mercurial import revlog
+    dist = opts['dist']
+    def d():
+        r = revlog.revlog(lambda fn: open(fn, 'rb'), file_)
+        for x in xrange(0, len(r), dist):
+            r.revision(r.node(x))
+
+    timer(d)
+
 cmdtable = {
     'perflookup': (perflookup, []),
     'perfparents': (perfparents, []),
@@ -149,4 +159,5 @@ cmdtable = {
                 [('', 'rename', False, 'ask log to follow renames')]),
     'perftemplating': (perftemplating, []),
     'perfdiffwd': (perfdiffwd, []),
+    'perfrevlog': (perfrevlog, [('d', 'dist', 100, 'distance between the revisions')],"[INDEXFILE]"),
 }
