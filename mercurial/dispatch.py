@@ -24,7 +24,7 @@ def dispatch(args):
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         if inst.hint:
-            sys.stdout.write(_("(%s)\n") % inst.hint)
+            sys.stderr.write(_("(%s)\n") % inst.hint)
         return -1
     except error.ParseError, inst:
         if len(inst.args) > 1:
@@ -119,7 +119,7 @@ def _runcatch(ui, args):
     except util.Abort, inst:
         ui.warn(_("abort: %s\n") % inst)
         if inst.hint:
-            ui.status(_("(%s)\n") % inst.hint)
+            ui.warn(_("(%s)\n") % inst.hint)
     except ImportError, inst:
         ui.warn(_("abort: %s!\n") % inst)
         m = str(inst).split()[-1]

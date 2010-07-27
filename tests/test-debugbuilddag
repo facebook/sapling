@@ -13,6 +13,8 @@ cd repo
 hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' -q -oa
 echo -- dag
 hg debugdag -t -b
+echo -- tip
+hg id
 echo -- glog
 hg glog --template '{rev}: {desc} [{branches}] @ {date}\n'
 echo -- glog of
@@ -35,6 +37,8 @@ cd repo
 hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' -q -mn
 echo -- dag
 hg debugdag -t -b
+echo -- tip
+hg id
 echo -- glog
 hg glog --template '{rev}: {desc} [{branches}] @ {date}\n'
 echo -- glog mf

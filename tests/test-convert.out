@@ -65,7 +65,7 @@ convert a foreign SCM repository to a Mercurial one.
 
       rename path/to/source path/to/destination
 
-    Comment lines start with '#'. A specificed path matches if it equals the
+    Comment lines start with '#'. A specified path matches if it equals the
     full relative name of a file or one of its parent directories. The
     'include' or 'exclude' directive with the longest matching path applies,
     so line order does not matter.
@@ -74,7 +74,7 @@ convert a foreign SCM repository to a Mercurial one.
     be included in the destination repository, and the exclusion of all other
     files and directories not explicitly included. The 'exclude' directive
     causes files or directories to be omitted. The 'rename' directive renames
-    a file or directory if is converted. To rename from a subdirectory into
+    a file or directory if it is converted. To rename from a subdirectory into
     the root of the repository, use '.' as the path to rename to.
 
     The splicemap is a file that allows insertion of synthetic history,

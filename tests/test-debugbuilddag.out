@@ -4,6 +4,8 @@
 +3:p2
 @temp*f+3
 @default*/p2+2:tip
+-- tip
+f96e381c614c tip
 -- glog
 @  11: r11 [] @ 11.00
 |
@@ -101,6 +103,8 @@ r11
 +3:p2
 @temp*f+3
 @default*/p2+2:tip
+-- tip
+9c5ce9b70771 tip
 -- glog
 @  11: r11 [] @ 11.00
 |

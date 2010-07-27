@@ -86,7 +86,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
       rename path/to/source path/to/destination
 
-    Comment lines start with '#'. A specificed path matches if it
+    Comment lines start with '#'. A specified path matches if it
     equals the full relative name of a file or one of its parent
     directories. The 'include' or 'exclude' directive with the longest
     matching path applies, so line order does not matter.
@@ -96,8 +96,8 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     exclusion of all other files and directories not explicitly
     included. The 'exclude' directive causes files or directories to
     be omitted. The 'rename' directive renames a file or directory if
-    is converted. To rename from a subdirectory into the root of the
-    repository, use '.' as the path to rename to.
+    it is converted. To rename from a subdirectory into the root of
+    the repository, use '.' as the path to rename to.
 
     The splicemap is a file that allows insertion of synthetic
     history, letting you specify the parents of a revision. This is

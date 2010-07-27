@@ -183,13 +183,13 @@ added 1 changesets with 1 changes to 1 files
 % push -f
 committing subrepository s
 abort: push creates new remote heads on branch 'default'!
+(did you forget to merge? use push -f to force)
 pushing ...sub/t
 pushing ...sub/t/s/ss
 searching for changes
 no changes found
 pushing ...sub/t/s
 searching for changes
-(did you forget to merge? use push -f to force)
 pushing ...sub/t
 pushing ...sub/t/s/ss
 searching for changes
@@ -300,4 +300,5 @@ added 1 changesets with 1 changes to 1 files
 created new head
 committing subrepository s
 abort: push creates new remote heads on branch 'default'!
+(did you forget to merge? use push -f to force)
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
