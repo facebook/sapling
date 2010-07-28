@@ -55,9 +55,11 @@ class SVNMeta(object):
                                                  'usebranchnames', True)
 
         # FIXME: test that this hasn't changed! defer & compare?
+        if subdir:
+            # strip leading and trailing slashes
+            # collapse all repeated slashes to a single one
+            subdir = '/'.join(p for p in subdir.split('/') if p)
         self.subdir = subdir
-        if self.subdir and self.subdir[0] == '/':
-            self.subdir = self.subdir[1:]
         self.branches = {}
         if os.path.exists(self.branch_info_file):
             f = open(self.branch_info_file)

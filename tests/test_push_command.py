@@ -76,7 +76,7 @@ class PushTests(test_util.TestBase):
         tip = self.repo['tip']
         self.assertEqual(new_hash, tip.node())
 
-    def test_push_over_svnserve(self, commit=True):
+    def internal_push_over_svnserve(self, subdir='', commit=True):
         test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
         open(os.path.join(self.repo_path, 'conf', 'svnserve.conf'),
              'w').write('[general]\nanon-access=write\n[sasl]\n')
@@ -94,7 +94,8 @@ class PushTests(test_util.TestBase):
             time.sleep(2)
             import shutil
             shutil.rmtree(self.wc_path)
-            commands.clone(self.ui(), 'svn://%s:%d/' % (self.host, self.port),
+            commands.clone(self.ui(),
+                           'svn://%s:%d/%s' % (self.host, self.port, subdir),
                            self.wc_path, noupdate=True)
 
             repo = self.repo
@@ -134,6 +135,12 @@ class PushTests(test_util.TestBase):
         finally:
             # TODO: use svnserve.kill() in Python >2.5
             test_util.kill_process(svnserve)
+
+    def test_push_over_svnserve(self):
+        self.internal_push_over_svnserve()
+
+    def test_push_over_svnserve_with_subdir(self):
+        self.internal_push_over_svnserve(subdir='///branches////the_branch/////')
 
     def test_push_to_default(self, commit=True):
         repo = self.repo
