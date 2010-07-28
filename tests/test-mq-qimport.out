@@ -61,3 +61,12 @@ renaming 2.diff to this-name-is-better
 adding this-name-is-better to series file
 this-name-is-better
 url.diff
+% qimport -e --name without --force
+abort: patch "this-name-is-better" already exists
+this-name-is-better
+url.diff
+% qimport -e --name with --force
+renaming 3.diff to this-name-is-better
+adding this-name-is-better to series file
+this-name-is-better
+url.diff

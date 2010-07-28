@@ -1699,7 +1699,7 @@ class queue(object):
 
                     self.ui.write(_('renaming %s to %s\n')
                                         % (filename, patchname))
-                    os.rename(originpath, self.join(patchname))
+                    util.rename(originpath, self.join(patchname))
                 else:
                     patchname = filename
 
