@@ -940,7 +940,9 @@ class workingfilectx(filectx):
 
         returns True if different than fctx.
         """
-        return self._repo.wread(self._path) != fctx.data()
+        # fctx should be a filectx (not a wfctx)
+        # invert comparison to reuse the same code path
+        return fctx.cmp(self)
 
 class memctx(object):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
