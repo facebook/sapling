@@ -341,3 +341,53 @@ branch b
   date:        Thu Jan 01 00:00:09 1970 +0000
   summary:     prune bad branch
   
+default branch colors:
+
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "color =" >> $HGRCPATH
+
+  $ hg up -C c
+  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg commit -d '9 0' --close-branch -m 'reclosing this branch'
+  $ hg up -C b
+  2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ hg branches --color=always
+  [0;32mb[0m [0;33m                            13:6ac12926b8c3[0m
+  [0;0ma branch name much longer than the default justification used by branches[0m [0;33m7:10ff5895aa57[0m
+  [0;0ma[0m [0;33m                             5:d8cbc61dbaa6[0m (inactive)
+  [0;0mdefault[0m [0;33m                       0:19709c5a4e75[0m (inactive)
+
+default closed branch color:
+
+  $ hg branches --color=always --closed
+  [0;32mb[0m [0;33m                            13:6ac12926b8c3[0m
+  [0;0ma branch name much longer than the default justification used by branches[0m [0;33m7:10ff5895aa57[0m
+  [0;30;1mc[0m [0;33m                            14:717d2e6fabe1[0m (closed)
+  [0;0ma[0m [0;33m                             5:d8cbc61dbaa6[0m (inactive)
+  [0;0mdefault[0m [0;33m                       0:19709c5a4e75[0m (inactive)
+
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "color =" >> $HGRCPATH
+  $ echo "[color]" >> $HGRCPATH
+  $ echo "branches.active = green" >> $HGRCPATH
+  $ echo "branches.closed = blue" >> $HGRCPATH
+  $ echo "branches.current = red" >> $HGRCPATH
+  $ echo "branches.inactive = magenta" >> $HGRCPATH
+  $ echo "log.changeset = cyan" >> $HGRCPATH
+
+custom branch colors:
+
+  $ hg branches --color=always
+  [0;31mb[0m [0;36m                            13:6ac12926b8c3[0m
+  [0;32ma branch name much longer than the default justification used by branches[0m [0;36m7:10ff5895aa57[0m
+  [0;35ma[0m [0;36m                             5:d8cbc61dbaa6[0m (inactive)
+  [0;35mdefault[0m [0;36m                       0:19709c5a4e75[0m (inactive)
+
+custom closed branch color:
+
+  $ hg branches --color=always --closed
+  [0;31mb[0m [0;36m                            13:6ac12926b8c3[0m
+  [0;32ma branch name much longer than the default justification used by branches[0m [0;36m7:10ff5895aa57[0m
+  [0;34mc[0m [0;36m                            14:717d2e6fabe1[0m (closed)
+  [0;35ma[0m [0;36m                             5:d8cbc61dbaa6[0m (inactive)
+  [0;35mdefault[0m [0;36m                       0:19709c5a4e75[0m (inactive)

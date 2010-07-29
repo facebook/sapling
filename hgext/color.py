@@ -62,6 +62,11 @@ Default effects may be overridden from the .hgrc file::
 
   bookmarks.current = green
 
+  branches.active = none
+  branches.closed = black bold
+  branches.current = green
+  branches.inactive = none
+
 The color extension will try to detect whether to use ANSI codes or
 Win32 console APIs, unless it is made explicit::
 
@@ -87,6 +92,10 @@ _effects = {'none': 0, 'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
             'cyan_background': 46, 'white_background': 47}
 
 _styles = {'grep.match': 'red bold',
+           'branches.active': 'none',
+           'branches.closed': 'black bold',
+           'branches.current': 'green',
+           'branches.inactive': 'none',
            'diff.changed': 'white',
            'diff.deleted': 'red',
            'diff.diffline': 'bold',

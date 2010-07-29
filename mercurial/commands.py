@@ -512,16 +512,22 @@ def branches(ui, repo, active=False, closed=False):
             else:
                 hn = repo.lookup(node)
                 if isactive:
+                    label = 'branches.active'
                     notice = ''
                 elif hn not in repo.branchheads(tag, closed=False):
                     if not closed:
                         continue
+                    label = 'branches.closed'
                     notice = _(' (closed)')
                 else:
+                    label = 'branches.inactive'
                     notice = _(' (inactive)')
+                if tag == repo.dirstate.branch():
+                    label = 'branches.current'
                 rev = str(node).rjust(31 - encoding.colwidth(encodedtag))
-                data = encodedtag, rev, hexfunc(hn), notice
-                ui.write("%s %s:%s%s\n" % data)
+                rev = ui.label('%s:%s' % (rev, hexfunc(hn)), 'log.changeset')
+                encodedtag = ui.label(encodedtag, label)
+                ui.write("%s %s%s\n" % (encodedtag, rev, notice))
 
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
