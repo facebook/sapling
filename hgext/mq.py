@@ -1818,8 +1818,7 @@ def qimport(ui, repo, *filename, **opts):
     When importing from standard input, a patch name must be specified
     using the --name flag.
 
-    You can import a patch existing inside the patch repository and
-    rename it on the go::
+    To import an existing patch while renaming it::
 
       hg qimport -e existing-patch -n new-name
     """
