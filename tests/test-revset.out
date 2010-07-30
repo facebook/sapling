@@ -152,6 +152,8 @@ hg: parse error: ancestor wants two arguments
 0
 % log 'max(contains(a))'
 5
+% log 'min(contains(a))'
+0
 % log 'merge()'
 6
 % log 'modifies(b)'

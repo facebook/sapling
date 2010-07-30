@@ -195,6 +195,14 @@ def maxrev(repo, subset, x):
             return [m]
     return []
 
+def minrev(repo, subset, x):
+    s = getset(repo, subset, x)
+    if s:
+        m = min(s)
+        if m in subset:
+            return [m]
+    return []
+
 def limit(repo, subset, x):
     l = getargs(x, 2, 2, _("limit wants two arguments"))
     try:
@@ -466,6 +474,7 @@ symbols = {
     "keyword": keyword,
     "limit": limit,
     "max": maxrev,
+    "min": minrev,
     "merge": merge,
     "modifies": modifies,
     "outgoing": outgoing,
