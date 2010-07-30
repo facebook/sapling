@@ -286,7 +286,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
     numupdates = len(action)
     for i, a in enumerate(action):
         f, m = a[:2]
-        u.progress('update', i + 1, item=f, total=numupdates, unit='files')
+        u.progress(_('updating'), i + 1, item=f, total=numupdates, unit='files')
         if f and f[0] == "/":
             continue
         if m == "r": # remove
@@ -346,7 +346,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
         elif m == "e": # exec
             flags = a[2]
             util.set_flags(repo.wjoin(f), 'l' in flags, 'x' in flags)
-    u.progress('update', None, total=numupdates, unit='files')
+    u.progress(_('updating'), None, total=numupdates, unit='files')
 
     return updated, merged, removed, unresolved
 
