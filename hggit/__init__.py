@@ -15,6 +15,7 @@ project that is in Git.  A bridger of worlds, this plugin be.
 Try hg clone git:// or hg clone git+ssh://
 '''
 
+import inspect
 import os
 
 from mercurial import commands
@@ -105,14 +106,23 @@ extensions.wrapfunction(localrepo.localrepository, 'nodetags', sortednodetags)
 
 try:
     from mercurial import discovery
-    def findoutgoing(orig, local, remote, base=None, heads=None, force=False):
+    kwname = 'heads'
+    if 'remoteheads' in inspect.getargspec(discovery.findoutgoing)[0]:
+        kwname = 'remoteheads'
+    def findoutgoing(orig, local, remote, base=None, remoteheads=None, force=False, heads=None):
+        kw = {'force': force, 'base': base, kwname: locals()[kwname]}
         if isinstance(remote, gitrepo.gitrepo):
+            # clean up this cruft when we're 1.7-only, remoteheads and
+            # the return value change happened between 1.6 and 1.7.
             git = GitHandler(local, local.ui)
             base, heads = git.get_refs(remote.path)
-            r = orig(local, remote, base=base, heads=heads,
-                        force=force)
-            return [x[0] for x in r]
-        return orig(local, remote, base=base, heads=heads, force=force)
+            newkw = {'base': base, kwname: heads}
+            newkw.update(kw)
+            kw = newkw
+            if kwname == 'heads':
+                r = orig(local, remote, **kw)
+                return [x[0] for x in r]
+        return orig(local, remote, **kw)
     extensions.wrapfunction(discovery, 'findoutgoing', findoutgoing)
 except ImportError:
     pass
