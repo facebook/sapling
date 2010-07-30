@@ -48,8 +48,16 @@ cd ..
 
 mkdir gitrepo2
 cd gitrepo2
-git clone ../gitrepo1 . | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
-git submodule add ../gitsubrepo subrepo | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
+
+rmpwd="import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
+# different versions of git spell the dir differently. Older versions
+# use the full path to the directory all the time, whereas newer
+# version spell it sanely as it was given (eg . in a newer version,
+# while older git will use the full normalized path for .)
+clonefilt='s/Cloning into/Initialized empty Git repository in/;s/in .*/in .../'
+
+git clone ../gitrepo1 . | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
+git submodule add ../gitsubrepo subrepo | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
 git commit -m 'add subrepo'
 git rm --cached subrepo
 git rm .gitmodules
