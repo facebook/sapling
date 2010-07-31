@@ -52,3 +52,21 @@ applying another.diff
 now at: another.diff
 patch b.diff finalized without changeset message
 patch another.diff finalized without changeset message
+popping 2.diff
+patch queue now empty
+% qimport -e
+adding 2.diff to series file
+% qimport -e --name newname oldexisitingpatch
+renaming 2.diff to this-name-is-better
+adding this-name-is-better to series file
+this-name-is-better
+url.diff
+% qimport -e --name without --force
+abort: patch "this-name-is-better" already exists
+this-name-is-better
+url.diff
+% qimport -e --name with --force
+renaming 3.diff to this-name-is-better
+adding this-name-is-better to series file
+this-name-is-better
+url.diff

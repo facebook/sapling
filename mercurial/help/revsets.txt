@@ -100,6 +100,9 @@ The following predicates are supported:
 ``max(set)``
   Changeset with highest revision number in set.
 
+``min(set)``
+  Changeset with lowest revision number in set.
+
 ``merge()``
   Changeset is a merge changeset.
 

@@ -73,7 +73,7 @@ class mergestate(object):
 def _checkunknown(wctx, mctx):
     "check for collisions between unknown files and files in mctx"
     for f in wctx.unknown():
-        if f in mctx and mctx[f].cmp(wctx[f].data()):
+        if f in mctx and mctx[f].cmp(wctx[f]):
             raise util.Abort(_("untracked file in working directory differs"
                                " from file in requested revision: '%s'") % f)
 
