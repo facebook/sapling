@@ -209,6 +209,8 @@ popping test2.patch
 popping test1b.patch
 popping test.patch
 patch queue now empty
+cannot push 'test2.patch' - guarded by ['+posguard']
+number of unguarded, unapplied patches has changed from 2 to 3
 applying test2.patch
 now at: test2.patch
 applying test1b.patch
@@ -222,14 +224,23 @@ popping test.patch
 popping test1b.patch
 popping test2.patch
 patch queue now empty
+guards deactivated
+number of unguarded, unapplied patches has changed from 3 to 2
 applying test.patch
 now at: test.patch
 applying test1b.patch
 now at: test1b.patch
 abort: patch bogus not in series
+abort: please specify the patch to move
 abort: cannot push to a previous patch: test.patch
 applying test2.patch
 now at: test2.patch
+% series after move
+test.patch
+test1b.patch
+test2.patch
+# comment
+
 % pop, qapplied, qunapplied
 0 A test.patch
 1 A test1b.patch
