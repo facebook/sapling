@@ -13,9 +13,14 @@ where WRITER is the name of a Docutils writer such as 'html' or 'manpage'
 """
 
 import sys
-from docutils.parsers.rst import roles
-from docutils.core import publish_cmdline
-from docutils import nodes, utils
+try:
+    from docutils.parsers.rst import roles
+    from docutils.core import publish_cmdline
+    from docutils import nodes, utils
+except ImportError:
+    sys.stderr.write("abort: couldn't generate documentation: docutils "
+                     "module is missing\n")
+    sys.exit(-1)
 
 def role_hg(name, rawtext, text, lineno, inliner,
             options={}, content=[]):
