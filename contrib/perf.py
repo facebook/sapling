@@ -159,5 +159,7 @@ cmdtable = {
                 [('', 'rename', False, 'ask log to follow renames')]),
     'perftemplating': (perftemplating, []),
     'perfdiffwd': (perfdiffwd, []),
-    'perfrevlog': (perfrevlog, [('d', 'dist', 100, 'distance between the revisions')],"[INDEXFILE]"),
+    'perfrevlog': (perfrevlog,
+                   [('d', 'dist', 100, 'distance between the revisions')],
+                   "[INDEXFILE]"),
 }
