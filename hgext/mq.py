@@ -1713,7 +1713,7 @@ class queue(object):
                     else:
                         text = url.open(self.ui, filename).read()
                 except (OSError, IOError):
-                    raise util.Abort(_("unable to read %s") % filename)
+                    raise util.Abort(_("unable to read file %s") % filename)
                 if not patchname:
                     patchname = normname(os.path.basename(filename))
                 self.check_reserved_name(patchname)

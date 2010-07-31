@@ -1,5 +1,5 @@
 % qimport non-existing-file
-abort: unable to read non-existing-file
+abort: unable to read file non-existing-file
 % import email
 adding email to series file
 applying email

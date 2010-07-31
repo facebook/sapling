@@ -395,7 +395,7 @@ def _dispatch(ui, args):
     try:
         wd = os.getcwd()
     except OSError, e:
-        raise util.Abort(_("error getting current working directory: %s") % 
+        raise util.Abort(_("error getting current working directory: %s") %
                          e.strerror)
     path = cmdutil.findrepo(wd) or ""
     if not path:
