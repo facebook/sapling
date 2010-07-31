@@ -1460,11 +1460,11 @@ def export(ui, repo, *changesets, **opts):
     given using a format string. The formatting rules are as follows:
 
     :``%%``: literal "%" character
-    :``%H``: changeset hash (40 bytes of hexadecimal)
+    :``%H``: changeset hash (40 hexadecimal digits)
     :``%N``: number of patches being generated
     :``%R``: changeset revision number
     :``%b``: basename of the exporting repository
-    :``%h``: short-form changeset hash (12 bytes of hexadecimal)
+    :``%h``: short-form changeset hash (12 hexadecimal digits)
     :``%n``: zero-padded sequence number, starting at 1
     :``%r``: zero-padded changeset revision number
 
