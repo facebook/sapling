@@ -154,7 +154,7 @@ class colorui(uimod.ui):
             self._buffers[-1].extend([(str(a), label) for a in args])
         elif self._colormode == 'win32':
             for a in args:
-                win32print(a, orig, **opts)
+                win32print(a, super(colorui, self).write, **opts)
         else:
             return super(colorui, self).write(
                 *[self.label(str(a), label) for a in args], **opts)
@@ -163,7 +163,7 @@ class colorui(uimod.ui):
         label = opts.get('label', '')
         if self._colormode == 'win32':
             for a in args:
-                win32print(a, orig, **opts)
+                win32print(a, super(colorui, self).write_err, **opts)
         else:
             return super(colorui, self).write(
                 *[self.label(str(a), label) for a in args], **opts)
