@@ -478,6 +478,9 @@ msgstr "requerido nome do marcador"
 msgid "bookmark name cannot contain newlines"
 msgstr "o nome do marcador não pode conter novas linhas"
 
+msgid "bookmark names cannot consist entirely of whitespace"
+msgstr "nomes de marcadores não podem conter apenas espaços em branco"
+
 msgid "a bookmark cannot have the name of an existing branch"
 msgstr "um marcador não pode ter o mesmo nome de um ramo existente"
 
@@ -3854,9 +3857,8 @@ msgstr "todos os patches estão aplicados nesse momento\n"
 msgid "patch series already fully applied\n"
 msgstr "série de patches já completamente aplicada\n"
 
-#, python-format
-msgid "patch '%s' not found"
-msgstr "patch '%s' não encontrado"
+msgid "please specify the patch to move"
+msgstr "por favor especifique o patch a ser movido"
 
 msgid "cleaning up working directory..."
 msgstr "limpando diretório de trabalho..."
@@ -3992,6 +3994,10 @@ msgstr "o patch %s não existe"
 
 msgid "need --name to import a patch from -"
 msgstr "--name é necessário ao importar um patch de -"
+
+#, python-format
+msgid "unable to read file %s"
+msgstr "incapaz de ler arquivo %s"
 
 #, python-format
 msgid "adding %s to series file\n"
@@ -9843,6 +9849,9 @@ msgstr ""
 msgid "tag names must be unique"
 msgstr "nomes de etiqueta devem ser únicos"
 
+msgid "tag names cannot consist entirely of whitespace"
+msgstr "nomes de etiqueta não podem conter apenas espaços em branco"
+
 msgid "--rev and --remove are incompatible"
 msgstr "--rev e --remove são incompatíveis"
 
@@ -11048,6 +11057,10 @@ msgstr "apelido '%s' indica comando ambíguo '%s'\n"
 #, python-format
 msgid "malformed --config option: %r (use --config section.name=value)"
 msgstr "opção --config mal formada: %r (use --config seção.nome=valor)"
+
+#, python-format
+msgid "error getting current working directory: %s"
+msgstr "erro obtendo diretório de trabalho atual: %s"
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
@@ -14183,6 +14196,9 @@ msgstr ""
 
 msgid "&Deleted"
 msgstr "(&D) apagada"
+
+msgid "updating"
+msgstr "atualizando"
 
 #, python-format
 msgid "update failed to remove %s: %s!\n"
