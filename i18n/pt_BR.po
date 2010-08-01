@@ -478,6 +478,9 @@ msgstr "requerido nome do marcador"
 msgid "bookmark name cannot contain newlines"
 msgstr "o nome do marcador não pode conter novas linhas"
 
+msgid "bookmark names cannot consist entirely of whitespace"
+msgstr "nomes de marcadores não podem conter apenas espaços em branco"
+
 msgid "a bookmark cannot have the name of an existing branch"
 msgstr "um marcador não pode ter o mesmo nome de um ramo existente"
 
@@ -3854,9 +3857,8 @@ msgstr "todos os patches estão aplicados nesse momento\n"
 msgid "patch series already fully applied\n"
 msgstr "série de patches já completamente aplicada\n"
 
-#, python-format
-msgid "patch '%s' not found"
-msgstr "patch '%s' não encontrado"
+msgid "please specify the patch to move"
+msgstr "por favor especifique o patch a ser movido"
 
 msgid "cleaning up working directory..."
 msgstr "limpando diretório de trabalho..."
@@ -3992,6 +3994,10 @@ msgstr "o patch %s não existe"
 
 msgid "need --name to import a patch from -"
 msgstr "--name é necessário ao importar um patch de -"
+
+#, python-format
+msgid "unable to read file %s"
+msgstr "incapaz de ler arquivo %s"
 
 #, python-format
 msgid "adding %s to series file\n"
@@ -9843,6 +9849,9 @@ msgstr ""
 msgid "tag names must be unique"
 msgstr "nomes de etiqueta devem ser únicos"
 
+msgid "tag names cannot consist entirely of whitespace"
+msgstr "nomes de etiqueta não podem conter apenas espaços em branco"
+
 msgid "--rev and --remove are incompatible"
 msgstr "--rev e --remove são incompatíveis"
 
@@ -9926,12 +9935,12 @@ msgstr ""
 "    pedida."
 
 msgid ""
-"    If no changeset is specified, attempt to update to the head of the\n"
-"    current branch. If this head is a descendant of the working\n"
+"    If no changeset is specified, attempt to update to the tip of the\n"
+"    current branch. If this changeset is a descendant of the working\n"
 "    directory's parent, update to it, otherwise abort."
 msgstr ""
-"    Se nenhuma revisão for especificada, tenta atualizar para a cabeça\n"
-"    do ramo atual. Se esta cabeça for uma descendente do pai do\n"
+"    Se nenhuma revisão for especificada, tenta atualizar para a tip\n"
+"    do ramo atual. Se esta revisão for uma descendente do pai do\n"
 "    diretório de trabalho, atualiza para ela, e aborta caso contrário."
 
 msgid ""
@@ -11050,6 +11059,10 @@ msgid "malformed --config option: %r (use --config section.name=value)"
 msgstr "opção --config mal formada: %r (use --config seção.nome=valor)"
 
 #, python-format
+msgid "error getting current working directory: %s"
+msgstr "erro obtendo diretório de trabalho atual: %s"
+
+#, python-format
 msgid "extension '%s' overrides commands: %s\n"
 msgstr "a extensão '%s' sobrepõe o comando: %s\n"
 
@@ -11069,6 +11082,9 @@ msgstr "Tempo: real %.3f segs (user %.3f+%.3f sys %.3f+%.3f)\n"
 #, python-format
 msgid "repository '%s' is not local"
 msgstr "o repositório '%s' não é local"
+
+msgid "warning: --repository ignored\n"
+msgstr "aviso: opção --repository ignorada\n"
 
 msgid "invalid arguments"
 msgstr "argumentos inválidos"
@@ -14181,6 +14197,9 @@ msgstr ""
 msgid "&Deleted"
 msgstr "(&D) apagada"
 
+msgid "updating"
+msgstr "atualizando"
+
 #, python-format
 msgid "update failed to remove %s: %s!\n"
 msgstr "update falhou ao remover %s: %s!\n"
@@ -14321,6 +14340,14 @@ msgstr "salvando bundle de segurança em %s\n"
 
 msgid "adding branch\n"
 msgstr "adicionando ramo\n"
+
+#, python-format
+msgid "strip failed, full bundle stored in '%s'\n"
+msgstr "strip falhou, bundle completo armazenado em '%s'\n"
+
+#, python-format
+msgid "strip failed, partial bundle stored in '%s'\n"
+msgstr "strip falhou, bundle parcial armazenado em '%s'\n"
 
 #, python-format
 msgid "cannot %s; remote repository does not support the %r capability"
@@ -14653,6 +14680,10 @@ msgstr "nome de usuário não fornecido (veja \"hg help config\")"
 #, python-format
 msgid "username %s contains a newline\n"
 msgstr "nome de usuário %s contém quebra de linha\n"
+
+#, python-format
+msgid "(deprecated '%%' in path %s=%s from %s)\n"
+msgstr "('%%' obsoleto em caminho %s=%s de %s)\n"
 
 msgid "response expected"
 msgstr "resposta esperada"
