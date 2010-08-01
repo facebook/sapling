@@ -9926,12 +9926,12 @@ msgstr ""
 "    pedida."
 
 msgid ""
-"    If no changeset is specified, attempt to update to the head of the\n"
-"    current branch. If this head is a descendant of the working\n"
+"    If no changeset is specified, attempt to update to the tip of the\n"
+"    current branch. If this changeset is a descendant of the working\n"
 "    directory's parent, update to it, otherwise abort."
 msgstr ""
-"    Se nenhuma revisão for especificada, tenta atualizar para a cabeça\n"
-"    do ramo atual. Se esta cabeça for uma descendente do pai do\n"
+"    Se nenhuma revisão for especificada, tenta atualizar para a tip\n"
+"    do ramo atual. Se esta revisão for uma descendente do pai do\n"
 "    diretório de trabalho, atualiza para ela, e aborta caso contrário."
 
 msgid ""
@@ -11069,6 +11069,9 @@ msgstr "Tempo: real %.3f segs (user %.3f+%.3f sys %.3f+%.3f)\n"
 #, python-format
 msgid "repository '%s' is not local"
 msgstr "o repositório '%s' não é local"
+
+msgid "warning: --repository ignored\n"
+msgstr "aviso: opção --repository ignorada\n"
 
 msgid "invalid arguments"
 msgstr "argumentos inválidos"
@@ -14323,6 +14326,14 @@ msgid "adding branch\n"
 msgstr "adicionando ramo\n"
 
 #, python-format
+msgid "strip failed, full bundle stored in '%s'\n"
+msgstr "strip falhou, bundle completo armazenado em '%s'\n"
+
+#, python-format
+msgid "strip failed, partial bundle stored in '%s'\n"
+msgstr "strip falhou, bundle parcial armazenado em '%s'\n"
+
+#, python-format
 msgid "cannot %s; remote repository does not support the %r capability"
 msgstr "impossível %s; repositório remoto não suporta a funcionalidade '%r'"
 
@@ -14653,6 +14664,10 @@ msgstr "nome de usuário não fornecido (veja \"hg help config\")"
 #, python-format
 msgid "username %s contains a newline\n"
 msgstr "nome de usuário %s contém quebra de linha\n"
+
+#, python-format
+msgid "(deprecated '%%' in path %s=%s from %s)\n"
+msgstr "('%%' obsoleto em caminho %s=%s de %s)\n"
 
 msgid "response expected"
 msgstr "resposta esperada"
