@@ -46,6 +46,15 @@ error: repository c not found
 /rcoll/b/
 /rcoll/b/d/
 /rcoll/c/
+/star/webdir/a/
+/star/webdir/a/.hg/patches/
+/star/webdir/b/
+/star/webdir/c/
+/starstar/webdir/a/
+/starstar/webdir/a/.hg/patches/
+/starstar/webdir/b/
+/starstar/webdir/b/d/
+/starstar/webdir/c/
 
 200 Script output follows
 
@@ -159,6 +168,78 @@ error: repository c not found
 
 <tr class="parity0">
 <td><a href="/rcoll/c/?style=paper">rcoll/c</a></td>
+<td>unknown</td>
+<td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+<td class="age">seconds ago</td>
+<td class="indexlinks"></td>
+</tr>
+
+<tr class="parity1">
+<td><a href="/star/webdir/a/?style=paper">star/webdir/a</a></td>
+<td>unknown</td>
+<td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+<td class="age">seconds ago</td>
+<td class="indexlinks"></td>
+</tr>
+
+<tr class="parity0">
+<td><a href="/star/webdir/a/.hg/patches/?style=paper">star/webdir/a/.hg/patches</a></td>
+<td>unknown</td>
+<td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+<td class="age">seconds ago</td>
+<td class="indexlinks"></td>
+</tr>
+
+<tr class="parity1">
+<td><a href="/star/webdir/b/?style=paper">star/webdir/b</a></td>
+<td>unknown</td>
+<td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+<td class="age">seconds ago</td>
+<td class="indexlinks"></td>
+</tr>
+
+<tr class="parity0">
+<td><a href="/star/webdir/c/?style=paper">star/webdir/c</a></td>
+<td>unknown</td>
+<td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+<td class="age">seconds ago</td>
+<td class="indexlinks"></td>
+</tr>
+
+<tr class="parity1">
+<td><a href="/starstar/webdir/a/?style=paper">starstar/webdir/a</a></td>
+<td>unknown</td>
+<td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+<td class="age">seconds ago</td>
+<td class="indexlinks"></td>
+</tr>
+
+<tr class="parity0">
+<td><a href="/starstar/webdir/a/.hg/patches/?style=paper">starstar/webdir/a/.hg/patches</a></td>
+<td>unknown</td>
+<td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+<td class="age">seconds ago</td>
+<td class="indexlinks"></td>
+</tr>
+
+<tr class="parity1">
+<td><a href="/starstar/webdir/b/?style=paper">starstar/webdir/b</a></td>
+<td>unknown</td>
+<td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+<td class="age">seconds ago</td>
+<td class="indexlinks"></td>
+</tr>
+
+<tr class="parity0">
+<td><a href="/starstar/webdir/b/d/?style=paper">starstar/webdir/b/d</a></td>
+<td>unknown</td>
+<td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+<td class="age">seconds ago</td>
+<td class="indexlinks"></td>
+</tr>
+
+<tr class="parity1">
+<td><a href="/starstar/webdir/c/?style=paper">starstar/webdir/c</a></td>
 <td>unknown</td>
 <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
 <td class="age">seconds ago</td>

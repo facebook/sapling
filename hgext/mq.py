@@ -1051,12 +1051,16 @@ class queue(object):
                 self.check_localchanges(repo)
 
             if move:
-                try:
-                    index = self.series.index(patch, start)
-                    fullpatch = self.full_series[index]
-                    del self.full_series[index]
-                except ValueError:
-                    raise util.Abort(_("patch '%s' not found") % patch)
+                if not patch:
+                    raise  util.Abort(_("please specify the patch to move"))
+                for i, rpn in enumerate(self.full_series[start:]):
+                    # strip markers for patch guards
+                    if self.guard_re.split(rpn, 1)[0] == patch:
+                        break
+                index = start + i
+                assert index < len(self.full_series)
+                fullpatch = self.full_series[index]
+                del self.full_series[index]
                 self.full_series.insert(start, fullpatch)
                 self.parse_series()
                 self.series_dirty = 1
@@ -1702,7 +1706,7 @@ class queue(object):
                     else:
                         text = url.open(self.ui, filename).read()
                 except (OSError, IOError):
-                    raise util.Abort(_("unable to read %s") % filename)
+                    raise util.Abort(_("unable to read file %s") % filename)
                 if not patchname:
                     patchname = normname(os.path.basename(filename))
                 self.check_reserved_name(patchname)

@@ -14,6 +14,7 @@ shortlog = log --template '{rev} {node|short} | {date|isodate}\n'
 dln = lognull --debug
 nousage = rollback
 put = export -r 0 -o "\$FOO/%R.diff"
+rt = root
 
 [defaults]
 mylog = -q
@@ -64,3 +65,8 @@ hg dln
 echo '% path expanding'
 FOO=`pwd` hg put
 cat 0.diff
+
+echo '% invalid arguments'
+hg rt foo
+
+exit 0

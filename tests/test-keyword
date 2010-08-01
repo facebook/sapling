@@ -283,8 +283,17 @@ hg revert --no-backup --rev tip a
 echo % cat a
 cat a
 
-echo % clone to test incoming
+echo % clone
 cd ..
+
+echo % expansion in dest
+hg --quiet clone Test globalconf
+cat globalconf/a
+echo % no expansion in dest
+hg --quiet --config 'keyword.**=ignore' clone Test localconf
+cat localconf/a
+
+echo % clone to test incoming
 hg clone -r1 Test Test-a
 cd Test-a
 cat <<EOF >> .hg/hgrc
