@@ -2574,7 +2574,7 @@ def finish(ui, repo, *revrange, **opts):
     if not opts['applied'] and not revrange:
         raise util.Abort(_('no revisions specified'))
     elif opts['applied']:
-        revrange = ('qbase:qtip',) + revrange
+        revrange = ('qbase::qtip',) + revrange
 
     q = repo.mq
     if not q.applied:
