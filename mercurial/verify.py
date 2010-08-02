@@ -124,7 +124,7 @@ def _verify(repo):
     checklog(cl, "changelog", 0)
     total = len(repo)
     for i in repo:
-        ui.progress(_('changesets'), i, total=total)
+        ui.progress(_('checking'), i, total=total, unit=_('changesets'))
         n = cl.node(i)
         checkentry(cl, i, n, seen, [i], "changelog")
 
@@ -135,14 +135,14 @@ def _verify(repo):
                 filelinkrevs.setdefault(f, []).append(i)
         except Exception, inst:
             exc(i, _("unpacking changeset %s") % short(n), inst)
-    ui.progress(_('changesets'), None)
+    ui.progress(_('checking'), None)
 
     ui.status(_("checking manifests\n"))
     seen = {}
     checklog(mf, "manifest", 0)
     total = len(mf)
     for i in mf:
-        ui.progress(_('manifests'), i, total=total)
+        ui.progress(_('checking'), i, total=total, unit=_('manifests'))
         n = mf.node(i)
         lr = checkentry(mf, i, n, seen, mflinkrevs.get(n, []), "manifest")
         if n in mflinkrevs:
@@ -158,7 +158,7 @@ def _verify(repo):
                     filenodes.setdefault(f, {}).setdefault(fn, lr)
         except Exception, inst:
             exc(lr, _("reading manifest delta %s") % short(n), inst)
-    ui.progress(_('manifests'), None)
+    ui.progress(_('checking'), None)
 
     ui.status(_("crosschecking files in changesets and manifests\n"))
 
