@@ -165,7 +165,7 @@ class colorui(uimod.ui):
             for a in args:
                 win32print(a, super(colorui, self).write_err, **opts)
         else:
-            return super(colorui, self).write(
+            return super(colorui, self).write_err(
                 *[self.label(str(a), label) for a in args], **opts)
 
     def label(self, msg, label):
