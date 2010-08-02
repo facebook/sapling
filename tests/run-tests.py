@@ -441,6 +441,24 @@ class Timeout(Exception):
 def alarmed(signum, frame):
     raise Timeout
 
+def pytest(test, options):
+    py3kswitch = options.py3k_warnings and ' -3' or ''
+    cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
+    vlog("# Running", cmd)
+    return run(cmd, options)
+
+def shtest(test, options):
+    cmd = '"%s"' % test
+    vlog("# Running", cmd)
+    return run(cmd, options)
+
+def battest(test, options):
+    # To reliably get the error code from batch files on WinXP,
+    # the "cmd /c call" prefix is needed. Grrr
+    cmd = 'cmd /c call "%s"' % testpath
+    vlog("# Running", cmd)
+    return run(cmd, options)
+
 def run(cmd, options):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
@@ -537,15 +555,12 @@ def runone(options, test, skips, fails):
     lctest = test.lower()
 
     if lctest.endswith('.py') or firstline == '#!/usr/bin/env python':
-        py3kswitch = options.py3k_warnings and ' -3' or ''
-        cmd = '%s%s "%s"' % (PYTHON, py3kswitch, testpath)
+        runner = pytest
     elif lctest.endswith('.bat'):
         # do not run batch scripts on non-windows
         if os.name != 'nt':
             return skip("batch script")
-        # To reliably get the error code from batch files on WinXP,
-        # the "cmd /c call" prefix is needed. Grrr
-        cmd = 'cmd /c call "%s"' % testpath
+        runner = battest
     else:
         # do not run shell scripts on windows
         if os.name == 'nt':
@@ -555,7 +570,7 @@ def runone(options, test, skips, fails):
             return fail("does not exist")
         elif not os.access(testpath, os.X_OK):
             return skip("not executable")
-        cmd = '"%s"' % testpath
+        runner = shtest
 
     # Make a tmp subdirectory to work in
     tmpd = os.path.join(HGTMP, test)
@@ -565,8 +580,7 @@ def runone(options, test, skips, fails):
     if options.timeout > 0:
         signal.alarm(options.timeout)
 
-    vlog("# Running", cmd)
-    ret, out = run(cmd, options)
+    ret, out = runner(testpath, options)
     vlog("# Ret was:", ret)
 
     if options.timeout > 0:
