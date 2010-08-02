@@ -81,7 +81,7 @@ class progresssource(object):
 
     def getfile(self, file, rev):
         self.retrieved += 1
-        self.ui.progress(_('retrieving file'), self.retrieved,
+        self.ui.progress(_('getting files'), self.retrieved,
                          item=file, total=self.filecount)
         return self.source.getfile(file, rev)
 
@@ -89,7 +89,7 @@ class progresssource(object):
         return self.source.lookuprev(rev)
 
     def close(self):
-        self.ui.progress(_('retrieving file'), None)
+        self.ui.progress(_('getting files'), None)
 
 class converter(object):
     def __init__(self, ui, source, dest, revmapfile, opts):
