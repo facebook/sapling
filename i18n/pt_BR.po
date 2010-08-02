@@ -1849,8 +1849,8 @@ msgstr "convert: %s\n"
 msgid "%s: unknown repository type"
 msgstr "%s: tipo de repositório desconhecido"
 
-msgid "retrieving file"
-msgstr "obtendo arquivo"
+msgid "getting files"
+msgstr "obtendo arquivos"
 
 msgid "revisions"
 msgstr "revisões"
