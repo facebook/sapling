@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-07-25 09:57+0200\n"
-"PO-Revision-Date: 2010-07-25 10:50+0200\n"
+"POT-Creation-Date: 2010-08-01 22:36+0200\n"
+"PO-Revision-Date: 2010-08-01 22:42+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -336,6 +336,9 @@ msgstr ""
 
 msgid "bookmark name cannot contain newlines"
 msgstr ""
+
+msgid "bookmark names cannot consist entirely of whitespace"
+msgstr "bokmärksnamn kan inte bestå enbart av blanktecken"
 
 msgid "a bookmark cannot have the name of an existing branch"
 msgstr ""
@@ -3108,9 +3111,8 @@ msgstr ""
 msgid "patch series already fully applied\n"
 msgstr ""
 
-#, python-format
-msgid "patch '%s' not found"
-msgstr "patchen '%s' hittades inte"
+msgid "please specify the patch to move"
+msgstr "ange patchen som ska flyttas"
 
 msgid "cleaning up working directory..."
 msgstr ""
@@ -3250,8 +3252,12 @@ msgid "need --name to import a patch from -"
 msgstr ""
 
 #, python-format
+msgid "unable to read file %s"
+msgstr "kan inte läsa filen %s"
+
+#, python-format
 msgid "adding %s to series file\n"
-msgstr ""
+msgstr "lägger till %s till seriefilen\n"
 
 msgid "remove patches from queue"
 msgstr ""
@@ -8377,6 +8383,9 @@ msgstr ""
 msgid "tag names must be unique"
 msgstr "märkesnamn måste vara unika"
 
+msgid "tag names cannot consist entirely of whitespace"
+msgstr "märkesnamn kan inte bara bestå av blanktecken"
+
 msgid "--rev and --remove are incompatible"
 msgstr "--rev och --remove är inkompatibla"
 
@@ -8674,7 +8683,7 @@ msgid "ignore white space when comparing lines"
 msgstr "ignorera blanktecken när rader jämförs"
 
 msgid "ignore changes in the amount of white space"
-msgstr "ignorera ändringar av antalet blanktäcken"
+msgstr "ignorera ändringar av antalet blanktecken"
 
 msgid "ignore changes whose lines are all blank"
 msgstr "ignorera ändringar vars rader är tomma"
@@ -9577,8 +9586,12 @@ msgid "malformed --config option: %r (use --config section.name=value)"
 msgstr ""
 
 #, python-format
+msgid "error getting current working directory: %s"
+msgstr "fel när nuvarande arbetskatalog hämtades: %s"
+
+#, python-format
 msgid "extension '%s' overrides commands: %s\n"
-msgstr ""
+msgstr "utökningen '%s' tar över dessa kommandon: %s\n"
 
 msgid "Option --config may not be abbreviated!"
 msgstr ""
@@ -12039,6 +12052,9 @@ msgstr ""
 
 msgid "&Deleted"
 msgstr ""
+
+msgid "updating"
+msgstr "uppdaterar"
 
 #, python-format
 msgid "update failed to remove %s: %s!\n"
