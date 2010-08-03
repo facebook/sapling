@@ -23,13 +23,17 @@ _compress = zlib.compress
 _decompress = zlib.decompress
 _sha = util.sha1
 
-# revlog flags
+# revlog header flags
 REVLOGV0 = 0
 REVLOGNG = 1
 REVLOGNGINLINEDATA = (1 << 16)
+REVLOGSHALLOW = (1 << 17)
 REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
+REVLOGNG_FLAGS = REVLOGNGINLINEDATA | REVLOGSHALLOW
+
+# revlog index flags
 REVIDX_PUNCHED_FLAG = 2
 REVIDX_KNOWN_FLAGS = REVIDX_PUNCHED_FLAG
 
@@ -422,7 +426,7 @@ class revlog(object):
     remove data, and can use some simple techniques to avoid the need
     for locking while reading.
     """
-    def __init__(self, opener, indexfile):
+    def __init__(self, opener, indexfile, shallowroot=None):
         """
         create a revlog object
 
@@ -436,12 +440,15 @@ class revlog(object):
         self._chunkcache = (0, '')
         self.nodemap = {nullid: nullrev}
         self.index = []
+        self._shallowroot = shallowroot
 
         v = REVLOG_DEFAULT_VERSION
         if hasattr(opener, 'options') and 'defversion' in opener.options:
             v = opener.options['defversion']
             if v & REVLOGNG:
                 v |= REVLOGNGINLINEDATA
+        if shallowroot:
+            v |= REVLOGSHALLOW
 
         i = ''
         try:
@@ -458,12 +465,13 @@ class revlog(object):
 
         self.version = v
         self._inline = v & REVLOGNGINLINEDATA
+        self._shallow = v & REVLOGSHALLOW
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
         if fmt == REVLOGV0 and flags:
             raise RevlogError(_("index %s unknown flags %#04x for format v0")
                               % (self.indexfile, flags >> 16))
-        elif fmt == REVLOGNG and flags & ~REVLOGNGINLINEDATA:
+        elif fmt == REVLOGNG and flags & ~REVLOGNG_FLAGS:
             raise RevlogError(_("index %s unknown flags %#04x for revlogng")
                               % (self.indexfile, flags >> 16))
         elif fmt > REVLOGNG:
