@@ -30,6 +30,8 @@ REVLOGNGINLINEDATA = (1 << 16)
 REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
+REVIDX_PUNCHED_FLAG = 2
+REVIDX_KNOWN_FLAGS = REVIDX_PUNCHED_FLAG
 
 # amount of data read unconditionally, should be >= 4
 # when not inline: threshold for using lazy index
@@ -1022,9 +1024,9 @@ class revlog(object):
         base = self.base(rev)
 
         # check rev flags
-        if self.flags(rev):
+        if self.flags(rev) & ~REVIDX_KNOWN_FLAGS:
             raise RevlogError(_('incompatible revision flag %x') %
-                              (self.flags(rev)))
+                              (self.flags(rev) & ~REVIDX_KNOWN_FLAGS))
 
         # do we have useful data cached?
         if self._cache and self._cache[1] >= base and self._cache[1] < rev:
@@ -1039,7 +1041,8 @@ class revlog(object):
         bins = [self._chunk(r) for r in xrange(base + 1, rev + 1)]
         text = mdiff.patches(text, bins)
         p1, p2 = self.parents(node)
-        if node != hash(text, p1, p2):
+        if (node != hash(text, p1, p2) and
+            not (self.flags(rev) & REVIDX_PUNCHED_FLAG)):
             raise RevlogError(_("integrity check failed on %s:%d")
                               % (self.indexfile, rev))
 
@@ -1125,7 +1128,9 @@ class revlog(object):
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
-        if not curr or dist > len(text) * 2:
+        # or the base revision is punched
+        if (not curr or dist > len(text) * 2 or
+            (self.flags(base) & REVIDX_PUNCHED_FLAG)):
             data = compress(text)
             l = len(data[1]) + len(data[0])
             base = curr
