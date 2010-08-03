@@ -216,35 +216,36 @@ commands.globalopts.append(('', 'color', 'auto',
                             _('TYPE')))
 
 try:
-    import re, pywintypes
-    from win32console import *
+    import re, pywintypes, win32console as win32c
 
     # http://msdn.microsoft.com/en-us/library/ms682088%28VS.85%29.aspx
     w32effects = {
         'none': 0,
         'black': 0,
-        'red': FOREGROUND_RED,
-        'green': FOREGROUND_GREEN,
-        'yellow': FOREGROUND_RED | FOREGROUND_GREEN,
-        'blue': FOREGROUND_BLUE,
-        'magenta': FOREGROUND_BLUE | FOREGROUND_RED,
-        'cyan': FOREGROUND_BLUE | FOREGROUND_GREEN,
-        'white': FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
-        'bold': FOREGROUND_INTENSITY,
+        'red': win32c.FOREGROUND_RED,
+        'green': win32c.FOREGROUND_GREEN,
+        'yellow': win32c.FOREGROUND_RED | win32c.FOREGROUND_GREEN,
+        'blue': win32c.FOREGROUND_BLUE,
+        'magenta': win32c.FOREGROUND_BLUE | win32c.FOREGROUND_RED,
+        'cyan': win32c.FOREGROUND_BLUE | win32c.FOREGROUND_GREEN,
+        'white': (win32c.FOREGROUND_RED | win32c.FOREGROUND_GREEN |
+                  win32c.FOREGROUND_BLUE),
+        'bold': win32c.FOREGROUND_INTENSITY,
         'black_background': 0,
-        'red_background': BACKGROUND_RED,
-        'green_background': BACKGROUND_GREEN,
-        'yellow_background': BACKGROUND_RED | BACKGROUND_GREEN,
-        'blue_background': BACKGROUND_BLUE,
-        'purple_background': BACKGROUND_BLUE | BACKGROUND_RED,
-        'cyan_background': BACKGROUND_BLUE | BACKGROUND_GREEN,
-        'white_background': BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE,
-        'bold_background': BACKGROUND_INTENSITY,
-        'underline': COMMON_LVB_UNDERSCORE,     # double-byte charsets only
-        'inverse': COMMON_LVB_REVERSE_VIDEO,    # double-byte charsets only
+        'red_background': win32c.BACKGROUND_RED,
+        'green_background': win32c.BACKGROUND_GREEN,
+        'yellow_background': win32c.BACKGROUND_RED | win32c.BACKGROUND_GREEN,
+        'blue_background': win32c.BACKGROUND_BLUE,
+        'purple_background': win32c.BACKGROUND_BLUE | win32c.BACKGROUND_RED,
+        'cyan_background': win32c.BACKGROUND_BLUE | win32c.BACKGROUND_GREEN,
+        'white_background': (win32c.BACKGROUND_RED | win32c.BACKGROUND_GREEN |
+                             win32c.BACKGROUND_BLUE),
+        'bold_background': win32c.BACKGROUND_INTENSITY,
+        'underline': win32c.COMMON_LVB_UNDERSCORE,  # double-byte charsets only
+        'inverse': win32c.COMMON_LVB_REVERSE_VIDEO, # double-byte charsets only
     }
 
-    stdout = GetStdHandle(STD_OUTPUT_HANDLE)
+    stdout = win32c.GetStdHandle(win32c.STD_OUTPUT_HANDLE)
     try:
         origattr = stdout.GetConsoleScreenBufferInfo()['Attributes']
     except pywintypes.error:

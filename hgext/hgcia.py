@@ -40,7 +40,7 @@ configure it, set the following options in your hgrc::
 """
 
 from mercurial.i18n import _
-from mercurial.node import *
+from mercurial.node import bin, short
 from mercurial import cmdutil, patch, templater, util, mail
 import email.Parser
 
