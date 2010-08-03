@@ -52,6 +52,7 @@ import signal
 import sys
 import tempfile
 import time
+import re
 
 closefds = os.name == 'posix'
 def Popen4(cmd, bufsize=-1):
@@ -459,6 +460,69 @@ def battest(test, options):
     vlog("# Running", cmd)
     return run(cmd, options)
 
+def tsttest(test, options):
+    t = open(test)
+    out = []
+    script = []
+    salt = "SALT" + str(time.time())
+
+    pos = prepos = -1
+    after = {}
+    expected = {}
+    for n, l in enumerate(t):
+        if l.startswith('  $ '): # commands
+            after.setdefault(pos, []).append(l)
+            prepos = pos
+            pos = n
+            script.append('echo %s %s\n' % (salt, n))
+            script.append(l[4:])
+        elif l.startswith('  > '): # continuations
+            after.setdefault(prepos, []).append(l)
+            script.append(l[4:])
+        elif l.startswith('  '): # results
+            # queue up a list of expected results
+            expected.setdefault(pos, []).append(l[2:])
+        else:
+            # non-command/result - queue up for merged output
+            after.setdefault(pos, []).append(l)
+
+    fd, name = tempfile.mkstemp(suffix='hg-tst')
+
+    try:
+        for l in script:
+            os.write(fd, l)
+        os.close(fd)
+
+        cmd = '/bin/sh "%s"' % name
+        vlog("# Running", cmd)
+        exitcode, output = run(cmd, options)
+    finally:
+        os.remove(name)
+
+    pos = -1
+    postout = []
+    for n, l in enumerate(output):
+        if l.startswith(salt):
+            if pos in after:
+                postout += after.pop(pos)
+            pos = int(l.split()[1])
+        else:
+            el = None
+            if pos in expected and expected[pos]:
+                el = expected[pos].pop(0)
+
+            if el == l: # perfect match (fast)
+                postout.append("  " + l)
+            elif el and re.match(el, l): # fallback regex match
+                postout.append("  " + el)
+            else: # mismatch - let diff deal with it
+                postout.append("  " + l)
+
+    if pos in after:
+        postout += after.pop(pos)
+
+    return exitcode, postout
+
 def run(cmd, options):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
@@ -561,6 +625,9 @@ def runone(options, test, skips, fails):
         if os.name != 'nt':
             return skip("batch script")
         runner = battest
+    elif lctest.endswith('.t'):
+        runner = tsttest
+        ref = testpath
     else:
         # do not run shell scripts on windows
         if os.name == 'nt':
@@ -821,7 +888,10 @@ def runtests(options, tests):
                     print "Accept this change? [n] ",
                     answer = sys.stdin.readline().strip()
                     if answer.lower() in "y yes".split():
-                        rename(test + ".err", test + ".out")
+                        if test.endswith(".t"):
+                            rename(test + ".err", test)
+                        else:
+                            rename(test + ".err", test + ".out")
                         tested += 1
                         fails.pop()
                         continue
@@ -958,7 +1028,7 @@ def main():
     for test in args:
         if (test.startswith("test-") and '~' not in test and
             ('.' not in test or test.endswith('.py') or
-             test.endswith('.bat'))):
+             test.endswith('.bat') or test.endswith('.t'))):
             tests.append(test)
     if not tests:
         print "# Ran 0 tests, 0 skipped, 0 failed."
