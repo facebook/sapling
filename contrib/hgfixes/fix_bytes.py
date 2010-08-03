@@ -13,6 +13,7 @@ _re = re.compile(r'[rR]?[\'\"]')
 # blacklisting some modules inside the fixers. So, this is what I came with.
 
 blacklist = ['mercurial/demandimport.py',
+             'mercurial/py3kcompat.py', # valid python 3 already
              'mercurial/i18n.py',
             ]
 
