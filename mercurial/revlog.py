@@ -1029,6 +1029,9 @@ class revlog(object):
             base = self._cache[1]
             text = self._cache[2]
 
+        # drop cache to save memory
+        self._cache = None
+
         self._loadindex(base, rev + 1)
         self._chunkraw(base, rev)
         if text is None:
