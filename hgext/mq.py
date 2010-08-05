@@ -2172,7 +2172,15 @@ def guard(ui, repo, *args, **opts):
     '''
     def status(idx):
         guards = q.series_guards[idx] or ['unguarded']
-        ui.write('%s: ' % ui.label(q.series[idx], 'qguard.patch'))
+        if q.series[idx] in applied:
+            state = 'applied'
+        elif q.pushable(idx)[0]:
+            state = 'unapplied'
+        else:
+            state = 'guarded'
+        label = 'qguard.patch qguard.%s qseries.%s' % (state, state)
+        ui.write('%s: ' % ui.label(q.series[idx], label))
+
         for i, guard in enumerate(guards):
             if guard.startswith('+'):
                 ui.write(guard, label='qguard.positive')
@@ -2184,6 +2192,7 @@ def guard(ui, repo, *args, **opts):
                 ui.write(' ')
         ui.write('\n')
     q = repo.mq
+    applied = set(p.name for p in q.applied)
     patch = None
     args = list(args)
     if opts['list']:
