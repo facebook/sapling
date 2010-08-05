@@ -243,12 +243,12 @@ def _verify(repo):
 
             # verify contents
             try:
-                t = fl.read(n)
+                l = len(fl.read(n))
                 rp = fl.renamed(n)
-                if len(t) != fl.size(i):
+                if l != fl.size(i):
                     if len(fl.revision(n)) != fl.size(i):
                         err(lr, _("unpacked size is %s, %s expected") %
-                            (len(t), fl.size(i)), f)
+                            (l, fl.size(i)), f)
             except Exception, inst:
                 exc(lr, _("unpacking %s") % short(n), inst, f)
 
