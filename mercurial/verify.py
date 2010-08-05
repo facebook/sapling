@@ -48,6 +48,8 @@ def _verify(repo):
         if isinstance(inst, KeyboardInterrupt):
             ui.warn(_("interrupted"))
             raise
+        if not str(inst):
+            inst = repr(inst)
         err(linkrev, "%s: %s" % (msg, inst), filename)
 
     def warn(msg):
