@@ -231,6 +231,7 @@ def _verify(repo):
 
         checklog(fl, f, lr)
         seen = {}
+        rp = None
         for i in fl:
             revisions += 1
             n = fl.node(i)
