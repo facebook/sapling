@@ -61,7 +61,7 @@ def verify(ui, repo, *args, **opts):
         dmatch = fctx.data() == data
         mmatch = fctx.flags() == mode
         if not (dmatch and mmatch):
-            ui.write('difference in file %s' % fn)
+            ui.write('difference in file %s\n' % fn)
             result = 1
 
     hgfiles = set(ctx)
@@ -69,7 +69,7 @@ def verify(ui, repo, *args, **opts):
     hgfiles.discard('.hgsvnexternals')
     if hgfiles != svnfiles:
         missing = set(hgfiles).symmetric_difference(svnfiles)
-        ui.write('missing files: %s' % (', '.join(missing)))
+        ui.write('missing files: %s\n' % (', '.join(missing)))
         result = 1
 
     return result
