@@ -323,6 +323,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
             repo.ui.note(_("getting %s\n") % f)
             t = mctx.filectx(f).data()
             repo.wwrite(f, t, flags)
+            t = None
             updated += 1
             if f == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx)

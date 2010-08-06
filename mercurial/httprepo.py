@@ -17,7 +17,9 @@ def zgenerator(f):
     zd = zlib.decompressobj()
     try:
         for chunk in util.filechunkiter(f):
-            yield zd.decompress(chunk)
+            while chunk:
+                yield zd.decompress(chunk, 2**18)
+                chunk = zd.unconsumed_tail
     except httplib.HTTPException:
         raise IOError(None, _('connection ended unexpectedly'))
     yield zd.flush()
