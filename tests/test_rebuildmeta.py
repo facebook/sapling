@@ -60,7 +60,9 @@ def _do_case(self, name, stupid, single):
         srcinfo = srcbi[branch]
         destinfo = destbi[branch]
         if srcinfo[:2] == (None, 0) or destinfo[:2] == (None, 0):
-            self.assert_(srcinfo[2] <= destinfo[2])
+            self.assertTrue(srcinfo[2] <= destinfo[2],
+                            'Latest revision for %s decreased from %d to %d!'
+                            % (branch or 'default', srcinfo[2], destinfo[2]))
             self.assertEqual(srcinfo[0], destinfo[0])
         else:
             pr = sorted(filter(lambda x: x[1] == srcinfo[0] and x[0] <= srcinfo[1],
