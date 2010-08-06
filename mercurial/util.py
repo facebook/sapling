@@ -15,7 +15,7 @@ hide platform-specific details from the core.
 
 from i18n import _
 import error, osutil, encoding
-import cStringIO, errno, re, shutil, sys, tempfile, traceback
+import errno, re, shutil, sys, tempfile, traceback
 import os, stat, time, calendar, textwrap, unicodedata, signal
 import imp
 
@@ -909,31 +909,36 @@ class chunkbuffer(object):
         """in_iter is the iterator that's iterating over the input chunks.
         targetsize is how big a buffer to try to maintain."""
         self.iter = iter(in_iter)
-        self.buf = ''
-        self.targetsize = 2**16
+        self._queue = []
 
     def read(self, l):
         """Read L bytes of data from the iterator of chunks of data.
         Returns less than L bytes if the iterator runs dry."""
-        if l > len(self.buf) and self.iter:
-            # Clamp to a multiple of self.targetsize
-            targetsize = max(l, self.targetsize)
-            collector = cStringIO.StringIO()
-            collector.write(self.buf)
-            collected = len(self.buf)
-            for chunk in self.iter:
-                collector.write(chunk)
-                collected += len(chunk)
-                if collected >= targetsize:
+        left = l
+        buf = ''
+        queue = self._queue
+        while left > 0:
+            # refill the queue
+            if not queue:
+                target = 2**18
+                for chunk in self.iter:
+                    queue.append(chunk)
+                    target -= len(chunk)
+                    if target <= 0:
+                        break
+                if not queue:
                     break
-            if collected < targetsize:
-                self.iter = False
-            self.buf = collector.getvalue()
-        if len(self.buf) == l:
-            s, self.buf = str(self.buf), ''
-        else:
-            s, self.buf = self.buf[:l], buffer(self.buf, l)
-        return s
+
+            chunk = queue.pop(0)
+            left -= len(chunk)
+            if left < 0:
+                queue.insert(0, chunk[left:])
+                buf += chunk[:left]
+            else:
+                buf += chunk
+
+        return buf
+
 
 def filechunkiter(f, size=65536, limit=None):
     """Create a generator that produces the data in the file size
