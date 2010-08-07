@@ -59,6 +59,13 @@ for key in list(os.environ.keys()):
     bvalue = os.environ[key].encode('utf-8', 'surrogateescape')
     os.environ[bkey] = bvalue
 
+origord = builtins.ord
+def fakeord(char):
+    if isinstance(char, int):
+        return char
+    return origord(char)
+builtins.ord = fakeord
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
