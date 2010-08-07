@@ -154,7 +154,8 @@ def rebase(ui, repo, **opts):
         for rev in sortedstate:
             pos += 1
             if state[rev] == -1:
-                ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, repo[rev])), _(' changesets'), total)
+                ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, repo[rev])),
+                            _(' changesets'), total)
                 storestatus(repo, originalwd, target, state, collapsef, keepf,
                                                     keepbranchesf, external)
                 p1, p2 = defineparents(repo, rev, target, state,
