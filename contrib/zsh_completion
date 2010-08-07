@@ -901,6 +901,7 @@ _hg_cmd_qpush() {
   '(--merge -m)'{-m+,--merge}'[merge from another queue]:' \
   '(--name -n)'{-n+,--name}'[merge queue name]:' \
   '(--force -f)'{-f,--force}'[apply if the patch has rejects]' \
+  '--move[reorder patch series and apply only the patch]' \
   ':patch:_hg_qunapplied'
 }
 
