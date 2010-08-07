@@ -84,7 +84,7 @@ class manifest(revlog.revlog):
                 hi = start
         end = advance(lo, '\0')
         found = m[lo:end]
-        if cmp(s, found) == 0:
+        if s == found:
             # we know that after the null there are 40 bytes of sha1
             end = advance(end + 40, '\n')
             return (lo, end + 1)
