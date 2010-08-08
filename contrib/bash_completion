@@ -462,6 +462,17 @@ _hg_opt_qguard()
     return 1
 }
 
+_hg_cmd_qqueue()
+{
+    local q
+    local queues
+    local opts="--list --create --delete"
+
+    queues=$( _hg_cmd qqueue --quiet )
+
+    COMPREPLY=( $( compgen -W "${opts} ${queues}" "${cur}" ) )
+}
+
 
 # hbisect
 _hg_cmd_bisect()
