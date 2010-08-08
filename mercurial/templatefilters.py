@@ -156,9 +156,10 @@ def json(obj):
     elif isinstance(obj, int) or isinstance(obj, float):
         return str(obj)
     elif isinstance(obj, str):
-        return '"%s"' % jsonescape(obj)
+        u = unicode(obj, encoding.encoding, 'replace')
+        return '"%s"' % jsonescape(u).encode('utf-8')
     elif isinstance(obj, unicode):
-        return json(obj.encode('utf-8'))
+        return '"%s"' % jsonescape(obj).encode('utf-8')
     elif hasattr(obj, 'keys'):
         out = []
         for k, v in obj.iteritems():

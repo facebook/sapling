@@ -60,5 +60,19 @@ echo % failing unbundle, requires POST request
 echo % Static files
 "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/static/style.css'
 
+echo % Stop and restart with HGENCODING=cp932
+"$TESTDIR/killdaemons.py"
+HGENCODING=cp932 hg serve --config server.uncompressed=False -n test \
+    -p $HGPORT -d --pid-file=hg.pid -E errors.log
+cat hg.pid >> $DAEMON_PIDS
+
+# commit message with Japanese Kanji 'Noh', which ends with '\x5c'
+echo foo >> foo
+HGENCODING=cp932 hg ci -m `python -c 'print("\x94\x5c")'`
+
+echo % Graph json escape of multibyte character
+"$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/graph/' \
+    | grep '^var data ='
+
 echo % ERRORS ENCOUNTERED
 cat errors.log
