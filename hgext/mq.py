@@ -2663,7 +2663,7 @@ def qqueue(ui, repo, name=None, **opts):
         current = _getcurrent()
         for queue in _getqueues():
             ui.write('%s' % (queue,))
-            if queue == current:
+            if queue == current and not ui.quiet:
                 ui.write(_(' (active)\n'))
             else:
                 ui.write('\n')

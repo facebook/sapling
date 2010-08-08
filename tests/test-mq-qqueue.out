@@ -12,6 +12,9 @@ patch queue now empty
 %% switch queue
 foo (active)
 patches
+%% list queues, quiet
+foo
+patches
 %% fail creating queue with already existing name
 abort: queue "foo" already exists
 foo (active)

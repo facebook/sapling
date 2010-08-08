@@ -28,6 +28,9 @@ echo %% switch queue
 hg qqueue foo
 hg qqueue
 
+echo %% list queues, quiet
+hg qqueue --quiet
+
 echo %% fail creating queue with already existing name
 hg qqueue --create foo
 hg qqueue
