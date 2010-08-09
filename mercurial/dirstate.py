@@ -625,6 +625,8 @@ class dirstate(object):
         dadd = deleted.append
         cadd = clean.append
 
+        lnkkind = stat.S_IFLNK
+
         for fn, st in self.walk(match, subrepos, listunknown,
                                 listignored).iteritems():
             if fn not in dmap:
@@ -640,13 +642,19 @@ class dirstate(object):
             if not st and state in "nma":
                 dadd(fn)
             elif state == 'n':
+                # The "mode & lnkkind != lnkkind or self._checklink"
+                # lines are an expansion of "islink => checklink"
+                # where islink means "is this a link?" and checklink
+                # means "can we check links?".
                 if (size >= 0 and
                     (size != st.st_size
                      or ((mode ^ st.st_mode) & 0100 and self._checkexec))
+                    and (mode & lnkkind != lnkkind or self._checklink)
                     or size == -2 # other parent
                     or fn in self._copymap):
                     madd(fn)
-                elif time != int(st.st_mtime):
+                elif (time != int(st.st_mtime)
+                      and (mode & lnkkind != lnkkind or self._checklink)):
                     ladd(fn)
                 elif listclean:
                     cadd(fn)
