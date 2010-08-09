@@ -13,7 +13,11 @@ from mercurial import hg, ui
 u = ui.ui()
 repo = hg.repository(u, rootdir)
 checked = 0
-for f in repo[None]:
+wctx = repo[None]
+for f in wctx:
+    # ignore removed and unknown files
+    if f not in wctx:
+        continue
     checked += 1
     checkcode.checkfile(os.path.join(rootdir, f))
 if not checked:
