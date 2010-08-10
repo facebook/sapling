@@ -1016,6 +1016,28 @@ class revlog(object):
     def _chunkclear(self):
         self._chunkcache = (0, '')
 
+    def deltaparent(self, rev):
+        """return previous revision or parentrev according to flags"""
+        if self.base(rev) == rev:
+            return nullrev
+        elif self.flags(rev) & REVIDX_PARENTDELTA:
+            return self.parentrevs(rev)[0]
+        else:
+            return rev - 1
+
+
+    def deltachain(self, rev, cache):
+        """return chain of revisions to construct a given revision"""
+        chain = []
+        check = False
+        while self.base(rev) != rev and rev != cache:
+            chain.append(rev)
+            rev = self.deltaparent(rev)
+        chain.reverse()
+        if rev == cache:
+            check = True
+        return check, rev, chain
+
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
         if rev1 + 1 == rev2 and self.base(rev1) == self.base(rev2):
