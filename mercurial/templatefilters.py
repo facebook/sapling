@@ -148,7 +148,13 @@ _escapes = [
 def jsonescape(s):
     for k, v in _escapes:
         s = s.replace(k, v)
-    return s
+
+    def uescape(c):
+        if ord(c) < 0x80:
+            return c
+        else:
+            return '\\u%04x' % ord(c)
+    return ''.join(uescape(c) for c in s)
 
 def json(obj):
     if obj is None or obj is False or obj is True:
@@ -157,9 +163,9 @@ def json(obj):
         return str(obj)
     elif isinstance(obj, str):
         u = unicode(obj, encoding.encoding, 'replace')
-        return '"%s"' % jsonescape(u).encode('utf-8')
+        return '"%s"' % jsonescape(u)
     elif isinstance(obj, unicode):
-        return '"%s"' % jsonescape(obj).encode('utf-8')
+        return '"%s"' % jsonescape(obj)
     elif hasattr(obj, 'keys'):
         out = []
         for k, v in obj.iteritems():
