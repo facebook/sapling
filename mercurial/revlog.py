@@ -1040,7 +1040,7 @@ class revlog(object):
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
-        if rev1 + 1 == rev2 and self.base(rev1) == self.base(rev2):
+        if rev1 != nullrev and self.deltaparent(rev2) == rev1:
             return self._chunk(rev2)
 
         return mdiff.textdiff(self.revision(self.node(rev1)),
@@ -1048,15 +1048,18 @@ class revlog(object):
 
     def revision(self, node):
         """return an uncompressed revision of a given node"""
+        cache = nullrev
         if node == nullid:
             return ""
-        if self._cache and self._cache[0] == node:
-            return self._cache[2]
+        if self._cache:
+            cache = self._cache[1]
+            if self._cache[0] == node:
+                return self._cache[2]
 
         # look up what we need to read
         text = None
         rev = self.rev(node)
-        base = self.base(rev)
+        cache, base, chain = self.deltachain(rev, cache)
 
         # check rev flags
         if self.flags(rev) & ~REVIDX_KNOWN_FLAGS:
@@ -1064,8 +1067,7 @@ class revlog(object):
                               (self.flags(rev) & ~REVIDX_KNOWN_FLAGS))
 
         # do we have useful data cached?
-        if self._cache and self._cache[1] >= base and self._cache[1] < rev:
-            base = self._cache[1]
+        if cache and self._cache:
             text = self._cache[2]
 
         # drop cache to save memory
@@ -1076,7 +1078,7 @@ class revlog(object):
         if text is None:
             text = self._chunk(base)
 
-        bins = [self._chunk(r) for r in xrange(base + 1, rev + 1)]
+        bins = [self._chunk(r) for r in chain]
         text = mdiff.patches(text, bins)
         p1, p2 = self.parents(node)
         if (node != hash(text, p1, p2) and
