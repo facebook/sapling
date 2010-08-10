@@ -34,8 +34,9 @@ REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 REVLOGNG_FLAGS = REVLOGNGINLINEDATA | REVLOGSHALLOW
 
 # revlog index flags
+REVIDX_PARENTDELTA  = 1
 REVIDX_PUNCHED_FLAG = 2
-REVIDX_KNOWN_FLAGS = REVIDX_PUNCHED_FLAG
+REVIDX_KNOWN_FLAGS = REVIDX_PUNCHED_FLAG | REVIDX_PARENTDELTA
 
 # amount of data read unconditionally, should be >= 4
 # when not inline: threshold for using lazy index
@@ -441,12 +442,16 @@ class revlog(object):
         self.nodemap = {nullid: nullrev}
         self.index = []
         self._shallowroot = shallowroot
+        self._parentdelta = 0
 
         v = REVLOG_DEFAULT_VERSION
         if hasattr(opener, 'options') and 'defversion' in opener.options:
             v = opener.options['defversion']
             if v & REVLOGNG:
                 v |= REVLOGNGINLINEDATA
+            if v & REVLOGNG and 'parentdelta' in opener.options:
+                self._parentdelta = 1
+
         if shallowroot:
             v |= REVLOGSHALLOW
 
