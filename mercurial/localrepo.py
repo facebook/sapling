@@ -21,7 +21,7 @@ propertycache = util.propertycache
 
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey'))
-    supported = set('revlogv1 store fncache shared'.split())
+    supported = set('revlogv1 store fncache shared parentdelta'.split())
 
     def __init__(self, baseui, path=None, create=0):
         repo.repository.__init__(self)
@@ -55,6 +55,8 @@ class localrepository(repo.repository):
                         '\0\0\0\2' # represents revlogv2
                         ' dummy changelog to prevent using the old repo layout'
                     )
+                if self.ui.configbool('format', 'parentdelta', False):
+                    requirements.append("parentdelta")
                 reqfile = self.opener("requires", "w")
                 for r in requirements:
                     reqfile.write("%s\n" % r)
@@ -91,6 +93,8 @@ class localrepository(repo.repository):
         self.sjoin = self.store.join
         self.opener.createmode = self.store.createmode
         self.sopener.options = {}
+        if 'parentdelta' in requirements:
+            self.sopener.options['parentdelta'] = 1
 
         # These two define the set of tags for this repository.  _tags
         # maps tag name to node; _tagtypes maps tag name to 'global' or
