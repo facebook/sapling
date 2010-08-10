@@ -1157,10 +1157,15 @@ class revlog(object):
         prev = curr - 1
         base = self.base(prev)
         offset = self.end(prev)
+        flags = 0
 
         if curr:
             if not d:
-                ptext = self.revision(self.node(prev))
+                if self._parentdelta:
+                    ptext = self.revision(p1)
+                    flags = REVIDX_PARENTDELTA
+                else:
+                    ptext = self.revision(self.node(prev))
                 d = mdiff.textdiff(ptext, text)
             data = compress(d)
             l = len(data[1]) + len(data[0])
@@ -1175,7 +1180,7 @@ class revlog(object):
             l = len(data[1]) + len(data[0])
             base = curr
 
-        e = (offset_type(offset, 0), l, len(text),
+        e = (offset_type(offset, flags), l, len(text),
              base, link, self.rev(p1), self.rev(p2), node)
         self.index.insert(-1, e)
         self.nodemap[node] = curr
