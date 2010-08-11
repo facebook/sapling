@@ -9,26 +9,6 @@ from mercurial import node
 import svnwrap
 import util
 
-def ieditor(fn):
-    """Helps identify methods used by the SVN editor interface.
-
-    Stash any exception raised in the method on self.
-
-    This is required because the SWIG bindings just mutate any exception into
-    a generic Subversion exception with no way of telling what the original was.
-    This allows the editor object to notice when you try and commit and really
-    got an exception in the replay process.
-    """
-    def fun(self, *args, **kwargs):
-        try:
-            return fn(self, *args, **kwargs)
-        except: #pragma: no cover
-            if self.current.exception is not None:
-                self.current.exception = sys.exc_info()
-            raise
-    return fun
-
-
 class RevisionData(object):
 
     __slots__ = [
@@ -120,7 +100,7 @@ class HgEditor(svnwrap.Editor):
         self.repo = meta.repo
         self.current = RevisionData(meta.ui)
 
-    @ieditor
+    @svnwrap.ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         br_path, branch = self.meta.split_branch_path(path)[:2]
         if br_path == '':
@@ -147,7 +127,7 @@ class HgEditor(svnwrap.Editor):
                         self.current.delete(f_p)
             self.current.delete(path)
 
-    @ieditor
+    @svnwrap.ieditor
     def open_file(self, path, parent_baton, base_revision, p=None):
         self.current.file = None
         fpath, branch = self.meta.split_branch_path(path)[:2]
@@ -186,7 +166,7 @@ class HgEditor(svnwrap.Editor):
             base = 'link ' + base
         self.current.set(path, base, 'x' in fctx.flags(), 'l' in fctx.flags())
 
-    @ieditor
+    @svnwrap.ieditor
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
                  copyfrom_revision=None, file_pool=None):
         self.current.file = None
@@ -229,7 +209,7 @@ class HgEditor(svnwrap.Editor):
                     if util.issamefile(parentctx, ctx, from_file):
                         self.current.copies[path] = from_file
 
-    @ieditor
+    @svnwrap.ieditor
     def add_directory(self, path, parent_baton, copyfrom_path,
                       copyfrom_revision, dir_pool=None):
         self.current.batons[path] = path
@@ -293,14 +273,14 @@ class HgEditor(svnwrap.Editor):
                         self.current.copies[k] = v
         return path
 
-    @ieditor
+    @svnwrap.ieditor
     def change_file_prop(self, file_baton, name, value, pool=None):
         if name == 'svn:executable':
             self.current.execfiles[self.current.file] = bool(value is not None)
         elif name == 'svn:special':
             self.current.symlinks[self.current.file] = bool(value is not None)
 
-    @ieditor
+    @svnwrap.ieditor
     def change_dir_prop(self, dir_baton, name, value, pool=None):
         if dir_baton is None:
             return
@@ -308,7 +288,7 @@ class HgEditor(svnwrap.Editor):
         if name == 'svn:externals':
             self.current.externals[path] = value
 
-    @ieditor
+    @svnwrap.ieditor
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
         self.current.batons[path] = path
         p_, branch = self.meta.split_branch_path(path)[:2]
@@ -317,12 +297,12 @@ class HgEditor(svnwrap.Editor):
                 self.current.emptybranches[branch] = False
         return path
 
-    @ieditor
+    @svnwrap.ieditor
     def close_directory(self, dir_baton, dir_pool=None):
         if dir_baton is not None:
             del self.current.batons[dir_baton]
 
-    @ieditor
+    @svnwrap.ieditor
     def apply_textdelta(self, file_baton, base_checksum, pool=None):
         # We know coming in here the file must be one of the following options:
         # 1) Deleted (invalid, fail an assertion)

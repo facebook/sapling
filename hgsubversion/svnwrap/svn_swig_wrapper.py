@@ -70,6 +70,25 @@ class RaCallbacks(ra.Callbacks):
     def get_client_string(pool):
         return 'hgsubversion'
 
+def ieditor(fn):
+    """Helps identify methods used by the SVN editor interface.
+
+    Stash any exception raised in the method on self.
+
+    This is required because the SWIG bindings just mutate any exception into
+    a generic Subversion exception with no way of telling what the original was.
+    This allows the editor object to notice when you try and commit and really
+    got an exception in the replay process.
+    """
+    def fun(self, *args, **kwargs):
+        try:
+            return fn(self, *args, **kwargs)
+        except: #pragma: no cover
+            if self.current.exception is not None:
+                self.current.exception = sys.exc_info()
+            raise
+    return fun
+
 def user_pass_prompt(realm, default_username, ms, pool): #pragma: no cover
     # FIXME: should use getpass() and username() from mercurial.ui
     creds = core.svn_auth_cred_simple_t()
