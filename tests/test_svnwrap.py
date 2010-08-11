@@ -53,18 +53,6 @@ class TestBasicRepoLayout(unittest.TestCase):
         revs = list(self.repo.revisions(start=3))
         self.assertEqual(len(revs), 4)
 
-
-    def test_branches(self):
-        self.assertEqual(self.repo.branches.keys(), ['crazy', 'more_crazy'])
-        self.assertEqual(self.repo.branches['crazy'], ('trunk', 2, 4))
-        self.assertEqual(self.repo.branches['more_crazy'], ('trunk', 5, 7))
-
-
-    def test_tags(self):
-        tags = self.repo.tags
-        self.assertEqual(tags.keys(), ['rev1'])
-        self.assertEqual(tags['rev1'], ('trunk', 2))
-
 class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')

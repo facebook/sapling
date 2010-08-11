@@ -278,10 +278,6 @@ class SubversionRepo(object):
         return ra.get_latest_revnum(self.ra, self.pool)
     HEAD = property(HEAD)
 
-    def START(self):
-        return 0
-    START = property(START)
-
     def last_changed_rev(self):
         try:
             holder = []
@@ -302,86 +298,6 @@ class SubversionRepo(object):
                 return self.HEAD
     last_changed_rev = property(last_changed_rev)
 
-    def branches(self):
-        """Get the branches defined in this repo assuming a standard layout.
-
-        This method should be eliminated; this class does not have
-        sufficient knowledge to yield all known tags.
-        """
-        branches = self.list_dir('branches').keys()
-        branch_info = {}
-        head=self.HEAD
-        for b in branches:
-            b_path = 'branches/%s' %b
-            hist_gen = self.revisions([b_path], stop=head)
-            hist = hist_gen.next()
-            source, source_rev = self._get_copy_source(b_path, cached_head=head)
-            # This if statement guards against projects that have non-ancestral
-            # branches by not listing them has branches
-            # Note that they probably are really ancestrally related, but there
-            # is just no way for us to know how.
-            if source is not None and source_rev is not None:
-                branch_info[b] = (source, source_rev, hist.revnum)
-        return branch_info
-    branches = property(branches)
-
-    def tags(self):
-        """Get the current tags in this repo assuming a standard layout.
-
-        This returns a dictionary of tag: (source path, source rev)
-
-        This method should be eliminated; this class does not have
-        sufficient knowledge to yield all known tags.
-        """
-        return self.tags_at_rev(self.HEAD)
-    tags = property(tags)
-
-    def tags_at_rev(self, revision):
-        """Get the tags in this repo at the given revision, assuming a
-        standard layout.
-
-        This returns a dictionary of tag: (source path, source rev)
-
-        This method should be eliminated; this class does not have
-        sufficient knowledge to yield all known tags.
-        """
-        try:
-            tags = self.list_dir('tags', revision=revision).keys()
-        except core.SubversionException, e:
-            if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
-                return {}
-            raise
-        tag_info = {}
-        for t in tags:
-            tag_info[t] = self._get_copy_source('tags/%s' % t,
-                                                cached_head=revision)
-        return tag_info
-
-    def _get_copy_source(self, path, cached_head=None):
-        """Get copy revision for the given path, assuming it was meant to be
-        a copy of the entire tree.
-        """
-        if not cached_head:
-            cached_head = self.HEAD
-        hist_gen = self.revisions([path], stop=cached_head)
-        hist = hist_gen.next()
-        if hist.paths[path].copyfrom_path is None:
-            return None, None
-        source = hist.paths[path].copyfrom_path
-        source_rev = 0
-        for p in hist.paths:
-            if not p.startswith(path):
-                continue
-            if hist.paths[p].copyfrom_rev:
-                # We assume that the revision of the source tree as it was
-                # copied was actually the revision of the highest revision
-                # copied item. This could be wrong, but in practice it will
-                # *probably* be correct
-                if source_rev < hist.paths[p].copyfrom_rev:
-                    source_rev = hist.paths[p].copyfrom_rev
-        source = source[len(self.subdir):]
-        return source, source_rev
-
     def list_dir(self, dir, revision=None):
         """List the contents of a server-side directory.
 
@@ -400,7 +316,7 @@ class SubversionRepo(object):
         folders, props, junk = r
         return folders
 
-    def revisions(self, paths=None, start=None, stop=None,
+    def revisions(self, paths=None, start=0, stop=0,
                   chunk_size=_chunk_size):
         """Load the history of this repo.
 
@@ -412,8 +328,6 @@ class SubversionRepo(object):
         """
         if paths is None:
             paths = ['']
-        if not start:
-            start = self.START
         if not stop:
             stop = self.HEAD
         while stop > start:
