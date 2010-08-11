@@ -8,4 +8,7 @@ present.
 
 from common import *
 
-from svn_swig_wrapper import *
+try:
+    from subvertpy_wrapper import *
+except ImportError, e:
+    from svn_swig_wrapper import *
