@@ -21,7 +21,7 @@ def _do_case(self, name, subdir, stupid):
         self.assertMultiLineEqual(fulltip[f].data(), headtip[f].data())
 
 def buildmethod(case, name, subdir, stupid):
-    m = lambda self: self._do_case(case, subdir, stupid)
+    m = lambda self: self._do_case(case, subdir.strip('/'), stupid)
     m.__name__ = name
     m.__doc__ = ('Test clone with startrev on %s%s with %s replay.' %
                  (case, subdir, (stupid and 'stupid') or 'real'))
@@ -31,10 +31,7 @@ def buildmethod(case, name, subdir, stupid):
 attrs = {'_do_case': _do_case,
          }
 for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]:
-    # this fixture results in an empty repository, don't use it
-    if case == 'project_root_not_repo_root.svndump':
-        continue
-    subdir = test_util.subdir.get(case, '')
+    subdir = test_util.subdir.get(case, '') + '/trunk'
 
     bname = 'test_' + case[:-len('.svndump')]
     attrs[bname] = buildmethod(case, bname, subdir, False)

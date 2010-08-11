@@ -241,7 +241,7 @@ def pull(repo, source, heads=[], force=False):
         # we are initializing a new repository
         start = repo.ui.config('hgsubversion', 'startrev', 0)
         if isinstance(start, str) and start.upper() == 'HEAD':
-            start = svn.HEAD
+            start = svn.last_changed_rev
         else:
             start = int(start)
 
