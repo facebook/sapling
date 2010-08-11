@@ -224,10 +224,11 @@ class SubversionRepo(object):
                         break
             raise common.SubversionConnectionException(msg)
 
+    @property
     def HEAD(self):
         return ra.get_latest_revnum(self.ra, self.pool)
-    HEAD = property(HEAD)
 
+    @property
     def last_changed_rev(self):
         try:
             holder = []
@@ -246,7 +247,6 @@ class SubversionRepo(object):
                 raise
             else:
                 return self.HEAD
-    last_changed_rev = property(last_changed_rev)
 
     def list_dir(self, dir, revision=None):
         """List the contents of a server-side directory.

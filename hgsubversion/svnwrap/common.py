@@ -56,25 +56,25 @@ class Revision(tuple):
         return tuple.__new__(self,
                              (revnum, author, message, date, _paths))
 
-    def get_revnum(self):
+    @property
+    def revnum(self):
         return self[0]
-    revnum = property(get_revnum)
 
-    def get_author(self):
+    @property
+    def author(self):
         return self[1]
-    author = property(get_author)
 
-    def get_message(self):
+    @property
+    def message(self):
         return self[2]
-    message = property(get_message)
 
-    def get_date(self):
+    @property
+    def date(self):
         return self[3]
-    date = property(get_date)
 
-    def get_paths(self):
+    @property
+    def paths(self):
         return self[4]
-    paths = property(get_paths)
 
     def __str__(self):
         return 'r%d by %s' % (self.revnum, self.author)
