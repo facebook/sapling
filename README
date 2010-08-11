@@ -38,55 +38,13 @@ part is that all the tests pass.
 
 .. _nose: http://code.google.com/p/python-nose/
 
-Basic Use
------------
-Get a new clone of an svn server::
+Further Reading
+---------------
 
- $ hg clone <svn URI> [destination]
+More information on how to use hgsubversion is available from within Mercurial
+in the `subversion` help topic. To view it, use::
 
-Real example::
+ $ hg help subversion
 
- $ hg clone http://python-nose.googlecode.com/svn nose-hg
-
-Note: there are two slightly different ways of cloning
-repositories. The most common desire is to have all the
-branches/tags/trunk from the svn repo, in which case you should clone
-from one level above trunk (as in the example above.) If you instead
-want to clone just a single directory rather than the complete
-branches/tags/trunk structure of the repo, clone the specific
-directory path. In the example above, to get *only* trunk, you would
-clone `http://python-nose.googlecode.com/svn/trunk`.
-
-Pull new revisions into an already-converted repo::
-
- $ hg pull
-
-For more information, see ``hg help svn`` while in a converted repo.
-
-Support for ``svn:externals``
------------------------------
-All ``svn:externals`` properties are serialized into a single
-``.hgsvnexternals`` file having the following syntax::
-
-  [.]
-   common1 http://path/to/external/svn/repo1
-   ...additional svn:externals properties lines...
-  [dir2]
-   common2 -r123 http://path/to/external/svn/repo2
-   ...additional svn:externals properties lines...
-
-A header line in brackets specifies the directory the property applies
-to, where '.' indicates the project root directory. The property content
-follows the header, **with every content line being prefixed by a single
-space**. Note that the property lines have a format identical to
-svn:externals properties as used in Subversion, and do not support the
-hgsubversion extended svn+http:// URL format.
-
-Issuing the command ``hg svn updateexternals`` with the
-``.hgsvnexternals`` example above would fetch the latest revision of
-repo1 into the subdirectory ./common1, and revision 123 of repo2 into
-dir2/common2.  Note that ``.hgsvnexternals`` must be tracked by Mercurial
-before this will work.  If ``.hgsvnexternals`` is created or changed, it
-will not be pushed to the related Subversion repository, *but its
-contents will be used to update ``svn:externals`` properties on the
-related Subversion repository*.
+The Restructured Text source for this topic is also available in the file
+``hgsubverson/help/subversion.rst``.
