@@ -31,8 +31,11 @@ def version(orig, ui, *args, **opts):
     svn = opts.pop('svn', None)
     orig(ui, *args, **opts)
     if svn:
-        ui.status('\nsvn bindings: %s\n' % svnwrap.version())
+        svnversion, bindings = svnwrap.version()
+        ui.status('\n')
         ui.status('hgsubversion: %s\n' % util.version(ui))
+        ui.status('Subversion: %s\n' % svnversion)
+        ui.status('bindings: %s\n' % bindings)
 
 
 def parents(orig, ui, repo, *args, **opts):

@@ -34,7 +34,7 @@ if current_bindings < required_bindings: #pragma: no cover
                       (required_bindings + current_bindings))
 
 def version():
-    return '%d.%d.%d' % current_bindings
+    return '%d.%d.%d' % current_bindings, 'SWIG'
 
 class SubversionRepoCanNotReplay(Exception):
     """Exception raised when the svn server is too old to have replay.
