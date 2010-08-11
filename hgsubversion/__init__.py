@@ -12,13 +12,8 @@ Before using hgsubversion, we *strongly* encourage running the
 automated tests. See 'README' in the hgsubversion directory for
 details.
 
-The operation of hgsubversion can be customised with the following variables:
-
-<list not written yet>
-
+For more information and instructions, see :hg:`help subversion`.
 '''
-# TODO: The docstring should be slightly more helpful, and at least mention all
-#       configuration settings we support
 
 import os
 import sys
@@ -26,6 +21,7 @@ import traceback
 
 from mercurial import commands
 from mercurial import extensions
+from mercurial import help
 from mercurial import hg
 from mercurial import util as hgutil
 from mercurial import demandimport
@@ -122,7 +118,19 @@ def uisetup(ui):
     except:
         pass
 
+    helpdir = os.path.join(os.path.dirname(__file__), 'help')
 
+    entries = (
+        (['subversion'],
+         "Working with Subversion Repositories",
+         lambda: open(os.path.join(helpdir, 'subversion.rst')).read()),
+    )
+
+    # in 1.6 and earler the help table is a tuple
+    if getattr(help.helptable, 'extend', None):
+        help.helptable.extend(entries)
+    else:
+        help.helptable = help.helptable + entries
 
 def reposetup(ui, repo):
     if repo.local():
