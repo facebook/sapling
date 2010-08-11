@@ -218,7 +218,7 @@ class ui(object):
         def _configlist(s):
             s = s.rstrip(' ,')
             if not s:
-                return None
+                return []
             parser, parts, offset = _parse_plain, [''], 0
             while parser:
                 parser, parts, offset = parser(parts, s, offset)
