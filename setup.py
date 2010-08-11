@@ -116,6 +116,7 @@ setup(
                                          'README')).read(),
     keywords = 'mercurial',
     packages = ('hgsubversion', 'hgsubversion.svnwrap'),
+    package_data = { 'hgsubversion': ['help/subversion.rst'] },
     platforms = 'any',
     install_requires=requires,
     classifiers = [
