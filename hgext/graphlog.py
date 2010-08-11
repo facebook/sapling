@@ -217,8 +217,8 @@ def get_revs(repo, rev_opt):
 
 def check_unsupported_flags(opts):
     for op in ["follow", "follow_first", "date", "copies", "keyword", "remove",
-               "only_merges", "user", "only_branch", "prune", "newest_first",
-               "no_merges", "include", "exclude"]:
+               "only_merges", "user", "branch", "only_branch", "prune",
+               "newest_first", "no_merges", "include", "exclude"]:
         if op in opts and opts[op]:
             raise util.Abort(_("--graph option is incompatible with --%s")
                              % op.replace("_", "-"))

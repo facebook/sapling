@@ -4177,7 +4177,7 @@ table = {
            _('show only heads which are descendants of REV'), _('REV')),
           ('t', 'topo', False, _('show topological heads only')),
           ('a', 'active', False,
-           _('show active branchheads only [DEPRECATED]')),
+           _('show active branchheads only (DEPRECATED)')),
           ('c', 'closed', False,
            _('show normal and closed branch heads')),
          ] + templateopts,
