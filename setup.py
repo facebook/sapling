@@ -99,9 +99,11 @@ try:
 except ImportError:
     requires.append('mercurial')
 
-# Ensure that the Subversion bindings are present
-sys.path.insert(0, 'hgsubversion')
-import svnwrap
+# If the Subversion SWIG bindings aren't present, require Subvertpy
+try:
+    from hgsubversion.svnwrap import svn_swig_wrapper
+except ImportError:
+    requires.append('subvertpy>=0.7.3')
 
 setup(
     name = 'hgsubversion',
