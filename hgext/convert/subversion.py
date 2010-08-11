@@ -1158,3 +1158,4 @@ class svn_sink(converter_sink, commandline):
 
     def puttags(self, tags):
         self.ui.warn(_('XXX TAGS NOT IMPLEMENTED YET\n'))
+        return None, None
