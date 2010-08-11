@@ -6,4 +6,6 @@ available implementation without the user having to configure what is actually
 present.
 """
 
+from common import *
+
 from svn_swig_wrapper import *

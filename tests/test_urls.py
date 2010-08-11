@@ -1,6 +1,6 @@
 import test_util
 import unittest
-from hgsubversion.svnwrap.svn_swig_wrapper import parse_url
+from hgsubversion.svnwrap import parse_url
 from hgsubversion import svnrepo
 
 class TestSubversionUrls(test_util.TestBase):

@@ -9,6 +9,8 @@ import urlparse
 import urllib
 import collections
 
+import common
+
 import warnings
 warnings.filterwarnings('ignore',
                         module='svn.core',
@@ -35,22 +37,6 @@ if current_bindings < required_bindings: #pragma: no cover
 
 def version():
     return '%d.%d.%d' % current_bindings, 'SWIG'
-
-class SubversionRepoCanNotReplay(Exception):
-    """Exception raised when the svn server is too old to have replay.
-    """
-
-class SubversionRepoCanNotDiff(Exception):
-    """Exception raised when the svn API diff3() command cannot be used
-    """
-
-class SubversionConnectionException(Exception):
-    """Exception raised when a generic error occurs when connecting to a
-       repository.
-    """
-
-'''Default chunk size used in fetch_history_at_paths() and revisions().'''
-chunk_size = 1000
 
 # exported values
 ERR_FS_CONFLICT = core.SVN_ERR_FS_CONFLICT
@@ -144,61 +130,6 @@ def _create_auth_baton(pool):
 
     return core.svn_auth_open(providers, pool)
 
-
-def parse_url(url, user=None, passwd=None):
-    """Parse a URL and return a tuple (username, password, url)
-    """
-    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-    if '@' in netloc:
-        userpass, netloc = netloc.split('@')
-        if not user and not passwd:
-            if ':' in userpass:
-                user, passwd = userpass.split(':')
-            else:
-                user, passwd = userpass, ''
-            user, passwd = urllib.unquote(user), urllib.unquote(passwd)
-    if user and scheme == 'svn+ssh':
-        netloc = '@'.join((user, netloc, ))
-    url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
-    return (user or None, passwd or None, url)
-
-
-class Revision(tuple):
-    """Wrapper for a Subversion revision.
-
-    Derives from tuple in an attempt to minimise the memory footprint.
-    """
-    def __new__(self, revnum, author, message, date, paths, strip_path=''):
-        _paths = {}
-        if paths:
-            for p in paths:
-                _paths[p[len(strip_path):]] = paths[p]
-        return tuple.__new__(self,
-                             (revnum, author, message, date, _paths))
-
-    def get_revnum(self):
-        return self[0]
-    revnum = property(get_revnum)
-
-    def get_author(self):
-        return self[1]
-    author = property(get_author)
-
-    def get_message(self):
-        return self[2]
-    message = property(get_message)
-
-    def get_date(self):
-        return self[3]
-    date = property(get_date)
-
-    def get_paths(self):
-        return self[4]
-    paths = property(get_paths)
-
-    def __str__(self):
-        return 'r%d by %s' % (self.revnum, self.author)
-
 _svntypes = {
     core.svn_node_dir: 'd',
     core.svn_node_file: 'f',
@@ -211,7 +142,7 @@ class SubversionRepo(object):
     It takes a required param, the URL.
     """
     def __init__(self, url='', username='', password='', head=None):
-        parsed = parse_url(url, username, password)
+        parsed = common.parse_url(url, username, password)
         # --username and --password override URL credentials
         self.username = parsed[0]
         self.password = parsed[1]
@@ -272,7 +203,7 @@ class SubversionRepo(object):
                     if k.startswith('SVN_ERR_') and v == e.apr_err:
                         msg = '%s (%s)' % (msg, k)
                         break
-            raise SubversionConnectionException(msg)
+            raise common.SubversionConnectionException(msg)
 
     def HEAD(self):
         return ra.get_latest_revnum(self.ra, self.pool)
@@ -317,7 +248,7 @@ class SubversionRepo(object):
         return folders
 
     def revisions(self, paths=None, start=0, stop=0,
-                  chunk_size=chunk_size):
+                  chunk_size=common.chunk_size):
         """Load the history of this repo.
 
         This is LAZY. It returns a generator, and fetches a small number
@@ -332,8 +263,8 @@ class SubversionRepo(object):
             stop = self.HEAD
         while stop > start:
             def callback(paths, revnum, author, date, message, pool):
-                r = Revision(revnum, author, message, date, paths,
-                             strip_path=self.subdir)
+                r = common.Revision(revnum, author, message, date, paths,
+                                    strip_path=self.subdir)
                 revisions.append(r)
             # use a queue; we only access revisions in a FIFO manner
             revisions = collections.deque()
@@ -355,9 +286,9 @@ class SubversionRepo(object):
                 if e.apr_err == core.SVN_ERR_FS_NOT_FOUND:
                     msg = ('%s not found at revision %d!'
                            % (self.subdir.rstrip('/'), stop))
-                    raise SubversionConnectionException(msg)
+                    raise common.SubversionConnectionException(msg)
                 elif e.apr_err == core.SVN_ERR_FS_NO_SUCH_REVISION:
-                    raise SubversionConnectionException(e.message)
+                    raise common.SubversionConnectionException(e.message)
                 else:
                     raise
 
@@ -458,8 +389,9 @@ class SubversionRepo(object):
             # can I depend on this number being constant?
             if (e.apr_err == core.SVN_ERR_RA_NOT_IMPLEMENTED or
                 e.apr_err == core.SVN_ERR_UNSUPPORTED_FEATURE):
-                raise SubversionRepoCanNotReplay, ('This Subversion server '
-                   'is older than 1.4.0, and cannot satisfy replay requests.')
+                msg = ('This Subversion server is older than 1.4.0, and '
+                       'cannot satisfy replay requests.')
+                raise common.SubversionRepoCanNotReplay(msg)
             else:
                 raise
 
@@ -479,7 +411,7 @@ class SubversionRepo(object):
         """Gets a unidiff of path at revision against revision-1.
         """
         if not self.hasdiff3:
-            raise SubversionRepoCanNotDiff()
+            raise common.SubversionRepoCanNotDiff()
         # works around an svn server keeping too many open files (observed
         # in an svnserve from the 1.2 era)
         self.init_ra_and_client()
@@ -509,7 +441,7 @@ class SubversionRepo(object):
                 if e.apr_err != 720006:
                     raise
                 self.hasdiff3 = False
-                raise SubversionRepoCanNotDiff()
+                raise common.SubversionRepoCanNotDiff()
             out.close()
             err.close()
             out, err = None, None
