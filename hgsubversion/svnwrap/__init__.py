@@ -11,4 +11,8 @@ from common import *
 try:
     from subvertpy_wrapper import *
 except ImportError, e:
-    from svn_swig_wrapper import *
+    try:
+        from svn_swig_wrapper import *
+    except ImportError:
+        # propagate the subvertpy error; it's easier to install
+        import subvertpy_wrapper
