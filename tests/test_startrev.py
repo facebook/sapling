@@ -20,6 +20,11 @@ def _do_case(self, name, subdir, stupid):
     for f in fulltip:
         self.assertMultiLineEqual(fulltip[f].data(), headtip[f].data())
 
+    self.assertNotEqual(len(fullclone), 0, "full clone shouldn't be empty")
+    self.assertEqual(len(headclone), 1,
+                     "shallow clone should have just one revision, not %d"
+                     % len(headclone))
+
 def buildmethod(case, name, subdir, stupid):
     m = lambda self: self._do_case(case, subdir.strip('/'), stupid)
     m.__name__ = name
@@ -28,10 +33,28 @@ def buildmethod(case, name, subdir, stupid):
     return m
 
 
+# these fixtures contain no files at HEAD and would result in empty clones
+nofiles = set([
+    'binaryfiles.svndump',
+    'emptyrepo.svndump',
+])
+
+# these fixtures contain no files in trunk at HEAD and would result in an empty
+# shallow clone if cloning trunk, so we use another subdirectory
+subdirmap = {
+    'commit-to-tag.svndump': '/branches/magic',
+    'pushexternals.svndump': '',
+    'tag_name_same_as_branch.svndump': '/branches/magic',
+}
+
 attrs = {'_do_case': _do_case,
          }
+
 for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]:
-    subdir = test_util.subdir.get(case, '') + '/trunk'
+    if case in nofiles:
+        continue
+
+    subdir = test_util.subdir.get(case, '') + subdirmap.get(case, '/trunk')
 
     bname = 'test_' + case[:-len('.svndump')]
     attrs[bname] = buildmethod(case, bname, subdir, False)
