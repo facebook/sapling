@@ -50,7 +50,7 @@ class SubversionConnectionException(Exception):
     """
 
 '''Default chunk size used in fetch_history_at_paths() and revisions().'''
-_chunk_size = 1000
+chunk_size = 1000
 
 # exported values
 ERR_FS_CONFLICT = core.SVN_ERR_FS_CONFLICT
@@ -317,7 +317,7 @@ class SubversionRepo(object):
         return folders
 
     def revisions(self, paths=None, start=0, stop=0,
-                  chunk_size=_chunk_size):
+                  chunk_size=chunk_size):
         """Load the history of this repo.
 
         This is LAZY. It returns a generator, and fetches a small number
