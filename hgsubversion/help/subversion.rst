@@ -178,3 +178,11 @@ Please note that some of these options may be specified as command line options
 as well, and when done so, will override the configuration. If an authormap,
 filemap or branchmap is specified, its contents will be read and stored for use
 in future pulls.
+
+Finally, the following environment variables can be used for testing a
+deployment of hgsubversion:
+
+  HGSUBVERSION_BINDINGS
+    By default, hgsubversion will use Subvertpy, but fall back to the SWIG
+    bindings. Set this variable to either ``SWIG`` or ``Subvertpy`` (case-
+    insensitive) to force that set of bindings.

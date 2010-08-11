@@ -8,11 +8,26 @@ present.
 
 from common import *
 
-try:
+import os
+
+choice = os.environ.get('HGSUBVERSION_BINDINGS', '').lower()
+
+if choice == 'subvertpy':
     from subvertpy_wrapper import *
-except ImportError, e:
+elif choice == 'swig':
+    from svn_swig_wrapper import *
+elif choice == 'none':
+    # useful for verifying that demandimport works properly
+    raise ImportError('cannot use hgsubversion; '
+                      'bindings disabled using HGSUBVERSION_BINDINGS')
+else:
     try:
-        from svn_swig_wrapper import *
-    except ImportError:
-        # propagate the subvertpy error; it's easier to install
-        import subvertpy_wrapper
+        from subvertpy_wrapper import *
+    except ImportError, e:
+        try:
+            from svn_swig_wrapper import *
+        except ImportError:
+            # propagate the subvertpy error; it's easier to install
+            raise e
+
+del os, choice
