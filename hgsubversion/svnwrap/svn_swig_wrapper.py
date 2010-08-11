@@ -157,8 +157,7 @@ _svntypes = {
 class SubversionRepo(object):
     """Wrapper for a Subversion repository.
 
-    This uses the SWIG Python bindings, and will only work on svn >= 1.4.
-    It takes a required param, the URL.
+    It uses the SWIG Python bindings, see above for requirements.
     """
     def __init__(self, url='', username='', password='', head=None):
         parsed = common.parse_url(url, username, password)
@@ -285,7 +284,7 @@ class SubversionRepo(object):
                 r = common.Revision(revnum, author, message, date, paths,
                                     strip_path=self.subdir)
                 revisions.append(r)
-            # use a queue; we only access revisions in a FIFO manner
+            # we only access revisions in a FIFO manner
             revisions = collections.deque()
 
             try:
