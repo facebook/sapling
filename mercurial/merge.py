@@ -117,7 +117,7 @@ def _forgetremoved(wctx, mctx, branchmerge):
 
 def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     """
-    Merge p1 and p2 with ancestor ma and generate merge action list
+    Merge p1 and p2 with ancestor pa and generate merge action list
 
     overwrite = whether we clobber working files
     partial = function to filter file lists
