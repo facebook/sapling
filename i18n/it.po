@@ -2143,7 +2143,7 @@ msgid ""
 "    changes."
 msgstr ""
 "    Se le modifiche ottenute aggiungono una nuova head, il merge di questa viene effettuato\n"
-"    automaticamente e si effettua il commit del merge.  Altrimenti, la\n"
+"    automaticamente e si effettua il commit del merge. Altrimenti, la\n"
 "    directory di lavoro viene aggiornata per includere le nuove modifiche."
 
 #, fuzzy
@@ -2154,8 +2154,8 @@ msgid ""
 "    order, use --switch-parent."
 msgstr ""
 "    Quando si verifica un merge, si assume che le modifiche appena ottenute siano\n"
-"    \"autoritarie\".  La head delle nuove modifiche è usata come primo\n"
-"    genitore, con le modifiche locali come secondo.  Per invertire l'ordine\n"
+"    \"autoritarie\". La head delle nuove modifiche è usata come primo\n"
+"    genitore, con le modifiche locali come secondo. Per invertire l'ordine\n"
 "    di merge, usare --switch-parent."
 
 #, fuzzy
