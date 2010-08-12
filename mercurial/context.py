@@ -75,7 +75,7 @@ class changectx(object):
 
     @propertycache
     def substate(self):
-        return subrepo.state(self)
+        return subrepo.state(self, self._repo.ui)
 
     def __contains__(self, key):
         return key in self._manifest

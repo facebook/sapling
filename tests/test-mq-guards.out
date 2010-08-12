@@ -84,10 +84,16 @@ number of unguarded, unapplied patches has changed from 3 to 2
 a.patch: +1 +2 -3
 b.patch: +2
 c.patch: unguarded
+% have at least one patch applied to test coloring
+applying b.patch
+now at: b.patch
 % list patches and guards with color
-a.patch: [0;33m+1[0m [0;33m+2[0m [0;31m-3[0m
-b.patch: [0;33m+2[0m
-c.patch: [0;32munguarded[0m
+[0;30;1ma.patch[0m: [0;33m+1[0m [0;33m+2[0m [0;31m-3[0m
+[0;34;1;4mb.patch[0m: [0;33m+2[0m
+[0;30;1mc.patch[0m: [0;32munguarded[0m
+% should pop b.patch
+popping b.patch
+patch queue now empty
 % list series
 0 G a.patch
 1 U b.patch

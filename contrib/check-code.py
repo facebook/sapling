@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import re, glob, os
+import re, glob, os, sys
 import optparse
 
 def repquote(m):
@@ -261,5 +261,8 @@ if __name__ == "__main__":
         check = args
 
     for f in check:
-        checkfile(f, maxerr=options.per_file, warnings=options.warnings,
-                  blame=options.blame)
+        ret = 0
+        if not checkfile(f, maxerr=options.per_file, warnings=options.warnings,
+                         blame=options.blame):
+            ret = 1
+    sys.exit(ret)

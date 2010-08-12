@@ -299,7 +299,7 @@ def reposetup(ui, repo):
 
             self.ui.debug("checking for updated bookmarks\n")
             rb = remote.listkeys('bookmarks')
-            changes = 0
+            changed = False
             for k in rb.keys():
                 if k in self._bookmarks:
                     nr, nl = rb[k], self._bookmarks[k]
@@ -310,12 +310,12 @@ def reposetup(ui, repo):
                             continue
                         if cr in cl.descendants():
                             self._bookmarks[k] = cr.node()
-                            changes += 1
+                            changed = True
                             self.ui.status(_("updating bookmark %s\n") % k)
                         else:
                             self.ui.warn(_("not updating divergent"
                                            " bookmark %s\n") % k)
-            if changes:
+            if changed:
                 write(repo)
 
             return result

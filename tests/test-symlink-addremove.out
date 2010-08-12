@@ -1,6 +1,0 @@
-% directory moved and symlinked
-adding foo/a
-% now addremove should remove old files
-adding bar/a
-adding foo
-removing foo/a

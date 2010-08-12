@@ -97,11 +97,16 @@ hg qpop -a
 
 hg qguard -- a.patch +1 +2 -3
 hg qselect 1 2 3
+
 echo % list patches and guards
 hg qguard -l
+echo % have at least one patch applied to test coloring
+hg qpush
 echo % list patches and guards with color
 hg --config extensions.color= qguard --config color.mode=ansi \
     -l --color=always
+echo % should pop b.patch
+hg qpop
 echo % list series
 hg qseries -v
 echo % list guards

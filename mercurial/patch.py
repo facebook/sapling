@@ -927,8 +927,8 @@ def selectfile(afile_orig, bfile_orig, hunk, strip):
     createfunc = hunk.createfile
     missing = not goodb and not gooda and not createfunc()
 
-    # some diff programs apparently produce create patches where the
-    # afile is not /dev/null, but afile starts with bfile
+    # some diff programs apparently produce patches where the afile is
+    # not /dev/null, but afile starts with bfile
     abasedir = afile[:afile.rfind('/') + 1]
     bbasedir = bfile[:bfile.rfind('/') + 1]
     if missing and abasedir == bbasedir and afile.startswith(bfile):
