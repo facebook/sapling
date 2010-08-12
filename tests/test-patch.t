@@ -17,8 +17,8 @@
   $ hg commit -Amb -d '2 0'
   $ cd ..
 
-This test check that:
- - custom patch commands with arguments actually works
+This test checks that:
+ - custom patch commands with arguments actually work
  - patch code does not try to add weird arguments like
  --binary when custom patch commands are used. For instance
  --binary is added by default under win32.
