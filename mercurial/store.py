@@ -22,7 +22,7 @@ def encodedir(path):
             .replace(".d/", ".d.hg/"))
 
 def decodedir(path):
-    if not path.startswith('data/'):
+    if not path.startswith('data/') or ".hg/" not in path:
         return path
     return (path
             .replace(".d.hg/", ".d/")
