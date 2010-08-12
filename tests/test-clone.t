@@ -431,3 +431,13 @@ Testing issue2267:
 
   $ rm -r ua
 
+cat <<EOF > branchclone.py
+from mercurial import ui, hg
+myui = ui.ui()
+repo = hg.repository(myui, 'a')
+hg.clone(myui, repo, dest="ua", branch=["stable",])
+EOF
+
+python branchclone.py
+rm -r ua
+
