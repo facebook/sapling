@@ -1,14 +1,8 @@
-Test bug regarding symlinks that showed up in hg 0.7
-Author: Matthew Elder <sseses@gmail.com>
-
   $ "$TESTDIR/hghave" symlink || exit 80
 
-make and initialize repo
+== tests added in 0.7 ==
 
-  $ hg init test; cd test;
-
-make a file and a symlink
-
+  $ hg init test-symlinks-0.7; cd test-symlinks-0.7;
   $ touch foo; ln -s foo bar;
 
 import with addremove -- symlink walking should _not_ screwup.
@@ -21,8 +15,6 @@ commit -- the symlink should _not_ appear added to dir state
 
   $ hg commit -m 'initial'
 
-add a new file so hg will let me commit again
-
   $ touch bomb
 
 again, symlink should _not_ show up on dir state
@@ -33,8 +25,11 @@ again, symlink should _not_ show up on dir state
 Assert screamed here before, should go by without consequence
 
   $ hg commit -m 'is there a bug?'
+  $ cd ..
 
-  $ cd .. ; rm -r test
+
+== fifo & ignore ==
+
   $ hg init test; cd test;
 
   $ mkdir dir
@@ -64,10 +59,13 @@ it should show a.c, dir/a.o and dir/b.o deleted
   $ hg status a.c
   a.c: unsupported file type (type is fifo)
   ! a.c
+  $ cd ..
+
+
+== symlinks from outside the tree ==
 
 test absolute path through symlink outside repo
 
-  $ cd ..
   $ p=`pwd`
   $ hg init x
   $ ln -s x y
@@ -85,9 +83,11 @@ this should fail
 
   $ hg status ../z && { echo hg mistakenly exited with status 0; exit 1; } || :
   abort: ../z not under root
+  $ cd ..
 
-  $ cd .. ; rm -r test
-  $ hg init test; cd test;
+
+== cloning symlinks ==
+  $ hg init clone; cd clone;
 
 try cloning symlink in a subdir
 1. commit a symlink
@@ -104,13 +104,16 @@ try cloning symlink in a subdir
 2. clone it
 
   $ cd ..
-  $ hg clone test testclone
+  $ hg clone clone clonedest
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+
+== symlink and git diffs ==
+
 git symlink diff
 
-  $ cd testclone
+  $ cd clonedest
   $ hg diff --git -r null:tip
   diff --git a/a/b/c/demo b/a/b/c/demo
   new file mode 120000
@@ -135,3 +138,116 @@ import git symlink diff
   @@ -0,0 +1,1 @@
   +/path/to/symlink/source
   \ No newline at end of file
+
+== symlinks and addremove ==
+
+directory moved and symlinked
+
+  $ mkdir foo
+  $ touch foo/a
+  $ hg ci -Ama
+  adding foo/a
+  $ mv foo bar
+  $ ln -s bar foo
+
+now addremove should remove old files
+
+  $ hg addremove
+  adding bar/a
+  adding foo
+  removing foo/a
+  $ cd ..
+
+== root of repository is symlinked ==
+
+  $ hg init root
+  $ ln -s root link
+  $ cd root
+  $ echo foo > foo
+  $ hg status
+  ? foo
+  $ hg status ../link
+  ? foo
+  $ cd ..
+
+
+
+
+  $ hg init b
+  $ cd b
+  $ ln -s nothing dangling
+  $ hg commit -m 'commit symlink without adding' dangling
+  abort: dangling: file not tracked!
+  $ hg add dangling
+  $ hg commit -m 'add symlink'
+
+  $ hg tip -v
+  changeset:   0:cabd88b706fc
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       dangling
+  description:
+  add symlink
+  
+  
+  $ hg manifest --debug
+  2564acbe54bbbedfbf608479340b359f04597f80 644 @ dangling
+  $ $TESTDIR/readlink.py dangling
+  dangling -> nothing
+
+  $ rm dangling
+  $ ln -s void dangling
+  $ hg commit -m 'change symlink'
+  $ $TESTDIR/readlink.py dangling
+  dangling -> void
+
+
+modifying link
+
+  $ rm dangling
+  $ ln -s empty dangling
+  $ $TESTDIR/readlink.py dangling
+  dangling -> empty
+
+
+reverting to rev 0:
+
+  $ hg revert -r 0 -a
+  reverting dangling
+  $ $TESTDIR/readlink.py dangling
+  dangling -> nothing
+
+
+backups:
+
+  $ $TESTDIR/readlink.py *.orig
+  dangling.orig -> empty
+  $ rm *.orig
+  $ hg up -C
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+copies
+
+  $ hg cp -v dangling dangling2
+  copying dangling to dangling2
+  $ hg st -Cmard
+  A dangling2
+    dangling
+  $ $TESTDIR/readlink.py dangling dangling2
+  dangling -> void
+  dangling2 -> void
+
+
+issue995
+
+  $ hg up -C
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ mkdir dir
+  $ ln -s dir dirlink
+  $ hg ci -qAm 'add dirlink'
+  $ mkdir newdir
+  $ mv dir newdir/dir
+  $ mv dirlink newdir/dirlink
+  $ hg mv -A dirlink newdir/dirlink
+
