@@ -397,14 +397,14 @@
   $ hg ci -d '0 0' -m 'add foo'
   Automatically installed hook
   $ echo >> foo
-  $ hg ci --debug -d '0 0' -m 'change foo' | sed -e 's/ at .*>/>/'
+  $ hg ci --debug -d '0 0' -m 'change foo'
   foo
-  calling hook commit.auto: <function autohook>
+  calling hook commit.auto: <function autohook at .*>
   Automatically installed hook
   committed changeset 1:52998019f6252a2b893452765fcb0a47351a5708
 
-  $ hg showconfig hooks | sed -e 's/ at .*>/>/'
-  hooks.commit.auto=<function autohook>
+  $ hg showconfig hooks
+  hooks.commit.auto=<function autohook at .*>
 
 # test python hook configured with python:[file]:[hook] syntax
 
