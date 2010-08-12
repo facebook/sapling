@@ -35,3 +35,5 @@ EOF
 
 check_code=`dirname $0`/../contrib/check-code.py
 ${check_code} ./wrong.py ./correct.py ./quote.py ./non-py24.py
+
+exit 0
