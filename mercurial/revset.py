@@ -429,7 +429,7 @@ def roots(repo, subset, x):
 def outgoing(repo, subset, x):
     import hg # avoid start-up nasties
     l = getargs(x, 0, 1, _("outgoing wants a repository path"))
-    dest = l[1:] or ''
+    dest = l and getstring(l[0], _("outgoing wants a repository path")) or ''
     dest = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest)
     other = hg.repository(hg.remoteui(repo, {}), dest)
