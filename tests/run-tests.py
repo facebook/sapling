@@ -499,6 +499,13 @@ def tsttest(test, options):
     finally:
         os.remove(name)
 
+    def rematch(el, l):
+        try:
+            return re.match(el, l)
+        except re.error:
+            # el is an invalid regex
+            return False
+
     pos = -1
     postout = []
     for n, l in enumerate(output):
@@ -513,7 +520,7 @@ def tsttest(test, options):
 
             if el == l: # perfect match (fast)
                 postout.append("  " + l)
-            elif el and re.match(el, l): # fallback regex match
+            elif el and rematch(el, l): # fallback regex match
                 postout.append("  " + el)
             else: # mismatch - let diff deal with it
                 postout.append("  " + l)
