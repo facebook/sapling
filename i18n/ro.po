@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-08-05 16:06+0200\n"
-"PO-Revision-Date: 2010-08-05 15:49+0200\n"
+"PO-Revision-Date: 2010-08-12 17:11+0200\n"
 "Last-Translator: Daniel Dumitriu <daniel.dumitriu@gmail.com>\n"
 "Language-Team: Romanian <>\n"
 "MIME-Version: 1.0\n"
@@ -129,13 +129,12 @@ msgid ""
 "distinguish them."
 msgstr ""
 "Hook-ul acl e folosit optim împreună cu un shell restrictiv precum\n"
-"hgsh, care împiedică utilizatorii care doresc să se autentifice să aibă "
-"alte\n"
-"acțiuni în afară de push și pull. Hook-ul nu prezintă siguranță dacă\n"
-"utilizatorii au acces la shell interactiv, deoarece astfel ei pot dezactiva\n"
-"hook-ul. De asemenea, nu prezintă siguranță situația în care utilizatorii\n"
-"de la distanță partajează un cont, deoarece nu există posibilitatea de\n"
-"a-i distinge."
+"hgsh, care împiedică utilizatorii care doresc să se autentifice să aibă\n"
+"alte acțiuni în afară de push și pull. Hook-ul nu prezintă siguranță\n"
+"dacă utilizatorii au acces la shell interactiv, deoarece astfel ei pot\n"
+"dezactiva hook-ul. De asemenea, nu prezintă siguranță situația în\n"
+"care utilizatorii la distanță partajează un cont, deoarece nu există\n"
+"posibilitatea de a-i distinge."
 
 msgid "The order in which access checks are performed is:"
 msgstr "Ordinea în care se fac verificările de acces este:"
@@ -469,7 +468,7 @@ msgstr ""
 
 #, python-format
 msgid "comparing with %s\n"
-msgstr ""
+msgstr "se compară cu %s\n"
 
 msgid "bookmark to import"
 msgstr ""
@@ -5747,7 +5746,7 @@ msgstr ""
 
 #, python-format
 msgid "changeset:   %d:%s\n"
-msgstr ""
+msgstr "set de modificări:   %d:%s\n"
 
 #, python-format
 msgid "branch:      %s\n"
@@ -5755,7 +5754,7 @@ msgstr ""
 
 #, python-format
 msgid "tag:         %s\n"
-msgstr ""
+msgstr "etichetă:            %s\n"
 
 #, python-format
 msgid "parent:      %d:%s\n"
@@ -5767,11 +5766,11 @@ msgstr ""
 
 #, python-format
 msgid "user:        %s\n"
-msgstr ""
+msgstr "utilizator:          %s\n"
 
 #, python-format
 msgid "date:        %s\n"
-msgstr ""
+msgstr "dată:                %s\n"
 
 msgid "files+:"
 msgstr ""
@@ -5780,11 +5779,11 @@ msgid "files-:"
 msgstr ""
 
 msgid "files:"
-msgstr ""
+msgstr "fișiere:"
 
 #, python-format
 msgid "files:       %s\n"
-msgstr ""
+msgstr "fișiere:             %s\n"
 
 #, python-format
 msgid "copies:      %s\n"
@@ -5795,11 +5794,11 @@ msgid "extra:       %s=%s\n"
 msgstr ""
 
 msgid "description:\n"
-msgstr ""
+msgstr "descriere:\n"
 
 #, python-format
 msgid "summary:     %s\n"
-msgstr ""
+msgstr "rezumat:             %s\n"
 
 #, python-format
 msgid "%s: no key named '%s'"
@@ -5827,7 +5826,7 @@ msgstr ""
 
 #, python-format
 msgid "HG: user: %s"
-msgstr ""
+msgstr "HG: utilizator: %s"
 
 msgid "HG: branch merge"
 msgstr ""
@@ -6303,7 +6302,7 @@ msgid ""
 "    Please see :hg:`help urls` for important details about ``ssh://`` URLs."
 msgstr ""
 "    Ca destinație se poate specifica un URL ``ssh://``, dar nu va fi creat.\n"
-"    niciun fișier .hg/hgrc pe mașina de la distanță.\n"
+"    niciun fișier .hg/hgrc pe mașina la distanță.\n"
 "    Vezi :hg:`help urls` pentru detalii importante despre URL-urile ``ssh://"
 "``."
 
@@ -7705,7 +7704,7 @@ msgstr ""
 
 #, python-format
 msgid "forgetting %s\n"
-msgstr "se uită %s\n"
+msgstr "se neglijează %s\n"
 
 #, python-format
 msgid "reverting %s\n"
@@ -8228,7 +8227,7 @@ msgid "specify ssh command to use"
 msgstr "specifică comanda ssh care va fi folosită"
 
 msgid "specify hg command to run on the remote side"
-msgstr "specifică comanda hg care va fi executată pe mașina de la distanță"
+msgstr "specifică comanda hg care va fi executată pe mașina la distanță"
 
 msgid "PATTERN"
 msgstr ""
@@ -8280,7 +8279,7 @@ msgid "produce a diff that undoes the changes"
 msgstr ""
 
 msgid "ignore white space when comparing lines"
-msgstr ""
+msgstr "ignoră spațiul alb la compararea liniilor"
 
 msgid "ignore changes in the amount of white space"
 msgstr ""
@@ -10602,6 +10601,9 @@ msgid ""
 "  Changesets not found in the specified destination repository, or the\n"
 "  default push location."
 msgstr ""
+"``outgoing([cale])``\n"
+"  Nu s-au găsit seturi de modificări în depozitul destinație specificat\n"
+"  sau în amplasarea implicită pentru `push`."
 
 msgid ""
 "``p1(set)``\n"
@@ -10924,6 +10926,7 @@ msgstr ""
 
 msgid ":user: Any text. Returns the user portion of an email address.\n"
 msgstr ""
+":user: Orice text. Returnează porțiunea utilizator a unei adrese de e-mail.\n"
 
 msgid "Valid URLs are of the form::"
 msgstr ""
@@ -11681,7 +11684,7 @@ msgstr ""
 
 #, python-format
 msgid "%s not found in the transaction"
-msgstr ""
+msgstr "%s nu a fost găsit în tranzacție"
 
 msgid "unknown base"
 msgstr ""
@@ -11996,10 +11999,10 @@ msgstr ""
 
 #, python-format
 msgid "user: %s\n"
-msgstr ""
+msgstr "utilizator: %s\n"
 
 msgid "user:"
-msgstr ""
+msgstr "utilizator:"
 
 #, python-format
 msgid "http auth: user %s, password %s\n"
@@ -12177,7 +12180,8 @@ msgid "reading manifest delta %s"
 msgstr ""
 
 msgid "crosschecking files in changesets and manifests\n"
-msgstr "se verifică încrucișat în seturile de modificări și manifeste\n"
+msgstr ""
+"se verifică încrucișat fișierele din seturile de modificări și manifeste\n"
 
 msgid "crosschecking"
 msgstr "se verifică încrucișat"
@@ -12275,3 +12279,4 @@ msgstr ""
 
 msgid "push failed (unexpected response):"
 msgstr ""
+
