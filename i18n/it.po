@@ -704,7 +704,7 @@ msgstr ""
 
 #, python-format
 msgid "config error - hook type \"%s\" cannot stop incoming changesets"
-msgstr "errore di configurazione - l'hook di tipo \"%s\" non pu fermare i changeset in entrata"
+msgstr "errore di configurazione - l'hook di tipo \"%s\" non può fermare i changeset in entrata"
 
 #, python-format
 msgid "acl: access denied for changeset %s"
@@ -724,7 +724,7 @@ msgstr ""
 "I segnalibri di Mercurial sono puntatori locali e mobili a changeset. Ogni\n"
 "segnalibro punta ad un changeset identificato dal proprio hash. Se fai il commit di un\n"
 "changeset basato su un changeset che ha un segnalibro, \n"
-"il segnalibro  spostato sul nuovo changeset"
+"il segnalibro è spostato sul nuovo changeset"
 
 #, fuzzy
 msgid ""
@@ -741,7 +741,7 @@ msgid ""
 "git-like experience by adding the following configuration option to\n"
 "your .hgrc::"
 msgstr ""
-"L'estensione bookmark offre la possibilit di avere un'esperienza pi simile a git\n"
+"L'estensione bookmark offre la possibilità di avere un'esperienza più simile a git\n"
 "aggiungendo la seguente opzione di configurazione al tuo .hgrc:"
 
 #, fuzzy
@@ -758,8 +758,8 @@ msgid ""
 "using, and only update it. This is similar to git's approach to\n"
 "branching.\n"
 msgstr ""
-"Questo porter i segnalibri a tener traccia del segnalibro su cui sei attualmente,e\n"
-"ad aggiornarlo. Questo  simile all'approccio di branching di git.\n"
+"Questo porterà i segnalibri a tener traccia del segnalibro su cui sei attualmente,e\n"
+"ad aggiornarlo. Questo è simile all'approccio di branching di git.\n"
 
 msgid ""
 "    Bookmarks are pointers to certain commits that move when\n"
@@ -1024,7 +1024,7 @@ msgstr "schema del database sconosciuto"
 
 #, python-format
 msgid "bug %d already knows about changeset %s\n"
-msgstr "il bug %d  gi a conoscenza del changeset %s\n"
+msgstr "il bug %d è già a conoscenza del changeset %s\n"
 
 msgid "telling bugzilla to send mail:\n"
 msgstr "sto dicendo a bugzilla di inviare la mail:\n"
@@ -3170,7 +3170,7 @@ msgstr ""
 
 #, python-format
 msgid "patch \"%s\" already exists"
-msgstr "la patch \"%s\" esiste gi"
+msgstr "la patch \"%s\" esiste già"
 
 #, python-format
 msgid "error unlinking %s\n"
@@ -3182,11 +3182,11 @@ msgstr "il nome della patch \"%s\"  ambiguo:\n"
 
 #, python-format
 msgid "patch %s not in series"
-msgstr "la patch %s non  nella serie"
+msgstr "la patch %s non è nella serie"
 
 #, fuzzy
 msgid "(working directory not at a head)\n"
-msgstr "(directory di lavoro non  tip)\n"
+msgstr "(directory di lavoro non è a una tip)\n"
 
 msgid "no patches in series\n"
 msgstr "nessuna patch nella serie\n"
@@ -3197,7 +3197,7 @@ msgstr "impossibile fare push su una patch precedente: %s"
 
 #, python-format
 msgid "qpush: %s is already at the top\n"
-msgstr "qpush: %s  gi in cima\n"
+msgstr "qpush: %s è già in cima\n"
 
 #, python-format
 msgid "guarded by %r"
@@ -3214,7 +3214,7 @@ msgid "all patches are currently applied\n"
 msgstr "tutte le patch sono correntemente applicate\n"
 
 msgid "patch series already fully applied\n"
-msgstr "la serie di patch  gi stata applicata completamente\n"
+msgstr "la serie di patch è già stata applicata completamente\n"
 
 msgid "cleaning up working directory..."
 msgstr "sto pulendo la directory di lavoro..."
@@ -3229,7 +3229,7 @@ msgstr "ora a: %s\n"
 
 #, python-format
 msgid "patch %s is not applied"
-msgstr "la patch %s non  applicata"
+msgstr "la patch %s non è applicata"
 
 msgid "no patches applied\n"
 msgstr "nessuna patch applicata\n"
@@ -3309,7 +3309,7 @@ msgstr "commit del repository fallito\n"
 
 #, python-format
 msgid "patch %s is already in the series file"
-msgstr "la patch %s  gi nel file series"
+msgstr "la patch %s è già nel file series"
 
 msgid "option \"-r\" not valid when importing files"
 msgstr "l'opzione \"-r\" non è valida quando si importano file"
@@ -3339,10 +3339,10 @@ msgstr ""
 
 #, python-format
 msgid "revision %d is not the parent of %d"
-msgstr "la revisione %d non  il genitore di %d"
+msgstr "la revisione %d non è il genitore di %d"
 
 msgid "-e is incompatible with import from -"
-msgstr "-e  incompatibile con l'import da -"
+msgstr "-e è incompatibile con l'import da -"
 
 #, python-format
 msgid "patch %s does not exist"
@@ -3369,7 +3369,7 @@ msgid ""
 msgstr ""
 
 msgid "print the patches already applied"
-msgstr "stampa le patch gi applicate"
+msgstr "stampa le patch già applicate"
 
 msgid "only one patch applied\n"
 msgstr " stata applicata solo una patch\n"
@@ -9807,7 +9807,7 @@ msgstr "il percorso contiene un componente non consentito: %s"
 
 #, python-format
 msgid "path %r is inside repo %r"
-msgstr "il percorso %r  all'interno del repository %r"
+msgstr "il percorso %r è all'interno del repository %r"
 
 #, python-format
 msgid "path %r traverses symbolic link %r"
