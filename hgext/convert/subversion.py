@@ -1157,4 +1157,5 @@ class svn_sink(converter_sink, commandline):
             os.unlink(messagefile)
 
     def puttags(self, tags):
-        self.ui.warn(_('XXX TAGS NOT IMPLEMENTED YET\n'))
+        self.ui.warn(_('writing Subversion tags is not yet implemented\n'))
+        return None, None
