@@ -431,13 +431,19 @@ Testing issue2267:
 
   $ rm -r ua
 
-cat <<EOF > branchclone.py
-from mercurial import ui, hg
-myui = ui.ui()
-repo = hg.repository(myui, 'a')
-hg.clone(myui, repo, dest="ua", branch=["stable",])
-EOF
+  $ cat <<EOF > branchclone.py
+  > from mercurial import ui, hg
+  > myui = ui.ui()
+  > repo = hg.repository(myui, 'a')
+  > hg.clone(myui, repo, dest="ua", branch=["stable",])
+  > EOF
 
-python branchclone.py
-rm -r ua
-
+  $ python branchclone.py
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 14 changesets with 14 changes to 3 files
+  updating to branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm -r ua
