@@ -484,5 +484,6 @@ def start(ui, dirstate, root, opts):
 
     appendpid = ui.configbool('inotify', 'appendpid', False)
 
+    ui.debug('starting inotify server: %s\n' % ' '.join(runargs))
     cmdutil.service(opts, initfn=service.init, runfn=service.run,
                     logfile=logfile, runargs=runargs, appendpid=appendpid)

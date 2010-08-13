@@ -32,7 +32,6 @@ def start_server(function):
                                'socket; removing it\n'))
                 os.unlink(os.path.join(self.root, '.hg', 'inotify.sock'))
             if err.args[0] in (errno.ECONNREFUSED, errno.ENOENT) and autostart:
-                self.ui.debug('(starting inotify server)\n')
                 try:
                     try:
                         server.start(self.ui, self.dirstate, self.root,
