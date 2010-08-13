@@ -110,7 +110,7 @@ def rebase(ui, repo, **opts):
                 raise util.Abort(
                     _('abort and continue do not allow specifying revisions'))
 
-            (originalwd, target, state, collapsef, keepf,
+            (originalwd, target, state, skipped, collapsef, keepf,
                                 keepbranchesf, external) = restorestatus(repo)
             if abortf:
                 return abort(repo, originalwd, target, state)
@@ -413,8 +413,18 @@ def restorestatus(repo):
             else:
                 oldrev, newrev = l.split(':')
                 state[repo[oldrev].rev()] = repo[newrev].rev()
+        skipped = set()
+        # recompute the set of skipped revs
+        if not collapse:
+            seen = set([target])
+            for old, new in sorted(state.items()):
+                if new != nullrev and new in seen:
+                    skipped.add(old)
+                seen.add(new)
+        repo.ui.debug('computed skipped revs: %s\n' % skipped)
         repo.ui.debug('rebase status resumed\n')
-        return originalwd, target, state, collapse, keep, keepbranches, external
+        return (originalwd, target, state, skipped,
+                collapse, keep, keepbranches, external)
     except IOError, err:
         if err.errno != errno.ENOENT:
             raise
