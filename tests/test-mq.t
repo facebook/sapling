@@ -170,6 +170,10 @@ qinit -c shouldn't touch these files if they already exist
   A
   B
 
+add an untracked file
+
+  $ echo >> .hg/patches/flaf
+
 status --mq with color (issue2096)
 
   $ hg status --mq --config extensions.color= --color=always
@@ -177,8 +181,14 @@ status --mq with color (issue2096)
   [0;32;1mA A[0m
   [0;32;1mA B[0m
   [0;32;1mA series[0m
-  $ cd ..
+  [0;35;1;4m? flaf[0m
 
+try the --mq option on a command provided by an extension
+
+  $ hg purge --mq --verbose --config extensions.purge=
+  Removing file flaf
+
+  $ cd ..
 
 init --mq without repo
 

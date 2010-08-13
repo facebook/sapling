@@ -2928,13 +2928,21 @@ def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'init', mqinit)
     entry[1].extend(mqopt)
 
-    norepo = commands.norepo.split(" ")
-    for cmd in commands.table.keys():
-        cmd = cmdutil.parsealiases(cmd)[0]
-        if cmd in norepo:
-            continue
-        entry = extensions.wrapcommand(commands.table, cmd, mqcommand)
-        entry[1].extend(mqopt)
+    nowrap = set(commands.norepo.split(" ") + ['qrecord'])
+
+    def dotable(cmdtable):
+        for cmd in cmdtable.keys():
+            cmd = cmdutil.parsealiases(cmd)[0]
+            if cmd in nowrap:
+                continue
+            entry = extensions.wrapcommand(cmdtable, cmd, mqcommand)
+            entry[1].extend(mqopt)
+
+    dotable(commands.table)
+
+    for extname, extmodule in extensions.extensions():
+        if extmodule.__file__ != __file__:
+            dotable(getattr(extmodule, 'cmdtable', {}))
 
 seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
