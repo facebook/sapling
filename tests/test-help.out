@@ -77,7 +77,7 @@ list of commands:
  recover      roll back an interrupted transaction
  remove       remove the specified files on the next commit
  rename       rename files; equivalent of copy + remove
- resolve      various operations to help finish a merge
+ resolve      redo merges or set/view the merge status of files
  revert       restore individual files or directories to an earlier state
  rollback     roll back the last transaction (dangerous)
  root         print the root (top) of the current working directory
@@ -145,7 +145,7 @@ use "hg -v help" to show aliases and global options
  recover      roll back an interrupted transaction
  remove       remove the specified files on the next commit
  rename       rename files; equivalent of copy + remove
- resolve      various operations to help finish a merge
+ resolve      redo merges or set/view the merge status of files
  revert       restore individual files or directories to an earlier state
  rollback     roll back the last transaction (dangerous)
  root         print the root (top) of the current working directory
@@ -601,7 +601,7 @@ list of commands:
  recover      roll back an interrupted transaction
  remove       remove the specified files on the next commit
  rename       rename files; equivalent of copy + remove
- resolve      various operations to help finish a merge
+ resolve      redo merges or set/view the merge status of files
  revert       restore individual files or directories to an earlier state
  rollback     roll back the last transaction (dangerous)
  root         print the root (top) of the current working directory
