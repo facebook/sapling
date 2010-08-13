@@ -3066,8 +3066,8 @@ def revert(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
 
-    if opts["date"]:
-        if opts["rev"]:
+    if opts.get("date"):
+        if opts.get("rev"):
             raise util.Abort(_("you can't specify a revision and a date"))
         opts["rev"] = cmdutil.finddate(ui, repo, opts["date"])
 
