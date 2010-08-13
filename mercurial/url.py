@@ -570,6 +570,25 @@ class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
                 return
             raise
 
+class httpbasicauthhandler(urllib2.HTTPBasicAuthHandler):
+    def __init__(self, *args, **kwargs):
+        urllib2.HTTPBasicAuthHandler.__init__(self, *args, **kwargs)
+        self.retried_req = None
+
+    def reset_retry_count(self):
+        # Python 2.6.5 will call this on 401 or 407 errors and thus loop
+        # forever. We disable reset_retry_count completely and reset in
+        # http_error_auth_reqed instead.
+        pass
+
+    def http_error_auth_reqed(self, auth_header, host, req, headers):
+        # Reset the retry counter once for each request.
+        if req is not self.retried_req:
+            self.retried_req = req
+            self.retried = 0
+        return urllib2.HTTPBasicAuthHandler.http_error_auth_reqed(
+                        self, auth_header, host, req, headers)
+
 def getauthinfo(path):
     scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
     if not urlpath:
@@ -615,7 +634,7 @@ def opener(ui, authinfo=None):
         ui.debug('http auth: user %s, password %s\n' %
                  (user, passwd and '*' * len(passwd) or 'not set'))
 
-    handlers.extend((urllib2.HTTPBasicAuthHandler(passmgr),
+    handlers.extend((httpbasicauthhandler(passmgr),
                      httpdigestauthhandler(passmgr)))
     handlers.extend([h(ui, passmgr) for h in handlerfuncs])
     opener = urllib2.build_opener(*handlers)
