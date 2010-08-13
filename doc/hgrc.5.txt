@@ -307,8 +307,8 @@ format. We suggest you use the ``eol`` extension for convenience.
 Use the ``[defaults]`` section to define command defaults, i.e. the
 default options/arguments to pass to the specified commands.
 
-The following example makes :hg:`log` run in verbose mode, and :hg:`hg
-status` show only the modified files, by default::
+The following example makes :hg:`log` run in verbose mode, and
+:hg:`status` show only the modified files, by default::
 
   [defaults]
   log = -v
