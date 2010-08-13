@@ -198,28 +198,41 @@
   $ hg debugwalk beans/.hg
   abort: path 'beans/.hg' is inside repo 'beans'
 
-Don't know how to test absolute paths without always getting a false
-error.
-# hg debugwalk `pwd`/beans
-# hg debugwalk `pwd`/..
+Test absolute paths:
+
+  $ hg debugwalk `pwd`/beans
+  f  beans/black     beans/black
+  f  beans/borlotti  beans/borlotti
+  f  beans/kidney    beans/kidney
+  f  beans/navy      beans/navy
+  f  beans/pinto     beans/pinto
+  f  beans/turtle    beans/turtle
+  $ hg debugwalk `pwd`/..
+  abort: .*/.. not under root
+
+Test patterns:
 
   $ hg debugwalk glob:\*
   f  fennel      fennel
   f  fenugreek   fenugreek
   f  fiddlehead  fiddlehead
   f  glob:glob   glob:glob
+
   $ hg debugwalk 'glob:**e'
   f  beans/turtle                    beans/turtle
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
+
   $ hg debugwalk 're:.*[kb]$'
   f  beans/black    beans/black
   f  fenugreek      fenugreek
   f  glob:glob      glob:glob
   f  mammals/skunk  mammals/skunk
+
   $ hg debugwalk path:beans/black
   f  beans/black  beans/black  exact
   $ hg debugwalk path:beans//black
   f  beans/black  beans/black  exact
+
   $ hg debugwalk relglob:Procyonidae
   $ hg debugwalk 'relglob:Procyonidae/**'
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
