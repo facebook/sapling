@@ -156,7 +156,8 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
                 continue
             group, setting = key.split('.', 1)
             gdict = config.setdefault(group, dict())
-            val = util.expandpath(val)
+            if setting in ('username', 'cert', 'key'):
+                val = util.expandpath(val)
             gdict[setting] = val
 
         # Find the best match
