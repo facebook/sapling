@@ -122,6 +122,10 @@ The following predicates are supported:
 ``parents(set)``
   The set of all parents for all changesets in set.
 
+``present(set)``
+  An empty set, if any revision in set isn't found; otherwise,
+  all revisions in set.
+
 ``removes(pattern)``
   Changesets which remove files matching pattern.
 

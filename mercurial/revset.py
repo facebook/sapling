@@ -378,6 +378,12 @@ def reverse(repo, subset, x):
     l.reverse()
     return l
 
+def present(repo, subset, x):
+    try:
+        return getset(repo, subset, x)
+    except error.RepoLookupError:
+        return []
+
 def sort(repo, subset, x):
     l = getargs(x, 1, 2, _("sort wants one or two arguments"))
     keys = "rev"
@@ -481,6 +487,7 @@ symbols = {
     "p1": p1,
     "p2": p2,
     "parents": parents,
+    "present": present,
     "removes": removes,
     "reverse": reverse,
     "roots": roots,
