@@ -1154,7 +1154,8 @@ class revlog(object):
     def _addrevision(self, text, transaction, link, p1, p2,
                      cachedelta, ifh, dfh):
         node = hash(text, p1, p2)
-        if node in self.nodemap:
+        if (node in self.nodemap and
+            (not self.flags(self.rev(node)) & REVIDX_PUNCHED_FLAG)):
             return node
 
         curr = len(self)
@@ -1305,7 +1306,8 @@ class revlog(object):
             for chunk in revs:
                 node, p1, p2, cs = struct.unpack("20s20s20s20s", chunk[:80])
                 link = linkmapper(cs)
-                if node in self.nodemap:
+                if (node in self.nodemap and
+                    (not self.flags(self.rev(node)) & REVIDX_PUNCHED_FLAG)):
                     # this can happen if two branches make the same change
                     chain = node
                     continue
@@ -1314,7 +1316,21 @@ class revlog(object):
 
                 for p in (p1, p2):
                     if not p in self.nodemap:
-                        raise LookupError(p, self.indexfile, _('unknown parent'))
+                        if self._shallow:
+                            # add null entries for missing parents
+                            if base == nullrev:
+                                base = len(self)
+                            e = (offset_type(end, REVIDX_PUNCHED_FLAG),
+                                 0, 0, base, nullrev, nullrev, nullrev, p)
+                            self.index.insert(-1, e)
+                            self.nodemap[p] = r
+                            entry = self._io.packentry(e, self.node,
+                                                       self.version, r)
+                            ifh.write(entry)
+                            t, r = r, r + 1
+                        else:
+                            raise LookupError(p, self.indexfile,
+                                              _('unknown parent'))
 
                 if not chain:
                     # retrieve the parent revision of the delta chain
@@ -1341,6 +1357,7 @@ class revlog(object):
                     text = self.revision(chain)
                     if len(text) == 0:
                         # skip over trivial delta header
+                        # text == '' in the case of nullrev or punched revision
                         text = buffer(delta, 12)
                     else:
                         text = mdiff.patches(text, [delta])
