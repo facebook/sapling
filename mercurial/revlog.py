@@ -1220,15 +1220,19 @@ class revlog(object):
             self._cache = (node, curr, text)
         return node
 
-    def group(self, nodelist, lookup, infocollect=None):
+    def group(self, nodelist, lookup, infocollect=None, fullrev=False):
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
 
         Given a list of changeset revs, return a set of deltas and
-        metadata corresponding to nodes. the first delta is
-        parent(nodes[0]) -> nodes[0] the receiver is guaranteed to
-        have this parent as it has all history before these
-        changesets. parent is parent[0]
+        metadata corresponding to nodes. The first delta is
+        first parent(nodelist[0]) -> nodelist[0], the receiver is
+        guaranteed to have this parent as it has all history before
+        these changesets. In the case firstparent is nullrev the
+        changegroup starts with a full revision.
+        fullrev forces the insertion of the full revision, necessary
+        in the case of shallow clones where the first parent might
+        not exist at the reciever.
         """
 
         revs = [self.rev(n) for n in nodelist]
@@ -1241,6 +1245,8 @@ class revlog(object):
         # add the parent of the first rev
         p = self.parentrevs(revs[0])[0]
         revs.insert(0, p)
+        if p == nullrev:
+            fullrev = True
 
         # build deltas
         for d in xrange(len(revs) - 1):
@@ -1252,9 +1258,10 @@ class revlog(object):
 
             p = self.parents(nb)
             meta = nb + p[0] + p[1] + lookup(nb)
-            if a == -1:
+            if fullrev:
                 d = self.revision(nb)
                 meta += mdiff.trivialdiffheader(len(d))
+                fullrev = False
             else:
                 d = self.revdiff(a, b)
             yield changegroup.chunkheader(len(meta) + len(d))
