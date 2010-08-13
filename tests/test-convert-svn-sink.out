@@ -335,3 +335,41 @@ At revision 4.
 <msg>base</msg>
 </logentry>
 </log>
+% tags are not supported, but must not break conversion
+adding a
+assuming destination a-hg
+initializing svn repository 'a-hg'
+initializing svn working copy 'a-hg-wc'
+scanning source...
+sorting...
+converting...
+1 Add file a
+0 Tagged as v1.0
+writing Subversion tags is not yet implemented
+At revision 2.
+ 2 2 test .
+ 2 1 test a
+ 2 2 test .hgtags
+<?xml version="1.0"?>
+<log>
+<logentry
+   revision="2">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="A">/.hgtags</path>
+</paths>
+<msg>Tagged as v1.0</msg>
+</logentry>
+<logentry
+   revision="1">
+<author>test</author>
+<date/>
+<paths>
+<path
+   action="A">/a</path>
+</paths>
+<msg>Add file a</msg>
+</logentry>
+</log>

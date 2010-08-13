@@ -134,3 +134,15 @@ hg --cwd b ci -d '5 0' -m 'merge'
 hg convert -d svn b
 echo % expect 4 changes
 svnupanddisplay b-hg-wc 0
+
+echo % tags are not supported, but must not break conversion
+
+rm -rf a a-hg a-hg-wc
+hg init a
+echo a > a/a
+hg --cwd a ci -d '0 0' -A -m 'Add file a'
+hg --cwd a tag -d '1 0' -m 'Tagged as v1.0' v1.0
+
+hg convert -d svn a
+svnupanddisplay a-hg-wc 2
+rm -rf a a-hg a-hg-wc
