@@ -232,16 +232,19 @@ Supported arguments:
     argument, q.v., is then subsequently consulted.
 ``username``
     Optional. Username to authenticate with. If not given, and the
-    remote site requires basic or digest authentication, the user
-    will be prompted for it.
+    remote site requires basic or digest authentication, the user will
+    be prompted for it. Environment variables are expanded in the
+    username letting you do ``foo.username = $USER``.
 ``password``
     Optional. Password to authenticate with. If not given, and the
     remote site requires basic or digest authentication, the user
     will be prompted for it.
 ``key``
-    Optional. PEM encoded client certificate key file.
+    Optional. PEM encoded client certificate key file. Environment
+    variables are expanded in the filename.
 ``cert``
-    Optional. PEM encoded client certificate chain file.
+    Optional. PEM encoded client certificate chain file. Environment
+    variables are expanded in the filename.
 ``schemes``
     Optional. Space separated list of URI schemes to use this
     authentication entry with. Only used if the prefix doesn't include
