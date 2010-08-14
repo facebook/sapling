@@ -739,8 +739,10 @@ def commit(ui, repo, *pats, **opts):
     If you are committing the result of a merge, do not provide any
     filenames or -I/-X filters.
 
-    If no commit message is specified, the configured editor is
-    started to prompt you for a message.
+    If no commit message is specified, Mercurial starts your
+    configured editor where you can enter a message. In case your
+    commit fails, you will find a backup of your message in
+    ``.hg/last-message.txt``.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
