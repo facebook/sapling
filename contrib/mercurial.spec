@@ -17,7 +17,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 # python-devel provides an adequate python-dev.  The merge tool is a
 # run-time dependency.
 #
-BuildRequires: python >= 2.4, python-devel, make, gcc, python-docutils >= 0.5
+BuildRequires: python >= 2.4, python-devel, make, gcc, python-docutils >= 0.5, gettext
 Provides: hg = %{version}-%{release}
 Requires: python >= 2.4
 # The hgk extension uses the wish tcl interpreter, but we don't enforce it
