@@ -8,6 +8,7 @@
 # GNU General Public License version 2 or any later version.
 
 import urllib, urllib2, urlparse, httplib, os, re, socket, cStringIO
+import __builtin__
 from i18n import _
 import keepalive, util
 
@@ -250,9 +251,25 @@ class proxyhandler(urllib2.ProxyHandler):
 
         return urllib2.ProxyHandler.proxy_open(self, req, proxy, type_)
 
-class httpsendfile(file):
+class httpsendfile(object):
+    """This is a wrapper around the objects returned by python's "open".
+
+    Its purpose is to send file-like objects via HTTP and, to do so, it
+    defines a __len__ attribute to feed the Content-Length header.
+    """
+
+    def __init__(self, *args, **kwargs):
+        # We can't just "self._data = open(*args, **kwargs)" here because there
+        # is an "open" function defined in this module that shadows the global
+        # one
+        self._data = __builtin__.open(*args, **kwargs)
+        self.read = self._data.read
+        self.seek = self._data.seek
+        self.close = self._data.close
+        self.write = self._data.write
+
     def __len__(self):
-        return os.fstat(self.fileno()).st_size
+        return os.fstat(self._data.fileno()).st_size
 
 def _gen_sendfile(connection):
     def _sendfile(self, data):
