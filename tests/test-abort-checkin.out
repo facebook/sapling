@@ -1,8 +1,0 @@
-error: pretxncommit.nocommits hook failed: no commits allowed
-transaction abort!
-rollback completed
-abort: no commits allowed
-error: pretxncommit.nocommits hook failed: no commits allowed
-transaction abort!
-rollback completed
-abort: no commits allowed
