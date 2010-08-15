@@ -2662,7 +2662,9 @@ def qqueue(ui, repo, name=None, **opts):
     def _setactive(name):
         if q.applied:
             raise util.Abort(_('patches applied - cannot set new queue active'))
+        _setactivenocheck(name)
 
+    def _setactivenocheck(name):
         fh = repo.opener(_activequeue, 'w')
         if name != 'patches':
             fh.write(name)
