@@ -140,6 +140,12 @@ def xmlescape(text):
             .replace("'", '&#39;')) # &apos; invalid in HTML
     return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
 
+def uescape(c):
+    if ord(c) < 0x80:
+        return c
+    else:
+        return '\\u%04x' % ord(c)
+
 _escapes = [
     ('\\', '\\\\'), ('"', '\\"'), ('\t', '\\t'), ('\n', '\\n'),
     ('\r', '\\r'), ('\f', '\\f'), ('\b', '\\b'),
@@ -148,12 +154,6 @@ _escapes = [
 def jsonescape(s):
     for k, v in _escapes:
         s = s.replace(k, v)
-
-    def uescape(c):
-        if ord(c) < 0x80:
-            return c
-        else:
-            return '\\u%04x' % ord(c)
     return ''.join(uescape(c) for c in s)
 
 def json(obj):
