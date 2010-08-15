@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-08-05 16:06+0200\n"
-"PO-Revision-Date: 2010-08-12 17:11+0200\n"
+"PO-Revision-Date: 2010-08-15 23:52+0200\n"
 "Last-Translator: Daniel Dumitriu <daniel.dumitriu@gmail.com>\n"
 "Language-Team: Romanian <>\n"
 "MIME-Version: 1.0\n"
@@ -464,7 +464,7 @@ msgid "searching for changes\n"
 msgstr "se caută modificări\n"
 
 msgid "no changes found\n"
-msgstr ""
+msgstr "nu s-au găsit modificări\n"
 
 #, python-format
 msgid "comparing with %s\n"
@@ -1413,7 +1413,7 @@ msgstr ""
 
 #, python-format
 msgid "%s: invalid source repository type"
-msgstr ""
+msgstr "%s: tipul depozitului sursă este invalid"
 
 #, python-format
 msgid "%s: missing or unsupported repository"
@@ -2130,7 +2130,7 @@ msgstr ""
 
 #, python-format
 msgid "updating to %d:%s\n"
-msgstr ""
+msgstr "se actualizează la %d:%s\n"
 
 #, python-format
 msgid "merging with %d:%s\n"
@@ -2399,7 +2399,7 @@ msgid "cat-file: type or revision not supplied\n"
 msgstr ""
 
 msgid "aborting hg cat-file only understands commits\n"
-msgstr ""
+msgstr "se abandonează hg cat-fișierul înțelege doar depozitări\n"
 
 msgid "parse given revisions"
 msgstr ""
@@ -3899,7 +3899,7 @@ msgid "mq:     (empty queue)\n"
 msgstr ""
 
 msgid "operate on patch repository"
-msgstr ""
+msgstr "operează pe depozitul de patch-uri"
 
 msgid "print first line of patch header"
 msgstr ""
@@ -4828,13 +4828,13 @@ msgid ""
 msgstr ""
 
 msgid "cannot use both abort and continue"
-msgstr ""
+msgstr "abort și continue nu se pot folosi împreună"
 
 msgid "cannot use collapse with continue or abort"
-msgstr ""
+msgstr "collapse nu se poate folosi cu continue sau abort"
 
 msgid "cannot use detach with continue or abort"
-msgstr ""
+msgstr "detach nu se poate folosi cu continue sau abort"
 
 msgid "abort and continue do not allow specifying revisions"
 msgstr ""
@@ -4894,6 +4894,8 @@ msgstr ""
 
 msgid "warning: new changesets detected on target branch, can't abort\n"
 msgstr ""
+"avertisment: au fost detectate seturi de modificări noi în ramura\n, "
+"destinație, nu se poate abandona\n"
 
 msgid "rebase aborted\n"
 msgstr ""
@@ -5958,6 +5960,8 @@ msgid ""
 "    Returns 0 on success.\n"
 "    "
 msgstr ""
+"    Returnează 0 în caz de succes.\n"
+"    "
 
 msgid "at least one filename or pattern is required"
 msgstr ""
@@ -6245,6 +6249,8 @@ msgid ""
 "    Returns 0 on success, 1 if no changes found.\n"
 "    "
 msgstr ""
+"    Returnează 0 în caz de succes, 1 dacă nu s-au găsit modificări.\n"
+"    "
 
 msgid "--base is incompatible with specifying a destination"
 msgstr ""
@@ -6295,6 +6301,7 @@ msgstr ""
 
 msgid "    See :hg:`help urls` for valid source format details."
 msgstr ""
+"    Vezi :hg:`help urls` pentru detalii legate de formate valide de surse."
 
 msgid ""
 "    It is possible to specify an ``ssh://`` URL as the destination, but no\n"
@@ -6371,19 +6378,18 @@ msgid ""
 msgstr ""
 "    Acesta este cel mai rapid mod de a clona, dar nu este întotdeauna\n"
 "    sigur. Operația nu este atomică (rămâne în sarcina dvs. să vă asigurați\n"
-"    că DEP nu este modificat în timpul operației) și trebuie să vă "
-"asigurați\n"
-"    că editorul dvs. desface link-urile hard (Emacs si cele mai multe "
-"unelte\n"
-"    din kernelul Linux vor face aceasta). De asemenea, acest mod nu este\n"
-"    compatibil cu anumite extensii care își plasează metadatele în "
-"directorul\n"
-"    .hg, precum mq."
+"    că DEP nu este modificat în timpul operației) și trebuie să vă\n"
+"    asigurați că editorul dvs. desface link-urile hard (Emacs si cele mai\n"
+"    multe unelte din kernelul Linux o vor face ). De asemenea, acest mod\n"
+"    nu este compatibil cu anumite extensii care își plasează metadatele\n"
+"    în directorul .hg, precum mq."
 
 msgid ""
 "    Mercurial will update the working directory to the first applicable\n"
 "    revision from this list:"
 msgstr ""
+"    Mercurial va actualiza directorul de lucru la prima revizie\n"
+"    aplicabilă din această listă:"
 
 msgid ""
 "    a) null if -U or the source repository has no changesets\n"
@@ -6397,6 +6403,19 @@ msgid ""
 "    g) the tipmost head of the default branch\n"
 "    h) tip"
 msgstr ""
+"    a) null, dacă s-a menționat -U sau depozitul sursă nu are seturi de "
+"modificări\n"
+"    b) dacă s-a menționat -u . iar depozitul sursă este local, primul "
+"părinte al\n"
+"       directorului de lucru al depozitului sursă\n"
+"    c) setul de modificări specificat cu -u (dacă este un nume de ramură,\n"
+"       înseamnă cel mai recent capăt al acelei ramuri)\n"
+"    d) setul de modificări specificat cu -r\n"
+"    e) capătul cel mai apropiat de vârf specificat cu -b\n"
+"    f) capătul cel mai apropiat de vârf specificat cu sintaxa sursă "
+"url#branch\n"
+"    g) capătul cel mai apropiat de vârf al ramurii default\n"
+"    h) vârful"
 
 msgid "cannot specify both --noupdate and --updaterev"
 msgstr ""
@@ -6439,6 +6458,8 @@ msgid ""
 "    Returns 0 on success, 1 if nothing changed.\n"
 "    "
 msgstr ""
+"    Returnează 0 în caz de succes, 1 dacă nu s-a modificat nimic.\n"
+"    "
 
 msgid "can only close branch heads"
 msgstr ""
@@ -6481,6 +6502,8 @@ msgid ""
 "    Returns 0 on success, 1 if errors are encountered.\n"
 "    "
 msgstr ""
+"    Returnează 0 în caz de succes, 1 dacă au apărut erori.\n"
+"    "
 
 msgid "find the ancestor revision of two revisions in a given index"
 msgstr ""
@@ -7057,6 +7080,8 @@ msgid ""
 "\n"
 "[+] marked option can be specified multiple times"
 msgstr ""
+"\n"
+"[+] opțiunea marcată poate fi specificată de mai multe ori"
 
 msgid ""
 "\n"
@@ -7165,7 +7190,7 @@ msgid ""
 msgstr ""
 
 msgid "    See pull for valid source format details."
-msgstr ""
+msgstr "    Vezi pull pentru detalii legate de formate valide de surse."
 
 msgid ""
 "    Returns 0 if there are incoming changes, 1 otherwise.\n"
@@ -7326,6 +7351,8 @@ msgid ""
 "    Returns 0 on success, 1 if there are unresolved files.\n"
 "    "
 msgstr ""
+"    Returnează 0 în caz de succes, 1 dacă există fișiere nerezolvate.\n"
+"    "
 
 #, python-format
 msgid ""
@@ -7457,6 +7484,9 @@ msgid ""
 "    Returns 0 on success, 1 if an update had unresolved files.\n"
 "    "
 msgstr ""
+"    Returnează 0 în caz de succes, 1 dacă o actualizare a avut\n"
+"    fișiere nerezolvate.\n"
+"    "
 
 msgid "push changes to the specified destination"
 msgstr ""
@@ -7564,6 +7594,8 @@ msgid ""
 "    Returns 0 on success, 1 if any warnings encountered.\n"
 "    "
 msgstr ""
+"    Returnează 0 în caz de succes, 1 dacă au apărut avertismente.\n"
+"    "
 
 #, python-format
 msgid "not removing %s: file is untracked\n"
@@ -7634,6 +7666,9 @@ msgid ""
 "    Returns 0 on success, 1 if any files fail a resolve attempt.\n"
 "    "
 msgstr ""
+"    Returnează 0 în caz de succes, 1 dacă există vreun fișier\n"
+"    pentru care tentativa de rezolvare a eșuat.\n"
+"    "
 
 msgid "too many options specified"
 msgstr ""
@@ -7957,10 +7992,10 @@ msgstr ""
 
 #, python-format
 msgid "remote: %s\n"
-msgstr ""
+msgstr "la distanță: %s\n"
 
 msgid "remote: (synced)\n"
-msgstr ""
+msgstr "la distanță: (sincronizat)\n"
 
 msgid "add one or more tags for the current or given revision"
 msgstr ""
@@ -8053,6 +8088,9 @@ msgid ""
 "    Returns 0 on success, 1 if an update has unresolved files.\n"
 "    "
 msgstr ""
+"    Returnează 0 în caz de succes, 1 dacă o actualizare are\n"
+"    fișiere nerezolvate.\n"
+"    "
 
 msgid "update working directory (or switch revisions)"
 msgstr "actualizează directorul de lucru (sau comută între revizii)"
@@ -8432,16 +8470,16 @@ msgid "[OPTION]... FILE..."
 msgstr ""
 
 msgid "the clone will include an empty working copy (only a repository)"
-msgstr ""
+msgstr "clona va include o copie de lucru vidă (doar un depozit)"
 
 msgid "revision, tag or branch to check out"
 msgstr "revizia, eticheta sau ramura care va fi actualizată"
 
 msgid "include the specified changeset"
-msgstr ""
+msgstr "include setul de modificări specificat"
 
 msgid "clone only the specified branch"
-msgstr ""
+msgstr "clonează doar ramura specificată"
 
 msgid "[OPTION]... SOURCE [DEST]"
 msgstr ""
@@ -9067,7 +9105,7 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s\n"
-msgstr ""
+msgstr "abandon: %s\n"
 
 #, python-format
 msgid "(%s)\n"
@@ -9100,11 +9138,11 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s: %s\n"
-msgstr ""
+msgstr "abandon: %s: %s\n"
 
 #, python-format
 msgid "abort: could not lock %s: %s\n"
-msgstr ""
+msgstr "abandon: nu s-a putut bloca %s: %s\n"
 
 #, python-format
 msgid "hg %s: %s\n"
@@ -9116,11 +9154,11 @@ msgstr ""
 
 #, python-format
 msgid "abort: %s!\n"
-msgstr ""
+msgstr "abandon: %s!\n"
 
 #, python-format
 msgid "abort: %s"
-msgstr ""
+msgstr "abandon: %s"
 
 msgid " empty string\n"
 msgstr ""
@@ -9140,7 +9178,7 @@ msgstr ""
 
 #, python-format
 msgid "abort: error: %s\n"
-msgstr ""
+msgstr "abandon: eroare: %s\n"
 
 msgid "broken pipe\n"
 msgstr ""
@@ -9154,7 +9192,7 @@ msgid ""
 msgstr ""
 
 msgid "abort: out of memory\n"
-msgstr ""
+msgstr "abandon: memorie epuizată\n"
 
 msgid "** unknown exception encountered, details follow\n"
 msgstr ""
@@ -11064,12 +11102,14 @@ msgstr ""
 
 #, python-format
 msgid "updating to branch %s\n"
-msgstr ""
+msgstr "se actualizează la ramura %s\n"
 
 #, python-format
 msgid ""
 "%d files updated, %d files merged, %d files removed, %d files unresolved\n"
 msgstr ""
+"%d fișiere actualizate, %d fișiere fuzionate, %d fișiere înlăturate, %d "
+"fișiere nerezolvate\n"
 
 msgid "use 'hg resolve' to retry unresolved file merges\n"
 msgstr ""
@@ -11818,10 +11858,10 @@ msgid "could not create remote repo"
 msgstr ""
 
 msgid "no suitable response from remote hg"
-msgstr ""
+msgstr "niciun răspuns potrivit de la hg-ul la distanță"
 
 msgid "remote: "
-msgstr ""
+msgstr "la distanță:"
 
 msgid "unexpected response:"
 msgstr ""
@@ -11926,14 +11966,14 @@ msgid "template file %s: %s"
 msgstr ""
 
 msgid "cannot use transaction when it is already committed/aborted"
-msgstr ""
+msgstr "nu se poate folosi o tranzacție când este deja depozitată/abandonată"
 
 #, python-format
 msgid "failed to truncate %s\n"
 msgstr ""
 
 msgid "transaction abort!\n"
-msgstr ""
+msgstr "tranzacție abandonată!\n"
 
 msgid "rollback completed\n"
 msgstr ""
@@ -12279,4 +12319,5 @@ msgstr ""
 
 msgid "push failed (unexpected response):"
 msgstr ""
+
 
