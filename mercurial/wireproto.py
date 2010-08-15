@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import urllib, tempfile, os
+import urllib, tempfile, os, sys
 from i18n import _
 from node import bin, hex
 import changegroup as changegroupmod
@@ -36,7 +36,7 @@ class wirerepository(repo.repository):
         try:
             return decodelist(d[:-1])
         except:
-            self.abort(error.ResponseError(_("unexpected response:"), d))
+            self._abort(error.ResponseError(_("unexpected response:"), d))
 
     def branchmap(self):
         d = self._call("branchmap")
