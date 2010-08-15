@@ -889,7 +889,7 @@ def debugbuilddag(ui, repo, text,
      - empty to denote the default parent.
 
     All string valued-elements are either strictly alphanumeric, or must
-    be enclosed in double quotes ("..."), with "\" as escape character.
+    be enclosed in double quotes ("..."), with "\\" as escape character.
 
     Note that the --overwritten-file and --appended-file options imply the
     use of "HGMERGE=internal:local" during DAG buildup.
