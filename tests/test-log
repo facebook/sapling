@@ -200,4 +200,53 @@ cd dir
 hg log -p -R .. ../a
 
 
+cd ..
+hg init follow2
+cd follow2
+
+# Build the following history:
+# tip - o - x - o - x - x
+#    \                 /
+#     o - o - o - x
+#      \     /
+#         o
+#
+# Where "o" is a revision containing "foo" and
+# "x" is a revision without "foo"
+touch init
+hg ci -A -m "init, unrelated"
+echo 'foo' > init
+hg ci -m "change, unrelated"
+echo 'foo' > foo
+hg ci -A -m "add unrelated old foo"
+hg rm foo
+hg ci -m "delete foo, unrelated"
+echo 'related' > foo
+hg ci -A -m "add foo, related"
+
+hg up 0
+touch branch
+hg ci -A -m "first branch, unrelated"
+touch foo
+hg ci -A -m "create foo, related"
+echo 'change' > foo
+hg ci -m "change foo, related"
+
+hg up 6
+echo 'change foo in branch' > foo
+hg ci -m "change foo in branch, related"
+hg merge 7
+echo 'merge 1' > foo
+hg resolve -m foo
+hg ci -m "First merge, related"
+
+hg merge 4
+echo 'merge 2' > foo
+hg resolve -m foo
+hg ci -m "Last merge, related"
+
+hg --config "extensions.graphlog=" glog
+
+hg --traceback log -f foo
+
 exit 0

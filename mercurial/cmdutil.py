@@ -1059,8 +1059,14 @@ def walkchangerevs(repo, match, opts, prepare):
         # We only have to read through the filelog to find wanted revisions
 
         minrev, maxrev = min(revs), max(revs)
-        # Only files, no patterns.  Check the history of each file.
         def filerevgen(filelog, last):
+            """
+            Only files, no patterns.  Check the history of each file.
+
+            Examines filelog entries within minrev, maxrev linkrev range
+            Returns an iterator yielding (linkrev, parentlinkrevs, copied)
+            tuples in backwards order
+            """
             cl_count = len(repo)
             revs = []
             for j in xrange(0, last + 1):
@@ -1071,8 +1077,13 @@ def walkchangerevs(repo, match, opts, prepare):
                 # happen while doing "hg log" during a pull or commit
                 if linkrev > maxrev or linkrev >= cl_count:
                     break
+
+                parentlinkrevs = []
+                for p in filelog.parentrevs(j):
+                    if p != nullrev:
+                        parentlinkrevs.append(filelog.linkrev(p))
                 n = filelog.node(j)
-                revs.append((filelog.linkrev(j),
+                revs.append((linkrev, parentlinkrevs,
                              follow and filelog.renamed(n)))
 
             for rev in reversed(revs):
@@ -1101,7 +1112,18 @@ def walkchangerevs(repo, match, opts, prepare):
             else:
                 last = filelog.rev(node)
 
-            for rev, copied in filerevgen(filelog, last):
+
+            # keep track of all ancestors of the file
+            ancestors = set([filelog.linkrev(last)])
+
+            # iterate from latest to oldest revision
+            for rev, flparentlinkrevs, copied in filerevgen(filelog, last):
+                if rev not in ancestors:
+                    continue
+                # XXX insert 1327 fix here
+                if flparentlinkrevs:
+                    ancestors.update(flparentlinkrevs)
+
                 fncache.setdefault(rev, [])
                 fncache[rev].append(file_)
                 wanted.add(rev)

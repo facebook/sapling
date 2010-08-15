@@ -611,3 +611,120 @@ diff -r 000000000000 -r 24427303d56f a
 @@ -0,0 +1,1 @@
 +a
 
+adding init
+adding foo
+adding foo
+1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+adding branch
+created new head
+adding foo
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+merging foo
+warning: conflicts during merge.
+merging foo failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+merging foo
+warning: conflicts during merge.
+merging foo failed!
+1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+@    changeset:   10:4dae8563d2c5
+|\   tag:         tip
+| |  parent:      9:7b35701b003e
+| |  parent:      4:88176d361b69
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:00 1970 +0000
+| |  summary:     Last merge, related
+| |
+| o    changeset:   9:7b35701b003e
+| |\   parent:      8:e5416ad8a855
+| | |  parent:      7:87fe3144dcfa
+| | |  user:        test
+| | |  date:        Thu Jan 01 00:00:00 1970 +0000
+| | |  summary:     First merge, related
+| | |
+| | o  changeset:   8:e5416ad8a855
+| | |  parent:      6:dc6c325fe5ee
+| | |  user:        test
+| | |  date:        Thu Jan 01 00:00:00 1970 +0000
+| | |  summary:     change foo in branch, related
+| | |
+| o |  changeset:   7:87fe3144dcfa
+| |/   user:        test
+| |    date:        Thu Jan 01 00:00:00 1970 +0000
+| |    summary:     change foo, related
+| |
+| o  changeset:   6:dc6c325fe5ee
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:00 1970 +0000
+| |  summary:     create foo, related
+| |
+| o  changeset:   5:73db34516eb9
+| |  parent:      0:e87515fd044a
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:00 1970 +0000
+| |  summary:     first branch, unrelated
+| |
+o |  changeset:   4:88176d361b69
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:00 1970 +0000
+| |  summary:     add foo, related
+| |
+o |  changeset:   3:dd78ae4afb56
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:00 1970 +0000
+| |  summary:     delete foo, unrelated
+| |
+o |  changeset:   2:c4c64aedf0f7
+| |  user:        test
+| |  date:        Thu Jan 01 00:00:00 1970 +0000
+| |  summary:     add unrelated old foo
+| |
+o |  changeset:   1:e5faa7440653
+|/   user:        test
+|    date:        Thu Jan 01 00:00:00 1970 +0000
+|    summary:     change, unrelated
+|
+o  changeset:   0:e87515fd044a
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     init, unrelated
+
+changeset:   10:4dae8563d2c5
+tag:         tip
+parent:      9:7b35701b003e
+parent:      4:88176d361b69
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Last merge, related
+
+changeset:   9:7b35701b003e
+parent:      8:e5416ad8a855
+parent:      7:87fe3144dcfa
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     First merge, related
+
+changeset:   8:e5416ad8a855
+parent:      6:dc6c325fe5ee
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     change foo in branch, related
+
+changeset:   7:87fe3144dcfa
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     change foo, related
+
+changeset:   6:dc6c325fe5ee
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     create foo, related
+
+changeset:   4:88176d361b69
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     add foo, related
+
