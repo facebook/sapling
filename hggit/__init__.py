@@ -109,8 +109,11 @@ try:
     kwname = 'heads'
     if 'remoteheads' in inspect.getargspec(discovery.findoutgoing)[0]:
         kwname = 'remoteheads'
-    def findoutgoing(orig, local, remote, base=None, remoteheads=None, force=False, heads=None):
-        kw = {'force': force, 'base': base, kwname: locals()[kwname]}
+    def findoutgoing(orig, local, remote, *args, **kwargs):
+        kw = {}
+        kw.update(kwargs)
+        for val, k in zip(args, ('base', kwname, 'force')):
+            kw[k] = val
         if isinstance(remote, gitrepo.gitrepo):
             # clean up this cruft when we're 1.7-only, remoteheads and
             # the return value change happened between 1.6 and 1.7.
