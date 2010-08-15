@@ -17,10 +17,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-07-01 14:56+0200\n"
-"PO-Revision-Date: 2010-07-01 15:23+0200\n"
+"POT-Creation-Date: 2010-08-15 17:28+0200\n"
+"PO-Revision-Date: 2010-08-15 18:57+0200\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -344,6 +345,9 @@ msgstr "bogmærkenavn påkrævet"
 
 msgid "bookmark name cannot contain newlines"
 msgstr "bogmærkenavn kan ikke indeholde linieskift"
+
+msgid "bookmark names cannot consist entirely of whitespace"
+msgstr "bogmærkenavne kan ikke bestå udelukkende af tomrum"
 
 msgid "a bookmark cannot have the name of an existing branch"
 msgstr "et bogmærke kan ikke hedde det samme som en eksisterende gren"
@@ -1082,17 +1086,24 @@ msgstr ""
 
 msgid ""
 "    The filemap is a file that allows filtering and remapping of files\n"
-"    and directories. Comment lines start with '#'. Each line can\n"
-"    contain one of the following directives::"
+"    and directories. Each line can contain one of the following\n"
+"    directives::"
 msgstr ""
 
-msgid "      include path/to/file"
+msgid "      include path/to/file-or-dir"
 msgstr ""
 
-msgid "      exclude path/to/file"
+msgid "      exclude path/to/file-or-dir"
 msgstr ""
 
-msgid "      rename from/file to/file"
+msgid "      rename path/to/source path/to/destination"
+msgstr ""
+
+msgid ""
+"    Comment lines start with '#'. A specified path matches if it\n"
+"    equals the full relative name of a file or one of its parent\n"
+"    directories. The 'include' or 'exclude' directive with the longest\n"
+"    matching path applies, so line order does not matter."
 msgstr ""
 
 msgid ""
@@ -1100,9 +1111,9 @@ msgid ""
 "    directory, to be included in the destination repository, and the\n"
 "    exclusion of all other files and directories not explicitly\n"
 "    included. The 'exclude' directive causes files or directories to\n"
-"    be omitted. The 'rename' directive renames a file or directory. To\n"
-"    rename from a subdirectory into the root of the repository, use\n"
-"    '.' as the path to rename to."
+"    be omitted. The 'rename' directive renames a file or directory if\n"
+"    it is converted. To rename from a subdirectory into the root of\n"
+"    the repository, use '.' as the path to rename to."
 msgstr ""
 
 msgid ""
@@ -1432,8 +1443,8 @@ msgstr "convert: %s\n"
 msgid "%s: unknown repository type"
 msgstr "%s: ukendt depottype"
 
-msgid "retrieving file"
-msgstr "henter fil"
+msgid "getting files"
+msgstr "henter filer"
 
 msgid "revisions"
 msgstr "revisioner"
@@ -1615,8 +1626,16 @@ msgid "errors in filemap"
 msgstr "fejl i filafbildning"
 
 #, python-format
+msgid "%s:%d: path to %s is missing\n"
+msgstr ""
+
+#, python-format
 msgid "%s:%d: %r already in %s list\n"
 msgstr "%s:%d: %r er allerede i %s listen\n"
+
+#, python-format
+msgid "%s:%d: superfluous / in %s %r\n"
+msgstr ""
 
 #, python-format
 msgid "%s:%d: unknown directive %r\n"
@@ -1802,8 +1821,8 @@ msgstr "uventet svn output:\n"
 msgid "unable to cope with svn output"
 msgstr "kan ikke håndtere svn output"
 
-msgid "XXX TAGS NOT IMPLEMENTED YET\n"
-msgstr "XXX MÆRKATER ER IKKE IMPLEMENTERET ENDNU\n"
+msgid "writing Subversion tags is not yet implemented\n"
+msgstr ""
 
 msgid "automatically manage newlines in repository files"
 msgstr "automatisk håndtering af linieskift i depotfiler"
@@ -2629,8 +2648,8 @@ msgstr "dette system ser ikke ud til at understøtte inotify"
 #, python-format
 msgid "*** the current per-user limit on the number of inotify watches is %s\n"
 msgstr ""
-"*** den nuværende grænse pr bruger for antallet af inotify overvågninger er %"
-"s\n"
+"*** den nuværende grænse pr bruger for antallet af inotify overvågninger er "
+"%s\n"
 
 msgid "*** this limit is too low to watch every directory in this repository\n"
 msgstr ""
@@ -3298,9 +3317,8 @@ msgstr "alle rettelser er i øjeblikket anvendt\n"
 msgid "patch series already fully applied\n"
 msgstr "serien af rettelser er allerede anvendt fuldt ud\n"
 
-#, python-format
-msgid "patch '%s' not found"
-msgstr "gren '%s' blev ikke fundet"
+msgid "please specify the patch to move"
+msgstr "angiv venligst lappen der skal flyttes"
 
 msgid "cleaning up working directory..."
 msgstr "rydder op i arbejdskataloget..."
@@ -3436,8 +3454,16 @@ msgstr "-e er ikke kompatibelt med importering fra -"
 msgid "patch %s does not exist"
 msgstr "rettelsen %s eksisterer ikke"
 
+#, python-format
+msgid "renaming %s to %s\n"
+msgstr "omdøber %s til %s\n"
+
 msgid "need --name to import a patch from -"
 msgstr "har brug for --name for at importere rettelse fra -"
+
+#, python-format
+msgid "unable to read file %s"
+msgstr "kan ikke læse filen %s"
 
 #, python-format
 msgid "adding %s to series file\n"
@@ -3520,13 +3546,20 @@ msgstr ""
 msgid ""
 "    To import a patch from standard input, pass - as the patch file.\n"
 "    When importing from standard input, a patch name must be specified\n"
-"    using the --name flag.\n"
-"    "
+"    using the --name flag."
 msgstr ""
 "    Brug - som patch filnavn for at importere en patch fra standard\n"
 "    indput. Når der importeres fra standard indput skal der angivet et\n"
 "    patchnavn med --name tilvalget.\n"
 "    "
+
+msgid "    To import an existing patch while renaming it::"
+msgstr ""
+
+msgid ""
+"      hg qimport -e existing-patch -n new-name\n"
+"    "
+msgstr ""
 
 msgid "init a new queue repository (DEPRECATED)"
 msgstr "opret et nyt kø-depot (FORÆLDET)"
@@ -3845,10 +3878,6 @@ msgstr "%s eksisterer allerede"
 msgid "A patch named %s already exists in the series file"
 msgstr "En rettelse ved navn %s eksisterer allerede i serien"
 
-#, python-format
-msgid "renaming %s to %s\n"
-msgstr "omdøber %s til %s\n"
-
 msgid "restore the queue state saved by a revision (DEPRECATED)"
 msgstr ""
 
@@ -3870,15 +3899,13 @@ msgstr "målet %s eksisterer, brug -f for at gennemtvinge"
 msgid "copy %s to %s\n"
 msgstr "kopier %s til %s\n"
 
-msgid "strip a changeset and all its descendants from the repository"
-msgstr "strip en ændring og alle dens efterkommere fra depotet"
+msgid "strip changesets and all their descendants from the repository"
+msgstr "strip ændringer og alle deres efterkommere fra depotet"
 
 msgid ""
-"    The strip command removes all changesets whose local revision\n"
-"    number is greater than or equal to REV, and then restores any\n"
-"    changesets that are not descendants of REV. If the working\n"
-"    directory has uncommitted changes, the operation is aborted unless\n"
-"    the --force flag is supplied."
+"    The strip command removes the specified changesets and all their\n"
+"    descendants. If the working directory has uncommitted changes,\n"
+"    the operation is aborted unless the --force flag is supplied."
 msgstr ""
 
 msgid ""
@@ -4366,8 +4393,8 @@ msgstr ""
 msgid "no backups"
 msgstr "ingen backupper"
 
-msgid "hg strip [-f] [-n] REV"
-msgstr "hg strip [-f] [-n] REV"
+msgid "hg strip [-f] [-n] REV..."
+msgstr "hg strip [-f] [-n] REV..."
 
 msgid "hg qtop [-s]"
 msgstr "hg qtop [-s]"
@@ -5114,6 +5141,12 @@ msgstr ""
 
 msgid "cannot use both keepbranches and extrafn"
 msgstr "man kan ikke bruge både keepbranches og extrafn"
+
+msgid "rebasing"
+msgstr ""
+
+msgid " changesets"
+msgstr " ændringer"
 
 msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
 msgstr "ret uløste konflikter med hg resolve og kør så hg rebase --continue"
@@ -5867,14 +5900,14 @@ msgid "discover and advertise repositories on the local network"
 msgstr ""
 
 msgid ""
-"Zeroconf enabled repositories will be announced in a network without\n"
+"Zeroconf-enabled repositories will be announced in a network without\n"
 "the need to configure a server or a service. They can be discovered\n"
 "without knowing their actual IP address."
 msgstr ""
 
 msgid ""
-"To allow other people to discover your repository using run \"hg serve\"\n"
-"in your repository::"
+"To allow other people to discover your repository using run\n"
+":hg:`serve` in your repository::"
 msgstr ""
 
 msgid ""
@@ -5885,7 +5918,8 @@ msgstr ""
 "  $ hg serve"
 
 msgid ""
-"You can discover zeroconf enabled repositories by running \"hg paths\"::"
+"You can discover Zeroconf-enabled repositories by running\n"
+":hg:`paths`::"
 msgstr ""
 
 msgid ""
@@ -6020,8 +6054,8 @@ msgstr "kopierer %s til %s\n"
 #, python-format
 msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
 msgstr ""
-"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for %"
-"s.\n"
+"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for "
+"%s.\n"
 
 msgid "no source or destination specified"
 msgstr "ingen kilde eller destination angivet"
@@ -6198,8 +6232,7 @@ msgid ""
 "         $ hg add\n"
 "         adding foo.c\n"
 "         $ hg status\n"
-"         A foo.c\n"
-"    "
+"         A foo.c"
 msgstr ""
 "         $ ls\n"
 "         foo.c\n"
@@ -6208,8 +6241,12 @@ msgstr ""
 "         $ hg add\n"
 "         adding foo.c\n"
 "         $ hg status\n"
-"         A foo.c\n"
+"         A foo.c"
+
+msgid ""
+"    Returns 0 if all files are successfully added.\n"
 "    "
+msgstr ""
 
 msgid "add all new files, delete all missing files"
 msgstr "tilføj alle nye filer, fjern alle manglende filer"
@@ -6234,19 +6271,16 @@ msgid ""
 "    every added file and records those similar enough as renames. This\n"
 "    option takes a percentage between 0 (disabled) and 100 (files must\n"
 "    be identical) as its parameter. Detecting renamed files this way\n"
-"    can be expensive."
+"    can be expensive. After using this option, :hg:`status -C` can be\n"
+"    used to check which files were identified as moved or renamed."
 msgstr ""
 "    Brug -s/--similarity tilvalget for at opdage omdøbte filer. Med en\n"
 "    parameter større end 0 bliver hver fjernet fil sammenlignet med\n"
 "    enhver tilføjet fil og filer der er tilstrækkelig ens bliver\n"
 "    opført som omdøbte. Dette tilvalg tager et procenttal mellem 0\n"
 "    (slået fra) og 100 (filer skal være identiske) som parameter. At\n"
-"    opdage omdøbninger på denne måde kan være dyrt."
-
-msgid ""
-"    Returns 0 if all files are successfully added.\n"
-"    "
-msgstr ""
+"    opdage omdøbninger på denne måde kan være dyrt. Brug :hg:`status\n"
+"    -C` for at kontrollere hvilke filer der blev markeret som omdøbt."
 
 msgid "similarity must be a number"
 msgstr "lighedsgrad skal være et tal"
@@ -7217,20 +7251,20 @@ msgstr ""
 
 msgid ""
 "    :``%%``: literal \"%\" character\n"
-"    :``%H``: changeset hash (40 bytes of hexadecimal)\n"
+"    :``%H``: changeset hash (40 hexadecimal digits)\n"
 "    :``%N``: number of patches being generated\n"
 "    :``%R``: changeset revision number\n"
 "    :``%b``: basename of the exporting repository\n"
-"    :``%h``: short-form changeset hash (12 bytes of hexadecimal)\n"
+"    :``%h``: short-form changeset hash (12 hexadecimal digits)\n"
 "    :``%n``: zero-padded sequence number, starting at 1\n"
 "    :``%r``: zero-padded changeset revision number"
 msgstr ""
 "    :``%%``: litteral \"%\" tegn\n"
-"    :``%H``: ændringshash (40 byte heksadecimal)\n"
+"    :``%H``: ændringshash (40 hexadecimale cifre)\n"
 "    :``%N``: antallet af rettelser som bliver genereret\n"
 "    :``%R``: revisionnummer for ændringen\n"
 "    :``%b``: grundnavn for det eksporterede depot\n"
-"    :``%h``: kortform ændringshash (12 byte heksadecimal)\n"
+"    :``%h``: kortform ændringshash (12 hexadecimale cifre)\n"
 "    :``%n``: nul-fyldt sekvensnummer, startende ved 1\n"
 "    :``%r``: nul-fyldt revisionsnummer for ændringen"
 
@@ -7425,6 +7459,14 @@ msgstr ""
 
 msgid "(no help text available)"
 msgstr "(ingen hjælpetekst tilgængelig)"
+
+#, python-format
+msgid "shell alias for::"
+msgstr "shellalias for::"
+
+#, python-format
+msgid "    %s"
+msgstr "    %s"
 
 #, python-format
 msgid "alias for: hg %s"
@@ -7859,12 +7901,8 @@ msgid ""
 "    :hg:`bundle`) operations."
 msgstr ""
 
-msgid ""
-"    See :hg:`help urls` for more information.\n"
-"    "
-msgstr ""
-"    Se :hg:`help urls` for mere information.\n"
-"    "
+msgid "    See :hg:`help urls` for more information."
+msgstr "    Se :hg:`help urls` for mere information."
 
 msgid "not found!\n"
 msgstr "ikke fundet!\n"
@@ -8517,6 +8555,9 @@ msgstr ""
 msgid "tag names must be unique"
 msgstr "mærkatnavne skal være unikke"
 
+msgid "tag names cannot consist entirely of whitespace"
+msgstr "mærkater kan ikke bestå udelukkende af tomrum"
+
 msgid "--rev and --remove are incompatible"
 msgstr "--rev og --remove er inkompatible"
 
@@ -8584,12 +8625,12 @@ msgid ""
 msgstr "    Opdater depotets arbejdskatalog til den angivne ændring."
 
 msgid ""
-"    If no changeset is specified, attempt to update to the head of the\n"
-"    current branch. If this head is a descendant of the working\n"
+"    If no changeset is specified, attempt to update to the tip of the\n"
+"    current branch. If this changeset is a descendant of the working\n"
 "    directory's parent, update to it, otherwise abort."
 msgstr ""
 "    Hvis der ikke er angivet nogen ændring, forsøg da at opdatere til\n"
-"    spidsen af den nuværende gren. Hvis dette hoved nedstammer fra\n"
+"    spidsen af den nuværende gren. Hvis denne ændring nedstammer fra\n"
 "    arbejdskatalogets forælder, da opdateres der til det, ellers\n"
 "    afbrydes der."
 
@@ -9109,7 +9150,7 @@ msgstr "vis kun hoveder som er efterkommere af REV"
 msgid "show topological heads only"
 msgstr ""
 
-msgid "show active branchheads only [DEPRECATED]"
+msgid "show active branchheads only (DEPRECATED)"
 msgstr "vis kun aktive gren-hoveder (FORÆLDET)"
 
 msgid "show normal and closed branch heads"
@@ -9564,24 +9605,24 @@ msgid "repository is unrelated"
 msgstr "depotet er urelateret"
 
 #, python-format
-msgid "abort: push creates new remote heads on branch '%s'!\n"
-msgstr "afbrudt: skub laver nye hoveder på grenen '%s'!\n"
+msgid "push creates new remote branches: %s!"
+msgstr "skub laver nye grene i fjerndepotet: %s!"
 
-msgid "abort: push creates new remote heads!\n"
-msgstr "afbrudt: skub laver nye fjern-hoveder!\n"
-
-msgid "(you should pull and merge or use push -f to force)\n"
-msgstr "(du skal hive og sammenføje eller bruge -f for at gennemtvinge)\n"
-
-msgid "(did you forget to merge? use push -f to force)\n"
-msgstr "(glemte du at sammenføje? brug push -f for at gennemtvinge)\n"
+msgid "use 'hg push --new-branch' to create new remote branches"
+msgstr "brug 'hg push --new-branch' for at lave nye grene i fjerndepotet"
 
 #, python-format
-msgid "abort: push creates new remote branches: %s!\n"
-msgstr "afbrudt: skub laver nye grene i fjerndepotet: %s!\n"
+msgid "push creates new remote heads on branch '%s'!"
+msgstr "skub laver nye fjern-hoveder på grenen '%s'!"
 
-msgid "(use 'hg push --new-branch' to create new remote branches)\n"
-msgstr "(brug 'hg push --new-branch' for at lave nye grene i fjerndepotet)\n"
+msgid "push creates new remote heads!"
+msgstr "skub laver nye fjern-hoveder!"
+
+msgid "you should pull and merge or use push -f to force"
+msgstr "du bør hive og sammenføje eller bruge -f for at gennemtvinge"
+
+msgid "did you forget to merge? use push -f to force"
+msgstr "glemte du at sammenføje? brug push -f for at gennemtvinge"
 
 msgid "note: unsynced remote changes!\n"
 msgstr "bemærk: usynkroniserede ændringer i fjernsystemet!\n"
@@ -9591,12 +9632,19 @@ msgid "abort: %s\n"
 msgstr "afbrudt: %s\n"
 
 #, python-format
+msgid "(%s)\n"
+msgstr ""
+
+#, python-format
 msgid "hg: parse error at %s: %s\n"
 msgstr "hg: konfigurationsfejl på %s: %s\n"
 
 #, python-format
 msgid "hg: parse error: %s\n"
 msgstr "hg: parse fejl: %s\n"
+
+msgid "entering debugger - type c to continue starting hg or h for help\n"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -9700,6 +9748,12 @@ msgid "no definition for alias '%s'\n"
 msgstr "ingen definition for alias '%s'\n"
 
 #, python-format
+msgid ""
+"error in definition for alias '%s': %s may only be given on the command "
+"line\n"
+msgstr ""
+
+#, python-format
 msgid "alias '%s' resolves to unknown command '%s'\n"
 msgstr "alias '%s' oversætter til ukendt kommando '%s'\n"
 
@@ -9710,6 +9764,10 @@ msgstr "alias '%s' oversætter til tvetydig kommando '%s'\n"
 #, python-format
 msgid "malformed --config option: %r (use --config section.name=value)"
 msgstr "misdannet --config tilvalg: %r (brug --config sektion.navn=værdi)"
+
+#, python-format
+msgid "error getting current working directory: %s"
+msgstr "fejl ved opslag af nuværende arbejdskatalog: %s"
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
@@ -9735,6 +9793,9 @@ msgstr ""
 #, python-format
 msgid "repository '%s' is not local"
 msgstr "depot '%s' er ikke lokalt"
+
+msgid "warning: --repository ignored\n"
+msgstr "advarsel: --repository ignoreret\n"
 
 msgid "invalid arguments"
 msgstr "ugyldige parametre"
@@ -9928,7 +9989,9 @@ msgstr ""
 
 msgid ""
 "  not trusting file <repo>/.hg/hgrc from untrusted user USER, group GROUP"
-msgstr "  stoler ikke på filen <depot>/.hg/hgrc fra ubetroet bruger BRUGER, gruppe GRUPPE"
+msgstr ""
+"  stoler ikke på filen <depot>/.hg/hgrc fra ubetroet bruger BRUGER, gruppe "
+"GRUPPE"
 
 msgid ""
 "If this bothers you, the warning can be silenced (the file would still\n"
@@ -10304,7 +10367,7 @@ msgid ""
 "    a remote repository, since new heads may be created by these\n"
 "    operations. Note that the term branch can also be used informally\n"
 "    to describe a development process in which certain development is\n"
-"    done independently of other development.This is sometimes done\n"
+"    done independently of other development. This is sometimes done\n"
 "    explicitly with a named branch, but it can also be done locally,\n"
 "    using bookmarks or clones and anonymous branches."
 msgstr ""
@@ -10399,8 +10462,8 @@ msgstr ""
 msgid ""
 "Changeset id\n"
 "    A SHA-1 hash that uniquely identifies a changeset. It may be\n"
-"    represented as either a \"long\" 40-byte hexadecimal string, or a\n"
-"    \"short\" 12-byte hexadecimal string."
+"    represented as either a \"long\" 40 hexadecimal digit string, or a\n"
+"    \"short\" 12 hexadecimal digit string."
 msgstr ""
 
 msgid ""
@@ -10547,7 +10610,7 @@ msgid ""
 "    Mercurial, that will be recorded in the next commit. The working\n"
 "    directory initially corresponds to the snapshot at an existing\n"
 "    changeset, known as the parent of the working directory. See\n"
-"    'Parents, working directory'. The state may be modified by changes\n"
+"    'Parent, working directory'. The state may be modified by changes\n"
 "    to the files introduced manually or by a merge. The repository\n"
 "    metadata exists in the .hg directory inside the working directory."
 msgstr ""
@@ -11101,8 +11164,7 @@ msgstr ""
 
 msgid ""
 "``branch(set)``\n"
-"  The branch names are found for changesets in set, and the result is\n"
-"  all changesets belonging to one those branches."
+"  All changesets belonging to the branches of changesets in set."
 msgstr ""
 
 msgid ""
@@ -11127,12 +11189,12 @@ msgstr ""
 
 msgid ""
 "``descendants(set)``\n"
-"  Changesets which are decendants of changesets in set."
+"  Changesets which are descendants of changesets in set."
 msgstr ""
 
 msgid ""
 "``file(pattern)``\n"
-"  Changesets which manually affected files matching pattern."
+"  Changesets affecting files matched by pattern."
 msgstr ""
 
 msgid ""
@@ -11172,18 +11234,24 @@ msgid ""
 msgstr ""
 
 msgid ""
+"``min(set)``\n"
+"  Changeset with lowest revision number in set."
+msgstr ""
+
+msgid ""
 "``merge()``\n"
 "  Changeset is a merge changeset."
 msgstr ""
 
 msgid ""
 "``modifies(pattern)``\n"
-"  Changesets which modify files matching pattern."
+"  Changesets modifying files matched by pattern."
 msgstr ""
 
 msgid ""
 "``outgoing([path])``\n"
-"  Changesets missing in path."
+"  Changesets not found in the specified destination repository, or the\n"
+"  default push location."
 msgstr ""
 
 msgid ""
@@ -11329,6 +11397,9 @@ msgid ""
 "    committed. Will be empty if the branch name was default."
 msgstr ""
 
+msgid ":children: List of strings. The children of the changeset."
+msgstr ""
+
 msgid ":date: Date information. The date when the changeset was committed."
 msgstr ""
 
@@ -11365,8 +11436,8 @@ msgid ":file_dels: List of strings. Files removed by this changeset."
 msgstr ""
 
 msgid ""
-":node: String. The changeset identification hash, as a 40-character\n"
-"    hexadecimal string."
+":node: String. The changeset identification hash, as a 40 hexadecimal\n"
+"    digit string."
 msgstr ""
 
 msgid ":parents: List of strings. The parents of the changeset."
@@ -11500,7 +11571,7 @@ msgstr ""
 
 msgid ""
 ":short: Changeset hash. Returns the short form of a changeset hash,\n"
-"    i.e. a 12-byte hexadecimal string."
+"    i.e. a 12 hexadecimal digit string."
 msgstr ""
 
 msgid ":shortdate: Date. Returns a date like \"2006-09-18\"."
@@ -11799,21 +11870,6 @@ msgstr "'%s' sendte ødelagt Content-Type header (%s)"
 msgid "'%s' uses newer protocol %s"
 msgstr "'%s' bruger nyere protokol %s"
 
-msgid "look up remote revision"
-msgstr ""
-
-msgid "unexpected response:"
-msgstr "uventet svar:"
-
-msgid "look up remote changes"
-msgstr ""
-
-msgid "push failed (unexpected response):"
-msgstr "skub fejlede (uventet svar):"
-
-msgid "remote: "
-msgstr "fjernsystem: "
-
 #, python-format
 msgid "push failed: %s"
 msgstr "skub fejlede: %s"
@@ -11911,6 +11967,9 @@ msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr ""
 "kan ikke deponere en sammenføjning partielt (undgå at specificere filer "
 "eller mønstre)"
+
+msgid "can't commit subrepos without .hgsub"
+msgstr "kan ikke deponere underdepoter uden .hgsub"
 
 msgid "file not found!"
 msgstr "filen blev ikke fundet!"
@@ -12117,6 +12176,9 @@ msgstr ""
 msgid "&Deleted"
 msgstr ""
 
+msgid "updating"
+msgstr "opdaterer"
+
 #, python-format
 msgid "update failed to remove %s: %s!\n"
 msgstr "opdatering kunne ikke fjerne %s: %s!\n"
@@ -12264,6 +12326,14 @@ msgid "adding branch\n"
 msgstr "tilføjer gren\n"
 
 #, python-format
+msgid "strip failed, full bundle stored in '%s'\n"
+msgstr ""
+
+#, python-format
+msgid "strip failed, partial bundle stored in '%s'\n"
+msgstr ""
+
+#, python-format
 msgid "cannot %s; remote repository does not support the %r capability"
 msgstr "kan ikke %s: fjerdepotet understøtter ikke %r egenskaben"
 
@@ -12321,9 +12391,6 @@ msgstr "syntaksfejl"
 
 msgid "missing argument"
 msgstr "manglende parameter"
-
-msgid "can't negate that"
-msgstr ""
 
 #, python-format
 msgid "can't use %s here"
@@ -12409,6 +12476,9 @@ msgstr ""
 msgid "tagged takes no arguments"
 msgstr ""
 
+msgid "can't negate that"
+msgstr ""
+
 msgid "not a symbol"
 msgstr ""
 
@@ -12441,12 +12511,15 @@ msgstr "kunne ikke oprette fjerndepot"
 msgid "no suitable response from remote hg"
 msgstr "intet brugbart svar fra fjernsystemets hg"
 
+msgid "remote: "
+msgstr "fjernsystem: "
+
+msgid "unexpected response:"
+msgstr "uventet svar:"
+
 #, python-format
 msgid "push refused: %s"
 msgstr "skub afvist: %s"
-
-msgid "unsynced changes"
-msgstr ""
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
@@ -12468,6 +12541,10 @@ msgstr "underdepot spec-fil %s blev ikke fundet"
 
 msgid "missing ] in subrepo source"
 msgstr "manglende ] i underdepot kilde"
+
+#, python-format
+msgid "bad subrepository pattern in %s: %s"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -12588,6 +12665,10 @@ msgstr "intet brugernavn angivet (se \"hg help config\")"
 #, python-format
 msgid "username %s contains a newline\n"
 msgstr "brugernavn %s indeholder et linieskift\n"
+
+#, python-format
+msgid "(deprecated '%%' in path %s=%s from %s)\n"
+msgstr ""
 
 msgid "response expected"
 msgstr "svar forventet"
@@ -12881,8 +12962,14 @@ msgstr "(første beskadigede ændring er tilsyneladende %d)\n"
 msgid "user name not available - set USERNAME environment variable"
 msgstr "der er ikke noget brugernavn - sæt USERNAME miljøvariabel"
 
-#~ msgid "failed to update bookmark %s!\n"
-#~ msgstr "kunne ikke opdatere bogmærke %s!\n"
+msgid "look up remote revision"
+msgstr ""
 
-#~ msgid "can't merge with ancestor"
-#~ msgstr "kan ikke sammenføje med forfader"
+msgid "look up remote changes"
+msgstr ""
+
+msgid "push failed:"
+msgstr "skub fejlede:"
+
+msgid "push failed (unexpected response):"
+msgstr "skub fejlede (uventet svar):"
