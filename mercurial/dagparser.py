@@ -7,6 +7,7 @@
 
 import re, string
 import util
+from i18n import _
 
 def parsedag(desc):
     '''parses a DAG from a concise textual description; generates events
