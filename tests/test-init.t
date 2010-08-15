@@ -130,7 +130,7 @@ comparing repositories
 check names for repositories (clashes with URL schemes, special chars)
 
   $ for i in bundle file hg http https old-http ssh static-http " " "with space"; do
-  >   echo -n "hg init \"$i\"... "
+  >   printf "hg init \"$i\"... "
   >   hg init "$i"
   >   test -d "$i" -a -d "$i/.hg" && echo "ok" || echo "failed"
   > done
