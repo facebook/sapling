@@ -41,7 +41,7 @@ EOF
 # of the very long subject line
 echo '% pull (minimal config)'
 hg --traceback --cwd b pull ../a 2>&1 |
-  python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),' |
+  python -c 'import sys,re; print re.sub("([n:])\\n[\\t ]", "\\1 ", sys.stdin.read()),' |
   sed -e 's/\(Message-Id:\).*/\1/' \
   -e 's/changeset \([0-9a-f]* *\)in .*test-notif/changeset \1in test-notif/' \
   -e 's/^details: .*test-notify/details: test-notify/' \
