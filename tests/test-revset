@@ -57,6 +57,11 @@ hg ci -Aqm9
 
 hg tag -r6 1.0
 
+hg clone --quiet -U -r 7 . ../remote1
+hg clone --quiet -U -r 8 . ../remote2
+echo "[paths]" >> .hg/hgrc
+echo "default = ../remote1" >> .hg/hgrc
+
 # names that should work without quoting
 try a
 try b-a
@@ -113,6 +118,9 @@ log 'max(contains(a))'
 log 'min(contains(a))'
 log 'merge()'
 log 'modifies(b)'
+log 'outgoing()'
+log 'outgoing("../remote1")'
+log 'outgoing("../remote2")'
 log 'p1(merge())'
 log 'p2(merge())'
 log 'parents(merge())'

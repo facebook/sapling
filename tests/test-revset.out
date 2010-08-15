@@ -158,6 +158,18 @@ hg: parse error: ancestor wants two arguments
 6
 % log 'modifies(b)'
 4
+% log 'outgoing()'
+8
+9
+% log 'outgoing("../remote1")'
+8
+9
+% log 'outgoing("../remote2")'
+3
+5
+6
+7
+9
 % log 'p1(merge())'
 5
 % log 'p2(merge())'

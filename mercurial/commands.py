@@ -726,8 +726,10 @@ def commit(ui, repo, *pats, **opts):
     If you are committing the result of a merge, do not provide any
     filenames or -I/-X filters.
 
-    If no commit message is specified, the configured editor is
-    started to prompt you for a message.
+    If no commit message is specified, Mercurial starts your
+    configured editor where you can enter a message. In case your
+    commit fails, you will find a backup of your message in
+    ``.hg/last-message.txt``.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
@@ -874,7 +876,7 @@ def debugbuilddag(ui, repo, text,
      - empty to denote the default parent.
 
     All string valued-elements are either strictly alphanumeric, or must
-    be enclosed in double quotes ("..."), with "\" as escape character.
+    be enclosed in double quotes ("..."), with "\\" as escape character.
 
     Note that the --overwritten-file and --appended-file options imply the
     use of "HGMERGE=internal:local" during DAG buildup.
