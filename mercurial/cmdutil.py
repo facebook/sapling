@@ -1086,8 +1086,7 @@ def walkchangerevs(repo, match, opts, prepare):
                 revs.append((linkrev, parentlinkrevs,
                              follow and filelog.renamed(n)))
 
-            for rev in reversed(revs):
-                yield rev
+            return reversed(revs)
         def iterfiles():
             for filename in match.files():
                 yield filename, None
@@ -1124,8 +1123,7 @@ def walkchangerevs(repo, match, opts, prepare):
                 if flparentlinkrevs:
                     ancestors.update(flparentlinkrevs)
 
-                fncache.setdefault(rev, [])
-                fncache[rev].append(file_)
+                fncache.setdefault(rev, []).append(file_)
                 wanted.add(rev)
                 if copied:
                     copies.append(copied)
