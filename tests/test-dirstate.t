@@ -1,4 +1,4 @@
-Test dirstate._dirs refcounting:
+------ Test dirstate._dirs refcounting
 
   $ hg init t
   $ cd t
@@ -14,4 +14,27 @@ Test dirstate._dirs refcounting:
   moving a/b/c/d/x to z/b/c/d/x
   moving a/b/c/d/y to z/b/c/d/y
   moving a/b/c/d/z to z/b/c/d/z
+  $ cd ..
+
+------ issue1790
+
+Prepare test repo:
+
+  $ hg init u
+  $ cd u
+  $ echo a > a
+  $ hg add
+  adding a
+  $ hg ci -m1
+
+Set mtime of a into the future:
+
+  $ touch -t 202101011200 a
+
+Status must not set a's entry to unset (issue1790):
+
+  $ hg status
+  $ hg debugstate
+  n 644          2 2021-01-01 12:00:00 a
+  $ cd ..
 
