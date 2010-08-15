@@ -12,11 +12,7 @@
 Run kwdemo before [keyword] files are set up
 as it would succeed without uisetup otherwise
 
-  $ hg --quiet kwdemo \
-  > | sed -e 's![^ ][^ ]*demo.txt,v!/TMP/demo.txt,v!' \
-  >  -e 's/,v [a-z0-9][a-z0-9]* /,v xxxxxxxxxxxx /' \
-  >  -e '/[$]Revision/ s/: [a-z0-9][a-z0-9]* /: xxxxxxxxxxxx /' \
-  >  -e 's! 20[0-9][0-9]/[01][0-9]/[0-3][0-9] [0-2][0-9]:[0-6][0-9]:[0-6][0-9]! 2000/00/00 00:00:00!'
+  $ hg --quiet kwdemo
   [extensions]
   keyword =
   [keyword]
@@ -30,14 +26,14 @@ as it would succeed without uisetup otherwise
   RCSfile = {file|basename},v
   Revision = {node|short}
   Source = {root}/{file},v
-  $Author: test $
-  $Date: 2000/00/00 00:00:00 $
-  $Header: /TMP/demo.txt,v xxxxxxxxxxxx 2000/00/00 00:00:00 test $
-  $Id: demo.txt,v xxxxxxxxxxxx 2000/00/00 00:00:00 test $
-  $RCSFile: demo.txt,v $
-  $RCSfile: demo.txt,v $
-  $Revision: xxxxxxxxxxxx $
-  $Source: /TMP/demo.txt,v $
+  \$Author: test \$
+  \$Date: ..../../.. ..:..:.. \$
+  \$Header: .*/demo.txt,v ............ ..../../.. ..:..:.. test \$
+  \$Id: demo.txt,v ............ ..../../.. ..:..:.. test \$
+  \$RCSFile: demo.txt,v \$
+  \$RCSfile: demo.txt,v \$
+  \$Revision: ............ \$
+  \$Source: .*/demo.txt,v \$
 
   $ hg --quiet kwdemo "Branch = {branches}"
   [extensions]
