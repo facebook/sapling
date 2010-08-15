@@ -19,6 +19,21 @@ patches
 abort: queue "foo" already exists
 foo (active)
 patches
+%% create new queue for rename
+bar (active)
+foo
+patches
+%% rename queue, same name
+abort: can't rename "bar" to its current name
+%% rename queue to existing
+abort: queue "foo" already exists
+%% rename queue
+buz (active)
+foo
+patches
+%% switch back to previous queue
+foo (active)
+patches
 %% unapplied patches
 %% fail switching back
 abort: patches applied - cannot set new queue active

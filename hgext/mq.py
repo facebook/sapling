@@ -2675,6 +2675,12 @@ def qqueue(ui, repo, name=None, **opts):
         fh.write('%s\n' % (name,))
         fh.close()
 
+    def _queuedir(name):
+        if name == 'patches':
+            return repo.join('patches')
+        else:
+            return repo.join('patches-' + name)
+
     def _validname(name):
         for n in name:
             if n in ':\\/.':
@@ -2704,6 +2710,31 @@ def qqueue(ui, repo, name=None, **opts):
             _addqueue(_defaultqueue)
         _addqueue(name)
         _setactive(name)
+    elif opts.get('rename'):
+        current = _getcurrent()
+        if name == current:
+            raise util.Abort(_('can\'t rename "%s" to its current name') % name)
+        if name in existing:
+            raise util.Abort(_('queue "%s" already exists') % name)
+
+        olddir = _queuedir(current)
+        newdir = _queuedir(name)
+
+        if os.path.exists(newdir):
+            raise util.Abort(_('non-queue directory "%s" already exists') %
+                    newdir)
+
+        fh = repo.opener('patches.queues.new', 'w')
+        for queue in existing:
+            if queue == current:
+                fh.write('%s\n' % (name,))
+                if os.path.exists(olddir):
+                    util.rename(olddir, newdir)
+            else:
+                fh.write('%s\n' % (queue,))
+        fh.close()
+        util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
+        _setactivenocheck(name)
     elif opts.get('delete'):
         if name not in existing:
             raise util.Abort(_('cannot delete queue that does not exist'))
@@ -3045,6 +3076,7 @@ cmdtable = {
          [
              ('l', 'list', False, _('list all available queues')),
              ('c', 'create', False, _('create new queue')),
+             ('', 'rename', False, _('rename active queue')),
              ('', 'delete', False, _('delete reference to queue')),
          ],
          _('[OPTION] [QUEUE]')),

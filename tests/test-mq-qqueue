@@ -35,6 +35,25 @@ echo %% fail creating queue with already existing name
 hg qqueue --create foo
 hg qqueue
 
+echo %% create new queue for rename
+hg qqueue --create bar
+hg qqueue
+
+echo %% rename queue, same name
+hg qqueue --rename bar
+
+echo %% rename queue to existing
+hg qqueue --rename foo
+
+echo %% rename queue
+hg qqueue --rename buz
+hg qqueue
+
+echo %% switch back to previous queue
+hg qqueue foo
+hg qqueue --delete buz
+hg qqueue
+
 echo %% unapplied patches
 hg qun
 echo c > a
