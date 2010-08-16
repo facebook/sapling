@@ -2041,6 +2041,10 @@ def refresh(ui, repo, *pats, **opts):
     If -s/--short is specified, files currently included in the patch
     will be refreshed just like matched files and remain in the patch.
 
+    If -e/--edit is specified, Mercurial will start your configured editor for
+    you to enter a message. In case qrefresh fails, you will find a backup of
+    your message in ``.hg/last-message.txt``.
+
     hg add/remove/copy/rename work as usual, though you might want to
     use git-style patches (-g/--git or [diff] git=1) to track copies
     and renames. See the diffs help topic for more information on the
@@ -2057,6 +2061,10 @@ def refresh(ui, repo, *pats, **opts):
         patch = q.applied[-1].name
         ph = patchheader(q.join(patch), q.plainmode)
         message = ui.edit('\n'.join(ph.message), ph.user or ui.username())
+        # We don't want to lose the patch message if qrefresh fails (issue2062)
+        msgfile = repo.opener('last-message.txt', 'wb')
+        msgfile.write(message)
+        msgfile.close()
     setupheaderopts(ui, opts)
     ret = q.refresh(repo, pats, msg=message, **opts)
     q.save_dirty()
