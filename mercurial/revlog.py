@@ -23,6 +23,8 @@ _compress = zlib.compress
 _decompress = zlib.decompress
 _sha = util.sha1
 
+_cached, _uncached = 0, 0
+
 # revlog header flags
 REVLOGV0 = 0
 REVLOGNG = 1
@@ -1030,9 +1032,15 @@ class revlog(object):
         """return chain of revisions to construct a given revision"""
         chain = []
         check = False
-        while self.base(rev) != rev and rev != cache:
+        index = self.index
+        e = index[rev]
+        while rev != e[3] and rev != cache:
             chain.append(rev)
-            rev = self.deltaparent(rev)
+            if e[0] & REVIDX_PARENTDELTA:
+                rev = e[5]
+            else:
+                rev -= 1
+            e = index[rev]
         chain.reverse()
         if rev == cache:
             check = True
@@ -1068,7 +1076,13 @@ class revlog(object):
 
         # do we have useful data cached?
         if cache and self._cache:
+            global _cached
+            _cached += 1
             text = self._cache[2]
+        else:
+            global _uncached
+            _uncached += 1
+
 
         # drop cache to save memory
         self._cache = None
