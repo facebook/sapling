@@ -9,6 +9,7 @@ diffline = '{line}'
 changesetparent = '# Parent  {node}'
 changesetchild = '# Child   {node}'
 filenodelink = ''
+filenolink = ''
 fileline = '{line}'
 diffblock = '{lines}'
 filediff = filediff.tmpl
