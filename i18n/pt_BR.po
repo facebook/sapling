@@ -10446,7 +10446,7 @@ msgid "print matching line numbers"
 msgstr "imprime número de linhas que casarem"
 
 msgid "only search files changed within revision range"
-msgstr "procura apenas opr arquivos que mudaram dentro do intervalo pedido"
+msgstr "procura apenas por arquivos que mudaram dentro do intervalo pedido"
 
 msgid "[OPTION]... PATTERN [FILE]..."
 msgstr "[OPÇÃO]... PADRÃO [ARQUIVO]..."
