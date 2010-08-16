@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-08-05 16:06+0200\n"
-"PO-Revision-Date: 2010-08-15 23:52+0200\n"
+"PO-Revision-Date: 2010-08-16 23:37+0200\n"
 "Last-Translator: Daniel Dumitriu <daniel.dumitriu@gmail.com>\n"
 "Language-Team: Romanian <>\n"
 "MIME-Version: 1.0\n"
@@ -9371,31 +9371,31 @@ msgid "Environment Variables"
 msgstr "Variabile de mediu"
 
 msgid "Specifying Single Revisions"
-msgstr "Se specifică revizii simple"
+msgstr "Specificarea reviziilor simple"
 
 msgid "Specifying Multiple Revisions"
-msgstr "Se specifică revizii multiple"
+msgstr "Specificarea reviziilor multiple"
 
 msgid "Specifying Revision Sets"
-msgstr ""
+msgstr "Specificarea seturilor de revizii"
 
 msgid "Diff Formats"
 msgstr "Formate pentru diff"
 
 msgid "Template Usage"
-msgstr "Folosirea șablonului"
+msgstr "Folosirea șabloanelor"
 
 msgid "URL Paths"
 msgstr "Căi URL"
 
 msgid "Using additional features"
-msgstr "Se folosesc facilități suplimentare"
+msgstr "Folosirea facilităților suplimentare"
 
 msgid "Configuring hgweb"
-msgstr ""
+msgstr "Configurarea hgweb"
 
 msgid "Glossary"
-msgstr ""
+msgstr "Glosar"
 
 msgid ""
 "Mercurial reads configuration data from several files, if they exist.\n"
