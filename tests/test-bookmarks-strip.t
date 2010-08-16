@@ -1,4 +1,3 @@
-  $ . $TESTDIR/helpers.sh
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "bookmarks=" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
@@ -50,8 +49,8 @@ bookmarks updated?
 
 strip to revision 1
 
-  $ hg strip 1 | hidebackup
-  saved backup bundle to 
+  $ hg strip 1
+  saved backup bundle to .*
 
 list bookmarks
 

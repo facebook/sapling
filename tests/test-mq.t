@@ -1,5 +1,3 @@
-  $ . $TESTDIR/helpers.sh
-
   $ checkundo()
   > {
   >     if [ -f .hg/store/undo ]; then
@@ -733,9 +731,9 @@ strip
   $ echo x>x
   $ hg ci -Ama
   adding x
-  $ hg strip tip | hidebackup
+  $ hg strip tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to 
+  saved backup bundle to .*
   $ hg unbundle .hg/strip-backup/*
   adding changesets
   adding manifests
@@ -750,14 +748,14 @@ strip with local changes, should complain
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo y>y
   $ hg add y
-  $ hg strip tip | hidebackup
+  $ hg strip tip
   abort: local changes found
 
 --force strip with local changes
 
-  $ hg strip -f tip | hidebackup
+  $ hg strip -f tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to 
+  saved backup bundle to .*
 
 
 cd b; hg qrefresh
@@ -1110,9 +1108,9 @@ strip again
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo
   
-  $ hg strip 1 | hidebackup
+  $ hg strip 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to 
+  saved backup bundle to .*
   $ checkundo strip
   $ hg log
   changeset:   1:20cbbe65cff7
