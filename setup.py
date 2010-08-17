@@ -52,6 +52,7 @@ from distutils.dist import Distribution
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.command.build_py import build_py
+from distutils.command.install_scripts import install_scripts
 from distutils.spawn import spawn, find_executable
 from distutils.ccompiler import new_compiler
 from distutils.errors import CCompilerError
@@ -216,6 +217,7 @@ class hgbuildmo(build):
             self.mkpath(join('mercurial', modir))
             self.make_file([pofile], mobuildfile, spawn, (cmd,))
 
+
 # Insert hgbuildmo first so that files in mercurial/locale/ are found
 # when build_py is run next.
 build.sub_commands.insert(0, ('build_mo', None))
@@ -260,9 +262,52 @@ class hgbuildpy(build_py):
             else:
                 yield module
 
+class hginstallscripts(install_scripts):
+    '''
+    This is a specialization of install_scripts that replaces the @LIBDIR@ with
+    the configured directory for modules. If possible, the path is made relative
+    to the directory for scripts.
+    '''
+
+    def initialize_options(self):
+        install_scripts.initialize_options(self)
+
+        self.install_lib = None
+
+    def finalize_options(self):
+        install_scripts.finalize_options(self)
+        self.set_undefined_options('install',
+                                   ('install_lib', 'install_lib'))
+
+    def run(self):
+        install_scripts.run(self)
+
+        if (os.path.splitdrive(self.install_dir)[0] !=
+            os.path.splitdrive(self.install_lib)[0]):
+            # can't make relative paths from one drive to another, so use an
+            # absolute path instead
+            libdir = self.install_lib
+        else:
+            common = os.path.commonprefix((self.install_dir, self.install_lib))
+            rest = self.install_dir[len(common):]
+            uplevel = len([n for n in os.path.split(rest) if n])
+
+            libdir =  uplevel * ('..' + os.sep) + self.install_lib[len(common):]
+
+        for outfile in self.outfiles:
+            data = open(outfile, 'rb').read()
+
+            # skip binary files
+            if '\0' in data:
+                continue
+
+            data = data.replace('@LIBDIR@', libdir)
+            open(outfile, 'wb').write(data)
+
 cmdclass = {'build_mo': hgbuildmo,
             'build_ext': hgbuildext,
-            'build_py': hgbuildpy}
+            'build_py': hgbuildpy,
+            'install_scripts': hginstallscripts}
 
 packages = ['mercurial', 'mercurial.hgweb', 'hgext', 'hgext.convert',
             'hgext.highlight', 'hgext.zeroconf']
