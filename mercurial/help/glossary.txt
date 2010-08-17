@@ -42,6 +42,17 @@ Branch, default
 Branch head
     See 'Head, branch'.
 
+Branch, inactive
+    If a named branch has no topological heads, it is considered to be
+    inactive. As an example, a feature branch becomes inactive when it
+    is merged into the default branch. The :hg:`branches` command
+    shows inactive branches by default, though they can be hidden with
+    :hg:`branches --active`.
+
+    NOTE: this concept is deprecated because it is too implicit.
+    Branches show now be explicitly closed using :hg:`commit
+    --close-branch` when they are no longer needed.
+
 Branch, named
     A collection of changesets which have the same branch name. By
     default, children of a changeset in a named branch belong to the
