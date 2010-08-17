@@ -29,29 +29,35 @@ _origimport = __import__
 
 class _demandmod(object):
     """module demand-loader and proxy"""
-    def __init__(self, name, globals, locals):
+    def __init__(self, name, globals, locals, level):
         if '.' in name:
             head, rest = name.split('.', 1)
             after = [rest]
         else:
             head = name
             after = []
-        object.__setattr__(self, "_data", (head, globals, locals, after))
+        object.__setattr__(self, "_data", (head, globals, locals, after, level))
         object.__setattr__(self, "_module", None)
     def _extend(self, name):
         """add to the list of submodules to load"""
         self._data[3].append(name)
     def _load(self):
         if not self._module:
-            head, globals, locals, after = self._data
-            mod = _origimport(head, globals, locals)
+            head, globals, locals, after, level = self._data
+            if level is not None:
+                mod = _origimport(head, globals, locals, level)
+            else:
+                mod = _origimport(head, globals, locals)
             # load submodules
             def subload(mod, p):
                 h, t = p, None
                 if '.' in p:
                     h, t = p.split('.', 1)
                 if not hasattr(mod, h):
-                    setattr(mod, h, _demandmod(p, mod.__dict__, mod.__dict__))
+                    # TODO: should we adjust the level here?
+                    submod = _demandmod(p, mod.__dict__, mod.__dict__,
+                                        level=level)
+                    setattr(mod, h, submod)
                 elif t:
                     subload(getattr(mod, h), t)
 
@@ -91,28 +97,36 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=None):
             base, rest = name.split('.', 1)
             # email.__init__ loading email.mime
             if globals and globals.get('__name__', None) == base:
-                return _origimport(name, globals, locals, fromlist)
+                if level is not None:
+                    return _origimport(name, globals, locals, fromlist, level)
+                else:
+                    return _origimport(name, globals, locals, fromlist)
             # if a is already demand-loaded, add b to its submodule list
             if base in locals:
                 if isinstance(locals[base], _demandmod):
                     locals[base]._extend(rest)
                 return locals[base]
-        return _demandmod(name, globals, locals)
+        return _demandmod(name, globals, locals, level=level)
     else:
-        if level is not None:
-            # from . import b,c,d or from .a import b,c,d
-            return _origimport(name, globals, locals, fromlist, level)
         # from a import b,c,d
-        mod = _origimport(name, globals, locals)
+        if level is not None:
+            mod = _origimport(name, globals, locals, level=level)
+        else:
+            mod = _origimport(name, globals, locals)
         # recurse down the module chain
         for comp in name.split('.')[1:]:
             if not hasattr(mod, comp):
-                setattr(mod, comp, _demandmod(comp, mod.__dict__, mod.__dict__))
+                # TODO: should we adjust the level here?
+                submod = _demandmod(comp, mod.__dict__, mod.__dict__,
+                                    level=level)
+                setattr(mod, comp, submod)
             mod = getattr(mod, comp)
         for x in fromlist:
             # set requested submodules for demand load
             if not(hasattr(mod, x)):
-                setattr(mod, x, _demandmod(x, mod.__dict__, locals))
+                # TODO: should we adjust the level here?
+                submod = _demandmod(x, mod.__dict__, locals, level=level)
+                setattr(mod, x, submod)
         return mod
 
 ignore = [
