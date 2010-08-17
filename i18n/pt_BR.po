@@ -7835,7 +7835,7 @@ msgid ""
 "    :hg:`push` for a way to actively distribute your changes."
 msgstr ""
 "    Consolida no repositório local mudanças nos arquivos dados. Ao\n"
-"    contrário do que ocorre um sistema de controle de versão\n"
+"    contrário do que ocorre em um sistema de controle de versão\n"
 "    centralizado, esta operação é local. Veja :hg:`push` para um modo\n"
 "    de distribuir ativamente suas mudanças."
 
