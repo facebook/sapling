@@ -1,7 +1,0 @@
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-removing b
-created new head
-% should abort
-abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
-% should succeed
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
