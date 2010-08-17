@@ -663,7 +663,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
             fp.write(s)
 
     if stat:
-        diffopts.context = 0
+        diffopts = diffopts.copy(context=0)
         width = 80
         if not ui.plain():
             width = util.termwidth()
@@ -803,10 +803,17 @@ class changeset_printer(object):
             matchfn = self.patch
         if matchfn:
             stat = self.diffopts.get('stat')
+            diff = self.diffopts.get('patch')
             diffopts = patch.diffopts(self.ui, self.diffopts)
             prev = self.repo.changelog.parents(node)[0]
-            diffordiffstat(self.ui, self.repo, diffopts, prev, node,
-                           match=matchfn, stat=stat)
+            if stat:
+                diffordiffstat(self.ui, self.repo, diffopts, prev, node,
+                               match=matchfn, stat=True)
+            if diff:
+                if stat:
+                    self.ui.write("\n")
+                diffordiffstat(self.ui, self.repo, diffopts, prev, node,
+                               match=matchfn, stat=False)
             self.ui.write("\n")
 
     def _meaningful_parentrevs(self, log, rev):
