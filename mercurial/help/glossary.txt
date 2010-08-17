@@ -50,7 +50,7 @@ Branch, inactive
     :hg:`branches --active`.
 
     NOTE: this concept is deprecated because it is too implicit.
-    Branches show now be explicitly closed using :hg:`commit
+    Branches should now be explicitly closed using :hg:`commit
     --close-branch` when they are no longer needed.
 
 Branch, named
