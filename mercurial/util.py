@@ -28,9 +28,9 @@ def _fastsha1(s):
     # This function will import sha1 from hashlib or sha (whichever is
     # available) and overwrite itself with it on the first call.
     # Subsequent calls will go directly to the imported function.
-    try:
+    if sys.version_info >= (2, 5):
         from hashlib import sha1 as _sha1
-    except ImportError:
+    else:
         from sha import sha as _sha1
     global _fastsha1, sha1
     _fastsha1 = sha1 = _sha1
