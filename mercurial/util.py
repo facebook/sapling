@@ -1408,3 +1408,18 @@ def termwidth():
         except ValueError:
             pass
     return termwidth_()
+
+def interpolate(prefix, mapping, s, fn=None):
+    """Return the result of interpolating items in the mapping into string s.
+
+    prefix is a single character string, or a two character string with
+    a backslash as the first character if the prefix needs to be escaped in
+    a regular expression.
+
+    fn is an optional function that will be applied to the replacement text
+    just before replacement.
+    """
+    fn = fn or (lambda s: s)
+    r = re.compile(r'%s(%s)' % (prefix, '|'.join(mapping.keys())))
+    return r.sub(lambda x: fn(mapping[x.group()[1:]]), s)
+
