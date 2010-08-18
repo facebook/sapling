@@ -8,8 +8,8 @@
 
 from common import NoRepo, commandline, commit, converter_source
 from mercurial.i18n import _
-from mercurial import util
-import os, shutil, tempfile, stat, locale
+from mercurial import encoding, util
+import os, shutil, tempfile, stat
 from email.Parser import Parser
 
 class gnuarch_source(converter_source, commandline):
@@ -55,7 +55,7 @@ class gnuarch_source(converter_source, commandline):
         self.parents = {}
         self.tags = {}
         self.catlogparser = Parser()
-        self.encoding = locale.getpreferredencoding()
+        self.encoding = encoding.encoding
         self.archives = []
 
     def before(self):
