@@ -55,7 +55,7 @@ class gnuarch_source(converter_source, commandline):
         self.parents = {}
         self.tags = {}
         self.catlogparser = Parser()
-        self.locale = locale.getpreferredencoding()
+        self.encoding = locale.getpreferredencoding()
         self.archives = []
 
     def before(self):
