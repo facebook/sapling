@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import os, sys, atexit, signal, pdb, socket, errno, shlex, time, traceback
+import os, sys, atexit, signal, pdb, socket, errno, shlex, time, traceback, re
 import util, commands, hg, fancyopts, extensions, hook, error
 import cmdutil, encoding
 import ui as uimod
@@ -214,8 +214,18 @@ class cmdalias(object):
 
         if self.definition.startswith('!'):
             def fn(ui, *args):
-                cmd = '%s %s' % (self.definition[1:], ' '.join(args))
-                return util.system(cmd)
+                env = {'HG_ARGS': ' '.join((self.name,) + args)}
+                def _checkvar(m):
+                    if int(m.groups()[0]) <= len(args):
+                        return m.group()
+                    else:
+                        return ''
+                cmd = re.sub(r'\$(\d+)', _checkvar, self.definition[1:])
+                replace = dict((str(i + 1), arg) for i, arg in enumerate(args))
+                replace['0'] = self.name
+                replace['@'] = ' '.join(args)
+                cmd = util.interpolate(r'\$', replace, cmd)
+                return util.system(cmd, environ=env)
             self.fn = fn
             return
 
@@ -274,7 +284,10 @@ class cmdalias(object):
         if self.shadows:
             ui.debug("alias '%s' shadows command\n" % self.name)
 
-        return util.checksignature(self.fn)(ui, *args, **opts)
+        if self.definition.startswith('!'):
+            return self.fn(ui, *args, **opts)
+        else:
+            return util.checksignature(self.fn)(ui, *args, **opts)
 
 def addaliases(ui, cmdtable):
     # aliases are processed after extensions have been loaded, so they

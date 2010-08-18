@@ -16,7 +16,13 @@
   > dln = lognull --debug
   > nousage = rollback
   > put = export -r 0 -o "\$FOO/%R.diff"
-  > echo = !echo
+  > blank = !echo
+  > self = !echo '\$0'
+  > echo = !echo '\$@'
+  > echo1 = !echo '\$1'
+  > echo2 = !echo '\$2'
+  > echo13 = !echo '\$1' '\$3'
+  > count = !hg log -r '\$@' --template='.' | wc -c | sed -e 's/ //g'
   > rt = root
   > 
   > [defaults]
@@ -146,10 +152,35 @@ path expanding
   +foo
 
 
-shell aliases
+simple shell aliases
 
+  $ hg blank
+  
+  $ hg blank foo
+  
+  $ hg echo
+  
+  $ hg self
+  self
   $ hg echo foo
   foo
+  $ hg echo 'test $2' foo
+  test $2 foo
+  $ hg echo1 foo bar baz
+  foo
+  $ hg echo2 foo bar baz
+  bar
+  $ hg echo13 foo bar baz test
+  foo baz
+  $ hg echo2 foo
+  
+  $ echo bar > bar
+  $ hg ci -qA -m bar
+  $ hg count .
+  1
+  $ hg count 'branch(default)'
+  2
+
 
 invalid arguments
 
