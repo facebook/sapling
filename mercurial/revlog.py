@@ -1171,32 +1171,36 @@ class revlog(object):
 
         curr = len(self)
         prev = curr - 1
-        base = self.base(prev)
+        base = curr
         offset = self.end(prev)
         flags = 0
         d = None
 
-        if curr:
+        if self._parentdelta:
+            deltarev, deltanode = self.rev(p1), p1
+            flags = REVIDX_PARENTDELTA
+        else:
+            deltarev, deltanode = prev, self.node(prev)
+
+        # should we try to build a delta?
+        if deltarev != nullrev:
             # can we use the cached delta?
             if cachedelta:
                 cacherev, d = cachedelta
-                if cacherev != prev:
+                if cacherev != deltarev:
                     d = None
-            if not d:
-                if self._parentdelta:
-                    ptext = self.revision(p1)
-                    flags = REVIDX_PARENTDELTA
-                else:
-                    ptext = self.revision(self.node(prev))
+            if d is None:
+                ptext = self.revision(deltanode)
                 d = mdiff.textdiff(ptext, text)
             data = compress(d)
             l = len(data[1]) + len(data[0])
+            base = self.base(deltarev)
             dist = l + offset - self.start(base)
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
         # or the base revision is punched
-        if (not curr or dist > len(text) * 2 or
+        if (d is None or dist > len(text) * 2 or
             (self.flags(base) & REVIDX_PUNCHED_FLAG)):
             data = compress(text)
             l = len(data[1]) + len(data[0])
