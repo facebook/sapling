@@ -1,22 +1,22 @@
   $ hg init outer
   $ cd outer
 
+hg debugsub with no remapping
+
   $ echo 'sub = http://example.net/libfoo' > .hgsub
   $ hg add .hgsub
-
-hg debugsub with no remapping
 
   $ hg debugsub
   path sub
    source   http://example.net/libfoo
    revision 
 
+hg debugsub with remapping
+
   $ cat > .hg/hgrc <<EOF
   > [subpaths]
   > http://example.net = ssh://localhost
   > EOF
-
-hg debugsub with remapping
 
   $ hg debugsub
   path sub
