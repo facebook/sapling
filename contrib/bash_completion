@@ -466,7 +466,7 @@ _hg_cmd_qqueue()
 {
     local q
     local queues
-    local opts="--list --create --delete"
+    local opts="--list --create --rename --delete --purge"
 
     queues=$( _hg_cmd qqueue --quiet )
 
