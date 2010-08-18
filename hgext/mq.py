@@ -2695,6 +2695,23 @@ def qqueue(ui, repo, name=None, **opts):
                 return False
         return True
 
+    def _delete(name):
+        if name not in existing:
+            raise util.Abort(_('cannot delete queue that does not exist'))
+
+        current = _getcurrent()
+
+        if name == current:
+            raise util.Abort(_('cannot delete currently active queue'))
+
+        fh = repo.opener('patches.queues.new', 'w')
+        for queue in existing:
+            if queue == name:
+                continue
+            fh.write('%s\n' % (queue,))
+        fh.close()
+        util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
+
     if not name or opts.get('list'):
         current = _getcurrent()
         for queue in _getqueues():
@@ -2744,21 +2761,7 @@ def qqueue(ui, repo, name=None, **opts):
         util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
         _setactivenocheck(name)
     elif opts.get('delete'):
-        if name not in existing:
-            raise util.Abort(_('cannot delete queue that does not exist'))
-
-        current = _getcurrent()
-
-        if name == current:
-            raise util.Abort(_('cannot delete currently active queue'))
-
-        fh = repo.opener('patches.queues.new', 'w')
-        for queue in existing:
-            if queue == name:
-                continue
-            fh.write('%s\n' % (queue,))
-        fh.close()
-        util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
+        _delete(name)
     else:
         if name not in existing:
             raise util.Abort(_('use --create to create a new queue'))
