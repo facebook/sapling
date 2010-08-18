@@ -34,6 +34,17 @@ patches
 %% switch back to previous queue
 foo (active)
 patches
+%% create queue for purge
+foo
+patches
+purge-me (active)
+%% create patch for purge
+.hg/patches-purge-me
+popping patch-purge-me
+patch queue now empty
+%% purge queue
+foo (active)
+patches
 %% unapplied patches
 %% fail switching back
 abort: patches applied - cannot set new queue active

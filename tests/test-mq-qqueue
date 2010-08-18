@@ -54,6 +54,21 @@ hg qqueue foo
 hg qqueue --delete buz
 hg qqueue
 
+echo %% create queue for purge
+hg qqueue --create purge-me
+hg qqueue
+
+echo %% create patch for purge
+hg qnew patch-purge-me
+ls -1d .hg/patches-purge-me 2>/dev/null || true
+hg qpop -a
+
+echo %% purge queue
+hg qqueue foo
+hg qqueue --purge purge-me
+hg qqueue
+ls -1d .hg/patches-purge-me 2>/dev/null || true
+
 echo %% unapplied patches
 hg qun
 echo c > a

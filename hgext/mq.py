@@ -47,7 +47,7 @@ from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, patch, util
 from mercurial import repair, extensions, url, error
-import os, sys, re, errno
+import os, sys, re, errno, shutil
 
 commands.norepo += " qclone"
 
@@ -2762,6 +2762,12 @@ def qqueue(ui, repo, name=None, **opts):
         _setactivenocheck(name)
     elif opts.get('delete'):
         _delete(name)
+    elif opts.get('purge'):
+        if name in existing:
+            _delete(name)
+        qdir = _queuedir(name)
+        if os.path.exists(qdir):
+            shutil.rmtree(qdir)
     else:
         if name not in existing:
             raise util.Abort(_('use --create to create a new queue'))
@@ -3089,6 +3095,7 @@ cmdtable = {
              ('c', 'create', False, _('create new queue')),
              ('', 'rename', False, _('rename active queue')),
              ('', 'delete', False, _('delete reference to queue')),
+             ('', 'purge', False, _('delete queue, and remove patch dir')),
          ],
          _('[OPTION] [QUEUE]')),
 }
