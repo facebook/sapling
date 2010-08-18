@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-08-05 16:06+0200\n"
-"PO-Revision-Date: 2010-08-16 23:37+0200\n"
+"PO-Revision-Date: 2010-08-19 00:00+0200\n"
 "Last-Translator: Daniel Dumitriu <daniel.dumitriu@gmail.com>\n"
 "Language-Team: Romanian <>\n"
 "MIME-Version: 1.0\n"
@@ -84,7 +84,7 @@ msgstr ""
 
 #, python-format
 msgid " (default: %s)"
-msgstr "(implicit: %s)"
+msgstr " (implicit: %s)"
 
 msgid "Options"
 msgstr "Opțiuni"
@@ -434,15 +434,15 @@ msgstr ""
 
 #, python-format
 msgid "updating bookmark %s\n"
-msgstr ""
+msgstr "se actualizează semnul de carte %s\n"
 
 #, python-format
 msgid "not updating divergent bookmark %s\n"
-msgstr ""
+msgstr "nu se actualizează semnul de carte divergent %s\n"
 
 #, python-format
 msgid "updating bookmark %s failed!\n"
-msgstr ""
+msgstr "actualizarea semnului de carte %s a eșuat!\n"
 
 #, python-format
 msgid "remote bookmark %s not found!"
@@ -1431,9 +1431,8 @@ msgstr ""
 msgid "%s: unknown repository type"
 msgstr ""
 
-#, fuzzy
 msgid "getting files"
-msgstr "se primește %s\n"
+msgstr "se obțin fișierele"
 
 msgid "revisions"
 msgstr ""
@@ -1689,7 +1688,7 @@ msgid "filtering out empty revision\n"
 msgstr ""
 
 msgid "updating tags\n"
-msgstr ""
+msgstr "se actualizează etichetele\n"
 
 #, python-format
 msgid "%s is not a valid start revision"
@@ -3237,8 +3236,9 @@ msgstr ""
 msgid "saved queue repository parents: %s %s\n"
 msgstr ""
 
+#, fuzzy
 msgid "queue directory updating\n"
-msgstr ""
+msgstr "actualizarea directorului se introduce în coadă\n"
 
 msgid "Unable to load queue repository\n"
 msgstr ""
@@ -3435,7 +3435,7 @@ msgid "stripping applied patches from destination repository\n"
 msgstr ""
 
 msgid "updating destination repository\n"
-msgstr ""
+msgstr "se actualizează depozitul destinație\n"
 
 msgid "commit changes in the queue repository (DEPRECATED)"
 msgstr ""
@@ -4854,13 +4854,12 @@ msgstr ""
 msgid "cannot use both keepbranches and extrafn"
 msgstr ""
 
-#, fuzzy
 msgid " changesets"
-msgstr "se adaugă seturile de modificări\n"
+msgstr "seturi de modificări"
 
 #, fuzzy
 msgid "rebasing"
-msgstr "revizia"
+msgstr ""
 
 msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
 msgstr ""
@@ -5040,7 +5039,7 @@ msgid ""
 msgstr ""
 
 msgid "      ? - display help"
-msgstr ""
+msgstr "      ? - afișează ajutorul"
 
 msgid "    This command is not available when committing a merge."
 msgstr ""
@@ -5873,9 +5872,9 @@ msgid ""
 "    The files will be added to the repository at the next commit. To\n"
 "    undo an add before that, see :hg:`forget`."
 msgstr ""
-"   Fișierele vor fi adăugate în depozit la următoarea depozitare "
+"    Fișierele vor fi adăugate în depozit la următoarea depozitare "
 "('commit').\n"
-"   Pentru a anula acțiunea înainte de efectuare, folosiți :hg:`forget`."
+"    Pentru a anula acțiunea înainte de efectuare, folosiți :hg:`forget`."
 
 msgid "    If no names are given, add all files to the repository."
 msgstr ""
@@ -5905,6 +5904,8 @@ msgid ""
 "    Returns 0 if all files are successfully added.\n"
 "    "
 msgstr ""
+"    Returnează 0 dacă toate fișierele sunt adăugate cu succes.\n"
+"    "
 
 msgid "add all new files, delete all missing files"
 msgstr ""
@@ -6992,21 +6993,25 @@ msgid "global options:"
 msgstr "opțiuni globale:"
 
 msgid "use \"hg help\" for the full list of commands"
-msgstr ""
+msgstr "folosiți \"hg help\" pentru lista completă a comenzilor"
 
 msgid "use \"hg help\" for the full list of commands or \"hg -v\" for details"
 msgstr ""
+"folosiți \"hg help\" pentru lista completă a comenzilor sau \"hg -v\" pentru "
+"detalii"
 
 #, python-format
 msgid "use \"hg -v help%s\" to show aliases and global options"
 msgstr ""
+"folosiți \"hg -v help%s\" pentru afișarea alias-urilor și a opțiunilor "
+"globale"
 
 #, python-format
 msgid "use \"hg -v help %s\" to show global options"
 msgstr "folosiți \"hg -v help %s\" pentru a vedea opțiunile globale"
 
 msgid "list of commands:"
-msgstr ""
+msgstr "lista comenzilor:"
 
 #, python-format
 msgid ""
@@ -7040,6 +7045,8 @@ msgid ""
 "\n"
 "use \"hg -v help %s\" to show verbose help\n"
 msgstr ""
+"\n"
+"folosiți \"hg -v help %s\" pentru afișarea ajutorului detaliat\n"
 
 msgid "options:\n"
 msgstr "opțiuni:\n"
@@ -7062,13 +7069,13 @@ msgid "'%s' is provided by the following extension:"
 msgstr ""
 
 msgid "Mercurial Distributed SCM\n"
-msgstr ""
+msgstr "Mercurial - gestionar distribuit pentru cod sursă\n"
 
 msgid "basic commands:"
 msgstr ""
 
 msgid "enabled extensions:"
-msgstr ""
+msgstr "extensii activate:"
 
 msgid "VALUE"
 msgstr ""
@@ -7087,6 +7094,8 @@ msgid ""
 "\n"
 "additional help topics:"
 msgstr ""
+"\n"
+"subiecte de ajutor suplimentare:"
 
 msgid "identify the working copy or specified revision"
 msgstr ""
@@ -7447,7 +7456,7 @@ msgid "not found!\n"
 msgstr ""
 
 msgid "not updating, since new heads added\n"
-msgstr ""
+msgstr "nu se actualizează deoarece au fost adăugate noi capete\n"
 
 msgid "(run 'hg heads' to see heads, 'hg merge' to merge)\n"
 msgstr ""
@@ -7873,7 +7882,7 @@ msgid ""
 msgstr ""
 
 msgid "    The codes used to show the status of files are::"
-msgstr ""
+msgstr "    Codurile folosite pentru a arăta starea fișierelor sunt::"
 
 msgid ""
 "      M = modified\n"
@@ -7885,6 +7894,14 @@ msgid ""
 "      I = ignored\n"
 "        = origin of the previous file listed as A (added)"
 msgstr ""
+"      M = modificat\n"
+"      A = adăugat\n"
+"      R = înlăturat\n"
+"      C = curat\n"
+"      ! = lipsă (șters de o comandă exterioară, dar încă urmărit)\n"
+"      ? = neurmărit\n"
+"      I = ignorat\n"
+"        = originea fișierului precedent listat ca A (adăugat)"
 
 msgid "summarize working directory state"
 msgstr ""
@@ -8188,11 +8205,11 @@ msgid ""
 msgstr ""
 
 msgid "output version and copyright information"
-msgstr ""
+msgstr "afișează versiunea și informații legate de copyright"
 
 #, python-format
 msgid "Mercurial Distributed SCM (version %s)\n"
-msgstr ""
+msgstr "Mercurial - gestionar distribuit pentru cod sursă (versiunea %s)\n"
 
 msgid ""
 "\n"
@@ -8200,6 +8217,12 @@ msgid ""
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
+"\n"
+"Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> și alții\n"
+"Acesta este software liber; vezi sursa pentru condițiile de copiere. Nu "
+"există\n"
+"NICIO garanție; nici măcar pentru COMERCIALIZARE sau POTRIVIRE PENTRU\n"
+"UN SCOP ANUME.\n"
 
 msgid "repository root directory or name of overlay bundle file"
 msgstr ""
@@ -8208,31 +8231,33 @@ msgid "DIR"
 msgstr ""
 
 msgid "change working directory"
-msgstr ""
+msgstr "nu întreba, presupune 'da' pentru orice răspuns solicitat"
 
 msgid "do not prompt, assume 'yes' for any required answers"
-msgstr ""
+msgstr "schimbă directorul de lucru"
 
 msgid "suppress output"
 msgstr ""
 
+#, fuzzy
 msgid "enable additional output"
-msgstr ""
+msgstr "activează afișarea informațiilor suplimentare"
 
 msgid "set/override config option (use 'section.name=value')"
 msgstr ""
+"setează/suprascrie opțiunea de configurare (folosiți 'secțiune.nume=valoare')"
 
 msgid "CONFIG"
 msgstr ""
 
 msgid "enable debugging output"
-msgstr ""
+msgstr "activează afișarea informațiilor pentru depanare"
 
 msgid "start debugger"
-msgstr ""
+msgstr "pornește depanatorul (debugger)"
 
 msgid "set the charset encoding"
-msgstr ""
+msgstr "setează codificarea pentru setul de caractere"
 
 msgid "ENCODE"
 msgstr ""
@@ -8241,22 +8266,22 @@ msgid "MODE"
 msgstr ""
 
 msgid "set the charset encoding mode"
-msgstr ""
+msgstr "setează modul de codificare pentru setul de caractere"
 
 msgid "always print a traceback on exception"
 msgstr ""
 
 msgid "time how long the command takes"
-msgstr ""
+msgstr "durata de execuție a comenzii"
 
 msgid "print command execution profile"
-msgstr ""
+msgstr "afișează profilul executării comenzii"
 
 msgid "output version information and exit"
-msgstr ""
+msgstr "afișează informații despre versiune și ieși"
 
 msgid "display help and exit"
-msgstr ""
+msgstr "afișează ajutorul și ieși"
 
 msgid "do not perform actions, just print output"
 msgstr "acțiunea nu se execută, doar se afișează mesajele"
@@ -8709,7 +8734,7 @@ msgid "end filenames with NUL, for use with xargs"
 msgstr ""
 
 msgid "print complete paths from the filesystem root"
-msgstr ""
+msgstr "afișează căi complete de la rădăcina sistemului de fișiere"
 
 msgid "[OPTION]... [PATTERN]..."
 msgstr ""
@@ -9209,7 +9234,7 @@ msgstr ""
 
 #, python-format
 msgid "** Mercurial Distributed SCM (version %s)\n"
-msgstr ""
+msgstr "** Mercurial - gestionar distribuit pentru cod sursă (versiunea %s)\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
@@ -9237,9 +9262,9 @@ msgstr "alias-ul '%s' corespunde comenzii ambigue '%s'\n"
 msgid "malformed --config option: %r (use --config section.name=value)"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "error getting current working directory: %s"
-msgstr "directorul de lucrul al %s"
+msgstr "eroare la obținerea directorului de lucru: %s"
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
@@ -11078,7 +11103,7 @@ msgid "destination already exists"
 msgstr ""
 
 msgid "updating working directory\n"
-msgstr ""
+msgstr "se actualizează directorul de lucru\n"
 
 #, python-format
 msgid "destination directory: %s\n"
@@ -11532,7 +11557,7 @@ msgid "&Deleted"
 msgstr ""
 
 msgid "updating"
-msgstr ""
+msgstr "se actualizează"
 
 #, python-format
 msgid "update failed to remove %s: %s!\n"
@@ -11540,11 +11565,11 @@ msgstr ""
 
 #, python-format
 msgid "getting %s\n"
-msgstr "se primește %s\n"
+msgstr "se obține %s\n"
 
 #, python-format
 msgid "getting %s to %s\n"
-msgstr "se primește %s în %s\n"
+msgstr "se obține %s în %s\n"
 
 #, python-format
 msgid "warning: detected divergent renames of %s to:\n"
@@ -11861,7 +11886,7 @@ msgid "no suitable response from remote hg"
 msgstr "niciun răspuns potrivit de la hg-ul la distanță"
 
 msgid "remote: "
-msgstr "la distanță:"
+msgstr "la distanță: "
 
 msgid "unexpected response:"
 msgstr ""
