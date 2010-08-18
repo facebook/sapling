@@ -188,11 +188,7 @@ class manifest(revlog.revlog):
             if dstart != None:
                 delta.append([dstart, dend, "".join(dline)])
             # apply the delta to the addlist, and get a delta for addrevision
-            cachedelta = addlistdelta(addlist, delta)
-
-            # the delta is only valid if we've been processing the tip revision
-            if p1 != self.tip():
-                cachedelta = None
+            cachedelta = (self.rev(p1), addlistdelta(addlist, delta))
             arraytext = addlist
             text = buffer(arraytext)
 

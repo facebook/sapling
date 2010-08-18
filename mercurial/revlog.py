@@ -1142,7 +1142,7 @@ class revlog(object):
         tr.replace(self.indexfile, trindex * self._io.size)
         self._chunkclear()
 
-    def addrevision(self, text, transaction, link, p1, p2, d=None):
+    def addrevision(self, text, transaction, link, p1, p2, cachedelta=None):
         """add a revision to the log
 
         text - the revision data to add
@@ -1156,13 +1156,15 @@ class revlog(object):
             dfh = self.opener(self.datafile, "a")
         ifh = self.opener(self.indexfile, "a+")
         try:
-            return self._addrevision(text, transaction, link, p1, p2, d, ifh, dfh)
+            return self._addrevision(text, transaction, link, p1, p2,
+                                     cachedelta, ifh, dfh)
         finally:
             if dfh:
                 dfh.close()
             ifh.close()
 
-    def _addrevision(self, text, transaction, link, p1, p2, d, ifh, dfh):
+    def _addrevision(self, text, transaction, link, p1, p2,
+                     cachedelta, ifh, dfh):
         node = hash(text, p1, p2)
         if node in self.nodemap:
             return node
@@ -1172,8 +1174,14 @@ class revlog(object):
         base = self.base(prev)
         offset = self.end(prev)
         flags = 0
+        d = None
 
         if curr:
+            # can we use the cached delta?
+            if cachedelta:
+                cacherev, d = cachedelta
+                if cacherev != prev:
+                    d = None
             if not d:
                 if self._parentdelta:
                     ptext = self.revision(p1)
