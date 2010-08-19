@@ -142,6 +142,9 @@ List of filters:
 
 :shortdate: Date. Returns a date like "2006-09-18".
 
+:stringify: Any type. Turns the value into text by converting values into
+    text and concatenating them.
+
 :strip: Any text. Strips all leading and trailing whitespace.
 
 :tabindent: Any text. Returns the text, with every line except the

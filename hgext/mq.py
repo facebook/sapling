@@ -1488,8 +1488,11 @@ class queue(object):
             return True
 
     def qrepo(self, create=False):
+        ui = self.ui.copy()
+        ui.setconfig('paths', 'default', '', overlay=False)
+        ui.setconfig('paths', 'default-push', '', overlay=False)
         if create or os.path.isdir(self.join(".hg")):
-            return hg.repository(self.ui, path=self.path, create=create)
+            return hg.repository(ui, path=self.path, create=create)
 
     def restore(self, repo, rev, delete=None, qupdate=None):
         desc = repo[rev].description().strip()
