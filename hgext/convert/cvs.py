@@ -5,9 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, locale, re, socket, errno
+import os, re, socket, errno
 from cStringIO import StringIO
-from mercurial import util
+from mercurial import encoding, util
 from mercurial.i18n import _
 
 from common import NoRepo, commit, converter_source, checktool
@@ -30,7 +30,7 @@ class convert_cvs(converter_source):
         self.socket = None
         self.cvsroot = open(os.path.join(cvs, "Root")).read()[:-1]
         self.cvsrepo = open(os.path.join(cvs, "Repository")).read()[:-1]
-        self.encoding = locale.getpreferredencoding()
+        self.encoding = encoding.encoding
 
         self._connect()
 
