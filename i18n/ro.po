@@ -6,7 +6,7 @@
 #
 # Glosar de traduceri
 # ===================
-# abort		a întrerupe, a renunța
+# abort		a abandona, a întrerupe, a renunța
 # branch	ramură
 # bundle	pachet (fascicul), a crea un pachet
 # change	modificare
@@ -27,12 +27,18 @@
 # resolve	a determina [[a rezolva]]
 # manage	a gestiona
 # manifest	manifest (și în română, ca "declarație/listă de mărfuri")
+# notify        ??? a înștiința
 # pull		(pull), a aduce, a trage, a extrage,
 # push		(push), a duce, a împinge, a difuza, a distribui
 # retrieve	a recupera, a regăsi
+# rebase        ???
+# rollback      ???
+# SCM           ??? Source Control Management/Manager
 # switch	a comuta
+# suppress      ???
 # tag		etichetă / a eticheta
 # tip		vârf
+# traceback     ???
 # track		a urmări
 # update	a actualiza
 #
@@ -72,7 +78,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-08-05 16:06+0200\n"
-"PO-Revision-Date: 2010-08-19 00:00+0200\n"
+"PO-Revision-Date: 2010-08-19 12:40+0200\n"
 "Last-Translator: Daniel Dumitriu <daniel.dumitriu@gmail.com>\n"
 "Language-Team: Romanian <>\n"
 "MIME-Version: 1.0\n"
@@ -772,8 +778,9 @@ msgstr ""
 msgid "command to display child changesets"
 msgstr ""
 
+#, fuzzy
 msgid "show the children of the given or working directory revision"
-msgstr ""
+msgstr "afișează copiii reviziei date sau a celei din directorul curent"
 
 msgid ""
 "    Print the children of the working directory's revisions. If a\n"
@@ -785,7 +792,7 @@ msgid ""
 msgstr ""
 
 msgid "show children of the specified revision"
-msgstr ""
+msgstr "afișează fiii reviziei specificate"
 
 msgid "hg children [-r REV] [FILE]"
 msgstr ""
@@ -1357,10 +1364,10 @@ msgid "specify cvsroot"
 msgstr ""
 
 msgid "show parent changesets"
-msgstr ""
+msgstr "afișează seturile de modificări părinte"
 
 msgid "show current changeset in ancestor branches"
-msgstr ""
+msgstr "afișează setul de modificări curent în ramurile strămoș"
 
 msgid "ignored for compatibility"
 msgstr ""
@@ -2061,7 +2068,7 @@ msgstr ""
 
 #, python-format
 msgid "hg %s [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg %s [OPȚIUNE]... [FIȘIER]..."
 
 msgid "pull, update and merge in one command"
 msgstr ""
@@ -2100,10 +2107,10 @@ msgid ""
 msgstr ""
 
 msgid "outstanding uncommitted merge"
-msgstr ""
+msgstr "fuziune nedepozitată în suspensie"
 
 msgid "outstanding uncommitted changes"
-msgstr ""
+msgstr "modificări nedepozitate în suspensie"
 
 msgid "working directory is missing some files"
 msgstr ""
@@ -2234,7 +2241,7 @@ msgid "commit message"
 msgstr ""
 
 msgid "hg sign [OPTION]... [REVISION]..."
-msgstr ""
+msgstr "hg sign [OPȚIUNE]... [REVIZIE].."
 
 msgid "hg sigcheck REVISION"
 msgstr ""
@@ -2256,7 +2263,7 @@ msgid "--graph option is incompatible with --%s"
 msgstr ""
 
 msgid "show revision history alongside an ASCII revision graph"
-msgstr ""
+msgstr "afișează istoricul reviziilor împreună cu un graf ASCII al reviziilor"
 
 msgid ""
 "    Print a revision history alongside a revision graph drawn with\n"
@@ -2843,7 +2850,7 @@ msgid ""
 msgstr ""
 
 msgid "show files configured for keyword expansion"
-msgstr ""
+msgstr "afișează fișierele configurate pentru expandarea cuvintelor cheie"
 
 msgid ""
 "    List which files in the working directory are matched by the\n"
@@ -2887,8 +2894,9 @@ msgid ""
 "    "
 msgstr ""
 
+#, fuzzy
 msgid "show default keyword template maps"
-msgstr ""
+msgstr "afișează corespondențele șabloanelor implicite de cuvinte cheie"
 
 msgid "read maps from rcfile"
 msgstr ""
@@ -2903,10 +2911,10 @@ msgid "show keyword status flags of all files"
 msgstr ""
 
 msgid "show files excluded from expansion"
-msgstr ""
+msgstr "afișează fișierele excluse de la expandare"
 
 msgid "only show unknown (not tracked) files"
-msgstr ""
+msgstr "afișează doar fișierele necunoscute (neurmărite)"
 
 msgid "hg kwfiles [OPTION]... [FILE]..."
 msgstr ""
@@ -3905,7 +3913,7 @@ msgid "print first line of patch header"
 msgstr ""
 
 msgid "show only the last patch"
-msgstr ""
+msgstr "afișează doar ultimul patch"
 
 msgid "hg qapplied [-1] [-s] [PATCH]"
 msgstr ""
@@ -4143,7 +4151,7 @@ msgid "hg qtop [-s]"
 msgstr ""
 
 msgid "show only the first patch"
-msgstr ""
+msgstr "afișează doar primul patch"
 
 msgid "hg qunapplied [-1] [-s] [PATCH]"
 msgstr ""
@@ -4164,7 +4172,7 @@ msgid "delete reference to queue"
 msgstr ""
 
 msgid "[OPTION] [QUEUE]"
-msgstr ""
+msgstr "[OPȚIUNE] [COADĂ]"
 
 msgid "hooks for sending email notifications at commit/push time"
 msgstr ""
@@ -4644,7 +4652,7 @@ msgid "hg email [OPTION]... [DEST]..."
 msgstr ""
 
 msgid "show progress bars for some actions"
-msgstr ""
+msgstr "afișează bare de progres pentru anumite acțiuni"
 
 msgid ""
 "This extension uses the progress information logged by hg commands\n"
@@ -4944,6 +4952,8 @@ msgid ""
 "hg rebase [-s REV | -b REV] [-d REV] [options]\n"
 "hg rebase {-a|-c}"
 msgstr ""
+"hg rebase [-s REV | -b REV] [-d REV] [opțiuni]\n"
+"hg rebase {-a|-c}"
 
 msgid "commands to interactively select changes for commit/qrefresh"
 msgstr ""
@@ -5060,7 +5070,7 @@ msgid "patch failed to apply"
 msgstr ""
 
 msgid "hg record [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg record [OPȚIUNE]... [FIȘIER]..."
 
 msgid "hg qrecord [OPTION]... PATCH [FILE]..."
 msgstr ""
@@ -5305,12 +5315,19 @@ msgid ""
 "q: cancel transplant\n"
 "?: show this help\n"
 msgstr ""
+"y: transplantează acest set de modificări\n"
+"n: sari acest set de modificări\n"
+"m: fuzionează la acest set de modificări\n"
+"p: afișează patch-ul\n"
+"c: depozitează seturile de modificări selectate\n"
+"q: anulează transplantul\n"
+"?: afișează acest ajutor\n"
 
 msgid "apply changeset? [ynmpcq?]:"
 msgstr ""
 
 msgid "no such option\n"
-msgstr ""
+msgstr "opțiune inexistentă\n"
 
 msgid "transplant changesets from another branch"
 msgstr ""
@@ -5380,10 +5397,10 @@ msgid "no revision checked out"
 msgstr ""
 
 msgid "outstanding uncommitted merges"
-msgstr ""
+msgstr "fuziuni nedepozitate în suspensie"
 
 msgid "outstanding local changes"
-msgstr ""
+msgstr "modificări locale în suspensie"
 
 msgid "pull patches from REPO"
 msgstr ""
@@ -5937,8 +5954,11 @@ msgstr ""
 msgid "similarity must be between 0 and 100"
 msgstr ""
 
+#, fuzzy
 msgid "show changeset information by line for each file"
 msgstr ""
+"afișează informațiile despre setul de modificări pentru fiecare linie a "
+"fiecărui fișier"
 
 msgid ""
 "    List changes in files, showing the revision id responsible for\n"
@@ -6147,7 +6167,7 @@ msgid "Testing changeset %d:%s (%d changesets remaining, ~%d tests)\n"
 msgstr ""
 
 msgid "set or show the current branch name"
-msgstr ""
+msgstr "setează sau afișează numele ramurii curente"
 
 msgid ""
 "    With no argument, show the current branch name. With one argument,\n"
@@ -6571,13 +6591,13 @@ msgid "%s command %s"
 msgstr ""
 
 msgid "list all available commands and options"
-msgstr ""
+msgstr "afișează toate comenzile și opțiunile disponibile"
 
 msgid "returns the completion list associated with the given command"
 msgstr ""
 
 msgid "show information detected about current filesystem"
-msgstr ""
+msgstr "afișează informațiile detectate despre sistemul de fișiere curent"
 
 msgid "rebuild the dirstate as it would look like for the given revision"
 msgstr ""
@@ -6605,7 +6625,7 @@ msgid ".hg/dirstate inconsistent with current parent's manifest"
 msgstr ""
 
 msgid "show combined config settings from all hgrc files"
-msgstr ""
+msgstr "afișează setările de configurare combinate din toate fișierele hgrc"
 
 msgid "    With no arguments, print names and values of all config items."
 msgstr ""
@@ -6656,7 +6676,7 @@ msgid ""
 msgstr ""
 
 msgid "show the contents of the current dirstate"
-msgstr ""
+msgstr "afișează conținutul dirstate-ului curent"
 
 #, python-format
 msgid "copy: %s -> %s\n"
@@ -6779,7 +6799,7 @@ msgid "%s not renamed\n"
 msgstr ""
 
 msgid "show how files match on given patterns"
-msgstr ""
+msgstr "afișează modul în care fișierele se potrivesc cu șabloanele date"
 
 msgid "diff repository (or selected files)"
 msgstr ""
@@ -6925,8 +6945,9 @@ msgstr ""
 msgid "grep: invalid match pattern: %s\n"
 msgstr ""
 
+#, fuzzy
 msgid "show current repository heads or show branch heads"
-msgstr ""
+msgstr "afișează capetele curente ale depozitului sau capetele de ramură"
 
 msgid "    With no arguments, show all repository branch heads."
 msgstr ""
@@ -6974,6 +6995,7 @@ msgstr ""
 
 msgid "show help for a given topic or a help overview"
 msgstr ""
+"afișează ajutorul pentru un anumit subiect sau un rezumat al ajutorului"
 
 msgid ""
 "    With no arguments, print a list of commands with short help messages."
@@ -7008,7 +7030,7 @@ msgstr ""
 
 #, python-format
 msgid "use \"hg -v help %s\" to show global options"
-msgstr "folosiți \"hg -v help %s\" pentru a vedea opțiunile globale"
+msgstr "folosiți \"hg -v help %s\" pentru afișarea opțiunilor globale"
 
 msgid "list of commands:"
 msgstr "lista comenzilor:"
@@ -7185,7 +7207,7 @@ msgid "no diffs found"
 msgstr ""
 
 msgid "show new changesets found in source"
-msgstr ""
+msgstr "afișează seturile de modificări noi găsite în sursă"
 
 msgid ""
 "    Show new changesets found in the specified path/URL or the default\n"
@@ -7388,7 +7410,7 @@ msgid ""
 msgstr ""
 
 msgid "show changesets not found in the destination"
-msgstr ""
+msgstr "afișează seturile de modificări negăsite în destinație"
 
 msgid ""
 "    Show changesets not found in the specified destination repository\n"
@@ -7405,7 +7427,7 @@ msgid ""
 msgstr ""
 
 msgid "show the parents of the working directory or revision"
-msgstr ""
+msgstr "afișează părinții directorului de lucru sau al reviziei"
 
 msgid ""
 "    Print the working directory's parent revisions. If a revision is\n"
@@ -7423,7 +7445,7 @@ msgid "'%s' not found in manifest!"
 msgstr "'%s' nu a fost găsit în manifest!"
 
 msgid "show aliases for remote repositories"
-msgstr ""
+msgstr "afișează alias-urile pentru depozitele la distanță"
 
 msgid ""
 "    Show definition of symbolic path name NAME. If no name is given,\n"
@@ -7851,7 +7873,7 @@ msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
 msgstr ""
 
 msgid "show changed files in the working directory"
-msgstr ""
+msgstr "afișează fișierele modificate în directorul de lucru"
 
 msgid ""
 "    Show status of files in the repository. If names are given, only\n"
@@ -8078,7 +8100,7 @@ msgid ""
 msgstr ""
 
 msgid "show the tip revision"
-msgstr ""
+msgstr "afișează revizia vârf"
 
 msgid ""
 "    The tip revision (usually just called the tip) is the changeset\n"
@@ -8336,7 +8358,7 @@ msgid "omit dates from diff headers"
 msgstr ""
 
 msgid "show which function each change is in"
-msgstr ""
+msgstr "afișează funcția în care se află fiecare modificare"
 
 msgid "produce a diff that undoes the changes"
 msgstr ""
@@ -8360,7 +8382,7 @@ msgid "guess renamed files by similarity (0<=s<=100)"
 msgstr ""
 
 msgid "[OPTION]... [FILE]..."
-msgstr ""
+msgstr "[OPȚIUNE]... [FIȘIER]..."
 
 msgid "annotate the specified revision"
 msgstr ""
@@ -8387,7 +8409,7 @@ msgid "list the changeset"
 msgstr ""
 
 msgid "show line number at the first appearance"
-msgstr ""
+msgstr "afișează numărul liniei la prima apariție"
 
 msgid "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."
 msgstr ""
@@ -8408,7 +8430,7 @@ msgid "type of distribution to create"
 msgstr ""
 
 msgid "[OPTION]... DEST"
-msgstr ""
+msgstr "[OPȚIUNE]... DEST"
 
 msgid "merge with old dirstate parent after backout"
 msgstr ""
@@ -8420,7 +8442,7 @@ msgid "revision to backout"
 msgstr ""
 
 msgid "[OPTION]... [-r] REV"
-msgstr ""
+msgstr "[OPȚIUNE]... [-r] REV"
 
 msgid "reset bisect state"
 msgstr ""
@@ -8453,10 +8475,10 @@ msgid "[-fC] [NAME]"
 msgstr ""
 
 msgid "show only branches that have unmerged heads"
-msgstr ""
+msgstr "afișează doar ramurile care au capete nefuzionate"
 
 msgid "show normal and closed branches"
-msgstr ""
+msgstr "afișează ramurile normale și închise"
 
 msgid "[-ac]"
 msgstr ""
@@ -8492,7 +8514,7 @@ msgid "apply any matching decode filter"
 msgstr ""
 
 msgid "[OPTION]... FILE..."
-msgstr ""
+msgstr "[OPȚIUNE]... FIȘIER"
 
 msgid "the clone will include an empty working copy (only a repository)"
 msgstr "clona va include o copie de lucru vidă (doar un depozit)"
@@ -8507,7 +8529,7 @@ msgid "clone only the specified branch"
 msgstr "clonează doar ramura specificată"
 
 msgid "[OPTION]... SOURCE [DEST]"
-msgstr ""
+msgstr "[OPȚIUNE]... SURSĂ [DEST]"
 
 msgid "mark new/missing files as added/removed before committing"
 msgstr ""
@@ -8523,7 +8545,7 @@ msgid "forcibly copy over an existing managed file"
 msgstr ""
 
 msgid "[OPTION]... [SOURCE]... DEST"
-msgstr ""
+msgstr "[OPȚIUNE]... [SURSĂ]... DEST"
 
 msgid "[INDEX] REV1 REV2"
 msgstr ""
@@ -8541,13 +8563,13 @@ msgid "add new file at each rev"
 msgstr ""
 
 msgid "[OPTION]... TEXT"
-msgstr ""
+msgstr "[OPȚIUNE]... TEXT"
 
 msgid "[COMMAND]"
 msgstr ""
 
 msgid "show the command options"
-msgstr ""
+msgstr "afișează opțiunile comenzii"
 
 msgid "[-o] CMD"
 msgstr ""
@@ -8565,7 +8587,7 @@ msgid "separate elements by spaces"
 msgstr ""
 
 msgid "[OPTION]... [FILE [REV]...]"
-msgstr ""
+msgstr "[OPȚIUNE]... [FIȘIER [REV]...]"
 
 msgid "try extended date formats"
 msgstr ""
@@ -8601,13 +8623,13 @@ msgid "do not display the saved mtime"
 msgstr ""
 
 msgid "[OPTION]..."
-msgstr ""
+msgstr "[OPȚIUNE]..."
 
 msgid "revision to check"
 msgstr ""
 
 msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
-msgstr ""
+msgstr "[OPȚIUNE]... ([-c REV] | [-r REV1 [-r REV2]]) [FIȘIER]..."
 
 msgid "diff against the second parent"
 msgstr ""
@@ -8616,7 +8638,7 @@ msgid "revisions to export"
 msgstr ""
 
 msgid "[OPTION]... [-o OUTFILESPEC] REV..."
-msgstr ""
+msgstr "[OPȚIUNE]... [-o SPECFIȘIEȘIRE] REV..."
 
 msgid "end fields with NUL"
 msgstr ""
@@ -8641,20 +8663,21 @@ msgstr ""
 msgid "only search files changed within revision range"
 msgstr ""
 
+#, fuzzy
 msgid "[OPTION]... PATTERN [FILE]..."
-msgstr ""
+msgstr "[OPȚIUNE]... TIPAR [FIȘIER]..."
 
 msgid "show only heads which are descendants of REV"
-msgstr ""
+msgstr "afișează doar capetele care sunt descendenți ai REV"
 
 msgid "show topological heads only"
-msgstr ""
+msgstr "afișează doar capetele topologice"
 
 msgid "show active branchheads only [DEPRECATED]"
-msgstr ""
+msgstr "afișează doar capetele de ramură active [ÎNVECHIT]"
 
 msgid "show normal and closed branch heads"
-msgstr ""
+msgstr " afișează capetele de ramură normale și închise"
 
 msgid "[-ac] [-r REV] [REV]..."
 msgstr ""
@@ -8666,16 +8689,16 @@ msgid "identify the specified revision"
 msgstr ""
 
 msgid "show local revision number"
-msgstr ""
+msgstr "afișează numărul de revizie local"
 
 msgid "show global revision id"
-msgstr "arată id-ul global al reviziei"
+msgstr "afișează id-ul global al reviziei"
 
 msgid "show branch"
-msgstr ""
+msgstr "afișează ramura"
 
 msgid "show tags"
-msgstr ""
+msgstr "afișează etichetele"
 
 msgid "[-nibt] [-r REV] [SOURCE]"
 msgstr ""
@@ -8704,13 +8727,13 @@ msgid "use any branch information in patch (implied by --exact)"
 msgstr ""
 
 msgid "[OPTION]... PATCH..."
-msgstr ""
+msgstr "[OPȚIUNE]... PATCH"
 
 msgid "run even if remote repository is unrelated"
 msgstr ""
 
 msgid "show newest record first"
-msgstr ""
+msgstr "afișează începând cu cea mai nouă înregistrare"
 
 msgid "file to store the bundles into"
 msgstr ""
@@ -8736,8 +8759,9 @@ msgstr ""
 msgid "print complete paths from the filesystem root"
 msgstr "afișează căi complete de la rădăcina sistemului de fișiere"
 
+#, fuzzy
 msgid "[OPTION]... [PATTERN]..."
-msgstr ""
+msgstr "[OPȚIUNE]... [TIPAR]..."
 
 msgid "only follow the first parent of merge changesets"
 msgstr "urmărește doar primul părinte al seturilor de modificări de fuziune"
@@ -8766,13 +8790,13 @@ msgstr ""
 "(ÎNVECHIT)"
 
 msgid "show changesets within the given named branch"
-msgstr ""
+msgstr "afișează seturile de modificări din cadrul ramurii denumite date"
 
 msgid "do not display revision or any of its ancestors"
 msgstr "nu afișa revizia sau oricare din strămoșii ei"
 
 msgid "[OPTION]... [FILE]"
-msgstr ""
+msgstr "[OPȚIUNE]... [FIȘIER]"
 
 msgid "revision to display"
 msgstr ""
@@ -8802,7 +8826,7 @@ msgid "[-M] [-p] [-n] [-f] [-r REV]... [DEST]"
 msgstr ""
 
 msgid "show parents of the specified revision"
-msgstr ""
+msgstr "afișează părinții reviziei specificate"
 
 msgid "[-r REV] [FILE]"
 msgstr ""
@@ -8838,7 +8862,7 @@ msgid "record a rename that has already occurred"
 msgstr ""
 
 msgid "[OPTION]... SOURCE... DEST"
-msgstr ""
+msgstr "[OPȚIUNE]... SURSĂ... DEST"
 
 msgid "select all unresolved files"
 msgstr ""
@@ -8868,7 +8892,7 @@ msgid "do not save backup copies of files"
 msgstr ""
 
 msgid "[OPTION]... [-r REV] [NAME]..."
-msgstr ""
+msgstr "[OPȚIUNE]... [-r REV] [NUME]..."
 
 msgid "name of access log file to write to"
 msgstr ""
@@ -8893,6 +8917,7 @@ msgstr ""
 
 msgid "name to show in web pages (default: working directory)"
 msgstr ""
+"numele care va fi afișat în paginile web (implicit: directorul de lucru)"
 
 msgid "name of the hgweb config file (serve more than one repository)"
 msgstr ""
@@ -8915,8 +8940,9 @@ msgstr ""
 msgid "SSL certificate file"
 msgstr ""
 
+#, fuzzy
 msgid "show untrusted configuration options"
-msgstr ""
+msgstr "afișează opțiunile de configurare 'untrusted'"
 
 msgid "[-u] [NAME]..."
 msgstr ""
@@ -8925,34 +8951,34 @@ msgid "check for push and pull"
 msgstr ""
 
 msgid "show status of all files"
-msgstr ""
+msgstr "afișează starea tuturor fișierelor"
 
 msgid "show only modified files"
-msgstr ""
+msgstr "afișează doar fișierele modificate"
 
 msgid "show only added files"
-msgstr ""
+msgstr "afișează doar fișierele adăugate"
 
 msgid "show only removed files"
-msgstr ""
+msgstr "afișează doar fișierele înlăturate"
 
 msgid "show only deleted (but tracked) files"
-msgstr ""
+msgstr "afișează doar fișierele șterse (dar urmărite)"
 
 msgid "show only files without changes"
-msgstr ""
+msgstr "afișează doar fișierele fără modificări"
 
 msgid "show only unknown (not tracked) files"
-msgstr ""
+msgstr "afișează doar fișierele necunoscute (neurmărite)"
 
 msgid "show only ignored files"
-msgstr ""
+msgstr "afișează doar fișierele ignorate"
 
 msgid "show source of copied files"
-msgstr ""
+msgstr "afișează sursa fișierelor copiate"
 
 msgid "show difference from revision"
-msgstr ""
+msgstr "afișează diferențele față de revizie"
 
 msgid "list the changed files of a revision"
 msgstr ""
@@ -11587,6 +11613,8 @@ msgstr ""
 
 msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
 msgstr ""
+"modificări nedepozitate în suspensie (folosiți 'hg status' pentru a afișa "
+"modificările)"
 
 msgid ""
 "crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard "
