@@ -1056,7 +1056,7 @@ class revlog(object):
 
     def revision(self, node):
         """return an uncompressed revision of a given node"""
-        cachedrev = nullrev
+        cachedrev = None
         if node == nullid:
             return ""
         if self._cache:
