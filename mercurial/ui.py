@@ -593,6 +593,15 @@ class ui(object):
         else:
             self.debug('%s:%s %s%s\n' % (topic, item, pos, unit))
 
+    def log(self, service, message):
+        '''hook for logging facility extensions
+
+        service should be a readily-identifiable subsystem, which will
+        allow filtering.
+        message should be a newline-terminated string to log.
+        '''
+        pass
+
     def label(self, msg, label):
         '''style msg based on supplied label
 
