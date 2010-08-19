@@ -23,8 +23,6 @@ _compress = zlib.compress
 _decompress = zlib.decompress
 _sha = util.sha1
 
-_cached, _uncached = 0, 0
-
 # revlog header flags
 REVLOGV0 = 0
 REVLOGNG = 1
@@ -1079,14 +1077,8 @@ class revlog(object):
         cachehit, base, chain = self.deltachain(rev, cachedrev)
 
         # do we have useful data cached?
-        if cachehit and self._cache:
-            global _cached
-            _cached += 1
+        if cachehit:
             text = self._cache[2]
-        else:
-            global _uncached
-            _uncached += 1
-
 
         # drop cache to save memory
         self._cache = None
