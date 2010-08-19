@@ -1025,25 +1025,6 @@ class revlog(object):
         else:
             return rev - 1
 
-
-    def deltachain(self, rev, cache):
-        """return chain of revisions to construct a given revision"""
-        chain = []
-        check = False
-        index = self.index
-        e = index[rev]
-        while rev != e[3] and rev != cache:
-            chain.append(rev)
-            if e[0] & REVIDX_PARENTDELTA:
-                rev = e[5]
-            else:
-                rev -= 1
-            e = index[rev]
-        chain.reverse()
-        if rev == cache:
-            check = True
-        return check, rev, chain
-
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
         if rev1 != nullrev and self.deltaparent(rev2) == rev1:
@@ -1074,10 +1055,22 @@ class revlog(object):
 
         # build delta chain
         self._loadindex(base, rev + 1)
-        cachehit, base, chain = self.deltachain(rev, cachedrev)
+        chain = []
+        index = self.index # for performance
+        iterrev = rev
+        e = index[iterrev]
+        while iterrev != base and iterrev != cachedrev:
+            chain.append(iterrev)
+            if e[0] & REVIDX_PARENTDELTA:
+                iterrev = e[5]
+            else:
+                iterrev -= 1
+            e = index[iterrev]
+        chain.reverse()
+        base = iterrev
 
-        # do we have useful data cached?
-        if cachehit:
+        if iterrev == cachedrev:
+            # cache hit
             text = self._cache[2]
 
         # drop cache to save memory
