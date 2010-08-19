@@ -23,15 +23,6 @@ from win32com.shell import shell, shellcon
 def os_link(src, dst):
     try:
         win32file.CreateHardLink(dst, src)
-        # CreateHardLink sometimes succeeds on mapped drives but
-        # following nlinks() returns 1. Check it now and bail out.
-        if nlinks(src) < 2:
-            try:
-                win32file.DeleteFile(dst)
-            except:
-                pass
-            # Fake hardlinking error
-            raise OSError(errno.EINVAL, 'Hardlinking not supported')
     except pywintypes.error:
         raise OSError(errno.EINVAL, 'target implements hardlinks improperly')
     except NotImplementedError: # Another fake error win Win98
@@ -54,9 +45,19 @@ def nlinks(pathname):
     """Return number of hardlinks for the given file."""
     res = _getfileinfo(pathname)
     if res is not None:
-        return res[7]
+        links = res[7]
     else:
-        return os.lstat(pathname).st_nlink
+        links = os.lstat(pathname).st_nlink
+    if links < 2:
+        # Known to be wrong for most network drives
+        dirname = os.path.dirname(pathname)
+        if not dirname:
+            dirname = '.'
+        dt = win32file.GetDriveType(dirname + '\\')
+        if dt == 4 or dt == 1:
+            # Fake hardlink to force COW for network drives
+            links = 2
+    return links
 
 def samefile(fpath1, fpath2):
     """Returns whether fpath1 and fpath2 refer to the same file. This is only
