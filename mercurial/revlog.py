@@ -1056,26 +1056,30 @@ class revlog(object):
 
     def revision(self, node):
         """return an uncompressed revision of a given node"""
-        cache = nullrev
+        cachedrev = nullrev
         if node == nullid:
             return ""
         if self._cache:
-            cache = self._cache[1]
             if self._cache[0] == node:
                 return self._cache[2]
+            cachedrev = self._cache[1]
 
         # look up what we need to read
         text = None
         rev = self.rev(node)
-        cache, base, chain = self.deltachain(rev, cache)
+        base = self.base(rev)
 
         # check rev flags
         if self.flags(rev) & ~REVIDX_KNOWN_FLAGS:
             raise RevlogError(_('incompatible revision flag %x') %
                               (self.flags(rev) & ~REVIDX_KNOWN_FLAGS))
 
+        # build delta chain
+        self._loadindex(base, rev + 1)
+        cachehit, base, chain = self.deltachain(rev, cachedrev)
+
         # do we have useful data cached?
-        if cache and self._cache:
+        if cachehit and self._cache:
             global _cached
             _cached += 1
             text = self._cache[2]
@@ -1087,7 +1091,6 @@ class revlog(object):
         # drop cache to save memory
         self._cache = None
 
-        self._loadindex(base, rev + 1)
         self._chunkraw(base, rev)
         if text is None:
             text = self._chunk(base)
