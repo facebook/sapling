@@ -50,6 +50,13 @@ def state(ctx, ui):
             kind = kind[1:]
 
         for pattern, repl in p.items('subpaths'):
+            # Turn r'C:\foo\bar' into r'C:\\foo\\bar' since re.sub
+            # does a string decode.
+            repl = repl.encode('string-escape')
+            # However, we still want to allow back references to go
+            # through unharmed, so we turn r'\\1' into r'\1'. Again,
+            # extra escapes are needed because re.sub string decodes.
+            repl = re.sub(r'\\\\([0-9]+)', r'\\\1', repl)
             try:
                 src = re.sub(pattern, repl, src, 1)
             except re.error, e:

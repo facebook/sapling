@@ -13,14 +13,12 @@ hg debugsub with no remapping
 
 hg debugsub with remapping
 
-  $ cat > .hg/hgrc <<EOF
-  > [subpaths]
-  > http://example.net = ssh://localhost
-  > EOF
+  $ echo '[subpaths]' > .hg/hgrc
+  $ echo 'http://example.net/lib(.*) = C:\libs\\1-lib\' >> .hg/hgrc
 
   $ hg debugsub
   path sub
-   source   ssh://localhost/libfoo
+   source   C:\libs\foo-lib\
    revision 
 
 test bad subpaths pattern
