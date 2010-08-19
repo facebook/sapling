@@ -78,7 +78,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-08-05 16:06+0200\n"
-"PO-Revision-Date: 2010-08-19 23:26+0200\n"
+"PO-Revision-Date: 2010-08-19 23:40+0200\n"
 "Last-Translator: Daniel Dumitriu <daniel.dumitriu@gmail.com>\n"
 "Language-Team: Romanian <>\n"
 "MIME-Version: 1.0\n"
@@ -5773,7 +5773,7 @@ msgstr "set de modificări:   %d:%s\n"
 
 #, python-format
 msgid "branch:      %s\n"
-msgstr ""
+msgstr "ramură:              %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
@@ -5781,11 +5781,11 @@ msgstr "etichetă:            %s\n"
 
 #, python-format
 msgid "parent:      %d:%s\n"
-msgstr ""
+msgstr "părinte:             %d:%s\n"
 
 #, python-format
 msgid "manifest:    %d:%s\n"
-msgstr ""
+msgstr "manifest:            %d:%s\n"
 
 #, python-format
 msgid "user:        %s\n"
@@ -5796,10 +5796,10 @@ msgid "date:        %s\n"
 msgstr "dată:                %s\n"
 
 msgid "files+:"
-msgstr ""
+msgstr "fișiere+:"
 
 msgid "files-:"
-msgstr ""
+msgstr "fișiere-:"
 
 msgid "files:"
 msgstr "fișiere:"
@@ -5810,11 +5810,11 @@ msgstr "fișiere:             %s\n"
 
 #, python-format
 msgid "copies:      %s\n"
-msgstr ""
+msgstr "copii:               %s\n"
 
 #, python-format
 msgid "extra:       %s=%s\n"
-msgstr ""
+msgstr "extra:         %s=%s\n"
 
 msgid "description:\n"
 msgstr "descriere:\n"
@@ -8276,10 +8276,10 @@ msgid "DIR"
 msgstr "DIR"
 
 msgid "change working directory"
-msgstr "nu întreba, presupune 'da' pentru orice răspuns solicitat"
+msgstr "schimbă directorul de lucru "
 
 msgid "do not prompt, assume 'yes' for any required answers"
-msgstr "schimbă directorul de lucru"
+msgstr "nu întreba, presupune 'da' pentru orice răspuns solicitat"
 
 msgid "suppress output"
 msgstr "suprimă afișarea"
