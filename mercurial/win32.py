@@ -23,15 +23,6 @@ from win32com.shell import shell, shellcon
 def os_link(src, dst):
     try:
         win32file.CreateHardLink(dst, src)
-        # CreateHardLink sometimes succeeds on mapped drives but
-        # following nlinks() returns 1. Check it now and bail out.
-        if nlinks(src) < 2:
-            try:
-                win32file.DeleteFile(dst)
-            except:
-                pass
-            # Fake hardlinking error
-            raise OSError(errno.EINVAL, 'Hardlinking not supported')
     except pywintypes.error:
         raise OSError(errno.EINVAL, 'target implements hardlinks improperly')
     except NotImplementedError: # Another fake error win Win98
@@ -43,41 +34,41 @@ def _getfileinfo(pathname):
         fh = win32file.CreateFile(pathname,
             win32file.GENERIC_READ, win32file.FILE_SHARE_READ,
             None, win32file.OPEN_EXISTING, 0, None)
-        try:
-            return win32file.GetFileInformationByHandle(fh)
-        finally:
-            fh.Close()
     except pywintypes.error:
-        return None
+        raise OSError(errno.ENOENT, 'The system cannot find the file specified')
+    try:
+        return win32file.GetFileInformationByHandle(fh)
+    finally:
+        fh.Close()
 
 def nlinks(pathname):
     """Return number of hardlinks for the given file."""
-    res = _getfileinfo(pathname)
-    if res is not None:
-        return res[7]
-    else:
-        return os.lstat(pathname).st_nlink
+    links = _getfileinfo(pathname)[7]
+    if links < 2:
+        # Known to be wrong for most network drives
+        dirname = os.path.dirname(pathname)
+        if not dirname:
+            dirname = '.'
+        dt = win32file.GetDriveType(dirname + '\\')
+        if dt == 4 or dt == 1:
+            # Fake hardlink to force COW for network drives
+            links = 2
+    return links
 
 def samefile(fpath1, fpath2):
     """Returns whether fpath1 and fpath2 refer to the same file. This is only
     guaranteed to work for files, not directories."""
     res1 = _getfileinfo(fpath1)
     res2 = _getfileinfo(fpath2)
-    if res1 is not None and res2 is not None:
-        # Index 4 is the volume serial number, and 8 and 9 contain the file ID
-        return res1[4] == res2[4] and res1[8] == res2[8] and res1[9] == res2[9]
-    else:
-        return False
+    # Index 4 is the volume serial number, and 8 and 9 contain the file ID
+    return res1[4] == res2[4] and res1[8] == res2[8] and res1[9] == res2[9]
 
 def samedevice(fpath1, fpath2):
     """Returns whether fpath1 and fpath2 are on the same device. This is only
     guaranteed to work for files, not directories."""
     res1 = _getfileinfo(fpath1)
     res2 = _getfileinfo(fpath2)
-    if res1 is not None and res2 is not None:
-        return res1[4] == res2[4]
-    else:
-        return False
+    return res1[4] == res2[4]
 
 def testpid(pid):
     '''return True if pid is still running or unable to
