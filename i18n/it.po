@@ -12341,17 +12341,14 @@ msgstr "base sconosciuta"
 msgid "consistency error adding group"
 msgstr ""
 
-#, fuzzy
 msgid "unterminated string"
-msgstr "stringa vuota\n"
+msgstr ""
 
-#, fuzzy
 msgid "syntax error"
-msgstr "%s errore:\n"
+msgstr ""
 
-#, fuzzy
 msgid "missing argument"
-msgstr "argomenti non validi"
+msgstr ""
 
 #, python-format
 msgid "can't use %s here"
@@ -12360,9 +12357,9 @@ msgstr ""
 msgid "can't use a list in this context"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "not a function: %s"
-msgstr "ora a: %s\n"
+msgstr ""
 
 msgid "limit wants two arguments"
 msgstr ""
@@ -12370,38 +12367,32 @@ msgstr ""
 msgid "limit wants a number"
 msgstr ""
 
-#, fuzzy
 msgid "limit expects a number"
-msgstr "numero di revisione atteso"
+msgstr ""
 
-#, fuzzy
 msgid "ancestor wants two arguments"
-msgstr "argomenti incompatibili"
+msgstr ""
 
-#, fuzzy
 msgid "ancestor arguments must be single revisions"
-msgstr "mostra i genitori della revisione specificata"
+msgstr ""
 
 msgid "follow takes no arguments"
 msgstr ""
 
-#, fuzzy
 msgid "date wants a string"
-msgstr "una guardia non può essere una stringa vuota"
+msgstr ""
 
 msgid "keyword wants a string"
 msgstr ""
 
-#, fuzzy
 msgid "grep wants a string"
-msgstr "stringa vuota\n"
+msgstr ""
 
 msgid "author wants a string"
 msgstr ""
 
-#, fuzzy
 msgid "file wants a pattern"
-msgstr "Pattern dei Nomi dei File"
+msgstr ""
 
 msgid "contains wants a pattern"
 msgstr ""
@@ -12415,16 +12406,14 @@ msgstr ""
 msgid "removes wants a pattern"
 msgstr ""
 
-#, fuzzy
 msgid "merge takes no arguments"
-msgstr "nome della coda del merge"
+msgstr ""
 
 msgid "closed takes no arguments"
 msgstr ""
 
-#, fuzzy
 msgid "head takes no arguments"
-msgstr "argomenti non validi"
+msgstr ""
 
 msgid "sort wants one or two arguments"
 msgstr ""
@@ -12432,39 +12421,33 @@ msgstr ""
 msgid "sort spec must be a string"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "unknown sort key %r"
-msgstr "modalità di ordinamento sconosciuta: %s"
+msgstr "chiave di ordinamento sconosciuta: %r"
 
-#, fuzzy
 msgid "all takes no arguments"
-msgstr "annulla tutte le modifiche quando nessun argomento è stato fornito"
+msgstr ""
 
-#, fuzzy
 msgid "outgoing wants a repository path"
-msgstr "sto clonando il repository principale\n"
+msgstr ""
 
 msgid "tagged takes no arguments"
 msgstr ""
 
-#, fuzzy
 msgid "can't negate that"
-msgstr "impossibile fare merge con un antenato"
+msgstr ""
 
 msgid "not a symbol"
 msgstr ""
 
-#, fuzzy
 msgid "empty query"
-msgstr "stringa vuota\n"
+msgstr ""
 
-#, fuzzy
 msgid "searching for exact renames"
-msgstr "sto cercando modifiche\n"
+msgstr ""
 
-#, fuzzy
 msgid "searching for similar files"
-msgstr "sto cercando modifiche\n"
+msgstr ""
 
 #, python-format
 msgid "%s looks like a binary file."
