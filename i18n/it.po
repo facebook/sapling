@@ -8418,115 +8418,107 @@ msgid ""
 "    incoming and outgoing changes. This can be time-consuming."
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "parent: %d:%s "
-msgstr "genitore:    %d:%s\n"
+msgstr "genitore: %d:%s "
 
-#, fuzzy
 msgid " (empty repository)"
-msgstr "repository·%s"
+msgstr " (repository vuoto)"
 
-#, fuzzy
 msgid " (no revision checked out)"
-msgstr "nessuna revisione specificata"
+msgstr " (nessuna revisione in check out)"
 
-#, fuzzy, python-format
+#, python-format
 msgid "branch: %s\n"
-msgstr "branch:      %s\n"
+msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d modified"
-msgstr "è modificato"
+msgstr "%d modificati"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d added"
-msgstr "%s non aggiunto!\n"
+msgstr "%d aggiunti"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d removed"
-msgstr "rimossi"
+msgstr "%d rimossi"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d renamed"
-msgstr "rimossi"
+msgstr "%d rinominati"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d copied"
-msgstr "è modificato"
+msgstr "%d copiati"
 
 #, python-format
 msgid "%d deleted"
+msgstr "%d cancellati"
+
+#, python-format
+msgid "%d unknown"
+msgstr "%d sconosciuti"
+
+#, python-format
+msgid "%d ignored"
+msgstr "%d ignorati"
+
+#, python-format
+msgid "%d unresolved"
+msgstr "%d non risolti"
+
+#, python-format
+msgid "%d subrepos"
+msgstr "%d subrepository"
+
+msgid " (merge)"
 msgstr ""
 
-#, fuzzy, python-format
-msgid "%d unknown"
-msgstr "base sconosciuta"
-
-#, fuzzy, python-format
-msgid "%d ignored"
-msgstr "ignorato"
-
-#, fuzzy, python-format
-msgid "%d unresolved"
-msgstr "non risolti"
-
-#, fuzzy, python-format
-msgid "%d subrepos"
-msgstr "HG: subrepository %s"
-
-#, fuzzy
-msgid " (merge)"
-msgstr "merge"
-
-#, fuzzy
 msgid " (new branch)"
-msgstr "mostra le branch"
+msgstr " (nuovo branch)"
 
-#, fuzzy
 msgid " (head closed)"
-msgstr " (%+d head)"
+msgstr " (head chiusa)"
 
 msgid " (clean)"
-msgstr ""
+msgstr " (pulito)"
 
 msgid " (new branch head)"
-msgstr ""
+msgstr " (nuova head per il branch)"
 
-#, fuzzy, python-format
+#, python-format
 msgid "commit: %s\n"
-msgstr "convert: %s\n"
+msgstr ""
 
 msgid "update: (current)\n"
-msgstr ""
+msgstr "update: (aggiornato)\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "update: %d new changesets (update)\n"
-msgstr "%s: %d nuovi changeset"
+msgstr "update: %d nuovi changeset (update)\n"
 
 #, python-format
 msgid "update: %d new changesets, %d branch heads (merge)\n"
-msgstr ""
+msgstr "update: %d nuovi changeset, %d head del branch (merge)\n"
 
 msgid "1 or more incoming"
-msgstr ""
+msgstr "1 o più in arrivo"
 
 #, python-format
 msgid "%d outgoing"
-msgstr ""
+msgstr "%d in uscita"
 
-#, fuzzy, python-format
+#, python-format
 msgid "remote: %s\n"
-msgstr "remoto: "
+msgstr "remoto: %s\n"
 
-#, fuzzy
 msgid "remote: (synced)\n"
-msgstr "remoto: "
+msgstr "remoto: (sincronizzato)\n"
 
-#, fuzzy
 msgid "add one or more tags for the current or given revision"
-msgstr "aggiunge una o più tag per la revisione corrente o data"
+msgstr "aggiunge una o più tag per la revisione corrente o quella data"
 
-#, fuzzy
 msgid "    Name a particular revision using <name>."
 msgstr "    Nomina una revisione particolare usando <nome>."
 
