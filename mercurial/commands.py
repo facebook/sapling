@@ -1286,9 +1286,10 @@ def debuginstall(ui):
         problems += 1
 
     # compiled modules
-    ui.status(_("Checking extensions...\n"))
+    ui.status(_("Checking installed modules (%s)...\n")
+              % os.path.dirname(__file__))
     try:
-        import bdiff, mpatch, base85
+        import bdiff, mpatch, base85, osutil
     except Exception, inst:
         ui.write(" %s\n" % inst)
         ui.write(_(" One or more extensions could not be found"))
