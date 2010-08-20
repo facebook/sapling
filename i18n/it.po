@@ -18,13 +18,11 @@ msgstr ""
 msgid " (default: %s)"
 msgstr " (default: %s)"
 
-#, fuzzy
 msgid "Options"
-msgstr "opzioni:\n"
+msgstr "Opzioni"
 
-#, fuzzy
 msgid "Commands"
-msgstr "comandi base:"
+msgstr "Comandi"
 
 msgid "    options:"
 msgstr "    opzioni:"
@@ -251,20 +249,24 @@ msgstr ""
 msgid "group '%s' is undefined"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "config error - hook type \"%s\" cannot stop incoming changesets nor commits"
 msgstr ""
-"errore di configurazione - l'hook di tipo \"%s\" non può fermare i changeset "
-"in entrata"
+"errore di configurazione - l'hook di tipo \"%s\" non può fermare né i "
+"changesetné i commit in entrata"
 
-#, fuzzy, python-format
+#, python-format
 msgid "acl: user \"%s\" denied on branch \"%s\" (changeset \"%s\")"
-msgstr "acl: accesso negato per il changeset %s"
+msgstr ""
+"acl: accesso negato per l'utente \"%s\" per il branch \"%s\" (changeset \"%s"
+"\")"
 
 #, python-format
 msgid "acl: user \"%s\" not allowed on branch \"%s\" (changeset \"%s\")"
 msgstr ""
+"acl: accesso non permesso per l'utente \"%s\" per il branch \"%s"
+"\" (changeset \"%s\")"
 
 #, python-format
 msgid "acl: access denied for changeset %s"
@@ -282,18 +284,16 @@ msgstr ""
 "I segnalibri di Mercurial sono puntatori locali e mobili a changeset. Ogni\n"
 "segnalibro punta ad un changeset identificato dal proprio hash. Se fai il "
 "commit di un\n"
-"changeset basato su un changeset che ha un segnalibro, \n"
+"changeset basato su un changeset che ha un segnalibro,\n"
 "il segnalibro è spostato sul nuovo changeset"
 
-#, fuzzy
 msgid ""
 "It is possible to use bookmark names in every revision lookup (e.g.\n"
 ":hg:`merge`, :hg:`update`)."
 msgstr ""
-"E' possibile usare nomi di segnalibri in ogni ricerca di revisioni (es. hg\n"
-"merge, hg update)."
+"E' possibile usare nomi di segnalibri in ogni ricerca di revisioni (es.\n"
+":hg:`merge`, :hg:`update`)."
 
-#, fuzzy
 msgid ""
 "By default, when several bookmarks point to the same changeset, they\n"
 "will all move forward together. It is possible to obtain a more\n"
@@ -302,7 +302,7 @@ msgid ""
 msgstr ""
 "Di default, quando più segnalibri puntano allo stesso changeset, essi\n"
 "avanzeranno tutti assieme. È possibile avere un comportamento più simile\n"
-"a git aggiungendo la seguente opzione di configurazione al tuo .hgrc:"
+"a git aggiungendo la seguente opzione di configurazione al tuo .hgrc::"
 
 msgid ""
 "  [bookmarks]\n"
@@ -349,9 +349,8 @@ msgstr "richiesto nome per il segnalibro"
 msgid "bookmark name cannot contain newlines"
 msgstr "il nome di un segnalibro non può contenere a capo"
 
-#, fuzzy
 msgid "bookmark names cannot consist entirely of whitespace"
-msgstr "il nome di un segnalibro non può contenere a capo"
+msgstr "il nome di un segnalibro non può consistere interamente di whitespace"
 
 msgid "a bookmark cannot have the name of an existing branch"
 msgstr "un segnalibro non può avere lo stesso nome di una branch esistente"
@@ -359,33 +358,33 @@ msgstr "un segnalibro non può avere lo stesso nome di una branch esistente"
 msgid "no bookmarks set\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "updating bookmark %s\n"
-msgstr "sto aggiornando a %d:%s\n"
+msgstr "sto aggiornando il segnalibro %s\n"
 
 #, python-format
 msgid "not updating divergent bookmark %s\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "updating bookmark %s failed!\n"
-msgstr "merge di %s fallito!\n"
+msgstr "aggiornamento del segnalibro %s fallito!\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "remote bookmark %s not found!"
-msgstr "repository %s non trovato"
+msgstr "repository remoto %s non trovato!"
 
-#, fuzzy, python-format
+#, python-format
 msgid "importing bookmark %s\n"
-msgstr "patch %s importata\n"
+msgstr "importazione segnalibro %s\n"
 
 #, python-format
 msgid "exporting bookmark %s\n"
-msgstr ""
+msgstr "esportazione segnalibro %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "deleting remote bookmark %s\n"
-msgstr "elimina un dato segnalibro"
+msgstr "eliminazione segnalibro remoto %s\n"
 
 msgid "searching for changes\n"
 msgstr "sto cercando modifiche\n"
@@ -397,17 +396,14 @@ msgstr "nessuna modifica trovata\n"
 msgid "comparing with %s\n"
 msgstr "sto confrontando con %s\n"
 
-#, fuzzy
 msgid "bookmark to import"
-msgstr "richiesto nome per il segnalibro"
+msgstr "segnalibro da importare"
 
-#, fuzzy
 msgid "bookmark to export"
-msgstr "richiesto nome per il segnalibro"
+msgstr "segnalibro da esportare"
 
-#, fuzzy
 msgid "compare bookmark"
-msgstr "rinomina un dato segnalibro"
+msgstr "confronta segnalibro"
 
 msgid "force"
 msgstr "forza"
@@ -421,9 +417,8 @@ msgstr "revisione"
 msgid "delete a given bookmark"
 msgstr "elimina un dato segnalibro"
 
-#, fuzzy
 msgid "NAME"
-msgstr "[NOME]"
+msgstr "NOME"
 
 msgid "rename a given bookmark"
 msgstr "rinomina un dato segnalibro"
@@ -832,9 +827,8 @@ msgstr "FILE"
 msgid "file with email aliases"
 msgstr "file con alias email"
 
-#, fuzzy
 msgid "hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]"
-msgstr "hg churn [-d DATA] [-r REV] [--aliases FILE] [--progress] [FILE]"
+msgstr "hg churn [-d DATA] [-r REV] [--aliases FILE] [FILE]"
 
 msgid "colorize output from some commands"
 msgstr ""
@@ -1311,13 +1305,12 @@ msgstr "ignorato per compatibilità"
 msgid "hg debugcvsps [OPTION]... [PATH]..."
 msgstr "hg debugcvsps [OPZIONI]... [PERCORSO]..."
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not look like a Bazaar repository"
-msgstr "%s non sembra essere un repository GNU Arch"
+msgstr "%s non sembra essere un repository Bazaar"
 
-#, fuzzy
 msgid "Bazaar modules could not be loaded"
-msgstr "Non è stato possibile caricare i binding python per Subversion"
+msgstr "Non è stato possibile caricare i moduli Bazaar"
 
 msgid ""
 "warning: lightweight checkouts may cause conversion failures, try with a "
@@ -1355,17 +1348,17 @@ msgstr ""
 msgid "could not open map file %r: %s"
 msgstr "impossibile aprire il file di associazione %r: %s"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s: invalid source repository type"
-msgstr "tipo del repository sorgente"
+msgstr "%s: tipo del repository sorgente non valido"
 
 #, python-format
 msgid "%s: missing or unsupported repository"
 msgstr "%s: repository mancante o non supportato"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s: invalid destination repository type"
-msgstr "tipo di repository di destinazione"
+msgstr "%s: tipo di repository di destinazione non valido"
 
 #, python-format
 msgid "convert: %s\n"
@@ -1375,13 +1368,11 @@ msgstr "convert: %s\n"
 msgid "%s: unknown repository type"
 msgstr "%s: tipo di repository sconosciuto"
 
-#, fuzzy
 msgid "getting files"
-msgstr "sto ottenendo %s\n"
+msgstr "prelievo dei file"
 
-#, fuzzy
 msgid "revisions"
-msgstr "revisione"
+msgstr "revisioni"
 
 msgid "scanning"
 msgstr ""
@@ -1430,9 +1421,8 @@ msgstr "sto effettuando la conversione...\n"
 msgid "source: %s\n"
 msgstr "sorgente: %s\n"
 
-#, fuzzy
 msgid "converting"
-msgstr "sto effettuando la conversione...\n"
+msgstr "conversione in corso"
 
 #, python-format
 msgid "assuming destination %s\n"
@@ -1444,9 +1434,9 @@ msgstr "più di una modalità di ordinamento specificata"
 msgid "--sourcesort is not supported by this data source"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not look like a CVS checkout"
-msgstr "%s non sembra essere un repository GNU Arch"
+msgstr "%s non sembra essere un repository CVS"
 
 #, python-format
 msgid "revision %s is not a patchset number"
@@ -1540,9 +1530,9 @@ msgstr ""
 msgid "%d changeset entries\n"
 msgstr "%d voci di changeset\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not look like a darcs repository"
-msgstr "%s non sembra essere un repository GNU Arch"
+msgstr "%s non sembra essere un repository darcs"
 
 #, python-format
 msgid "darcs version 2.1 or newer needed (found %r)"
@@ -1568,9 +1558,9 @@ msgstr "%s:%d: direttiva sconosciuta %r\n"
 msgid "source repository doesn't support --filemap"
 msgstr "il repository sorgente non supporta --filemap"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not look like a Git repository"
-msgstr "%s non sembra essere un repository GNU Arch"
+msgstr "%s non sembra essere un repository Git"
 
 msgid "cannot retrieve git heads"
 msgstr ""
@@ -1579,15 +1569,15 @@ msgstr ""
 msgid "cannot read %r object at %s"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "cannot read changes in %s"
-msgstr "effettuato il commit del changeset %d:%s\n"
+msgstr "impossibile leggere le modifiche in %s"
 
 #, python-format
 msgid "cannot read tags from %s"
-msgstr ""
+msgstr "impossibile leggere le tag da %s"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not look like a GNU Arch repository"
 msgstr "%s non sembra essere un repository GNU Arch"
 
@@ -1609,7 +1599,7 @@ msgstr ""
 msgid "could not parse cat-log of %s"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s is not a local Mercurial repository"
 msgstr "%s non è un repository locale Mercurial"
 
@@ -1617,17 +1607,16 @@ msgstr "%s non è un repository locale Mercurial"
 msgid "initializing destination %s repository\n"
 msgstr "sto inizializzando il repository destinatario %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "could not create hg repository %s as sink"
-msgstr "impossibile creare un nuovo repository http"
+msgstr "impossibile creare il repository hg %s come destinazione"
 
 #, python-format
 msgid "pulling from %s into %s\n"
 msgstr "sto effettuando il pull da %s a %s\n"
 
-#, fuzzy
 msgid "filtering out empty revision\n"
-msgstr "stampa la data revisione"
+msgstr "salto revisione vuota\n"
 
 msgid "updating tags\n"
 msgstr "sto aggiornando le tag\n"
@@ -1640,7 +1629,7 @@ msgstr "%s non è una revisione iniziale valida"
 msgid "ignoring: %s\n"
 msgstr "sto ignorando: %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not look like a monotone repository"
 msgstr "%s non sembra essere un repository monotone"
 
@@ -1648,9 +1637,9 @@ msgstr "%s non sembra essere un repository monotone"
 msgid "copying file in renamed directory from '%s' to '%s'"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not look like a P4 repository"
-msgstr "%s non sembra essere un repository GNU Arch"
+msgstr "%s non sembra essere un repository P4"
 
 msgid "reading p4 views\n"
 msgstr "sto leggendo le viste p4\n"
@@ -1666,9 +1655,9 @@ msgid ""
 "repository. Use --source-type if you know better.\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not look like a Subversion repository"
-msgstr "%s non sembra essere un repository monotone"
+msgstr "%s non sembra essere un repository Subversion"
 
 msgid "Subversion python bindings could not be loaded"
 msgstr "Non è stato possibile caricare i binding python per Subversion"
@@ -1724,7 +1713,7 @@ msgstr "%s non trovato fino alla revisione %d"
 
 #, fuzzy
 msgid "scanning paths"
-msgstr "sto effettuando la scansione della sorgente...\n"
+msgstr "scansione percorsi"
 
 #, python-format
 msgid "found parent of branch %s at %d: %s\n"
@@ -1738,25 +1727,26 @@ msgstr ""
 msgid "svn: branch has no revision %s"
 msgstr "svn: la branch non ha nessuna revisione %s"
 
-#, fuzzy, python-format
+#, python-format
 msgid "initializing svn repository %r\n"
 msgstr "inizializzo il repository svn %r\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "initializing svn working copy %r\n"
-msgstr "inizializzo svn wc %r\n"
+msgstr "inizializzo working copy svn %r\n"
 
 msgid "unexpected svn output:\n"
 msgstr "output svn inatteso:\n"
 
 msgid "unable to cope with svn output"
-msgstr ""
+msgstr "non sono in grado di gestire l'output di svn"
 
 msgid "XXX TAGS NOT IMPLEMENTED YET\n"
 msgstr "XXX TAG NON ANCORA IMPLEMENTATE\n"
 
 msgid "automatically manage newlines in repository files"
 msgstr ""
+"gestisci automaticamente i fine linea nei file contenuti nel repository"
 
 msgid ""
 "This extension allows you to manage the type of line endings (CRLF or\n"
@@ -1814,11 +1804,10 @@ msgid ""
 "  **.jpg = BIN"
 msgstr ""
 
-#, fuzzy
 msgid ""
 "  [repository]\n"
 "  native = LF"
-msgstr "il repository non è imparentato"
+msgstr ""
 
 msgid ""
 "The extension uses an optional ``[eol]`` section in your hgrc file\n"
@@ -1995,7 +1984,7 @@ msgid "change made by revision"
 msgstr "modifica effettuata dalla revisione"
 
 msgid "hg extdiff [OPT]... [FILE]..."
-msgstr "hg extdiff [OPT]... [FILE]..."
+msgstr "hg extdiff [OPZIONI]... [FILE]..."
 
 #, python-format
 msgid "use %(path)s to diff repository (or selected files)"
@@ -2208,9 +2197,9 @@ msgstr ""
 "merge di cui non si è effettuato il commit - si prega di fornire una "
 "revisione specifica"
 
-#, fuzzy, python-format
+#, python-format
 msgid "Signing %d:%s\n"
-msgstr "sto ignorando: %s\n"
+msgstr "Firma in corso di %d:%s\n"
 
 msgid "Error while signing"
 msgstr "Errore durante la firma"
@@ -6329,9 +6318,9 @@ msgstr "esecuzione di %s fallita"
 msgid "%s killed"
 msgstr "%s ucciso"
 
-#, fuzzy, python-format
+#, python-format
 msgid "Changeset %d:%s: %s\n"
-msgstr "Changeset %s: %s\n"
+msgstr "Changeset %d:%s: %s\n"
 
 #, python-format
 msgid "Testing changeset %d:%s (%d changesets remaining, ~%d tests)\n"
@@ -6368,11 +6357,11 @@ msgstr ""
 msgid "reset working directory to branch %s\n"
 msgstr "resetto la directory di lavoro alla branch %s\n"
 
-#, fuzzy
 msgid ""
 "a branch of the same name already exists (use 'hg update' to switch to it)"
 msgstr ""
-"una branch con lo stesso nome esiste già (usare --force per sovrascrivere)"
+"una branch con lo stesso nome esiste già (usare 'hg update' per passare ad "
+"essa)"
 
 #, python-format
 msgid "marked working directory as branch %s\n"
@@ -8632,80 +8621,70 @@ msgstr "--rev e --remove sono incompatibili"
 msgid "tag '%s' does not exist"
 msgstr "la tag '%s' non esiste"
 
-#, fuzzy, python-format
+#, python-format
 msgid "tag '%s' is not a global tag"
-msgstr "la tag '%s' non è una tag %s"
+msgstr "la tag '%s' non è una tag globale"
 
-#, fuzzy, python-format
+#, python-format
 msgid "tag '%s' is not a local tag"
-msgstr "la tag '%s' non è una tag %s"
+msgstr "la tag '%s' non è una tag locale"
 
 #, python-format
 msgid "tag '%s' already exists (use -f to force)"
 msgstr "la tag '%s' esiste già (usare -f per forzare)"
 
-#, fuzzy
 msgid "list repository tags"
 msgstr "elenca le tag del repository"
 
-#, fuzzy
 msgid ""
 "    This lists both regular and local tags. When the -v/--verbose\n"
 "    switch is used, a third column \"local\" is printed for local tags."
 msgstr ""
 "    Questo elenca sia le tag regolari sia le tag locali. Quando viene usata "
 "l'opzione -v/--verbose\n"
-"    una terza colonna \"local\" viene stampata per le tag locali.\n"
-"    "
+"    una terza colonna \"local\" viene stampata per le tag locali."
 
-#, fuzzy
 msgid "show the tip revision"
 msgstr "mostra la revisione tip"
 
-#, fuzzy
 msgid ""
 "    The tip revision (usually just called the tip) is the changeset\n"
 "    most recently added to the repository (and therefore the most\n"
 "    recently changed head)."
 msgstr ""
-"    La revisione tip (di solito chiamata solo tip) è il più recente\n"
-"    changeset aggiunto al repository, l'head modificata più\n"
-"    recentemente."
+"    La revisione tip (di solito chiamata solo tip) è il changeset\n"
+"    aggiunto più di recente al repository (e quindi l'head modificata\n"
+"    più recentemente.)"
 
-#, fuzzy
 msgid ""
 "    If you have just made a commit, that commit will be the tip. If\n"
 "    you have just pulled changes from another repository, the tip of\n"
 "    that repository becomes the current tip. The \"tip\" tag is special\n"
 "    and cannot be renamed or assigned to a different changeset."
 msgstr ""
-"    Se si ha fatto solo un commit, quel commit sarà il tip. Se si ha\n"
+"    Se si è appena fatto un commit, quel commit sarà il tip. Se si ha\n"
 "    appena fatto il pull di modifiche da un altro repository, il tip\n"
 "    di quel repository diventa il tip corrente. La tag \"tip\" tag è\n"
 "    speciale e non può essere rinominata o assegnata ad un changeset\n"
-"    differente.\n"
-"    "
+"    differente."
 
 msgid "apply one or more changegroup files"
 msgstr "applica uno o più file changegroup"
 
-#, fuzzy
 msgid ""
 "    Apply one or more compressed changegroup files generated by the\n"
 "    bundle command."
 msgstr ""
 "    Applica uno o più file changegroup compressi generati dal\n"
-"    comando bundle.\n"
-"    "
+"    comando bundle."
 
 msgid ""
 "    Returns 0 on success, 1 if an update has unresolved files.\n"
 "    "
 msgstr ""
 
-#, fuzzy
 msgid "update working directory (or switch revisions)"
-msgstr "mostra i genitori della directory di lavoro o di una revisione"
+msgstr "aggiorna la directory di lavoro (o passa a un'altra revisione)"
 
 msgid ""
 "    Update the repository's working directory to the specified\n"
@@ -8749,21 +8728,19 @@ msgid ""
 "    :hg:`clone -U`)."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "    If you want to update just one file to an older changeset, use :hg:"
 "`revert`."
 msgstr ""
 "    Se si desidera aggiornare solo un file ad una revisione più\n"
-"    vecchia, usare revert."
+"    vecchia, usare :hg: `revert`."
 
-#, fuzzy
 msgid "cannot specify both -c/--check and -C/--clean"
-msgstr "non è possibile specificare sia una revisione sia una base"
+msgstr "non è possibile specificare sia -c/--check sia -C/--clean"
 
 #, fuzzy
 msgid "uncommitted local changes"
-msgstr "sovrascrivi ogni modifica locale"
+msgstr "modifiche locale sovrascrivi ogni "
 
 msgid "verify the integrity of the repository"
 msgstr "verifica l'integrità del repository"
@@ -9495,7 +9472,7 @@ msgstr "la revisione più vicina a tip corrispondente alla data"
 
 #, fuzzy
 msgid "revert to the specified revision"
-msgstr "annota la revisione specificata"
+msgstr "ritorna alla revisione specificata"
 
 msgid "do not save backup copies of files"
 msgstr "non salva copie di backup dei file"
