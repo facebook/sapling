@@ -2893,43 +2893,60 @@ msgid "hg kwshrink [OPTION]... [FILE]..."
 msgstr "hg kwshrink [OPZIONE]... [FILE]..."
 
 msgid "manage a stack of patches"
-msgstr ""
+msgstr "gestisci una pila di patch"
 
 msgid ""
 "This extension lets you work with a stack of patches in a Mercurial\n"
 "repository. It manages two stacks of patches - all known patches, and\n"
 "applied patches (subset of known patches)."
 msgstr ""
+"Questa estensione ti permette di gestire una coda di patch per un "
+"repository\n"
+"Mercurial. Essa gestisce due pile di patch - tutte le patch note, e\n"
+"le patch applicate (un sottoinsieme delle patch note)."
 
 msgid ""
 "Known patches are represented as patch files in the .hg/patches\n"
 "directory. Applied patches are both patch files and changesets."
 msgstr ""
+"Le patch note sono rappresentate da file di patch nella directory\n"
+".hg/patches. Le patch applicate sono sia file di patch sia changeset."
 
 msgid "Common tasks (use :hg:`help command` for more details)::"
-msgstr ""
+msgstr "Compiti comuni (usa :hg:`help comando` per maggior dettagli)::"
 
 msgid ""
 "  create new patch                          qnew\n"
 "  import existing patch                     qimport"
 msgstr ""
+"  crea una nuova patch                      qnew\n"
+"  importa una patch esistente               qimport"
 
 msgid ""
 "  print patch series                        qseries\n"
 "  print applied patches                     qapplied"
 msgstr ""
+"  stampa la serie di patch                  qseries\n"
+"  stampa le patch applicate                 qapplied"
 
 msgid ""
 "  add known patch to applied stack          qpush\n"
 "  remove patch from applied stack           qpop\n"
 "  refresh contents of top applied patch     qrefresh"
 msgstr ""
+"  aggiungi patch nota alla pila applicata   qpush\n"
+"  rimuovi patch dalla pila applicata        qpop\n"
+"  aggiorna i contenuti della patch applicata in cima     qrefresh"
 
 msgid ""
 "By default, mq will automatically use git patches when required to\n"
 "avoid losing file mode changes, copy records, binary files or empty\n"
 "files creations or deletions. This behaviour can be configured with::"
 msgstr ""
+"Di default, mq userà automaticamente patch in formato git quando necessario\n"
+"per evitare di perdere modifiche ai permessi dei file, registrazioni di\n"
+"copie, file binari o la creazione o cancellazione di file vuoti. Questo\n"
+"comportamento può essere configurato con::"
 
 msgid ""
 "  [mq]\n"
@@ -2942,15 +2959,22 @@ msgid ""
 "'no', mq will override the [diff] section and always generate git or\n"
 "regular patches, possibly losing data in the second case."
 msgstr ""
+"Se impostato a 'keep', mq seguirà la configurazione nella sezione\n"
+"[diff] nel mantenere il formato git o meno delle patch esistenti\n"
+"nell'eseguire il comando qrefresh. Se impostato a 'yes' o 'no', mq\n"
+"sovrascriverà la sezione [diff] e genererà sempre patch in formato git o\n"
+"normale, perdendo potenzialmente dati nel secondo caso."
 
 msgid ""
 "You will by default be managing a patch queue named \"patches\". You can\n"
 "create other, independent patch queues with the :hg:`qqueue` command.\n"
 msgstr ""
+"Di default, verrà gestita una coda di patch chiamata \"patches\".\n"
+"Se ne possono creare altre indipendenti, col comando :hg:`qqueue`.\n"
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
-msgstr ""
+msgstr "l'opzione mg.git può valere auto/keep/yes/no, impostata a %s"
 
 #, python-format
 msgid "%s appears more than once in %s"
@@ -3005,7 +3029,7 @@ msgstr "applicazione della patch %s fallita"
 
 #, python-format
 msgid "patch didn't work out, merging %s\n"
-msgstr ""
+msgstr "patch non ha funzionato, esecuzione del merge di %s\n"
 
 #, python-format
 msgid "update returned %d"
@@ -3033,9 +3057,9 @@ msgstr "patch fallita, impossibile continuare (provare con -v)\n"
 msgid "applying %s\n"
 msgstr "sto applicando %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "unable to read %s\n"
-msgstr "impossibile leggere %s"
+msgstr "impossibile leggere %s\n"
 
 #, python-format
 msgid "patch %s is empty\n"
@@ -3043,60 +3067,60 @@ msgstr "la patch %s è vuota\n"
 
 msgid "patch failed, rejects left in working dir\n"
 msgstr ""
+"patch fallita, frammenti rifiutati lasciati nella directory di lavoro\n"
 
 msgid "fuzz found when applying patch, stopping\n"
-msgstr ""
+msgstr "trovato fuzz nell'applicare la patch, arresto\n"
 
 #, python-format
 msgid "revision %d is not managed"
-msgstr ""
+msgstr "la revisione %d non è gestita"
 
 #, python-format
 msgid "cannot delete revision %d above applied patches"
-msgstr ""
+msgstr "impossibile cancellare la revisione %d sopra patch applicate"
 
-#, fuzzy, python-format
+#, python-format
 msgid "patch %s finalized without changeset message\n"
-msgstr "mostra solo i file senza modifiche"
+msgstr "patch %s finalizzata senza un messaggio di changeset\n"
 
 msgid "qdelete requires at least one revision or patch name"
 msgstr ""
 
 #, python-format
 msgid "cannot delete applied patch %s"
-msgstr ""
+msgstr "impossibile rimuovere la patch applicata %s"
 
 #, python-format
 msgid "patch %s not in series file"
-msgstr ""
+msgstr "la patch %s non è nel file series"
 
 msgid "no patches applied"
-msgstr ""
+msgstr "nessuna patch applicata"
 
 msgid "working directory revision is not qtip"
-msgstr ""
+msgstr "la revisione della directory di lavoro non è qtip"
 
 msgid "local changes found, refresh first"
-msgstr ""
+msgstr "trovate modifiche locali, effettuare prima un refresh"
 
 msgid "local changes found"
-msgstr ""
+msgstr "trovate modifiche locali"
 
 #, python-format
 msgid "\"%s\" cannot be used as the name of a patch"
-msgstr ""
+msgstr "\"%s\" non può essere usato come nome di una patch"
 
 #, python-format
 msgid "patch \"%s\" already exists"
 msgstr "la patch \"%s\" esiste già"
 
-#, fuzzy
 msgid "cannot manage merge changesets"
-msgstr "misura velocità dal numero di changeset"
+msgstr "impossibile gestire un changeset di merge"
 
 #, python-format
 msgid "error unlinking %s\n"
-msgstr ""
+msgstr "errore nella cancellazione di %s\n"
 
 #, python-format
 msgid "patch name \"%s\" is ambiguous:\n"
@@ -3104,18 +3128,17 @@ msgstr "il nome della patch \"%s\" è ambiguo:\n"
 
 #, python-format
 msgid "patch %s not in series"
-msgstr "la patch %s non è nella serie"
+msgstr "la patch %s non è nel file series"
 
-#, fuzzy
 msgid "(working directory not at a head)\n"
-msgstr "(directory di lavoro non è a una tip)\n"
+msgstr "(la directory di lavoro non è a una head)\n"
 
 msgid "no patches in series\n"
 msgstr "nessuna patch nella serie\n"
 
 #, python-format
 msgid "cannot push to a previous patch: %s"
-msgstr "impossibile fare push su una patch precedente: %s"
+msgstr "impossibile fare push fino a una patch precedente: %s"
 
 #, python-format
 msgid "qpush: %s is already at the top\n"
@@ -3123,7 +3146,7 @@ msgstr "qpush: %s è già in cima\n"
 
 #, python-format
 msgid "guarded by %r"
-msgstr "controllato da %r"
+msgstr "controllato dalla guardia %r"
 
 msgid "no matching guards"
 msgstr "nessuna guardia corrispondente"
@@ -3138,9 +3161,8 @@ msgstr "tutte le patch sono correntemente applicate\n"
 msgid "patch series already fully applied\n"
 msgstr "la serie di patch è già stata applicata completamente\n"
 
-#, fuzzy
 msgid "please specify the patch to move"
-msgstr "Si prega di specificare uno username."
+msgstr "si prega di specificare la patch da spostare"
 
 msgid "cleaning up working directory..."
 msgstr "sto pulendo la directory di lavoro..."
@@ -3163,45 +3185,49 @@ msgstr "nessuna patch applicata\n"
 
 #, python-format
 msgid "qpop: %s is already at the top\n"
-msgstr ""
+msgstr "qpop: %s è già in cima\n"
 
 msgid "qpop: forcing dirstate update\n"
-msgstr ""
+msgstr "qpop: forzatura aggiornamento dirstate\n"
 
 #, python-format
 msgid "trying to pop unknown node %s"
-msgstr ""
+msgstr "tentativo rimozione dalla cima del nodo sconosciuto %s"
 
 msgid "popping would remove a revision not managed by this patch queue"
 msgstr ""
+"la rimozione dalla cima cancellerebbe una revisione non gestita da\n"
+"questa coda di patch"
 
 msgid "deletions found between repo revs"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "popping %s\n"
-msgstr "sto applicando %s\n"
+msgstr "sto rimuovendo %s dalla cima\n"
 
 msgid "patch queue now empty\n"
-msgstr ""
+msgstr "coda di patch ora vuota\n"
 
 msgid "cannot refresh a revision with children"
-msgstr ""
+msgstr "impossibile aggiornare una revisione con figli"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
 "recover)\n"
 msgstr ""
+"aggiornamento patch interrotto mentre la patch veniva rimossa dalla\n"
+"cima! (revert --all, qpush per recuperare)\n"
 
 msgid "patch queue directory already exists"
-msgstr ""
+msgstr "la directory per la coda di patch esiste già"
 
 #, python-format
 msgid "patch %s is not in series file"
-msgstr ""
+msgstr "la patch %s non è nel file series"
 
 msgid "No saved patch data found\n"
-msgstr ""
+msgstr "Non è stata trovata nessuna modifica salvata\n"
 
 #, python-format
 msgid "restoring status: %s\n"
@@ -3219,7 +3245,7 @@ msgid "saved queue repository parents: %s %s\n"
 msgstr ""
 
 msgid "queue directory updating\n"
-msgstr ""
+msgstr "aggiornamento directory della coda\n"
 
 msgid "Unable to load queue repository\n"
 msgstr "Impossibile caricare il repository della coda\n"
@@ -3280,9 +3306,9 @@ msgstr "la patch %s non esiste"
 msgid "need --name to import a patch from -"
 msgstr "necessario --name per importare una patch da -"
 
-#, fuzzy, python-format
+#, python-format
 msgid "unable to read file %s"
-msgstr "impossibile leggere %s"
+msgstr "impossibile leggere file %s"
 
 #, python-format
 msgid "adding %s to series file\n"
@@ -3315,7 +3341,7 @@ msgid "all patches applied\n"
 msgstr "tutte le patch sono state applicate\n"
 
 msgid "import a patch"
-msgstr ""
+msgstr "importa una patch"
 
 msgid ""
 "    The patch is inserted into the series after the last applied\n"
@@ -3354,11 +3380,9 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy
 msgid "init a new queue repository (DEPRECATED)"
-msgstr "inizializza un nuovo repository della coda"
+msgstr "inizializza un nuovo repository della coda (DEPRECATO)"
 
-#, fuzzy
 msgid ""
 "    The queue repository is unversioned by default. If\n"
 "    -c/--create-repo is specified, qinit will create a separate nested\n"
@@ -3366,10 +3390,10 @@ msgid ""
 "    an unversioned patch repository into a versioned one). You can use\n"
 "    qcommit to commit changes to this queue repository."
 msgstr ""
-"    Il repository della coda di default non è sotto controllo di\n"
-"    versione. Se viene specificato -c, qinit creerà un separato\n"
-"    repository annidato per le patch (qinit -c potrebbe anche essere\n"
-"    eseguito in seguito per convertire un repository non gestito in\n"
+"    Il repository della coda, di default, non è sotto controllo di\n"
+"    versione. Se viene specificato -c/--create-repo, qinit creerà un\n"
+"    repository annidato separato per le patch (qinit -c potrebbe anche\n"
+"    essere eseguito in seguito per convertire un repository non gestito in\n"
 "    uno gestito).\n"
 "    Si può usare qcommit per effettuare il commit delle modifiche in\n"
 "    questo repository della coda."
@@ -3378,9 +3402,11 @@ msgid ""
 "    This command is deprecated. Without -c, it's implied by other relevant\n"
 "    commands. With -c, use :hg:`init --mq` instead."
 msgstr ""
+"    Questo comando è deprecated. Senza -c, è implicito negli altri comandi\n"
+"    relativi. Con -c, è stato rimpiazzato da :hg:`init --mq`."
 
 msgid "clone main and patch repository at same time"
-msgstr ""
+msgstr "clona assieme il repository principale e quello delle patch"
 
 msgid ""
 "    If source is local, destination will have no patches applied. If\n"
@@ -3401,34 +3427,29 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy
 msgid "versioned patch repository not found (see init --mq)"
 msgstr ""
-"repository delle patch sotto controllo di versione non trovato (vedere qinit "
-"-c)"
+"repository delle patch sotto controllo di versione non trovato (vedere init "
+"--mq)"
 
-#, fuzzy
 msgid "cloning main repository\n"
-msgstr "sto clonando il repository principale\n"
+msgstr "clonazione del repository principale\n"
 
-#, fuzzy
 msgid "cloning patch repository\n"
-msgstr "sto clonando il repository delle patch\n"
+msgstr "clonazione del repository delle patch\n"
 
-#, fuzzy
 msgid "stripping applied patches from destination repository\n"
-msgstr "sto rimuovendo le patch applicate dal repository di destinazione\n"
+msgstr "rimozione delle patch applicate dal repository di destinazione\n"
 
-#, fuzzy
 msgid "updating destination repository\n"
-msgstr "sto aggiornando il repository di destinazione\n"
+msgstr "aggiornamento del repository di destinazione\n"
 
-#, fuzzy
 msgid "commit changes in the queue repository (DEPRECATED)"
-msgstr "effettua il commit delle modifiche nel repository della coda"
+msgstr ""
+"effettua il commit delle modifiche nel repository della coda (DEPRECATO)"
 
 msgid "    This command is deprecated; use :hg:`commit --mq` instead."
-msgstr ""
+msgstr "    Questo comando è deprecato; usa invece :hg:`commit --mq`."
 
 msgid "print the entire series file"
 msgstr "stampa l'intero file series"
@@ -3442,11 +3463,9 @@ msgstr "stampa il nome della patch seguente"
 msgid "print the name of the previous patch"
 msgstr "stampa il nome della patch precedente"
 
-#, fuzzy
 msgid "create a new patch"
 msgstr "crea una nuova patch"
 
-#, fuzzy
 msgid ""
 "    qnew creates a new patch on top of the currently-applied patch (if\n"
 "    any). The patch will be initialized with any outstanding changes\n"
@@ -3456,36 +3475,33 @@ msgid ""
 "    as uncommitted modifications."
 msgstr ""
 "    qnew crea una nuova patch sopra alla patch correntemente applicata\n"
-"    (se esiste).\n"
-"    Si rifiuterà di farlo se ci sono modifiche pendenti a meno che -f\n"
-"    non sia stato specificato, nel qual caso la patch sarà\n"
-"    inizializzata con tali modifiche. Si potrebbe anche usare -I, -X,\n"
-"    e/o una lista di file dopo il nome della patch per aggiungere alla\n"
-"    patch solamente le modifiche a tali file, lasciando il resto come\n"
-"    cambiamenti non salvati."
+"    (se esiste). La patch verrà inizializzata con le eventuali modifiche\n"
+"    pendenti nella directory di lavoro. È possibile anche usare\n"
+"    -I/--include, -X/--exclude e/o una lista di file dopo il nome\n"
+"    della patch, per aggiungere alla nuova patch solamente le modifiche a\n"
+"    tali file, lasciando il resto come cambiamenti non salvati."
 
-#, fuzzy
 msgid ""
 "    -u/--user and -d/--date can be used to set the (given) user and\n"
 "    date, respectively. -U/--currentuser and -D/--currentdate set user\n"
 "    to current user and date to current date."
 msgstr ""
-"    -u e -d possono essere usati per impostare rispettivamente un dato\n"
-"    utente e data.\n"
-"    -U e -D impostano l'utente all'utente corrente e la data alla data\n"
-"    corrente."
+"    -u/--user e -d/--date possono essere usati per impostare "
+"rispettivamente\n"
+"    un dato utente e data.\n"
+"    -U/--currentuser e -D/--currentdate impostano l'utente all'utente\n"
+"    corrente e la data alla data corrente."
 
-#, fuzzy
 msgid ""
 "    -e/--edit, -m/--message or -l/--logfile set the patch header as\n"
 "    well as the commit message. If none is specified, the header is\n"
 "    empty and the commit message is '[mq]: PATCH'."
 msgstr ""
-"    -e, -m o -l impostano l'intestazione della patch così come il\n"
-"    messaggio di commit. Se nulla è stato specificato, l'intestazione\n"
-"    sarà vuota e il messaggio di commit '[mq]: PATCH'."
+"    -e/--edit, -m/--message o -l/--logfile impostano l'intestazione\n"
+"    della patch così come il messaggio di commit. Se nulla è stato\n"
+"    specificato, l'intestazione sarà vuota e il messaggio di commit\n"
+"    '[mq]: PATCH'."
 
-#, fuzzy
 msgid ""
 "    Use the -g/--git option to keep the patch in the git extended diff\n"
 "    format. Read the diffs help topic for more information on why this\n"
@@ -3493,14 +3509,14 @@ msgid ""
 "    information.\n"
 "    "
 msgstr ""
-"    Usa l'opzione --git per mantenere la patch nel formato diff esteso\n"
+"    Usa l'opzione -g/--git per mantenere la patch nel formato diff esteso\n"
 "    git. Leggere le informazioni di aiuto sui diff per maggiori\n"
-"    informazioni sul motivo per cui quest'opzione è importante per\n"
-"    preservare modifiche di permessi e informazioni su copie/rinomine.\n"
+"    informazioni sul perché quest'opzione è importante per preservare\n"
+"    modifiche di permessi e informazioni su copie/rinomine.\n"
 "    "
 
 msgid "update the current patch"
-msgstr ""
+msgstr "aggiorna la patch corrente"
 
 msgid ""
 "    If any file patterns are provided, the refreshed patch will\n"
@@ -3543,7 +3559,7 @@ msgid ""
 msgstr ""
 
 msgid "fold the named patches into the current patch"
-msgstr ""
+msgstr "ripiega le patch indicate in quella corrente"
 
 msgid ""
 "    Patches must not yet be applied. Each patch will be successively\n"
@@ -3560,7 +3576,7 @@ msgid ""
 msgstr ""
 
 msgid "qfold requires at least one patch name"
-msgstr ""
+msgstr "qfold richiede almeno un nome di patch"
 
 msgid "No patches applied"
 msgstr "Nessuna patch applicata"
@@ -3579,9 +3595,11 @@ msgstr "Errore nel ripiegare la patch %s"
 
 msgid "push or pop patches until named patch is at top of stack"
 msgstr ""
+"applica o rimuove delle patch finché la patch indicata si trova in cima alla "
+"pila"
 
 msgid "set or print guards for a patch"
-msgstr ""
+msgstr "imposta o stampa le guardie per una patch"
 
 msgid ""
 "    Guards control whether a patch can be pushed. A patch with no\n"
@@ -3667,20 +3685,18 @@ msgstr "%s esiste già"
 msgid "A patch named %s already exists in the series file"
 msgstr "Una patch chiamata %s esiste già nel file series"
 
-#, fuzzy, python-format
+#, python-format
 msgid "renaming %s to %s\n"
-msgstr "sto spostando %s in %s\n"
+msgstr "sto rinominando %s in %s\n"
 
-#, fuzzy
 msgid "restore the queue state saved by a revision (DEPRECATED)"
-msgstr "ripristina lo stato della coda salvato da una revisione"
+msgstr "ripristina lo stato della coda salvato da una revisione (DEPRECATO)"
 
 msgid "    This command is deprecated, use rebase --mq instead."
-msgstr ""
+msgstr "    Questo comando è deprecato, usare invece rebase --mq."
 
-#, fuzzy
 msgid "save current queue state (DEPRECATED)"
-msgstr "salva lo stato corrente della coda"
+msgstr "salva lo stato corrente della coda (DEPRECATO)"
 
 #, python-format
 msgid "destination %s exists and is not a directory"
@@ -3694,7 +3710,6 @@ msgstr "la destinazione %s esiste, usare -f per forzare l'operazione"
 msgid "copy %s to %s\n"
 msgstr "copia %s a %s\n"
 
-#, fuzzy
 msgid "strip a changeset and all its descendants from the repository"
 msgstr "elimina una revisione e tutti i suoi discendenti dal repository"
 
@@ -3706,7 +3721,6 @@ msgid ""
 "    the --force flag is supplied."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "    If a parent of the working directory is stripped, then the working\n"
 "    directory will automatically be updated to the most recent\n"
@@ -3714,9 +3728,9 @@ msgid ""
 "    completes."
 msgstr ""
 "    Se una delle revisioni genitore della directory di lavoro\n"
-"    viene rimossa, la directory di lavorò sarà aggiornata al\n"
-"    genitore della revisione rimossa.\n"
-"    "
+"    viene rimossa, la directory di lavorò sarà aggiornata automaticamente,\n"
+"    dopo il completamento dell'operazione, all'antenato più recente\n"
+"    disponibile del genitore rimosso."
 
 msgid ""
 "    Any stripped changesets are stored in ``.hg/strip-backup`` as a\n"
@@ -3734,7 +3748,7 @@ msgid ""
 msgstr ""
 
 msgid "set or print guarded patches to push"
-msgstr ""
+msgstr "imposta o stampa le patch controllate da guardia"
 
 msgid ""
 "    Use the :hg:`qguard` command to set or print guards on patch, then use\n"
@@ -3790,7 +3804,8 @@ msgstr ""
 
 #, python-format
 msgid "number of guarded, applied patches has changed from %d to %d\n"
-msgstr "il numero di patch applicate aventi guardia è cambiato da %d a %d\n"
+msgstr ""
+"il numero di patch applicate controllate da guardia è cambiato da %d a %d\n"
 
 msgid "guards in series file:\n"
 msgstr "guardie nel file series:\n"
@@ -3805,10 +3820,10 @@ msgid "no active guards\n"
 msgstr "nessuna guardia attiva\n"
 
 msgid "popping guarded patches\n"
-msgstr "sto disapplicando patch che hanno una guardia\n"
+msgstr "sto disapplicando patch controllate da una guardia\n"
 
 msgid "reapplying unguarded patches\n"
-msgstr "sto riapplicando patch che non hanno guardia\n"
+msgstr "sto riapplicando patch che non sono controllate da una guardia\n"
 
 msgid "move applied patches into repository history"
 msgstr ""
@@ -3875,18 +3890,18 @@ msgstr ""
 msgid "invalid queue name, may not contain the characters \":\\/.\""
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "queue \"%s\" already exists"
-msgstr "%s esiste già"
+msgstr "la coda \"%s\" esiste già"
 
 msgid "cannot delete queue that does not exist"
-msgstr ""
+msgstr "impossibile cancellare una coda che non esiste"
 
 msgid "cannot delete currently active queue"
-msgstr ""
+msgstr "impossibile cancellare la coda correntemente attiva"
 
 msgid "use --create to create a new queue"
-msgstr ""
+msgstr "usa --create per creare una nuova coda"
 
 msgid "cannot commit over an applied mq patch"
 msgstr "impossibile effettuare commit su una patch mq applicata"
@@ -3905,42 +3920,37 @@ msgstr "La tag %s annulla una patch mq con lo stesso nome\n"
 msgid "cannot import over an applied patch"
 msgstr "impossibile importare sopra ad una patch applicata"
 
-#, fuzzy
 msgid "only a local queue repository may be initialized"
-msgstr "Impossibile caricare il repository della coda\n"
+msgstr "solo un repository locale della coda può essere inizializzato"
 
 msgid "There is no Mercurial repository here (.hg not found)"
 msgstr "Non esiste alcun repository Mercurial qui (.hg non trovata)"
 
-#, fuzzy
 msgid "no queue repository"
-msgstr "crea il repository della coda"
+msgstr "nessun repository della coda"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d applied"
-msgstr "%s non aggiunto!\n"
+msgstr "%d applicate"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d unapplied"
-msgstr "non risolti"
+msgstr "%d non applicate"
 
 msgid "mq:     (empty queue)\n"
-msgstr ""
+msgstr "mq:     (coda vuota)\n"
 
-#, fuzzy
 msgid "operate on patch repository"
-msgstr "sto clonando il repository delle patch\n"
+msgstr "opera sul repository delle patch"
 
 msgid "print first line of patch header"
 msgstr "stampa la prima riga dell'intestazione della patch"
 
-#, fuzzy
 msgid "show only the last patch"
-msgstr "mostra solo i file aggiunti"
+msgstr "mostra solo l'ultima patch"
 
-#, fuzzy
 msgid "hg qapplied [-1] [-s] [PATCH]"
-msgstr "hg qapplied [-s] [PATCH]"
+msgstr ""
 
 msgid "use pull protocol to copy metadata"
 msgstr "usa il protocollo pull per copiare i metadati"
@@ -3954,9 +3964,8 @@ msgstr "usa trasferimento non compresso (veloce su LAN)"
 msgid "REPO"
 msgstr ""
 
-#, fuzzy
 msgid "location of source patch repository"
-msgstr "posizione del repository delle patch sorgente"
+msgstr "posizione del repository sorgente delle patch"
 
 msgid "hg qclone [OPTION]... SOURCE [DEST]"
 msgstr "hg qclone [OPZIONE]... SORGENTE [DEST]"
@@ -3970,18 +3979,17 @@ msgstr "hg qdiff [OPZIONE]... [FILE]..."
 msgid "keep patch file"
 msgstr "mantieni il file della patch"
 
-#, fuzzy
 msgid "stop managing a revision (DEPRECATED)"
-msgstr "smetti di gestire una revisione"
+msgstr "smetti di gestire una revisione (DEPRECATO)"
 
 msgid "hg qdelete [-k] [-r REV]... [PATCH]..."
-msgstr "hg qdelete [-k] [-r REV]... [PATCH]..."
+msgstr ""
 
 msgid "edit patch header"
 msgstr "modifica l'intestazione della patch"
 
 msgid "keep folded patch files"
-msgstr ""
+msgstr "mantieni il file della patch ripiegata"
 
 msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
 msgstr "hg qfold [-e] [-k] [-m TESTO] [-l FILE] PATCH..."
@@ -4159,7 +4167,7 @@ msgid "list all guards in series file"
 msgstr "elenca tutte le guardie nel file series"
 
 msgid "pop to before first guarded applied patch"
-msgstr "disapplica fino alla prima patch con guardia applicata"
+msgstr "disapplica fino alla prima patch applicata con guardia"
 
 msgid "pop, then reapply patches"
 msgstr "disapplica e poi riapplica le patch"
@@ -4186,34 +4194,29 @@ msgstr ""
 msgid "no backups"
 msgstr "nessun backup"
 
-#, fuzzy
 msgid "hg strip [-f] [-n] REV"
-msgstr "hg strip [-f] [-b] [-n] REV"
+msgstr ""
 
 msgid "hg qtop [-s]"
-msgstr "hg qtop [-s]"
+msgstr ""
 
-#, fuzzy
 msgid "show only the first patch"
-msgstr "mostra solo i file aggiunti"
+msgstr "mostra solo la prima patch"
 
-#, fuzzy
 msgid "hg qunapplied [-1] [-s] [PATCH]"
-msgstr "hg qunapplied [-s] [PATCH]"
+msgstr ""
 
 msgid "finish all applied changesets"
 msgstr "finalizza tutti i changeset applicati"
 
-#, fuzzy
 msgid "hg qfinish [-a] [REV]..."
-msgstr "hg qfinish [-a] [REV...]"
+msgstr ""
 
 msgid "list all available queues"
 msgstr ""
 
-#, fuzzy
 msgid "create new queue"
-msgstr "creata una nuova head\n"
+msgstr "crea nuova coda"
 
 msgid "delete reference to queue"
 msgstr ""
