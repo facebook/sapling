@@ -1270,7 +1270,7 @@ msgid "preserve source changesets order"
 msgstr "preserva l'ordine dei changeset nella sorgente"
 
 msgid "hg convert [OPTION]... SOURCE [DEST [REVMAP]]"
-msgstr "hg convert [OPZIONI]... SORGENTE [DEST [REVMAP]]"
+msgstr "hg convert [OPZIONE]... SORGENTE [DEST [REVMAP]]"
 
 msgid "only return changes on specified branches"
 msgstr "restituisce solo le modifiche relative alle branch specificate"
@@ -1303,7 +1303,7 @@ msgid "ignored for compatibility"
 msgstr "ignorato per compatibilità"
 
 msgid "hg debugcvsps [OPTION]... [PATH]..."
-msgstr "hg debugcvsps [OPZIONI]... [PERCORSO]..."
+msgstr "hg debugcvsps [OPZIONE]... [PERCORSO]..."
 
 #, python-format
 msgid "%s does not look like a Bazaar repository"
@@ -1973,9 +1973,8 @@ msgstr ""
 msgid "comparison program to run"
 msgstr "programma per i confronti da eseguire"
 
-#, fuzzy
 msgid "OPT"
-msgstr "OPZIONI"
+msgstr "OPZIONE"
 
 msgid "pass option to comparison program"
 msgstr "passa l'opzione al programma per i confronti"
@@ -1984,7 +1983,7 @@ msgid "change made by revision"
 msgstr "modifica effettuata dalla revisione"
 
 msgid "hg extdiff [OPT]... [FILE]..."
-msgstr "hg extdiff [OPZIONI]... [FILE]..."
+msgstr "hg extdiff [OPZIONE]... [FILE]..."
 
 #, python-format
 msgid "use %(path)s to diff repository (or selected files)"
@@ -2026,7 +2025,7 @@ msgstr ""
 
 #, python-format
 msgid "hg %s [OPTION]... [FILE]..."
-msgstr "hg %s [OPZIONI]... [FILE]..."
+msgstr "hg %s [OPZIONE]... [FILE]..."
 
 #, fuzzy
 msgid "pull, update and merge in one command"
@@ -2236,7 +2235,7 @@ msgid "commit message"
 msgstr "messaggio di commit"
 
 msgid "hg sign [OPTION]... [REVISION]..."
-msgstr "hg sign [OPZIONI]... [REVISIONE]..."
+msgstr "hg sign [OPZIONE]... [REVISIONE]..."
 
 msgid "hg sigcheck REVISION"
 msgstr "hg sigcheck REVISIONE"
@@ -2287,7 +2286,7 @@ msgid "show the specified revision or range"
 msgstr ""
 
 msgid "hg glog [OPTION]... [FILE]"
-msgstr "hg glog [OPZIONI]... [FILE]"
+msgstr "hg glog [OPZIONE]... [FILE]"
 
 msgid "hooks for integrating with the CIA.vc notification service"
 msgstr ""
@@ -2436,10 +2435,10 @@ msgid "search"
 msgstr "ricerca"
 
 msgid "hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]..."
-msgstr "hg git-diff-tree [OPZIONI]... NODO1 NODO2 [FILE]..."
+msgstr "hg git-diff-tree [OPZIONE]... NODO1 NODO2 [FILE]..."
 
 msgid "hg debug-cat-file [OPTION]... TYPE FILE"
-msgstr "hg debug-cat-file [OPZIONI]... TIPO FILE"
+msgstr "hg debug-cat-file [OPZIONE]... TIPO FILE"
 
 msgid "hg debug-config"
 msgstr "hg debug-config"
@@ -2468,7 +2467,7 @@ msgstr "conto massimo"
 
 #, fuzzy
 msgid "hg debug-rev-list [OPTION]... REV..."
-msgstr "hg debugcvsps [OPZIONI]... [PERCORSO]..."
+msgstr "hg debugcvsps [OPZIONE]... [PERCORSO]..."
 
 msgid "syntax highlighting for hgweb (requires Pygments)"
 msgstr ""
@@ -2910,7 +2909,7 @@ msgid "hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]..."
 msgstr ""
 
 msgid "hg kwexpand [OPTION]... [FILE]..."
-msgstr "hg kwexpand [OPZIONI]... [FILE]..."
+msgstr "hg kwexpand [OPZIONE]... [FILE]..."
 
 msgid "show keyword status flags of all files"
 msgstr ""
@@ -2923,10 +2922,10 @@ msgid "only show unknown (not tracked) files"
 msgstr "mostra solo i file sconosciuti (non tracciati)"
 
 msgid "hg kwfiles [OPTION]... [FILE]..."
-msgstr "hg kwfiles [OPZIONI]... [FILE]..."
+msgstr "hg kwfiles [OPZIONE]... [FILE]..."
 
 msgid "hg kwshrink [OPTION]... [FILE]..."
-msgstr "hg kwshrink [OPZIONI]... [FILE]..."
+msgstr "hg kwshrink [OPZIONE]... [FILE]..."
 
 msgid "manage a stack of patches"
 msgstr ""
@@ -3995,13 +3994,13 @@ msgid "location of source patch repository"
 msgstr "posizione del repository delle patch sorgente"
 
 msgid "hg qclone [OPTION]... SOURCE [DEST]"
-msgstr "hg qclone [OPZIONI]... SORGENTE [DEST]"
+msgstr "hg qclone [OPZIONE]... SORGENTE [DEST]"
 
 msgid "hg qcommit [OPTION]... [FILE]..."
-msgstr "hg qcommit [OPZIONI]... [FILE]..."
+msgstr "hg qcommit [OPZIONE]... [FILE]..."
 
 msgid "hg qdiff [OPTION]... [FILE]..."
-msgstr "hg qdiff [OPZIONI]... [FILE]..."
+msgstr "hg qdiff [OPZIONE]... [FILE]..."
 
 msgid "keep patch file"
 msgstr "mantieni il file della patch"
@@ -4026,7 +4025,7 @@ msgid "overwrite any local changes"
 msgstr "sovrascrivi ogni modifica locale"
 
 msgid "hg qgoto [OPTION]... PATCH"
-msgstr "hg qgoto [OPZIONI]... PATCH"
+msgstr "hg qgoto [OPZIONE]... PATCH"
 
 msgid "list all patches and guards"
 msgstr "elenca tutte le patch e le guardie"
@@ -4256,7 +4255,7 @@ msgstr ""
 
 #, fuzzy
 msgid "[OPTION] [QUEUE]"
-msgstr "[OPZIONI]... [FILE]"
+msgstr "[OPZIONE]... [FILE]"
 
 msgid "hooks for sending email notifications at commit/push time"
 msgstr ""
@@ -4744,7 +4743,7 @@ msgid "send an introduction email for a single patch"
 msgstr "invia una mail introduttiva per una patch singola"
 
 msgid "hg email [OPTION]... [DEST]..."
-msgstr "hg email [OPZIONI]... [DEST]..."
+msgstr "hg email [OPZIONE]... [DEST]..."
 
 msgid "show progress bars for some actions"
 msgstr ""
@@ -4853,7 +4852,7 @@ msgid "end filenames with NUL, for use with xargs (implies -p/--print)"
 msgstr "termina il nome dei file con NUL, per usarli con xargs (implica -p)"
 
 msgid "hg purge [OPTION]... [DIR]..."
-msgstr "hg purge [OPZIONI]... [DIR]..."
+msgstr "hg purge [OPZIONE]... [DIR]..."
 
 #, fuzzy
 msgid "command to move sets of revisions to a different ancestor"
@@ -5219,10 +5218,10 @@ msgid "patch failed to apply"
 msgstr ""
 
 msgid "hg record [OPTION]... [FILE]..."
-msgstr "hg record [OPZIONI]... [FILE]..."
+msgstr "hg record [OPZIONE]... [FILE]..."
 
 msgid "hg qrecord [OPTION]... PATCH [FILE]..."
-msgstr "hg qrecord [OPZIONI]... PATCH [FILE]..."
+msgstr "hg qrecord [OPZIONE]... PATCH [FILE]..."
 
 msgid "recreates hardlinks between repository clones"
 msgstr ""
@@ -8920,7 +8919,7 @@ msgid "guess renamed files by similarity (0<=s<=100)"
 msgstr "stima i file rinominati per similarità (0<=s<=100)"
 
 msgid "[OPTION]... [FILE]..."
-msgstr "[OPZIONI]... [FILE]..."
+msgstr "[OPZIONE]... [FILE]..."
 
 msgid "annotate the specified revision"
 msgstr "annota la revisione specificata"
@@ -8970,7 +8969,7 @@ msgid "type of distribution to create"
 msgstr "tipo di distribuzione da creare"
 
 msgid "[OPTION]... DEST"
-msgstr "[OPZIONI]... DEST"
+msgstr "[OPZIONE]... DEST"
 
 msgid "merge with old dirstate parent after backout"
 msgstr "effettua il merge con il vecchio dirstate del genitore dopo il backout"
@@ -8982,7 +8981,7 @@ msgid "revision to backout"
 msgstr "revisione di cui effettuare il backout"
 
 msgid "[OPTION]... [-r] REV"
-msgstr "[OPZIONI]... [-r] REV"
+msgstr "[OPZIONE]... [-r] REV"
 
 msgid "reset bisect state"
 msgstr "resetta lo stato di bisect"
@@ -9062,7 +9061,7 @@ msgid "apply any matching decode filter"
 msgstr "applica qualunque filtro di decodifica corrispondente"
 
 msgid "[OPTION]... FILE..."
-msgstr "[OPZIONI]... FILE..."
+msgstr "[OPZIONE]... FILE..."
 
 #, fuzzy
 msgid "the clone will include an empty working copy (only a repository)"
@@ -9081,7 +9080,7 @@ msgid "clone only the specified branch"
 msgstr "restituisce solo le modifiche relative alle branch specificate"
 
 msgid "[OPTION]... SOURCE [DEST]"
-msgstr "[OPZIONI]... SORGENTE [DEST]"
+msgstr "[OPZIONE]... SORGENTE [DEST]"
 
 msgid "mark new/missing files as added/removed before committing"
 msgstr ""
@@ -9117,7 +9116,7 @@ msgstr ""
 
 #, fuzzy
 msgid "[OPTION]... TEXT"
-msgstr "[OPZIONI]... DEST"
+msgstr "[OPZIONE]... DEST"
 
 msgid "[COMMAND]"
 msgstr "[COMANDO]"
@@ -9144,7 +9143,7 @@ msgstr ""
 
 #, fuzzy
 msgid "[OPTION]... [FILE [REV]...]"
-msgstr "[OPZIONI]... [FILE]..."
+msgstr "[OPZIONE]... [FILE]..."
 
 msgid "try extended date formats"
 msgstr "prova formati di date estesi"
@@ -9180,7 +9179,7 @@ msgid "do not display the saved mtime"
 msgstr "non mostrare l'mtime salvato"
 
 msgid "[OPTION]..."
-msgstr "[OPZIONI]..."
+msgstr "[OPZIONE]..."
 
 #, fuzzy
 msgid "revision to check"
@@ -9188,7 +9187,7 @@ msgstr "revisione di cui effettuare il backout"
 
 #, fuzzy
 msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
-msgstr "[OPZIONI]... [-r REV1 [-r REV2]] [FILE]..."
+msgstr "[OPZIONE]... [-r REV1 [-r REV2]] [FILE]..."
 
 msgid "diff against the second parent"
 msgstr "effettua il diff con il secondo genitore"
@@ -9198,7 +9197,7 @@ msgid "revisions to export"
 msgstr "revisione di cui fare il merge"
 
 msgid "[OPTION]... [-o OUTFILESPEC] REV..."
-msgstr "[OPZIONI]... [-o OUTFILESPEC] REV..."
+msgstr "[OPZIONE]... [-o OUTFILESPEC] REV..."
 
 msgid "end fields with NUL"
 msgstr "termina i campi con NUL"
@@ -9226,7 +9225,7 @@ msgid "only search files changed within revision range"
 msgstr "cerca nell'intervallo di revisioni fornito"
 
 msgid "[OPTION]... PATTERN [FILE]..."
-msgstr "[OPZIONI]... PATTERN [FILE]..."
+msgstr "[OPZIONE]... PATTERN [FILE]..."
 
 #, fuzzy
 msgid "show only heads which are descendants of REV"
@@ -9298,7 +9297,7 @@ msgstr ""
 "Usa qualunque informazione sulla branch nella patch (implicato da --exact)"
 
 msgid "[OPTION]... PATCH..."
-msgstr "[OPZIONI]... PATCH..."
+msgstr "[OPZIONE]... PATCH..."
 
 #, fuzzy
 msgid "run even if remote repository is unrelated"
@@ -9335,7 +9334,7 @@ msgid "print complete paths from the filesystem root"
 msgstr "stampa i percorsi completi dalla radice del filesystem"
 
 msgid "[OPTION]... [PATTERN]..."
-msgstr "[OPZIONI]... [PATTERN]..."
+msgstr "[OPZIONE]... [PATTERN]..."
 
 msgid "only follow the first parent of merge changesets"
 msgstr "segui solo il primo genitore di un changeset di merge"
@@ -9374,7 +9373,7 @@ msgid "do not display revision or any of its ancestors"
 msgstr "non mostrare la revisione o qualche suo antenato"
 
 msgid "[OPTION]... [FILE]"
-msgstr "[OPZIONI]... [FILE]"
+msgstr "[OPZIONE]... [FILE]"
 
 msgid "revision to display"
 msgstr "revisione da mostrare"
@@ -9446,7 +9445,7 @@ msgid "record a rename that has already occurred"
 msgstr "registra una rinomina che si è già verificata"
 
 msgid "[OPTION]... SOURCE... DEST"
-msgstr "[OPZIONI]... SORGENTE... DEST"
+msgstr "[OPZIONE]... SORGENTE... DEST"
 
 #, fuzzy
 msgid "select all unresolved files"
@@ -9478,7 +9477,7 @@ msgid "do not save backup copies of files"
 msgstr "non salva copie di backup dei file"
 
 msgid "[OPTION]... [-r REV] [NAME]..."
-msgstr "[OPZIONI]... [-r REV] [NOME]..."
+msgstr "[OPZIONE]... [-r REV] [NOME]..."
 
 msgid "name of access log file to write to"
 msgstr "nome del file di log degli accessi su cui scrivere"
