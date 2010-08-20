@@ -1711,7 +1711,6 @@ msgstr "svn: nessuna revisione trovata dopo la revisione iniziale %d"
 msgid "%s not found up to revision %d"
 msgstr "%s non trovato fino alla revisione %d"
 
-#, fuzzy
 msgid "scanning paths"
 msgstr "scansione percorsi"
 
@@ -1988,56 +1987,28 @@ msgstr "hg extdiff [OPZIONE]... [FILE]..."
 #, python-format
 msgid "use %(path)s to diff repository (or selected files)"
 msgstr ""
+"usa %(path)s per creare una diff tra repository (o tra i file selezionati)"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "    Show differences between revisions for the specified files, using\n"
 "    the %(path)s program."
 msgstr ""
-"show revision history of entire repository or files\n"
-"\n"
-"    Print the revision history of the specified files or the entire\n"
-"    project.\n"
-"\n"
-"    File history is shown without following rename or copy history of\n"
-"    files. Use -f/--follow with a file name to follow history across\n"
-"    renames and copies. --follow without a file name will only show\n"
-"    ancestors or descendants of the starting revision. --follow-first\n"
-"    only follows the first parent of merge revisions.\n"
-"\n"
-"    If no revision range is specified, the default is tip:0 unless\n"
-"    --follow is set, in which case the working directory parent is\n"
-"    used as the starting revision.\n"
-"\n"
-"    Vedere 'hg help dates' per un elenco dei formati validi per -d/--date.\n"
-"\n"
-"    By default this command outputs: changeset id and hash, tags,\n"
-"    non-trivial parents, user, date and time, and a summary for each\n"
-"    commit. When the -v/--verbose switch is used, the list of changed\n"
-"    files and full commit message is shown.\n"
-"\n"
-"    NOTE: log -p may generate unexpected diff output for merge\n"
-"    changesets, as it will compare the merge changeset against its\n"
-"    first parent only. Also, the files: list will only reflect files\n"
-"    that are different from BOTH parents.\n"
-"\n"
-"    "
+"    Mostra differenze tra revisioni per i file specificati, usando\n"
+"    il programma %(path)s."
 
 #, python-format
 msgid "hg %s [OPTION]... [FILE]..."
 msgstr "hg %s [OPZIONE]... [FILE]..."
 
-#, fuzzy
 msgid "pull, update and merge in one command"
 msgstr "pull, update e merge in un comando"
 
-#, fuzzy
 msgid "pull changes from a remote repository, merge new changes if needed."
 msgstr ""
 "effettua il pull delle modifiche da un repository remoto, effettua il merge "
 "delle nuove modifiche se necessario."
 
-#, fuzzy
 msgid ""
 "    This finds all changes from the repository at the specified path\n"
 "    or URL and adds them to the local repository."
@@ -2046,19 +2017,17 @@ msgstr ""
 "specificato\n"
 "    e le aggiunge al repository locale."
 
-#, fuzzy
 msgid ""
 "    If the pulled changes add a new branch head, the head is\n"
 "    automatically merged, and the result of the merge is committed.\n"
 "    Otherwise, the working directory is updated to include the new\n"
 "    changes."
 msgstr ""
-"    Se le modifiche ottenute aggiungono una nuova head, il merge di questa "
-"viene effettuato\n"
+"    Se le modifiche ottenute aggiungono una nuova head di branch, il merge "
+"di questa viene effettuato\n"
 "    automaticamente e si effettua il commit del merge. Altrimenti, la\n"
 "    directory di lavoro viene aggiornata per includere le nuove modifiche."
 
-#, fuzzy
 msgid ""
 "    When a merge occurs, the newly pulled changes are assumed to be\n"
 "    \"authoritative\". The head of the new changes is used as the first\n"
@@ -2071,12 +2040,11 @@ msgstr ""
 "    genitore, con le modifiche locali come secondo. Per invertire l'ordine\n"
 "    di merge, usare --switch-parent."
 
-#, fuzzy
 msgid ""
 "    See :hg:`help dates` for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
-"    Vedere 'hg help dates' per un elenco dei formati validi per -d/--date.\n"
+"    Vedere :hg:`help dates` per un elenco dei formati validi per -d/--date.\n"
 "    "
 
 msgid ""
@@ -2146,9 +2114,8 @@ msgstr "inverte i genitori durante il merge"
 msgid "hg fetch [SOURCE]"
 msgstr "hg fetch [SORGENTE]"
 
-#, fuzzy
 msgid "commands to sign and verify changesets"
-msgstr "elenca i changeset firmati"
+msgstr "comandi per firmare e verificare changeset"
 
 msgid "error while verifying signature"
 msgstr "errore durante la verifica della firma"
@@ -2443,9 +2410,8 @@ msgstr "hg debug-cat-file [OPZIONE]... TIPO FILE"
 msgid "hg debug-config"
 msgstr "hg debug-config"
 
-#, fuzzy
 msgid "hg debug-merge-base REV REV"
-msgstr "hg debug-rev-parse REV"
+msgstr ""
 
 msgid "ignored"
 msgstr "ignorato"
