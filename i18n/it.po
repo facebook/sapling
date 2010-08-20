@@ -2465,9 +2465,8 @@ msgstr "genitori"
 msgid "max-count"
 msgstr "conto massimo"
 
-#, fuzzy
 msgid "hg debug-rev-list [OPTION]... REV..."
-msgstr "hg debugcvsps [OPZIONE]... [PERCORSO]..."
+msgstr "hg debug-rev-list [OPZIONE]... REV..."
 
 msgid "syntax highlighting for hgweb (requires Pygments)"
 msgstr ""
@@ -4253,9 +4252,8 @@ msgstr "creata una nuova head\n"
 msgid "delete reference to queue"
 msgstr ""
 
-#, fuzzy
 msgid "[OPTION] [QUEUE]"
-msgstr "[OPZIONE]... [FILE]"
+msgstr "[OPZIONE] [CODA]"
 
 msgid "hooks for sending email notifications at commit/push time"
 msgstr ""
@@ -5401,9 +5399,8 @@ msgstr ""
 msgid "do not create a working copy"
 msgstr "non aggiornare le nuove directory di lavoro"
 
-#, fuzzy
 msgid "[-U] SOURCE [DEST]"
-msgstr "[OPZIONI]... SORGENTE [DEST]"
+msgstr "[-U] SORGENTE [DEST]"
 
 msgid "command to transplant changesets from another branch"
 msgstr ""
@@ -9114,9 +9111,8 @@ msgstr ""
 msgid "add new file at each rev"
 msgstr ""
 
-#, fuzzy
 msgid "[OPTION]... TEXT"
-msgstr "[OPZIONE]... DEST"
+msgstr "[OPZIONE]... TESTO"
 
 msgid "[COMMAND]"
 msgstr "[COMANDO]"
@@ -9141,9 +9137,8 @@ msgstr "stile non trovato: %s"
 msgid "separate elements by spaces"
 msgstr ""
 
-#, fuzzy
 msgid "[OPTION]... [FILE [REV]...]"
-msgstr "[OPZIONE]... [FILE]..."
+msgstr "[OPZIONE]... [FILE [REV]...]"
 
 msgid "try extended date formats"
 msgstr "prova formati di date estesi"
@@ -9185,9 +9180,8 @@ msgstr "[OPZIONE]..."
 msgid "revision to check"
 msgstr "revisione di cui effettuare il backout"
 
-#, fuzzy
 msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
-msgstr "[OPZIONE]... [-r REV1 [-r REV2]] [FILE]..."
+msgstr "[OPZIONE]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
 
 msgid "diff against the second parent"
 msgstr "effettua il diff con il secondo genitore"
