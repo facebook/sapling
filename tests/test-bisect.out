@@ -237,7 +237,7 @@ user:        test
 date:        Thu Jan 01 00:00:01 1970 +0000
 summary:     msg 1
 
-abort: Inconsistent state, 31:58c80a7c8a40 is good and bad
+abort: starting revisions are not directly related
 error
 Testing changeset 15:e7fa0811edb0 (32 changesets remaining, ~5 tests)
 5cd978ea5149
