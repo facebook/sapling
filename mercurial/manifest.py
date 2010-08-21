@@ -36,9 +36,7 @@ class manifest(revlog.revlog):
 
     def readdelta(self, node):
         r = self.rev(node)
-        if self._parentdelta:
-            return self.parse(mdiff.patchtext(self.revdiff(self.deltaparent(r), r)))
-        return self.parse(mdiff.patchtext(self.revdiff(r - 1, r)))
+        return self.parse(mdiff.patchtext(self.revdiff(self.deltaparent(r), r)))
 
     def read(self, node):
         if node == revlog.nullid:
