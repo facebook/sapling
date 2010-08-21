@@ -270,7 +270,12 @@ def applyupdates(repo, action, wctx, mctx, actx):
             repo.ui.debug("preserving %s for resolve of %s\n" % (f, fd))
             fcl = wctx[f]
             fco = mctx[f2]
-            fca = fcl.ancestor(fco, actx) or repo.filectx(f, fileid=nullrev)
+            if mctx == actx: # backwards, use working dir parent as ancestor
+                fca = fcl.parents()[0]
+            else:
+                fca = fcl.ancestor(fco, actx)
+            if not fca:
+                fca = repo.filectx(f, fileid=nullrev)
             ms.add(fcl, fco, fca, fd, flags)
             if f != fd and move:
                 moves.append(f)
