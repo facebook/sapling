@@ -23,9 +23,6 @@
 #                 |
 #                 0
 
-
-  $ set -e
-
 init
 
   $ hg init
@@ -389,3 +386,11 @@ first good revision is 17
   date:        Thu Jan 01 00:00:17 1970 +0000
   summary:     17
   
+
+test unrelated revs:
+
+  $ hg bisect --reset
+  $ hg bisect -b 7
+  $ hg bisect -g 14
+  abort: starting revisions are not directly related
+  $ hg bisect --reset
