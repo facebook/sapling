@@ -1135,7 +1135,7 @@ class revlog(object):
         transaction - the transaction object used for rollback
         link - the linkrev data to add
         p1, p2 - the parent nodeids of the revision
-        d - an optional precomputed delta
+        cachedelta - an optional precomputed delta
         """
         dfh = None
         if not self._inline:
