@@ -26,6 +26,8 @@ def _copyrevlog(ui, src, dst, tr, progress=None):
         progress(r)
 
 def compress(ui, repo, dest):
+    # activate parentdelta
+    ui.setconfig('format', 'parentdelta', 'on')
     dest = hg.localpath(ui.expandpath(dest))
     target = localrepo.instance(ui, dest, create=True)
 
