@@ -1137,25 +1137,25 @@ class revlog(object):
         p1, p2 - the parent nodeids of the revision
         cachedelta - an optional precomputed delta
         """
+        node = hash(text, p1, p2)
+        if (node in self.nodemap and
+            (not self.flags(self.rev(node)) & REVIDX_PUNCHED_FLAG)):
+            return node
+
         dfh = None
         if not self._inline:
             dfh = self.opener(self.datafile, "a")
         ifh = self.opener(self.indexfile, "a+")
         try:
-            return self._addrevision(text, transaction, link, p1, p2,
+            return self._addrevision(node, text, transaction, link, p1, p2,
                                      cachedelta, ifh, dfh)
         finally:
             if dfh:
                 dfh.close()
             ifh.close()
 
-    def _addrevision(self, text, transaction, link, p1, p2,
+    def _addrevision(self, node, text, transaction, link, p1, p2,
                      cachedelta, ifh, dfh):
-        node = hash(text, p1, p2)
-        if (node in self.nodemap and
-            (not self.flags(self.rev(node)) & REVIDX_PUNCHED_FLAG)):
-            return node
-
         curr = len(self)
         prev = curr - 1
         base = curr
@@ -1360,8 +1360,8 @@ class revlog(object):
                     else:
                         text = mdiff.patches(text, [delta])
                     del delta
-                    chk = self._addrevision(text, transaction, link, p1, p2, None,
-                                            ifh, dfh)
+                    chk = self._addrevision(node, text, transaction, link,
+                                            p1, p2, None, ifh, dfh)
                     if not dfh and not self._inline:
                         # addrevision switched from inline to conventional
                         # reopen the index
