@@ -182,7 +182,7 @@ def aliasargs(fn):
 
 class cmdalias(object):
     def __init__(self, name, definition, cmdtable):
-        self.name = name
+        self.name = self.cmd = name
         self.definition = definition
         self.args = []
         self.opts = []
@@ -191,7 +191,11 @@ class cmdalias(object):
         self.badalias = False
 
         try:
-            cmdutil.findcmd(self.name, cmdtable, True)
+            aliases, entry = cmdutil.findcmd(self.name, cmdtable)
+            for alias, e in cmdtable.iteritems():
+                if e is entry:
+                    self.cmd = alias
+                    break
             self.shadows = True
         except error.UnknownCommand:
             self.shadows = False
@@ -256,7 +260,7 @@ def addaliases(ui, cmdtable):
     # but only if they have been defined prior to the current definition.
     for alias, definition in ui.configitems('alias'):
         aliasdef = cmdalias(alias, definition, cmdtable)
-        cmdtable[alias] = (aliasdef, aliasdef.opts, aliasdef.help)
+        cmdtable[aliasdef.cmd] = (aliasdef, aliasdef.opts, aliasdef.help)
         if aliasdef.norepo:
             commands.norepo += ' %s' % alias
 
