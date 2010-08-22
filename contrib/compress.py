@@ -7,10 +7,10 @@
 # GNU General Public License version 2 or any later version.
 
 
-from mercurial import hg, ui, transaction, util, changegroup, localrepo, merge
+from mercurial import transaction, util, changegroup, localrepo
 import sys, os
 
-def compress(ui, repo, dest, **opts):
+def compress(ui, repo, dest):
     dest = os.path.realpath(util.expandpath(dest))
     target = localrepo.instance(ui, dest, create=1)
     tr = transaction.transaction(sys.stderr.write,
@@ -21,7 +21,6 @@ def compress(ui, repo, dest, **opts):
     mmfs = {}
     collect = changegroup.collector(src_cl, mmfs, changedfiles)
     total = len(repo)
-    opener = target.sopener
 
     for r in src_cl:
         p = [src_cl.node(i) for i in src_cl.parentrevs(r)]
@@ -46,7 +45,7 @@ def compress(ui, repo, dest, **opts):
         tf = target.file(f)
         for r in sf:
             p = [sf.node(i) for i in sf.parentrevs(r)]
-            a = tf.addrevision(sf.revision(sf.node(r)), tr, sf.linkrev(r),
+            tf.addrevision(sf.revision(sf.node(r)), tr, sf.linkrev(r),
                                p[0], p[1])
         ui.progress(('adding files'), cnt, item=f, unit=('file'), total=total)
 
