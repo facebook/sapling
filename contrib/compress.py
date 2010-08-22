@@ -36,7 +36,6 @@ def compress(ui, repo, dest):
         tr = target.transaction("compress")
         trp = weakref.proxy(tr)
 
-        _copyrevlog(ui, repo.changelog, target.changelog, trp, 'changesets')
         _copyrevlog(ui, repo.manifest, target.manifest, trp, 'manifest')
 
         # only keep indexes and filter "data/" prefix and ".i" suffix
@@ -47,6 +46,8 @@ def compress(ui, repo, dest):
             _copyrevlog(ui, repo.file(f), target.file(f), trp)
             ui.progress(('adding files'), cnt, item=f, unit=('file'),
                         total=total)
+
+        _copyrevlog(ui, repo.changelog, target.changelog, trp, 'changesets')
 
         tr.close()
     finally:
