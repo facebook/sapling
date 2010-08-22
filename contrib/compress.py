@@ -7,14 +7,13 @@
 # GNU General Public License version 2 or any later version.
 
 
-from mercurial import transaction, util, changegroup, localrepo
-import sys, os
+from mercurial import util, changegroup, localrepo
+import os
 
 def compress(ui, repo, dest):
     dest = os.path.realpath(util.expandpath(dest))
     target = localrepo.instance(ui, dest, create=1)
-    tr = transaction.transaction(sys.stderr.write,
-                                 util.opener('.', False), "compress")
+    tr = target.transaction("compress")
     src_cl = repo.changelog
     tar_cl = target.changelog
     changedfiles = set()
