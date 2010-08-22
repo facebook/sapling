@@ -35,10 +35,3 @@ class repository(object):
 
     def cancopy(self):
         return self.local()
-
-    def rjoin(self, path):
-        url = self.url()
-        if url.endswith('/'):
-            return url + path
-        else:
-            return url + '/' + path
