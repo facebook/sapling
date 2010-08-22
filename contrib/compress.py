@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 
-from mercurial import hg, changegroup, localrepo
+from mercurial import hg, localrepo
 from mercurial.lock import release
 import weakref
 
@@ -24,16 +24,12 @@ def compress(ui, repo, dest):
 
         src_cl = repo.changelog
         tar_cl = target.changelog
-        changedfiles = set()
-        mmfs = {}
-        collect = changegroup.collector(src_cl, mmfs, changedfiles)
         total = len(repo)
 
         for r in src_cl:
             p = [src_cl.node(i) for i in src_cl.parentrevs(r)]
-            nd = tar_cl.addrevision(src_cl.revision(src_cl.node(r)), trp,
-                                     src_cl.linkrev(r), p[0], p[1])
-            collect(nd)
+            tar_cl.addrevision(src_cl.revision(src_cl.node(r)), trp,
+                               src_cl.linkrev(r), p[0], p[1])
             ui.progress(('adding changesets'), r, unit=('revisions'),
                         total=total)
 
@@ -46,8 +42,11 @@ def compress(ui, repo, dest):
             ui.progress(('adding manifest'), r, unit=('revisions'),
                         total=total)
 
-        total = len(changedfiles)
-        for cnt, f in enumerate(changedfiles):
+        # only keep indexes and filter "data/" prefix and ".i" suffix
+        datafiles = [fn[5:-2] for fn, f2, size in repo.store.datafiles()
+                                      if size and fn.endswith('.i')]
+        total = len(datafiles)
+        for cnt, f in enumerate(datafiles):
             sf = repo.file(f)
             tf = target.file(f)
             for r in sf:
