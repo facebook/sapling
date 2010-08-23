@@ -1353,12 +1353,7 @@ class revlog(object):
                         dfh.flush()
                     ifh.flush()
                     text = self.revision(chain)
-                    if len(text) == 0:
-                        # skip over trivial delta header
-                        # text == '' in the case of nullrev or punched revision
-                        text = buffer(delta, 12)
-                    else:
-                        text = mdiff.patches(text, [delta])
+                    text = mdiff.patch(text, delta)
                     del delta
                     chk = self._addrevision(node, text, transaction, link,
                                             p1, p2, None, ifh, dfh)
