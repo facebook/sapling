@@ -550,8 +550,7 @@ class revlog(object):
         return self.index[rev][3]
     def flags(self, rev):
         return self.index[rev][0] & 0xFFFF
-
-    def size(self, rev):
+    def rawsize(self, rev):
         """return the length of the uncompressed text for a given revision"""
         l = self.index[rev][2]
         if l >= 0:
@@ -559,6 +558,7 @@ class revlog(object):
 
         t = self.revision(self.node(rev))
         return len(t)
+    size = rawsize
 
     def reachable(self, node, stop=None):
         """return the set of all nodes ancestral to a given node, including
