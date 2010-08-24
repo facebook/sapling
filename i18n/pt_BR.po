@@ -11187,6 +11187,9 @@ msgstr ""
 msgid "merging %s failed!\n"
 msgstr "mesclagem de %s falhou!\n"
 
+msgid "starting revisions are not directly related"
+msgstr "as revisões iniciais não são diretamente relacionadas"
+
 #, python-format
 msgid "Inconsistent state, %s:%s is good and bad"
 msgstr "Estado inconsistente, %s:%s é bom e ruim"
