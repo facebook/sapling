@@ -26,6 +26,10 @@ hg init c
 echo c > c/c
 hg --cwd c ci -Amc -d'3 0'
 
+# create repository without .hg/store
+hg init nostore
+rm -R nostore/.hg/store
+
 root=`pwd`
 cd ..
 
@@ -110,6 +114,20 @@ cat hg.pid >> $DAEMON_PIDS
 echo % test descend = False
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=raw'
 "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/?style=raw'
+
+
+"$TESTDIR/killdaemons.py"
+cat > paths.conf <<EOF
+[paths]
+nostore = $root/nostore
+inexistent = $root/inexistent
+EOF
+
+hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
+    -A access-paths.log -E error-paths-4.log
+cat hg.pid >> $DAEMON_PIDS
+echo % test inexistent and inaccessible repo should be ignored silently
+"$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/'
 
 
 cat > collections.conf <<EOF
