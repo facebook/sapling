@@ -23,6 +23,7 @@
   > echo2 = !echo '\$2'
   > echo13 = !echo '\$1' '\$3'
   > count = !hg log -r '\$@' --template='.' | wc -c | sed -e 's/ //g'
+  > mcount = !hg log \$@ --template='.' | wc -c | sed -e 's/ //g'
   > rt = root
   > 
   > [defaults]
@@ -158,10 +159,10 @@ simple shell aliases
   
   $ hg blank foo
   
-  $ hg echo
-  
   $ hg self
   self
+  $ hg echo
+  
   $ hg echo foo
   foo
   $ hg echo 'test $2' foo
@@ -180,6 +181,59 @@ simple shell aliases
   1
   $ hg count 'branch(default)'
   2
+  $ hg mcount -r '"branch(default)"'
+  2
+
+
+shell aliases with global options
+
+  $ hg init sub
+  $ cd sub
+  $ hg count 'branch(default)'
+  0
+  $ hg -v count 'branch(default)'
+  0
+  $ hg -R .. count 'branch(default)'
+  0
+  $ hg --cwd .. count 'branch(default)'
+  2
+  $ hg echo --cwd ..
+  --cwd ..
+
+
+repo specific shell aliases
+
+  $ cat >> .hg/hgrc <<EOF
+  > [alias]
+  > subalias = !echo sub \$@
+  > EOF
+  $ cat >> ../.hg/hgrc <<EOF
+  > [alias]
+  > mainalias = !echo main \$@
+  > EOF
+
+
+shell alias defined in current repo
+
+  $ hg subalias
+  sub
+  $ hg --cwd .. subalias > /dev/null
+  hg: unknown command 'subalias'
+  [255]
+  $ hg -R .. subalias > /dev/null
+  hg: unknown command 'subalias'
+  [255]
+
+
+shell alias defined in other repo
+
+  $ hg mainalias > /dev/null
+  hg: unknown command 'mainalias'
+  [255]
+  $ hg -R .. mainalias
+  main
+  $ hg --cwd .. mainalias
+  main
 
 
 invalid arguments

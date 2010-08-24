@@ -218,6 +218,7 @@ class cmdalias(object):
             return
 
         if self.definition.startswith('!'):
+            self.shell = True
             def fn(ui, *args):
                 env = {'HG_ARGS': ' '.join((self.name,) + args)}
                 def _checkvar(m):
@@ -404,18 +405,11 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
               result=ret, pats=cmdpats, opts=cmdoptions)
     return ret
 
-_loaded = set()
-def _dispatch(ui, args):
-    # read --config before doing anything else
-    # (e.g. to change trust settings for reading .hg/hgrc)
-    _parseconfig(ui, _earlygetopt(['--config'], args))
-
-    # check for cwd
-    cwd = _earlygetopt(['--cwd'], args)
-    if cwd:
-        os.chdir(cwd[-1])
-
-    # read the local repository .hgrc into a local ui object
+def _getlocal(ui, rpath):
+    """Return (path, local ui object) for the given target path.
+    
+    Takes paths in [cwd]/.hg/hgrc into account."
+    """
     try:
         wd = os.getcwd()
     except OSError, e:
@@ -431,12 +425,63 @@ def _dispatch(ui, args):
         except IOError:
             pass
 
-    # now we can expand paths, even ones in .hg/hgrc
-    rpath = _earlygetopt(["-R", "--repository", "--repo"], args)
     if rpath:
         path = lui.expandpath(rpath[-1])
         lui = ui.copy()
         lui.readconfig(os.path.join(path, ".hg", "hgrc"))
+
+    return path, lui
+
+def _checkshellalias(ui, args):
+    cwd = os.getcwd()
+    options = {}
+    args = fancyopts.fancyopts(args, commands.globalopts, options)
+
+    if not args:
+        return
+
+    _parseconfig(ui, options['config'])
+    if options['cwd']:
+        os.chdir(options['cwd'])
+
+    path, lui = _getlocal(ui, [options['repository']])
+
+    cmdtable = commands.table.copy()
+    addaliases(lui, cmdtable)
+
+    cmd = args[0]
+    try:
+        aliases, entry = cmdutil.findcmd(cmd, cmdtable, lui.config("ui", "strict"))
+    except error.UnknownCommand:
+        os.chdir(cwd)
+        return
+
+    cmd = aliases[0]
+    fn = entry[0]
+
+    if cmd and hasattr(fn, 'shell'):
+        d = lambda: fn(ui, *args[1:])
+        return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d, [], {})
+
+    os.chdir(cwd)
+
+_loaded = set()
+def _dispatch(ui, args):
+    shellaliasfn = _checkshellalias(ui, args)
+    if shellaliasfn:
+        return shellaliasfn()
+
+    # read --config before doing anything else
+    # (e.g. to change trust settings for reading .hg/hgrc)
+    _parseconfig(ui, _earlygetopt(['--config'], args))
+
+    # check for cwd
+    cwd = _earlygetopt(['--cwd'], args)
+    if cwd:
+        os.chdir(cwd[-1])
+
+    rpath = _earlygetopt(["-R", "--repository", "--repo"], args)
+    path, lui = _getlocal(ui, rpath)
 
     # Configure extensions in phases: uisetup, extsetup, cmdtable, and
     # reposetup. Programs like TortoiseHg will call _dispatch several
