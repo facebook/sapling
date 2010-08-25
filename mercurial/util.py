@@ -431,15 +431,6 @@ def checksignature(func):
 
     return check
 
-# os.path.lexists is not available on python2.3
-def lexists(filename):
-    "test whether a file with this name exists. does not follow symlinks"
-    try:
-        os.lstat(filename)
-    except:
-        return False
-    return True
-
 def unlink(f):
     """unlink and remove the directory if it is empty"""
     os.unlink(f)

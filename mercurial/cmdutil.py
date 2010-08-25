@@ -297,7 +297,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             unknown.append(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        elif repo.dirstate[abs] != 'r' and (not good or not util.lexists(target)
+        elif repo.dirstate[abs] != 'r' and (not good or not os.path.lexists(target)
             or (os.path.isdir(target) and not os.path.islink(target))):
             deleted.append(abs)
             if repo.ui.verbose or not exact:

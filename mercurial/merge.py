@@ -282,7 +282,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
 
     # remove renamed files after safely stored
     for f in moves:
-        if util.lexists(repo.wjoin(f)):
+        if os.path.lexists(repo.wjoin(f)):
             repo.ui.debug("removing %s\n" % f)
             os.unlink(repo.wjoin(f))
 
@@ -320,7 +320,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
                 else:
                     merged += 1
             util.set_flags(repo.wjoin(fd), 'l' in flags, 'x' in flags)
-            if f != fd and move and util.lexists(repo.wjoin(f)):
+            if f != fd and move and os.path.lexists(repo.wjoin(f)):
                 repo.ui.debug("removing %s\n" % f)
                 os.unlink(repo.wjoin(f))
         elif m == "g": # get
