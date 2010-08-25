@@ -294,13 +294,7 @@ def unbundle(repo, proto, heads):
 
             # push can proceed
             fp.seek(0)
-            header = fp.read(6)
-            if header.startswith('HG'):
-                if not header.startswith('HG10'):
-                    raise ValueError('unknown bundle version')
-                elif header not in changegroupmod.bundletypes:
-                    raise ValueError('unknown bundle compression type')
-            gen = changegroupmod.unbundle(header, fp)
+            gen = changegroupmod.readbundle(fp, None)
 
             try:
                 r = repo.addchangegroup(gen, 'serve', proto._client(),

@@ -138,24 +138,24 @@ def decompressor(fh, alg):
         raise util.Abort("unknown bundle compression '%s'" % alg)
     return generator(fh)
 
-def unbundle(header, fh):
-    if not header.startswith('HG'):
-        def fixup(f, h):
-            yield h
-            for x in f:
-                yield x
-        fh = fixup(f, h)
-        header = "HG10UN"
-
-    alg = header[4:6]
-    return util.chunkbuffer(decompressor(fh, alg))
-
 def readbundle(fh, fname):
     header = fh.read(6)
-    if not header.startswith('HG'):
-        raise util.Abort(_('%s: not a Mercurial bundle file') % fname)
-    if not header.startswith('HG10'):
-        raise util.Abort(_('%s: unknown bundle version') % fname)
-    elif header not in bundletypes:
-        raise util.Abort(_('%s: unknown bundle compression type') % fname)
-    return unbundle(header, fh)
+
+    if not fname:
+        fname = "stream"
+        if not header.startswith('HG') and header.startswith('\0'):
+            # headerless bundle, clean things up
+            def fixup(f, h):
+                yield h
+                for x in f:
+                    yield x
+            fh = fixup(fh, header)
+            header = "HG10UN"
+
+    magic, version, alg = header[0:2], header[2:4], header[4:6]
+
+    if magic != 'HG':
+        raise util.Abort(_('%s: not a Mercurial bundle') % fname)
+    if version != '10':
+        raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
+    return util.chunkbuffer(decompressor(fh, alg))
