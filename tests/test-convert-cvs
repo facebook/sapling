@@ -132,12 +132,22 @@ log message' . | grep '<--' |\
     sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
 cd ..
 
-echo % convert again
-hg convert src src-hg | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
+echo % commit new file revisions with some fuzz
+cd src
+echo f >> a
+cvscall -q commit -mfuzzy . | grep '<--' |\
+    sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
+sleep 4 # the two changes will be split if fuzz < 4
+echo g >> b/c
+cvscall -q commit -mfuzzy . | grep '<--' |\
+    sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
+cd ..
 
-echo "graphlog = " >> $HGRCPATH
+echo % convert again
+hg convert --config convert.cvsps.fuzz=2 src src-hg | sed -e 's/connecting to.*cvsrepo/connecting to cvsrepo/g'
+
 hg -R src-hg glog --template '{rev} ({branches}) {desc} files: {files}\n'
 
 echo % testing debugcvsps
 cd src
-hg debugcvsps | sed -e 's/Author:.*/Author:/' -e 's/Date:.*/Date:/' 
+hg debugcvsps --fuzz=2 | sed -e 's/Author:.*/Author:/' -e 's/Date:.*/Date:/' 

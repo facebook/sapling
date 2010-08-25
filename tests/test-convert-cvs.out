@@ -150,18 +150,27 @@ d
 0 Initial revision files: b/c
 % commit a new revision with funny log message
 checking in src/a,v
+% commit new file revisions with some fuzz
+checking in src/a,v
+checking in src/b/c,v
 % convert again
 connecting to cvsrepo
 scanning source...
 collecting CVS rlog
-9 log entries
-cvslog hook: 9 entries
+11 log entries
+cvslog hook: 11 entries
 creating changesets
-6 changeset entries
-cvschangesets hook: 6 changesets
+8 changeset entries
+cvschangesets hook: 8 changesets
 sorting...
 converting...
-0 funny
+2 funny
+1 fuzzy
+0 fuzzy
+o  8 (branch) fuzzy files: b/c
+|
+o  7 (branch) fuzzy files: a
+|
 o  6 (branch) funny
 |  ----------------------------
 |  log message files: a
@@ -179,11 +188,11 @@ o  0 () Initial revision files: a b/c
 
 % testing debugcvsps
 collecting CVS rlog
-9 log entries
-cvslog hook: 9 entries
+11 log entries
+cvslog hook: 11 entries
 creating changesets
-8 changeset entries
-cvschangesets hook: 8 changesets
+10 changeset entries
+cvschangesets hook: 10 changesets
 ---------------------
 PatchSet 1 
 Date:
@@ -285,4 +294,28 @@ log message
 
 Members: 
 	a:1.2->1.2.2.1 
+
+---------------------
+PatchSet 9 
+Date:
+Author:
+Branch: branch
+Tag: (none) 
+Log:
+fuzzy
+
+Members: 
+	a:1.2.2.1->1.2.2.2 
+
+---------------------
+PatchSet 10 
+Date:
+Author:
+Branch: branch
+Tag: (none) 
+Log:
+fuzzy
+
+Members: 
+	b/c:1.1.2.1->1.1.2.2 
 

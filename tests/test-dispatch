@@ -21,10 +21,6 @@ cat = -r null
 EOF
 hg cat a
 
-echo '% working directory removed'
-sh -c "cd $dir && rm -rf a"
-hg --version 2>&1 | sed -e 's,\(abort:.*:\).*$,\1 ...,g'
-
 echo '% no repo'
 cd $dir
 hg cat
