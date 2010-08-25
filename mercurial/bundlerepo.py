@@ -13,7 +13,7 @@ were part of the actual repository.
 
 from node import nullid
 from i18n import _
-import os, struct, bz2, zlib, tempfile, shutil
+import os, struct, tempfile, shutil
 import changegroup, util, mdiff
 import localrepo, changelog, manifest, filelog, revlog, error
 
@@ -172,43 +172,27 @@ class bundlerepository(localrepo.localrepository):
 
         self.tempfile = None
         self.bundlefile = open(bundlename, "rb")
-        header = self.bundlefile.read(6)
-        if not header.startswith("HG"):
-            raise util.Abort(_("%s: not a Mercurial bundle file") % bundlename)
-        elif not header.startswith("HG10"):
-            raise util.Abort(_("%s: unknown bundle version") % bundlename)
-        elif (header == "HG10BZ") or (header == "HG10GZ"):
+        b = changegroup.readbundle(self.bundlefile, bundlename)
+        if b.compressed():
             fdtemp, temp = tempfile.mkstemp(prefix="hg-bundle-",
                                             suffix=".hg10un", dir=self.path)
             self.tempfile = temp
             fptemp = os.fdopen(fdtemp, 'wb')
-            def generator(f):
-                if header == "HG10BZ":
-                    zd = bz2.BZ2Decompressor()
-                    zd.decompress("BZ")
-                elif header == "HG10GZ":
-                    zd = zlib.decompressobj()
-                for chunk in f:
-                    yield zd.decompress(chunk)
-            gen = generator(util.filechunkiter(self.bundlefile, 4096))
 
             try:
                 fptemp.write("HG10UN")
-                for chunk in gen:
+                while 1:
+                    chunk = b.read(2**18)
+                    if not chunk:
+                        break
                     fptemp.write(chunk)
             finally:
                 fptemp.close()
                 self.bundlefile.close()
 
             self.bundlefile = open(self.tempfile, "rb")
-            # seek right after the header
             self.bundlefile.seek(6)
-        elif header == "HG10UN":
-            # nothing to do
-            pass
-        else:
-            raise util.Abort(_("%s: unknown bundle compression type")
-                             % bundlename)
+
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
 

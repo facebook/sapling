@@ -141,6 +141,9 @@ def decompressor(fh, alg):
 class unbundle10(object):
     def __init__(self, fh, alg):
         self._stream = util.chunkbuffer(decompressor(fh, alg))
+        self._type = alg
+    def compressed(self):
+        return self._type != 'UN'
     def read(self, l):
         return self._stream.read(l)
 

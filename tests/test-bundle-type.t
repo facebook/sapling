@@ -87,7 +87,7 @@ test garbage file
   $ hg init tgarbage
   $ cd tgarbage
   $ hg pull ../bgarbage
-  abort: ../bgarbage: not a Mercurial bundle file
+  abort: ../bgarbage: not a Mercurial bundle
   $ cd ..
 
 test invalid bundle type
