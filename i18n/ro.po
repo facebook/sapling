@@ -77,7 +77,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-08-05 16:06+0200\n"
+"POT-Creation-Date: 2010-08-25 11:46+0200\n"
 "PO-Revision-Date: 2010-08-19 23:40+0200\n"
 "Last-Translator: Daniel Dumitriu <daniel.dumitriu@gmail.com>\n"
 "Language-Team: Romanian <>\n"
@@ -464,6 +464,10 @@ msgstr ""
 
 #, python-format
 msgid "deleting remote bookmark %s\n"
+msgstr ""
+
+#, python-format
+msgid "bookmark %s does not exist on the local or remote repository!\n"
 msgstr ""
 
 msgid "searching for changes\n"
@@ -962,6 +966,13 @@ msgid ""
 msgstr ""
 
 msgid "  bookmarks.current = green"
+msgstr ""
+
+msgid ""
+"  branches.active = none\n"
+"  branches.closed = black bold\n"
+"  branches.current = green\n"
+"  branches.inactive = none"
 msgstr ""
 
 msgid ""
@@ -1813,7 +1824,7 @@ msgstr ""
 msgid "unable to cope with svn output"
 msgstr ""
 
-msgid "XXX TAGS NOT IMPLEMENTED YET\n"
+msgid "writing Subversion tags is not yet implemented\n"
 msgstr ""
 
 msgid "automatically manage newlines in repository files"
@@ -2277,8 +2288,8 @@ msgid ""
 "    directory.\n"
 "    "
 msgstr ""
-"    Nodurile afișate cu un caracter @ sunt părinți ai directorului de lucru."
-"\n"
+"    Nodurile afișate cu un caracter @ sunt părinți ai directorului de "
+"lucru.\n"
 "    "
 
 msgid "show the revision DAG"
@@ -3515,6 +3526,14 @@ msgid ""
 msgstr ""
 
 msgid ""
+"    If -e/--edit is specified, Mercurial will start your configured editor "
+"for\n"
+"    you to enter a message. In case qrefresh fails, you will find a backup "
+"of\n"
+"    your message in ``.hg/last-message.txt``."
+msgstr ""
+
+msgid ""
 "    hg add/remove/copy/rename work as usual, though you might want to\n"
 "    use git-style patches (-g/--git or [diff] git=1) to track copies\n"
 "    and renames. See the diffs help topic for more information on the\n"
@@ -3687,15 +3706,13 @@ msgstr ""
 msgid "copy %s to %s\n"
 msgstr ""
 
-msgid "strip a changeset and all its descendants from the repository"
+msgid "strip changesets and all their descendants from the repository"
 msgstr ""
 
 msgid ""
-"    The strip command removes all changesets whose local revision\n"
-"    number is greater than or equal to REV, and then restores any\n"
-"    changesets that are not descendants of REV. If the working\n"
-"    directory has uncommitted changes, the operation is aborted unless\n"
-"    the --force flag is supplied."
+"    The strip command removes the specified changesets and all their\n"
+"    descendants. If the working directory has uncommitted changes,\n"
+"    the operation is aborted unless the --force flag is supplied."
 msgstr ""
 
 msgid ""
@@ -3855,6 +3872,12 @@ msgstr ""
 msgid "patches applied - cannot set new queue active"
 msgstr ""
 
+msgid "cannot delete queue that does not exist"
+msgstr ""
+
+msgid "cannot delete currently active queue"
+msgstr ""
+
 msgid " (active)\n"
 msgstr ""
 
@@ -3865,11 +3888,13 @@ msgstr ""
 msgid "queue \"%s\" already exists"
 msgstr ""
 
-msgid "cannot delete queue that does not exist"
+#, python-format
+msgid "can't rename \"%s\" to its current name"
 msgstr ""
 
-msgid "cannot delete currently active queue"
-msgstr ""
+#, fuzzy, python-format
+msgid "non-queue directory \"%s\" already exists"
+msgstr "depozitul %s există deja"
 
 msgid "use --create to create a new queue"
 msgstr ""
@@ -4149,7 +4174,7 @@ msgstr ""
 msgid "no backups"
 msgstr ""
 
-msgid "hg strip [-f] [-n] REV"
+msgid "hg strip [-f] [-n] REV..."
 msgstr ""
 
 msgid "hg qtop [-s]"
@@ -4173,7 +4198,13 @@ msgstr ""
 msgid "create new queue"
 msgstr ""
 
+msgid "rename active queue"
+msgstr ""
+
 msgid "delete reference to queue"
+msgstr ""
+
+msgid "delete queue, and remove patch dir"
 msgstr ""
 
 msgid "[OPTION] [QUEUE]"
@@ -4867,12 +4898,11 @@ msgstr ""
 msgid "cannot use both keepbranches and extrafn"
 msgstr ""
 
-msgid " changesets"
-msgstr "seturi de modificări"
-
-#, fuzzy
 msgid "rebasing"
 msgstr ""
+
+msgid " changesets"
+msgstr "seturi de modificări"
 
 msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
 msgstr ""
@@ -4906,8 +4936,8 @@ msgstr ""
 
 msgid "warning: new changesets detected on target branch, can't abort\n"
 msgstr ""
-"avertisment: au fost detectate seturi de modificări noi în ramura\n, "
-"destinație, nu se poate abandona\n"
+"avertisment: au fost detectate seturi de modificări noi în ramura\n"
+", destinație, nu se poate abandona\n"
 
 msgid "rebase aborted\n"
 msgstr ""
@@ -6353,8 +6383,8 @@ msgstr ""
 "    urmează a fi recuperate poate fi specificată prin listarea fiecărui set\n"
 "    de modificări (etichete sau nume de ramuri) cu -r/--rev.\n"
 "    Dacă se folosește -r/--rev, depozitul clonat va conține numai un subset\n"
-"    al seturilor de modificări ale depozitului sursă. Numai colecția de\n "
-"    seturi de modificări definite de toate opțiunile -r/--rev (inclusiv "
+"    al seturilor de modificări ale depozitului sursă. Numai colecția de\n"
+"     seturi de modificări definite de toate opțiunile -r/--rev (inclusiv "
 "toți\n"
 "    strămoșii) va fi adusă (pulled) in depozitul destinație.\n"
 "    Nici un set de modificări ulterior (inclusiv etichete ulterioare) nu se\n"
@@ -6473,11 +6503,11 @@ msgstr ""
 "    fișier sau filtrele -I/-X."
 
 msgid ""
-"    If no commit message is specified, the configured editor is\n"
-"    started to prompt you for a message."
+"    If no commit message is specified, Mercurial starts your\n"
+"    configured editor where you can enter a message. In case your\n"
+"    commit fails, you will find a backup of your message in\n"
+"    ``.hg/last-message.txt``."
 msgstr ""
-"    Dacă nu specificați nici un mesaj pentru depozitare, se va\n"
-"    lansa editorul menționat în configurație pentru a scrie un mesaj."
 
 msgid ""
 "    Returns 0 on success, 1 if nothing changed.\n"
@@ -6575,7 +6605,7 @@ msgstr ""
 
 msgid ""
 "    All string valued-elements are either strictly alphanumeric, or must\n"
-"    be enclosed in double quotes (\"...\"), with \"\" as escape character."
+"    be enclosed in double quotes (\"...\"), with \"\\\" as escape character."
 msgstr ""
 
 msgid ""
@@ -6728,8 +6758,9 @@ msgstr "Se verifică codificarea (%s)...\n"
 msgid " (check that your locale is properly set)\n"
 msgstr ""
 
-msgid "Checking extensions...\n"
-msgstr "Se verifică extensiile...\n"
+#, fuzzy, python-format
+msgid "Checking installed modules (%s)...\n"
+msgstr "Se verifică codificarea (%s)...\n"
 
 msgid " One or more extensions could not be found"
 msgstr ""
@@ -7680,38 +7711,48 @@ msgid ""
 "    before that, see :hg:`revert`."
 msgstr ""
 
-msgid "various operations to help finish a merge"
+msgid "redo merges or set/view the merge status of files"
 msgstr ""
 
 msgid ""
-"    This command includes several actions that are often useful while\n"
-"    performing a merge, after running ``merge`` but before running\n"
-"    ``commit``.  (It is only meaningful if your working directory has\n"
-"    two parents.)  It is most relevant for merges with unresolved\n"
-"    conflicts, which are typically a result of non-interactive merging with\n"
-"    ``internal:merge`` or a command-line merge tool like ``diff3``."
+"    Merges with unresolved conflicts are often the result of\n"
+"    non-interactive merging using the ``internal:merge`` hgrc setting,\n"
+"    or a command-line merge tool like ``diff3``. The resolve command\n"
+"    is used to manage the files involved in a merge, after :hg:`merge`\n"
+"    has been run, and before :hg:`commit` is run (i.e. the working\n"
+"    directory must have two parents)."
 msgstr ""
 
-msgid "    The available actions are:"
-msgstr ""
-
-msgid ""
-"      1) list files that were merged with conflicts (U, for unresolved)\n"
-"         and without conflicts (R, for resolved): ``hg resolve -l``\n"
-"         (this is like ``status`` for merges)\n"
-"      2) record that you have resolved conflicts in certain files:\n"
-"         ``hg resolve -m [file ...]`` (default: mark all unresolved files)\n"
-"      3) forget that you have resolved conflicts in certain files:\n"
-"         ``hg resolve -u [file ...]`` (default: unmark all resolved files)\n"
-"      4) discard your current attempt(s) at resolving conflicts and\n"
-"         restart the merge from scratch: ``hg resolve file...``\n"
-"         (or ``-a`` for all unresolved files)"
+msgid "    The resolve command can be used in the following ways:"
 msgstr ""
 
 msgid ""
-"    Note that Mercurial will not let you commit files with unresolved merge\n"
-"    conflicts.  You must use ``hg resolve -m ...`` before you can commit\n"
-"    after a conflicting merge."
+"    - :hg:`resolve FILE...`: attempt to re-merge the specified files,\n"
+"      discarding any previous merge attempts. Re-merging is not\n"
+"      performed for files already marked as resolved. Use ``--all/-a``\n"
+"      to selects all unresolved files."
+msgstr ""
+
+msgid ""
+"    - :hg:`resolve -m [FILE]`: mark a file as having been resolved\n"
+"      (e.g. after having manually fixed-up the files). The default is\n"
+"      to mark all unresolved files."
+msgstr ""
+
+msgid ""
+"    - :hg:`resolve -u [FILE]...`: mark a file as unresolved. The\n"
+"      default is to mark all resolved files."
+msgstr ""
+
+msgid ""
+"    - :hg:`resolve -l`: list files which had or still have conflicts.\n"
+"      In the printed list, ``U`` = unresolved and ``R`` = resolved."
+msgstr ""
+
+msgid ""
+"    Note that Mercurial will not let you commit files with unresolved\n"
+"    merge conflicts. You must use :hg:`resolve -m ...` before you can\n"
+"    commit after a conflicting merge."
 msgstr ""
 
 msgid ""
@@ -8698,7 +8739,8 @@ msgstr "afișează doar capetele care sunt descendenți ai REV"
 msgid "show topological heads only"
 msgstr "afișează doar capetele topologice"
 
-msgid "show active branchheads only [DEPRECATED]"
+#, fuzzy
+msgid "show active branchheads only (DEPRECATED)"
 msgstr "afișează doar capetele de ramură active [ÎNVECHIT]"
 
 msgid "show normal and closed branch heads"
@@ -8904,8 +8946,9 @@ msgstr "afișează starea fișierelor care au nevoie de fuziune"
 msgid "mark files as resolved"
 msgstr "marchează fișierul drept rezolvat"
 
-msgid "unmark files as resolved"
-msgstr "de-marchează fișierul drept rezolvat"
+#, fuzzy
+msgid "mark files as unresolved"
+msgstr "marchează fișierul drept rezolvat"
 
 msgid "hide status prefix"
 msgstr "ascunde prefixul stării"
@@ -9431,6 +9474,9 @@ msgstr ""
 msgid "merging %s failed!\n"
 msgstr ""
 
+msgid "starting revisions are not directly related"
+msgstr ""
+
 #, python-format
 msgid "Inconsistent state, %s:%s is good and bad"
 msgstr ""
@@ -9891,6 +9937,21 @@ msgstr ""
 msgid ""
 "Branch head\n"
 "    See 'Head, branch'."
+msgstr ""
+
+msgid ""
+"Branch, inactive\n"
+"    If a named branch has no topological heads, it is considered to be\n"
+"    inactive. As an example, a feature branch becomes inactive when it\n"
+"    is merged into the default branch. The :hg:`branches` command\n"
+"    shows inactive branches by default, though they can be hidden with\n"
+"    :hg:`branches --active`."
+msgstr ""
+
+msgid ""
+"    NOTE: this concept is deprecated because it is too implicit.\n"
+"    Branches should now be explicitly closed using :hg:`commit\n"
+"    --close-branch` when they are no longer needed."
 msgstr ""
 
 msgid ""
@@ -10743,6 +10804,12 @@ msgid ""
 msgstr ""
 
 msgid ""
+"``present(set)``\n"
+"  An empty set, if any revision in set isn't found; otherwise,\n"
+"  all revisions in set."
+msgstr ""
+
+msgid ""
 "``removes(pattern)``\n"
 "  Changesets which remove files matching pattern."
 msgstr ""
@@ -11031,6 +11098,11 @@ msgid ""
 msgstr ""
 
 msgid ":shortdate: Date. Returns a date like \"2006-09-18\"."
+msgstr ""
+
+msgid ""
+":stringify: Any type. Turns the value into text by converting values into\n"
+"    text and concatenating them."
 msgstr ""
 
 msgid ":strip: Any text. Strips all leading and trailing whitespace."
@@ -11978,6 +12050,10 @@ msgid "missing ] in subrepo source"
 msgstr ""
 
 #, python-format
+msgid "bad subrepository pattern in %s: %s"
+msgstr ""
+
+#, python-format
 msgid ""
 " subrepository sources for %s differ\n"
 "use (l)ocal source (%s) or (r)emote source (%s)?"
@@ -12406,4 +12482,15 @@ msgstr ""
 msgid "push failed (unexpected response):"
 msgstr ""
 
+#~ msgid ""
+#~ "    If no commit message is specified, the configured editor is\n"
+#~ "    started to prompt you for a message."
+#~ msgstr ""
+#~ "    Dacă nu specificați nici un mesaj pentru depozitare, se va\n"
+#~ "    lansa editorul menționat în configurație pentru a scrie un mesaj."
 
+#~ msgid "Checking extensions...\n"
+#~ msgstr "Se verifică extensiile...\n"
+
+#~ msgid "unmark files as resolved"
+#~ msgstr "de-marchează fișierul drept rezolvat"
