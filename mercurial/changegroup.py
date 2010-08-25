@@ -138,6 +138,12 @@ def decompressor(fh, alg):
         raise util.Abort("unknown bundle compression '%s'" % alg)
     return generator(fh)
 
+class unbundle10(object):
+    def __init__(self, fh, alg):
+        self._stream = util.chunkbuffer(decompressor(fh, alg))
+    def read(self, l):
+        return self._stream.read(l)
+
 def readbundle(fh, fname):
     header = fh.read(6)
 
@@ -158,4 +164,4 @@ def readbundle(fh, fname):
         raise util.Abort(_('%s: not a Mercurial bundle') % fname)
     if version != '10':
         raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
-    return util.chunkbuffer(decompressor(fh, alg))
+    return unbundle10(fh, alg)
