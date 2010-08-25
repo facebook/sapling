@@ -400,8 +400,7 @@ def patchbomb(ui, repo, *revs, **opts):
             return mail.addrlistencode(ui, addrs, _charsets,
                                        opts.get('test'))
 
-        addrs = (ui.config('email', opt) or
-                 ui.config('patchbomb', opt) or '')
+        addrs = ui.config('email', opt) or ui.config('patchbomb', opt) or ''
         if not addrs and prpt:
             addrs = prompt(ui, prpt, default)
 
