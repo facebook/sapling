@@ -120,27 +120,35 @@ def writebundle(cg, filename, bundletype):
         if cleanup is not None:
             os.unlink(cleanup)
 
-def unbundle(header, fh):
-    if header == 'HG10UN':
+def decompressor(fh, alg):
+    if alg == 'UN':
         return fh
-    elif not header.startswith('HG'):
-        # old client with uncompressed bundle
-        def generator(f):
-            yield header
-            for chunk in f:
-                yield chunk
-    elif header == 'HG10GZ':
+    elif alg == 'GZ':
         def generator(f):
             zd = zlib.decompressobj()
             for chunk in f:
                 yield zd.decompress(chunk)
-    elif header == 'HG10BZ':
+    elif alg == 'BZ':
         def generator(f):
             zd = bz2.BZ2Decompressor()
             zd.decompress("BZ")
             for chunk in util.filechunkiter(f, 4096):
                 yield zd.decompress(chunk)
-    return util.chunkbuffer(generator(fh))
+    else:
+        raise util.Abort("unknown bundle compression '%s'" % alg)
+    return generator(fh)
+
+def unbundle(header, fh):
+    if not header.startswith('HG'):
+        def fixup(f, h):
+            yield h
+            for x in f:
+                yield x
+        fh = fixup(f, h)
+        header = "HG10UN"
+
+    alg = header[4:6]
+    return util.chunkbuffer(decompressor(fh, alg))
 
 def readbundle(fh, fname):
     header = fh.read(6)
