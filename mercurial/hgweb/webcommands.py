@@ -116,12 +116,11 @@ def _search(web, req, tmpl):
     morevars['rev'] = query
 
     def changelist(**map):
-        cl = web.repo.changelog
         count = 0
         qw = query.lower().split()
 
         def revgen():
-            for i in xrange(len(cl) - 1, 0, -100):
+            for i in xrange(len(web.repo) - 1, 0, -100):
                 l = []
                 for j in xrange(max(0, i - 100), i + 1):
                     ctx = web.repo[j]
@@ -164,10 +163,10 @@ def _search(web, req, tmpl):
             if count >= revcount:
                 break
 
-    cl = web.repo.changelog
+    tip = web.repo['tip']
     parity = paritygen(web.stripecount)
 
-    return tmpl('search', query=query, node=hex(cl.tip()),
+    return tmpl('search', query=query, node=tip.hex(),
                 entries=changelist, archives=web.archivelist("tip"),
                 morevars=morevars, lessvars=lessvars)
 
@@ -224,8 +223,7 @@ def changelog(web, req, tmpl, shortlog=False):
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
 
-    cl = web.repo.changelog
-    count = len(cl)
+    count = len(web.repo)
     pos = ctx.rev()
     start = max(0, pos - revcount + 1)
     end = min(count, start + revcount)
@@ -467,19 +465,19 @@ def summary(web, req, tmpl):
 
         yield l
 
-    cl = web.repo.changelog
-    count = len(cl)
+    tip = web.repo['tip']
+    count = len(web.repo)
     start = max(0, count - web.maxchanges)
     end = min(count, start + web.maxchanges)
 
     return tmpl("summary",
                 desc=web.config("web", "description", "unknown"),
                 owner=get_contact(web.config) or "unknown",
-                lastchange=cl.read(cl.tip())[2],
+                lastchange=tip.date(),
                 tags=tagentries,
                 branches=branches,
                 shortlog=changelist,
-                node=hex(cl.tip()),
+                node=tip.hex(),
                 archives=web.archivelist("tip"))
 
 def filediff(web, req, tmpl):
