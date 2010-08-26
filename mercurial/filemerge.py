@@ -225,7 +225,8 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
 
     if not r and (_toolbool(ui, tool, "checkconflicts") or
                   'conflicts' in _toollist(ui, tool, "check")):
-        if re.match("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data()):
+        if re.search("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data(),
+                     re.MULTILINE):
             r = 1
 
     checked = False
