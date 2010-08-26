@@ -236,7 +236,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     if repo.ui.configbool("ui", "archivemeta", True):
         def metadata():
             base = 'repo: %s\nnode: %s\nbranch: %s\n' % (
-                hex(repo.changelog.node(0)), hex(node), ctx.branch())
+                repo[0].hex(), hex(node), ctx.branch())
 
             tags = ''.join('tag: %s\n' % t for t in ctx.tags()
                            if repo.tagtype(t) == 'global')
