@@ -1,6 +1,0 @@
-adding a
-updating to branch default
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-adding b
-pushing to ../a
-abort: could not lock repository ../a: Permission denied
