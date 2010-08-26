@@ -1,4 +1,4 @@
-Summary: Mercurial -- a distributed SCM
+Summary: A fast, lightweight Source Control Management system
 Name: mercurial
 Version: snapshot
 Release: 0
@@ -40,8 +40,8 @@ make all
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT PREFIX=%{_prefix} MANDIR=%{_mandir}
 
-install contrib/hgk          $RPM_BUILD_ROOT%{_bindir}
-install contrib/hg-ssh       $RPM_BUILD_ROOT%{_bindir}
+install -m 755 contrib/hgk $RPM_BUILD_ROOT%{_bindir}
+install -m 755 contrib/hg-ssh $RPM_BUILD_ROOT%{_bindir}
 
 bash_completion_dir=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
 mkdir -p $bash_completion_dir
@@ -52,11 +52,11 @@ mkdir -p $zsh_completion_dir
 install -m 644 contrib/zsh_completion $zsh_completion_dir/_mercurial
 
 mkdir -p $RPM_BUILD_ROOT%{emacs_lispdir}
-install contrib/mercurial.el $RPM_BUILD_ROOT%{emacs_lispdir}
-install contrib/mq.el $RPM_BUILD_ROOT%{emacs_lispdir}
+install -m 644 contrib/mercurial.el $RPM_BUILD_ROOT%{emacs_lispdir}
+install -m 644 contrib/mq.el $RPM_BUILD_ROOT%{emacs_lispdir}
 
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/mercurial/hgrc.d
-install contrib/mergetools.hgrc $RPM_BUILD_ROOT%{_sysconfdir}/mercurial/hgrc.d/mergetools.rc
+install -m 644 contrib/mergetools.hgrc $RPM_BUILD_ROOT%{_sysconfdir}/mercurial/hgrc.d/mergetools.rc
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -66,15 +66,17 @@ rm -rf $RPM_BUILD_ROOT
 %doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html *.cgi contrib/*.fcgi
 %doc %attr(644,root,root) %{_mandir}/man?/hg*
 %doc %attr(644,root,root) contrib/*.svg contrib/sample.hgrc
-%{_sysconfdir}/bash_completion.d/mercurial.sh
+%dir %{_datadir}/zsh/
+%dir %{_datadir}/zsh/site-functions/
 %{_datadir}/zsh/site-functions/_mercurial
+%dir %{_datadir}/emacs/site-lisp/
 %{_datadir}/emacs/site-lisp/mercurial.el
 %{_datadir}/emacs/site-lisp/mq.el
 %{_bindir}/hg
 %{_bindir}/hgk
 %{_bindir}/hg-ssh
 %dir %{_sysconfdir}/bash_completion.d/
-%dir %{_datadir}/zsh/site-functions/
+%config(noreplace) %{_sysconfdir}/bash_completion.d/mercurial.sh
 %dir %{_sysconfdir}/mercurial
 %dir %{_sysconfdir}/mercurial/hgrc.d
 %config(noreplace) %{_sysconfdir}/mercurial/hgrc.d/mergetools.rc
