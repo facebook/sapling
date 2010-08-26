@@ -35,7 +35,7 @@ def _collectfiles(repo, striprev):
 
 def _collectextranodes(repo, files, link):
     """return the nodes that have to be saved before the strip"""
-    def collectone(revlog):
+    def collectone(cl, revlog):
         extra = []
         startrev = count = len(revlog)
         # find the truncation point of the revlog
@@ -57,12 +57,12 @@ def _collectextranodes(repo, files, link):
 
     extranodes = {}
     cl = repo.changelog
-    extra = collectone(repo.manifest)
+    extra = collectone(cl, repo.manifest)
     if extra:
         extranodes[1] = extra
     for fname in files:
         f = repo.file(fname)
-        extra = collectone(f)
+        extra = collectone(cl, f)
         if extra:
             extranodes[fname] = extra
 
