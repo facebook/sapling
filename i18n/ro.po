@@ -6,42 +6,71 @@
 #
 # Glosar de traduceri
 # ===================
-# abort		a abandona, a întrerupe, a renunța
-# branch	ramură
-# bundle	pachet (fascicul), a crea un pachet
-# change	modificare
-# changeset	set de modificări
-# changegroup	grup de modificări
-# check out	a actualiza, a extrage, checkout
-# commit	depozitare, predare, încredințare, commit
-# commit (v)	a depozita, a preda, a încredința, commit
-# consistency	consistență (termen informatic; sens general: coerență)
-# deprecated	învechit
-# discard	a înlătura, a renunța la
-# head		capăt
-# hook		hook, acțiune, ancoră
-# merge		a fuziona (a contopi, a îmbina)
-# notation	notație
-# remove	a elimina
-# repository	depozit (magazie)
-# resolve	a determina [[a rezolva]]
-# manage	a gestiona
-# manifest	manifest (și în română, ca "declarație/listă de mărfuri")
-# notify        ??? a înștiința
-# pull		(pull), a aduce, a trage, a extrage,
-# push		(push), a duce, a împinge, a difuza, a distribui
-# retrieve	a recupera, a regăsi
-# rebase        ???
+# abort         a abandona
+# ancestor      strămoș
+# branch        ramură
+# bundle        pachet (fascicul), a crea un pachet
+# change        modificare
+# changeset     set de modificări
+# changegroup   grup de modificări
+# check out     a actualiza, a extrage, checkout
+# children      fiu
+# commit        depozitare, predare, încredințare, commit
+# commit (v)    a depozita, a preda, a încredința, commit
+# consistency   consistență (termen informatic; sens general: coerență)
+# deprecated    învechit
+# diff          diff
+# dirstate      dirstate
+# discard       a înlătura, a renunța la
+# expand        a extinde
+# fold          a plia
+# flag          indicator
+# given         specificat
+# guard         gardă / a garda
+# head          capăt
+# imply         a implica, a sugera
+# incoming      de primit
+# hook          hook, acțiune, ancoră 
+# merge         a fuziona (a contopi, a îmbina)
+# notation      notație
+# pattern       tipar
+# remove        a înlătura, a elimina
+# repository    depozit (magazie)
+# resolve       a determina (a rezolva)
+# manage        a gestiona
+# manifest      manifest (există în română, ca "declarație/listă de mărfuri")
+# map           corespondență, mapare
+# merge         a fuziona
+# notify        a înștiința
+# outgoing      de trimis
+# outstanding   în suspensie
+# overview      rezumat
+# patch         patch
+# patch queue/stack     o stivă de patch-uri (mq)
+# patch series  serie/suită (completă) de patch-uri
+# pull          (pull), a aduce, a trage, a extrage,
+# push          (push), a duce, a împinge, a difuza, a distribui
+# rebase        a repoziționa, a disloca, a deplasa
+# remote        la distanță
+# rejects       respingeri, rejectări
+# retrieve      a recupera, a regăsi
+# revert        a reveni
+# revlog        revlog
 # rollback      ???
-# SCM           ??? Source Control Management/Manager
-# switch	a comuta
-# suppress      ???
-# tag		etichetă / a eticheta
-# tip		vârf
-# traceback     ???
-# track		a urmări
-# update	a actualiza
-#
+# shelf         ? raft
+# shelve        ? a pune pe raft
+# switch        a comuta
+# tag           etichetă / a eticheta
+# template      tipar
+# tip           vârf
+# topmost patch ultimul patch aplicat
+# track         a urmări
+# traceback     ?
+# undo          a anula, a reface, a desface
+# unrelated/unversioned/unmanaged/untracked repository          depozit neînrudit/neversionat/negestionat/neurmărit
+# update        a actualiza
+# (un)trusted   ?
+# working directory     directorul de lucru
 #
 # NOTĂ: - Terminologia de mai sus este departe de a fi completă sau perfectă.
 #         De completat și ameliorat
@@ -78,7 +107,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-08-25 11:46+0200\n"
-"PO-Revision-Date: 2010-08-19 23:40+0200\n"
+"PO-Revision-Date: 2010-08-26 16:19+0200\n"
 "Last-Translator: Daniel Dumitriu <daniel.dumitriu@gmail.com>\n"
 "Language-Team: Romanian <>\n"
 "MIME-Version: 1.0\n"
@@ -782,9 +811,8 @@ msgstr ""
 msgid "command to display child changesets"
 msgstr ""
 
-#, fuzzy
 msgid "show the children of the given or working directory revision"
-msgstr "afișează copiii reviziei date sau a celei din directorul curent"
+msgstr "afișează copiii reviziei specificate sau a celei din directorul curent"
 
 msgid ""
 "    Print the children of the working directory's revisions. If a\n"
@@ -875,7 +903,7 @@ msgid "count rate for revisions matching date spec"
 msgstr ""
 
 msgid "TEMPLATE"
-msgstr ""
+msgstr "ȘABLON"
 
 msgid "template to group changesets"
 msgstr ""
@@ -3035,11 +3063,11 @@ msgstr ""
 
 #, python-format
 msgid "skipping %s - guarded by %r\n"
-msgstr ""
+msgstr "se omite %s - gardat de către %r\n"
 
 #, python-format
 msgid "skipping %s - no matching guards\n"
-msgstr ""
+msgstr "se omite %s - nu există gărzi care se potrivesc\n"
 
 #, python-format
 msgid "error removing undo: %s\n"
@@ -3587,7 +3615,7 @@ msgstr ""
 
 #, python-format
 msgid "Skipping already folded patch %s"
-msgstr ""
+msgstr "Se omite patch-ul deja pliat %s"
 
 #, python-format
 msgid "qfold cannot fold already applied patch %s"
@@ -3894,7 +3922,7 @@ msgstr ""
 
 #, fuzzy, python-format
 msgid "non-queue directory \"%s\" already exists"
-msgstr "depozitul %s există deja"
+msgstr "depozitul %s neaflat în coadă există deja"
 
 msgid "use --create to create a new queue"
 msgstr ""
@@ -3973,7 +4001,7 @@ msgid "hg qdiff [OPTION]... [FILE]..."
 msgstr ""
 
 msgid "keep patch file"
-msgstr ""
+msgstr "păstrează fișierul patch"
 
 msgid "stop managing a revision (DEPRECATED)"
 msgstr ""
@@ -4909,7 +4937,7 @@ msgstr ""
 
 #, python-format
 msgid "no changes, revision %d skipped\n"
-msgstr ""
+msgstr "nu există modificări, se omite revizia %d\n"
 
 msgid "rebase merging completed\n"
 msgstr ""
@@ -4922,10 +4950,10 @@ msgstr ""
 
 #, python-format
 msgid "%d revisions have been skipped\n"
-msgstr ""
+msgstr "%d revizii au fost omise\n"
 
 msgid "unable to collapse, there is more than one external parent"
-msgstr ""
+msgstr "nu se poate restrânge, există mai mult de un părinte extern"
 
 #, python-format
 msgid "cannot use revision %d as base, result would have 3 parents"
@@ -4963,10 +4991,10 @@ msgid ""
 msgstr ""
 
 msgid "rebase onto the specified changeset"
-msgstr ""
+msgstr "dislocă către setul de modificări specificat"
 
 msgid "collapse the rebased changesets"
-msgstr ""
+msgstr "restrânge seturile de modificări repoziționate"
 
 msgid "keep original changesets"
 msgstr ""
@@ -4978,10 +5006,10 @@ msgid "force detaching of source from its original branch"
 msgstr ""
 
 msgid "continue an interrupted rebase"
-msgstr ""
+msgstr "continuă o repoziționare întreruptă"
 
 msgid "abort an interrupted rebase"
-msgstr ""
+msgstr "abandonează o repoziționare întreruptă"
 
 msgid ""
 "hg rebase [-s REV | -b REV] [-d REV] [options]\n"
@@ -5010,16 +5038,16 @@ msgid "&Yes, record this change"
 msgstr ""
 
 msgid "&No, skip this change"
-msgstr ""
+msgstr "&Nu, omite această modificare"
 
 msgid "&Skip remaining changes to this file"
-msgstr ""
+msgstr "&Omite restul modificărilor pentru acest fișier"
 
 msgid "Record remaining changes to this &file"
 msgstr ""
 
 msgid "&Done, skip remaining changes and files"
-msgstr ""
+msgstr "În&cheiat, omite restul modificărilor și fișierelor"
 
 msgid "Record &all changes to all remaining files"
 msgstr ""
@@ -5071,17 +5099,24 @@ msgid ""
 "      y - record this change\n"
 "      n - skip this change"
 msgstr ""
+"      y - înregistrează această modificare\n"
+"      n - omite această modificare"
 
 msgid ""
 "      s - skip remaining changes to this file\n"
 "      f - record remaining changes to this file"
 msgstr ""
+"      s - omite restul modificărilor la acest fișier\n"
+"      f - înregistrează restul modificărilor la acest fișier"
 
 msgid ""
 "      d - done, skip remaining changes and files\n"
 "      a - record all changes to all remaining files\n"
 "      q - quit, recording no changes"
 msgstr ""
+"      d - încheiat, omite restul modificărilor și fișierelor\n"
+"      a - înregistrează toate modificările pentru tot restul fișierelor\n"
+"      q - ieși fără a înregistra vreo modificare"
 
 msgid "      ? - display help"
 msgstr "      ? - afișează ajutorul"
@@ -5296,11 +5331,11 @@ msgstr ""
 
 #, python-format
 msgid "skipping already applied revision %s\n"
-msgstr ""
+msgstr "se omite revizia %s, deja aplicată\n"
 
 #, python-format
 msgid "skipping merge changeset %s:%s\n"
-msgstr ""
+msgstr "se omite setul de modificări de fuziune %s:%s\n"
 
 #, python-format
 msgid "%s merged at %s\n"
@@ -5351,7 +5386,7 @@ msgid ""
 "?: show this help\n"
 msgstr ""
 "y: transplantează acest set de modificări\n"
-"n: sari acest set de modificări\n"
+"n: sari omite set de modificări\n"
 "m: fuzionează la acest set de modificări\n"
 "p: afișează patch-ul\n"
 "c: depozitează seturile de modificări selectate\n"
@@ -5450,7 +5485,7 @@ msgid "pull all changesets up to BRANCH"
 msgstr ""
 
 msgid "skip over REV"
-msgstr ""
+msgstr "omite REV"
 
 msgid "merge at REV"
 msgstr ""
@@ -5989,11 +6024,10 @@ msgstr ""
 msgid "similarity must be between 0 and 100"
 msgstr ""
 
-#, fuzzy
 msgid "show changeset information by line for each file"
 msgstr ""
-"afișează informațiile despre setul de modificări pentru fiecare linie a "
-"fiecărui fișier"
+"afișează informațiile despre setul de modificări line cu linie\n "
+"pentru fiecare fișier"
 
 msgid ""
 "    List changes in files, showing the revision id responsible for\n"
@@ -6160,6 +6194,11 @@ msgid ""
 "    (command not found) will abort the bisection, and any other\n"
 "    non-zero exit status means the revision is bad."
 msgstr ""
+"    Dacă furnizați o comandă, aceasta va fi folosită pentru bisecția\n"
+"    automată. Starea ei la ieșire va fi folosită pentru a marca\n"
+"    reviziile drept bune sau rele: starea 0 înseamnă bun, 125 înseamnă\n"
+"    omiterea reviziei, 127 (comandă negăsită) va abandona bisecția,\n"
+"    iar orice altă stare la ieșire diferită de 0 înseamnă revizie rea."
 
 msgid "The first good revision is:\n"
 msgstr ""
@@ -6169,9 +6208,13 @@ msgstr ""
 
 msgid "Due to skipped revisions, the first good revision could be any of:\n"
 msgstr ""
+"Datorită reviziilor omise, prima revizie bună ar putea fi oricare\n"
+"dintre:\n"
 
 msgid "Due to skipped revisions, the first bad revision could be any of:\n"
 msgstr ""
+"Datorită reviziilor omise, prima revizie rea ar putea fi oricare\n"
+"dintre:\n"
 
 msgid "cannot bisect (no known good revisions)"
 msgstr ""
@@ -6508,6 +6551,10 @@ msgid ""
 "    commit fails, you will find a backup of your message in\n"
 "    ``.hg/last-message.txt``."
 msgstr ""
+"    Dacă nu se specifică nici un mesaj de depozitare, Mercurial va\n"
+"    porni editorul configurat de dvs., unde veți putea introduce un\n"
+"    mesaj. În cazul în care depozitarea eșuează, veți găsi o copie\n"
+"    de siguranță a mesajului dvs. în ``.hg/last-message.txt``."
 
 msgid ""
 "    Returns 0 on success, 1 if nothing changed.\n"
@@ -6758,9 +6805,9 @@ msgstr "Se verifică codificarea (%s)...\n"
 msgid " (check that your locale is properly set)\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "Checking installed modules (%s)...\n"
-msgstr "Se verifică codificarea (%s)...\n"
+msgstr "Se verifică modulele instalate (%s)...\n"
 
 msgid " One or more extensions could not be found"
 msgstr ""
@@ -6834,8 +6881,7 @@ msgid "%s not renamed\n"
 msgstr ""
 
 msgid "show how files match on given patterns"
-msgstr ""
-"afișează modul în care fișierele se potrivesc cu șabloanele specificate"
+msgstr "afișează modul în care fișierele se potrivesc cu tiparele specificate"
 
 msgid "diff repository (or selected files)"
 msgstr ""
@@ -6983,7 +7029,6 @@ msgstr ""
 msgid "grep: invalid match pattern: %s\n"
 msgstr ""
 
-#, fuzzy
 msgid "show current repository heads or show branch heads"
 msgstr "afișează capetele curente ale depozitului sau capetele de ramură"
 
@@ -7133,7 +7178,7 @@ msgid "'%s' is provided by the following extension:"
 msgstr ""
 
 msgid "Mercurial Distributed SCM\n"
-msgstr "Mercurial - gestionar distribuit pentru cod sursă\n"
+msgstr "Mercurial - gestionar distribuit pentru controlul codului sursă\n"
 
 msgid "basic commands:"
 msgstr ""
@@ -7395,12 +7440,14 @@ msgid ""
 msgstr ""
 
 msgid "merge working directory with another revision"
-msgstr ""
+msgstr "fuzionează directorul de lucru cu o altă revizie"
 
 msgid ""
 "    The current working directory is updated with all changes made in\n"
 "    the requested revision since the last common predecessor revision."
 msgstr ""
+"    Directorul de lucru curent este actualizat cu toate modificările\n"
+"    făcute în revizia cerută, de la ultima revizie precedentă comună."
 
 msgid ""
 "    Files that changed between either parent are marked as changed for\n"
@@ -7408,6 +7455,11 @@ msgid ""
 "    updates to the repository are allowed. The next commit will have\n"
 "    two parents."
 msgstr ""
+"    Fișierele care au fost modificate între oricare din părinți sunt\n"
+"    marcate drept modificate pentru următoarea depozitare, și o\n"
+"    depozitare trebuie să fie executată înainte de a se permite orice\n"
+"    altă actualizare a depozitului. Următoarea depozitare va avea\n"
+"    doi părinți."
 
 msgid ""
 "    If no revision is specified, the working directory's parent is a\n"
@@ -7415,12 +7467,20 @@ msgid ""
 "    head, the other head is merged with by default. Otherwise, an\n"
 "    explicit revision with which to merge with must be provided."
 msgstr ""
+"    Dacă nu se specifică niciun părinte, părintele directorului de\n"
+"    lucru este o revizie capăt, iar ramura curentă conține exact\n"
+"    un singur alt capăt, atunci implicit fuziunea are loc cu celălalt\n"
+"    capăt. Altfel, o revizie explicită cu care să aibă loc fuziunea\n"
+"    trebuie specificată."
 
 msgid ""
 "    To undo an uncommitted merge, use :hg:`update --clean .` which\n"
 "    will check out a clean copy of the original merge parent, losing\n"
 "    all changes."
 msgstr ""
+"    Pentru a anula o fuziune nedepozitată, folosiți\n"
+"    :hg:`update --clean .`, care va extrage o copie curată a\n"
+"    părintelui original al fuziunii, renunțând la toate modificările."
 
 msgid ""
 "    Returns 0 on success, 1 if there are unresolved files.\n"
@@ -7639,10 +7699,10 @@ msgstr ""
 "    "
 
 msgid "remove the specified files on the next commit"
-msgstr ""
+msgstr "înlătură fișierele specificate la următoarea depozitare"
 
 msgid "    Schedule the indicated files for removal from the repository."
-msgstr ""
+msgstr "    Planifică fișierele indicate spre a fi înlăturate din depozit."
 
 msgid ""
 "    This only removes files from the current branch, not from the\n"
@@ -7651,6 +7711,12 @@ msgid ""
 "    force deletion, and -Af can be used to remove files from the next\n"
 "    revision without deleting them from the working directory."
 msgstr ""
+"    Aceasta înlătură doar fișiere din ramura curentă, nu din întregul\n"
+"    istoric al proiectului. -A/--after poate fi folosit pentru a\n"
+"    înlătura doar fișiere care au fost deja șterse, -f/--force poate\n"
+"    fi folosit pentru a forța ștergerea, iar -Af poate fi folosit\n"
+"    pentru a înlătura fișiere din revizia următoare, fără a le șterge\n"
+"    din directorul de lucru."
 
 msgid ""
 "    The following table details the behavior of remove for different\n"
@@ -7659,6 +7725,11 @@ msgid ""
 "    reported by :hg:`status`). The actions are Warn, Remove (from\n"
 "    branch) and Delete (from disk)::"
 msgstr ""
+"    Tabelul următor detaliază comportamentul comenzii pentru diferite\n"
+"    stări ale fișierelor (pe coloane) și combinații de opțiuni (pe\n"
+"    rânduri). Stările fișierelor sunt Adăugat [A], Curat [C],\n"
+"    Modificat [M] și Lipsă [!]. Acțiunile sunt Avertizează [V],\n"
+"    Înlătură [Î] (din ramură) și Șterge [Ș] (de pe disc)::"
 
 msgid ""
 "             A  C  M  !\n"
@@ -7667,11 +7738,19 @@ msgid ""
 "      -A     W  W  W  R\n"
 "      -Af    R  R  R  R"
 msgstr ""
+"              A  C  M  !\n"
+"      nimic   V  ÎȘ V  Î\n"
+"      -f      Î  ÎȘ ÎȘ Î\n"
+"      -A      V  V  V  Î\n"
+"      -Af     Î  Î  Î  Î"
 
 msgid ""
 "    This command schedules the files to be removed at the next commit.\n"
 "    To undo a remove before that, see :hg:`revert`."
 msgstr ""
+"    Această comandă planifică fișierele spre a fi înlăturate la\n"
+"    următoarea depozitare. Pentru a anula planificarea înainte\n"
+"    de a avea loc, vezi :hg:`revert`."
 
 msgid ""
 "    Returns 0 on success, 1 if any warnings encountered.\n"
@@ -8296,7 +8375,9 @@ msgstr "afișează versiunea și informații legate de copyright"
 
 #, python-format
 msgid "Mercurial Distributed SCM (version %s)\n"
-msgstr "Mercurial - gestionar distribuit pentru cod sursă (versiunea %s)\n"
+msgstr ""
+"Mercurial - gestionar distribuit pentru controlul codului sursă\n"
+"(versiunea %s)\n"
 
 msgid ""
 "\n"
@@ -8306,8 +8387,8 @@ msgid ""
 msgstr ""
 "\n"
 "Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> și alții\n"
-"Acesta este software liber; vezi sursa pentru condițiile de copiere. Nu\n"
-"există NICIO garanție; nici măcar pentru COMERCIALIZARE sau\n"
+"Acesta este software liber; vezi sursa pentru condițiile de copiere.\n"
+"Nu există NICIO garanție; nici măcar pentru COMERCIALIZARE sau\n"
 "COMPATIBILITATE ÎN ANUMITE SCOPURI.\n"
 
 msgid "repository root directory or name of overlay bundle file"
@@ -8325,7 +8406,6 @@ msgstr "nu întreba, presupune 'da' pentru orice răspuns solicitat"
 msgid "suppress output"
 msgstr "suprimă afișarea"
 
-#, fuzzy
 msgid "enable additional output"
 msgstr "activează afișarea informațiilor suplimentare"
 
@@ -8382,10 +8462,10 @@ msgid "PATTERN"
 msgstr "TIPAR"
 
 msgid "include names matching the given patterns"
-msgstr "include numele care se potrivesc cu șabloanele specificate"
+msgstr "include numele care se potrivesc cu tiparele specificate"
 
 msgid "exclude names matching the given patterns"
-msgstr "exclude numele care se potrivesc cu șabloanele specificate"
+msgstr "exclude numele care se potrivesc cu tiparele specificate"
 
 msgid "use text as commit message"
 msgstr "folosește textul drept mesaj de depozitare"
@@ -8520,14 +8600,13 @@ msgid "mark changeset bad"
 msgstr "marchează setul de modificări drept rău"
 
 msgid "skip testing changeset"
-msgstr ""
+msgstr "omite testarea setului de modificări"
 
 msgid "use command to check changeset state"
 msgstr ""
 
-#, fuzzy
 msgid "do not update to target"
-msgstr "nu actualiza la țintă"
+msgstr "nu actualiza la destinație"
 
 msgid "[-gbsr] [-U] [-c CMD] [REV]"
 msgstr "[-gbsr] [-U] [-c CMD] [REV]"
@@ -8739,7 +8818,6 @@ msgstr "afișează doar capetele care sunt descendenți ai REV"
 msgid "show topological heads only"
 msgstr "afișează doar capetele topologice"
 
-#, fuzzy
 msgid "show active branchheads only (DEPRECATED)"
 msgstr "afișează doar capetele de ramură active [ÎNVECHIT]"
 
@@ -8782,7 +8860,7 @@ msgid "base path"
 msgstr "calea de bază"
 
 msgid "skip check for outstanding uncommitted changes"
-msgstr ""
+msgstr "omite verificarea pentru modificări nedepozitate în suspensie"
 
 msgid "don't commit, just update the working directory"
 msgstr "nu depozita, doar actualizează directorul de lucru"
@@ -8790,7 +8868,6 @@ msgstr "nu depozita, doar actualizează directorul de lucru"
 msgid "apply patch to the nodes from which it was generated"
 msgstr "aplică patch-ul nodurilor pentru care a fost generat"
 
-#, fuzzy
 msgid "use any branch information in patch (implied by --exact)"
 msgstr ""
 "folosește orice informație despre ramură din patch\n"
@@ -8829,7 +8906,6 @@ msgstr "termină numele de fișiere cu NUL, pentru utilizare cu xargs"
 msgid "print complete paths from the filesystem root"
 msgstr "afișează căi complete de la rădăcina sistemului de fișiere"
 
-#, fuzzy
 msgid "[OPTION]... [PATTERN]..."
 msgstr "[OPȚIUNE]... [TIPAR]..."
 
@@ -8946,7 +9022,6 @@ msgstr "afișează starea fișierelor care au nevoie de fuziune"
 msgid "mark files as resolved"
 msgstr "marchează fișierul drept rezolvat"
 
-#, fuzzy
 msgid "mark files as unresolved"
 msgstr "marchează fișierul drept rezolvat"
 
@@ -9336,7 +9411,9 @@ msgstr ""
 
 #, python-format
 msgid "** Mercurial Distributed SCM (version %s)\n"
-msgstr "** Mercurial - gestionar distribuit pentru cod sursă (versiunea %s)\n"
+msgstr ""
+"** Mercurial - gestionar distribuit pentru controlul codului sursă\n"
+"(versiunea %s)\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
@@ -9565,6 +9642,9 @@ msgid ""
 "If there is a per-repository configuration file which is not owned by\n"
 "the active user, Mercurial will warn you that the file is skipped::"
 msgstr ""
+"Dacă există un fișier de configurare la nivelul depozitului care nu\n"
+"este proprietatea utilizatorului activ, Mercurial vă va avertiza că\n"
+"fișierul este omis::"
 
 msgid ""
 "  not trusting file <repo>/.hg/hgrc from untrusted user USER, group GROUP"
@@ -11398,7 +11478,7 @@ msgstr ""
 
 #, python-format
 msgid "skipping unreadable ignore file '%s': %s\n"
-msgstr ""
+msgstr "se omite fișierul ilizibil cu ignorări: '%s': %s\n"
 
 #, python-format
 msgid "repository %s not found"
