@@ -123,7 +123,7 @@ class wirerepository(repo.repository):
                 _('push failed:'), output)
         try:
             ret = int(ret)
-        except ValueError, err:
+        except ValueError:
             raise error.ResponseError(
                 _('push failed (unexpected response):'), ret)
 

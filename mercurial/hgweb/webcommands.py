@@ -383,7 +383,6 @@ def tags(web, req, tmpl):
                 latestentry=lambda **x: entries(True, 1, **x))
 
 def branches(web, req, tmpl):
-    b = web.repo.branchtags()
     tips = (web.repo[n] for t, n in web.repo.branchtags().iteritems())
     heads = web.repo.heads()
     parity = paritygen(web.stripecount)

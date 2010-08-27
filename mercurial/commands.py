@@ -1360,7 +1360,7 @@ def debuginstall(ui):
     # check username
     ui.status(_("Checking username...\n"))
     try:
-        user = ui.username()
+        ui.username()
     except util.Abort, e:
         ui.write(" %s\n" % e)
         ui.write(_(" (specify a username in your .hgrc file)\n"))

@@ -53,8 +53,6 @@ class convert_cvs(converter_source):
         try:
             os.chdir(self.path)
             id = None
-            state = 0
-            filerevids = {}
 
             cache = 'update'
             if not self.ui.configbool('convert', 'cvsps.cache', True):

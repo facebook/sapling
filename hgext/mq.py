@@ -1756,7 +1756,6 @@ def applied(ui, repo, patch=None, **opts):
     """print the patches already applied"""
 
     q = repo.mq
-    l = len(q.applied)
 
     if patch:
         if patch not in q.series:

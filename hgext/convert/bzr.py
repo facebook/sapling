@@ -61,7 +61,7 @@ class bzr_source(converter_source):
             try:
                 tree = dir.open_workingtree(recommend_upgrade=False)
                 branch = tree.branch
-            except (errors.NoWorkingTree, errors.NotLocalUrl), e:
+            except (errors.NoWorkingTree, errors.NotLocalUrl):
                 tree = None
                 branch = dir.open_branch()
             if (tree is not None and tree.bzrdir.root_transport.base !=

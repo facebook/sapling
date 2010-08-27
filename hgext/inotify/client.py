@@ -21,7 +21,6 @@ def start_server(function):
     Raise QueryFailed if something went wrong
     """
     def decorated_function(self, *args):
-        result = None
         try:
             return function(self, *args)
         except (OSError, socket.error), err:
