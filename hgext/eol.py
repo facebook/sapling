@@ -66,7 +66,7 @@ used.
 """
 
 from mercurial.i18n import _
-from mercurial import util, config, extensions, commands, match, cmdutil
+from mercurial import util, config, extensions, match
 import re, os
 
 # Matches a lone LF, i.e., one that is not part of CRLF.

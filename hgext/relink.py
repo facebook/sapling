@@ -7,7 +7,7 @@
 
 """recreates hardlinks between repository clones"""
 
-from mercurial import cmdutil, hg, util
+from mercurial import hg, util
 from mercurial.i18n import _
 import os, stat
 

@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import error
-import sys, unicodedata, locale, os
+import unicodedata, locale, os
 
 def _getpreferredencoding():
     '''

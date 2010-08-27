@@ -6,8 +6,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, sys, urllib
-from mercurial import ui, hg, hook, error, encoding, templater, util
+import os
+from mercurial import ui, hg, hook, error, encoding, templater
 from common import get_mtime, ErrorResponse, permhooks
 from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest

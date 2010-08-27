@@ -77,7 +77,7 @@ Any value other than 'ansi', 'win32', or 'auto' will disable color.
 
 '''
 
-import os, sys
+import os
 
 from mercurial import commands, dispatch, extensions, ui as uimod
 from mercurial.i18n import _

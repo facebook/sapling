@@ -6,12 +6,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import bin, hex, nullid
+from node import nullid
 from i18n import _
-import repo, changegroup, statichttprepo, error, url, util, wireproto
+import changegroup, statichttprepo, error, url, util, wireproto
 import os, urllib, urllib2, urlparse, zlib, httplib
 import errno, socket
-import encoding
 
 def zgenerator(f):
     zd = zlib.decompressobj()

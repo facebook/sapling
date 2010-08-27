@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import repo, util, error, wireproto
+import util, error, wireproto
 import re
 
 class remotelock(object):
