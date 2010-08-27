@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2004, 2005 Canonical Ltd
 #
 # This program is free software; you can redistribute it and/or modify
