@@ -10822,6 +10822,10 @@ msgstr "não é possível incluir %s (%s)"
 msgid "not found in manifest"
 msgstr "não encontrado no manifesto"
 
+#, python-format
+msgid "No such file in rev %s"
+msgstr "Não há tal arquivo na revisão %s"
+
 msgid "branch name not in UTF-8!"
 msgstr "nome do ramo não está em UTF-8!"
 
@@ -13825,6 +13829,10 @@ msgstr "(mesclagem de ramo, não esqueça de consolidar)\n"
 #, python-format
 msgid "error reading %s/.hg/hgrc: %s\n"
 msgstr "erro ao ler %s/.hg/hgrc: %s\n"
+
+#, python-format
+msgid "error accessing repository at %s\n"
+msgstr "erro ao acessar o repositório em %s\n"
 
 msgid "SSL support is unavailable"
 msgstr "Suporte a SSL indisponível"
