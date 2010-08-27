@@ -410,7 +410,7 @@ class svnsubrepo(abstractsubrepo):
             raise util.Abort(_('cannot commit svn externals'))
         commitinfo = self._svncommand(['commit', '-m', text])
         self._ui.status(commitinfo)
-        newrev = re.search('Committed revision ([\d]+).', commitinfo)
+        newrev = re.search('Committed revision ([0-9]+).', commitinfo)
         if not newrev:
             raise util.Abort(commitinfo.splitlines()[-1])
         newrev = newrev.groups()[0]
@@ -427,7 +427,7 @@ class svnsubrepo(abstractsubrepo):
 
     def get(self, state):
         status = self._svncommand(['checkout', state[0], '--revision', state[1]])
-        if not re.search('Checked out revision [\d]+.', status):
+        if not re.search('Checked out revision [0-9]+.', status):
             raise util.Abort(status.splitlines()[-1])
         self._ui.status(status)
 
