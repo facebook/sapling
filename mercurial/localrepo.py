@@ -337,8 +337,7 @@ class localrepository(repo.repository):
 
         return partial
 
-    def branchmap(self):
-        '''returns a dictionary {branch: [branchheads]}'''
+    def updatebranchcache(self):
         tip = self.changelog.tip()
         if self._branchcache is not None and self._branchcachetip == tip:
             return self._branchcache
@@ -355,6 +354,9 @@ class localrepository(repo.repository):
         # this private cache holds all heads (not just tips)
         self._branchcache = partial
 
+    def branchmap(self):
+        '''returns a dictionary {branch: [branchheads]}'''
+        self.updatebranchcache()
         return self._branchcache
 
     def branchtags(self):
@@ -976,7 +978,7 @@ class localrepository(repo.repository):
             tr.close()
 
             if self._branchcache:
-                self.branchtags()
+                self.updatebranchcache()
             return n
         finally:
             if tr:
@@ -1700,7 +1702,7 @@ class localrepository(repo.repository):
         if changesets > 0:
             # forcefully update the on-disk branch cache
             self.ui.debug("updating the branch cache\n")
-            self.branchtags()
+            self.updatebranchcache()
             self.hook("changegroup", node=hex(cl.node(clstart)),
                       source=srctype, url=url)
 
