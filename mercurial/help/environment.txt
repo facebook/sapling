@@ -8,7 +8,7 @@ HG
 HGEDITOR
     This is the name of the editor to run when committing. See EDITOR.
 
-    (deprecated, use .hgrc)
+    (deprecated, use configuration file)
 
 HGENCODING
     This overrides the default locale setting detected by Mercurial.
@@ -29,13 +29,13 @@ HGMERGE
     will be executed with three arguments: local file, remote file,
     ancestor file.
 
-    (deprecated, use .hgrc)
+    (deprecated, use configuration file)
 
 HGRCPATH
-    A list of files or directories to search for hgrc files. Item
-    separator is ":" on Unix, ";" on Windows. If HGRCPATH is not set,
-    platform default search path is used. If empty, only the .hg/hgrc
-    from the current repository is read.
+    A list of files or directories to search for configuration
+    files. Item separator is ":" on Unix, ";" on Windows. If HGRCPATH
+    is not set, platform default search path is used. If empty, only
+    the .hg/hgrc from the current repository is read.
 
     For each element in HGRCPATH:
 
@@ -43,9 +43,9 @@ HGRCPATH
     - otherwise, the file itself will be added
 
 HGPLAIN
-    When set, this disables any options in .hgrc that might change
-    Mercurial's default output. This includes encoding, defaults,
-    verbose mode, debug mode, quiet mode, tracebacks, and
+    When set, this disables any configuration settings that might
+    change Mercurial's default output. This includes encoding,
+    defaults, verbose mode, debug mode, quiet mode, tracebacks, and
     localization. This can be useful when scripting against Mercurial
     in the face of existing user configuration.
 
@@ -57,12 +57,12 @@ HGUSER
     available values will be considered in this order:
 
     - HGUSER (deprecated)
-    - hgrc files from the HGRCPATH
+    - configuration files from the HGRCPATH
     - EMAIL
     - interactive prompt
     - LOGNAME (with ``@hostname`` appended)
 
-    (deprecated, use .hgrc)
+    (deprecated, use configuration file)
 
 EMAIL
     May be used as the author of a commit; see HGUSER.

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 #
-# To load the extension, add it to your .hgrc file:
+# To load the extension, add it to your configuration file:
 #
 #   [extension]
 #   pager =
@@ -46,7 +46,7 @@ paged.
 If pager.attend is present, pager.ignore will be ignored.
 
 To ignore global commands like :hg:`version` or :hg:`help`, you have
-to specify them in the global .hgrc
+to specify them in your user configuration file.
 '''
 
 import sys, os, signal, shlex, errno

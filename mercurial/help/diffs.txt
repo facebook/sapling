@@ -25,5 +25,5 @@ format for communicating changes.
 
 To make Mercurial produce the git extended diff format, use the --git
 option available for many commands, or set 'git = True' in the [diff]
-section of your hgrc. You do not need to set this option when
-importing diffs in this format or using them in the mq extension.
+section of your configuration file. You do not need to set this option
+when importing diffs in this format or using them in the mq extension.

@@ -35,11 +35,11 @@ Some notes about using SSH with Mercurial:
     Host *
       Compression yes
 
-  Alternatively specify "ssh -C" as your ssh command in your hgrc or
-  with the --ssh command line option.
+  Alternatively specify "ssh -C" as your ssh command in your
+  configuration file or with the --ssh command line option.
 
-These URLs can all be stored in your hgrc with path aliases under the
-[paths] section like so::
+These URLs can all be stored in your configuration file with path
+aliases under the [paths] section like so::
 
   [paths]
   alias1 = URL1
