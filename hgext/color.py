@@ -254,8 +254,10 @@ try:
         'inverse': win32c.COMMON_LVB_REVERSE_VIDEO, # double-byte charsets only
     }
 
-    stdout = win32c.GetStdHandle(win32c.STD_OUTPUT_HANDLE)
     try:
+        stdout = win32c.GetStdHandle(win32c.STD_OUTPUT_HANDLE)
+        if stdout is None:
+            raise ImportError()
         origattr = stdout.GetConsoleScreenBufferInfo()['Attributes']
     except pywintypes.error:
         # stdout may be defined but not support
