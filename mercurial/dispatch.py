@@ -190,6 +190,7 @@ def aliasargs(fn):
 class cmdalias(object):
     def __init__(self, name, definition, cmdtable):
         self.name = self.cmd = name
+        self.cmdname = ''
         self.definition = definition
         self.args = []
         self.opts = []
@@ -234,7 +235,7 @@ class cmdalias(object):
             return
 
         args = shlex.split(self.definition)
-        cmd = args.pop(0)
+        self.cmdname = cmd = args.pop(0)
         args = map(util.expandpath, args)
 
         for invalidarg in ("--cwd", "-R", "--repository", "--repo"):
@@ -286,7 +287,8 @@ class cmdalias(object):
 
     def __call__(self, ui, *args, **opts):
         if self.shadows:
-            ui.debug("alias '%s' shadows command\n" % self.name)
+            ui.debug("alias '%s' shadows command '%s'\n" %
+                     (self.name, self.cmdname))
 
         if self.definition.startswith('!'):
             return self.fn(ui, *args, **opts)
