@@ -269,7 +269,7 @@ def create_server(ui, app):
     import mimetypes; mimetypes.init()
 
     address = ui.config('web', 'address', '')
-    port = int(ui.config('web', 'port', 8000))
+    port = util.getport(ui.config('web', 'port', 8000))
     try:
         return cls(ui, app, (address, port), handler)
     except socket.error, inst:

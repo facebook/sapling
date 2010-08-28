@@ -17,7 +17,7 @@ from i18n import _
 import error, osutil, encoding
 import errno, re, shutil, sys, tempfile, traceback
 import os, stat, time, calendar, textwrap, unicodedata, signal
-import imp
+import imp, socket
 
 # Python compatibility
 
@@ -1414,3 +1414,19 @@ def interpolate(prefix, mapping, s, fn=None):
     r = re.compile(r'%s(%s)' % (prefix, '|'.join(mapping.keys())))
     return r.sub(lambda x: fn(mapping[x.group()[1:]]), s)
 
+def getport(port):
+    """Return the port for a given network service.
+
+    If port is an integer, it's returned as is. If it's a string, it's
+    looked up using socket.getservbyname(). If there's no matching
+    service, util.Abort is raised.
+    """
+    try:
+        return int(port)
+    except ValueError:
+        pass
+
+    try:
+        return socket.getservbyname(port)
+    except socket.error:
+        raise Abort(_("no port number associated with service '%s'") % port)

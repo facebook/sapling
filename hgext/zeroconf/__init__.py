@@ -27,7 +27,7 @@ You can discover Zeroconf-enabled repositories by running
 import socket, time, os
 
 import Zeroconf
-from mercurial import ui, hg, encoding
+from mercurial import ui, hg, encoding, util
 from mercurial import extensions
 from mercurial.hgweb import hgweb_mod
 from mercurial.hgweb import hgwebdir_mod
@@ -107,7 +107,7 @@ class hgwebzc(hgweb_mod.hgweb):
         path = self.repo.ui.config("web", "prefix", "").strip('/')
         desc = self.repo.ui.config("web", "description", name)
         publish(name, desc, path,
-                int(self.repo.ui.config("web", "port", 8000)))
+                util.getport(self.repo.ui.config("web", "port", 8000)))
 
 class hgwebdirzc(hgwebdir_mod.hgwebdir):
     def __init__(self, conf, baseui=None):
@@ -119,7 +119,7 @@ class hgwebdirzc(hgwebdir_mod.hgwebdir):
             name = os.path.basename(repo)
             path = (prefix + repo).strip('/')
             desc = u.config('web', 'description', name)
-            publish(name, desc, path, int(u.config("web", "port", 8000)))
+            publish(name, desc, path, util.getport(u.config("web", "port", 8000)))
 
 # listen
 

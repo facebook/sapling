@@ -10,7 +10,11 @@ hgserve()
     echo % errors
     cat errors.log
     sleep 1
-    kill `cat hg.pid`
+    if [ "$KILLQUIETLY" = "Y" ]; then
+        kill `cat hg.pid` 2>/dev/null
+    else
+        kill `cat hg.pid`
+    fi
     sleep 1
 }
 
@@ -35,6 +39,9 @@ hgserve
 
 echo % With -v and -p HGPORT2
 hgserve -p "$HGPORT2"
+
+echo '% With -v and -p http (should fail)'
+KILLQUIETLY=Y hgserve -p http
 
 echo % With --prefix foo
 hgserve --prefix foo
