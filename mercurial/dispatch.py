@@ -293,7 +293,12 @@ class cmdalias(object):
         if self.definition.startswith('!'):
             return self.fn(ui, *args, **opts)
         else:
-            return util.checksignature(self.fn)(ui, *args, **opts)
+            try:
+                util.checksignature(self.fn)(ui, *args, **opts)
+            except error.SignatureError:
+                args = ' '.join([self.cmdname] + self.args)
+                ui.debug("alias '%s' expands to '%s'\n" % (self.name, args))
+                raise
 
 def addaliases(ui, cmdtable):
     # aliases are processed after extensions have been loaded, so they
