@@ -129,10 +129,14 @@ def churn(ui, repo, *pats, **opts):
         aliases = repo.wjoin('.hgchurn')
     if aliases:
         for l in open(aliases, "r"):
-            if not l.strip():
+            try:
+                alias, actual = l.split('=' in l and '=' or None, 1)
+                amap[alias.strip()] = actual.strip()
+            except ValueError:
+                l = l.strip()
+                if l:
+                    ui.warn(_("skipping malformed alias: %s\n" % l))
                 continue
-            alias, actual = l.split('=' in l and '=' or None, 1)
-            amap[alias.strip()] = actual.strip()
 
     rate = countrate(ui, repo, amap, *pats, **opts).items()
     if not rate:
