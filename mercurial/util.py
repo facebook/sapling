@@ -950,7 +950,7 @@ class chunkbuffer(object):
                 buf += chunk
 
         return buf
-        
+
 def filechunkiter(f, size=65536, limit=None):
     """Create a generator that produces the data in the file size
     (default 65536) bytes at a time, up to optional limit (default is
