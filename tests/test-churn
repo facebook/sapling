@@ -38,6 +38,7 @@ cd ..
 echo % churn with aliases
 cat > ../aliases <<EOF
 user1 alias1
+
 user3 alias3
 EOF
 hg churn --aliases ../aliases
