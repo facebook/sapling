@@ -492,12 +492,15 @@ class path_auditor(object):
     - starts at the root of a windows drive
     - contains ".."
     - traverses a symlink (e.g. a/symlink_here/b)
-    - inside a nested repository'''
+    - inside a nested repository (a callback can be used to approve
+      some nested repositories, e.g., subrepositories)
+    '''
 
-    def __init__(self, root):
+    def __init__(self, root, callback=None):
         self.audited = set()
         self.auditeddir = set()
         self.root = root
+        self.callback = callback
 
     def __call__(self, path):
         if path in self.audited:
@@ -530,8 +533,9 @@ class path_auditor(object):
                                 (path, prefix))
                 elif (stat.S_ISDIR(st.st_mode) and
                       os.path.isdir(os.path.join(curpath, '.hg'))):
-                    raise Abort(_('path %r is inside repo %r') %
-                                (path, prefix))
+                    if not self.callback or not self.callback(curpath):
+                        raise Abort(_('path %r is inside repo %r') %
+                                    (path, prefix))
         parts.pop()
         prefixes = []
         while parts:
