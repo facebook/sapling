@@ -36,7 +36,7 @@ invalid eol
 
   $ hg --config patch.eol='LFCR' import eol.diff
   applying eol.diff
-  abort: Unsupported line endings type: LFCR
+  abort: unsupported line endings type: LFCR
   $ hg revert -a
 
 

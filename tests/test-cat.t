@@ -19,6 +19,6 @@
   $ hg cat -r 0 b
   0
   $ hg cat -r 1 a
-  a: No such file in rev 03f6b0774996
+  a: no such file in rev 03f6b0774996
   $ hg cat -r 1 b
   1

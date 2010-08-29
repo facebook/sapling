@@ -3,7 +3,7 @@
 no repo
 
   $ hg id
-  abort: There is no Mercurial repository here (.hg not found)
+  abort: there is no Mercurial repository here (.hg not found)
 
 create repo
 

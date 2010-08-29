@@ -32,6 +32,6 @@ options:
 use "hg -v help cat" to show global options
 % [defaults]
 a
-a: No such file in rev 000000000000
+a: no such file in rev 000000000000
 % no repo
 abort: There is no Mercurial repository here (.hg not found)!

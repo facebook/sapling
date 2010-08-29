@@ -37,7 +37,7 @@ no changes needed to a
 %% should say file not managed
 file not managed: q
 %% should say file not found
-notfound: No such file in rev 095eacd0c0d7
+notfound: no such file in rev 095eacd0c0d7
 A z
 ? e.orig
 %% should add a, remove d, forget z

@@ -195,7 +195,7 @@ init --mq without repo
   $ mkdir f
   $ cd f
   $ hg init --mq
-  abort: There is no Mercurial repository here (.hg not found)
+  abort: there is no Mercurial repository here (.hg not found)
   $ cd ..
 
 init --mq with repo path

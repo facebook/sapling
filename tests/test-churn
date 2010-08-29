@@ -38,7 +38,9 @@ cd ..
 echo % churn with aliases
 cat > ../aliases <<EOF
 user1 alias1
+
 user3 alias3
+not-an-alias
 EOF
 hg churn --aliases ../aliases
 echo % churn with .hgchurn

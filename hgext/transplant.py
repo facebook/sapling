@@ -234,7 +234,7 @@ class transplanter(object):
                 p2 = node
                 self.log(user, date, message, p1, p2, merge=merge)
                 self.ui.write(str(inst) + '\n')
-                raise util.Abort(_('Fix up the merge and run '
+                raise util.Abort(_('fix up the merge and run '
                                    'hg transplant --continue'))
         else:
             files = None
