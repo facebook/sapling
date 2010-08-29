@@ -54,6 +54,8 @@ Source: contrib\xml.rnc; DestDir: {app}/Contrib
 Source: contrib\shrink-revlog.py; DestDir: {app}/Contrib
 Source: contrib\mercurial.el; DestDir: {app}/Contrib
 Source: contrib\mq.el; DestDir: {app}/Contrib
+Source: contrib\hgweb.fcgi; DestDir: {app}/Contrib
+Source: contrib\hgweb.wsgi; DestDir: {app}/Contrib
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: contrib\mergetools.hgrc; DestDir: {tmp};
 Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Check: CheckFile; AfterInstall: ConcatenateFiles;
