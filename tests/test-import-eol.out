@@ -2,7 +2,7 @@ adding .hgignore
 adding a
 % invalid eol
 applying eol.diff
-abort: Unsupported line endings type: LFCR
+abort: unsupported line endings type: LFCR
 % force LF
 applying eol.diff
 'a\nyyyy\ncc\n\nd\ne'

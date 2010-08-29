@@ -112,14 +112,14 @@ patching file foo
 Hunk #1 FAILED at 0
 1 out of 1 hunks FAILED -- saving rejects to file foo.rej
 patch failed to apply
-abort: Fix up the merge and run hg transplant --continue
+abort: fix up the merge and run hg transplant --continue
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 applying a1e30dd1b8e7
 patching file foo
 Hunk #1 FAILED at 0
 1 out of 1 hunks FAILED -- saving rejects to file foo.rej
 patch failed to apply
-abort: Fix up the merge and run hg transplant --continue
+abort: fix up the merge and run hg transplant --continue
 a1e30dd1b8e7 transplanted as f1563cf27039
 skipping already applied revision 1:a1e30dd1b8e7
 applying 1739ac5f6139
@@ -166,7 +166,7 @@ adding test-filter
 created new head
 file b1 already exists
 1 out of 1 hunks FAILED -- saving rejects to file b1.rej
-abort: Fix up the merge and run hg transplant --continue
+abort: fix up the merge and run hg transplant --continue
 filtering
 applying 348b36d0b6a5
 patch failed to apply

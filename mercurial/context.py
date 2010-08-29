@@ -198,7 +198,7 @@ class changectx(object):
             if match(fn):
                 yield fn
         for fn in sorted(fset):
-            if match.bad(fn, _('No such file in rev %s') % self) and match(fn):
+            if match.bad(fn, _('no such file in rev %s') % self) and match(fn):
                 yield fn
 
     def sub(self, path):

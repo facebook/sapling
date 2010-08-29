@@ -1284,7 +1284,7 @@ def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):
     if eolmode is None:
         eolmode = ui.config('patch', 'eol', 'strict')
     if eolmode.lower() not in eolmodes:
-        raise util.Abort(_('Unsupported line endings type: %s') % eolmode)
+        raise util.Abort(_('unsupported line endings type: %s') % eolmode)
     eolmode = eolmode.lower()
 
     try:

@@ -424,9 +424,9 @@ def _dispatch(ui, args):
     cmd, func, args, options, cmdoptions = _parse(lui, args)
 
     if options["config"]:
-        raise util.Abort(_("Option --config may not be abbreviated!"))
+        raise util.Abort(_("option --config may not be abbreviated!"))
     if options["cwd"]:
-        raise util.Abort(_("Option --cwd may not be abbreviated!"))
+        raise util.Abort(_("option --cwd may not be abbreviated!"))
     if options["repository"]:
         raise util.Abort(_(
             "Option -R has to be separated from other options (e.g. not -qR) "

@@ -846,7 +846,7 @@ def debugancestor(ui, repo, *args):
         lookup = r.lookup
     elif len(args) == 2:
         if not repo:
-            raise util.Abort(_("There is no Mercurial repository here "
+            raise util.Abort(_("there is no Mercurial repository here "
                                "(.hg not found)"))
         rev1, rev2 = args
         r = repo.changelog
@@ -2105,7 +2105,7 @@ def identify(ui, repo, source=None,
     """
 
     if not repo and not source:
-        raise util.Abort(_("There is no Mercurial repository here "
+        raise util.Abort(_("there is no Mercurial repository here "
                            "(.hg not found)"))
 
     hexfunc = ui.debugflag and hex or short

@@ -2083,7 +2083,7 @@ def fold(ui, repo, *files, **opts):
     if not files:
         raise util.Abort(_('qfold requires at least one patch name'))
     if not q.check_toppatch(repo)[0]:
-        raise util.Abort(_('No patches applied'))
+        raise util.Abort(_('no patches applied'))
     q.check_localchanges(repo)
 
     message = cmdutil.logmessage(opts)
@@ -2110,7 +2110,7 @@ def fold(ui, repo, *files, **opts):
         pf = q.join(p)
         (patchsuccess, files, fuzz) = q.patch(repo, pf)
         if not patchsuccess:
-            raise util.Abort(_('Error folding patch %s') % p)
+            raise util.Abort(_('error folding patch %s') % p)
         patch.updatedir(ui, repo, files)
 
     if not message:
@@ -2799,7 +2799,7 @@ def mqinit(orig, ui, *args, **kwargs):
     else:
         repopath = cmdutil.findrepo(os.getcwd())
         if not repopath:
-            raise util.Abort(_('There is no Mercurial repository here '
+            raise util.Abort(_('there is no Mercurial repository here '
                                '(.hg not found)'))
     repo = hg.repository(ui, repopath)
     return qinit(ui, repo, True)
