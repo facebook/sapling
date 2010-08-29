@@ -292,7 +292,7 @@ def pathto(root, n1, n2):
     b.reverse()
     return os.sep.join((['..'] * len(a)) + b) or '.'
 
-def canonpath(root, cwd, myname, audit_path=None):
+def canonpath(root, cwd, myname, auditor=None):
     """return the canonical path of myname, given cwd and root"""
     if endswithsep(root):
         rootsep = root
@@ -302,11 +302,11 @@ def canonpath(root, cwd, myname, audit_path=None):
     if not os.path.isabs(name):
         name = os.path.join(root, cwd, name)
     name = os.path.normpath(name)
-    if audit_path is None:
-        audit_path = path_auditor(root)
+    if auditor is None:
+        auditor = path_auditor(root)
     if name != rootsep and name.startswith(rootsep):
         name = name[len(rootsep):]
-        audit_path(name)
+        auditor(name)
         return pconvert(name)
     elif name == root:
         return ''
@@ -330,7 +330,7 @@ def canonpath(root, cwd, myname, audit_path=None):
                     return ''
                 rel.reverse()
                 name = os.path.join(*rel)
-                audit_path(name)
+                auditor(name)
                 return pconvert(name)
             dirname, basename = os.path.split(name)
             rel.append(basename)
@@ -836,9 +836,9 @@ class opener(object):
     def __init__(self, base, audit=True):
         self.base = base
         if audit:
-            self.audit_path = path_auditor(base)
+            self.auditor = path_auditor(base)
         else:
-            self.audit_path = always
+            self.auditor = always
         self.createmode = None
 
     @propertycache
@@ -851,7 +851,7 @@ class opener(object):
         os.chmod(name, self.createmode & 0666)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False):
-        self.audit_path(path)
+        self.auditor(path)
         f = os.path.join(self.base, path)
 
         if not text and "b" not in mode:
@@ -876,7 +876,7 @@ class opener(object):
         return fp
 
     def symlink(self, src, dst):
-        self.audit_path(dst)
+        self.auditor(dst)
         linkname = os.path.join(self.base, dst)
         try:
             os.unlink(linkname)
