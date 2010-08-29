@@ -1435,3 +1435,13 @@ def getport(port):
         return socket.getservbyname(port)
     except socket.error:
         raise Abort(_("no port number associated with service '%s'") % port)
+
+_booleans = {'1': True, 'yes': True, 'true': True, 'on': True,
+             '0': False, 'no': False, 'false': False, 'off': False}
+
+def parsebool(s):
+    """Parse s into a boolean.
+
+    If s is not a valid boolean, returns None.
+    """
+    return _booleans.get(s.lower(), None)

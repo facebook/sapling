@@ -9,9 +9,6 @@ from i18n import _
 import errno, getpass, os, socket, sys, tempfile, traceback
 import config, util, error
 
-_booleans = {'1': True, 'yes': True, 'true': True, 'on': True,
-             '0': False, 'no': False, 'false': False, 'off': False}
-
 class ui(object):
     def __init__(self, src=None):
         self._buffers = []
@@ -149,10 +146,11 @@ class ui(object):
             return default
         if isinstance(v, bool):
             return v
-        if v.lower() not in _booleans:
+        b = util.parsebool(v)
+        if b is None:
             raise error.ConfigError(_("%s.%s not a boolean ('%s')")
                                     % (section, name, v))
-        return _booleans[v.lower()]
+        return b
 
     def configlist(self, section, name, default=None, untrusted=False):
         """Return a list of comma/space separated strings"""
