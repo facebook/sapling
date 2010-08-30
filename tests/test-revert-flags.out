@@ -1,6 +1,0 @@
-% reverting to rev 0
-reverting foo
-M foo
-diff --git a/foo b/foo
-old mode 100755
-new mode 100644
