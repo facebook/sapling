@@ -59,7 +59,7 @@ username expansion
   John Doe
   $ cd ..
 
-  $ hg showconfig | sed -e "s:$p:...:"
+  $ hg showconfig
   ui.username=$FAKEUSER
 
   $ unset FAKEUSER
