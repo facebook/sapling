@@ -1335,7 +1335,8 @@ def debuginstall(ui):
     if patchproblems:
         if ui.config('ui', 'patch'):
             ui.write(_(" (Current patch tool may be incompatible with patch,"
-                       " or misconfigured. Please check your .hgrc file)\n"))
+                       " or misconfigured. Please check your configuration"
+                       " file)\n"))
         else:
             ui.write(_(" Internal patcher failure, please report this error"
                        " to http://mercurial.selenic.com/bts/\n"))
@@ -1351,10 +1352,12 @@ def debuginstall(ui):
     if not cmdpath:
         if editor == 'vi':
             ui.write(_(" No commit editor set and can't find vi in PATH\n"))
-            ui.write(_(" (specify a commit editor in your .hgrc file)\n"))
+            ui.write(_(" (specify a commit editor in your configuration"
+                       " file)\n"))
         else:
             ui.write(_(" Can't find editor '%s' in PATH\n") % editor)
-            ui.write(_(" (specify a commit editor in your .hgrc file)\n"))
+            ui.write(_(" (specify a commit editor in your configuration"
+                       " file)\n"))
             problems += 1
 
     # check username
@@ -1363,7 +1366,7 @@ def debuginstall(ui):
         ui.username()
     except util.Abort, e:
         ui.write(" %s\n" % e)
-        ui.write(_(" (specify a username in your .hgrc file)\n"))
+        ui.write(_(" (specify a username in your configuration file)\n"))
         problems += 1
 
     if not problems:
@@ -2724,8 +2727,8 @@ def paths(ui, repo, search=None):
     Show definition of symbolic path name NAME. If no name is given,
     show definition of all available names.
 
-    Path names are defined in the [paths] section of
-    ``/etc/mercurial/hgrc`` and ``$HOME/.hgrc``. If run inside a
+    Path names are defined in the [paths] section of your
+    configuration file and in ``/etc/mercurial/hgrc``. If run inside a
     repository, ``.hg/hgrc`` is used, too.
 
     The path names ``default`` and ``default-push`` have a special
@@ -2960,11 +2963,11 @@ def resolve(ui, repo, *pats, **opts):
     """redo merges or set/view the merge status of files
 
     Merges with unresolved conflicts are often the result of
-    non-interactive merging using the ``internal:merge`` hgrc setting,
-    or a command-line merge tool like ``diff3``. The resolve command
-    is used to manage the files involved in a merge, after :hg:`merge`
-    has been run, and before :hg:`commit` is run (i.e. the working
-    directory must have two parents).
+    non-interactive merging using the ``internal:merge`` configuration
+    setting, or a command-line merge tool like ``diff3``. The resolve
+    command is used to manage the files involved in a merge, after
+    :hg:`merge` has been run, and before :hg:`commit` is run (i.e. the
+    working directory must have two parents).
 
     The resolve command can be used in the following ways:
 

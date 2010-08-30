@@ -11,9 +11,9 @@ for prime time; or they may alter some usual behaviors of stock
 Mercurial. It is thus up to the user to activate extensions as
 needed.
 
-To enable the "foo" extension, either shipped with Mercurial or in
-the Python search path, create an entry for it in your hgrc, like
-this::
+To enable the "foo" extension, either shipped with Mercurial or in the
+Python search path, create an entry for it in your configuration file,
+like this::
 
   [extensions]
   foo =
@@ -23,8 +23,8 @@ You may also specify the full path to an extension::
   [extensions]
   myfeature = ~/.hgext/myfeature.py
 
-To explicitly disable an extension enabled in an hgrc of broader
-scope, prepend its path with !::
+To explicitly disable an extension enabled in a configuration file of
+broader scope, prepend its path with !::
 
   [extensions]
   # disabling extension bar residing in /path/to/extension/bar.py

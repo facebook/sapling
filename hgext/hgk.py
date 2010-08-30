@@ -19,7 +19,7 @@ repository, and needs to be enabled.
 
 The :hg:`view` command will launch the hgk Tcl script. For this command
 to work, hgk must be in your search path. Alternately, you can specify
-the path to hgk in your .hgrc file::
+the path to hgk in your configuration file::
 
   [hgk]
   path=/location/of/hgk

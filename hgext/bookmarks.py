@@ -18,7 +18,7 @@ It is possible to use bookmark names in every revision lookup (e.g.
 By default, when several bookmarks point to the same changeset, they
 will all move forward together. It is possible to obtain a more
 git-like experience by adding the following configuration option to
-your .hgrc::
+your configuration file::
 
   [bookmarks]
   track.current = True

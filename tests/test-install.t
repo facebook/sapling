@@ -17,7 +17,7 @@ hg debuginstall with no username
   Checking commit editor...
   Checking username...
    no username supplied (see "hg help config")
-   (specify a username in your .hgrc file)
+   (specify a username in your configuration file)
   1 problems detected, please check your install!
 
   $ true
