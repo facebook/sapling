@@ -150,7 +150,7 @@ quoting needed
   $ log 'date('
   hg: parse error at 5: not a prefix: end
   $ log 'date(tip)'
-  abort: invalid date: 'tip' 
+  abort: invalid date: 'tip'
   $ log '"date"'
   abort: unknown revision 'date'!
   $ log 'date(2005) and 1::'

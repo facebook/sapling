@@ -1069,7 +1069,7 @@ def parsedate(date, formats=None, defaults=None):
             else:
                 break
         else:
-            raise Abort(_('invalid date: %r ') % date)
+            raise Abort(_('invalid date: %r') % date)
     # validate explicit (probably user-specified) date and
     # time zone offset. values must fit in signed 32 bits for
     # current 32-bit linux runtimes. timezones go from UTC-12
