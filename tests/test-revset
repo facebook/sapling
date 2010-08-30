@@ -82,17 +82,17 @@ log '1|2'
 log '1 and 2'
 log '1&2'
 try '1&2|3' # precedence - and is higher
-try '1|2&3' 
+try '1|2&3'
 try '1&2&3' # associativity
 try '1|(2|3)'
 log '1.0' # tag
 log 'a' # branch
-log '2785f51ee' 
+log '2785f51ee'
 log 'date(2005)'
 log 'date(this is a test)'
 log 'date()'
 log 'date'
-log 'date(' 
+log 'date('
 log 'date(tip)'
 log '"date"'
 log 'date(2005) and 1::'
