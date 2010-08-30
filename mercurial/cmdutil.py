@@ -9,7 +9,7 @@ from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, glob, tempfile
 import util, templater, patch, error, encoding, templatekw
-import match as _match
+import match as matchmod
 import similar, revset
 
 revrangesep = ':'
@@ -247,7 +247,7 @@ def expandpats(pats):
         return list(pats)
     ret = []
     for p in pats:
-        kind, name = _match._patsplit(p, None)
+        kind, name = matchmod._patsplit(p, None)
         if kind is None:
             try:
                 globbed = glob.glob(name)
@@ -262,7 +262,7 @@ def expandpats(pats):
 def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
     if not globbed and default == 'relpath':
         pats = expandpats(pats or [])
-    m = _match.match(repo.root, repo.getcwd(), pats,
+    m = matchmod.match(repo.root, repo.getcwd(), pats,
                     opts.get('include'), opts.get('exclude'), default)
     def badfn(f, msg):
         repo.ui.warn("%s: %s\n" % (m.rel(f), msg))
@@ -270,10 +270,10 @@ def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
     return m
 
 def matchall(repo):
-    return _match.always(repo.root, repo.getcwd())
+    return matchmod.always(repo.root, repo.getcwd())
 
 def matchfiles(repo, files):
-    return _match.exact(repo.root, repo.getcwd(), files)
+    return matchmod.exact(repo.root, repo.getcwd(), files)
 
 def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     if dry_run is None:
@@ -464,7 +464,7 @@ def copy(ui, repo, pats, opts, rename=False):
     # srcs: list of (hgsep, hgsep, ossep, bool)
     # return: function that takes hgsep and returns ossep
     def targetpathafterfn(pat, dest, srcs):
-        if _match.patkind(pat):
+        if matchmod.patkind(pat):
             # a mercurial pattern
             res = lambda p: os.path.join(dest,
                                          os.path.basename(util.localpath(p)))
@@ -512,7 +512,7 @@ def copy(ui, repo, pats, opts, rename=False):
     dest = pats.pop()
     destdirexists = os.path.isdir(dest) and not os.path.islink(dest)
     if not destdirexists:
-        if len(pats) > 1 or _match.patkind(pats[0]):
+        if len(pats) > 1 or matchmod.patkind(pats[0]):
             raise util.Abort(_('with multiple sources, destination must be an '
                                'existing directory'))
         if util.endswithsep(dest):

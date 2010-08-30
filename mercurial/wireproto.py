@@ -10,7 +10,7 @@ from i18n import _
 from node import bin, hex
 import changegroup as changegroupmod
 import repo, error, encoding, util, store
-import pushkey as pushkey_
+import pushkey as pushkeymod
 
 # list of nodes encoding / decoding
 
@@ -202,7 +202,7 @@ def hello(repo, proto):
     return "capabilities: %s\n" % (capabilities(repo, proto))
 
 def listkeys(repo, proto, namespace):
-    d = pushkey_.list(repo, namespace).items()
+    d = pushkeymod.list(repo, namespace).items()
     t = '\n'.join(['%s\t%s' % (k.encode('string-escape'),
                                v.encode('string-escape')) for k, v in d])
     return t
@@ -217,7 +217,7 @@ def lookup(repo, proto, key):
     return "%s %s\n" % (success, r)
 
 def pushkey(repo, proto, namespace, key, old, new):
-    r = pushkey_.push(repo, namespace, key, old, new)
+    r = pushkeymod.push(repo, namespace, key, old, new)
     return '%s\n' % int(r)
 
 def _allowstream(ui):

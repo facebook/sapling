@@ -7,7 +7,7 @@
 
 import re
 import parser, util, error, discovery
-import match as _match
+import match as matchmod
 from i18n import _
 
 elements = {
@@ -292,7 +292,7 @@ def author(repo, subset, x):
 
 def hasfile(repo, subset, x):
     pat = getstring(x, _("file wants a pattern"))
-    m = _match.match(repo.root, repo.getcwd(), [pat])
+    m = matchmod.match(repo.root, repo.getcwd(), [pat])
     s = []
     for r in subset:
         for f in repo[r].files():
@@ -303,7 +303,7 @@ def hasfile(repo, subset, x):
 
 def contains(repo, subset, x):
     pat = getstring(x, _("contains wants a pattern"))
-    m = _match.match(repo.root, repo.getcwd(), [pat])
+    m = matchmod.match(repo.root, repo.getcwd(), [pat])
     s = []
     if m.files() == [pat]:
         for r in subset:
@@ -319,7 +319,7 @@ def contains(repo, subset, x):
     return s
 
 def checkstatus(repo, subset, pat, field):
-    m = _match.match(repo.root, repo.getcwd(), [pat])
+    m = matchmod.match(repo.root, repo.getcwd(), [pat])
     s = []
     fast = (m.files() == [pat])
     for r in subset:
