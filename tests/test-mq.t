@@ -941,7 +941,7 @@ test file addition in slow path
   created new head
   $ hg up -C 1
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg qrefresh --git 2>&1 | grep -v 'saving bundle'
+  $ hg qrefresh --git
   $ cat .hg/patches/bar
   diff --git a/bar b/bar
   new file mode 100644
@@ -983,7 +983,7 @@ test file move chains in the slow path
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg mv bar quux
   $ hg mv baz bleh
-  $ hg qrefresh --git 2>&1 | grep -v 'saving bundle'
+  $ hg qrefresh --git
   $ cat .hg/patches/bar
   diff --git a/foo b/bleh
   rename from foo
