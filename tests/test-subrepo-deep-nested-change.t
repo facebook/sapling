@@ -11,7 +11,7 @@ Preparing the 'sub1' repo which depends on the subrepo 'sub2'
   $ hg init sub1
   $ echo sub1 > sub1/sub1
   $ echo "sub2 = ../sub2" > sub1/.hgsub
-  $ hg clone sub2 sub1/sub2 | sed 's/ .*sub/ ...sub/g'
+  $ hg clone sub2 sub1/sub2
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg add -R sub1
@@ -25,9 +25,9 @@ Preparing the 'main' repo which depends on the subrepo 'sub1'
   $ hg init main
   $ echo main > main/main
   $ echo "sub1 = ../sub1" > main/.hgsub
-  $ hg clone sub1 main/sub1  | sed 's/ .*sub/ ...sub/g'
+  $ hg clone sub1 main/sub1
   updating to branch default
-  pulling ...sub2
+  pulling subrepo sub2 from .*/sub2
   requesting all changes
   adding changesets
   adding manifests
@@ -53,15 +53,15 @@ Cleaning both repositories, just as a clone -U
 
 Clone main
 
-  $ hg clone main cloned | sed 's/ .*sub/ ...sub/g' 
+  $ hg clone main cloned
   updating to branch default
-  pulling ...sub1
+  pulling subrepo sub1 from .*/sub1
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
-  pulling ...sub2
+  pulling subrepo sub1/sub2 from .*/sub2
   requesting all changes
   adding changesets
   adding manifests
