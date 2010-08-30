@@ -36,8 +36,8 @@ qpop/qrefresh on the wrong revision
 
   $ hg qpop
   abort: popping would remove a revision not managed by this patch queue
-  $ hg qpop -n patches 2>&1 | sed -e 's/\(using patch queue:\).*/\1/'
-  using patch queue:
+  $ hg qpop -n patches
+  using patch queue: .*/repo/.hg/patches
   abort: popping would remove a revision not managed by this patch queue
   $ hg qrefresh
   abort: working directory revision is not qtip
