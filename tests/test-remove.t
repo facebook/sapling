@@ -1,0 +1,234 @@
+  $ remove() {
+  >     hg rm $@
+  >     hg st
+  >     # do not use ls -R, which recurses in .hg subdirs on Mac OS X 10.5
+  >     find . -name .hg -prune -o -type f -print | sort
+  >     hg up -C
+  > }
+
+  $ hg init a
+  $ cd a
+  $ echo a > foo
+
+file not managed
+
+  $ remove foo
+  not removing foo: file is untracked
+  ? foo
+  ./foo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg add foo
+  $ hg commit -m1
+
+the table cases
+00 state added, options none
+
+  $ echo b > bar
+  $ hg add bar
+  $ remove bar
+  not removing bar: file has been marked for add (use -f to force removal)
+  A bar
+  ./bar
+  ./foo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+01 state clean, options none
+
+  $ remove foo
+  R foo
+  ? bar
+  ./bar
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+02 state modified, options none
+
+  $ echo b >> foo
+  $ remove foo
+  not removing foo: file is modified (use -f to force removal)
+  M foo
+  ? bar
+  ./bar
+  ./foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+03 state missing, options none
+
+  $ rm foo
+  $ remove foo
+  R foo
+  ? bar
+  ./bar
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+10 state added, options -f
+
+  $ echo b > bar
+  $ hg add bar
+  $ remove -f bar
+  ? bar
+  ./bar
+  ./foo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm bar
+
+11 state clean, options -f
+
+  $ remove -f foo
+  R foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+12 state modified, options -f
+
+  $ echo b >> foo
+  $ remove -f foo
+  R foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+13 state missing, options -f
+
+  $ rm foo
+  $ remove -f foo
+  R foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+20 state added, options -A
+
+  $ echo b > bar
+  $ hg add bar
+  $ remove -A bar
+  not removing bar: file still exists (use -f to force removal)
+  A bar
+  ./bar
+  ./foo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+21 state clean, options -A
+
+  $ remove -A foo
+  not removing foo: file still exists (use -f to force removal)
+  ? bar
+  ./bar
+  ./foo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+22 state modified, options -A
+
+  $ echo b >> foo
+  $ remove -A foo
+  not removing foo: file still exists (use -f to force removal)
+  M foo
+  ? bar
+  ./bar
+  ./foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+23 state missing, options -A
+
+  $ rm foo
+  $ remove -A foo
+  R foo
+  ? bar
+  ./bar
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+30 state added, options -Af
+
+  $ echo b > bar
+  $ hg add bar
+  $ remove -Af bar
+  ? bar
+  ./bar
+  ./foo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm bar
+
+31 state clean, options -Af
+
+  $ remove -Af foo
+  R foo
+  ./foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+32 state modified, options -Af
+
+  $ echo b >> foo
+  $ remove -Af foo
+  R foo
+  ./foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+33 state missing, options -Af
+
+  $ rm foo
+  $ remove -Af foo
+  R foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+test some directory stuff
+
+  $ mkdir test
+  $ echo a > test/foo
+  $ echo b > test/bar
+  $ hg ci -Am2
+  adding test/bar
+  adding test/foo
+
+dir, options none
+
+  $ rm test/bar
+  $ remove test
+  removing test/bar
+  removing test/foo
+  R test/bar
+  R test/foo
+  ./foo
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+dir, options -f
+
+  $ rm test/bar
+  $ remove -f test
+  removing test/bar
+  removing test/foo
+  R test/bar
+  R test/foo
+  ./foo
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+dir, options -A
+
+  $ rm test/bar
+  $ remove -A test
+  not removing test/foo: file still exists (use -f to force removal)
+  removing test/bar
+  R test/bar
+  ./foo
+  ./test/foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+dir, options -Af
+
+  $ rm test/bar
+  $ remove -Af test
+  removing test/bar
+  removing test/foo
+  R test/bar
+  R test/foo
+  ./foo
+  ./test/foo
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+test remove dropping empty trees (issue1861)
+
+  $ mkdir -p issue1861/b/c
+  $ echo x > issue1861/x
+  $ echo y > issue1861/b/c/y
+  $ hg ci -Am add
+  adding issue1861/b/c/y
+  adding issue1861/x
+  $ hg rm issue1861/b
+  removing issue1861/b/c/y
+  $ hg ci -m remove
+  $ ls issue1861
+  x
