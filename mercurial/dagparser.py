@@ -268,7 +268,7 @@ def parsedag(desc):
                 s += c
                 i += 1
                 c = nextch()
-            raise util.Abort("invalid character in dag description: %s..." % s)
+            raise util.Abort(_("invalid character in dag description: %s...") % s)
 
 def dagtextlines(events,
                  addspaces=True,
@@ -296,14 +296,14 @@ def dagtextlines(events,
 
                 # sanity check
                 if r != wantr:
-                    raise util.Abort("Expected id %i, got %i" % (wantr, r))
+                    raise util.Abort(_("expected id %i, got %i") % (wantr, r))
                 if not ps:
                     ps = [-1]
                 else:
                     for p in ps:
                         if p >= r:
-                            raise util.Abort("Parent id %i is larger than "
-                                             "current id %i" % (p, r))
+                            raise util.Abort(_("parent id %i is larger than "
+                                               "current id %i") % (p, r))
                 wantr += 1
 
                 # new root?
