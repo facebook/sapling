@@ -36,7 +36,7 @@ def _smtp(ui):
     s = smtplib.SMTP(local_hostname=local_hostname)
     mailhost = ui.config('smtp', 'host')
     if not mailhost:
-        raise util.Abort(_('no [smtp]host in hgrc - cannot send mail'))
+        raise util.Abort(_('smtp.host not configured - cannot send mail'))
     mailport = util.getport(ui.config('smtp', 'port', 25))
     ui.note(_('sending mail: smtp host %s, port %s\n') %
             (mailhost, mailport))
