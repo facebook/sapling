@@ -49,15 +49,11 @@ Fresh checkout:
   $ cat stuff.txt
   Copyright 2046, The Masters
   Some stuff to ponder very carefully.
-  $ echo >> stuff.txt <<EOF
-  > Very very carefully.
-  > EOF
+  $ echo "Very very carefully." >> stuff.txt
   $ hg stat
   M stuff.txt
 
-  $ cat > morestuff.txt <<EOF
-  > Unauthorized material subject to destruction.
-  > EOF
+  $ echo "Unauthorized material subject to destruction." > morestuff.txt
 
 Problem encoding:
 
