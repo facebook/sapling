@@ -499,8 +499,8 @@ test subrepo delete from .hgsubstate
   $ hg -R testdelete add
   adding testdelete/.hgsub
   $ hg -R testdelete ci -m "nested 1 & 2 added"
-  committing subrepository nested2
   committing subrepository nested
+  committing subrepository nested2
   $ echo nested = nested > testdelete/.hgsub
   $ hg -R testdelete ci -m "nested 2 deleted"
   $ cat testdelete/.hgsubstate
@@ -529,8 +529,8 @@ test repository cloning
   $ hg -R main add
   adding main/.hgsub
   $ hg -R main ci -m "add subrepos"
-  committing subrepository nested_relative
   committing subrepository nested_absolute
+  committing subrepository nested_relative
   $ cd ..
   $ hg clone mercurial/main mercurial2/main
   updating to branch default

@@ -877,7 +877,7 @@ class localrepository(repo.repository):
             # commit subs
             if subs or removedsubs:
                 state = wctx.substate.copy()
-                for s in subs:
+                for s in sorted(subs):
                     sub = wctx.sub(s)
                     self.ui.status(_('committing subrepository %s\n') %
                         subrepo.relpath(sub))
