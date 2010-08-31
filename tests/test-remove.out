@@ -1,83 +1,100 @@
 % file not managed
 not removing foo: file is untracked
+exit code: 1
 ? foo
 ./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 00 state added, options none
 not removing bar: file has been marked for add (use -f to force removal)
+exit code: 1
 A bar
 ./bar
 ./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 01 state clean, options none
+exit code: 0
 R foo
 ? bar
 ./bar
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 02 state modified, options none
 not removing foo: file is modified (use -f to force removal)
+exit code: 1
 M foo
 ? bar
 ./bar
 ./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 03 state missing, options none
+exit code: 0
 R foo
 ? bar
 ./bar
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 10 state added, options -f
+exit code: 0
 ? bar
 ./bar
 ./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 11 state clean, options -f
+exit code: 0
 R foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 12 state modified, options -f
+exit code: 0
 R foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 13 state missing, options -f
+exit code: 0
 R foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 20 state added, options -A
 not removing bar: file still exists (use -f to force removal)
+exit code: 1
 A bar
 ./bar
 ./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 21 state clean, options -A
 not removing foo: file still exists (use -f to force removal)
+exit code: 1
 ? bar
 ./bar
 ./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 22 state modified, options -A
 not removing foo: file still exists (use -f to force removal)
+exit code: 1
 M foo
 ? bar
 ./bar
 ./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 23 state missing, options -A
+exit code: 0
 R foo
 ? bar
 ./bar
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 30 state added, options -Af
+exit code: 0
 ? bar
 ./bar
 ./foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 31 state clean, options -Af
+exit code: 0
 R foo
 ./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 32 state modified, options -Af
+exit code: 0
 R foo
 ./foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % 33 state missing, options -Af
+exit code: 0
 R foo
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 adding test/bar
@@ -85,6 +102,7 @@ adding test/foo
 % dir, options none
 removing test/bar
 removing test/foo
+exit code: 0
 R test/bar
 R test/foo
 ./foo
@@ -92,6 +110,7 @@ R test/foo
 % dir, options -f
 removing test/bar
 removing test/foo
+exit code: 0
 R test/bar
 R test/foo
 ./foo
@@ -99,6 +118,7 @@ R test/foo
 % dir, options -A
 not removing test/foo: file still exists (use -f to force removal)
 removing test/bar
+exit code: 1
 R test/bar
 ./foo
 ./test/foo
@@ -106,6 +126,7 @@ R test/bar
 % dir, options -Af
 removing test/bar
 removing test/foo
+exit code: 0
 R test/bar
 R test/foo
 ./foo
