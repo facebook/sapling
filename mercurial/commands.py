@@ -2798,7 +2798,7 @@ def pull(ui, repo, source="default", **opts):
         try:
             revs = [other.lookup(rev) for rev in revs]
         except error.CapabilityError:
-            err = _("Other repository doesn't support revision lookup, "
+            err = _("other repository doesn't support revision lookup, "
                     "so a rev cannot be specified.")
             raise util.Abort(err)
 
@@ -2913,21 +2913,24 @@ def remove(ui, repo, *pats, **opts):
             ui.warn(_('not removing %s: file is untracked\n') % m.rel(f))
             ret = 1
 
-    def warn(files, reason):
-        for f in files:
-            ui.warn(_('not removing %s: file %s (use -f to force removal)\n')
-                    % (m.rel(f), reason))
-            ret = 1
-
     if force:
         remove, forget = modified + deleted + clean, added
     elif after:
         remove, forget = deleted, []
-        warn(modified + added + clean, _('still exists'))
+        for f in modified + added + clean:
+            ui.warn(_('not removing %s: file still exists (use -f'
+                      ' to force removal)\n') % m.rel(f))
+            ret = 1
     else:
         remove, forget = deleted + clean, []
-        warn(modified, _('is modified'))
-        warn(added, _('has been marked for add'))
+        for f in modified:
+            ui.warn(_('not removing %s: file is modified (use -f'
+                      ' to force removal)\n') % m.rel(f))
+            ret = 1
+        for f in added:
+            ui.warn(_('not removing %s: file has been marked for add (use -f'
+                      ' to force removal)\n') % m.rel(f))
+            ret = 1
 
     for f in sorted(remove + forget):
         if ui.verbose or not m.exact(f):
