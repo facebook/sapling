@@ -2801,7 +2801,7 @@ def pull(ui, repo, source="default", **opts):
         try:
             revs = [other.lookup(rev) for rev in revs]
         except error.CapabilityError:
-            err = _("Other repository doesn't support revision lookup, "
+            err = _("other repository doesn't support revision lookup, "
                     "so a rev cannot be specified.")
             raise util.Abort(err)
 
