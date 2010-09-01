@@ -7,6 +7,7 @@
 
 import re
 import util
+from i18n import _
 
 class match(object):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
@@ -214,8 +215,8 @@ def _buildmatch(pats, tail):
             try:
                 re.compile('(?:%s)' % _regex(k, p, tail))
             except re.error:
-                raise util.Abort("invalid pattern (%s): %s" % (k, p))
-        raise util.Abort("invalid pattern")
+                raise util.Abort(_("invalid pattern (%s): %s") % (k, p))
+        raise util.Abort(_("invalid pattern"))
 
 def _normalize(names, default, root, cwd):
     pats = []
