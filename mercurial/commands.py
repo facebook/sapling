@@ -1214,9 +1214,15 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
         ui.write(line)
         ui.write("\n")
 
-def debugdata(ui, file_, rev):
+def debugdata(ui, repo, file_, rev):
     """dump the contents of a data file revision"""
-    r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_[:-2] + ".i")
+    r = None
+    if repo:
+        filelog = repo.file(file_)
+        if len(filelog):
+            r = filelog
+    if not r:
+        r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_[:-2] + ".i")
     try:
         ui.write(r.revision(r.lookup(rev)))
     except KeyError:
@@ -4476,7 +4482,8 @@ table = {
     "version": (version_, []),
 }
 
-norepo = ("clone init version help debugcommands debugcomplete debugdata"
+norepo = ("clone init version help debugcommands debugcomplete"
           " debugindex debugindexdot debugdate debuginstall debugfsinfo"
           " debugpushkey")
-optionalrepo = ("identify paths serve showconfig debugancestor debugdag")
+optionalrepo = ("identify paths serve showconfig debugancestor debugdag"
+                " debugdata")
