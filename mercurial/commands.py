@@ -1240,9 +1240,15 @@ def debugdate(ui, date, range=None, **opts):
         m = util.matchdate(range)
         ui.write("match: %s\n" % m(d[0]))
 
-def debugindex(ui, file_):
+def debugindex(ui, repo, file_):
     """dump the contents of an index file"""
-    r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
+    r = None
+    if repo:
+        filelog = repo.file(file_)
+        if len(filelog):
+            r = filelog
+    if not r:
+        r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
     ui.write("   rev    offset  length   base linkrev"
              " nodeid       p1           p2\n")
     for i in r:
@@ -1255,9 +1261,15 @@ def debugindex(ui, file_):
                 i, r.start(i), r.length(i), r.base(i), r.linkrev(i),
             short(node), short(pp[0]), short(pp[1])))
 
-def debugindexdot(ui, file_):
+def debugindexdot(ui, repo, file_):
     """dump an index DAG as a graphviz dot file"""
-    r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
+    r = None
+    if repo:
+        filelog = repo.file(file_)
+        if len(filelog):
+            r = filelog
+    if not r:
+        r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
     ui.write("digraph G {\n")
     for i in r:
         node = r.node(i)
@@ -4483,7 +4495,6 @@ table = {
 }
 
 norepo = ("clone init version help debugcommands debugcomplete"
-          " debugindex debugindexdot debugdate debuginstall debugfsinfo"
-          " debugpushkey")
+          " debugdate debuginstall debugfsinfo debugpushkey")
 optionalrepo = ("identify paths serve showconfig debugancestor debugdag"
-                " debugdata")
+                " debugdata debugindex debugindexdot")
