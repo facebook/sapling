@@ -7,6 +7,7 @@
 
 import os
 from mercurial import util
+from mercurial.node import hex, nullid
 from mercurial.i18n import _
 
 from common import NoRepo, commit, converter_source, checktool
@@ -59,7 +60,7 @@ class convert_git(converter_source):
         return heads
 
     def catfile(self, rev, type):
-        if rev == "0" * 40:
+        if rev == hex(nullid):
             raise IOError()
         data, ret = self.gitread("git cat-file %s %s" % (type, rev))
         if ret:

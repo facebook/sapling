@@ -311,7 +311,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             # we need to re-init the repo after manually copying the data
             # into it
             dest_repo = repository(ui, dest)
-            src_repo.hook('outgoing', source='clone', node='0'*40)
+            src_repo.hook('outgoing', source='clone',
+                          node=node.hex(node.nullid))
         else:
             try:
                 dest_repo = repository(ui, dest, create=True)

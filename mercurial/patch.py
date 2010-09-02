@@ -1352,7 +1352,7 @@ def b85diff(to, tn):
     '''print base85-encoded binary diff'''
     def gitindex(text):
         if not text:
-            return '0' * 40
+            return hex(nullid)
         l = len(text)
         s = util.sha1('blob %d\0' % l)
         s.update(text)
