@@ -1,8 +1,0 @@
-#!/bin/sh
-
-hg init
-python -c 'print "confuse str.splitlines\nembedded\rnewline"' > a
-hg ci -Ama -d '1 0'
-echo clean diff >> a
-hg ci -mb -d '2 0'
-hg diff -r0 -r1
