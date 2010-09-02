@@ -134,6 +134,7 @@ cd ..
 
 echo % commit new file revisions with some fuzz
 cd src
+sleep 1
 echo f >> a
 cvscall -q commit -mfuzzy . | grep '<--' |\
     sed -e 's:.*src/\(.*\),v.*:checking in src/\1,v:g'
