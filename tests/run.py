@@ -25,6 +25,7 @@ def tests():
     import test_startrev
     import test_svnwrap
     import test_tags
+    import test_template_keywords
     import test_utility_commands
     import test_urls
 
