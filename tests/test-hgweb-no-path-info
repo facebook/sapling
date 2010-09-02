@@ -8,7 +8,7 @@ cd repo
 hg init
 echo foo > bar
 hg add bar
-hg commit -m "test" -u "Testing"
+hg commit -m "test"
 hg tip
 
 cat > request.py <<EOF

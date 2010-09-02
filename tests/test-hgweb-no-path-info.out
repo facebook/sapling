@@ -1,6 +1,6 @@
-changeset:   0:4cbec7e6f8c4
+changeset:   0:61c9426e69fe
 tag:         tip
-user:        Testing
+user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     test
 
@@ -19,11 +19,11 @@ summary:     test
 
  <entry>
   <title>test</title>
-  <id>http://127.0.0.1/#changeset-4cbec7e6f8c42eb52b6b52670e1f7560ae9a101e</id>
-  <link href="http://127.0.0.1/rev/4cbec7e6f8c4"/>
+  <id>http://127.0.0.1/#changeset-61c9426e69fef294feed5e2bbfc97d39944a5b1c</id>
+  <link href="http://127.0.0.1/rev/61c9426e69fe"/>
   <author>
-   <name>Testing</name>
-   <email>&#84;&#101;&#115;&#116;&#105;&#110;&#103;</email>
+   <name>test</name>
+   <email>&#116;&#101;&#115;&#116;</email>
   </author>
   <updated>1970-01-01T00:00:00+00:00</updated>
   <published>1970-01-01T00:00:00+00:00</published>
