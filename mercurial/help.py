@@ -83,7 +83,7 @@ def loaddoc(topic):
     return loader
 
 helptable = [
-    (["config"], _("Configuration Files"), loaddoc('config')),
+    (["config", "hgrc"], _("Configuration Files"), loaddoc('config')),
     (["dates"], _("Date Formats"), loaddoc('dates')),
     (["patterns"], _("File Name Patterns"), loaddoc('patterns')),
     (['environment', 'env'], _('Environment Variables'),

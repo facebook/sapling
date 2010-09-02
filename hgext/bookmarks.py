@@ -451,8 +451,8 @@ def push(oldpush, ui, repo, dest=None, **opts):
                 ui.status(_("deleting remote bookmark %s\n") % b)
                 new = '' # delete
             else:
-                ui.warn(_('bookmark %s does not exist on the local'
-                          ' or remote repository!\n') % b)
+                ui.warn(_('bookmark %s does not exist on the local '
+                          'or remote repository!\n') % b)
                 return 2
             old = rb.get(b, '')
             r = other.pushkey('bookmarks', b, old, new)
