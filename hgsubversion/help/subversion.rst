@@ -112,6 +112,9 @@ It is not possible to interact with more than one Subversion repository per
 Mercurial clone. Please note that this also applies to more than one path within
 a repository.
 
+Mercurial does not track directories, and as a result, any empty directories
+in Subversion cannot be represented in the resulting Mercurial repository.
+
 Advanced Configuration
 ----------------------
 
