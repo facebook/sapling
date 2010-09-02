@@ -134,7 +134,7 @@ settings:
     with no hostname component.
 
   hgsubversion.defaultauthors
-    Setting this boolean option to true will cause hgsubversion to abort a
+    Setting this boolean option to false will cause hgsubversion to abort a
     conversion if a revision has an author not listed in the author map.
 
   hgsubversion.branchmap
