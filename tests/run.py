@@ -54,6 +54,11 @@ if __name__ == '__main__':
     parser.add_option("", "--no-demandimport",
                       dest="demandimport", action="store_false", default=True,
                       help="disable Mercurial demandimport loading")
+    parser.add_option("", "--bindings",
+                      dest="bindings", action="store", default=None,
+                      choices=["swig", "subvertpy"],
+                      help="test using the specified bindings (swig or "
+                      "subvertpy)")
 
     (options, args) = parser.parse_args()
 
@@ -67,6 +72,9 @@ if __name__ == '__main__':
     if options.demandimport:
         from mercurial import demandimport
         demandimport.enable()
+
+    if options.bindings:
+        os.putenv('HGSUBVERSION_BINDINGS', options.bindings)
 
     # make sure our copy of hgsubversion gets imported by loading test_util
     import test_util
