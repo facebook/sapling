@@ -3,6 +3,8 @@
   > [extensions]
   > graphlog =
   > convert =
+  > [convert]
+  > hg.saverev = yes
   > EOF
 
   $ glog()
@@ -98,12 +100,12 @@ Convert from merge parent
 Check copy preservation
 
   $ hg log --follow --copies e
-  changeset:   2:d67b1d48a835
+  changeset:   2:79818a521a40
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     4: merge 2 and 3, copy d from b
   
-  changeset:   1:462c431cf47d
+  changeset:   1:3e6201832cce
   user:        test
   date:        Thu Jan 01 00:00:02 1970 +0000
   summary:     2: copy e from a, change b
@@ -111,7 +113,7 @@ Check copy preservation
 Check copy removal on missing parent
 
   $ hg log --follow --copies d
-  changeset:   2:d67b1d48a835
+  changeset:   2:79818a521a40
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     4: merge 2 and 3, copy d from b
