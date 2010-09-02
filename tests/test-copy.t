@@ -1,37 +1,37 @@
   $ hg init
   $ echo a > a
   $ hg add a
-  $ hg commit -m "1" -d "1000000 0"
+  $ hg commit -m "1"
   $ hg status
   $ hg copy a b
   $ hg status
   A b
   $ hg sum
-  parent: 0:33aaa84a386b tip
+  parent: 0:c19d34741b0a tip
    1
   branch: default
   commit: 1 copied
   update: (current)
-  $ hg --debug commit -m "2" -d "1000000 0"
+  $ hg --debug commit -m "2"
   b
    b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
-  committed changeset 1:76973b01f66a012648546c979ea4c41de9e7d8cd
+  committed changeset 1:93580a2c28a50a56f63526fb305067e6fbf739c4
 
 we should see two history entries
 
   $ hg history -v
-  changeset:   1:76973b01f66a
+  changeset:   1:93580a2c28a5
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   files:       b
   description:
   2
   
   
-  changeset:   0:33aaa84a386b
+  changeset:   0:c19d34741b0a
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   files:       a
   description:
   1
@@ -41,9 +41,9 @@ we should see two history entries
 we should see one log entry for a
 
   $ hg log a
-  changeset:   0:33aaa84a386b
+  changeset:   0:c19d34741b0a
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
 
@@ -56,10 +56,10 @@ this should show a revision linked to changeset 0
 we should see one log entry for b
 
   $ hg log b
-  changeset:   1:76973b01f66a
+  changeset:   1:93580a2c28a5
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
 

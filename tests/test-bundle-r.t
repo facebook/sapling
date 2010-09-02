@@ -2,30 +2,30 @@
   $ cd test
   $ echo "0" >> afile
   $ hg add afile
-  $ hg commit -m "0.0" -d "1000000 0"
+  $ hg commit -m "0.0"
   $ echo "1" >> afile
-  $ hg commit -m "0.1" -d "1000000 0"
+  $ hg commit -m "0.1"
   $ echo "2" >> afile
-  $ hg commit -m "0.2" -d "1000000 0"
+  $ hg commit -m "0.2"
   $ echo "3" >> afile
-  $ hg commit -m "0.3" -d "1000000 0"
+  $ hg commit -m "0.3"
   $ hg update -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "1" >> afile
-  $ hg commit -m "1.1" -d "1000000 0"
+  $ hg commit -m "1.1"
   created new head
   $ echo "2" >> afile
-  $ hg commit -m "1.2" -d "1000000 0"
+  $ hg commit -m "1.2"
   $ echo "a line" > fred
   $ echo "3" >> afile
   $ hg add fred
-  $ hg commit -m "1.3" -d "1000000 0"
+  $ hg commit -m "1.3"
   $ hg mv afile adifferentfile
-  $ hg commit -m "1.3m" -d "1000000 0"
+  $ hg commit -m "1.3m"
   $ hg update -C 3
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg mv afile anotherfile
-  $ hg commit -m "0.3m" -d "1000000 0"
+  $ hg commit -m "0.3m"
   $ hg debugindex .hg/store/data/afile.i
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       0 362fef284ce2 000000000000 000000000000
@@ -79,7 +79,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 1 changesets, 1 total revisions
-  0:5649c9d34dd8
+  0:f9ee2f85a263
   searching for changes
   2 changesets found
   adding changesets
@@ -92,7 +92,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  1:10b2180f755b
+  1:34c2bf6b0626
   searching for changes
   3 changesets found
   adding changesets
@@ -105,7 +105,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  2:d62976ca1e50
+  2:e38ba6f5b7e0
   searching for changes
   4 changesets found
   adding changesets
@@ -118,7 +118,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 4 changesets, 4 total revisions
-  3:ac69c658229d
+  3:eebf5a27f8ca
   searching for changes
   2 changesets found
   adding changesets
@@ -131,7 +131,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  1:5f4f3ceb285e
+  1:095197eb4973
   searching for changes
   3 changesets found
   adding changesets
@@ -144,7 +144,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  2:024e4e7df376
+  2:1bb50a9436a7
   searching for changes
   4 changesets found
   adding changesets
@@ -157,7 +157,7 @@
   crosschecking files in changesets and manifests
   checking files
   2 files, 4 changesets, 5 total revisions
-  3:1e3f6b843bd6
+  3:7373c1169842
   searching for changes
   5 changesets found
   adding changesets
@@ -170,7 +170,7 @@
   crosschecking files in changesets and manifests
   checking files
   3 files, 5 changesets, 6 total revisions
-  4:27f57c869697
+  4:a6a34bfa0076
   searching for changes
   5 changesets found
   adding changesets
@@ -183,7 +183,7 @@
   crosschecking files in changesets and manifests
   checking files
   2 files, 5 changesets, 5 total revisions
-  4:088ff9d6e1e1
+  4:aa35859c02ea
   $ cd test-8
   $ hg pull ../test-7
   pulling from ../test-7
@@ -242,17 +242,17 @@ issue1910
 revision 2
 
   $ hg tip -q
-  2:d62976ca1e50
+  2:e38ba6f5b7e0
   $ hg unbundle ../test-bundle-should-fail.hg
   adding changesets
   transaction abort!
   rollback completed
-  abort: 00changelog.i@ac69c658229d: unknown parent!
+  abort: 00changelog.i@eebf5a27f8ca: unknown parent!
 
 revision 2
 
   $ hg tip -q
-  2:d62976ca1e50
+  2:e38ba6f5b7e0
   $ hg unbundle ../test-bundle-all.hg
   adding changesets
   adding manifests
@@ -263,7 +263,7 @@ revision 2
 revision 8
 
   $ hg tip -q
-  8:088ff9d6e1e1
+  8:aa35859c02ea
   $ hg verify
   checking changesets
   checking manifests
@@ -276,7 +276,7 @@ revision 8
 revision 2
 
   $ hg tip -q
-  2:d62976ca1e50
+  2:e38ba6f5b7e0
   $ hg unbundle ../test-bundle-branch1.hg
   adding changesets
   adding manifests
@@ -287,7 +287,7 @@ revision 2
 revision 4
 
   $ hg tip -q
-  4:088ff9d6e1e1
+  4:aa35859c02ea
   $ hg verify
   checking changesets
   checking manifests
@@ -306,7 +306,7 @@ revision 4
 revision 6
 
   $ hg tip -q
-  6:27f57c869697
+  6:a6a34bfa0076
   $ hg verify
   checking changesets
   checking manifests
@@ -325,7 +325,7 @@ revision 6
 revision 4
 
   $ hg tip -q
-  4:088ff9d6e1e1
+  4:aa35859c02ea
   $ hg verify
   checking changesets
   checking manifests
@@ -340,7 +340,7 @@ revision 4
    adifferentfile
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg ci -m merge -d "1000000 0"
+  $ hg ci -m merge
   $ cd ..
   $ hg -R test bundle --base 2 test-bundle-head.hg
   7 changesets found
@@ -358,7 +358,7 @@ revision 4
 revision 9
 
   $ hg tip -q
-  9:e3061ea42e4c
+  9:905597b0d5d4
   $ hg verify
   checking changesets
   checking manifests

@@ -3,11 +3,11 @@
 
   $ touch a
   $ hg add a
-  $ hg ci -m "1" -d "1000000 0"
+  $ hg ci -m "1"
 
   $ touch b
   $ hg add b
-  $ hg ci -m "2" -d "1000000 0"
+  $ hg ci -m "2"
 
 Should show unknown
 

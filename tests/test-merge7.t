@@ -7,7 +7,7 @@ initial
   > 3
   > EOF
   $ hg add test.txt
-  $ hg commit -m "Initial" -d "1000000 0"
+  $ hg commit -m "Initial"
 
 clone
   $ cd ..
@@ -22,7 +22,7 @@ change test-a
   > two
   > three
   > EOF
-  $ hg commit -m "Numbers as words" -d "1000000 0"
+  $ hg commit -m "Numbers as words"
 
 change test-b
   $ cd ../test-b
@@ -31,7 +31,7 @@ change test-b
   > 2.5
   > 3
   > EOF
-  $ hg commit -m "2 -> 2.5" -d "1000000 0"
+  $ hg commit -m "2 -> 2.5"
 
 now pull and merge from test-a
   $ hg pull ../test-a
@@ -56,7 +56,7 @@ resolve conflict
   > EOF
   $ rm -f *.orig
   $ hg resolve -m test.txt
-  $ hg commit -m "Merge 1" -d "1000000 0"
+  $ hg commit -m "Merge 1"
 
 change test-a again
   $ cd ../test-a
@@ -65,7 +65,7 @@ change test-a again
   > two-point-one
   > three
   > EOF
-  $ hg commit -m "two -> two-point-one" -d "1000000 0"
+  $ hg commit -m "two -> two-point-one"
 
 pull and merge from test-a again
   $ cd ../test-b
@@ -81,13 +81,13 @@ pull and merge from test-a again
     searching for copies back to rev 1
   resolving manifests
    overwrite None partial False
-   ancestor faaea63e63a9 local 451c744aabcc+ remote a070d41e8360
+   ancestor 96b70246a118 local 50c3a7e29886+ remote 40d11a4173a8
    test.txt: versions differ -> m
   preserving test.txt for resolve of test.txt
   updating: test.txt 1/1 files (100.00%)
   picked tool 'internal:merge' for test.txt (binary False symlink False)
   merging test.txt
-  my test.txt@451c744aabcc+ other test.txt@a070d41e8360 ancestor test.txt@faaea63e63a9
+  my test.txt@50c3a7e29886+ other test.txt@40d11a4173a8 ancestor test.txt@96b70246a118
   warning: conflicts during merge.
   merging test.txt failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -111,33 +111,33 @@ pull and merge from test-a again
        4        58      25      4       4 d40249267ae3 8fe46a3eb557 000000000000
 
   $ hg log
-  changeset:   4:a070d41e8360
+  changeset:   4:40d11a4173a8
   tag:         tip
-  parent:      2:faaea63e63a9
+  parent:      2:96b70246a118
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     two -> two-point-one
   
-  changeset:   3:451c744aabcc
-  parent:      1:e409be6afcc0
-  parent:      2:faaea63e63a9
+  changeset:   3:50c3a7e29886
+  parent:      1:d1e159716d41
+  parent:      2:96b70246a118
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Merge 1
   
-  changeset:   2:faaea63e63a9
-  parent:      0:095c92b91f1a
+  changeset:   2:96b70246a118
+  parent:      0:b1832b9d912a
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Numbers as words
   
-  changeset:   1:e409be6afcc0
+  changeset:   1:d1e159716d41
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2 -> 2.5
   
-  changeset:   0:095c92b91f1a
+  changeset:   0:b1832b9d912a
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Initial
   

@@ -5,7 +5,7 @@ cd a
 hg init
 echo foo > b
 hg add b
-hg ci -m "b" -d "1000000 0"
+hg ci -m "b"
 
 chmod -w .hg/store
 

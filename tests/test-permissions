@@ -7,7 +7,7 @@ echo foo > a
 echo '% hg add a'
 hg add a
 echo '% hg commit'
-hg commit -m "1" -d "1000000 0"
+hg commit -m "1"
 echo '% hg verify'
 hg verify
 chmod -r .hg/store/data/a.i
@@ -19,7 +19,7 @@ hg verify 2>/dev/null || echo verify failed
 chmod -w .hg/store/data/a.i
 echo barber > a
 echo '% hg commit'
-hg commit -m "2" -d "1000000 0" 2>/dev/null || echo commit failed
+hg commit -m "2" 2>/dev/null || echo commit failed
 chmod -w .
 echo '% hg diff'
 hg diff --nodates

@@ -37,19 +37,19 @@ no changes found
 # find outgoing
 comparing with ssh://user@dummy/remote
 searching for changes
-changeset:   1:572896fe480d
+changeset:   1:a28a9d1a809c
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add
 
 # find incoming on the remote side
 comparing with ssh://user@dummy/local
 searching for changes
-changeset:   1:572896fe480d
+changeset:   1:a28a9d1a809c
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add
 
 # push
@@ -60,10 +60,10 @@ remote: adding manifests
 remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
 # check remote tip
-changeset:   1:572896fe480d
+changeset:   1:a28a9d1a809c
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add
 
 checking changesets
@@ -82,17 +82,17 @@ remote: adding manifests
 remote: adding file changes
 remote: added 1 changesets with 1 changes to 1 files
 remote: KABOOM
-changeset:   3:ac7448082955
+changeset:   3:1383141674ec
 tag:         tip
-parent:      1:572896fe480d
+parent:      1:a28a9d1a809c
 user:        test
-date:        Mon Jan 12 13:46:42 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     z
 
-changeset:   2:187c6caa0d1e
-parent:      0:e34318c26897
+changeset:   2:6c0482d977a3
+parent:      0:1160648e36ce
 user:        test
-date:        Mon Jan 12 13:46:41 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     z
 
 Got arguments 1:user@dummy 2:hg -R nonexistent serve --stdio
@@ -102,6 +102,6 @@ Got arguments 1:user@dummy 2:hg -R remote serve --stdio
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio
 Got arguments 1:user@dummy 2:hg -R local serve --stdio
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-changegroup-in-remote hook: HG_NODE=572896fe480d7581849806ee402175c49cb20037 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
+changegroup-in-remote hook: HG_NODE=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-changegroup-in-remote hook: HG_NODE=ac7448082955a0b2ff5cb4512c1e061c779bbc79 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
+changegroup-in-remote hook: HG_NODE=1383141674ec756a6056f6a9097618482fe0f4a6 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 

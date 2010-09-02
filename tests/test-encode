@@ -16,7 +16,7 @@ EOF
 echo "this is a test" | gzip > a.gz
 echo "this is a test" > not.gz
 hg add *
-hg ci -m "test" -d "1000000 0"
+hg ci -m "test"
 echo %% no changes
 hg status
 touch *

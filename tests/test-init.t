@@ -43,7 +43,7 @@ creating 'local'
   store
   fncache
   $ echo this > local/foo
-  $ hg ci --cwd local -A -m "init" -d "1000000 0"
+  $ hg ci --cwd local -A -m "init"
   adding foo
 
 creating repo with format.usestore=false
@@ -71,10 +71,10 @@ init+push to remote2
   $ hg init -e "python ./dummyssh" ssh://user@dummy/remote2
   $ hg incoming -R remote2 local
   comparing with local
-  changeset:   0:c4e059d443be
+  changeset:   0:08b9e9f63b32
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
   
 
@@ -121,11 +121,11 @@ output of dummyssh
 comparing repositories
 
   $ hg tip -q -R local
-  0:c4e059d443be
+  0:08b9e9f63b32
   $ hg tip -q -R remote1
-  0:c4e059d443be
+  0:08b9e9f63b32
   $ hg tip -q -R remote2
-  0:c4e059d443be
+  0:08b9e9f63b32
 
 check names for repositories (clashes with URL schemes, special chars)
 

@@ -78,21 +78,21 @@ hg add $L
 echo 'first line(1)' >> s; cp s $S
 echo 'first line(2)' >> m; cp m $M
 echo 'first line(3)' >> l; cp l $L
-hg commit -m 'first commit' -u $S -d "1000000 0"
+hg commit -m 'first commit' -u $S
 
 #### commit(2)
 
 echo 'second line(1)' >> s; cp s $S
 echo 'second line(2)' >> m; cp m $M
 echo 'second line(3)' >> l; cp l $L
-hg commit -m 'second commit' -u $M -d "1000000 0"
+hg commit -m 'second commit' -u $M
 
 #### commit(3)
 
 echo 'third line(1)' >> s; cp s $S
 echo 'third line(2)' >> m; cp m $M
 echo 'third line(3)' >> l; cp l $L
-hg commit -m 'third commit' -u $L -d "1000000 0"
+hg commit -m 'third commit' -u $L
 
 #### check
 
@@ -109,11 +109,11 @@ hg diff -c tip --stat
 #### add branches/tags
 
 hg branch $S
-hg tag -d "1000000 0" $S
+hg tag $S
 hg branch $M
-hg tag -d "1000000 0" $M
+hg tag $M
 hg branch $L
-hg tag -d "1000000 0" $L
+hg tag $L
 
 #### check
 

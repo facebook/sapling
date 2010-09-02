@@ -6,10 +6,10 @@ abort: a branch of the same name already exists (use 'hg update' to switch to it
 marked working directory as branch default
 created new head
 % there should be only one default branch head
-changeset:   3:bf1bc2f45e83
+changeset:   3:9d567d0b51f9
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     clear branch name
 
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -17,92 +17,92 @@ foo
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 foo
-changeset:   5:5f8fb06e083e
+changeset:   5:dc140083783b
 branch:      foo
 tag:         tip
-parent:      4:4909a3732169
-parent:      3:bf1bc2f45e83
+parent:      4:98d14f698afe
+parent:      3:9d567d0b51f9
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     merge
 
-changeset:   4:4909a3732169
+changeset:   4:98d14f698afe
 branch:      foo
-parent:      1:b699b1cec9c2
+parent:      1:0079f24813e2
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     modify a branch
 
-changeset:   3:bf1bc2f45e83
+changeset:   3:9d567d0b51f9
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     clear branch name
 
-changeset:   2:67ec16bde7f1
+changeset:   2:ed2bbf4e0102
 branch:      bar
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     change branch name
 
-changeset:   1:b699b1cec9c2
+changeset:   1:0079f24813e2
 branch:      foo
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add branch name
 
-changeset:   0:be8523e69bf8
+changeset:   0:db01e8ea3388
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     initial
 
-foo                            5:5f8fb06e083e
-default                        3:bf1bc2f45e83 (inactive)
-bar                            2:67ec16bde7f1 (inactive)
+foo                            5:dc140083783b
+default                        3:9d567d0b51f9 (inactive)
+bar                            2:ed2bbf4e0102 (inactive)
 foo
 default
 bar
 % test for invalid branch cache
 rolling back to revision 4 (undo commit)
-changeset:   4:4909a3732169
+changeset:   4:98d14f698afe
 branch:      foo
 tag:         tip
-parent:      1:b699b1cec9c2
+parent:      1:0079f24813e2
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     modify a branch
 
 invalidating branch cache (tip differs)
-changeset:   4:4909a3732169c0c20011c4f4b8fdff4e3d89b23f
+changeset:   4:98d14f698afeaff8cb612dcf215ce95e639effc3
 branch:      foo
 tag:         tip
-parent:      1:b699b1cec9c2966b3700de4fef0dc123cd754c31
+parent:      1:0079f24813e2b73a891577c243684c5066347bc8
 parent:      -1:0000000000000000000000000000000000000000
 manifest:    4:d01b250baaa05909152f7ae07d7a649deea0df9a
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 files:       a
 extra:       branch=foo
 description:
 modify a branch
 
 
-4:4909a3732169
-4909a3732169c0c20011c4f4b8fdff4e3d89b23f 4
-bf1bc2f45e834c75404d0ddab57d53beab56e2f8 default
-4909a3732169c0c20011c4f4b8fdff4e3d89b23f foo
-67ec16bde7f1575d523313b9bca000f6a6f12dca bar
+4:98d14f698afe
+98d14f698afeaff8cb612dcf215ce95e639effc3 4
+9d567d0b51f9e2068b054e1948e1a927f99b5874 default
+98d14f698afeaff8cb612dcf215ce95e639effc3 foo
+ed2bbf4e01029020711be82ca905283e883f0e11 bar
 % push should update the branch cache
 % pushing just rev 0
-be8523e69bf892e25817fc97187516b3c0804ae4 0
-be8523e69bf892e25817fc97187516b3c0804ae4 default
+db01e8ea3388fd3c7c94e1436ea2bd6a53d581c5 0
+db01e8ea3388fd3c7c94e1436ea2bd6a53d581c5 default
 % pushing everything
-4909a3732169c0c20011c4f4b8fdff4e3d89b23f 4
-bf1bc2f45e834c75404d0ddab57d53beab56e2f8 default
-4909a3732169c0c20011c4f4b8fdff4e3d89b23f foo
-67ec16bde7f1575d523313b9bca000f6a6f12dca bar
+98d14f698afeaff8cb612dcf215ce95e639effc3 4
+9d567d0b51f9e2068b054e1948e1a927f99b5874 default
+98d14f698afeaff8cb612dcf215ce95e639effc3 foo
+ed2bbf4e01029020711be82ca905283e883f0e11 bar
 % update with no arguments: tipmost revision of the current branch
-bf1bc2f45e83
-4909a3732169 (foo) tip
+9d567d0b51f9
+98d14f698afe (foo) tip
 marked working directory as branch foobar
 abort: branch foobar not found
 % fastforward merge
@@ -112,13 +112,13 @@ adding ff
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 foo
-changeset:   6:f0c74f92a385
+changeset:   6:917eb54e1b4b
 branch:      foo
 tag:         tip
-parent:      4:4909a3732169
-parent:      5:c420d2121b71
+parent:      4:98d14f698afe
+parent:      5:6683a60370cb
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     Merge ff into foo
 
 a

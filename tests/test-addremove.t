@@ -5,19 +5,19 @@
   $ hg -v addremove
   adding dir/bar
   adding foo
-  $ hg -v commit -m "add 1" -d "1000000 0"
+  $ hg -v commit -m "add 1"
   dir/bar
   foo
-  committed changeset 0:d44511117907
+  committed changeset 0:6f7f953567a2
   $ cd dir/
   $ touch ../foo_2 bar_2
   $ hg -v addremove
   adding dir/bar_2
   adding foo_2
-  $ hg -v commit -m "add 2" -d "1000000 0"
+  $ hg -v commit -m "add 2"
   dir/bar_2
   foo_2
-  committed changeset 1:a85812e0561a
+  committed changeset 1:e65414bf35c5
 
   $ cd ..
   $ hg init sim

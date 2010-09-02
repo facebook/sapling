@@ -6,56 +6,56 @@
   $ cd test
   $ touch asdf
   $ hg add asdf
-  $ hg commit -d '1000000 0' -m commit-1
+  $ hg commit -m commit-1
   $ hg tip
-  changeset:   0:9426b370c206
+  changeset:   0:53f268a58230
   tag:         tip
   user:        My Name <myname@example.com>
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
   
 
   $ unset EMAIL
   $ echo 1234 > asdf
-  $ hg commit -d '1000000 0' -u "foo@bar.com" -m commit-1
+  $ hg commit -u "foo@bar.com" -m commit-1
   $ hg tip
-  changeset:   1:4997f15a1b24
+  changeset:   1:3871b2a9e9bf
   tag:         tip
   user:        foo@bar.com
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
   
   $ echo "[ui]" >> .hg/hgrc
   $ echo "username = foobar <foo@bar.com>" >> .hg/hgrc
   $ echo 12 > asdf
-  $ hg commit -d '1000000 0' -m commit-1
+  $ hg commit -m commit-1
   $ hg tip
-  changeset:   2:72b8012b424e
+  changeset:   2:8eeac6695c1c
   tag:         tip
   user:        foobar <foo@bar.com>
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
   
   $ echo 1 > asdf
-  $ hg commit -d '1000000 0' -u "foo@bar.com" -m commit-1
+  $ hg commit -u "foo@bar.com" -m commit-1
   $ hg tip
-  changeset:   3:35ff3067bedd
+  changeset:   3:957606a725e4
   tag:         tip
   user:        foo@bar.com
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
   
   $ echo 123 > asdf
   $ echo "[ui]" > .hg/hgrc
   $ echo "username = " >> .hg/hgrc
-  $ hg commit -d '1000000 0' -m commit-1
+  $ hg commit -m commit-1
   abort: no username supplied (see "hg help config")
   $ rm .hg/hgrc
-  $ hg commit -d '1000000 0' -m commit-1 2>&1
+  $ hg commit -m commit-1 2>&1
   No username found, using '[^']*' instead
 
   $ echo space > asdf
-  $ hg commit -d '1000000 0' -u ' ' -m commit-1
+  $ hg commit -u ' ' -m commit-1
   transaction abort!
   rollback completed
   abort: empty username!

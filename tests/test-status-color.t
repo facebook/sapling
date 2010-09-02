@@ -111,7 +111,7 @@ hg status . in repo root:
   $ cd repo2
   $ touch modified removed deleted ignored
   $ echo "^ignored$" > .hgignore
-  $ hg ci -A -m 'initial checkin' -d "1000000 0"
+  $ hg ci -A -m 'initial checkin'
   adding .hgignore
   adding deleted
   adding modified

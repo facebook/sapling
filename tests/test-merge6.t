@@ -10,7 +10,7 @@
   $ echo This is file foo1 > foo
   $ echo This is file bar1 > bar
   $ hg add foo bar
-  $ hg commit -m "commit text" -d "1000000 0"
+  $ hg commit -m "commit text"
 
   $ cd ..
   $ hg clone A1 B1
@@ -20,11 +20,11 @@
   $ cd A1
   $ rm bar
   $ hg remove bar
-  $ hg commit -m "commit test" -d "1000000 0"
+  $ hg commit -m "commit test"
 
   $ cd ../B1
   $ echo This is file foo22 > foo
-  $ hg commit -m "commit test" -d "1000000 0"
+  $ hg commit -m "commit test"
 
   $ cd ..
   $ hg clone A1 A2
@@ -46,7 +46,7 @@
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg commit -m "commit test" -d "1000000 0"
+  $ hg commit -m "commit test"
 bar should remain deleted.
   $ hg manifest --debug
   f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644   foo
@@ -63,7 +63,7 @@ bar should remain deleted.
   $ hg merge
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg commit -m "commit test" -d "1000000 0"
+  $ hg commit -m "commit test"
 bar should remain deleted.
   $ hg manifest --debug
   f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644   foo

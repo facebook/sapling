@@ -1,10 +1,10 @@
 abort: error: Connection refused
 255
 copy: No such file or directory
-changeset:   0:53e17d176ae6
+changeset:   0:61c9426e69fe
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     test
 
 requesting all changes
@@ -21,7 +21,7 @@ checking files
 1 files, 1 changesets, 1 total revisions
 foo
 adding quux
-changegroup hook: HG_NODE=34401e0e9971e9720b613d9089ffa9a6eefb3d2d HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/remote 
+changegroup hook: HG_NODE=822d6e31f08b9d6e3b898ce5e52efc0a4bf4905a HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/remote 
 pulling from static-http://localhost:$HGPORT/remote
 searching for changes
 adding changesets

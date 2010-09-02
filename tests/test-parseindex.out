@@ -1,14 +1,14 @@
-changeset:   0:9c2cf2b35aa7
+changeset:   0:7c31755bf9b5
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     add foo
 
-changeset:   1:3756a9556b89
+changeset:   1:26333235a41c
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:41 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     change foo
 
 2 revisions:
-9c2cf2b35aa7
-3756a9556b89
+7c31755bf9b5
+26333235a41c

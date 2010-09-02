@@ -7,38 +7,38 @@
 
   $ echo bar > foo
   $ hg add foo
-  $ hg ci -m 'add foo' -d '1000000 0'
+  $ hg ci -m 'add foo'
 
   $ echo foobar > foo
-  $ hg ci -m 'change foo' -d '1000001 0'
+  $ hg ci -m 'change foo'
 
   $ hg --quiet diff -r 0 -r 1
-  --- a/foo	Mon Jan 12 13:46:40 1970 +0000
-  +++ b/foo	Mon Jan 12 13:46:41 1970 +0000
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -bar
   +foobar
 
   $ hg diff -r 0 -r 1
-  diff -r 74de3f1392e2 -r b8b5f023a6ad foo
-  --- a/foo	Mon Jan 12 13:46:40 1970 +0000
-  +++ b/foo	Mon Jan 12 13:46:41 1970 +0000
+  diff -r a99fb63adac3 -r 9b8568d3af2f foo
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -bar
   +foobar
 
   $ hg --verbose diff -r 0 -r 1
-  diff -r 74de3f1392e2 -r b8b5f023a6ad foo
-  --- a/foo	Mon Jan 12 13:46:40 1970 +0000
-  +++ b/foo	Mon Jan 12 13:46:41 1970 +0000
+  diff -r a99fb63adac3 -r 9b8568d3af2f foo
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -bar
   +foobar
 
   $ hg --debug diff -r 0 -r 1
-  diff -r 74de3f1392e2d67856fb155963441f2610494e1a -r b8b5f023a6ad77fc378bd95cf3fa00cd1414d107 foo
-  --- a/foo	Mon Jan 12 13:46:40 1970 +0000
-  +++ b/foo	Mon Jan 12 13:46:41 1970 +0000
+  diff -r a99fb63adac3f31816a22f665bc3b7a7655b30f4 -r 9b8568d3af2f1749445eef03aede868a6f39f210 foo
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -bar
   +foobar

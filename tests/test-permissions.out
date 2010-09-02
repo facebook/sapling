@@ -22,7 +22,7 @@ checking files
 % hg commit
 commit failed
 % hg diff
-diff -r c1fab96507ef a
+diff -r 2a18120dc1c9 a
 --- a/a
 +++ b/a
 @@ -1,1 +1,1 @@

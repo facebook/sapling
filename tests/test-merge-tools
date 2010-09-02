@@ -9,23 +9,23 @@ hg init
 echo "# revision 0"
 echo "revision 0" > f
 echo "space" >> f
-hg commit -Am "revision 0" -d "1000000 0"
+hg commit -Am "revision 0"
 
 echo "# revision 1"
 echo "revision 1" > f
 echo "space" >> f
-hg commit -Am "revision 1" -d "1000000 0"
+hg commit -Am "revision 1"
 
 hg update 0 > /dev/null
 echo "# revision 2"
 echo "revision 2" > f
 echo "space" >> f
-hg commit -Am "revision 2" -d "1000000 0"
+hg commit -Am "revision 2"
 
 hg update 0 > /dev/null
 echo "# revision 3 - simple to merge"
 echo "revision 3" >> f
-hg commit -Am "revision 3" -d "1000000 0"
+hg commit -Am "revision 3"
 
 
 echo "[merge-tools]" > .hg/hgrc

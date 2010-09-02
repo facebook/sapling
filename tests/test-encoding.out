@@ -15,27 +15,27 @@ abort: decoding near ' encoded: é': 'ascii' codec can't decode byte 0xe9 in posi
 % these should work
 marked working directory as branch é
 % hg log (ascii)
-changeset:   5:db5520b4645f
+changeset:   5:093c6077d1c8
 branch:      ?
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin1 branch
 
-changeset:   4:9cff3c980b58
+changeset:   4:94db611b4196
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     Added tag ? for changeset 770b9b11621d
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Added tag ? for changeset ca661e7520de
 
-changeset:   3:770b9b11621d
+changeset:   3:ca661e7520de
 tag:         ?
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     utf-8 e' encoded: ?
 
-changeset:   2:0572af48b948
+changeset:   2:650c6f3d55dd
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e' encoded: ?
 
 changeset:   1:0e5b7e3f9c4a
@@ -49,27 +49,27 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e': ? = u'\xe9'
 
 % hg log (latin-1)
-changeset:   5:db5520b4645f
+changeset:   5:093c6077d1c8
 branch:      é
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin1 branch
 
-changeset:   4:9cff3c980b58
+changeset:   4:94db611b4196
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     Added tag é for changeset 770b9b11621d
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Added tag é for changeset ca661e7520de
 
-changeset:   3:770b9b11621d
+changeset:   3:ca661e7520de
 tag:         é
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     utf-8 e' encoded: é
 
-changeset:   2:0572af48b948
+changeset:   2:650c6f3d55dd
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e' encoded: é
 
 changeset:   1:0e5b7e3f9c4a
@@ -83,27 +83,27 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e': é = u'\xe9'
 
 % hg log (utf-8)
-changeset:   5:db5520b4645f
+changeset:   5:093c6077d1c8
 branch:      Ã©
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin1 branch
 
-changeset:   4:9cff3c980b58
+changeset:   4:94db611b4196
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     Added tag Ã© for changeset 770b9b11621d
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Added tag Ã© for changeset ca661e7520de
 
-changeset:   3:770b9b11621d
+changeset:   3:ca661e7520de
 tag:         Ã©
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     utf-8 e' encoded: Ã©
 
-changeset:   2:0572af48b948
+changeset:   2:650c6f3d55dd
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e' encoded: Ã©
 
 changeset:   1:0e5b7e3f9c4a
@@ -117,45 +117,45 @@ date:        Mon Jan 12 13:46:40 1970 +0000
 summary:     latin-1 e': Ã© = u'\xe9'
 
 % hg tags (ascii)
-tip                                5:db5520b4645f
-?                                  3:770b9b11621d
+tip                                5:093c6077d1c8
+?                                  3:ca661e7520de
 % hg tags (latin-1)
-tip                                5:db5520b4645f
-é                                 3:770b9b11621d
+tip                                5:093c6077d1c8
+é                                 3:ca661e7520de
 % hg tags (utf-8)
-tip                                5:db5520b4645f
-Ã©                                 3:770b9b11621d
+tip                                5:093c6077d1c8
+Ã©                                 3:ca661e7520de
 % hg branches (ascii)
-?                              5:db5520b4645f
-default                        4:9cff3c980b58 (inactive)
+?                              5:093c6077d1c8
+default                        4:94db611b4196 (inactive)
 % hg branches (latin-1)
-é                             5:db5520b4645f
-default                        4:9cff3c980b58 (inactive)
+é                             5:093c6077d1c8
+default                        4:94db611b4196 (inactive)
 % hg branches (utf-8)
-Ã©                             5:db5520b4645f
-default                        4:9cff3c980b58 (inactive)
+Ã©                             5:093c6077d1c8
+default                        4:94db611b4196 (inactive)
 % hg log (utf-8)
-changeset:   5:db5520b4645f
+changeset:   5:093c6077d1c8
 branch:      Ã©
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin1 branch
 
-changeset:   4:9cff3c980b58
+changeset:   4:94db611b4196
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
-summary:     Added tag Ã© for changeset 770b9b11621d
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     Added tag Ã© for changeset ca661e7520de
 
-changeset:   3:770b9b11621d
+changeset:   3:ca661e7520de
 tag:         Ã©
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     utf-8 e' encoded: Ã©
 
-changeset:   2:0572af48b948
+changeset:   2:650c6f3d55dd
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     latin-1 e' encoded: Ã©
 
 changeset:   1:0e5b7e3f9c4a

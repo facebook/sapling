@@ -23,9 +23,9 @@ commit added file that has been deleted
   $ echo bar > bar
   $ hg add bar
   $ rm bar
-  $ hg commit -d "1000000 0" -m commit-8
+  $ hg commit -m commit-8
   nothing changed
-  $ hg commit -d "1000000 0" -m commit-8-2 bar
+  $ hg commit -m commit-8-2 bar
   abort: bar: file not found!
 
   $ hg -q revert -a --no-backup
@@ -89,15 +89,15 @@ partial subdir commit test
   $ hg add
   adding bar/bar
   adding foo/foo
-  $ hg ci -d '1000000 0' -m commit-subdir-1 foo
-  $ hg ci -d '1000001 0' -m commit-subdir-2 bar
+  $ hg ci -m commit-subdir-1 foo
+  $ hg ci -m commit-subdir-2 bar
 
 subdir log 1
 
   $ hg log -v foo
-  changeset:   0:6ef3cb06bb80
+  changeset:   0:f97e73a25882
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/foo
   description:
   commit-subdir-1
@@ -107,10 +107,10 @@ subdir log 1
 subdir log 2
 
   $ hg log -v bar
-  changeset:   1:f2e51572cf5a
+  changeset:   1:aa809156d50d
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:41 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/bar
   description:
   commit-subdir-2
@@ -120,18 +120,18 @@ subdir log 2
 full log
 
   $ hg log -v
-  changeset:   1:f2e51572cf5a
+  changeset:   1:aa809156d50d
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:41 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/bar
   description:
   commit-subdir-2
   
   
-  changeset:   0:6ef3cb06bb80
+  changeset:   0:f97e73a25882
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/foo
   description:
   commit-subdir-1
@@ -147,25 +147,25 @@ dot and subdir commit test
   $ mkdir foo
   $ echo foo content > foo/plain-file
   $ hg add foo/plain-file
-  $ hg ci -d '1000000 0' -m commit-foo-subdir foo
+  $ hg ci -m commit-foo-subdir foo
   $ echo modified foo content > foo/plain-file
-  $ hg ci -d '2000000 0' -m commit-foo-dot .
+  $ hg ci -m commit-foo-dot .
 
 full log
 
   $ hg log -v
-  changeset:   1:d9180e04fa8a
+  changeset:   1:95b38e3a5b2e
   tag:         tip
   user:        test
-  date:        Sat Jan 24 03:33:20 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/plain-file
   description:
   commit-foo-dot
   
   
-  changeset:   0:80b572aaf098
+  changeset:   0:65d4e9386227
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/plain-file
   description:
   commit-foo-subdir
@@ -176,15 +176,15 @@ subdir log
 
   $ cd foo
   $ hg log .
-  changeset:   1:d9180e04fa8a
+  changeset:   1:95b38e3a5b2e
   tag:         tip
   user:        test
-  date:        Sat Jan 24 03:33:20 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-foo-dot
   
-  changeset:   0:80b572aaf098
+  changeset:   0:65d4e9386227
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-foo-subdir
   
   $ cd ..

@@ -3,11 +3,11 @@
 hg init
 touch a
 hg add a
-hg commit -m "Added a" -d "1000000 0"
+hg commit -m "Added a"
 
 touch main
 hg add main
-hg commit -m "Added main" -d "1000000 0"
+hg commit -m "Added main"
 hg checkout 0
 
 echo Main should be gone
@@ -15,10 +15,10 @@ ls
 
 touch side1
 hg add side1
-hg commit -m "Added side1" -d "1000000 0"
+hg commit -m "Added side1"
 touch side2
 hg add side2
-hg commit -m "Added side2" -d "1000000 0"
+hg commit -m "Added side2"
 
 hg log
 

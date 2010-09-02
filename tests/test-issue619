@@ -4,15 +4,15 @@ mkdir t
 cd t
 hg init
 echo a > a
-hg ci -Ama -d '1000000000 0'
+hg ci -Ama
 echo b > b
 hg branch b
-hg ci -Amb -d '1000000000 0'
+hg ci -Amb
 hg co -C 0
 
 echo fast-forward
 hg merge b
-hg ci -Ammerge -d '1000000000 0'
+hg ci -Ammerge
 
 echo bogus fast-forward should fail
 hg merge b

@@ -8,7 +8,7 @@ cd a
 hg init
 echo foo > t1
 hg add t1
-hg commit -m "1" -d "1000000 0"
+hg commit -m "1"
 
 cd ..
 hg clone a b
@@ -16,18 +16,18 @@ hg clone a b
 cd a
 echo foo > t2
 hg add t2
-hg commit -m "2" -d "1000000 0"
+hg commit -m "2"
 
 cd ../b
 echo foo > t3
 hg add t3
-hg commit -m "3" -d "1000000 0"
+hg commit -m "3"
 
 hg push ../a
 hg pull ../a
 hg push ../a
 hg merge
-hg commit -m "4" -d "1000000 0"
+hg commit -m "4"
 hg push ../a
 cd ..
 
@@ -35,7 +35,7 @@ hg init c
 cd c
 for i in 0 1 2; do
     echo $i >> foo
-    hg ci -Am $i -d "1000000 0"
+    hg ci -Am $i
 done
 cd ..
 
@@ -44,11 +44,11 @@ cd d
 for i in 0 1; do
     hg co -C $i
     echo d-$i >> foo
-    hg ci -m d-$i -d "1000000 0"
+    hg ci -m d-$i
 done
 
 HGMERGE=true hg merge 3
-hg ci -m c-d -d "1000000 0"
+hg ci -m c-d
 
 hg push ../c; echo $?
 hg push -r 2 ../c; echo $?
@@ -70,16 +70,16 @@ hg init f
 cd f
 hg -q branch a
 echo 0 > foo
-hg -q ci -d "1000000 0" -Am 0
+hg -q ci -Am 0
 echo 1 > foo
-hg -q ci -d "1000000 0" -m 1
+hg -q ci -m 1
 hg -q up 0
 echo 2 > foo
-hg -q ci -d "1000000 0" -m 2
+hg -q ci -m 2
 hg -q up 0
 hg -q branch b
 echo 3 > foo
-hg -q ci -d "1000000 0" -m 3
+hg -q ci -m 3
 cd ..
 
 hg -q clone f g
@@ -88,18 +88,18 @@ cd g
 echo % push on existing branch and new branch
 hg -q up 1
 echo 4 > foo
-hg -q ci -d "1000000 0" -m 4
+hg -q ci -m 4
 hg -q up 0
 echo 5 > foo
 hg -q branch c
-hg -q ci -d "1000000 0" -m 5
+hg -q ci -m 5
 hg push ../f; echo $?
 hg push -r 4 -r 5 ../f; echo $?
 
 echo % multiple new branches
 hg -q branch d
 echo 6 > foo
-hg -q ci -d "1000000 0" -m 6
+hg -q ci -m 6
 hg push ../f; echo $?
 hg push -r 4 -r 6 ../f; echo $?
 cd ../g
@@ -107,41 +107,41 @@ cd ../g
 echo % fail on multiple head push
 hg -q up 1
 echo 7 > foo
-hg -q ci -d "1000000 0" -m 7
+hg -q ci -m 7
 hg push -r 4 -r 7 ../f; echo $?
 
 echo % push replacement head on existing branches
 hg -q up 3
 echo 8 > foo
-hg -q ci -d "1000000 0" -m 8
+hg -q ci -m 8
 hg push -r 7 -r 8 ../f; echo $?
 
 echo % merge of branch a to other branch b followed by unrelated push on branch a
 hg -q up 7
 HGMERGE=true hg -q merge 8
-hg -q ci -d "1000000 0" -m 9
+hg -q ci -m 9
 hg -q up 8
 echo 10 > foo
-hg -q ci -d "1000000 0" -m 10
+hg -q ci -m 10
 hg push -r 9 ../f; echo $?
 hg push -r 10 ../f; echo $?
 
 echo % cheating the counting algorithm
 hg -q up 9
 HGMERGE=true hg -q merge 2
-hg -q ci -d "1000000 0" -m 11
+hg -q ci -m 11
 hg -q up 1
 echo 12 > foo
-hg -q ci -d "1000000 0" -m 12
+hg -q ci -m 12
 hg push -r 11 -r 12 ../f; echo $?
 
 echo % failed push of new named branch
 echo 12 > foo
-hg -q ci -d "1000000 0" -m 12a
+hg -q ci -m 12a
 hg -q up 11
 echo 13 > foo
 hg -q branch e
-hg -q ci -d "1000000 0" -m 13d
+hg -q ci -m 13d
 hg push -r 12 -r 13 ../f; echo $?
 
 echo % using --new-branch to push new named branch
@@ -187,26 +187,26 @@ cd l
 echo a >> foo
 hg -q add foo
 hg -q branch a
-hg -q ci -d '0 0' -ma
+hg -q ci -ma
 hg -q up null
 echo a >> foo
 hg -q add foo
 hg -q branch b
-hg -q ci -d '0 0' -mb
+hg -q ci -mb
 cd ..
 hg -q clone l m -u a
 cd m
 hg -q merge b
-hg -q ci -d '0 0' -mmb
+hg -q ci -mmb
 hg -q up 0
 echo a >> foo
 hg -q ci -ma2
 hg -q up 2
 echo a >> foo
 hg -q branch -f b
-hg -q ci -d '0 0' -mb2
+hg -q ci -mb2
 hg -q merge 3
-hg -q ci -d '0 0' -mma
+hg -q ci -mma
 hg push ../l -b b
 cd ..
 

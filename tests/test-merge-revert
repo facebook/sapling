@@ -6,9 +6,9 @@ hg init
 echo "added file1" > file1
 echo "added file2" > file2
 hg add file1 file2
-hg commit -m "added file1 and file2" -d "1000000 0" -u user
+hg commit -m "added file1 and file2"
 echo "changed file1" >> file1
-hg commit -m "changed file1" -d "1000000 0" -u user
+hg commit -m "changed file1"
 hg -q log
 hg id
 hg update -C 0

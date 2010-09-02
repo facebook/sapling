@@ -29,7 +29,7 @@
   adding mammals/Procyonidae/coatimundi
   adding mammals/Procyonidae/raccoon
   adding mammals/skunk
-  $ hg commit -m "commit #0" -d "1000000 0"
+  $ hg commit -m "commit #0"
 
   $ hg debugwalk
   f  beans/black                     beans/black

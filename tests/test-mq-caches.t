@@ -46,17 +46,17 @@ some regular revisions
   $ echo foo > foo
   $ hg add foo
   $ echo foo > .hg/branch
-  $ hg ci -m 'branch foo' -d '1000000 0'
+  $ hg ci -m 'branch foo'
 
   $ echo bar > bar
   $ hg add bar
   $ echo bar > .hg/branch
-  $ hg ci -m 'branch bar' -d '1000000 0'
+  $ hg ci -m 'branch bar'
   $ show_branch_cache
   tip: 1
-  3f910abad313ff802d3a23a7529433872df9b3ae 1
-  3f910abad313ff802d3a23a7529433872df9b3ae bar
-  9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
+  c229711f16da3d7591f89b1b8d963b79bda22714 1
+  c229711f16da3d7591f89b1b8d963b79bda22714 bar
+  dc25e3827021582e979f600811852e36cbe57341 foo
 
 add some mq patches
 
@@ -65,9 +65,9 @@ add some mq patches
   now at: p1
   $ show_branch_cache
   tip: 2
-  3f910abad313ff802d3a23a7529433872df9b3ae 1
-  3f910abad313ff802d3a23a7529433872df9b3ae bar
-  9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
+  c229711f16da3d7591f89b1b8d963b79bda22714 1
+  c229711f16da3d7591f89b1b8d963b79bda22714 bar
+  dc25e3827021582e979f600811852e36cbe57341 foo
 
   $ hg qnew p2
   $ echo foo > .hg/branch
@@ -75,9 +75,9 @@ add some mq patches
   $ hg qrefresh -m 'patch 2'
   $ show_branch_cache 1
   tip: 3
-  3f910abad313ff802d3a23a7529433872df9b3ae 1
-  3f910abad313ff802d3a23a7529433872df9b3ae bar
-  9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
+  c229711f16da3d7591f89b1b8d963b79bda22714 1
+  c229711f16da3d7591f89b1b8d963b79bda22714 bar
+  dc25e3827021582e979f600811852e36cbe57341 foo
   branch foo: 3
   branch bar: 2
 
@@ -86,9 +86,9 @@ removing the cache
   $ rm $branches
   $ show_branch_cache 1
   tip: 3
-  3f910abad313ff802d3a23a7529433872df9b3ae 1
-  3f910abad313ff802d3a23a7529433872df9b3ae bar
-  9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
+  c229711f16da3d7591f89b1b8d963b79bda22714 1
+  c229711f16da3d7591f89b1b8d963b79bda22714 bar
+  dc25e3827021582e979f600811852e36cbe57341 foo
   branch foo: 3
   branch bar: 2
 
@@ -97,9 +97,9 @@ importing rev 1 (the cache now ends in one of the patches)
   $ hg qimport -r 1 -n p0
   $ show_branch_cache 1
   tip: 3
-  3f910abad313ff802d3a23a7529433872df9b3ae 1
-  3f910abad313ff802d3a23a7529433872df9b3ae bar
-  9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
+  c229711f16da3d7591f89b1b8d963b79bda22714 1
+  c229711f16da3d7591f89b1b8d963b79bda22714 bar
+  dc25e3827021582e979f600811852e36cbe57341 foo
   branch foo: 3
   branch bar: 2
   $ hg log -r qbase --template 'qbase: {rev}\n'
@@ -119,6 +119,6 @@ detect an invalid cache
   now at: p2
   $ show_branch_cache
   tip: 3
-  9539f35bdc80732cc9a3f84e46508f1ed1ec8cff 0
-  9539f35bdc80732cc9a3f84e46508f1ed1ec8cff foo
+  dc25e3827021582e979f600811852e36cbe57341 0
+  dc25e3827021582e979f600811852e36cbe57341 foo
 

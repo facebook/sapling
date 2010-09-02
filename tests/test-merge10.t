@@ -7,7 +7,7 @@ but then local changes are added in the same directory)
   $ mkdir -p testdir
   $ echo a > testdir/a
   $ hg add testdir/a
-  $ hg commit -d '1000000 0' -m a
+  $ hg commit -m a
   $ cd ..
 
   $ hg clone a b
@@ -15,17 +15,17 @@ but then local changes are added in the same directory)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd a
   $ echo alpha > testdir/a
-  $ hg commit -d '1000000 0' -m remote-change
+  $ hg commit -m remote-change
   $ cd ..
 
   $ cd b
   $ mkdir testdir/subdir
   $ hg mv testdir/a testdir/subdir/a
-  $ hg commit -d '1000000 0' -m move
+  $ hg commit -m move
   $ mkdir newdir
   $ echo beta > newdir/beta
   $ hg add newdir/beta
-  $ hg commit -d '1000000 0' -m local-addition
+  $ hg commit -m local-addition
   $ hg pull ../a
   pulling from ../a
   searching for changes
@@ -43,7 +43,7 @@ but then local changes are added in the same directory)
   $ hg stat
   M testdir/subdir/a
   $ hg diff --nodates
-  diff -r f7459795031e testdir/subdir/a
+  diff -r bc21c9773bfa testdir/subdir/a
   --- a/testdir/subdir/a
   +++ b/testdir/subdir/a
   @@ -1,1 +1,1 @@

@@ -23,12 +23,12 @@ marked working directory as branch 短名
 marked working directory as branch MIDDLE_
 marked working directory as branch 長い長い名前
 % check alignment of branches
-tip                                5:afc60d8eed19
-長い長い名前                       4:19fe74d09ba0
-MIDDLE_                            3:8a20997d2281
-短名                               2:0cc06ffa3461
+tip                                5:d745ff46155b
+長い長い名前                       4:9259be597f19
+MIDDLE_                            3:b06c5b6def9e
+短名                               2:64a70663cee8
 % check alignment of tags
-tip                                5:afc60d8eed19
-長い長い名前                       4:19fe74d09ba0
-MIDDLE_                            3:8a20997d2281
-短名                               2:0cc06ffa3461
+tip                                5:d745ff46155b
+長い長い名前                       4:9259be597f19
+MIDDLE_                            3:b06c5b6def9e
+短名                               2:64a70663cee8

@@ -17,7 +17,7 @@ echo 1 > bar
 echo 1 > baz
 echo 1 > quux
 hg add foo bar baz quux
-hg commit -m "base" -d "1000000 0"
+hg commit -m "base"
 
 cd ..
 hg clone a b
@@ -26,7 +26,7 @@ echo creating branch a
 cd a
 echo 2a > foo
 echo 2a > bar
-hg commit -m "branch a" -d "1000000 0"
+hg commit -m "branch a"
 
 echo creating branch b
 
@@ -34,7 +34,7 @@ cd ..
 cd b
 echo 2b > foo
 echo 2b > baz
-hg commit -m "branch b" -d "1000000 0"
+hg commit -m "branch b"
 
 echo "we shouldn't have anything but n state here"
 hg debugstate --nodates | grep -v "^n"
@@ -50,7 +50,7 @@ echo new > quux
 echo "we shouldn't have anything but foo in merge state here"
 hg debugstate --nodates | grep "^m"
 
-hg ci -m "merge" -d "1000000 0"
+hg ci -m "merge"
 
 echo "main: we should have a merge here"
 hg debugindex .hg/store/00changelog.i

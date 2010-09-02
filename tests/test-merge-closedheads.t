@@ -1,5 +1,5 @@
   $ hgcommit() {
-  >    hg commit -u user -d '0 0' "$@"
+  >    hg commit -u user "$@"
   > }
 
   $ hg init clhead

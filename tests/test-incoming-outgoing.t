@@ -3,7 +3,7 @@
   $ hg init
   $ for i in 0 1 2 3 4 5 6 7 8; do
   >     echo $i >> foo
-  >     hg commit -A -m $i -d "1000000 0"
+  >     hg commit -A -m $i
   > done
   adding foo
   $ hg verify
@@ -22,78 +22,78 @@ http incoming
 
   $ hg -R new incoming http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
   comparing with http://localhost:$HGPORT/
-  changeset:   0:9cb21d99fe27
+  changeset:   0:00a43fa82f62
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
-  changeset:   1:d717f5dfad6a
+  changeset:   1:5460a410df01
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   2:c0d6b86da426
+  changeset:   2:d9f42cd1a1ec
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   3:dfacbd43b3fe
+  changeset:   3:376476025137
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
-  changeset:   4:1f3a964b6022
+  changeset:   4:70d7eb252d49
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     4
   
-  changeset:   5:c028bcc7a28a
+  changeset:   5:ad284ee3b5ee
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     5
   
-  changeset:   6:a0c0095f3389
+  changeset:   6:e9229f2de384
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     6
   
-  changeset:   7:d4be65f4e891
+  changeset:   7:d152815bb8db
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     7
   
-  changeset:   8:92b83e334ef8
+  changeset:   8:e4feb4ac9035
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
   
   $ hg -R new incoming -r 4 http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
   comparing with http://localhost:$HGPORT/
-  changeset:   0:9cb21d99fe27
+  changeset:   0:00a43fa82f62
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
-  changeset:   1:d717f5dfad6a
+  changeset:   1:5460a410df01
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   2:c0d6b86da426
+  changeset:   2:d9f42cd1a1ec
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   3:dfacbd43b3fe
+  changeset:   3:376476025137
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
-  changeset:   4:1f3a964b6022
+  changeset:   4:70d7eb252d49
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     4
   
 
@@ -101,77 +101,77 @@ local incoming
 
   $ hg -R new incoming test
   comparing with test
-  changeset:   0:9cb21d99fe27
+  changeset:   0:00a43fa82f62
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
-  changeset:   1:d717f5dfad6a
+  changeset:   1:5460a410df01
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   2:c0d6b86da426
+  changeset:   2:d9f42cd1a1ec
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   3:dfacbd43b3fe
+  changeset:   3:376476025137
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
-  changeset:   4:1f3a964b6022
+  changeset:   4:70d7eb252d49
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     4
   
-  changeset:   5:c028bcc7a28a
+  changeset:   5:ad284ee3b5ee
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     5
   
-  changeset:   6:a0c0095f3389
+  changeset:   6:e9229f2de384
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     6
   
-  changeset:   7:d4be65f4e891
+  changeset:   7:d152815bb8db
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     7
   
-  changeset:   8:92b83e334ef8
+  changeset:   8:e4feb4ac9035
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
   
   $ hg -R new incoming -r 4 test
   comparing with test
-  changeset:   0:9cb21d99fe27
+  changeset:   0:00a43fa82f62
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
-  changeset:   1:d717f5dfad6a
+  changeset:   1:5460a410df01
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   2:c0d6b86da426
+  changeset:   2:d9f42cd1a1ec
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   3:dfacbd43b3fe
+  changeset:   3:376476025137
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
-  changeset:   4:1f3a964b6022
+  changeset:   4:70d7eb252d49
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     4
   
 
@@ -179,14 +179,14 @@ limit to 2 changesets
 
   $ hg -R new incoming -l 2 test
   comparing with test
-  changeset:   0:9cb21d99fe27
+  changeset:   0:00a43fa82f62
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
-  changeset:   1:d717f5dfad6a
+  changeset:   1:5460a410df01
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
 
@@ -194,9 +194,9 @@ limit to 2 changesets, test with -p --git
 
   $ hg -R new incoming -l 2 -p --git test
   comparing with test
-  changeset:   0:9cb21d99fe27
+  changeset:   0:00a43fa82f62
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
   diff --git a/foo b/foo
@@ -206,9 +206,9 @@ limit to 2 changesets, test with -p --git
   @@ -0,0 +1,1 @@
   +0
   
-  changeset:   1:d717f5dfad6a
+  changeset:   1:5460a410df01
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
   diff --git a/foo b/foo
@@ -223,98 +223,98 @@ test with --bundle
 
   $ hg -R new incoming --bundle test.hg http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
   comparing with http://localhost:$HGPORT/
-  changeset:   0:9cb21d99fe27
+  changeset:   0:00a43fa82f62
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
-  changeset:   1:d717f5dfad6a
+  changeset:   1:5460a410df01
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   2:c0d6b86da426
+  changeset:   2:d9f42cd1a1ec
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   3:dfacbd43b3fe
+  changeset:   3:376476025137
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
-  changeset:   4:1f3a964b6022
+  changeset:   4:70d7eb252d49
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     4
   
-  changeset:   5:c028bcc7a28a
+  changeset:   5:ad284ee3b5ee
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     5
   
-  changeset:   6:a0c0095f3389
+  changeset:   6:e9229f2de384
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     6
   
-  changeset:   7:d4be65f4e891
+  changeset:   7:d152815bb8db
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     7
   
-  changeset:   8:92b83e334ef8
+  changeset:   8:e4feb4ac9035
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
   
   $ hg -R new incoming --bundle test2.hg test
   comparing with test
-  changeset:   0:9cb21d99fe27
+  changeset:   0:00a43fa82f62
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
-  changeset:   1:d717f5dfad6a
+  changeset:   1:5460a410df01
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   2:c0d6b86da426
+  changeset:   2:d9f42cd1a1ec
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   3:dfacbd43b3fe
+  changeset:   3:376476025137
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
-  changeset:   4:1f3a964b6022
+  changeset:   4:70d7eb252d49
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     4
   
-  changeset:   5:c028bcc7a28a
+  changeset:   5:ad284ee3b5ee
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     5
   
-  changeset:   6:a0c0095f3389
+  changeset:   6:e9229f2de384
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     6
   
-  changeset:   7:d4be65f4e891
+  changeset:   7:d152815bb8db
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     7
   
-  changeset:   8:92b83e334ef8
+  changeset:   8:e4feb4ac9035
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
   
 
@@ -336,17 +336,17 @@ test the resulting bundles
   added 9 changesets with 9 changes to 1 files
   (run 'hg update' to get a working copy)
   $ hg -R temp tip
-  changeset:   8:92b83e334ef8
+  changeset:   8:e4feb4ac9035
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
   
   $ hg -R temp2 tip
-  changeset:   8:92b83e334ef8
+  changeset:   8:e4feb4ac9035
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
   
 
@@ -360,7 +360,7 @@ test outgoing
   $ cd test-dev
   $ for i in 9 10 11 12 13; do
   >     echo $i >> foo
-  >     hg commit -A -m $i -d "1000000 0"
+  >     hg commit -A -m $i
   > done
   $ hg verify
   checking changesets
@@ -372,30 +372,30 @@ test outgoing
   $ hg -R test-dev outgoing test
   comparing with test
   searching for changes
-  changeset:   9:3741c3ad1096
+  changeset:   9:d89d4abea5bc
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     9
   
-  changeset:   10:de4143c8d9a5
+  changeset:   10:820095aa7158
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     10
   
-  changeset:   11:0e1c188b9a7a
+  changeset:   11:09ede2f3a638
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11
   
-  changeset:   12:251354d0fdd3
+  changeset:   12:e576b1bed305
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     12
   
-  changeset:   13:bdaadd969642
+  changeset:   13:96bbff09a7cc
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13
   
 
@@ -404,65 +404,65 @@ limit to 3 changesets
   $ hg -R test-dev outgoing -l 3 test
   comparing with test
   searching for changes
-  changeset:   9:3741c3ad1096
+  changeset:   9:d89d4abea5bc
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     9
   
-  changeset:   10:de4143c8d9a5
+  changeset:   10:820095aa7158
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     10
   
-  changeset:   11:0e1c188b9a7a
+  changeset:   11:09ede2f3a638
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11
   
   $ hg -R test-dev outgoing http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
   comparing with http://localhost:$HGPORT/
   searching for changes
-  changeset:   9:3741c3ad1096
+  changeset:   9:d89d4abea5bc
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     9
   
-  changeset:   10:de4143c8d9a5
+  changeset:   10:820095aa7158
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     10
   
-  changeset:   11:0e1c188b9a7a
+  changeset:   11:09ede2f3a638
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11
   
-  changeset:   12:251354d0fdd3
+  changeset:   12:e576b1bed305
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     12
   
-  changeset:   13:bdaadd969642
+  changeset:   13:96bbff09a7cc
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13
   
   $ hg -R test-dev outgoing -r 11 http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
   comparing with http://localhost:$HGPORT/
   searching for changes
-  changeset:   9:3741c3ad1096
+  changeset:   9:d89d4abea5bc
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     9
   
-  changeset:   10:de4143c8d9a5
+  changeset:   10:820095aa7158
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     10
   
-  changeset:   11:0e1c188b9a7a
+  changeset:   11:09ede2f3a638
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11
   

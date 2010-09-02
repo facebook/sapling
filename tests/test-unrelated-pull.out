@@ -9,15 +9,15 @@ adding manifests
 adding file changes
 added 1 changesets with 1 changes to 1 files (+1 heads)
 (run 'hg heads' to see heads, 'hg merge' to merge)
-changeset:   1:bdcee5d51fa6
+changeset:   1:9a79c33a9db3
 tag:         tip
 parent:      -1:000000000000
 user:        a
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     a
 
-changeset:   0:f155ba1aa5ba
+changeset:   0:01f8062b2de5
 user:        b
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     b
 

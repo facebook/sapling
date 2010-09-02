@@ -11,18 +11,18 @@ echo "# initial file contents"
 echo "line 1" > f
 echo "line 2" >> f
 echo "line 3" >> f
-hg commit -Am "revision 0" -d "1000000 0"
+hg commit -Am "revision 0"
 cat f
 echo "# branch 1: editing line 1"
 sed 's/line 1/first line/' f > f.new
 mv f.new f
-hg commit -Am "edited first line" -d "1000000 0"
+hg commit -Am "edited first line"
 
 echo "# branch 2: editing line 3"
 hg update 0
 sed 's/line 3/third line/' f > f.new
 mv f.new f
-hg commit -Am "edited third line" -d "1000000 0"
+hg commit -Am "edited third line"
 
 echo "# merge using internal:fail tool"
 echo "[merge-patterns]" > .hg/hgrc

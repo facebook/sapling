@@ -37,7 +37,7 @@ hg init remote
 cd remote
 echo this > foo
 echo this > fooO
-hg ci -A -m "init" -d "1000000 0" foo fooO
+hg ci -A -m "init" foo fooO
 echo '[server]' > .hg/hgrc
 echo 'uncompressed = True' >> .hg/hgrc
 echo '[hooks]' >> .hg/hgrc
@@ -71,7 +71,7 @@ hg pull -e "python ../dummyssh"
 
 echo "# local change"
 echo bleah > foo
-hg ci -m "add" -d "1000000 0"
+hg ci -m "add"
 
 echo "# updating rc"
 echo "default-push = ssh://user@dummy/remote" >> .hg/hgrc
@@ -95,13 +95,13 @@ hg verify
 hg cat -r tip foo
 
 echo z > z
-hg ci -A -m z -d '1000001 0' z
+hg ci -A -m z z
 # a bad, evil hook that prints to stdout
 echo 'changegroup.stdout = python ../badhook' >> .hg/hgrc
 
 cd ../local
 echo r > r
-hg ci -A -m z -d '1000002 0' r
+hg ci -A -m z r
 
 echo "# push should succeed even though it has an unexpected response"
 hg push

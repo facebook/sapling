@@ -106,7 +106,7 @@ hg status . in repo root:
   $ cd repo2
   $ touch modified removed deleted ignored
   $ echo "^ignored$" > .hgignore
-  $ hg ci -A -m 'initial checkin' -d "1000000 0"
+  $ hg ci -A -m 'initial checkin'
   adding .hgignore
   adding deleted
   adding modified
@@ -231,7 +231,7 @@ hg status -i ignoreddir/file:
   $ hg init repo4
   $ cd repo4
   $ touch modified removed deleted
-  $ hg ci -q -A -m 'initial checkin' -d "1000000 0"
+  $ hg ci -q -A -m 'initial checkin'
   $ touch added unknown
   $ hg add added
   $ hg remove removed

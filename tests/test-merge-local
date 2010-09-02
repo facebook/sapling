@@ -11,7 +11,7 @@ for i in 1 2 3 4 5 6 7 8 9; do
     echo "merge ok $i" >> zzz1_merge_ok
 done
 echo "merge bad" > zzz2_merge_bad
-hg ci -Am "revision 0" -d "1000000 0"
+hg ci -Am "revision 0"
 
 echo "# revision 1"
 hg rm remove
@@ -22,7 +22,7 @@ hg add added
 echo "new first line" > zzz1_merge_ok
 hg cat zzz1_merge_ok >> zzz1_merge_ok
 echo "new last line" >> zzz2_merge_bad
-hg ci -m "revision 1" -d "1000000 0"
+hg ci -m "revision 1"
 
 echo "# local changes to revision 0"
 hg co 0

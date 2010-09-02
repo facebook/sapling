@@ -309,7 +309,7 @@ test filter with failed patch
   $ hg up 0
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ echo foo > b1
-  $ hg ci -d '0 0' -Am foo
+  $ hg ci -Am foo
   adding b1
   adding test-filter
   created new head

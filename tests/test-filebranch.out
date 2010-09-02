@@ -22,17 +22,17 @@ we shouldn't have anything but foo in merge state here
 m 644          3 foo
 main: we should have a merge here
    rev    offset  length   base linkrev nodeid       p1           p2
-     0         0      77      0       0 c36078bec30d 000000000000 000000000000
-     1        77      73      1       1 182b283965f1 c36078bec30d 000000000000
-     2       150      71      2       2 a6aef98656b7 c36078bec30d 000000000000
-     3       221      72      3       3 0c2cc6fc80e2 182b283965f1 a6aef98656b7
+     0         0      73      0       0 cdca01651b96 000000000000 000000000000
+     1        73      68      1       1 f6718a9cb7f3 cdca01651b96 000000000000
+     2       141      68      2       2 bdd988058d16 cdca01651b96 000000000000
+     3       209      66      3       3 d8a521142a3c f6718a9cb7f3 bdd988058d16
 log should show foo and quux changed
-changeset:   3:0c2cc6fc80e2
+changeset:   3:d8a521142a3c
 tag:         tip
-parent:      1:182b283965f1
-parent:      2:a6aef98656b7
+parent:      1:f6718a9cb7f3
+parent:      2:bdd988058d16
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 files:       foo quux
 description:
 merge

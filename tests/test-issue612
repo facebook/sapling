@@ -6,15 +6,15 @@ cd t
 hg init
 mkdir src
 echo a > src/a.c
-hg ci -Ama -d "10000000 0"
+hg ci -Ama
 
 hg mv src source
-hg ci -Ammove -d "1000000 0"
+hg ci -Ammove
 
 hg co -C 0
 echo new > src/a.c
 echo compiled > src/a.o
-hg ci -mupdate -d "1000000 0"
+hg ci -mupdate
 
 hg st
 

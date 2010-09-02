@@ -21,13 +21,13 @@ echo 0 > t/b
 echo 0 > t/e.h
 mkdir dir.h
 echo 0 > dir.h/foo
-hg ci -A -m m -d "1000000 0"
+hg ci -A -m m
 touch nottracked
 hglocate a && echo locate succeeded || echo locate failed
 hglocate NONEXISTENT && echo locate succeeded || echo locate failed
 hglocate
 hg rm a
-hg ci -m m -d "1000000 0"
+hg ci -m m
 hglocate a
 hglocate NONEXISTENT
 hglocate relpath:NONEXISTENT

@@ -8,15 +8,15 @@ Make a changeset:
 
   $ echo a > a
   $ hg add a
-  $ hg commit -m test -d "1000000 0"
+  $ hg commit -m test
 
 This command is ancient:
 
   $ hg history
-  changeset:   0:0acdaf898367
+  changeset:   0:acb14030fe0a
   tag:         tip
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     test
   
 

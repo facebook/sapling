@@ -4,7 +4,7 @@
   $ echo 123 > c
   $ echo 123 > e
   $ hg add a c e
-  $ hg commit -m "first" -d "1000000 0" a c e
+  $ hg commit -m "first" a c e
   $ echo 123 > b
 
 should show b unknown
@@ -102,11 +102,11 @@ should say file not managed
 should say file not found
 
   $ hg revert notfound
-  notfound: no such file in rev 095eacd0c0d7
+  notfound: no such file in rev 334a9e57682c
   $ touch d
   $ hg add d
   $ hg rm a
-  $ hg commit -m "second" -d "1000000 0"
+  $ hg commit -m "second"
   $ echo z > z
   $ hg add z
   $ hg st
@@ -154,7 +154,7 @@ should print non-executable
   non-executable
 
   $ chmod +x c
-  $ hg commit -d '1000001 0' -m exe
+  $ hg commit -m exe
 
   $ chmod -x c
   $ hg revert --all
@@ -195,7 +195,7 @@ should succeed
 
 issue332
 
-  $ hg ci -A -m b -d '1000001 0'
+  $ hg ci -A -m b
   adding b/b
   created new head
   $ echo foobar > b/b

@@ -13,7 +13,7 @@ add file
 
 commit first revision
 
-  $ hg ci -m 1 -u user -d "1 0"
+  $ hg ci -m 1
 
 set bookmark
 
@@ -23,7 +23,7 @@ set bookmark
 
 commit second revision
 
-  $ hg ci -m 2 -u usr -d "1 0"
+  $ hg ci -m 2
 
 set bookmark
 
@@ -38,14 +38,14 @@ update to -2
 
 commit new head
 
-  $ hg ci -m 3 -u user -d "1 0"
+  $ hg ci -m 3
   created new head
 
 bookmarks updated?
 
   $ hg book
-     test                      1:16b24da7e457
-     test2                     1:16b24da7e457
+     test                      1:25e1ee7a0081
+     test2                     1:25e1ee7a0081
 
 strip to revision 1
 
@@ -55,6 +55,6 @@ strip to revision 1
 list bookmarks
 
   $ hg book
-   * test                      1:9f1b7e78eff8
-   * test2                     1:9f1b7e78eff8
+   * test                      1:8cf31af87a2b
+   * test2                     1:8cf31af87a2b
 

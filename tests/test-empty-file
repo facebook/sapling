@@ -4,16 +4,16 @@ hg init a
 cd a
 touch empty1
 hg add empty1
-hg commit -m 'add empty1' -d '1000000 0'
+hg commit -m 'add empty1'
 
 touch empty2
 hg add empty2
-hg commit -m 'add empty2' -d '1000000 0'
+hg commit -m 'add empty2'
 
 hg up -C 0
 touch empty3
 hg add empty3
-hg commit -m 'add empty3' -d '1000000 0'
+hg commit -m 'add empty3'
 
 hg heads
 
@@ -21,5 +21,5 @@ hg merge 1
 # before changeset 05257fd28591, we didn't notice the
 # empty file that came from rev 1.
 hg status
-hg commit -m merge -d '1000000 0'
+hg commit -m merge
 hg manifest --debug tip

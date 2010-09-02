@@ -3,7 +3,7 @@
 hg init
 echo foo > a
 hg add a
-hg commit -m "1" -d "1000000 0"
+hg commit -m "1"
 
 echo bar > b
 hg add b
@@ -22,11 +22,11 @@ rm b
 
 hg co -C 0
 echo foo-a > a
-hg commit -m "2a" -d "1000000 0"
+hg commit -m "2a"
 
 hg co -C 0
 echo foo-b > a
-hg commit -m "2b" -d "1000000 0"
+hg commit -m "2b"
 
 HGMERGE=true hg merge 1
 

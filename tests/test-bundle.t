@@ -6,30 +6,30 @@ Setting up test
   $ cd test
   $ echo 0 > afile
   $ hg add afile
-  $ hg commit -m "0.0" -d "1000000 0"
+  $ hg commit -m "0.0"
   $ echo 1 >> afile
-  $ hg commit -m "0.1" -d "1000000 0"
+  $ hg commit -m "0.1"
   $ echo 2 >> afile
-  $ hg commit -m "0.2" -d "1000000 0"
+  $ hg commit -m "0.2"
   $ echo 3 >> afile
-  $ hg commit -m "0.3" -d "1000000 0"
+  $ hg commit -m "0.3"
   $ hg update -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 1 >> afile
-  $ hg commit -m "1.1" -d "1000000 0"
+  $ hg commit -m "1.1"
   created new head
   $ echo 2 >> afile
-  $ hg commit -m "1.2" -d "1000000 0"
+  $ hg commit -m "1.2"
   $ echo "a line" > fred
   $ echo 3 >> afile
   $ hg add fred
-  $ hg commit -m "1.3" -d "1000000 0"
+  $ hg commit -m "1.3"
   $ hg mv afile adifferentfile
-  $ hg commit -m "1.3m" -d "1000000 0"
+  $ hg commit -m "1.3m"
   $ hg update -C 3
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg mv afile anotherfile
-  $ hg commit -m "0.3m" -d "1000000 0"
+  $ hg commit -m "0.3m"
   $ hg verify
   checking changesets
   checking manifests
@@ -139,52 +139,52 @@ Log -R full.hg in fresh empty
   $ hg init empty
   $ cd empty
   $ hg -R bundle://../full.hg log
-  changeset:   8:088ff9d6e1e1
+  changeset:   8:aa35859c02ea
   tag:         tip
-  parent:      3:ac69c658229d
+  parent:      3:eebf5a27f8ca
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
   
-  changeset:   7:27f57c869697
+  changeset:   7:a6a34bfa0076
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
-  changeset:   6:1e3f6b843bd6
+  changeset:   6:7373c1169842
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3
   
-  changeset:   5:024e4e7df376
+  changeset:   5:1bb50a9436a7
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.2
   
-  changeset:   4:5f4f3ceb285e
-  parent:      0:5649c9d34dd8
+  changeset:   4:095197eb4973
+  parent:      0:f9ee2f85a263
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
   
-  changeset:   3:ac69c658229d
+  changeset:   3:eebf5a27f8ca
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3
   
-  changeset:   2:d62976ca1e50
+  changeset:   2:e38ba6f5b7e0
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.2
   
-  changeset:   1:10b2180f755b
+  changeset:   1:34c2bf6b0626
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.1
   
-  changeset:   0:5649c9d34dd8
+  changeset:   0:f9ee2f85a263
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.0
   
 
@@ -198,7 +198,7 @@ doesn't work (yet ?)
 hg -R bundle://../full.hg verify
 
   $ hg pull bundle://../full.hg
-  changegroup hook: HG_NODE=5649c9d34dd87d0ecb5fd39672128376e83b22e1 HG_SOURCE=pull HG_URL=bundle:../full.hg 
+  changegroup hook: HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_SOURCE=pull HG_URL=bundle:../full.hg 
   pulling from bundle://../full.hg
   requesting all changes
   adding changesets
@@ -221,7 +221,7 @@ Log -R bundle:empty+full.hg
 Pull full.hg into empty again (using -R; with hook)
 
   $ hg -R empty pull full.hg
-  changegroup hook: HG_NODE=5649c9d34dd87d0ecb5fd39672128376e83b22e1 HG_SOURCE=pull HG_URL=bundle:empty+full.hg 
+  changegroup hook: HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_SOURCE=pull HG_URL=bundle:empty+full.hg 
   pulling from full.hg
   requesting all changes
   adding changesets
@@ -250,52 +250,52 @@ Create partial clones
 Log -R full.hg in partial
 
   $ hg -R bundle://../full.hg log
-  changeset:   8:088ff9d6e1e1
+  changeset:   8:aa35859c02ea
   tag:         tip
-  parent:      3:ac69c658229d
+  parent:      3:eebf5a27f8ca
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
   
-  changeset:   7:27f57c869697
+  changeset:   7:a6a34bfa0076
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
-  changeset:   6:1e3f6b843bd6
+  changeset:   6:7373c1169842
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3
   
-  changeset:   5:024e4e7df376
+  changeset:   5:1bb50a9436a7
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.2
   
-  changeset:   4:5f4f3ceb285e
-  parent:      0:5649c9d34dd8
+  changeset:   4:095197eb4973
+  parent:      0:f9ee2f85a263
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
   
-  changeset:   3:ac69c658229d
+  changeset:   3:eebf5a27f8ca
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3
   
-  changeset:   2:d62976ca1e50
+  changeset:   2:e38ba6f5b7e0
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.2
   
-  changeset:   1:10b2180f755b
+  changeset:   1:34c2bf6b0626
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.1
   
-  changeset:   0:5649c9d34dd8
+  changeset:   0:f9ee2f85a263
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.0
   
 
@@ -304,32 +304,32 @@ Incoming full.hg in partial
   $ hg incoming bundle://../full.hg
   comparing with bundle://../full.hg
   searching for changes
-  changeset:   4:5f4f3ceb285e
-  parent:      0:5649c9d34dd8
+  changeset:   4:095197eb4973
+  parent:      0:f9ee2f85a263
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
   
-  changeset:   5:024e4e7df376
+  changeset:   5:1bb50a9436a7
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.2
   
-  changeset:   6:1e3f6b843bd6
+  changeset:   6:7373c1169842
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3
   
-  changeset:   7:27f57c869697
+  changeset:   7:a6a34bfa0076
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
-  changeset:   8:088ff9d6e1e1
+  changeset:   8:aa35859c02ea
   tag:         tip
-  parent:      3:ac69c658229d
+  parent:      3:eebf5a27f8ca
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
   
 
@@ -338,32 +338,32 @@ Outgoing -R full.hg vs partial2 in partial
   $ hg -R bundle://../full.hg outgoing ../partial2
   comparing with ../partial2
   searching for changes
-  changeset:   4:5f4f3ceb285e
-  parent:      0:5649c9d34dd8
+  changeset:   4:095197eb4973
+  parent:      0:f9ee2f85a263
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
   
-  changeset:   5:024e4e7df376
+  changeset:   5:1bb50a9436a7
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.2
   
-  changeset:   6:1e3f6b843bd6
+  changeset:   6:7373c1169842
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3
   
-  changeset:   7:27f57c869697
+  changeset:   7:a6a34bfa0076
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
-  changeset:   8:088ff9d6e1e1
+  changeset:   8:aa35859c02ea
   tag:         tip
-  parent:      3:ac69c658229d
+  parent:      3:eebf5a27f8ca
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
   
 
@@ -384,16 +384,16 @@ Direct clone from bundle (all-history)
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R full-clone heads
-  changeset:   8:088ff9d6e1e1
+  changeset:   8:aa35859c02ea
   tag:         tip
-  parent:      3:ac69c658229d
+  parent:      3:eebf5a27f8ca
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
   
-  changeset:   7:27f57c869697
+  changeset:   7:a6a34bfa0076
   user:        test
-  date:        Mon Jan 12 13:46:40 1970 +0000
+  date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
   $ rm -r full-clone
@@ -482,8 +482,8 @@ diff against bundle
   $ hg init b
   $ cd b
   $ hg -R ../all.hg diff -r tip
-  diff -r 088ff9d6e1e1 anotherfile
-  --- a/anotherfile	Mon Jan 12 13:46:40 1970 +0000
+  diff -r aa35859c02ea anotherfile
+  --- a/anotherfile	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,4 +0,0 @@
   -0

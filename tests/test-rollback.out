@@ -3,10 +3,10 @@ checking manifests
 crosschecking files in changesets and manifests
 checking files
 1 files, 1 changesets, 1 total revisions
-changeset:   0:0acdaf898367
+changeset:   0:acb14030fe0a
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     test
 
 rolling back to revision -1 (undo commit)

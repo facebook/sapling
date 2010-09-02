@@ -15,12 +15,12 @@
   $ echo 'post-cat = python ../printenv.py post-cat' >> .hg/hgrc
   $ echo a > a
   $ hg add a
-  $ hg commit -m a -d "1000000 0"
+  $ hg commit -m a
   precommit hook: HG_PARENT1=0000000000000000000000000000000000000000 
-  pretxncommit hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$HGTMP/test-hook.t/a 
-  0:29b62aeb769f
-  commit hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0000000000000000000000000000000000000000 
-  commit.b hook: HG_NODE=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PARENT1=0000000000000000000000000000000000000000 
+  pretxncommit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$HGTMP/test-hook.t/a 
+  0:cb9a9f314b8b
+  commit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 
+  commit.b hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 
 
   $ hg clone . ../b
   updating to branch default
@@ -39,31 +39,31 @@
   $ cd ../a
   $ echo b >> a
   $ hg commit -m a1 -d "1 0"
-  precommit hook: HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
-  pretxncommit hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PENDING=$HGTMP/test-hook.t/a 
-  1:b702efe96888
-  commit hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
-  commit.b hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
+  precommit hook: HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
+  pretxncommit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$HGTMP/test-hook.t/a 
+  1:ab228980c14d
+  commit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
+  commit.b hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
   $ hg update -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b > b
   $ hg add b
   $ hg commit -m b -d '1 0'
-  precommit hook: HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
-  pretxncommit hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b HG_PENDING=$HGTMP/test-hook.t/a 
-  2:1324a5531bac
-  commit hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
-  commit.b hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT1=29b62aeb769fdf78d8d9c5f28b017f76d7ef824b 
+  precommit hook: HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
+  pretxncommit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$HGTMP/test-hook.t/a 
+  2:ee9deb46ab31
+  commit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
+  commit.b hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
   created new head
   $ hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m merge -d '2 0'
-  precommit hook: HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 
-  pretxncommit hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 HG_PENDING=$HGTMP/test-hook.t/a 
-  3:4c52fb2e4022
-  commit hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 
-  commit.b hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_PARENT1=1324a5531bac09b329c3845d35ae6a7526874edb HG_PARENT2=b702efe9688826e3a91283852b328b84dbf37bc2 
+  precommit hook: HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd 
+  pretxncommit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd HG_PENDING=$HGTMP/test-hook.t/a 
+  3:07f3376c1e65
+  commit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd 
+  commit.b hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd 
 
 # test generic hooks
 
@@ -78,10 +78,10 @@
   $ cd ../b
   $ hg pull ../a
   prechangegroup hook: HG_SOURCE=pull HG_URL=file: 
-  changegroup hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_SOURCE=pull HG_URL=file: 
-  incoming hook: HG_NODE=b702efe9688826e3a91283852b328b84dbf37bc2 HG_SOURCE=pull HG_URL=file: 
-  incoming hook: HG_NODE=1324a5531bac09b329c3845d35ae6a7526874edb HG_SOURCE=pull HG_URL=file: 
-  incoming hook: HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_SOURCE=pull HG_URL=file: 
+  changegroup hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file: 
+  incoming hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file: 
+  incoming hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_SOURCE=pull HG_URL=file: 
+  incoming hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_SOURCE=pull HG_URL=file: 
   pulling from ../a
   searching for changes
   adding changesets
@@ -96,27 +96,27 @@
   $ echo 'pretag = python ../printenv.py pretag' >> .hg/hgrc
   $ echo 'tag = unset HG_PARENT1 HG_PARENT2; python ../printenv.py tag' >> .hg/hgrc
   $ hg tag -d '3 0' a
-  pretag hook: HG_LOCAL=0 HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_TAG=a 
-  precommit hook: HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 
-  pretxncommit hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 HG_PENDING=$HGTMP/test-hook.t/a 
-  4:8ea2ef7ad3e8
-  commit hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 
-  commit.b hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PARENT1=4c52fb2e402287dd5dc052090682536c8406c321 
-  tag hook: HG_LOCAL=0 HG_NODE=4c52fb2e402287dd5dc052090682536c8406c321 HG_TAG=a 
+  pretag hook: HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a 
+  precommit hook: HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 
+  pretxncommit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$HGTMP/test-hook.t/a 
+  4:539e4b31b6dc
+  commit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 
+  commit.b hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 
+  tag hook: HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a 
   $ hg tag -l la
-  pretag hook: HG_LOCAL=1 HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_TAG=la 
-  tag hook: HG_LOCAL=1 HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_TAG=la 
+  pretag hook: HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=la 
+  tag hook: HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=la 
 
 # pretag hook can forbid tagging
 
   $ echo 'pretag.forbid = python ../printenv.py pretag.forbid 1' >> .hg/hgrc
   $ hg tag -d '4 0' fa
-  pretag hook: HG_LOCAL=0 HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_TAG=fa 
-  pretag.forbid hook: HG_LOCAL=0 HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_TAG=fa 
+  pretag hook: HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa 
+  pretag.forbid hook: HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa 
   abort: pretag.forbid hook exited with status 1
   $ hg tag -l fla
-  pretag hook: HG_LOCAL=1 HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_TAG=fla 
-  pretag.forbid hook: HG_LOCAL=1 HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_TAG=fla 
+  pretag hook: HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fla 
+  pretag.forbid hook: HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fla 
   abort: pretag.forbid hook exited with status 1
 
 # pretxncommit hook can see changeset, can roll back txn, changeset
@@ -127,49 +127,49 @@
   $ echo z > z
   $ hg add z
   $ hg -q tip
-  4:8ea2ef7ad3e8
+  4:539e4b31b6dc
   $ hg commit -m 'fail' -d '4 0'
-  precommit hook: HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
-  pretxncommit hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PENDING=$HGTMP/test-hook.t/a 
-  5:fad284daf8c0
-  5:fad284daf8c0
-  pretxncommit.forbid hook: HG_NODE=fad284daf8c032148abaffcd745dafeceefceb61 HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PENDING=$HGTMP/test-hook.t/a 
+  precommit hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 
+  pretxncommit hook: HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$HGTMP/test-hook.t/a 
+  5:6f611f8018c1
+  5:6f611f8018c1
+  pretxncommit.forbid hook: HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$HGTMP/test-hook.t/a 
   transaction abort!
   rollback completed
   abort: pretxncommit.forbid1 hook exited with status 1
   $ hg -q tip
-  4:8ea2ef7ad3e8
+  4:539e4b31b6dc
 
 # precommit hook can prevent commit
 
   $ echo 'precommit.forbid = python ../printenv.py precommit.forbid 1' >> .hg/hgrc
   $ hg commit -m 'fail' -d '4 0'
-  precommit hook: HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
-  precommit.forbid hook: HG_PARENT1=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 
+  precommit hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 
+  precommit.forbid hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 
   abort: precommit.forbid hook exited with status 1
   $ hg -q tip
-  4:8ea2ef7ad3e8
+  4:539e4b31b6dc
 
 # preupdate hook can prevent update
 
   $ echo 'preupdate = python ../printenv.py preupdate' >> .hg/hgrc
   $ hg update 1
-  preupdate hook: HG_PARENT1=b702efe96888 
+  preupdate hook: HG_PARENT1=ab228980c14d 
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
 # update hook
 
   $ echo 'update = python ../printenv.py update' >> .hg/hgrc
   $ hg update
-  preupdate hook: HG_PARENT1=8ea2ef7ad3e8 
-  update hook: HG_ERROR=0 HG_PARENT1=8ea2ef7ad3e8 
+  preupdate hook: HG_PARENT1=539e4b31b6dc 
+  update hook: HG_ERROR=0 HG_PARENT1=539e4b31b6dc 
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # prechangegroup hook can prevent incoming changes
 
   $ cd ../b
   $ hg -q tip
-  3:4c52fb2e4022
+  3:07f3376c1e65
   $ echo '[hooks]' > .hg/hgrc
   $ echo 'prechangegroup.forbid = python ../printenv.py prechangegroup.forbid 1' >> .hg/hgrc
   $ hg pull ../a
@@ -185,8 +185,8 @@
   $ echo 'pretxnchangegroup.forbid0 = hg tip -q' >> .hg/hgrc
   $ echo 'pretxnchangegroup.forbid1 = python ../printenv.py pretxnchangegroup.forbid 1' >> .hg/hgrc
   $ hg pull ../a
-  4:8ea2ef7ad3e8
-  pretxnchangegroup.forbid hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_PENDING=$HGTMP/test-hook.t/b HG_SOURCE=pull HG_URL=file: 
+  4:539e4b31b6dc
+  pretxnchangegroup.forbid hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$HGTMP/test-hook.t/b HG_SOURCE=pull HG_URL=file: 
   pulling from ../a
   searching for changes
   adding changesets
@@ -197,7 +197,7 @@
   rollback completed
   abort: pretxnchangegroup.forbid1 hook exited with status 1
   $ hg -q tip
-  3:4c52fb2e4022
+  3:07f3376c1e65
 
 # outgoing hooks can see env vars
 
@@ -207,7 +207,7 @@
   $ echo 'outgoing = python ../printenv.py outgoing' >> ../a/.hg/hgrc
   $ hg pull ../a
   preoutgoing hook: HG_SOURCE=pull 
-  outgoing hook: HG_NODE=8ea2ef7ad3e8cac946c72f1e0c79d6aebc301198 HG_SOURCE=pull 
+  outgoing hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_SOURCE=pull 
   pulling from ../a
   searching for changes
   adding changesets
@@ -441,7 +441,7 @@
   $ echo 'precommit.importfail = python:importfail.whatever' >> .hg/hgrc
 
   $ echo a >> a
-  $ hg --traceback commit -d '0 0' -ma 2>&1 | egrep '^(exception|Traceback|ImportError)'
+  $ hg --traceback commit -ma 2>&1 | egrep '^(exception|Traceback|ImportError)'
   exception from first failed import attempt:
   Traceback (most recent call last):
   ImportError: No module named somebogusmodule
@@ -456,10 +456,10 @@
   $ echo 'commit = hg id' >> .hg/hgrc
   $ echo 'update = hg id' >> .hg/hgrc
   $ echo bb > a
-  $ hg ci -d '0 0' -ma
-  8da618c33484 tip
+  $ hg ci -ma
+  223eafe2750c tip
   $ hg up 0
-  29b62aeb769f
+  cb9a9f314b8b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ exit 0

@@ -29,7 +29,7 @@ cd remote
 hg init
 echo foo > bar
 hg add bar
-hg commit -m"test" -d "1000000 0"
+hg commit -m"test"
 hg tip
 
 cd ..
@@ -42,7 +42,7 @@ cat bar
 
 cd ../remote
 echo baz > quux
-hg commit -A -mtest2 -d '100000000 0'
+hg commit -A -mtest2
 # check for HTTP opener failures when cachefile does not exist
 rm .hg/*.cache
 
@@ -54,7 +54,7 @@ hg pull | sed -e "s,:$HGPORT/,:\$HGPORT/,"
 echo '% trying to push'
 hg update
 echo more foo >> bar
-hg commit -m"test" -d "100000000 0"
+hg commit -m"test"
 hg push | sed -e "s,:$HGPORT/,:\$HGPORT/,"
 
 echo '% trying clone -r'

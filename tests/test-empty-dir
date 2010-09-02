@@ -3,11 +3,11 @@
 hg init
 echo 123 > a
 hg add a
-hg commit -m "first" -d "1000000 0" a
+hg commit -m "first" a
 mkdir sub
 echo 321 > sub/b
 hg add sub/b
-hg commit -m "second" -d "1000000 0" sub/b
+hg commit -m "second" sub/b
 cat sub/b
 hg co 0
 cat sub/b 2>/dev/null || echo "sub/b not present"

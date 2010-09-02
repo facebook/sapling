@@ -14,10 +14,10 @@ hg init a
 cd a
 echo abc > foo
 hg add foo
-hg commit -m 'add foo' -d '1000000 0'
+hg commit -m 'add foo'
 
 echo >> foo
-hg commit -m 'change foo' -d '1000001 0'
+hg commit -m 'change foo'
 hg log -r 0:
 
 cat >> test.py << EOF

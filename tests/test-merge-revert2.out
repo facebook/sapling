@@ -1,20 +1,20 @@
-1:f248da0d4c3e
-0:9eca13a34789
-f248da0d4c3e tip
+1:dfab7f3c2efb
+0:c3fa057dd86f
+dfab7f3c2efb tip
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-9eca13a34789
-9eca13a34789+
+c3fa057dd86f
+c3fa057dd86f+
 reverting file1
-9eca13a34789
+c3fa057dd86f
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-f248da0d4c3e tip
+dfab7f3c2efb tip
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 merging file1
 warning: conflicts during merge.
 merging file1 failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
 use 'hg resolve' to retry unresolved file merges
-diff -r f248da0d4c3e file1
+diff -r dfab7f3c2efb file1
 --- a/file1
 +++ b/file1
 @@ -1,3 +1,7 @@
@@ -27,12 +27,12 @@ diff -r f248da0d4c3e file1
 +>>>>>>> other
 M file1
 ? file1.orig
-f248da0d4c3e+ tip
+dfab7f3c2efb+ tip
 reverting file1
 ? file1.orig
-f248da0d4c3e tip
+dfab7f3c2efb tip
 ? file1.orig
-f248da0d4c3e tip
+dfab7f3c2efb tip
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 ? file1.orig
-f248da0d4c3e tip
+dfab7f3c2efb tip

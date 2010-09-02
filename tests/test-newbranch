@@ -8,16 +8,16 @@ hg branches
 
 echo foo > a
 hg add a
-hg ci -m "initial" -d "1000000 0"
+hg ci -m "initial"
 hg branch foo
 hg branch
-hg ci -m "add branch name" -d "1000000 0"
+hg ci -m "add branch name"
 hg branch bar
-hg ci -m "change branch name" -d "1000000 0"
+hg ci -m "change branch name"
 echo % branch shadowing
 hg branch default
 hg branch -f default
-hg ci -m "clear branch name" -d "1000000 0"
+hg ci -m "clear branch name"
 
 echo % there should be only one default branch head
 hg heads .
@@ -25,11 +25,11 @@ hg heads .
 hg co foo
 hg branch
 echo bleah > a
-hg ci -m "modify a branch" -d "1000000 0"
+hg ci -m "modify a branch"
 
 hg merge default
 hg branch
-hg ci -m "merge" -d "1000000 0"
+hg ci -m "merge"
 hg log
 
 hg branches
@@ -68,11 +68,11 @@ hg up
 echo % fastforward merge
 hg branch ff
 echo ff > ff
-hg ci -Am'fast forward' -d '1000000 0'
+hg ci -Am'fast forward'
 hg up foo
 hg merge ff
 hg branch
-hg commit -m'Merge ff into foo' -d '1000000 0'
+hg commit -m'Merge ff into foo'
 hg parents
 hg manifest
 

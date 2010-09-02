@@ -5,7 +5,7 @@ cd a
 hg init
 echo 123 > a
 hg add a
-hg commit -m "a" -u a -d "1000000 0"
+hg commit -m "a" -u a
 
 cd ..
 mkdir b
@@ -13,7 +13,7 @@ cd b
 hg init
 echo 321 > b
 hg add b
-hg commit -m "b" -u b -d "1000000 0"
+hg commit -m "b" -u b
 
 hg pull ../a
 hg pull -f ../a

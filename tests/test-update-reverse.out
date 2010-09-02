@@ -2,38 +2,38 @@
 Main should be gone
 a
 created new head
-changeset:   3:ded32b0db104
+changeset:   3:91ebc10ed028
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     Added side2
 
-changeset:   2:92a816cea698
-parent:      0:537353581d3d
+changeset:   2:b932d7dbb1e1
+parent:      0:c2eda428b523
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     Added side1
 
-changeset:   1:221226fb2bd8
+changeset:   1:71a760306caf
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     Added main
 
-changeset:   0:537353581d3d
+changeset:   0:c2eda428b523
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     Added a
 
 Should have two heads, side2 and main
-changeset:   3:ded32b0db104
+changeset:   3:91ebc10ed028
 tag:         tip
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     Added side2
 
-changeset:   1:221226fb2bd8
+changeset:   1:71a760306caf
 user:        test
-date:        Mon Jan 12 13:46:40 1970 +0000
+date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     Added main
 
 Should show a side1 side2
@@ -42,7 +42,7 @@ side1
 side2
 resolving manifests
  overwrite True partial False
- ancestor ded32b0db104+ local ded32b0db104+ remote 221226fb2bd8
+ ancestor 91ebc10ed028+ local 91ebc10ed028+ remote 71a760306caf
  side2: other deleted -> r
  side1: other deleted -> r
  main: remote created -> g
