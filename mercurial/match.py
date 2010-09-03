@@ -110,6 +110,37 @@ class always(match):
     def __init__(self, root, cwd):
         match.__init__(self, root, cwd, [])
 
+class narrowmatcher(match):
+    """Adapt a matcher to work on a subdirectory only.
+
+    The paths are remapped to remove/insert the path as needed:
+
+    >>> m1 = match('root', '', ['a.txt', 'sub/b.txt'])
+    >>> m2 = narrowmatcher('sub', m1)
+    >>> bool(m2('a.txt'))
+    False
+    >>> bool(m2('b.txt'))
+    True
+    >>> bool(m2.matchfn('a.txt'))
+    False
+    >>> bool(m2.matchfn('b.txt'))
+    True
+    >>> m2.files()
+    ['b.txt']
+    >>> m2.exact('b.txt')
+    True
+    """
+
+    def __init__(self, path, matcher):
+        self._path = path
+        self._matcher = matcher
+
+        self._files = [f[len(path) + 1:] for f in matcher._files
+                       if f.startswith(path + "/")]
+        self._anypats = matcher._anypats
+        self.matchfn = lambda fn: matcher.matchfn(self._path + "/" + fn)
+        self._fmap = set(self._files)
+
 def patkind(pat):
     return _patsplit(pat, None)[0]
 

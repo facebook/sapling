@@ -15,6 +15,9 @@ doctest.testmod(mercurial.httprepo)
 import mercurial.util
 doctest.testmod(mercurial.util)
 
+import mercurial.match
+doctest.testmod(mercurial.match)
+
 import mercurial.dagparser
 doctest.testmod(mercurial.dagparser, optionflags=doctest.NORMALIZE_WHITESPACE)
 
