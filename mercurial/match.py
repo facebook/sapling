@@ -11,7 +11,7 @@ from i18n import _
 
 class match(object):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
-                 default='glob', exact=False):
+                 default='glob', exact=False, auditor=None):
         """build an object to match a set of file patterns
 
         arguments:
@@ -39,14 +39,16 @@ class match(object):
         self._anypats = bool(include or exclude)
 
         if include:
-            im = _buildmatch(_normalize(include, 'glob', root, cwd), '(?:/|$)')
+            im = _buildmatch(_normalize(include, 'glob', root, cwd, auditor),
+                             '(?:/|$)')
         if exclude:
-            em = _buildmatch(_normalize(exclude, 'glob', root, cwd), '(?:/|$)')
+            em = _buildmatch(_normalize(exclude, 'glob', root, cwd, auditor),
+                             '(?:/|$)')
         if exact:
             self._files = patterns
             pm = self.exact
         elif patterns:
-            pats = _normalize(patterns, default, root, cwd)
+            pats = _normalize(patterns, default, root, cwd, auditor)
             self._files = _roots(pats)
             self._anypats = self._anypats or _anypats(pats)
             pm = _buildmatch(pats, '$')
@@ -218,11 +220,11 @@ def _buildmatch(pats, tail):
                 raise util.Abort(_("invalid pattern (%s): %s") % (k, p))
         raise util.Abort(_("invalid pattern"))
 
-def _normalize(names, default, root, cwd):
+def _normalize(names, default, root, cwd, auditor):
     pats = []
     for kind, name in [_patsplit(p, default) for p in names]:
         if kind in ('glob', 'relpath'):
-            name = util.canonpath(root, cwd, name)
+            name = util.canonpath(root, cwd, name, auditor)
         elif kind in ('relglob', 'path'):
             name = util.normpath(name)
 
