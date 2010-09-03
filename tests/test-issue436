@@ -1,7 +1,0 @@
-#!/bin/sh
-
-hg init a
-cd a
-hg -v log -v
-hg -v log -v x
-true
