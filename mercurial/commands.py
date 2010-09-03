@@ -3478,7 +3478,8 @@ def status(ui, repo, *pats, **opts):
         show = ui.quiet and states[:4] or states[:5]
 
     stat = repo.status(node1, node2, cmdutil.match(repo, pats, opts),
-                       'ignored' in show, 'clean' in show, 'unknown' in show)
+                       'ignored' in show, 'clean' in show, 'unknown' in show,
+                       opts.get('subrepos'))
     changestates = zip(states, 'MAR!?IC', stat)
 
     if (opts.get('all') or opts.get('copies')) and not opts.get('no_status'):
@@ -3991,6 +3992,11 @@ similarityopts = [
      _('guess renamed files by similarity (0<=s<=100)'), _('SIMILARITY'))
 ]
 
+subrepoopts = [
+    ('S', 'subrepos', None,
+     _('recurse into subrepositories'))
+]
+
 table = {
     "^add": (add, walkopts + dryrunopts, _('[OPTION]... [FILE]...')),
     "addremove":
@@ -4454,7 +4460,7 @@ table = {
            _('show difference from revision'), _('REV')),
           ('', 'change', '',
            _('list the changed files of a revision'), _('REV')),
-         ] + walkopts,
+         ] + walkopts + subrepoopts,
          _('[OPTION]... [FILE]...')),
     "tag":
         (tag,

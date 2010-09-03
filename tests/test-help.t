@@ -532,6 +532,7 @@ Test command without options
       --change REV           list the changed files of a revision
    -I --include PATTERN [+]  include names matching the given patterns
    -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -S --subrepos             recurse into subrepositories
   
   [+] marked option can be specified multiple times
   

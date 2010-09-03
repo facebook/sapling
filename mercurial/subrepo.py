@@ -246,6 +246,9 @@ class abstractsubrepo(object):
         raise NotImplementedError
 
 
+    def status(self, rev2, **opts):
+        return [], [], [], [], [], [], []
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -274,6 +277,17 @@ class hgsubrepo(abstractsubrepo):
             if defpath != defpushpath:
                 addpathconfig('default-push', defpushpath)
             fp.close()
+
+    def status(self, rev2, **opts):
+        try:
+            rev1 = self._state[1]
+            ctx1 = self._repo[rev1]
+            ctx2 = self._repo[rev2]
+            return self._repo.status(ctx1, ctx2, **opts)
+        except error.RepoLookupError, inst:
+            self._repo.ui.warn(_("warning: %s in %s\n")
+                               % (inst, relpath(self)))
+            return [], [], [], [], [], [], []
 
     def dirty(self):
         r = self._state[1]

@@ -1052,7 +1052,8 @@ class localrepository(repo.repository):
         return self[node].walk(match)
 
     def status(self, node1='.', node2=None, match=None,
-               ignored=False, clean=False, unknown=False):
+               ignored=False, clean=False, unknown=False,
+               listsubrepos=False):
         """return status of files between two nodes or node and working directory
 
         If node1 is None, use the first dirstate parent instead.
@@ -1158,6 +1159,25 @@ class localrepository(repo.repository):
             removed = mf1.keys()
 
         r = modified, added, removed, deleted, unknown, ignored, clean
+
+        if listsubrepos:
+            for subpath in ctx1.substate:
+                sub = ctx1.sub(subpath)
+                if working:
+                    rev2 = None
+                else:
+                    rev2 = ctx2.substate[subpath][1]
+                try:
+                    submatch = matchmod.narrowmatcher(subpath, match)
+                    s = sub.status(rev2, match=submatch, ignored=listignored,
+                                   clean=listclean, unknown=listunknown,
+                                   listsubrepos=True)
+                    for rfiles, sfiles in zip(r, s):
+                        rfiles.extend("%s/%s" % (subpath, f) for f in sfiles)
+                except error.LookupError:
+                    self.ui.status(_("skipping missing subrepository: %s\n")
+                                   % subpath)
+
         [l.sort() for l in r]
         return r
 
