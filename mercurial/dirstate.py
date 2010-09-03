@@ -498,6 +498,8 @@ class dirstate(object):
             skipstep3 = True
 
         files = set(match.files())
+        for s in subrepos:
+            files = [f for f in files if not f.startswith(s + "/")]
         if not files or '.' in files:
             files = ['']
         results = dict.fromkeys(subrepos)
