@@ -28,6 +28,7 @@ class localrepository(repo.repository):
         self.root = os.path.realpath(util.expandpath(path))
         self.path = os.path.join(self.root, ".hg")
         self.origroot = path
+        self.auditor = util.path_auditor(self.root, self._checknested)
         self.opener = util.opener(self.path)
         self.wopener = util.opener(self.root)
         self.baseui = baseui
@@ -110,6 +111,44 @@ class localrepository(repo.repository):
         self.filterpats = {}
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
+
+    def _checknested(self, path):
+        """Determine if path is a legal nested repository."""
+        if not path.startswith(self.root):
+            return False
+        subpath = path[len(self.root) + 1:]
+
+        # XXX: Checking against the current working copy is wrong in
+        # the sense that it can reject things like
+        #
+        #   $ hg cat -r 10 sub/x.txt
+        #
+        # if sub/ is no longer a subrepository in the working copy
+        # parent revision.
+        #
+        # However, it can of course also allow things that would have
+        # been rejected before, such as the above cat command if sub/
+        # is a subrepository now, but was a normal directory before.
+        # The old path auditor would have rejected by mistake since it
+        # panics when it sees sub/.hg/.
+        #
+        # All in all, checking against the working copy parent
+        # revision seems sensible since we want to prevent access to
+        # nested repositories on the filesystem *now*.
+        ctx = self['.']
+        parts = util.splitpath(subpath)
+        while parts:
+            prefix = os.sep.join(parts)
+            if prefix in ctx.substate:
+                if prefix == subpath:
+                    return True
+                else:
+                    sub = ctx.sub(prefix)
+                    return sub.checknested(subpath[len(prefix) + 1:])
+            else:
+                parts.pop()
+        return False
+
 
     @propertycache
     def changelog(self):

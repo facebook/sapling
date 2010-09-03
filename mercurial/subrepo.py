@@ -210,6 +210,10 @@ class abstractsubrepo(object):
         """
         raise NotImplementedError
 
+    def checknested(path):
+        """check if path is a subrepository within this repository"""
+        return False
+
     def commit(self, text, user, date):
         """commit the current changes to the subrepo with the given
         log message. Use given user and date if possible. Return the
@@ -279,6 +283,9 @@ class hgsubrepo(abstractsubrepo):
         if w.p1() != self._repo[r]: # version checked out change
             return True
         return w.dirty() # working directory changed
+
+    def checknested(self, path):
+        return self._repo._checknested(self._repo.wjoin(path))
 
     def commit(self, text, user, date):
         self._repo.ui.debug("committing subrepo %s\n" % relpath(self))
