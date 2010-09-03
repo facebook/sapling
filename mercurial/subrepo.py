@@ -7,7 +7,7 @@
 
 import errno, os, re, xml.dom.minidom, shutil, urlparse, posixpath
 from i18n import _
-import config, util, node, error
+import config, util, node, error, cmdutil
 hg = None
 
 nullstate = ('', '', 'empty')
@@ -249,6 +249,9 @@ class abstractsubrepo(object):
     def status(self, rev2, **opts):
         return [], [], [], [], [], [], []
 
+    def diff(self, diffopts, node2, match, prefix, **opts):
+        pass
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -288,6 +291,17 @@ class hgsubrepo(abstractsubrepo):
             self._repo.ui.warn(_("warning: %s in %s\n")
                                % (inst, relpath(self)))
             return [], [], [], [], [], [], []
+
+    def diff(self, diffopts, node2, match, prefix, **opts):
+        try:
+            node1 = node.bin(self._state[1])
+            cmdutil.diffordiffstat(self._repo.ui, self._repo, diffopts,
+                                   node1, node2, match,
+                                   prefix=os.path.join(prefix, self._path),
+                                   listsubrepos=True, **opts)
+        except error.RepoLookupError, inst:
+            self._repo.ui.warn(_("warning: %s in %s\n")
+                               % (inst, relpath(self)))
 
     def dirty(self):
         r = self._state[1]

@@ -471,6 +471,7 @@ Test command without options
       --stat                 output diffstat-style summary of changes
    -I --include PATTERN [+]  include names matching the given patterns
    -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -S --subrepos             recurse into subrepositories
   
   [+] marked option can be specified multiple times
   

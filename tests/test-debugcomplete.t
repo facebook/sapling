@@ -180,7 +180,7 @@ Show all commands + options
   annotate: rev, follow, no-follow, text, user, file, date, number, changeset, line-number, include, exclude
   clone: noupdate, updaterev, rev, branch, pull, uncompressed, ssh, remotecmd
   commit: addremove, close-branch, include, exclude, message, logfile, date, user
-  diff: rev, change, text, git, nodates, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, unified, stat, include, exclude
+  diff: rev, change, text, git, nodates, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, unified, stat, include, exclude, subrepos
   export: output, switch-parent, rev, text, git, nodates
   forget: include, exclude
   init: ssh, remotecmd

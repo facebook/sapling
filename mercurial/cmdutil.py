@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import hex, nullid, nullrev, short
+from node import hex, bin, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, glob, tempfile
 import util, templater, patch, error, encoding, templatekw
@@ -655,7 +655,8 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         single(rev, seqno + 1, fp)
 
 def diffordiffstat(ui, repo, diffopts, node1, node2, match,
-                   changes=None, stat=False, fp=None):
+                   changes=None, stat=False, fp=None, prefix='',
+                   listsubrepos=False):
     '''show diff or diffstat.'''
     if fp is None:
         write = ui.write
@@ -668,15 +669,26 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
         width = 80
         if not ui.plain():
             width = util.termwidth()
-        chunks = patch.diff(repo, node1, node2, match, changes, diffopts)
+        chunks = patch.diff(repo, node1, node2, match, changes, diffopts,
+                            prefix=prefix)
         for chunk, label in patch.diffstatui(util.iterlines(chunks),
                                              width=width,
                                              git=diffopts.git):
             write(chunk, label=label)
     else:
         for chunk, label in patch.diffui(repo, node1, node2, match,
-                                         changes, diffopts):
+                                         changes, diffopts, prefix=prefix):
             write(chunk, label=label)
+
+    if listsubrepos:
+        ctx1 = repo[node1]
+        for subpath in ctx1.substate:
+            sub = ctx1.sub(subpath)
+            if node2 is not None:
+                node2 = bin(repo[node2].substate[subpath][1])
+            submatch = matchmod.narrowmatcher(subpath, match)
+            sub.diff(diffopts, node2, submatch, changes=changes,
+                     stat=stat, fp=fp, prefix=prefix)
 
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''

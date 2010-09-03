@@ -1471,7 +1471,8 @@ def diff(ui, repo, *pats, **opts):
 
     diffopts = patch.diffopts(ui, opts)
     m = cmdutil.match(repo, pats, opts)
-    cmdutil.diffordiffstat(ui, repo, diffopts, node1, node2, m, stat=stat)
+    cmdutil.diffordiffstat(ui, repo, diffopts, node1, node2, m, stat=stat,
+                           listsubrepos=opts.get('subrepos'))
 
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
@@ -4183,7 +4184,7 @@ table = {
            _('revision'), _('REV')),
           ('c', 'change', '',
            _('change made by revision'), _('REV'))
-         ] + diffopts + diffopts2 + walkopts,
+         ] + diffopts + diffopts2 + walkopts + subrepoopts,
          _('[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...')),
     "^export":
         (export,
