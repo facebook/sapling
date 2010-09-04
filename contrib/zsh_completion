@@ -14,7 +14,7 @@
 # compinit
 #
 # Copyright (C) 2005, 2006 Steve Borho <steve@borho.org>
-# Copyright (C) 2006-9 Brendan Cully <brendan@kublai.com>
+# Copyright (C) 2006-10 Brendan Cully <brendan@kublai.com>
 #
 # Permission is hereby granted, without written agreement and without
 # licence or royalty fees, to use, copy, modify, and distribute this
@@ -946,6 +946,36 @@ _hg_cmd_strip() {
   '(--backup -b)'{-b,--backup}'[bundle unrelated changesets]' \
   '(--nobackup -n)'{-n,--nobackup}'[no backups]' \
   ':revision:_hg_tags'
+}
+
+# Patchbomb
+_hg_cmd_email() {
+  _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
+  '(--git -g)'{-g,--git}'[use git extended diff format]' \
+  '--plain[omit hg patch header]' \
+  '(--outgoing -o)'{-o,--outgoing}'[send changes not found in the target repository]' \
+  '(--bundle -b)'{-b,--bundle}'[send changes not in target as a binary bundle]' \
+  '--bundlename[name of the bundle attachment file (default: bundle)]:' \
+  '*'{-r+,--rev}'[search in given revision range]:revision:_hg_revrange' \
+  '--force[run even when remote repository is unrelated (with -b/--bundle)]' \
+  '*--base[a base changeset to specify instead of a destination (with -b/--bundle)]:revision:_hg_tags' \
+  '--intro[send an introduction email for a single patch]' \
+  '(--inline -i --attach -a)'{-a,--attach}'[send patches as attachments]' \
+  '(--attach -a --inline -i)'{-i,--inline}'[send patches as inline attachments]' \
+  '*--bcc[email addresses of blind carbon copy recipients]:email:' \
+  '*'{-c+,--cc}'[email addresses of copy recipients]:email:' \
+  '(--diffstat -d)'{-d,--diffstat}'[add diffstat output to messages]' \
+  '--date[use the given date as the sending date]:date:' \
+  '--desc[use the given file as the series description]:files:_files' \
+  '(--from -f)'{-f,--from}'[email address of sender]:email:' \
+  '(--test -n)'{-n,--test}'[print messages that would be sent]' \
+  '(--mbox -m)'{-m,--mbox}'[write messages to mbox file instead of sending them]:file:' \
+  '*--reply-to[email addresses replies should be sent to]:email:' \
+  '(--subject -s)'{-s,--subject}'[subject of first message (intro or single patch)]:subject:' \
+  '--in-reply-to[message identifier to reply to]:msgid:' \
+  '*--flag[flags to add in subject prefixes]:flag:' \
+  '*'{-t,--to}'[email addresses of recipients]:email:' \
+  ':revision:_hg_revrange'
 }
 
 _hg "$@"
