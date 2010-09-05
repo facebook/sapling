@@ -163,7 +163,7 @@ def _calcmode(path):
         mode = None
     return mode
 
-_data = 'data 00manifest.d 00manifest.i 00changelog.d  00changelog.i'
+_data = 'data 00manifest.d 00manifest.i 00changelog.d 00changelog.i'
 
 class basicstore(object):
     '''base class for local repository stores'''
