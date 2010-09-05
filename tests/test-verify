@@ -48,4 +48,12 @@ echo
 echo % verify
 hg verify
 
+cd ..
+
+echo % test revlog format 0
+
+"$TESTDIR/revlog-formatv0.py"
+cd formatv0
+hg verify
+
 exit 0

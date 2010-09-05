@@ -50,3 +50,10 @@ warning: orphan revlog 'data/a.i'
 1 warnings encountered!
 1 integrity errors encountered!
 (first damaged changeset appears to be 0)
+% test revlog format 0
+repository uses revlog format 0
+checking changesets
+checking manifests
+crosschecking files in changesets and manifests
+checking files
+1 files, 1 changesets, 1 total revisions
