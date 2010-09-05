@@ -766,6 +766,31 @@ _hg_cmd_update() {
   ':revision:_hg_tags'
 }
 
+## extensions ##
+
+# bookmarks
+_hg_bookmarks() {
+  typeset -a bookmark bookmarks
+
+  _hg_cmd bookmarks | while read -A bookmark
+  do
+    if test -z ${bookmark[-1]:#[0-9]*}
+    then
+      bookmarks+=($bookmark[-2])
+    fi
+  done
+  (( $#bookmarks )) && _describe -t bookmarks 'bookmarks' bookmarks
+}
+
+_hg_cmd_bookmarks() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--force -f)'{-f,--force}'[force]' \
+  '(--rev -r --delete -d --rename -m)'{-r+,--rev}'[revision]:revision:_hg_tags' \
+  '(--rev -r --delete -d --rename -m)'{-d,--delete}'[delete a given bookmark]' \
+  '(--rev -r --delete -d --rename -m)'{-m+,--rename}'[rename a given bookmark]:bookmark:_hg_bookmarks' \
+  ':bookmark:_hg_bookmarks'
+}
+
 # HGK
 _hg_cmd_view() {
   _arguments -s -w : $_hg_global_opts \
