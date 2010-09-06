@@ -2990,6 +2990,8 @@ def resolve(ui, repo, *pats, **opts):
 
                 # replace filemerge's .orig file with our resolve file
                 util.rename(a + ".resolve", a + ".orig")
+
+    ms.commit()
     return ret
 
 def revert(ui, repo, *pats, **opts):

@@ -14,12 +14,14 @@ class mergestate(object):
     '''track 3-way merge state of individual files'''
     def __init__(self, repo):
         self._repo = repo
+        self._dirty = False
         self._read()
     def reset(self, node=None):
         self._state = {}
         if node:
             self._local = node
         shutil.rmtree(self._repo.join("merge"), True)
+        self._dirty = False
     def _read(self):
         self._state = {}
         try:
@@ -33,17 +35,20 @@ class mergestate(object):
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
-    def _write(self):
-        f = self._repo.opener("merge/state", "w")
-        f.write(hex(self._local) + "\n")
-        for d, v in self._state.iteritems():
-            f.write("\0".join([d] + v) + "\n")
+        self._dirty = False
+    def commit(self):
+        if self._dirty:
+            f = self._repo.opener("merge/state", "w")
+            f.write(hex(self._local) + "\n")
+            for d, v in self._state.iteritems():
+                f.write("\0".join([d] + v) + "\n")
+            self._dirty = False
     def add(self, fcl, fco, fca, fd, flags):
         hash = util.sha1(fcl.path()).hexdigest()
         self._repo.opener("merge/" + hash, "w").write(fcl.data())
         self._state[fd] = ['u', hash, fcl.path(), fca.path(),
                            hex(fca.filenode()), fco.path(), flags]
-        self._write()
+        self._dirty = True
     def __contains__(self, dfile):
         return dfile in self._state
     def __getitem__(self, dfile):
@@ -55,7 +60,7 @@ class mergestate(object):
             yield f
     def mark(self, dfile, state):
         self._state[dfile][0] = state
-        self._write()
+        self._dirty = True
     def resolve(self, dfile, wctx, octx):
         if self[dfile] == 'r':
             return 0
@@ -352,6 +357,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
         elif m == "e": # exec
             flags = a[2]
             util.set_flags(repo.wjoin(f), 'l' in flags, 'x' in flags)
+    ms.commit()
     u.progress(_('updating'), None, total=numupdates, unit='files')
 
     return updated, merged, removed, unresolved
