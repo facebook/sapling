@@ -23,7 +23,6 @@ from mercurial import commands
 from mercurial import extensions
 from mercurial import help
 from mercurial import hg
-from mercurial import templatekw
 from mercurial import util as hgutil
 from mercurial import demandimport
 demandimport.ignore.extend([
@@ -33,6 +32,13 @@ demandimport.ignore.extend([
     'svn.delta',
     'svn.ra',
     ])
+
+try:
+    from mercurial import templatekw
+    # force demandimport to load templatekw
+    templatekw.keywords
+except ImportError:
+   templatekw = None
 
 import svncommands
 import util
@@ -152,11 +158,12 @@ def _show_tpl_kw(ctx, kw):
     return convinfo.get(kw, '')
 
 
-templatekw.keywords.update({
-    'svnrev': lambda repo, ctx, templ, **a: _show_tpl_kw(ctx, 'svnrev'),
-    'svnpath': lambda repo, ctx, templ, **a: _show_tpl_kw(ctx, 'svnpath'),
-    'svnuuid': lambda repo, ctx, templ, **a: _show_tpl_kw(ctx, 'svnuuid'),
-    })
+if templatekw:
+    templatekw.keywords.update({
+        'svnrev': lambda repo, ctx, templ, **a: _show_tpl_kw(ctx, 'svnrev'),
+        'svnpath': lambda repo, ctx, templ, **a: _show_tpl_kw(ctx, 'svnpath'),
+        'svnuuid': lambda repo, ctx, templ, **a: _show_tpl_kw(ctx, 'svnuuid'),
+        })
 
 
 def reposetup(ui, repo):
