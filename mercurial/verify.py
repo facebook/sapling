@@ -199,7 +199,7 @@ def _verify(repo):
     for f, f2, size in repo.store.datafiles():
         if not f:
             err(None, _("cannot decode filename '%s'") % f2)
-        elif size > 0:
+        elif size > 0 or not revlogv1:
             storefiles.add(f)
 
     files = sorted(set(filenodes) | set(filelinkrevs))

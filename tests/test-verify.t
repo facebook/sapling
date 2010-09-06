@@ -84,4 +84,18 @@ test revlog corruption
   1 integrity errors encountered!
   (first damaged changeset appears to be 0)
 
+  $ cd ..
+
+test revlog format 0
+
+  $ "$TESTDIR/revlog-formatv0.py"
+  $ cd formatv0
+  $ hg verify
+  repository uses revlog format 0
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 1 changesets, 1 total revisions
+
   $ exit 0
