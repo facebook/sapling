@@ -15037,3 +15037,231 @@ msgstr "(primeira revisão danificada parece ser %d)\n"
 
 msgid "user name not available - set USERNAME environment variable"
 msgstr "nome de usuário indisponível - defina a variável de ambiente USERNAME"
+
+msgid ""
+"By default, when several bookmarks point to the same changeset, they\n"
+"will all move forward together. It is possible to obtain a more\n"
+"git-like experience by adding the following configuration option to\n"
+"your configuration file::"
+msgstr ""
+"Por padrão, quando vários marcadores apontam para a mesma revisão,\n"
+"todos serão movidos para a frente juntos. É possível obter um\n"
+"funcionamento mais semelhante ao do sistema git com a adição das\n"
+"seguintes opções de configuração ao seu arquivo de configuração::"
+
+#, python-format
+msgid "skipping malformed alias: %s\n"
+msgstr "omitindo apelido mal formado: %s\n"
+
+msgid "Default effects may be overridden from your configuration file::"
+msgstr "Os efeitos padrão podem ser redefinidos pelo seu arquivo de configuração::"
+
+msgid "error while signing"
+msgstr "erro ao assinar"
+
+msgid ""
+"The :hg:`view` command will launch the hgk Tcl script. For this command\n"
+"to work, hgk must be in your search path. Alternately, you can specify\n"
+"the path to hgk in your configuration file::"
+msgstr ""
+"O comando :hg:`view` irá lançar o script Tcl hgk. Para esse comando\n"
+"funcionar, hgk deve estar em seu caminho de busca. Alternativamente,\n"
+"você pode especificar o caminho para o hgk em seu arquivo de\n"
+"configuração::"
+
+#, python-format
+msgid "error folding patch %s"
+msgstr "erro incorporando patch %s"
+
+msgid "there is no Mercurial repository here (.hg not found)"
+msgstr "não há um repositório do Mercurial aqui (.hg não encontrado)"
+
+msgid ""
+"To ignore global commands like :hg:`version` or :hg:`help`, you have\n"
+"to specify them in your user configuration file.\n"
+msgstr ""
+"Para ignorar comandos globais como :hg:`version`ou :hg:`help`,\n"
+"você precisa especificá-los no seu arquivo de configuração de\n"
+"usuário.\n"
+
+msgid "fix up the merge and run hg transplant --continue"
+msgstr "conserte a mesclagem e execute hg transplant --continue"
+
+msgid " (Current patch tool may be incompatible with patch, or misconfigured. Please check your configuration file)\n"
+msgstr " (O utilitário de patch atual pode ser incompatível com o patch, ou pode estar configurado incorretamente. Por favor verifique seu arquivo de configuração)\n"
+
+msgid " (specify a commit editor in your configuration file)\n"
+msgstr " (especifique um editor para consolidação em seu arquivo de configuração)\n"
+
+msgid " (specify a username in your configuration file)\n"
+msgstr " (especifique um nome de usuário em seu arquivo de configuração)\n"
+
+msgid ""
+"    Path names are defined in the [paths] section of your\n"
+"    configuration file and in ``/etc/mercurial/hgrc``. If run inside a\n"
+"    repository, ``.hg/hgrc`` is used, too."
+msgstr ""
+"    Nomes de caminho são definidos na seção [paths] de seu arquivo\n"
+"    de configuração e em ``/etc/mercurial/hgrc``. Se executado em um\n"
+"    repositório, ``.hg/hgrc`` também será usado."
+
+msgid "other repository doesn't support revision lookup, so a rev cannot be specified."
+msgstr "o outro repositório não suporta busca por revisão, portanto uma revisão não pode ser especificada."
+
+#, python-format
+msgid "not removing %s: file still exists (use -f to force removal)\n"
+msgstr "%s não removido: o arquivo ainda existe (use -f para forçar a remoção)\n"
+
+#, python-format
+msgid "not removing %s: file is modified (use -f to force removal)\n"
+msgstr "%s não removido: o arquivo foi modificado (use -f para forçar a remoção)\n"
+
+#, python-format
+msgid "not removing %s: file has been marked for add (use -f to force removal)\n"
+msgstr "%s não removido: o arquivo foi marcado para adição (use -f para forçar a remoção)\n"
+
+msgid ""
+"    Merges with unresolved conflicts are often the result of\n"
+"    non-interactive merging using the ``internal:merge`` configuration\n"
+"    setting, or a command-line merge tool like ``diff3``. The resolve\n"
+"    command is used to manage the files involved in a merge, after\n"
+"    :hg:`merge` has been run, and before :hg:`commit` is run (i.e. the\n"
+"    working directory must have two parents)."
+msgstr ""
+"    Mesclagens com conflitos não resolvidos podem resultar de mesclagens\n"
+"    rnão interativas usando a configuração ``internal:merge``,\n"
+"    ou um utilitário de mesclagem de linha de comando, como o ``diff3``.\n"
+"    O comando resolve é usado para gerenciar os arquivos envolvidos em uma\n"
+"    mesclagem após a execução de :hg:`merge` e antes da execução de\n"
+"    :hg:`commit` (ou seja, enquanto o diretório de trabalho tiver dois\n"
+"    pais)."
+
+#, python-format
+msgid "no such file in rev %s"
+msgstr "não há tal arquivo na revisão %s"
+
+#, python-format
+msgid "invalid character in dag description: %s..."
+msgstr "caractere inválido na descrição do dag: %s..."
+
+#, python-format
+msgid "expected id %i, got %i"
+msgstr "esperado id %i, obtido %i"
+
+#, python-format
+msgid "parent id %i is larger than current id %i"
+msgstr "id do pai %i é maior que o id atual %i"
+
+msgid "option --config may not be abbreviated!"
+msgstr "a opção --config não pode ser abreviada!"
+
+msgid "option --cwd may not be abbreviated!"
+msgstr "a opção --cwd não pode ser abreviada!"
+
+#, python-format
+msgid "inconsistent state, %s:%s is good and bad"
+msgstr "estado inconsistente, %s:%s é bom e ruim"
+
+msgid ""
+"To make Mercurial produce the git extended diff format, use the --git\n"
+"option available for many commands, or set 'git = True' in the [diff]\n"
+"section of your configuration file. You do not need to set this option\n"
+"when importing diffs in this format or using them in the mq extension.\n"
+msgstr ""
+"Para fazer com que o Mercurial produza o formato estendido git\n"
+"diff, use a opção --git disponível para vários comandos, ou\n"
+"defina 'git = True' na seção [diff] de seu arquivo de configuração.\n"
+"Você não precisa definir essa opção para importar diffs nesse formato,\n"
+"nem para usá-lo com a extensão mq.\n"
+
+msgid "    (deprecated, use configuration file)"
+msgstr "    (obsoleto, use o arquivo de configuração)"
+
+msgid ""
+"HGRCPATH\n"
+"    A list of files or directories to search for configuration\n"
+"    files. Item separator is \":\" on Unix, \";\" on Windows. If HGRCPATH\n"
+"    is not set, platform default search path is used. If empty, only\n"
+"    the .hg/hgrc from the current repository is read."
+msgstr ""
+"HGRCPATH\n"
+"    Uma lista de arquivos ou diretórios onde procurar por arquivos de\n"
+"    configuração. O separador de itens é \":\" em Unix, \";\" no\n"
+"    Windows. Se HGRCPATH não estiver definido, o caminho de busca padrão\n"
+"    da plataforma será usado. Se vazio, será lido apenas o .hg/hgrc no\n"
+"    repositório atual."
+
+msgid ""
+"HGPLAIN\n"
+"    When set, this disables any configuration settings that might\n"
+"    change Mercurial's default output. This includes encoding,\n"
+"    defaults, verbose mode, debug mode, quiet mode, tracebacks, and\n"
+"    localization. This can be useful when scripting against Mercurial\n"
+"    in the face of existing user configuration."
+msgstr ""
+"HGPLAIN\n"
+"    Se definido, desabilita qualquer opção de configuração que possa mudar\n"
+"    a saída padrão do Mercurial. Isto inclui codificação, seção defaults,\n"
+"    modo verboso, modo debug, modo silencioso, adições de tracebacks\n"
+"    e localização. Isto pode ser útil para a inclusão do Mercurial em\n"
+"    scipts para compensar mudanças de configuração feitas pelo usuário."
+
+msgid ""
+"    - HGUSER (deprecated)\n"
+"    - configuration files from the HGRCPATH\n"
+"    - EMAIL\n"
+"    - interactive prompt\n"
+"    - LOGNAME (with ``@hostname`` appended)"
+msgstr ""
+"    - HGUSER (obsoleto)\n"
+"    - arquivos de configuração no HGRCPATH\n"
+"    - EMAIL\n"
+"    - consulta interativa\n"
+"    - LOGNAME (com ``@hostname`` anexado)"
+
+msgid ""
+"To enable the \"foo\" extension, either shipped with Mercurial or in the\n"
+"Python search path, create an entry for it in your configuration file,\n"
+"like this::"
+msgstr ""
+"Para habilitar a extensão \"foo\", tanto se for distribuída com\n"
+"o Mercurial como estiver no caminho de busca do Python, crie uma\n"
+"entrada para ela em seu arquivo de configuração, da seguinte forma::"
+
+msgid ""
+"To explicitly disable an extension enabled in a configuration file of\n"
+"broader scope, prepend its path with !::"
+msgstr ""
+"Para desabilitar explicitamente uma extensão habilitada em um\n"
+"arquivo de configuração de escopo mais amplo, prefixe seu caminho com !::"
+
+msgid ""
+"  Alternatively specify \"ssh -C\" as your ssh command in your\n"
+"  configuration file or with the --ssh command line option."
+msgstr ""
+"  Alternativamente especifique \"ssh -C\" como seu comando ssh\n"
+"  em seu arquivo de configuração ou pela opção de linha de comando --ssh ."
+
+msgid ""
+"These URLs can all be stored in your configuration file with path\n"
+"aliases under the [paths] section like so::"
+msgstr ""
+"Estas URLs podem ser todas armazenadas em seu arquivo de configuração\n"
+"com apelidos de caminho na seção [paths] , da seguinte forma::"
+
+msgid "partial pull cannot be done because other repository doesn't support changegroupsubset."
+msgstr "pull parcial não pode ser feito porque o outro repositório não suporta 'changegroupsubset'."
+
+msgid "smtp.host not configured - cannot send mail"
+msgstr "servidor smtp não configurado - impossível enviar e-mail"
+
+#, python-format
+msgid "invalid pattern (%s): %s"
+msgstr "padrão inválido (%s): %s"
+
+msgid "invalid pattern"
+msgstr "padrão inválido"
+
+#, python-format
+msgid "unsupported line endings type: %s"
+msgstr "tipo de quebra de linha não suportado: %s"
