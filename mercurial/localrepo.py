@@ -132,10 +132,10 @@ class localrepository(repo.repository):
         # The old path auditor would have rejected by mistake since it
         # panics when it sees sub/.hg/.
         #
-        # All in all, checking against the working copy parent
-        # revision seems sensible since we want to prevent access to
-        # nested repositories on the filesystem *now*.
-        ctx = self['.']
+        # All in all, checking against the working copy seems sensible
+        # since we want to prevent access to nested repositories on
+        # the filesystem *now*.
+        ctx = self[None]
         parts = util.splitpath(subpath)
         while parts:
             prefix = os.sep.join(parts)
