@@ -110,6 +110,12 @@ or pulling converted changesets to or from any other source. To regenerate the
 stored metadata, run :hg:`svn rebuildmeta [URI]`. This must also be done if any
 converted changesets are ever removed from the repository.
 
+Under certain circumstances a long-running conversion can leak substantial
+amounts of memory, on the order of 100MB per 1000 revisions converted. The
+leaks appear to be persistent and unavoidable using the SWIG bindings. When
+using the new experimental Subvertpy bindings leaks have only been observed
+accessing FSFS repositories over the file protocol.
+
 It is not possible to interact with more than one Subversion repository per
 Mercurial clone. Please note that this also applies to more than one path within
 a repository.
