@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, glob, tempfile
 import util, templater, patch, error, encoding, templatekw
 import match as matchmod
-import similar, revset
+import similar, revset, subrepo
 
 revrangesep = ':'
 
@@ -683,14 +683,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
     if listsubrepos:
         ctx1 = repo[node1]
         ctx2 = repo[node2]
-        # Create a (subpath, ctx) mapping where we prefer subpaths
-        # from ctx1. The subpaths from ctx2 are important when the
-        # .hgsub file has been modified (in ctx2) but not yet
-        # committed (in ctx1).
-        subpaths = dict.fromkeys(ctx2.substate, ctx2)
-        subpaths.update(dict.fromkeys(ctx1.substate, ctx1))
-        for subpath, ctx in subpaths.iteritems():
-            sub = ctx.sub(subpath)
+        for subpath, sub in subrepo.itersubrepos(ctx1, ctx2):
             if node2 is not None:
                 node2 = bin(ctx2.substate[subpath][1])
             submatch = matchmod.narrowmatcher(subpath, match)

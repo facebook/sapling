@@ -184,6 +184,16 @@ def _abssource(repo, push=False):
         return repo.ui.config('paths', 'default-push', repo.root)
     return repo.ui.config('paths', 'default', repo.root)
 
+def itersubrepos(ctx1, ctx2):
+    """find subrepos in ctx1 or ctx2"""
+    # Create a (subpath, ctx) mapping where we prefer subpaths from
+    # ctx1. The subpaths from ctx2 are important when the .hgsub file
+    # has been modified (in ctx2) but not yet committed (in ctx1).
+    subpaths = dict.fromkeys(ctx2.substate, ctx2)
+    subpaths.update(dict.fromkeys(ctx1.substate, ctx1))
+    for subpath, ctx in sorted(subpaths.iteritems()):
+        yield subpath, ctx.sub(subpath)
+
 def subrepo(ctx, path):
     """return instance of the right subrepo class for subrepo in path"""
     # subrepo inherently violates our import layering rules
