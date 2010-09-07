@@ -1161,8 +1161,14 @@ class localrepository(repo.repository):
         r = modified, added, removed, deleted, unknown, ignored, clean
 
         if listsubrepos:
-            for subpath in ctx1.substate:
-                sub = ctx1.sub(subpath)
+            # Create a (subpath, ctx) mapping where we prefer subpaths
+            # from ctx1. The subpaths from ctx2 are important when the
+            # .hgsub file has been modified (in ctx2) but not yet
+            # committed (in ctx1).
+            subpaths = dict.fromkeys(ctx2.substate, ctx2)
+            subpaths.update(dict.fromkeys(ctx1.substate, ctx1))
+            for subpath, ctx in subpaths.iteritems():
+                sub = ctx.sub(subpath)
                 if working:
                     rev2 = None
                 else:

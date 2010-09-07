@@ -28,6 +28,36 @@ Create test repository:
   $ echo 'foo = foo' > .hgsub
   $ hg add .hgsub
 
+Test recursive status without committing anything:
+
+  $ hg status
+  A .hgsub
+  A foo/.hgsub
+  A foo/bar/z.txt
+  A foo/y.txt
+  A x.txt
+
+Test recursive diff without committing anything:
+
+  $ hg diff foo
+  diff -r 000000000000 foo/.hgsub
+  --- /dev/null
+  +++ b/foo/.hgsub
+  @@ -0,0 +1,1 @@
+  +bar = bar
+  diff -r 000000000000 foo/y.txt
+  --- /dev/null
+  +++ b/foo/y.txt
+  @@ -0,0 +1,1 @@
+  +y1
+  diff -r 000000000000 foo/bar/z.txt
+  --- /dev/null
+  +++ b/foo/bar/z.txt
+  @@ -0,0 +1,1 @@
+  +z1
+
+Commits:
+
   $ hg commit -m 0-0-0
   committing subrepository foo
   committing subrepository foo/bar
