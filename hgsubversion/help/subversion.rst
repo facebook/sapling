@@ -59,8 +59,8 @@ Please note that this only works for single-directory clones.
 Support for externals
 -----------------------------
 
-All ``svn:externals`` properties are serialized into a single
-``.hgsvnexternals`` file having the following syntax::
+When using a standard layout, ``svn:externals`` properties are serialized into
+a single ``.hgsvnexternals`` file having the following syntax::
 
   [.]
    common1 http://path/to/external/svn/repo1
@@ -122,6 +122,10 @@ a repository.
 
 Mercurial does not track directories, and as a result, any empty directories
 in Subversion cannot be represented in the resulting Mercurial repository.
+
+Externals support requires that the ``svn`` command line utility is available.
+In addition, externals support has been disabled for single directory clones,
+due to known bugs.
 
 Advanced Configuration
 ----------------------
