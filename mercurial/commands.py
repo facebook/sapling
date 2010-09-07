@@ -59,7 +59,8 @@ def add(ui, repo, *pats, **opts):
             if ui.verbose or not exact:
                 ui.status(_('adding %s\n') % m.rel(f))
     if not opts.get('dry_run'):
-        bad += [f for f in repo[None].add(names) if f in m.files()]
+        rejected = repo[None].add(names)
+        bad += [f for f in rejected if f in m.files()]
     return bad and 1 or 0
 
 def addremove(ui, repo, *pats, **opts):
