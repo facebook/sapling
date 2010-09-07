@@ -208,6 +208,26 @@ class MapTests(test_util.TestBase):
         '''test rebuildmeta on a branchmapped clone (stupid)'''
         self.test_branchmap_rebuildmeta(True)
 
+    def test_branchmap_verify(self, stupid=False):
+        '''test verify on a branchmapped clone'''
+        test_util.load_svndump_fixture(self.repo_path, 'branchmap.svndump')
+        branchmap = open(self.branchmap, 'w')
+        branchmap.write("badname = dit\n")
+        branchmap.write("feature = dah\n")
+        branchmap.close()
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
+                       self.wc_path, branchmap=self.branchmap)
+        repo = self.repo
+
+        for r in repo:
+            self.assertEquals(svncommands.verify(ui, repo, rev=r), 0)
+
+    def test_branchmap_verify_stupid(self):
+        '''test verify on a branchmapped clone (stupid)'''
+        self.test_branchmap_verify(True)
+
     def test_branchmap_no_replacement(self):
         '''
         test that empty mappings are rejected

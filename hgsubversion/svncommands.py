@@ -29,27 +29,27 @@ def verify(ui, repo, *args, **opts):
     if 'close' in ctx.extra():
         ui.write('cannot verify closed branch')
         return 0
-    srev = ctx.extra().get('convert_revision')
-    if srev is None:
+    convert_revision = ctx.extra().get('convert_revision')
+    if convert_revision is None or not convert_revision.startswith('svn:'):
         raise hgutil.Abort('revision %s not from SVN' % ctx)
 
-    srev = int(srev.split('@')[1])
-    ui.write('verifying %s against r%i\n' % (ctx, srev))
-
-    url = repo.ui.expandpath('default')
     if args:
-        url = args[0]
+        url = repo.ui.expandpath(args[0])
+    else:
+        url = repo.ui.expandpath('default')
+
     svn = svnrepo.svnremoterepo(ui, url).svn
     meta = repo.svnmeta(svn.uuid, svn.subdir)
+    srev, branch, branchpath = meta.get_source_rev(ctx=ctx)
 
-    btypes = {'default': 'trunk'}
-    if meta.layout == 'standard':
-        branchpath = btypes.get(ctx.branch(), 'branches/%s' % ctx.branch())
-    else:
-        branchpath = ''
+    branchpath = branchpath[len(svn.subdir.lstrip('/')):]
+
+    ui.write('verifying %s against r%i\n' % (ctx, srev))
+
     svnfiles = set()
     result = 0
-    for fn, type in svn.list_files(posixpath.normpath(branchpath), srev):
+
+    for fn, type in svn.list_files(branchpath, srev):
         if type != 'f':
             continue
         svnfiles.add(fn)
