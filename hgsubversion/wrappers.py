@@ -141,41 +141,52 @@ def push(repo, dest, force, revs):
         ui.status('no changes found\n')
         return 1 # so we get a sane exit status, see hg's commands.push
     while outgoing:
+
+        # 2. Commit oldest revision that needs to be pushed
         oldest = outgoing.pop(-1)
         old_ctx = repo[oldest]
-        if len(old_ctx.parents()) != 1:
+        old_pars = old_ctx.parents()
+        if len(old_pars) != 1:
             ui.status('Found a branch merge, this needs discussion and '
                       'implementation.\n')
             return 0 # results in nonzero exit status, see hg's commands.py
-        base_n = old_ctx.parents()[0].node()
-        old_children = repo[base_n].children()
-        svnbranch = repo[base_n].branch()
-        oldtip = base_n
-        samebranchchildren = [c for c in repo[oldtip].children() if c.branch() == svnbranch
+        # We will commit to svn against this node's parent rev. Any file-level
+        # conflicts here will result in an error reported by svn.
+        base_ctx = old_pars[0]
+        base_revision = hashes[base_ctx.node()][0]
+        svnbranch = base_ctx.branch()
+        # Find most recent svn commit we have on this branch.
+        # This node will become the nearest known ancestor of the pushed rev.
+        oldtipctx = base_ctx
+        old_children = oldtipctx.descendants()
+        seen = set(c.node() for c in old_children)
+        samebranchchildren = [c for c in old_children if c.branch() == svnbranch
                               and c.node() in hashes]
-        while samebranchchildren:
-            oldtip = samebranchchildren[0].node()
-            samebranchchildren = [c for c in repo[oldtip].children() if c.branch() == svnbranch
-                                  and c.node() in hashes]
-        # 2. Commit oldest revision that needs to be pushed
-        base_revision = hashes[base_n][0]
+        if samebranchchildren:
+            # The following relies on descendants being sorted by rev.
+            oldtipctx = samebranchchildren[-1]
+        # All set, so commit now.
         try:
             pushmod.commit(ui, repo, old_ctx, meta, base_revision, svn)
         except pushmod.NoFilesException:
             ui.warn("Could not push revision %s because it had no changes in svn.\n" %
                      old_ctx)
             return 1
+
         # 3. Fetch revisions from svn
         # TODO: this probably should pass in the source explicitly - rev too?
         r = repo.pull(dest, force=force)
         assert not r or r == 0
+
         # 4. Find the new head of the target branch
-        oldtipctx = repo[oldtip]
-        replacement = [c for c in oldtipctx.children() if c not in old_children
-                       and c.branch() == oldtipctx.branch()]
-        assert len(replacement) == 1, 'Replacement node came back as: %r' % replacement
-        replacement = replacement[0]
-        # 5. Rebase all children of the currently-pushing rev to the new branch
+        # We expect to get our own new commit back, but we might also get other
+        # commits that happened since our last pull, or even right after our own
+        # commit (race).
+        for c in oldtipctx.descendants():
+            if c.node() not in seen and c.branch() == svnbranch:
+                newtipctx = c
+
+        # 5. Rebase all children of the currently-pushing rev to the new head
         heads = repo.heads(old_ctx.node())
         for needs_transplant in heads:
             def extrafn(ctx, extra):
@@ -185,8 +196,12 @@ def push(repo, dest, force, revs):
             # TODO: can we avoid calling our own rebase wrapper here?
             rebase(hgrebase.rebase, ui, repo, svn=True, svnextrafn=extrafn,
                    svnsourcerev=needs_transplant)
+            # Reload the repo after the rebase. Do not reuse contexts across this.
+            newtip = newtipctx.node()
             repo = hg.repository(ui, meta.path)
-            for child in repo[replacement.node()].children():
+            newtipctx = repo[newtip]
+            # Rewrite the node ids in outgoing to their rebased versions.
+            for child in newtipctx.children():
                 rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
                 if rebasesrc in outgoing:
                     while rebasesrc in outgoing:

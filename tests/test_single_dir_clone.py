@@ -134,6 +134,37 @@ class TestSingleDir(test_util.TestBase):
         self.assertEqual(self.repo['tip']['bogus'].data(),
                          'contents of bogus')
 
+    def test_push_single_dir_one_incoming_and_two_outgoing(self):
+        # Tests simple pushing from default branch to a single dir repo
+        # Pushes two outgoing over one incoming svn rev
+        # (used to cause an "unknown revision")
+        # This can happen if someone committed to svn since our last pull (race).
+        repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
+                                            stupid=False,
+                                            layout='single',
+                                            subdir='trunk')
+        self._add_svn_rev({'trunk/alpha': 'Changed'})
+        def file_callback(repo, memctx, path):
+            return context.memfilectx(path=path,
+                                      data='data of %s' % path,
+                                      islink=False,
+                                      isexec=False,
+                                      copied=False)
+        for fn in ['one', 'two']:
+            ctx = context.memctx(repo,
+                                 (repo['tip'].node(), node.nullid),
+                                 'automated test',
+                                 [fn],
+                                 file_callback,
+                                 'an_author',
+                                 '2009-10-19 18:49:30 -0500',
+                                 {'branch': 'default',})
+            repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        self.pushrevisions(expected_extra_back=1)
+        self.assertTrue('trunk/one' in self.svnls(''))
+        self.assertTrue('trunk/two' in self.svnls(''))
+
     def test_push_single_dir_branch(self):
         # Tests local branches pushing to a single dir repo. Creates a fork at
         # tip. The default branch adds a file called default, while branch foo
