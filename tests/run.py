@@ -60,6 +60,9 @@ if __name__ == '__main__':
                       choices=["swig", "subvertpy"],
                       help="test using the specified bindings (swig or "
                       "subvertpy)")
+    parser.add_option("", "--show-stdout",
+                      dest="showstdout", action="store_true", default=False,
+                      help="show stdout (hidden by default)")
 
     (options, args) = parser.parse_args()
 
@@ -82,8 +85,9 @@ if __name__ == '__main__':
     test_util.TestBase
 
     # silence output when running outside nose
-    import tempfile
-    sys.stdout = tempfile.TemporaryFile()
+    if not options.showstdout:
+        import tempfile
+        sys.stdout = tempfile.TemporaryFile()
 
     all = tests()
 
