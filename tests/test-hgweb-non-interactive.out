@@ -4,10 +4,11 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     test
 
----- HEADERS
+---- STATUS
 200 Script output follows
----- DATA
+---- HEADERS
 [('Content-Type', 'text/html; charset=ascii')]
+---- DATA
 ---- ERRORS
 
 ---- OS.ENVIRON wsgi variables

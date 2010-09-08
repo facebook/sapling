@@ -4,10 +4,11 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     test
 
----- HEADERS
+---- STATUS
 200 Script output follows
----- DATA
+---- HEADERS
 [('Content-Type', 'application/atom+xml; charset=ascii')]
+---- DATA
 <?xml version="1.0" encoding="ascii"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
  <!-- Changelog -->
@@ -37,29 +38,32 @@ summary:     test
 </feed>
 ---- ERRORS
 
----- HEADERS
+---- STATUS
 200 Script output follows
----- DATA
+---- HEADERS
 [('Content-Type', 'text/plain; charset=ascii')]
+---- DATA
 
 -rw-r--r-- 4 bar
 
 
 ---- ERRORS
 
----- HEADERS
+---- STATUS
 200 Script output follows
----- DATA
+---- HEADERS
 [('Content-Type', 'text/plain; charset=ascii')]
+---- DATA
 
 /repo/
 
 ---- ERRORS
 
----- HEADERS
+---- STATUS
 200 Script output follows
----- DATA
+---- HEADERS
 [('Content-Type', 'text/plain; charset=ascii')]
+---- DATA
 
 -rw-r--r-- 4 bar
 

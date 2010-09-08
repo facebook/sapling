@@ -36,11 +36,12 @@ errors = StringIO()
 input = StringIO()
 output = StringIO()
 
-def startrsp(headers, data):
+def startrsp(status, headers):
+	print '---- STATUS'
+	print status
 	print '---- HEADERS'
 	print headers
 	print '---- DATA'
-	print data
 	return output.write
 
 env = {
