@@ -394,3 +394,35 @@ test unrelated revs:
   $ hg bisect -g 14
   abort: starting revisions are not directly related
   $ hg bisect --reset
+
+end at merge: 17 bad, 11 good (but 9 is first bad)
+
+  $ hg bisect -r
+  $ hg bisect -b 17
+  $ hg bisect -g 11
+  Testing changeset 13:b0a32c86eb31 (5 changesets remaining, ~2 tests)
+  3 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg bisect -g
+  Testing changeset 15:857b178a7cf3 (3 changesets remaining, ~1 tests)
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg bisect -b
+  The first bad revision is:
+  changeset:   15:857b178a7cf3
+  parent:      13:b0a32c86eb31
+  parent:      10:429fcd26f52d
+  user:        test
+  date:        Thu Jan 01 00:00:15 1970 +0000
+  summary:     merge 10,13
+  
+  Not all ancestors of this changeset have been checked.
+  To check the other ancestors, start from the common ancestor, dab8161ac8fc.
+  $ hg bisect -g 8 # dab8161ac8fc
+  Testing changeset 9:3c77083deb4a (3 changesets remaining, ~1 tests)
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg bisect -b
+  The first bad revision is:
+  changeset:   9:3c77083deb4a
+  user:        test
+  date:        Thu Jan 01 00:00:09 1970 +0000
+  summary:     9
+  

@@ -336,6 +336,15 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             else:
                 ui.write(_("The first bad revision is:\n"))
             displayer.show(repo[nodes[0]])
+            parents = repo[nodes[0]].parents()
+            if len(parents) > 1:
+                side = state['bad'] if good else state['good']
+                num = len(set(i.node() for i in parents) & set(side))
+                if num == 1:
+                    common = parents[0].ancestor(parents[1])
+                    ui.write(_('Not all ancestors of this changeset have been'
+                               ' checked.\nTo check the other ancestors, start'
+                               ' from the common ancestor, %s.\n' % common))
         else:
             # multiple possible revisions
             if good:
