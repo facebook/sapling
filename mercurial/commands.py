@@ -338,7 +338,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             displayer.show(repo[nodes[0]])
             parents = repo[nodes[0]].parents()
             if len(parents) > 1:
-                side = state['bad'] if good else state['good']
+                side = good and state['bad'] or state['good']
                 num = len(set(i.node() for i in parents) & set(side))
                 if num == 1:
                     common = parents[0].ancestor(parents[1])
