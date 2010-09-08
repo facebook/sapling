@@ -43,7 +43,7 @@ cat hg.pid >> $DAEMON_PIDS
 python -c "print len(file('access.log').readlines()), 'log lines written'"
 
 echo % static file
-"$TESTDIR/get-with-headers.py" localhost:$HGPORT '/static/style-gitweb.css'
+"$TESTDIR/get-with-headers.py" --twice localhost:$HGPORT '/static/style-gitweb.css'
 
 echo % errors
 cat errors.log
