@@ -23,7 +23,7 @@ def startrsp(status, headers):
 	print '---- STATUS'
 	print status
 	print '---- HEADERS'
-	print headers
+	print [i for i in headers if i[0] != 'ETag']
 	print '---- DATA'
 	return output.write
 

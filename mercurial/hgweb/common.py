@@ -9,6 +9,7 @@
 import errno, mimetypes, os
 
 HTTP_OK = 200
+HTTP_NOT_MODIFIED = 304
 HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
@@ -152,3 +153,9 @@ def get_contact(config):
     return (config("web", "contact") or
             config("ui", "username") or
             os.environ.get("EMAIL") or "")
+
+def caching(web, req):
+    tag = str(web.mtime)
+    if req.env.get('HTTP_IF_NONE_MATCH') == tag:
+        raise ErrorResponse(HTTP_NOT_MODIFIED)
+    req.headers.append(('ETag', tag))
