@@ -471,12 +471,13 @@ class PushTests(test_util.TestBase):
         self.test_push_two_revs()
         changes = [('adding_file', 'adding_file', 'different_content', ),
                    ]
-        self.commitchanges(changes, parent='tip')
+        par = self.repo['tip'].rev()
+        self.commitchanges(changes, parent=par)
         self.pushrevisions()
         changes = [('adding_file', 'adding_file',
                     'even_more different_content', ),
                    ]
-        self.commitchanges(changes, parent=3)
+        self.commitchanges(changes, parent=par)
         try:
             self.pushrevisions()
             assert False, 'This should have aborted!'
