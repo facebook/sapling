@@ -57,13 +57,13 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 
 def prompt(ui, prompt, default=None, rest=':'):
-    if not ui.interactive():
-        return default
     if default:
         prompt += ' [%s]' % default
     prompt += rest
     while True:
         result = ui.prompt(prompt, default=default)
+        if not ui.interactive():
+            return result
         if result is not None:
             return result
         elif default is not None:

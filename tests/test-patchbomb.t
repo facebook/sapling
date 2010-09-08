@@ -1474,6 +1474,7 @@ no intro message in non-interactive mode
   >  -r 0:1 | fixheaders
   This patch series consists of 2 patches.
   
+  Subject: [PATCH 0 of 2] 
   
   Displaying [PATCH 1 of 2] a ...
   Content-Type: text/plain; charset="us-ascii"
@@ -1883,6 +1884,7 @@ test multi-byte domain parsing:
   $ hg email --date '1980-1-1 0:1' -m tmp.mbox -f quux -t "bar@${UUML}nicode.com" -s test -r 0
   This patch series consists of 1 patches.
   
+  Cc: 
   
   Writing [PATCH] test ...
 
@@ -1927,11 +1929,13 @@ test outgoing:
   $ hg email --date '1980-1-1 0:1' -n -t foo -s test -o ../t
   comparing with ../t
   searching for changes
+  From [test]: test
   This patch series consists of 8 patches.
   
   
   Write the introductory message for the patch series.
   
+  Cc: 
   
   Displaying [PATCH 0 of 8] test ...
   Content-Type: text/plain; charset="us-ascii"
@@ -2199,8 +2203,10 @@ dest#branch URIs:
   $ hg email --date '1980-1-1 0:1' -n -t foo -s test -o ../t#test
   comparing with ../t
   searching for changes
+  From [test]: test
   This patch series consists of 1 patches.
   
+  Cc: 
   
   Displaying [PATCH] test ...
   Content-Type: text/plain; charset="us-ascii"
