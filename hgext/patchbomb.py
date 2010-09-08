@@ -101,8 +101,8 @@ def cdiffstat(ui, summary, patchlines):
     if summary:
         ui.write(summary, '\n')
         ui.write(s, '\n')
-    ans = prompt(ui, _('does the diffstat above look okay?'), 'y')
-    if not ans.lower().startswith('y'):
+    if ui.promptchoice(_('does the diffstat above look okay (yn)?'),
+                       (_('&Yes'), _('&No'))):
         raise util.Abort(_('diffstat rejected'))
     return s
 

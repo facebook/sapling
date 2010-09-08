@@ -337,6 +337,7 @@ test diffstat for single patch:
    c |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
+  does the diffstat above look okay (yn)? y
   
   Displaying [PATCH] test ...
   Content-Type: text/plain; charset="us-ascii"
@@ -379,17 +380,20 @@ test diffstat for multiple patches:
    a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
+  does the diffstat above look okay (yn)? y
   b
   
    b |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
+  does the diffstat above look okay (yn)? y
   Final summary:
   
    a |  1 +
    b |  1 +
    2 files changed, 2 insertions(+), 0 deletions(-)
   
+  does the diffstat above look okay (yn)? y
   
   Write the introductory message for the patch series.
   
