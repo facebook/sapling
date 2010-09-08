@@ -81,9 +81,7 @@ from mercurial.i18n import _
 from mercurial.node import bin
 
 def prompt(ui, prompt, default=None, rest=':'):
-    if not ui.interactive():
-        if default is not None:
-            return default
+    if not ui.interactive() and default is None:
         raise util.Abort(_("%s Please enter a valid value" % (prompt + rest)))
     if default:
         prompt += ' [%s]' % default
