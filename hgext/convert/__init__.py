@@ -73,8 +73,11 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     The [username mapping] file is a simple text file that maps each
     source commit author to a destination commit author. It is handy
     for source SCMs that use unix logins to identify authors (eg:
-    CVS). One line per author mapping and the line format is:
-    srcauthor=whatever string you want
+    CVS). One line per author mapping and the line format is::
+
+      source author = destination author
+
+    Empty lines and lines starting with a ``#`` are ignored.
 
     The filemap is a file that allows filtering and remapping of files
     and directories. Each line can contain one of the following
@@ -104,7 +107,11 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     useful if you want to e.g. give a Subversion merge two parents, or
     graft two disconnected series of history together. Each entry
     contains a key, followed by a space, followed by one or two
-    comma-separated values. The key is the revision ID in the source
+    comma-separated values::
+
+      key parent1, parent2
+
+    The key is the revision ID in the source
     revision control system whose parents should be modified (same
     format as a key in .hg/shamap). The values are the revision IDs
     (in either the source or destination revision control system) that
@@ -118,11 +125,15 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     conjunction with a splicemap, it allows for a powerful combination
     to help fix even the most badly mismanaged repositories and turn them
     into nicely structured Mercurial repositories. The branchmap contains
-    lines of the form "original_branch_name new_branch_name".
-    "original_branch_name" is the name of the branch in the source
-    repository, and "new_branch_name" is the name of the branch is the
-    destination repository. This can be used to (for instance) move code
-    in one repository from "default" to a named branch.
+    lines of the form::
+
+      original_branch_name new_branch_name
+
+    where "original_branch_name" is the name of the branch in the
+    source repository, and "new_branch_name" is the name of the branch
+    is the destination repository. No whitespace is allowed in the
+    branch names. This can be used to (for instance) move code in one
+    repository from "default" to a named branch.
 
     Mercurial Source
     ----------------
