@@ -67,10 +67,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
       <source ID> <destination ID>
 
     If the file doesn't exist, it's automatically created. It's
-    updated on each commit copied, so convert-repo can be interrupted
+    updated on each commit copied, so :hg:`convert` can be interrupted
     and can be run repeatedly to copy new commits.
 
-    The [username mapping] file is a simple text file that maps each
+    The username mapping file is a simple text file that maps each
     source commit author to a destination commit author. It is handy
     for source SCMs that use unix logins to identify authors (eg:
     CVS). One line per author mapping and the line format is::
