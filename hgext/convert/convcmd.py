@@ -112,8 +112,8 @@ class converter(object):
         if authorfile and os.path.exists(authorfile):
             self.readauthormap(authorfile)
         # Extend/Override with new author map if necessary
-        if opts.get('authors'):
-            self.readauthormap(opts.get('authors'))
+        if opts.get('authormap'):
+            self.readauthormap(opts.get('authormap'))
             self.authorfile = self.dest.authorfile()
 
         self.splicemap = mapfile(ui, opts.get('splicemap'))
@@ -391,6 +391,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     global orig_encoding
     orig_encoding = encoding.encoding
     encoding.encoding = 'UTF-8'
+
+    # support --authors as an alias for --authormap
+    if not opts.get('authormap'):
+        opts['authormap'] = opts.get('authors')
 
     if not dest:
         dest = hg.defaultdest(src) + "-hg"

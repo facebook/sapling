@@ -70,10 +70,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     updated on each commit copied, so :hg:`convert` can be interrupted
     and can be run repeatedly to copy new commits.
 
-    The username mapping file is a simple text file that maps each
-    source commit author to a destination commit author. It is handy
-    for source SCMs that use unix logins to identify authors (eg:
-    CVS). One line per author mapping and the line format is::
+    The authormap is a simple text file that maps each source commit
+    author to a destination commit author. It is handy for source SCMs
+    that use unix logins to identify authors (eg: CVS). One line per
+    author mapping and the line format is::
 
       source author = destination author
 
@@ -275,13 +275,16 @@ cmdtable = {
     "convert":
         (convert,
          [('A', 'authors', '',
-           _('username mapping filename'), _('FILE')),
+           _('username mapping filename (DEPRECATED, use --authormap instead)'),
+           _('FILE')),
           ('s', 'source-type', '',
            _('source repository type'), _('TYPE')),
           ('d', 'dest-type', '',
            _('destination repository type'), _('TYPE')),
           ('r', 'rev', '',
            _('import up to target revision REV'), _('REV')),
+          ('', 'authormap', '',
+           _('remap usernames using this file'), _('FILE')),
           ('', 'filemap', '',
            _('remap file names using contents of file'), _('FILE')),
           ('', 'splicemap', '',
