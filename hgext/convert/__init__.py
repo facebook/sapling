@@ -40,7 +40,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     (given in a format understood by the source).
 
     If no destination directory name is specified, it defaults to the
-    basename of the source with '-hg' appended. If the destination
+    basename of the source with ``-hg`` appended. If the destination
     repository doesn't exist, it will be created.
 
     By default, all sources except Mercurial will use --branchsort.
@@ -89,18 +89,18 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
       rename path/to/source path/to/destination
 
-    Comment lines start with '#'. A specificed path matches if it
+    Comment lines start with ``#``. A specificed path matches if it
     equals the full relative name of a file or one of its parent
-    directories. The 'include' or 'exclude' directive with the longest
-    matching path applies, so line order does not matter.
+    directories. The ``include`` or ``exclude`` directive with the
+    longest matching path applies, so line order does not matter.
 
-    The 'include' directive causes a file, or all files under a
+    The ``include`` directive causes a file, or all files under a
     directory, to be included in the destination repository, and the
     exclusion of all other files and directories not explicitly
-    included. The 'exclude' directive causes files or directories to
-    be omitted. The 'rename' directive renames a file or directory if
+    included. The ``exclude`` directive causes files or directories to
+    be omitted. The ``rename`` directive renames a file or directory if
     is converted. To rename from a subdirectory into the root of the
-    repository, use '.' as the path to rename to.
+    repository, use ``.`` as the path to rename to.
 
     The splicemap is a file that allows insertion of synthetic
     history, letting you specify the parents of a revision. This is
