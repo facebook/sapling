@@ -40,7 +40,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     (given in a format understood by the source).
 
     If no destination directory name is specified, it defaults to the
-    basename of the source with '-hg' appended. If the destination
+    basename of the source with ``-hg`` appended. If the destination
     repository doesn't exist, it will be created.
 
     By default, all sources except Mercurial will use --branchsort.
@@ -67,14 +67,17 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
       <source ID> <destination ID>
 
     If the file doesn't exist, it's automatically created. It's
-    updated on each commit copied, so convert-repo can be interrupted
+    updated on each commit copied, so :hg:`convert` can be interrupted
     and can be run repeatedly to copy new commits.
 
-    The [username mapping] file is a simple text file that maps each
+    The username mapping file is a simple text file that maps each
     source commit author to a destination commit author. It is handy
     for source SCMs that use unix logins to identify authors (eg:
-    CVS). One line per author mapping and the line format is:
-    srcauthor=whatever string you want
+    CVS). One line per author mapping and the line format is::
+
+      source author = destination author
+
+    Empty lines and lines starting with a ``#`` are ignored.
 
     The filemap is a file that allows filtering and remapping of files
     and directories. Each line can contain one of the following
@@ -86,25 +89,29 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
       rename path/to/source path/to/destination
 
-    Comment lines start with '#'. A specified path matches if it
+    Comment lines start with ``#``. A specified path matches if it
     equals the full relative name of a file or one of its parent
-    directories. The 'include' or 'exclude' directive with the longest
-    matching path applies, so line order does not matter.
+    directories. The ``include`` or ``exclude`` directive with the
+    longest matching path applies, so line order does not matter.
 
-    The 'include' directive causes a file, or all files under a
+    The ``include`` directive causes a file, or all files under a
     directory, to be included in the destination repository, and the
     exclusion of all other files and directories not explicitly
-    included. The 'exclude' directive causes files or directories to
-    be omitted. The 'rename' directive renames a file or directory if
+    included. The ``exclude`` directive causes files or directories to
+    be omitted. The ``rename`` directive renames a file or directory if
     it is converted. To rename from a subdirectory into the root of
-    the repository, use '.' as the path to rename to.
+    the repository, use ``.`` as the path to rename to.
 
     The splicemap is a file that allows insertion of synthetic
     history, letting you specify the parents of a revision. This is
     useful if you want to e.g. give a Subversion merge two parents, or
     graft two disconnected series of history together. Each entry
     contains a key, followed by a space, followed by one or two
-    comma-separated values. The key is the revision ID in the source
+    comma-separated values::
+
+      key parent1, parent2
+
+    The key is the revision ID in the source
     revision control system whose parents should be modified (same
     format as a key in .hg/shamap). The values are the revision IDs
     (in either the source or destination revision control system) that
@@ -118,11 +125,15 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     conjunction with a splicemap, it allows for a powerful combination
     to help fix even the most badly mismanaged repositories and turn them
     into nicely structured Mercurial repositories. The branchmap contains
-    lines of the form "original_branch_name new_branch_name".
-    "original_branch_name" is the name of the branch in the source
-    repository, and "new_branch_name" is the name of the branch is the
-    destination repository. This can be used to (for instance) move code
-    in one repository from "default" to a named branch.
+    lines of the form::
+
+      original_branch_name new_branch_name
+
+    where "original_branch_name" is the name of the branch in the
+    source repository, and "new_branch_name" is the name of the branch
+    is the destination repository. No whitespace is allowed in the
+    branch names. This can be used to (for instance) move code in one
+    repository from "default" to a named branch.
 
     Mercurial Source
     ----------------
