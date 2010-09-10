@@ -108,13 +108,14 @@ def introneeded(opts, number):
     '''is an introductory message required?'''
     return number > 1 or opts.get('intro') or opts.get('desc')
 
-def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
+def makepatch(ui, repo, patchlines, opts, _charsets, idx, total,
+              patchname=None):
 
     desc = []
     node = None
     body = ''
 
-    for line in patch:
+    for line in patchlines:
         if line.startswith('#'):
             if line.startswith('# Node ID'):
                 node = line.split()[-1]
@@ -132,21 +133,21 @@ def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
         body += '\n\n\n'
 
     if opts.get('plain'):
-        while patch and patch[0].startswith('# '):
-            patch.pop(0)
-        if patch:
-            patch.pop(0)
-        while patch and not patch[0].strip():
-            patch.pop(0)
+        while patchlines and patchlines[0].startswith('# '):
+            patchlines.pop(0)
+        if patchlines:
+            patchlines.pop(0)
+        while patchlines and not patchlines[0].strip():
+            patchlines.pop(0)
 
     if opts.get('diffstat'):
-        body += cdiffstat(ui, '\n'.join(desc), patch) + '\n\n'
+        body += cdiffstat(ui, '\n'.join(desc), patchlines) + '\n\n'
 
     if opts.get('attach') or opts.get('inline'):
         msg = email.MIMEMultipart.MIMEMultipart()
         if body:
             msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
-        p = mail.mimetextpatch('\n'.join(patch), 'x-patch', opts.get('test'))
+        p = mail.mimetextpatch('\n'.join(patchlines), 'x-patch', opts.get('test'))
         binnode = bin(node)
         # if node is mq patch, it will have the patch file's name as a tag
         if not patchname:
@@ -165,7 +166,7 @@ def makepatch(ui, repo, patch, opts, _charsets, idx, total, patchname=None):
         p['Content-Disposition'] = disposition + '; filename=' + patchname
         msg.attach(p)
     else:
-        body += '\n'.join(patch)
+        body += '\n'.join(patchlines)
         msg = mail.mimetextpatch(body, display=opts.get('test'))
 
     flag = ' '.join(opts.get('flag'))
