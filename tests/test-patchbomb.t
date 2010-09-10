@@ -46,6 +46,23 @@
   +a
   
 
+  $ hg --config ui.interactive=1 email --confirm -n -f quux -t foo -c bar -r tip<<EOF
+  > n
+  > EOF
+  This patch series consists of 1 patches.
+  
+  
+  Final summary:
+  
+  From: quux
+  To: foo
+  Cc: bar
+  Subject: [PATCH] a
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  are you sure you want to send (yn)? abort: patchbomb canceled
+
   $ echo b > b
   $ hg commit -Amb -d '2 0'
   adding b

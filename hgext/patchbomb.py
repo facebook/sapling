@@ -22,9 +22,9 @@ Each message refers to the first in the series using the In-Reply-To
 and References headers, so they will show up as a sequence in threaded
 mail and news readers, and in mail archives.
 
-With the -d/--diffstat option, you will be presented with a final
-summary of all messages and asked for confirmation before the messages
-are sent.
+With the -d/--diffstat or -c/--confirm options, you will be presented
+with a final summary of all messages and asked for confirmation before
+the messages are sent.
 
 To configure other defaults, add a section like this to your hgrc
 file::
@@ -412,7 +412,7 @@ def patchbomb(ui, repo, *revs, **opts):
     bcc = getaddrs('bcc')
     replyto = getaddrs('reply-to')
 
-    if opts.get('diffstat'):
+    if opts.get('diffstat') or opts.get('confirm'):
         ui.write(_('\nFinal summary:\n\n'))
         ui.write('From: %s\n' % sender)
         for addr in showaddrs:
@@ -509,6 +509,7 @@ emailopts = [
           ('i', 'inline', None, _('send patches as inline attachments')),
           ('', 'bcc', [], _('email addresses of blind carbon copy recipients')),
           ('c', 'cc', [], _('email addresses of copy recipients')),
+          ('', 'confirm', None, _('ask for confirmation before sending')),
           ('d', 'diffstat', None, _('add diffstat output to messages')),
           ('', 'date', '', _('use the given date as the sending date')),
           ('', 'desc', '', _('use the given file as the series description')),
