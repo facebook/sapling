@@ -35,6 +35,9 @@ Keywords are only expanded in local repositories and not stored in the
 change history. The mechanism can be regarded as a convenience for the
 current user or for archive distribution.
 
+Keywords expand to the changeset data pertaining to the latest change
+relative to the working directory parent of each file.
+
 Configuration is done in the [keyword], [keywordset] and [keywordmaps]
 sections of hgrc files.
 
