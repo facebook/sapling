@@ -332,12 +332,17 @@ test diffstat for single patch:
   >  fixheaders
   This patch series consists of 1 patches.
   
-  c
   
+  Final summary:
+  
+  From: quux
+  To: foo
+  Cc: bar
+  Subject: [PATCH] test
    c |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  does the diffstat above look okay (yn)? y
+  are you sure you want to send (yn)? y
   
   Displaying [PATCH] test ...
   Content-Type: text/plain; charset="us-ascii"
@@ -375,28 +380,27 @@ test diffstat for multiple patches:
   >  -r 0:1 | fixheaders
   This patch series consists of 2 patches.
   
-  a
-  
-   a |  1 +
-   1 files changed, 1 insertions(+), 0 deletions(-)
-  
-  does the diffstat above look okay (yn)? y
-  b
-  
-   b |  1 +
-   1 files changed, 1 insertions(+), 0 deletions(-)
-  
-  does the diffstat above look okay (yn)? y
-  Final summary:
-  
-   a |  1 +
-   b |  1 +
-   2 files changed, 2 insertions(+), 0 deletions(-)
-  
-  does the diffstat above look okay (yn)? y
   
   Write the introductory message for the patch series.
   
+  
+  Final summary:
+  
+  From: quux
+  To: foo
+  Cc: bar
+  Subject: [PATCH 0 of 2] test
+   a |  1 +
+   b |  1 +
+   2 files changed, 2 insertions(+), 0 deletions(-)
+  Subject: [PATCH 1 of 2] a
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  Subject: [PATCH 2 of 2] b
+   b |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  are you sure you want to send (yn)? y
   
   Displaying [PATCH 0 of 2] test ...
   Content-Type: text/plain; charset="us-ascii"
