@@ -2120,7 +2120,7 @@ def fold(ui, repo, *files, **opts):
     for f in files:
         p = q.lookup(f)
         if p in patches or p == parent:
-            ui.warn(_('Skipping already folded patch %s') % p)
+            ui.warn(_('Skipping already folded patch %s\n') % p)
         if q.isapplied(p):
             raise util.Abort(_('qfold cannot fold already applied patch %s') % p)
         patches.append(p)
