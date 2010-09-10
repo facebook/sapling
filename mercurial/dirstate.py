@@ -497,16 +497,25 @@ class dirstate(object):
         elif match.files() and not match.anypats(): # match.match, no patterns
             skipstep3 = True
 
-        files = set(match.files())
-        for s in subrepos:
-            files = [f for f in files if not f.startswith(s + "/")]
+        files = sorted(match.files())
+        subrepos.sort()
+        i, j = 0, 0
+        while i < len(files) and j < len(subrepos):
+            subpath = subrepos[j] + "/"
+            if not files[i].startswith(subpath):
+                i += 1
+                continue
+            while files and files[i].startswith(subpath):
+                del files[i]
+            j += 1
+
         if not files or '.' in files:
             files = ['']
         results = dict.fromkeys(subrepos)
         results['.hg'] = None
 
         # step 1: find all explicit files
-        for ff in sorted(files):
+        for ff in files:
             nf = normalize(normpath(ff), False)
             if nf in results:
                 continue
