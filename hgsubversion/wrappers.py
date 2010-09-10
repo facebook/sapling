@@ -201,17 +201,12 @@ def push(repo, dest, force, revs):
             repo = hg.repository(ui, meta.path)
             newtipctx = repo[newtip]
             # Rewrite the node ids in outgoing to their rebased versions.
-            for child in newtipctx.children():
-                rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
-                if rebasesrc in outgoing:
-                    while rebasesrc in outgoing:
-                        rebsrcindex = outgoing.index(rebasesrc)
-                        outgoing = (outgoing[0:rebsrcindex] +
-                                    [child.node(), ] + outgoing[rebsrcindex+1:])
-                        children = [c for c in child.children() if c.branch() == child.branch()]
-                        if children:
-                            child = children[0]
-                        rebasesrc = node.bin(child.extra().get('rebase_source', node.hex(node.nullid)))
+            rebasemap = dict()
+            for child in newtipctx.descendants():
+                rebasesrc = child.extra().get('rebase_source')
+                if rebasesrc:
+                    rebasemap[node.bin(rebasesrc)] = child.node()
+            outgoing = [rebasemap.get(n) or n for n in outgoing]
         # TODO: stop constantly creating the SVNMeta instances.
         meta = repo.svnmeta(svn.uuid)
         hashes = meta.revmap.hashes()
