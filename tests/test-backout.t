@@ -39,7 +39,7 @@ file that was removed is recreated
   $ hg rm a
   $ hg commit -d '1 0' -m b
 
-  $ hg backout -d '2 0' --merge tip
+  $ hg backout -d '2 0' tip
   adding a
   changeset 2:de31bdc76c0d backs out changeset 1:76862dcce372
   $ cat a
@@ -131,12 +131,26 @@ backout should not back out subsequent changesets
   $ echo 1 > b
   $ hg commit -d '2 0' -A -m c
   adding b
+
+without --merge
   $ hg backout -d '3 0' 1
+  reverting a
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg locate b
+  b
+  $ hg update -C tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg locate b
+  b
+
+with --merge
+  $ hg backout --merge -d '3 0' 1
   reverting a
   created new head
   changeset 3:3202beb76721 backs out changeset 1:22bca4c721e5
-  the backout changeset is a new head - do not forget to merge
-  (use "backout --merge" if you want to auto-merge)
+  merging with changeset 3:3202beb76721
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
   $ hg locate b
   b
   $ hg update -C tip
@@ -220,14 +234,28 @@ named branches
   $ echo branch2 > file2
   $ hg ci -d '2 0' -Am file2
   adding file2
-  $ hg backout -d '3 0' -r 1 -m 'backout on branch1'
+
+without --merge
+  $ hg backout -r 1
+  removing file1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch
+  branch2
+  $ hg status -A
+  R file1
+  C default
+  C file2
+
+with --merge
+  $ hg update -qC
+  $ hg backout --merge -d '3 0' -r 1 -m 'backout on branch1'
   removing file1
   created new head
   changeset 3:d4e8f6db59fb backs out changeset 1:bf1602f437f3
-  the backout changeset is a new head - do not forget to merge
-  (use "backout --merge" if you want to auto-merge)
-
-XXX maybe backout shouldn't suggest a merge here as it is a different branch?
+  merging with changeset 3:d4e8f6db59fb
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg update -q -C 2
 
 on branch2 with branch1 not merged, so file1 should still exist:
 

@@ -204,17 +204,26 @@ def archive(ui, repo, dest, **opts):
 def backout(ui, repo, node=None, rev=None, **opts):
     '''reverse effect of earlier changeset
 
-    Commit the backed out changes as a new changeset. The new
-    changeset is a child of the backed out changeset.
+    The backout command merges the reverse effect of the reverted
+    changeset into the working directory.
 
-    If you backout a changeset other than the tip, a new head is
-    created. This head will be the new tip and you should merge this
-    backout changeset with another head.
-
+    With the --merge option, it first commits the reverted changes
+    as a new changeset. This new changeset is a child of the reverted
+    changeset.
     The --merge option remembers the parent of the working directory
     before starting the backout, then merges the new head with that
-    changeset afterwards. This saves you from doing the merge by hand.
-    The result of this merge is not committed, as with a normal merge.
+    changeset afterwards.
+    This will result in an explicit merge in the history.
+
+    If you backout a changeset other than the original parent of the
+    working directory, the result of this merge is not committed,
+    as with a normal merge. Otherwise, no merge is needed and the
+    commit is automatic.
+
+    Note that the default behavior (without --merge) has changed in
+    version 1.7. To restore the previous default behavior, use
+    :hg:`backout --merge` and then :hg:`update --clean .` to get rid of
+    the ongoing merge.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
@@ -268,6 +277,9 @@ def backout(ui, repo, node=None, rev=None, **opts):
     revert_opts['rev'] = hex(parent)
     revert_opts['no_backup'] = None
     revert(ui, repo, **revert_opts)
+    if not opts.get('merge') and op1 != node:
+        return hg.update(repo, op1)
+
     commit_opts = opts.copy()
     commit_opts['addremove'] = False
     if not commit_opts['message'] and not commit_opts['logfile']:
@@ -279,17 +291,12 @@ def backout(ui, repo, node=None, rev=None, **opts):
         return '%d:%s' % (repo.changelog.rev(node), short(node))
     ui.status(_('changeset %s backs out changeset %s\n') %
               (nice(repo.changelog.tip()), nice(node)))
-    if op1 != node:
+    if opts.get('merge') and op1 != node:
         hg.clean(repo, op1, show_stats=False)
-        if opts.get('merge'):
-            ui.status(_('merging with changeset %s\n')
-                      % nice(repo.changelog.tip()))
-            hg.merge(repo, hex(repo.changelog.tip()))
-        else:
-            ui.status(_('the backout changeset is a new head - '
-                        'do not forget to merge\n'))
-            ui.status(_('(use "backout --merge" '
-                        'if you want to auto-merge)\n'))
+        ui.status(_('merging with changeset %s\n')
+                  % nice(repo.changelog.tip()))
+        return hg.merge(repo, hex(repo.changelog.tip()))
+    return 0
 
 def bisect(ui, repo, rev=None, extra=None, command=None,
                reset=None, good=None, bad=None, skip=None, noupdate=None):
