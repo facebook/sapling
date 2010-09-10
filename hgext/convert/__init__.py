@@ -274,7 +274,7 @@ commands.norepo += " convert debugsvnlog debugcvsps"
 cmdtable = {
     "convert":
         (convert,
-         [('A', 'authors', '',
+         [('', 'authors', '',
            _('username mapping filename (DEPRECATED, use --authormap instead)'),
            _('FILE')),
           ('s', 'source-type', '',
@@ -283,7 +283,7 @@ cmdtable = {
            _('destination repository type'), _('TYPE')),
           ('r', 'rev', '',
            _('import up to target revision REV'), _('REV')),
-          ('', 'authormap', '',
+          ('A', 'authormap', '',
            _('remap usernames using this file'), _('FILE')),
           ('', 'filemap', '',
            _('remap file names using contents of file'), _('FILE')),
