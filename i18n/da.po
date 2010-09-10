@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-08-15 17:28+0200\n"
-"PO-Revision-Date: 2010-08-15 18:57+0200\n"
+"PO-Revision-Date: 2010-08-26 08:58+0200\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "Language: \n"
@@ -4122,7 +4122,7 @@ msgid "cannot commit over an applied mq patch"
 msgstr "kan ikke deponere henover en anvendt mq rettelse"
 
 msgid "source has mq patches applied"
-msgstr "målet har mq rettelser anvendt"
+msgstr "kilden har mq rettelser anvendt"
 
 #, python-format
 msgid "mq status file refers to unknown node %s\n"

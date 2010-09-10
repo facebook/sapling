@@ -19623,7 +19623,7 @@ msgstr ""
 "Datenübergabe unterbrochen\n"
 
 msgid "abort: out of memory\n"
-msgstr "Abbruch: Unzureichender Speicherplatz\n"
+msgstr "Abbruch: Unzureichender Arbeitsspeicher\n"
 
 msgid "** unknown exception encountered, details follow\n"
 msgstr "** Unbekannter Fehler, Details folgen\n"

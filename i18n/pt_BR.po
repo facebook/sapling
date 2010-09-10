@@ -515,6 +515,10 @@ msgstr "exportando marcador %s\n"
 msgid "deleting remote bookmark %s\n"
 msgstr "apagando marcador remoto %s\n"
 
+#, python-format
+msgid "bookmark %s does not exist on the local or remote repository!\n"
+msgstr "o marcador %s não existe nem no repositório local nem no remoto!\n"
+
 msgid "searching for changes\n"
 msgstr "procurando por mudanças\n"
 
@@ -10818,6 +10822,10 @@ msgstr "não é possível incluir %s (%s)"
 msgid "not found in manifest"
 msgstr "não encontrado no manifesto"
 
+#, python-format
+msgid "No such file in rev %s"
+msgstr "Não há tal arquivo na revisão %s"
+
 msgid "branch name not in UTF-8!"
 msgstr "nome do ramo não está em UTF-8!"
 
@@ -11182,6 +11190,9 @@ msgstr ""
 #, python-format
 msgid "merging %s failed!\n"
 msgstr "mesclagem de %s falhou!\n"
+
+msgid "starting revisions are not directly related"
+msgstr "as revisões iniciais não são diretamente relacionadas"
 
 #, python-format
 msgid "Inconsistent state, %s:%s is good and bad"
@@ -11850,6 +11861,30 @@ msgid ""
 msgstr ""
 "Branch head\n"
 "    Veja 'Head, branch'."
+
+msgid ""
+"Branch, inactive\n"
+"    If a named branch has no topological heads, it is considered to be\n"
+"    inactive. As an example, a feature branch becomes inactive when it\n"
+"    is merged into the default branch. The :hg:`branches` command\n"
+"    shows inactive branches by default, though they can be hidden with\n"
+"    :hg:`branches --active`."
+msgstr ""
+"Branch, inactive\n"
+"    Ramo inativo. Um ramo nomeado é considerado inativo se ele não tiver\n"
+"    cabeças topológicas. Por exemplo, um \"feature branch\" (ramo de\n"
+"    implementação) se torna inativo quando for mesclado com o ramo default.\n"
+"    O comando :hg:`branches` mostra ramos inativos por padrão, mas eles\n"
+"    podem ser ocultados usando :hg:`branches --active`."
+
+msgid ""
+"    NOTE: this concept is deprecated because it is too implicit.\n"
+"    Branches should now be explicitly closed using :hg:`commit\n"
+"    --close-branch` when they are no longer needed."
+msgstr ""
+"    NOTA: este conceito foi tornado obsoleto por ser demasiado implícito.\n"
+"    Atualmente, quando não forem mais necessários, ramos nomeados devem\n"
+"    ser fechados explicitamente usando :hg:`commit --close-branch`."
 
 msgid ""
 "Branch, named\n"
@@ -13561,6 +13596,13 @@ msgstr ""
 msgid ":shortdate: Date. Returns a date like \"2006-09-18\"."
 msgstr ":shortdate: Data. Devolve uma data como \"2006-09-18\"."
 
+msgid ""
+":stringify: Any type. Turns the value into text by converting values into\n"
+"    text and concatenating them."
+msgstr ""
+":stringify: Qualquer tipo. Transforma o valor em texto convertendo cada\n"
+"    parte em texto e concatenando os resultados."
+
 msgid ":strip: Any text. Strips all leading and trailing whitespace."
 msgstr ""
 ":strip: Qualquer texto. Remove todos os espaços em branco no\n"
@@ -13787,6 +13829,10 @@ msgstr "(mesclagem de ramo, não esqueça de consolidar)\n"
 #, python-format
 msgid "error reading %s/.hg/hgrc: %s\n"
 msgstr "erro ao ler %s/.hg/hgrc: %s\n"
+
+#, python-format
+msgid "error accessing repository at %s\n"
+msgstr "erro ao acessar o repositório em %s\n"
 
 msgid "SSL support is unavailable"
 msgstr "Suporte a SSL indisponível"
