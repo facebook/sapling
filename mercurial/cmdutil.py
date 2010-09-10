@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import hex, bin, nullid, nullrev, short
+from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, glob, tempfile
 import util, templater, patch, error, encoding, templatekw
@@ -685,7 +685,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
         ctx2 = repo[node2]
         for subpath, sub in subrepo.itersubrepos(ctx1, ctx2):
             if node2 is not None:
-                node2 = bin(ctx2.substate[subpath][1])
+                node2 = ctx2.substate[subpath][1]
             submatch = matchmod.narrowmatcher(subpath, match)
             sub.diff(diffopts, node2, submatch, changes=changes,
                      stat=stat, fp=fp, prefix=prefix)

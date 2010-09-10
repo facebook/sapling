@@ -305,6 +305,9 @@ class hgsubrepo(abstractsubrepo):
     def diff(self, diffopts, node2, match, prefix, **opts):
         try:
             node1 = node.bin(self._state[1])
+            # We currently expect node2 to come from substate and be
+            # in hex format
+            node2 = node.bin(node2)
             cmdutil.diffordiffstat(self._repo.ui, self._repo, diffopts,
                                    node1, node2, match,
                                    prefix=os.path.join(prefix, self._path),
