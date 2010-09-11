@@ -394,17 +394,14 @@ def patchbomb(ui, repo, *revs, **opts):
 
         if addrs:
             showaddrs.append('%s %s' % (showaddr, ', '.join(addrs)))
-            return mail.addrlistencode(ui, addrs, _charsets,
-                                       opts.get('test'))
+            return mail.addrlistencode(ui, addrs, _charsets, opts.get('test'))
 
         addrs = ui.config('email', opt) or ui.config('patchbomb', opt) or ''
         if not addrs and prpt:
             addrs = prompt(ui, prpt, default)
 
         if addrs:
-            showaddr = '%s %s' % (showaddr, addrs)
-            showaddrs.append(showaddr)
-
+            showaddrs.append('%s %s' % (showaddr, addrs))
         return mail.addrlistencode(ui, [addrs], _charsets, opts.get('test'))
 
     to = getaddrs('to', 'To')
