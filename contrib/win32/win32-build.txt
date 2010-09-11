@@ -1,7 +1,8 @@
 The standalone Windows installer for Mercurial is built in a somewhat
 jury-rigged fashion.
 
-It has the following prerequisites, at least as I build it:
+It has the following prerequisites. Ensure to take the packages
+matching the mercurial version you want to build (32-bit or 64-bit).
 
   Python 2.6 for Windows
       http://www.python.org/download/releases/
@@ -19,7 +20,10 @@ It has the following prerequisites, at least as I build it:
       http://starship.python.net/crew/mhammond/win32/
 
   Visual C++ 2008 SP1 redistributable package (needed for >= Python 2.6 or if you compile with MSVC)
+    for 32-bit:
       http://www.microsoft.com/downloads/details.aspx?FamilyID=A5C84275-3B97-4AB7-A40D-3802B2AF5FC2
+    for 64-bit:
+      http://www.microsoft.com/downloads/details.aspx?familyid=BA9257CA-337F-4B40-8C14-157CFDFFEE4E
       
   The py2exe distutils extension
       http://sourceforge.net/projects/py2exe/
@@ -62,7 +66,12 @@ compiler=mingw32
 you can skip the first build step.
 
 Building instructions with MSVC 2008 SP1 Express Edition:
-  python setup.py py2exe -b 2
+  for 32-bit:
+    "C:\Program Files\Microsoft Visual Studio 9.0\VC\vcvarsall.bat" x86
+    python setup.py py2exe -b 2
+  for 64-bit:
+    "C:\Program Files\Microsoft Visual Studio 9.0\VC\vcvarsall.bat" x86_amd64
+    python setup.py py2exe -b 3
 
 Copy add_path.exe into the dist directory that just got created.
 
@@ -74,11 +83,13 @@ mercurial, you must include the C runtime libraries in the installer. To do so,
 install the Visual C++ 2008 SP1 redistributable package. Then in your
 windows\winsxs folder, locate the folder containing the dlls version 9.0.30729.
 For x86, it should be named like x86_Microsoft.VC90.CRT_(...)_9.0.30729(...).
+For x64, it should be named like amd64_Microsoft.VC90.CRT_(...)_9.0.30729(...).
 Copy the files named msvcm90.dll, msvcp90.dll and msvcr90.dll into the dist
 directory.
 Then in the windows\winsxs\manifests folder, locate the corresponding manifest
-file (x86_Microsoft.VC90.CRT_(...)_9.0.30729(...).manifest for x86), copy it in
-the dist directory and rename it to Microsoft.VC90.CRT.manifest.
+file (x86_Microsoft.VC90.CRT_(...)_9.0.30729(...).manifest for x86,
+amd64_Microsoft.VC90.CRT_(...)_9.0.30729(...).manifest for x64), copy it in the
+dist directory and rename it to Microsoft.VC90.CRT.manifest.
 
 Before building the installer, you have to build Mercurial HTML documentation 
 (or fix mercurial.iss to not reference the doc directory):
@@ -100,6 +111,10 @@ Where 'foo' is the version number you would like to see in the
 a directory named Output/ at the root of your repository.
 If the /dVERSION=foo parameter is not given in the command line, the
 installer will retrieve the version information from the __version__.py file.
+
+If you want to build an installer for a 64-bit mercurial, add /dARCH=x64 to
+your command line:
+  iscc contrib\win32\mercurial.iss /dARCH=x64
 
 To automate the steps above you may want to create a batchfile based on the
 following (MinGW build chain):

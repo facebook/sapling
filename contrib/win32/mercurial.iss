@@ -16,10 +16,22 @@
 #pragma message "Detected Version: " + VERSION
 #endif
 
+#ifndef ARCH
+#define ARCH = "x86"
+#endif
+
 [Setup]
 AppCopyright=Copyright 2005-2010 Matt Mackall and others
 AppName=Mercurial
+#if ARCH == "x64"
+AppVerName=Mercurial {#VERSION} (64-bit)
+OutputBaseFilename=Mercurial-{#VERSION}-x64
+ArchitecturesAllowed=x64
+ArchitecturesInstallIn64BitMode=x64
+#else
 AppVerName=Mercurial {#VERSION}
+OutputBaseFilename=Mercurial-{#VERSION}
+#endif
 InfoAfterFile=contrib/win32/postinstall.txt
 LicenseFile=COPYING
 ShowLanguageDialog=yes
@@ -29,7 +41,6 @@ AppSupportURL=http://mercurial.selenic.com/
 AppUpdatesURL=http://mercurial.selenic.com/
 AppID={{4B95A5F1-EF59-4B08-BED8-C891C46121B3}
 AppContact=mercurial@selenic.com
-OutputBaseFilename=Mercurial-{#VERSION}
 DefaultDirName={pf}\Mercurial
 SourceDir=..\..
 VersionInfoDescription=Mercurial distributed SCM (version {#VERSION})
@@ -61,11 +72,16 @@ Source: contrib\mergetools.hgrc; DestDir: {tmp};
 Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Check: CheckFile; AfterInstall: ConcatenateFiles;
 Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
 Source: dist\hg.exe; DestDir: {app}; AfterInstall: Touch('{app}\hg.exe.local')
+#if ARCH == "x64"
+Source: dist\*.dll; Destdir: {app}
+Source: dist\*.pyd; Destdir: {app}
+#else
 Source: dist\python*.dll; Destdir: {app}; Flags: skipifsourcedoesntexist
-Source: dist\library.zip; DestDir: {app}
 Source: dist\msvc*.dll; DestDir: {app}; Flags: skipifsourcedoesntexist
-Source: dist\Microsoft.VC*.CRT.manifest; DestDir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\w9xpopen.exe; DestDir: {app}
+#endif
+Source: dist\Microsoft.VC*.CRT.manifest; DestDir: {app}; Flags: skipifsourcedoesntexist
+Source: dist\library.zip; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.html; DestDir: {app}\Docs
 Source: doc\style.css; DestDir: {app}\Docs
