@@ -63,16 +63,14 @@ Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.tx
 Source: dist\hg.exe; DestDir: {app}; AfterInstall: Touch('{app}\hg.exe.local')
 Source: dist\python*.dll; Destdir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\library.zip; DestDir: {app}
-Source: dist\mfc*.dll; DestDir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\msvc*.dll; DestDir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\Microsoft.VC*.CRT.manifest; DestDir: {app}; Flags: skipifsourcedoesntexist
-Source: dist\Microsoft.VC*.MFC.manifest; DestDir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.html; DestDir: {app}\Docs
 Source: doc\style.css; DestDir: {app}\Docs
 Source: mercurial\help\*.txt; DestDir: {app}\help
-Source: mercurial\locale\*.*; DestDir: {app}\locale; Flags: recursesubdirs createallsubdirs
+Source: mercurial\locale\*.*; DestDir: {app}\locale; Flags: recursesubdirs createallsubdirs skipifsourcedoesntexist
 Source: mercurial\templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
 Source: COPYING; DestDir: {app}; DestName: Copying.txt
@@ -99,6 +97,7 @@ Filename: "{app}\add_path.exe"; Parameters: "/del {app}"
 
 [UninstallDelete]
 Type: files; Name: "{app}\hg.exe.local"
+
 [Code]
 var
   WriteFile: Boolean;
