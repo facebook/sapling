@@ -17,6 +17,8 @@ if '--twice' in sys.argv:
     sys.argv.remove('--twice')
     twice = True
 
+reasons = {'Not modified': 'Not Modified'} # python 2.4
+
 tag = None
 def request(host, path, show):
 
@@ -28,7 +30,7 @@ def request(host, path, show):
     conn = httplib.HTTPConnection(host)
     conn.request("GET", path, None, headers)
     response = conn.getresponse()
-    print response.status, response.reason
+    print response.status, reasons.get(response.reason, response.reason)
     for h in [h.lower() for h in show]:
         if response.getheader(h, None) is not None:
             print "%s: %s" % (h, response.getheader(h))
