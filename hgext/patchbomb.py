@@ -438,7 +438,7 @@ def patchbomb(ui, repo, *revs, **opts):
     sender_addr = email.Utils.parseaddr(sender)[1]
     sender = mail.addressencode(ui, sender, _charsets, opts.get('test'))
     sendmail = None
-    for m, subj, ds in msgs:
+    for i, (m, subj, ds) in enumerate(msgs):
         try:
             m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
         except TypeError:
@@ -480,6 +480,7 @@ def patchbomb(ui, repo, *revs, **opts):
                 fp.close()
         elif mbox:
             ui.status(_('Writing '), subj, ' ...\n')
+            ui.progress(_('writing'), i, item=subj, total=len(msgs))
             fp = open(mbox, 'In-Reply-To' in m and 'ab+' or 'wb+')
             generator = email.Generator.Generator(fp, mangle_from_=True)
             # Should be time.asctime(), but Windows prints 2-characters day
@@ -494,12 +495,16 @@ def patchbomb(ui, repo, *revs, **opts):
             if not sendmail:
                 sendmail = mail.connect(ui)
             ui.status(_('Sending '), subj, ' ...\n')
+            ui.progress(_('sending'), i, item=subj, total=len(msgs))
             # Exim does not remove the Bcc field
             del m['Bcc']
             fp = cStringIO.StringIO()
             generator = email.Generator.Generator(fp, mangle_from_=False)
             generator.flatten(m, 0)
             sendmail(sender, to + bcc + cc, fp.getvalue())
+
+    ui.progress(_('writing'), None)
+    ui.progress(_('sending'), None)
 
 emailopts = [
           ('a', 'attach', None, _('send patches as attachments')),
