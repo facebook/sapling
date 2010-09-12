@@ -56,13 +56,18 @@ darcs remove dir/d2
 rm dir/d2
 darcs mv dir dir2
 darcs record -a -l -m p3
-cd ..
+
+echo % test utf-8 commit message and author
+echo g > g
+# darcs is encoding agnostic, so it takes whatever bytes it's given
+darcs record -a -l -m 'p4: desc ñ' -A 'author ñ'
 
 glog()
 {
-    hg glog --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
+    HGENCODING=utf-8 hg glog --template '{rev} "{desc|firstline}" ({author}) files: {files}\n' "$@"
 }
 
+cd ..
 hg convert darcs-repo darcs-repo-hg
 # The converter does not currently handle patch conflicts very well.
 # When they occur, it reverts *all* changes and moves forward,
