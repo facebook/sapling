@@ -23,7 +23,7 @@ failing merge
 
   $ HGMERGE=internal:fail hg merge
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 
   $ echo resolved > file
   $ hg resolve -m file

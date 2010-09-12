@@ -217,7 +217,7 @@ merge tests
   warning: conflicts during merge.
   merging t failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

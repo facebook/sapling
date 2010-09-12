@@ -17,7 +17,7 @@ merging f
 warning: conflicts during merge.
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 <<<<<<< local
 revision 1
@@ -37,7 +37,7 @@ false.whatever=
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -69,7 +69,7 @@ true.priority=1
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -86,7 +86,7 @@ true.priority=1
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -103,7 +103,7 @@ true.priority=1
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -120,7 +120,7 @@ true.priority=1
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -185,7 +185,7 @@ true.executable=cat
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -204,7 +204,7 @@ couldn't find merge tool true specified for f
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -223,7 +223,7 @@ couldn't find merge tool true specified for f
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -244,7 +244,7 @@ true.executable=cat
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -260,7 +260,7 @@ true.executable=cat
 # hg update -C 1
 # hg merge -r 2 --config ui.merge=internal:fail
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -323,7 +323,7 @@ true.executable=cat
 # hg merge -r 2 --config ui.merge=internal:dump
 merging f
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -354,7 +354,7 @@ true.executable=cat
 merging f
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space
@@ -537,7 +537,7 @@ merging f
 was merge successful (yn)? n
 merging f failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 # cat f
 revision 1
 space

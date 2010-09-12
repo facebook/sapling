@@ -267,7 +267,7 @@ test unknown color
   warning: conflicts during merge.
   merging b failed!
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   $ hg resolve -m b
 
 hg resolve with one unresolved, one resolved:

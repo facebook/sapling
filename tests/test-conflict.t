@@ -15,7 +15,7 @@
   warning: conflicts during merge.
   merging a failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 
   $ hg id
   32e80765d7fe+75234512624c+ tip

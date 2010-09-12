@@ -31,7 +31,7 @@ Merging a conflict araises
   warning: conflicts during merge.
   merging A failed!
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
 
 Correct the conflict without marking the file as resolved
 
