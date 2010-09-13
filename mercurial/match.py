@@ -129,9 +129,13 @@ class narrowmatcher(match):
     ['b.txt']
     >>> m2.exact('b.txt')
     True
+    >>> m2.rel('b.txt')
+    'b.txt'
     """
 
     def __init__(self, path, matcher):
+        self._root = matcher._root
+        self._cwd = matcher._cwd
         self._path = path
         self._matcher = matcher
 
