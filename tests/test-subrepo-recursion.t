@@ -316,4 +316,8 @@ Test incoming:
   $ hg incoming -S --bundle incoming.hg
   abort: cannot combine --bundle and --subrepos
 
-  $ exit 0
+Test missing subrepo:
+
+  $ rm -r foo
+  $ hg status
+  warning: unknown revision '65903cebad86f1a84bd4f1134f62fa7dcb7a1c98' in foo
