@@ -46,22 +46,9 @@ def add(ui, repo, *pats, **opts):
     Returns 0 if all files are successfully added.
     """
 
-    bad = []
-    names = []
     m = cmdutil.match(repo, pats, opts)
-    oldbad = m.bad
-    m.bad = lambda x, y: bad.append(x) or oldbad(x, y)
-
-    for f in repo.walk(m):
-        exact = m.exact(f)
-        if exact or f not in repo.dirstate:
-            names.append(f)
-            if ui.verbose or not exact:
-                ui.status(_('adding %s\n') % m.rel(f))
-    if not opts.get('dry_run'):
-        rejected = repo[None].add(names)
-        bad += [f for f in rejected if f in m.files()]
-    return bad and 1 or 0
+    rejected = cmdutil.add(ui, repo, m, opts.get('dry_run'))
+    return rejected and 1 or 0
 
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files

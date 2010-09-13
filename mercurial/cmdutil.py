@@ -1280,6 +1280,22 @@ def walkchangerevs(repo, match, opts, prepare):
                 yield change(rev)
     return iterate()
 
+def add(ui, repo, match, dryrun):
+    bad = []
+    oldbad = match.bad
+    match.bad = lambda x, y: bad.append(x) or oldbad(x, y)
+    names = []
+    for f in repo.walk(match):
+        exact = match.exact(f)
+        if exact or f not in repo.dirstate:
+            names.append(f)
+            if ui.verbose or not exact:
+                ui.status(_('adding %s\n') % match.rel(f))
+    if not dryrun:
+        rejected = repo[None].add(names)
+        bad.extend(f for f in rejected if f in match.files())
+    return bad
+
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''
     date = opts.get('date')
