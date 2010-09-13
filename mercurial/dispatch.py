@@ -24,7 +24,7 @@ def dispatch(args):
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         if inst.hint:
-            sys.stderr.write(_("(%s)\n") % inst.hint)
+            sys.stderr.write("(%s)\n" % inst.hint)
         return -1
     except error.ParseError, inst:
         if len(inst.args) > 1:
