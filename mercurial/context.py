@@ -769,7 +769,8 @@ class workingctx(changectx):
                 self.modified() or self.added() or self.removed() or
                 (missing and self.deleted()))
 
-    def add(self, list):
+    def add(self, list, prefix=""):
+        join = lambda f: os.path.join(prefix, f)
         wlock = self._repo.wlock()
         ui, ds = self._repo.ui, self._repo.dirstate
         try:
@@ -779,7 +780,7 @@ class workingctx(changectx):
                 try:
                     st = os.lstat(p)
                 except:
-                    ui.warn(_("%s does not exist!\n") % f)
+                    ui.warn(_("%s does not exist!\n") % join(f))
                     rejected.append(f)
                     continue
                 if st.st_size > 10000000:
@@ -787,13 +788,13 @@ class workingctx(changectx):
                               "to manage this file\n"
                               "(use 'hg revert %s' to cancel the "
                               "pending addition)\n")
-                              % (f, 3 * st.st_size // 1000000, f))
+                              % (f, 3 * st.st_size // 1000000, join(f)))
                 if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                     ui.warn(_("%s not added: only files and symlinks "
-                              "supported currently\n") % f)
+                              "supported currently\n") % join(f))
                     rejected.append(p)
                 elif ds[f] in 'amn':
-                    ui.warn(_("%s already tracked!\n") % f)
+                    ui.warn(_("%s already tracked!\n") % join(f))
                 elif ds[f] == 'r':
                     ds.normallookup(f)
                 else:

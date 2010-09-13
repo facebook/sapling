@@ -176,7 +176,7 @@ Show an error if we use --options with an ambiguous abbreviation
 
 Show all commands + options
   $ hg debugcommands
-  add: include, exclude, dry-run
+  add: include, exclude, subrepos, dry-run
   annotate: rev, follow, no-follow, text, user, file, date, number, changeset, line-number, include, exclude
   clone: noupdate, updaterev, rev, branch, pull, uncompressed, ssh, remotecmd
   commit: addremove, close-branch, include, exclude, message, logfile, date, user

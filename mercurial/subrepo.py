@@ -255,6 +255,8 @@ class abstractsubrepo(object):
         """
         raise NotImplementedError
 
+    def add(self, ui, match, dryrun, prefix):
+        return []
 
     def status(self, rev2, **opts):
         return [], [], [], [], [], [], []
@@ -290,6 +292,10 @@ class hgsubrepo(abstractsubrepo):
             if defpath != defpushpath:
                 addpathconfig('default-push', defpushpath)
             fp.close()
+
+    def add(self, ui, match, dryrun, prefix):
+        return cmdutil.add(ui, self._repo, match, dryrun, True,
+                           os.path.join(prefix, self._path))
 
     def status(self, rev2, **opts):
         try:

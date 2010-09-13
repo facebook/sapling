@@ -47,7 +47,8 @@ def add(ui, repo, *pats, **opts):
     """
 
     m = cmdutil.match(repo, pats, opts)
-    rejected = cmdutil.add(ui, repo, m, opts.get('dry_run'))
+    rejected = cmdutil.add(ui, repo, m, opts.get('dry_run'),
+                           opts.get('subrepos'), prefix="")
     return rejected and 1 or 0
 
 def addremove(ui, repo, *pats, **opts):
@@ -4001,7 +4002,8 @@ subrepoopts = [
 ]
 
 table = {
-    "^add": (add, walkopts + dryrunopts, _('[OPTION]... [FILE]...')),
+    "^add": (add, walkopts + subrepoopts + dryrunopts,
+             _('[OPTION]... [FILE]...')),
     "addremove":
         (addremove, similarityopts + walkopts + dryrunopts,
          _('[OPTION]... [FILE]...')),

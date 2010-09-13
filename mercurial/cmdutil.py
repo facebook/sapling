@@ -1280,19 +1280,32 @@ def walkchangerevs(repo, match, opts, prepare):
                 yield change(rev)
     return iterate()
 
-def add(ui, repo, match, dryrun):
+def add(ui, repo, match, dryrun, listsubrepos, prefix):
+    join = lambda f: os.path.join(prefix, f)
     bad = []
     oldbad = match.bad
     match.bad = lambda x, y: bad.append(x) or oldbad(x, y)
     names = []
+    wctx = repo[None]
     for f in repo.walk(match):
         exact = match.exact(f)
         if exact or f not in repo.dirstate:
             names.append(f)
             if ui.verbose or not exact:
-                ui.status(_('adding %s\n') % match.rel(f))
+                ui.status(_('adding %s\n') % match.rel(join(f)))
+
+    if listsubrepos:
+        for subpath in wctx.substate:
+            sub = wctx.sub(subpath)
+            try:
+                submatch = matchmod.narrowmatcher(subpath, match)
+                bad.extend(sub.add(ui, submatch, dryrun, prefix))
+            except error.LookupError:
+                ui.status(_("skipping missing subrepository: %s\n")
+                               % join(subpath))
+
     if not dryrun:
-        rejected = repo[None].add(names)
+        rejected = wctx.add(names, prefix)
         bad.extend(f for f in rejected if f in match.files())
     return bad
 

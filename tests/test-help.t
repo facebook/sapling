@@ -274,6 +274,7 @@ Test short command list with verbose option
   
    -I --include PATTERN [+]  include names matching the given patterns
    -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -S --subrepos             recurse into subrepositories
    -n --dry-run              do not perform actions, just print output
   
   [+] marked option can be specified multiple times
@@ -312,6 +313,7 @@ Verbose help for add
   
    -I --include PATTERN [+]  include names matching the given patterns
    -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -S --subrepos             recurse into subrepositories
    -n --dry-run              do not perform actions, just print output
   
   global options:
@@ -364,6 +366,7 @@ Test help option with version option
   
    -I --include PATTERN [+]  include names matching the given patterns
    -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -S --subrepos             recurse into subrepositories
    -n --dry-run              do not perform actions, just print output
   
   [+] marked option can be specified multiple times
@@ -391,6 +394,7 @@ Test help option with version option
   
    -I --include PATTERN [+]  include names matching the given patterns
    -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -S --subrepos             recurse into subrepositories
    -n --dry-run              do not perform actions, just print output
   
   [+] marked option can be specified multiple times

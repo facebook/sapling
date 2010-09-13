@@ -8,25 +8,30 @@ Create test repository:
 
   $ hg init
   $ echo x1 > x.txt
-  $ hg add x.txt
 
   $ hg init foo
   $ cd foo
   $ echo y1 > y.txt
-  $ hg add y.txt
 
   $ hg init bar
   $ cd bar
   $ echo z1 > z.txt
-  $ hg add z.txt
 
   $ cd ..
   $ echo 'bar = bar' > .hgsub
-  $ hg add .hgsub
 
   $ cd ..
   $ echo 'foo = foo' > .hgsub
-  $ hg add .hgsub
+
+Add files --- .hgsub files must go first to trigger subrepos:
+
+  $ hg add -S .hgsub
+  $ hg add -S foo/.hgsub
+  $ hg add -S foo/bar
+  adding foo/bar/z.txt
+  $ hg add -S
+  adding x.txt
+  adding foo/y.txt
 
 Test recursive status without committing anything:
 
