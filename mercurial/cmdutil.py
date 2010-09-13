@@ -329,6 +329,49 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         finally:
             wlock.release()
 
+def updatedir(ui, repo, patches, similarity=0):
+    '''Update dirstate after patch application according to metadata'''
+    if not patches:
+        return
+    copies = []
+    removes = set()
+    cfiles = patches.keys()
+    cwd = repo.getcwd()
+    if cwd:
+        cfiles = [util.pathto(repo.root, cwd, f) for f in patches.keys()]
+    for f in patches:
+        gp = patches[f]
+        if not gp:
+            continue
+        if gp.op == 'RENAME':
+            copies.append((gp.oldpath, gp.path))
+            removes.add(gp.oldpath)
+        elif gp.op == 'COPY':
+            copies.append((gp.oldpath, gp.path))
+        elif gp.op == 'DELETE':
+            removes.add(gp.path)
+
+    wctx = repo[None]
+    for src, dst in copies:
+        wctx.copy(src, dst)
+    if (not similarity) and removes:
+        wctx.remove(sorted(removes), True)
+
+    for f in patches:
+        gp = patches[f]
+        if gp and gp.mode:
+            islink, isexec = gp.mode
+            dst = repo.wjoin(gp.path)
+            # patch won't create empty files
+            if gp.op == 'ADD' and not os.path.exists(dst):
+                flags = (isexec and 'x' or '') + (islink and 'l' or '')
+                repo.wwrite(gp.path, '', flags)
+            util.set_flags(dst, islink, isexec)
+    addremove(repo, cfiles, similarity=similarity)
+    files = patches.keys()
+    files.extend([r for r in removes if r not in files])
+    return sorted(files)
+
 def copy(ui, repo, pats, opts, rename=False):
     # called with the repo lock held
     #

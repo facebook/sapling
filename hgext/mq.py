@@ -685,7 +685,7 @@ class queue(object):
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
 
-            files = patch.updatedir(self.ui, repo, files)
+            files = cmdutil.updatedir(self.ui, repo, files)
             match = cmdutil.matchfiles(repo, files or [])
             n = repo.commit(message, ph.user, ph.date, match=match, force=True)
 
@@ -2134,7 +2134,7 @@ def fold(ui, repo, *files, **opts):
         (patchsuccess, files, fuzz) = q.patch(repo, pf)
         if not patchsuccess:
             raise util.Abort(_('error folding patch %s') % p)
-        patch.updatedir(ui, repo, files)
+        cmdutil.updatedir(ui, repo, files)
 
     if not message:
         ph = patchheader(q.join(parent), q.plainmode)

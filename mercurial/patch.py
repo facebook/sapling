@@ -11,7 +11,7 @@ import tempfile, zlib
 
 from i18n import _
 from node import hex, nullid, short
-import base85, cmdutil, mdiff, util, diffhelpers, copies, encoding
+import base85, mdiff, util, diffhelpers, copies, encoding
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 
@@ -444,8 +444,8 @@ class patchfile(object):
 
     def writelines(self, fname, lines):
         # Ensure supplied data ends in fname, being a regular file or
-        # a symlink. updatedir() will -too magically- take care of
-        # setting it to the proper type afterwards.
+        # a symlink. cmdutil.updatedir will -too magically- take care
+        # of setting it to the proper type afterwards.
         islink = os.path.islink(fname)
         if islink:
             fp = cStringIO.StringIO()
@@ -1129,8 +1129,8 @@ def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
     read in binary mode. Otherwise, line endings are ignored when
     patching then normalized according to 'eolmode'.
 
-    Callers probably want to call 'updatedir' after this to apply
-    certain categories of changes not done by this function.
+    Callers probably want to call 'cmdutil.updatedir' after this to
+    apply certain categories of changes not done by this function.
     """
     return _applydiff(
         ui, fp, patchfile, copyfile,
@@ -1195,49 +1195,6 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
     if rejects:
         return -1
     return err
-
-def updatedir(ui, repo, patches, similarity=0):
-    '''Update dirstate after patch application according to metadata'''
-    if not patches:
-        return
-    copies = []
-    removes = set()
-    cfiles = patches.keys()
-    cwd = repo.getcwd()
-    if cwd:
-        cfiles = [util.pathto(repo.root, cwd, f) for f in patches.keys()]
-    for f in patches:
-        gp = patches[f]
-        if not gp:
-            continue
-        if gp.op == 'RENAME':
-            copies.append((gp.oldpath, gp.path))
-            removes.add(gp.oldpath)
-        elif gp.op == 'COPY':
-            copies.append((gp.oldpath, gp.path))
-        elif gp.op == 'DELETE':
-            removes.add(gp.path)
-
-    wctx = repo[None]
-    for src, dst in copies:
-        wctx.copy(src, dst)
-    if (not similarity) and removes:
-        wctx.remove(sorted(removes), True)
-
-    for f in patches:
-        gp = patches[f]
-        if gp and gp.mode:
-            islink, isexec = gp.mode
-            dst = repo.wjoin(gp.path)
-            # patch won't create empty files
-            if gp.op == 'ADD' and not os.path.exists(dst):
-                flags = (isexec and 'x' or '') + (islink and 'l' or '')
-                repo.wwrite(gp.path, '', flags)
-            util.set_flags(dst, islink, isexec)
-    cmdutil.addremove(repo, cfiles, similarity=similarity)
-    files = patches.keys()
-    files.extend([r for r in removes if r not in files])
-    return sorted(files)
 
 def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
     """use <patcher> to apply <patchname> to the working directory.
