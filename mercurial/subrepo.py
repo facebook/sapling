@@ -331,7 +331,7 @@ class hgsubrepo(abstractsubrepo):
             ctx2 = self._repo[rev2]
             return self._repo.status(ctx1, ctx2, **opts)
         except error.RepoLookupError, inst:
-            self._repo.ui.warn(_("warning: %s in %s\n")
+            self._repo.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
                                % (inst, relpath(self)))
             return [], [], [], [], [], [], []
 
@@ -347,7 +347,7 @@ class hgsubrepo(abstractsubrepo):
                                    prefix=os.path.join(prefix, self._path),
                                    listsubrepos=True, **opts)
         except error.RepoLookupError, inst:
-            self._repo.ui.warn(_("warning: %s in %s\n")
+            self._repo.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
                                % (inst, relpath(self)))
 
     def archive(self, archiver, prefix):

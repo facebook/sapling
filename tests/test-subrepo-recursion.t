@@ -350,4 +350,4 @@ Test missing subrepo:
 
   $ rm -r foo
   $ hg status
-  warning: unknown revision '65903cebad86f1a84bd4f1134f62fa7dcb7a1c98' in foo
+  warning: error "unknown revision '65903cebad86f1a84bd4f1134f62fa7dcb7a1c98'" in subrepository "foo"
