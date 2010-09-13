@@ -267,6 +267,9 @@ class abstractsubrepo(object):
     def outgoing(self, ui, dest, opts):
         return 1
 
+    def incoming(self, ui, source, opts):
+        return 1
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -399,6 +402,9 @@ class hgsubrepo(abstractsubrepo):
 
     def outgoing(self, ui, dest, opts):
         return hg.outgoing(ui, self._repo, _abssource(self._repo, True), opts)
+
+    def incoming(self, ui, source, opts):
+        return hg.incoming(ui, self._repo, _abssource(self._repo, False), opts)
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):

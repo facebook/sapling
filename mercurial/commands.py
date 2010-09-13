@@ -2357,7 +2357,16 @@ def incoming(ui, repo, source="default", **opts):
 
     Returns 0 if there are incoming changes, 1 otherwise.
     """
-    return hg.incoming(ui, repo, source, opts)
+    if opts.get('bundle') and opts.get('subrepos'):
+        raise util.Abort(_('cannot combine --bundle and --subrepos'))
+
+    ret = hg.incoming(ui, repo, source, opts)
+    if opts.get('subrepos'):
+        ctx = repo[None]
+        for subpath in sorted(ctx.substate):
+            sub = ctx.sub(subpath)
+            ret = min(ret, sub.incoming(ui, source, opts))
+    return ret
 
 def init(ui, dest=".", **opts):
     """create a new repository in the given directory
@@ -4191,7 +4200,7 @@ table = {
            _('a remote changeset intended to be added'), _('REV')),
           ('b', 'branch', [],
            _('a specific branch you would like to pull'), _('BRANCH')),
-         ] + logopts + remoteopts,
+         ] + logopts + remoteopts + subrepoopts,
          _('[-p] [-n] [-M] [-f] [-r REV]...'
            ' [--bundle FILENAME] [SOURCE]')),
     "^init":

@@ -227,7 +227,7 @@ Show all commands + options
   help: 
   identify: rev, num, id, branch, tags
   import: strip, base, force, no-commit, exact, import-branch, message, logfile, date, user, similarity
-  incoming: force, newest-first, bundle, rev, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd
+  incoming: force, newest-first, bundle, rev, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, subrepos
   locate: rev, print0, fullpath, include, exclude
   manifest: rev
   outgoing: force, rev, newest-first, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, subrepos

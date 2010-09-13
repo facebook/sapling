@@ -287,3 +287,33 @@ Make nested change:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3-4-2
   
+
+Switch to original repo and setup default path:
+
+  $ cd ../repo
+  $ echo '[paths]' >> .hg/hgrc
+  $ echo 'default = ../repo2' >> .hg/hgrc
+
+Test incoming:
+
+  $ hg incoming -S
+  comparing with .*/test-subrepo-recursion.t/repo2
+  searching for changes
+  changeset:   3:2655b8ecc4ee
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     3-4-2
+  
+  comparing with .*/test-subrepo-recursion.t/repo2/foo
+  searching for changes
+  changeset:   4:e96193d6cb36
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     3-4-2
+  
+  $ hg incoming -S --bundle incoming.hg
+  abort: cannot combine --bundle and --subrepos
+
+  $ exit 0
