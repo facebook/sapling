@@ -6,7 +6,8 @@ Make status look into subrepositories by default:
 
 Create test repository:
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
   $ echo x1 > x.txt
 
   $ hg init foo
@@ -225,3 +226,64 @@ Status between revisions:
   @@ -1,1 +1,2 @@
    z1
   +z2
+
+Clone and test outgoing:
+
+  $ cd ..
+  $ hg clone repo repo2
+  updating to branch default
+  pulling subrepo foo from .*/test-subrepo-recursion.t/repo/foo
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 7 changes to 3 files
+  pulling subrepo foo/bar from .*/test-subrepo-recursion.t/repo/foo/bar
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 1 files
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd repo2
+  $ hg outgoing -S
+  comparing with .*/test-subrepo-recursion.t/repo
+  searching for changes
+  no changes found
+  comparing with .*/test-subrepo-recursion.t/repo/foo
+  searching for changes
+  no changes found
+  $ echo $?
+  0
+
+Make nested change:
+
+  $ echo y4 >> foo/y.txt
+  $ hg diff
+  diff -r 65903cebad86 foo/y.txt
+  --- a/foo/y.txt
+  +++ b/foo/y.txt
+  @@ -1,3 +1,4 @@
+   y1
+   y2
+   y3
+  +y4
+  $ hg commit -m 3-4-2
+  committing subrepository foo
+  $ hg outgoing -S
+  comparing with .*/test-subrepo-recursion.t/repo
+  searching for changes
+  changeset:   3:2655b8ecc4ee
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     3-4-2
+  
+  comparing with .*/test-subrepo-recursion.t/repo/foo
+  searching for changes
+  changeset:   4:e96193d6cb36
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     3-4-2
+  

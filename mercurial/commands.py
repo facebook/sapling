@@ -2672,7 +2672,13 @@ def outgoing(ui, repo, dest=None, **opts):
 
     Returns 0 if there are outgoing changes, 1 otherwise.
     """
-    return hg.outgoing(ui, repo, dest, opts)
+    ret = hg.outgoing(ui, repo, dest, opts)
+    if opts.get('subrepos'):
+        ctx = repo[None]
+        for subpath in sorted(ctx.substate):
+            sub = ctx.sub(subpath)
+            ret = min(ret, sub.outgoing(ui, dest, opts))
+    return ret
 
 def parents(ui, repo, file_=None, **opts):
     """show the parents of the working directory or revision
@@ -4311,7 +4317,7 @@ table = {
           ('n', 'newest-first', None, _('show newest record first')),
           ('b', 'branch', [],
            _('a specific branch you would like to push'), _('BRANCH')),
-         ] + logopts + remoteopts,
+         ] + logopts + remoteopts + subrepoopts,
          _('[-M] [-p] [-n] [-f] [-r REV]... [DEST]')),
     "parents":
         (parents,

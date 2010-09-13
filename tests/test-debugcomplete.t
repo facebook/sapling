@@ -230,7 +230,7 @@ Show all commands + options
   incoming: force, newest-first, bundle, rev, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd
   locate: rev, print0, fullpath, include, exclude
   manifest: rev
-  outgoing: force, rev, newest-first, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd
+  outgoing: force, rev, newest-first, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, subrepos
   parents: rev, style, template
   paths: 
   recover: 

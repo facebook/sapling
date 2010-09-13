@@ -264,6 +264,9 @@ class abstractsubrepo(object):
     def diff(self, diffopts, node2, match, prefix, **opts):
         pass
 
+    def outgoing(self, ui, dest, opts):
+        return 1
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -393,6 +396,9 @@ class hgsubrepo(abstractsubrepo):
             (relpath(self), dsturl))
         other = hg.repository(self._repo.ui, dsturl)
         return self._repo.push(other, force)
+
+    def outgoing(self, ui, dest, opts):
+        return hg.outgoing(ui, self._repo, _abssource(self._repo, True), opts)
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
