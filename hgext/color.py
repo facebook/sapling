@@ -233,7 +233,7 @@ try:
 
     # http://msdn.microsoft.com/en-us/library/ms682088%28VS.85%29.aspx
     w32effects = {
-        'none': 0,
+        'none': -1,
         'black': 0,
         'red': win32c.FOREGROUND_RED,
         'green': win32c.FOREGROUND_GREEN,
@@ -244,7 +244,7 @@ try:
         'white': (win32c.FOREGROUND_RED | win32c.FOREGROUND_GREEN |
                   win32c.FOREGROUND_BLUE),
         'bold': win32c.FOREGROUND_INTENSITY,
-        'black_background': 0,
+        'black_background': 0x100,                  # unused value > 0x0f
         'red_background': win32c.BACKGROUND_RED,
         'green_background': win32c.BACKGROUND_GREEN,
         'yellow_background': win32c.BACKGROUND_RED | win32c.BACKGROUND_GREEN,
@@ -257,6 +257,11 @@ try:
         'underline': win32c.COMMON_LVB_UNDERSCORE,  # double-byte charsets only
         'inverse': win32c.COMMON_LVB_REVERSE_VIDEO, # double-byte charsets only
     }
+
+    passthrough = set([win32c.FOREGROUND_INTENSITY,
+                       win32c.BACKGROUND_INTENSITY,
+                       win32c.COMMON_LVB_UNDERSCORE,
+                       win32c.COMMON_LVB_REVERSE_VIDEO])
 
     try:
         stdout = win32c.GetStdHandle(win32c.STD_OUTPUT_HANDLE)
@@ -272,13 +277,23 @@ try:
 
     def win32print(text, orig, **opts):
         label = opts.get('label', '')
-        attr = 0
+        attr = origattr
+
+        def mapcolor(val, attr):
+            if val == -1:
+                return origattr
+            elif val in passthrough:
+                return attr | val
+            elif val > 0x0f:
+                return (val & 0x70) | (attr & 0x8f)
+            else:
+                return (val & 0x07) | (attr & 0xf8)
 
         # determine console attributes based on labels
         for l in label.split():
             style = _styles.get(l, '')
             for effect in style.split():
-                attr |= w32effects[effect]
+                attr = mapcolor(w32effects[effect], attr)
 
         # hack to ensure regexp finds data
         if not text.startswith('\033['):
@@ -289,9 +304,8 @@ try:
         while m:
             for sattr in m.group(1).split(';'):
                 if sattr:
-                    val = int(sattr)
-                    attr = val and attr|val or 0
-            stdout.SetConsoleTextAttribute(attr or origattr)
+                    attr = mapcolor(int(sattr), attr)
+            stdout.SetConsoleTextAttribute(attr)
             orig(m.group(2), **opts)
             m = re.match(ansire, m.group(3))
 
