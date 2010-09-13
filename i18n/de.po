@@ -2,29 +2,43 @@
 # Deutsche Übersetzungen für Mercurial
 # Copyright (C) 2009 Matt Mackall and others
 #
-# Übersetzungen
-# =============
-# branch	Zweig/Verzweigung
-# bundle	Bündel
-# change	Änderung
-# changeset	Änderungssatz
-# check out	auschecken
-# commit	Version
-# commit (v)	übernehmen
-# deprecated	veraltet
-# hook		Aktion
-# merge		zusammenführen
-# notation	Schreibweise
-# repository	(Projekt)archiv
+# Übersetzungshilfen
+# ==================
+#
+# Der Benutzer sollte mit formeller Anrede angesprochen werden. Je nach
+# Fall kann aber auch eine unpersönliche Anrede ("man") verwendet werden.
+#
+# Deutsche Begriffe sind fein, man sollte es aber nicht übertreiben. Ein
+# Hilfstext à la "Beim Versionieren von Etiketten auf Zweigen" hilft
+# niemandem. Erfahrene Benutzer sind kurz irritiert, weil sie bekannte
+# Begriffe vermissen, während neue Nutzer sich eh noch nichts unter den
+# Begriffen vorstellen können und entweder `hg help` oder Google bemühen
+# müssen.
+# Gleichzeitig bringt fördert Suche nach "Mercurial Etikett" wenig
+# Brauchbares zu Tage.
+# Hier sollten diese krassen Eindeutschungen nur in der Erklärung zu "tag"
+# verwendet, sonst aber eher vermieden werden.
+#
+# branch        Branch/Zweig/Verzweigung
+# bundle        Bündel
+# change        Änderung
+# changeset     Änderungssatz
+# check out     auschecken
+# commit        Commit
+# commit (v)    übernehmen
+# deprecated    veraltet
+# hook          Aktion
+# merge         zusammenführen
+# notation      Schreibweise
+# repository    Projektarchiv
 # manage/track  versionieren
 #
-# Die Koordination der Übersetzung erfolgt auf https://bitbucket.org/FabianKreutz/hg-i18n-de/
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2009-11-13 10:15+0200\n"
-"PO-Revision-Date: 2010-09-12 03:17+0100\n"
+"PO-Revision-Date: 2010-09-13 02:01+0100\n"
 "Last-Translator: Christoph Mewes <christoph@webvariants.de>\n"
 "Language-Team: German (Tobias Bell, Fabian Kreutz, Lutz Horn)\n"
 "MIME-Version: 1.0\n"
@@ -320,6 +334,14 @@ msgid ""
 "    \"ignore\", which drops them. This setting can be overridden with\n"
 "    the --encodingmode command-line option."
 msgstr ""
+"HGENCODINGMODE\n"
+"    Dieses steuert, wie sich Mercurial beim Auftreten unbekannter Zeichen\n"
+"    verhält, wenn es Benutzereingaben verarbeitet. Der Standard ist\n"
+"    \"strict\", das zu einem Abbruch führt, wenn ein Zeichen nicht erkannt\n"
+"    werden konnte. Andere Einstellungen sind \"replace\", das unbekannte\n"
+"    Zeichen ersetzt, und \"ignore\", das diese Zeichen verwirft. Diese\n"
+"    Einstellung kann über den Schalter --encondingmode auf der\n"
+"    Kommandozeile überschrieben werden."
 
 msgid ""
 "HGMERGE\n"
@@ -327,6 +349,10 @@ msgid ""
 "    will be executed with three arguments: local file, remote file,\n"
 "    ancestor file."
 msgstr ""
+"HGMERGE\n"
+"    Die Programmdatei, die zum Lösen von Konflikten verwendet werden\n"
+"    soll. Das Programm wird mit drei Argumenten aufgerufen: die lokale\n"
+"    Datei, die entfernte Datei und die Vorgängerdatei."
 
 msgid ""
 "HGRCPATH\n"
@@ -335,20 +361,34 @@ msgid ""
 "    platform default search path is used. If empty, only the .hg/hgrc\n"
 "    from the current repository is read."
 msgstr ""
+"HGRCPATH\n"
+"    Eine Liste von Dateien oder Verzeichnissen, in denen nach hgrc-\n"
+"    Dateien gesucht werden soll. Als Trenner zwischen zwei Elementen\n"
+"    dient \":\" unter Unix und \";\" unter Windows. Wenn HGRCPATH nicht\n"
+"    gesetzt ist, wird der plattformspezifische Standardwert verwendet.\n"
+"    Wenn die Variable gesetzt, aber leer ist, wird nur .hg/hgrc aus dem\n"
+"    aktuellen Projektarchiv ausgewertet."
 
 msgid "    For each element in HGRCPATH:"
-msgstr ""
+msgstr "   Für jedes Element in HGRCPATH gilt:"
 
 msgid ""
 "    - if it's a directory, all files ending with .rc are added\n"
 "    - otherwise, the file itself will be added"
 msgstr ""
+"    - Wenn es ein Verzeichnis ist, werden alle Dateien, die auf .rc\n"
+"      enden, hinzugefügt.\n"
+"    - Ansonsten wird die Datei selbst hinzugefügt."
 
 msgid ""
 "HGUSER\n"
 "    This is the string used as the author of a commit. If not set,\n"
 "    available values will be considered in this order:"
 msgstr ""
+"HGUSER\n"
+"    Diese Angabe wird als Autor von Commits verwendet. Wenn sie nicht\n"
+"    gesetzt ist, werden die verfügbaren Werte in der folgenden\n"
+"    Reihenfolge ausgewertet:"
 
 msgid ""
 "    - HGUSER (deprecated)\n"
@@ -357,21 +397,33 @@ msgid ""
 "    - interactive prompt\n"
 "    - LOGNAME (with ``@hostname`` appended)"
 msgstr ""
+"    - HGUSER (veraltet)\n"
+"    - hgrc-Dateien aus dem HGRCPATH\n"
+"    - EMAIL\n"
+"    - Wert aus einer ineraktiven Eingabeaufforderung\n"
+"    - LOGNAME (mit angefügtem ``@hostname``)"
 
 msgid ""
 "EMAIL\n"
 "    May be used as the author of a commit; see HGUSER."
 msgstr ""
+"EMAIL\n"
+"    Kann als Autor eines Commits verwendet werden; siehe auch HGUSER."
 
 msgid ""
 "LOGNAME\n"
 "    May be used as the author of a commit; see HGUSER."
 msgstr ""
+"LOGNAME\n"
+"    Kann als Autor eines Commits verwendet werden; siehe auch HGUSER."
 
 msgid ""
 "VISUAL\n"
 "    This is the name of the editor to use when committing. See EDITOR."
 msgstr ""
+"VISUAL\n"
+"    Dies ist der Name des Editors, der beim Erzeugen eines Commits\n"
+"    verwendet werden soll. Siehe auch EDITOR."
 
 msgid ""
 "EDITOR\n"
@@ -382,12 +434,23 @@ msgid ""
 "    non-empty one is chosen. If all of them are empty, the editor\n"
 "    defaults to 'vi'."
 msgstr ""
+"EDITOR\n"
+"    Manchmal muss Mercurial eine Textdatei in einem Editor öffnen, damit\n"
+"    der Nutzer sie bearbeiten kann, zum Beispiel when eine Commit-\n"
+"    Nachricht geschrieben wird. Der verwendete Editor wird aus den drei\n"
+"    Umgebungsvariablen HGEDITOR, VISUAL und EDITOR (in dieser Reihenfolge)\n"
+"    ermittelt. Der erste nicht-leere wird verwendet. Wenn alle Angaben\n"
+"    leer sind, wird der Standard 'vi' verwendet."
 
 msgid ""
 "PYTHONPATH\n"
 "    This is used by Python to find imported modules and may need to be\n"
 "    set appropriately if this Mercurial is not installed system-wide.\n"
 msgstr ""
+"PYTHONPATH\n"
+"    Dies wird von Python genutzt, um importierte Module zu finden, und\n"
+"    muss entsprechend angepasst werden, wenn Mercurial nicht\n"
+"    systemweit installiert ist.\n"
 
 msgid ""
 "Mercurial has the ability to add new features through the use of\n"
@@ -395,6 +458,10 @@ msgid ""
 "existing commands, change the default behavior of commands, or\n"
 "implement hooks."
 msgstr ""
+"Mercurial hat die Fähigkeit, neue Funktionen über Erweiterungen\n"
+"einzubinden. Erweiterungen können neue Befehle oder Schalter für\n"
+"bestehende Befehle hinzufügen, das Standardverhalten ändern\n"
+"oder Hooks implementieren."
 
 msgid ""
 "Extensions are not loaded by default for a variety of reasons:\n"
@@ -405,30 +472,46 @@ msgid ""
 "Mercurial. It is thus up to the user to activate extensions as\n"
 "needed."
 msgstr ""
+"Erweiterungen werden aus einer Vielzahl von Gründen nicht standardmäßig\n"
+"geladen: Sie können die Startzeit verlängern; sie können nur für\n"
+"erweiterte Nutzung gedacht sein; sie können möglicherweise gefährliche\n"
+"Fähigkeiten (wie das Zerstören oder Verändern der Projektgeschichte)\n"
+"bereitstellen; sie können noch nicht für den allgemeinen Einsatz bereit\n"
+"sein; oder sie verändern das übliche Verhalten des Kerns von Mercurial.\n"
+"Daher müssen Erweiterungen erst vom Benutzer bei Bedarf aktiviert werden."
 
 msgid ""
 "To enable the \"foo\" extension, either shipped with Mercurial or in\n"
 "the Python search path, create an entry for it in your hgrc, like\n"
 "this::"
 msgstr ""
+"Um die Erweiterung \"foo\", die entweder mit Mercurial ausgeliefert wird\n"
+"oder sich im Python-Suchpfad befindet, zu aktivieren, erstellen Sie einen\n"
+"Eintrag wie den folgenden in Ihrer hgrc::"
 
 msgid ""
 "  [extensions]\n"
 "  foo ="
 msgstr ""
+"  [extensions]\n"
+"  foo ="
 
 msgid "You may also specify the full path to an extension::"
-msgstr ""
+msgstr "Sie können auch den vollen Pfad zu einer Erweiterung angeben::"
 
 msgid ""
 "  [extensions]\n"
 "  myfeature = ~/.hgext/myfeature.py"
 msgstr ""
+"  [extensions]\n"
+"  meinefunktion = ~/.hgext/meinefunktion.py"
 
 msgid ""
 "To explicitly disable an extension enabled in an hgrc of broader\n"
 "scope, prepend its path with !::"
 msgstr ""
+"Um eine Erweiterung explizit zu deaktivieren, die von einer allgemeineren\n"
+"hgrc aktiviert wurde, setzen Sie ein ! vor den Pfad::"
 
 msgid ""
 "  [extensions]\n"
@@ -437,6 +520,11 @@ msgid ""
 "  # ditto, but no path was supplied for extension baz\n"
 "  baz = !\n"
 msgstr ""
+"  [extensions]\n"
+"  # deaktiviert die Erweiterung bar, die im Verzeichnis\n"
+"  # /pfad/zur/erweiterung/bar.py liegt  bar = !/pfad/zur/erweiterung/bar.py\n"
+"  # ditto, aber es wurde kein Pfad für die Erweiterung baz angegeben\n"
+"  baz = !\n"
 
 msgid ""
 "When Mercurial accepts more than one revision, they may be specified\n"
@@ -629,37 +717,55 @@ msgid ""
 "line, via the --template option, or select an existing\n"
 "template-style (--style)."
 msgstr ""
+"Mercurial erlaubt es Ihnen, die Ausgabe von Befehlen mit Vorlagen\n"
+"anzupassen. Sie können eine Vorlage entweder über die Kommandozeile\n"
+"(über den Schalter --template) angeben, oder einen vorhandenen\n"
+"Vorlagenstil auswählen (--style)."
 
 msgid ""
 "You can customize output for any \"log-like\" command: log,\n"
 "outgoing, incoming, tip, parents, heads and glog."
 msgstr ""
+"Sie können die Ausgabe für jeden \"log-ähnlichen\" Befehl anpassen:\n"
+"log, outgoing, incoming, tip, parents, heads und glog."
 
 msgid ""
 "Three styles are packaged with Mercurial: default (the style used\n"
 "when no explicit preference is passed), compact and changelog.\n"
 "Usage::"
 msgstr ""
+"Drei Stile werden mit Mercurial mitgeliefert: default (der Stil, der\n"
+"genutzt wird, wenn kein anderer explizit angegeben wird), compact und\n"
+"changelog. Benutzung::"
 
 msgid "    $ hg log -r1 --style changelog"
-msgstr ""
+msgstr "    $ hg log -r1 --style changelog"
 
 msgid ""
 "A template is a piece of text, with markup to invoke variable\n"
 "expansion::"
 msgstr ""
+"Ein Template ist ein Stück Text, das Markierungen enthält, die bei der\n"
+"Ausgabe mit den eigentlichen Informationen ersetzt werden::"
 
 msgid ""
 "    $ hg log -r1 --template \"{node}\\n"
 "\"\n"
 "    b56ce7b07c52de7d5fd79fb89701ea538af65746"
 msgstr ""
+"    $ hg log -r1 --template \"{node}\\n"
+"\"\n"
+"    b56ce7b07c52de7d5fd79fb89701ea538af65746"
 
 msgid ""
 "Strings in curly braces are called keywords. The availability of\n"
 "keywords depends on the exact context of the templater. These\n"
 "keywords are usually available for templating a log-like command:"
 msgstr ""
+"Zeichenketten in geschweiften Klammern werden als Schlüsselwörter\n"
+"bezeichnet. Die Verfügbarkeit von Schlüsselwörtern hängt von dem\n"
+"ausgeführten Befehl ab. Diese Schlüsselwörter stehen üblicherweise für\n"
+"Vorlagen von \"log-ähnlichen\" Befehlen zur Verfügung:"
 
 msgid ""
 ":author:    String. The unmodified author of the changeset.\n"
@@ -687,6 +793,31 @@ msgid ""
 "            changeset.\n"
 ":latesttagdistance: Integer. Longest path to the latest tag."
 msgstr ""
+":author:    Zeichenkette. Der unveränderte Autor eines Änderungssatzes.\n"
+":branches:  Zeichenkette. Der Name des Branches, in dem der Änderungssatz\n"
+"            versioniert wurde. Ist leer, wenn der Branch-Name default\n"
+"            ist.\n"
+":date:      Datumsangabe. Das Datum, wann ein Änderungssatz versioniert\n"
+"            wurde.\n"
+":desc:      Zeichenkette. Der Text der Beschreibung eines\n"
+"            Änderungssatzes.\n"
+":diffstat:  Zeichenkette. Statistik über die Änderungen in dem folgenden\n"
+"            Format: \"geänderte Dateien: +hinzugefügt/-entfernte Zeilen\"\n"
+":files:     Liste von Zeichenketten. Alle geänderten, hinzugefügten oder\n"
+"            gelöschten Dateien dieses Änderungssatzes.\n"
+":file_adds: Liste von Zeichenketten. Alle hinzugefügten Dateien.\n"
+":file_mods: Liste von Zeichenketten. Alle geänderten Dateien.\n"
+":file_dels: Liste von Zeichenketten. Alle gelöschten Dateien.\n"
+":node:      Zeichenkette. Die Prüfsumme, die einen Änderungssatz\n"
+"            identifiziert, als 40 Zeichen lange hexadezimale Zeichenkette.\n"
+":parents:   Liste von Zeichenketten. Die Eltern des Änderungssatzes.\n"
+":rev:       Zahl. Die für dieses Projektarchiv geltende Nummer eines\n"
+"            Änderungssatzes.\n"
+":tags:      Liste von Zeichenketten. Alle Tags, die diesem Änderungssatz\n"
+"            zugewiesen wurden.\n"
+":latesttag: Zeichenkette. Aktuellstes globales Tag in den Nachfahren\n"
+"            dieses Änderungssatzes.\n"
+":latesttagdistance: Zahl. Längster Pfad zum aktuellsten Tag."
 
 msgid ""
 "The \"date\" keyword does not produce human-readable output. If you\n"
@@ -695,15 +826,23 @@ msgid ""
 "variable. You can also use a chain of filters to get the desired\n"
 "output::"
 msgstr ""
+"Das \"date\" Schlüsselwort erzeugt keine menschenlesbare Ausgabe. Wenn\n"
+"Sie ein Datum in Ihrer Ausgabe verwenden wollen, können Sie einen Filter\n"
+"einsetzen, um es zu verarbeiten. Filter sind Funktionen, die eine\n"
+"Zeichenkette basierend auf der Eingabe-Variablen zurückgeben. Sie können\n"
+"auch mehrere Filter verketten, um das gewünschte Ergebnis zu erhalten::"
 
 msgid ""
 "   $ hg tip --template \"{date|isodate}\\n"
 "\"\n"
 "   2008-08-21 18:22 +0000"
 msgstr ""
+"   $ hg tip --template \"{date|isodate}\\n"
+"\"\n"
+"   2008-08-21 18:22 +0000"
 
 msgid "List of filters:"
-msgstr ""
+msgstr "Liste aller Filter:"
 
 msgid ""
 ":addbreaks:   Any text. Add an XHTML \"<br />\" tag before the end of\n"
@@ -760,6 +899,69 @@ msgid ""
 ":user:        Any text. Returns the user portion of an email\n"
 "              address.\n"
 msgstr ""
+":addbreaks:   Beliebiger Text. Führt ein XHTML \"<br />\"-Tag vor das\n"
+"              Ende jeder Zeile bis auf die letzte ein.\n"
+":age:         Datumsangabe. Gibt eine menschenlesbare Datums- und\n"
+"              Zeitdifferenz zwischen dem gegebenen Datum und der\n"
+"              aktuellen Zeit aus.\n"
+":basename:    Beliebiger Text. Behandelt jeden Text als Pfadangabe und\n"
+"              gibt den letzten Bestandteil des Pfades nach dem Auftrennen\n"
+"              mit dem Trennzeichen für Verzeichnisse zurück (überhängende\n"
+"              Trenner werden ignoriert). Zum Beispiel wird aus\n"
+"              \"foo/bar/baz\" dann \"baz\" und \"foo/bar//\" wird zu\n"
+"              \"bar\".\n"
+":stripdir:    Behandelt den Text als Pfadangabe und entfernt das letzte\n"
+"              Verzeichnis, wenn möglich. Zum Beispiel wird aus \"foo\"\n"
+"              und \"foo/bar//\" dann \"bar\".\n"
+":date:        Datumsangabe. Gibt ein Datum als Unix Datum zurück,\n"
+"              inklusive der Zeitzone: \"Mon Sep 04 15:13:13 2006 0700\".\n"
+":domain:      Beliebiger Text. Findet die erste Zeichenkette, die wie\n"
+"              eine E-Mail-Adresse aussieht, und extrahiert davon die\n"
+"              Domain-Komponente:\n"
+"              Beispiel: ``Nutzer <user@example.com>`` wird zu\n"
+"              ``example.com``.\n"
+":domain:      Beliebiger Text. Extrahiert die erste Zeichenkette, die wie\n"
+"              eine E-Mail-Adresse aussieht.\n"
+"              Beispiel: ``Nutzer <user@example.com>`` wird zu\n"
+"              ``user@example.com``.\n"
+":escape:      Beliebiger Text. Ersetzt die besonderen XML/XHTML-Zeichen\n"
+"              \"&\", \"<\" und \">\" mit XML-Entitäten.\n"
+":fill68:      Beliebiger Text. Umbricht den Text bei 68 Zeichen.\n"
+":fill76:      Beliebiger Text. Umbricht den Text bei 76 Zeichen.\n"
+":firstline:   Beliebiger Text. Gibt die erste Zeile des Texts zurück.\n"
+":nonempty:    Beliebiger Text. Gibt '(none)' für eine leere Zeichenkette\n"
+"              zurück.\n"
+":hgdate:      Datumsangabe. Gibt das Datum als Zahlpaar zurück:\n"
+"              \"1157407993 25200\" (Unix Zeitstempel,\n"
+"              Zeitzonenverschiebung)\n"
+":isodate:     Datumsangabe. Gibt das Datum im ISO 8601-Format zurück:\n"
+"              \"2009-08-18 13:00 +0200\".\n"
+":isodatesec:  Datumsangabe. Gibt das Datum im ISO 8601-Format inklusive\n"
+"              Sekunden zurück: \"2009-08-18 13:00 +0200\". Siehe auch\n"
+"              den rfc3339date-Filter.\n"
+":localdate:   Datumsangabe. Konvertiert ein Datum in das lokale\n"
+"              Datumsformat.\n"
+":obfuscate:   Beliebiger Text. Gibt den Text als Folge von XML-Entitäten\n"
+"              zurück.\n"
+":person:      Beliebiger Text. Gibt den Text vor einer E-Mail-Adresse\n"
+"              zurück.\n"
+":rfc822date:  Datumsangabe. Gibt das Datum im gleichen Format zurück,\n"
+"              das auch in Kopfzeilen von E-Mails verwendet wird:\n"
+"              \"Tue, 18 Aug 2009 13:00:13 +0200\".\n"
+":rfc3339date: Datumsangabe. Gibt das Datum im Internet-Datumsformat,\n"
+"              spezifiziert im RFC 3339, zurück:\n"
+"              \"2009-08-18T13:00:13+02:00\".\n"
+":short:       Prüfsumme. Gibt die Kurzform der Prüfsumme zurück, d.h.\n"
+"              als 12 Zeichen lange hexadezimale Zeichenkette.\n"
+":shortdate:   Datumsangabe. Gibt ein Datum wie \"2006-09-18\" zurück.\n"
+":strip:       Beliebiger Text. Entfernt jeden führenden und überhängenden\n"
+"              Leerraum.\n"
+":tabindent:   Beliebiger Text. Gibt den Text zurück, wobei jede Zeile bis\n"
+"              auf die erste mit einem Tabulator eingerückt ist.\n"
+":urlescape:   Beliebiger Text. Maskiert alle \"besonderen\" Zeichen.\n"
+"              Aus \"foo bar\" wird zum Beispiel \"foo%20bar\".\n"
+":users:       Beliebiger Text. Gibt den Nutzerteil einer E-Mail-Adresse\n"
+"              (vor dem @-Zeichen) zurück.\n"
 
 msgid "Valid URLs are of the form::"
 msgstr "Gültige URLs haben folgende Form::"
@@ -1108,7 +1310,7 @@ msgid "rename a given bookmark"
 msgstr "Benennt ein gegebenes Lesezeichen um"
 
 msgid "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
-msgstr ""
+msgstr "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
 
 msgid "hooks for integrating with the Bugzilla bug tracker"
 msgstr "Bugzilla integration"
@@ -10465,14 +10667,17 @@ msgstr ""
 "\n"
 "    "
 
+#, fuzzy
 msgid "create changeset information from CVS"
-msgstr ""
+msgstr "erstellt Änderungssätze aus CVS"
 
 msgid ""
 "    This command is intended as a debugging tool for the CVS to\n"
 "    Mercurial converter, and can be used as a direct replacement for\n"
 "    cvsps."
 msgstr ""
+"    Dieser Befehl ist als Debuggingwerkzeug für den Konverter von CVS zu\n"
+"    Mercurial gedacht und kann als direkte Ersetzung für cvsps dienen."
 
 msgid ""
 "    Hg debugcvsps reads the CVS rlog for current directory (or any\n"
@@ -10480,6 +10685,10 @@ msgid ""
 "    series of changesets based on matching commit log entries and\n"
 "    dates."
 msgstr ""
+"    Hg debugcvsps liest das CVS-Logbuch für das aktuelle Verzeichnis\n"
+"    (oder jedes angegebene Verzeichnis) aus dem CVS-Projektarchiv aus\n"
+"    und konvertiert den Log in eine Serie von Änderungssetzen,\n"
+"    basierend auf übereinstimmenden Log-Einträgen und Datumsangaben."
 
 msgid "username mapping filename"
 msgstr "Abbildungsdatei für Benutzernamen"
@@ -10515,37 +10724,38 @@ msgid "hg convert [OPTION]... SOURCE [DEST [REVMAP]]"
 msgstr "hg convert [OPTION]... QUELLE [ZIEL [REVMAP]]"
 
 msgid "only return changes on specified branches"
-msgstr ""
+msgstr "nur die Änderungen des angegebenen Branches zurückgeben"
 
 msgid "prefix to remove from file names"
-msgstr ""
+msgstr "Präfix, das von Dateinamen entfernt werden soll"
 
 msgid "only return changes after or between specified tags"
-msgstr ""
+msgstr "nur Änderungen nach oder zwischen angegebenen Tags zurückgeben"
 
 msgid "update cvs log cache"
-msgstr ""
+msgstr "CVS Log-Zwischenspeicher aktualisieren"
 
 msgid "create new cvs log cache"
-msgstr ""
+msgstr "neuen CVS Log-Zwischenspeicher erzeugen"
 
 msgid "set commit time fuzz in seconds"
-msgstr ""
+msgstr "setze erlaubte Abweichung von der Commit-Zeit in Sekunden"
 
 msgid "specify cvsroot"
-msgstr ""
+msgstr "gibt cvsroot an"
 
 msgid "show parent changesets"
-msgstr ""
+msgstr "zeigt die Eltern-Änderungssätze an"
 
+#, fuzzy
 msgid "show current changeset in ancestor branches"
-msgstr ""
+msgstr "zeigt den aktuellen Änderungssatz in Vorgänger-Branches"
 
 msgid "ignored for compatibility"
-msgstr ""
+msgstr "ignoriert aus Kompatibilitätsgründen"
 
 msgid "hg debugcvsps [OPTION]... [PATH]..."
-msgstr ""
+msgstr "hg debugcvsps [OPTION]... [PATH]..."
 
 msgid "warning: lightweight checkouts may cause conversion failures, try with a regular branch instead.\n"
 msgstr "Warnung: Leichte Arbeitskopien können zu Konversationsfehlern führen; erwäge einen regulären Zweig zu nutzen.\n"
@@ -10622,7 +10832,7 @@ msgstr "Überschreibe Abbildung für Autor %s: war %s, wird %s\n"
 
 #, python-format
 msgid "spliced in %s as parents of %s\n"
-msgstr ""
+msgstr "in %s als Eltern von %s verbunden\n"
 
 msgid "scanning source...\n"
 msgstr "Untersuche Quelle...\n"
@@ -10770,17 +10980,17 @@ msgstr "Analysiere Baumversion %s...\n"
 msgid "tree analysis stopped because it points to an unregistered archive %s...\n"
 msgstr "Baumanalyse gestoppt, da er ein unregistriertes Archiv referenziert %s...\n"
 
-#, python-format
+#, fuzzy, python-format
 msgid "could not parse cat-log of %s"
-msgstr ""
+msgstr "konnte cat-log von %s nicht verarbeiten"
 
 #, python-format
 msgid "%s is not a local Mercurial repo"
-msgstr ""
+msgstr "%s ist kein lokales Mercurial Projektarchiv"
 
-#, python-format
+#, fuzzy, python-format
 msgid "initializing destination %s repository\n"
-msgstr ""
+msgstr "Initialisiere Ziel-Projektarchiv %s\n"
 
 #, python-format
 msgid "pulling from %s into %s\n"
@@ -10816,9 +11026,13 @@ msgstr "Sammle p4 Änderungslisten\n"
 
 msgid "Mercurial failed to run itself, check hg executable is in PATH"
 msgstr ""
+"Mercurial konnte sich selbst nicht ausführen, prüfen Sie, ob die\n"
+"Programmdatei in PATH enthalten ist."
 
 msgid "svn: cannot probe remote repository, assume it could be a subversion repository. Use --source if you know better.\n"
 msgstr ""
+"svn: Kann entferntes Projektarchiv nicht untersuchen, nehme an, es handelt sich um ein Subversion-Projektarchiv.\n"
+"Verwenden Sie --source, wenn Sie es besser wissen.\n"
 
 msgid "Subversion python bindings could not be loaded"
 msgstr "Pythons Subversion-Unterstützung konnte nicht geladen werden"
@@ -10887,11 +11101,11 @@ msgstr "svn: Zweig hat keine Revisionen: %s"
 
 #, python-format
 msgid "initializing svn repo %r\n"
-msgstr ""
+msgstr "Initialisiere svn-Projektarchiv %r\n"
 
 #, python-format
 msgid "initializing svn wc %r\n"
-msgstr ""
+msgstr "Initialisiere svn-Arbeitskopie %r\n"
 
 msgid "unexpected svn output:\n"
 msgstr "Unerwartete Ausgabe von Subversion:\n"
@@ -10900,7 +11114,7 @@ msgid "unable to cope with svn output"
 msgstr "Ausgabe von Subversion nicht verstanden"
 
 msgid "XXX TAGS NOT IMPLEMENTED YET\n"
-msgstr ""
+msgstr "XXX TAGS WURDEN NOCH NICHT IMPLEMENTIERT\n"
 
 msgid "command to allow external programs to compare revisions"
 msgstr "Erlaubt externen Programmen, Revisionen zu vergleichen"
@@ -11174,7 +11388,7 @@ msgid "commands to sign and verify changesets"
 msgstr "Nutzt eine Programm um den Fehlerstatus zu bestimmen"
 
 msgid "error while verifying signature"
-msgstr ""
+msgstr "Fehler beim Überprüfen der Signatur"
 
 #, python-format
 msgid "%s Bad signature from \"%s\"\n"
@@ -11196,7 +11410,7 @@ msgid "%s:%d node does not exist\n"
 msgstr "%s:%d Knoten existiert nicht\n"
 
 msgid "verify all the signatures there may be for a particular revision"
-msgstr ""
+msgstr "überprüfe alle für eine bestimmte Revision vorhandenen Signaturen"
 
 #, python-format
 msgid "No valid signature for %s\n"
@@ -11241,13 +11455,13 @@ msgid "commit message"
 msgstr "Versionsmeldung"
 
 msgid "hg sign [OPTION]... [REVISION]..."
-msgstr ""
+msgstr "hg sign [OPTION]... [REVISION]..."
 
 msgid "hg sigcheck REVISION"
-msgstr ""
+msgstr "hg sigcheck REVISION"
 
 msgid "hg sigs"
-msgstr ""
+msgstr "hg sigs"
 
 #, fuzzy
 msgid "command to view revision graphs from a shell"
@@ -11311,12 +11525,15 @@ msgid "hg glog [OPTION]... [FILE]"
 msgstr "hg glog [OPTION]... [DATEI]"
 
 msgid "hooks for integrating with the CIA.vc notification service"
-msgstr ""
+msgstr "Hooks zur Integration mit dem CIA.cv-Benachrichtigungsdienst"
 
 msgid ""
 "This is meant to be run as a changegroup or incoming hook. To\n"
 "configure it, set the following options in your hgrc::"
 msgstr ""
+"Dies ist dafür gedacht, als Hook für changegroup oder incoming\n"
+"eingesetzt zu werden. Um es zu konfigurieren, setzen Sie die\n"
+"folgenden Optionen in Ihrer hgrc::"
 
 msgid ""
 "  [cia]\n"
@@ -11341,6 +11558,29 @@ msgid ""
 "  # print message instead of sending it (optional)\n"
 "  #test = False"
 msgstr ""
+"  [cia]\n"
+"  # Ihr registrierter CIA-Benutzername\n"
+"  user = foo\n"
+"  # der Name des Projekts bei CIA\n"
+"  project = foo\n"
+"  # das Modul (Unterprojekt) (optional)\n"
+"  #module = foo\n"
+"  # Hänge eine Statistik über die Änderungen an die Commit-Nachricht an\n"
+"  # (optional)\n"
+"  #diffstat = False\n"
+"  # Vorlage für die Commit-Nachrichten (optional)\n"
+"  #template = {desc}\\n"
+"{baseurl}/rev/{node}-- {diffstat}\n"
+"  # zu verwendender Stil (optional)\n"
+"  #style = foo\n"
+"  # Die URL des CIA Benachrichtigungsdienstes (optional)\n"
+"  # Sie können mailto:-URLs verwenden, um E-Mails zu senden, z.B.\n"
+"  # mailto:cia@cia.vc\n"
+"  # Stellen Sie sicher, dass Sie email.from korrekt eingerichtet haben,\n"
+"  # wenn Sie dies tun.\n"
+"  #url = http://cia.vc/\n"
+"  # Nachrichten ausgeben statt sie zu senden (optional)\n"
+"  #test = False"
 
 msgid ""
 "  [hooks]\n"
@@ -11348,22 +11588,29 @@ msgid ""
 "  changegroup.cia = python:hgcia.hook\n"
 "  #incoming.cia = python:hgcia.hook"
 msgstr ""
+"  [hooks]\n"
+"  # einer von diesen:\n"
+"  changegroup.cia = python:hgcia.hook\n"
+"  #incoming.cia = python:hgcia.hook"
 
 msgid ""
 "  [web]\n"
 "  # If you want hyperlinks (optional)\n"
 "  baseurl = http://server/path/to/repo\n"
 msgstr ""
+"  [web]\n"
+"  # Wenn Sie Hyperlinks möchten (optional)\n"
+"  baseurl = http://server/path/to/repo\n"
 
 #, python-format
 msgid "hgcia: sending update to %s\n"
-msgstr ""
+msgstr "hgcia: Sende Aktualisierung an %s\n"
 
 msgid "email.from must be defined when sending by email"
-msgstr ""
+msgstr "email.from muss definiert werden, wenn E-Mails gesendet werden"
 
 msgid "browse the repository in a graphical way"
-msgstr ""
+msgstr "durchstöbert das Projektarchiv auf grafische Weise"
 
 msgid ""
 "The hgk extension allows browsing the history of a repository in a\n"
@@ -16225,7 +16472,7 @@ msgid " (Current patch tool may be incompatible with patch, or misconfigured. Pl
 msgstr " (Aktuelles patch Werkzeug könnte mit patch inkompatibel or fehlkonfiguriert sein. Prüfe die .hgrc Datei!)\n"
 
 msgid " Internal patcher failure, please report this error to http://mercurial.selenic.com/bts/\n"
-msgstr "Fehlschlag des internen patch Werkzeugs. Bitte melden Sie diesen Fehler bei http://www.selenic.com/mercurial/bts\n"
+msgstr " Fehlschlag des internen patch Werkzeugs. Bitte melden Sie diesen Fehler bei http://www.selenic.com/mercurial/bts\n"
 
 msgid "Checking commit editor...\n"
 msgstr "Prüfe Editor für Versionsmeldungen...\n"
@@ -20740,39 +20987,39 @@ msgstr "Ungültige Angabe des Tages: %s"
 
 #, python-format
 msgid "%.0f GB"
-msgstr ""
+msgstr "%.0f GB"
 
 #, python-format
 msgid "%.1f GB"
-msgstr ""
+msgstr "%.1f GB"
 
 #, python-format
 msgid "%.2f GB"
-msgstr ""
+msgstr "%.2f GB"
 
 #, python-format
 msgid "%.0f MB"
-msgstr ""
+msgstr "%.0f MB"
 
 #, python-format
 msgid "%.1f MB"
-msgstr ""
+msgstr "%.1f MB"
 
 #, python-format
 msgid "%.2f MB"
-msgstr ""
+msgstr "%.2f MB"
 
 #, python-format
 msgid "%.0f KB"
-msgstr ""
+msgstr "%.0f KB"
 
 #, python-format
 msgid "%.1f KB"
-msgstr ""
+msgstr "%.1f KB"
 
 #, python-format
 msgid "%.2f KB"
-msgstr ""
+msgstr "%.2f KB"
 
 #, python-format
 msgid "%.0f bytes"
