@@ -2672,33 +2672,7 @@ def outgoing(ui, repo, dest=None, **opts):
 
     Returns 0 if there are outgoing changes, 1 otherwise.
     """
-    limit = cmdutil.loglimit(opts)
-    dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    dest, branches = hg.parseurl(dest, opts.get('branch'))
-    revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
-    if revs:
-        revs = [repo.lookup(rev) for rev in revs]
-
-    other = hg.repository(hg.remoteui(repo, opts), dest)
-    ui.status(_('comparing with %s\n') % url.hidepassword(dest))
-    o = discovery.findoutgoing(repo, other, force=opts.get('force'))
-    if not o:
-        ui.status(_("no changes found\n"))
-        return 1
-    o = repo.changelog.nodesbetween(o, revs)[0]
-    if opts.get('newest_first'):
-        o.reverse()
-    displayer = cmdutil.show_changeset(ui, repo, opts)
-    count = 0
-    for n in o:
-        if limit is not None and count >= limit:
-            break
-        parents = [p for p in repo.changelog.parents(n) if p != nullid]
-        if opts.get('no_merges') and len(parents) == 2:
-            continue
-        count += 1
-        displayer.show(repo[n])
-    displayer.close()
+    return hg.outgoing(ui, repo, dest, opts)
 
 def parents(ui, repo, file_=None, **opts):
     """show the parents of the working directory or revision

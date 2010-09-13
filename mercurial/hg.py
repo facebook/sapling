@@ -8,8 +8,10 @@
 
 from i18n import _
 from lock import release
+from node import hex, nullid, nullrev, short
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
 import lock, util, extensions, error, encoding, node
+import cmdutil, discovery, url
 import merge as mergemod
 import verify as verifymod
 import errno, os, shutil
@@ -405,6 +407,35 @@ def merge(repo, node, force=None, remind=True):
     elif remind:
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
     return stats[3] > 0
+
+def outgoing(ui, repo, dest, opts):
+    limit = cmdutil.loglimit(opts)
+    dest = ui.expandpath(dest or 'default-push', dest or 'default')
+    dest, branches = parseurl(dest, opts.get('branch'))
+    revs, checkout = addbranchrevs(repo, repo, branches, opts.get('rev'))
+    if revs:
+        revs = [repo.lookup(rev) for rev in revs]
+
+    other = repository(remoteui(repo, opts), dest)
+    ui.status(_('comparing with %s\n') % url.hidepassword(dest))
+    o = discovery.findoutgoing(repo, other, force=opts.get('force'))
+    if not o:
+        ui.status(_("no changes found\n"))
+        return 1
+    o = repo.changelog.nodesbetween(o, revs)[0]
+    if opts.get('newest_first'):
+        o.reverse()
+    displayer = cmdutil.show_changeset(ui, repo, opts)
+    count = 0
+    for n in o:
+        if limit is not None and count >= limit:
+            break
+        parents = [p for p in repo.changelog.parents(n) if p != nullid]
+        if opts.get('no_merges') and len(parents) == 2:
+            continue
+        count += 1
+        displayer.show(repo[n])
+    displayer.close()
 
 def revert(repo, node, choose):
     """revert changes to revision in node without updating dirstate"""
