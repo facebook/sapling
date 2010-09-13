@@ -131,6 +131,11 @@ class narrowmatcher(match):
     True
     >>> m2.rel('b.txt')
     'b.txt'
+    >>> def bad(f, msg):
+    ...     print "%s: %s" % (f, msg)
+    >>> m1.bad = bad
+    >>> m2.bad('x.txt', 'No such file')
+    sub/x.txt: No such file
     """
 
     def __init__(self, path, matcher):
@@ -144,6 +149,9 @@ class narrowmatcher(match):
         self._anypats = matcher._anypats
         self.matchfn = lambda fn: matcher.matchfn(self._path + "/" + fn)
         self._fmap = set(self._files)
+
+    def bad(self, f, msg):
+        self._matcher.bad(self._path + "/" + f, msg)
 
 def patkind(pat):
     return _patsplit(pat, None)[0]
