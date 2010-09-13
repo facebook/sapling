@@ -9,7 +9,7 @@ from node import hex, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
 import os, re, sys, difflib, time, tempfile
-import hg, util, revlog, bundlerepo, extensions, copies, error
+import hg, util, revlog, extensions, copies, error
 import patch, help, mdiff, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
@@ -2357,66 +2357,7 @@ def incoming(ui, repo, source="default", **opts):
 
     Returns 0 if there are incoming changes, 1 otherwise.
     """
-    limit = cmdutil.loglimit(opts)
-    source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-    other = hg.repository(hg.remoteui(repo, opts), source)
-    ui.status(_('comparing with %s\n') % url.hidepassword(source))
-    revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
-    if revs:
-        revs = [other.lookup(rev) for rev in revs]
-
-    tmp = discovery.findcommonincoming(repo, other, heads=revs,
-                                       force=opts.get('force'))
-    common, incoming, rheads = tmp
-    if not incoming:
-        try:
-            os.unlink(opts["bundle"])
-        except:
-            pass
-        ui.status(_("no changes found\n"))
-        return 1
-
-    cleanup = None
-    try:
-        fname = opts["bundle"]
-        if fname or not other.local():
-            # create a bundle (uncompressed if other repo is not local)
-
-            if revs is None and other.capable('changegroupsubset'):
-                revs = rheads
-
-            if revs is None:
-                cg = other.changegroup(incoming, "incoming")
-            else:
-                cg = other.changegroupsubset(incoming, revs, 'incoming')
-            bundletype = other.local() and "HG10BZ" or "HG10UN"
-            fname = cleanup = changegroup.writebundle(cg, fname, bundletype)
-            # keep written bundle?
-            if opts["bundle"]:
-                cleanup = None
-            if not other.local():
-                # use the created uncompressed bundlerepo
-                other = bundlerepo.bundlerepository(ui, repo.root, fname)
-
-        o = other.changelog.nodesbetween(incoming, revs)[0]
-        if opts.get('newest_first'):
-            o.reverse()
-        displayer = cmdutil.show_changeset(ui, other, opts)
-        count = 0
-        for n in o:
-            if limit is not None and count >= limit:
-                break
-            parents = [p for p in other.changelog.parents(n) if p != nullid]
-            if opts.get('no_merges') and len(parents) == 2:
-                continue
-            count += 1
-            displayer.show(other[n])
-        displayer.close()
-    finally:
-        if hasattr(other, 'close'):
-            other.close()
-        if cleanup:
-            os.unlink(cleanup)
+    return hg.incoming(ui, repo, source, opts)
 
 def init(ui, dest=".", **opts):
     """create a new repository in the given directory

@@ -11,7 +11,7 @@ from lock import release
 from node import hex, nullid, nullrev, short
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
 import lock, util, extensions, error, encoding, node
-import cmdutil, discovery, url
+import cmdutil, discovery, url, changegroup
 import merge as mergemod
 import verify as verifymod
 import errno, os, shutil
@@ -407,6 +407,68 @@ def merge(repo, node, force=None, remind=True):
     elif remind:
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
     return stats[3] > 0
+
+def incoming(ui, repo, source, opts):
+    limit = cmdutil.loglimit(opts)
+    source, branches = parseurl(ui.expandpath(source), opts.get('branch'))
+    other = repository(remoteui(repo, opts), source)
+    ui.status(_('comparing with %s\n') % url.hidepassword(source))
+    revs, checkout = addbranchrevs(repo, other, branches, opts.get('rev'))
+    if revs:
+        revs = [other.lookup(rev) for rev in revs]
+
+    tmp = discovery.findcommonincoming(repo, other, heads=revs,
+                                       force=opts.get('force'))
+    common, incoming, rheads = tmp
+    if not incoming:
+        try:
+            os.unlink(opts["bundle"])
+        except:
+            pass
+        ui.status(_("no changes found\n"))
+        return 1
+
+    cleanup = None
+    try:
+        fname = opts["bundle"]
+        if fname or not other.local():
+            # create a bundle (uncompressed if other repo is not local)
+
+            if revs is None and other.capable('changegroupsubset'):
+                revs = rheads
+
+            if revs is None:
+                cg = other.changegroup(incoming, "incoming")
+            else:
+                cg = other.changegroupsubset(incoming, revs, 'incoming')
+            bundletype = other.local() and "HG10BZ" or "HG10UN"
+            fname = cleanup = changegroup.writebundle(cg, fname, bundletype)
+            # keep written bundle?
+            if opts["bundle"]:
+                cleanup = None
+            if not other.local():
+                # use the created uncompressed bundlerepo
+                other = bundlerepo.bundlerepository(ui, repo.root, fname)
+
+        o = other.changelog.nodesbetween(incoming, revs)[0]
+        if opts.get('newest_first'):
+            o.reverse()
+        displayer = cmdutil.show_changeset(ui, other, opts)
+        count = 0
+        for n in o:
+            if limit is not None and count >= limit:
+                break
+            parents = [p for p in other.changelog.parents(n) if p != nullid]
+            if opts.get('no_merges') and len(parents) == 2:
+                continue
+            count += 1
+            displayer.show(other[n])
+        displayer.close()
+    finally:
+        if hasattr(other, 'close'):
+            other.close()
+        if cleanup:
+            os.unlink(cleanup)
 
 def outgoing(ui, repo, dest, opts):
     limit = cmdutil.loglimit(opts)
