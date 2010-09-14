@@ -23,11 +23,14 @@ elif choice == 'none':
 else:
     try:
         from subvertpy_wrapper import *
-    except ImportError, e:
+    except ImportError, e1:
         try:
             from svn_swig_wrapper import *
-        except ImportError:
-            # propagate the subvertpy error; it's easier to install
-            raise e
+        except ImportError, e2:
+            raise ImportError('no compatible bindings available:\n\n'
+                              '%s\n%s\n\n'
+                              'Please install either Subvertpy or the '
+                              'Subversion Python SWIG bindings'
+                              % (e2, e1))
 
 del os, choice
