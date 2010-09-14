@@ -771,7 +771,7 @@ class queue(object):
         if opts.get('rev'):
             if not self.applied:
                 raise util.Abort(_('no patches applied'))
-            revs = cmdutil.revrange(repo, opts['rev'])
+            revs = cmdutil.revrange(repo, opts.get('rev'))
             if len(revs) > 1 and revs[0] > revs[1]:
                 revs.reverse()
             revpatches = self._revpatches(repo, revs)
@@ -1831,9 +1831,9 @@ def qimport(ui, repo, *filename, **opts):
     """
     q = repo.mq
     try:
-        q.qimport(repo, filename, patchname=opts['name'],
-              existing=opts['existing'], force=opts['force'], rev=opts['rev'],
-              git=opts['git'])
+        q.qimport(repo, filename, patchname=opts.get('name'),
+              existing=opts.get('existing'), force=opts.get('force'),
+              rev=opts.get('rev'), git=opts.get('git'))
     finally:
         q.save_dirty()
 
@@ -1876,7 +1876,7 @@ def init(ui, repo, **opts):
 
     This command is deprecated. Without -c, it's implied by other relevant
     commands. With -c, use :hg:`init --mq` instead."""
-    return qinit(ui, repo, create=opts['create_repo'])
+    return qinit(ui, repo, create=opts.get('create_repo'))
 
 def clone(ui, source, dest=None, **opts):
     '''clone main and patch repository at same time
@@ -1901,8 +1901,8 @@ def clone(ui, source, dest=None, **opts):
     if dest is None:
         dest = hg.defaultdest(source)
     sr = hg.repository(hg.remoteui(ui, opts), ui.expandpath(source))
-    if opts['patches']:
-        patchespath = ui.expandpath(opts['patches'])
+    if opts.get('patches'):
+        patchespath = ui.expandpath(opts.get('patches'))
     else:
         patchespath = patchdir(sr)
     try:
@@ -1925,20 +1925,20 @@ def clone(ui, source, dest=None, **opts):
             pass
     ui.note(_('cloning main repository\n'))
     sr, dr = hg.clone(ui, sr.url(), dest,
-                      pull=opts['pull'],
+                      pull=opts.get('pull'),
                       rev=destrev,
                       update=False,
-                      stream=opts['uncompressed'])
+                      stream=opts.get('uncompressed'))
     ui.note(_('cloning patch repository\n'))
-    hg.clone(ui, opts['patches'] or patchdir(sr), patchdir(dr),
-             pull=opts['pull'], update=not opts['noupdate'],
-             stream=opts['uncompressed'])
+    hg.clone(ui, opts.get('patches') or patchdir(sr), patchdir(dr),
+             pull=opts.get('pull'), update=not opts.get('noupdate'),
+             stream=opts.get('uncompressed'))
     if dr.local():
         if qbase:
             ui.note(_('stripping applied patches from destination '
                       'repository\n'))
             dr.mq.strip(dr, [qbase], update=False, backup=None)
-        if not opts['noupdate']:
+        if not opts.get('noupdate'):
             ui.note(_('updating destination repository\n'))
             hg.update(dr, dr.changelog.tip())
 
@@ -1954,7 +1954,7 @@ def commit(ui, repo, *pats, **opts):
 
 def series(ui, repo, **opts):
     """print the entire series file"""
-    repo.mq.qseries(repo, missing=opts['missing'], summary=opts['summary'])
+    repo.mq.qseries(repo, missing=opts.get('missing'), summary=opts.get('summary'))
     return 0
 
 def top(ui, repo, **opts):
@@ -2021,7 +2021,7 @@ def new(ui, repo, patch, *args, **opts):
     """
     msg = cmdutil.logmessage(opts)
     def getmsg():
-        return ui.edit(msg, opts['user'] or ui.username())
+        return ui.edit(msg, opts.get('user') or ui.username())
     q = repo.mq
     opts['msg'] = msg
     if opts.get('edit'):
@@ -2054,7 +2054,7 @@ def refresh(ui, repo, *pats, **opts):
     """
     q = repo.mq
     message = cmdutil.logmessage(opts)
-    if opts['edit']:
+    if opts.get('edit'):
         if not q.applied:
             ui.write(_("no patches applied\n"))
             return 1
@@ -2110,7 +2110,7 @@ def fold(ui, repo, *files, **opts):
     q.check_localchanges(repo)
 
     message = cmdutil.logmessage(opts)
-    if opts['edit']:
+    if opts.get('edit'):
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
 
@@ -2144,7 +2144,7 @@ def fold(ui, repo, *files, **opts):
             message.extend(msg)
         message = '\n'.join(message)
 
-    if opts['edit']:
+    if opts.get('edit'):
         message = ui.edit(message, user or ui.username())
 
     diffopts = q.patchopts(q.diffopts(), *patches)
@@ -2157,9 +2157,9 @@ def goto(ui, repo, patch, **opts):
     q = repo.mq
     patch = q.lookup(patch)
     if q.isapplied(patch):
-        ret = q.pop(repo, patch, force=opts['force'])
+        ret = q.pop(repo, patch, force=opts.get('force'))
     else:
-        ret = q.push(repo, patch, force=opts['force'])
+        ret = q.push(repo, patch, force=opts.get('force'))
     q.save_dirty()
     return ret
 
@@ -2205,8 +2205,8 @@ def guard(ui, repo, *args, **opts):
     applied = set(p.name for p in q.applied)
     patch = None
     args = list(args)
-    if opts['list']:
-        if args or opts['none']:
+    if opts.get('list'):
+        if args or opts.get('none'):
             raise util.Abort(_('cannot mix -l/--list with options or arguments'))
         for i in xrange(len(q.series)):
             status(i)
@@ -2219,7 +2219,7 @@ def guard(ui, repo, *args, **opts):
         patch = args.pop(0)
     if patch is None:
         raise util.Abort(_('no patch to work with'))
-    if args or opts['none']:
+    if args or opts.get('none'):
         idx = q.find_series(patch)
         if idx is None:
             raise util.Abort(_('no patch named %s') % patch)
@@ -2276,9 +2276,9 @@ def push(ui, repo, patch=None, **opts):
     q = repo.mq
     mergeq = None
 
-    if opts['merge']:
-        if opts['name']:
-            newpath = repo.join(opts['name'])
+    if opts.get('merge'):
+        if opts.get('name'):
+            newpath = repo.join(opts.get('name'))
         else:
             newpath, i = lastsavename(q.path)
         if not newpath:
@@ -2286,7 +2286,7 @@ def push(ui, repo, patch=None, **opts):
             return 1
         mergeq = queue(ui, repo.join(""), newpath)
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
-    ret = q.push(repo, patch, force=opts['force'], list=opts['list'],
+    ret = q.push(repo, patch, force=opts.get('force'), list=opts.get('list'),
                  mergeq=mergeq, all=opts.get('all'), move=opts.get('move'))
     return ret
 
@@ -2298,14 +2298,14 @@ def pop(ui, repo, patch=None, **opts):
     top of the stack.
     """
     localupdate = True
-    if opts['name']:
-        q = queue(ui, repo.join(""), repo.join(opts['name']))
+    if opts.get('name'):
+        q = queue(ui, repo.join(""), repo.join(opts.get('name')))
         ui.warn(_('using patch queue: %s\n') % q.path)
         localupdate = False
     else:
         q = repo.mq
-    ret = q.pop(repo, patch, force=opts['force'], update=localupdate,
-                all=opts['all'])
+    ret = q.pop(repo, patch, force=opts.get('force'), update=localupdate,
+                all=opts.get('all'))
     q.save_dirty()
     return ret
 
@@ -2379,8 +2379,8 @@ def restore(ui, repo, rev, **opts):
     This command is deprecated, use rebase --mq instead."""
     rev = repo.lookup(rev)
     q = repo.mq
-    q.restore(repo, rev, delete=opts['delete'],
-              qupdate=opts['update'])
+    q.restore(repo, rev, delete=opts.get('delete'),
+              qupdate=opts.get('update'))
     q.save_dirty()
     return 0
 
@@ -2394,22 +2394,22 @@ def save(ui, repo, **opts):
     if ret:
         return ret
     q.save_dirty()
-    if opts['copy']:
+    if opts.get('copy'):
         path = q.path
-        if opts['name']:
-            newpath = os.path.join(q.basepath, opts['name'])
+        if opts.get('name'):
+            newpath = os.path.join(q.basepath, opts.get('name'))
             if os.path.exists(newpath):
                 if not os.path.isdir(newpath):
                     raise util.Abort(_('destination %s exists and is not '
                                        'a directory') % newpath)
-                if not opts['force']:
+                if not opts.get('force'):
                     raise util.Abort(_('destination %s exists, '
                                        'use -f to force') % newpath)
         else:
             newpath = savename(path)
         ui.warn(_("copy %s to %s\n") % (path, newpath))
         util.copyfiles(path, newpath)
-    if opts['empty']:
+    if opts.get('empty'):
         try:
             os.unlink(q.join(q.status_path))
         except:
@@ -2439,9 +2439,9 @@ def strip(ui, repo, *revs, **opts):
     operation completes.
     """
     backup = 'all'
-    if opts['backup']:
+    if opts.get('backup'):
         backup = 'strip'
-    elif opts['nobackup']:
+    elif opts.get('nobackup'):
         backup = 'none'
 
     cl = repo.changelog
@@ -2479,7 +2479,7 @@ def strip(ui, repo, *revs, **opts):
             q.save_dirty()
 
     repo.mq.strip(repo, list(rootnodes), backup=backup, update=update,
-                  force=opts['force'])
+                  force=opts.get('force'))
     return 0
 
 def select(ui, repo, *args, **opts):
@@ -2517,7 +2517,7 @@ def select(ui, repo, *args, **opts):
 
     q = repo.mq
     guards = q.active()
-    if args or opts['none']:
+    if args or opts.get('none'):
         old_unapplied = q.unapplied(repo)
         old_guarded = [i for i in xrange(len(q.applied)) if
                        not q.pushable(i)[0]]
@@ -2525,7 +2525,7 @@ def select(ui, repo, *args, **opts):
         q.save_dirty()
         if not args:
             ui.status(_('guards deactivated\n'))
-        if not opts['pop'] and not opts['reapply']:
+        if not opts.get('pop') and not opts.get('reapply'):
             unapplied = q.unapplied(repo)
             guarded = [i for i in xrange(len(q.applied))
                        if not q.pushable(i)[0]]
@@ -2537,7 +2537,7 @@ def select(ui, repo, *args, **opts):
                 ui.status(_('number of guarded, applied patches has changed '
                             'from %d to %d\n') %
                           (len(old_guarded), len(guarded)))
-    elif opts['series']:
+    elif opts.get('series'):
         guards = {}
         noguards = 0
         for gs in q.series_guards:
@@ -2564,9 +2564,9 @@ def select(ui, repo, *args, **opts):
                 ui.write(g, '\n')
         else:
             ui.write(_('no active guards\n'))
-    reapply = opts['reapply'] and q.applied and q.appliedname(-1)
+    reapply = opts.get('reapply') and q.applied and q.appliedname(-1)
     popped = False
-    if opts['pop'] or opts['reapply']:
+    if opts.get('pop') or opts.get('reapply'):
         for i in xrange(len(q.applied)):
             pushable, reason = q.pushable(i)
             if not pushable:
@@ -2601,9 +2601,9 @@ def finish(ui, repo, *revrange, **opts):
     an upstream repository, or if you are about to push your changes
     to upstream.
     """
-    if not opts['applied'] and not revrange:
+    if not opts.get('applied') and not revrange:
         raise util.Abort(_('no revisions specified'))
-    elif opts['applied']:
+    elif opts.get('applied'):
         revrange = ('qbase::qtip',) + revrange
 
     q = repo.mq
