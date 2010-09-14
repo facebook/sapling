@@ -26,23 +26,30 @@ try:
     from subvertpy import ra
     import subvertpy
 except ImportError:
-    raise ImportError('subvertpy %d.%d.%d or later required, but not found'
+    raise ImportError('Subvertpy %d.%d.%d or later required, but not found'
                       % subvertpy_required)
 
+def _versionstr(v):
+    return '.'.join(str(d) for d in v)
+
 if subvertpy.__version__ < subvertpy_required: #pragma: no cover
-    raise ImportError('subvertpy %d.%d.%d or later required, '
-                      'but %d.%d.%d found' %
-                      (subvertpy_required + subvertpy.__version__))
+    raise ImportError('Subvertpy %s or later required, '
+                      'but %s found'
+                      % (_versionstr(subvertpy_required),
+                         _versionstr(subvertpy.__version__)))
 
 if subvertpy.wc.version()[:3] < subversion_required:
-    raise ImportError('Subversion %d.%d.%d or later required, '
-                      'but %d.%d.%d found' %
-                      (subversion_required + subvertpy.wc.version()[:3]))
+    raise ImportError('Subversion %s or later required, '
+                      'but Subvertpy is using %s'
+                      % (_versionstr(subversion_required),
+                         _versionstr(subvertpy.wc.version()[:3])))
 
 
 def version():
-    return ('%d.%d.%d' % subvertpy.wc.version()[:3],
-            'Subvertpy %d.%d.%d' % subvertpy.__version__)
+    svnvers = _versionstr(subvertpy.wc.version()[:3])
+    if subvertpy.wc.version()[3]:
+        svnvers += '-' + subvertpy.wc.version()[3]
+    return (svnvers, 'Subvertpy ' + _versionstr(subvertpy.__version__))
 
 # exported values
 ERR_FS_CONFLICT = subvertpy.ERR_FS_CONFLICT
