@@ -332,6 +332,7 @@ def pull(repo, source, heads=[], force=False):
                             tries += 1
                             ui.status('Got a 502, retrying (%s)\n' % tries)
                         else:
+                            ui.traceback()
                             raise hgutil.Abort(*e.args)
         except KeyboardInterrupt:
             pass
