@@ -78,7 +78,7 @@ if __name__ == '__main__':
         demandimport.enable()
 
     if options.bindings:
-        os.putenv('HGSUBVERSION_BINDINGS', options.bindings)
+        os.environ['HGSUBVERSION_BINDINGS'] = options.bindings
 
     # make sure our copy of hgsubversion gets imported by loading test_util
     import test_util
