@@ -2435,13 +2435,13 @@ def strip(ui, repo, *revs, **opts):
     the local revision numbers will in general be different after the
     restore.
 
-    Use the --nobackup option to discard the backup bundle once the
+    Use the --no-backup option to discard the backup bundle once the
     operation completes.
     """
     backup = 'all'
     if opts.get('backup'):
         backup = 'strip'
-    elif opts.get('nobackup'):
+    elif opts.get('no-backup') or opts.get('nobackup'):
         backup = 'none'
 
     cl = repo.changelog
@@ -3087,7 +3087,8 @@ cmdtable = {
           ('b', 'backup', None, _('bundle only changesets with local revision'
                                   ' number greater than REV which are not'
                                   ' descendants of REV (DEPRECATED)')),
-           ('n', 'nobackup', None, _('no backups'))],
+           ('n', 'no-backup', None, _('no backups')),
+           ('', 'nobackup', None, _('no backups (DEPRECATED)'))],
           _('hg strip [-f] [-n] REV...')),
      "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
     "qunapplied":
