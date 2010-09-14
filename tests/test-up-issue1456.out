@@ -1,8 +1,0 @@
-abort: uncommitted local changes
-dirty
-M foo
-% validate update of standalone execute bit change
-1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-nothing changed
-0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-0 files updated, 0 files merged, 0 files removed, 0 files unresolved

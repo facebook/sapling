@@ -433,7 +433,7 @@ def update(repo, node, branchmerge, force, partial):
     the parent rev to the target rev (linear, on the same named
     branch, or on another named branch).
 
-    This logic is tested by test-update-branches.
+    This logic is tested by test-update-branches.t.
 
     -c  -C  dirty  rev  |  linear   same  cross
      n   n    n     n   |    ok     (1)     x

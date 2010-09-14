@@ -1,9 +1,0 @@
-# should print nothing
-# should fail
-abort: path 'b/x' is inside repo 'b'
-abort: path 'b/x' is inside repo 'b'
-# should fail
-abort: path 'b/x' is inside repo 'b'
-# should arguably print nothing
-# should fail
-abort: path 'b/a' is inside repo 'b'
