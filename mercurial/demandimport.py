@@ -45,7 +45,7 @@ class _demandmod(object):
         if not self._module:
             head, globals, locals, after, level = self._data
             if level is not None:
-                mod = _origimport(head, globals, locals, level)
+                mod = _origimport(head, globals, locals, level=level)
             else:
                 mod = _origimport(head, globals, locals)
             # load submodules
