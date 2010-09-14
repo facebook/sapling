@@ -46,7 +46,6 @@ class TestSubversionUrls(test_util.TestBase):
             ('bob', '123abc', 'https://svn.testurl.com/repo'),
             parse_url('https://joe:t3stpw@svn.testurl.com/repo', 'bob', '123abc'))
 
-class TestSvnRepo(test_util.TestBase):
     def test_url_rewriting(self):
         ui = test_util.ui.ui()
         ui.setconfig('hgsubversion', 'username', 'bob')
