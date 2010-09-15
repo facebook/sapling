@@ -21,7 +21,8 @@ propertycache = util.propertycache
 
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey'))
-    supported = set('revlogv1 store fncache shared parentdelta'.split())
+    supportedformats = set(('revlogv1', 'parentdelta'))
+    supported = supportedformats | set(('store', 'fncache', 'shared'))
 
     def __init__(self, baseui, path=None, create=0):
         repo.repository.__init__(self)
@@ -58,10 +59,6 @@ class localrepository(repo.repository):
                     )
                 if self.ui.configbool('format', 'parentdelta', False):
                     requirements.append("parentdelta")
-                reqfile = self.opener("requires", "w")
-                for r in requirements:
-                    reqfile.write("%s\n" % r)
-                reqfile.close()
             else:
                 raise error.RepoError(_("repository %s not found") % path)
         elif create:
@@ -93,9 +90,9 @@ class localrepository(repo.repository):
         self.sopener = self.store.opener
         self.sjoin = self.store.join
         self.opener.createmode = self.store.createmode
-        self.sopener.options = {}
-        if 'parentdelta' in requirements:
-            self.sopener.options['parentdelta'] = 1
+        self._applyrequirements(requirements)
+        if create:
+            self._writerequirements()
 
         # These two define the set of tags for this repository.  _tags
         # maps tag name to node; _tagtypes maps tag name to 'global' or
@@ -111,6 +108,18 @@ class localrepository(repo.repository):
         self.filterpats = {}
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
+
+    def _applyrequirements(self, requirements):
+        self.requirements = requirements
+        self.sopener.options = {}
+        if 'parentdelta' in requirements:
+            self.sopener.options['parentdelta'] = 1
+
+    def _writerequirements(self):
+        reqfile = self.opener("requires", "w")
+        for r in self.requirements:
+            reqfile.write("%s\n" % r)
+        reqfile.close()
 
     def _checknested(self, path):
         """Determine if path is a legal nested repository."""
@@ -1775,7 +1784,7 @@ class localrepository(repo.repository):
             return newheads - oldheads + 1
 
 
-    def stream_in(self, remote):
+    def stream_in(self, remote, requirements):
         fp = remote.stream_out()
         l = fp.readline()
         try:
@@ -1820,6 +1829,13 @@ class localrepository(repo.repository):
         self.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
                        (util.bytecount(total_bytes), elapsed,
                         util.bytecount(total_bytes / elapsed)))
+
+        # new requirements = old non-format requirements + new format-related
+        # requirements from the streamed-in repository
+        requirements.update(set(self.requirements) - self.supportedformats)
+        self._applyrequirements(requirements)
+        self._writerequirements()
+
         self.invalidate()
         return len(self.heads()) + 1
 
@@ -1838,8 +1854,17 @@ class localrepository(repo.repository):
         # and format flags on "stream" capability, and use
         # uncompressed only if compatible.
 
-        if stream and not heads and remote.capable('stream'):
-            return self.stream_in(remote)
+        if stream and not heads:
+            # 'stream' means remote revlog format is revlogv1 only
+            if remote.capable('stream'):
+                return self.stream_in(remote, set(('revlogv1',)))
+            # otherwise, 'streamreqs' contains the remote revlog format
+            streamreqs = remote.capable('streamreqs')
+            if streamreqs:
+                streamreqs = set(streamreqs.split(','))
+                # if we support it, stream in and adjust our requirements
+                if not streamreqs - self.supportedformats:
+                    return self.stream_in(remote, streamreqs)
         return self.pull(remote, heads)
 
     def pushkey(self, namespace, key, old, new):
