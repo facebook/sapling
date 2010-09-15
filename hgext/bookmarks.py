@@ -504,10 +504,12 @@ def uisetup(ui):
 
     entry = extensions.wrapcommand(commands.table, 'pull', pull)
     entry[1].append(('B', 'bookmark', [],
-                     _("bookmark to import")))
+                     _("bookmark to import"),
+                     _('BOOKMARK')))
     entry = extensions.wrapcommand(commands.table, 'push', push)
     entry[1].append(('B', 'bookmark', [],
-                     _("bookmark to export")))
+                     _("bookmark to export"),
+                     _('BOOKMARK')))
     entry = extensions.wrapcommand(commands.table, 'incoming', incoming)
     entry[1].append(('B', 'bookmarks', False,
                      _("compare bookmark")))
