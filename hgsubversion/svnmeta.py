@@ -53,6 +53,8 @@ class SVNMeta(object):
         tag_locations = self.ui.configlist('hgsubversion', 'tagpaths', ['tags'])
         self.usebranchnames = self.ui.configbool('hgsubversion',
                                                  'usebranchnames', True)
+        branchmap = self.ui.config('hgsubversion', 'branchmap')
+        singlebranch = self.ui.config('hgsubversion', 'singlebranch')
 
         # FIXME: test that this hasn't changed! defer & compare?
         if subdir:
@@ -90,8 +92,10 @@ class SVNMeta(object):
                                  defaulthost=author_host)
         if authors: self.authors.load(authors)
         self.branchmap = maps.BranchMap(self.ui, self.branchmapfile)
-        if self.ui.config('hgsubversion', 'branchmap'):
-            self.branchmap.load(self.ui.config('hgsubversion', 'branchmap'))
+        if branchmap:
+            self.branchmap.load(branchmap)
+        if singlebranch:
+            self.branchmap['default'] = singlebranch
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.filemap = maps.FileMap(repo)

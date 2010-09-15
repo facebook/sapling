@@ -75,6 +75,7 @@ wrapcmds = { # cmd: generic, target, fixdoc, ppopts, opts
         ('', 'layout', 'auto', ('import standard layout or single '
                                 'directory? Can be standard, single, or auto.')),
         ('', 'branchmap', '', 'file containing rules for branch conversion'),
+        ('', 'singlebranch', '', 'branch name to use for local svn commits'),
         ('', 'startrev', '', ('convert Subversion revisions starting at the one '
                               'specified, either an integer revision or HEAD; '
                               'HEAD causes only the latest revision to be '
