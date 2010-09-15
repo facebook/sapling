@@ -172,7 +172,13 @@ def branches(repo, proto, nodes):
 def capabilities(repo, proto):
     caps = 'lookup changegroupsubset branchmap pushkey'.split()
     if _allowstream(repo.ui):
-        caps.append('stream=%d' % repo.changelog.version)
+        requiredformats = repo.requirements & repo.supportedformats
+        # if our local revlogs are just revlogv1, add 'stream' cap
+        if not requiredformats - set(('revlogv1',)):
+            caps.append('stream')
+        # otherwise, add 'streamreqs' detailing our local revlog format
+        else:
+            caps.append('streamreqs=%s' % ','.join(requiredformats))
     caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
     return ' '.join(caps)
 

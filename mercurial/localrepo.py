@@ -1784,7 +1784,7 @@ class localrepository(repo.repository):
             return newheads - oldheads + 1
 
 
-    def stream_in(self, remote):
+    def stream_in(self, remote, requirements):
         fp = remote.stream_out()
         l = fp.readline()
         try:
@@ -1829,6 +1829,13 @@ class localrepository(repo.repository):
         self.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
                        (util.bytecount(total_bytes), elapsed,
                         util.bytecount(total_bytes / elapsed)))
+
+        # new requirements = old non-format requirements + new format-related
+        # requirements from the streamed-in repository
+        requirements.update(set(self.requirements) - self.supportedformats)
+        self._applyrequirements(requirements)
+        self._writerequirements()
+
         self.invalidate()
         return len(self.heads()) + 1
 
@@ -1847,8 +1854,17 @@ class localrepository(repo.repository):
         # and format flags on "stream" capability, and use
         # uncompressed only if compatible.
 
-        if stream and not heads and remote.capable('stream'):
-            return self.stream_in(remote)
+        if stream and not heads:
+            # 'stream' means remote revlog format is revlogv1 only
+            if remote.capable('stream'):
+                return self.stream_in(remote, set(('revlogv1',)))
+            # otherwise, 'streamreqs' contains the remote revlog format
+            streamreqs = remote.capable('streamreqs')
+            if streamreqs:
+                streamreqs = set(streamreqs.split(','))
+                # if we support it, stream in and adjust our requirements
+                if not streamreqs - self.supportedformats:
+                    return self.stream_in(remote, streamreqs)
         return self.pull(remote, heads)
 
     def pushkey(self, namespace, key, old, new):
