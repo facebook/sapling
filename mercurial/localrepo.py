@@ -21,7 +21,8 @@ propertycache = util.propertycache
 
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey'))
-    supported = set('revlogv1 store fncache shared parentdelta'.split())
+    supportedformats = set(('revlogv1', 'parentdelta'))
+    supported = supportedformats | set(('store', 'fncache', 'shared'))
 
     def __init__(self, baseui, path=None, create=0):
         repo.repository.__init__(self)
@@ -58,10 +59,6 @@ class localrepository(repo.repository):
                     )
                 if self.ui.configbool('format', 'parentdelta', False):
                     requirements.append("parentdelta")
-                reqfile = self.opener("requires", "w")
-                for r in requirements:
-                    reqfile.write("%s\n" % r)
-                reqfile.close()
             else:
                 raise error.RepoError(_("repository %s not found") % path)
         elif create:
@@ -93,9 +90,9 @@ class localrepository(repo.repository):
         self.sopener = self.store.opener
         self.sjoin = self.store.join
         self.opener.createmode = self.store.createmode
-        self.sopener.options = {}
-        if 'parentdelta' in requirements:
-            self.sopener.options['parentdelta'] = 1
+        self._applyrequirements(requirements)
+        if create:
+            self._writerequirements()
 
         # These two define the set of tags for this repository.  _tags
         # maps tag name to node; _tagtypes maps tag name to 'global' or
@@ -111,6 +108,18 @@ class localrepository(repo.repository):
         self.filterpats = {}
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
+
+    def _applyrequirements(self, requirements):
+        self.requirements = requirements
+        self.sopener.options = {}
+        if 'parentdelta' in requirements:
+            self.sopener.options['parentdelta'] = 1
+
+    def _writerequirements(self):
+        reqfile = self.opener("requires", "w")
+        for r in self.requirements:
+            reqfile.write("%s\n" % r)
+        reqfile.close()
 
     def _checknested(self, path):
         """Determine if path is a legal nested repository."""
