@@ -204,6 +204,10 @@ class SubversionRepo(object):
         ]
 
         auth = ra.Auth(providers)
+        if self.username:
+            auth.set_parameter(subvertpy.AUTH_PARAM_DEFAULT_USERNAME, self.username)
+        if self.password:
+            auth.set_parameter(subvertpy.AUTH_PARAM_DEFAULT_PASSWORD, self.password)
 
         self.remote = ra.RemoteAccess(url=self.svn_url.encode('utf-8'),
                                       client_string_func=getclientstring,
