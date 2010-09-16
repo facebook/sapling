@@ -145,6 +145,7 @@ def extsetup(ui):
 
 
 def reposetup(ui, repo):
+    uisetup(repo.ui)
     #print "reposetup for", repo.root
 
     if not repo.local():
