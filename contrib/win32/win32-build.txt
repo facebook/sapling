@@ -19,11 +19,11 @@ matching the mercurial version you want to build (32-bit or 64-bit).
   mfc71.dll (just download, don't install; not needed for Python 2.6)
       http://starship.python.net/crew/mhammond/win32/
 
-  Visual C++ 2008 SP1 redistributable package (needed for >= Python 2.6 or if you compile with MSVC)
+  Visual C++ 2008 redistributable package (needed for >= Python 2.6 or if you compile with MSVC)
     for 32-bit:
-      http://www.microsoft.com/downloads/details.aspx?FamilyID=A5C84275-3B97-4AB7-A40D-3802B2AF5FC2
+      http://www.microsoft.com/downloads/details.aspx?FamilyID=9b2da534-3e03-4391-8a4d-074b9f2bc1bf
     for 64-bit:
-      http://www.microsoft.com/downloads/details.aspx?familyid=BA9257CA-337F-4B40-8C14-157CFDFFEE4E
+      http://www.microsoft.com/downloads/details.aspx?familyid=bd2a6171-e2d6-4230-b809-9a8d7548c1b6
       
   The py2exe distutils extension
       http://sourceforge.net/projects/py2exe/
@@ -65,7 +65,7 @@ If you want to create a file named setup.cfg with the contents:
 compiler=mingw32
 you can skip the first build step.
 
-Building instructions with MSVC 2008 SP1 Express Edition:
+Building instructions with MSVC 2008 Express Edition:
   for 32-bit:
     "C:\Program Files\Microsoft Visual Studio 9.0\VC\vcvarsall.bat" x86
     python setup.py py2exe -b 2
@@ -80,15 +80,15 @@ directory that just got created.
 
 If you are using Python 2.6 or later, or if you are using MSVC 2008 to compile
 mercurial, you must include the C runtime libraries in the installer. To do so,
-install the Visual C++ 2008 SP1 redistributable package. Then in your
-windows\winsxs folder, locate the folder containing the dlls version 9.0.30729.
-For x86, it should be named like x86_Microsoft.VC90.CRT_(...)_9.0.30729(...).
-For x64, it should be named like amd64_Microsoft.VC90.CRT_(...)_9.0.30729(...).
+install the Visual C++ 2008 redistributable package. Then in your windows\winsxs
+folder, locate the folder containing the dlls version 9.0.21022.8.
+For x86, it should be named like x86_Microsoft.VC90.CRT_(...)_9.0.21022.8(...).
+For x64, it should be named like amd64_Microsoft.VC90.CRT_(...)_9.0.21022.8(...).
 Copy the files named msvcm90.dll, msvcp90.dll and msvcr90.dll into the dist
 directory.
 Then in the windows\winsxs\manifests folder, locate the corresponding manifest
-file (x86_Microsoft.VC90.CRT_(...)_9.0.30729(...).manifest for x86,
-amd64_Microsoft.VC90.CRT_(...)_9.0.30729(...).manifest for x64), copy it in the
+file (x86_Microsoft.VC90.CRT_(...)_9.0.21022.8(...).manifest for x86,
+amd64_Microsoft.VC90.CRT_(...)_9.0.21022.8(...).manifest for x64), copy it in the
 dist directory and rename it to Microsoft.VC90.CRT.manifest.
 
 Before building the installer, you have to build Mercurial HTML documentation 
