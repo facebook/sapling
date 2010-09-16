@@ -31,7 +31,7 @@ class transplants(object):
 
         if not opener:
             self.opener = util.opener(self.path)
-        self.transplants = []
+        self.transplants = {}
         self.dirty = False
         self.read()
 
@@ -40,29 +40,34 @@ class transplants(object):
         if self.transplantfile and os.path.exists(abspath):
             for line in self.opener(self.transplantfile).read().splitlines():
                 lnode, rnode = map(revlog.bin, line.split(':'))
-                self.transplants.append(transplantentry(lnode, rnode))
+                list = self.transplants.setdefault(rnode, [])
+                list.append(transplantentry(lnode, rnode))
 
     def write(self):
         if self.dirty and self.transplantfile:
             if not os.path.isdir(self.path):
                 os.mkdir(self.path)
             fp = self.opener(self.transplantfile, 'w')
-            for c in self.transplants:
-                l, r = map(revlog.hex, (c.lnode, c.rnode))
-                fp.write(l + ':' + r + '\n')
+            for l in self.transplants.itervalues():
+                for c in l:
+                    l, r = map(revlog.hex, (c.lnode, c.rnode))
+                    fp.write(l + ':' + r + '\n')
             fp.close()
         self.dirty = False
 
     def get(self, rnode):
-        return [t for t in self.transplants if t.rnode == rnode]
+        return self.transplants.get(rnode) or []
 
     def set(self, lnode, rnode):
-        self.transplants.append(transplantentry(lnode, rnode))
+        list = self.transplants.setdefault(rnode, [])
+        list.append(transplantentry(lnode, rnode))
         self.dirty = True
 
     def remove(self, transplant):
-        del self.transplants[self.transplants.index(transplant)]
-        self.dirty = True
+        list = self.transplants.get(transplant.rnode)
+        if list:
+            del list[list.index(transplant)]
+            self.dirty = True
 
 class transplanter(object):
     def __init__(self, ui, repo):
