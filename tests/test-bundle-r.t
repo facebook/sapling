@@ -207,8 +207,10 @@ should fail
 
   $ hg -R test bundle --base 2 -r tip test-bundle-branch1.hg test-3
   abort: --base is incompatible with specifying a destination
+  [255]
   $ hg -R test bundle -r tip test-bundle-branch1.hg
   abort: repository default-push not found!
+  [255]
 
   $ hg -R test bundle --base 2 -r tip test-bundle-branch1.hg
   2 changesets found
@@ -223,6 +225,7 @@ empty bundle
 
   $ hg -R test bundle --base 7 --base 8 test-bundle-empty.hg
   no changes found
+  [1]
 
 issue76 msg2163
 
@@ -248,6 +251,7 @@ revision 2
   transaction abort!
   rollback completed
   abort: 00changelog.i@eebf5a27f8ca: unknown parent!
+  [255]
 
 revision 2
 

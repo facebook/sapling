@@ -60,9 +60,11 @@ The next two calls are expected to abort:
 
   $ hg manifest -r 2
   abort: unknown revision '2'!
+  [255]
 
   $ hg manifest -r tip tip
   abort: please specify just one revision
+  [255]
 
 
   $ true

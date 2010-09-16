@@ -34,6 +34,7 @@ Pull a missing revision:
 
   $ hg pull -qr missing ../repo
   abort: unknown revision 'missing'!
+  [255]
 
 Pull multiple revisions with update:
 

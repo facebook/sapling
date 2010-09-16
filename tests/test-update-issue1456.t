@@ -10,6 +10,7 @@
   $ echo dirty > foo
   $ hg up -c
   abort: uncommitted local changes
+  [255]
   $ hg up -q
   $ cat foo
   dirty
@@ -23,6 +24,7 @@ Validate update of standalone execute bit change:
   $ chmod -x foo
   $ hg ci -m removeexec
   nothing changed
+  [1]
   $ hg up -C 0
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up

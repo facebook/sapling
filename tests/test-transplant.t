@@ -207,6 +207,7 @@ transplant --continue
   1 out of 1 hunks FAILED -- saving rejects to file foo.rej
   patch failed to apply
   abort: fix up the merge and run hg transplant --continue
+  [255]
 
 transplant -c shouldn't use an old changeset
 
@@ -220,6 +221,7 @@ transplant -c shouldn't use an old changeset
   1 out of 1 hunks FAILED -- saving rejects to file foo.rej
   patch failed to apply
   abort: fix up the merge and run hg transplant --continue
+  [255]
   $ hg transplant --continue
   a1e30dd1b8e7 transplanted as f1563cf27039
   $ hg transplant 1:3
@@ -320,6 +322,7 @@ test filter with failed patch
   1 out of 1 hunks FAILED -- saving rejects to file b1.rej
   patch failed to apply
   abort: fix up the merge and run hg transplant --continue
+  [255]
   $ cd ..
 
 
@@ -345,6 +348,7 @@ test with a win32ext like setup (differing EOLs)
   $ python -c "file('b', 'wb').write('b\r\nb\r\n')"
   $ hg ci -m addb
   nothing changed
+  [1]
   $ hg transplant -s ../twin1 tip
   applying 2e849d776c17
   2e849d776c17 transplanted to 589cea8ba85b

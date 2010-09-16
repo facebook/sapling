@@ -42,8 +42,11 @@
   $ hg ci -m m
 
   $ hg locate a
+  [1]
   $ hg locate NONEXISTENT
+  [1]
   $ hg locate relpath:NONEXISTENT
+  [1]
   $ hg locate
   b
   dir.h/foo
@@ -54,7 +57,9 @@
   $ hg locate -r 0 a
   a
   $ hg locate -r 0 NONEXISTENT
+  [1]
   $ hg locate -r 0 relpath:NONEXISTENT
+  [1]
   $ hg locate -r 0
   a
   b

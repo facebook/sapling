@@ -60,6 +60,7 @@ Problem encoding:
   $ hg add morestuff.txt
   $ hg ci -m morestuff
   abort: missing header "Copyright 2046, The Masters" in morestuff.txt
+  [255]
   $ hg stat
   M stuff.txt
   A morestuff.txt

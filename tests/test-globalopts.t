@@ -60,10 +60,13 @@ Implicit -R:
   0: a
   $ hg ann a/a b/b
   abort: There is no Mercurial repository here (.hg not found)!
+  [255]
   $ hg -R b ann a/a
   abort: a/a not under root
+  [255]
   $ hg log
   abort: There is no Mercurial repository here (.hg not found)!
+  [255]
 
 Abbreviation of long option:
 
@@ -103,16 +106,22 @@ earlygetopt with illegal abbreviations:
 
   $ hg --confi "foo.bar=baz"
   abort: option --config may not be abbreviated!
+  [255]
   $ hg --cw a tip
   abort: option --cwd may not be abbreviated!
+  [255]
   $ hg --rep a tip
   abort: Option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  [255]
   $ hg --repositor a tip
   abort: Option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  [255]
   $ hg -qR a tip
   abort: Option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  [255]
   $ hg -qRa tip
   abort: Option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  [255]
 
 Testing --cwd:
 
@@ -179,14 +188,19 @@ Testing --config:
   quuxfoo
   $ hg --cwd c --config '' tip -q
   abort: malformed --config option: '' (use --config section.name=value)
+  [255]
   $ hg --cwd c --config a.b tip -q
   abort: malformed --config option: 'a.b' (use --config section.name=value)
+  [255]
   $ hg --cwd c --config a tip -q
   abort: malformed --config option: 'a' (use --config section.name=value)
+  [255]
   $ hg --cwd c --config a.= tip -q
   abort: malformed --config option: 'a.=' (use --config section.name=value)
+  [255]
   $ hg --cwd c --config .b= tip -q
   abort: malformed --config option: '.b=' (use --config section.name=value)
+  [255]
 
 Testing --debug:
 

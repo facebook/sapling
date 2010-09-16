@@ -88,6 +88,7 @@ test garbage file
   $ cd tgarbage
   $ hg pull ../bgarbage
   abort: ../bgarbage: not a Mercurial bundle
+  [255]
   $ cd ..
 
 test invalid bundle type
@@ -96,4 +97,5 @@ test invalid bundle type
   $ hg bundle -a -t garbage ../bgarbage
   1 changesets found
   abort: unknown bundle type specified with --type
+  [255]
   $ cd ..

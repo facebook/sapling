@@ -50,6 +50,7 @@
   $ echo "username = " >> .hg/hgrc
   $ hg commit -m commit-1
   abort: no username supplied (see "hg help config")
+  [255]
   $ rm .hg/hgrc
   $ hg commit -m commit-1 2>&1
   No username found, using '[^']*' instead
@@ -59,5 +60,6 @@
   transaction abort!
   rollback completed
   abort: empty username!
+  [255]
 
   $ true

@@ -41,6 +41,7 @@ Creating branch b:
 We shouldn't have anything but n state here:
 
   $ hg debugstate --nodates | grep -v "^n"
+  [1]
 
 Merging:
 

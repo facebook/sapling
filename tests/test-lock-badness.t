@@ -16,6 +16,7 @@
   $ hg -R b push a
   pushing to a
   abort: could not lock repository a: Permission denied
+  [255]
 
   $ chmod 700 a/.hg/store
 

@@ -4,6 +4,7 @@ should fail - foo is not managed
   $ hg mv foo bar
   foo: not copying - file is not managed
   abort: no files to copy
+  [255]
   $ hg st -A
   ? foo
   $ hg add foo

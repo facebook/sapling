@@ -10,6 +10,7 @@
   $ echo foo > a
   $ hg ci -Am0
   abort: abandoned transaction found - run hg recover!
+  [255]
 
   $ hg recover
   rolling back interrupted transaction
@@ -27,6 +28,7 @@ Check that zero-size journals are correctly aborted:
   $ hg -R foo unbundle repo.hg
   adding changesets
   abort: Permission denied: .*
+  [255]
 
   $ if test -f foo/.hg/store/journal; then echo 'journal exists :-('; fi
 

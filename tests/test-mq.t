@@ -136,6 +136,7 @@ qinit -c should create both files if they don't exist
   $ cat .hg/patches/series
   $ hg qinit -c
   abort: repository .* already exists!
+  [255]
   $ cd ..
 
   $ echo '% qinit; <stuff>; qinit -c'
@@ -196,6 +197,7 @@ init --mq without repo
   $ cd f
   $ hg init --mq
   abort: there is no Mercurial repository here (.hg not found)
+  [255]
   $ cd ..
 
 init --mq with repo path
@@ -209,6 +211,7 @@ init --mq with nonexistent directory
 
   $ hg init --mq nonexistentdir
   abort: repository nonexistentdir not found!
+  [255]
 
 
 init --mq with bundle (non "local")
@@ -216,6 +219,7 @@ init --mq with bundle (non "local")
   $ hg -R a bundle --all a.bundle >/dev/null
   $ hg init --mq a.bundle
   abort: only a local queue repository may be initialized
+  [255]
 
   $ cd a
 
@@ -370,6 +374,7 @@ next
 
   $ hg qunapp -1
   all patches applied
+  [1]
 
   $ hg qpop
   popping test2.patch
@@ -379,12 +384,14 @@ commit should fail
 
   $ hg commit
   abort: cannot commit over an applied mq patch
+  [255]
 
 push should fail
 
   $ hg push ../../k
   pushing to ../../k
   abort: source has mq patches applied
+  [255]
 
 
 import should fail
@@ -395,6 +402,7 @@ import should fail
   $ hg revert --no-backup ../a
   $ hg import ../../import.diff
   abort: cannot import over an applied patch
+  [255]
   $ hg st
 
 import --no-commit should succeed
@@ -454,6 +462,7 @@ qpush --move
   $ hg qguard test2.patch -- +posguard
   $ hg qpush --move test2.patch # can't move guarded patch
   cannot push 'test2.patch' - guarded by ['+posguard']
+  [1]
   $ hg qselect posguard
   number of unguarded, unapplied patches has changed from 2 to 3
   $ hg qpush --move test2.patch # move to front
@@ -490,10 +499,13 @@ cleaning up
   now at: test1b.patch
   $ hg qpush --move bogus # nonexistent patch
   abort: patch bogus not in series
+  [255]
   $ hg qpush --move # no patch
   abort: please specify the patch to move
+  [255]
   $ hg qpush --move test.patch # already applied
   abort: cannot push to a previous patch: test.patch
+  [255]
   $ hg qpush
   applying test2.patch
   now at: test2.patch
@@ -520,6 +532,7 @@ qapplied -1 test.patch
 
   $ hg qapplied -1 test.patch
   only one patch applied
+  [1]
 
 qapplied -1 test1b.patch
 
@@ -553,6 +566,7 @@ qunapplied -1
 
   $ hg qunapplied -1
   all patches applied
+  [1]
 
 qunapplied
 
@@ -582,6 +596,7 @@ qunapplied -1 test2.patch
 
   $ hg qunapplied -1 test2.patch
   all patches applied
+  [1]
 
 popping -a
 
@@ -598,6 +613,7 @@ qapplied -1
 
   $ hg qapplied -1
   no patches applied
+  [1]
   $ hg qpush
   applying test.patch
   now at: test.patch
@@ -760,6 +776,7 @@ strip with local changes, should complain
   $ hg add y
   $ hg strip tip
   abort: local changes found
+  [255]
 
 --force strip with local changes
 
@@ -835,6 +852,7 @@ qpush failure
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working dir
   errors during apply, please fix and refresh bar
+  [2]
   $ hg st
   ? foo
   ? foo.rej
@@ -865,6 +883,7 @@ bad node in status
   default                        0:cb9a9f314b8b
   $ hg qpop
   no patches applied
+  [1]
 
   $ cat >>$HGRCPATH <<EOF
   > [diff]
@@ -1064,6 +1083,7 @@ check binary patches can be popped and pushed
   popping addbucephalus
   now at: addalexander
   $ test -f bucephalus && echo % bucephalus should not be there
+  [1]
   $ hg qpush
   applying addbucephalus
   now at: addbucephalus
@@ -1162,6 +1182,7 @@ repo with unversioned patch dir
 
   $ hg qclone qclonesource failure
   abort: versioned patch repository not found (see init --mq)
+  [255]
 
   $ cd qclonesource
   $ hg qinit -c
@@ -1254,6 +1275,7 @@ qpush should fail, local changes
 
   $ hg qpush
   abort: local changes found, refresh first
+  [255]
 
 
 apply force, should not discard changes with empty patch
@@ -1299,6 +1321,7 @@ qpush should fail, local changes
 
   $ hg qpush
   abort: local changes found, refresh first
+  [255]
 
 
 apply force, should discard changes in hello, but not bye

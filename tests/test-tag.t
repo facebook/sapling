@@ -14,6 +14,7 @@
 
   $ hg tag ' '
   abort: tag names cannot consist entirely of whitespace
+  [255]
 
   $ hg tag "bleah"
   $ hg history
@@ -88,8 +89,10 @@
   $ hg tag -l 'xx
   > newline'
   abort: '\n' cannot be used in a tag name
+  [255]
   $ hg tag -l 'xx:xx'
   abort: ':' cannot be used in a tag name
+  [255]
 
 cloning local tags
 

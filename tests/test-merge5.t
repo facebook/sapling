@@ -15,6 +15,7 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg update
   abort: crosses branches (use 'hg merge' or use 'hg update -c')
+  [255]
   $ hg update -c
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mv a c
@@ -27,6 +28,7 @@ Should abort:
 
   $ hg update -y 1
   abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
+  [255]
   $ mv c a
 
 Should succeed:

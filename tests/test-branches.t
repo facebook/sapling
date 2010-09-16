@@ -43,10 +43,13 @@
 
   $ hg branch tip
   abort: the name 'tip' is reserved
+  [255]
   $ hg branch null
   abort: the name 'null' is reserved
+  [255]
   $ hg branch .
   abort: the name '.' is reserved
+  [255]
 
   $ echo 'd' >d
   $ hg add d
@@ -235,6 +238,7 @@
   a branch name much longer than the default justification used by branches 7:10ff5895aa57
   $ hg heads b
   no open branch heads found on branches b
+  [1]
   $ hg heads --closed b
   changeset:   12:2da6583810df
   branch:      b
@@ -316,6 +320,7 @@ branch a
   
   $ hg heads --active a
   no open branch heads found on branches a
+  [1]
 
 branch b
 

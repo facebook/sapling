@@ -60,6 +60,8 @@ push/pull name that doesn't exist
 
   $ hg push -B badname ../a
   bookmark badname does not exist on the local or remote repository!
+  [2]
   $ hg pull -B anotherbadname ../a
   abort: remote bookmark anotherbadname not found!
+  [255]
   $ true

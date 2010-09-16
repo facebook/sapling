@@ -14,6 +14,7 @@ Should diff cloned directories:
   $ hg extdiff -o -r $opt
   Only in a: a
   Only in a: b
+  [1]
 
   $ echo "[extdiff]" >> $HGRCPATH
   $ echo "cmd.falabala=echo" >> $HGRCPATH
@@ -21,6 +22,7 @@ Should diff cloned directories:
 
   $ hg falabala
   diffing a.000000000000 a
+  [1]
 
   $ hg help falabala
   hg falabala [OPTION]... [FILE]...
@@ -56,6 +58,7 @@ Should diff cloned files directly:
 
   $ hg falabala -r 0:1
   diffing a.8a5febb7f867/a a.34eed99112ab/a
+  [1]
 
 Test diff during merge:
 
@@ -72,6 +75,7 @@ Test diff during merge:
 Should diff cloned file against wc file:
 
   $ hg falabala > out
+  [1]
 
 Cleanup the output since the wc is a tmp directory:
 
@@ -83,6 +87,7 @@ Test --change option:
   $ hg ci -d '2 0' -mtest3
   $ hg falabala -c 1
   diffing a.8a5febb7f867/a a.34eed99112ab/a
+  [1]
 
 Check diff are made from the first parent:
 
@@ -133,6 +138,7 @@ Prepare custom diff/edit tool:
 # will change to /tmp/extdiff.TMP and populate directories a.TMP and a
 # and start tool
   $ hg extdiff -p "`pwd`/diff tool.py"
+  [1]
 
 Diff in working directory, after:
 
@@ -158,9 +164,11 @@ Test extdiff with --option:
 
   $ hg extdiff -p echo -o this -c 1
   this a.8a5febb7f867/a a.34eed99112ab/a
+  [1]
 
   $ hg falabala -o this -c 1
   diffing this a.8a5febb7f867/a a.34eed99112ab/a
+  [1]
 
   $ true
 

@@ -20,6 +20,7 @@ Branch shadowing:
 
   $ hg branch default
   abort: a branch of the same name already exists (use 'hg update' to switch to it)
+  [255]
 
   $ hg branch -f default
   marked working directory as branch default
@@ -186,6 +187,7 @@ Update with no arguments: tipmost revision of the current branch:
 
   $ hg up
   abort: branch foobar not found
+  [255]
 
 Fastforward merge:
 
@@ -292,6 +294,7 @@ Implicit merge with test branch as parent:
   $ hg merge
   abort: branch 'test' has one head - please merge with an explicit rev
   (run 'hg heads' to see all heads)
+  [255]
   $ hg up -C default
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
@@ -300,6 +303,7 @@ Implicit merge with default branch as parent:
   $ hg merge
   abort: branch 'default' has 3 heads - please merge with an explicit rev
   (run 'hg heads .' to see heads)
+  [255]
 
 3 branch heads, explicit merge required:
 

@@ -6,17 +6,22 @@ commit date test
   $ hg add foo
   $ HGEDITOR=true hg commit -m ""
   abort: empty commit message
+  [255]
   $ hg commit -d '0 0' -m commit-1
   $ echo foo >> foo
   $ hg commit -d '1 4444444' -m commit-3
   abort: impossible time zone offset: 4444444
+  [255]
   $ hg commit -d '1	15.1' -m commit-4
   abort: invalid date: '1\t15.1'
+  [255]
   $ hg commit -d 'foo bar' -m commit-5
   abort: invalid date: 'foo bar'
+  [255]
   $ hg commit -d ' 1 4444' -m commit-6
   $ hg commit -d '111111111111 0' -m commit-7
   abort: date exceeds 32 bits: 111111111111
+  [255]
 
 commit added file that has been deleted
 
@@ -25,8 +30,10 @@ commit added file that has been deleted
   $ rm bar
   $ hg commit -m commit-8
   nothing changed
+  [1]
   $ hg commit -m commit-8-2 bar
   abort: bar: file not found!
+  [255]
 
   $ hg -q revert -a --no-backup
 
@@ -43,6 +50,7 @@ commit added file that has been deleted
   adding dir.file
   $ hg commit -m commit-10 dir dir.file
   abort: dir: no match under directory!
+  [255]
 
   $ echo >> dir/file
   $ mkdir bleh
@@ -50,8 +58,10 @@ commit added file that has been deleted
   $ cd bleh
   $ hg commit -m commit-11 .
   abort: bleh: no match under directory!
+  [255]
   $ hg commit -m commit-12 ../dir ../dir2
   abort: dir2: no match under directory!
+  [255]
   $ hg -v commit -m commit-13 ../dir
   dir/file
   committed changeset 3:1cd62a2d8db5
@@ -59,12 +69,15 @@ commit added file that has been deleted
 
   $ hg commit -m commit-14 does-not-exist
   abort: does-not-exist: No such file or directory
+  [255]
   $ ln -s foo baz
   $ hg commit -m commit-15 baz
   abort: baz: file not tracked!
+  [255]
   $ touch quux
   $ hg commit -m commit-16 quux
   abort: quux: file not tracked!
+  [255]
   $ echo >> dir/file
   $ hg -v commit -m commit-17 dir/file
   dir/file
@@ -75,6 +88,7 @@ An empty date was interpreted as epoch origin
   $ echo foo >> foo
   $ hg commit -d '' -m commit-no-date
   $ hg tip --template '{date|isodate}\n' | grep '1970'
+  [1]
   $ cd ..
 
 
@@ -212,11 +226,13 @@ should fail because we are specifying a file name
 
   $ hg ci -mmerge a
   abort: cannot partially commit a merge (do not specify files or patterns)
+  [255]
 
 should fail because we are specifying a pattern
 
   $ hg ci -mmerge -I a
   abort: cannot partially commit a merge (do not specify files or patterns)
+  [255]
 
 should succeed
 
@@ -248,6 +264,7 @@ test commit message content
   HG: changed changed
   HG: removed removed
   abort: empty commit message
+  [255]
   $ cd ..
 
   $ exit 0

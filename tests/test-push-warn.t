@@ -28,6 +28,7 @@
   searching for changes
   abort: push creates new remote heads on branch 'default'!
   (you should pull and merge or use push -f to force)
+  [255]
 
   $ hg pull ../a
   pulling from ../a
@@ -43,6 +44,7 @@
   searching for changes
   abort: push creates new remote heads on branch 'default'!
   (did you forget to merge? use push -f to force)
+  [255]
 
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -139,6 +141,7 @@
   comparing with ../c
   searching for changes
   no changes found
+  [1]
 
 
 Issue 450:
@@ -315,6 +318,7 @@ Failed push of new named branch:
 
   $ echo 12 > foo
   $ hg -q ci -m 12a
+  [1]
   $ hg -q up 11
   $ echo 13 > foo
   $ hg -q branch e
@@ -372,6 +376,7 @@ multiple new heads:
   searching for changes
   abort: push creates new remote heads on branch 'default'!
   (you should pull and merge or use push -f to force)
+  [255]
 
 
 Check prepush logic with merged branches:
@@ -405,6 +410,7 @@ Check prepush logic with merged branches:
   searching for changes
   abort: push creates new remote branches: b!
   (use 'hg push --new-branch' to create new remote branches)
+  [255]
 
 
 Prepush -r should not allow you to sneak in new heads:
@@ -440,6 +446,7 @@ Prepush -r should not allow you to sneak in new heads:
   searching for changes
   abort: push creates new remote heads on branch 'a'!
   (did you forget to merge? use push -f to force)
+  [255]
 
   $ cd ..
 
@@ -685,17 +692,20 @@ outgoing:
   searching for changes
   abort: push creates new remote heads on branch 'A'!
   (did you forget to merge? use push -f to force)
+  [255]
 
   $ hg push inner -r4 -r5
   pushing to inner
   searching for changes
   abort: push creates new remote heads on branch 'A'!
   (did you forget to merge? use push -f to force)
+  [255]
 
   $ hg in inner
   comparing with inner
   searching for changes
   no changes found
+  [1]
 
   $ cd ..
 

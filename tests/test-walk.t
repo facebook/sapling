@@ -160,8 +160,10 @@
   f  mammals/skunk                   skunk
   $ hg debugwalk .hg
   abort: path 'mammals/.hg' is inside repo 'mammals'
+  [255]
   $ hg debugwalk ../.hg
   abort: path contains illegal component: .hg
+  [255]
   $ cd ..
 
   $ hg debugwalk -Ibeans
@@ -187,16 +189,22 @@
   f  mammals/skunk                   mammals/skunk
   $ hg debugwalk ..
   abort: .. not under root
+  [255]
   $ hg debugwalk beans/../..
   abort: beans/../.. not under root
+  [255]
   $ hg debugwalk .hg
   abort: path contains illegal component: .hg
+  [255]
   $ hg debugwalk beans/../.hg
   abort: path contains illegal component: .hg
+  [255]
   $ hg debugwalk beans/../.hg/data
   abort: path contains illegal component: .hg/data
+  [255]
   $ hg debugwalk beans/.hg
   abort: path 'beans/.hg' is inside repo 'beans'
+  [255]
 
 Test absolute paths:
 
@@ -209,6 +217,7 @@ Test absolute paths:
   f  beans/turtle    beans/turtle
   $ hg debugwalk `pwd`/..
   abort: .*/.. not under root
+  [255]
 
 Test patterns:
 

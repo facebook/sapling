@@ -62,6 +62,7 @@
    1 files changed, 1 insertions(+), 0 deletions(-)
   
   are you sure you want to send (yn)? abort: patchbomb canceled
+  [255]
 
   $ echo b > b
   $ hg commit -Amb -d '2 0'
@@ -1447,6 +1448,7 @@ test inreplyto:
   This patch series consists of 2 patches.
   
   abort: Subject: [PATCH 0 of 2] Please enter a valid value
+  [255]
 
   $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar --in-reply-to baz \
   >  -s test -r 0:1 | fixheaders

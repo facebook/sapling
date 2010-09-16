@@ -400,6 +400,7 @@ Test help option with version option
   [+] marked option can be specified multiple times
   
   use "hg -v help add" to show global options
+  [255]
 
 Test ambiguous command help
 
@@ -573,6 +574,7 @@ Test command without options
    update     update working directory (or switch revisions)
   
   use "hg help" for the full list of commands or "hg -v" for details
+  [255]
 
   $ hg skjdfks
   hg: unknown command 'skjdfks'
@@ -599,6 +601,7 @@ Test command without options
    update     update working directory (or switch revisions)
   
   use "hg help" for the full list of commands or "hg -v" for details
+  [255]
 
   $ cat > helpext.py <<EOF
   > import os

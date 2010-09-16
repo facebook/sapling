@@ -29,6 +29,7 @@ Should fail because not at a head:
   $ hg merge
   abort: branch 'default' has 3 heads - please merge with an explicit rev
   (run 'hg heads .' to see heads)
+  [255]
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -39,6 +40,7 @@ Should fail because > 2 heads:
   $ hg merge
   abort: branch 'default' has 3 heads - please merge with an explicit rev
   (run 'hg heads .' to see heads)
+  [255]
 
 Should succeed:
 
@@ -65,6 +67,7 @@ Should fail because at tip:
 
   $ hg merge
   abort: there is nothing to merge
+  [255]
 
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -73,6 +76,7 @@ Should fail because there is only one head:
 
   $ hg merge
   abort: there is nothing to merge - use "hg update" instead
+  [255]
 
   $ hg up 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -87,6 +91,7 @@ Should fail because merge with other branch:
   $ hg merge
   abort: branch 'foobranch' has one head - please merge with an explicit rev
   (run 'hg heads' to see all heads)
+  [255]
 
 
 Test for issue2043: ensure that 'merge -P' shows ancestors of 6 that

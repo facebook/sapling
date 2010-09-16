@@ -97,11 +97,13 @@ Compare repos:
   comparing with repo-a
   searching for changes
   no changes found
+  [1]
 
   $ hg -R repo-a incoming repo-c
   comparing with repo-c
   searching for changes
   no changes found
+  [1]
 
   $ exit 0
 

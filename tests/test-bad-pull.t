@@ -1,5 +1,6 @@
   $ hg clone http://localhost:$HGPORT/ copy
   abort: error: Connection refused
+  [255]
 
   $ echo $?
   0
@@ -27,6 +28,7 @@ give the server some time to start running
 
   $ hg clone http://localhost:$HGPORT/foo copy2 2>&1
   abort: HTTP Error 404: .*
+  [255]
 
   $ echo $?
   0

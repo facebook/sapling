@@ -24,10 +24,12 @@ called and .hg/journal.dirstate will not be deleted:
   transaction abort!
   rollback completed
   abort: no commits allowed
+  [255]
   $ hg ci -m foo
   error: pretxncommit.nocommits hook failed: no commits allowed
   transaction abort!
   rollback completed
   abort: no commits allowed
+  [255]
 
   $ exit 0

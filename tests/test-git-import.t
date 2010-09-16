@@ -192,6 +192,7 @@ Rename and modify:
   8:c32b0d7e6f44
 
   $ hg locate copy2
+  [1]
   $ hg cat rename2
   a
   a

@@ -8,8 +8,10 @@
   $ hg in dupe
   comparing with .*/test-paths.t/b
   no changes found
+  [1]
   $ cd ..
   $ hg -R a in dupe
   comparing with .*/test-paths.t/b
   no changes found
+  [1]
   $ true

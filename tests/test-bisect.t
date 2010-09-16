@@ -386,6 +386,7 @@ assuming that the shell returns 127 if command not found ...
   $ hg bisect -r
   $ hg bisect --command 'exit 127'
   abort: failed to execute exit 127
+  [255]
 
 
 test bisecting command

@@ -253,6 +253,7 @@ Clone and test outgoing:
   comparing with .*/test-subrepo-recursion.t/repo/foo
   searching for changes
   no changes found
+  [1]
   $ echo $?
   0
 
@@ -315,6 +316,7 @@ Test incoming:
   
   $ hg incoming -S --bundle incoming.hg
   abort: cannot combine --bundle and --subrepos
+  [255]
 
 Test missing subrepo:
 

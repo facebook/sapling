@@ -60,6 +60,7 @@ Revert should fail:
 
   $ hg revert --all
   abort: uncommitted merge - please provide a specific revision
+  [255]
 
 Revert should be ok now:
 

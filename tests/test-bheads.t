@@ -132,6 +132,7 @@
 
   $ heads -r 3 .
   no open branch heads found on branches c (started at 3)
+  [1]
   $ echo $?
   0
   $ heads -r 2 .
@@ -157,6 +158,7 @@
 -------
   $ heads -r 7 .
   no open branch heads found on branches b (started at 7)
+  [1]
   $ echo $?
   0
 

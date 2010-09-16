@@ -437,23 +437,27 @@ Error if style not readable:
   $ chmod 0 q
   $ hg log --style ./q
   abort: Permission denied: ./q
+  [255]
 
 Error if no style:
 
   $ hg log --style notexist
   abort: style not found: notexist
+  [255]
 
 Error if style missing key:
 
   $ echo 'q = q' > t
   $ hg log --style ./t
   abort: ./t: no key named 'changeset'
+  [255]
 
 Error if include fails:
 
   $ echo 'changeset = q' >> t
   $ hg log --style ./t
   abort: template file ./q: Permission denied
+  [255]
 
 Include works:
 
@@ -1192,6 +1196,7 @@ Error on syntax:
   $ echo 'x = "f' >> t
   $ hg log
   abort: t:3: unmatched quotes
+  [255]
 
   $ cd ..
 

@@ -268,6 +268,7 @@ overwrite existing files (d2/b)
   @@ -1 +1 @@
   -d1/b
   +d2/b
+  [1]
   $ hg update -C
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/a d2/ba d2/d11/a1
@@ -276,6 +277,7 @@ attempt to move one file into a non-existent directory
 
   $ hg rename d1/a dx/
   abort: destination dx/ is not a directory
+  [255]
   $ hg status -C
   $ hg update -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -284,6 +286,7 @@ attempt to move potentially more than one file into a non-existent directory
 
   $ hg rename 'glob:d1/**' dx
   abort: with multiple sources, destination must be an existing directory
+  [255]
 
 move every file under d1 to d2/d21 (glob)
 
@@ -560,14 +563,17 @@ check illegal path components
 
   $ hg rename d1/d11/a1 .hg/foo
   abort: path contains illegal component: .hg/foo
+  [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ../foo
   abort: ../foo not under root
+  [255]
   $ hg status -C
 
   $ mv d1/d11/a1 .hg/foo
   $ hg rename --after d1/d11/a1 .hg/foo
   abort: path contains illegal component: .hg/foo
+  [255]
   $ hg status -C
   ! d1/d11/a1
   $ hg update -C
@@ -576,14 +582,17 @@ check illegal path components
 
   $ hg rename d1/d11/a1 .hg
   abort: path contains illegal component: .hg/a1
+  [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ..
   abort: ../a1 not under root
+  [255]
   $ hg status -C
 
   $ mv d1/d11/a1 .hg
   $ hg rename --after d1/d11/a1 .hg
   abort: path contains illegal component: .hg/a1
+  [255]
   $ hg status -C
   ! d1/d11/a1
   $ hg update -C
@@ -592,8 +601,10 @@ check illegal path components
 
   $ (cd d1/d11; hg rename ../../d2/b ../../.hg/foo)
   abort: path contains illegal component: .hg/foo
+  [255]
   $ hg status -C
   $ (cd d1/d11; hg rename ../../d2/b ../../../foo)
   abort: ../../../foo not under root
+  [255]
   $ hg status -C
 

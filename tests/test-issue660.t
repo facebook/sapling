@@ -18,6 +18,7 @@ Should fail - would corrupt dirstate:
 
   $ hg add a/a
   abort: file 'a' in dirstate clashes with 'a/a'
+  [255]
 
 Removing shadow:
 
@@ -36,6 +37,7 @@ Should fail - would corrupt dirstate:
 
   $ hg add b
   abort: directory 'b' already in dirstate
+  [255]
 
 Removing shadow:
 
@@ -58,6 +60,7 @@ Revert reintroducing shadow - should fail:
   $ rm -r a b
   $ hg revert b/b
   abort: file 'b' in dirstate clashes with 'b/b'
+  [255]
 
 Revert all - should succeed:
 
@@ -110,6 +113,7 @@ Should fail - would corrupt dirstate:
 
   $ hg add d
   abort: directory 'd' already in dirstate
+  [255]
 
 Removing shadow:
 

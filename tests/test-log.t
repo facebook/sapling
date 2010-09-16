@@ -31,6 +31,7 @@
 
   $ hg log -f dir
   abort: cannot follow nonexistent file: "dir"
+  [255]
 
 -f, but no args
 
@@ -495,11 +496,13 @@ log -r ""
 
   $ hg log -r ''
   hg: parse error: empty query
+  [255]
 
 log -r <some unknown node id>
 
   $ hg log -r 1000000000000000000000000000000000000000
   abort: unknown revision '1000000000000000000000000000000000000000'!
+  [255]
 
 log -k r1
 
@@ -658,6 +661,7 @@ log -b dummy
 
   $ hg log -b dummy
   abort: unknown revision 'dummy'!
+  [255]
 
 
 log -b .
@@ -899,6 +903,7 @@ log -p -R repo
   merging foo failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ echo 'merge 1' > foo
   $ hg resolve -m foo
   $ hg ci -m "First merge, related"
@@ -909,6 +914,7 @@ log -p -R repo
   merging foo failed!
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ echo 'merge 2' > foo
   $ hg resolve -m foo
   $ hg ci -m "Last merge, related"

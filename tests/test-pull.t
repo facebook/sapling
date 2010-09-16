@@ -69,6 +69,7 @@ Test 'file:' uri handling:
 
   $ hg pull -q file://../test-doesnt-exist
   abort: repository /test-doesnt-exist not found!
+  [255]
 
   $ hg pull -q file:../test
 

@@ -32,12 +32,14 @@ Merging a conflict araises
   merging A failed!
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
 Correct the conflict without marking the file as resolved
 
   $ echo "ABCD" > A
   $ hg commit -m "Merged"
   abort: unresolved merge conflicts (see hg resolve)
+  [255]
 
 Mark the conflict as resolved and commit
 

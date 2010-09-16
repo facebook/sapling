@@ -7,6 +7,7 @@ Try some commands:
 
   $ hg log
   $ hg grep wah
+  [1]
   $ hg manifest
   $ hg verify
   checking changesets

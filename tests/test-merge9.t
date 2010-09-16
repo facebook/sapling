@@ -31,6 +31,7 @@ test with the rename on the remote side
   merging foo and baz to baz
   1 files updated, 1 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ hg resolve -l
   U bar
   R baz
@@ -44,6 +45,7 @@ test with the rename on the local side
   merging baz and foo to baz
   1 files updated, 1 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
 show unresolved
   $ hg resolve -l
@@ -75,12 +77,14 @@ after resolve
 resolve all warning
   $ hg resolve
   abort: no files or directories specified; use --all to remerge all files
+  [255]
 
 resolve all
   $ hg resolve -a
   merging bar
   warning: conflicts during merge.
   merging bar failed!
+  [1]
 
 after
   $ hg resolve -l

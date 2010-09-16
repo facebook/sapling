@@ -19,5 +19,6 @@ hg debuginstall with no username
    no username supplied (see "hg help config")
    (specify a username in your configuration file)
   1 problems detected, please check your install!
+  [1]
 
   $ true

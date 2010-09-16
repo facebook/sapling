@@ -74,6 +74,7 @@ import of plain diff should fail without message
   $ hg --cwd b import ../tip.patch
   applying ../tip.patch
   abort: empty commit message
+  [255]
   $ rm -r b
 
 
@@ -287,6 +288,7 @@ plain diff in email, no subject, no message body, should fail
   $ egrep -v '^(Subject|email)' msg.patch | hg --cwd b import -
   applying patch from stdin
   abort: empty commit message
+  [255]
   $ rm -r b
 
 
@@ -605,6 +607,7 @@ test paths outside repo root
   > EOF
   applying patch from stdin
   abort: ../outside/foo not under root
+  [255]
   $ cd ..
 
 

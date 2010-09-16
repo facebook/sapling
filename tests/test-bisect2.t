@@ -393,6 +393,7 @@ test unrelated revs:
   $ hg bisect -b 7
   $ hg bisect -g 14
   abort: starting revisions are not directly related
+  [255]
   $ hg bisect --reset
 
 end at merge: 17 bad, 11 good (but 9 is first bad)

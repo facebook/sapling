@@ -17,6 +17,7 @@
   pulling from ../a
   searching for changes
   abort: repository is unrelated
+  [255]
 
   $ hg pull -f ../a
   pulling from ../a

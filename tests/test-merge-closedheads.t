@@ -44,6 +44,7 @@ fail with three heads
   $ hg merge
   abort: branch 'default' has 3 heads - please merge with an explicit rev
   (run 'hg heads .' to see heads)
+  [255]
 
 close one of the heads
   $ hg up -C 6

@@ -57,6 +57,7 @@ Local merge with bad merge tool:
   merging zzz2_merge_bad failed!
   3 files updated, 1 files merged, 2 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
+  [1]
 
   $ hg co 0
   merging zzz1_merge_ok
@@ -65,6 +66,7 @@ Local merge with bad merge tool:
   merging zzz2_merge_bad failed!
   2 files updated, 1 files merged, 3 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
+  [1]
 
   $ hg diff --nodates | grep "^[+-][^<>]"
   --- a/zzz1_merge_ok
@@ -89,6 +91,7 @@ Local merge with conflicts:
   merging zzz2_merge_bad failed!
   3 files updated, 1 files merged, 2 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
+  [1]
 
   $ hg co 0
   merging zzz1_merge_ok
@@ -97,6 +100,7 @@ Local merge with conflicts:
   merging zzz2_merge_bad failed!
   2 files updated, 1 files merged, 3 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
+  [1]
 
   $ hg diff --nodates | grep "^[+-][^<>]"
   --- a/zzz1_merge_ok

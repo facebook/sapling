@@ -48,6 +48,7 @@ now pull and merge from test-a
   merging test.txt failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 resolve conflict
   $ cat >test.txt <<"EOF"
   > one
@@ -92,6 +93,7 @@ pull and merge from test-a again
   merging test.txt failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
   $ cat test.txt
   one

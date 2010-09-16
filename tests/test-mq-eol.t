@@ -60,6 +60,7 @@ should fail in strict mode
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working dir
   errors during apply, please fix and refresh eol.diff
+  [2]
   $ hg qpop
   popping eol.diff
   patch queue now empty
@@ -71,6 +72,7 @@ invalid eol
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working dir
   errors during apply, please fix and refresh eol.diff
+  [2]
   $ hg qpop
   popping eol.diff
   patch queue now empty

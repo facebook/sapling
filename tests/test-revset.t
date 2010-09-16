@@ -61,6 +61,7 @@
   marked working directory as branch all
   $ hg ci --close-branch -Aqm8
   abort: can only close branch heads
+  [255]
 
   $ hg co 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -97,11 +98,13 @@ names that should work without quoting
   7
   $ try -- '-a-b-c-' # complains
   hg: parse error at 7: not a prefix: end
+  [255]
   $ log -a-b-c- # succeeds with fallback
   4
   $ try -- -a-b-c--a # complains
   ('minus', ('minus', ('minus', ('negate', ('symbol', 'a')), ('symbol', 'b')), ('symbol', 'c')), ('negate', ('symbol', 'a')))
   abort: unknown revision '-a'!
+  [255]
   $ try é
   ('symbol', '\xc3\xa9')
   9
@@ -143,21 +146,28 @@ quoting needed
   4
   $ log 'date(this is a test)'
   hg: parse error at 10: unexpected token: symbol
+  [255]
   $ log 'date()'
   hg: parse error: date wants a string
+  [255]
   $ log 'date'
   hg: parse error: can't use date here
+  [255]
   $ log 'date('
   hg: parse error at 5: not a prefix: end
+  [255]
   $ log 'date(tip)'
   abort: invalid date: 'tip'
+  [255]
   $ log '"date"'
   abort: unknown revision 'date'!
+  [255]
   $ log 'date(2005) and 1::'
   4
 
   $ log 'ancestor(1)'
   hg: parse error: ancestor wants two arguments
+  [255]
   $ log 'ancestor(4,5)'
   1
   $ log 'ancestor(4,5) and 4'

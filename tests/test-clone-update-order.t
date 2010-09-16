@@ -21,6 +21,7 @@
 
   $ hg clone -U -u . .#other ../b -r 0 -r 1 -r 2 -b other
   abort: cannot specify both --noupdate and --updaterev
+  [255]
 
   $ hg clone -U .#other ../b -r 0 -r 1 -r 2 -b other
   requesting all changes

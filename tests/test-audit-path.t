@@ -4,6 +4,7 @@ should fail
 
   $ hg add .hg/00changelog.i
   abort: path contains illegal component: .hg/00changelog.i
+  [255]
 
   $ mkdir a
   $ echo a > a/a
@@ -16,6 +17,7 @@ should fail
 
   $ hg add b/b
   abort: path 'b/b' traverses symbolic link 'b'
+  [255]
 
 should succeed
 
@@ -25,6 +27,7 @@ should still fail - maybe
 
   $ hg add b/b
   abort: path 'b/b' traverses symbolic link 'b'
+  [255]
 
 unbundle tampered bundle
 
@@ -43,6 +46,7 @@ attack .hg/test
   .hg/test
   $ hg update -Cr0
   abort: path contains illegal component: .hg/test
+  [255]
 
 attack foo/.hg/test
 
@@ -50,6 +54,7 @@ attack foo/.hg/test
   foo/.hg/test
   $ hg update -Cr1
   abort: path 'foo/.hg/test' is inside repo 'foo'
+  [255]
 
 attack back/test where back symlinks to ..
 
@@ -58,6 +63,7 @@ attack back/test where back symlinks to ..
   back/test
   $ hg update -Cr2
   abort: path 'back/test' traverses symbolic link 'back'
+  [255]
 
 attack ../test
 
@@ -65,6 +71,7 @@ attack ../test
   ../test
   $ hg update -Cr3
   abort: path contains illegal component: ../test
+  [255]
 
 attack /tmp/test
 
@@ -72,5 +79,6 @@ attack /tmp/test
   /tmp/test
   $ hg update -Cr4
   abort: No such file or directory: .*/test-audit-path.t/target//tmp/test
+  [255]
 
   $ exit 0

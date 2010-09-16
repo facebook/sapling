@@ -62,6 +62,7 @@ Unbundle full.hg in test
 Verify empty
 
   $ hg -R empty heads
+  [1]
   $ hg -R empty verify
   checking changesets
   checking manifests
@@ -371,6 +372,7 @@ Outgoing -R does-not-exist.hg vs partial2 in partial
 
   $ hg -R bundle://../does-not-exist.hg outgoing ../partial2
   abort: No such file or directory: ../does-not-exist.hg
+  [255]
   $ cd ..
 
 Direct clone from bundle (all-history)
@@ -462,11 +464,13 @@ partial history bundle, fails w/ unkown parent
 
   $ hg -R bundle.hg verify
   abort: 00changelog.i@bbd179dfa0a7: unknown parent!
+  [255]
 
 full history bundle, refuses to verify non-local repo
 
   $ hg -R all.hg verify
   abort: cannot verify bundle or remote repos
+  [255]
 
 but, regular verify must continue to work
 

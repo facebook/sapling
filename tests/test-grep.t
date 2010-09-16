@@ -20,6 +20,7 @@ pattern error
 
   $ hg grep '**test**'
   grep: invalid match pattern: nothing to repeat
+  [1]
 
 simple
 
@@ -79,7 +80,9 @@ follow
   $ hg init t2
   $ cd t2
   $ hg grep foobar foo
+  [1]
   $ hg grep foobar
+  [1]
   $ echo blue >> color
   $ echo black >> color
   $ hg add color

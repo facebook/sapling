@@ -57,10 +57,12 @@ unknown branch and fallback
 
   $ hg in -qbz
   abort: unknown branch 'z'!
+  [255]
   $ hg in -q ../branch#z
   2:f25d57ab0566
   $ hg out -qbz
   abort: unknown branch 'z'!
+  [255]
 
 in rev c branch a
 

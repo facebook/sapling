@@ -164,6 +164,7 @@ archives and rename them afterwards.
 
   $ hg archive -t zip -p /illegal test.zip
   abort: archive prefix contains illegal components
+  [255]
   $ hg archive -t zip -p very/../bad test.zip
 
   $ hg archive --config ui.archivemeta=false -t zip -r 2 test.zip
@@ -205,6 +206,7 @@ test .hg_archival.txt
 
   $ hg archive -t bogus test.bogus
   abort: unknown archive type 'bogus'
+  [255]
 
 server errors
 
@@ -216,5 +218,6 @@ empty repo
   $ cd ../empty
   $ hg archive ../test-empty
   abort: no working directory: please specify a revision
+  [255]
 
   $ exit 0

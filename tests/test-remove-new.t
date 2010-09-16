@@ -10,4 +10,5 @@ test that 'hg commit' does not crash if the user removes a newly added file
   $ hg commit -A -m"comment #1"
   removing b
   nothing changed
+  [1]
   $ exit 0

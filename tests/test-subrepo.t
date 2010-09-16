@@ -21,6 +21,7 @@ issue2232 - committing a subrepo without .hgsub
 
   $ hg ci -mbad s
   abort: can't commit subrepos without .hgsub
+  [255]
 
   $ hg -R s ci -Ams0
   adding a
@@ -302,6 +303,7 @@ push -f
   searching for changes
   abort: push creates new remote heads on branch 'default'!
   (did you forget to merge? use push -f to force)
+  [255]
   $ hg push -f
   pushing .*sub/t
   pushing .*sub/t/s/ss
@@ -361,6 +363,7 @@ bogus subrepo path aborts
   $ echo 'bogus=[boguspath' >> .hgsub
   $ hg ci -m 'bogus subrepo path'
   abort: missing ] in subrepo source
+  [255]
 
 issue 1986
 
@@ -577,6 +580,7 @@ issue 1977
   $ hg -q -R repo2 push
   abort: push creates new remote heads on branch 'default'!
   (did you forget to merge? use push -f to force)
+  [255]
   $ hg -R repo update
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf repo2 repo

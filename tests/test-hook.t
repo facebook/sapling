@@ -70,6 +70,7 @@
   $ hg id
   pre-identify hook: HG_ARGS=id HG_OPTS={'tags': None, 'rev': '', 'num': None, 'branch': None, 'id': None} HG_PATS=[] 
   warning: pre-identify hook exited with status 1
+  [1]
   $ hg cat b
   pre-cat hook: HG_ARGS=cat b HG_OPTS={'rev': '', 'decode': None, 'exclude': [], 'output': '', 'include': []} HG_PATS=['b'] 
   post-cat hook: HG_ARGS=cat b HG_OPTS={'rev': '', 'decode': None, 'exclude': [], 'output': '', 'include': []} HG_PATS=['b'] HG_RESULT=0 
@@ -114,10 +115,12 @@
   pretag hook: HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa 
   pretag.forbid hook: HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa 
   abort: pretag.forbid hook exited with status 1
+  [255]
   $ hg tag -l fla
   pretag hook: HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fla 
   pretag.forbid hook: HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fla 
   abort: pretag.forbid hook exited with status 1
+  [255]
 
 # pretxncommit hook can see changeset, can roll back txn, changeset
 # no more there after
@@ -137,6 +140,7 @@
   transaction abort!
   rollback completed
   abort: pretxncommit.forbid1 hook exited with status 1
+  [255]
   $ hg -q tip
   4:539e4b31b6dc
 
@@ -147,6 +151,7 @@
   precommit hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 
   precommit.forbid hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 
   abort: precommit.forbid hook exited with status 1
+  [255]
   $ hg -q tip
   4:539e4b31b6dc
 
@@ -177,6 +182,7 @@
   pulling from ../a
   searching for changes
   abort: prechangegroup.forbid hook exited with status 1
+  [255]
 
 # pretxnchangegroup hook can see incoming changes, can roll back txn,
 # incoming changes no longer there after
@@ -196,6 +202,7 @@
   transaction abort!
   rollback completed
   abort: pretxnchangegroup.forbid1 hook exited with status 1
+  [255]
   $ hg -q tip
   3:07f3376c1e65
 
@@ -227,6 +234,7 @@
   pulling from ../a
   searching for changes
   abort: preoutgoing.forbid hook exited with status 1
+  [255]
 
 # outgoing hooks work for local clones
 
@@ -248,6 +256,7 @@
   preoutgoing hook: HG_SOURCE=clone 
   preoutgoing.forbid hook: HG_SOURCE=clone 
   abort: preoutgoing.forbid hook exited with status 1
+  [255]
   $ cd b
 
   $ cat > hooktests.py <<EOF
@@ -309,6 +318,7 @@
   searching for changes
   error: preoutgoing.abort hook failed: raise abort from hook
   abort: raise abort from hook
+  [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
   $ echo 'preoutgoing.fail = python:hooktests.failhook' >> ../a/.hg/hgrc
@@ -319,6 +329,7 @@
     hooktype preoutgoing
     source pull
   abort: preoutgoing.fail hook failed
+  [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
   $ echo 'preoutgoing.uncallable = python:hooktests.uncallable' >> ../a/.hg/hgrc
@@ -326,6 +337,7 @@
   pulling from ../a
   searching for changes
   abort: preoutgoing.uncallable hook is invalid ("hooktests.uncallable" is not callable)
+  [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
   $ echo 'preoutgoing.nohook = python:hooktests.nohook' >> ../a/.hg/hgrc
@@ -333,6 +345,7 @@
   pulling from ../a
   searching for changes
   abort: preoutgoing.nohook hook is invalid ("hooktests.nohook" is not defined)
+  [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
   $ echo 'preoutgoing.nomodule = python:nomodule' >> ../a/.hg/hgrc
@@ -340,6 +353,7 @@
   pulling from ../a
   searching for changes
   abort: preoutgoing.nomodule hook is invalid ("nomodule" not in a module)
+  [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
   $ echo 'preoutgoing.badmodule = python:nomodule.nowhere' >> ../a/.hg/hgrc
@@ -347,6 +361,7 @@
   pulling from ../a
   searching for changes
   abort: preoutgoing.badmodule hook is invalid (import of "nomodule" failed)
+  [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
   $ echo 'preoutgoing.unreachable = python:hooktests.container.unreachable' >> ../a/.hg/hgrc
@@ -354,6 +369,7 @@
   pulling from ../a
   searching for changes
   abort: preoutgoing.unreachable hook is invalid (import of "hooktests.container" failed)
+  [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
   $ echo 'preoutgoing.pass = python:hooktests.passhook' >> ../a/.hg/hgrc
@@ -426,6 +442,7 @@
   $ hg commit -d '0 0'
   hook works
   nothing changed
+  [1]
 
   $ cd ../../b
 

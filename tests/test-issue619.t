@@ -25,6 +25,7 @@ Bogus fast-forward should fail:
 
   $ hg merge b
   abort: merging with a working directory ancestor has no effect
+  [255]
 
   $ true
 

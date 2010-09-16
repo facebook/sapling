@@ -89,11 +89,13 @@ rename nonexistent bookmark
 
   $ hg bookmark -m A B
   abort: a bookmark of this name does not exist
+  [255]
 
 rename to existent bookmark
 
   $ hg bookmark -m X Y
   abort: a bookmark of the same name already exists
+  [255]
 
 force rename to existent bookmark
 
@@ -110,16 +112,19 @@ rename without new name
 
   $ hg bookmark -m Y
   abort: new bookmark name required
+  [255]
 
 delete without name
 
   $ hg bookmark -d
   abort: bookmark name required
+  [255]
 
 delete nonexistent bookmark
 
   $ hg bookmark -d A
   abort: a bookmark of this name does not exist
+  [255]
 
 bookmark name with spaces should be stripped
 
@@ -151,11 +156,13 @@ reject bookmark name with newline
   $ hg bookmark '
   > '
   abort: bookmark name cannot contain newlines
+  [255]
 
 bookmark with existing name
 
   $ hg bookmark Z
   abort: a bookmark of the same name already exists
+  [255]
 
 force bookmark with existing name
 
@@ -173,10 +180,12 @@ revision but no bookmark name
 
   $ hg bookmark -r .
   abort: bookmark name required
+  [255]
 
 bookmark name with whitespace only
 
   $ hg bookmark ' '
   abort: bookmark names cannot consist entirely of whitespace
+  [255]
 
   $ true

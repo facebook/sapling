@@ -32,6 +32,7 @@ help (no mq, so no qrecord)
    update     update working directory (or switch revisions)
   
   use "hg help" for the full list of commands or "hg -v" for details
+  [255]
 
 help (mq present)
 

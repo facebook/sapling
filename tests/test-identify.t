@@ -4,6 +4,7 @@ no repo
 
   $ hg id
   abort: there is no Mercurial repository here (.hg not found)
+  [255]
 
 create repo
 
@@ -65,5 +66,6 @@ remote with tags?
 
   $ hg id -t http://localhost:$HGPORT1/
   abort: can't query remote revision number, branch, or tags
+  [255]
 
   $ true # ends with util.Abort -> returns 255

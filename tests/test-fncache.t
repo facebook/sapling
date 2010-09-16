@@ -54,6 +54,7 @@ Testing verify:
   3 files, 3 changesets, 3 total revisions
   3 integrity errors encountered!
   (first damaged changeset appears to be 0)
+  [1]
   $ cd ..
 
 Non store repo:

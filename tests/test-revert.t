@@ -186,6 +186,7 @@ should fail - no arguments
 
   $ hg revert -rtip
   abort: no files or directories specified; use --all to revert the whole repo
+  [255]
 
 should succeed
 

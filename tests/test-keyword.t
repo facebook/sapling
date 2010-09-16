@@ -116,6 +116,7 @@ Interrupted commit should not change state or run commit hook
 
   $ hg --debug commit
   abort: empty commit message
+  [255]
   $ hg status
   A a
   A b
@@ -540,6 +541,7 @@ Interrupted commit should not change state
 
   $ hg commit
   abort: empty commit message
+  [255]
   $ hg status
   M a
   ? c
@@ -689,6 +691,7 @@ kwexpand x/a should abort
 
   $ hg --verbose kwexpand x/a
   abort: outstanding uncommitted changes
+  [255]
   $ cd x
   $ hg --debug commit -m xa -d '3 0' -u 'User Name <user@example.com>'
   x/a
@@ -818,6 +821,7 @@ conflict: keyword should stay outside conflict zone
   merging m failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ cat m
   $Id$
   <<<<<<< local

@@ -153,6 +153,7 @@ this commit fails because of externals changes
   $ hg ci -m 'amend externals from hg'
   committing subrepository s
   abort: cannot commit svn externals
+  [255]
   $ hg diff --subrepos -r 1:2 | grep -v diff
   --- a/.hgsubstate	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgsubstate	Thu Jan 01 00:00:00 1970 +0000
@@ -173,6 +174,7 @@ this commit fails because of externals meta changes
   $ hg ci -m 'amend externals from hg'
   committing subrepository s
   abort: cannot commit svn externals
+  [255]
   $ svn revert -q s/externals/other
 
 clone

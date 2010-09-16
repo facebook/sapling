@@ -23,6 +23,7 @@ try to commit on top of a patch
   $ echo quux >> foo
   $ hg ci -m 'append quux'
   abort: cannot commit over an applied mq patch
+  [255]
 
 
 cheat a bit...
@@ -36,18 +37,23 @@ qpop/qrefresh on the wrong revision
 
   $ hg qpop
   abort: popping would remove a revision not managed by this patch queue
+  [255]
   $ hg qpop -n patches
   using patch queue: .*/repo/.hg/patches
   abort: popping would remove a revision not managed by this patch queue
+  [255]
   $ hg qrefresh
   abort: working directory revision is not qtip
+  [255]
 
   $ hg up -C qtip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg qpop
   abort: popping would remove a revision not managed by this patch queue
+  [255]
   $ hg qrefresh
   abort: cannot refresh a revision with children
+  [255]
   $ hg tip --template '{rev} {desc}\n'
   3 append quux
 

@@ -474,7 +474,7 @@ def tsttest(test, options):
             after.setdefault(pos, []).append(l)
             prepos = pos
             pos = n
-            script.append('echo %s %s\n' % (salt, n))
+            script.append('echo %s %s $?\n' % (salt, n))
             script.append(l[4:])
         elif l.startswith('  > '): # continuations
             after.setdefault(prepos, []).append(l)
@@ -485,6 +485,8 @@ def tsttest(test, options):
         else:
             # non-command/result - queue up for merged output
             after.setdefault(pos, []).append(l)
+
+    script.append('echo %s %s $?\n' % (salt, n + 1))
 
     fd, name = tempfile.mkstemp(suffix='hg-tst')
 
@@ -508,8 +510,13 @@ def tsttest(test, options):
 
     pos = -1
     postout = []
+    ret = 0
     for n, l in enumerate(output):
         if l.startswith(salt):
+            # add on last return code
+            ret = int(l.split()[2])
+            if ret != 0:
+                postout.append("  [%s]\n" % ret)
             if pos in after:
                 postout += after.pop(pos)
             pos = int(l.split()[1])

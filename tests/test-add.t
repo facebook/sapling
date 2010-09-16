@@ -54,6 +54,7 @@ should fail
   merging a failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ hg st
   M a
   ? a.orig
@@ -86,9 +87,11 @@ issue683
 
   $ hg add c && echo "unexpected addition of missing file"
   c: No such file or directory
+  [1]
   $ echo c > c
   $ hg add d c && echo "unexpected addition of missing file"
   d: No such file or directory
+  [1]
   $ hg st
   M a
   A c

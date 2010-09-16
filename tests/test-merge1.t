@@ -69,6 +69,7 @@ no merges expected
 merge should fail
   $ hg merge 1
   abort: untracked file in working directory differs from file in requested revision: 'b'
+  [255]
 merge of b expected
   $ hg merge -f 1
   merging for b
@@ -111,6 +112,7 @@ Contents of b should be "this is file b1"
 merge fails
   $ hg merge 2
   abort: outstanding uncommitted changes (use 'hg status' to list changes)
+  [255]
   $ echo %% merge expected!
   %% merge expected!
   $ hg merge -f 2
@@ -148,6 +150,7 @@ merge fails
 merge of b should fail
   $ hg merge 2
   abort: outstanding uncommitted changes (use 'hg status' to list changes)
+  [255]
 merge of b expected
   $ hg merge -f 2
   merging for b

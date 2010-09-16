@@ -74,6 +74,7 @@ Check that we drop the 'file:' from the path before writing the .hgrc:
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ grep 'file:' e/.hg/hgrc
+  [1]
 
 Check that path aliases are expanded:
 
@@ -160,6 +161,7 @@ Testing --noupdate with --updaterev (must abort):
 
   $ hg clone --noupdate --updaterev 1 a ua
   abort: cannot specify both --noupdate and --updaterev
+  [255]
 
 
 Testing clone -u:

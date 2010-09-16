@@ -244,6 +244,7 @@ git=abort: fail on execute bit change
 
   $ hg autodiff --git=abort regular setexec
   abort: losing data for setexec
+  [255]
 
 git=abort: succeed on regular file
 

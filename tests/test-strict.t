@@ -35,6 +35,7 @@
    update     update working directory (or switch revisions)
   
   use "hg help" for the full list of commands or "hg -v" for details
+  [255]
   $ hg annotate a
   0: a
 

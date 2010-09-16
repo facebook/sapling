@@ -56,6 +56,7 @@ introduce some bugs in repo
   3 files, 1 changesets, 0 total revisions
   9 integrity errors encountered!
   (first damaged changeset appears to be 0)
+  [1]
 
   $ cd ..
 
@@ -83,6 +84,7 @@ test revlog corruption
   1 warnings encountered!
   1 integrity errors encountered!
   (first damaged changeset appears to be 0)
+  [1]
 
   $ cd ..
 

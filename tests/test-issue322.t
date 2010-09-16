@@ -15,6 +15,7 @@ Should fail - would corrupt dirstate:
 
   $ hg add a/a
   abort: file 'a' in dirstate clashes with 'a/a'
+  [255]
 
   $ cd ..
 
@@ -34,6 +35,7 @@ Should fail - would corrupt dirstate:
 
   $ hg add a
   abort: directory 'a' already in dirstate
+  [255]
 
   $ cd ..
 
@@ -53,6 +55,7 @@ Should fail - would corrupt dirstate:
 
   $ hg add b
   abort: directory 'b' already in dirstate
+  [255]
 
   $ exit 0
 

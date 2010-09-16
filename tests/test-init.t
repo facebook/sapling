@@ -65,6 +65,7 @@ test failure
 
   $ hg init local
   abort: repository local already exists!
+  [255]
 
 init+push to remote2
 
@@ -100,12 +101,14 @@ init to existing repo
   $ hg init -e "python ./dummyssh" ssh://user@dummy/remote1
   abort: repository remote1 already exists!
   abort: could not create remote repo!
+  [255]
 
 clone to existing repo
 
   $ hg clone -e "python ./dummyssh" local ssh://user@dummy/remote1
   abort: repository remote1 already exists!
   abort: could not create remote repo!
+  [255]
 
 output of dummyssh
 
