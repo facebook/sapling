@@ -862,7 +862,6 @@ log -p -R repo
 #      \     /
 #         o
 #
-
 # Where "o" is a revision containing "foo" and
 # "x" is a revision without "foo"
 

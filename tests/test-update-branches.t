@@ -69,8 +69,8 @@ Test helper functions:
   >     hg stat
   > }    
 
-# Test cases are documented in a table in the update function of merge.py.
-# Cases are run as shown in that table, row by row.
+Test cases are documented in a table in the update function of merge.py.
+Cases are run as shown in that table, row by row.
 
   $ norevtest 'none clean linear' clean 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

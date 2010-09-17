@@ -1,6 +1,6 @@
   $ cp "$TESTDIR"/printenv.py .
 
-# commit hooks can see env vars
+commit hooks can see env vars
 
   $ hg init a
   $ cd a
@@ -27,14 +27,14 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../b
 
-# changegroup hooks can see env vars
+changegroup hooks can see env vars
 
   $ echo '[hooks]' > .hg/hgrc
   $ echo 'prechangegroup = python ../printenv.py prechangegroup' >> .hg/hgrc
   $ echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
   $ echo 'incoming = python ../printenv.py incoming' >> .hg/hgrc
 
-# pretxncommit and commit hooks can see both parents of merge
+pretxncommit and commit hooks can see both parents of merge
 
   $ cd ../a
   $ echo b >> a
@@ -65,7 +65,7 @@
   commit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd 
   commit.b hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd 
 
-# test generic hooks
+test generic hooks
 
   $ hg id
   pre-identify hook: HG_ARGS=id HG_OPTS={'tags': None, 'rev': '', 'num': None, 'branch': None, 'id': None} HG_PATS=[] 
@@ -91,7 +91,7 @@
   added 3 changesets with 2 changes to 2 files
   (run 'hg update' to get a working copy)
 
-# tag hooks can see env vars
+tag hooks can see env vars
 
   $ cd ../a
   $ echo 'pretag = python ../printenv.py pretag' >> .hg/hgrc
@@ -108,7 +108,7 @@
   pretag hook: HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=la 
   tag hook: HG_LOCAL=1 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=la 
 
-# pretag hook can forbid tagging
+pretag hook can forbid tagging
 
   $ echo 'pretag.forbid = python ../printenv.py pretag.forbid 1' >> .hg/hgrc
   $ hg tag -d '4 0' fa
@@ -122,8 +122,8 @@
   abort: pretag.forbid hook exited with status 1
   [255]
 
-# pretxncommit hook can see changeset, can roll back txn, changeset
-# no more there after
+pretxncommit hook can see changeset, can roll back txn, changeset no
+more there after
 
   $ echo 'pretxncommit.forbid0 = hg tip -q' >> .hg/hgrc
   $ echo 'pretxncommit.forbid1 = python ../printenv.py pretxncommit.forbid 1' >> .hg/hgrc
@@ -144,7 +144,7 @@
   $ hg -q tip
   4:539e4b31b6dc
 
-# precommit hook can prevent commit
+precommit hook can prevent commit
 
   $ echo 'precommit.forbid = python ../printenv.py precommit.forbid 1' >> .hg/hgrc
   $ hg commit -m 'fail' -d '4 0'
@@ -155,14 +155,14 @@
   $ hg -q tip
   4:539e4b31b6dc
 
-# preupdate hook can prevent update
+preupdate hook can prevent update
 
   $ echo 'preupdate = python ../printenv.py preupdate' >> .hg/hgrc
   $ hg update 1
   preupdate hook: HG_PARENT1=ab228980c14d 
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
-# update hook
+update hook
 
   $ echo 'update = python ../printenv.py update' >> .hg/hgrc
   $ hg update
@@ -170,7 +170,7 @@
   update hook: HG_ERROR=0 HG_PARENT1=539e4b31b6dc 
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-# prechangegroup hook can prevent incoming changes
+prechangegroup hook can prevent incoming changes
 
   $ cd ../b
   $ hg -q tip
@@ -184,8 +184,8 @@
   abort: prechangegroup.forbid hook exited with status 1
   [255]
 
-# pretxnchangegroup hook can see incoming changes, can roll back txn,
-# incoming changes no longer there after
+pretxnchangegroup hook can see incoming changes, can roll back txn,
+incoming changes no longer there after
 
   $ echo '[hooks]' > .hg/hgrc
   $ echo 'pretxnchangegroup.forbid0 = hg tip -q' >> .hg/hgrc
@@ -206,7 +206,7 @@
   $ hg -q tip
   3:07f3376c1e65
 
-# outgoing hooks can see env vars
+outgoing hooks can see env vars
 
   $ rm .hg/hgrc
   $ echo '[hooks]' > ../a/.hg/hgrc
@@ -225,7 +225,7 @@
   $ hg rollback
   rolling back to revision 3 (undo pull)
 
-# preoutgoing hook can prevent outgoing changes
+preoutgoing hook can prevent outgoing changes
 
   $ echo 'preoutgoing.forbid = python ../printenv.py preoutgoing.forbid 1' >> ../a/.hg/hgrc
   $ hg pull ../a
@@ -236,7 +236,7 @@
   abort: preoutgoing.forbid hook exited with status 1
   [255]
 
-# outgoing hooks work for local clones
+outgoing hooks work for local clones
 
   $ cd ..
   $ echo '[hooks]' > a/.hg/hgrc
@@ -249,7 +249,7 @@
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf c
 
-# preoutgoing hook can prevent outgoing changes for local clones
+preoutgoing hook can prevent outgoing changes for local clones
 
   $ echo 'preoutgoing.forbid = python ../printenv.py preoutgoing.forbid 1' >> a/.hg/hgrc
   $ hg clone a zzz
@@ -296,7 +296,7 @@
   >     unreachable = 1
   > EOF
 
-# test python hooks
+test python hooks
 
   $ PYTHONPATH="`pwd`:$PYTHONPATH"
   $ export PYTHONPATH
@@ -385,7 +385,7 @@
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
 
-# make sure --traceback works
+make sure --traceback works
 
   $ echo '[hooks]' > .hg/hgrc
   $ echo 'commit.abort = python:hooktests.aborthook' >> .hg/hgrc
@@ -422,7 +422,7 @@
   $ hg showconfig hooks
   hooks.commit.auto=<function autohook at .*>
 
-# test python hook configured with python:[file]:[hook] syntax
+test python hook configured with python:[file]:[hook] syntax
 
   $ cd ..
   $ mkdir d
@@ -446,7 +446,7 @@
 
   $ cd ../../b
 
-# make sure --traceback works on hook import failure
+make sure --traceback works on hook import failure
 
   $ cat > importfail.py <<EOF
   > import somebogusmodule
@@ -467,7 +467,7 @@
   ImportError: No module named hgext_importfail
   Traceback (most recent call last):
 
-# commit and update hooks should run after command completion (issue 1827)
+commit and update hooks should run after command completion (issue 1827)
 
   $ echo '[hooks]' > .hg/hgrc
   $ echo 'commit = hg id' >> .hg/hgrc

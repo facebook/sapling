@@ -1,4 +1,4 @@
-# http://mercurial.selenic.com/bts/issue1438
+http://mercurial.selenic.com/bts/issue1438
 
   $ "$TESTDIR/hghave" symlink || exit 80
 

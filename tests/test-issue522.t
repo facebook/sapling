@@ -1,10 +1,10 @@
-# http://mercurial.selenic.com/bts/issue522
+http://mercurial.selenic.com/bts/issue522
 
-# In the merge below, the file "foo" has the same contents in both
-# parents, but if we look at the file-level history, we'll notice that
-# the version in p1 is an ancestor of the version in p2.  This test
-# makes sure that we'll use the version from p2 in the manifest of the
-# merge revision.
+In the merge below, the file "foo" has the same contents in both
+parents, but if we look at the file-level history, we'll notice that
+the version in p1 is an ancestor of the version in p2. This test makes
+sure that we'll use the version from p2 in the manifest of the merge
+revision.
 
   $ hg init
 

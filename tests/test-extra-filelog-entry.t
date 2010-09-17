@@ -1,4 +1,4 @@
-# test for issue351
+test for issue351
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH

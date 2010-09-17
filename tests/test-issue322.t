@@ -1,4 +1,4 @@
-# http://mercurial.selenic.com/bts/issue322
+http://mercurial.selenic.com/bts/issue322
 
 File replaced with directory:
 

@@ -1,5 +1,5 @@
-# Make sure that the internal merge tools (internal:fail, internal:local, and
-# internal:other) are used when matched by a merge-pattern in hgrc
+Make sure that the internal merge tools (internal:fail, internal:local, and
+internal:other) are used when matched by a merge-pattern in hgrc
 
 Make sure HGMERGE doesn't interfere with the test:
 

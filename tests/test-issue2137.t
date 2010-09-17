@@ -1,12 +1,12 @@
-# http://mercurial.selenic.com/bts/issue2137
+http://mercurial.selenic.com/bts/issue2137
 
 Setup:
 
-# create a little extension that has 3 side-effects:
-#   1) ensure changelog data is not inlined
-#   2) make revlog to use lazyparser
-#   3) test that repo.lookup() works
-# 1 and 2 are preconditions for the bug; 3 is the bug.
+create a little extension that has 3 side-effects:
+1) ensure changelog data is not inlined
+2) make revlog to use lazyparser
+3) test that repo.lookup() works
+1 and 2 are preconditions for the bug; 3 is the bug.
 
   $ cat > commitwrapper.py <<EOF
   > from mercurial import extensions, node, revlog
@@ -39,7 +39,6 @@ Setup:
   adding a
   new tip: 553596fad57b
 
-
 Test that new changesets are visible to repo.lookup():
 
   $ echo a >> a
@@ -53,4 +52,3 @@ Test that new changesets are visible to repo.lookup():
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     one more commit to demonstrate the bug
   
-

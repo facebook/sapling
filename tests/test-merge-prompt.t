@@ -1,10 +1,9 @@
-# Test for
-#
-#   b5605d88dc27: Make ui.prompt repeat on "unrecognized response" again
-#                 (issue897)
-#
-#   840e2b315c1f: Fix misleading error and prompts during update/merge
-#                 (issue556)
+Test for
+b5605d88dc27: Make ui.prompt repeat on "unrecognized response" again
+ (issue897)
+
+840e2b315c1f: Fix misleading error and prompts during update/merge
+ (issue556)
 
   $ status() {
   >     [ $? -ne 0 ] && echo "failed."

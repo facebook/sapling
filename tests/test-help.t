@@ -1,4 +1,4 @@
-#!/bin/sh
+Short help:
 
   $ hg
   Mercurial Distributed SCM

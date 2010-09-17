@@ -3,7 +3,7 @@
   $ hg init basic
   $ cd basic
 
-# should complain
+should complain
 
   $ hg backout
   abort: please specify a revision to backout
@@ -12,7 +12,7 @@
   abort: please specify just one revision
   [255]
 
-# basic operation
+basic operation
 
   $ echo a > a
   $ hg commit -d '0 0' -A -m a
@@ -26,7 +26,7 @@
   $ cat a
   a
 
-# file that was removed is recreated
+file that was removed is recreated
 
   $ cd ..
   $ hg init remove
@@ -45,7 +45,7 @@
   $ cat a
   content
 
-# backout of backout is as if nothing happened
+backout of backout is as if nothing happened
 
   $ hg backout -d '3 0' --merge tip
   removing a
@@ -53,7 +53,7 @@
   $ cat a 2>/dev/null || echo cat: a: No such file or directory
   cat: a: No such file or directory
 
-# across branch
+across branch
 
   $ cd ..
   $ hg init branch
@@ -83,7 +83,7 @@ should fail
   abort: cannot backout change on a different branch
   [255]
 
-# backout with merge
+backout with merge
 
   $ cd ..
   $ hg init merge
@@ -119,7 +119,7 @@ check line 1 is back
   line 2
   line 3
 
-# backout should not back out subsequent changesets
+backout should not back out subsequent changesets
 
   $ hg init onecs
   $ cd onecs
@@ -167,25 +167,25 @@ check line 1 is back
   (branch merge, don't forget to commit)
   $ hg commit -d '4 0' -A -m d
 
-# backout of merge should fail
+backout of merge should fail
 
   $ hg backout 4
   abort: cannot backout a merge changeset without --parent
   [255]
 
-# backout of merge with bad parent should fail
+backout of merge with bad parent should fail
 
   $ hg backout --parent 0 4
   abort: cb9a9f314b8b is not a parent of b2f3bb92043e
   [255]
 
-# backout of non-merge with parent should fail
+backout of non-merge with parent should fail
 
   $ hg backout --parent 0 3
   abort: cannot use --parent on non-merge changeset
   [255]
 
-# backout with valid parent should be ok
+backout with valid parent should be ok
 
   $ hg backout -d '5 0' --parent 2 4
   removing d
@@ -202,7 +202,7 @@ check line 1 is back
 
   $ cd ..
 
-# named branches
+named branches
 
   $ hg init named_branches
   $ cd named_branches

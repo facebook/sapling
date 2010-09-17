@@ -1,6 +1,6 @@
-# test update logic when there are renames
+Test update logic when there are renames
 
-# update with local changes across a file rename
+Update with local changes across a file rename
 
   $ hg init
 

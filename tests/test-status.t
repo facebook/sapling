@@ -173,7 +173,7 @@ hg status -i ignoreddir/file:
   I ignoreddir/file
   $ cd ..
 
-# check 'status -q' and some combinations
+Check 'status -q' and some combinations
 
   $ hg init repo3
   $ cd repo3
@@ -191,9 +191,9 @@ hg status -i ignoreddir/file:
   $ rm deleted
   $ hg copy modified copied
 
-# Run status with 2 different flags.
-# Check if result is the same or different.
-# If result is not as expected, raise error
+Run status with 2 different flags.
+Check if result is the same or different.
+If result is not as expected, raise error
 
   $ assert() {
   >    hg status $1 > ../a
@@ -214,7 +214,7 @@ hg status -i ignoreddir/file:
   >     fi
   > }
 
-# assert flag1 flag2 [0-same | 1-different]
+Assert flag1 flag2 [0-same | 1-different]
 
   $ assert "-q" "-mard"      0
   $ assert "-A" "-marduicC"  0

@@ -1,4 +1,4 @@
-# test basic functionality of url#rev syntax
+Test basic functionality of url#rev syntax
 
   $ hg init repo
   $ cd repo

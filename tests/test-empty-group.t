@@ -1,4 +1,3 @@
-#
 #  A          B
 #
 #  3  4       3
@@ -15,7 +14,6 @@
 #
 # (plus we test a failure where outgoing
 # wrongly reported the number of csets)
-#
 
   $ hg init a
   $ cd a
@@ -40,9 +38,6 @@
   (branch merge, don't forget to commit)
   $ hg ci -A -m m1
 
-#hg log
-#hg debugindex .hg/store/00manifest.i
-
   $ hg update -C 1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 2
@@ -50,9 +45,6 @@
   (branch merge, don't forget to commit)
   $ hg ci -A -m m2
   created new head
-
-#hg log
-#hg debugindex .hg/store/00manifest.i
 
   $ cd ..
 
@@ -135,4 +127,3 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-

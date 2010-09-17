@@ -1,4 +1,4 @@
-# This test tries to exercise the ssh functionality with a dummy script
+This test tries to exercise the ssh functionality with a dummy script
 
   $ cat <<EOF > dummyssh
   > import sys

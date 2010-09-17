@@ -1,4 +1,4 @@
-# http://mercurial.selenic.com/bts/issue1175
+http://mercurial.selenic.com/bts/issue1175
 
   $ hg init
   $ touch a

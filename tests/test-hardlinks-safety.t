@@ -1,5 +1,5 @@
+some implementations of cp can't create hardlinks
 
-# some implementations of cp can't create hardlinks
   $ cat > cp.py <<EOF
   > from mercurial import util
   > import sys

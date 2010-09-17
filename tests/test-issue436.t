@@ -1,4 +1,4 @@
-# http://mercurial.selenic.com/bts/issue436
+http://mercurial.selenic.com/bts/issue436
 
   $ hg init
   $ hg -v log -v

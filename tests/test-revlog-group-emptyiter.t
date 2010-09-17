@@ -1,4 +1,5 @@
-# issue 1678
+issue 1678
+
 setting up base repo
   $ hg init a
   $ cd a

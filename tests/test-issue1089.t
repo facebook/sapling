@@ -1,4 +1,4 @@
-# http://mercurial.selenic.com/bts/issue1089
+http://mercurial.selenic.com/bts/issue1089
 
   $ hg init
   $ mkdir a

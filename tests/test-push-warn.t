@@ -466,8 +466,8 @@ Check prepush with new branch head on former topo non-head:
   $ hg ci -Amb
   adding b
 
-# b is now branch head of B, and a topological head
-# a is now branch head of A, but not a topological head
+b is now branch head of B, and a topological head
+a is now branch head of A, but not a topological head
 
   $ hg clone . inner
   updating to branch B
@@ -479,7 +479,7 @@ Check prepush with new branch head on former topo non-head:
   $ hg ci -Amb1
   adding b1
 
-# in the clone b1 is now the head of B
+in the clone b1 is now the head of B
 
   $ cd ..
   $ hg up 0
@@ -488,8 +488,9 @@ Check prepush with new branch head on former topo non-head:
   $ hg ci -Ama2
   adding a2
 
-# a2 is now the new branch head of A, and a new topological head
-# it replaces a former inner branch head, so it should at most warn about A, not B
+a2 is now the new branch head of A, and a new topological head 
+it replaces a former inner branch head, so it should at most warn about
+A, not B
 
 glog of local:
 
@@ -542,7 +543,7 @@ Check prepush with new branch head on former topo head:
   $ hg ci -Amb
   adding b
 
-# b is now branch head of B, and a topological head
+b is now branch head of B, and a topological head
 
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -550,7 +551,7 @@ Check prepush with new branch head on former topo head:
   $ hg ci -Ama1
   adding a1
 
-# a1 is now branch head of A, and a topological head
+a1 is now branch head of A, and a topological head
 
   $ hg clone . inner
   updating to branch A
@@ -562,15 +563,15 @@ Check prepush with new branch head on former topo head:
   $ hg ci -Amb1
   adding b1
 
-# in the clone b1 is now the head of B
+in the clone b1 is now the head of B
 
   $ cd ..
   $ echo a2 >a2
   $ hg ci -Ama2
   adding a2
 
-# a2 is now the new branch head of A, and a topological head
-# it replaces a former topological and branch head, so this should not warn
+a2 is now the new branch head of A, and a topological head
+it replaces a former topological and branch head, so this should not warn
 
 glog of local:
 
@@ -706,6 +707,3 @@ outgoing:
   searching for changes
   no changes found
   [1]
-
-  $ cd ..
-

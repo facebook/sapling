@@ -178,7 +178,7 @@ hg status -i ignoreddir/file:
   [0;30;1mI ignoreddir/file[0m
   $ cd ..
 
-# check 'status -q' and some combinations
+check 'status -q' and some combinations
 
   $ hg init repo3
   $ cd repo3
@@ -207,9 +207,10 @@ test unknown color
   [0;36;1;4m! deleted[0m
   [0;35;1;4m? unknown[0m
 
-# Run status with 2 different flags.
-# Check if result is the same or different.
-# If result is not as expected, raise error
+Run status with 2 different flags.
+Check if result is the same or different.
+If result is not as expected, raise error
+
   $ assert() {
   >     hg status --color=always $1 > ../a
   >     hg status --color=always $2 > ../b
@@ -229,7 +230,7 @@ test unknown color
   >     fi
   > }
 
-# assert flag1 flag2 [0-same | 1-different]
+assert flag1 flag2 [0-same | 1-different]
 
   $ assert "-q" "-mard"      0
   $ assert "-A" "-marduicC"  0
@@ -243,7 +244,8 @@ test unknown color
   $ assert "-r" "-d"         1
   $ cd ..
 
-# test 'resolve -l'
+test 'resolve -l'
+
   $ hg init repo4
   $ cd repo4
   $ echo "file a" > a

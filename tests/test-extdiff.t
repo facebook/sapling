@@ -135,8 +135,9 @@ Prepare custom diff/edit tool:
 
   $ chmod +x 'diff tool.py'
 
-# will change to /tmp/extdiff.TMP and populate directories a.TMP and a
-# and start tool
+will change to /tmp/extdiff.TMP and populate directories a.TMP and a
+and start tool
+
   $ hg extdiff -p "`pwd`/diff tool.py"
   [1]
 
