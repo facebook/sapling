@@ -11,4 +11,3 @@ test that 'hg commit' does not crash if the user removes a newly added file
   removing b
   nothing changed
   [1]
-  $ exit 0

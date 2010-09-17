@@ -31,5 +31,3 @@ called and .hg/journal.dirstate will not be deleted:
   rollback completed
   abort: no commits allowed
   [255]
-
-  $ exit 0

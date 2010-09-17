@@ -32,5 +32,3 @@ Check that zero-size journals are correctly aborted:
 
   $ if test -f foo/.hg/store/journal; then echo 'journal exists :-('; fi
 
-  $ exit 0
-

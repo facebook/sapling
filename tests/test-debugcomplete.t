@@ -247,5 +247,3 @@ Show all commands + options
   unbundle: update
   verify: 
   version: 
-
-  $ exit 0

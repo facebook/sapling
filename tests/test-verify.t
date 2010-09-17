@@ -99,5 +99,3 @@ test revlog format 0
   crosschecking files in changesets and manifests
   checking files
   1 files, 1 changesets, 1 total revisions
-
-  $ exit 0

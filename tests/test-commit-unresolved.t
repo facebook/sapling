@@ -45,5 +45,3 @@ Mark the conflict as resolved and commit
 
   $ hg resolve -m A
   $ hg commit -m "Merged"
-
-  $ exit 0

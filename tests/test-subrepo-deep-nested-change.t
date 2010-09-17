@@ -115,5 +115,3 @@ debugsub output for main and sub1
   path sub2
    source   ../sub2
    revision 53dd3430bcaf5ab4a7c48262bcad6d441f510487
-
-  $ exit 0

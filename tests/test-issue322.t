@@ -57,5 +57,3 @@ Should fail - would corrupt dirstate:
   abort: directory 'b' already in dirstate
   [255]
 
-  $ exit 0
-

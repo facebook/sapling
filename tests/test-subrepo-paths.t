@@ -30,5 +30,3 @@ test bad subpaths pattern
   $ hg debugsub
   abort: bad subrepository pattern in .*/test-subrepo-paths.t/outer/.hg/hgrc:2: invalid group reference
   [255]
-
-  $ exit 0

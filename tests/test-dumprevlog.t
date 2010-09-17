@@ -105,5 +105,3 @@ Compare repos:
   no changes found
   [1]
 
-  $ exit 0
-

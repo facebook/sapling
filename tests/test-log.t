@@ -1020,5 +1020,3 @@ log -p -R repo
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo, related
   
-
-  $ exit 0

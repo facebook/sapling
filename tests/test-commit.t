@@ -265,6 +265,3 @@ test commit message content
   HG: removed removed
   abort: empty commit message
   [255]
-  $ cd ..
-
-  $ exit 0

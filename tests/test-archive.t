@@ -233,5 +233,3 @@ old file -- date clamped to 1980
           0  1980-01-01 00:00   old/old
   ---------                     -------
         147                     2 files
-
-  $ exit 0

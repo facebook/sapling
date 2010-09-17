@@ -198,5 +198,3 @@ invalid arguments
   
   use "hg -v help rt" to show global options
   [255]
-
-  $ exit 0

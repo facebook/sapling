@@ -584,5 +584,3 @@ issue 1977
   $ hg -R repo update
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf repo2 repo
-
-  $ exit 0

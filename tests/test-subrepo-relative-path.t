@@ -67,5 +67,3 @@ subrepo debug for 'main' clone
    revision 863c1745b441bd97a8c4a096e87793073f4fb215
 
   $ "$TESTDIR/killdaemons.py"
-
-  $ exit 0

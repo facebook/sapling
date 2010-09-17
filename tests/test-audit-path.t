@@ -80,5 +80,3 @@ attack /tmp/test
   $ hg update -Cr4
   abort: No such file or directory: .*/test-audit-path.t/target//tmp/test
   [255]
-
-  $ exit 0

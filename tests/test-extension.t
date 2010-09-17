@@ -318,6 +318,3 @@ Broken disabled extension and command:
   $ hg --config extensions.path=./path.py help foo > /dev/null
   hg: unknown command 'foo'
   [255]
-
-  $ exit 0
-

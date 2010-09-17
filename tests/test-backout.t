@@ -259,5 +259,3 @@ on branch1, so no file1 and file2:
   $ hg st -A
   C default
   C file1
-
-  $ exit 0

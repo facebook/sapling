@@ -64,5 +64,3 @@ No repo:
   abort: There is no Mercurial repository here (.hg not found)!
   [255]
 
-  $ exit 0
-
