@@ -25,8 +25,8 @@ diff --git a/a.txt b/a.txt
 merging a.txt
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 % printrepr.py a.txt
-first\r
-third\r
+first
+third
 % hg diff
 diff --git a/a.txt b/a.txt
 --- a/a.txt
@@ -57,8 +57,8 @@ diff --git a/a.txt b/a.txt
 merging a.txt
 1 files updated, 1 files merged, 0 files removed, 0 files unresolved
 % printrepr.py a.txt
-first\r
-third\r
+first
+third
 % hg diff
 diff --git a/a.txt b/a.txt
 --- a/a.txt
