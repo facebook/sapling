@@ -134,6 +134,9 @@ hg: parse error: ancestor wants two arguments
 9
 % log 'grep("issue\d+")'
 6
+% hg debugrevspec grep("(")
+('func', ('symbol', 'grep'), ('string', '('))
+hg: parse error: invalid match pattern: unbalanced parenthesis
 % log 'head()'
 0
 1

@@ -110,6 +110,7 @@ log 'descendants(2 or 3)'
 log 'file(b)'
 log 'follow()'
 log 'grep("issue\d+")'
+try 'grep("(")' # invalid regular expression
 log 'head()'
 log 'heads(6::)'
 log 'keyword(issue)'
