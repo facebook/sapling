@@ -174,6 +174,7 @@ class bundlerepository(localrepo.localrepository):
         self.bundlefile = open(bundlename, "rb")
         b = changegroup.readbundle(self.bundlefile, bundlename)
         if b.compressed():
+            # we need a seekable, decompressed bundle
             fdtemp, temp = tempfile.mkstemp(prefix="hg-bundle-",
                                             suffix=".hg10un", dir=self.path)
             self.tempfile = temp
@@ -241,10 +242,6 @@ class bundlerepository(localrepo.localrepository):
                                  self.changelog.rev)
         else:
             return filelog.filelog(self.sopener, f)
-
-    def close(self):
-        """Close assigned bundle file immediately."""
-        self.bundlefile.close()
 
     def __del__(self):
         bundlefile = getattr(self, 'bundlefile', None)
