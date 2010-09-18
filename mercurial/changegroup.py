@@ -146,6 +146,10 @@ class unbundle10(object):
         return self._type != 'UN'
     def read(self, l):
         return self._stream.read(l)
+    def seek(self, pos):
+        return self._stream.seek(pos)
+    def tell(self):
+        return self._stream.tell(pos)
 
 class headerlessfixup(object):
     def __init__(self, fh, h):
