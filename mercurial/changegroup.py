@@ -149,7 +149,7 @@ class unbundle10(object):
     def seek(self, pos):
         return self._stream.seek(pos)
     def tell(self):
-        return self._stream.tell(pos)
+        return self._stream.tell()
 
 class headerlessfixup(object):
     def __init__(self, fh, h):

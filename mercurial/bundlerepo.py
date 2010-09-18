@@ -18,11 +18,11 @@ import changegroup, util, mdiff
 import localrepo, changelog, manifest, filelog, revlog, error
 
 class bundlerevlog(revlog.revlog):
-    def __init__(self, opener, indexfile, bundlefile,
+    def __init__(self, opener, indexfile, bundle,
                  linkmapper=None):
         # How it works:
         # to retrieve a revision, we need to know the offset of
-        # the revision in the bundlefile (an opened file).
+        # the revision in the bundle (an unbundle object).
         #
         # We store this offset in the index (start), to differentiate a
         # rev in the bundle and from a rev in the revlog, we check
@@ -30,11 +30,11 @@ class bundlerevlog(revlog.revlog):
         # (it is bigger since we store the node to which the delta is)
         #
         revlog.revlog.__init__(self, opener, indexfile)
-        self.bundlefile = bundlefile
+        self.bundle = bundle
         self.basemap = {}
         def chunkpositer():
-            for chunk in changegroup.chunkiter(bundlefile):
-                pos = bundlefile.tell()
+            for chunk in changegroup.chunkiter(bundle):
+                pos = bundle.tell()
                 yield chunk, pos - len(chunk)
         n = len(self)
         prev = None
@@ -68,7 +68,7 @@ class bundlerevlog(revlog.revlog):
             prev = node
             n += 1
 
-    def bundle(self, rev):
+    def inbundle(self, rev):
         """is rev from the bundle"""
         if rev < 0:
             return False
@@ -79,19 +79,19 @@ class bundlerevlog(revlog.revlog):
         # Warning: in case of bundle, the diff is against bundlebase,
         # not against rev - 1
         # XXX: could use some caching
-        if not self.bundle(rev):
+        if not self.inbundle(rev):
             return revlog.revlog._chunk(self, rev)
-        self.bundlefile.seek(self.start(rev))
-        return self.bundlefile.read(self.length(rev))
+        self.bundle.seek(self.start(rev))
+        return self.bundle.read(self.length(rev))
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
-        if self.bundle(rev1) and self.bundle(rev2):
+        if self.inbundle(rev1) and self.inbundle(rev2):
             # hot path for bundle
             revb = self.rev(self.bundlebase(rev2))
             if revb == rev1:
                 return self._chunk(rev2)
-        elif not self.bundle(rev1) and not self.bundle(rev2):
+        elif not self.inbundle(rev1) and not self.inbundle(rev2):
             return revlog.revlog.revdiff(self, rev1, rev2)
 
         return mdiff.textdiff(self.revision(self.node(rev1)),
@@ -107,7 +107,7 @@ class bundlerevlog(revlog.revlog):
         iter_node = node
         rev = self.rev(iter_node)
         # reconstruct the revision if it is from a changegroup
-        while self.bundle(rev):
+        while self.inbundle(rev):
             if self._cache and self._cache[0] == iter_node:
                 text = self._cache[2]
                 break
@@ -139,20 +139,20 @@ class bundlerevlog(revlog.revlog):
         raise NotImplementedError
 
 class bundlechangelog(bundlerevlog, changelog.changelog):
-    def __init__(self, opener, bundlefile):
+    def __init__(self, opener, bundle):
         changelog.changelog.__init__(self, opener)
-        bundlerevlog.__init__(self, opener, self.indexfile, bundlefile)
+        bundlerevlog.__init__(self, opener, self.indexfile, bundle)
 
 class bundlemanifest(bundlerevlog, manifest.manifest):
-    def __init__(self, opener, bundlefile, linkmapper):
+    def __init__(self, opener, bundle, linkmapper):
         manifest.manifest.__init__(self, opener)
-        bundlerevlog.__init__(self, opener, self.indexfile, bundlefile,
+        bundlerevlog.__init__(self, opener, self.indexfile, bundle,
                               linkmapper)
 
 class bundlefilelog(bundlerevlog, filelog.filelog):
-    def __init__(self, opener, path, bundlefile, linkmapper):
+    def __init__(self, opener, path, bundle, linkmapper):
         filelog.filelog.__init__(self, opener, path)
-        bundlerevlog.__init__(self, opener, self.indexfile, bundlefile,
+        bundlerevlog.__init__(self, opener, self.indexfile, bundle,
                               linkmapper)
 
 class bundlerepository(localrepo.localrepository):
@@ -171,9 +171,9 @@ class bundlerepository(localrepo.localrepository):
             self._url = 'bundle:' + bundlename
 
         self.tempfile = None
-        self.bundlefile = open(bundlename, "rb")
-        b = changegroup.readbundle(self.bundlefile, bundlename)
-        if b.compressed():
+        f = open(bundlename, "rb")
+        self.bundle = changegroup.readbundle(f, bundlename)
+        if self.bundle.compressed():
             # we need a seekable, decompressed bundle
             fdtemp, temp = tempfile.mkstemp(prefix="hg-bundle-",
                                             suffix=".hg10un", dir=self.path)
@@ -183,31 +183,30 @@ class bundlerepository(localrepo.localrepository):
             try:
                 fptemp.write("HG10UN")
                 while 1:
-                    chunk = b.read(2**18)
+                    chunk = self.bundle.read(2**18)
                     if not chunk:
                         break
                     fptemp.write(chunk)
             finally:
                 fptemp.close()
-                self.bundlefile.close()
 
-            self.bundlefile = open(self.tempfile, "rb")
-            self.bundlefile.seek(6)
+            f = open(self.tempfile, "rb")
+            self.bundle = changegroup.readbundle(f, bundlename)
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
 
     @util.propertycache
     def changelog(self):
-        c = bundlechangelog(self.sopener, self.bundlefile)
-        self.manstart = self.bundlefile.tell()
+        c = bundlechangelog(self.sopener, self.bundle)
+        self.manstart = self.bundle.tell()
         return c
 
     @util.propertycache
     def manifest(self):
-        self.bundlefile.seek(self.manstart)
-        m = bundlemanifest(self.sopener, self.bundlefile, self.changelog.rev)
-        self.filestart = self.bundlefile.tell()
+        self.bundle.seek(self.manstart)
+        m = bundlemanifest(self.sopener, self.bundle, self.changelog.rev)
+        self.filestart = self.bundle.tell()
         return m
 
     @util.propertycache
@@ -225,29 +224,26 @@ class bundlerepository(localrepo.localrepository):
 
     def file(self, f):
         if not self.bundlefilespos:
-            self.bundlefile.seek(self.filestart)
+            self.bundle.seek(self.filestart)
             while 1:
-                chunk = changegroup.getchunk(self.bundlefile)
+                chunk = changegroup.getchunk(self.bundle)
                 if not chunk:
                     break
-                self.bundlefilespos[chunk] = self.bundlefile.tell()
-                for c in changegroup.chunkiter(self.bundlefile):
+                self.bundlefilespos[chunk] = self.bundle.tell()
+                for c in changegroup.chunkiter(self.bundle):
                     pass
 
         if f[0] == '/':
             f = f[1:]
         if f in self.bundlefilespos:
-            self.bundlefile.seek(self.bundlefilespos[f])
-            return bundlefilelog(self.sopener, f, self.bundlefile,
+            self.bundle.seek(self.bundlefilespos[f])
+            return bundlefilelog(self.sopener, f, self.bundle,
                                  self.changelog.rev)
         else:
             return filelog.filelog(self.sopener, f)
 
     def __del__(self):
-        bundlefile = getattr(self, 'bundlefile', None)
-        if bundlefile and not bundlefile.closed:
-            bundlefile.close()
-        tempfile = getattr(self, 'tempfile', None)
+        del self.bundle
         if tempfile is not None:
             os.unlink(tempfile)
         if self._tempparent:
