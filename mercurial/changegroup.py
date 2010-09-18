@@ -136,16 +136,28 @@ def decompressor(fh, alg):
                 yield zd.decompress(chunk)
     else:
         raise util.Abort("unknown bundle compression '%s'" % alg)
-    return generator(fh)
+    return util.chunkbuffer(generator(fh))
 
 class unbundle10(object):
     def __init__(self, fh, alg):
-        self._stream = util.chunkbuffer(decompressor(fh, alg))
+        self._stream = decompressor(fh, alg)
         self._type = alg
     def compressed(self):
         return self._type != 'UN'
     def read(self, l):
         return self._stream.read(l)
+
+class headerlessfixup(object):
+    def __init__(self, fh, h):
+        self._h = h
+        self._fh = fh
+    def read(self, n):
+        if self._h:
+            d, self._h = self._h[:n], self._h[n:]
+            if len(d) < n:
+                d += self._fh.read(n - len(d))
+            return d
+        return self._fh.read(n)
 
 def readbundle(fh, fname):
     header = fh.read(6)
@@ -153,12 +165,7 @@ def readbundle(fh, fname):
     if not fname:
         fname = "stream"
         if not header.startswith('HG') and header.startswith('\0'):
-            # headerless bundle, clean things up
-            def fixup(f, h):
-                yield h
-                for x in f:
-                    yield x
-            fh = fixup(fh, header)
+            fh = headerlessfixup(fh, header)
             header = "HG10UN"
 
     magic, version, alg = header[0:2], header[2:4], header[4:6]
