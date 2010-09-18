@@ -150,6 +150,10 @@ class unbundle10(object):
         return self._stream.seek(pos)
     def tell(self):
         return self._stream.tell()
+    def chunks(self, progress=None):
+        return chunkiter(self, progress)
+    def chunk(self):
+        return getchunk(self)
 
 class headerlessfixup(object):
     def __init__(self, fh, h):

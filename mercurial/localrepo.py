@@ -1644,6 +1644,9 @@ class localrepository(repo.repository):
         if not source:
             return 0
 
+        if not hasattr(source, 'chunk'):
+            source = changegroup.unbundle10(source, 'UN')
+
         self.hook('prechangegroup', throw=True, source=srctype, url=url)
 
         changesets = files = revisions = 0
@@ -1671,8 +1674,8 @@ class localrepository(repo.repository):
                                      total=self.total)
                     self.count += 1
             pr = prog()
-            chunkiter = changegroup.chunkiter(source, progress=pr)
-            if cl.addgroup(chunkiter, csmap, trp) is None and not emptyok:
+            if (cl.addgroup(source.chunks(pr), csmap, trp) is None
+                and not emptyok):
                 raise util.Abort(_("received changelog group is empty"))
             clend = len(cl)
             changesets = clend - clstart
@@ -1686,12 +1689,11 @@ class localrepository(repo.repository):
             pr.step = _('manifests')
             pr.count = 1
             pr.total = changesets # manifests <= changesets
-            chunkiter = changegroup.chunkiter(source, progress=pr)
             # no need to check for empty manifest group here:
             # if the result of the merge of 1 and 2 is the same in 3 and 4,
             # no new manifest will be created and the manifest group will
             # be empty during the pull
-            self.manifest.addgroup(chunkiter, revmap, trp)
+            self.manifest.addgroup(source.chunks(pr), revmap, trp)
             self.ui.progress(_('manifests'), None)
 
             needfiles = {}
@@ -1710,15 +1712,14 @@ class localrepository(repo.repository):
             pr.count = 1
             pr.total = efiles
             while 1:
-                f = changegroup.getchunk(source)
+                f = source.chunk()
                 if not f:
                     break
                 self.ui.debug("adding %s revisions\n" % f)
                 pr()
                 fl = self.file(f)
                 o = len(fl)
-                chunkiter = changegroup.chunkiter(source)
-                if fl.addgroup(chunkiter, revmap, trp) is None:
+                if fl.addgroup(source.chunks(), revmap, trp) is None:
                     raise util.Abort(_("received file revlog group is empty"))
                 revisions += len(fl) - o
                 files += 1
