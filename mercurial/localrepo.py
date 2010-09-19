@@ -1674,7 +1674,9 @@ class localrepository(repo.repository):
                                      total=self.total)
                     self.count += 1
             pr = prog()
-            if (cl.addgroup(source.chunks(pr), csmap, trp) is None
+            source.callback = pr
+
+            if (cl.addgroup(source.chunks(), csmap, trp) is None
                 and not emptyok):
                 raise util.Abort(_("received changelog group is empty"))
             clend = len(cl)
@@ -1693,7 +1695,7 @@ class localrepository(repo.repository):
             # if the result of the merge of 1 and 2 is the same in 3 and 4,
             # no new manifest will be created and the manifest group will
             # be empty during the pull
-            self.manifest.addgroup(source.chunks(pr), revmap, trp)
+            self.manifest.addgroup(source.chunks(), revmap, trp)
             self.ui.progress(_('manifests'), None)
 
             needfiles = {}
@@ -1711,6 +1713,8 @@ class localrepository(repo.repository):
             pr.step = 'files'
             pr.count = 1
             pr.total = efiles
+            source.callback = None
+
             while 1:
                 f = source.chunk()
                 if not f:

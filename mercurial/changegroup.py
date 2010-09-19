@@ -142,6 +142,7 @@ class unbundle10(object):
     def __init__(self, fh, alg):
         self._stream = decompressor(fh, alg)
         self._type = alg
+        self.callback = None
     def compressed(self):
         return self._type != 'UN'
     def read(self, l):
@@ -150,10 +151,32 @@ class unbundle10(object):
         return self._stream.seek(pos)
     def tell(self):
         return self._stream.tell()
-    def chunks(self, progress=None):
-        return chunkiter(self, progress)
+
+    def chunklength(self):
+        d = self.read(4)
+        if not d:
+            return 0
+        l = max(0, struct.unpack(">l", d)[0] - 4)
+        if l and self.callback:
+            self.callback()
+        return l
+
     def chunk(self):
-        return getchunk(self)
+        """return the next chunk from changegroup 'source' as a string"""
+        l = self.chunklength()
+        d = self.read(l)
+        if len(d) < l:
+            raise util.Abort(_("premature EOF reading chunk"
+                               " (got %d bytes, expected %d)")
+                             % (len(d), l))
+        return d
+
+    def chunks(self):
+        while 1:
+            c = self.chunk()
+            if not c:
+                break
+            yield c
 
 class headerlessfixup(object):
     def __init__(self, fh, h):
