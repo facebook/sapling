@@ -1302,18 +1302,21 @@ class revlog(object):
             # loop through our set of deltas
             chain = None
             while 1:
-                chunk = bundle.chunk()
-                if not chunk:
+                chunkdata = bundle.parsechunk()
+                if not chunkdata:
                     break
-                node, p1, p2, cs = struct.unpack("20s20s20s20s", chunk[:80])
+                node = chunkdata['node']
+                p1 = chunkdata['p1']
+                p2 = chunkdata['p2']
+                cs = chunkdata['cs']
+                delta = chunkdata['data']
+
                 link = linkmapper(cs)
                 if (node in self.nodemap and
                     (not self.flags(self.rev(node)) & REVIDX_PUNCHED_FLAG)):
                     # this can happen if two branches make the same change
                     chain = node
                     continue
-                delta = buffer(chunk, 80)
-                del chunk
 
                 for p in (p1, p2):
                     if not p in self.nodemap:

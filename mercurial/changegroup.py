@@ -163,6 +163,15 @@ class unbundle10(object):
                              % (len(d), l))
         return d
 
+    def parsechunk(self):
+        l = self.chunklength()
+        if not l:
+            return {}
+        h = self.read(80)
+        node, p1, p2, cs = struct.unpack("20s20s20s20s", h)
+        data = self.read(l - 80)
+        return dict(node=node, p1=p1, p2=p2, cs=cs, data=data)
+
 class headerlessfixup(object):
     def __init__(self, fh, h):
         self._h = h
