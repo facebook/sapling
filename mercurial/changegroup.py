@@ -24,17 +24,6 @@ def getchunk(source):
                           % (len(d), l - 4))
     return d
 
-def chunkiter(source, progress=None):
-    """iterate through the chunks in source, yielding a sequence of chunks
-    (strings)"""
-    while 1:
-        c = getchunk(source)
-        if not c:
-            break
-        elif progress is not None:
-            progress()
-        yield c
-
 def chunkheader(length):
     """return a changegroup chunk header (string)"""
     return struct.pack(">l", length + 4)
@@ -94,15 +83,18 @@ def writebundle(cg, filename, bundletype):
         # parse the changegroup data, otherwise we will block
         # in case of sshrepo because we don't know the end of the stream
 
-        # an empty chunkiter is the end of the changegroup
-        # a changegroup has at least 2 chunkiters (changelog and manifest).
-        # after that, an empty chunkiter is the end of the changegroup
+        # an empty chunkgroup is the end of the changegroup
+        # a changegroup has at least 2 chunkgroups (changelog and manifest).
+        # after that, an empty chunkgroup is the end of the changegroup
         empty = False
         count = 0
         while not empty or count <= 2:
             empty = True
             count += 1
-            for chunk in chunkiter(cg):
+            while 1:
+                chunk = getchunk(cg)
+                if not chunk:
+                    break
                 empty = False
                 fh.write(z.compress(chunkheader(len(chunk))))
                 pos = 0
@@ -170,13 +162,6 @@ class unbundle10(object):
                                " (got %d bytes, expected %d)")
                              % (len(d), l))
         return d
-
-    def chunks(self):
-        while 1:
-            c = self.chunk()
-            if not c:
-                break
-            yield c
 
 class headerlessfixup(object):
     def __init__(self, fh, h):

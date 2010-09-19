@@ -33,7 +33,10 @@ class bundlerevlog(revlog.revlog):
         self.bundle = bundle
         self.basemap = {}
         def chunkpositer():
-            for chunk in bundle.chunks():
+            while 1:
+                chunk = bundle.chunk()
+                if not chunk:
+                    break
                 pos = bundle.tell()
                 yield chunk, pos - len(chunk)
         n = len(self)
@@ -230,8 +233,10 @@ class bundlerepository(localrepo.localrepository):
                 if not chunk:
                     break
                 self.bundlefilespos[chunk] = self.bundle.tell()
-                for c in self.bundle.chunks():
-                    pass
+                while 1:
+                    c = self.bundle.chunk()
+                    if not c:
+                        break
 
         if f[0] == '/':
             f = f[1:]

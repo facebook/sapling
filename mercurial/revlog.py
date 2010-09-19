@@ -1269,7 +1269,7 @@ class revlog(object):
 
         yield changegroup.closechunk()
 
-    def addgroup(self, revs, linkmapper, transaction):
+    def addgroup(self, bundle, linkmapper, transaction):
         """
         add a delta group
 
@@ -1301,7 +1301,10 @@ class revlog(object):
         try:
             # loop through our set of deltas
             chain = None
-            for chunk in revs:
+            while 1:
+                chunk = bundle.chunk()
+                if not chunk:
+                    break
                 node, p1, p2, cs = struct.unpack("20s20s20s20s", chunk[:80])
                 link = linkmapper(cs)
                 if (node in self.nodemap and
