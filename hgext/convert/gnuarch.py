@@ -138,7 +138,7 @@ class gnuarch_source(converter_source, commandline):
             raise util.Abort(_('internal calling inconsistency'))
 
         # Raise IOError if necessary (i.e. deleted files).
-        if not os.path.exists(os.path.join(self.tmppath, name)):
+        if not os.path.lexists(os.path.join(self.tmppath, name)):
             raise IOError
 
         return self._getfile(name, rev)

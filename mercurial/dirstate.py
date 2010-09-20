@@ -362,7 +362,7 @@ class dirstate(object):
         norm_path = os.path.normcase(path)
         fold_path = self._foldmap.get(norm_path, None)
         if fold_path is None:
-            if knownpath or not os.path.exists(os.path.join(self._root, path)):
+            if knownpath or not os.path.lexists(os.path.join(self._root, path)):
                 fold_path = path
             else:
                 fold_path = self._foldmap.setdefault(norm_path,

@@ -642,7 +642,7 @@ def fspath(name, root):
             l = l + 1
         name = name[l:]
 
-    if not os.path.exists(os.path.join(root, name)):
+    if not os.path.lexists(os.path.join(root, name)):
         return None
 
     seps = os.sep
