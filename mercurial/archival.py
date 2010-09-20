@@ -150,6 +150,13 @@ class zipit(object):
         self.z = zipfile.ZipFile(dest, 'w',
                                  compress and zipfile.ZIP_DEFLATED or
                                  zipfile.ZIP_STORED)
+
+        # Python's zipfile module emits deprecation warnings if we try
+        # to store files with a date before 1980.
+        epoch = 315532800 # calendar.timegm((1980, 1, 1, 0, 0, 0, 1, 1, 0))
+        if mtime < epoch:
+            mtime = epoch
+
         self.date_time = time.gmtime(mtime)[:6]
 
     def addfile(self, name, mode, islink, data):

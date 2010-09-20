@@ -211,6 +211,10 @@ quoting needed
   9
   $ log 'grep("issue\d+")'
   6
+  $ try 'grep("(")' # invalid regular expression
+  ('func', ('symbol', 'grep'), ('string', '('))
+  hg: parse error: invalid match pattern: unbalanced parenthesis
+  [255]
   $ log 'head()'
   0
   1

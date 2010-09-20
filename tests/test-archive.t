@@ -219,5 +219,19 @@ empty repo
   $ hg archive ../test-empty
   abort: no working directory: please specify a revision
   [255]
+old file -- date clamped to 1980
+
+  $ touch -d 1975-01-01 old
+  $ hg add old
+  $ hg commit -m old
+  $ hg archive ../old.zip
+  $ unzip -l ../old.zip
+  Archive:  ../old.zip
+    Length      Date    Time    Name
+  ---------  ---------- -----   ----
+        147  1980-01-01 00:00   old/.hg_archival.txt
+          0  1980-01-01 00:00   old/old
+  ---------                     -------
+        147                     2 files
 
   $ exit 0

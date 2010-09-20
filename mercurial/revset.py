@@ -276,7 +276,10 @@ def keyword(repo, subset, x):
     return l
 
 def grep(repo, subset, x):
-    gr = re.compile(getstring(x, _("grep wants a string")))
+    try:
+        gr = re.compile(getstring(x, _("grep wants a string")))
+    except re.error, e:
+        raise error.ParseError(_('invalid match pattern: %s') % e)
     l = []
     for r in subset:
         c = repo[r]
