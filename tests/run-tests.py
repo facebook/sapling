@@ -503,6 +503,9 @@ def tsttest(test, options):
 
     def rematch(el, l):
         try:
+            # hack to deal with graphlog, which looks like bogus regexes
+            if el.startswith('|'):
+                el = '\\' + el
             return re.match(el, l)
         except re.error:
             # el is an invalid regex
