@@ -227,6 +227,40 @@ Status between revisions:
    z1
   +z2
 
+Test archiving to a directory tree:
+
+  $ hg archive --subrepos ../archive
+  $ find ../archive
+  ../archive
+  ../archive/foo
+  ../archive/foo/bar
+  ../archive/foo/bar/z.txt
+  ../archive/foo/.hgsubstate
+  ../archive/foo/.hgsub
+  ../archive/foo/y.txt
+  ../archive/x.txt
+  ../archive/.hgsubstate
+  ../archive/.hgsub
+  ../archive/.hg_archival.txt
+
+Test archiving to zip file:
+
+  $ hg archive --subrepos ../archive.zip
+  $ unzip -l ../archive.zip
+  Archive:  ../archive.zip
+    Length      Date    Time    Name
+  ---------  ---------- -----   ----
+        147  1980-01-01 00:00   archive/.hg_archival.txt
+         10  1980-01-01 00:00   archive/.hgsub
+         45  1980-01-01 00:00   archive/.hgsubstate
+          3  1980-01-01 00:00   archive/x.txt
+          9  1980-01-01 00:00   archive/foo/y.txt
+         10  1980-01-01 00:00   archive/foo/.hgsub
+         45  1980-01-01 00:00   archive/foo/.hgsubstate
+          9  1980-01-01 00:00   archive/foo/bar/z.txt
+  ---------                     -------
+        278                     8 files
+
 Clone and test outgoing:
 
   $ cd ..

@@ -199,7 +199,7 @@ def archive(ui, repo, dest, **opts):
     prefix = cmdutil.make_filename(repo, prefix, node)
     matchfn = cmdutil.match(repo, [], opts)
     archival.archive(repo, dest, node, kind, not opts.get('no_decode'),
-                     matchfn, prefix)
+                     matchfn, prefix, subrepos=opts.get('subrepos'))
 
 def backout(ui, repo, node=None, rev=None, **opts):
     '''reverse effect of earlier changeset
@@ -3963,7 +3963,7 @@ table = {
            _('revision to distribute'), _('REV')),
           ('t', 'type', '',
            _('type of distribution to create'), _('TYPE')),
-         ] + walkopts,
+         ] + subrepoopts + walkopts,
          _('[OPTION]... DEST')),
     "backout":
         (backout,

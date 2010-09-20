@@ -205,7 +205,7 @@ archivers = {
     }
 
 def archive(repo, dest, node, kind, decode=True, matchfn=None,
-            prefix=None, mtime=None):
+            prefix=None, mtime=None, subrepos=False):
     '''create archive of repo as it was at node.
 
     dest can be name of directory, name of archive file, or file
@@ -263,4 +263,10 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     for f in ctx:
         ff = ctx.flags(f)
         write(f, 'x' in ff and 0755 or 0644, 'l' in ff, ctx[f].data)
+
+    if subrepos:
+        for subpath in ctx.substate:
+            sub = ctx.sub(subpath)
+            sub.archive(archiver, prefix)
+
     archiver.done()

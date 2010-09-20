@@ -282,6 +282,15 @@ class abstractsubrepo(object):
         """return file flags"""
         return ''
 
+    def archive(self, archiver, prefix):
+        for name in self.files():
+            flags = self.fileflags(name)
+            mode = 'x' in flags and 0755 or 0644
+            symlink = 'l' in flags
+            archiver.addfile(os.path.join(prefix, self._path, name),
+                             mode, symlink, self.filedata(name))
+
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -340,6 +349,15 @@ class hgsubrepo(abstractsubrepo):
         except error.RepoLookupError, inst:
             self._repo.ui.warn(_("warning: %s in %s\n")
                                % (inst, relpath(self)))
+
+    def archive(self, archiver, prefix):
+        abstractsubrepo.archive(self, archiver, prefix)
+
+        rev = self._state[1]
+        ctx = self._repo[rev]
+        for subpath in ctx.substate:
+            s = subrepo(ctx, subpath)
+            s.archive(archiver, os.path.join(prefix, self._path))
 
     def dirty(self):
         r = self._state[1]
