@@ -372,6 +372,17 @@ forced overwrite of an existing file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/ca
 
+attempt to overwrite an existing broken symlink
+
+  $ ln -s ba d1/ca
+  $ hg rename --traceback d1/ba d1/ca
+  d1/ca: not overwriting - file exists
+  $ hg status -C
+  ? d1/ca
+  $ hg update -C
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm d1/ca
+
 replace a symlink with a file
 
   $ ln -s ba d1/ca
