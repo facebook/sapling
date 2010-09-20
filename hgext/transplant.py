@@ -600,6 +600,7 @@ def transplant(ui, repo, *revs, **opts):
         tp.apply(repo, source, revmap, merges, opts)
     finally:
         if bundle:
+            source.close()
             os.unlink(bundle)
 
 cmdtable = {

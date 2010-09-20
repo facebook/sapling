@@ -143,6 +143,8 @@ class unbundle10(object):
         return self._stream.seek(pos)
     def tell(self):
         return self._stream.tell()
+    def close(self):
+        return self._stream.close()
 
     def chunklength(self):
         d = self.read(4)
