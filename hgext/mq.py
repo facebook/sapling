@@ -2344,7 +2344,7 @@ def rename(ui, repo, patch, name=None, **opts):
 def restore(ui, repo, rev, **opts):
     """restore the queue state saved by a revision (DEPRECATED)
 
-    This command is deprecated, use rebase --mq instead."""
+    This command is deprecated, use :hg:`rebase` instead."""
     rev = repo.lookup(rev)
     q = repo.mq
     q.restore(repo, rev, delete=opts['delete'],
@@ -2355,7 +2355,7 @@ def restore(ui, repo, rev, **opts):
 def save(ui, repo, **opts):
     """save current queue state (DEPRECATED)
 
-    This command is deprecated, use rebase --mq instead."""
+    This command is deprecated, use :hg:`rebase` instead."""
     q = repo.mq
     message = cmdutil.logmessage(opts)
     ret = q.save(repo, msg=message)
