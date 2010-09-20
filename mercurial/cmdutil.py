@@ -378,7 +378,7 @@ def copy(ui, repo, pats, opts, rename=False):
             return
 
         # check for overwrites
-        exists = os.path.exists(target)
+        exists = os.path.lexists(target)
         if not after and exists or after and state in 'mn':
             if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %

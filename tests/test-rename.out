@@ -213,6 +213,10 @@ A d1/ca
   d1/ba
 R d1/ba
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+# attempt to overwrite an existing broken symlink
+d1/ca: not overwriting - file exists
+? d1/ca
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 # replace a symlink with a file
 A d1/ca
   d1/ba

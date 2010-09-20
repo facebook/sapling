@@ -158,6 +158,13 @@ hg status -C
 hg update -C
 rm d1/ca
 
+echo "# attempt to overwrite an existing broken symlink"
+ln -s ba d1/ca
+hg rename --traceback d1/ba d1/ca
+hg status -C
+hg update -C
+rm d1/ca
+
 echo "# replace a symlink with a file"
 ln -s ba d1/ca
 hg rename --force d1/ba d1/ca
