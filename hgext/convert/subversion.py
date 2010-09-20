@@ -1037,7 +1037,7 @@ class svn_sink(converter_sink, commandline):
         # our copyfile method expects to record a copy that has
         # already occurred.  Cross the semantic gap.
         wdest = self.wjoin(dest)
-        exists = os.path.exists(wdest)
+        exists = os.path.lexists(wdest)
         if exists:
             fd, tempname = tempfile.mkstemp(
                 prefix='hg-copy-', dir=os.path.dirname(wdest))
