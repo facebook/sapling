@@ -117,6 +117,7 @@ def writerevs(ui, r1, r2, order, tr):
 
     try:
         group = util.chunkbuffer(r1.group(order, lookup, progress))
+        group = changegroup.unbundle10(group, "UN")
         r2.addgroup(group, unlookup, tr)
     finally:
         ui.progress(_('writing'), None)
