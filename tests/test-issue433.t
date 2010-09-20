@@ -8,6 +8,3 @@ http://mercurial.selenic.com/bts/issue433
   $ hg parents -r 0 doesnotexist
   abort: 'doesnotexist' not found in manifest!
   [255]
-
-  $ true
-

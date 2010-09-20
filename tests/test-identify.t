@@ -67,5 +67,3 @@ remote with tags?
   $ hg id -t http://localhost:$HGPORT1/
   abort: can't query remote revision number, branch, or tags
   [255]
-
-  $ true # ends with util.Abort -> returns 255

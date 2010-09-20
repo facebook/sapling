@@ -23,5 +23,3 @@
   abort: username 'foo\nbar3' contains a newline!
   [255]
 
-  $ true
-

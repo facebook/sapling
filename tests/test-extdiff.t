@@ -171,5 +171,3 @@ Test extdiff with --option:
   diffing this a.8a5febb7f867/a a.34eed99112ab/a
   [1]
 
-  $ true
-

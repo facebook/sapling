@@ -64,4 +64,3 @@ push/pull name that doesn't exist
   $ hg pull -B anotherbadname ../a
   abort: remote bookmark anotherbadname not found!
   [255]
-  $ true

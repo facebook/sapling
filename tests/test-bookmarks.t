@@ -187,5 +187,3 @@ bookmark name with whitespace only
   $ hg bookmark ' '
   abort: bookmark names cannot consist entirely of whitespace
   [255]
-
-  $ true

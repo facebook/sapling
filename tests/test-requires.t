@@ -12,5 +12,3 @@
   $ hg tip
   abort: requirement 'indoor-pool' not supported!
   [255]
-
-  $ true

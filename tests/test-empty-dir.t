@@ -21,5 +21,3 @@
   $ test -d sub || echo "sub not present"
   sub not present
 
-  $ true
-

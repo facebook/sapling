@@ -1734,5 +1734,3 @@ Disable the fakegroups trick to get real failures
   acl: "unlikelytoexist" not defined in [acl.groups]
   error: pretxnchangegroup.acl hook failed: group 'unlikelytoexist' is undefined
   abort: group 'unlikelytoexist' is undefined
-
-  $ true

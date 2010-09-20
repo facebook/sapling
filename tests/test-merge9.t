@@ -90,5 +90,3 @@ after
   $ hg resolve -l
   U bar
   R baz
-
-  $ true

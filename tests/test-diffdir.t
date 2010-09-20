@@ -38,5 +38,3 @@
   $ hg diff -r tip -r ""
   abort: 00changelog.i@: ambiguous identifier!
   [255]
-
-  $ true

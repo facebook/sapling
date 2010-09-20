@@ -27,5 +27,3 @@ Bogus fast-forward should fail:
   abort: merging with a working directory ancestor has no effect
   [255]
 
-  $ true
-

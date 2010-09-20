@@ -14,4 +14,3 @@
   comparing with .*/test-paths.t/b
   no changes found
   [1]
-  $ true
