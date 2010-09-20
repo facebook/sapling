@@ -195,7 +195,7 @@ Show all commands + options
   summary: remote
   update: clean, check, date, rev
   addremove: similarity, include, exclude, dry-run
-  archive: no-decode, prefix, rev, type, include, exclude
+  archive: no-decode, prefix, rev, type, subrepos, include, exclude
   backout: merge, parent, rev, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, command, noupdate
   branch: force, clean
