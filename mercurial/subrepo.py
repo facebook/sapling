@@ -270,6 +270,18 @@ class abstractsubrepo(object):
     def incoming(self, ui, source, opts):
         return 1
 
+    def files(self):
+        """return filename iterator"""
+        raise NotImplementedError
+
+    def filedata(self, name):
+        """return file data"""
+        raise NotImplementedError
+
+    def fileflags(self, name):
+        """return file flags"""
+        return ''
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -406,6 +418,21 @@ class hgsubrepo(abstractsubrepo):
     def incoming(self, ui, source, opts):
         return hg.incoming(ui, self._repo, _abssource(self._repo, False), opts)
 
+    def files(self):
+        rev = self._state[1]
+        ctx = self._repo[rev]
+        return ctx.manifest()
+
+    def filedata(self, name):
+        rev = self._state[1]
+        return self._repo[rev][name].data()
+
+    def fileflags(self, name):
+        rev = self._state[1]
+        ctx = self._repo[rev]
+        return ctx.flags(name)
+
+
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -507,6 +534,15 @@ class svnsubrepo(abstractsubrepo):
     def push(self, force):
         # push is a no-op for SVN
         return True
+
+    def files(self):
+        output = self._svncommand(['list'])
+        # This works because svn forbids \n in filenames.
+        return output.splitlines()
+
+    def filedata(self, name):
+        return self._svncommand(['cat'], name)
+
 
 types = {
     'hg': hgsubrepo,
