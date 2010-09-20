@@ -363,7 +363,7 @@ def updatedir(ui, repo, patches, similarity=0):
             islink, isexec = gp.mode
             dst = repo.wjoin(gp.path)
             # patch won't create empty files
-            if gp.op == 'ADD' and not os.path.exists(dst):
+            if gp.op == 'ADD' and not os.path.lexists(dst):
                 flags = (isexec and 'x' or '') + (islink and 'l' or '')
                 repo.wwrite(gp.path, '', flags)
             util.set_flags(dst, islink, isexec)
@@ -422,7 +422,7 @@ def copy(ui, repo, pats, opts, rename=False):
             return
 
         # check for overwrites
-        exists = os.path.exists(target)
+        exists = os.path.lexists(target)
         if not after and exists or after and state in 'mn':
             if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %
@@ -521,7 +521,7 @@ def copy(ui, repo, pats, opts, rename=False):
                     score = 0
                     for s in srcs:
                         t = os.path.join(dest, util.localpath(s[0])[striplen:])
-                        if os.path.exists(t):
+                        if os.path.lexists(t):
                             score += 1
                     return score
 

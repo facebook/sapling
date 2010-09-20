@@ -674,7 +674,7 @@ class queue(object):
                 removed = []
                 merged = []
                 for f in files:
-                    if os.path.exists(repo.wjoin(f)):
+                    if os.path.lexists(repo.wjoin(f)):
                         merged.append(f)
                     else:
                         removed.append(f)

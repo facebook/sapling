@@ -1,8 +1,9 @@
 % add
 adding a
 adding d1/d2/b
+adding link
 % modify
-1:e0e2b8a9156b
+1:8231f652da37
 assuming destination a-hg
 initializing svn repository 'a-hg'
 initializing svn working copy 'a-hg-wc'
@@ -17,6 +18,7 @@ At revision 2.
  2 1 test d1
  2 1 test d1/d2
  2 1 test d1/d2/b
+ 2 1 test link
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -42,6 +44,8 @@ At revision 2.
    action="A">/d1/d2</path>
 <path
    action="A">/d1/d2/b</path>
+<path
+   action="A">/link</path>
 </paths>
 <msg>add a file</msg>
 </logentry>
@@ -49,13 +53,15 @@ At revision 2.
 a:
 a
 d1
+link
 
 a-hg-wc:
 a
 d1
+link
 same
 % rename
-2:eb5169441d43
+2:a67e26ccec09
 assuming destination a-hg
 initializing svn working copy 'a-hg-wc'
 scanning source...
@@ -68,6 +74,7 @@ At revision 3.
  3 1 test d1
  3 1 test d1/d2
  3 1 test d1/d2/b
+ 3 3 test newlink
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -81,6 +88,12 @@ At revision 3.
    copyfrom-path="/a"
    copyfrom-rev="2"
    action="A">/b</path>
+<path
+   copyfrom-path="/link"
+   copyfrom-rev="2"
+   action="A">/newlink</path>
+<path
+   action="D">/link</path>
 </paths>
 <msg>rename a file</msg>
 </logentry>
@@ -88,12 +101,14 @@ At revision 3.
 a:
 b
 d1
+newlink
 
 a-hg-wc:
 b
 d1
+newlink
 % copy
-3:60effef6ab48
+3:0cf087b9ab02
 assuming destination a-hg
 initializing svn working copy 'a-hg-wc'
 scanning source...
@@ -107,6 +122,7 @@ At revision 4.
  4 1 test d1
  4 1 test d1/d2
  4 1 test d1/d2/b
+ 4 3 test newlink
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -126,13 +142,15 @@ a:
 b
 c
 d1
+newlink
 
 a-hg-wc:
 b
 c
 d1
+newlink
 % remove
-4:87bbe3013fb6
+4:07b2e34a5b17
 assuming destination a-hg
 initializing svn working copy 'a-hg-wc'
 scanning source...
@@ -145,6 +163,7 @@ At revision 5.
  5 1 test d1
  5 1 test d1/d2
  5 1 test d1/d2/b
+ 5 3 test newlink
 <?xml version="1.0"?>
 <log>
 <logentry
@@ -161,12 +180,14 @@ At revision 5.
 a:
 c
 d1
+newlink
 
 a-hg-wc:
 c
 d1
+newlink
 % executable
-5:ff42e473c340
+5:31093672760b
 assuming destination a-hg
 initializing svn working copy 'a-hg-wc'
 scanning source...
@@ -179,6 +200,7 @@ At revision 6.
  6 1 test d1
  6 1 test d1/d2
  6 1 test d1/d2/b
+ 6 3 test newlink
 <?xml version="1.0"?>
 <log>
 <logentry
