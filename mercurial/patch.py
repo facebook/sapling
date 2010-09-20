@@ -25,7 +25,7 @@ class NoHunks(PatchError):
 
 def copyfile(src, dst, basedir):
     abssrc, absdst = [util.canonpath(basedir, basedir, x) for x in [src, dst]]
-    if os.path.exists(absdst):
+    if os.path.lexists(absdst):
         raise util.Abort(_("cannot create %s: destination already exists") %
                          dst)
 
