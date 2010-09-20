@@ -33,6 +33,7 @@ tr.light:hover, .parity0:hover { background-color:#edece6; }
 tr.dark, .parity1 { background-color:#f6f6f0; }
 tr.dark:hover, .parity1:hover { background-color:#edece6; }
 td { padding:2px 5px; font-size:12px; vertical-align:top; }
+td.closed { background-color: #99f; }
 td.link { padding:2px 5px; font-family:sans-serif; font-size:10px; }
 td.indexlinks { white-space: nowrap; }
 td.indexlinks a {
