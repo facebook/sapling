@@ -102,14 +102,15 @@ class wirerepository(repo.repository):
     def changegroup(self, nodes, kind):
         n = encodelist(nodes)
         f = self._callstream("changegroup", roots=n)
-        return self._decompress(f)
+        return changegroupmod.unbundle10(self._decompress(f), 'UN')
 
     def changegroupsubset(self, bases, heads, kind):
         self.requirecap('changegroupsubset', _('look up remote changes'))
         bases = encodelist(bases)
         heads = encodelist(heads)
-        return self._decompress(self._callstream("changegroupsubset",
-                                                 bases=bases, heads=heads))
+        f = self._callstream("changegroupsubset",
+                             bases=bases, heads=heads)
+        return changegroupmod.unbundle10(self._decompress(f), 'UN')
 
     def unbundle(self, cg, heads, source):
         '''Send cg (a readable file-like object representing the

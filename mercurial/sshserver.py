@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import util, hook, wireproto
+import util, hook, wireproto, changegroup
 import os, sys
 
 class sshserver(object):
@@ -130,7 +130,8 @@ class sshserver(object):
             return
 
         self.sendresponse("")
-        r = self.repo.addchangegroup(self.fin, 'serve', self._client(),
+        cg = changegroup.unbundle10(self.fin, "UN")
+        r = self.repo.addchangegroup(cg, 'serve', self._client(),
                                      lock=self.lock)
         return str(r)
 

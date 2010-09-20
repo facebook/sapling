@@ -1543,7 +1543,7 @@ class localrepository(repo.repository):
             if msng_cl_lst:
                 self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
 
-        return util.chunkbuffer(gengroup())
+        return changegroup.unbundle10(util.chunkbuffer(gengroup()), 'UN')
 
     def changegroup(self, basenodes, source):
         # to avoid a race we use changegroupsubset() (issue1320)
@@ -1621,7 +1621,7 @@ class localrepository(repo.repository):
             if nodes:
                 self.hook('outgoing', node=hex(nodes[0]), source=source)
 
-        return util.chunkbuffer(gengroup())
+        return changegroup.unbundle10(util.chunkbuffer(gengroup()), 'UN')
 
     def addchangegroup(self, source, srctype, url, emptyok=False, lock=None):
         """Add the changegroup returned by source.read() to this repo.
@@ -1643,9 +1643,6 @@ class localrepository(repo.repository):
 
         if not source:
             return 0
-
-        if not hasattr(source, 'chunk'):
-            source = changegroup.unbundle10(source, 'UN')
 
         self.hook('prechangegroup', throw=True, source=srctype, url=url)
 
