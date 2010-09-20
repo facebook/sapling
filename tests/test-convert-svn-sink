@@ -29,6 +29,7 @@ hg init a
 echo a > a/a
 mkdir -p a/d1/d2
 echo b > a/d1/d2/b
+ln -s a/missing a/link
 echo % add
 hg --cwd a ci -d '0 0' -A -m 'add a file'
 
@@ -43,6 +44,7 @@ ls a a-hg-wc
 cmp a/a a-hg-wc/a && echo same || echo different
 
 hg --cwd a mv a b
+hg --cwd a mv link newlink
 echo % rename
 hg --cwd a ci -d '2 0' -m 'rename a file'
 hg --cwd a tip -q
