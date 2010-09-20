@@ -923,7 +923,7 @@ def selectfile(afile_orig, bfile_orig, hunk, strip):
     if afile == bfile:
         goodb = gooda
     else:
-        goodb = not nullb and os.path.exists(bfile)
+        goodb = not nullb and os.path.lexists(bfile)
     createfunc = hunk.createfile
     missing = not goodb and not gooda and not createfunc()
 

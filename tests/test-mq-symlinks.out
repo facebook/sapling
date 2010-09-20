@@ -29,3 +29,9 @@ now at: removesl.patch
 C b
 C c
 C s
+% replace broken symlink with another broken symlink
+popping movelink
+now at: link
+applying movelink
+now at: movelink
+linkb -> linkb

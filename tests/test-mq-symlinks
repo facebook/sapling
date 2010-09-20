@@ -55,3 +55,14 @@ hg qrefresh --git
 hg qpop
 hg qpush
 hg st -c
+
+echo '% replace broken symlink with another broken symlink'
+ln -s linka linka
+hg add linka
+hg qnew link
+hg mv linka linkb
+ln -sf linkb linkb
+hg qnew movelink
+hg qpop
+hg qpush
+$TESTDIR/readlink.py linkb
