@@ -27,7 +27,7 @@
 # commit        Commit
 # commit (v)    übernehmen
 # deprecated    veraltet
-# hook          Aktion
+# hook          Hook
 # merge         zusammenführen
 # notation      Schreibweise
 # repository    Projektarchiv
@@ -38,9 +38,10 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-09-18 00:47+0200\n"
-"PO-Revision-Date: 2010-09-21 02:23+0200\n"
+"PO-Revision-Date: 2010-09-22 00:47+0200\n"
 "Last-Translator: Christoph Mewes <christoph@webvariants.de>\n"
-"Language-Team: German (Tobias Bell, Fabian Kreutz, Lutz Horn) <>\n"
+"Language-Team: German (http://transifex.net/projects/p/mercurial/team/de/) "
+"<>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -2815,8 +2816,8 @@ msgid ""
 "working copy of .hgsigs is changed (please commit .hgsigs manually or use --"
 "force)"
 msgstr ""
-"Arbeitskopie der Datei .hgsigs wurde geändert (bitte manuell übernehmen "
-"oder--force verwendet)"
+"Arbeitskopie der Datei .hgsigs wurde geändert (bitte manuell übernehmen oder "
+"--force verwenden)"
 
 msgid "unknown signature version"
 msgstr "Unbekannte Version der Signatur"
@@ -2825,19 +2826,19 @@ msgid "make the signature local"
 msgstr "signiert nur lokal"
 
 msgid "sign even if the sigfile is modified"
-msgstr "signiere auch, wenn die Signaturdatei geändert ist"
+msgstr "signiert auch, wenn die Signaturdatei geändert ist"
 
 msgid "do not commit the sigfile after signing"
 msgstr "Signaturdatei nach dem Signieren nicht übernehmen"
 
 msgid "ID"
-msgstr ""
+msgstr "ID"
 
 msgid "the key id to sign with"
 msgstr "Die Schlüssel-ID zum Signieren"
 
 msgid "TEXT"
-msgstr ""
+msgstr "TEXT"
 
 msgid "commit message"
 msgstr "Versionsmeldung"
@@ -2851,24 +2852,17 @@ msgstr "hg sigcheck REVISION"
 msgid "hg sigs"
 msgstr "hg sigs"
 
-#, fuzzy
 msgid "command to view revision graphs from a shell"
-msgstr ""
-"Zeigt ASCII Revisionsgraphen bei einigen Befehlen\n"
-"Diese Erweiterung fügt die Option --graph zu den Kommandos incoming,\n"
-"outgoing und log hinzu. Wenn die Option angegeben ist, wird eine ASCII-\n"
-"Repäsentation des Revisionsgraphen angezeigt.\n"
+msgstr "Befehl zum Anzeigen eines Revisionsgraphs auf dem Terminal"
 
-#, fuzzy
 msgid ""
 "This extension adds a --graph option to the incoming, outgoing and log\n"
 "commands. When this options is given, an ASCII representation of the\n"
 "revision graph is also shown.\n"
 msgstr ""
-"Zeigt ASCII Revisionsgraphen bei einigen Befehlen\n"
 "Diese Erweiterung fügt die Option --graph zu den Kommandos incoming,\n"
 "outgoing und log hinzu. Wenn die Option angegeben ist, wird eine ASCII-\n"
-"Repäsentation des Revisionsgraphen angezeigt.\n"
+"Repräsentation des Revisionsgraphen angezeigt.\n"
 
 #, python-format
 msgid "--graph option is incompatible with --%s"
@@ -2880,7 +2874,7 @@ msgstr "Zeigt die Revisionshistorie zusammen mit einem ASCII Revisionsgraphen"
 msgid ""
 "    Print a revision history alongside a revision graph drawn with\n"
 "    ASCII characters."
-msgstr "    Zeigt die Revisionshistorie und einen ASCII-Graphen."
+msgstr "    Zeigt die Revisionshistorie und zusammen mit einem ASCII-Graphen."
 
 msgid ""
 "    Nodes printed as an @ character are parents of the working\n"
@@ -2891,10 +2885,10 @@ msgstr ""
 "    "
 
 msgid "show the revision DAG"
-msgstr "Zeigt zusätzlich einen ASCII-Revisionsgraphen"
+msgstr "Zeigt den Revisions-DAG"
 
 msgid "NUM"
-msgstr ""
+msgstr "NUM"
 
 msgid "limit number of changes displayed"
 msgstr "Begrenzt die Anzahl der angezeigten Änderungen"
@@ -2903,7 +2897,7 @@ msgid "show patch"
 msgstr "Patch anzeigen"
 
 msgid "show the specified revision or range"
-msgstr "Zeigt die angegebene Revision oder Revisionsfolge"
+msgstr "Zeigt die angegebene Revision oder den Bereich"
 
 msgid "hg glog [OPTION]... [FILE]"
 msgstr "hg glog [OPTION]... [DATEI]"
@@ -2915,9 +2909,9 @@ msgid ""
 "This is meant to be run as a changegroup or incoming hook. To\n"
 "configure it, set the following options in your hgrc::"
 msgstr ""
-"Dies ist dafür gedacht, als Hook für changegroup oder incoming\n"
-"eingesetzt zu werden. Um es zu konfigurieren, setzen Sie die\n"
-"folgenden Optionen in Ihrer hgrc::"
+"Dies ist dafür gedacht, als Hook für changegroup oder incoming eingesetzt\n"
+"zu werden. Um es zu konfigurieren, setzen Sie die folgenden Optionen in\n"
+"Ihrer hgrc::"
 
 msgid ""
 "  [cia]\n"
@@ -2984,9 +2978,9 @@ msgstr ""
 "  # Wenn Sie Hyperlinks möchten (optional)\n"
 "  baseurl = http://server/path/to/repo\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s returned an error: %s"
-msgstr "%s umbenannt von %s:%s\n"
+msgstr "%s gab einen Fehler zurück: %s"
 
 #, python-format
 msgid "hgcia: sending update to %s\n"
@@ -3003,6 +2997,9 @@ msgid ""
 "graphical way. It requires Tcl/Tk version 8.4 or later. (Tcl/Tk is not\n"
 "distributed with Mercurial.)"
 msgstr ""
+"Die hgk-Erweiterung erlaubt das Durchstöbern des Projektarchivs auf\n"
+"gratische Weise. Sie benötigt Tcl/Tk in Version 8.4 oder neuer. (Tcl/Tk\n"
+"wird nicht mit Mercurial ausgeliefert.)"
 
 msgid ""
 "hgk consists of two parts: a Tcl script that does the displaying and\n"
@@ -3011,62 +3008,80 @@ msgid ""
 "the contrib directory, and the extension is shipped in the hgext\n"
 "repository, and needs to be enabled."
 msgstr ""
+"hgk besteht aus zwei Teilen: Ein Tcl-Skript, das die Anzeige und das\n"
+"Abrufen der Informationen übernimmt, und eine Mercurial-Erweiterung\n"
+"namens hgk.py, die Hooks für hgk bereitstellt. hgk kann im Verzeichnis\n"
+"contrib gefunden werden, während die Erweiterung im hgext-Archiv liegt\n"
+"und extra aktiviert werden muss."
 
 msgid ""
 "The :hg:`view` command will launch the hgk Tcl script. For this command\n"
 "to work, hgk must be in your search path. Alternately, you can specify\n"
 "the path to hgk in your configuration file::"
 msgstr ""
+"Der :hg:`view`-Befehl wird das hgk Tcl-Skript starten. Damit dies\n"
+"funktioniert, muss hgk im Suchpfad vorhanden sein. Alternativ kann der\n"
+"Pfad zu hgk auch in Ihrer Konfigurationsdatei angegeben werden::"
 
 msgid ""
 "  [hgk]\n"
 "  path=/location/of/hgk"
 msgstr ""
+"  [hgk]\n"
+"  path=/pfad/zu/hgk"
 
 msgid ""
 "hgk can make use of the extdiff extension to visualize revisions.\n"
 "Assuming you had already configured extdiff vdiff command, just add::"
 msgstr ""
+"hgk kann die extdiff-Erweiterung nutzen, um Revisionen anzuzeigen.\n"
+"Angenommen, extdiff ist bereits mit dem vdiff-Befehl konfiguriert, muss\n"
+"nur das Folgende ergänzt werden::"
 
 msgid ""
 "  [hgk]\n"
 "  vdiff=vdiff"
 msgstr ""
+"  [hgk]\n"
+"  vdiff=vdiff"
 
 msgid ""
 "Revisions context menu will now display additional entries to fire\n"
 "vdiff on hovered and selected revisions.\n"
 msgstr ""
+"Das Kontextmenü von Revisionen wird nun einen zusätzlichen Eintrag\n"
+"anzeigen, um vdiff auf markierten (und bei Mouse-Over) Revisionen\n"
+"auszuführen.\n"
 
 msgid "diff trees from two commits"
-msgstr ""
+msgstr "Vergleicht (Teil)bäume von zwei Commits"
 
 msgid "output common ancestor information"
-msgstr ""
+msgstr "gibt Informationen über gemeinsame Vorfahren aus"
 
 msgid "cat a specific revision"
-msgstr ""
+msgstr "gibt eine bestimmte Revision aus"
 
 msgid "cat-file: type or revision not supplied\n"
-msgstr ""
+msgstr "cat-file: Typ oder Revision nicht angegeben\n"
 
 msgid "aborting hg cat-file only understands commits\n"
-msgstr ""
+msgstr "Breche cat-file ab: Nur Commits werden unterstützt\n"
 
 msgid "parse given revisions"
-msgstr ""
+msgstr "Verarbeitet angegebene Revisionen"
 
 msgid "print revisions"
-msgstr "Änderungen ausgeben"
+msgstr "Revisionen ausgeben"
 
 msgid "print extension options"
-msgstr ""
+msgstr "Gibt die Optionen der Erweiterung aus"
 
 msgid "start interactive history viewer"
-msgstr ""
+msgstr "Startet den interaktiven Historie-Betrachter"
 
 msgid "hg view [-l LIMIT] [REVRANGE]"
-msgstr ""
+msgstr "hg view [-l LIMIT] [REVBEREICH]"
 
 msgid "generate patch"
 msgstr "Patch erzeugen"
@@ -3074,84 +3089,89 @@ msgstr "Patch erzeugen"
 msgid "recursive"
 msgstr "rekursiv"
 
-#, fuzzy
 msgid "pretty"
 msgstr "hübsch"
 
 msgid "stdin"
-msgstr ""
+msgstr "stdin (Standardeingabe)"
 
 msgid "detect copies"
-msgstr ""
+msgstr "erkennt Kopien"
 
 msgid "search"
-msgstr ""
+msgstr "Suche"
 
 msgid "hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]..."
-msgstr ""
+msgstr "hg git-diff-tree [OPTION]... KNOTEN1 KNOTEN2 [DATEI]..."
 
 msgid "hg debug-cat-file [OPTION]... TYPE FILE"
-msgstr ""
+msgstr "hg debug-cat-file [OPTION]... TYP DATEI"
 
 msgid "hg debug-config"
-msgstr ""
+msgstr "hg debug-config"
 
 msgid "hg debug-merge-base REV REV"
-msgstr ""
+msgstr "hg debug-merge-base REV REV"
 
 msgid "ignored"
-msgstr ""
+msgstr "ignoriert"
 
 msgid "hg debug-rev-parse REV"
-msgstr ""
+msgstr "hg debug-rev-parse REV"
 
 msgid "header"
-msgstr ""
+msgstr "Kopfbereich"
 
 msgid "topo-order"
-msgstr ""
+msgstr "topologische Sortierung"
 
 msgid "parents"
-msgstr ""
+msgstr "Eltern"
 
 msgid "max-count"
-msgstr ""
+msgstr "maximale Anzahl"
 
 msgid "hg debug-rev-list [OPTION]... REV..."
-msgstr ""
+msgstr "hg debug-rev-list [OPTION]... REV..."
 
 msgid "syntax highlighting for hgweb (requires Pygments)"
-msgstr ""
+msgstr "Syntax-Hervorhebung für hgweb (erfordert Pygments)"
 
 msgid ""
 "It depends on the Pygments syntax highlighting library:\n"
 "http://pygments.org/"
 msgstr ""
+"Dies hängt von der Syntaxhervorhebungs-Bibliothek Pygments ab:\n"
+"http://pygments.org/"
 
 msgid "There is a single configuration option::"
-msgstr ""
+msgstr "Es gibt eine einzelne Konfigurationsoption::"
 
 msgid ""
 "  [web]\n"
 "  pygments_style = <style>"
 msgstr ""
+"  [web]\n"
+"  pygments_style = <style>"
 
 msgid "The default is 'colorful'.\n"
-msgstr ""
+msgstr "Der Standard ist 'colorful'.\n"
 
 msgid "accelerate status report using Linux's inotify service"
-msgstr ""
+msgstr "Beschleunigt die Statusabfrage mit dem inotify-Dient von Linux"
 
 msgid "start an inotify server for this repository"
-msgstr ""
+msgstr "Startet einen inotify-Server für dieses Projektarchiv"
 
 msgid "debugging information for inotify extension"
-msgstr ""
+msgstr "Informationen zur Fehlersucht für die inotify-Erweiterung"
 
 msgid ""
 "    Prints the list of directories being watched by the inotify server.\n"
 "    "
 msgstr ""
+"    Gibt eine Liste von Verzeichnissen aus, die von dem inotify-Server\n"
+"    überwacht werden."
 
 msgid "directories being watched:\n"
 msgstr "Überwachte Verzeichnisse:\n"
@@ -3163,49 +3183,53 @@ msgid "used internally by daemon mode"
 msgstr "Wird intern im Server-Modus genutzt"
 
 msgid "minutes to sit idle before exiting"
-msgstr ""
+msgstr "Minuten, bevor wegen Untätigkeit beendet wird"
 
 msgid "name of file to write process ID to"
 msgstr "Dateiname für Prozess-ID"
 
 msgid "hg inserve [OPTION]..."
-msgstr ""
+msgstr "hg inserve [OPTION]..."
 
 msgid "inotify-client: found dead inotify server socket; removing it\n"
-msgstr ""
+msgstr "inotify-Client: toten inotify-Serversocket gefunden; entferne ihn\n"
 
 #, python-format
 msgid "inotify-client: could not start inotify server: %s\n"
-msgstr ""
+msgstr "inotify-Client: Konnte inotify-Server nicht starten: %s\n"
 
 #, python-format
 msgid "inotify-client: could not talk to new inotify server: %s\n"
 msgstr ""
+"inotify-Client: Konnte nicht mit dem neuen inotify-Server sprechen: %s\n"
 
 #, python-format
 msgid "inotify-client: failed to contact inotify server: %s\n"
-msgstr ""
+msgstr "inotify-Client: Kontakt zum inotify-Server fehlgeschlagen: %s\n"
 
 msgid "inotify-client: received empty answer from inotify server"
-msgstr ""
+msgstr "inotify-Client: Leere Antwort vom inotify-Sever emfpangen"
 
 #, python-format
 msgid "(inotify: received response from incompatible server version %d)\n"
 msgstr ""
+"(inotify: Antwort eines Servers mit inkompatibler Version %d empfangen)\n"
 
 #, python-format
 msgid "(inotify: received '%s' response when expecting '%s')\n"
-msgstr ""
+msgstr "(inotify: '%s' Antwort erhalten, aber '%s' erwartet)\n"
 
 msgid "this system does not seem to support inotify"
-msgstr ""
+msgstr "Dieses System scheint inotify nicht zu unterstützen."
 
 #, python-format
 msgid "*** the current per-user limit on the number of inotify watches is %s\n"
-msgstr ""
+msgstr "*** Das aktuelle Benutzer-Limit für inotify-Beobachter ist %s\n"
 
 msgid "*** this limit is too low to watch every directory in this repository\n"
 msgstr ""
+"*** Dieses Limit ist zu gering, um jedes Verzeichnis dieses Archivs zu\n"
+"*** überwachen.\n"
 
 msgid "*** counting directories: "
 msgstr "*** zähle Verzeichnisse:"
