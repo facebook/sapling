@@ -63,6 +63,7 @@ testpats = [
     (r'export.*=', "don't export and assign at once"),
     ('^([^"\']|("[^"]*")|(\'[^\']*\'))*\\^', "^ must be quoted"),
     (r'^source\b', "don't use 'source', use '.'"),
+    (r'touch -d', "don't use 'touch -d', use 'touch -t' instead"),
 ]
 
 testfilters = [

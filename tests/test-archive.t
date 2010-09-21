@@ -221,7 +221,7 @@ empty repo
   [255]
 old file -- date clamped to 1980
 
-  $ touch -d 1975-01-01 old
+  $ touch -t 19750101 old
   $ hg add old
   $ hg commit -m old
   $ hg archive ../old.zip
