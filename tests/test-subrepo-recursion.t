@@ -230,18 +230,18 @@ Status between revisions:
 Test archiving to a directory tree:
 
   $ hg archive --subrepos ../archive
-  $ find ../archive
+  $ find ../archive | sort
   ../archive
+  ../archive/.hg_archival.txt
+  ../archive/.hgsub
+  ../archive/.hgsubstate
   ../archive/foo
+  ../archive/foo/.hgsub
+  ../archive/foo/.hgsubstate
   ../archive/foo/bar
   ../archive/foo/bar/z.txt
-  ../archive/foo/.hgsubstate
-  ../archive/foo/.hgsub
   ../archive/foo/y.txt
   ../archive/x.txt
-  ../archive/.hgsubstate
-  ../archive/.hgsub
-  ../archive/.hg_archival.txt
 
 Test archiving to zip file (unzip output is unstable):
 
