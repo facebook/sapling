@@ -70,6 +70,26 @@ testfilters = [
     (r"<<(\S+)((.|\n)*?\n\1)", rephere),
 ]
 
+uprefix = r"^  \$ "
+utestpats = [
+    (uprefix + r'(true|exit 0)', "explicit zero exit unnecessary"),
+    (uprefix + r'.*\$\?', "explicit exit code checks unnecessary"),
+    (uprefix + r'.*\|\| echo.*(fail|error)',
+     "explicit exit code checks unnecessary"),
+    (uprefix + r'set -e', "don't use set -e"),
+]
+
+for p, m in testpats:
+    if p.startswith('^'):
+        p = uprefix + p[1:]
+    else:
+        p = uprefix + p
+    utestpats.append((p, m))
+
+utestfilters = [
+    (r"( *)(#([^\n]*\S)?)", repcomment),
+]
+
 pypats = [
     (r'^\s*def\s*\w+\s*\(.*,\s*\(',
      "tuple parameter unpacking not available in Python 3+"),
@@ -157,6 +177,7 @@ checks = [
     ('python', r'.*\.(py|cgi)$', pyfilters, pypats),
     ('test script', r'(.*/)?test-[^.~]*$', testfilters, testpats),
     ('c', r'.*\.c$', cfilters, cpats),
+    ('unified test', r'.*\.t$', utestfilters, utestpats),
 ]
 
 class norepeatlogger(object):
