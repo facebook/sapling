@@ -6,7 +6,6 @@ b5605d88dc27: Make ui.prompt repeat on "unrecognized response" again
  (issue556)
 
   $ status() {
-  >     [ $? -ne 0 ] && echo "failed."
   >     echo "--- status ---"
   >     hg st -A file1 file2
   >     for file in file1 file2; do
@@ -42,7 +41,7 @@ b5605d88dc27: Make ui.prompt repeat on "unrecognized response" again
 
 Non-interactive merge:
 
-  $ hg merge -y || echo "failed"
+  $ hg merge -y
    local changed file1 which remote deleted
   use (c)hanged version or (d)elete? c
   remote changed file2 which local deleted
@@ -67,7 +66,7 @@ Interactive merge:
   $ hg co -C
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-  $ hg merge --config ui.interactive=true <<EOF || echo "failed"
+  $ hg merge --config ui.interactive=true <<EOF
   > c
   > d
   > EOF
@@ -91,7 +90,7 @@ Interactive merge with bad input:
   $ hg co -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg merge --config ui.interactive=true <<EOF || echo "failed"
+  $ hg merge --config ui.interactive=true <<EOF
   > foo
   > bar
   > d
@@ -124,13 +123,13 @@ Interactive merge with not enough input:
   $ hg co -C
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-  $ hg merge --config ui.interactive=true <<EOF || echo "failed"
+  $ hg merge --config ui.interactive=true <<EOF
   > d
   > EOF
    local changed file1 which remote deleted
   use (c)hanged version or (d)elete? remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? abort: response expected
-  failed
+  [255]
 
   $ status
   --- status ---

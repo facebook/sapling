@@ -27,8 +27,6 @@ o  0
   >     hg -q ci -m"rev $revno"
   > }
 
-  $ set -e
-
 setup test repo1
 
   $ hg init repo1

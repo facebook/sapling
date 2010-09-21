@@ -196,13 +196,12 @@ Check if result is the same or different.
 If result is not as expected, raise error
 
   $ assert() {
-  >    hg status $1 > ../a
-  >    hg status $2 > ../b
-  >     out=`diff ../a ../b`
-  >     if [ $? -ne 0 ]; then
-  >         out=1
-  >     else
+  >     hg status $1 > ../a
+  >     hg status $2 > ../b
+  >     if diff ../a ../b > /dev/null; then
   >         out=0
+  >     else
+  >         out=1
   >     fi
   >     if [ $3 -eq 0 ]; then
   >         df="same"

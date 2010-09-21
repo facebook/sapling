@@ -20,7 +20,7 @@
   $ hg st
   A a
   ? b
-  $ hg add b || echo "failed to add b"
+  $ hg add b
   $ hg st
   A a
   A b

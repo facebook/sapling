@@ -133,34 +133,22 @@
   $ heads -r 3 .
   no open branch heads found on branches c (started at 3)
   [1]
-  $ echo $?
-  0
   $ heads -r 2 .
   7: Adding c branch (c)
-  $ echo $?
-  0
 -------
   $ hg update -C 4
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ echo $?
-  0
 -------
   $ heads -r 3 .
   3: Adding b branch head 1 (b)
-  $ echo $?
-  0
 -------
   $ heads -r 2 .
   6: Merging b branch head 2 and b branch head 3 (b)
   3: Adding b branch head 1 (b)
-  $ echo $?
-  0
 -------
   $ heads -r 7 .
   no open branch heads found on branches b (started at 7)
   [1]
-  $ echo $?
-  0
 
 =======
 

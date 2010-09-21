@@ -32,30 +32,30 @@
   
 
   $ echo foo >> .hgtags
-  $ hg tag "bleah2" || echo "failed"
+  $ hg tag "bleah2"
   abort: working copy of .hgtags is changed (please commit .hgtags manually)
-  failed
+  [255]
 
   $ hg revert .hgtags
-  $ hg tag -r 0 x y z y y z || echo "failed"
+  $ hg tag -r 0 x y z y y z
   abort: tag names must be unique
-  failed
-  $ hg tag tap nada dot tip null . || echo "failed"
+  [255]
+  $ hg tag tap nada dot tip null .
   abort: the name 'tip' is reserved
-  failed
-  $ hg tag "bleah" || echo "failed"
+  [255]
+  $ hg tag "bleah"
   abort: tag 'bleah' already exists (use -f to force)
-  failed
-  $ hg tag "blecch" "bleah" || echo "failed"
+  [255]
+  $ hg tag "blecch" "bleah"
   abort: tag 'bleah' already exists (use -f to force)
-  failed
+  [255]
 
-  $ hg tag --remove "blecch" || echo "failed"
+  $ hg tag --remove "blecch"
   abort: tag 'blecch' does not exist
-  failed
-  $ hg tag --remove "bleah" "blecch" "blough" || echo "failed"
+  [255]
+  $ hg tag --remove "bleah" "blecch" "blough"
   abort: tag 'blecch' does not exist
-  failed
+  [255]
 
   $ hg tag -r 0 "bleah0"
   $ hg tag -l -r 1 "bleah1"

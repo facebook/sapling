@@ -204,8 +204,7 @@ init --mq with repo path
 
   $ hg init g
   $ hg init --mq g
-  $ test -d g/.hg/patches/.hg && echo "ok" || echo "failed"
-  ok
+  $ test -d g/.hg/patches/.hg
 
 init --mq with nonexistent directory
 
@@ -633,14 +632,6 @@ push should succeed
   added 1 changesets with 1 changes to 1 files
 
 
-qpush/qpop error codes
-
-  $ errorcode()
-  > {
-  >     hg "$@" && echo "  $@ succeeds" || echo "  $@ fails"
-  > }
-
-
 we want to start with some patches applied
 
   $ hg qpush -a
@@ -651,105 +642,92 @@ we want to start with some patches applied
 
 % pops all patches and succeeds
 
-  $ errorcode qpop -a
+  $ hg qpop -a
   popping test2.patch
   popping test1b.patch
   popping test.patch
   patch queue now empty
-    qpop -a succeeds
 
 % does nothing and succeeds
 
-  $ errorcode qpop -a
+  $ hg qpop -a
   no patches applied
-    qpop -a succeeds
 
 % fails - nothing else to pop
 
-  $ errorcode qpop
+  $ hg qpop
   no patches applied
-    qpop fails
+  [1]
 
 % pushes a patch and succeeds
 
-  $ errorcode qpush
+  $ hg qpush
   applying test.patch
   now at: test.patch
-    qpush succeeds
 
 % pops a patch and succeeds
 
-  $ errorcode qpop
+  $ hg qpop
   popping test.patch
   patch queue now empty
-    qpop succeeds
 
 % pushes up to test1b.patch and succeeds
 
-  $ errorcode qpush test1b.patch
+  $ hg qpush test1b.patch
   applying test.patch
   applying test1b.patch
   now at: test1b.patch
-    qpush test1b.patch succeeds
 
 % does nothing and succeeds
 
-  $ errorcode qpush test1b.patch
+  $ hg qpush test1b.patch
   qpush: test1b.patch is already at the top
-    qpush test1b.patch succeeds
 
 % does nothing and succeeds
 
-  $ errorcode qpop test1b.patch
+  $ hg qpop test1b.patch
   qpop: test1b.patch is already at the top
-    qpop test1b.patch succeeds
 
 % fails - can't push to this patch
 
-  $ errorcode qpush test.patch
+  $ hg qpush test.patch
   abort: cannot push to a previous patch: test.patch
-    qpush test.patch fails
+  [255]
 
 % fails - can't pop to this patch
 
-  $ errorcode qpop test2.patch
+  $ hg qpop test2.patch
   abort: patch test2.patch is not applied
-    qpop test2.patch fails
+  [255]
 
 % pops up to test.patch and succeeds
 
-  $ errorcode qpop test.patch
+  $ hg qpop test.patch
   popping test1b.patch
   now at: test.patch
-    qpop test.patch succeeds
 
 % pushes all patches and succeeds
 
-  $ errorcode qpush -a
+  $ hg qpush -a
   applying test1b.patch
   applying test2.patch
   now at: test2.patch
-    qpush -a succeeds
 
 % does nothing and succeeds
 
-  $ errorcode qpush -a
+  $ hg qpush -a
   all patches are currently applied
-    qpush -a succeeds
 
 % fails - nothing else to push
 
-  $ errorcode qpush
+  $ hg qpush
   patch series already fully applied
-    qpush fails
+  [1]
 
 % does nothing and succeeds
 
-  $ errorcode qpush test2.patch
+  $ hg qpush test2.patch
   qpush: test2.patch is already at the top
-    qpush test2.patch succeeds
-
-
 
 strip
 
@@ -1087,7 +1065,7 @@ check binary patches can be popped and pushed
   $ hg qpush
   applying addbucephalus
   now at: addbucephalus
-  $ test -f bucephalus || echo % bucephalus should be there
+  $ test -f bucephalus
   $ python "$TESTDIR/md5sum.py" bucephalus
   8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
 

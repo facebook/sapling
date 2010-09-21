@@ -91,7 +91,7 @@ Test 12-hours times
   $ hg debugdate "2006-02-01 1:00:30PM +0000"
   internal: 1138798830 0
   standard: Wed Feb 01 13:00:30 2006 +0000
-  $ hg debugdate "1:00:30PM" > /dev/null || echo 'failed'
+  $ hg debugdate "1:00:30PM" > /dev/null
 
 Test date formats with '>' or '<' accompanied by space characters
 

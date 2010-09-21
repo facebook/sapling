@@ -22,12 +22,11 @@
 
   $ touch nottracked
 
-  $ hg locate a && echo locate succeeded || echo locate failed
+  $ hg locate a
   a
-  locate succeeded
 
-  $ hg locate NONEXISTENT && echo locate succeeded || echo locate failed
-  locate failed
+  $ hg locate NONEXISTENT
+  [1]
 
   $ hg locate
   a

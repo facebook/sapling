@@ -10,10 +10,7 @@
 SVN wants all paths to start with a slash. Unfortunately, Windows ones
 don't. Handle that.
 
-  $ expr "$escapedwd" : "\/" > /dev/null
-  $ if [ $? -ne 0 ]; then
-  >     escapedwd="/$escapedwd"
-  > fi
+  $ expr "$escapedwd" : / > /dev/null || escapedwd="/$escapedwd"
   $ escapedwd=`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$escapedwd"`
   $ filterpath="s|$escapedwd|/root|"
   $ filteroutofdate='s/ in transaction.*/ is out of date/;s/Out of date: /File /'

@@ -84,9 +84,9 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  $ hg --debug merge || echo failed
+  $ hg --debug merge
   abort: there is nothing to merge - use "hg update" instead
-  failed
+  [255]
   $ hg parents
   changeset:   0:c19d34741b0a
   user:        test
@@ -166,12 +166,12 @@ create a second head
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  $ hg --debug up || echo failed
+  $ hg --debug up
   abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
-  failed
-  $ hg --debug merge || echo failed
+  [255]
+  $ hg --debug merge
   abort: outstanding uncommitted changes (use 'hg status' to list changes)
-  failed
+  [255]
   $ hg --debug merge -f
     searching for copies back to rev 1
   resolving manifests

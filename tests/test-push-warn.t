@@ -92,50 +92,47 @@
 
   $ hg ci -m c-d
 
-  $ hg push ../c; echo $?
+  $ hg push ../c
   pushing to ../c
   searching for changes
   abort: push creates new remote heads on branch 'default'!
   (did you forget to merge? use push -f to force)
-  255
+  [255]
 
-  $ hg push -r 2 ../c; echo $?
+  $ hg push -r 2 ../c
   pushing to ../c
   searching for changes
   no changes found
-  0
 
-  $ hg push -r 3 ../c; echo $?
+  $ hg push -r 3 ../c
   pushing to ../c
   searching for changes
   abort: push creates new remote heads on branch 'default'!
   (did you forget to merge? use push -f to force)
-  255
+  [255]
 
-  $ hg push -r 3 -r 4 ../c; echo $?
+  $ hg push -r 3 -r 4 ../c
   pushing to ../c
   searching for changes
   abort: push creates new remote heads on branch 'default'!
   (did you forget to merge? use push -f to force)
-  255
+  [255]
 
-  $ hg push -f -r 3 -r 4 ../c; echo $?
+  $ hg push -f -r 3 -r 4 ../c
   pushing to ../c
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files (+2 heads)
-  0
 
-  $ hg push -r 5 ../c; echo $?
+  $ hg push -r 5 ../c
   pushing to ../c
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (-1 heads)
-  0
 
   $ hg in ../c
   comparing with ../c
@@ -147,23 +144,21 @@
 Issue 450:
 
   $ hg init ../e
-  $ hg push -r 0 ../e ; echo $?
+  $ hg push -r 0 ../e
   pushing to ../e
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  0
 
-  $ hg push -r 1 ../e ; echo $?
+  $ hg push -r 1 ../e
   pushing to ../e
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  0
 
   $ cd ..
 
@@ -199,19 +194,19 @@ Push on existing branch and new branch:
   $ hg -q branch c
   $ hg -q ci -m 5
 
-  $ hg push ../f; echo $?
+  $ hg push ../f
   pushing to ../f
   searching for changes
   abort: push creates new remote branches: c!
   (use 'hg push --new-branch' to create new remote branches)
-  255
+  [255]
 
-  $ hg push -r 4 -r 5 ../f; echo $?
+  $ hg push -r 4 -r 5 ../f
   pushing to ../f
   searching for changes
   abort: push creates new remote branches: c!
   (use 'hg push --new-branch' to create new remote branches)
-  255
+  [255]
 
 
 Multiple new branches:
@@ -220,19 +215,19 @@ Multiple new branches:
   $ echo 6 > foo
   $ hg -q ci -m 6
 
-  $ hg push ../f; echo $?
+  $ hg push ../f
   pushing to ../f
   searching for changes
   abort: push creates new remote branches: c, d!
   (use 'hg push --new-branch' to create new remote branches)
-  255
+  [255]
 
-  $ hg push -r 4 -r 6 ../f; echo $?
+  $ hg push -r 4 -r 6 ../f
   pushing to ../f
   searching for changes
   abort: push creates new remote branches: c, d!
   (use 'hg push --new-branch' to create new remote branches)
-  255
+  [255]
 
   $ cd ../g
 
@@ -243,12 +238,12 @@ Fail on multiple head push:
   $ echo 7 > foo
   $ hg -q ci -m 7
 
-  $ hg push -r 4 -r 7 ../f; echo $?
+  $ hg push -r 4 -r 7 ../f
   pushing to ../f
   searching for changes
   abort: push creates new remote heads on branch 'a'!
   (did you forget to merge? use push -f to force)
-  255
+  [255]
 
 Push replacement head on existing branches:
 
@@ -256,14 +251,13 @@ Push replacement head on existing branches:
   $ echo 8 > foo
   $ hg -q ci -m 8
 
-  $ hg push -r 7 -r 8 ../f; echo $?
+  $ hg push -r 7 -r 8 ../f
   pushing to ../f
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  0
 
 
 Merge of branch a to other branch b followed by unrelated push
@@ -276,23 +270,21 @@ on branch a:
   $ echo 10 > foo
   $ hg -q ci -m 10
 
-  $ hg push -r 9 ../f; echo $?
+  $ hg push -r 9 ../f
   pushing to ../f
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (-1 heads)
-  0
 
-  $ hg push -r 10 ../f; echo $?
+  $ hg push -r 10 ../f
   pushing to ../f
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  0
 
 
 Cheating the counting algorithm:
@@ -304,14 +296,13 @@ Cheating the counting algorithm:
   $ echo 12 > foo
   $ hg -q ci -m 12
 
-  $ hg push -r 11 -r 12 ../f; echo $?
+  $ hg push -r 11 -r 12 ../f
   pushing to ../f
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  0
 
 
 Failed push of new named branch:
@@ -324,24 +315,23 @@ Failed push of new named branch:
   $ hg -q branch e
   $ hg -q ci -m 13d
 
-  $ hg push -r 12 -r 13 ../f; echo $?
+  $ hg push -r 12 -r 13 ../f
   pushing to ../f
   searching for changes
   abort: push creates new remote branches: e!
   (use 'hg push --new-branch' to create new remote branches)
-  255
+  [255]
 
 
 Using --new-branch to push new named branch:
 
-  $ hg push --new-branch -r 12 -r 13 ../f; echo $?
+  $ hg push --new-branch -r 12 -r 13 ../f
   pushing to ../f
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  0
 
 
 Checking prepush logic does not allow silently pushing 

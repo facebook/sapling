@@ -1,4 +1,3 @@
-  $ set -e
   $ hg init
 
 
@@ -270,12 +269,14 @@ skip
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     msg 1
   
+  $ false
+  [1]
+
 
   $ hg bisect -r
   $ hg bisect -g tip
-  $ hg bisect -b tip || echo error
+  $ hg bisect -b tip
   abort: starting revisions are not directly related
-  error
 
   $ hg bisect -r
   $ hg bisect -g null
@@ -346,9 +347,8 @@ reproduce non converging bisect, issue1182
 test no action
 
   $ hg bisect -r
-  $ hg bisect || echo failure
+  $ hg bisect
   abort: cannot bisect (no known good revisions)
-  failure
 
 
 reproduce AssertionError, issue1445

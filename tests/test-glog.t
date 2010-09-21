@@ -71,8 +71,6 @@ o  (0) root
 
   $ "$TESTDIR/hghave" no-outer-repo || exit 80
 
-  $ set -e
-
   $ commit()
   > {
   >   rev=$1
@@ -681,12 +679,12 @@ File glog:
   
 
 Unused arguments:
-  $ hg glog -q foo bar || echo failed
+  $ hg glog -q foo bar
   hg glog: invalid arguments
   hg glog [OPTION]... [FILE]
   
   show revision history alongside an ASCII revision graph
-  failed
+  [255]
 
 Empty revision range - display nothing:
   $ hg glog -r 1..0

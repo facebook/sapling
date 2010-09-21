@@ -43,7 +43,7 @@ chmod +x:
   $ hg tip -q
   2:3a34410f282e
 
-  $ test -x new || echo failed
+  $ test -x new
 
 Copy:
 
@@ -65,10 +65,10 @@ Copy:
   3:37bacb7ca14d
 
   $ if "$TESTDIR/hghave" -q execbit; then
-  >     test -f copy -a ! -x copy || echo failed
-  >     test -x copyx || echo failed
+  >     test -f copy -a ! -x copy || echo bad
+  >     test -x copyx || echo bad
   > else
-  >     test -f copy || echo failed
+  >     test -f copy || echo bad
   > fi
 
   $ cat copy
@@ -117,7 +117,8 @@ Delete:
   new
   rename
 
-  $ test -f copyx && echo failed || true
+  $ test -f copyx
+  [1]
 
 Regular diff:
 

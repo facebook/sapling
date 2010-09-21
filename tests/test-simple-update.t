@@ -1,5 +1,3 @@
-  $ set -e
-
   $ mkdir test
   $ cd test
   $ echo foo>foo

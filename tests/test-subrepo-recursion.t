@@ -274,8 +274,6 @@ Clone and test outgoing:
   searching for changes
   no changes found
   [1]
-  $ echo $?
-  0
 
 Make nested change:
 
