@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import cgi, re, os, time, urllib
-import util, encoding
+import encoding, node, util
 
 def stringify(thing):
     '''turn nested template iterator into string.'''
@@ -216,6 +216,7 @@ filters = {
     "person": person,
     "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S %1%2"),
     "rfc3339date": lambda x: util.datestr(x, "%Y-%m-%dT%H:%M:%S%1:%2"),
+    "hex": node.hex,
     "short": lambda x: x[:12],
     "shortdate": util.shortdate,
     "stringify": stringify,

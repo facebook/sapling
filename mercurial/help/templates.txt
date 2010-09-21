@@ -106,6 +106,9 @@ List of filters:
 :escape: Any text. Replaces the special XML/XHTML characters "&", "<"
     and ">" with XML entities.
 
+:hex: Any text. Convert a binary Mercurial node identifier into
+    its long hexadecimal representation.
+
 :fill68: Any text. Wraps the text to fit in 68 columns.
 
 :fill76: Any text. Wraps the text to fit in 76 columns.
