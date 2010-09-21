@@ -138,10 +138,12 @@ class engine(object):
             pos = n + 1
 
             if '%' in expr:
+                # the keyword should be formatted with a template
                 key, t = expr.split('%')
                 parsed.append((self._format, (key.strip(),
                                               self._load(t.strip()))))
             elif '|' in expr:
+                # process the keyword value with one or more filters
                 parts = expr.split('|')
                 val = parts[0].strip()
                 try:
@@ -150,6 +152,7 @@ class engine(object):
                     raise SyntaxError(_("unknown filter '%s'") % i[0])
                 parsed.append((self._filter, (filters, val)))
             else:
+                # just get the keyword
                 parsed.append((self._get, expr.strip()))
 
         return parsed
