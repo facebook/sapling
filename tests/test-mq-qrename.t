@@ -59,4 +59,25 @@ Test patch being renamed before committed:
 
   $ cd ..
 
+Test overlapping renames (issue2388)
 
+  $ hg init c
+  $ cd c
+  $ hg qinit -c
+  $ echo a > a
+  $ hg add
+  adding a
+  $ hg qnew patcha
+  $ echo b > b
+  $ hg add
+  adding b
+  $ hg qnew patchb
+  $ hg ci --mq -m c1
+  $ hg qrename patchb patchc
+  $ hg qrename patcha patchb
+  $ hg st --mq
+  M patchb
+  M series
+  A patchc
+  R patcha
+  $ cd ..
