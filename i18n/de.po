@@ -38,7 +38,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-09-18 00:47+0200\n"
-"PO-Revision-Date: 2010-09-22 00:47+0200\n"
+"PO-Revision-Date: 2010-09-22 01:03+0200\n"
 "Last-Translator: Christoph Mewes <christoph@webvariants.de>\n"
 "Language-Team: German (http://transifex.net/projects/p/mercurial/team/de/) "
 "<>\n"
@@ -3232,7 +3232,7 @@ msgstr ""
 "*** überwachen.\n"
 
 msgid "*** counting directories: "
-msgstr "*** zähle Verzeichnisse:"
+msgstr "*** Zähle Verzeichnisse: "
 
 #, python-format
 msgid "found %d\n"
@@ -3253,79 +3253,79 @@ msgstr ""
 
 #, python-format
 msgid "inotify service not available: %s"
-msgstr ""
+msgstr "inotify-Dienst ist nicht verfügbar: %s"
 
 #, python-format
 msgid "watching %r\n"
-msgstr ""
+msgstr "Beobachte %r\n"
 
 #, python-format
 msgid "watching directories under %r\n"
-msgstr ""
+msgstr "Beobachte Verzeichnisse unterhalb von %r\n"
 
 #, python-format
 msgid "%s event: created %s\n"
-msgstr ""
+msgstr "%s-Ereignis: %s erstellt\n"
 
 #, python-format
 msgid "%s event: deleted %s\n"
-msgstr ""
+msgstr "%s-Ereignis: %s gelöscht\n"
 
 #, python-format
 msgid "%s event: modified %s\n"
-msgstr ""
+msgstr "%s-Ereignis: %s geändert\n"
 
 #, python-format
 msgid "filesystem containing %s was unmounted\n"
-msgstr ""
+msgstr "Dateisystem, das %s enthielt, wurde ausgehangen\n"
 
 #, python-format
 msgid "%s readable: %d bytes\n"
-msgstr ""
+msgstr "%s lesbar: %d Bytes\n"
 
 #, python-format
 msgid "%s below threshold - unhooking\n"
-msgstr ""
+msgstr "%s unterhalb der Grenze - aushängen\n"
 
 #, python-format
 msgid "%s reading %d events\n"
-msgstr ""
+msgstr "%s Lese %d Ereignisse\n"
 
 #, python-format
 msgid "%s hooking back up with %d bytes readable\n"
-msgstr ""
+msgstr "%s Hänge wieder mit %d lesbaren Bytes ein\n"
 
 msgid "finished setup\n"
-msgstr ""
+msgstr "Einrichtung abgeschlossen\n"
 
 #, python-format
 msgid "status: %r %s -> %s\n"
-msgstr ""
+msgstr "Status: %r %s -> %s\n"
 
 msgid "rescanning due to .hgignore change\n"
-msgstr ""
+msgstr "Untersuche erneut, da sich die .hgignore geändert hat\n"
 
-#, fuzzy
 msgid "cannot start: socket is already bound"
-msgstr ""
-"Kann Transaktion nicht verwenden, wenn sie bereits übernommen/abgebrochen ist"
+msgstr "Kann nicht starten: Socket ist bereits gebunden"
 
 msgid ""
 "cannot start: tried linking .hg/inotify.sock to a temporary socket but .hg/"
 "inotify.sock already exists"
 msgstr ""
+"Kann nicht starten: Versucht, .hg/inotify.sock auf ein temporäres Socket zu "
+"linken, aber .hg/inotify.sock existiert bereits."
 
 #, python-format
 msgid "answering query for %r\n"
-msgstr ""
+msgstr "Beantworte Anfrage für %r\n"
 
 #, python-format
 msgid "received query from incompatible client version %d\n"
-msgstr ""
+msgstr "Anfrage von Client mit inkompatibler Version %d empfangen\n"
 
 #, python-format
 msgid "unrecognized query type: %s\n"
-msgstr "Unbekannte Abfrageart: %s\n"
+msgstr "Unbekannte Anfrageart: %s\n"
 
 msgid "expand expressions into changelog and summaries"
 msgstr ""
