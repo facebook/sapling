@@ -3328,18 +3328,23 @@ msgid "unrecognized query type: %s\n"
 msgstr "Unbekannte Anfrageart: %s\n"
 
 msgid "expand expressions into changelog and summaries"
-msgstr ""
+msgstr "Erweitert Ausdrücke in der Historie und Zusammenfassungen"
 
 msgid ""
 "This extension allows the use of a special syntax in summaries, which\n"
 "will be automatically expanded into links or any other arbitrary\n"
 "expression, much like InterWiki does."
 msgstr ""
+"Diese Erweiterung erlaubt es, eine spezielle Syntax in der Zusammenfassung\n"
+"zu verwenden, die automatisch in Links oder jeden beliebigen anderen\n"
+"Ausdruck ausgewertet werden, in etwa so, wie es InterWiki macht."
 
 msgid ""
 "A few example patterns (link to bug tracking, etc.) that may be used\n"
 "in your hgrc::"
 msgstr ""
+"Ein paar Beispiel-Muster (Link zu einem Bugtracker usw.), die in Ihrer\n"
+".hgrc verwendet werden können::"
 
 msgid ""
 "  [interhg]\n"
@@ -3348,14 +3353,19 @@ msgid ""
 "i\n"
 "  boldify = s!(^|\\s)#(\\d+)\\b! <b>#\\2</b>!\n"
 msgstr ""
+"  [interhg]\n"
+"  fehler = s!fehler(\\d+)!<a href=\"http://bts/issue\\1\">fehler\\1</a>!\n"
+"  bugzilla = s!((?:bug|b=|(?=#?\\d{4,}))(?:\\s*#?)(\\d+))!<a..=\\2\">\\1</a>!"
+"i\n"
+"  fett = s!(^|\\s)#(\\d+)\\b! <b>#\\2</b>!\n"
 
 #, python-format
 msgid "interhg: invalid pattern for %s: %s\n"
-msgstr ""
+msgstr "interhg: Ungültiges Muster für %s: %s\n"
 
 #, python-format
 msgid "interhg: invalid regexp for %s: %s\n"
-msgstr ""
+msgstr "interhg: Ungültiger Regulärer Ausdruck für %s: %s\n"
 
 msgid "expand keywords in tracked files"
 msgstr ""
