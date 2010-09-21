@@ -1,6 +1,7 @@
   $ echo "invalid" > $HGRCPATH
-  $ hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
-  hg: parse error at $HGRCPATH:1: invalid
+  $ hg version
+  hg: parse error at .*/\.hgrc:1: invalid
+  [255]
   $ echo "" > $HGRCPATH
 
 issue1199: escaping
@@ -11,22 +12,23 @@ issue1199: escaping
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ p=`pwd`
   $ cd foobar
-  $ cat .hg/hgrc | sed -e "s:$p:...:"
+  $ cat .hg/hgrc
   [paths]
-  default = .../foo%bar
-  $ hg paths | sed -e "s:$p:...:"
-  default = .../foo%bar
-  $ hg showconfig | sed -e "s:$p:...:"
-  bundle.mainreporoot=.../foobar
-  paths.default=.../foo%bar
+  default = .*/foo%bar
+  $ hg paths
+  default = .*/foo%bar
+  $ hg showconfig
+  bundle.mainreporoot=.*/foobar
+  paths.default=.*/foo%bar
   $ cd ..
 
 issue1829: wrong indentation
 
   $ echo '[foo]' > $HGRCPATH
   $ echo '  x = y' >> $HGRCPATH
-  $ hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
-  hg: parse error at $HGRCPATH:2:   x = y
+  $ hg version
+  hg: parse error at .*/\.hgrc:2:   x = y
+  [255]
 
   $ python -c "print '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n'" \
   > > $HGRCPATH
@@ -37,8 +39,9 @@ issue1829: wrong indentation
   $ FAKEPATH=/path/to/nowhere
   $ export FAKEPATH
   $ echo '%include $FAKEPATH/no-such-file' > $HGRCPATH
-  $ hg version 2>&1 | sed -e "s|$HGRCPATH|\$HGRCPATH|"
-  hg: parse error at $HGRCPATH:1: cannot include /path/to/nowhere/no-such-file (No such file or directory)
+  $ hg version
+  hg: parse error at .*/.hgrc:1: cannot include /path/to/nowhere/no-such-file \(No such file or directory\)
+  [255]
   $ unset FAKEPATH
 
 username expansion
@@ -86,24 +89,24 @@ HGPLAIN
 
 customized hgrc
 
-  $ hg showconfig | sed -e "s:$p:...:"
-  read config from: .../.hgrc
-  .../.hgrc:13: alias.log=log -g
-  .../.hgrc:11: defaults.identify=-n
-  .../.hgrc:2: ui.debug=true
-  .../.hgrc:3: ui.fallbackencoding=ASCII
-  .../.hgrc:4: ui.quiet=true
-  .../.hgrc:5: ui.slash=true
-  .../.hgrc:6: ui.traceback=true
-  .../.hgrc:7: ui.verbose=true
-  .../.hgrc:8: ui.style=~/.hgstyle
-  .../.hgrc:9: ui.logtemplate={node}
+  $ hg showconfig
+  read config from: .*/.hgrc
+  .*/.hgrc:13: alias.log=log -g
+  .*/.hgrc:11: defaults.identify=-n
+  .*/.hgrc:2: ui.debug=true
+  .*/.hgrc:3: ui.fallbackencoding=ASCII
+  .*/.hgrc:4: ui.quiet=true
+  .*/.hgrc:5: ui.slash=true
+  .*/.hgrc:6: ui.traceback=true
+  .*/.hgrc:7: ui.verbose=true
+  .*/.hgrc:8: ui.style=~/.hgstyle
+  .*/.hgrc:9: ui.logtemplate={node}
 
 plain hgrc
 
   $ HGPLAIN=; export HGPLAIN
-  $ hg showconfig --config ui.traceback=True --debug | sed -e "s:$p:...:"
-  read config from: .../.hgrc
+  $ hg showconfig --config ui.traceback=True --debug
+  read config from: .*/.hgrc
   none: ui.traceback=True
   none: ui.verbose=False
   none: ui.debug=True

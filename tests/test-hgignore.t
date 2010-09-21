@@ -43,8 +43,9 @@ Should display baz only:
   ? syntax
 
   $ echo "*.o" > .hgignore
-  $ hg status 2>&1 | sed -e 's/abort: .*\.hgignore:/abort: .hgignore:/'
-  abort: .hgignore: invalid pattern (relre): *.o
+  $ hg status
+  abort: .*/.hgignore: invalid pattern \(relre\): \*.o
+  [255]
 
   $ echo ".*\.o" > .hgignore
   $  hg status
@@ -86,8 +87,8 @@ Check it does not ignore the current directory '.':
   ? syntax
 
   $ echo "syntax: invalid" > .hgignore
-  $ hg status 2>&1 | sed -e 's/.*\.hgignore:/.hgignore:/'
-  .hgignore: ignoring invalid syntax 'invalid'
+  $ hg status
+  .*/.hgignore: ignoring invalid syntax 'invalid'
   A dir/b.o
   ? .hgignore
   ? a.c

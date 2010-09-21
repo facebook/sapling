@@ -123,7 +123,7 @@ Add invalid tags:
   $ echo "spam" >> .hgtags
   $ echo >> .hgtags
   $ echo "foo bar" >> .hgtags
-  $ echo "$T invalid" | sed "s/..../a5a5/" >> .hg/localtags
+  $ echo "a5a5 invalid" >> .hg/localtags
   $ echo "committing .hgtags:"
   committing .hgtags:
   $ cat .hgtags 

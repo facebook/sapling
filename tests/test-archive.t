@@ -74,23 +74,23 @@ invalid arch type should give 404
   >                     % (os.environ['HGPORT'], node, archive))
   > sys.stdout.write(f.read())
   > EOF
-  $ python getarchive.py "$TIP" gz | gunzip | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
-  test-archive-TIP/.hg_archival.txt
-  test-archive-TIP/bar
-  test-archive-TIP/baz/bletch
-  test-archive-TIP/foo
-  $ python getarchive.py "$TIP" bz2 | bunzip2 | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
-  test-archive-TIP/.hg_archival.txt
-  test-archive-TIP/bar
-  test-archive-TIP/baz/bletch
-  test-archive-TIP/foo
+  $ python getarchive.py "$TIP" gz | gunzip | tar tf - 2>/dev/null
+  test-archive-2c0277f05ed4/.hg_archival.txt
+  test-archive-2c0277f05ed4/bar
+  test-archive-2c0277f05ed4/baz/bletch
+  test-archive-2c0277f05ed4/foo
+  $ python getarchive.py "$TIP" bz2 | bunzip2 | tar tf - 2>/dev/null
+  test-archive-2c0277f05ed4/.hg_archival.txt
+  test-archive-2c0277f05ed4/bar
+  test-archive-2c0277f05ed4/baz/bletch
+  test-archive-2c0277f05ed4/foo
   $ python getarchive.py "$TIP" zip > archive.zip
-  $ unzip -t archive.zip | sed "s/$QTIP/TIP/"
+  $ unzip -t archive.zip
   Archive:  archive.zip
-      testing: test-archive-TIP/.hg_archival.txt   OK
-      testing: test-archive-TIP/bar   OK
-      testing: test-archive-TIP/baz/bletch   OK
-      testing: test-archive-TIP/foo   OK
+      testing: test-archive-2c0277f05ed4/.hg_archival.txt   OK
+      testing: test-archive-2c0277f05ed4/bar   OK
+      testing: test-archive-2c0277f05ed4/baz/bletch   OK
+      testing: test-archive-2c0277f05ed4/foo   OK
   No errors detected in compressed data of archive.zip.
 
   $ "$TESTDIR/killdaemons.py"
@@ -109,11 +109,11 @@ invalid arch type should give 404
   test/foo
 
   $ hg archive -t tgz -p %b-%h test-%h.tar.gz
-  $ gzip -dc test-$QTIP.tar.gz | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
-  test-TIP/.hg_archival.txt
-  test-TIP/bar
-  test-TIP/baz/bletch
-  test-TIP/foo
+  $ gzip -dc test-$QTIP.tar.gz | tar tf - 2>/dev/null
+  test-2c0277f05ed4/.hg_archival.txt
+  test-2c0277f05ed4/bar
+  test-2c0277f05ed4/baz/bletch
+  test-2c0277f05ed4/foo
 
   $ hg archive autodetected_test.tar
   $ tar tf autodetected_test.tar
@@ -175,11 +175,11 @@ archives and rename them afterwards.
       testing: test/foo                 OK
   No errors detected in compressed data of test.zip.
 
-  $ hg archive -t tar - | tar tf - 2>/dev/null | sed "s/$QTIP/TIP/"
-  test-TIP/.hg_archival.txt
-  test-TIP/bar
-  test-TIP/baz/bletch
-  test-TIP/foo
+  $ hg archive -t tar - | tar tf - 2>/dev/null
+  test-2c0277f05ed4/.hg_archival.txt
+  test-2c0277f05ed4/bar
+  test-2c0277f05ed4/baz/bletch
+  test-2c0277f05ed4/foo
 
   $ hg archive -r 0 -t tar rev-%r.tar
   $ if [ -f rev-0.tar ]; then

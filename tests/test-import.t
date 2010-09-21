@@ -380,7 +380,8 @@ hg import in a subdirectory
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a export tip | sed -e 's/d1\/d2\///' > tip.patch
+  $ hg --cwd a export tip > tmp
+  $ sed -e 's/d1\/d2\///' < tmp > tip.patch
   $ dir=`pwd`
   $ cd b/d1/d2 2>&1 > /dev/null
   $ hg import  ../../../tip.patch

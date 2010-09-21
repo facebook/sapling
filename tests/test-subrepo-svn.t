@@ -5,15 +5,12 @@
   >     tr '\\' /
   > }
 
-  $ escapedwd=`pwd | fix_path`
-
 SVN wants all paths to start with a slash. Unfortunately, Windows ones
 don't. Handle that.
 
+  $ escapedwd=`pwd | fix_path`
   $ expr "$escapedwd" : / > /dev/null || escapedwd="/$escapedwd"
   $ escapedwd=`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$escapedwd"`
-  $ filterpath="s|$escapedwd|/root|"
-  $ filteroutofdate='s/ in transaction.*/ is out of date/;s/Out of date: /File /'
 
 create subversion repo
 
@@ -74,19 +71,18 @@ add first svn sub with leading whitespaces
 
 debugsub
 
-  $ hg debugsub | sed "$filterpath"
+  $ hg debugsub
   path s
-   source   file:///root/svn-repo/src
+   source   file:///.*/svn-repo/src
    revision 2
 
 change file in svn and hg, commit
 
   $ echo a >> a
   $ echo alpha >> s/alpha
-  $ hg commit -m 'Message!' \
-  >     | sed 's:Sending.*s/alpha:Sending        s/alpha:g'
+  $ hg commit -m 'Message!'
   committing subrepository s
-  Sending        s/alpha
+  Sending.*s/alpha
   Transmitting file data .
   Committed revision 3.
   
@@ -94,9 +90,9 @@ change file in svn and hg, commit
   External at revision 1.
   
   At revision 3.
-  $ hg debugsub | sed "$filterpath"
+  $ hg debugsub
   path s
-   source   file:///root/svn-repo/src
+   source   file:///.*/svn-repo/src
    revision 3
 
   $ echo a > s/a
@@ -128,20 +124,22 @@ add a commit from svn
 this commit from hg will fail
 
   $ echo zzz >> s/alpha
-  $ hg ci -m 'amend alpha from hg' 2>&1 | sed "$filteroutofdate"
+  $ hg ci -m 'amend alpha from hg'
   committing subrepository s
   abort: svn: Commit failed (details follow):
-  svn: File '/src/alpha' is out of date
+  svn: (Out of date)?.*/src/alpha.*(is out of date)?
+  [255]
   $ svn revert -q s/alpha
 
 this commit fails because of meta changes
 
   $ svn propset svn:mime-type 'text/html' s/alpha
   property 'svn:mime-type' set on 's/alpha'
-  $ hg ci -m 'amend alpha from hg' 2>&1 | sed "$filteroutofdate"
+  $ hg ci -m 'amend alpha from hg'
   committing subrepository s
   abort: svn: Commit failed (details follow):
-  svn: File '/src/alpha' is out of date
+  svn: (Out of date)?.*/src/alpha.*(is out of date)?
+  [255]
   $ svn revert -q s/alpha
 
 this commit fails because of externals changes
@@ -192,9 +190,9 @@ clone
 
 debugsub in clone
 
-  $ hg debugsub | sed "$filterpath"
+  $ hg debugsub
   path s
-   source   file:///root/svn-repo/src
+   source   file:///.*/svn-repo/src
    revision 3
 
 verify subrepo is contained within the repo directory

@@ -18,7 +18,7 @@
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
-  $ hg clone --pull http://foo:bar@localhost:$HGPORT/ copy | sed -e "s,:$HGPORT/,:\$HGPORT/,"
+  $ hg clone --pull http://foo:bar@localhost:$HGPORT/ copy
   requesting all changes
   adding changesets
   adding manifests
@@ -43,13 +43,13 @@
   $ hg manifest --debug
   2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   foo
 
-  $ hg pull | sed -e "s,:$HGPORT/,:\$HGPORT/,"
-  pulling from http://foo:***@localhost:$HGPORT/
+  $ hg pull
+  pulling from http://foo:\*\*\*@localhost:.*/
   searching for changes
   no changes found
 
-  $ hg rollback --dry-run --verbose | sed -e "s,:$HGPORT/,:\$HGPORT/,"
-  rolling back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/)
+  $ hg rollback --dry-run --verbose
+  rolling back to revision -1 \(undo pull: http://foo:\*\*\*@localhost:.*/\)
 
 Issue 622:
 

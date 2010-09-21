@@ -17,10 +17,10 @@
 
 qdiff:
 
-  $ hg qdiff | sed -e "s/\(+++ [a-zA-Z0-9_/.-]*\).*/\1/"
+  $ hg qdiff
   diff -r d20a80d4def3 base
   --- a/base	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/base
+  \+\+\+ b/base.*
   @@ -1,1 +1,1 @@
   -base
   +patched

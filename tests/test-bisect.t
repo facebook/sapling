@@ -277,6 +277,7 @@ skip
   $ hg bisect -g tip
   $ hg bisect -b tip
   abort: starting revisions are not directly related
+  [255]
 
   $ hg bisect -r
   $ hg bisect -g null
@@ -349,6 +350,7 @@ test no action
   $ hg bisect -r
   $ hg bisect
   abort: cannot bisect (no known good revisions)
+  [255]
 
 
 reproduce AssertionError, issue1445

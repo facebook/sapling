@@ -81,13 +81,13 @@
 Exporting 4 changesets to a file:
 
   $ hg export -o export_internal 1 2 3 4
-  $ grep HG export_internal | wc -l | sed -e 's/^ *//'
-  4
+  $ grep HG export_internal | wc -l
+  \s*4
 
 Exporting 4 changesets to a file:
 
-  $ hg export 1 2 3 4 | grep HG | wc -l | sed -e 's/^ *//'
-  4
+  $ hg export 1 2 3 4 | grep HG | wc -l
+  \s*4
 
 Exporting revision -2 to a file:
 

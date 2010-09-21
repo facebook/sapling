@@ -20,8 +20,8 @@
 
 http incoming
 
-  $ hg -R new incoming http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
-  comparing with http://localhost:$HGPORT/
+  $ hg -R new incoming http://localhost:$HGPORT/
+  comparing with http://localhost:\d+/
   changeset:   0:00a43fa82f62
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -68,8 +68,8 @@ http incoming
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     8
   
-  $ hg -R new incoming -r 4 http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
-  comparing with http://localhost:$HGPORT/
+  $ hg -R new incoming -r 4 http://localhost:$HGPORT/
+  comparing with http://localhost:\d+/
   changeset:   0:00a43fa82f62
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -221,8 +221,8 @@ limit to 2 changesets, test with -p --git
 
 test with --bundle
 
-  $ hg -R new incoming --bundle test.hg http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
-  comparing with http://localhost:$HGPORT/
+  $ hg -R new incoming --bundle test.hg http://localhost:$HGPORT/
+  comparing with http://localhost:.*/
   changeset:   0:00a43fa82f62
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -419,8 +419,8 @@ limit to 3 changesets
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11
   
-  $ hg -R test-dev outgoing http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
-  comparing with http://localhost:$HGPORT/
+  $ hg -R test-dev outgoing http://localhost:$HGPORT/
+  comparing with http://localhost:.*/
   searching for changes
   changeset:   9:d89d4abea5bc
   user:        test
@@ -448,8 +448,8 @@ limit to 3 changesets
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13
   
-  $ hg -R test-dev outgoing -r 11 http://localhost:$HGPORT/ | sed -e "s,:$HGPORT/,:\$HGPORT/,"
-  comparing with http://localhost:$HGPORT/
+  $ hg -R test-dev outgoing -r 11 http://localhost:$HGPORT/
+  comparing with http://localhost:.*/
   searching for changes
   changeset:   9:d89d4abea5bc
   user:        test
