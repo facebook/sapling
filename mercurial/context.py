@@ -843,7 +843,7 @@ class workingctx(changectx):
                 if self._repo.dirstate[f] != 'r':
                     self._repo.ui.warn(_("%s not removed!\n") % f)
                 else:
-                    fctx = f in pctxs[0] and pctxs[0] or pctxs[1]
+                    fctx = f in pctxs[0] and pctxs[0][f] or pctxs[1][f]
                     t = fctx.data()
                     self._repo.wwrite(f, t, fctx.flags())
                     self._repo.dirstate.normal(f)

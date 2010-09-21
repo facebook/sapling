@@ -8,3 +8,10 @@ baz
 new/dir
 .hg/patches/new/dir
 % test patch being renamed before committed
+% test overlapping renames (issue2388)
+adding a
+adding b
+M patchb
+M series
+A patchc
+R patcha

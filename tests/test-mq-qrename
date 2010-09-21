@@ -36,4 +36,18 @@ hg qrename y
 hg qcommit -m rename
 cd ..
 
-
+echo '% test overlapping renames (issue2388)'
+hg init c
+cd c
+hg qinit -c
+echo a > a
+hg add
+hg qnew patcha
+echo b > b
+hg add
+hg qnew patchb
+hg ci --mq -m c1
+hg qrename patchb patchc
+hg qrename patcha patchb
+hg st --mq
+cd ..
