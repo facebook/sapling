@@ -24,6 +24,8 @@ It only supports a small subset of reStructuredText:
 
 - definition lists
 
+- specific admonitions
+
 - bullet lists (items must start with '-')
 
 - enumerated lists (no autonumbering)
@@ -37,6 +39,8 @@ It only supports a small subset of reStructuredText:
 
 import re, sys
 import util, encoding
+from i18n import _
+
 
 def replace(text, substs):
     utext = text.decode(encoding.encoding)
@@ -292,12 +296,58 @@ def addmargins(blocks):
             i += 2
     return blocks
 
+def findadmonitions(blocks):
+    """
+    Makes the type of the block an admonition block if
+    the first line is an admonition directive
+    """
+
+    i = 0
+
+    pattern = (r"\.\. (admonition|attention|caution|danger|error|hint|"
+               r"important|note|tip|warning)::")
+
+    prog = re.compile(pattern, flags=re.IGNORECASE)
+    while i < len(blocks):
+        m = prog.match(blocks[i]['lines'][0])
+        if m:
+            blocks[i]['type'] = 'admonition'
+            admonitiontitle = blocks[i]['lines'][0][3:m.end() - 2].lower()
+
+            firstline = blocks[i]['lines'][0][m.end() + 1:]
+            if firstline != '':
+                blocks[i]['lines'].insert(1, '   ' + firstline + '')
+
+
+            blocks[i]['admonitiontitle'] = admonitiontitle
+            del blocks[i]['lines'][0]
+        i = i + 1
+    return blocks
 
 def formatblock(block, width):
     """Format a block according to width."""
     if width <= 0:
         width = 78
     indent = ' ' * block['indent']
+    if block['type'] == 'admonition':
+        titles = {'attention': _('Attention:'),
+                  'caution': _('Caution:'),
+                  'danger': _('!Danger!')  ,
+                  'error': _('Error:'),
+                  'hint': _('Hint:'),
+                  'important': _('Important:'),
+                  'note': _('Note:'),
+                  'tip': _('Tip:'),
+                  'warning': _('Warning!')}
+
+        admonition = titles[block['admonitiontitle']]
+        hang = len(block['lines'][-1]) - len(block['lines'][-1].lstrip())
+
+        defindent = indent + hang * ' '
+        text = ' '.join(map(str.strip, block['lines']))
+        return '%s\n%s' % (indent + admonition, util.wrap(text, width=width,
+                                           initindent=defindent,
+                                           hangindent=defindent))
     if block['type'] == 'margin':
         return ''
     if block['type'] == 'literal':
@@ -363,6 +413,7 @@ def format(text, width, indent=0, keep=None):
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
     blocks = addmargins(blocks)
+    blocks = findadmonitions(blocks)
     text = '\n'.join(formatblock(b, width) for b in blocks)
     if keep is None:
         return text
@@ -389,4 +440,5 @@ if __name__ == "__main__":
     blocks = debug(updatefieldlists, blocks)
     blocks = debug(findsections, blocks)
     blocks = debug(addmargins, blocks)
+    blocks = debug(findadmonitions, blocks)
     print '\n'.join(formatblock(b, 30) for b in blocks)

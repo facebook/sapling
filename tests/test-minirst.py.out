@@ -318,3 +318,19 @@ Markup: "foo" and "hg help"
 ---------------------------
 ----------------------------------------------------------------------
 
+admonitions formatted to fit within 30 characters:
+----------------------------------------------------------------------
+Note:
+   This is a note
+
+   - Bullet 1
+   - Bullet 2
+
+   Warning!
+      This is a warning Second
+      input line of warning
+
+!Danger!
+   This is danger
+----------------------------------------------------------------------
+

@@ -197,3 +197,20 @@ Markup: ``foo`` and :hg:`help`
 ------------------------------
 """
 debugformat('sections', sections, 20)
+
+
+admonitions = """
+.. note::
+   This is a note
+
+   - Bullet 1
+   - Bullet 2
+
+   .. warning:: This is a warning Second
+      input line of warning
+
+.. danger::
+   This is danger
+"""
+
+debugformat('admonitions', admonitions, 30)
