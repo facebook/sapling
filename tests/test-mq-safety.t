@@ -110,3 +110,67 @@ qpush warning branchheads
   $ hg qpush
   applying qp
   now at: qp
+
+Testing applied patches, push and --force
+
+  $ cd ..
+  $ hg init forcepush
+  $ cd forcepush
+  $ echo a > a
+  $ hg ci -Am adda
+  adding a
+  $ echo a >> a
+  $ hg ci -m changea
+  $ hg up 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch branch
+  marked working directory as branch branch
+  $ echo b > b
+  $ hg ci -Am addb
+  adding b
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg --cwd .. clone -r 0 forcepush forcepush2
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo a >> a
+  $ hg qnew patch
+
+Pushing applied patch with --rev without --force
+
+  $ hg push -r default ../forcepush2
+  pushing to ../forcepush2
+  abort: source has mq patches applied
+  [255]
+
+Pushing applied patch with branchhash, without --force
+
+  $ hg push ../forcepush2#default
+  pushing to ../forcepush2
+  abort: source has mq patches applied
+  [255]
+
+Pushing revs excluding applied patch
+
+  $ hg push --new-branch -r branch -r 2 ../forcepush2
+  pushing to ../forcepush2
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+
+Pushing applied patch with --force
+
+  $ hg push --force -r default ../forcepush2
+  pushing to ../forcepush2
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
