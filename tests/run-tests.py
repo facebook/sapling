@@ -518,7 +518,7 @@ def tsttest(test, options):
             c = el[i]
             i += 1
             if c == '\\' and el[i] in '*?\\':
-                res += el[i-1:i+1]
+                res += el[i - 1:i + 1]
                 i += 1
             elif c == '*':
                 res += '.*'

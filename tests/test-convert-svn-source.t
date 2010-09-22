@@ -12,7 +12,6 @@
   > EOF
 
   $ svnadmin create svn-repo
-  $ svnadmin setuuid svn-repo 00000000-0000-0000-0000-000000000000
   $ svnpath=`pwd | fixpath`
 
 
@@ -175,5 +174,5 @@ This is also the only place testing more than one extra field in a revision.
   $ cd stoprev
   $ hg tip --debug | grep extra
   extra:       branch=default
-  extra:       convert_revision=svn:00000000-0000-0000-0000-000000000000/proj B/trunk@1
+  extra:       convert_revision=svn:........-....-....-....-............/proj B/trunk@1 (re)
   $ cd ..

@@ -44,12 +44,12 @@
   2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   foo
 
   $ hg pull
-  pulling from http://foo:\*\*\*@localhost:.*/
+  pulling from http://foo:\*\*\*@localhost:.*/ (re)
   searching for changes
   no changes found
 
   $ hg rollback --dry-run --verbose
-  rolling back to revision -1 \(undo pull: http://foo:\*\*\*@localhost:.*/\)
+  rolling back to revision -1 \(undo pull: http://foo:\*\*\*@localhost:.*/\) (re)
 
 Issue 622:
 

@@ -73,7 +73,7 @@ debugsub
 
   $ hg debugsub
   path s
-   source   file:///.*/svn-repo/src
+   source   file:///*/svn-repo/src (glob)
    revision 2
 
 change file in svn and hg, commit
@@ -82,7 +82,7 @@ change file in svn and hg, commit
   $ echo alpha >> s/alpha
   $ hg commit -m 'Message!'
   committing subrepository s
-  Sending.*s/alpha
+  Sending*s/alpha (glob)
   Transmitting file data .
   Committed revision 3.
   
@@ -92,7 +92,7 @@ change file in svn and hg, commit
   At revision 3.
   $ hg debugsub
   path s
-   source   file:///.*/svn-repo/src
+   source   file:///*/svn-repo/src (glob)
    revision 3
 
   $ echo a > s/a
@@ -127,7 +127,7 @@ this commit from hg will fail
   $ hg ci -m 'amend alpha from hg'
   committing subrepository s
   abort: svn: Commit failed (details follow):
-  svn: (Out of date)?.*/src/alpha.*(is out of date)?
+  svn: (Out of date)?.*/src/alpha.*(is out of date)? (re)
   [255]
   $ svn revert -q s/alpha
 
@@ -138,7 +138,7 @@ this commit fails because of meta changes
   $ hg ci -m 'amend alpha from hg'
   committing subrepository s
   abort: svn: Commit failed (details follow):
-  svn: (Out of date)?.*/src/alpha.*(is out of date)?
+  svn: (Out of date)?.*/src/alpha.*(is out of date)? (re)
   [255]
   $ svn revert -q s/alpha
 
@@ -192,7 +192,7 @@ debugsub in clone
 
   $ hg debugsub
   path s
-   source   file:///.*/svn-repo/src
+   source   file:///*/svn-repo/src (glob)
    revision 3
 
 verify subrepo is contained within the repo directory

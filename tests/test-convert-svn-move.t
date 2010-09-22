@@ -87,8 +87,8 @@ Check move copy records
 Check branches
 
   $ hg branches
-  default                       13:.*
-  d1                             6:.*
+  default                       13:* (glob)
+  d1                             6:* (glob)
   $ cd ..
 
   $ mkdir test-replace

@@ -2,7 +2,7 @@ Simple commands:
 
   $ echo foo
   foo
-  $ echo 'bar\nbaz' | cat
+  $ printf 'bar\nbaz\n' | cat
   bar
   baz
 
@@ -23,7 +23,7 @@ Regular expressions:
 
 Globs:
 
-  $ echo '* \\foobarbaz {10}'
+  $ printf '* \\foobarbaz {10}\n'
   \* \\fo?bar* {10} (glob)
 
 Literal match ending in " (re)":
