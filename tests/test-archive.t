@@ -228,8 +228,8 @@ old file -- date clamped to 1980
   $ unzip -l ../old.zip
   Archive:  ../old.zip
   \s*Length.* (re)
-  .*-----.* (re)
-  .*147.*80.*00:00.*old/\.hg_archival\.txt (re)
-  .*0.*80.*00:00.*old/old (re)
-  .*-----.* (re)
+  *-----* (glob)
+  *147*80*00:00*old/.hg_archival.txt (glob)
+  *0*80*00:00*old/old (glob)
+  *-----* (glob)
   \s*147\s+2 files (re)

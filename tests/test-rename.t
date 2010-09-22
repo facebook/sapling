@@ -263,8 +263,8 @@ overwrite existing files (d2/b)
   R d1/ba
   R d1/d11/a1
   $ diff -u d1/b d2/b
-  --- d1/b	.* (re)
-  \+\+\+ d2/b	.* (re)
+  --- d1/b	* (glob)
+  +++ d2/b	* (glob)
   @@ -1 +1 @@
   -d1/b
   +d2/b

@@ -78,5 +78,5 @@ attack /tmp/test
   $ hg manifest -r4
   /tmp/test
   $ hg update -Cr4
-  abort: No such file or directory: .*/test-audit-path\.t/target//tmp/test (re)
+  abort: No such file or directory: */test-audit-path.t/target//tmp/test (glob)
   [255]

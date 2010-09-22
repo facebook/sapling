@@ -32,7 +32,7 @@ Create a patch removing a:
 Save the patch queue so we can merge it later:
 
   $ hg qsave -c -e
-  copy .*/t/\.hg/patches to .*/t/\.hg/patches\.1 (re)
+  copy */t/.hg/patches to */t/.hg/patches.1 (glob)
   $ checkundo
 
 Update b and commit in an "update" changeset:
@@ -52,7 +52,7 @@ Update b and commit in an "update" changeset:
   b
 
   $ hg qpush -a -m
-  merging with queue at: .*/t/\.hg/patches\.1 (re)
+  merging with queue at: */t/.hg/patches.1 (glob)
   applying rm_a
   now at: rm_a
 
@@ -91,14 +91,14 @@ Classic MQ merge sequence *with an explicit named queue*:
 Create the reference queue:
 
   $ hg qsave -c -e -n refqueue
-  copy .*/t2/\.hg/patches to .*/t2/\.hg/refqueue (re)
+  copy */t2/.hg/patches to */t2/.hg/refqueue (glob)
   $ hg up -C 1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Merge:
 
   $ HGMERGE=internal:other hg qpush -a -m -n refqueue
-  merging with queue at: .*/t2/\.hg/refqueue (re)
+  merging with queue at: */t2/.hg/refqueue (glob)
   applying patcha
   patching file a
   Hunk #1 FAILED at 0
@@ -138,10 +138,10 @@ Check patcha2 is still a regular patch:
 
   $ cat .hg/patches/patcha2
   # HG changeset patch
-  # Parent ........................................ (re)
+  # Parent ???????????????????????????????????????? (glob)
   # Date 0 0
   
-  diff -r ............ -r ............ a (re)
+  diff -r ???????????? -r ???????????? a (glob)
   --- a/a
   +++ b/a
   @@ -1,2 +1,3 @@

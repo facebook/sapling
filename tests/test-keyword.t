@@ -27,13 +27,13 @@ as it would succeed without uisetup otherwise
   Revision = {node|short}
   Source = {root}/{file},v
   $Author: test $
-  \$Date: ..../../.. ..:..:.. \$ (re)
-  \$Header: .*/demo\.txt,v ............ ..../../.. ..:..:.. test \$ (re)
-  \$Id: demo\.txt,v ............ ..../../.. ..:..:.. test \$ (re)
+  $Date: ????/??/?? ??:??:?? $ (glob)
+  $Header: */demo.txt,v ???????????? ????/??/?? ??:??:?? test $ (glob)
+  $Id: demo.txt,v ???????????? ????/??/?? ??:??:?? test $ (glob)
   $RCSFile: demo.txt,v $
   $RCSfile: demo.txt,v $
-  \$Revision: ............ \$ (re)
-  \$Source: .*/demo.txt,v \$ (re)
+  $Revision: ???????????? $ (glob)
+  $Source: */demo.txt,v $ (glob)
 
   $ hg --quiet kwdemo "Branch = {branches}"
   [extensions]
@@ -71,7 +71,7 @@ A bundle to test this was made with:
  hg bundle --base null ../test-keyword.hg
 
   $ hg pull -u "$TESTDIR"/test-keyword.hg
-  pulling from .*test-keyword\.hg (re)
+  pulling from *test-keyword.hg (glob)
   requesting all changes
   adding changesets
   adding manifests
@@ -150,7 +150,7 @@ hg cat files and symlink, no expansion
   do not process $Id:
   xxx $
   ignore $Id$
-  a.* (re)
+  a* (glob)
 
 Test hook execution
 
@@ -195,15 +195,15 @@ Pull from bundle and trigger notify
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
-  Date: .* (re)
-  Subject: changeset in .* (re)
+  Date: * (glob)
+  Subject: changeset in * (glob)
   From: mercurial
   X-Hg-Notification: changeset a2392c293916
-  Message-Id: <hg\.a2392c293916.*> (re)
+  Message-Id: <hg.a2392c293916*> (glob)
   To: Test
   
-  changeset a2392c293916 in .* (re)
-  details: .*\?cmd=changeset;node=a2392c293916 (re)
+  changeset a2392c293916 in * (glob)
+  details: *cmd=changeset;node=a2392c293916 (glob)
   description:
   	addsym
   
@@ -218,15 +218,15 @@ Pull from bundle and trigger notify
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
-  Date:.* (re)
-  Subject: changeset in.* (re)
+  Date:* (glob)
+  Subject: changeset in* (glob)
   From: User Name <user@example.com>
   X-Hg-Notification: changeset ef63ca68695b
-  Message-Id: <hg\.ef63ca68695b.*> (re)
+  Message-Id: <hg.ef63ca68695b*> (glob)
   To: Test
   
-  changeset ef63ca68695b in .* (re)
-  details: .*\?cmd=changeset;node=ef63ca68695b (re)
+  changeset ef63ca68695b in * (glob)
+  details: *cmd=changeset;node=ef63ca68695b (glob)
   description:
   	absym
   
@@ -335,7 +335,7 @@ Diff remaining chunk
   $ hg diff
   diff -r d17e03c92c97 a
   --- a/a	Wed Dec 31 23:59:51 1969 -0000
-  \+\+\+ b/a	.* (re)
+  +++ b/a	* (glob)
   @@ -2,3 +2,4 @@
    foo
    do not process $Id:
@@ -479,7 +479,7 @@ Diff specific revision
   $ hg diff --rev 1
   diff -r ef63ca68695b c
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  \+\+\+ b/c	.* (re)
+  +++ b/c	* (glob)
   @@ -0,0 +1,3 @@
   +expand $Id$
   +do not process $Id:
@@ -527,7 +527,7 @@ Cat and hg cat files before custom expansion
   do not process $Id:
   xxx $
   ignore $Id$
-  a.* (re)
+  a* (glob)
 
 Write custom keyword and prepare multiline commit message
 
@@ -577,7 +577,7 @@ Stat, verify and show custom expansion (firstline)
   xxx $
   $Xinfo: User Name <user@example.com>: firstline $
   ignore $Id$
-  a.* (re)
+  a* (glob)
 
 annotate
 
@@ -648,7 +648,7 @@ Clone to test incoming
   > default = ../Test
   > EOF
   $ hg incoming
-  comparing with .*test-keyword\.t/Test (re)
+  comparing with *test-keyword.t/Test (glob)
   searching for changes
   changeset:   2:bb948857c743
   tag:         tip
@@ -718,7 +718,7 @@ kwshrink a inside directory x
 kwexpand nonexistent
 
   $ hg kwexpand nonexistent
-  nonexistent:.* (re)
+  nonexistent:* (glob)
 
 
 hg serve
@@ -907,7 +907,7 @@ Keywords shrunk in working directory, but not yet disabled
   xxx $
   $Xinfo: User Name <user@example.com>: firstline $
   ignore $Id$
-  a.* (re)
+  a* (glob)
 
 Now disable keyword expansion
 
@@ -924,4 +924,4 @@ Now disable keyword expansion
   xxx $
   $Xinfo$
   ignore $Id$
-  a.* (re)
+  a* (glob)

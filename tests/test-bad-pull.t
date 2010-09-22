@@ -24,7 +24,7 @@ give the server some time to start running
   $ sleep 1
 
   $ hg clone http://localhost:$HGPORT/foo copy2 2>&1
-  abort: HTTP Error 404: .* (re)
+  abort: HTTP Error 404: * (glob)
   [255]
 
   $ kill $!

@@ -21,6 +21,11 @@ Regular expressions:
   $ echo barbazquux
   .*quux.* (re)
 
+Globs:
+
+  $ echo '* \\foobarbaz {10}'
+  \* \\fo?bar* {10} (glob)
+
 Literal match ending in " (re)":
 
   $ echo 'foo (re)'

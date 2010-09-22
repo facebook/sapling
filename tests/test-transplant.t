@@ -285,16 +285,16 @@ test filter
   > EOF
   $ chmod +x test-filter
   $ hg transplant -s ../t -b tip -a --filter ./test-filter
-  filtering .* (re)
+  filtering * (glob)
   applying 17ab29e464c6
   17ab29e464c6 transplanted to e9ffc54ea104
-  filtering .* (re)
+  filtering * (glob)
   applying 37a1297eb21b
   37a1297eb21b transplanted to 348b36d0b6a5
-  filtering .* (re)
+  filtering * (glob)
   applying 722f4667af76
   722f4667af76 transplanted to 0aa6979afb95
-  filtering .* (re)
+  filtering * (glob)
   applying a53251cdf717
   a53251cdf717 transplanted to 14f8512272b5
   $ hg log --template '{rev} {parents} {desc}\n'
@@ -316,7 +316,7 @@ test filter with failed patch
   adding test-filter
   created new head
   $ hg transplant 1 --filter ./test-filter
-  filtering .* (re)
+  filtering * (glob)
   applying 348b36d0b6a5
   file b1 already exists
   1 out of 1 hunks FAILED -- saving rejects to file b1.rej

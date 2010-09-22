@@ -135,7 +135,7 @@ qinit -c should create both files if they don't exist
   guards
   $ cat .hg/patches/series
   $ hg qinit -c
-  abort: repository .* already exists! (re)
+  abort: repository * already exists! (glob)
   [255]
   $ cd ..
 
@@ -737,7 +737,7 @@ strip
   adding x
   $ hg strip tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to .* (re)
+  saved backup bundle to * (glob)
   $ hg unbundle .hg/strip-backup/*
   adding changesets
   adding manifests
@@ -760,7 +760,7 @@ strip with local changes, should complain
 
   $ hg strip -f tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to .* (re)
+  saved backup bundle to * (glob)
 
 
 cd b; hg qrefresh
@@ -1118,7 +1118,7 @@ strip again
   
   $ hg strip 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to .* (re)
+  saved backup bundle to * (glob)
   $ checkundo strip
   $ hg log
   changeset:   1:20cbbe65cff7

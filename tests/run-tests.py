@@ -509,6 +509,25 @@ def tsttest(test, options):
             # el is an invalid regex
             return False
 
+    def globmatch(el, l):
+        # The only supported special characters are * and ?. Escaping is
+        # supported.
+        i, n = 0, len(el)
+        res = ''
+        while i < n:
+            c = el[i]
+            i += 1
+            if c == '\\' and el[i] in '*?\\':
+                res += el[i-1:i+1]
+                i += 1
+            elif c == '*':
+                res += '.*'
+            elif c == '?':
+                res += '.'
+            else:
+                res += re.escape(c)
+        return rematch(res, l)
+
     pos = -1
     postout = []
     ret = 0
@@ -528,8 +547,10 @@ def tsttest(test, options):
 
             if el == l: # perfect match (fast)
                 postout.append("  " + l)
-            elif el and el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l):
-                postout.append("  " + el) # fallback regex match
+            elif (el and
+                  (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
+                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l))):
+                postout.append("  " + el) # fallback regex/glob match
             else:
                 postout.append("  " + l) # let diff deal with it
 
