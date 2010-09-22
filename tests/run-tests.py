@@ -506,7 +506,8 @@ def tsttest(test, options):
             # hack to deal with graphlog, which looks like bogus regexes
             if el.startswith('|'):
                 el = '\\' + el
-            return re.match(el, l)
+            # ensure that the regex matches to the end of the string
+            return re.match(el + r'\Z', l)
         except re.error:
             # el is an invalid regex
             return False
