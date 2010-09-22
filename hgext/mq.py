@@ -2174,7 +2174,9 @@ def guard(ui, repo, *args, **opts):
 
     With no arguments, print the currently active guards.
     With arguments, set guards for the named patch.
-    NOTE: Specifying negative guards now requires '--'.
+
+    .. note::
+       Specifying negative guards now requires '--'.
 
     To set guards on another patch::
 

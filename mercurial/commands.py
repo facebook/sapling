@@ -1432,9 +1432,10 @@ def diff(ui, repo, *pats, **opts):
 
     Differences between files are shown using the unified diff format.
 
-    NOTE: diff may generate unexpected results for merges, as it will
-    default to comparing against the working directory's first parent
-    changeset if no revisions are specified.
+    .. note::
+       diff may generate unexpected results for merges, as it will
+       default to comparing against the working directory's first
+       parent changeset if no revisions are specified.
 
     When two revision arguments are given, then changes are shown
     between those revisions. If only one revision is specified then
