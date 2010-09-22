@@ -530,7 +530,7 @@ def tsttest(test, options):
 
             if el == l: # perfect match (fast)
                 postout.append("  " + l)
-            elif el and rematch(el, l): # fallback regex match
+            elif el and el[2:] and rematch(el, l): # fallback regex match
                 postout.append("  " + el)
             else: # mismatch - let diff deal with it
                 postout.append("  " + l)
