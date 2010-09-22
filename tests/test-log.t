@@ -1019,3 +1019,76 @@ log -p -R repo
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo, related
   
+
+Test from/for issue2383
+
+  $ hg init issue2383
+  $ cd issue2383
+
+Create a test repo:
+
+  $ echo a > a
+  $ hg ci -Am0
+  adding a
+  $ echo b > b
+  $ hg ci -Am1
+  adding b
+  $ hg co 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo b > a
+  $ hg ci -m2
+  created new head
+
+Merge:
+
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+Make sure there's a file listed in the merge to trigger the bug:
+
+  $ echo c > a
+  $ hg ci -m3
+
+Two files shown here in diff:
+
+  $ hg diff --rev 2:3
+  diff -r b09be438c43a -r 8e07aafe1edc a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -b
+  +c
+  diff -r b09be438c43a -r 8e07aafe1edc b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +b
+
+Diff here should be the same:
+
+  $ hg log -vpr 3
+  changeset:   3:8e07aafe1edc
+  tag:         tip
+  parent:      2:b09be438c43a
+  parent:      1:925d80f479bb
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       a
+  description:
+  3
+  
+  
+  diff -r b09be438c43a -r 8e07aafe1edc a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -b
+  +c
+  diff -r b09be438c43a -r 8e07aafe1edc b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +b
+  
+  $ cd ..
