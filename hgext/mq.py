@@ -2713,8 +2713,16 @@ def reposetup(ui, repo):
                                               editor, extra)
 
         def push(self, remote, force=False, revs=None, newbranch=False):
-            if self.mq.applied and not force and not revs:
-                raise util.Abort(_('source has mq patches applied'))
+            if self.mq.applied and not force:
+                haspatches = True
+                if revs:
+                    # Assume applied patches have no non-patch descendants
+                    # and are not on remote already. If they appear in the
+                    # set of resolved 'revs', bail out.
+                    applied = set(e.node for e in self.mq.applied)
+                    haspatches = bool([n for n in revs if n in applied])
+                if haspatches:
+                    raise util.Abort(_('source has mq patches applied'))
             return super(mqrepo, self).push(remote, force, revs, newbranch)
 
         def _findtags(self):

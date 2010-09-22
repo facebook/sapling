@@ -62,3 +62,29 @@ hg ci -mmerge
 hg up default
 hg log
 hg qpush
+cd ..
+
+echo '% testing applied patches, push and --force'
+hg init forcepush
+cd forcepush
+echo a > a
+hg ci -Am adda
+echo a >> a
+hg ci -m changea
+hg up 0
+hg branch branch
+echo b > b
+hg ci -Am addb
+hg up 0
+hg --cwd .. clone -r 0 forcepush forcepush2
+echo a >> a
+hg qnew patch
+echo '% pushing applied patch with --rev without --force'
+hg push -r default ../forcepush2
+echo '% pushing applied patch with branchhash, without --force'
+hg push ../forcepush2#default
+echo '% pushing revs excluding applied patch'
+hg push --new-branch -r branch -r 2 ../forcepush2
+echo '% pushing applied patch with --force'
+hg push --force -r default ../forcepush2
+cd ..

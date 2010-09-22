@@ -45,3 +45,36 @@ summary:     a
 
 applying qp
 now at: qp
+% testing applied patches, push and --force
+adding a
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+marked working directory as branch branch
+adding b
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+requesting all changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+updating to branch default
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% pushing applied patch with --rev without --force
+pushing to ../forcepush2
+abort: source has mq patches applied
+% pushing applied patch with branchhash, without --force
+pushing to ../forcepush2
+abort: source has mq patches applied
+% pushing revs excluding applied patch
+pushing to ../forcepush2
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files
+% pushing applied patch with --force
+pushing to ../forcepush2
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 1 changesets with 1 changes to 1 files (+1 heads)
