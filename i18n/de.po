@@ -38,7 +38,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-09-22 13:26+0200\n"
-"PO-Revision-Date: 2010-09-23 01:08+0200\n"
+"PO-Revision-Date: 2010-09-23 01:18+0200\n"
 "Last-Translator: Martin Roppelt <m.p.roppelt@web.de>\n"
 "Language-Team: German (http://transifex.net/projects/p/mercurial/team/de/) "
 "<>\n"
@@ -5347,7 +5347,7 @@ msgid ""
 "  user@host = pattern"
 msgstr ""
 "  [usersubs]\n"
-"  # Schlüssel ist E-Mail-Adresse des Abonnenten\n"
+"  # Schlüssel ist die E-Mail-Adresse des Abonnenten\n"
 "  # Wert ist eine kommaseparierte Liste von glob-Mustern\n"
 "  benutzer@rechner = muster"
 
@@ -5753,27 +5753,28 @@ msgstr ""
 "\n"
 "Bitte eine Einführung für die Patch-Serie eingeben."
 
-#, fuzzy, python-format
+#, python-format
 msgid "This patch series consists of %d patches."
-msgstr "Diese Patch-Serie besteht aus %d Patchen.\n"
+msgstr "Diese Patch-Serie besteht aus %d Patches."
 
-#, fuzzy
 msgid ""
 "\n"
 "Final summary:"
-msgstr "Zusammenfassung:\n"
+msgstr ""
+"\n"
+"Zusammenfassung:"
 
 msgid "are you sure you want to send (yn)?"
-msgstr ""
+msgstr "Sicher, dass Sie jetzt senden möchten (y/n)?"
 
 msgid "&No"
-msgstr ""
+msgstr "&Nein"
 
 msgid "&Yes"
-msgstr ""
+msgstr "Ja (&y)"
 
 msgid "patchbomb canceled"
-msgstr ""
+msgstr "patchbomb abgebrochen"
 
 msgid "Displaying "
 msgstr "Zeige "
@@ -5781,16 +5782,14 @@ msgstr "Zeige "
 msgid "Writing "
 msgstr "Schreibe "
 
-#, fuzzy
 msgid "writing"
-msgstr "Schreibe "
+msgstr "Schreibe"
 
 msgid "Sending "
 msgstr "Sende "
 
-#, fuzzy
 msgid "sending"
-msgstr "Sende "
+msgstr "Sende"
 
 msgid "send patches as attachments"
 msgstr "Sendet Patches als Anhänge"
