@@ -32,7 +32,7 @@ Create a patch removing a:
 Save the patch queue so we can merge it later:
 
   $ hg qsave -c -e
-  copy .*/t/.hg/patches to .*/t/.hg/patches.1
+  copy .*/t/\.hg/patches to .*/t/\.hg/patches\.1
   $ checkundo
 
 Update b and commit in an "update" changeset:
@@ -52,7 +52,7 @@ Update b and commit in an "update" changeset:
   b
 
   $ hg qpush -a -m
-  merging with queue at: .*/t/.hg/patches.1
+  merging with queue at: .*/t/\.hg/patches\.1
   applying rm_a
   now at: rm_a
 
@@ -91,14 +91,14 @@ Classic MQ merge sequence *with an explicit named queue*:
 Create the reference queue:
 
   $ hg qsave -c -e -n refqueue
-  copy .*/t2/.hg/patches to .*/t2/.hg/refqueue
+  copy .*/t2/\.hg/patches to .*/t2/\.hg/refqueue
   $ hg up -C 1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Merge:
 
   $ HGMERGE=internal:other hg qpush -a -m -n refqueue
-  merging with queue at: .*/t2/.hg/refqueue
+  merging with queue at: .*/t2/\.hg/refqueue
   applying patcha
   patching file a
   Hunk #1 FAILED at 0

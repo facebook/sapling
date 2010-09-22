@@ -229,7 +229,7 @@ old file -- date clamped to 1980
   Archive:  ../old.zip
   \s*Length.*
   .*-----.*
-  .*147.*80.*00:00.*old/.hg_archival.txt
+  .*147.*80.*00:00.*old/\.hg_archival\.txt
   .*0.*80.*00:00.*old/old
   .*-----.*
   \s*147\s+2 files

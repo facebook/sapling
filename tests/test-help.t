@@ -189,7 +189,7 @@ Short help:
 Test short command list with verbose option
 
   $ hg -v help shortlist
-  Mercurial Distributed SCM \(version .*?\)
+  Mercurial Distributed SCM \(version .*\)
   
   Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> and others
   This is free software; see the source for copying conditions. There is NO

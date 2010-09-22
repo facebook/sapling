@@ -44,7 +44,7 @@ Should display baz only:
 
   $ echo "*.o" > .hgignore
   $ hg status
-  abort: .*/.hgignore: invalid pattern \(relre\): \*.o
+  abort: .*/\.hgignore: invalid pattern \(relre\): \*\.o
   [255]
 
   $ echo ".*\.o" > .hgignore
@@ -88,7 +88,7 @@ Check it does not ignore the current directory '.':
 
   $ echo "syntax: invalid" > .hgignore
   $ hg status
-  .*/.hgignore: ignoring invalid syntax 'invalid'
+  .*/\.hgignore: ignoring invalid syntax 'invalid'
   A dir/b.o
   ? .hgignore
   ? a.c

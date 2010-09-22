@@ -252,13 +252,13 @@ Clone and test outgoing:
   $ cd ..
   $ hg clone repo repo2
   updating to branch default
-  pulling subrepo foo from .*/test-subrepo-recursion.t/repo/foo
+  pulling subrepo foo from .*/test-subrepo-recursion\.t/repo/foo
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 7 changes to 3 files
-  pulling subrepo foo/bar from .*/test-subrepo-recursion.t/repo/foo/bar
+  pulling subrepo foo/bar from .*/test-subrepo-recursion\.t/repo/foo/bar
   requesting all changes
   adding changesets
   adding manifests
@@ -267,10 +267,10 @@ Clone and test outgoing:
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo2
   $ hg outgoing -S
-  comparing with .*/test-subrepo-recursion.t/repo
+  comparing with .*/test-subrepo-recursion\.t/repo
   searching for changes
   no changes found
-  comparing with .*/test-subrepo-recursion.t/repo/foo
+  comparing with .*/test-subrepo-recursion\.t/repo/foo
   searching for changes
   no changes found
   [1]
@@ -290,7 +290,7 @@ Make nested change:
   $ hg commit -m 3-4-2
   committing subrepository foo
   $ hg outgoing -S
-  comparing with .*/test-subrepo-recursion.t/repo
+  comparing with .*/test-subrepo-recursion\.t/repo
   searching for changes
   changeset:   3:2655b8ecc4ee
   tag:         tip
@@ -298,7 +298,7 @@ Make nested change:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3-4-2
   
-  comparing with .*/test-subrepo-recursion.t/repo/foo
+  comparing with .*/test-subrepo-recursion\.t/repo/foo
   searching for changes
   changeset:   4:e96193d6cb36
   tag:         tip
@@ -316,7 +316,7 @@ Switch to original repo and setup default path:
 Test incoming:
 
   $ hg incoming -S
-  comparing with .*/test-subrepo-recursion.t/repo2
+  comparing with .*/test-subrepo-recursion\.t/repo2
   searching for changes
   changeset:   3:2655b8ecc4ee
   tag:         tip
@@ -324,7 +324,7 @@ Test incoming:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3-4-2
   
-  comparing with .*/test-subrepo-recursion.t/repo2/foo
+  comparing with .*/test-subrepo-recursion\.t/repo2/foo
   searching for changes
   changeset:   4:e96193d6cb36
   tag:         tip

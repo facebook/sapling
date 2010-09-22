@@ -541,9 +541,9 @@ test repository cloning
   $ cat mercurial2/main/nested_absolute/.hg/hgrc \
   >     mercurial2/main/nested_relative/.hg/hgrc
   [paths]
-  default = .*/test-subrepo.t/sub/mercurial/nested_absolute
+  default = .*/test-subrepo\.t/sub/mercurial/nested_absolute
   [paths]
-  default = .*/test-subrepo.t/sub/mercurial/nested_relative
+  default = .*/test-subrepo\.t/sub/mercurial/nested_relative
   $ rm -rf mercurial mercurial2
 
 issue 1977

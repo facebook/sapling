@@ -26,14 +26,14 @@ as it would succeed without uisetup otherwise
   RCSfile = {file|basename},v
   Revision = {node|short}
   Source = {root}/{file},v
-  \$Author: test \$
+  $Author: test $
   \$Date: ..../../.. ..:..:.. \$
-  \$Header: .*/demo.txt,v ............ ..../../.. ..:..:.. test \$
-  \$Id: demo.txt,v ............ ..../../.. ..:..:.. test \$
-  \$RCSFile: demo.txt,v \$
-  \$RCSfile: demo.txt,v \$
+  \$Header: .*/demo\.txt,v ............ ..../../.. ..:..:.. test \$
+  \$Id: demo\.txt,v ............ ..../../.. ..:..:.. test \$
+  $RCSFile: demo.txt,v $
+  $RCSfile: demo.txt,v $
   \$Revision: ............ \$
-  \$Source: .*/demo.txt,v \$
+  \$Source: .*/demo\.txt,v \$
 
   $ hg --quiet kwdemo "Branch = {branches}"
   [extensions]
@@ -71,7 +71,7 @@ A bundle to test this was made with:
  hg bundle --base null ../test-keyword.hg
 
   $ hg pull -u "$TESTDIR"/test-keyword.hg
-  pulling from .*test-keyword.hg
+  pulling from .*test-keyword\.hg
   requesting all changes
   adding changesets
   adding manifests
@@ -199,11 +199,11 @@ Pull from bundle and trigger notify
   Subject: changeset in .*
   From: mercurial
   X-Hg-Notification: changeset a2392c293916
-  Message-Id: <hg.a2392c293916.*>
+  Message-Id: <hg\.a2392c293916.*>
   To: Test
   
   changeset a2392c293916 in .*
-  details: .*?cmd=changeset;node=a2392c293916
+  details: .*\?cmd=changeset;node=a2392c293916
   description:
   	addsym
   
@@ -222,11 +222,11 @@ Pull from bundle and trigger notify
   Subject: changeset in.*
   From: User Name <user@example.com>
   X-Hg-Notification: changeset ef63ca68695b
-  Message-Id: <hg.ef63ca68695b.*>
+  Message-Id: <hg\.ef63ca68695b.*>
   To: Test
   
   changeset ef63ca68695b in .*
-  details: .*?cmd=changeset;node=ef63ca68695b
+  details: .*\?cmd=changeset;node=ef63ca68695b
   description:
   	absym
   
@@ -648,7 +648,7 @@ Clone to test incoming
   > default = ../Test
   > EOF
   $ hg incoming
-  comparing with .*test-keyword.t/Test
+  comparing with .*test-keyword\.t/Test
   searching for changes
   changeset:   2:bb948857c743
   tag:         tip

@@ -25,7 +25,7 @@
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
-  Message-Id: <8580ff50825a50c8f716.60@.*
+  Message-Id: <8580ff50825a50c8f716\.60@.*
   User-Agent: Mercurial-patchbomb/.*
   Date: Thu, 01 Jan 1970 00:01:00 +0000
   From: quux
@@ -80,7 +80,7 @@
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2] test
-  Message-Id: <patchbomb.120@[^>]*>
+  Message-Id: <patchbomb\.120@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Thu, 01 Jan 1970 00:02:00 +0000
   From: quux
@@ -94,9 +94,9 @@
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
-  Message-Id: <8580ff50825a50c8f716.121@[^>]*>
-  In-Reply-To: <patchbomb.120@[^>]*>
-  References: <patchbomb.120@[^>]*>
+  Message-Id: <8580ff50825a50c8f716\.121@[^>]*>
+  In-Reply-To: <patchbomb\.120@[^>]*>
+  References: <patchbomb\.120@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Thu, 01 Jan 1970 00:02:01 +0000
   From: quux
@@ -122,9 +122,9 @@
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
-  Message-Id: <97d72e5f12c7e84f8506.122@[^>]*>
-  In-Reply-To: <patchbomb.120@[^>]*>
-  References: <patchbomb.120@[^>]*>
+  Message-Id: <97d72e5f12c7e84f8506\.122@[^>]*>
+  In-Reply-To: <patchbomb\.120@[^>]*>
+  References: <patchbomb\.120@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Thu, 01 Jan 1970 00:02:02 +0000
   From: quux
@@ -241,7 +241,7 @@ mime encoded mbox (base64):
   Content-Transfer-Encoding: base64
   Subject: [PATCH] charset=utf-8; content-transfer-encoding: base64
   X-Mercurial-Node: c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  Message-Id: <c3c9e37db9f4fe4882cd.240@.*
+  Message-Id: <c3c9e37db9f4fe4882cd\.240@.*
   User-Agent: Mercurial-patchbomb/.*
   Date: Thu, 01 Jan 1970 00:04:00 +0000
   From: quux
@@ -1810,7 +1810,7 @@ test multi-byte domain parsing:
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] test
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
-  Message-Id: <8580ff50825a50c8f716.315532860@.*
+  Message-Id: <8580ff50825a50c8f716\.315532860@.*
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:00 +0000
   From: quux
@@ -1857,7 +1857,7 @@ test outgoing:
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 8] test
-  Message-Id: <patchbomb.315532860@.*
+  Message-Id: <patchbomb\.315532860@.*
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:00 +0000
   From: test
@@ -1870,9 +1870,9 @@ test outgoing:
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 8] c
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
-  Message-Id: <ff2c9fa2018b15fa74b3.315532861@.*
-  In-Reply-To: <patchbomb.315532860@[^>]*>
-  References: <patchbomb.315532860@[^>]*>
+  Message-Id: <ff2c9fa2018b15fa74b3\.315532861@.*
+  In-Reply-To: <patchbomb\.315532860@[^>]*>
+  References: <patchbomb\.315532860@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:01 +0000
   From: test
@@ -1897,9 +1897,9 @@ test outgoing:
   Content-Transfer-Encoding: 8bit
   Subject: [PATCH 2 of 8] charset=utf-8; content-transfer-encoding: base64
   X-Mercurial-Node: c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  Message-Id: <c3c9e37db9f4fe4882cd.315532862@.*
-  In-Reply-To: <patchbomb.315532860@[^>]*>
-  References: <patchbomb.315532860@[^>]*>
+  Message-Id: <c3c9e37db9f4fe4882cd\.315532862@.*
+  In-Reply-To: <patchbomb\.315532860@[^>]*>
+  References: <patchbomb\.315532860@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:02 +0000
   From: test
@@ -1932,9 +1932,9 @@ test outgoing:
   Subject: [PATCH 3 of 8] charset=utf-8;
    content-transfer-encoding: quoted-printable
   X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  Message-Id: <c655633f8c87700bb38c.315532863@.*
-  In-Reply-To: <patchbomb.315532860@[^>]*>
-  References: <patchbomb.315532860@[^>]*>
+  Message-Id: <c655633f8c87700bb38c\.315532863@.*
+  In-Reply-To: <patchbomb\.315532860@[^>]*>
+  References: <patchbomb\.315532860@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:03 +0000
   From: test
@@ -1975,9 +1975,9 @@ test outgoing:
   Content-Transfer-Encoding: 8bit
   Subject: [PATCH 4 of 8] charset=us-ascii; content-transfer-encoding: 8bit
   X-Mercurial-Node: 22d0f96be12f5945fd67d101af58f7bc8263c835
-  Message-Id: <22d0f96be12f5945fd67.315532864@.*
-  In-Reply-To: <patchbomb.315532860@[^>]*>
-  References: <patchbomb.315532860@[^>]*>
+  Message-Id: <22d0f96be12f5945fd67\.315532864@.*
+  In-Reply-To: <patchbomb\.315532860@[^>]*>
+  References: <patchbomb\.315532860@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:04 +0000
   From: test
@@ -2002,9 +2002,9 @@ test outgoing:
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 5 of 8] Added tag zero, zero.foo for changeset 8580ff50825a
   X-Mercurial-Node: dd9c2b4b8a8a0934d5523c15f2c119b362360903
-  Message-Id: <dd9c2b4b8a8a0934d552.315532865@.*
-  In-Reply-To: <patchbomb.315532860@[^>]*>
-  References: <patchbomb.315532860@[^>]*>
+  Message-Id: <dd9c2b4b8a8a0934d552\.315532865@.*
+  In-Reply-To: <patchbomb\.315532860@[^>]*>
+  References: <patchbomb\.315532860@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:05 +0000
   From: test
@@ -2030,9 +2030,9 @@ test outgoing:
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 6 of 8] Added tag one, one.patch for changeset 97d72e5f12c7
   X-Mercurial-Node: eae5fcf795eee29d0e45ffc9f519a91cd79fc9ff
-  Message-Id: <eae5fcf795eee29d0e45.315532866@.*
-  In-Reply-To: <patchbomb.315532860@[^>]*>
-  References: <patchbomb.315532860@[^>]*>
+  Message-Id: <eae5fcf795eee29d0e45\.315532866@.*
+  In-Reply-To: <patchbomb\.315532860@[^>]*>
+  References: <patchbomb\.315532860@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:06 +0000
   From: test
@@ -2060,9 +2060,9 @@ test outgoing:
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 7 of 8] Added tag two, two.diff for changeset ff2c9fa2018b
   X-Mercurial-Node: e317db6a6f288748d1f6cb064f3810fcba66b1b6
-  Message-Id: <e317db6a6f288748d1f6.315532867@.*
-  In-Reply-To: <patchbomb.315532860@[^>]*>
-  References: <patchbomb.315532860@[^>]*>
+  Message-Id: <e317db6a6f288748d1f6\.315532867@.*
+  In-Reply-To: <patchbomb\.315532860@[^>]*>
+  References: <patchbomb\.315532860@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:07 +0000
   From: test
@@ -2091,9 +2091,9 @@ test outgoing:
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 8 of 8] d
   X-Mercurial-Node: 2f9fa9b998c5fe3ac2bd9a2b14bfcbeecbc7c268
-  Message-Id: <2f9fa9b998c5fe3ac2bd.315532868[^>]*>
-  In-Reply-To: <patchbomb.315532860@[^>]*>
-  References: <patchbomb.315532860@[^>]*>
+  Message-Id: <2f9fa9b998c5fe3ac2bd\.315532868[^>]*>
+  In-Reply-To: <patchbomb\.315532860@[^>]*>
+  References: <patchbomb\.315532860@[^>]*>
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:08 +0000
   From: test
@@ -2129,7 +2129,7 @@ dest#branch URIs:
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] test
   X-Mercurial-Node: 2f9fa9b998c5fe3ac2bd9a2b14bfcbeecbc7c268
-  Message-Id: <2f9fa9b998c5fe3ac2bd.315532860@.*
+  Message-Id: <2f9fa9b998c5fe3ac2bd\.315532860@.*
   User-Agent: Mercurial-patchbomb/.*
   Date: Tue, 01 Jan 1980 00:01:00 +0000
   From: test

@@ -18,8 +18,8 @@ issue1199: escaping
   $ hg paths
   default = .*/foo%bar
   $ hg showconfig
-  bundle.mainreporoot=.*/foobar
-  paths.default=.*/foo%bar
+  bundle\.mainreporoot=.*/foobar
+  paths\.default=.*/foo%bar
   $ cd ..
 
 issue1829: wrong indentation
@@ -40,7 +40,7 @@ issue1829: wrong indentation
   $ export FAKEPATH
   $ echo '%include $FAKEPATH/no-such-file' > $HGRCPATH
   $ hg version
-  hg: parse error at .*/.hgrc:1: cannot include /path/to/nowhere/no-such-file \(No such file or directory\)
+  hg: parse error at .*/\.hgrc:1: cannot include /path/to/nowhere/no-such-file \(No such file or directory\)
   [255]
   $ unset FAKEPATH
 
@@ -90,23 +90,23 @@ HGPLAIN
 customized hgrc
 
   $ hg showconfig
-  read config from: .*/.hgrc
-  .*/.hgrc:13: alias.log=log -g
-  .*/.hgrc:11: defaults.identify=-n
-  .*/.hgrc:2: ui.debug=true
-  .*/.hgrc:3: ui.fallbackencoding=ASCII
-  .*/.hgrc:4: ui.quiet=true
-  .*/.hgrc:5: ui.slash=true
-  .*/.hgrc:6: ui.traceback=true
-  .*/.hgrc:7: ui.verbose=true
-  .*/.hgrc:8: ui.style=~/.hgstyle
-  .*/.hgrc:9: ui.logtemplate={node}
+  read config from: .*/\.hgrc
+  .*/\.hgrc:13: alias\.log=log -g
+  .*/\.hgrc:11: defaults\.identify=-n
+  .*/\.hgrc:2: ui\.debug=true
+  .*/\.hgrc:3: ui\.fallbackencoding=ASCII
+  .*/\.hgrc:4: ui\.quiet=true
+  .*/\.hgrc:5: ui\.slash=true
+  .*/\.hgrc:6: ui\.traceback=true
+  .*/\.hgrc:7: ui\.verbose=true
+  .*/\.hgrc:8: ui\.style=~/.hgstyle
+  .*/\.hgrc:9: ui\.logtemplate=\{node\}
 
 plain hgrc
 
   $ HGPLAIN=; export HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
-  read config from: .*/.hgrc
+  read config from: .*/\.hgrc
   none: ui.traceback=True
   none: ui.verbose=False
   none: ui.debug=True
