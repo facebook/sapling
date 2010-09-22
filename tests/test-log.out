@@ -585,3 +585,48 @@ diff -r 000000000000 -r 24427303d56f a
 @@ -0,0 +1,1 @@
 +a
 
+% issue2383
+adding a
+adding b
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+created new head
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+(branch merge, don't forget to commit)
+
+% diff
+diff -r b09be438c43a -r 8e07aafe1edc a
+--- a/a	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:00 1970 +0000
+@@ -1,1 +1,1 @@
+-b
++c
+diff -r b09be438c43a -r 8e07aafe1edc b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++b
+
+% log
+changeset:   3:8e07aafe1edc
+tag:         tip
+parent:      2:b09be438c43a
+parent:      1:925d80f479bb
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+files:       a
+description:
+3
+
+
+diff -r b09be438c43a -r 8e07aafe1edc a
+--- a/a	Thu Jan 01 00:00:00 1970 +0000
++++ b/a	Thu Jan 01 00:00:00 1970 +0000
+@@ -1,1 +1,1 @@
+-b
++c
+diff -r b09be438c43a -r 8e07aafe1edc b
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/b	Thu Jan 01 00:00:00 1970 +0000
+@@ -0,0 +1,1 @@
++b
+

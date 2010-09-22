@@ -2533,7 +2533,11 @@ def log(ui, repo, *pats, **opts):
 
         revmatchfn = None
         if opts.get('patch') or opts.get('stat'):
-            revmatchfn = cmdutil.match(repo, fns, default='path')
+            if opts.get('follow') or opts.get('follow_first'):
+                # note: this might be wrong when following through merges
+                revmatchfn = cmdutil.match(repo, fns, default='path')
+            else:
+                revmatchfn = matchfn
 
         displayer.show(ctx, copies=copies, matchfn=revmatchfn)
 

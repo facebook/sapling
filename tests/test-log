@@ -194,5 +194,26 @@ echo '% log -p -R repo'
 cd dir
 hg log -p -R .. ../a
 
+cd ..
 
-exit 0
+echo '% issue2383'
+
+hg init issue2383
+cd issue2383
+echo a > a
+hg ci -Am0
+echo b > b
+hg ci -Am1
+hg co 0
+echo b > a
+hg ci -m2
+hg merge
+echo c > a
+hg ci -m3
+echo
+echo % diff
+hg diff --rev 2:3
+echo
+echo % log
+hg log -vpr 3
+cd ..
