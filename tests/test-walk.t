@@ -216,7 +216,7 @@ Test absolute paths:
   f  beans/pinto     beans/pinto
   f  beans/turtle    beans/turtle
   $ hg debugwalk `pwd`/..
-  abort: .*/\.\. not under root
+  abort: .*/\.\. not under root (re)
   [255]
 
 Test patterns:

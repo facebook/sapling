@@ -240,12 +240,12 @@ Testing --time:
 
   $ hg --cwd a --time id
   8580ff50825a tip
-  Time: real .*
+  Time: real .* (re)
 
 Testing --version:
 
   $ hg --version -q
-  Mercurial Distributed SCM .*
+  Mercurial Distributed SCM .* (re)
 
 Testing -h/--help:
 

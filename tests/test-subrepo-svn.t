@@ -86,7 +86,7 @@ change file in svn and hg, commit
   Transmitting file data .
   Committed revision 3.
   
-  Fetching external item into '.*/s/externals'
+  Fetching external item into '.*/s/externals' (re)
   External at revision 1.
   
   At revision 3.

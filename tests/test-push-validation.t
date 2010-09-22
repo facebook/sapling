@@ -40,7 +40,7 @@ Expected to fail:
 Expected to fail:
 
   $ hg push
-  pushing to .*
+  pushing to .* (re)
   searching for changes
   adding changesets
   adding manifests

@@ -8,8 +8,8 @@
   $ echo "badext2 =" >> $HGRCPATH
 
   $ hg -q help help
-  \*\*\* failed to import extension badext from .*/badext.py: bit bucket overflow
-  \*\*\* failed to import extension badext2: No module named badext2
+  \*\*\* failed to import extension badext from .*/badext.py: bit bucket overflow (re)
+  *** failed to import extension badext2: No module named badext2
   hg help [TOPIC]
   
   show help for a given topic or a help overview

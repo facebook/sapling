@@ -503,9 +503,6 @@ def tsttest(test, options):
 
     def rematch(el, l):
         try:
-            # hack to deal with graphlog, which looks like bogus regexes
-            if el.startswith('|'):
-                el = '\\' + el
             # ensure that the regex matches to the end of the string
             return re.match(el + r'\Z', l)
         except re.error:
@@ -531,10 +528,10 @@ def tsttest(test, options):
 
             if el == l: # perfect match (fast)
                 postout.append("  " + l)
-            elif el and el[2:] and rematch(el, l): # fallback regex match
-                postout.append("  " + el)
-            else: # mismatch - let diff deal with it
-                postout.append("  " + l)
+            elif el and el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l):
+                postout.append("  " + el) # fallback regex match
+            else:
+                postout.append("  " + l) # let diff deal with it
 
     if pos in after:
         postout += after.pop(pos)

@@ -1,6 +1,6 @@
   $ echo "invalid" > $HGRCPATH
   $ hg version
-  hg: parse error at .*/\.hgrc:1: invalid
+  hg: parse error at .*/\.hgrc:1: invalid (re)
   [255]
   $ echo "" > $HGRCPATH
 
@@ -14,12 +14,12 @@ issue1199: escaping
   $ cd foobar
   $ cat .hg/hgrc
   [paths]
-  default = .*/foo%bar
+  default = .*/foo%bar (re)
   $ hg paths
-  default = .*/foo%bar
+  default = .*/foo%bar (re)
   $ hg showconfig
-  bundle\.mainreporoot=.*/foobar
-  paths\.default=.*/foo%bar
+  bundle\.mainreporoot=.*/foobar (re)
+  paths\.default=.*/foo%bar (re)
   $ cd ..
 
 issue1829: wrong indentation
@@ -27,7 +27,7 @@ issue1829: wrong indentation
   $ echo '[foo]' > $HGRCPATH
   $ echo '  x = y' >> $HGRCPATH
   $ hg version
-  hg: parse error at .*/\.hgrc:2:   x = y
+  hg: parse error at .*/\.hgrc:2:   x = y (re)
   [255]
 
   $ python -c "print '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n'" \
@@ -40,7 +40,7 @@ issue1829: wrong indentation
   $ export FAKEPATH
   $ echo '%include $FAKEPATH/no-such-file' > $HGRCPATH
   $ hg version
-  hg: parse error at .*/\.hgrc:1: cannot include /path/to/nowhere/no-such-file \(No such file or directory\)
+  hg: parse error at .*/\.hgrc:1: cannot include /path/to/nowhere/no-such-file \(No such file or directory\) (re)
   [255]
   $ unset FAKEPATH
 
@@ -90,23 +90,23 @@ HGPLAIN
 customized hgrc
 
   $ hg showconfig
-  read config from: .*/\.hgrc
-  .*/\.hgrc:13: alias\.log=log -g
-  .*/\.hgrc:11: defaults\.identify=-n
-  .*/\.hgrc:2: ui\.debug=true
-  .*/\.hgrc:3: ui\.fallbackencoding=ASCII
-  .*/\.hgrc:4: ui\.quiet=true
-  .*/\.hgrc:5: ui\.slash=true
-  .*/\.hgrc:6: ui\.traceback=true
-  .*/\.hgrc:7: ui\.verbose=true
-  .*/\.hgrc:8: ui\.style=~/.hgstyle
-  .*/\.hgrc:9: ui\.logtemplate=\{node\}
+  read config from: .*/\.hgrc (re)
+  .*/\.hgrc:13: alias\.log=log -g (re)
+  .*/\.hgrc:11: defaults\.identify=-n (re)
+  .*/\.hgrc:2: ui\.debug=true (re)
+  .*/\.hgrc:3: ui\.fallbackencoding=ASCII (re)
+  .*/\.hgrc:4: ui\.quiet=true (re)
+  .*/\.hgrc:5: ui\.slash=true (re)
+  .*/\.hgrc:6: ui\.traceback=true (re)
+  .*/\.hgrc:7: ui\.verbose=true (re)
+  .*/\.hgrc:8: ui\.style=~/.hgstyle (re)
+  .*/\.hgrc:9: ui\.logtemplate=\{node\} (re)
 
 plain hgrc
 
   $ HGPLAIN=; export HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
-  read config from: .*/\.hgrc
+  read config from: .*/\.hgrc (re)
   none: ui.traceback=True
   none: ui.verbose=False
   none: ui.debug=True

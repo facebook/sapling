@@ -299,7 +299,7 @@ Don't allow moving tag without -f:
 Strip 1: expose an old head:
 
   $ hg --config extensions.mq= strip 5
-  saved backup bundle to .*
+  saved backup bundle to .* (re)
   $ hg tags                  # partly stale cache
   tip                                5:735c3ca72986
   bar                                1:78391a272241
@@ -310,7 +310,7 @@ Strip 1: expose an old head:
 Strip 2: destroy whole branch, no old head exposed
 
   $ hg --config extensions.mq= strip 4
-  saved backup bundle to .*
+  saved backup bundle to .* (re)
   $ hg tags                  # partly stale
   tip                                4:735c3ca72986
   bar                                0:bbd179dfa0a7

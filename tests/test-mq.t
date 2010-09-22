@@ -135,7 +135,7 @@ qinit -c should create both files if they don't exist
   guards
   $ cat .hg/patches/series
   $ hg qinit -c
-  abort: repository .* already exists!
+  abort: repository .* already exists! (re)
   [255]
   $ cd ..
 
@@ -237,9 +237,9 @@ qrefresh
   $ cat .hg/patches/test.patch
   foo bar
   
-  diff -r [a-f0-9]* a
-  --- a/a\t(?P<date>.*)
-  \+\+\+ b/a\t(?P<date2>.*)
+  diff -r [a-f0-9]* a (re)
+  --- a/a\t(?P<date>.*) (re)
+  \+\+\+ b/a\t(?P<date2>.*) (re)
   @@ -1,1 +1,2 @@
    a
   +a
@@ -290,7 +290,7 @@ Dump the tag cache to ensure that it has exactly one head after qpush.
 .hg/tags.cache (pre qpush):
 
   $ cat .hg/tags.cache
-  1 [\da-f]{40}
+  1 [\da-f]{40} (re)
   
   $ hg qpush
   applying test.patch
@@ -300,7 +300,7 @@ Dump the tag cache to ensure that it has exactly one head after qpush.
 .hg/tags.cache (post qpush):
 
   $ cat .hg/tags.cache
-  2 [\da-f]{40}
+  2 [\da-f]{40} (re)
   
   $ checkundo qpush
   $ cd ..
@@ -737,7 +737,7 @@ strip
   adding x
   $ hg strip tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to .*
+  saved backup bundle to .* (re)
   $ hg unbundle .hg/strip-backup/*
   adding changesets
   adding manifests
@@ -760,7 +760,7 @@ strip with local changes, should complain
 
   $ hg strip -f tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to .*
+  saved backup bundle to .* (re)
 
 
 cd b; hg qrefresh
@@ -782,14 +782,14 @@ cd b; hg qrefresh
   foo
   
   diff -r cb9a9f314b8b a
-  --- a/a\t(?P<date>.*)
-  \+\+\+ b/a\t(?P<date>.*)
+  --- a/a\t(?P<date>.*) (re)
+  \+\+\+ b/a\t(?P<date>.*) (re)
   @@ -1,1 +1,2 @@
    a
   +a
   diff -r cb9a9f314b8b b/f
-  --- /dev/null\t(?P<date>.*)
-  \+\+\+ b/b/f\t(?P<date>.*)
+  --- /dev/null\t(?P<date>.*) (re)
+  \+\+\+ b/b/f\t(?P<date>.*) (re)
   @@ -0,0 +1,1 @@
   +f
 
@@ -800,8 +800,8 @@ hg qrefresh .
   foo
   
   diff -r cb9a9f314b8b b/f
-  --- /dev/null\t(?P<date>.*)
-  \+\+\+ b/b/f\t(?P<date>.*)
+  --- /dev/null\t(?P<date>.*) (re)
+  \+\+\+ b/b/f\t(?P<date>.*) (re)
   @@ -0,0 +1,1 @@
   +f
   $ hg status
@@ -1118,7 +1118,7 @@ strip again
   
   $ hg strip 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to .*
+  saved backup bundle to .* (re)
   $ checkundo strip
   $ hg log
   changeset:   1:20cbbe65cff7

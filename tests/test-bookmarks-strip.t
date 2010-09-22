@@ -50,7 +50,7 @@ bookmarks updated?
 strip to revision 1
 
   $ hg strip 1
-  saved backup bundle to .*
+  saved backup bundle to .* (re)
 
 list bookmarks
 

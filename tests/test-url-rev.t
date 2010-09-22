@@ -42,7 +42,7 @@ Test basic functionality of url#rev syntax
   
   $ cat clone/.hg/hgrc
   [paths]
-  default = .*/repo#foo
+  default = .*/repo#foo (re)
 
 Changing original repo:
 

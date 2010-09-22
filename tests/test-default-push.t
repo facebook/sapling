@@ -18,7 +18,7 @@
 Push should push to 'default' when 'default-push' not set:
 
   $ hg --cwd b push
-  pushing to .*/a
+  pushing to .*/a (re)
   searching for changes
   adding changesets
   adding manifests
@@ -29,7 +29,7 @@ Push should push to 'default-push' when set:
 
   $ echo 'default-push = ../c' >> b/.hg/hgrc
   $ hg --cwd b push
-  pushing to .*/c
+  pushing to .*/c (re)
   searching for changes
   adding changesets
   adding manifests

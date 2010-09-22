@@ -37,7 +37,7 @@ bookmark list
 rebase
 
   $ hg rebase -s two -d one
-  saved backup bundle to .*
+  saved backup bundle to .* (re)
 
   $ hg log
   changeset:   3:9163974d1cb5

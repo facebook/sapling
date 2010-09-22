@@ -255,7 +255,7 @@ qrefresh --short tests:
 diff shows what is not in patch:
 
   $ hg diff
-  diff -r ............ orphanchild
+  diff -r ............ orphanchild (re)
   --- /dev/null
   +++ b/orphanchild
   @@ -0,0 +1,1 @@

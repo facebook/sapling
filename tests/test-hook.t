@@ -415,12 +415,12 @@ make sure --traceback works
   $ echo >> foo
   $ hg ci --debug -d '0 0' -m 'change foo'
   foo
-  calling hook commit\.auto: <function autohook at .*>
+  calling hook commit\.auto: <function autohook at .*> (re)
   Automatically installed hook
   committed changeset 1:52998019f6252a2b893452765fcb0a47351a5708
 
   $ hg showconfig hooks
-  hooks\.commit\.auto=<function autohook at .*>
+  hooks\.commit\.auto=<function autohook at .*> (re)
 
 test python hook configured with python:[file]:[hook] syntax
 
