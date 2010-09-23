@@ -8,7 +8,7 @@
 from common import NoRepo, checktool, commandline, commit, converter_source
 from mercurial.i18n import _
 from mercurial import util
-import os, shutil, tempfile
+import os, shutil, tempfile, re
 
 # The naming drift of ElementTree is fun!
 
@@ -31,11 +31,8 @@ class darcs_source(converter_source, commandline):
         converter_source.__init__(self, ui, path, rev=rev)
         commandline.__init__(self, ui, 'darcs')
 
-        # check for _darcs, ElementTree, _darcs/inventory so that we can
-        # easily skip test-convert-darcs if ElementTree is not around
-        if not os.path.exists(os.path.join(path, '_darcs', 'inventories')):
-            raise NoRepo(_("%s does not look like a darcs repository") % path)
-
+        # check for _darcs, ElementTree so that we can easily skip
+        # test-convert-darcs if ElementTree is not around
         if not os.path.exists(os.path.join(path, '_darcs')):
             raise NoRepo(_("%s does not look like a darcs repository") % path)
 
@@ -54,6 +51,15 @@ class darcs_source(converter_source, commandline):
         self.changes = {}
         self.parents = {}
         self.tags = {}
+
+        # Check darcs repository format
+        format = self.format()
+        if format:
+            if format in ('darcs-1.0', 'hashed'):
+                raise NoRepo(_("%s repository format is unsupported, "
+                               "please upgrade") % format)
+        else:
+            self.ui.warn(_('failed to detect repository format!'))
 
     def before(self):
         self.tmppath = tempfile.mkdtemp(
@@ -90,6 +96,15 @@ class darcs_source(converter_source, commandline):
         etree.parse(fp)
         self.checkexit(fp.close())
         return etree.getroot()
+
+    def format(self):
+        output, status = self.run('show', 'repo', no_files=True,
+                                  repodir=self.path)
+        self.checkexit(status)
+        m = re.search(r'^\s*Format:\s*(.*)$', output, re.MULTILINE)
+        if not m:
+            return None
+        return ','.join(sorted(f.strip() for f in m.group(1).split(',')))
 
     def manifest(self):
         man = []

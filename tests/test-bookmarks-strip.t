@@ -58,3 +58,30 @@ list bookmarks
    * test                      1:8cf31af87a2b
    * test2                     1:8cf31af87a2b
 
+immediate rollback and reentrancy issue
+
+  $ echo "mq=!" >> $HGRCPATH
+  $ hg init repo
+  $ cd repo
+  $ echo a > a
+  $ hg ci -Am adda
+  adding a
+  $ echo b > b
+  $ hg ci -Am addb
+  adding b
+  $ hg bookmarks markb
+  $ hg rollback
+  rolling back to revision 0 (undo commit)
+
+are you there?
+
+  $ hg bookmarks
+  no bookmarks set
+
+can you be added again?
+
+  $ hg bookmarks markb
+  $ hg bookmarks
+   * markb                     0:07f494440405
+  $ cd ..
+

@@ -1,3 +1,5 @@
+% try converting darcs1 repository
+darcs-1.0 repository format is unsupported, please upgrade
 % initialize darcs repo
 Finished recording patch 'p0'
 % branch and update
