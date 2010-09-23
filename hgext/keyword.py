@@ -52,8 +52,9 @@ Example::
     # prefer svn- over cvs-like default keywordmaps
     svn = True
 
-NOTE: the more specific you are in your filename patterns the less you
-lose speed in huge repositories.
+.. note::
+   The more specific you are in your filename patterns the less you
+   lose speed in huge repositories.
 
 For [keywordmaps] template mapping and expansion demonstration and
 control run :hg:`kwdemo`. See :hg:`help templates` for a list of

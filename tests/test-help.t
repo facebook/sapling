@@ -499,10 +499,11 @@ Test command without options
       Option -q/--quiet hides untracked (unknown and ignored) files unless
       explicitly requested with -u/--unknown or -i/--ignored.
   
-      NOTE: status may appear to disagree with diff if permissions have changed
-      or a merge has occurred. The standard diff format does not report
-      permission changes and diff only reports changes relative to one merge
-      parent.
+      Note:
+         status may appear to disagree with diff if permissions have changed or
+         a merge has occurred. The standard diff format does not report
+         permission changes and diff only reports changes relative to one merge
+         parent.
   
       If one revision is given, it is used as the base revision. If two
       revisions are given, the differences between them are shown. The --change

@@ -1487,9 +1487,10 @@ def export(ui, repo, *changesets, **opts):
     branch name (if non-default), changeset hash, parent(s) and commit
     comment.
 
-    NOTE: export may generate unexpected diff output for merge
-    changesets, as it will compare the merge changeset against its
-    first parent only.
+    .. note::
+       export may generate unexpected diff output for merge
+       changesets, as it will compare the merge changeset against its
+       first parent only.
 
     Output may be to a file, in which case the name of the file is
     given using a format string. The formatting rules are as follows:
@@ -2445,10 +2446,11 @@ def log(ui, repo, *pats, **opts):
     each commit. When the -v/--verbose switch is used, the list of
     changed files and full commit message are shown.
 
-    NOTE: log -p/--patch may generate unexpected diff output for merge
-    changesets, as it will only compare the merge changeset against
-    its first parent. Also, only files different from BOTH parents
-    will appear in files:.
+    .. note::
+       log -p/--patch may generate unexpected diff output for merge
+       changesets, as it will only compare the merge changeset against
+       its first parent. Also, only files different from BOTH parents
+       will appear in files:.
 
     Returns 0 on success.
     """
@@ -3002,11 +3004,13 @@ def resolve(ui, repo, *pats, **opts):
 def revert(ui, repo, *pats, **opts):
     """restore individual files or directories to an earlier state
 
-    NOTE: This command is most likely not what you are looking for. revert
-    will partially overwrite content in the working directory without changing
-    the working directory parents. Use :hg:`update -r rev` to check out earlier
-    revisions, or :hg:`update --clean .` to undo a merge which has added
-    another parent.
+    .. note::
+       This command is most likely not what you are looking for.
+       revert will partially overwrite content in the working
+       directory without changing the working directory parents. Use
+       :hg:`update -r rev` to check out earlier revisions, or
+       :hg:`update --clean .` to undo a merge which has added another
+       parent.
 
     With no revision specified, revert the named files or directories
     to the contents they had in the parent of the working directory.
@@ -3372,10 +3376,11 @@ def status(ui, repo, *pats, **opts):
     Option -q/--quiet hides untracked (unknown and ignored) files
     unless explicitly requested with -u/--unknown or -i/--ignored.
 
-    NOTE: status may appear to disagree with diff if permissions have
-    changed or a merge has occurred. The standard diff format does not
-    report permission changes and diff only reports changes relative
-    to one merge parent.
+    .. note::
+       status may appear to disagree with diff if permissions have
+       changed or a merge has occurred. The standard diff format does
+       not report permission changes and diff only reports changes
+       relative to one merge parent.
 
     If one revision is given, it is used as the base revision.
     If two revisions are given, the differences between them are
