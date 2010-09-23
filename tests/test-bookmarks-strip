@@ -43,3 +43,18 @@ hg strip 1 | hidebackup
 echo % list bookmarks
 hg book
 
+echo '% test immediate rollback and reentrancy issue'
+echo "mq=!" >> $HGRCPATH
+hg init repo
+cd repo
+echo a > a
+hg ci -Am adda
+echo b > b
+hg ci -Am addb
+hg bookmarks markb
+hg rollback
+hg bookmarks
+hg bookmarks markb
+hg bookmarks
+cd ..
+

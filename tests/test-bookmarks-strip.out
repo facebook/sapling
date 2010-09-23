@@ -16,3 +16,9 @@ saved backup bundle to
 % list bookmarks
  * test                      1:9f1b7e78eff8
  * test2                     1:9f1b7e78eff8
+% test immediate rollback and reentrancy issue
+adding a
+adding b
+rolling back to revision 0 (undo commit)
+no bookmarks set
+ * markb                     0:07f494440405
