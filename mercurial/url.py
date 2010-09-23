@@ -469,9 +469,6 @@ class httphandler(keepalive.HTTPHandler):
         _generic_start_transaction(self, h, req)
         return keepalive.HTTPHandler._start_transaction(self, h, req)
 
-    def __del__(self):
-        self.close_all()
-
 if has_https:
     class BetterHTTPS(httplib.HTTPSConnection):
         send = keepalive.safesend
