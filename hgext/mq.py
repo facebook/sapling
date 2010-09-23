@@ -1778,8 +1778,9 @@ def applied(ui, repo, patch=None, **opts):
     else:
         start = 0
 
-    return q.qseries(repo, length=end, start=start, status='A',
-                     summary=opts.get('summary'))
+    q.qseries(repo, length=end, start=start, status='A',
+              summary=opts.get('summary'))
+
 
 def unapplied(ui, repo, patch=None, **opts):
     """print the patches not yet applied
@@ -1799,8 +1800,8 @@ def unapplied(ui, repo, patch=None, **opts):
         return 1
 
     length = opts.get('first') and 1 or None
-    return q.qseries(repo, start=start, length=length, status='U',
-                     summary=opts.get('summary'))
+    q.qseries(repo, start=start, length=length, status='U',
+              summary=opts.get('summary'))
 
 def qimport(ui, repo, *filename, **opts):
     """import a patch
@@ -1976,8 +1977,8 @@ def top(ui, repo, **opts):
     q = repo.mq
     t = q.applied and q.series_end(True) or 0
     if t:
-        return q.qseries(repo, start=t - 1, length=1, status='A',
-                         summary=opts.get('summary'))
+        q.qseries(repo, start=t - 1, length=1, status='A',
+                  summary=opts.get('summary'))
     else:
         ui.write(_("no patches applied\n"))
         return 1
@@ -1991,7 +1992,7 @@ def next(ui, repo, **opts):
     if end == len(q.series):
         ui.write(_("all patches applied\n"))
         return 1
-    return q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
+    q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
 
 def prev(ui, repo, **opts):
     """print the name of the previous patch
@@ -2005,8 +2006,8 @@ def prev(ui, repo, **opts):
     if not l:
         ui.write(_("no patches applied\n"))
         return 1
-    return q.qseries(repo, start=l - 2, length=1, status='A',
-                     summary=opts.get('summary'))
+    q.qseries(repo, start=l - 2, length=1, status='A',
+              summary=opts.get('summary'))
 
 def setupheaderopts(ui, opts):
     if not opts.get('user') and opts.get('currentuser'):
