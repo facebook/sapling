@@ -177,7 +177,7 @@ class p4_source(converter_source):
                     elif "k" in flags:
                         keywords = self.re_keywords
 
-            elif code == "text" or code == "binary":
+            elif code in ("text", "binary"):
                 contents += data
 
         if mode is None:

@@ -87,7 +87,7 @@ def tokenize(program):
 # helpers
 
 def getstring(x, err):
-    if x and (x[0] == 'string' or x[0] == 'symbol'):
+    if x and x[0] in ('string', 'symbol'):
         return x[1]
     raise error.ParseError(err)
 
@@ -537,7 +537,7 @@ def optimize(x, small):
                          '-' + getstring(x[1], _("can't negate that"))), small)
     elif op in 'string symbol negate':
         return smallbonus, x # single revisions are small
-    elif op == 'and' or op == 'dagrange':
+    elif op in ('and', 'dagrange'):
         wa, ta = optimize(x[1], True)
         wb, tb = optimize(x[2], True)
         w = min(wa, wb)

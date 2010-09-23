@@ -219,7 +219,7 @@ def parsedag(desc):
                 yield 'n', (r, [p1])
                 p1 = r
                 r += 1
-        elif c == '*' or c == '/':
+        elif c in '*/':
             if c == '*':
                 c = nextch()
             c, pref = nextstring(c)
