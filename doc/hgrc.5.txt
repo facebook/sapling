@@ -699,13 +699,12 @@ Configuration for extensions that need to send email messages.
     Optional. Whether to connect to mail server using TLS. True or
     False. Default: False.
 ``username``
-    Optional. User name to authenticate to SMTP server with. If
-    username is specified, password must also be specified.
+    Optional. User name for authenticating with the SMTP server.
     Default: none.
 ``password``
-    Optional. Password to authenticate to SMTP server with. If
-    username is specified, password must also be specified.
-    Default: none.
+    Optional. Password for authenticating with the SMTP server. If not
+    specified, interactive sessions will prompt the user for a
+    password; non-interactive sessions will fail. Default: none.
 ``local_hostname``
     Optional. It's the hostname that the sender can use to identify
     itself to the MTA.
