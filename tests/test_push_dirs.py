@@ -3,13 +3,9 @@ import test_util
 import unittest
 
 class TestPushDirectories(test_util.TestBase):
-    def setUp(self):
-        test_util.TestBase.setUp(self)
-        test_util.load_fixture_and_fetch('emptyrepo.svndump',
-                                         self.repo_path,
-                                         self.wc_path)
-
     def test_push_dirs(self):
+        self._load_fixture_and_fetch('emptyrepo.svndump')
+
         changes = [
             # Single file in single directory
             ('d1/a', 'd1/a', 'a\n'),
@@ -49,13 +45,9 @@ class TestPushDirectories(test_util.TestBase):
         self.assertEqual(self.svnls('trunk'),
                          ['d2', 'd2/b', 'd31', 'd31/d32', 'd31/d32/a', ])
 
-
-class TestPushDirsNotAtRoot(test_util.TestBase):
     def test_push_new_dir_project_root_not_repo_root(self):
-        test_util.load_fixture_and_fetch('fetch_missing_files_subdir.svndump',
-                                         self.repo_path,
-                                         self.wc_path,
-                                         subdir='foo')
+        self._load_fixture_and_fetch('fetch_missing_files_subdir.svndump',
+                                     subdir='foo')
         changes = [('magic_new/a', 'magic_new/a', 'ohai', ),
                    ]
         self.commitchanges(changes)
@@ -70,10 +62,8 @@ class TestPushDirsNotAtRoot(test_util.TestBase):
                                                    'magic_new/a'])
 
     def test_push_new_file_existing_dir_root_not_repo_root(self):
-        test_util.load_fixture_and_fetch('empty_dir_in_trunk_not_repo_root.svndump',
-                                         self.repo_path,
-                                         self.wc_path,
-                                         subdir='project')
+        self._load_fixture_and_fetch('empty_dir_in_trunk_not_repo_root.svndump',
+                                     subdir='project')
         changes = [('narf/a', 'narf/a', 'ohai', ),
                    ]
         self.commitchanges(changes)
