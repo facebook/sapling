@@ -1753,7 +1753,9 @@ def delete(ui, repo, *patches, **opts):
     return 0
 
 def applied(ui, repo, patch=None, **opts):
-    """print the patches already applied"""
+    """print the patches already applied
+
+    Returns 0 on success."""
 
     q = repo.mq
 
@@ -1780,7 +1782,9 @@ def applied(ui, repo, patch=None, **opts):
                      summary=opts.get('summary'))
 
 def unapplied(ui, repo, patch=None, **opts):
-    """print the patches not yet applied"""
+    """print the patches not yet applied
+
+    Returns 0 on success."""
 
     q = repo.mq
     if patch:
@@ -1828,6 +1832,8 @@ def qimport(ui, repo, *filename, **opts):
     To import an existing patch while renaming it::
 
       hg qimport -e existing-patch -n new-name
+
+    Returns 0 if import succeeded.
     """
     q = repo.mq
     try:
@@ -1846,7 +1852,9 @@ def qinit(ui, repo, create):
 
     This command also creates a series file for ordering patches, and
     an mq-specific .hgignore file in the queue repository, to exclude
-    the status and guards files (these contain mostly transient state)."""
+    the status and guards files (these contain mostly transient state).
+
+    Returns 0 if initialization succeeded."""
     q = repo.mq
     r = q.init(repo, create)
     q.save_dirty()
@@ -1892,6 +1900,8 @@ def clone(ui, source, dest=None, **opts):
 
     The patch directory must be a nested Mercurial repository, as
     would be created by :hg:`init --mq`.
+
+    Return 0 on success.
     '''
     def patchdir(repo):
         url = repo.url()
@@ -1953,12 +1963,16 @@ def commit(ui, repo, *pats, **opts):
     commands.commit(r.ui, r, *pats, **opts)
 
 def series(ui, repo, **opts):
-    """print the entire series file"""
+    """print the entire series file
+
+    Returns 0 on success."""
     repo.mq.qseries(repo, missing=opts.get('missing'), summary=opts.get('summary'))
     return 0
 
 def top(ui, repo, **opts):
-    """print the name of the current patch"""
+    """print the name of the current patch
+
+    Returns 0 on success."""
     q = repo.mq
     t = q.applied and q.series_end(True) or 0
     if t:
@@ -1969,7 +1983,9 @@ def top(ui, repo, **opts):
         return 1
 
 def next(ui, repo, **opts):
-    """print the name of the next patch"""
+    """print the name of the next patch
+
+    Returns 0 on success."""
     q = repo.mq
     end = q.series_end()
     if end == len(q.series):
@@ -1978,7 +1994,9 @@ def next(ui, repo, **opts):
     return q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
 
 def prev(ui, repo, **opts):
-    """print the name of the previous patch"""
+    """print the name of the previous patch
+
+    Returns 0 on success."""
     q = repo.mq
     l = len(q.applied)
     if l == 1:
@@ -2018,6 +2036,8 @@ def new(ui, repo, patch, *args, **opts):
     format. Read the diffs help topic for more information on why this
     is important for preserving permission changes and copy/rename
     information.
+
+    Returns 0 on successful creation of a new patch.
     """
     msg = cmdutil.logmessage(opts)
     def getmsg():
@@ -2051,6 +2071,8 @@ def refresh(ui, repo, *pats, **opts):
     use git-style patches (-g/--git or [diff] git=1) to track copies
     and renames. See the diffs help topic for more information on the
     git diff format.
+
+    Returns 0 on success.
     """
     q = repo.mq
     message = cmdutil.logmessage(opts)
@@ -2084,6 +2106,8 @@ def diff(ui, repo, *pats, **opts):
     last qrefresh, or :hg:`export qtip` if you want to see changes
     made by the current patch without including changes made since the
     qrefresh.
+
+    Returns 0 on success.
     """
     repo.mq.diff(repo, pats, opts)
     return 0
@@ -2099,7 +2123,9 @@ def fold(ui, repo, *files, **opts):
     removed afterwards.
 
     The header for each folded patch will be concatenated with the
-    current patch header, separated by a line of '* * *'."""
+    current patch header, separated by a line of '* * *'.
+
+    Returns 0 on success."""
 
     q = repo.mq
 
@@ -2153,7 +2179,9 @@ def fold(ui, repo, *files, **opts):
     q.save_dirty()
 
 def goto(ui, repo, patch, **opts):
-    '''push or pop patches until named patch is at top of stack'''
+    '''push or pop patches until named patch is at top of stack
+
+    Returns 0 on success.'''
     q = repo.mq
     patch = q.lookup(patch)
     if q.isapplied(patch):
@@ -2181,6 +2209,8 @@ def guard(ui, repo, *args, **opts):
     To set guards on another patch::
 
       hg qguard other.patch -- +2.6.17 -stable
+
+    Returns 0 on success.
     '''
     def status(idx):
         guards = q.series_guards[idx] or ['unguarded']
@@ -2231,7 +2261,9 @@ def guard(ui, repo, *args, **opts):
         status(q.series.index(q.lookup(patch)))
 
 def header(ui, repo, patch=None):
-    """print the header of the topmost or specified patch"""
+    """print the header of the topmost or specified patch
+
+    Returns 0 on success."""
     q = repo.mq
 
     if patch:
@@ -2274,6 +2306,8 @@ def push(ui, repo, patch=None, **opts):
 
     When -f/--force is applied, all local changes in patched files
     will be lost.
+
+    Return 0 on succces.
     """
     q = repo.mq
     mergeq = None
@@ -2298,6 +2332,8 @@ def pop(ui, repo, patch=None, **opts):
     By default, pops off the top of the patch stack. If given a patch
     name, keeps popping off patches until the named patch is at the
     top of the stack.
+
+    Return 0 on success.
     """
     localupdate = True
     if opts.get('name'):
@@ -2315,7 +2351,9 @@ def rename(ui, repo, patch, name=None, **opts):
     """rename a patch
 
     With one argument, renames the current patch to PATCH1.
-    With two arguments, renames PATCH1 to PATCH2."""
+    With two arguments, renames PATCH1 to PATCH2.
+
+    Returns 0 on success."""
 
     q = repo.mq
 
@@ -2439,6 +2477,8 @@ def strip(ui, repo, *revs, **opts):
 
     Use the --no-backup option to discard the backup bundle once the
     operation completes.
+
+    Return 0 on success.
     """
     backup = 'all'
     if opts.get('backup'):
@@ -2515,7 +2555,9 @@ def select(ui, repo, *args, **opts):
     guarded patches.
 
     Use -s/--series to print a list of all guards in the series file
-    (no other arguments needed). Use -v for more information.'''
+    (no other arguments needed). Use -v for more information.
+
+    Returns 0 on success.'''
 
     q = repo.mq
     guards = q.active()
@@ -2602,6 +2644,8 @@ def finish(ui, repo, *revrange, **opts):
     This can be especially useful if your changes have been applied to
     an upstream repository, or if you are about to push your changes
     to upstream.
+
+    Returns 0 on success.
     """
     if not opts.get('applied') and not revrange:
         raise util.Abort(_('no revisions specified'))
@@ -2635,6 +2679,8 @@ def qqueue(ui, repo, name=None, **opts):
 
     To delete an existing queue, use --delete. You cannot delete the currently
     active queue.
+
+    Returns 0 on success.
     '''
 
     q = repo.mq
