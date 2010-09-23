@@ -1,0 +1,49 @@
+# Boring file regexps:
+\.hi$
+\.hi-boot$
+\.o-boot$
+\.o$
+\.o\.cmd$
+# *.ko files aren't boring by default because they might
+# be Korean translations rather than kernel modules.
+# \.ko$
+\.ko\.cmd$
+\.mod\.c$
+(^|/)\.tmp_versions($|/)
+(^|/)CVS($|/)
+\.cvsignore$
+^\.#
+(^|/)RCS($|/)
+,v$
+(^|/)\.svn($|/)
+\.bzr$
+(^|/)SCCS($|/)
+~$
+(^|/)_darcs($|/)
+\.bak$
+\.BAK$
+\.orig$
+\.rej$
+(^|/)vssver\.scc$
+\.swp$
+(^|/)MT($|/)
+(^|/)\{arch\}($|/)
+(^|/).arch-ids($|/)
+(^|/),
+\.prof$
+(^|/)\.DS_Store$
+(^|/)BitKeeper($|/)
+(^|/)ChangeSet($|/)
+\.py[co]$
+\.elc$
+\.class$
+\#
+(^|/)Thumbs\.db$
+(^|/)autom4te\.cache($|/)
+(^|/)config\.(log|status)$
+^\.depend$
+(^|/)(tags|TAGS)$
+#(^|/)\.[^/]
+(^|/|\.)core$
+\.(obj|a|exe|so|lo|la)$
+^\.darcs-temp-mail$
