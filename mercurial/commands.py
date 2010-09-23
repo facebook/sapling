@@ -1569,7 +1569,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         reflags |= re.I
     try:
         regexp = re.compile(pattern, reflags)
-    except Exception, inst:
+    except re.error, inst:
         ui.warn(_("grep: invalid match pattern: %s\n") % inst)
         return 1
     sep, eol = ':', '\n'
