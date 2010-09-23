@@ -246,6 +246,15 @@ def pull(repo, source, heads=[], force=False):
         repo.ui.setconfig('hgsubversion', 'layout', layout)
         repo.ui.note('using %s layout\n' % layout)
 
+    branch = repo.ui.config('hgsubversion', 'branch')
+    if branch:
+        if layout != 'single':
+            msg = ('branch cannot be specified for Subversion clones using '
+                   'standard directory layout')
+            raise hgutil.Abort(msg)
+
+        meta.branchmap['default'] = branch
+
     ui = repo.ui
     start = meta.revmap.youngest
     origrevcount = len(meta.revmap)
@@ -390,7 +399,6 @@ optionmap = {
     'authors': ('hgsubversion', 'authormap'),
     'filemap': ('hgsubversion', 'filemap'),
     'branchmap': ('hgsubversion', 'branchmap'),
-    'singlebranch': ('hgsubversion', 'singlebranch'),
     'stupid': ('hgsubversion', 'stupid'),
     'defaulthost': ('hgsubversion', 'defaulthost'),
     'defaultauthors': ('hgsubversion', 'defaultauthors'),
@@ -407,6 +415,10 @@ def clone(orig, ui, source, dest=None, **opts):
     %(target)s. See 'hg help %(extension)s' for more information on
     them as well as other ways of customising the conversion process.
     """
+
+    branch = opts.get('branch', None)
+    if branch:
+        ui.setconfig('hgsubversion', 'branch', branch[-1])
 
     for opt, (section, name) in optionmap.iteritems():
         if opt in opts and opts[opt]:
@@ -436,6 +448,11 @@ def generic(orig, ui, repo, *args, **opts):
     Subversion %(target)s can be used for %(command)s. See 'hg help
     %(extension)s' for more on the conversion process.
     """
+
+    branch = opts.get('branch', None)
+    if branch:
+        ui.setconfig('hgsubversion', 'branch', branch[-1])
+
     for opt, (section, name) in optionmap.iteritems():
         if opt in opts and opts[opt]:
             if isinstance(repo, str):

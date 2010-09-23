@@ -54,7 +54,6 @@ class SVNMeta(object):
         self.usebranchnames = self.ui.configbool('hgsubversion',
                                                  'usebranchnames', True)
         branchmap = self.ui.config('hgsubversion', 'branchmap')
-        singlebranch = self.ui.config('hgsubversion', 'singlebranch')
 
         # FIXME: test that this hasn't changed! defer & compare?
         if subdir:
@@ -94,8 +93,6 @@ class SVNMeta(object):
         self.branchmap = maps.BranchMap(self.ui, self.branchmapfile)
         if branchmap:
             self.branchmap.load(branchmap)
-        if singlebranch:
-            self.branchmap['default'] = singlebranch
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.filemap = maps.FileMap(repo)

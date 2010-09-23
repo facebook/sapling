@@ -38,7 +38,9 @@ If you instead want to clone just a single directory or branch, clone the
 specific directory path. In the example above, to get *only* trunk, you would
 issue :hg:`clone http://python-nose.googlecode.com/svn/trunk nose-trunk`. This
 works with any directory with a Subversion repository, and is know as a single
-directory clone.
+directory clone. Normally, converted changesets will be marked as belonging to
+the ``default`` branch, but this can be changed by using the ``-b/--branch``
+option.
 
 Pulling new revisions into an already-converted repo is the same as from any
 other Mercurial source. Within the first example above, the following three
@@ -139,6 +141,11 @@ settings:
   hgsubversion.defaultauthors
     Setting this boolean option to false will cause hgsubversion to abort a
     conversion if a revision has an author not listed in the author map.
+
+  hgsubversion.branch
+    Mark converted changesets as belonging to this branch or, if unspecifed,
+     `default`. Please note that this option is not supported for standard
+     layout clones.
 
   hgsubversion.branchmap
     Path to a file for changing branch names during the conversion from

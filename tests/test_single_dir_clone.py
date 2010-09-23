@@ -4,6 +4,7 @@ import errno
 import shutil
 import unittest
 
+from mercurial import dispatch
 from mercurial import commands
 from mercurial import context
 from mercurial import hg
@@ -211,6 +212,44 @@ class TestSingleDir(test_util.TestBase):
         self.pushrevisions()
         self.assertTrue('default' in self.svnls(''))
         self.assertEquals(len(self.repo.branchheads('default')), 1)
+
+    def test_push_single_dir_renamed_branch(self, stupid=False):
+        # Tests pulling and pushing with a renamed branch
+        # Based on test_push_single_dir
+        test_util.load_svndump_fixture(self.repo_path,
+                                       'branch_from_tag.svndump')
+        cmd = ['clone', '--layout=single', '--branch=flaf']
+        if stupid:
+            cmd.append('--stupid')
+        cmd += [test_util.fileurl(self.repo_path), self.wc_path]
+        dispatch.dispatch(cmd)
+
+        def file_callback(repo, memctx, path):
+            if path == 'adding_file':
+                return context.memfilectx(path=path,
+                                          data='foo',
+                                          islink=False,
+                                          isexec=False,
+                                          copied=False)
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
+        ctx = context.memctx(self.repo,
+                             (self.repo['tip'].node(), node.nullid),
+                             'automated test',
+                             ['adding_file'],
+                             file_callback,
+                             'an_author',
+                             '2009-10-19 18:49:30 -0500',
+                             {'branch': 'default',})
+        self.repo.commitctx(ctx)
+        hg.update(self.repo, self.repo['tip'].node())
+        self.pushrevisions()
+        self.assertTrue('adding_file' in self.svnls(''))
+
+        self.assertEquals(set(['flaf']),
+                          set(self.repo[i].branch() for i in self.repo))
+
+    def test_push_single_dir_renamed_branch_stupid(self):
+        self.test_push_single_dir_renamed_branch(True)
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestSingleDir)]
