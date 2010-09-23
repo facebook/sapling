@@ -2,6 +2,10 @@ import test_util
 
 import unittest
 
+from mercurial import context
+from mercurial import hg
+from mercurial import node
+
 class TestPushDirectories(test_util.TestBase):
     def test_push_dirs(self):
         self._load_fixture_and_fetch('emptyrepo.svndump')
@@ -79,6 +83,30 @@ class TestPushDirectories(test_util.TestBase):
         self.pushrevisions()
         self.assertEqual(self.svnls('project/trunk'), ['a' ,])
 
+    def test_push_single_dir_change_in_subdir(self):
+        # Tests simple pushing from default branch to a single dir repo
+        # Changes a file in a subdir (regression).
+        repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
+                                            stupid=False,
+                                            layout='single',
+                                            subdir='tags')
+        def file_callback(repo, memctx, path):
+            return context.memfilectx(path=path,
+                                      data='foo',
+                                      islink=False,
+                                      isexec=False,
+                                      copied=False)
+        ctx = context.memctx(repo,
+                             (repo['tip'].node(), node.nullid),
+                             'automated test',
+                             ['tag_r3/alpha', 'tag_r3/new', 'new_dir/new'],
+                             file_callback,
+                             'an_author',
+                             '2009-10-19 18:49:30 -0500',
+                             {'branch': 'default',})
+        repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        self.pushrevisions()
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestPushDirectories),

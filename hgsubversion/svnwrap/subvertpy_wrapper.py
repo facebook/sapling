@@ -360,21 +360,20 @@ class SubversionRepo(object):
                 if directory and not path.startswith(directory + '/'):
                     return pathidx
 
-                dirent = path[len(directory):].lstrip('/')
                 pathidx += 1
 
                 if path in file_data:
                     # visiting a file
                     base_text, new_text, action = file_data[path]
                     if action == 'modify':
-                        fileeditor = editor.open_file(dirent, base_revision)
+                        fileeditor = editor.open_file(path, base_revision)
                     elif action == 'add':
                         frompath, fromrev = copies.get(path, (None, -1))
                         if frompath:
                             frompath = self.path2url(frompath)
-                        fileeditor = editor.add_file(dirent, frompath, fromrev)
+                        fileeditor = editor.add_file(path, frompath, fromrev)
                     elif action == 'delete':
-                        editor.delete_entry(dirent, base_revision)
+                        editor.delete_entry(path, base_revision)
                         continue
                     else:
                         assert False, 'invalid action \'%s\'' % action
@@ -393,9 +392,9 @@ class SubversionRepo(object):
                 else:
                     # visiting a directory
                     if path in addeddirs:
-                        direditor = editor.add_directory(dirent)
+                        direditor = editor.add_directory(path)
                     elif path in deleteddirs:
-                        direditor = editor.delete_entry(dirent, base_revision)
+                        direditor = editor.delete_entry(path, base_revision)
                         continue
                     else:
                         direditor = editor.open_directory(path)
@@ -404,8 +403,7 @@ class SubversionRepo(object):
                         for p, v in props[path].iteritems():
                             direditor.change_prop(p, v)
 
-                    pathidx = visitdir(direditor, '/'.join((directory, dirent)),
-                                       paths, pathidx)
+                    pathidx = visitdir(direditor, path, paths, pathidx)
                     direditor.close()
 
             return pathidx
