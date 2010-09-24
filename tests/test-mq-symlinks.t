@@ -95,7 +95,8 @@ replace broken symlink with another broken symlink
   $ hg add linka
   $ hg qnew link
   $ hg mv linka linkb
-  $ ln -sf linkb linkb
+  $ rm linkb
+  $ ln -s linkb linkb
   $ hg qnew movelink
   $ hg qpop
   popping movelink
