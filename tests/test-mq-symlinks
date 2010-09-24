@@ -61,6 +61,7 @@ ln -s linka linka
 hg add linka
 hg qnew link
 hg mv linka linkb
+rm linkb
 ln -sf linkb linkb
 hg qnew movelink
 hg qpop
