@@ -141,7 +141,7 @@ cd ../empty
 hg archive ../test-empty
 
 echo '% old file -- date clamped to 1980'
-touch -d 1975-01-01 old
+touch -t 197501010000 old
 hg add old
 hg commit -m old
 hg archive ../old.zip
