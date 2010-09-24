@@ -2049,6 +2049,13 @@ msgstr "necessária versão do darcs 2.1 ou posterior (%r encontrada)"
 msgid "Python ElementTree module is not available"
 msgstr "módulo ElementTree do Python não está disponível"
 
+#, python-format
+msgid "%s repository format is unsupported, please upgrade"
+msgstr "o formato de repositório %s não é suportado, por favor atualize"
+
+msgid "failed to detect repository format!"
+msgstr "falha na detecção do formato do repositório!"
+
 msgid "internal calling inconsistency"
 msgstr "inconsistência interna de chamadas"
 
