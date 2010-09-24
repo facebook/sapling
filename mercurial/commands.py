@@ -2363,11 +2363,6 @@ def incoming(ui, repo, source="default", **opts):
         raise util.Abort(_('cannot combine --bundle and --subrepos'))
 
     ret = hg.incoming(ui, repo, source, opts)
-    if opts.get('subrepos'):
-        ctx = repo[None]
-        for subpath in sorted(ctx.substate):
-            sub = ctx.sub(subpath)
-            ret = min(ret, sub.incoming(ui, source, opts))
     return ret
 
 def init(ui, dest=".", **opts):
@@ -2630,11 +2625,6 @@ def outgoing(ui, repo, dest=None, **opts):
     Returns 0 if there are outgoing changes, 1 otherwise.
     """
     ret = hg.outgoing(ui, repo, dest, opts)
-    if opts.get('subrepos'):
-        ctx = repo[None]
-        for subpath in sorted(ctx.substate):
-            sub = ctx.sub(subpath)
-            ret = min(ret, sub.outgoing(ui, dest, opts))
     return ret
 
 def parents(ui, repo, file_=None, **opts):

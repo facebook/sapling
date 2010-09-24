@@ -409,6 +409,15 @@ def merge(repo, node, force=None, remind=True):
     return stats[3] > 0
 
 def incoming(ui, repo, source, opts):
+    def recurse():
+        ret = 1
+        if opts.get('subrepos'):
+            ctx = repo[None]
+            for subpath in sorted(ctx.substate):
+                sub = ctx.sub(subpath)
+                ret = min(ret, sub.incoming(ui, source, opts))
+        return ret
+
     limit = cmdutil.loglimit(opts)
     source, branches = parseurl(ui.expandpath(source), opts.get('branch'))
     other = repository(remoteui(repo, opts), source)
@@ -426,7 +435,7 @@ def incoming(ui, repo, source, opts):
         except:
             pass
         ui.status(_("no changes found\n"))
-        return 1
+        return recurse()
 
     cleanup = None
     try:
@@ -469,8 +478,19 @@ def incoming(ui, repo, source, opts):
             other.close()
         if cleanup:
             os.unlink(cleanup)
+    recurse()
+    return 0 # exit code is zero since we found incoming changes
 
 def outgoing(ui, repo, dest, opts):
+    def recurse():
+        ret = 1
+        if opts.get('subrepos'):
+            ctx = repo[None]
+            for subpath in sorted(ctx.substate):
+                sub = ctx.sub(subpath)
+                ret = min(ret, sub.outgoing(ui, dest, opts))
+        return ret
+
     limit = cmdutil.loglimit(opts)
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = parseurl(dest, opts.get('branch'))
@@ -483,7 +503,8 @@ def outgoing(ui, repo, dest, opts):
     o = discovery.findoutgoing(repo, other, force=opts.get('force'))
     if not o:
         ui.status(_("no changes found\n"))
-        return 1
+        return recurse()
+
     o = repo.changelog.nodesbetween(o, revs)[0]
     if opts.get('newest_first'):
         o.reverse()
@@ -498,6 +519,8 @@ def outgoing(ui, repo, dest, opts):
         count += 1
         displayer.show(repo[n])
     displayer.close()
+    recurse()
+    return 0 # exit code is zero since we found outgoing changes
 
 def revert(repo, node, choose):
     """revert changes to revision in node without updating dirstate"""

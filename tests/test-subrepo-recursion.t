@@ -273,6 +273,9 @@ Clone and test outgoing:
   comparing with */test-subrepo-recursion.t/repo/foo (glob)
   searching for changes
   no changes found
+  comparing with */test-subrepo-recursion.t/repo/foo/bar (glob)
+  searching for changes
+  no changes found
   [1]
 
 Make nested change:
@@ -306,6 +309,9 @@ Make nested change:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3-4-2
   
+  comparing with */test-subrepo-recursion.t/repo/foo/bar (glob)
+  searching for changes
+  no changes found
 
 Switch to original repo and setup default path:
 
@@ -332,6 +338,10 @@ Test incoming:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3-4-2
   
+  comparing with */test-subrepo-recursion.t/repo2/foo/bar (glob)
+  searching for changes
+  no changes found
+
   $ hg incoming -S --bundle incoming.hg
   abort: cannot combine --bundle and --subrepos
   [255]
