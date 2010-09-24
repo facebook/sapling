@@ -48,6 +48,9 @@ cd ..
 echo "# repo not found error"
 hg clone -e "python ./dummyssh" ssh://user@dummy/nonexistent local
 
+echo "# non-existent absolute path"
+hg clone -e "python ./dummyssh" ssh://user@dummy//$HGTMP/nonexistent local
+
 echo "# clone remote via stream"
 hg clone -e "python ./dummyssh" --uncompressed ssh://user@dummy/remote local-stream 2>&1 | \
   sed -e 's/[0-9][0-9.]*/XXX/g' -e 's/[KM]\(B\/sec\)/X\1/'
@@ -108,4 +111,4 @@ hg push
 hg -R ../remote heads
 
 cd ..
-cat dummylog
+cat dummylog | sed -e "s,$HGTMP,HGTMP,"

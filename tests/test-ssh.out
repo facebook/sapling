@@ -2,6 +2,9 @@
 # repo not found error
 remote: abort: There is no Mercurial repository here (.hg not found)!
 abort: no suitable response from remote hg!
+# non-existent absolute path
+remote: abort: There is no Mercurial repository here (.hg not found)!
+abort: no suitable response from remote hg!
 # clone remote via stream
 streaming all changes
 XXX files to transfer, XXX bytes of data
@@ -96,6 +99,7 @@ date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     z
 
 Got arguments 1:user@dummy 2:hg -R nonexistent serve --stdio
+Got arguments 1:user@dummy 2:hg -R /HGTMP/nonexistent serve --stdio
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio
 Got arguments 1:user@dummy 2:hg -R remote serve --stdio
