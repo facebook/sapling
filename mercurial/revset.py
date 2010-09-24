@@ -48,7 +48,14 @@ def tokenize(program):
             pos += 1 # skip ahead
         elif c in "():,-|&+!": # handle simple operators
             yield (c, None, pos)
-        elif c in '"\'': # handle quoted strings
+        elif (c in '"\'' or c == 'r' and
+              program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
+            if c == 'r':
+                pos += 1
+                c = program[pos]
+                decode = lambda x: x
+            else:
+                decode = lambda x: x.decode('string-escape')
             pos += 1
             s = pos
             while pos < l: # find closing quote
@@ -57,7 +64,7 @@ def tokenize(program):
                     pos += 2
                     continue
                 if d == c:
-                    yield ('string', program[s:pos].decode('string-escape'), s)
+                    yield ('string', decode(program[s:pos]), s)
                     break
                 pos += 1
             else:

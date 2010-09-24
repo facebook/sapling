@@ -7,8 +7,11 @@ operators. Parenthesis can be used for grouping.
 Identifiers such as branch names must be quoted with single or double
 quotes if they contain characters outside of
 ``[._a-zA-Z0-9\x80-\xff]`` or if they match one of the predefined
-predicates. Special characters can be used in quoted identifiers by
-escaping them, e.g., ``\n`` is interpreted as a newline.
+predicates.
+
+Special characters can be used in quoted identifiers by escaping them,
+e.g., ``\n`` is interpreted as a newline. To prevent them from being
+interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``.
 
 There is a single prefix operator:
 
@@ -82,7 +85,8 @@ The following predicates are supported:
   An alias for ``::.`` (ancestors of the working copy's first parent).
 
 ``grep(regex)``
-  Like ``keyword(string)`` but accepts a regex.
+  Like ``keyword(string)`` but accepts a regex. Use ``grep(r'...')``
+  to ensure special escape characters are handled correctly.
 
 ``head()``
   Changeset is a head.
