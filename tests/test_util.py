@@ -17,6 +17,7 @@ sys.path.insert(0, _rootdir)
 
 from mercurial import commands
 from mercurial import context
+from mercurial import dispatch
 from mercurial import hg
 from mercurial import i18n
 from mercurial import node
@@ -126,8 +127,21 @@ def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False,
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
-    _ui = testui(stupid=stupid, layout=layout, startrev=startrev)
-    commands.clone(_ui, fileurl(repo_path), wc_path, noupdate=noupdate)
+
+    cmd = [
+        'clone',
+        '--layout=%s' % layout,
+        '--startrev=%s' % startrev,
+        fileurl(repo_path),
+        wc_path,
+    ]
+    if stupid:
+        cmd.append('--stupid')
+    if noupdate:
+        cmd.append('--noupdate')
+
+    dispatch.dispatch(cmd)
+
     return hg.repository(testui(), wc_path)
 
 def rmtree(path):
