@@ -69,7 +69,7 @@ should fail
   $ hg resolve -m a
   $ hg ci -m merge
 
-issue683
+Issue683: peculiarity with hg revert of an removed then added file
 
   $ hg forget a
   $ hg add a

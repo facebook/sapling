@@ -733,7 +733,7 @@ File log with revs != cset revs:
      summary:     two
   
 
-File log with explicit style (issue 1896):
+Issue1896: File log with explicit style
   $ hg glog --style=default one
   o  changeset:   0:3d578b4a1f53
      user:        test

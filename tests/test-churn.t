@@ -126,7 +126,7 @@ churn with space in alias
   $ cd ..
 
 
-issue 833: ZeroDivisionError
+Issue833: ZeroDivisionError
 
   $ hg init issue-833
   $ cd issue-833

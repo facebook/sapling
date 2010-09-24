@@ -240,7 +240,7 @@ copies
   dangling2 -> void
 
 
-issue995
+Issue995: hg copy -A incorrectly handles symbolic links
 
   $ hg up -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

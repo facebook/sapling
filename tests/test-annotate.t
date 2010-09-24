@@ -207,7 +207,7 @@ linkrev vs rev with -l
   1:2: a
   1:3: a
 
-test issue 589
+Issue589: "undelete" sequence leads to crash
 
 annotate was crashing when trying to --follow something
 

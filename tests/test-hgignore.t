@@ -1,6 +1,6 @@
   $ hg init
 
-Test issue 562: .hgignore requires newline at end:
+Issue562: .hgignore requires newline at end:
 
   $ touch foo
   $ touch bar

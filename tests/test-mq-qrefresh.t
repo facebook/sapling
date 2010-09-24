@@ -402,7 +402,7 @@ Refresh and check changes again:
   $ cd ..
 
 
-Test issue 1441: qrefresh confused after hg rename:
+Issue1441: qrefresh confused after hg rename:
 
   $ hg init repo-1441
   $ cd repo-1441
@@ -422,7 +422,8 @@ Test issue 1441: qrefresh confused after hg rename:
   $ cd ..
 
 
-Issue2025: qrefresh does not honor filtering options when tip != qtip:
+Issue2025: qrefresh does not honor filtering options when tip !=
+qtip:
 
   $ hg init repo-2025
   $ cd repo-2025

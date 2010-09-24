@@ -236,8 +236,7 @@ transplant -c shouldn't use an old changeset
   foo
   $ cd ..
 
-Test transplant --merge (issue 1111)
-test transplant merge
+Issue1111: Test transplant --merge
 
   $ hg init t1111
   $ cd t1111

@@ -1215,7 +1215,7 @@ repo with patches unapplied
   $ cd ..
 
 
-test applying on an empty file (issue 1033)
+Issue1033: test applying on an empty file
 
   $ hg init empty
   $ cd empty

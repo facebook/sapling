@@ -17,7 +17,7 @@ add first sub
   $ hg init s
   $ echo a > s/a
 
-issue2232 - committing a subrepo without .hgsub
+Issue2232: committing a subrepo without .hgsub
 
   $ hg ci -mbad s
   abort: can't commit subrepos without .hgsub
@@ -34,7 +34,7 @@ issue2232 - committing a subrepo without .hgsub
   $ hg ci -m1
   committing subrepository s
 
-issue 2022 - update -C
+Issue2022: update -C
 
   $ echo b > s/a
   $ hg sum
@@ -365,7 +365,8 @@ bogus subrepo path aborts
   abort: missing ] in subrepo source
   [255]
 
-issue 1986
+Issue1986: merge aborts when trying to merge a subrepo that
+shouldn't need merging
 
 # subrepo layout
 #
@@ -546,7 +547,7 @@ test repository cloning
   default = */test-subrepo.t/sub/mercurial/nested_relative (glob)
   $ rm -rf mercurial mercurial2
 
-issue 1977
+Issue1977: multirepo push should fail if subrepo push fails
 
   $ hg init repo
   $ hg init repo/s

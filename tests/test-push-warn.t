@@ -141,7 +141,8 @@
   [1]
 
 
-Issue 450:
+Issue450: push -r warns about remote head creation even if no heads
+will be created
 
   $ hg init ../e
   $ hg push -r 0 ../e
@@ -163,7 +164,8 @@ Issue 450:
   $ cd ..
 
 
-Issue 736:
+Issue736: named branches are not considered for detection of
+unmerged heads in "hg push"
 
   $ hg init f
   $ cd f

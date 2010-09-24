@@ -148,7 +148,8 @@ cloning local tags
 
   $ cd test
 
-issue 601
+Issue601: hg tag doesn't do the right thing if .hgtags or localtags
+doesn't end with EOL
 
   $ python << EOF
   > f = file('.hg/localtags'); last = f.readlines()[-1][:-1]; f.close()

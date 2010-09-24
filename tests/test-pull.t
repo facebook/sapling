@@ -51,7 +51,7 @@
   $ hg rollback --dry-run --verbose
   rolling back to revision -1 \(undo pull: http://foo:\*\*\*@localhost:.*/\) (re)
 
-Issue 622:
+Issue622: hg init && hg pull -u URL doesn't checkout default branch
 
   $ cd ..
   $ hg init empty

@@ -548,7 +548,7 @@ Issue338:
   	[1e4e1b8f71e0]
   
 
-Issue 2130:
+Issue2130: xml output for 'hg heads' is malformed
 
   $ hg heads --style changelog
   2020-01-01  test  <test>
@@ -1298,7 +1298,8 @@ Merged tag overrides:
   $ cd ..
 
 
-Style path expansion (issue1948):
+Style path expansion: issue1948 - ui.style option doesn't work on OSX
+if it is a relative path
 
   $ mkdir -p home/styles
 

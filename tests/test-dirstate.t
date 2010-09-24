@@ -16,7 +16,8 @@
   moving a/b/c/d/z to z/b/c/d/z
   $ cd ..
 
------- issue1790
+Issue1790: dirstate entry locked into unset if file mtime is set into
+the future
 
 Prepare test repo:
 

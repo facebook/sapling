@@ -4,7 +4,7 @@
   [255]
   $ echo "" > $HGRCPATH
 
-issue1199: escaping
+Issue1199: Can't use '%' in hgrc (eg url encoded username)
 
   $ hg init "foo%bar"
   $ hg clone "foo%bar" foobar

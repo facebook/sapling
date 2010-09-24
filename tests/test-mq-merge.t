@@ -1,4 +1,4 @@
-# Test issue 529 - mq aborts when merging patch deleting files
+Issue529: mq aborts when merging patch deleting files
 
   $ checkundo()
   > {

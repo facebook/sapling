@@ -69,7 +69,7 @@ should all fail
 
   $ cd ..
 
-issue 1527
+Issue1527: repeated addremove causes util.Abort
 
   $ hg init rep3; cd rep3
   $ mkdir d

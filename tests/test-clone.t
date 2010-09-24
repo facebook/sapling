@@ -418,7 +418,8 @@ Branch 'stable' is checked out:
   $ rm -r ua
 
 
-Testing issue2267:
+Issue2267: Error in 1.6 hg.py: TypeError: 'NoneType' object is not
+iterable in addbranchrevs()
 
   $ cat <<EOF > simpleclone.py
   > from mercurial import ui, hg

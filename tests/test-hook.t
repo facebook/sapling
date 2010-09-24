@@ -467,7 +467,9 @@ make sure --traceback works on hook import failure
   ImportError: No module named hgext_importfail
   Traceback (most recent call last):
 
-commit and update hooks should run after command completion (issue 1827)
+Issue1827: Hooks Update & Commit not completely post operation
+
+commit and update hooks should run after command completion
 
   $ echo '[hooks]' > .hg/hgrc
   $ echo 'commit = hg id' >> .hg/hgrc

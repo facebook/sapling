@@ -1020,7 +1020,7 @@ log -p -R repo
   summary:     add foo, related
   
 
-Test from/for issue2383
+Issue2383: hg log showing _less_ differences than hg diff
 
   $ hg init issue2383
   $ cd issue2383

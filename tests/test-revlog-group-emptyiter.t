@@ -1,4 +1,4 @@
-issue 1678
+Issue1678: IndexError when pushing
 
 setting up base repo
   $ hg init a

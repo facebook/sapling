@@ -116,9 +116,10 @@ last character omitted in output to avoid infinite loop
 
   $ cd ..
 
+Issue685: trackback in grep -r after rename
+
 Got a traceback when using grep on a single
 revision with renamed files.
-issue 685
 
   $ hg init issue685
   $ cd issue685

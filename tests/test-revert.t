@@ -168,7 +168,7 @@ should print executable
   $ cd ..
 
 
-issue 241
+Issue241: update and revert produces inconsistent repositories
 
   $ hg init a
   $ cd a
@@ -194,7 +194,7 @@ should succeed
   reverting a
 
 
-issue332
+Issue332: confusing message when reverting directory
 
   $ hg ci -A -m b
   adding b/b

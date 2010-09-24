@@ -83,7 +83,7 @@
   t/e.h
   t/x
 
-Test issue294:
+Issue294: hg remove --after dir fails when dir.* also exists
 
   $ cd ..
   $ rm -r t

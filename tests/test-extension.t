@@ -232,7 +232,7 @@ Check hgweb's load order:
   [+] marked option can be specified multiple times
   $ echo 'debugextension = !' >> $HGRCPATH
 
-Issue811:
+Issue811: Problem loading extensions twice (by site and by user)
 
   $ debugpath=`pwd`/debugissue811.py
   $ cat > debugissue811.py <<EOF

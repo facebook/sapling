@@ -232,7 +232,8 @@ issue76 msg2163
   $ hg -R test bundle --base 3 -r 3 -r 3 test-bundle-cset-3.hg
   1 changesets found
 
-issue1910
+Issue1910: 'hg bundle --base $head' does not exclude $head from
+result
 
   $ hg -R test bundle --base 7 test-bundle-cset-7.hg
   4 changesets found

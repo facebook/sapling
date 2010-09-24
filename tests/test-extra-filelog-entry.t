@@ -1,4 +1,4 @@
-test for issue351
+Issue351: mq: qrefresh can create extra revlog entry
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH

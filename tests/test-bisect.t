@@ -287,7 +287,8 @@ skip
   5cd978ea5149
 
 
-reproduce AssertionError, issue1228 and issue1182
+Issue1228: hg bisect crashes when you skip the last rev in bisection
+Issue1182: hg bisect exception
 
   $ hg bisect -r
   $ hg bisect -b 4

@@ -344,9 +344,11 @@ plain diff in email, [PATCH] subject, message body with subject
   $ rm -r b
 
 
-We weren't backing up the correct dirstate file when importing many patches
-(issue963)
-import patch1 patch2; rollback
+Issue963: Parent of working dir incorrect after import of multiple
+patches and rollback
+
+We weren't backing up the correct dirstate file when importing many
+patches: import patch1 patch2; rollback
 
   $ echo line 3 >> a/a
   $ hg --cwd a ci -m'third change'
@@ -542,7 +544,7 @@ Test importing a patch ending with a binary file removal
   $ cd ..
 
 
-test update+rename with common name (issue 927)
+Issue927: test update+rename with common name
 
   $ hg init t
   $ cd t
@@ -661,7 +663,7 @@ test import with similarity and git and strip (issue295 et al.)
   $ cd ..
 
 
-add empty file from the end of patch (issue 1495)
+Issue1495: add empty file from the end of patch
 
   $ hg init addemptyend
   $ cd addemptyend
@@ -716,7 +718,7 @@ some people have patches like the following too
   a
 
 
-first line mistaken for email headers (issue 1859)
+Issue1859: first line mistaken for email headers
 
   $ hg init emailconfusion
   $ cd emailconfusion
@@ -825,7 +827,7 @@ first line mistaken for email headers (issue 1859)
   $ cd ..
 
 
-issue2102
+Issue2102: hg export and hg import speak different languages
 
   $ hg init issue2102
   $ cd issue2102
