@@ -50,7 +50,7 @@ def nlinks(pathname):
         if not dirname:
             dirname = '.'
         dt = win32file.GetDriveType(dirname + '\\')
-        if dt in (4, 1):
+        if dt == 4 or dt == 1:
             # Fake hardlink to force COW for network drives
             links = 2
     return links

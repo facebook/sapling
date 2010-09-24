@@ -640,7 +640,7 @@ def fspath(name, root):
     # If name is absolute, make it relative
     if name.lower().startswith(root.lower()):
         l = len(root)
-        if name[l] in (os.sep, os.altsep):
+        if name[l] == os.sep or name[l] == os.altsep:
             l = l + 1
         name = name[l:]
 
@@ -1008,7 +1008,7 @@ def strdate(string, format, defaults=[]):
             hours = int(tz[1:3])
             minutes = int(tz[3:5])
             return -sign * (hours * 60 + minutes) * 60
-        if tz in ("GMT", "UTC"):
+        if tz == "GMT" or tz == "UTC":
             return 0
         return None
 

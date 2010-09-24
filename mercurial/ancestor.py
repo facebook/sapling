@@ -34,7 +34,7 @@ def ancestor(a, b, pfunc):
             visit.pop()
         else:
             for p in pl:
-                if p in (a, b): # did we find a or b as a parent?
+                if p == a or p == b: # did we find a or b as a parent?
                     return p # we're done
                 if p not in depth:
                     visit.append(p)

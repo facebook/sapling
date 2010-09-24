@@ -496,7 +496,7 @@ def update(repo, node, branchmerge, force, partial):
                 raise util.Abort(_("outstanding uncommitted changes "
                                    "(use 'hg status' to list changes)"))
         elif not overwrite:
-            if pa in (p1, p2): # linear
+            if pa == p1 or pa == p2: # linear
                 pass # all good
             elif wc.files() or wc.deleted():
                 raise util.Abort(_("crosses branches (use 'hg merge' to merge "

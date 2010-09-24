@@ -110,7 +110,7 @@ class Merge3Text(object):
             if what == 'unchanged':
                 for i in range(t[1], t[2]):
                     yield self.base[i]
-            elif what in ('a', 'same'):
+            elif what == 'a' or what == 'same':
                 for i in range(t[1], t[2]):
                     yield self.a[i]
             elif what == 'b':
@@ -142,7 +142,7 @@ class Merge3Text(object):
             if what == 'unchanged':
                 for i in range(t[1], t[2]):
                     yield 'u | ' + self.base[i]
-            elif what in ('a', 'same'):
+            elif what == 'a' or what == 'same':
                 for i in range(t[1], t[2]):
                     yield what[0] + ' | ' + self.a[i]
             elif what == 'b':
@@ -181,7 +181,7 @@ class Merge3Text(object):
             what = t[0]
             if what == 'unchanged':
                 yield what, self.base[t[1]:t[2]]
-            elif what in ('a', 'same'):
+            elif what == 'a' or what == 'same':
                 yield what, self.a[t[1]:t[2]]
             elif what == 'b':
                 yield what, self.b[t[1]:t[2]]

@@ -531,7 +531,7 @@ class dirstate(object):
                     match.dir(nf)
                     if not dirignore(nf):
                         wadd(nf)
-                elif kind in (regkind, lnkkind):
+                elif kind == regkind or kind == lnkkind:
                     results[nf] = st
                 else:
                     badfn(ff, badtype(kind))

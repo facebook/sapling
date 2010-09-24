@@ -25,7 +25,7 @@ def moduledoc(file):
             break
 
     start = line[:3]
-    if start in ('"""', "'''"):
+    if start == '"""' or start == "'''":
         line = line[3:]
         while line:
             if line.rstrip().endswith(start):
