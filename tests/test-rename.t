@@ -265,7 +265,7 @@ overwrite existing files (d2/b)
   $ diff -u d1/b d2/b
   --- d1/b	* (glob)
   +++ d2/b	* (glob)
-  @@ -1 +1 @@
+  @@ * (glob)
   -d1/b
   +d2/b
   [1]
