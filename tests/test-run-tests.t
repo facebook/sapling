@@ -33,5 +33,5 @@ Literal match ending in " (re)":
 
 Exit code:
 
-  $ false
+  $ (exit 1) 
   [1]

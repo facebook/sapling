@@ -269,9 +269,6 @@ skip
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     msg 1
   
-  $ false
-  [1]
-
 
   $ hg bisect -r
   $ hg bisect -g tip
