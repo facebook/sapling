@@ -9,7 +9,7 @@ SVN wants all paths to start with a slash. Unfortunately, Windows ones
 don't. Handle that.
 
   $ escapedwd=`pwd | fix_path`
-  $ expr "$escapedwd" : / > /dev/null || escapedwd="/$escapedwd"
+  $ expr "$escapedwd" : '\/' > /dev/null || escapedwd="/$escapedwd"
   $ escapedwd=`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$escapedwd"`
 
 create subversion repo
