@@ -40,8 +40,10 @@ hgserve
 echo % With -v and -p HGPORT2
 hgserve -p "$HGPORT2"
 
-echo '% With -v and -p http (should fail)'
-KILLQUIETLY=Y hgserve -p http; KILLQUIETLY=N
+echo '% With -v and -p echo (should fail because low port)'
+KILLQUIETLY=Y
+hgserve -p echo
+KILLQUIETLY=N
 
 echo % With --prefix foo
 hgserve --prefix foo
