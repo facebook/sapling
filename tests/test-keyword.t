@@ -375,10 +375,48 @@ File a should be clean
 
   $ hg status -A a
   C a
-
   $ rm msg
-  $ hg rollback
+
+rollback and revert expansion
+
+  $ cat a
+  expand $Id: a,v 59f969a3b52c 1970/01/01 00:00:01 test $
+  foo
+  do not process $Id:
+  xxx $
+  bar
+  $ hg --verbose rollback
   rolling back to revision 2 (undo commit)
+  overwriting a expanding keywords
+  $ hg status a
+  M a
+  $ cat a
+  expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
+  foo
+  do not process $Id:
+  xxx $
+  bar
+  $ echo '$Id$' > y
+  $ echo '$Id$' > z
+  $ hg add y
+  $ hg commit -Am "rollback only" z
+  $ cat z
+  $Id: z,v 45a5d3adce53 1970/01/01 00:00:00 test $
+  $ hg --verbose rollback
+  rolling back to revision 2 (undo commit)
+  overwriting z shrinking keywords
+
+Only z should be overwritten
+
+  $ hg status a y z
+  M a
+  A y
+  A z
+  $ cat z
+  $Id$
+  $ hg forget y z
+  $ rm y z
+
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
