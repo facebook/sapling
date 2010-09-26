@@ -1,20 +1,0 @@
-% test issue352
-adding hello
-abort: '\n' and '\r' disallowed in filenames: 'he\rllo'
-adding hello
-abort: '\n' and '\r' disallowed in filenames: 'he\rllo'
-adding hell
-o
-abort: '\n' and '\r' disallowed in filenames: 'hell\no'
-adding hell
-o
-abort: '\n' and '\r' disallowed in filenames: 'hell\no'
-f  hello  hello
-f  hell
-o  hell
-o
-% test issue2039
-[0;35;1;4m? foo[0m
-[0;35;1;4mbar[0m
-[0;35;1;4m? foo[0m
-[0;35;1;4mbar.baz[0m
