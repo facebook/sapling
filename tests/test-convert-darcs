@@ -18,7 +18,8 @@ if hg convert dummy 2>&1 | grep ElementTree > /dev/null; then
 fi
 
 echo '% try converting darcs1 repository'
-hg convert -s darcs "$TESTDIR/darcs/darcs1" 2>&1 | grep darcs-1.0
+hg clone -q "$TESTDIR/darcs1.hg" darcs
+hg convert -s darcs darcs/darcs1 2>&1 | grep darcs-1.0
 
 echo % initialize darcs repo
 mkdir darcs-repo
