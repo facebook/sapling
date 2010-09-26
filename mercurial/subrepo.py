@@ -220,7 +220,7 @@ class abstractsubrepo(object):
         """
         raise NotImplementedError
 
-    def checknested(path):
+    def checknested(self, path):
         """check if path is a subrepository within this repository"""
         return False
 
