@@ -1,9 +1,0 @@
-% status without inotify
-A a
-! b
-% inserve
-% status
-A a
-! b
-? hg.pid
-Are we able to kill the service? if not, the service died on some error
