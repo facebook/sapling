@@ -878,7 +878,7 @@ Expansion in changeset but not in file
   foobranch
   expand $Id: a 5a4da427c162 Thu, 01 Jan 1970 00:00:00 +0000 test $
 
-Switch of expansion
+Turn off expansion
 
   $ hg -q rollback
   $ hg -q update -C
