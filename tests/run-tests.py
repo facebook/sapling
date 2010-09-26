@@ -362,10 +362,11 @@ def installhg(options):
         # when they happen.
         nohome = ''
     cmd = ('%s setup.py %s clean --all'
+           ' build --build-base="%s"'
            ' install --force --prefix="%s" --install-lib="%s"'
            ' --install-scripts="%s" %s >%s 2>&1'
-           % (sys.executable, pure, INST, PYTHONDIR, BINDIR, nohome,
-              installerrs))
+           % (sys.executable, pure, os.path.join(HGTMP, "build"),
+              INST, PYTHONDIR, BINDIR, nohome, installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
         if not options.verbose:
