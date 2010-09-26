@@ -10,10 +10,10 @@ test stripping of filelogs where the linkrev doesn't always increase
   >     hg up -qC null
   >     count=1
   >     for i in "$@"; do
-  > 	for f in $i; do
-  > 	    echo $count > $f
-  > 	done
-  > 	count=`expr $count + 1`
+  >         for f in $i; do
+  >             echo $count > $f
+  >         done
+  >         count=`expr $count + 1`
   >     done
   >     hg commit -qAm "$*"
   > }
