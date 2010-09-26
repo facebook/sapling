@@ -1,7 +1,0 @@
-% fail
-abort: inotify-server: cannot start: .hg/inotify.sock is a broken symlink
-inotify-client: could not start inotify server: child process failed to start
-abort: inotify-server: cannot start: .hg/inotify.sock is a broken symlink
-% inserve
-% status
-? hg.pid
