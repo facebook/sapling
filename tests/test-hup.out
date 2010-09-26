@@ -1,7 +1,0 @@
-0
-0
-adding changesets
-transaction abort!
-rollback completed
-killed!
-.hg/00changelog.i .hg/journal.branch .hg/journal.desc .hg/journal.dirstate .hg/requires .hg/store .hg/store/00changelog.i .hg/store/00changelog.i.a
