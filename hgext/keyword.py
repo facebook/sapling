@@ -198,6 +198,7 @@ class kwtemplater(object):
             candidates = [f for f in ctx.files() if f in ctx]
         candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
         if candidates:
+            restrict = self.restrict
             self.restrict = True        # do not expand when reading
             mf = ctx.manifest()
             msg = (expand and _('overwriting %s expanding keywords\n')
@@ -223,7 +224,7 @@ class kwtemplater(object):
                         self.repo.dirstate.normal(f)
                     elif self.record:
                         self.repo.dirstate.normallookup(f)
-            self.restrict = False
+            self.restrict = restrict
 
     def shrinktext(self, text):
         '''Unconditionally removes all keyword substitutions from text.'''
