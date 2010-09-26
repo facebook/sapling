@@ -517,12 +517,8 @@ def reposetup(ui, repo):
 
     def kw_diff(orig, repo, node1=None, node2=None, match=None, changes=None,
                 opts=None, prefix=''):
-        '''Monkeypatch patch.diff to avoid expansion except when
-        comparing against working dir.'''
-        if node2 is not None:
-            kwt.match = util.never
-        elif node1 is not None and node1 != repo['.'].node():
-            kwt.restrict = True
+        '''Monkeypatch patch.diff to avoid expansion.'''
+        kwt.restrict = True
         return orig(repo, node1, node2, match, changes, opts, prefix)
 
     def kwweb_skip(orig, web, req, tmpl):
@@ -548,8 +544,7 @@ def reposetup(ui, repo):
     repo.__class__ = kwrepo
 
     extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
-    if not kwt.restrict:
-        extensions.wrapfunction(patch, 'diff', kw_diff)
+    extensions.wrapfunction(patch, 'diff', kw_diff)
     for c in 'annotate changeset rev filediff diff'.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)
     for name in recordextensions.split():
