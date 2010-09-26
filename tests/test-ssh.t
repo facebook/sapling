@@ -6,12 +6,16 @@ This test tries to exercise the ssh functionality with a dummy script
   $ cat <<EOF > dummyssh
   > import sys
   > import os
+  > 
   > os.chdir(os.path.dirname(sys.argv[0]))
   > if sys.argv[1] != "user@dummy":
   >     sys.exit(-1)
+  > 
   > if not os.path.exists("dummyssh"):
   >     sys.exit(-1)
+  > 
   > os.environ["SSH_CLIENT"] = "127.0.0.1 1 2"
+  > 
   > log = open("dummylog", "ab")
   > log.write("Got arguments")
   > for i, arg in enumerate(sys.argv[1:]):
@@ -26,7 +30,7 @@ This test tries to exercise the ssh functionality with a dummy script
   > sys.stdout.write("KABOOM\n")
   > EOF
 
-creating 'remote'
+creating 'remote
 
   $ hg init remote
   $ cd remote
@@ -55,13 +59,12 @@ non-existent absolute path
 
 clone remote via stream
 
-  $ hg clone -e "python ./dummyssh" --uncompressed ssh://user@dummy/remote local-stream 2>&1 | \
-  >   sed -e 's/[0-9][0-9.]*/XXX/g' -e 's/[KM]\(B\/sec\)/X\1/'
+  $ hg clone -e "python ./dummyssh" --uncompressed ssh://user@dummy/remote local-stream
   streaming all changes
-  XXX files to transfer, XXX bytes of data
-  transferred XXX bytes in XXX seconds (XXX XB/sec)
+  4 files to transfer, 392 bytes of data
+  transferred 392 bytes in * seconds (*B/sec) (glob)
   updating to branch default
-  XXX files updated, XXX files merged, XXX files removed, XXX files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd local-stream
   $ hg verify
   checking changesets
