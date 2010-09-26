@@ -229,7 +229,7 @@ class hgbuildext(build_ext):
         try:
             build_ext.build_extension(self, ext)
         except CCompilerError:
-            if not hasattr(ext, 'optional') or not ext.optional:
+            if not getattr(ext, 'optional', False):
                 raise
             log.warn("Failed to build optional extension '%s' (skipping)",
                      ext.name)
