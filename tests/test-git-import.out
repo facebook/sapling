@@ -80,3 +80,10 @@ foo
 applying patch from stdin
 14:c4cd9cdeaa74
 foo
+% move text file and patch as binary
+adding text2
+applying patch from stdin
+'a\nb\n\x00'
+A binary2
+  text2
+R text2

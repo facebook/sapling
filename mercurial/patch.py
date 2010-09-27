@@ -1184,7 +1184,9 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
                 gp.path = pathstrip(gp.path, strip - 1)[1]
                 if gp.oldpath:
                     gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
-                if gp.op in ('COPY', 'RENAME'):
+                # Binary patches really overwrite target files, copying them
+                # will just make it fails with "target file exists"
+                if gp.op in ('COPY', 'RENAME') and not gp.binary:
                     copyfn(gp.oldpath, gp.path, cwd)
                 changed[gp.path] = gp
         else:
