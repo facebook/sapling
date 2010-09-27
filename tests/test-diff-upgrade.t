@@ -7,10 +7,13 @@
   $ hg init repo
   $ cd repo
 
+
+
 make a combination of new, changed and deleted file
 
   $ echo regular > regular
   $ echo rmregular > rmregular
+  $ python -c "file('bintoregular', 'wb').write('\0')"
   $ touch rmempty
   $ echo exec > exec
   $ chmod +x exec
@@ -23,6 +26,7 @@ make a combination of new, changed and deleted file
   $ python -c "file('rmbinary', 'wb').write('\0')"
   $ hg ci -Am addfiles
   adding binary
+  adding bintoregular
   adding exec
   adding regular
   adding rmbinary
@@ -38,6 +42,7 @@ make a combination of new, changed and deleted file
   $ rm rmregular
   $ echo exec >> exec
   $ echo newexec > newexec
+  $ echo bintoregular > bintoregular
   $ chmod +x newexec
   $ rm rmexec
   $ chmod +x setexec
@@ -58,40 +63,42 @@ make a combination of new, changed and deleted file
 git=no: regular diff for all files
 
   $ hg autodiff --git=no
-  diff -r b3f053cd7c7f binary
+  diff -r a66d19b9302d binary
   Binary file binary has changed
-  diff -r b3f053cd7c7f exec
+  diff -r a66d19b9302d bintoregular
+  Binary file bintoregular has changed
+  diff -r a66d19b9302d exec
   --- a/exec
   +++ b/exec
   @@ -1,1 +1,2 @@
    exec
   +exec
-  diff -r b3f053cd7c7f newbinary
+  diff -r a66d19b9302d newbinary
   Binary file newbinary has changed
-  diff -r b3f053cd7c7f newexec
+  diff -r a66d19b9302d newexec
   --- /dev/null
   +++ b/newexec
   @@ -0,0 +1,1 @@
   +newexec
-  diff -r b3f053cd7c7f newregular
+  diff -r a66d19b9302d newregular
   --- /dev/null
   +++ b/newregular
   @@ -0,0 +1,1 @@
   +newregular
-  diff -r b3f053cd7c7f regular
+  diff -r a66d19b9302d regular
   --- a/regular
   +++ b/regular
   @@ -1,1 +1,2 @@
    regular
   +regular
-  diff -r b3f053cd7c7f rmbinary
+  diff -r a66d19b9302d rmbinary
   Binary file rmbinary has changed
-  diff -r b3f053cd7c7f rmexec
+  diff -r a66d19b9302d rmexec
   --- a/rmexec
   +++ /dev/null
   @@ -1,1 +0,0 @@
   -rmexec
-  diff -r b3f053cd7c7f rmregular
+  diff -r a66d19b9302d rmregular
   --- a/rmregular
   +++ /dev/null
   @@ -1,1 +0,0 @@
@@ -107,41 +114,39 @@ git=yes: git diff for single regular file
    regular
   +regular
 
-git=auto: regular diff for regular files and removals
+git=auto: regular diff for regular files and non-binary removals
 
-  $ hg autodiff --git=auto regular newregular rmregular rmbinary rmexec
-  diff -r b3f053cd7c7f newregular
+  $ hg autodiff --git=auto regular newregular rmregular rmexec
+  diff -r a66d19b9302d newregular
   --- /dev/null
   +++ b/newregular
   @@ -0,0 +1,1 @@
   +newregular
-  diff -r b3f053cd7c7f regular
+  diff -r a66d19b9302d regular
   --- a/regular
   +++ b/regular
   @@ -1,1 +1,2 @@
    regular
   +regular
-  diff -r b3f053cd7c7f rmbinary
-  Binary file rmbinary has changed
-  diff -r b3f053cd7c7f rmexec
+  diff -r a66d19b9302d rmexec
   --- a/rmexec
   +++ /dev/null
   @@ -1,1 +0,0 @@
   -rmexec
-  diff -r b3f053cd7c7f rmregular
+  diff -r a66d19b9302d rmregular
   --- a/rmregular
   +++ /dev/null
   @@ -1,1 +0,0 @@
   -rmregular
 
-  $ for f in exec newexec setexec unsetexec binary newbinary newempty rmempty; do
+  $ for f in exec newexec setexec unsetexec binary newbinary newempty rmempty rmbinary bintoregular; do
   >     echo
   >     echo '% git=auto: git diff for' $f
   >     hg autodiff --git=auto $f
   > done
   
   % git=auto: git diff for exec
-  diff -r b3f053cd7c7f exec
+  diff -r a66d19b9302d exec
   --- a/exec
   +++ b/exec
   @@ -1,1 +1,2 @@
@@ -190,52 +195,69 @@ git=auto: regular diff for regular files and removals
   % git=auto: git diff for rmempty
   diff --git a/rmempty b/rmempty
   deleted file mode 100644
+  
+  % git=auto: git diff for rmbinary
+  diff --git a/rmbinary b/rmbinary
+  deleted file mode 100644
+  Binary file rmbinary has changed
+  
+  % git=auto: git diff for bintoregular
+  diff --git a/bintoregular b/bintoregular
+  index f76dd238ade08917e6712764a16a22005a50573d..9c42f2b6427d8bf034b7bc23986152dc01bfd3ab
+  GIT binary patch
+  literal 13
+  Uc$`bh%qz(+N=+}#Ni5<5043uE82|tP
+  
 
 git=warn: regular diff with data loss warnings
 
   $ hg autodiff --git=warn
-  diff -r b3f053cd7c7f binary
+  diff -r a66d19b9302d binary
   Binary file binary has changed
-  diff -r b3f053cd7c7f exec
+  diff -r a66d19b9302d bintoregular
+  Binary file bintoregular has changed
+  diff -r a66d19b9302d exec
   --- a/exec
   +++ b/exec
   @@ -1,1 +1,2 @@
    exec
   +exec
-  diff -r b3f053cd7c7f newbinary
+  diff -r a66d19b9302d newbinary
   Binary file newbinary has changed
-  diff -r b3f053cd7c7f newexec
+  diff -r a66d19b9302d newexec
   --- /dev/null
   +++ b/newexec
   @@ -0,0 +1,1 @@
   +newexec
-  diff -r b3f053cd7c7f newregular
+  diff -r a66d19b9302d newregular
   --- /dev/null
   +++ b/newregular
   @@ -0,0 +1,1 @@
   +newregular
-  diff -r b3f053cd7c7f regular
+  diff -r a66d19b9302d regular
   --- a/regular
   +++ b/regular
   @@ -1,1 +1,2 @@
    regular
   +regular
-  diff -r b3f053cd7c7f rmbinary
+  diff -r a66d19b9302d rmbinary
   Binary file rmbinary has changed
-  diff -r b3f053cd7c7f rmexec
+  diff -r a66d19b9302d rmexec
   --- a/rmexec
   +++ /dev/null
   @@ -1,1 +0,0 @@
   -rmexec
-  diff -r b3f053cd7c7f rmregular
+  diff -r a66d19b9302d rmregular
   --- a/rmregular
   +++ /dev/null
   @@ -1,1 +0,0 @@
   -rmregular
   data lost for: binary
+  data lost for: bintoregular
   data lost for: newbinary
   data lost for: newempty
   data lost for: newexec
+  data lost for: rmbinary
   data lost for: rmempty
   data lost for: setexec
   data lost for: unsetexec
@@ -249,7 +271,7 @@ git=abort: fail on execute bit change
 git=abort: succeed on regular file
 
   $ hg autodiff --git=abort regular
-  diff -r b3f053cd7c7f regular
+  diff -r a66d19b9302d regular
   --- a/regular
   +++ b/regular
   @@ -1,1 +1,2 @@

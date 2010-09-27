@@ -335,3 +335,24 @@ Copy then modify the original file:
   $ cat foo3
   foo
 
+Move text file and patch as binary
+
+  $ echo a > text2
+  $ hg ci -Am0
+  adding text2
+  $ hg import -d "1000000 0" -m rename-as-binary - <<"EOF"
+  > diff --git a/text2 b/binary2
+  > rename from text2
+  > rename to binary2
+  > index 78981922613b2afb6025042ff6bd878ac1994e85..10efcb362e9f3b3420fcfbfc0e37f3dc16e29757
+  > GIT binary patch
+  > literal 5
+  > Mc$`b*O5$Pw00T?_*Z=?k
+  > 
+  > EOF
+  applying patch from stdin
+  $ python $TESTDIR/printrepr.py < binary2
+  a
+  b
+  \x00
+  $ hg st --copies --change .  abort: unknown revision '.echo'!
