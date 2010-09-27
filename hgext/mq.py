@@ -3046,7 +3046,7 @@ cmdtable = {
           ('n', 'name', '',
            _('merge queue name (DEPRECATED)'), _('NAME')),
           ('', 'move', None, _('reorder patch series and apply only the patch'))],
-         _('hg qpush [-f] [-l] [-a] [-m] [-n NAME] [--move] [PATCH | INDEX]')),
+         _('hg qpush [-f] [-l] [-a] [-n NAME] [--move] [PATCH | INDEX]')),
     "^qrefresh":
         (refresh,
          [('e', 'edit', None, _('edit commit message')),
