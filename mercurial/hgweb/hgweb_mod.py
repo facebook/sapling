@@ -276,8 +276,8 @@ class hgweb(object):
                 yield {"type" : i, "extension" : spec[2], "node" : nodeid}
 
     archive_specs = {
-        'bz2': ('application/x-tar', 'tbz2', '.tar.bz2', None),
-        'gz': ('application/x-tar', 'tgz', '.tar.gz', None),
+        'bz2': ('application/x-bzip2', 'tbz2', '.tar.bz2', None),
+        'gz': ('application/x-gzip', 'tgz', '.tar.gz', None),
         'zip': ('application/zip', 'zip', '.zip', None),
         }
 
