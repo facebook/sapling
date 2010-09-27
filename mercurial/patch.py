@@ -1588,7 +1588,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                     else:
                         header.append('deleted file mode %s\n' %
                                       gitmode[man1.flags(f)])
-                elif not to:
+                elif not to or util.binary(to):
                     # regular diffs cannot represent empty file deletion
                     losedatafn(f)
             else:

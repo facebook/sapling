@@ -62,7 +62,7 @@ diff --git a/regular b/regular
 @@ -1,1 +1,2 @@
  regular
 +regular
-% git=auto: regular diff for regular files and removals
+% git=auto: regular diff for regular files and non-binary removals
 diff -r b3f053cd7c7f newregular
 --- /dev/null
 +++ b/newregular
@@ -74,8 +74,6 @@ diff -r b3f053cd7c7f regular
 @@ -1,1 +1,2 @@
  regular
 +regular
-diff -r b3f053cd7c7f rmbinary
-Binary file rmbinary has changed
 diff -r b3f053cd7c7f rmexec
 --- a/rmexec
 +++ /dev/null
@@ -129,6 +127,10 @@ new file mode 100644
 % git=auto: git diff for rmempty
 diff --git a/rmempty b/rmempty
 deleted file mode 100644
+% git=auto: git diff for rmbinary
+diff --git a/rmbinary b/rmbinary
+deleted file mode 100644
+Binary file rmbinary has changed
 % git=warn: regular diff with data loss warnings
 diff -r b3f053cd7c7f binary
 Binary file binary has changed
@@ -172,6 +174,7 @@ data lost for: binary
 data lost for: newbinary
 data lost for: newempty
 data lost for: newexec
+data lost for: rmbinary
 data lost for: rmempty
 data lost for: setexec
 data lost for: unsetexec

@@ -43,10 +43,10 @@ hg autodiff --git=no
 echo '% git=no: git diff for single regular file'
 hg autodiff --git=yes regular
 
-echo '% git=auto: regular diff for regular files and removals'
-hg autodiff --git=auto regular newregular rmregular rmbinary rmexec
+echo '% git=auto: regular diff for regular files and non-binary removals'
+hg autodiff --git=auto regular newregular rmregular rmexec
 
-for f in exec newexec setexec unsetexec binary newbinary newempty rmempty; do
+for f in exec newexec setexec unsetexec binary newbinary newempty rmempty rmbinary; do
     echo '% git=auto: git diff for' $f
     hg autodiff --git=auto $f
 done
