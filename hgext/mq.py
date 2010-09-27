@@ -3030,7 +3030,7 @@ cmdtable = {
          [('k', 'keep', None, _('keep patch file')),
           ('r', 'rev', [],
            _('stop managing a revision (DEPRECATED)'), _('REV'))],
-         _('hg qdelete [-k] [-r REV]... [PATCH]...')),
+         _('hg qdelete [-k] ... [PATCH]...')),
     'qfold':
         (fold,
          [('e', 'edit', None, _('edit patch header')),
@@ -3083,7 +3083,7 @@ cmdtable = {
           ('n', 'name', '',
            _('queue name to pop (DEPRECATED)'), _('NAME')),
           ('f', 'force', None, _('forget any local changes to patched files'))],
-         _('hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]')),
+         _('hg qpop [-a] [-f] [PATCH | INDEX]')),
     "^qpush":
         (push,
          [('f', 'force', None, _('apply on top of local changes')),
@@ -3093,7 +3093,7 @@ cmdtable = {
           ('n', 'name', '',
            _('merge queue name (DEPRECATED)'), _('NAME')),
           ('', 'move', None, _('reorder patch series and apply only the patch'))],
-         _('hg qpush [-f] [-l] [-a] [-n NAME] [--move] [PATCH | INDEX]')),
+         _('hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]')),
     "^qrefresh":
         (refresh,
          [('e', 'edit', None, _('edit commit message')),
