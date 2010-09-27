@@ -1569,6 +1569,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         header.append('new file mode %s\n' % mode)
                     elif ctx2.flags(f):
                         losedatafn(f)
+                # In theory, if tn was copied or renamed we should check
+                # if the source is binary too but the copy record already
+                # forces git mode.
                 if util.binary(tn):
                     if opts.git:
                         dodiff = 'binary'

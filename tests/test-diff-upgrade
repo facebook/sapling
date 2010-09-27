@@ -20,6 +20,7 @@ echo unsetexec > unsetexec
 chmod +x unsetexec
 echo binary > binary
 python -c "file('rmbinary', 'wb').write('\0')"
+python -c "file('bintoregular', 'wb').write('\0')"
 hg ci -Am addfiles
 echo regular >> regular
 echo newregular >> newregular
@@ -28,6 +29,7 @@ touch newempty
 rm rmregular
 echo exec >> exec
 echo newexec > newexec
+echo bintoregular > bintoregular
 chmod +x newexec
 rm rmexec
 chmod +x setexec
@@ -46,7 +48,8 @@ hg autodiff --git=yes regular
 echo '% git=auto: regular diff for regular files and non-binary removals'
 hg autodiff --git=auto regular newregular rmregular rmexec
 
-for f in exec newexec setexec unsetexec binary newbinary newempty rmempty rmbinary; do
+for f in exec newexec setexec unsetexec binary newbinary newempty rmempty \
+    rmbinary bintoregular; do
     echo '% git=auto: git diff for' $f
     hg autodiff --git=auto $f
 done
