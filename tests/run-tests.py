@@ -499,6 +499,9 @@ def tsttest(test, options):
         cmd = '/bin/sh "%s"' % name
         vlog("# Running", cmd)
         exitcode, output = run(cmd, options)
+        # do not merge output if skipped, return hghave message instead
+        if exitcode == SKIPPED_STATUS:
+            return exitcode, output
     finally:
         os.remove(name)
 
