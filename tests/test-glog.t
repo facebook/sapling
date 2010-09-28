@@ -740,6 +740,17 @@ Issue1896: File log with explicit style
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     one
   
+Issue2395: glog --style header and footer
+  $ hg glog --style=xml one
+  <?xml version="1.0"?>
+  <log>
+  o  <logentry revision="0" node="3d578b4a1f537d5fcf7301bfa9c0b97adfaa6fb1">
+     <author email="test">test</author>
+     <date>1970-01-01T00:00:00+00:00</date>
+     <msg xml:space="preserve">one</msg>
+     </logentry>
+  </log>
+
   $ cd ..
 
 Incoming and outgoing:

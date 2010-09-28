@@ -229,7 +229,9 @@ def generate(ui, dag, displayer, showparents, edgefn):
         char = ctx.node() in showparents and '@' or 'o'
         displayer.show(ctx)
         lines = displayer.hunk.pop(rev).split('\n')[:-1]
+        displayer.flush(rev)
         ascii(ui, state, type, char, lines, edgefn(seen, rev, parents))
+    displayer.close()
 
 def graphlog(ui, repo, path=None, **opts):
     """show revision history alongside an ASCII revision graph
