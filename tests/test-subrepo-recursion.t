@@ -1,8 +1,6 @@
 Make status look into subrepositories by default:
 
   $ echo '[defaults]' >> $HGRCPATH
-  $ echo 'status = -S' >> $HGRCPATH
-  $ echo 'diff = --nodates -S' >> $HGRCPATH
 
 Create test repository:
 
@@ -36,7 +34,7 @@ Add files --- .hgsub files must go first to trigger subrepos:
 
 Test recursive status without committing anything:
 
-  $ hg status
+  $ hg status -S
   A .hgsub
   A foo/.hgsub
   A foo/bar/z.txt
@@ -45,7 +43,7 @@ Test recursive status without committing anything:
 
 Test recursive diff without committing anything:
 
-  $ hg diff foo
+  $ hg diff --nodates -S foo
   diff -r 000000000000 foo/.hgsub
   --- /dev/null
   +++ b/foo/.hgsub
@@ -88,10 +86,10 @@ Change working directory:
 
   $ echo y3 >> foo/y.txt
   $ echo z3 >> foo/bar/z.txt
-  $ hg status
+  $ hg status -S
   M foo/bar/z.txt
   M foo/y.txt
-  $ hg diff
+  $ hg diff --nodates -S
   diff -r d254738c5f5e foo/y.txt
   --- a/foo/y.txt
   +++ b/foo/y.txt
@@ -109,14 +107,14 @@ Change working directory:
 
 Status call crossing repository boundaries:
 
-  $ hg status foo/bar/z.txt
+  $ hg status -S foo/bar/z.txt
   M foo/bar/z.txt
-  $ hg status -I 'foo/?.txt'
+  $ hg status -S -I 'foo/?.txt'
   M foo/y.txt
-  $ hg status -I '**/?.txt'
+  $ hg status -S -I '**/?.txt'
   M foo/bar/z.txt
   M foo/y.txt
-  $ hg diff -I '**/?.txt'
+  $ hg diff --nodates -S -I '**/?.txt'
   diff -r d254738c5f5e foo/y.txt
   --- a/foo/y.txt
   +++ b/foo/y.txt
@@ -137,11 +135,11 @@ Status from within a subdirectory:
   $ mkdir dir
   $ cd dir
   $ echo a1 > a.txt
-  $ hg status
+  $ hg status -S
   M foo/bar/z.txt
   M foo/y.txt
   ? dir/a.txt
-  $ hg diff
+  $ hg diff --nodates -S
   diff -r d254738c5f5e foo/y.txt
   --- a/foo/y.txt
   +++ b/foo/y.txt
@@ -159,11 +157,11 @@ Status from within a subdirectory:
 
 Status with relative path:
 
-  $ hg status ..
+  $ hg status -S ..
   M ../foo/bar/z.txt
   M ../foo/y.txt
   ? a.txt
-  $ hg diff ..
+  $ hg diff --nodates -S ..
   diff -r d254738c5f5e foo/y.txt
   --- a/foo/y.txt
   +++ b/foo/y.txt
@@ -207,13 +205,13 @@ Log with the relationships between repo and its subrepo:
 
 Status between revisions:
 
-  $ hg status
-  $ hg status --rev 0:1
+  $ hg status -S
+  $ hg status -S --rev 0:1
   M .hgsubstate
   M foo/.hgsubstate
   M foo/bar/z.txt
   M foo/y.txt
-  $ hg diff -I '**/?.txt' --rev 0:1
+  $ hg diff --nodates -S -I '**/?.txt' --rev 0:1
   diff -r af048e97ade2 -r d254738c5f5e foo/y.txt
   --- a/foo/y.txt
   +++ b/foo/y.txt
@@ -281,7 +279,7 @@ Clone and test outgoing:
 Make nested change:
 
   $ echo y4 >> foo/y.txt
-  $ hg diff
+  $ hg diff --nodates -S
   diff -r 65903cebad86 foo/y.txt
   --- a/foo/y.txt
   +++ b/foo/y.txt
@@ -312,6 +310,7 @@ Make nested change:
   comparing with */repo/foo/bar (glob)
   searching for changes
   no changes found
+
 
 Switch to original repo and setup default path:
 
@@ -349,5 +348,5 @@ Test incoming:
 Test missing subrepo:
 
   $ rm -r foo
-  $ hg status
+  $ hg status -S
   warning: error "unknown revision '65903cebad86f1a84bd4f1134f62fa7dcb7a1c98'" in subrepository "foo"
