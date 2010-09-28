@@ -3086,7 +3086,7 @@ cmdtable = {
          _('hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]')),
     "^qpush":
         (push,
-         [('f', 'force', None, _('apply if the patch has rejects')),
+         [('f', 'force', None, _('apply on top of local changes')),
           ('l', 'list', None, _('list patch name in commit text')),
           ('a', 'all', None, _('apply all patches')),
           ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
