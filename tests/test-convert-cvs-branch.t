@@ -44,12 +44,14 @@ Branch the project
 
 Modify file a, then b, then a 
 
+  $ sleep 1
   $ echo "2" > a
   $ cvscall ci -m "mod a"
   cvs commit: Examining .
   $ echo "2" > b
   $ cvscall ci -m "mod b"
   cvs commit: Examining .
+  $ sleep 1
   $ echo "3" > a
   $ cvscall ci -m "mod a again"
   cvs commit: Examining .
