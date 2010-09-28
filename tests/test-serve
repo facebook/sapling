@@ -40,9 +40,9 @@ hgserve
 echo % With -v and -p HGPORT2
 hgserve -p "$HGPORT2"
 
-echo '% With -v and -p echo (should fail because low port)'
+echo '% With -v and -p daytime (should fail because low port)'
 KILLQUIETLY=Y
-hgserve -p echo
+hgserve -p daytime
 KILLQUIETLY=N
 
 echo % With --prefix foo

@@ -7,8 +7,8 @@ listening at http://localhost/ (bound to 127.0.0.1:HGPORT1)
 % With -v and -p HGPORT2
 listening at http://localhost/ (bound to 127.0.0.1:HGPORT2)
 % errors
-% With -v and -p echo (should fail because low port)
-abort: cannot start server at 'localhost:7': Permission denied
+% With -v and -p daytime (should fail because low port)
+abort: cannot start server at 'localhost:13': Permission denied
 abort: child process failed to start
 % errors
 % With --prefix foo
