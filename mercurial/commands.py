@@ -2378,7 +2378,7 @@ def init(ui, dest=".", **opts):
 
     Returns 0 on success.
     """
-    hg.repository(hg.remoteui(ui, opts), dest, create=1)
+    hg.repository(hg.remoteui(ui, opts), ui.expandpath(dest), create=1)
 
 def locate(ui, repo, *pats, **opts):
     """locate files matching specific patterns

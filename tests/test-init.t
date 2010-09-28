@@ -24,13 +24,13 @@ This test tries to exercise the ssh functionality with a dummy script
   $ checknewrepo()
   > {
   >    name=$1
-  >    if [ -d $name/.hg/store ]; then
+  >    if [ -d "$name"/.hg/store ]; then
   >    echo store created
   >    fi
-  >    if [ -f $name/.hg/00changelog.i ]; then
+  >    if [ -f "$name"/.hg/00changelog.i ]; then
   >    echo 00changelog.i created
   >    fi
-  >    cat $name/.hg/requires
+  >    cat "$name"/.hg/requires
   > }
 
 creating 'local'
@@ -152,6 +152,34 @@ creating 'local/sub/repo'
 
   $ hg init local/sub/repo
   $ checknewrepo local/sub/repo
+  store created
+  00changelog.i created
+  revlogv1
+  store
+  fncache
+
+prepare test of init of url configured from paths
+
+  $ echo '[paths]' >> $HGRCPATH
+  $ echo "somewhere = `pwd`/url from paths" >> $HGRCPATH
+  $ echo "elsewhere = `pwd`/another paths url" >> $HGRCPATH
+
+init should (for consistency with clone) expand the url
+
+  $ hg init somewhere
+  $ checknewrepo "url from paths"
+  store created
+  00changelog.i created
+  revlogv1
+  store
+  fncache
+
+verify that clone also expand urls
+
+  $ hg clone somewhere elsewhere
+  updating to branch default
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ checknewrepo "another paths url"
   store created
   00changelog.i created
   revlogv1
