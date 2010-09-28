@@ -17,6 +17,7 @@ from mercurial.i18n import _
 import os, tempfile
 from mercurial import bundlerepo, changegroup, cmdutil, hg, merge, match
 from mercurial import patch, revlog, util, error, discovery
+from mercurial import revset, help
 
 class transplantentry(object):
     def __init__(self, lnode, rnode):
@@ -602,6 +603,30 @@ def transplant(ui, repo, *revs, **opts):
         if bundle:
             source.close()
             os.unlink(bundle)
+
+def revsettransplanted(repo, subset, x):
+    if x:
+      s = revset.getset(repo, subset, x)
+    else:
+      s = subset
+    cs = set()
+    for r in xrange(0, len(repo)):
+      if repo[r].extra().get('transplant_source'):
+        cs.add(r)
+    return [r for r in s if r in cs]
+
+def revsetdoc():
+    doc = help.loaddoc('revsets')()
+    doc += _('\nAdded by the transplant extension:\n\n'
+           '``transplanted(set)``\n'
+           '  Transplanted changesets in set.\n')
+    return doc
+
+def uisetup(ui):
+    'Add the transplanted revset predicate'
+    for i in (i for i, x in enumerate(help.helptable) if x[0] == ['revsets']):
+        help.helptable[i] = (['revsets'], _("Specifying Revision Sets"), revsetdoc)
+    revset.symbols['transplanted'] = revsettransplanted
 
 cmdtable = {
     "transplant":
