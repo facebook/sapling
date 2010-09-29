@@ -30,13 +30,13 @@ Please note that there are two slightly different ways of cloning repositories:
 The most common desire is to have the full history of a repository, including
 all its tags and branches. In such cases you should clone from one level above
 trunk, as in the example above. This is known as `standard layout`, and works
-with repositories that use the conventional `trunk`, `tags` and `branches`
+with repositories that use the conventional ``trunk``, ``tags`` and ``branches``
 directories. By default, hgsubversion will use this layout whenever it finds any
 of these directories at the specified directory on the server.
 
 If you instead want to clone just a single directory or branch, clone the
 specific directory path. In the example above, to get *only* trunk, you would
-issue :hg:`clone http://python-nose.googlecode.com/svn/trunk nose-trunk`. This
+issue ``hg clone http://python-nose.googlecode.com/svn/trunk nose-trunk``. This
 works with any directory with a Subversion repository, and is know as a single
 directory clone. Normally, converted changesets will be marked as belonging to
 the ``default`` branch, but this can be changed by using the ``-b/--branch``
@@ -51,10 +51,11 @@ commands are all equivalent::
  $ hg pull http://python-nose.googlecode.com/svn
 
 Sometimes, past repository history is of little or no interest, and all that is
-wanted is access to current and future history from Mercurial. The --startrev
-option with the HEAD argument causes the initial clone to only convert the
-latest revision; later pulls will convert all revisions following the first.
-Please note that this only works for single-directory clones.
+wanted is access to current and future history from Mercurial. The
+``--startrev`` option with the ``HEAD`` argument causes the initial clone to
+only convert the latest revision; later pulls will convert all revisions
+following the first. Please note that this only works for single-directory
+clones.
 
 Displaying Subversion revisions
 -------------------------------------------
@@ -69,7 +70,7 @@ repository. An example::
   $ hg log --template='{rev}:{node|short} {author|user}\nsvn: {svnrev}\n'
 
 Support for externals
------------------------------
+---------------------
 
 When using a standard layout, ``svn:externals`` properties are serialized into
 a single ``.hgsvnexternals`` file having the following syntax::
@@ -88,7 +89,7 @@ space. Note that the property lines have a format identical to
 svn:externals properties as used in Subversion, and do not support the
 hgsubversion extended svn+http:// URL format.
 
-Issuing the command :hg:`svn updateexternals` with the ``.hgsvnexternals``
+Issuing the command ``hg svn updateexternals`` with the ``.hgsvnexternals``
 example above would fetch the latest revision of repo1 into the subdirectory
 *./common1*, and revision 123 of repo2 into *dir2/common2*.  Note that 
 ``.hgsvnexternals`` must be tracked by Mercurial before this will work.  If
@@ -119,7 +120,7 @@ layouts. Thus, only a single directory clones can be made of such repositories.
 When interacting with Subversion, hgsubversion relies on information about the
 previously converted changesets. This information will not be updated if pushing
 or pulling converted changesets to or from any other source. To regenerate the
-stored metadata, run :hg:`svn rebuildmeta [URI]`. This must also be done if any
+stored metadata, run ``hg svn rebuildmeta [URI]``. This must also be done if any
 converted changesets are ever removed from the repository.
 
 Under certain circumstances a long-running conversion can leak substantial
@@ -154,8 +155,8 @@ settings:
   hgsubversion.defaulthost
     This option specifies the hostname to append to unmapped Subversion
     usernames. The default is to append the UUID of the Subversion repository
-    as a hostname. That is, an author of `bob` may be mapped to
-    `bob@0b1d8996-7ded-4192-9199-38e2bec458fb`.
+    as a hostname. That is, an author of ``bob`` may be mapped to
+    ``bob@0b1d8996-7ded-4192-9199-38e2bec458fb``.
 
     If this option set to an empty string, the Subversion authors will be used
     with no hostname component.
@@ -166,8 +167,8 @@ settings:
 
   hgsubversion.branch
     Mark converted changesets as belonging to this branch or, if unspecifed,
-     `default`. Please note that this option is not supported for standard
-     layout clones.
+    ``default``. Please note that this option is not supported for standard
+    layout clones.
 
   hgsubversion.branchmap
     Path to a file for changing branch names during the conversion from
@@ -175,7 +176,7 @@ settings:
 
   hgsubversion.filemap
     Path to a file for filtering files during the conversion. Files may either
-    be excluded or included. See the documentation for :hg:`convert` for more
+    be excluded or included. See the documentation for ``hg convert`` for more
     information on filemaps.
 
   hgsubversion.username, hgsubversion.password
@@ -190,20 +191,20 @@ settings:
 The following options only have an effect on the initial clone of a repository:
 
   hgsubversion.layout
-    Set the layout of the repository. `standard` assumes a normal
-    trunk/branches/tags layout. `single` means that the entire repository is
-    converted into a single branch. The default, `auto`, causes hgsubversion to
+    Set the layout of the repository. ``standard`` assumes a normal
+    trunk/branches/tags layout. ``single`` means that the entire repository is
+    converted into a single branch. The default, ``auto``, causes hgsubversion to
     assume a standard layout if any of trunk, branches, or tags exist within the
     specified directory on the server.
 
   hgsubversion.startrev
     Convert Subversion revisions starting at the one specified, either an
-    integer revision or HEAD; HEAD causes only the latest revision to be pulled.
-    The default is to pull everything.
+    integer revision or ``HEAD``; ``HEAD`` causes only the latest revision to be
+    pulled. The default is to pull everything.
 
   hgsubversion.tagpaths
     Specifies one or more paths in the Subversion repository that
-    contain tags. The default is to only look in `tags`. This option has no
+    contain tags. The default is to only look in ``tags``. This option has no
     effect for single-directory clones.
 
 Please note that some of these options may be specified as command line options
