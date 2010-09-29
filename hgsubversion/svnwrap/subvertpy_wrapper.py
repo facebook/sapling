@@ -25,6 +25,8 @@ try:
     from subvertpy import properties
     from subvertpy import ra
     import subvertpy
+
+    subversion_version = subvertpy.wc.api_version()
 except ImportError:
     raise ImportError('Subvertpy %d.%d.%d or later required, but not found'
                       % subvertpy_required)
@@ -38,17 +40,17 @@ if subvertpy.__version__ < subvertpy_required: #pragma: no cover
                       % (_versionstr(subvertpy_required),
                          _versionstr(subvertpy.__version__)))
 
-if subvertpy.wc.version()[:3] < subversion_required:
+if subversion_version[:3] < subversion_required:
     raise ImportError('Subversion %s or later required, '
                       'but Subvertpy is using %s'
                       % (_versionstr(subversion_required),
-                         _versionstr(subvertpy.wc.version()[:3])))
+                         _versionstr(subversion_version[:3])))
 
 
 def version():
-    svnvers = _versionstr(subvertpy.wc.version()[:3])
-    if subvertpy.wc.version()[3]:
-        svnvers += '-' + subvertpy.wc.version()[3]
+    svnvers = _versionstr(subversion_version[:3])
+    if subversion_version[3]:
+        svnvers += '-' + subversion_version[3]
     return (svnvers, 'Subvertpy ' + _versionstr(subvertpy.__version__))
 
 # exported values
