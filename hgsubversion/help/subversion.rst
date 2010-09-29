@@ -56,6 +56,18 @@ option with the HEAD argument causes the initial clone to only convert the
 latest revision; later pulls will convert all revisions following the first.
 Please note that this only works for single-directory clones.
 
+Displaying Subversion revisions
+-------------------------------------------
+
+For revealing the relationship between Mercurial changesets and Subversion
+revisions, hgsubversion provides three keywords, available when using Mercurial
+1.5 or later. The "svnrev" keyword is expanded to the original Subversion
+revision number. "svnpath" is the path within the repository that the changeset
+represents, and "svnuuid" is the Universally Unique Identifier of the Subversion
+repository. An example::
+
+  $ hg log --template='{rev}:{node|short} {author|user}\nsvn: {svnrev}\n'
+
 Support for externals
 -----------------------------
 

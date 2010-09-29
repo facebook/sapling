@@ -20,28 +20,29 @@ class CapturingUI(ui.ui):
     def write(self, msg, *args, **kwds):
         self._output += msg
 
-if templatekw:
-    class TestLogKeywords(test_util.TestBase):
-
+class TestLogKeywords(test_util.TestBase):
+    if templatekw:
         def test_svn_keywords(self):
             defaults = {'date': None, 'rev': None, 'user': None}
             repo = self._load_fixture_and_fetch('two_revs.svndump')
+
+            # we want one commit that isn't from Subversion
+            self.commitchanges([('foo', 'foo', 'frobnicate\n')])
+
             ui = CapturingUI()
             commands.log(ui, repo, template='{rev}:{svnrev} ', **defaults)
-            self.assertEqual(ui._output, '0:2 1:3 ')
+            self.assertEqual(ui._output, '0:2 1:3 2: ')
             ui = CapturingUI()
             commands.log(ui, repo, template='{rev}:{svnpath} ', **defaults)
-            self.assertEqual(ui._output, '0:/trunk 1:/trunk ')
+            self.assertEqual(ui._output, '0:/trunk 1:/trunk 2: ')
             ui = CapturingUI()
             commands.log(ui, repo, template='{rev}:{svnuuid} ', **defaults)
             self.assertEqual(ui._output,
                              ('0:df2126f7-00ab-4d49-b42c-7e981dde0bcf '
-                              '1:df2126f7-00ab-4d49-b42c-7e981dde0bcf '))
+                              '1:df2126f7-00ab-4d49-b42c-7e981dde0bcf '
+                              '2: '))
 
 
-    def suite():
-        all = [unittest.TestLoader().loadTestsFromTestCase(TestLogKeywords),]
-        return unittest.TestSuite(all)
-else:
-    def suite():
-        return unittest.TestSuite([])
+def suite():
+    all = [unittest.TestLoader().loadTestsFromTestCase(TestLogKeywords),]
+    return unittest.TestSuite(all)

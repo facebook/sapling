@@ -139,32 +139,8 @@ def uisetup(ui):
     else:
         help.helptable = help.helptable + entries
 
-
-def _get_svnmeta(ctx):
-    """Returns a dictionary with parsed convert_revision or None."""
-    unparsed = ctx.extra().get('convert_revision', '')
-    if unparsed.startswith('svn:'):
-        unparsed = unparsed[4:]  # remove "svn:"
-        return {'svnuuid': unparsed[:36],
-                'svnpath': unparsed[36:].rsplit('@', 1)[0],
-                'svnrev': unparsed[36:].rsplit('@', 1)[-1]}
-    return None
-
-
-def _show_tpl_kw(ctx, kw):
-    convinfo = _get_svnmeta(ctx)
-    if convinfo is None:
-        return ''
-    return convinfo.get(kw, '')
-
-
-if templatekw:
-    templatekw.keywords.update({
-        'svnrev': lambda repo, ctx, templ, **a: _show_tpl_kw(ctx, 'svnrev'),
-        'svnpath': lambda repo, ctx, templ, **a: _show_tpl_kw(ctx, 'svnpath'),
-        'svnuuid': lambda repo, ctx, templ, **a: _show_tpl_kw(ctx, 'svnuuid'),
-        })
-
+    if templatekw:
+        templatekw.keywords.update(util.templatekeywords)
 
 def reposetup(ui, repo):
     if repo.local():

@@ -174,3 +174,27 @@ def issamefile(parentctx, childctx, f):
             return False
     # parentctx is not an ancestor of childctx, files are unrelated
     return False
+
+def _templatehelper(ctx, kw):
+    '''
+    Helper function for displaying information about converted changesets.
+    '''
+    convertinfo = ctx.extra().get('convert_revision', '')
+
+    if not convertinfo or not convertinfo.startswith('svn:'):
+        return ''
+
+    if kw == 'svnuuid':
+        return convertinfo[4:40]
+    elif kw == 'svnpath':
+        return convertinfo[40:].rsplit('@', 1)[0]
+    elif kw == 'svnrev':
+        return convertinfo[40:].rsplit('@', 1)[-1]
+    else:
+        raise hgutil.Abort('unrecognized hgsubversion keyword %s' % kw)
+
+templatekeywords = {
+    'svnrev': (lambda repo, ctx, templ, **a: _templatehelper(ctx, 'svnrev')),
+    'svnpath': (lambda repo, ctx, templ, **a: _templatehelper(ctx, 'svnpath')),
+    'svnuuid': (lambda repo, ctx, templ, **a: _templatehelper(ctx, 'svnuuid')),
+}
