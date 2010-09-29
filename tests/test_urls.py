@@ -50,7 +50,7 @@ class TestSubversionUrls(test_util.TestBase):
         ui = test_util.ui.ui()
         ui.setconfig('hgsubversion', 'username', 'bob')
         repo = svnrepo.svnremoterepo(ui, 'svn+ssh://joe@foo/bar')
-        self.assertEqual('svn+ssh://bob@foo/bar', repo.svnurl)
+        self.assertEqual('svn+ssh://bob@foo/bar', repo.svnauth[0])
 
         repo = svnrepo.svnremoterepo(ui, 'svn+http://joe@foo/bar')
         self.assertEqual(('http://foo/bar', 'bob', None), repo.svnauth)

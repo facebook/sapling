@@ -95,7 +95,7 @@ class svnremoterepo(mercurial.repo.repository):
 
     @property
     def svnurl(self):
-        return self.svnauth[0]
+        return self.svn.svn_url
 
     @propertycache
     def svn(self):
