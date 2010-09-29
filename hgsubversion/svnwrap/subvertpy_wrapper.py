@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore',
                         module='svn.core',
                         category=DeprecationWarning)
 
-subvertpy_required = (0, 7, 3)
+subvertpy_required = (0, 7, 4)
 subversion_required = (1, 5, 0)
 
 try:
