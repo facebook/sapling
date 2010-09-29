@@ -6,6 +6,7 @@ from mercurial import hg
 from mercurial import util as hgutil
 from mercurial import node
 from mercurial import i18n
+from mercurial import extensions
 
 import replay
 import pushmod
@@ -417,20 +418,39 @@ def clone(orig, ui, source, dest=None, **opts):
     them as well as other ways of customising the conversion process.
     """
 
-    branch = opts.get('branch', None)
-    if branch:
-        ui.setconfig('hgsubversion', 'branch', branch[-1])
+    data = {}
+    def hgclonewrapper(orig, ui, origsource, dest, **opts):
+        if isinstance(origsource, str):
+            source, branch, checkout = util.parseurl(ui.expandpath(origsource),
+                                         opts.get('branch'))
+            srcrepo = hg.repository(ui, source)
+        else:
+            srcrepo = origsource
+
+        if srcrepo.capable('subversion'):
+            branches = opts.pop('branch', None)
+            if branches:
+                data['branches'] = branches
+                ui.setconfig('hgsubversion', 'branch', branches[-1])
+
+        data['srcrepo'], data['dstrepo'] = orig(ui, origsource, dest, **opts)
 
     for opt, (section, name) in optionmap.iteritems():
         if opt in opts and opts[opt]:
             ui.setconfig(section, name, str(opts.pop(opt)))
 
-    # this must be kept in sync with mercurial/commands.py
-    srcrepo, dstrepo = hg.clone(util.remoteui(ui, opts), source, dest,
-                                pull=opts.get('pull'),
-                                stream=opts.get('uncompressed'),
-                                rev=opts.get('rev'),
-                                update=not opts.get('noupdate'))
+    # calling hg.clone directoly to get the repository instances it returns,
+    # breaks in subtle ways, so we double-wrap
+    orighgclone = extensions.wrapfunction(hg, 'clone', hgclonewrapper)
+    orig(ui, source, dest, **opts)
+    hg.clone = orighgclone
+
+    # do this again; the ui instance isn't shared between the wrappers
+    if data.get('branches'):
+        ui.setconfig('hgsubversion', 'branch', data['branches'][-1])
+
+    dstrepo = data.get('dstrepo')
+    srcrepo = data.get('srcrepo')
 
     if dstrepo.local() and srcrepo.capable('subversion'):
         fd = dstrepo.opener("hgrc", "a", text=True)
