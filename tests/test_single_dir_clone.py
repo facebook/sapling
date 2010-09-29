@@ -213,6 +213,7 @@ class TestSingleDir(test_util.TestBase):
         self.assertTrue('default' in self.svnls(''))
         self.assertEquals(len(self.repo.branchheads('default')), 1)
 
+    @test_util.requiresoption('branch')
     def test_push_single_dir_renamed_branch(self, stupid=False):
         # Tests pulling and pushing with a renamed branch
         # Based on test_push_single_dir
@@ -248,6 +249,7 @@ class TestSingleDir(test_util.TestBase):
         self.assertEquals(set(['flaf']),
                           set(self.repo[i].branch() for i in self.repo))
 
+    @test_util.requiresoption('branch')
     def test_push_single_dir_renamed_branch_stupid(self):
         self.test_push_single_dir_renamed_branch(True)
 

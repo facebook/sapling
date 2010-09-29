@@ -40,7 +40,7 @@ issue :hg:`clone http://python-nose.googlecode.com/svn/trunk nose-trunk`. This
 works with any directory with a Subversion repository, and is know as a single
 directory clone. Normally, converted changesets will be marked as belonging to
 the ``default`` branch, but this can be changed by using the ``-b/--branch``
-option.
+option introduced in Mercurial 1.5.
 
 Pulling new revisions into an already-converted repo is the same as from any
 other Mercurial source. Within the first example above, the following three
