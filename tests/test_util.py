@@ -15,6 +15,7 @@ import urllib
 _rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _rootdir)
 
+from mercurial import cmdutil
 from mercurial import commands
 from mercurial import context
 from mercurial import dispatch
@@ -86,6 +87,21 @@ subdir = {'truncatedhistory.svndump': '/project2',
 
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         'fixtures')
+
+def requiresoption(option):
+    '''
+    Decorator for test functions which require clone to accept the given option.
+    If the option isn't available, the test is skipped.
+
+    Takes one argument: the required option.
+    '''
+    def decorator(fn):
+        for entry in cmdutil.findcmd('clone', commands.table)[1][1]:
+            if entry[1] == option:
+                return fn
+    if not isinstance(option, str):
+        raise TypeError('requiresoption takes a string argument')
+    return decorator
 
 def filtermanifest(manifest):
     return filter(lambda x: x not in ('.hgtags', '.hgsvnexternals', ),
