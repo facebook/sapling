@@ -1,7 +1,3 @@
-Make status look into subrepositories by default:
-
-  $ echo '[defaults]' >> $HGRCPATH
-
 Create test repository:
 
   $ hg init repo
