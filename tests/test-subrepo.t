@@ -542,9 +542,9 @@ test repository cloning
   $ cat mercurial2/main/nested_absolute/.hg/hgrc \
   >     mercurial2/main/nested_relative/.hg/hgrc
   [paths]
-  default = */test-subrepo.t/sub/mercurial/nested_absolute (glob)
+  default = */sub/mercurial/nested_absolute (glob)
   [paths]
-  default = */test-subrepo.t/sub/mercurial/nested_relative (glob)
+  default = */sub/mercurial/nested_relative (glob)
   $ rm -rf mercurial mercurial2
 
 Issue1977: multirepo push should fail if subrepo push fails

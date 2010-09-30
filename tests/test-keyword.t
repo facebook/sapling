@@ -686,7 +686,7 @@ Clone to test incoming
   > default = ../Test
   > EOF
   $ hg incoming
-  comparing with *test-keyword.t/Test (glob)
+  comparing with */Test (glob)
   searching for changes
   changeset:   2:bb948857c743
   tag:         tip

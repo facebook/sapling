@@ -74,13 +74,10 @@ Test diff during merge:
 
 Should diff cloned file against wc file:
 
-  $ hg falabala > out
+  $ hg falabala
+  diffing a.2a13a4d2da36/a */a/a (glob)
   [1]
 
-Cleanup the output since the wc is a tmp directory:
-
-  $ sed  's:\(diffing [^ ]* \).*\(\/test-extdiff\):\1[tmp]\2:' out
-  diffing a.2a13a4d2da36/a [tmp]/test-extdiff.t/a/a
 
 Test --change option:
 

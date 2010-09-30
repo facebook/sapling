@@ -17,7 +17,7 @@ commit hooks can see env vars
   $ hg add a
   $ hg commit -m a
   precommit hook: HG_PARENT1=0000000000000000000000000000000000000000 
-  pretxncommit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$HGTMP/test-hook.t/a 
+  pretxncommit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$HGTMP/*/a  (glob)
   0:cb9a9f314b8b
   commit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 
   commit.b hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 
@@ -40,7 +40,7 @@ pretxncommit and commit hooks can see both parents of merge
   $ echo b >> a
   $ hg commit -m a1 -d "1 0"
   precommit hook: HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
-  pretxncommit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$HGTMP/test-hook.t/a 
+  pretxncommit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$HGTMP/*/a  (glob)
   1:ab228980c14d
   commit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
   commit.b hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
@@ -50,7 +50,7 @@ pretxncommit and commit hooks can see both parents of merge
   $ hg add b
   $ hg commit -m b -d '1 0'
   precommit hook: HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
-  pretxncommit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$HGTMP/test-hook.t/a 
+  pretxncommit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$HGTMP/*/a  (glob)
   2:ee9deb46ab31
   commit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
   commit.b hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 
@@ -60,7 +60,7 @@ pretxncommit and commit hooks can see both parents of merge
   (branch merge, don't forget to commit)
   $ hg commit -m merge -d '2 0'
   precommit hook: HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd 
-  pretxncommit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd HG_PENDING=$HGTMP/test-hook.t/a 
+  pretxncommit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd HG_PENDING=$HGTMP/*/a  (glob)
   3:07f3376c1e65
   commit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd 
   commit.b hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd 
@@ -99,7 +99,7 @@ tag hooks can see env vars
   $ hg tag -d '3 0' a
   pretag hook: HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a 
   precommit hook: HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 
-  pretxncommit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$HGTMP/test-hook.t/a 
+  pretxncommit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$HGTMP/*/a  (glob)
   4:539e4b31b6dc
   commit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 
   commit.b hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 
@@ -133,10 +133,10 @@ more there after
   4:539e4b31b6dc
   $ hg commit -m 'fail' -d '4 0'
   precommit hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 
-  pretxncommit hook: HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$HGTMP/test-hook.t/a 
+  pretxncommit hook: HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$HGTMP/*/a  (glob)
   5:6f611f8018c1
   5:6f611f8018c1
-  pretxncommit.forbid hook: HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$HGTMP/test-hook.t/a 
+  pretxncommit.forbid hook: HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$HGTMP/*/a  (glob)
   transaction abort!
   rollback completed
   abort: pretxncommit.forbid1 hook exited with status 1
@@ -192,7 +192,7 @@ incoming changes no longer there after
   $ echo 'pretxnchangegroup.forbid1 = python ../printenv.py pretxnchangegroup.forbid 1' >> .hg/hgrc
   $ hg pull ../a
   4:539e4b31b6dc
-  pretxnchangegroup.forbid hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$HGTMP/test-hook.t/b HG_SOURCE=pull HG_URL=file: 
+  pretxnchangegroup.forbid hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$HGTMP/*/b HG_SOURCE=pull HG_URL=file:  (glob)
   pulling from ../a
   searching for changes
   adding changesets

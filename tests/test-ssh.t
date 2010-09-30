@@ -144,7 +144,7 @@ find incoming on the remote side
 find incoming on the remote side (using absolute path)
 
   $ hg incoming -R ../remote -e "python ../dummyssh" "ssh://user@dummy/`pwd`"
-  comparing with ssh://user@dummy/*/test-ssh.t/local (glob)
+  comparing with ssh://user@dummy/*/local (glob)
   searching for changes
   changeset:   1:a28a9d1a809c
   tag:         tip
@@ -226,7 +226,7 @@ push should succeed even though it has an unexpected response
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R local serve --stdio
-  Got arguments 1:user@dummy 2:hg -R /*/test-ssh.t/local serve --stdio (glob)
+  Got arguments 1:user@dummy 2:hg -R /*/local serve --stdio (glob)
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   changegroup-in-remote hook: HG_NODE=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
