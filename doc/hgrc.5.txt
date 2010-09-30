@@ -951,8 +951,9 @@ Web interface configuration.
     third-party tools like email notification hooks can construct
     URLs. Example: ``http://hgserver/repos/``.
 ``cacerts``
-    Path to file containing a list of PEM encoded certificate authorities
-    that may be used to verify an SSL server's identity. The form must be
+    Path to file containing a list of PEM encoded certificate authority
+    certificates. If specified on the client, then it will verify the identity
+    of remote HTTPS servers with these certificates. The form must be
     as follows::
 
         -----BEGIN CERTIFICATE-----
@@ -962,8 +963,8 @@ Web interface configuration.
         ... (certificate in base64 PEM encoding) ...
         -----END CERTIFICATE-----
 
-    This feature is only supported when using Python 2.6. If you wish to
-    use it with earlier versions of Python, install the backported
+    This feature is only supported when using Python 2.6 or later. If you wish
+    to use it with earlier versions of Python, install the backported
     version of the ssl library that is available from
     ``http://pypi.python.org``.
 

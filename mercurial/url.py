@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import urllib, urllib2, urlparse, httplib, os, re, socket, cStringIO
+import urllib, urllib2, urlparse, httplib, os, re, socket, cStringIO, time
 import __builtin__
 from i18n import _
 import keepalive, util
@@ -486,6 +486,31 @@ class httphandler(keepalive.HTTPHandler):
         _generic_start_transaction(self, h, req)
         return keepalive.HTTPHandler._start_transaction(self, h, req)
 
+def _verifycert(cert, hostname):
+    '''Verify that cert (in socket.getpeercert() format) matches hostname and is 
+    valid at this time. CRLs and subjectAltName are not handled.
+    
+    Returns error message if any problems are found and None on success.
+    '''
+    if not cert:
+        return _('no certificate received')
+    notafter = cert.get('notAfter')
+    if notafter and time.time() > ssl.cert_time_to_seconds(notafter):
+        return _('certificate expired %s') % notafter
+    notbefore = cert.get('notBefore')
+    if notbefore and time.time() < ssl.cert_time_to_seconds(notbefore):
+        return _('certificate not valid before %s') % notbefore
+    dnsname = hostname.lower()
+    for s in cert.get('subject', []):
+        key, value = s[0]
+        if key == 'commonName':
+            certname = value.lower()
+            if (certname == dnsname or
+                '.' in dnsname and certname == '*.' + dnsname.split('.', 1)[1]):
+                return None
+            return _('certificate is for %s') % certname
+    return _('no commonName found in certificate')
+
 if has_https:
     class BetterHTTPS(httplib.HTTPSConnection):
         send = keepalive.safesend
@@ -501,7 +526,11 @@ if has_https:
                 self.sock = _ssl_wrap_socket(sock, self.key_file,
                         self.cert_file, cert_reqs=CERT_REQUIRED,
                         ca_certs=cacerts)
-                self.ui.debug(_('server identity verification succeeded\n'))
+                msg = _verifycert(self.sock.getpeercert(), self.host)
+                if msg:
+                    raise util.Abort('%s certificate error: %s' % (self.host, msg))
+                self.ui.debug(_('%s certificate successfully verified\n') % 
+                    self.host)
             else:
                 httplib.HTTPSConnection.connect(self)
 
