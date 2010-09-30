@@ -18,6 +18,9 @@ Some features, such as pushing to http:// and https:// URLs are only
 possible if the feature is explicitly enabled on the remote Mercurial
 server.
 
+Note that the security of HTTPS URLs depends on proper configuration of
+web.cacerts.
+
 Some notes about using SSH with Mercurial:
 
 - SSH requires an accessible shell account on the destination machine
