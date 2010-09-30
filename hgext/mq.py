@@ -3030,7 +3030,7 @@ cmdtable = {
          [('k', 'keep', None, _('keep patch file')),
           ('r', 'rev', [],
            _('stop managing a revision (DEPRECATED)'), _('REV'))],
-         _('hg qdelete [-k] ... [PATCH]...')),
+         _('hg qdelete [-k] [PATCH]...')),
     'qfold':
         (fold,
          [('e', 'edit', None, _('edit patch header')),
