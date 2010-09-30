@@ -5,18 +5,13 @@ if 'TERM' in os.environ:
 import doctest
 
 import mercurial.changelog
-# test doctest from changelog
-
 doctest.testmod(mercurial.changelog)
-
-import mercurial.httprepo
-doctest.testmod(mercurial.httprepo)
-
-import mercurial.util
-doctest.testmod(mercurial.util)
 
 import mercurial.dagparser
 doctest.testmod(mercurial.dagparser, optionflags=doctest.NORMALIZE_WHITESPACE)
+
+import mercurial.url
+doctest.testmod(mercurial.url)
 
 import hgext.convert.cvsps
 doctest.testmod(hgext.convert.cvsps)
