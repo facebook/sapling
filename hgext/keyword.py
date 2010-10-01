@@ -191,10 +191,10 @@ class kwtemplater(object):
         Caveat: localrepository._link fails on Windows.'''
         return self.match(path) and not 'l' in flagfunc(path)
 
-    def overwrite(self, ctx, candidates, iswctx, expand, cfiles):
+    def overwrite(self, ctx, candidates, iswctx, expand, changed):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        if cfiles is not None:
-            candidates = [f for f in candidates if f in cfiles]
+        if changed is not None:
+            candidates = [f for f in candidates if f in changed]
         candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
         if candidates:
             restrict = self.restrict
@@ -510,13 +510,13 @@ def reposetup(ui, repo):
             wlock = repo.wlock()
             try:
                 if not dryrun:
-                    cfiles = self['.'].files()
+                    changed = self['.'].files()
                 ret = super(kwrepo, self).rollback(dryrun)
                 if not dryrun:
                     ctx = self['.']
                     modified, added = super(kwrepo, self).status()[:2]
-                    kwt.overwrite(ctx, added, True, False, cfiles)
-                    kwt.overwrite(ctx, modified, True, True, cfiles)
+                    kwt.overwrite(ctx, added, True, False, changed)
+                    kwt.overwrite(ctx, modified, True, True, changed)
                 return ret
             finally:
                 wlock.release()
