@@ -65,9 +65,15 @@ echo g > g
 # darcs is encoding agnostic, so it takes whatever bytes it's given
 darcs record -a -l -m 'p4: desc ñ' -A 'author ñ'
 
+echo % test latin-1 commit message
+echo h > h
+printf "p5: desc " > ../p5
+python -c 'print "".join([chr(i) for i in range(128, 256)])' >> ../p5
+darcs record -a -l --logfile ../p5
+
 glog()
 {
-    HGENCODING=utf-8 hg glog --template '{rev} "{desc|firstline}" ({author}) files: {files}\n' "$@"
+    hg glog --template '{rev} "{desc|firstline}" ({author}) files: {files}\n' "$@"
 }
 
 cd ..
@@ -78,6 +84,7 @@ hg convert darcs-repo darcs-repo-hg
 # Unfortunately, non-conflicting changes, like the addition of the
 # "c" file in p1.1 patch are reverted too.
 # Just to say that manifest not listing "c" here is a bug.
-glog -R darcs-repo-hg
+HGENCODING=latin-1 glog -R darcs-repo-hg -r 6 | "$TESTDIR"/printrepr.py
+HGENCODING=utf-8 glog -R darcs-repo-hg -r 0:5 | "$TESTDIR"/printrepr.py
 hg up -q -R darcs-repo-hg
 hg -R darcs-repo-hg manifest --debug
