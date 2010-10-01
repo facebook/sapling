@@ -511,9 +511,10 @@ if has_https:
                         ca_certs=cacerts)
                 msg = _verifycert(self.sock.getpeercert(), self.host)
                 if msg:
-                    raise util.Abort('%s certificate error: %s' % (self.host, msg))
-                self.ui.debug(_('%s certificate successfully verified\n') % 
-                    self.host)
+                    raise util.Abort(_('%s certificate error: %s') %
+                                     (self.host, msg))
+                self.ui.debug('%s certificate successfully verified\n' %
+                              self.host)
             else:
                 httplib.HTTPSConnection.connect(self)
 
