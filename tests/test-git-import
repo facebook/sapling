@@ -1,5 +1,7 @@
 #!/bin/sh
 
+. $TESTDIR/helpers.sh
+
 hg init a
 cd a
 
@@ -226,5 +228,20 @@ copy from foo2
 copy to foo3
 EOF
 hg tip -q
-
 cat foo3
+
+echo % move text file and patch as binary
+echo a > text2
+hg ci -Am0
+hg import -d "1000000 0" -m rename-as-binary - <<"EOF"
+diff --git a/text2 b/binary2
+rename from text2
+rename to binary2
+index 78981922613b2afb6025042ff6bd878ac1994e85..10efcb362e9f3b3420fcfbfc0e37f3dc16e29757
+GIT binary patch
+literal 5
+Mc$`b*O5$Pw00T?_*Z=?k
+
+EOF
+cat binary2 | repr
+hg st --copies --change .

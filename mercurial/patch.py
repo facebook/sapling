@@ -1184,7 +1184,9 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
                 gp.path = pathstrip(gp.path, strip - 1)[1]
                 if gp.oldpath:
                     gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
-                if gp.op in ('COPY', 'RENAME'):
+                # Binary patches really overwrite target files, copying them
+                # will just make it fails with "target file exists"
+                if gp.op in ('COPY', 'RENAME') and not gp.binary:
                     copyfn(gp.oldpath, gp.path, cwd)
                 changed[gp.path] = gp
         else:
@@ -1567,6 +1569,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         header.append('new file mode %s\n' % mode)
                     elif ctx2.flags(f):
                         losedatafn(f)
+                # In theory, if tn was copied or renamed we should check
+                # if the source is binary too but the copy record already
+                # forces git mode.
                 if util.binary(tn):
                     if opts.git:
                         dodiff = 'binary'
@@ -1586,7 +1591,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                     else:
                         header.append('deleted file mode %s\n' %
                                       gitmode[man1.flags(f)])
-                elif not to:
+                elif not to or util.binary(to):
                     # regular diffs cannot represent empty file deletion
                     losedatafn(f)
             else:
