@@ -4155,14 +4155,15 @@ table = {
     "heads":
         (heads,
          [('r', 'rev', '',
-           _('show only heads which are descendants of REV'), _('REV')),
+           _('show only heads which are descendants of STARTREV'),
+           _('STARTREV')),
           ('t', 'topo', False, _('show topological heads only')),
           ('a', 'active', False,
            _('show active branchheads only (DEPRECATED)')),
           ('c', 'closed', False,
            _('show normal and closed branch heads')),
          ] + templateopts,
-         _('[-ac] [-r REV] [REV]...')),
+         _('[-ac] [-r STARTREV] [REV]...')),
     "help": (help_, [], _('[TOPIC]')),
     "identify|id":
         (identify,
