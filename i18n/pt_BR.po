@@ -13725,6 +13725,13 @@ msgstr ""
 "são possíveis apenas se forem explicitamente habilitadas no\n"
 "servidor remoto do Mercurial."
 
+msgid ""
+"Note that the security of HTTPS URLs depends on proper configuration of\n"
+"web.cacerts."
+msgstr ""
+"Note que a segurança de URLs HTTPS depende de uma configuração\n"
+"adequada de web.cacerts."
+
 msgid "Some notes about using SSH with Mercurial:"
 msgstr "Algumas notas sobre o uso de SSH com o Mercurial:"
 
@@ -14850,8 +14857,31 @@ msgstr "ignorando chave inválida em [auth] '%s'\n"
 msgid "certificate checking requires Python 2.6"
 msgstr "verificação de certificado exige Python 2.6"
 
-msgid "server identity verification succeeded\n"
-msgstr "verificação de identidade do servidor feita com sucesso\n"
+msgid "no certificate received"
+msgstr "nenhum certificado recebido"
+
+#, python-format
+msgid "certificate expired %s"
+msgstr "o certificado expirou em %s"
+
+#, python-format
+msgid "certificate not valid before %s"
+msgstr "o certificado não é válido antes de %s"
+
+#, python-format
+msgid "certificate is for %s"
+msgstr "o certificado é para %s"
+
+msgid "no commonName found in certificate"
+msgstr "nenhum commonName encontrado no certificado"
+
+#, python-format
+msgid "%s certificate error: %s"
+msgstr "erro no certificado de %s: %s"
+
+#, python-format
+msgid "%s certificate successfully verified\n"
+msgstr "certificado %s verificado com sucesso\n"
 
 #, python-format
 msgid "command '%s' failed: %s"
