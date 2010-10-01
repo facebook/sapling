@@ -4956,8 +4956,8 @@ msgstr "nome da fila de mesclagem (OBSOLETO)"
 msgid "reorder patch series and apply only the patch"
 msgstr "reordena a fila de patches e aplica apenas o patch"
 
-msgid "hg qpush [-f] [-l] [-a] [-m] [-n NAME] [--move] [PATCH | INDEX]"
-msgstr "hg qpush [-f] [-l] [-a] [-m] [-n NOME] [--move] [PATCH | ÍNDICE]"
+msgid "hg qpush [-f] [-l] [-a] [-n NAME] [--move] [PATCH | INDEX]"
+msgstr "hg qpush [-f] [-l] [-a] [-n NOME] [--move] [PATCH | ÍNDICE]"
 
 msgid "refresh only files already in the patch and specified files"
 msgstr "renova apenas os arquivos especificados ou que já estão no patch"
