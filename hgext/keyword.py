@@ -514,7 +514,7 @@ def reposetup(ui, repo):
                 ret = super(kwrepo, self).rollback(dryrun)
                 if not dryrun:
                     ctx = self['.']
-                    modified, added = super(kwrepo, self).status()[:2]
+                    modified, added = self[None].status()[:2]
                     kwt.overwrite(ctx, added, True, False, changed)
                     kwt.overwrite(ctx, modified, True, True, changed)
                 return ret
