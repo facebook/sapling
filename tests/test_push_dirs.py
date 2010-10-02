@@ -2,10 +2,6 @@ import test_util
 
 import unittest
 
-from mercurial import context
-from mercurial import hg
-from mercurial import node
-
 class TestPushDirectories(test_util.TestBase):
     def test_push_dirs(self):
         self._load_fixture_and_fetch('emptyrepo.svndump')
@@ -90,23 +86,22 @@ class TestPushDirectories(test_util.TestBase):
                                             stupid=False,
                                             layout='single',
                                             subdir='tags')
-        def file_callback(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data='foo',
-                                      islink=False,
-                                      isexec=False,
-                                      copied=False)
-        ctx = context.memctx(repo,
-                             (repo['tip'].node(), node.nullid),
-                             'automated test',
-                             ['tag_r3/alpha', 'tag_r3/new', 'new_dir/new'],
-                             file_callback,
-                             'an_author',
-                             '2009-10-19 18:49:30 -0500',
-                             {'branch': 'default',})
-        repo.commitctx(ctx)
-        hg.update(repo, repo['tip'].node())
+        changes = [('tag_r3/alpha', 'tag_r3/alpha', 'foo'),
+                   ('tag_r3/new', 'tag_r3/new', 'foo'),
+                   ('new_dir/new', 'new_dir/new', 'foo'),
+                   ]
+        self.commitchanges(changes)
         self.pushrevisions()
+        self.assertEqual(self.svnls('tags'),
+                         ['copied_tag',
+                          'copied_tag/alpha',
+                          'copied_tag/beta',
+                          'new_dir',
+                          'new_dir/new',
+                          'tag_r3',
+                          'tag_r3/alpha',
+                          'tag_r3/beta',
+                          'tag_r3/new'])
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestPushDirectories),
