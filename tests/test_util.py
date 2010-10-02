@@ -89,12 +89,7 @@ FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         'fixtures')
 
 def requiresoption(option):
-    '''
-    Decorator for test functions which require clone to accept the given option.
-    If the option isn't available, the test is skipped.
-
-    Takes one argument: the required option.
-    '''
+    '''Skip a test if commands.clone does not take the specified option.'''
     def decorator(fn):
         for entry in cmdutil.findcmd('clone', commands.table)[1][1]:
             if entry[1] == option:
