@@ -25,6 +25,14 @@ from mercurial import node
 from mercurial import ui
 from mercurial import extensions
 
+try:
+    from unittest2 import SkipTest
+except ImportError:
+    try:
+        from nose import SkipTest
+    except ImportError:
+        SkipTest = None
+
 from hgsubversion import util
 
 # Documentation for Subprocess.Popen() says:
@@ -94,6 +102,14 @@ def requiresoption(option):
         for entry in cmdutil.findcmd('clone', commands.table)[1][1]:
             if entry[1] == option:
                 return fn
+        # no match found, so skip
+        if SkipTest:
+            def skip(*args, **kwargs):
+                raise SkipTest('test requires clone to accept %s' % option)
+            skip.__name__ = fn.__name__
+            return skip
+        # no skipping support, so erase decorated method
+        return
     if not isinstance(option, str):
         raise TypeError('requiresoption takes a string argument')
     return decorator
