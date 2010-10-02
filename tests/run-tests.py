@@ -546,6 +546,8 @@ def tsttest(test, options, replacements):
 
             if el == l: # perfect match (fast)
                 postout.append("  " + l)
+            elif el and el.decode('string-escape') == l:
+                postout.append("  " + el)  # \-escape match
             elif (el and
                   (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
                    el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l))):
