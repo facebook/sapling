@@ -52,6 +52,20 @@ Testing -R/--repository:
   summary:     b
   
 
+-R with a URL:
+
+  $ hg -R file:a identify
+  8580ff50825a tip
+  $ hg -R file://localhost/`pwd`/a/ identify
+  8580ff50825a tip
+
+-R with a path alias:
+
+  $ cd c
+  $ hg -R default identify
+  8580ff50825a tip
+  $ cd ..
+
 Implicit -R:
 
   $ hg ann a/a
