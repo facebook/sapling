@@ -420,12 +420,12 @@ def _getlocal(ui, rpath):
         lui = ui
     else:
         lui = ui.copy()
-        lui.readconfig(os.path.join(path, ".hg", "hgrc"))
+        lui.readconfig(os.path.join(path, ".hg", "hgrc"), path)
 
     if rpath:
         path = lui.expandpath(rpath[-1])
         lui = ui.copy()
-        lui.readconfig(os.path.join(path, ".hg", "hgrc"))
+        lui.readconfig(os.path.join(path, ".hg", "hgrc"), path)
 
     return path, lui
 

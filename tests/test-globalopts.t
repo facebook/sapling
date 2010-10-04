@@ -20,6 +20,10 @@
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd c
+  $ cat >> .hg/hgrc <<EOF
+  > [paths]
+  > relative = ../a
+  > EOF
   $ hg pull -f ../b
   pulling from ../b
   searching for changes
@@ -59,10 +63,16 @@ Testing -R/--repository:
   $ hg -R file://localhost/`pwd`/a/ identify
   8580ff50825a tip
 
--R with a path alias:
+-R with path aliases:
 
   $ cd c
   $ hg -R default identify
+  8580ff50825a tip
+  $ hg -R relative identify
+  8580ff50825a tip
+  $ echo '[paths]' >> $HGRCPATH
+  $ echo 'relativetohome = a' >> $HGRCPATH
+  $ HOME=`pwd`/../ hg -R relativetohome identify
   8580ff50825a tip
   $ cd ..
 
