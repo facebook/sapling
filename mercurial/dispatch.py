@@ -419,11 +419,8 @@ def _getlocal(ui, rpath):
     if not path:
         lui = ui
     else:
-        try:
-            lui = ui.copy()
-            lui.readconfig(os.path.join(path, ".hg", "hgrc"))
-        except IOError:
-            pass
+        lui = ui.copy()
+        lui.readconfig(os.path.join(path, ".hg", "hgrc"))
 
     if rpath:
         path = lui.expandpath(rpath[-1])
