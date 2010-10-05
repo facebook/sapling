@@ -106,6 +106,15 @@ def _makeskip(name, message):
     return skip
 
 
+def requiresmodule(mod):
+    """Skip a test if the specified module is not None."""
+    def decorator(fn):
+        if mod is not None:
+            return fn
+        return _makeskip(fn.__name__, 'missing required feature')
+    return decorator
+
+
 def requiresoption(option):
     '''Skip a test if commands.clone does not take the specified option.'''
     def decorator(fn):
