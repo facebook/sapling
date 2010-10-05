@@ -49,36 +49,37 @@ class TestLogKeywords(test_util.TestBase):
                           '1:df2126f7-00ab-4d49-b42c-7e981dde0bcf '
                           '2: '))
 
-    if templatekw and revset:
-        def test_svn_revsets(self):
-            repo = self._load_fixture_and_fetch('two_revs.svndump')
+    @test_util.requiresmodule(revset)
+    @test_util.requiresmodule(templatekw)
+    def test_svn_revsets(self):
+        repo = self._load_fixture_and_fetch('two_revs.svndump')
 
-            # we want one commit that isn't from Subversion
-            self.commitchanges([('foo', 'foo', 'frobnicate\n')])
+        # we want one commit that isn't from Subversion
+        self.commitchanges([('foo', 'foo', 'frobnicate\n')])
 
-            defaults = {'date': None, 'rev': ['fromsvn()'], 'user': None}
+        defaults = {'date': None, 'rev': ['fromsvn()'], 'user': None}
 
-            ui = CapturingUI()
-            commands.log(ui, repo, template='{rev}:{svnrev} ', **defaults)
-            self.assertEqual(ui._output, '0:2 1:3 ')
+        ui = CapturingUI()
+        commands.log(ui, repo, template='{rev}:{svnrev} ', **defaults)
+        self.assertEqual(ui._output, '0:2 1:3 ')
 
-            defaults = {'date': None, 'rev': ['svnrev(2)'], 'user': None}
+        defaults = {'date': None, 'rev': ['svnrev(2)'], 'user': None}
 
-            ui = CapturingUI()
-            commands.log(ui, repo, template='{rev}:{svnrev} ', **defaults)
-            self.assertEqual(ui._output, '0:2 ')
+        ui = CapturingUI()
+        commands.log(ui, repo, template='{rev}:{svnrev} ', **defaults)
+        self.assertEqual(ui._output, '0:2 ')
 
-            defaults = {'date': None, 'rev': ['fromsvn(1)'], 'user': None}
+        defaults = {'date': None, 'rev': ['fromsvn(1)'], 'user': None}
 
-            self.assertRaises(error.ParseError,
-                              commands.log, self.ui(), repo,
-                              template='{rev}:{svnrev} ', **defaults)
+        self.assertRaises(error.ParseError,
+                          commands.log, self.ui(), repo,
+                          template='{rev}:{svnrev} ', **defaults)
 
-            defaults = {'date': None, 'rev': ['svnrev(1, 2)'], 'user': None}
+        defaults = {'date': None, 'rev': ['svnrev(1, 2)'], 'user': None}
 
-            self.assertRaises(error.ParseError,
-                              commands.log, self.ui(), repo,
-                              template='{rev}:{svnrev} ', **defaults)
+        self.assertRaises(error.ParseError,
+                          commands.log, self.ui(), repo,
+                          template='{rev}:{svnrev} ', **defaults)
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestLogKeywords),]
