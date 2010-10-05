@@ -435,12 +435,15 @@ def outgoing(repo, subset, x):
     dest = l and getstring(l[0], _("outgoing wants a repository path")) or ''
     dest = repo.ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest)
+    revs, checkout = hg.addbranchrevs(repo, repo, branches, [])
+    if revs:
+        revs = [repo.lookup(rev) for rev in revs]
     other = hg.repository(hg.remoteui(repo, {}), dest)
     repo.ui.pushbuffer()
     o = discovery.findoutgoing(repo, other)
     repo.ui.popbuffer()
     cl = repo.changelog
-    o = set([cl.rev(r) for r in repo.changelog.nodesbetween(o, None)[0]])
+    o = set([cl.rev(r) for r in repo.changelog.nodesbetween(o, revs)[0]])
     return [r for r in subset if r in o]
 
 def tagged(repo, subset, x):
