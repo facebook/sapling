@@ -1,5 +1,8 @@
 import test_util
+
 import unittest
+import urllib
+
 from hgsubversion.svnwrap import parse_url
 from hgsubversion import svnrepo
 
@@ -57,6 +60,19 @@ class TestSubversionUrls(test_util.TestBase):
 
         repo = svnrepo.svnremoterepo(ui, 'svn+https://joe@foo/bar')
         self.assertEqual(('https://foo/bar', 'bob', None), repo.svnauth)
+
+    def test_quoting(self):
+        ui = self.ui()
+        test_util.load_svndump_fixture(self.repo_path,
+                                       'non_ascii_path_1.svndump')
+
+        repo_url = test_util.fileurl(self.repo_path)
+        subdir = '/b\xC3\xB8b'
+        quoted_subdir = urllib.quote(subdir)
+
+        repo1 = svnrepo.svnremoterepo(ui, repo_url + subdir)
+        repo2 = svnrepo.svnremoterepo(ui, repo_url + quoted_subdir)
+        self.assertEqual(repo1.svnurl, repo2.svnurl)
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestSubversionUrls)]

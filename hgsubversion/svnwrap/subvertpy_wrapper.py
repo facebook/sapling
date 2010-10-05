@@ -5,7 +5,6 @@ import os
 import shutil
 import sys
 import tempfile
-import urlparse
 import urllib
 import collections
 
@@ -176,13 +175,18 @@ class SubversionRepo(object):
 
         self.init_ra_and_client()
 
+        self.svn_url = self.remote.get_url()
         self.uuid = self.remote.get_uuid()
         self.root = self.remote.get_repos_root()
+        assert self.svn_url.startswith(self.root)
 
         # *will* have a leading '/', would not if we used get_repos_root2
-        self.subdir = url[len(self.root):]
+        self.subdir = self.svn_url[len(self.root):]
         if not self.subdir or self.subdir[-1] != '/':
             self.subdir += '/'
+        # the RA interface always yields quoted paths, but the editor interface
+        # expects unquoted paths
+        self.subdir = urllib.unquote(self.subdir)
         self.hasdiff3 = True
 
     def init_ra_and_client(self):
@@ -218,7 +222,7 @@ class SubversionRepo(object):
         if self.password:
             auth.set_parameter(subvertpy.AUTH_PARAM_DEFAULT_PASSWORD, self.password)
 
-        self.remote = ra.RemoteAccess(url=self.svn_url.encode('utf-8'),
+        self.remote = ra.RemoteAccess(url=self.svn_url,
                                       client_string_func=getclientstring,
                                       auth=auth)
 

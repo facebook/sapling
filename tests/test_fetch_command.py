@@ -1,7 +1,10 @@
 import test_util
 
+import os
 import unittest
+import urllib
 
+from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
@@ -147,6 +150,42 @@ class TestBasicRepoLayout(test_util.TestBase):
 
     def test_fetch_when_trunk_has_no_files_stupid(self):
         self.test_fetch_when_trunk_has_no_files(stupid=True)
+
+    def test_path_quoting(self, stupid=False):
+        test_util.load_svndump_fixture(self.repo_path,
+                                       'non_ascii_path_1.svndump')
+        subdir = '/b\xC3\xB8b'
+        quoted_subdir = urllib.quote(subdir)
+
+        repo_url = test_util.fileurl(self.repo_path)
+        wc_path = self.wc_path
+        wc2_path = wc_path + '-2'
+
+        ui = self.ui(stupid=stupid)
+
+        commands.clone(ui, repo_url + subdir, wc_path)
+        commands.clone(ui, repo_url + quoted_subdir, wc2_path)
+        repo  = hg.repository(ui, wc_path)
+        repo2 = hg.repository(ui, wc2_path)
+
+        self.assertEqual(repo['tip'].extra()['convert_revision'],
+                         repo2['tip'].extra()['convert_revision'])
+        self.assertEqual(len(repo), len(repo2))
+
+        for r in repo:
+            self.assertEqual(repo[r].hex(), repo2[r].hex())
+
+    def test_path_quoting_stupid(self):
+        self.test_path_quoting(True)
+
+    def test_identical_fixtures(self):
+        '''ensure that the non_ascii_path_N fixtures are identical'''
+        fixturepaths = [
+            os.path.join(test_util.FIXTURES, 'non_ascii_path_1.svndump'),
+            os.path.join(test_util.FIXTURES, 'non_ascii_path_2.svndump'),
+        ]
+        self.assertMultiLineEqual(open(fixturepaths[0]).read(),
+                                  open(fixturepaths[1]).read())
 
 class TestStupidPull(test_util.TestBase):
     def test_stupid(self):

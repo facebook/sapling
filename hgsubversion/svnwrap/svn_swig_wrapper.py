@@ -5,7 +5,6 @@ import os
 import shutil
 import sys
 import tempfile
-import urlparse
 import urllib
 import collections
 
@@ -172,11 +171,16 @@ class SubversionRepo(object):
 
         self.init_ra_and_client()
         self.uuid = ra.get_uuid(self.ra, self.pool)
-        self.root = urllib.unquote(ra.get_repos_root(self.ra, self.pool))
+        self.svn_url = ra.get_session_url(self.ra, self.pool)
+        self.root = ra.get_repos_root(self.ra, self.pool)
+        assert self.svn_url.startswith(self.root)
         # *will* have a leading '/', would not if we used get_repos_root2
-        self.subdir = url[len(self.root):]
+        self.subdir = self.svn_url[len(self.root):]
         if not self.subdir or self.subdir[-1] != '/':
             self.subdir += '/'
+        # the RA interface always yields quoted paths, but the editor interface
+        # expects unquoted paths
+        self.subdir = urllib.unquote(self.subdir)
         self.hasdiff3 = True
 
     def init_ra_and_client(self):
@@ -201,11 +205,7 @@ class SubversionRepo(object):
         callbacks.auth_baton = self.auth_baton
         self.callbacks = callbacks
         try:
-            url = self.svn_url.encode('utf-8')
-            scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-            path=urllib.quote(path)
-            url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
-            self.ra = ra.open2(url, callbacks,
+            self.ra = ra.open2(self.svn_url, callbacks,
                                svn_config, self.pool)
         except SubversionException, e:
             if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:

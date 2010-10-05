@@ -91,6 +91,8 @@ subdir = {'truncatedhistory.svndump': '/project2',
           'empty_dir_in_trunk_not_repo_root.svndump': '/project',
           'project_root_not_repo_root.svndump': '/dummyproj',
           'project_name_with_space.svndump': '/project name',
+          'non_ascii_path_1.svndump': '/b\xC3\xB8b',
+          'non_ascii_path_2.svndump': '/b%C3%B8b',
           }
 
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
