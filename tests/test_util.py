@@ -98,6 +98,14 @@ subdir = {'truncatedhistory.svndump': '/project2',
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         'fixtures')
 
+
+def _makeskip(name, message):
+    def skip(*args, **kwargs):
+        raise SkipTest(message)
+    skip.__name__ = name
+    return skip
+
+
 def requiresoption(option):
     '''Skip a test if commands.clone does not take the specified option.'''
     def decorator(fn):
@@ -106,10 +114,8 @@ def requiresoption(option):
                 return fn
         # no match found, so skip
         if SkipTest:
-            def skip(*args, **kwargs):
-                raise SkipTest('test requires clone to accept %s' % option)
-            skip.__name__ = fn.__name__
-            return skip
+            return _makeskip(fn.__name__,
+                             'test requires clone to accept %s' % option)
         # no skipping support, so erase decorated method
         return
     if not isinstance(option, str):
