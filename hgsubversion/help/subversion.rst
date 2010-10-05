@@ -57,7 +57,7 @@ only convert the latest revision; later pulls will convert all revisions
 following the first. Please note that this only works for single-directory
 clones.
 
-Displaying Subversion revisions
+Finding and displaying Subversion revisions
 -------------------------------------------
 
 For revealing the relationship between Mercurial changesets and Subversion
@@ -68,6 +68,16 @@ represents, and "svnuuid" is the Universally Unique Identifier of the Subversion
 repository. An example::
 
   $ hg log --template='{rev}:{node|short} {author|user}\nsvn: {svnrev}\n'
+
+For finding changesets from Subversion, hgsubversion extends revsets to provide
+two new selectors: ``fromsvn()`` and ``svnrev()``. (Revsets were introduced in
+Mercurial 1.6 and are accepted by several Mercurial commands for specifying
+revisions. See ``hg help revsets`` for details.) You can use ``fromsvn()`` to
+select all changesets that originate from Subversion, and ``svnrev(REV)`` to
+match changesets that originate in a specific Subversion revision. For example::
+
+  $ hg log -r 'fromsvn()'
+  $ hg log -r 'svnrev(500)'
 
 Support for externals
 ---------------------

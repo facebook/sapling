@@ -40,6 +40,13 @@ try:
 except ImportError:
    templatekw = None
 
+try:
+    from mercurial import revset
+    # force demandimport to load revset
+    revset.methods
+except ImportError:
+   revset = None
+
 import svncommands
 import util
 import svnrepo
@@ -141,6 +148,9 @@ def uisetup(ui):
 
     if templatekw:
         templatekw.keywords.update(util.templatekeywords)
+
+    if revset:
+        revset.symbols.update(util.revsets)
 
 def reposetup(ui, repo):
     if repo.local():

@@ -3,10 +3,15 @@ import os
 import urllib
 
 from mercurial import cmdutil
+from mercurial import error
 from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
 
+try:
+    from mercurial import revset
+except ImportError:
+    pass
 
 b_re = re.compile(r'^\+\+\+ b\/([^\n]*)', re.MULTILINE)
 a_re = re.compile(r'^--- a\/([^\n]*)', re.MULTILINE)
@@ -197,4 +202,36 @@ templatekeywords = {
     'svnrev': (lambda repo, ctx, templ, **a: _templatehelper(ctx, 'svnrev')),
     'svnpath': (lambda repo, ctx, templ, **a: _templatehelper(ctx, 'svnpath')),
     'svnuuid': (lambda repo, ctx, templ, **a: _templatehelper(ctx, 'svnuuid')),
+}
+
+def revset_fromsvn(repo, subset, x):
+    args = revset.getargs(x, 0, 0, "fromsvn takes no arguments")
+
+    def matches(r):
+        convertinfo = repo[r].extra().get('convert_revision', '')
+        return convertinfo[:4] == 'svn:'
+
+    return [r for r in subset if matches(r)]
+
+def revset_svnrev(repo, subset, x):
+    args = revset.getargs(x, 1, 1, "svnrev takes one argument")
+
+    rev = revset.getstring(args[0],
+                           "the argument to svnrev() must be a number")
+    try:
+        rev = int(rev)
+    except ValueError:
+        raise error.ParseError("the argument to svnrev() must be a number")
+
+    def matches(r):
+        convertinfo = repo[r].extra().get('convert_revision', '')
+        if convertinfo[:4] != 'svn:':
+            return False
+        return int(convertinfo[40:].rsplit('@', 1)[-1]) == rev
+
+    return [r for r in subset if matches(r)]
+
+revsets = {
+    'fromsvn': revset_fromsvn,
+    'svnrev': revset_svnrev,
 }
