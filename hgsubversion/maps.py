@@ -97,7 +97,7 @@ class AuthorMap(dict):
             return author.rsplit('@', 1)[0]
 
 
-class TagMap(dict):
+class Tags(dict):
     """Map tags to converted node identifier.
 
     tag names are non-empty strings.

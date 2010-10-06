@@ -102,9 +102,9 @@ def rebuildmeta(ui, repo, args, **opts):
     branchinfo = {}
     noderevnums = {}
     tagfile = os.path.join(svnmetadir, 'tagmap')
-    if os.path.exists(maps.TagMap.filepath(repo)):
-        os.unlink(maps.TagMap.filepath(repo))
-    tags = maps.TagMap(repo)
+    if os.path.exists(maps.Tags.filepath(repo)):
+        os.unlink(maps.Tags.filepath(repo))
+    tags = maps.Tags(repo)
 
     layout = None
 

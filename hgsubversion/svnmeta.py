@@ -67,7 +67,7 @@ class SVNMeta(object):
             self.branches = pickle.load(f)
             f.close()
         self.prevbranches = dict(self.branches)
-        self.tags = maps.TagMap(repo)
+        self.tags = maps.Tags(repo)
         if os.path.exists(self.tag_locations_file):
             f = open(self.tag_locations_file)
             self.tag_locations = pickle.load(f)
@@ -413,7 +413,7 @@ class SVNMeta(object):
                     return node.hex(self.revmap[tagged])
                 tag = fromtag
             # Reference an existing tag
-            limitedtags = maps.TagMap(self.repo, endrev=number-1)
+            limitedtags = maps.Tags(self.repo, endrev=number-1)
             if tag in limitedtags:
                 return limitedtags[tag]
         r, br = self.get_parent_svn_branch_and_rev(number - 1, branch, exact)
