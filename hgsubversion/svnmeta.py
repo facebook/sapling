@@ -621,13 +621,16 @@ class SVNMeta(object):
                 branches.setdefault(branch, []).append((op, tag, srcrev))
 
         for b, tags in branches.iteritems():
-            fromtag = self.get_path_tag(self.remotename(b))
+
             # modify parent's .hgtags source
+
             parent = self.repo[self.get_parent_revision(rev.revnum, b)]
             if '.hgtags' not in parent:
                 src = ''
             else:
                 src = parent['.hgtags'].data()
+
+            fromtag = self.get_path_tag(self.remotename(b))
             for op, tag, r in sorted(tags, reverse=True):
                 if op == 'add':
                     if fromtag:
