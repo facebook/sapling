@@ -275,7 +275,8 @@ class SVNMeta(object):
         """Figure out which branch inside our repo this path represents, and
         also figure out which path inside that branch it is.
 
-        Returns a tuple of (path within branch, local branch name, server-side branch path).
+        Returns a tuple of (path within branch, local branch name, server-side
+        branch path).
 
         Note that tag paths can also be matched: assuming tags/tag-1.1
         is a tag then:
@@ -283,9 +284,10 @@ class SVNMeta(object):
         tags/tag-1.1/file => ('file', '../tags/tag-1.1', 'tags/tag-1.1')
         tags/tag-1.2 => (None, None, None)
 
-        If existing=True, will return None, None, None if the file isn't on some known
-        branch. If existing=False, then it will guess what the branch would be if it were
-        known. Server-side branch path should be relative to our subdirectory.
+        If existing=True, will return None, None, None if the file isn't on
+        some known branch. If existing=False, then it will guess what the
+        branch would be if it were known. Server-side branch path should be
+        relative to our subdirectory.
         """
         path = self.normalize(path)
         if self.layout == 'single':
@@ -528,7 +530,8 @@ class SVNMeta(object):
                     if self.remotename(known).startswith(p):
                         self.closebranches.add(known) # case 5
             parent = self._determine_parent_branch(
-                p, paths[p].copyfrom_path, paths[p].copyfrom_rev, revision.revnum)
+                p, paths[p].copyfrom_path, paths[p].copyfrom_rev,
+                revision.revnum)
             if not parent and paths[p].copyfrom_path:
                 bpath, branch = self.split_branch_path(p, False)[:2]
                 if (bpath is not None
