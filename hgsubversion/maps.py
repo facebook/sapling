@@ -111,7 +111,7 @@ class TagMap(dict):
     def __init__(self, repo, endrev=None):
         dict.__init__(self)
         self.path = self.filepath(repo)
-        self.endrev=endrev
+        self.endrev = endrev
         if os.path.isfile(self.path):
             self._load(repo)
         else:
@@ -148,7 +148,7 @@ class TagMap(dict):
         f.close()
 
     def update(self, other):
-        for k,v in other.iteritems():
+        for k, v in other.iteritems():
             self[k] = v
 
     def __contains__(self, tag):
