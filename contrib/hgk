@@ -469,7 +469,12 @@ proc makewindow {} {
     global rowctxmenu gaudydiff mergemax
     global hgvdiff bgcolor fgcolor diffremcolor diffaddcolor diffmerge1color
     global diffmerge2color hunksepcolor
+    global posx posy
 
+    if {[info exists posx]} {
+        wm geometry . +$posx+$posy
+    }
+    
     menu .bar
     .bar add cascade -label "File" -menu .bar.file
     menu .bar.file
@@ -741,6 +746,10 @@ proc savestuff {w} {
 	set wid [expr {([winfo width $cflist] - 11) \
 			   / [font measure [$cflist cget -font] "0"]}]
 	puts $f "set geometry(cflistw) $wid"
+	puts $f "#"
+	puts $f "# main window position:"
+	puts $f "set posx [winfo x .]"
+	puts $f "set posy [winfo y .]"
 	puts $f "#"
 	puts $f "# authorcolors format:"
 	puts $f "#"
