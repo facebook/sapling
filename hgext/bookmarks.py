@@ -225,15 +225,13 @@ def reposetup(ui, repo):
             in the .hg/bookmarks file.
             Read the file and return a (name=>nodeid) dictionary
             '''
-            self._loadingbookmarks = True
             try:
                 bookmarks = {}
                 for line in self.opener('bookmarks'):
                     sha, refspec = line.strip().split(' ', 1)
-                    bookmarks[refspec] = super(bookmark_repo, self).lookup(sha)
+                    bookmarks[refspec] = self.changelog.lookup(sha)
             except:
                 pass
-            self._loadingbookmarks = False
             return bookmarks
 
         @util.propertycache
@@ -260,9 +258,8 @@ def reposetup(ui, repo):
             return super(bookmark_repo, self).rollback(*args)
 
         def lookup(self, key):
-            if not getattr(self, '_loadingbookmarks', False):
-                if key in self._bookmarks:
-                    key = self._bookmarks[key]
+            if key in self._bookmarks:
+                key = self._bookmarks[key]
             return super(bookmark_repo, self).lookup(key)
 
         def _bookmarksupdate(self, parents, node):
@@ -361,8 +358,7 @@ def reposetup(ui, repo):
         def _findtags(self):
             """Merge bookmarks with normal tags"""
             (tags, tagtypes) = super(bookmark_repo, self)._findtags()
-            if not getattr(self, '_loadingbookmarks', False):
-                tags.update(self._bookmarks)
+            tags.update(self._bookmarks)
             return (tags, tagtypes)
 
         if hasattr(repo, 'invalidate'):
