@@ -12,7 +12,7 @@ from i18n import _
 
 elements = {
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
-    "-": (19, ("negate", 19), ("minus", 19)),
+    "-": (5, ("negate", 19), ("minus", 5)),
     "::": (17, ("dagrangepre", 17), ("dagrange", 17),
            ("dagrangepost", 17)),
     "..": (17, ("dagrangepre", 17), ("dagrange", 17),

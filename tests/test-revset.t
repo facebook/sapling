@@ -327,3 +327,5 @@ quoting needed
   2
   1
   0
+  $ log '4::8 - 8'
+  4
