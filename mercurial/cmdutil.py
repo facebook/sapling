@@ -112,32 +112,18 @@ def loglimit(opts):
     return limit
 
 def revpair(repo, revs):
-    '''return pair of nodes, given list of revisions. second item can
-    be None, meaning use working dir.'''
-
-    def revfix(repo, val, defval):
-        if not val and val != 0 and defval is not None:
-            val = defval
-        return repo.lookup(val)
-
     if not revs:
         return repo.dirstate.parents()[0], None
-    end = None
-    if len(revs) == 1:
-        if revrangesep in revs[0]:
-            start, end = revs[0].split(revrangesep, 1)
-            start = revfix(repo, start, 0)
-            end = revfix(repo, end, len(repo) - 1)
-        else:
-            start = revfix(repo, revs[0], None)
-    elif len(revs) == 2:
-        if revrangesep in revs[0] or revrangesep in revs[1]:
-            raise util.Abort(_('too many revisions specified'))
-        start = revfix(repo, revs[0], None)
-        end = revfix(repo, revs[1], None)
-    else:
-        raise util.Abort(_('too many revisions specified'))
-    return start, end
+
+    l = revrange(repo, revs)
+
+    if len(l) == 0:
+        return repo.dirstate.parents()[0], None
+
+    if len(l) == 1:
+        return repo.lookup(l[0]), None
+
+    return repo.lookup(l[0]), repo.lookup(l[-1])
 
 def revrange(repo, revs):
     """Yield revision as strings from a list of revision specifications."""
