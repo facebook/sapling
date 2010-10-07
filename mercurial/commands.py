@@ -634,7 +634,7 @@ def cat(ui, repo, file1, *pats, **opts):
 
     Returns 0 on success.
     """
-    ctx = repo[opts.get('rev')]
+    ctx = cmdutil.revsingle(repo, opts.get('rev'))
     err = 1
     m = cmdutil.match(repo, (file1,) + pats, opts)
     for abs in ctx.walk(m):

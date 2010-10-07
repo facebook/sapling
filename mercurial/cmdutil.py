@@ -111,6 +111,15 @@ def loglimit(opts):
         limit = None
     return limit
 
+def revsingle(repo, revspec, default=None):
+    if not revspec:
+        return repo[default]
+
+    l = revrange(repo, [revspec])
+    if len(l) < 1:
+        raise util.Abort("empty revision set")
+    return repo[l[-1]]
+
 def revpair(repo, revs):
     if not revs:
         return repo.dirstate.parents()[0], None
