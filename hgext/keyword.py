@@ -191,16 +191,15 @@ class kwtemplater(object):
             return self.substitute(data, path, ctx, self.re_kw.sub)
         return data
 
-    def iskwfile(self, path, flagfunc):
-        '''Returns true if path matches [keyword] pattern
-        and is not a symbolic link.
-        Caveat: localrepository._link fails on Windows.'''
-        return self.match(path) and not 'l' in flagfunc(path)
+    def iskwfile(self, cand, ctx):
+        '''Returns subset of candidates which are configured for keyword
+        expansion are not symbolic links.'''
+        return [f for f in cand if self.match(f) and not 'l' in ctx.flags(f)]
 
     def overwrite(self, ctx, candidates, lookup, expand):
         '''Overwrites selected files expanding/shrinking keywords.'''
         if self.restrict or lookup: # exclude kw_copy
-            candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
+            candidates = self.iskwfile(candidates, ctx)
         if not candidates:
             return
         commit = self.restrict and not lookup
@@ -417,8 +416,8 @@ def files(ui, repo, *pats, **opts):
     if not opts.get('unknown') or opts.get('all'):
         files = sorted(modified + added + clean)
     wctx = repo[None]
-    kwfiles = [f for f in files if kwt.iskwfile(f, wctx.flags)]
-    kwunknown = [f for f in unknown if kwt.iskwfile(f, wctx.flags)]
+    kwfiles = kwt.iskwfile(files, wctx)
+    kwunknown = kwt.iskwfile(unknown, wctx)
     if not opts.get('ignore') or opts.get('all'):
         showfiles = kwfiles, kwunknown
     else:
