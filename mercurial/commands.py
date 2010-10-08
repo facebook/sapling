@@ -3745,11 +3745,14 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     """update working directory (or switch revisions)
 
     Update the repository's working directory to the specified
-    changeset.
+    changeset. If no changeset is specified, update to the tip of the
+    current named branch.
 
-    If no changeset is specified, attempt to update to the tip of the
-    current branch. If this changeset is a descendant of the working
-    directory's parent, update to it, otherwise abort.
+    If the changeset is not a descendant of the working directory's
+    parent, the update is aborted. With the -c/--check option, the
+    working directory is checked for uncommitted changes; if none are
+    found, the working directory is updated to the specified
+    changeset.
 
     The following rules apply when the working directory contains
     uncommitted changes:
@@ -3772,7 +3775,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     Use null as the changeset to remove the working directory (like
     :hg:`clone -U`).
 
-    If you want to update just one file to an older changeset, use :hg:`revert`.
+    If you want to update just one file to an older changeset, use
+    :hg:`revert`.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
@@ -4428,7 +4432,8 @@ table = {
     "^update|up|checkout|co":
         (update,
          [('C', 'clean', None, _('discard uncommitted changes (no backup)')),
-          ('c', 'check', None, _('check for uncommitted changes')),
+          ('c', 'check', None,
+           _('update across branches if no uncommitted changes')),
           ('d', 'date', '',
            _('tipmost revision matching date'), _('DATE')),
           ('r', 'rev', '',
