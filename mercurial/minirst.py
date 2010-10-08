@@ -296,28 +296,25 @@ def addmargins(blocks):
             i += 2
     return blocks
 
+_admonitionre = re.compile(r"\.\. (admonition|attention|caution|danger|"
+                           r"error|hint|important|note|tip|warning)::",
+                           flags=re.IGNORECASE)
+
 def findadmonitions(blocks):
     """
     Makes the type of the block an admonition block if
     the first line is an admonition directive
     """
-
     i = 0
-
-    pattern = (r"\.\. (admonition|attention|caution|danger|error|hint|"
-               r"important|note|tip|warning)::")
-
-    prog = re.compile(pattern, flags=re.IGNORECASE)
     while i < len(blocks):
-        m = prog.match(blocks[i]['lines'][0])
+        m = _admonitionre.match(blocks[i]['lines'][0])
         if m:
             blocks[i]['type'] = 'admonition'
             admonitiontitle = blocks[i]['lines'][0][3:m.end() - 2].lower()
 
             firstline = blocks[i]['lines'][0][m.end() + 1:]
-            if firstline != '':
-                blocks[i]['lines'].insert(1, '   ' + firstline + '')
-
+            if firstline:
+                blocks[i]['lines'].insert(1, '   ' + firstline)
 
             blocks[i]['admonitiontitle'] = admonitiontitle
             del blocks[i]['lines'][0]
