@@ -98,8 +98,6 @@ nokwcommands = ('add addremove annotate bundle export grep incoming init log'
 # not when reading filelog, and unexpand when reading from working dir
 restricted = 'merge kwexpand kwshrink record qrecord resolve transplant'
 
-# commands using dorecord
-recordcommands = 'record qrecord'
 # names of extensions using dorecord
 recordextensions = 'record'
 
@@ -155,7 +153,7 @@ class kwtemplater(object):
         self.repo = repo
         self.match = match.match(repo.root, '', [], inc, exc)
         self.restrict = kwtools['hgcmd'] in restricted.split()
-        self.record = kwtools['hgcmd'] in recordcommands.split()
+        self.record = False
 
         kwmaps = self.ui.configitems('keywordmaps')
         if kwmaps: # override default templates
@@ -570,6 +568,7 @@ def reposetup(ui, repo):
         try:
             # record returns 0 even when nothing has changed
             # therefore compare nodes before and after
+            kwt.record = True
             ctx = repo['.']
             modified, added = repo[None].status()[:2]
             ret = orig(ui, repo, commitfunc, *pats, **opts)
