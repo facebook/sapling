@@ -3,6 +3,9 @@ import os
 import sys
 import unittest
 
+import test_util
+test_util.SkipTest = None
+
 def tests():
     import test_binaryfiles
     import test_diff

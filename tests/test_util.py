@@ -100,15 +100,17 @@ FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
 
 
 def _makeskip(name, message):
-    def skip(*args, **kwargs):
-        raise SkipTest(message)
-    skip.__name__ = name
-    return skip
-
+    if SkipTest:
+        def skip(*args, **kwargs):
+            raise SkipTest(message)
+        skip.__name__ = name
+        return skip
 
 def requiresmodule(mod):
     """Skip a test if the specified module is not None."""
     def decorator(fn):
+        if fn is None:
+            return
         if mod is not None:
             return fn
         return _makeskip(fn.__name__, 'missing required feature')
