@@ -1156,6 +1156,21 @@ class revlog(object):
 
     def _addrevision(self, node, text, transaction, link, p1, p2,
                      cachedelta, ifh, dfh):
+
+        def buildtext(cachedelta):
+            if text is not None:
+                return text
+            # flush any pending writes here so we can read it in revision
+            if dfh:
+                dfh.flush()
+            ifh.flush()
+            basetext = self.revision(self.node(cachedelta[0]))
+            patchedtext = mdiff.patch(basetext, cachedelta[1])
+            chk = hash(patchedtext, p1, p2)
+            if chk != node:
+                raise RevlogError(_("consistency error in delta"))
+            return patchedtext
+
         curr = len(self)
         prev = curr - 1
         base = curr
@@ -1175,6 +1190,7 @@ class revlog(object):
             if cachedelta:
                 cacherev, d = cachedelta
                 if cacherev != deltarev:
+                    text = buildtext(cachedelta)
                     d = None
             if d is None:
                 ptext = self.revision(deltanode)
@@ -1187,13 +1203,19 @@ class revlog(object):
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
         # or the base revision is punched
-        if (d is None or dist > len(text) * 2 or
+        if text is None:
+            textlen = mdiff.patchedsize(self.rawsize(cachedelta[0]),
+                                        cachedelta[1])
+        else:
+            textlen = len(text)
+        if (d is None or dist > textlen * 2 or
             (self.flags(base) & REVIDX_PUNCHED_FLAG)):
+            text = buildtext(cachedelta)
             data = compress(text)
             l = len(data[1]) + len(data[0])
             base = curr
 
-        e = (offset_type(offset, flags), l, len(text),
+        e = (offset_type(offset, flags), l, textlen,
              base, link, self.rev(p1), self.rev(p2), node)
         self.index.insert(-1, e)
         self.nodemap[node] = curr
