@@ -50,6 +50,9 @@ as it would succeed without uisetup otherwise
   > b = ignore
   > i = ignore
   > [hooks]
+  > EOF
+  $ cp $HGRCPATH $HGRCPATH.nohooks
+  > cat <<EOF >> $HGRCPATH
   > commit=
   > commit.test=cp a hooktest
   > EOF
@@ -157,10 +160,7 @@ Test hook execution
 
   $ diff a hooktest
 
-Removing commit hook from config
-
-  $ sed -e '/\[hooks\]/,$ d' "$HGRCPATH" > $HGRCPATH.nohook
-  $ mv "$HGRCPATH".nohook "$HGRCPATH"
+  $ cp $HGRCPATH.nohooks $HGRCPATH
   $ rm hooktest
 
 bundle
@@ -247,10 +247,7 @@ Pull from bundle and trigger notify
   +ignore $Id$
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-Remove notify config
-
-  $ sed -e '/\[hooks\]/,$ d' "$HGRCPATH" > $HGRCPATH.nonotify
-  $ mv "$HGRCPATH".nonotify "$HGRCPATH"
+  $ cp $HGRCPATH.nohooks $HGRCPATH
 
 Touch files and check with status
 
@@ -730,8 +727,8 @@ Clone to test incoming
   
 Imported patch should not be rejected
 
-  $ sed -e 's/Id.*/& rejecttest/' a > a.new
-  $ mv a.new a
+  $ python -c \
+  > 'import re; s=re.sub("(Id.*)","\\1 rejecttest",open("a").read()); open("a","wb").write(s);'
   $ hg --debug commit -m'rejects?' -d '3 0' -u 'User Name <user@example.com>'
   a
   overwriting a expanding keywords
