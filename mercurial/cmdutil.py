@@ -111,7 +111,7 @@ def loglimit(opts):
         limit = None
     return limit
 
-def revsingle(repo, revspec, default=None):
+def revsingle(repo, revspec, default='.'):
     if not revspec:
         return repo[default]
 
