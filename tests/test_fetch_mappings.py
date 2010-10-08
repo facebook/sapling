@@ -25,6 +25,10 @@ class MapTests(test_util.TestBase):
     @property
     def branchmap(self):
         return os.path.join(self.tmpdir, 'branchmap')
+	
+    @property
+    def tagmap(self):
+        return os.path.join(self.tmpdir, 'tagmap')
 
     def test_author_map(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'replace_trunk_with_branch.svndump')
@@ -242,6 +246,44 @@ class MapTests(test_util.TestBase):
         branchmap.close()
         self.assertRaises(hgutil.Abort,
                           maps.BranchMap, self.ui(), self.branchmap)
+
+    def test_tagmap(self, stupid=False):
+        test_util.load_svndump_fixture(self.repo_path,
+                                       'basic_tag_tests.svndump')
+        tagmap = open(self.tagmap, 'w')
+        tagmap.write("tag_r3 = 3.x # stuffy\n")
+        tagmap.write("copied_tag = \n")
+        tagmap.close()
+
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'tagmap', self.tagmap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
+                       self.wc_path, tagmap=self.tagmap)
+        tags = self.repo.tags()
+        assert 'tag_r3' not in tags
+        assert '3.x' in tags
+        assert 'copied_tag' not in tags
+
+    def test_tagmap_stupid(self):
+        self.test_tagmap(True)
+
+    def test_tagren_changed(self, stupid=False):
+        test_util.load_svndump_fixture(self.repo_path,
+                                       'commit-to-tag.svndump')
+        tagmap = open(self.tagmap, 'w')
+        tagmap.write("edit-at-create = edit-past\n")
+        tagmap.write("also-edit = \n")
+        tagmap.write("will-edit = edit-future\n")
+        tagmap.close()
+
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'tagmap', self.tagmap)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
+                       self.wc_path, tagmap=self.tagmap)
+        tags = self.repo.tags()
+
+    def test_tagren_changed_stupid(self):
+        self.test_tagren_changed(True)
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(MapTests)

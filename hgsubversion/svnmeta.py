@@ -54,6 +54,7 @@ class SVNMeta(object):
         self.usebranchnames = self.ui.configbool('hgsubversion',
                                                  'usebranchnames', True)
         branchmap = self.ui.config('hgsubversion', 'branchmap')
+        tagmap = self.ui.config('hgsubversion', 'tagmap')
 
         # FIXME: test that this hasn't changed! defer & compare?
         if subdir:
@@ -90,9 +91,14 @@ class SVNMeta(object):
         self.authors = maps.AuthorMap(self.ui, self.authors_file,
                                  defaulthost=author_host)
         if authors: self.authors.load(authors)
+
         self.branchmap = maps.BranchMap(self.ui, self.branchmapfile)
         if branchmap:
             self.branchmap.load(branchmap)
+
+        self.tagmap = maps.TagMap(self.ui, self.tagmapfile)
+        if tagmap:
+            self.tagmap.load(tagmap)
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.filemap = maps.FileMap(repo)
@@ -162,6 +168,11 @@ class SVNMeta(object):
     @property
     def branchmapfile(self):
         return os.path.join(self.meta_data_dir, 'branchmap')
+
+    @property
+    def tagmapfile(self):
+        # called tag-renames for backwards compatibility
+        return os.path.join(self.meta_data_dir, 'tag-renames')
 
     @property
     def layoutfile(self):
@@ -577,7 +588,7 @@ class SVNMeta(object):
             tagdata = parentctx.filectx('.hgtags').data()
         else:
             tagdata = ''
-        tagdata += '%s %s\n' % (node.hex(hash), tag, )
+        tagdata += '%s %s\n' % (node.hex(hash), self.tagmap.get(tag, tag))
         def hgtagsfn(repo, memctx, path):
             assert path == '.hgtags'
             return context.memfilectx(path=path,
@@ -632,6 +643,11 @@ class SVNMeta(object):
 
             fromtag = self.get_path_tag(self.remotename(b))
             for op, tag, r in sorted(tags, reverse=True):
+
+                if tag in self.tagmap and not self.tagmap[tag]:
+                    continue
+
+                tagged = node.hex(node.nullid) # op != 'add'
                 if op == 'add':
                     if fromtag:
                         if fromtag in self.tags:
@@ -639,9 +655,8 @@ class SVNMeta(object):
                     else:
                         tagged = node.hex(self.revmap[
                             self.get_parent_svn_branch_and_rev(r, b)])
-                else:
-                    tagged = node.hex(node.nullid)
-                src += '%s %s\n' % (tagged, tag)
+
+                src += '%s %s\n' % (tagged, self.tagmap.get(tag, tag))
                 self.tags[tag] = node.bin(tagged), rev.revnum
 
             # add new changeset containing updated .hgtags

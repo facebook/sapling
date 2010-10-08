@@ -100,7 +100,8 @@ class AuthorMap(dict):
 class Tags(dict):
     """Map tags to converted node identifier.
 
-    tag names are non-empty strings.
+    tag names are non-empty strings. Tags are saved in a file
+    called tagmap, for backwards compatibility reasons.
     """
     VERSION = 2
 
@@ -354,6 +355,64 @@ class BranchMap(dict):
                                    % (number, path))
             elif src in self and dst != self[src]:
                 msg = 'overriding branch: "%s" to "%s" (%s)\n'
+                self.ui.status(msg % (self[src], dst, src))
+            self[src] = dst
+
+        f.close()
+        if writing:
+            writing.flush()
+            writing.close()
+
+class TagMap(dict):
+    '''Facility for controlled renaming of tags. Example:
+
+    oldname = newname
+    other =
+
+	The oldname tag from SVN will be represented as newname in the hg tags;
+	the other tag will not be reflected in the hg repository.
+    '''
+
+    def __init__(self, ui, path):
+        self.ui = ui
+        self.path = path
+        self.super = super(TagMap, self)
+        self.super.__init__()
+        self.load(path)
+
+    def load(self, path):
+        '''Load mappings from a file at the specified path.'''
+        if not os.path.exists(path):
+            return
+
+        writing = False
+        if path != self.path:
+            writing = open(self.path, 'a')
+
+        self.ui.note('reading tag renames from %s\n' % path)
+        f = open(path, 'r')
+        for number, line in enumerate(f):
+
+            if writing:
+                writing.write(line)
+
+            line = line.split('#')[0]
+            if not line.strip():
+                continue
+
+            try:
+                src, dst = line.split('=', 1)
+            except (IndexError, ValueError):
+                msg = 'ignoring line %i in tag renames %s: %s\n'
+                self.ui.status(msg % (number, path, line.rstrip()))
+                continue
+
+            src = src.strip()
+            dst = dst.strip()
+            self.ui.debug('adding tag %s to tag renames\n' % src)
+
+            if src in self and dst != self[src]:
+                msg = 'overriding tag rename: "%s" to "%s" (%s)\n'
                 self.ui.status(msg % (self[src], dst, src))
             self[src] = dst
 
