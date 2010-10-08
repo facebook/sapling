@@ -1300,16 +1300,13 @@ class revlog(object):
         log, the rest are against the previous delta.
         """
 
-        #track the base of the current delta log
-        r = len(self)
-        t = r - 1
+        # track the base of the current delta log
         node = None
 
-        base = prev = nullrev
-        start = end = textlen = 0
+        r = len(self)
+        end = 0
         if r:
-            end = self.end(t)
-
+            end = self.end(r - 1)
         ifh = self.opener(self.indexfile, "a+")
         isize = r * self._io.size
         if self._inline:
@@ -1344,16 +1341,19 @@ class revlog(object):
                     if not p in self.nodemap:
                         if self._shallow:
                             # add null entries for missing parents
-                            if base == nullrev:
-                                base = len(self)
-                            e = (offset_type(end, REVIDX_PUNCHED_FLAG),
-                                 0, 0, base, nullrev, nullrev, nullrev, p)
-                            self.index.insert(-1, e)
-                            self.nodemap[p] = r
-                            entry = self._io.packentry(e, self.node,
-                                                       self.version, r)
-                            ifh.write(entry)
-                            t, r = r, r + 1
+                            # XXX FIXME
+                            #if base == nullrev:
+                            #    base = len(self)
+                            #e = (offset_type(end, REVIDX_PUNCHED_FLAG),
+                            #     0, 0, base, nullrev, nullrev, nullrev, p)
+                            #self.index.insert(-1, e)
+                            #self.nodemap[p] = r
+                            #entry = self._io.packentry(e, self.node,
+                            #                           self.version, r)
+                            #ifh.write(entry)
+                            #t, r = r, r + 1
+                            raise LookupError(p, self.indexfile,
+                                              _('unknown parent'))
                         else:
                             raise LookupError(p, self.indexfile,
                                               _('unknown parent'))
@@ -1364,58 +1364,14 @@ class revlog(object):
                     if not chain in self.nodemap:
                         raise LookupError(chain, self.indexfile, _('unknown base'))
 
-                # full versions are inserted when the needed deltas become
-                # comparable to the uncompressed text or when the previous
-                # version is not the one we have a delta against. We use
-                # the size of the previous full rev as a proxy for the
-                # current size.
-
-                if chain == prev:
-                    cdelta = compress(delta)
-                    cdeltalen = len(cdelta[0]) + len(cdelta[1])
-                    textlen = mdiff.patchedsize(textlen, delta)
-
-                if chain != prev or (end - start + cdeltalen) > textlen * 2:
-                    # flush our writes here so we can read it in revision
-                    if dfh:
-                        dfh.flush()
-                    ifh.flush()
-                    text = self.revision(chain)
-                    text = mdiff.patch(text, delta)
-                    del delta
-                    chk = self._addrevision(node, text, transaction, link,
-                                            p1, p2, None, ifh, dfh)
-                    if not dfh and not self._inline:
-                        # addrevision switched from inline to conventional
-                        # reopen the index
-                        dfh = self.opener(self.datafile, "a")
-                        ifh = self.opener(self.indexfile, "a")
-                    if chk != node:
-                        raise RevlogError(_("consistency error adding group"))
-                    textlen = len(text)
-                else:
-                    e = (offset_type(end, 0), cdeltalen, textlen, base,
-                         link, self.rev(p1), self.rev(p2), node)
-                    self.index.insert(-1, e)
-                    self.nodemap[node] = r
-                    entry = self._io.packentry(e, self.node, self.version, r)
-                    if self._inline:
-                        ifh.write(entry)
-                        ifh.write(cdelta[0])
-                        ifh.write(cdelta[1])
-                        self.checkinlinesize(transaction, ifh)
-                        if not self._inline:
-                            dfh = self.opener(self.datafile, "a")
-                            ifh = self.opener(self.indexfile, "a")
-                    else:
-                        dfh.write(cdelta[0])
-                        dfh.write(cdelta[1])
-                        ifh.write(entry)
-
-                t, r, chain, prev = r, r + 1, node, node
-                base = self.base(t)
-                start = self.start(base)
-                end = self.end(t)
+                chainrev = self.rev(chain)
+                chain = self._addrevision(node, None, transaction, link,
+                                          p1, p2, (chainrev, delta), ifh, dfh)
+                if not dfh and not self._inline:
+                    # addrevision switched from inline to conventional
+                    # reopen the index
+                    dfh = self.opener(self.datafile, "a")
+                    ifh = self.opener(self.indexfile, "a")
         finally:
             if dfh:
                 dfh.close()
