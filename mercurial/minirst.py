@@ -48,25 +48,21 @@ def replace(text, substs):
         utext = utext.replace(f, t)
     return utext.encode(encoding.encoding)
 
+
+_blockre = re.compile(r"\n(?:\s*\n)+")
+
 def findblocks(text):
     """Find continuous blocks of lines in text.
 
     Returns a list of dictionaries representing the blocks. Each block
     has an 'indent' field and a 'lines' field.
     """
-    blocks = [[]]
-    lines = text.splitlines()
-    for line in lines:
-        if line.strip():
-            blocks[-1].append(line)
-        elif blocks[-1]:
-            blocks.append([])
-    if not blocks[-1]:
-        del blocks[-1]
-
-    for i, block in enumerate(blocks):
-        indent = min((len(l) - len(l.lstrip())) for l in block)
-        blocks[i] = dict(indent=indent, lines=[l[indent:] for l in block])
+    blocks = []
+    for b in _blockre.split(text.strip()):
+        lines = b.splitlines()
+        indent = min((len(l) - len(l.lstrip())) for l in lines)
+        lines = [l[indent:] for l in lines]
+        blocks.append(dict(indent=indent, lines=lines))
     return blocks
 
 
