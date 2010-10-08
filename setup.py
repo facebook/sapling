@@ -55,6 +55,7 @@ from distutils.command.build_py import build_py
 from distutils.spawn import spawn, find_executable
 from distutils.ccompiler import new_compiler
 from distutils.errors import CCompilerError
+from distutils.sysconfig import get_python_inc
 
 scripts = ['hg']
 if os.name == 'nt':
@@ -246,6 +247,9 @@ class hgbuildpy(build_py):
                 if ext.name.startswith("mercurial."):
                     self.py_modules.append("mercurial.pure.%s" % ext.name[10:])
             self.distribution.ext_modules = []
+        else:
+            if not os.path.exists(os.path.join(get_python_inc(), 'Python.h')):
+                raise SystemExit("Python headers are required to build Mercurial")
 
     def find_modules(self):
         modules = build_py.find_modules(self)
