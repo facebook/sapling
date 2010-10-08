@@ -487,6 +487,8 @@ def tsttest(test, options):
             # non-command/result - queue up for merged output
             after.setdefault(pos, []).append(l)
 
+    if script and not script[-1].endswith('\n'):
+        script[-1] = script[-1] + '\n'
     script.append('echo %s %s $?\n' % (salt, n + 1))
 
     fd, name = tempfile.mkstemp(suffix='hg-tst')
