@@ -82,8 +82,8 @@ like CVS' $Log$, are not supported. A keyword template map "Log =
 {desc}" expands to the first line of the changeset description.
 '''
 
-from mercurial import commands, cmdutil, dispatch, filelog, revlog, extensions
-from mercurial import patch, localrepo, templater, templatefilters, util, match
+from mercurial import commands, cmdutil, dispatch, filelog, extensions
+from mercurial import localrepo, match, patch, templatefilters, templater, util
 from mercurial.hgweb import webcommands
 from mercurial.i18n import _
 import re, shutil, tempfile
@@ -263,6 +263,8 @@ class kwfilelog(filelog.filelog):
     def read(self, node):
         '''Expands keywords when reading filelog.'''
         data = super(kwfilelog, self).read(node)
+        if self.renamed(node):
+            return data
         return self.kwt.expand(self.path, node, data)
 
     def add(self, text, meta, tr, link, p1=None, p2=None):
@@ -273,10 +275,7 @@ class kwfilelog(filelog.filelog):
     def cmp(self, node, text):
         '''Removes keyword substitutions for comparison.'''
         text = self.kwt.shrink(self.path, text)
-        if self.renamed(node):
-            t2 = super(kwfilelog, self).read(node)
-            return t2 != text
-        return revlog.revlog.cmp(self, node, text)
+        return super(kwfilelog, self).cmp(node, text)
 
 def _status(ui, repo, kwt, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
