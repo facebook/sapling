@@ -91,8 +91,8 @@ import re, shutil, tempfile
 commands.optionalrepo += ' kwdemo'
 
 # hg commands that do not act on keywords
-nokwcommands = ('add addremove annotate bundle copy export grep incoming init'
-                ' log outgoing push rename tip verify convert email glog')
+nokwcommands = ('add addremove annotate bundle export grep incoming init log'
+                ' outgoing push tip verify convert email glog')
 
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
@@ -199,7 +199,8 @@ class kwtemplater(object):
 
     def overwrite(self, ctx, candidates, lookup, expand):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
+        if self.restrict or lookup: # exclude kw_copy
+            candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
         if not candidates:
             return
         commit = self.restrict and not lookup
@@ -547,6 +548,22 @@ def reposetup(ui, repo):
         kwt.match = util.never
         return orig(web, req, tmpl)
 
+    def kw_copy(orig, ui, repo, pats, opts, rename=False):
+        '''Wraps cmdutil.copy so that copy/rename destinations do not
+        contain expanded keywords.
+        Note that the source may also be a symlink as:
+        hg cp sym x                -> x is symlink
+        cp sym x; hg cp -A sym x   -> x is file (maybe expanded keywords)
+        '''
+        orig(ui, repo, pats, opts, rename)
+        if opts.get('dry_run'):
+            return
+        wctx = repo[None]
+        candidates = [f for f in repo.dirstate.copies() if
+                      kwt.match(repo.dirstate.copied(f)) and
+                      not 'l' in wctx.flags(f)]
+        kwt.overwrite(wctx, candidates, False, False)
+
     def kw_dorecord(orig, ui, repo, commitfunc, *pats, **opts):
         '''Wraps record.dorecord expanding keywords after recording.'''
         wlock = repo.wlock()
@@ -569,6 +586,7 @@ def reposetup(ui, repo):
 
     extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
     extensions.wrapfunction(patch, 'diff', kw_diff)
+    extensions.wrapfunction(cmdutil, 'copy', kw_copy)
     for c in 'annotate changeset rev filediff diff'.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)
     for name in recordextensions.split():

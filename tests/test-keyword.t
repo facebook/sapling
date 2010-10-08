@@ -48,6 +48,7 @@ as it would succeed without uisetup otherwise
   > [keyword]
   > ** =
   > b = ignore
+  > i = ignore
   > [hooks]
   > commit=
   > commit.test=cp a hooktest
@@ -498,6 +499,38 @@ Touch copied c and check its status
   $ touch c
   $ hg status
 
+Copy kwfile to keyword ignored file unexpanding keywords
+
+  $ hg --verbose copy a i
+  copying a to i
+  overwriting i shrinking keywords
+  $ head -n 1 i
+  expand $Id$
+  $ hg forget i
+  $ rm i
+
+Copy ignored file to ignored file: no overwriting
+
+  $ hg --verbose copy b i
+  copying b to i
+  $ hg forget i
+  $ rm i
+
+cp symlink (becomes regular file), and hg copy after
+
+  $ cp sym i
+  $ ls -l i
+  -rw-r--r--  * (glob)
+  $ head -1 i
+  expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
+  $ hg copy --after --verbose sym i
+  copying sym to i
+  overwriting i shrinking keywords
+  $ head -1 i
+  expand $Id$
+  $ hg forget i
+  $ rm i
+
 Test different options of hg kwfiles
 
   $ hg kwfiles
@@ -541,6 +574,7 @@ Custom keywordmaps as argument to kwdemo
   ** = 
   b = ignore
   demo.txt = 
+  i = ignore
   [keywordmaps]
   Xinfo = {author}: {desc}
   $Xinfo: test: hg keyword configuration and expansion example $
