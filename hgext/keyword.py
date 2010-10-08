@@ -163,9 +163,9 @@ class kwtemplater(object):
                                   for k, v in kwmaps)
         else:
             self.templates = _defaultkwmaps(self.ui)
-        escaped = map(re.escape, self.templates.keys())
-        kwpat = r'\$(%s)(: [^$\n\r]*? )??\$' % '|'.join(escaped)
-        self.re_kw = re.compile(kwpat)
+        escaped = '|'.join(map(re.escape, self.templates.keys()))
+        self.re_kw = re.compile(r'\$(%s)\$' % escaped)
+        self.re_kwexp = re.compile(r'\$(%s): [^$\n\r]*? \$' % escaped)
 
         templatefilters.filters.update({'utcdate': utcdate,
                                         'svnisodate': svnisodate,
@@ -196,7 +196,7 @@ class kwtemplater(object):
         expansion are not symbolic links.'''
         return [f for f in cand if self.match(f) and not 'l' in ctx.flags(f)]
 
-    def overwrite(self, ctx, candidates, lookup, expand):
+    def overwrite(self, ctx, candidates, lookup, expand, recsubn=None):
         '''Overwrites selected files expanding/shrinking keywords.'''
         if self.restrict or lookup: # exclude kw_copy
             candidates = self.iskwfile(candidates, ctx)
@@ -206,6 +206,8 @@ class kwtemplater(object):
         if self.restrict or expand and lookup:
             mf = ctx.manifest()
         fctx = ctx
+        subn = (self.restrict and self.re_kw.subn or
+                recsubn or self.re_kwexp.subn)
         msg = (expand and _('overwriting %s expanding keywords\n')
                or _('overwriting %s shrinking keywords\n'))
         for f in candidates:
@@ -218,11 +220,11 @@ class kwtemplater(object):
             if expand:
                 if lookup:
                     fctx = self.repo.filectx(f, fileid=mf[f]).changectx()
-                data, found = self.substitute(data, f, fctx, self.re_kw.subn)
+                data, found = self.substitute(data, f, fctx, subn)
             elif self.restrict:
                 found = self.re_kw.search(data)
             else:
-                data, found = _shrinktext(data, self.re_kw.subn)
+                data, found = _shrinktext(data, subn)
             if found:
                 self.ui.note(msg % f)
                 self.repo.wwrite(f, data, ctx.flags(f))
@@ -234,7 +236,7 @@ class kwtemplater(object):
     def shrink(self, fname, text):
         '''Returns text with all keyword substitutions removed.'''
         if self.match(fname) and not util.binary(text):
-            return _shrinktext(text, self.re_kw.sub)
+            return _shrinktext(text, self.re_kwexp.sub)
         return text
 
     def shrinklines(self, fname, lines):
@@ -242,7 +244,7 @@ class kwtemplater(object):
         if self.match(fname):
             text = ''.join(lines)
             if not util.binary(text):
-                return _shrinktext(text, self.re_kw.sub).splitlines(True)
+                return _shrinktext(text, self.re_kwexp.sub).splitlines(True)
         return lines
 
     def wread(self, fname, data):
@@ -569,12 +571,15 @@ def reposetup(ui, repo):
             # record returns 0 even when nothing has changed
             # therefore compare nodes before and after
             ctx = repo['.']
+            modified, added = repo[None].status()[:2]
             ret = orig(ui, repo, commitfunc, *pats, **opts)
-            recordctx = repo['.']
-            if ctx != recordctx:
-                candidates = [f for f in recordctx.files() if f in recordctx]
+            recctx = repo['.']
+            if ctx != recctx:
+                modified = [f for f in modified if f in recctx]
+                added = [f for f in added if f in recctx]
                 kwt.restrict = False
-                kwt.overwrite(recordctx, candidates, False, True)
+                kwt.overwrite(recctx, modified, False, True, kwt.re_kwexp.subn)
+                kwt.overwrite(recctx, added, False, True, kwt.re_kw.subn)
                 kwt.restrict = True
             return ret
         finally:

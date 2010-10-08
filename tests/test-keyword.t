@@ -373,7 +373,6 @@ File a should be clean
 
   $ hg status -A a
   C a
-  $ rm msg
 
 rollback and revert expansion
 
@@ -417,6 +416,25 @@ Only z should be overwritten
 
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+record added file
+
+  $ echo '$Id$' > r
+  $ hg add r
+  $ hg -v record -l msg -d '1 12' r<<EOF
+  > y
+  > EOF
+  diff --git a/r b/r
+  new file mode 100644
+  examine changes to 'r'? [Ynsfdaq?] 
+  r
+  committed changeset 3:899491280810
+  overwriting r expanding keywords
+  $ hg --verbose rollback
+  rolling back to revision 2 (undo commit)
+  overwriting r shrinking keywords
+  $ hg forget r
+  $ rm msg r
 
 Test patch queue repo
 
