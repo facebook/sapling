@@ -317,23 +317,23 @@ def findadmonitions(blocks):
         i = i + 1
     return blocks
 
+_admonitiontitles = {'attention': _('Attention:'),
+                     'caution': _('Caution:'),
+                     'danger': _('!Danger!')  ,
+                     'error': _('Error:'),
+                     'hint': _('Hint:'),
+                     'important': _('Important:'),
+                     'note': _('Note:'),
+                     'tip': _('Tip:'),
+                     'warning': _('Warning!')}
+
 def formatblock(block, width):
     """Format a block according to width."""
     if width <= 0:
         width = 78
     indent = ' ' * block['indent']
     if block['type'] == 'admonition':
-        titles = {'attention': _('Attention:'),
-                  'caution': _('Caution:'),
-                  'danger': _('!Danger!')  ,
-                  'error': _('Error:'),
-                  'hint': _('Hint:'),
-                  'important': _('Important:'),
-                  'note': _('Note:'),
-                  'tip': _('Tip:'),
-                  'warning': _('Warning!')}
-
-        admonition = titles[block['admonitiontitle']]
+        admonition = _admonitiontitles[block['admonitiontitle']]
         hang = len(block['lines'][-1]) - len(block['lines'][-1].lstrip())
 
         defindent = indent + hang * ' '
