@@ -96,7 +96,7 @@ nokwcommands = ('add addremove annotate bundle copy export grep incoming init'
 
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
-restricted = 'merge record qrecord resolve transplant'
+restricted = 'merge kwexpand kwshrink record qrecord resolve transplant'
 
 # commands using dorecord
 recordcommands = 'record qrecord'
@@ -137,6 +137,12 @@ def _defaultkwmaps(ui):
     })
     templates.update(kwsets[ui.configbool('keywordset', 'svn')])
     return templates
+
+def _shrinktext(text, subfunc):
+    '''Helper for keyword expansion removal in text.
+    Depending on subfunc also returns number of substitutions.'''
+    return subfunc(r'$\1$', text)
+
 
 class kwtemplater(object):
     '''
@@ -191,49 +197,44 @@ class kwtemplater(object):
         Caveat: localrepository._link fails on Windows.'''
         return self.match(path) and not 'l' in flagfunc(path)
 
-    def overwrite(self, ctx, candidates, iswctx, expand, changed):
+    def overwrite(self, ctx, candidates, lookup, expand):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        if changed is not None:
-            candidates = [f for f in candidates if f in changed]
         candidates = [f for f in candidates if self.iskwfile(f, ctx.flags)]
-        if candidates:
-            restrict = self.restrict
-            self.restrict = True        # do not expand when reading
-            rollback = kwtools['hgcmd'] == 'rollback'
+        if not candidates:
+            return
+        commit = self.restrict and not lookup
+        if self.restrict or expand and lookup:
             mf = ctx.manifest()
-            msg = (expand and _('overwriting %s expanding keywords\n')
-                   or _('overwriting %s shrinking keywords\n'))
-            for f in candidates:
-                if not self.record and not rollback:
-                    data = self.repo.file(f).read(mf[f])
-                else:
-                    data = self.repo.wread(f)
-                if util.binary(data):
-                    continue
-                if expand:
-                    if iswctx:
-                        ctx = self.repo.filectx(f, fileid=mf[f]).changectx()
-                    data, found = self.substitute(data, f, ctx,
-                                                  self.re_kw.subn)
-                else:
-                    found = self.re_kw.search(data)
-                if found:
-                    self.ui.note(msg % f)
-                    self.repo.wwrite(f, data, mf.flags(f))
-                    if iswctx and not rollback:
-                        self.repo.dirstate.normal(f)
-                    elif self.record:
-                        self.repo.dirstate.normallookup(f)
-            self.restrict = restrict
-
-    def shrinktext(self, text):
-        '''Unconditionally removes all keyword substitutions from text.'''
-        return self.re_kw.sub(r'$\1$', text)
+        fctx = ctx
+        msg = (expand and _('overwriting %s expanding keywords\n')
+               or _('overwriting %s shrinking keywords\n'))
+        for f in candidates:
+            if self.restrict:
+                data = self.repo.file(f).read(mf[f])
+            else:
+                data = self.repo.wread(f)
+            if util.binary(data):
+                continue
+            if expand:
+                if lookup:
+                    fctx = self.repo.filectx(f, fileid=mf[f]).changectx()
+                data, found = self.substitute(data, f, fctx, self.re_kw.subn)
+            elif self.restrict:
+                found = self.re_kw.search(data)
+            else:
+                data, found = _shrinktext(data, self.re_kw.subn)
+            if found:
+                self.ui.note(msg % f)
+                self.repo.wwrite(f, data, ctx.flags(f))
+                if commit:
+                    self.repo.dirstate.normal(f)
+                elif self.record:
+                    self.repo.dirstate.normallookup(f)
 
     def shrink(self, fname, text):
         '''Returns text with all keyword substitutions removed.'''
         if self.match(fname) and not util.binary(text):
-            return self.shrinktext(text)
+            return _shrinktext(text, self.re_kw.sub)
         return text
 
     def shrinklines(self, fname, lines):
@@ -241,7 +242,7 @@ class kwtemplater(object):
         if self.match(fname):
             text = ''.join(lines)
             if not util.binary(text):
-                return self.shrinktext(text).splitlines(True)
+                return _shrinktext(text, self.re_kw.sub).splitlines(True)
         return lines
 
     def wread(self, fname, data):
@@ -299,7 +300,7 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
         modified, added, removed, deleted, unknown, ignored, clean = status
         if modified or added or removed or deleted:
             raise util.Abort(_('outstanding uncommitted changes'))
-        kwt.overwrite(wctx, clean, True, expand, None)
+        kwt.overwrite(wctx, clean, True, expand)
     finally:
         wlock.release()
 
@@ -502,8 +503,11 @@ def reposetup(ui, repo):
             n = super(kwrepo, self).commitctx(ctx, error)
             # no lock needed, only called from repo.commit() which already locks
             if not kwt.record:
+                restrict = kwt.restrict
+                kwt.restrict = True
                 kwt.overwrite(self[n], sorted(ctx.added() + ctx.modified()),
-                              False, True, None)
+                              False, True)
+                kwt.restrict = restrict
             return n
 
         def rollback(self, dryrun=False):
@@ -515,8 +519,10 @@ def reposetup(ui, repo):
                 if not dryrun:
                     ctx = self['.']
                     modified, added = self[None].status()[:2]
-                    kwt.overwrite(ctx, added, True, False, changed)
-                    kwt.overwrite(ctx, modified, True, True, changed)
+                    modified = [f for f in modified if f in changed]
+                    added = [f for f in added if f in changed]
+                    kwt.overwrite(ctx, added, True, False)
+                    kwt.overwrite(ctx, modified, True, True)
                 return ret
             finally:
                 wlock.release()
@@ -551,8 +557,10 @@ def reposetup(ui, repo):
             ret = orig(ui, repo, commitfunc, *pats, **opts)
             recordctx = repo['.']
             if ctx != recordctx:
-                kwt.overwrite(recordctx, recordctx.files(),
-                              False, True, recordctx)
+                candidates = [f for f in recordctx.files() if f in recordctx]
+                kwt.restrict = False
+                kwt.overwrite(recordctx, candidates, False, True)
+                kwt.restrict = True
             return ret
         finally:
             wlock.release()
