@@ -434,6 +434,7 @@ def _getlocal(ui, rpath):
 
 def _checkshellalias(ui, args):
     cwd = os.getcwd()
+    norepo = commands.norepo
     options = {}
     args = fancyopts.fancyopts(args, commands.globalopts, options)
 
@@ -453,6 +454,7 @@ def _checkshellalias(ui, args):
     try:
         aliases, entry = cmdutil.findcmd(cmd, cmdtable, lui.config("ui", "strict"))
     except error.UnknownCommand:
+        commands.norepo = norepo
         os.chdir(cwd)
         return
 
@@ -463,6 +465,7 @@ def _checkshellalias(ui, args):
         d = lambda: fn(ui, *args[1:])
         return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d, [], {})
 
+    commands.norepo = norepo
     os.chdir(cwd)
 
 _loaded = set()
