@@ -1408,7 +1408,7 @@ class localrepository(repo.repository):
             # the first manifest that references it belongs to.
             def collect_msng_filenodes(mnfstnode):
                 r = mnfst.rev(mnfstnode)
-                if r - 1 in mnfst.parentrevs(r):
+                if mnfst.deltaparent(r) in mnfst.parentrevs(r):
                     # If the previous rev is one of the parents,
                     # we only need to see a diff.
                     deltamf = mnfst.readdelta(mnfstnode)
