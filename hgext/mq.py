@@ -479,7 +479,7 @@ class queue(object):
         if self.added:
             qrepo = self.qrepo()
             if qrepo:
-                qrepo[None].add(self.added)
+                qrepo[None].add(f for f in self.added if f not in qrepo[None])
             self.added = []
 
     def removeundo(self, repo):

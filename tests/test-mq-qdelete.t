@@ -150,3 +150,15 @@ Delete the same patch twice in one command (issue2427)
   series
   status
 
+qdel -k X && hg qimp -e X used to trigger spurious output with versioned queues
+
+  $ hg init --mq
+  $ hg qimport -r 3
+  $ hg qpop
+  popping 3.diff
+  patch queue now empty
+  $ hg qdel -k 3.diff
+  $ hg qimp -e 3.diff
+  adding 3.diff to series file
+  $ hg qfinish -a
+  no patches applied
