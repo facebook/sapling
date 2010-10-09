@@ -1169,11 +1169,12 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1,
         return -1
     return err
 
-def externalpatch(patcher, args, patchname, ui, strip, cwd, files):
+def externalpatch(patcher, patchname, ui, strip, cwd, files):
     """use <patcher> to apply <patchname> to the working directory.
     returns whether patch was applied with fuzz factor."""
 
     fuzz = False
+    args = []
     if cwd:
         args.append('-d %s' % util.shellquote(cwd))
     fp = util.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
@@ -1248,13 +1249,11 @@ def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
     Returns whether patch was applied with fuzz factor.
     """
     patcher = ui.config('ui', 'patch')
-    args = []
     if files is None:
         files = {}
     try:
         if patcher:
-            return externalpatch(patcher, args, patchname, ui, strip, cwd,
-                                 files)
+            return externalpatch(patcher, patchname, ui, strip, cwd, files)
         return internalpatch(patchname, ui, strip, cwd, files, eolmode)
     except PatchError, err:
         s = str(err)
