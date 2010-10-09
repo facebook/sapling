@@ -52,7 +52,7 @@ repo not found error
 
 non-existent absolute path
 
-  $ hg clone -e "python ./dummyssh" ssh://user@dummy//$HGTMP/nonexistent local
+  $ hg clone -e "python ./dummyssh" ssh://user@dummy//`pwd`/nonexistent local
   remote: abort: There is no Mercurial repository here (.hg not found)!
   abort: no suitable response from remote hg!
   [255]

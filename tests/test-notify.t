@@ -141,7 +141,7 @@ pull (minimal config)
   (run 'hg update' to get a working copy)
   $ cat <<EOF >> $HGRCPATH
   > [notify]
-  > config = $HGTMP/.notify.conf
+  > config = `pwd`/.notify.conf
   > domain = test.com
   > strip = 3
   > template = Subject: {desc|firstline|strip}\nFrom: {author}\nX-Test: foo\n\nchangeset {node|short} in {webroot}\ndescription:\n\t{desc|tabindent|strip}
@@ -156,7 +156,7 @@ fail for config file is missing
   rolling back to revision 0 (undo pull)
   $ hg --cwd b pull ../a 2>&1 | grep 'error.*\.notify\.conf' > /dev/null && echo pull failed
   pull failed
-  $ touch "$HGTMP/.notify.conf"
+  $ touch ".notify.conf"
 
 pull
 

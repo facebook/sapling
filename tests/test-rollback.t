@@ -74,17 +74,18 @@ rollback by pretxncommit saves commit message (issue 1635)
   precious commit message
   $ echo '% same thing, but run $EDITOR'
   % same thing, but run $EDITOR
-  $ cat > $HGTMP/editor <<'__EOF__'
+  $ cat > editor << '__EOF__'
   > #!/bin/sh
   > echo "another precious commit message" > "$1"
   > __EOF__
-  > chmod +x "$HGTMP"/editor
-  > HGEDITOR="'$HGTMP'"/editor hg --config hooks.pretxncommit=false commit 2>&1
-  > cat .hg/last-message.txt
+  $ chmod +x editor
+  $ HGEDITOR="'`pwd`'"/editor hg --config hooks.pretxncommit=false commit 2>&1
   transaction abort!
   rollback completed
   note: commit message saved in .hg/last-message.txt
   abort: pretxncommit hook exited with status * (glob)
+  [255]
+  $ cat .hg/last-message.txt
   another precious commit message
 
 .hg/last-message.txt:

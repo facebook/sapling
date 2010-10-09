@@ -186,13 +186,13 @@ tag and branch using same name
 
 test custom commit messages
 
-  $ cat > $HGTMP/editor <<'__EOF__'
+  $ cat > editor << '__EOF__'
   > #!/bin/sh
   > echo "custom tag message" > "$1"
   > echo "second line" >> "$1"
   > __EOF__
-  $ chmod +x "$HGTMP"/editor
-  $ HGEDITOR="'$HGTMP'"/editor hg tag custom-tag -e
+  $ chmod +x editor
+  $ HGEDITOR="'`pwd`'"/editor hg tag custom-tag -e
   $ hg log -l1 --template "{desc}\n"
   custom tag message
   second line
