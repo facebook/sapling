@@ -26,4 +26,11 @@ status
 
   $ hg status
   ? hg.pid
+
+if we try to start twice the server, make sure we get a correct error
+
+  $ hg inserve -d --pid-file=hg2.pid
+  abort: inotify-server: cannot start: socket is already bound
+  abort: child process failed to start
+  [255]
   $ kill `cat hg.pid`

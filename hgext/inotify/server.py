@@ -332,18 +332,21 @@ class socketlistener(object):
         self.repowatcher = repowatcher
         self.sock = socket.socket(socket.AF_UNIX)
         self.sockpath = join(root, '.hg/inotify.sock')
-        self.realsockpath = None
+
+        self.realsockpath = self.sockpath
+        if os.path.islink(self.sockpath):
+            if os.path.exists(self.sockpath):
+                self.realsockpath = os.readlink(self.sockpath)
+            else:
+                raise util.Abort('inotify-server: cannot start: '
+                                '.hg/inotify.sock is a broken symlink')
         try:
-            self.sock.bind(self.sockpath)
+            self.sock.bind(self.realsockpath)
         except socket.error, err:
             if err.args[0] == errno.EADDRINUSE:
                 raise AlreadyStartedException(_('cannot start: socket is '
                                                 'already bound'))
             if err.args[0] == "AF_UNIX path too long":
-                if os.path.islink(self.sockpath) and \
-                        not os.path.exists(self.sockpath):
-                    raise util.Abort('inotify-server: cannot start: '
-                                    '.hg/inotify.sock is a broken symlink')
                 tempdir = tempfile.mkdtemp(prefix="hg-inotify-")
                 self.realsockpath = os.path.join(tempdir, "inotify.sock")
                 try:
