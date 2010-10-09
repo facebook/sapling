@@ -75,6 +75,22 @@ username expansion
   $ HGUSER=$olduser
   $ export HGUSER
 
+showconfig with multiple arguments
+
+  $ echo "[alias]" > $HGRCPATH
+  $ echo "log = log -g" >> $HGRCPATH
+  $ echo "[defaults]" >> $HGRCPATH
+  $ echo "identify = -n" >> $HGRCPATH
+  $ hg showconfig alias defaults
+  alias.log=log -g
+  defaults.identify=-n
+  $ hg showconfig alias defaults.identify
+  abort: only one config item permitted
+  [255]
+  $ hg showconfig alias.log defaults.identify
+  abort: only one config item permitted
+  [255]
+
 HGPLAIN
 
   $ cd ..
