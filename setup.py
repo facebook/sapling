@@ -301,7 +301,7 @@ class hginstallscripts(install_scripts):
             if '\0' in data:
                 continue
 
-            data = data.replace('@LIBDIR@', libdir)
+            data = data.replace('@LIBDIR@', libdir.encode('string_escape'))
             open(outfile, 'wb').write(data)
 
 cmdclass = {'build_mo': hgbuildmo,
