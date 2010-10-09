@@ -280,10 +280,6 @@ def extract(ui, fileobj):
     p2 = parents and parents.pop(0) or None
     return tmpname, message, user, date, branch, nodeid, p1, p2
 
-GP_PATCH  = 1 << 0  # we have to run patch
-GP_FILTER = 1 << 1  # there's some copy/rename operation
-GP_BINARY = 1 << 2  # there's a binary patch
-
 class patchmeta(object):
     """Patched file metadata
 
@@ -316,9 +312,6 @@ def readgitpatch(lr):
     # Filter patch for git information
     gp = None
     gitpatches = []
-    # Can have a git patch with only metadata, causing patch to complain
-    dopatch = 0
-
     lineno = 0
     for line in lr:
         lineno += 1
@@ -333,11 +326,8 @@ def readgitpatch(lr):
                 gp.lineno = lineno
         elif gp:
             if line.startswith('--- '):
-                if gp.op in ('COPY', 'RENAME'):
-                    dopatch |= GP_FILTER
                 gitpatches.append(gp)
                 gp = None
-                dopatch |= GP_PATCH
                 continue
             if line.startswith('rename from '):
                 gp.op = 'RENAME'
@@ -357,15 +347,11 @@ def readgitpatch(lr):
             elif line.startswith('new mode '):
                 gp.setmode(int(line[-6:], 8))
             elif line.startswith('GIT binary patch'):
-                dopatch |= GP_BINARY
                 gp.binary = True
     if gp:
         gitpatches.append(gp)
 
-    if not gitpatches:
-        dopatch = GP_PATCH
-
-    return (dopatch, gitpatches)
+    return gitpatches
 
 class linereader(object):
     # simple class to allow pushing lines back into the input stream
@@ -986,9 +972,9 @@ def scangitpatch(lr, firstline):
         fp = cStringIO.StringIO(lr.fp.read())
     gitlr = linereader(fp, lr.textmode)
     gitlr.push(firstline)
-    (dopatch, gitpatches) = readgitpatch(gitlr)
+    gitpatches = readgitpatch(gitlr)
     fp.seek(pos)
-    return dopatch, gitpatches
+    return gitpatches
 
 def iterhunks(ui, fp, sourcefile=None):
     """Read a patch and yield the following events:
@@ -1062,7 +1048,7 @@ def iterhunks(ui, fp, sourcefile=None):
                 afile, bfile = m.group(1, 2)
                 if not git:
                     git = True
-                    gitpatches = scangitpatch(lr, x)[1]
+                    gitpatches = scangitpatch(lr, x)
                     yield 'git', gitpatches
                     for gp in gitpatches:
                         changed[gp.path] = gp
