@@ -103,7 +103,7 @@ except ImportError:
 try:
     from hgsubversion.svnwrap import svn_swig_wrapper
 except ImportError:
-    requires.append('subvertpy>=0.7.3')
+    requires.append('subvertpy>=0.7.4')
 
 setup(
     name = 'hgsubversion',
