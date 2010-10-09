@@ -2,7 +2,10 @@
 
 from mercurial import store
 
-enc = store.hybridencode # used for fncache repo format
+auxencode = lambda f: store._auxencode(f, True)
+hybridencode = lambda f: store._hybridencode(f, auxencode)
+
+enc = hybridencode # used for 'dotencode' repo format
 
 def show(s):
     print "A = '%s'" % s
@@ -22,4 +25,5 @@ show('data/Project Planning/Resources/AnotherLongDirectoryName/'
      'Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt')
 show('data/Project.Planning/Resources/AnotherLongDirectoryName/'
      'Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt')
-show('data/foo.../foo   / /a./_. /__/.x../    bla/something.i')
+show('data/foo.../foo   / /a./_. /__/.x../    bla/.FOO/something.i')
+

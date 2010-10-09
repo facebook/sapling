@@ -16,6 +16,6 @@ B = 'dh/project_/resource/anotherl/followed/andanoth/andthenanextremelylongfilen
 A = 'data/Project.Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt'
 B = 'dh/project_/resource/anotherl/followed/andanoth/andthenanextremelylongfilena0fd7c506f5c9d58204444fc67e9499006bd2d445.txt'
 
-A = 'data/foo.../foo   / /a./_. /__/.x../    bla/something.i'
-B = 'data/foo..~2e/foo  ~20/~20/a~2e/__.~20/____/.x.~2e/    bla/something.i'
+A = 'data/foo.../foo   / /a./_. /__/.x../    bla/.FOO/something.i'
+B = 'data/foo..~2e/foo  ~20/~20/a~2e/__.~20/____/~2ex.~2e/~20   bla/~2e_f_o_o/something.i'
 

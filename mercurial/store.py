@@ -71,7 +71,7 @@ lowerencode = _build_lower_encodefun()
 _windows_reserved_filenames = '''con prn aux nul
     com1 com2 com3 com4 com5 com6 com7 com8 com9
     lpt1 lpt2 lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9'''.split()
-def auxencode(path):
+def _auxencode(path, dotencode):
     res = []
     for n in path.split('/'):
         if n:
@@ -83,13 +83,15 @@ def auxencode(path):
             if n[-1] in '. ':
                 # encode last period or space ('foo...' -> 'foo..~2e')
                 n = n[:-1] + "~%02x" % ord(n[-1])
+            if dotencode and n[0] in '. ':
+                n = "~%02x" % ord(n[0]) + n[1:]
         res.append(n)
     return '/'.join(res)
 
 MAX_PATH_LEN_IN_HGSTORE = 120
 DIR_PREFIX_LEN = 8
 _MAX_SHORTENED_DIRS_LEN = 8 * (DIR_PREFIX_LEN + 1) - 4
-def hybridencode(path):
+def _hybridencode(path, auxencode):
     '''encodes path with a length limit
 
     Encodes all paths that begin with 'data/', according to the following.
@@ -282,7 +284,8 @@ class fncache(object):
         return iter(self.entries)
 
 class fncachestore(basicstore):
-    def __init__(self, path, opener, pathjoiner):
+    def __init__(self, path, opener, pathjoiner, encode):
+        self.encode = encode
         self.pathjoiner = pathjoiner
         self.path = self.pathjoiner(path, 'store')
         self.createmode = _calcmode(self.path)
@@ -294,11 +297,11 @@ class fncachestore(basicstore):
         def fncacheopener(path, mode='r', *args, **kw):
             if mode not in ('r', 'rb') and path.startswith('data/'):
                 fnc.add(path)
-            return op(hybridencode(path), mode, *args, **kw)
+            return op(self.encode(path), mode, *args, **kw)
         self.opener = fncacheopener
 
     def join(self, f):
-        return self.pathjoiner(self.path, hybridencode(f))
+        return self.pathjoiner(self.path, self.encode(f))
 
     def datafiles(self):
         rewrite = False
@@ -306,7 +309,7 @@ class fncachestore(basicstore):
         pjoin = self.pathjoiner
         spath = self.path
         for f in self.fncache:
-            ef = hybridencode(f)
+            ef = self.encode(f)
             try:
                 st = os.stat(pjoin(spath, ef))
                 yield f, ef, st.st_size
@@ -328,6 +331,8 @@ def store(requirements, path, opener, pathjoiner=None):
     pathjoiner = pathjoiner or os.path.join
     if 'store' in requirements:
         if 'fncache' in requirements:
-            return fncachestore(path, opener, pathjoiner)
+            auxencode = lambda f: _auxencode(f, 'dotencode' in requirements)
+            encode = lambda f: _hybridencode(f, auxencode)
+            return fncachestore(path, opener, pathjoiner, encode)
         return encodedstore(path, opener, pathjoiner)
     return basicstore(path, opener, pathjoiner)

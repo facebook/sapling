@@ -22,7 +22,8 @@ propertycache = util.propertycache
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey'))
     supportedformats = set(('revlogv1', 'parentdelta'))
-    supported = supportedformats | set(('store', 'fncache', 'shared'))
+    supported = supportedformats | set(('store', 'fncache', 'shared',
+                                        'dotencode'))
 
     def __init__(self, baseui, path=None, create=0):
         repo.repository.__init__(self)
@@ -52,6 +53,8 @@ class localrepository(repo.repository):
                     requirements.append("store")
                     if self.ui.configbool('format', 'usefncache', True):
                         requirements.append("fncache")
+                        if self.ui.configbool('format', 'dotencode', True):
+                            requirements.append('dotencode')
                     # create an invalid changelog
                     self.opener("00changelog.i", "a").write(
                         '\0\0\0\2' # represents revlogv2

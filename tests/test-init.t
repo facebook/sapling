@@ -42,6 +42,7 @@ creating 'local'
   revlogv1
   store
   fncache
+  dotencode
   $ echo this > local/foo
   $ hg ci --cwd local -A -m "init"
   adding foo
@@ -157,6 +158,7 @@ creating 'local/sub/repo'
   revlogv1
   store
   fncache
+  dotencode
 
 prepare test of init of url configured from paths
 
@@ -173,6 +175,7 @@ init should (for consistency with clone) expand the url
   revlogv1
   store
   fncache
+  dotencode
 
 verify that clone also expand urls
 
@@ -185,3 +188,4 @@ verify that clone also expand urls
   revlogv1
   store
   fncache
+  dotencode
