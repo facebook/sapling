@@ -983,6 +983,27 @@ def main():
 
         checktools()
 
+    if len(args) == 0:
+        args = os.listdir(".")
+    args.sort()
+
+    tests = []
+    skipped = []
+    for test in args:
+        if (test.startswith("test-") and '~' not in test and
+            ('.' not in test or test.endswith('.py') or
+             test.endswith('.bat') or test.endswith('.t'))):
+            if not os.path.exists(test):
+                skipped.append(test)
+            else:
+                tests.append(test)
+    if not tests:
+        for test in skipped:
+            print 'Skipped %s: does not exist' % test
+        print "# Ran 0 tests, %d skipped, 0 failed." % len(skipped)
+        return
+    tests = tests + skipped
+
     # Reset some environment variables to well-known values so that
     # the tests produce repeatable output.
     os.environ['LANG'] = os.environ['LC_ALL'] = os.environ['LANGUAGE'] = 'C'
@@ -1068,20 +1089,6 @@ def main():
         os.environ[IMPL_PATH] = os.pathsep.join(pypath)
 
     COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
-
-    if len(args) == 0:
-        args = os.listdir(".")
-        args.sort()
-
-    tests = []
-    for test in args:
-        if (test.startswith("test-") and '~' not in test and
-            ('.' not in test or test.endswith('.py') or
-             test.endswith('.bat') or test.endswith('.t'))):
-            tests.append(test)
-    if not tests:
-        print "# Ran 0 tests, 0 skipped, 0 failed."
-        return
 
     vlog("# Using TESTDIR", TESTDIR)
     vlog("# Using HGTMP", HGTMP)
