@@ -150,6 +150,25 @@ import of plain diff should be ok with --no-commit
   $ rm -r b
 
 
+import of malformed plain diff should fail
+
+  $ hg clone -r0 a b
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg --cwd a diff -r0:1 > tip.patch
+  $ sed 's/1,1/foo/' < tip.patch > broken.patch
+  $ hg --cwd b import -mpatch ../broken.patch
+  applying ../broken.patch
+  abort: bad hunk #1
+  [255]
+  $ rm -r b
+
+
 hg -R repo import
 put the clone in a subdir - having a directory named "a"
 used to hide a bug.

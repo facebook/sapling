@@ -1007,17 +1007,12 @@ def iterhunks(ui, fp, sourcefile=None):
             current_hunk = None
         if ((sourcefile or state == BFILE) and ((not context and x[0] == '@') or
             ((context is not False) and x.startswith('***************')))):
-            try:
-                if context is None and x.startswith('***************'):
-                    context = True
-                gpatch = changed.get(bfile)
-                create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
-                remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
-                current_hunk = hunk(x, hunknum + 1, lr, context, create, remove)
-            except PatchError, err:
-                ui.debug(err)
-                current_hunk = None
-                continue
+            if context is None and x.startswith('***************'):
+                context = True
+            gpatch = changed.get(bfile)
+            create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
+            remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
+            current_hunk = hunk(x, hunknum + 1, lr, context, create, remove)
             hunknum += 1
             if emitfile:
                 emitfile = False
