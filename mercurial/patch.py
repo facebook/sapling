@@ -18,9 +18,6 @@ gitre = re.compile('diff --git a/(.*) b/(.*)')
 class PatchError(Exception):
     pass
 
-class NoHunks(PatchError):
-    pass
-
 # helper functions
 
 def copyfile(src, dst, basedir):
@@ -997,7 +994,6 @@ def iterhunks(ui, fp, sourcefile=None):
     # performed already for the current file. Useful when the file
     # section may have no hunk.
     gitworkdone = False
-    empty = None
 
     while True:
         newfile = newgitfile = False
@@ -1009,7 +1005,6 @@ def iterhunks(ui, fp, sourcefile=None):
                 current_hunk.fix_newline()
             yield 'hunk', current_hunk
             current_hunk = None
-            empty = False
         if ((sourcefile or state == BFILE) and ((not context and x[0] == '@') or
             ((context is not False) and x.startswith('***************')))):
             try:
@@ -1027,14 +1022,12 @@ def iterhunks(ui, fp, sourcefile=None):
             if emitfile:
                 emitfile = False
                 yield 'file', (afile, bfile, current_hunk)
-                empty = False
         elif state == BFILE and x.startswith('GIT binary patch'):
             current_hunk = binhunk(changed[bfile])
             hunknum += 1
             if emitfile:
                 emitfile = False
                 yield 'file', ('a/' + afile, 'b/' + bfile, current_hunk)
-                empty = False
             current_hunk.extract(lr)
         elif x.startswith('diff --git'):
             # check for git diff, scanning the whole patch file if needed
@@ -1083,9 +1076,6 @@ def iterhunks(ui, fp, sourcefile=None):
             bfile = parsefilename(l2)
 
         if newfile:
-            if empty:
-                raise NoHunks
-            empty = not gitworkdone
             gitworkdone = False
 
         if newgitfile or newfile:
@@ -1095,14 +1085,9 @@ def iterhunks(ui, fp, sourcefile=None):
     if current_hunk:
         if current_hunk.complete():
             yield 'hunk', current_hunk
-            empty = False
         else:
             raise PatchError(_("malformed patch %s %s") % (afile,
                              current_hunk.desc))
-
-    if (empty is None and not gitworkdone) or empty:
-        raise NoHunks
-
 
 def applydiff(ui, fp, changed, strip=1, sourcefile=None, eolmode='strict'):
     """Reads a patch from fp and tries to apply it.
@@ -1270,22 +1255,7 @@ def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
         if patcher:
             return externalpatch(patcher, args, patchname, ui, strip, cwd,
                                  files)
-        else:
-            try:
-                return internalpatch(patchname, ui, strip, cwd, files, eolmode)
-            except NoHunks:
-                ui.warn(_('internal patcher failed\n'
-                          'please report details to '
-                          'http://mercurial.selenic.com/bts/\n'
-                          'or mercurial@selenic.com\n'))
-                patcher = (util.find_exe('gpatch') or util.find_exe('patch')
-                           or 'patch')
-                ui.debug('no valid hunks found; trying with %r instead\n' %
-                         patcher)
-                if util.needbinarypatch():
-                    args.append('--binary')
-                return externalpatch(patcher, args, patchname, ui, strip, cwd,
-                                     files)
+        return internalpatch(patchname, ui, strip, cwd, files, eolmode)
     except PatchError, err:
         s = str(err)
         if s:
