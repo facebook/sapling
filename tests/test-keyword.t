@@ -535,7 +535,7 @@ cp symlink (becomes regular file), and hg copy after
 
   $ cp sym i
   $ ls -l i
-  -rw-r--r-- * (glob)
+  -rw-r--r--* (glob)
   $ head -1 i
   expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
   $ hg copy --after --verbose sym i
