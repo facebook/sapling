@@ -454,13 +454,6 @@ def shtest(test, options, replacements):
     vlog("# Running", cmd)
     return run(cmd, options, replacements)
 
-def battest(test, options, replacements):
-    # To reliably get the error code from batch files on WinXP,
-    # the "cmd /c call" prefix is needed. Grrr
-    cmd = 'cmd /c call "%s"' % testpath
-    vlog("# Running", cmd)
-    return run(cmd, options, replacements)
-
 def tsttest(test, options, replacements):
     t = open(test)
     out = []
@@ -664,22 +657,12 @@ def runone(options, test, skips, fails):
 
     if lctest.endswith('.py') or firstline == '#!/usr/bin/env python':
         runner = pytest
-    elif lctest.endswith('.bat'):
-        # do not run batch scripts on non-windows
-        if os.name != 'nt':
-            return skip("batch script")
-        runner = battest
     elif lctest.endswith('.t'):
         runner = tsttest
         ref = testpath
     else:
-        # do not run shell scripts on windows
-        if os.name == 'nt':
-            return skip("shell script")
         # do not try to run non-executable programs
-        if not os.path.exists(testpath):
-            return fail("does not exist")
-        elif not os.access(testpath, os.X_OK):
+        if not os.access(testpath, os.X_OK):
             return skip("not executable")
         runner = shtest
 
