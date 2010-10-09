@@ -48,7 +48,7 @@ already has one local mq patch
   $ hg up -q -C qtip
 
   $ hg rebase
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  3: 'P0' tags: p0.patch qbase qtip tip
@@ -111,7 +111,7 @@ already has one local mq patch
   $ HGMERGE=internal:local hg resolve --all
 
   $ hg rebase --continue
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  9: 'r5' tags: 5.diff qtip tip

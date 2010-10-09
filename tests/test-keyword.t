@@ -154,7 +154,7 @@ hg cat files and symlink, no expansion
   do not process $Id:
   xxx $
   ignore $Id$
-  a* (glob)
+  a
 
 Test hook execution
 
@@ -197,13 +197,13 @@ Pull from bundle and trigger notify
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
-  Subject: changeset in * (glob)
+  Subject: changeset in $TESTTMP/Test: addsym
   From: mercurial
   X-Hg-Notification: changeset a2392c293916
   Message-Id: <hg.a2392c293916*> (glob)
   To: Test
   
-  changeset a2392c293916 in * (glob)
+  changeset a2392c293916 in $TESTTMP/Test
   details: *cmd=changeset;node=a2392c293916 (glob)
   description:
   	addsym
@@ -220,14 +220,14 @@ Pull from bundle and trigger notify
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Date:* (glob)
-  Subject: changeset in* (glob)
+  Subject: changeset in $TESTTMP/Test: absym
   From: User Name <user@example.com>
   X-Hg-Notification: changeset ef63ca68695b
   Message-Id: <hg.ef63ca68695b*> (glob)
   To: Test
   
-  changeset ef63ca68695b in * (glob)
-  details: *cmd=changeset;node=ef63ca68695b (glob)
+  changeset ef63ca68695b in $TESTTMP/Test
+  details: $TESTTMP/Test?cmd=changeset;node=ef63ca68695b
   description:
   	absym
   
@@ -614,7 +614,7 @@ Cat and hg cat files before custom expansion
   do not process $Id:
   xxx $
   ignore $Id$
-  a* (glob)
+  a
 
 Write custom keyword and prepare multiline commit message
 
@@ -664,7 +664,7 @@ Stat, verify and show custom expansion (firstline)
   xxx $
   $Xinfo: User Name <user@example.com>: firstline $
   ignore $Id$
-  a* (glob)
+  a
 
 annotate
 
@@ -735,7 +735,7 @@ Clone to test incoming
   > default = ../Test
   > EOF
   $ hg incoming
-  comparing with */Test (glob)
+  comparing with $TESTTMP/Test
   searching for changes
   changeset:   2:bb948857c743
   tag:         tip
@@ -994,7 +994,7 @@ Keywords shrunk in working directory, but not yet disabled
   xxx $
   $Xinfo: User Name <user@example.com>: firstline $
   ignore $Id$
-  a* (glob)
+  a
 
 Now disable keyword expansion
 
@@ -1011,4 +1011,4 @@ Now disable keyword expansion
   xxx $
   $Xinfo$
   ignore $Id$
-  a* (glob)
+  a

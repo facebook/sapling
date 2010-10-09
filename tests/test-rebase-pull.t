@@ -48,13 +48,13 @@
 Now b has one revision to be pulled from a:
 
   $ hg pull --rebase
-  pulling from */a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  3: 'L1'
@@ -68,7 +68,7 @@ Now b has one revision to be pulled from a:
 Re-run:
 
   $ hg pull --rebase
-  pulling from */a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   no changes found
 
@@ -78,7 +78,7 @@ Invoke pull --rebase and nothing to rebase:
   $ cd ../c
 
   $ hg pull --rebase
-  pulling from */a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -94,7 +94,7 @@ Invoke pull --rebase and nothing to rebase:
 pull --rebase --update should ignore --update:
 
   $ hg pull --rebase --update
-  pulling from */a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   no changes found
 
@@ -103,7 +103,7 @@ pull --rebase doesn't update if nothing has been pulled:
   $ hg up -q 1
 
   $ hg pull --rebase
-  pulling from */a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   no changes found
 

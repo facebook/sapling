@@ -62,7 +62,7 @@ Convert
   $ hg convert src
   assuming destination src-hg
   initializing destination src-hg repository
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   7 log entries

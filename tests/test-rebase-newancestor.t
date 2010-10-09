@@ -41,7 +41,7 @@
   $ hg rebase -s 1 -d 3
   merging a
   merging a
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  3: 'C'

@@ -18,7 +18,7 @@
 Push should push to 'default' when 'default-push' not set:
 
   $ hg --cwd b push
-  pushing to */a (glob)
+  pushing to $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -29,7 +29,7 @@ Push should push to 'default-push' when set:
 
   $ echo 'default-push = ../c' >> b/.hg/hgrc
   $ hg --cwd b push
-  pushing to */c (glob)
+  pushing to $TESTTMP/c
   searching for changes
   adding changesets
   adding manifests

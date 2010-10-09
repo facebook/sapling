@@ -107,7 +107,7 @@ Rebase with no arguments (from 3 onto 7):
   $ hg up -q -C 5
 
   $ hg rebase
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  7: 'l3'
@@ -141,7 +141,7 @@ Rebase with base == '.' => same as no arguments (from 3 onto 7):
   $ cd a2
 
   $ hg rebase --base .
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  7: 'l3'
@@ -169,7 +169,7 @@ Rebase with dest == `hg branch` => same as no arguments (from 3 onto 7):
   $ cd a3
 
   $ hg rebase --dest `hg branch`
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  7: 'l3'
@@ -197,7 +197,7 @@ Specify only source (from 4 onto 7):
   $ cd a4
 
   $ hg rebase --source 4
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  7: 'l3'
@@ -225,7 +225,7 @@ Specify only dest (from 3 onto 6):
   $ cd a5
 
   $ hg rebase --dest 6
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  7: 'l3'
@@ -253,7 +253,7 @@ Specify only base (from 3 onto 7):
   $ cd a6
 
   $ hg rebase --base 5
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  7: 'l3'
@@ -281,7 +281,7 @@ Specify source and dest (from 4 onto 6):
   $ cd a7
 
   $ hg rebase --source 4 --dest 6
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  7: 'l3'
@@ -309,7 +309,7 @@ Specify base and dest (from 3 onto 6):
   $ cd a8
 
   $ hg rebase --base 4 --dest 6
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a8/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  7: 'l3'

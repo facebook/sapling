@@ -66,14 +66,14 @@ commit a new revision changing b/c
   $ sleep 1
   $ echo c >> b/c
   $ cvscall -q commit -mci0 . | grep '<--'
-  */cvsrepo/src/b/c,v  <--  *c (glob)
+  $TESTTMP/cvsrepo/src/b/c,v  <--  *c (glob)
   $ cd ..
 
 convert fresh repo
 
   $ hg convert src src-hg
   initializing destination src-hg repository
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   5 log entries
@@ -98,7 +98,7 @@ convert fresh repo with --filemap
   $ echo include b/c > filemap
   $ hg convert --filemap filemap src src-filemap
   initializing destination src-filemap repository
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   5 log entries
@@ -135,7 +135,7 @@ convert full repository (issue1649)
   >     | grep -v 'log entries' | grep -v 'hook:' \
   >     | grep -v '^[0-3] .*' # filter instable changeset order
   initializing destination srcfull-hg repository
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   creating changesets
@@ -155,14 +155,14 @@ commit new file revisions
   $ echo a >> a
   $ echo c >> b/c
   $ cvscall -q commit -mci1 . | grep '<--'
-  */cvsrepo/src/a,v  <--  a (glob)
-  */cvsrepo/src/b/c,v  <--  *c (glob)
+  $TESTTMP/cvsrepo/src/a,v  <--  a
+  $TESTTMP/cvsrepo/src/b/c,v  <--  *c (glob)
   $ cd ..
 
 convert again
 
   $ hg convert src src-hg
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   7 log entries
@@ -184,7 +184,7 @@ convert again
 convert again with --filemap
 
   $ hg convert --filemap filemap src src-filemap
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   7 log entries
@@ -216,13 +216,13 @@ commit branch
   $ cvs -q update -r branch > /dev/null
   $ echo d >> b/c
   $ cvs -q commit -mci2 . | grep '<--'
-  */cvsrepo/src/b/c,v  <--  *c (glob)
+  $TESTTMP/cvsrepo/src/b/c,v  <--  *c (glob)
   $ cd ..
 
 convert again
 
   $ hg convert src src-hg
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   8 log entries
@@ -240,7 +240,7 @@ convert again
 convert again with --filemap
 
   $ hg convert --filemap filemap src src-filemap
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   8 log entries
@@ -277,17 +277,17 @@ commit new file revisions with some fuzz
   $ sleep 1
   $ echo f >> a
   $ cvscall -q commit -mfuzzy . | grep '<--'
-  */cvsrepo/src/a,v  <--  a (glob)
+  $TESTTMP/cvsrepo/src/a,v  <--  a
   $ sleep 4 # the two changes will be split if fuzz < 4
   $ echo g >> b/c
   $ cvscall -q commit -mfuzzy . | grep '<--'
-  */cvsrepo/src/b/c,v  <--  *c (glob)
+  $TESTTMP/cvsrepo/src/b/c,v  <--  *c (glob)
   $ cd ..
 
 convert again
 
   $ hg convert --config convert.cvsps.fuzz=2 src src-hg
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   11 log entries

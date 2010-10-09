@@ -14,7 +14,7 @@ Convert while testing all possible outputs
 
   $ hg --debug convert svn-repo A-hg
   initializing destination A-hg repository
-  reparent to file://*/svn-repo (glob)
+  reparent to file://$TESTTMP/svn-repo
   run hg sink pre-conversion action
   scanning source...
   found trunk at 'trunk'
@@ -23,7 +23,7 @@ Convert while testing all possible outputs
   found branch branché at 5
   found branch branchée at 6
   scanning: 1 revisions
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file://$TESTTMP/svn-repo/trunk
   fetching revision log for "/trunk" from 4 to 0
   parsing revision 4 (2 changes)
   parsing revision 3 (4 changes)
@@ -33,18 +33,18 @@ Convert while testing all possible outputs
   '/branches' is not under '/trunk', ignoring
   '/tags' is not under '/trunk', ignoring
   scanning: 2 revisions
-  reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
+  reparent to file://$TESTTMP/svn-repo/branches/branch%C3%A9
   fetching revision log for "/branches/branché" from 5 to 0
   parsing revision 5 (1 changes)
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
+  reparent to file://$TESTTMP/svn-repo
+  reparent to file://$TESTTMP/svn-repo/branches/branch%C3%A9
   found parent of branch /branches/branché at 4: /trunk
   scanning: 3 revisions
-  reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
+  reparent to file://$TESTTMP/svn-repo/branches/branch%C3%A9e
   fetching revision log for "/branches/branchée" from 6 to 0
   parsing revision 6 (1 changes)
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
+  reparent to file://$TESTTMP/svn-repo
+  reparent to file://$TESTTMP/svn-repo/branches/branch%C3%A9e
   found parent of branch /branches/branchée at 5: /branches/branché
   scanning: 4 revisions
   scanning: 5 revisions
@@ -57,7 +57,7 @@ Convert while testing all possible outputs
   4 hello
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@2
   converting: 1/6 revisions (16.67%)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file://$TESTTMP/svn-repo/trunk
   scanning paths: /trunk/à 0/3 (0.00%)
   scanning paths: /trunk/à/é 1/3 (33.33%)
   scanning paths: /trunk/é 2/3 (66.67%)
@@ -70,14 +70,14 @@ Convert while testing all possible outputs
   converting: 2/6 revisions (33.33%)
   scanning paths: /trunk/à 0/4 (0.00%)
   gone from -1
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file://$TESTTMP/svn-repo
+  reparent to file://$TESTTMP/svn-repo/trunk
   scanning paths: /trunk/è 1/4 (25.00%)
   copied to è from é@2
   scanning paths: /trunk/é 2/4 (50.00%)
   gone from -1
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file://$TESTTMP/svn-repo
+  reparent to file://$TESTTMP/svn-repo/trunk
   scanning paths: /trunk/ù 3/4 (75.00%)
   mark /trunk/ù came from à:2
   à/é
@@ -95,12 +95,12 @@ Convert while testing all possible outputs
   converting: 3/6 revisions (50.00%)
   scanning paths: /trunk/è 0/2 (0.00%)
   gone from -1
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file://$TESTTMP/svn-repo
+  reparent to file://$TESTTMP/svn-repo/trunk
   scanning paths: /trunk/ù 1/2 (50.00%)
   gone from -1
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file://$TESTTMP/svn-repo
+  reparent to file://$TESTTMP/svn-repo/trunk
   è
   getting files: è 1/2 (50.00%)
   ù/é
@@ -108,17 +108,17 @@ Convert while testing all possible outputs
   1 branch to branch?
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?@5
   converting: 4/6 revisions (66.67%)
-  reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
+  reparent to file://$TESTTMP/svn-repo/branches/branch%C3%A9
   scanning paths: /branches/branché 0/1 (0.00%)
   0 branch to branch?e
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?e@6
   converting: 5/6 revisions (83.33%)
-  reparent to file://*svn-repo/branches/branch%C3%A9e (glob)
+  reparent to file://$TESTTMP/svn-repo/branches/branch%C3%A9e
   scanning paths: /branches/branchée 0/1 (0.00%)
-  reparent to file://*svn-repo (glob)
-  reparent to file://*svn-repo/branches/branch%C3%A9e (glob)
-  reparent to file://*svn-repo (glob)
-  reparent to file://*svn-repo/branches/branch%C3%A9e (glob)
+  reparent to file://$TESTTMP/svn-repo
+  reparent to file://$TESTTMP/svn-repo/branches/branch%C3%A9e
+  reparent to file://$TESTTMP/svn-repo
+  reparent to file://$TESTTMP/svn-repo/branches/branch%C3%A9e
   updating tags
   .hgtags
   run hg sink post-conversion action

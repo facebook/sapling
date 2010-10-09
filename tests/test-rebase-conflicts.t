@@ -73,7 +73,7 @@ Conclude rebase:
   $ echo 'resolved merge' >common
   $ hg resolve -m common
   $ hg rebase --continue
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  5: 'L3'

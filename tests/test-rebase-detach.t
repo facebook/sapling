@@ -54,7 +54,7 @@ Rebasing D onto E detaching from C:
   o  0: 'A'
   
   $ hg rebase --detach -s 3 -d 4
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  4: 'D'
@@ -92,7 +92,7 @@ Rebasing C onto E detaching from B:
   o  0: 'A'
   
   $ hg rebase --detach -s 2 -d 4
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  4: 'D'
@@ -131,7 +131,7 @@ Rebasing B onto E using detach (same as not using it):
   o  0: 'A'
   
   $ hg rebase --detach -s 1 -d 4
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  4: 'D'
@@ -171,7 +171,7 @@ Rebasing C onto E detaching from B and collapsing:
   o  0: 'A'
   
   $ hg rebase --detach --collapse -s 2 -d 4
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  3: 'Collapsed revision

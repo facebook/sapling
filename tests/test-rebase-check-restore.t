@@ -125,7 +125,7 @@ Solve the conflict and go on:
   $ rm A.orig
   $ hg resolve -m A
   $ hg rebase --continue
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  5: 'F' notdefault

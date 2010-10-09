@@ -1,6 +1,5 @@
 test stripping of filelogs where the linkrev doesn't always increase
 
-  $ . $TESTDIR/helpers.sh
   $ echo '[extensions]' >> $HGRCPATH
   $ echo 'hgext.mq =' >> $HGRCPATH
   $ hg init orig
@@ -90,13 +89,13 @@ test stripping of filelogs where the linkrev doesn't always increase
   $ for i in 0 1 2 3 4; do
   >     hg clone -q -U --pull crossed $i
   >     echo "% Trying to strip revision $i"
-  >     hg --cwd $i strip $i | hidebackup
+  >     hg --cwd $i strip $i
   >     echo "% Verifying"
   >     hg --cwd $i verify
   >     echo
   > done
   % Trying to strip revision 0
-  saved backup bundle to 
+  saved backup bundle to $TESTTMP/0/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests
@@ -105,7 +104,7 @@ test stripping of filelogs where the linkrev doesn't always increase
   7 files, 4 changesets, 15 total revisions
   
   % Trying to strip revision 1
-  saved backup bundle to 
+  saved backup bundle to $TESTTMP/1/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests
@@ -114,7 +113,7 @@ test stripping of filelogs where the linkrev doesn't always increase
   7 files, 4 changesets, 14 total revisions
   
   % Trying to strip revision 2
-  saved backup bundle to 
+  saved backup bundle to $TESTTMP/2/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests
@@ -123,7 +122,7 @@ test stripping of filelogs where the linkrev doesn't always increase
   7 files, 4 changesets, 14 total revisions
   
   % Trying to strip revision 3
-  saved backup bundle to 
+  saved backup bundle to $TESTTMP/3/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests
@@ -132,7 +131,7 @@ test stripping of filelogs where the linkrev doesn't always increase
   7 files, 4 changesets, 19 total revisions
   
   % Trying to strip revision 4
-  saved backup bundle to 
+  saved backup bundle to $TESTTMP/4/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests

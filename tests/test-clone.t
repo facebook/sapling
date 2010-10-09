@@ -80,7 +80,7 @@ Check that path aliases are expanded:
 
   $ hg clone -q -U --config 'paths.foobar=a#0' foobar f
   $ hg -R f showconfig paths.default
-  */a#0 (glob)
+  $TESTTMP/a#0
 
 Use --pull:
 

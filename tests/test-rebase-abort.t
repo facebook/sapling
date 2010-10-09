@@ -56,7 +56,7 @@ Conflicting rebase:
 Abort:
 
   $ hg rebase --abort
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
   rebase aborted
 
   $ hg tglog

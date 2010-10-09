@@ -1,6 +1,13 @@
+Use hgrc within $TESTTMP
+
+  $ HGRCPATH=`pwd`/hgrc
+  $ export HGRCPATH
+
+Basic syntax error
+
   $ echo "invalid" > $HGRCPATH
   $ hg version
-  hg: parse error at */.hgrc:1: invalid (glob)
+  hg: parse error at $TESTTMP/hgrc:1: invalid
   [255]
   $ echo "" > $HGRCPATH
 
@@ -10,7 +17,6 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   $ hg clone "foo%bar" foobar
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ p=`pwd`
   $ cd foobar
   $ cat .hg/hgrc
   [paths]
@@ -27,7 +33,7 @@ issue1829: wrong indentation
   $ echo '[foo]' > $HGRCPATH
   $ echo '  x = y' >> $HGRCPATH
   $ hg version
-  hg: parse error at */.hgrc:2:   x = y (glob)
+  hg: parse error at $TESTTMP/hgrc:2:   x = y
   [255]
 
   $ python -c "print '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n'" \
@@ -40,7 +46,7 @@ issue1829: wrong indentation
   $ export FAKEPATH
   $ echo '%include $FAKEPATH/no-such-file' > $HGRCPATH
   $ hg version
-  hg: parse error at */.hgrc:1: cannot include /path/to/nowhere/no-such-file (No such file or directory) (glob)
+  hg: parse error at $TESTTMP/hgrc:1: cannot include /path/to/nowhere/no-such-file (No such file or directory)
   [255]
   $ unset FAKEPATH
 
@@ -90,23 +96,23 @@ HGPLAIN
 customized hgrc
 
   $ hg showconfig
-  read config from: */.hgrc (glob)
-  */.hgrc:13: alias.log=log -g (glob)
-  */.hgrc:11: defaults.identify=-n (glob)
-  */.hgrc:2: ui.debug=true (glob)
-  */.hgrc:3: ui.fallbackencoding=ASCII (glob)
-  */.hgrc:4: ui.quiet=true (glob)
-  */.hgrc:5: ui.slash=true (glob)
-  */.hgrc:6: ui.traceback=true (glob)
-  */.hgrc:7: ui.verbose=true (glob)
-  */.hgrc:8: ui.style=~/.hgstyle (glob)
-  */.hgrc:9: ui.logtemplate={node} (glob)
+  read config from: $TESTTMP/hgrc
+  $TESTTMP/hgrc:13: alias.log=log -g
+  $TESTTMP/hgrc:11: defaults.identify=-n
+  $TESTTMP/hgrc:2: ui.debug=true
+  $TESTTMP/hgrc:3: ui.fallbackencoding=ASCII
+  $TESTTMP/hgrc:4: ui.quiet=true
+  $TESTTMP/hgrc:5: ui.slash=true
+  $TESTTMP/hgrc:6: ui.traceback=true
+  $TESTTMP/hgrc:7: ui.verbose=true
+  $TESTTMP/hgrc:8: ui.style=~/.hgstyle
+  $TESTTMP/hgrc:9: ui.logtemplate={node}
 
 plain hgrc
 
   $ HGPLAIN=; export HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
-  read config from: */.hgrc (glob)
+  read config from: $TESTTMP/hgrc
   none: ui.traceback=True
   none: ui.verbose=False
   none: ui.debug=True

@@ -20,7 +20,7 @@
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  abort: Permission denied: * (glob)
+  abort: Permission denied: $TESTTMP/t/.hg/store/data/a.i
   [255]
 
   $ chmod +r .hg/store/data/a.i
@@ -37,7 +37,7 @@
   $ echo barber > a
   $ hg commit -m "2"
   trouble committing a!
-  abort: Permission denied: * (glob)
+  abort: Permission denied: $TESTTMP/t/.hg/store/data/a.i
   [255]
 
   $ chmod -w .

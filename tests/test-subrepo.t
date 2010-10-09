@@ -236,19 +236,19 @@ clone
   $ cd ..
   $ hg clone t tc
   updating to branch default
-  pulling subrepo s from */sub/t/s (glob)
+  pulling subrepo s from $TESTTMP/sub/t/s
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 5 changes to 3 files
-  pulling subrepo s/ss from */sub/t/s/ss (glob)
+  pulling subrepo s/ss from $TESTTMP/sub/t/s/ss
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  pulling subrepo t from */sub/t/t (glob)
+  pulling subrepo t from $TESTTMP/sub/t/t
   requesting all changes
   adding changesets
   adding manifests
@@ -270,14 +270,14 @@ push
   $ hg ci -m11
   committing subrepository t
   $ hg push
-  pushing *sub/t (glob)
-  pushing *sub/t/s/ss (glob)
+  pushing to $TESTTMP/sub/t
+  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss
   searching for changes
   no changes found
-  pushing *sub/t/s (glob)
+  pushing subrepo s to $TESTTMP/sub/t/s
   searching for changes
   no changes found
-  pushing *sub/t/t (glob)
+  pushing subrepo t to $TESTTMP/sub/t/t
   searching for changes
   adding changesets
   adding manifests
@@ -295,27 +295,27 @@ push -f
   $ hg ci -m12
   committing subrepository s
   $ hg push
-  pushing *sub/t (glob)
-  pushing *sub/t/s/ss (glob)
+  pushing to $TESTTMP/sub/t
+  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss
   searching for changes
   no changes found
-  pushing *sub/t/s (glob)
+  pushing subrepo s to $TESTTMP/sub/t/s
   searching for changes
   abort: push creates new remote heads on branch 'default'!
   (did you forget to merge? use push -f to force)
   [255]
   $ hg push -f
-  pushing *sub/t (glob)
-  pushing *sub/t/s/ss (glob)
+  pushing to $TESTTMP/sub/t
+  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss
   searching for changes
   no changes found
-  pushing *sub/t/s (glob)
+  pushing subrepo s to $TESTTMP/sub/t/s
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  pushing *sub/t/t (glob)
+  pushing subrepo t to $TESTTMP/sub/t/t
   searching for changes
   no changes found
   searching for changes
@@ -337,7 +337,7 @@ pull
 
   $ cd ../tc
   $ hg pull
-  pulling *sub/t (glob)
+  pulling from $TESTTMP/sub/t
   searching for changes
   adding changesets
   adding manifests
@@ -348,7 +348,7 @@ pull
 should pull t
 
   $ hg up
-  pulling subrepo t from */sub/t/t (glob)
+  pulling subrepo t from $TESTTMP/sub/t/t
   searching for changes
   adding changesets
   adding manifests
@@ -542,9 +542,9 @@ test repository cloning
   $ cat mercurial2/main/nested_absolute/.hg/hgrc \
   >     mercurial2/main/nested_relative/.hg/hgrc
   [paths]
-  default = */sub/mercurial/nested_absolute (glob)
+  default = $TESTTMP/sub/mercurial/nested_absolute
   [paths]
-  default = */sub/mercurial/nested_relative (glob)
+  default = $TESTTMP/sub/mercurial/nested_relative
   $ rm -rf mercurial mercurial2
 
 Issue1977: multirepo push should fail if subrepo push fails
@@ -560,7 +560,7 @@ Issue1977: multirepo push should fail if subrepo push fails
   committing subrepository s
   $ hg clone repo repo2
   updating to branch default
-  pulling subrepo s from */sub/repo/s (glob)
+  pulling subrepo s from $TESTTMP/sub/repo/s
   requesting all changes
   adding changesets
   adding manifests

@@ -69,7 +69,7 @@ make unrelated change on v1_1
 merge file1 to v1_1
 
   $ cvscall -Q update -jv1_0
-  RCS file: */cvsrepo/proj/file1,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/file1,v
   retrieving revision 1.1
   retrieving revision 1.1.2.1
   Merging differences between 1.1 and 1.1.2.1 into file1
@@ -80,7 +80,7 @@ merge change to trunk
 
   $ cvscall -Q update -A
   $ cvscall -Q update -jv1_1
-  RCS file: */cvsrepo/proj/file1,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/file1,v
   retrieving revision 1.1
   retrieving revision 1.1.4.1
   Merging differences between 1.1 and 1.1.4.1 into file1
@@ -101,7 +101,7 @@ change on trunk to backport
   $ cvsci -m"add other text" file1
   $ cvscall log file1
   
-  RCS file: */cvsrepo/proj/file1,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/file1,v
   Working file: file1
   head: 1.3
   branch:
@@ -141,7 +141,7 @@ backport trunk change to v1_1
 
   $ cvscall -Q update -rv1_1
   $ cvscall -Q update -j1.2 -j1.3 file1
-  RCS file: */cvsrepo/proj/file1,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/file1,v
   retrieving revision 1.2
   retrieving revision 1.3
   Merging differences between 1.2 and 1.3 into file1
@@ -157,7 +157,7 @@ fix bug on v1_1, merge to trunk with error
   cvs commit: Examining .
   $ cvscall -Q update -A
   $ cvscall -Q update -junmerged -jv1_1
-  RCS file: */cvsrepo/proj/file1,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/file1,v
   retrieving revision 1.1.4.2
   retrieving revision 1.1.4.3
   Merging differences between 1.1.4.2 and 1.1.4.3 into file1
@@ -173,7 +173,7 @@ convert to hg
   $ cd ..
   $ hg convert proj proj.hg
   initializing destination proj.hg repository
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   12 log entries

@@ -120,14 +120,14 @@ pull (minimal config)
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
-  Subject: changeset in */b: b (glob)
+  Subject: changeset in $TESTTMP/b: b
   From: test
   X-Hg-Notification: changeset 0647d048b600
   Message-Id: <*> (glob)
   To: baz, foo@bar
   
-  changeset 0647d048b600 in */b (glob)
-  details: *?cmd=changeset;node=0647d048b600 (glob)
+  changeset 0647d048b600 in $TESTTMP/b
+  details: $TESTTMP/b?cmd=changeset;node=0647d048b600
   description: b
   
   diffs (6 lines):

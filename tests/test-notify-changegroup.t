@@ -56,12 +56,12 @@ push
   Message-Id: <*> (glob)
   To: baz, foo@bar
   
-  changeset cb9a9f314b8b in */a (glob)
-  details: */a?cmd=changeset;node=cb9a9f314b8b (glob)
+  changeset cb9a9f314b8b in $TESTTMP/a
+  details: $TESTTMP/a?cmd=changeset;node=cb9a9f314b8b
   summary: a
   
-  changeset ba677d0156c1 in */a (glob)
-  details: */a?cmd=changeset;node=ba677d0156c1 (glob)
+  changeset ba677d0156c1 in $TESTTMP/a
+  details: $TESTTMP/a?cmd=changeset;node=ba677d0156c1
   summary: b
   
   diffs (6 lines):

@@ -40,7 +40,7 @@ Expected to fail:
 Expected to fail:
 
   $ hg push
-  pushing to * (glob)
+  pushing to $TESTTMP/test
   searching for changes
   adding changesets
   adding manifests

@@ -26,7 +26,7 @@ share shouldn't have a store dir
 Some sed versions appends newline, some don't, and some just fails
 
   $ cat .hg/sharedpath; echo
-  */repo1/.hg (glob)
+  $TESTTMP/repo1/.hg
 
 commit in shared clone
 

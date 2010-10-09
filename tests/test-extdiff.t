@@ -75,7 +75,7 @@ Test diff during merge:
 Should diff cloned file against wc file:
 
   $ hg falabala
-  diffing a.2a13a4d2da36/a */a/a (glob)
+  diffing a.2a13a4d2da36/a $TESTTMP/a/a
   [1]
 
 

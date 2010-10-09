@@ -6,11 +6,11 @@
   $ echo '[paths]' >> .hg/hgrc
   $ echo 'dupe = ../b' >> .hg/hgrc
   $ hg in dupe
-  comparing with */b (glob)
+  comparing with $TESTTMP/b
   no changes found
   [1]
   $ cd ..
   $ hg -R a in dupe
-  comparing with */b (glob)
+  comparing with $TESTTMP/b
   no changes found
   [1]

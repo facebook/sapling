@@ -53,7 +53,7 @@ Rebase a branch while preserving the branch name:
   $ hg up -q -C 3
 
   $ hg rebase -b 4 -d 3 --keepbranches
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  4: 'r1' notdefault

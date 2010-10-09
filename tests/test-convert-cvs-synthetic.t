@@ -107,24 +107,24 @@ merge file6 from trunk to v1_2
 cvs rlog output
 
   $ cvscall -q rlog proj | egrep '^(RCS file|revision)'
-  RCS file: */cvsrepo/proj/file1,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/file1,v
   revision 1.1
-  RCS file: */cvsrepo/proj/Attic/file2,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/Attic/file2,v
   revision 1.1
   revision 1.1.4.2
   revision 1.1.4.1
   revision 1.1.2.1
-  RCS file: */cvsrepo/proj/Attic/file3,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/Attic/file3,v
   revision 1.1
   revision 1.1.2.1
-  RCS file: */cvsrepo/proj/Attic/file4,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/Attic/file4,v
   revision 1.1
   revision 1.1.2.1
-  RCS file: */cvsrepo/proj/file5,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/file5,v
   revision 1.2
   revision 1.1
   revision 1.1.2.1
-  RCS file: */cvsrepo/proj/file6,v (glob)
+  RCS file: $TESTTMP/cvsrepo/proj/file6,v
   revision 1.1
   revision 1.1.2.2
   revision 1.1.2.1
@@ -134,7 +134,7 @@ convert to hg (#1)
   $ cd ..
   $ hg convert --datesort proj proj.hg
   initializing destination proj.hg repository
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   15 log entries
@@ -178,7 +178,7 @@ convert to hg (#2: with merge detection)
   >   --datesort \
   >   proj proj.hg2
   initializing destination proj.hg2 repository
-  connecting to */cvsrepo (glob)
+  connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
   15 log entries

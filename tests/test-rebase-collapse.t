@@ -77,7 +77,7 @@ Rebasing B onto H:
   $ cd a1
 
   $ hg rebase --collapse --keepbranches
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  5: 'Collapsed revision
@@ -111,7 +111,7 @@ Rebasing G onto H:
   $ cd a2
 
   $ hg rebase --base 6 --collapse
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  6: 'Collapsed revision
@@ -220,7 +220,7 @@ Rebase and collapse - more than one external (fail):
 Rebase and collapse - E onto H:
 
   $ hg rebase -s 4 --collapse
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @    5: 'Collapsed revision
@@ -331,7 +331,7 @@ Rebase and collapse - E onto I:
 
   $ hg rebase -s 4 --collapse
   merging E
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/c1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @    5: 'Collapsed revision
@@ -420,7 +420,7 @@ Rebase and collapse - B onto F:
   $ cd d1
 
   $ hg rebase -s 1 --collapse
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/d1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  2: 'Collapsed revision

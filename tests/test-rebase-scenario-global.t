@@ -69,7 +69,7 @@ B onto F - simple rebase:
   o  0: 'A'
   
   $ hg rebase -s 1 -d 5
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  5: 'B'
@@ -93,7 +93,7 @@ B onto D - intermediate point:
   $ cd a2
 
   $ hg rebase -s 1 -d 3
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  5: 'B'
@@ -117,7 +117,7 @@ C onto F - skip of E:
   $ cd a3
 
   $ hg rebase -s 2 -d 5
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  4: 'C'
@@ -139,7 +139,7 @@ D onto C - rebase of a branching point (skip E):
   $ cd a4
 
   $ hg rebase -s 3 -d 2
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  4: 'F'
@@ -161,7 +161,7 @@ E onto F - merged revision having a parent in ancestors of target:
   $ cd a5
 
   $ hg rebase -s 4 -d 5
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @    5: 'E'
@@ -185,7 +185,7 @@ D onto B - E maintains C as parent:
   $ cd a6
 
   $ hg rebase -s 3 -d 1
-  saved backup bundle to */.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  5: 'F'

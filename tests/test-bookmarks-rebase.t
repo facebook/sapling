@@ -37,7 +37,7 @@ bookmark list
 rebase
 
   $ hg rebase -s two -d one
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg log
   changeset:   3:9163974d1cb5

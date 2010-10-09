@@ -28,5 +28,5 @@ test bad subpaths pattern
   > .* = \1
   > EOF
   $ hg debugsub
-  abort: bad subrepository pattern in */outer/.hg/hgrc:2: invalid group reference (glob)
+  abort: bad subrepository pattern in $TESTTMP/outer/.hg/hgrc:2: invalid group reference
   [255]

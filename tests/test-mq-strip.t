@@ -77,7 +77,7 @@
   summary:     e
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 4
   changeset:   3:65bd5f99a4a3
   tag:         tip
@@ -96,7 +96,7 @@
   summary:     e
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 3
   changeset:   1:ef3a871183d7
   user:        test
@@ -111,7 +111,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 1, strip 4
   changeset:   1:ef3a871183d7
   user:        test
@@ -127,7 +127,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 2
   changeset:   3:443431ffac4f
   tag:         tip
@@ -146,7 +146,7 @@
   summary:     c
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 1
   changeset:   0:9ab35a2d17cb
   tag:         tip
@@ -157,7 +157,7 @@
   $ teststrip null 4
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   % before update null, strip 4
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update null, strip 4
 
   $ hg log
@@ -212,7 +212,7 @@ before strip of merge parent
   
   $ hg strip 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
 
 after strip of merge parent
 
@@ -258,7 +258,7 @@ after strip of merge parent
 2 is parent of 3, only one strip should happen
 
   $ hg strip 2 3
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg glog
   @  changeset:   2:264128213d29
   |  tag:         tip
@@ -310,8 +310,8 @@ after strip of merge parent
 
   $ hg strip 2 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to * (glob)
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg glog
   @  changeset:   2:65bd5f99a4a3
   |  tag:         tip
@@ -335,14 +335,14 @@ after strip of merge parent
 
   $ hg strip 1 2 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ restore
 
 
 remove branchy history for qimport tests
 
   $ hg strip 3
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
 
 
 strip of applied mq should cleanup status file
@@ -364,7 +364,7 @@ stripping revision in queue
 
   $ hg strip 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
 
 applied patches after stripping rev in queue
 
@@ -375,7 +375,7 @@ stripping ancestor of queue
 
   $ hg strip 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
 
 applied patches after stripping ancestor of queue
 

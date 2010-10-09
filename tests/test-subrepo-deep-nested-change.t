@@ -27,7 +27,7 @@ Preparing the 'main' repo which depends on the subrepo 'sub1'
   $ echo "sub1 = ../sub1" > main/.hgsub
   $ hg clone sub1 main/sub1
   updating to branch default
-  pulling subrepo sub2 from */sub2 (glob)
+  pulling subrepo sub2 from $TESTTMP/sub2
   requesting all changes
   adding changesets
   adding manifests
@@ -55,13 +55,13 @@ Clone main
 
   $ hg clone main cloned
   updating to branch default
-  pulling subrepo sub1 from */sub1 (glob)
+  pulling subrepo sub1 from $TESTTMP/sub1
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
-  pulling subrepo sub1/sub2 from */sub2 (glob)
+  pulling subrepo sub1/sub2 from $TESTTMP/sub2
   requesting all changes
   adding changesets
   adding manifests

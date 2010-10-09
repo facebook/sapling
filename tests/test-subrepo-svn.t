@@ -73,7 +73,7 @@ debugsub
 
   $ hg debugsub
   path s
-   source   file:///*/svn-repo/src (glob)
+   source   file://$TESTTMP/svn-repo/src
    revision 2
 
 change file in svn and hg, commit
@@ -86,13 +86,13 @@ change file in svn and hg, commit
   Transmitting file data .
   Committed revision 3.
   
-  Fetching external item into '*/s/externals' (glob)
+  Fetching external item into '$TESTTMP/sub/t/s/externals'
   External at revision 1.
   
   At revision 3.
   $ hg debugsub
   path s
-   source   file:///*/svn-repo/src (glob)
+   source   file://$TESTTMP/svn-repo/src
    revision 3
 
   $ echo a > s/a
@@ -192,7 +192,7 @@ debugsub in clone
 
   $ hg debugsub
   path s
-   source   file:///*/svn-repo/src (glob)
+   source   file://$TESTTMP/svn-repo/src
    revision 3
 
 verify subrepo is contained within the repo directory
