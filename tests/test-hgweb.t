@@ -63,6 +63,7 @@ should give a 404 - static file that does not exist
   <li><a href="/graph">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   
@@ -147,6 +148,7 @@ should give a 404 - file does not exist
   <li><a href="/graph">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   
@@ -213,7 +215,6 @@ try bad style
   <li><a href="/graph/2ef0ac749a14">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
-  <li><a href="/help">help</a></li>
   </ul>
   <ul>
   <li><a href="/rev/2ef0ac749a14">changeset</a></li>
@@ -224,6 +225,9 @@ try bad style
   </ul>
   <ul>
    <li><a href="/help">help</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   

@@ -205,7 +205,6 @@ Logs and changes
   <li><a href="/graph/1d22e65f027e">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
-  <li><a href="/help">help</a></li>
   </ul>
   <ul>
   <li><a href="/rev/1d22e65f027e">changeset</a></li>
@@ -298,7 +297,6 @@ Logs and changes
    <li><a href="/graph/2ef0ac749a14">graph</a></li>
    <li><a href="/tags">tags</a></li>
    <li><a href="/branches">branches</a></li>
-   <li><a href="/help">help</a></li>
   </ul>
   <ul>
    <li class="active">changeset</li>
@@ -412,6 +410,7 @@ Logs and changes
   <li><a href="/graph">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   
@@ -520,6 +519,9 @@ File-related
   <li><a href="/annotate/a4f92ed23982/foo">annotate</a></li>
   <li><a href="/log/a4f92ed23982/foo">file log</a></li>
   <li><a href="/raw-file/a4f92ed23982/foo">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   

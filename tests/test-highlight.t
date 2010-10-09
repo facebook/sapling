@@ -95,6 +95,9 @@ hgweb filerevision, html
   <li><a href="/log/853dcd4de2a6/primes.py">file log</a></li>
   <li><a href="/raw-file/853dcd4de2a6/primes.py">raw</a></li>
   </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
   </div>
   
   <div class="main">
@@ -218,6 +221,9 @@ hgweb fileannotate, html
   <li class="active">annotate</li>
   <li><a href="/log/853dcd4de2a6/primes.py">file log</a></li>
   <li><a href="/raw-annotate/853dcd4de2a6/primes.py">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   

@@ -44,7 +44,6 @@ revision
    <li><a href="/graph/0cd96de13884">graph</a></li>
    <li><a href="/tags">tags</a></li>
    <li><a href="/branches">branches</a></li>
-   <li><a href="/help">help</a></li>
   </ul>
   <ul>
    <li class="active">changeset</li>
@@ -182,6 +181,9 @@ diff removed file
   <li><a href="/log/78e4ebad7cdf/a">file log</a></li>
   <li><a href="/raw-file/78e4ebad7cdf/a">raw</a></li>
   </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
   </div>
   
   <div class="main">
@@ -267,7 +269,6 @@ revision
    <li><a href="/graph/0cd96de13884">graph</a></li>
    <li><a href="/tags">tags</a></li>
    <li><a href="/branches">branches</a></li>
-   <li><a href="/help">help</a></li>
   </ul>
   <ul>
    <li class="active">changeset</li>
@@ -408,6 +409,9 @@ diff removed file
   <li><a href="/annotate/78e4ebad7cdf/a">annotate</a></li>
   <li><a href="/log/78e4ebad7cdf/a">file log</a></li>
   <li><a href="/raw-file/78e4ebad7cdf/a">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   

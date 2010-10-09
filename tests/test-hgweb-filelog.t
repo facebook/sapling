@@ -149,6 +149,9 @@ tip - two revisions
   <li class="active">file log</li>
   <li><a href="/raw-file/01de2d66a28d/a">raw</a></li>
   </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
   </div>
   
   <div class="main">
@@ -243,6 +246,9 @@ second version - two revisions
   <li><a href="/annotate/01de2d66a28d/a">annotate</a></li>
   <li class="active">file log</li>
   <li><a href="/raw-file/01de2d66a28d/a">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   
@@ -339,6 +345,9 @@ first deleted - one revision
   <li class="active">file log</li>
   <li><a href="/raw-file/5ed941583260/a">raw</a></li>
   </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
   </div>
   
   <div class="main">
@@ -429,6 +438,9 @@ first version - one revision
   <li class="active">file log</li>
   <li><a href="/raw-file/5ed941583260/a">raw</a></li>
   </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
   </div>
   
   <div class="main">
@@ -503,6 +515,7 @@ before addition - error
   <li><a href="/graph">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   
@@ -564,6 +577,7 @@ should show base link, use spartan because it shows it
   <a href="/branches?style=spartan">branches</a>
   <a href="/file/b7682196df1c/c?style=spartan">file</a>
   <a href="/annotate/b7682196df1c/c?style=spartan">annotate</a>
+  <a href="/help?style=spartan">help</a>
   <a type="application/rss+xml" href="/rss-log/tip/c">rss</a>
   <a type="application/atom+xml" href="/atom-log/tip/c" title="Atom feed for test:c">atom</a>
   </div>

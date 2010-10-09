@@ -39,7 +39,6 @@ revision
    <li><a href="/graph/c78f6c5cbea9">graph</a></li>
    <li><a href="/tags">tags</a></li>
    <li><a href="/branches">branches</a></li>
-   <li><a href="/help">help</a></li>
   </ul>
   <ul>
    <li class="active">changeset</li>
@@ -147,6 +146,9 @@ diff removed file
   <li><a href="/annotate/c78f6c5cbea9/a">annotate</a></li>
   <li><a href="/log/c78f6c5cbea9/a">file log</a></li>
   <li><a href="/raw-file/c78f6c5cbea9/a">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   

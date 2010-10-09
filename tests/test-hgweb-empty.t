@@ -33,7 +33,6 @@ Some tests for hgweb in an empty repository
   <li><a href="/graph/000000000000">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
-  <li><a href="/help">help</a></li>
   </ul>
   <ul>
   <li><a href="/rev/000000000000">changeset</a></li>
@@ -116,7 +115,6 @@ Some tests for hgweb in an empty repository
   <li><a href="/graph/000000000000">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
-  <li><a href="/help">help</a></li>
   </ul>
   <ul>
   <li><a href="/rev/000000000000">changeset</a></li>
@@ -200,7 +198,6 @@ Some tests for hgweb in an empty repository
   <li class="active">graph</li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
-  <li><a href="/help">help</a></li>
   </ul>
   <ul>
   <li><a href="/rev/000000000000">changeset</a></li>
@@ -344,7 +341,6 @@ Some tests for hgweb in an empty repository
   <li><a href="/graph/000000000000">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
-  <li><a href="/help">help</a></li>
   </ul>
   <ul>
   <li><a href="/rev/000000000000">changeset</a></li>
@@ -355,6 +351,9 @@ Some tests for hgweb in an empty repository
   </ul>
   <ul>
    <li><a href="/help">help</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   

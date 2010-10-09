@@ -52,7 +52,6 @@ manifest with descending
   <li><a href="/graph/9087c84a0f5d">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
-  <li><a href="/help">help</a></li>
   </ul>
   <ul>
   <li><a href="/rev/9087c84a0f5d">changeset</a></li>
@@ -63,6 +62,9 @@ manifest with descending
   </ul>
   <ul>
    <li><a href="/help">help</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
   </ul>
   </div>
   
