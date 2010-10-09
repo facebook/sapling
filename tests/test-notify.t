@@ -109,7 +109,7 @@ of the very long subject line
 pull (minimal config)
 
   $ hg --traceback --cwd b pull ../a | \
-  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >   python -c 'import sys,re; print re.sub("\n[\t ]", " ", sys.stdin.read()),'
   pulling from ../a
   searching for changes
   adding changesets
@@ -135,8 +135,7 @@ pull (minimal config)
   diff -r cb9a9f314b8b -r 0647d048b600 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:01 1970 +0000
-  @@ -1,1 +1,2 @@
-   a
+  @@ -1,1 +1,2 @@ a
   +a
   (run 'hg update' to get a working copy)
   $ cat <<EOF >> $HGRCPATH
