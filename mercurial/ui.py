@@ -98,12 +98,21 @@ class ui(object):
         self.fixconfig(root=root)
 
     def fixconfig(self, root=None):
+        # expand vars and ~
         # translate paths relative to root (or home) into absolute paths
         root = root or os.getcwd()
         for c in self._tcfg, self._ucfg, self._ocfg:
             for n, p in c.items('paths'):
-                if p and "://" not in p and not os.path.isabs(p):
-                    c.set("paths", n, os.path.normpath(os.path.join(root, p)))
+                if not p:
+                    continue
+                if '%%' in p:
+                    self.warn(_("(deprecated '%%' in path %s=%s from %s)\n")
+                              % (n, p, self.configsource('paths', n)))
+                    p = p.replace('%%', '%')
+                p = util.expandpath(p)
+                if '://' not in p and not os.path.isabs(p):
+                        p = os.path.normpath(os.path.join(root, p))
+                c.set("paths", n, p)
 
         # update ui options
         self.debugflag = self.configbool('ui', 'debug')
@@ -300,24 +309,14 @@ class ui(object):
             user = util.shortuser(user)
         return user
 
-    def _path(self, loc):
-        p = self.config('paths', loc)
-        if p:
-            if '%%' in p:
-                self.warn(_("(deprecated '%%' in path %s=%s from %s)\n") %
-                          (loc, p, self.configsource('paths', loc)))
-                p = p.replace('%%', '%')
-            p = util.expandpath(p)
-        return p
-
     def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
         if "://" in loc or os.path.isdir(os.path.join(loc, '.hg')):
             return loc
 
-        path = self._path(loc)
+        path = self.config('paths', loc)
         if not path and default is not None:
-            path = self._path(default)
+            path = self.config('paths', default)
         return path or loc
 
     def pushbuffer(self):
