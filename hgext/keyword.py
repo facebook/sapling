@@ -194,7 +194,7 @@ class kwtemplater(object):
         expansion are not symbolic links.'''
         return [f for f in cand if self.match(f) and not 'l' in ctx.flags(f)]
 
-    def overwrite(self, ctx, candidates, lookup, expand, recsubn=None):
+    def overwrite(self, ctx, candidates, lookup, expand, rekw=False):
         '''Overwrites selected files expanding/shrinking keywords.'''
         if self.restrict or lookup: # exclude kw_copy
             candidates = self.iskwfile(candidates, ctx)
@@ -204,8 +204,7 @@ class kwtemplater(object):
         if self.restrict or expand and lookup:
             mf = ctx.manifest()
         fctx = ctx
-        subn = (self.restrict and self.re_kw.subn or
-                recsubn or self.re_kwexp.subn)
+        subn = (self.restrict or rekw) and self.re_kw.subn or self.re_kwexp.subn
         msg = (expand and _('overwriting %s expanding keywords\n')
                or _('overwriting %s shrinking keywords\n'))
         for f in candidates:
@@ -578,8 +577,8 @@ def reposetup(ui, repo):
                 modified = [f for f in modified if f in changed]
                 added = [f for f in added if f in changed]
                 kwt.restrict = False
-                kwt.overwrite(recctx, modified, False, True, kwt.re_kwexp.subn)
-                kwt.overwrite(recctx, added, False, True, kwt.re_kw.subn)
+                kwt.overwrite(recctx, modified, False, True)
+                kwt.overwrite(recctx, added, False, True, True)
                 kwt.restrict = True
             return ret
         finally:
