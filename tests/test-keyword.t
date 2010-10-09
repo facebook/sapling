@@ -180,6 +180,7 @@ ie. if patch.diff wrapper acts as it should
   > [notify]
   > sources = pull
   > diffstat = False
+  > maxsubject = 15
   > [reposubs]
   > * = Test
   > EOF
@@ -197,7 +198,7 @@ Pull from bundle and trigger notify
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
-  Subject: changeset in $TESTTMP/Test: addsym
+  Subject: changeset in...
   From: mercurial
   X-Hg-Notification: changeset a2392c293916
   Message-Id: <hg.a2392c293916*> (glob)
@@ -220,7 +221,7 @@ Pull from bundle and trigger notify
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Date:* (glob)
-  Subject: changeset in $TESTTMP/Test: absym
+  Subject: changeset in...
   From: User Name <user@example.com>
   X-Hg-Notification: changeset ef63ca68695b
   Message-Id: <hg.ef63ca68695b*> (glob)
