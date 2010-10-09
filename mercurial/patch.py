@@ -295,7 +295,6 @@ class patchmeta(object):
         self.oldpath = None
         self.mode = None
         self.op = 'MODIFY'
-        self.lineno = 0
         self.binary = False
 
     def setmode(self, mode):
@@ -312,9 +311,7 @@ def readgitpatch(lr):
     # Filter patch for git information
     gp = None
     gitpatches = []
-    lineno = 0
     for line in lr:
-        lineno += 1
         line = line.rstrip(' \r\n')
         if line.startswith('diff --git'):
             m = gitre.match(line)
@@ -323,7 +320,6 @@ def readgitpatch(lr):
                     gitpatches.append(gp)
                 dst = m.group(2)
                 gp = patchmeta(dst)
-                gp.lineno = lineno
         elif gp:
             if line.startswith('--- '):
                 gitpatches.append(gp)
