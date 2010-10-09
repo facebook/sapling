@@ -39,3 +39,47 @@ check custom patch options are honored
   applying ../a.diff
   Using custom patch
 
+
+Issue2417: hg import with # comments in description
+
+Prepare source repo and patch:
+
+  $ rm $HGRCPATH
+  $ hg init c
+  $ cd c
+  $ echo 0 > a
+  $ hg ci -A -m 0 a -d '0 0'
+  $ echo 1 >> a
+  $ cat << eof > log
+  > 1
+  > # comment for 1
+  > eof
+  $ hg ci -l log -d '0 0'
+  $ hg export -o p 1
+  $ cd ..
+
+Clone and apply patch:
+
+  $ hg clone -r 0 c d
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd d
+  $ hg import ../c/p
+  applying ../c/p
+  $ hg log -v -r 1
+  changeset:   1:89bf2f6d8088
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       a
+  description:
+  1
+  # comment for 1
+  
+  
+  $ cd ..
