@@ -143,7 +143,7 @@ pull (minimal config)
   > [notify]
   > config = `pwd`/.notify.conf
   > domain = test.com
-  > strip = 3
+  > strip = 42
   > template = Subject: {desc|firstline|strip}\nFrom: {author}\nX-Test: foo\n\nchangeset {node|short} in {webroot}\ndescription:\n\t{desc|tabindent|strip}
   > 
   > [web]
@@ -181,7 +181,7 @@ pull
   Message-Id: <*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset 0647d048b600 in */b (glob)
+  changeset 0647d048b600 in b
   description: b
   diffs (6 lines):
   
@@ -225,7 +225,7 @@ pull
   Message-Id: <*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset 0647d048b600 in */b (glob)
+  changeset 0647d048b600 in b
   description: b
   diffstat:
   
@@ -274,7 +274,7 @@ test merge
   Message-Id: <*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset 0a184ce6067f in */b (glob)
+  changeset 0a184ce6067f in b
   description: adda2
   diffstat:
   
@@ -300,6 +300,6 @@ test merge
   Message-Id: <*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset 22c88b85aa27 in */b (glob)
+  changeset 22c88b85aa27 in b
   description: merge
   (run 'hg update' to get a working copy)
