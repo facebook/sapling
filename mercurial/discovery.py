@@ -183,17 +183,19 @@ def findoutgoing(repo, remote, base=None, remoteheads=None, force=False):
     the remote repository.
     """
     if base is None:
-        base = {}
-        findincoming(repo, remote, base, remoteheads, force=force)
+        base = findcommonincoming(repo, remote, heads=remoteheads,
+                                  force=force)[0]
+    else:
+        base = list(base)
 
     repo.ui.debug("common changesets up to "
-                  + " ".join(map(short, base.keys())) + "\n")
+                  + " ".join(map(short, base)) + "\n")
 
     remain = set(repo.changelog.nodemap)
 
     # prune everything remote has from the tree
     remain.remove(nullid)
-    remove = base.keys()
+    remove = base
     while remove:
         n = remove.pop(0)
         if n in remain:
@@ -225,9 +227,9 @@ def prepush(repo, remote, force, revs, newbranch):
     changegroup is a readable file-like object whose read() returns
     successive changegroup chunks ready to be sent over the wire and
     remoteheads is the list of remote heads.'''
-    common = {}
     remoteheads = remote.heads()
-    inc = findincoming(repo, remote, common, remoteheads, force=force)
+    common, inc, rheads = findcommonincoming(repo, remote, heads=remoteheads,
+                                             force=force)
 
     cl = repo.changelog
     update = findoutgoing(repo, remote, common, remoteheads)
@@ -326,7 +328,7 @@ def prepush(repo, remote, force, revs, newbranch):
 
     if revs is None:
         # use the fast path, no race possible on push
-        nodes = repo.changelog.findmissing(common.keys())
+        nodes = repo.changelog.findmissing(common)
         cg = repo._changegroup(nodes, 'push')
     else:
         cg = repo.changegroupsubset(update, revs, 'push')
