@@ -716,10 +716,6 @@ def checklink(path):
     except (OSError, AttributeError):
         return False
 
-def needbinarypatch():
-    """return True if patches should be applied in binary mode by default."""
-    return os.name == 'nt'
-
 def endswithsep(path):
     '''Check path ends with os.sep or os.altsep.'''
     return path.endswith(os.sep) or os.altsep and path.endswith(os.altsep)
