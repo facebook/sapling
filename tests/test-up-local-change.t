@@ -167,7 +167,7 @@ create a second head
   summary:     2
   
   $ hg --debug up
-  abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
+  abort: crosses branches (merge branches or use --clean to discard changes)
   [255]
   $ hg --debug merge
   abort: outstanding uncommitted changes (use 'hg status' to list changes)

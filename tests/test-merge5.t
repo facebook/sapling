@@ -14,7 +14,7 @@
   $ hg update 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg update
-  abort: crosses branches (use 'hg merge' or use 'hg update -c')
+  abort: crosses branches (merge branches or use --check to force update)
   [255]
   $ hg update -c
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -27,7 +27,7 @@ or delete".
 Should abort:
 
   $ hg update -y 1
-  abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
+  abort: crosses branches (merge branches or use --clean to discard changes)
   [255]
   $ mv c a
 

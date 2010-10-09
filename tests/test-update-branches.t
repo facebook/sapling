@@ -77,7 +77,7 @@ Cases are run as shown in that table, row by row.
   parent=5
 
   $ norevtest 'none clean same'   clean 2
-  abort: crosses branches (use 'hg merge' or use 'hg update -c')
+  abort: crosses branches (merge branches or use --check to force update)
   parent=2
 
 
@@ -100,12 +100,12 @@ Cases are run as shown in that table, row by row.
   M foo
 
   $ revtest 'none dirty same'   dirty 2 3
-  abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
+  abort: crosses branches (merge branches or use --clean to discard changes)
   parent=2
   M foo
 
   $ revtest 'none dirty cross'  dirty 3 4
-  abort: crosses branches (use 'hg merge' to merge or use 'hg update -C' to discard changes)
+  abort: crosses branches (merge branches or use --clean to discard changes)
   parent=3
   M foo
 
