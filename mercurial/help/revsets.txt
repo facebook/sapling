@@ -178,6 +178,10 @@ Some sample queries:
 
     hg log -r 'branch(default) and 1.5:: and not merge()'
 
+- Open branch heads::
+
+    hg log -r 'head() and not closed()'
+
 - Changesets between tags 1.3 and 1.5 mentioning "bug" that affect
   hgext/*::
 
