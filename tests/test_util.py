@@ -26,12 +26,15 @@ from mercurial import ui
 from mercurial import extensions
 
 try:
-    from unittest2 import SkipTest
-except ImportError:
+    SkipTest = unittest.SkipTest
+except AttributeError:
     try:
-        from nose import SkipTest
+        from unittest2 import SkipTest
     except ImportError:
-        SkipTest = None
+        try:
+            from nose import SkipTest
+        except ImportError:
+            SkipTest = None
 
 from hgsubversion import util
 
