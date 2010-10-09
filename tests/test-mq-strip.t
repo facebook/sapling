@@ -380,3 +380,39 @@ stripping ancestor of queue
 applied patches after stripping ancestor of queue
 
   $ hg qapplied
+
+Verify strip protects against stripping wc parent when there are uncommited mods
+
+  $ echo b > b
+  $ hg add b
+  $ hg ci -m 'b'
+  $ hg log --graph
+  @  changeset:   1:7519abd79d14
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     b
+  |
+  o  changeset:   0:9ab35a2d17cb
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     a
+  
+
+  $ echo c > b
+  $ echo c > bar
+  $ hg strip tip
+  abort: local changes found
+  [255]
+  $ hg strip tip --keep
+  saved backup bundle to * (glob)
+  $ hg log --graph
+  @  changeset:   0:9ab35a2d17cb
+     tag:         tip
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     a
+  
+  $ hg status
+  M bar
+  ? b

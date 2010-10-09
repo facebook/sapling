@@ -2522,7 +2522,18 @@ def strip(ui, repo, *revs, **opts):
             del q.applied[start:end]
             q.save_dirty()
 
-    repo.mq.strip(repo, list(rootnodes), backup=backup, update=update,
+    revs = list(rootnodes)
+    if update and opts.get('keep'):
+        wlock = repo.wlock()
+        try:
+            urev = repo.mq.qparents(repo, revs[0])
+            repo.dirstate.rebuild(urev, repo[urev].manifest())
+            repo.dirstate.write()
+            update = False
+        finally:
+            wlock.release()
+
+    repo.mq.strip(repo, revs, backup=backup, update=update,
                   force=opts.get('force'))
     return 0
 
@@ -3145,9 +3156,10 @@ cmdtable = {
           ('b', 'backup', None, _('bundle only changesets with local revision'
                                   ' number greater than REV which are not'
                                   ' descendants of REV (DEPRECATED)')),
-           ('n', 'no-backup', None, _('no backups')),
-           ('', 'nobackup', None, _('no backups (DEPRECATED)'))],
-          _('hg strip [-f] [-n] REV...')),
+          ('n', 'no-backup', None, _('no backups')),
+          ('', 'nobackup', None, _('no backups (DEPRECATED)')),
+          ('k', 'keep', None, _("do not modify working copy during strip"))],
+          _('hg strip [-k] [-f] [-n] REV...')),
      "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
     "qunapplied":
         (unapplied,
