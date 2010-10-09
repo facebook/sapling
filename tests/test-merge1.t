@@ -166,3 +166,11 @@ merge of b expected
   +This is file b33
   $ hg status
   M b
+
+Test for issue2364
+
+  $ hg up -qC .
+  $ hg rm b
+  $ hg ci -md
+  $ hg revert -r -2 b
+  $ hg up -q -- -2

@@ -276,7 +276,10 @@ def applyupdates(repo, action, wctx, mctx, actx):
             fcl = wctx[f]
             fco = mctx[f2]
             if mctx == actx: # backwards, use working dir parent as ancestor
-                fca = fcl.parents()[0]
+                if fcl.parents():
+                    fca = fcl.parents()[0]
+                else:
+                    fca = repo.filectx(f, fileid=nullrev)
             else:
                 fca = fcl.ancestor(fco, actx)
             if not fca:
