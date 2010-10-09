@@ -1,4 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > graphlog=
+  > 
   > [alias]
   > myinit = init
   > cleanstatus = status -c
@@ -25,6 +28,7 @@
   > count = !hg log -r '\$@' --template='.' | wc -c | sed -e 's/ //g'
   > mcount = !hg log \$@ --template='.' | wc -c | sed -e 's/ //g'
   > rt = root
+  > tglog = glog --template "{rev}:{node|short}: '{desc}' {branches}\n"
   > 
   > [defaults]
   > mylog = -q
@@ -184,6 +188,11 @@ simple shell aliases
   $ hg mcount -r '"branch(default)"'
   2
 
+  $ hg tglog
+  @  1:7e7f92de180e: 'bar'
+  |
+  o  0:e63c23eaa88a: 'foo'
+  
 
 shell aliases with global options
 
