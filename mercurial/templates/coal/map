@@ -10,6 +10,11 @@ shortlog = ../paper/shortlog.tmpl
 shortlogentry = ../paper/shortlogentry.tmpl
 graph = ../paper/graph.tmpl
 
+help = ../paper/help.tmpl
+helptopics = ../paper/helptopics.tmpl
+
+helpentry = '<tr><td><a href="{url}help/{topic|escape}{sessionvars%urlparameter}">{topic|escape}</a></td><td>{summary|escape}</td></tr>'
+
 naventry = '<a href="{url}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navshortentry = '<a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navgraphentry = '<a href="{url}graph/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '

@@ -17,15 +17,22 @@
 <a href="{url}log{sessionvars%urlparameter}">changelog</a> |
 <a href="{url}graph{sessionvars%urlparameter}">graph</a> |
 <a href="{url}tags{sessionvars%urlparameter}">tags</a> |
-branches |
+<a href="{url}branches{sessionvars%urlparameter}">branches</a> |
 <a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a> |
-<a href="{url}help{sessionvars%urlparameter}">help</a>
+help
 <br/>
 </div>
 
 <div class="title">&nbsp;</div>
 <table cellspacing="0">
-{entries%branchentry}
+<tr><td colspan="2"><h2><a name="main" href="#topics">Topics</a></h2></td></tr>
+{topics % helpentry}
+
+<tr><td colspan="2"><h2><a name="main" href="#main">Main Commands</a></h2></td></tr>
+{earlycommands % helpentry}
+
+<tr><td colspan="2"><h2><a name="other" href="#other">Other Commands</a></h2></td></tr>
+{othercommands % helpentry}
 </table>
 
 {footer}

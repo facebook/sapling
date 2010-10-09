@@ -7,6 +7,12 @@ changelog = changelog.tmpl
 summary = summary.tmpl
 error = error.tmpl
 notfound = notfound.tmpl
+
+help = help.tmpl
+helptopics = helptopics.tmpl
+
+helpentry = '<tr><td><a href="{url}help/{topic|escape}{sessionvars%urlparameter}">{topic|escape}</a></td><td>{summary|escape}</td></tr>'
+
 naventry = '<a href="{url}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navshortentry = '<a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navgraphentry = '<a href="{url}graph/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
@@ -75,7 +81,7 @@ annotateline = '
   <tr class="parity{parity}">
     <td class="linenr">
       <a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#{targetline}"
-         title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
+	 title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
     </td>
     <td class="lineno">
       <a href="#{lineid}" id="{lineid}">{linenumber}</a>

@@ -1,5 +1,5 @@
 {header}
-    <title>{repo|escape}: shortlog</title>
+    <title>{repo|escape}: Branches</title>
     <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for {repo|escape}"/>
     <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
@@ -7,7 +7,7 @@
 <body>
 <div id="container">
     <div class="page-header">
-        <h1><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / shortlog</h1>
+        <h1><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / Branches</h1>
 
         <form action="{url}log">
             {sessionvars%hiddenformentry}
@@ -19,25 +19,26 @@
 
         <ul class="page-nav">
             <li><a href="{url}summary{sessionvars%urlparameter}">summary</a></li>
-            <li class="current">shortlog</li>
-            <li><a href="{url}log{sessionvars%urlparameter}">changelog</a></li>
+            <li><a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a></li>
+            <li><a href="{url}changelog{sessionvars%urlparameter}">changelog</a></li>
             <li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
             <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
-            <li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
+            <li><a href="{url}help{sessionvars%urlparameter}">branches</a></li>
             <li><a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a></li>
-	    {archives%archiveentry}
-	    <li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
+	    <li class="current">help</li>
         </ul>
     </div>
 
-    <h2 class="no-link no-border">shortlog</h2>
+    <h2 class="no-link no-border">branches</h2>
+    <table cellspacing="0">
+    <tr><td colspan="2"><h2><a name="main" href="#topics">Topics</a></h2></td></tr>
+    {topics % helpentry}
 
-    <table>
-{entries%shortlogentry}
+    <tr><td colspan="2"><h2><a name="main" href="#main">Main Commands</a></h2></td></tr>
+    {earlycommands % helpentry}
+
+    <tr><td colspan="2"><h2><a name="other" href="#other">Other Commands</a></h2></td></tr>
+    {othercommands % helpentry}
     </table>
-
-    <div class="page-path">
-    {changenav%navshort}
-    </div>
 
 {footer}

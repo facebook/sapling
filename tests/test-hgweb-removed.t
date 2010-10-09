@@ -39,6 +39,7 @@ revision
    <li><a href="/graph/c78f6c5cbea9">graph</a></li>
    <li><a href="/tags">tags</a></li>
    <li><a href="/branches">branches</a></li>
+   <li><a href="/help">help</a></li>
   </ul>
   <ul>
    <li class="active">changeset</li>
@@ -47,6 +48,9 @@ revision
   </ul>
   <ul>
    
+  </ul>
+  <ul>
+   <li><a href="/help">help</a></li>
   </ul>
   </div>
   

@@ -205,6 +205,7 @@ Logs and changes
   <li><a href="/graph/1d22e65f027e">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/branches">branches</a></li>
+  <li><a href="/help">help</a></li>
   </ul>
   <ul>
   <li><a href="/rev/1d22e65f027e">changeset</a></li>
@@ -212,6 +213,9 @@ Logs and changes
   </ul>
   <ul>
   
+  </ul>
+  <ul>
+   <li><a href="/help">help</a></li>
   </ul>
   </div>
   
@@ -294,6 +298,7 @@ Logs and changes
    <li><a href="/graph/2ef0ac749a14">graph</a></li>
    <li><a href="/tags">tags</a></li>
    <li><a href="/branches">branches</a></li>
+   <li><a href="/help">help</a></li>
   </ul>
   <ul>
    <li class="active">changeset</li>
@@ -302,6 +307,9 @@ Logs and changes
   </ul>
   <ul>
    
+  </ul>
+  <ul>
+   <li><a href="/help">help</a></li>
   </ul>
   </div>
   
@@ -627,7 +635,8 @@ Overviews
   <a href="/graph?style=gitweb">graph</a> |
   <a href="/tags?style=gitweb">tags</a> |
   <a href="/branches?style=gitweb">branches</a> |
-  <a href="/file/1d22e65f027e?style=gitweb">files</a>
+  <a href="/file/1d22e65f027e?style=gitweb">files</a> |
+  <a href="/help?style=gitweb">help</a>
   <br/>
   </div>
   
@@ -778,7 +787,8 @@ Overviews
   graph |
   <a href="/tags?style=gitweb">tags</a> |
   <a href="/branches?style=gitweb">branches</a> |
-  <a href="/file/1d22e65f027e?style=gitweb">files</a>
+  <a href="/file/1d22e65f027e?style=gitweb">files</a> |
+  <a href="/help?style=gitweb">help</a>
   <br/>
   <a href="/graph/2?style=gitweb&revcount=30">less</a>
   <a href="/graph/2?style=gitweb&revcount=120">more</a>

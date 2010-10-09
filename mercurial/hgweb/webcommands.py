@@ -13,6 +13,9 @@ from mercurial.util import binary
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
 from mercurial import graphmod
+from mercurial import help as helpmod
+from mercurial import ui
+from mercurial.i18n import _
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
 # you're adding a new command, or the new command won't work.
@@ -20,7 +23,7 @@ from mercurial import graphmod
 __all__ = [
    'log', 'rawfile', 'file', 'changelog', 'shortlog', 'changeset', 'rev',
    'manifest', 'tags', 'branches', 'summary', 'filediff', 'diff', 'annotate',
-   'filelog', 'archive', 'static', 'graph',
+   'filelog', 'archive', 'static', 'graph', 'help',
 ]
 
 def log(web, req, tmpl):
@@ -724,3 +727,58 @@ def graph(web, req, tmpl):
                 lessvars=lessvars, morevars=morevars, downrev=downrev,
                 canvasheight=canvasheight, jsdata=data, bg_height=bg_height,
                 node=revnode_hex, changenav=changenav)
+
+def _getdoc(e):
+    doc = e[0].__doc__
+    if doc:
+        doc = doc.split('\n')[0]
+    else:
+        doc = _('(no help text available)')
+    return doc
+
+def help(web, req, tmpl):
+    from mercurial import commands # avoid cycle
+
+    topicname = req.form.get('node', [None])[0]
+    if not topicname:
+        topic = []
+
+        def topics(**map):
+            for entries, summary, _ in helpmod.helptable:
+                entries = sorted(entries, key=len)
+                yield {'topic': entries[-1], 'summary': summary}
+
+        early, other = [], []
+        primary = lambda s: s.split('|')[0]
+        for c, e in commands.table.iteritems():
+            doc = _getdoc(e)
+            if 'DEPRECATED' in doc or c.startswith('debug'):
+                continue
+            cmd = primary(c)
+            if cmd.startswith('^'):
+                early.append((cmd[1:], doc))
+            else:
+                other.append((cmd, doc))
+
+        early.sort()
+        other.sort()
+
+        def earlycommands(**map):
+            for c, doc in early:
+                yield {'topic': c, 'summary': doc}
+
+        def othercommands(**map):
+            for c, doc in other:
+                yield {'topic': c, 'summary': doc}
+
+        return tmpl('helptopics', topics=topics, earlycommands=earlycommands,
+                    othercommands=othercommands, title='Index')
+
+    u = ui.ui()
+    u.pushbuffer()
+    try:
+        commands.help_(u, topicname)
+    except error.UnknownCommand:
+        raise ErrorResponse(HTTP_NOT_FOUND)
+    doc = u.popbuffer()
+    return tmpl('help', topic=topicname, doc=doc)
