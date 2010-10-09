@@ -111,7 +111,7 @@ class ui(object):
                     p = p.replace('%%', '%')
                 p = util.expandpath(p)
                 if '://' not in p and not os.path.isabs(p):
-                        p = os.path.normpath(os.path.join(root, p))
+                    p = os.path.normpath(os.path.join(root, p))
                 c.set("paths", n, p)
 
         # update ui options
