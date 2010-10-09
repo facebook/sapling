@@ -24,7 +24,9 @@
   popping c
   now at: b
 
-  $ hg qdel c
+Delete the same patch twice in one command (issue2427)
+
+  $ hg qdel c c
 
   $ hg qseries
   a

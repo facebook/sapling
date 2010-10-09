@@ -765,7 +765,8 @@ class queue(object):
                 raise util.Abort(_("cannot delete applied patch %s") % patch)
             if patch not in self.series:
                 raise util.Abort(_("patch %s not in series file") % patch)
-            realpatches.append(patch)
+            if patch not in realpatches:
+                realpatches.append(patch)
 
         numrevs = 0
         if opts.get('rev'):
