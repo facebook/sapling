@@ -418,7 +418,10 @@ def listauthors(ui, args, authors=None, **opts):
     svn = svnrepo.svnremoterepo(ui, args[0]).svn
     author_set = set()
     for rev in svn.revisions():
-        author_set.add(str(rev.author)) # So None becomes 'None'
+        if rev.author is None:
+            author_set.add('(no author)')
+        else:
+            author_set.add(rev.author)
     if authors:
         authorfile = open(authors, 'w')
         authorfile.write('%s=\n' % '=\n'.join(sorted(author_set)))

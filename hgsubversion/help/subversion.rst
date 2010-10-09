@@ -162,6 +162,10 @@ settings:
 
       joe = Joe User <joe@example.com>
 
+    Some Subversion conversion tools create revisions without
+    specifying an author.  Such author names are mapped to ``(no
+    author)``, similar to how ``svn log`` will display them.
+
   hgsubversion.defaulthost
     This option specifies the hostname to append to unmapped Subversion
     usernames. The default is to append the UUID of the Subversion repository

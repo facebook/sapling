@@ -65,6 +65,27 @@ class MapTests(test_util.TestBase):
     def test_author_map_closing_author_stupid(self):
         self.test_author_map_closing_author(True)
 
+    def test_author_map_no_author(self, stupid=False):
+        self._load_fixture_and_fetch('no-author.svndump')
+        users = set(self.repo[r].user() for r in self.repo)
+        expected_users = ['(no author)@%s' % self.repo.svnmeta().uuid]
+        self.assertEqual(sorted(users), expected_users)
+        test_util.rmtree(self.wc_path)
+
+        authormap = open(self.authors, 'w')
+        authormap.write("(no author)=Testy <test@example.com>")
+        authormap.close()
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'authormap', self.authors)
+        commands.clone(ui, test_util.fileurl(self.repo_path),
+                       self.wc_path, authors=self.authors)
+        users = set(self.repo[r].user() for r in self.repo)
+        expected_users = ['Testy <test@example.com>']
+        self.assertEqual(sorted(users), expected_users)
+
+    def test_author_map_no_author_stupid(self):
+        self.test_author_map_no_author(True)
+
     def test_author_map_no_overwrite(self):
         cwd = os.path.dirname(__file__)
         orig = os.path.join(cwd, 'fixtures', 'author-map-test.txt')

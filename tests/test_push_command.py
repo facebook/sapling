@@ -131,7 +131,7 @@ class PushTests(test_util.TestBase):
             self.assertEqual(tip.branch(), 'default')
             # unintended behaviour:
             self.assertNotEqual('an_author', tip.user())
-            self.assertEqual('None', tip.user().rsplit('@', 1)[0])
+            self.assertEqual('(no author)', tip.user().rsplit('@', 1)[0])
         finally:
             # TODO: use svnserve.kill() in Python >2.5
             test_util.kill_process(svnserve)

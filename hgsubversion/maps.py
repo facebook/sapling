@@ -76,6 +76,8 @@ class AuthorMap(dict):
         ''' Similar to dict.__getitem__, except in case of an unknown author.
         In such cases, a new value is generated and added to the dictionary
         as well as the backing store. '''
+        if author is None:
+            author = '(no author)'
         if author in self:
             result = self.super.__getitem__(author)
         elif self.ui.configbool('hgsubversion', 'defaultauthors', True):
