@@ -291,11 +291,16 @@ compare changenodes in a and c
   $Id: c,v 40a904bbbe4c 1970/01/01 00:00:01 user $
   tests for different changenodes
 
+record
+
+  $ echo '$Id$' > r
+  $ hg add r
+
 record chunk
 
   $ python -c \
   > 'l=open("a").readlines();l.insert(1,"foo\n");l.append("bar\n");open("a","w").writelines(l);'
-  $ hg record -d '1 10' -m rectest<<EOF
+  $ hg record -d '1 10' -m rectest a<<EOF
   > y
   > y
   > n
@@ -319,6 +324,7 @@ record chunk
   d17e03c92c97+ tip
   $ hg status
   M a
+  A r
 
 Cat modified file a
 
@@ -331,7 +337,7 @@ Cat modified file a
 
 Diff remaining chunk
 
-  $ hg diff
+  $ hg diff a
   diff -r d17e03c92c97 a
   --- a/a	Wed Dec 31 23:59:51 1969 -0000
   +++ b/a	* (glob)
@@ -350,7 +356,7 @@ Record all chunks in file a
 
  - do not use "hg record -m" here!
 
-  $ hg record -l msg -d '1 11'<<EOF
+  $ hg record -l msg -d '1 11' a<<EOF
   > y
   > y
   > y
@@ -415,13 +421,8 @@ Only z should be overwritten
   $ hg forget y z
   $ rm y z
 
-  $ hg update -C
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+record added file alone
 
-record added file
-
-  $ echo '$Id$' > r
-  $ hg add r
   $ hg -v record -l msg -d '1 12' r<<EOF
   > y
   > EOF
@@ -436,6 +437,8 @@ record added file
   overwriting r shrinking keywords
   $ hg forget r
   $ rm msg r
+  $ hg update -C
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test patch queue repo
 

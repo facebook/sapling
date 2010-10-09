@@ -574,8 +574,9 @@ def reposetup(ui, repo):
             ret = orig(ui, repo, commitfunc, *pats, **opts)
             recctx = repo['.']
             if ctx != recctx:
-                modified = [f for f in modified if f in recctx]
-                added = [f for f in added if f in recctx]
+                changed = recctx.files()
+                modified = [f for f in modified if f in changed]
+                added = [f for f in added if f in changed]
                 kwt.restrict = False
                 kwt.overwrite(recctx, modified, False, True, kwt.re_kwexp.subn)
                 kwt.overwrite(recctx, added, False, True, kwt.re_kw.subn)
