@@ -89,7 +89,7 @@ The following predicates are supported:
   to ensure special escape characters are handled correctly.
 
 ``head()``
-  Changeset is a head.
+  Changeset is a named branch head.
 
 ``heads(set)``
   Members of set with no children in set.
