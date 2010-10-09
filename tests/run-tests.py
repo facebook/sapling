@@ -443,25 +443,25 @@ class Timeout(Exception):
 def alarmed(signum, frame):
     raise Timeout
 
-def pytest(test, options):
+def pytest(test, options, replacements):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
     vlog("# Running", cmd)
-    return run(cmd, options)
+    return run(cmd, options, replacements)
 
-def shtest(test, options):
+def shtest(test, options, replacements):
     cmd = '"%s"' % test
     vlog("# Running", cmd)
-    return run(cmd, options)
+    return run(cmd, options, replacements)
 
-def battest(test, options):
+def battest(test, options, replacements):
     # To reliably get the error code from batch files on WinXP,
     # the "cmd /c call" prefix is needed. Grrr
     cmd = 'cmd /c call "%s"' % testpath
     vlog("# Running", cmd)
-    return run(cmd, options)
+    return run(cmd, options, replacements)
 
-def tsttest(test, options):
+def tsttest(test, options, replacements):
     t = open(test)
     out = []
     script = []
@@ -500,7 +500,7 @@ def tsttest(test, options):
 
         cmd = '/bin/sh "%s"' % name
         vlog("# Running", cmd)
-        exitcode, output = run(cmd, options)
+        exitcode, output = run(cmd, options, replacements)
         # do not merge output if skipped, return hghave message instead
         if exitcode == SKIPPED_STATUS:
             return exitcode, output
@@ -565,7 +565,7 @@ def tsttest(test, options):
 
     return exitcode, postout
 
-def run(cmd, options):
+def run(cmd, options, replacements):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
@@ -608,6 +608,8 @@ def run(cmd, options):
             cleanup()
             raise
 
+    for s, r in replacements:
+        output = output.replace(s, r)
     return ret, splitnewlines(output)
 
 def runone(options, test, skips, fails):
@@ -682,14 +684,14 @@ def runone(options, test, skips, fails):
         runner = shtest
 
     # Make a tmp subdirectory to work in
-    tmpd = os.path.join(HGTMP, test)
-    os.mkdir(tmpd)
-    os.chdir(tmpd)
+    testtmp = os.environ["TESTTMP"] = os.path.join(HGTMP, test)
+    os.mkdir(testtmp)
+    os.chdir(testtmp)
 
     if options.timeout > 0:
         signal.alarm(options.timeout)
 
-    ret, out = runner(testpath, options)
+    ret, out = runner(testpath, options, [(testtmp, '$TESTTMP')])
     vlog("# Ret was:", ret)
 
     if options.timeout > 0:
@@ -755,7 +757,7 @@ def runone(options, test, skips, fails):
 
     os.chdir(TESTDIR)
     if not options.keep_tmpdir:
-        shutil.rmtree(tmpd, True)
+        shutil.rmtree(testtmp, True)
     if skipped:
         return None
     return ret == 0
