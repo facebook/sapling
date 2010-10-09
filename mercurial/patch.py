@@ -1233,7 +1233,7 @@ def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):
         if fp != patchobj:
             fp.close()
     if ret < 0:
-        raise PatchError
+        raise PatchError(_('patch failed to apply'))
     return ret > 0
 
 def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
@@ -1256,11 +1256,7 @@ def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
             return externalpatch(patcher, patchname, ui, strip, cwd, files)
         return internalpatch(patchname, ui, strip, cwd, files, eolmode)
     except PatchError, err:
-        s = str(err)
-        if s:
-            raise util.Abort(s)
-        else:
-            raise util.Abort(_('patch failed to apply'))
+        raise util.Abort(str(err))
 
 def b85diff(to, tn):
     '''print base85-encoded binary diff'''

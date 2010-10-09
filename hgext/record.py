@@ -499,11 +499,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                                         eolmode=None)
                     cmdutil.updatedir(ui, repo, pfiles)
                 except patch.PatchError, err:
-                    s = str(err)
-                    if s:
-                        raise util.Abort(s)
-                    else:
-                        raise util.Abort(_('patch failed to apply'))
+                    raise util.Abort(str(err))
             del fp
 
             # 4. We prepared working directory according to filtered patch.
