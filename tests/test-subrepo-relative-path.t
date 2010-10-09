@@ -44,7 +44,7 @@ Clone main from hgweb
   adding file changes
   added 1 changesets with 3 changes to 3 files
   updating to branch default
-  pulling subrepo sub from http://localhost:[0-9]+/sub (re)
+  pulling subrepo sub from http://localhost:$HGPORT/sub
   requesting all changes
   adding changesets
   adding manifests

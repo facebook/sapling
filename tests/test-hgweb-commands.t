@@ -30,16 +30,16 @@ Logs and changes
   <?xml version="1.0" encoding="ascii"?>
   <feed xmlns="http://www.w3.org/2005/Atom">
    <!-- Changelog -->
-   <id>http://*/</id> (glob)
-   <link rel="self" href="http://*/atom-log"/> (glob)
-   <link rel="alternate" href="http://*/"/> (glob)
+   <id>http://*:$HGPORT/</id> (glob)
+   <link rel="self" href="http://*:$HGPORT/atom-log"/> (glob)
+   <link rel="alternate" href="http://*:$HGPORT/"/> (glob)
    <title>test Changelog</title>
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
     <title>branch</title>
-    <id>http://*/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id> (glob)
-    <link href="http://*/rev/1d22e65f027e"/> (glob)
+    <id>http://*:$HGPORT/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id> (glob)
+    <link href="http://*:$HGPORT/rev/1d22e65f027e"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -54,8 +54,8 @@ Logs and changes
    </entry>
    <entry>
     <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
-    <id>http://*/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id> (glob)
-    <link href="http://*/rev/a4f92ed23982"/> (glob)
+    <id>http://*:$HGPORT/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id> (glob)
+    <link href="http://*:$HGPORT/rev/a4f92ed23982"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -70,8 +70,8 @@ Logs and changes
    </entry>
    <entry>
     <title>base</title>
-    <id>http://*/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id> (glob)
-    <link href="http://*/rev/2ef0ac749a14"/> (glob)
+    <id>http://*:$HGPORT/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id> (glob)
+    <link href="http://*:$HGPORT/rev/2ef0ac749a14"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -92,16 +92,16 @@ Logs and changes
   <?xml version="1.0" encoding="ascii"?>
   <feed xmlns="http://www.w3.org/2005/Atom">
    <!-- Changelog -->
-   <id>http://*/</id> (glob)
-   <link rel="self" href="http://*/atom-log"/> (glob)
-   <link rel="alternate" href="http://*/"/> (glob)
+   <id>http://*:$HGPORT/</id> (glob)
+   <link rel="self" href="http://*:$HGPORT/atom-log"/> (glob)
+   <link rel="alternate" href="http://*:$HGPORT/"/> (glob)
    <title>test Changelog</title>
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
     <title>branch</title>
-    <id>http://*/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id> (glob)
-    <link href="http://*/rev/1d22e65f027e"/> (glob)
+    <id>http://*:$HGPORT/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id> (glob)
+    <link href="http://*:$HGPORT/rev/1d22e65f027e"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -116,8 +116,8 @@ Logs and changes
    </entry>
    <entry>
     <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
-    <id>http://*/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id> (glob)
-    <link href="http://*/rev/a4f92ed23982"/> (glob)
+    <id>http://*:$HGPORT/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id> (glob)
+    <link href="http://*:$HGPORT/rev/a4f92ed23982"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -132,8 +132,8 @@ Logs and changes
    </entry>
    <entry>
     <title>base</title>
-    <id>http://*/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id> (glob)
-    <link href="http://*/rev/2ef0ac749a14"/> (glob)
+    <id>http://*:$HGPORT/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id> (glob)
+    <link href="http://*:$HGPORT/rev/2ef0ac749a14"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -153,15 +153,15 @@ Logs and changes
   
   <?xml version="1.0" encoding="ascii"?>
   <feed xmlns="http://www.w3.org/2005/Atom">
-   <id>http://*/atom-log/tip/foo</id> (glob)
-   <link rel="self" href="http://*/atom-log/tip/foo"/> (glob)
+   <id>http://*:$HGPORT/atom-log/tip/foo</id> (glob)
+   <link rel="self" href="http://*:$HGPORT/atom-log/tip/foo"/> (glob)
    <title>test: foo history</title>
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
     <title>base</title>
-    <id>http://*/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id> (glob)
-    <link href="http://*/rev/2ef0ac749a14"/> (glob)
+    <id>http://*:$HGPORT/#changeset-2ef0ac749a14e4f57a5a822464a0902c6f7f448f</id> (glob)
+    <link href="http://*:$HGPORT/rev/2ef0ac749a14"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>

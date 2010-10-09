@@ -83,14 +83,14 @@ should give a 404 - repo is not published
 atom-log without basedir
 
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/a/atom-log' | grep '<link'
-   <link rel="self" href="http://*/a/atom-log"/> (glob)
-   <link rel="alternate" href="http://*/a/"/> (glob)
-    <link href="http://*/a/rev/8580ff50825a"/> (glob)
+   <link rel="self" href="http://*:$HGPORT/a/atom-log"/> (glob)
+   <link rel="alternate" href="http://*:$HGPORT/a/"/> (glob)
+    <link href="http://*:$HGPORT/a/rev/8580ff50825a"/> (glob)
 
 rss-log without basedir
 
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/a/rss-log' | grep '<guid'
-      <guid isPermaLink="true">http://*/a/rev/8580ff50825a</guid> (glob)
+      <guid isPermaLink="true">http://*:$HGPORT/a/rev/8580ff50825a</guid> (glob)
   $ cat > paths.conf <<EOF
   > [paths]
   > t/a/=$root/a
@@ -395,16 +395,16 @@ should succeed, slashy names
   <?xml version="1.0" encoding="ascii"?>
   <feed xmlns="http://www.w3.org/2005/Atom">
    <!-- Changelog -->
-   <id>http://*/t/a/</id> (glob)
-   <link rel="self" href="http://*/t/a/atom-log"/> (glob)
-   <link rel="alternate" href="http://*/t/a/"/> (glob)
+   <id>http://*:$HGPORT1/t/a/</id> (glob)
+   <link rel="self" href="http://*:$HGPORT1/t/a/atom-log"/> (glob)
+   <link rel="alternate" href="http://*:$HGPORT1/t/a/"/> (glob)
    <title>t/a Changelog</title>
    <updated>1970-01-01T00:00:01+00:00</updated>
   
    <entry>
     <title>a</title>
-    <id>http://*/t/a/#changeset-8580ff50825a50c8f716709acdf8de0deddcd6ab</id> (glob)
-    <link href="http://*/t/a/rev/8580ff50825a"/> (glob)
+    <id>http://*:$HGPORT1/t/a/#changeset-8580ff50825a50c8f716709acdf8de0deddcd6ab</id> (glob)
+    <link href="http://*:$HGPORT1/t/a/rev/8580ff50825a"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -425,16 +425,16 @@ should succeed, slashy names
   <?xml version="1.0" encoding="ascii"?>
   <feed xmlns="http://www.w3.org/2005/Atom">
    <!-- Changelog -->
-   <id>http://*/t/a/</id> (glob)
-   <link rel="self" href="http://*/t/a/atom-log"/> (glob)
-   <link rel="alternate" href="http://*/t/a/"/> (glob)
+   <id>http://*:$HGPORT1/t/a/</id> (glob)
+   <link rel="self" href="http://*:$HGPORT1/t/a/atom-log"/> (glob)
+   <link rel="alternate" href="http://*:$HGPORT1/t/a/"/> (glob)
    <title>t/a Changelog</title>
    <updated>1970-01-01T00:00:01+00:00</updated>
   
    <entry>
     <title>a</title>
-    <id>http://*/t/a/#changeset-8580ff50825a50c8f716709acdf8de0deddcd6ab</id> (glob)
-    <link href="http://*/t/a/rev/8580ff50825a"/> (glob)
+    <id>http://*:$HGPORT1/t/a/#changeset-8580ff50825a50c8f716709acdf8de0deddcd6ab</id> (glob)
+    <link href="http://*:$HGPORT1/t/a/rev/8580ff50825a"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>

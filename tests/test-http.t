@@ -18,7 +18,7 @@
 Test server address cannot be reused
 
   $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at ':*': Address already in use (glob)
+  abort: cannot start server at ':$HGPORT1': Address already in use
   [255]
   $ cd ..
   $ cat hg1.pid hg2.pid >> $DAEMON_PIDS
@@ -77,8 +77,8 @@ pull
   $ echo '[hooks]' >> .hg/hgrc
   $ echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
   $ hg pull
-  changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=http://localhost:*/* (glob)
-  pulling from http://localhost:*/ (glob)
+  changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=http://localhost:$HGPORT1/ 
+  pulling from http://localhost:$HGPORT1/
   searching for changes
   adding changesets
   adding manifests

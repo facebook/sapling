@@ -66,8 +66,8 @@ check for HTTP opener failures when cachefile does not exist
   $ echo '[hooks]' >> .hg/hgrc
   $ echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
   $ hg pull
-  changegroup hook: HG_NODE=822d6e31f08b9d6e3b898ce5e52efc0a4bf4905a HG_SOURCE=pull HG_URL=http://localhost:*/remote  (glob)
-  pulling from static-http://localhost:*/remote (glob)
+  changegroup hook: HG_NODE=822d6e31f08b9d6e3b898ce5e52efc0a4bf4905a HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/remote 
+  pulling from static-http://localhost:$HGPORT/remote
   searching for changes
   adding changesets
   adding manifests
@@ -82,7 +82,7 @@ trying to push
   $ echo more foo >> bar
   $ hg commit -m"test"
   $ hg push
-  pushing to static-http://localhost:*/remote (glob)
+  pushing to static-http://localhost:$HGPORT/remote
   abort: cannot lock static-http repository
   [255]
 
@@ -125,7 +125,7 @@ test with "/" URI (issue 747)
   $ cat a
   a
   $ hg paths
-  default = static-http://localhost:*/ (glob)
+  default = static-http://localhost:$HGPORT/
 
 test with empty repo (issue965)
 
@@ -143,13 +143,13 @@ test with empty repo (issue965)
   checking files
   0 files, 0 changesets, 0 total revisions
   $ hg paths
-  default = static-http://localhost:*/remotempty (glob)
+  default = static-http://localhost:$HGPORT/remotempty
 
 test with non-repo
 
   $ cd ..
   $ mkdir notarepo
   $ hg clone static-http://localhost:$HGPORT/notarepo local3
-  abort: 'http://localhost:*/notarepo' does not appear to be an hg repository! (glob)
+  abort: 'http://localhost:$HGPORT/notarepo' does not appear to be an hg repository!
   [255]
   $ kill $!

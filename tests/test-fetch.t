@@ -72,7 +72,7 @@ should merge c into a
 fetch over http, no auth
 
   $ hg --cwd d fetch -d '5 0' http://localhost:$HGPORT/
-  pulling from http://localhost:*/ (glob)
+  pulling from http://localhost:$HGPORT/
   searching for changes
   adding changesets
   adding manifests
@@ -84,12 +84,12 @@ fetch over http, no auth
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   new changeset 3:* merges remote changes with local (glob)
   $ hg --cwd d tip --template '{desc}\n'
-  Automated merge with http://localhost:*/ (glob)
+  Automated merge with http://localhost:$HGPORT/
 
 fetch over http with auth (should be hidden in desc)
 
   $ hg --cwd e fetch -d '5 0' http://user:password@localhost:$HGPORT/
-  pulling from http://user:***@localhost:*/ (glob)
+  pulling from http://user:***@localhost:$HGPORT/
   searching for changes
   adding changesets
   adding manifests
@@ -101,7 +101,7 @@ fetch over http with auth (should be hidden in desc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   new changeset 3:* merges remote changes with local (glob)
   $ hg --cwd e tip --template '{desc}\n'
-  Automated merge with http://localhost:*/ (glob)
+  Automated merge with http://localhost:$HGPORT/
   $ hg clone a f
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -218,7 +218,7 @@ clone remote via stream
   $ cd ..
   $ cd test-1
   $ hg pull -r 4 http://localhost:$HGPORT/
-  pulling from http://localhost:*/ (glob)
+  pulling from http://localhost:$HGPORT/
   searching for changes
   adding changesets
   adding manifests
@@ -232,7 +232,7 @@ clone remote via stream
   checking files
   1 files, 3 changesets, 2 total revisions
   $ hg pull http://localhost:$HGPORT/
-  pulling from http://localhost:*/ (glob)
+  pulling from http://localhost:$HGPORT/
   searching for changes
   adding changesets
   adding manifests
@@ -242,7 +242,7 @@ clone remote via stream
   $ cd ..
   $ cd test-2
   $ hg pull -r 5 http://localhost:$HGPORT/
-  pulling from http://localhost:*/ (glob)
+  pulling from http://localhost:$HGPORT/
   searching for changes
   adding changesets
   adding manifests
@@ -256,7 +256,7 @@ clone remote via stream
   checking files
   1 files, 5 changesets, 3 total revisions
   $ hg pull http://localhost:$HGPORT/
-  pulling from http://localhost:*/ (glob)
+  pulling from http://localhost:$HGPORT/
   searching for changes
   adding changesets
   adding manifests

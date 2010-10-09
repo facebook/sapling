@@ -691,7 +691,12 @@ def runone(options, test, skips, fails):
     if options.timeout > 0:
         signal.alarm(options.timeout)
 
-    ret, out = runner(testpath, options, [(testtmp, '$TESTTMP')])
+    ret, out = runner(testpath, options, [
+        (testtmp, '$TESTTMP'),
+        (':%s' % options.port, ':$HGPORT'),
+        (':%s' % (options.port + 1), ':$HGPORT1'),
+        (':%s' % (options.port + 2), ':$HGPORT2'),
+        ])
     vlog("# Ret was:", ret)
 
     if options.timeout > 0:
