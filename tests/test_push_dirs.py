@@ -79,6 +79,29 @@ class TestPushDirectories(test_util.TestBase):
         self.pushrevisions()
         self.assertEqual(self.svnls('project/trunk'), ['a' ,])
 
+    def test_push_single_dir_change_in_subdir(self):
+        # Tests simple pushing from default branch to a single dir repo
+        # Changes a file in a subdir (regression).
+        repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
+                                            stupid=False,
+                                            layout='single',
+                                            subdir='tags')
+        changes = [('tag_r3/alpha', 'tag_r3/alpha', 'foo'),
+                   ('tag_r3/new', 'tag_r3/new', 'foo'),
+                   ('new_dir/new', 'new_dir/new', 'foo'),
+                   ]
+        self.commitchanges(changes)
+        self.pushrevisions()
+        self.assertEqual(self.svnls('tags'),
+                         ['copied_tag',
+                          'copied_tag/alpha',
+                          'copied_tag/beta',
+                          'new_dir',
+                          'new_dir/new',
+                          'tag_r3',
+                          'tag_r3/alpha',
+                          'tag_r3/beta',
+                          'tag_r3/new'])
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestPushDirectories),
