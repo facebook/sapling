@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os, copy
-from mercurial import match, patch, util, error
+from mercurial import match, patch, util, error, ui
 from mercurial.node import hex, nullid
 
 def up(p):
@@ -219,3 +219,8 @@ class sessionvars(object):
         for key, value in self.vars.iteritems():
             yield {'name': key, 'value': str(value), 'separator': separator}
             separator = '&'
+
+class wsgiui(ui.ui):
+    # default termwidth breaks under mod_wsgi
+    def termwidth(self):
+        return 80

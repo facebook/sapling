@@ -41,11 +41,6 @@ def findrepos(paths):
             repos.append((name, path))
     return repos
 
-class wsgiui(ui.ui):
-    # default termwidth breaks under mod_wsgi
-    def termwidth(self):
-        return 80
-
 class hgwebdir(object):
     refreshinterval = 20
 
@@ -63,7 +58,7 @@ class hgwebdir(object):
         if self.baseui:
             u = self.baseui.copy()
         else:
-            u = wsgiui()
+            u = webutil.wsgiui()
             u.setconfig('ui', 'report_untrusted', 'off')
             u.setconfig('ui', 'interactive', 'off')
 
