@@ -586,11 +586,10 @@ class localrepository(repo.repository):
                     fn = lambda s, c, **kwargs: oldfn(s, c)
                 l.append((mf, fn, params))
             self.filterpats[filter] = l
+        return self.filterpats[filter]
 
     def _filter(self, filter, filename, data):
-        self._loadfilter(filter)
-
-        for mf, fn, cmd in self.filterpats[filter]:
+        for mf, fn, cmd in self._loadfilter[filter]:
             if mf(filename):
                 self.ui.debug("filtering %s through %s\n" % (filename, cmd))
                 data = fn(data, cmd, ui=self.ui, repo=self, filename=filename)
