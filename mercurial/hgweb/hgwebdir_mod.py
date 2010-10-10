@@ -58,7 +58,7 @@ class hgwebdir(object):
         if self.baseui:
             u = self.baseui.copy()
         else:
-            u = webutil.wsgiui()
+            u = ui.ui()
             u.setconfig('ui', 'report_untrusted', 'off')
             u.setconfig('ui', 'interactive', 'off')
 

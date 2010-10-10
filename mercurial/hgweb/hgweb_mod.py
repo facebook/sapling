@@ -28,7 +28,7 @@ class hgweb(object):
             if baseui:
                 u = baseui.copy()
             else:
-                u = webutil.wsgiui()
+                u = ui.ui()
             self.repo = hg.repository(u, repo)
         else:
             self.repo = repo

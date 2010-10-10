@@ -773,7 +773,7 @@ def help(web, req, tmpl):
         return tmpl('helptopics', topics=topics, earlycommands=earlycommands,
                     othercommands=othercommands, title='Index')
 
-    u = web.repo.ui
+    u = webutil.wsgiui()
     u.pushbuffer()
     try:
         commands.help_(u, topicname)
