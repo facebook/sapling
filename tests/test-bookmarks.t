@@ -62,6 +62,28 @@ list bookmarks
   $ hg add b
   $ hg commit -m 1
 
+bookmarks revset
+
+  $ hg log -r 'bookmark()'
+  changeset:   1:925d80f479bb
+  tag:         X
+  tag:         X2
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
+  $ hg log -r 'bookmark(Y)'
+  $ hg log -r 'bookmark(X2)'
+  changeset:   1:925d80f479bb
+  tag:         X
+  tag:         X2
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
+
 bookmarks X and X2 moved to rev 1, Y at rev -1
 
   $ hg bookmarks
