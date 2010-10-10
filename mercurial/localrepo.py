@@ -588,8 +588,8 @@ class localrepository(repo.repository):
             self.filterpats[filter] = l
         return self.filterpats[filter]
 
-    def _filter(self, filter, filename, data):
-        for mf, fn, cmd in self._loadfilter[filter]:
+    def _filter(self, filterpats, filename, data):
+        for mf, fn, cmd in filterpats:
             if mf(filename):
                 self.ui.debug("filtering %s through %s\n" % (filename, cmd))
                 data = fn(data, cmd, ui=self.ui, repo=self, filename=filename)
@@ -605,10 +605,10 @@ class localrepository(repo.repository):
             data = os.readlink(self.wjoin(filename))
         else:
             data = self.wopener(filename, 'r').read()
-        return self._filter("encode", filename, data)
+        return self._filter(self._loadfilter("encode"), filename, data)
 
     def wwrite(self, filename, data, flags):
-        data = self._filter("decode", filename, data)
+        data = self._filter(self._loadfilter("decode"), filename, data)
         try:
             os.unlink(self.wjoin(filename))
         except OSError:
@@ -621,7 +621,7 @@ class localrepository(repo.repository):
                 util.set_flags(self.wjoin(filename), False, True)
 
     def wwritedata(self, filename, data):
-        return self._filter("decode", filename, data)
+        return self._filter(self._loadfilter("decode"), filename, data)
 
     def transaction(self, desc):
         tr = self._transref and self._transref() or None
