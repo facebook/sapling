@@ -1949,7 +1949,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
                 commands = cmds[f].replace("|",", ")
                 ui.write(" %s:\n      %s\n"%(commands, h[f]))
             else:
-                ui.write('%s\n' % (util.wrap(h[f],
+                ui.write('%s\n' % (util.wrap(h[f], textwidth,
                                              initindent=' %-*s   ' % (m, f),
                                              hangindent=' ' * (m + 4))))
 
@@ -2106,7 +2106,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
             if desc:
                 initindent = ' %s%s  ' % (opt, ' ' * (hanging - width))
                 hangindent = ' ' * (hanging + 3)
-                ui.write('%s\n' % (util.wrap(desc,
+                ui.write('%s\n' % (util.wrap(desc, textwidth,
                                              initindent=initindent,
                                              hangindent=hangindent)))
             else:

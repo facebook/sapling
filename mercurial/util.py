@@ -1313,9 +1313,7 @@ class MBTextWrapper(textwrap.TextWrapper):
 
 #### naming convention of above implementation follows 'textwrap' module
 
-def wrap(line, width=None, initindent='', hangindent=''):
-    if width is None:
-        width = termwidth() - 2
+def wrap(line, width, initindent='', hangindent=''):
     maxindent = max(len(hangindent), len(initindent))
     if width <= maxindent:
         # adjust for weird terminal size
