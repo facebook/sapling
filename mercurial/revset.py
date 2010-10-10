@@ -467,10 +467,15 @@ def outgoing(repo, subset, x):
     o = set([cl.rev(r) for r in repo.changelog.nodesbetween(o, revs)[0]])
     return [r for r in subset if r in o]
 
-def tagged(repo, subset, x):
-    getargs(x, 0, 0, _("tagged takes no arguments"))
+def tag(repo, subset, x):
+    args = getargs(x, 0, 1, _("tag takes one or no arguments"))
     cl = repo.changelog
-    s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
+    if args:
+        tn = getstring(args[0],
+                       _('the argument to tag must be a string'))
+        s = set([cl.rev(n) for t, n in repo.tagslist() if t == tn])
+    else:
+        s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
     return [r for r in subset if r in s]
 
 symbols = {
@@ -505,7 +510,8 @@ symbols = {
     "reverse": reverse,
     "roots": roots,
     "sort": sort,
-    "tagged": tagged,
+    "tag": tag,
+    "tagged": tag,
     "user": author,
 }
 

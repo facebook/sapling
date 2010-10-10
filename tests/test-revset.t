@@ -287,6 +287,12 @@ quoting needed
   4
   $ log 'tagged()'
   6
+  $ log 'tag()'
+  6
+  $ log 'tag(1.0)'
+  6
+  $ log 'tag(tip)'
+  9
   $ log 'user(bob)'
   2
 

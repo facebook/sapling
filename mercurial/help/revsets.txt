@@ -151,8 +151,8 @@ The following predicates are supported:
   - ``user`` for user name (``author`` can be used as an alias),
   - ``date`` for the commit date
 
-``tagged()``
-  Changeset is tagged.
+``tag(name)``
+  The specified tag by name, or all tagged revisions if no name is given.
 
 ``user(string)``
   User name is string.
