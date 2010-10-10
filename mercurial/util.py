@@ -1393,14 +1393,6 @@ except NameError:
                 return False
         return True
 
-def termwidth():
-    if 'COLUMNS' in os.environ:
-        try:
-            return int(os.environ['COLUMNS'])
-        except ValueError:
-            pass
-    return termwidth_()
-
 def interpolate(prefix, mapping, s, fn=None):
     """Return the result of interpolating items in the mapping into string s.
 

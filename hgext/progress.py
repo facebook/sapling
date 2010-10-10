@@ -156,7 +156,7 @@ class progbar(object):
         sys.stderr.flush()
 
     def width(self):
-        tw = util.termwidth()
+        tw = self.ui.termwidth()
         return min(int(self.ui.config('progress', 'width', default=tw)), tw)
 
     def progress(self, topic, pos, item='', unit='', total=None):

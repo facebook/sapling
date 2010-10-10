@@ -1834,7 +1834,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
     Returns 0 if successful.
     """
     option_lists = []
-    textwidth = util.termwidth() - 2
+    textwidth = ui.termwidth() - 2
 
     def addglobalopts(aliases):
         if ui.verbose:

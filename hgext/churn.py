@@ -149,7 +149,7 @@ def churn(ui, repo, *pats, **opts):
     maxcount = float(max(sum(v) for k, v in rate)) or 1.0
     maxname = max(len(k) for k, v in rate)
 
-    ttywidth = util.termwidth()
+    ttywidth = ui.termwidth()
     ui.debug("assuming %i character terminal\n" % ttywidth)
     width = ttywidth - maxname - 2 - 2 - 2
 

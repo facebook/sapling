@@ -181,7 +181,7 @@ def hidewindow():
     pid =  win32process.GetCurrentProcessId()
     win32gui.EnumWindows(callback, pid)
 
-def termwidth_():
+def termwidth():
     try:
         # Query stderr to avoid problems with redirections
         screenbuf = win32console.GetStdHandle(win32console.STD_ERROR_HANDLE)

@@ -706,7 +706,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
         diffopts = diffopts.copy(context=0)
         width = 80
         if not ui.plain():
-            width = util.termwidth()
+            width = ui.termwidth()
         chunks = patch.diff(repo, node1, node2, match, changes, diffopts,
                             prefix=prefix)
         for chunk, label in patch.diffstatui(util.iterlines(chunks),

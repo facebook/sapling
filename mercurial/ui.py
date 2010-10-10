@@ -402,6 +402,16 @@ class ui(object):
 
         return i
 
+    def termwidth(self):
+        '''how wide is the terminal in columns?
+        '''
+        if 'COLUMNS' in os.environ:
+            try:
+                return int(os.environ['COLUMNS'])
+            except ValueError:
+                pass
+        return util.termwidth()
+
     def formatted(self):
         '''should formatted output be used?
 
