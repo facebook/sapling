@@ -75,3 +75,27 @@
   $ hg debugrename b
   b renamed from a:dd03b83622e78778b403775d0d074b9ac7387a66
 
+This used to trigger a "divergent renames" warning, despite no renames
+
+  $ hg cp b b3
+  $ hg cp b b4
+  $ hg ci -A -m 'copy b twice'
+  $ hg up eb92d88a9712
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg up
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg rm b3 b4
+  $ hg ci -m 'clean up a bit of our mess'
+
+We'd rather not warn on divergent renames done in the same changeset (issue2113)
+
+  $ hg cp b b3
+  $ hg mv b b4
+  $ hg ci -A -m 'divergent renames in same changeset'
+  $ hg up c761c6948de0
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg up
+  warning: detected divergent renames of b to:
+   b3
+   b4
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
