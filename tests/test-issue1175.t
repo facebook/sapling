@@ -13,7 +13,7 @@ http://mercurial.selenic.com/bts/issue1175
 
   $ hg mv a a2
   $ hg up
-  warning: detected divergent renames of a to:
+  note: possible conflict - a was renamed multiple times to:
    a2
    a1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

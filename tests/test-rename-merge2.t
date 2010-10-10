@@ -383,7 +383,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    c: remote created -> g
   preserving rev for resolve of rev
   updating: a 1/3 files (33.33%)
-  warning: detected divergent renames of a to:
+  note: possible conflict - a was renamed multiple times to:
    b
    c
   updating: c 2/3 files (66.67%)

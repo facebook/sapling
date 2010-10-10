@@ -47,7 +47,7 @@
   my b@044f8520aeeb+ other b@85c198ef2f6c ancestor a@af1939970a1c
    premerge successful
   updating: a2 2/3 files (66.67%)
-  warning: detected divergent renames of a2 to:
+  note: possible conflict - a2 was renamed multiple times to:
    c2
    b2
   updating: b2 3/3 files (100.00%)
@@ -95,7 +95,7 @@ We'd rather not warn on divergent renames done in the same changeset (issue2113)
   $ hg up c761c6948de0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg up
-  warning: detected divergent renames of b to:
+  note: possible conflict - b was renamed multiple times to:
    b3
    b4
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved

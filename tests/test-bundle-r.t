@@ -340,7 +340,7 @@ revision 4
 
   $ cd ../test
   $ hg merge 7
-  warning: detected divergent renames of afile to:
+  note: possible conflict - afile was renamed multiple times to:
    anotherfile
    adifferentfile
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
