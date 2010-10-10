@@ -47,10 +47,15 @@ If pager.attend is present, pager.ignore will be ignored.
 
 To ignore global commands like :hg:`version` or :hg:`help`, you have
 to specify them in your user configuration file.
+
+The --pager=... option can also be used to control when the pager is
+used. Use a boolean value like yes, no, on, off, or use auto for
+normal behavior.
 '''
 
 import sys, os, signal, shlex, errno
-from mercurial import dispatch, util, extensions
+from mercurial import commands, dispatch, util, extensions
+from mercurial.i18n import _
 
 def _runpager(p):
     if not hasattr(os, 'fork'):
@@ -85,8 +90,11 @@ def uisetup(ui):
         p = ui.config("pager", "pager", os.environ.get("PAGER"))
         if p and sys.stdout.isatty() and '--debugger' not in sys.argv:
             attend = ui.configlist('pager', 'attend', attended)
-            if (cmd in attend or
-                (cmd not in ui.configlist('pager', 'ignore') and not attend)):
+            auto = options['pager'] == 'auto'
+            always = util.parsebool(options['pager'])
+            if (always or auto and
+                (cmd in attend or
+                 (cmd not in ui.configlist('pager', 'ignore') and not attend))):
                 ui.setconfig('ui', 'formatted', ui.formatted())
                 ui.setconfig('ui', 'interactive', False)
                 _runpager(p)
@@ -95,5 +103,11 @@ def uisetup(ui):
         return orig(ui, options, cmd, cmdfunc)
 
     extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
+
+def extsetup(ui):
+    commands.globalopts.append(
+        ('', 'pager', 'auto',
+         _("when to paginate (boolean, always, auto, or never)"),
+         _('TYPE')))
 
 attended = ['annotate', 'cat', 'diff', 'export', 'glog', 'log', 'qdiff']
