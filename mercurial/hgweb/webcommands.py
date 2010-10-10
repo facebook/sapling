@@ -14,7 +14,6 @@ from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
 from mercurial import graphmod
 from mercurial import help as helpmod
-from mercurial import ui
 from mercurial.i18n import _
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
@@ -774,7 +773,7 @@ def help(web, req, tmpl):
         return tmpl('helptopics', topics=topics, earlycommands=earlycommands,
                     othercommands=othercommands, title='Index')
 
-    u = ui.ui()
+    u = web.repo.ui
     u.pushbuffer()
     try:
         commands.help_(u, topicname)
