@@ -223,10 +223,11 @@ def uisetup(ui):
         return orig(ui_, opts, cmd, cmdfunc)
     extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
 
-commands.globalopts.append(
-    ('', 'color', 'auto',
-     _("when to colorize (boolean, always, auto, or never)"),
-     _('TYPE')))
+def extsetup(ui):
+    commands.globalopts.append(
+        ('', 'color', 'auto',
+         _("when to colorize (boolean, always, auto, or never)"),
+         _('TYPE')))
 
 try:
     import re, pywintypes, win32console as win32c
