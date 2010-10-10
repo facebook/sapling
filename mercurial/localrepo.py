@@ -597,6 +597,14 @@ class localrepository(repo.repository):
 
         return data
 
+    @propertycache
+    def _encodefilterpats(self):
+        return self._loadfilter('encode')
+
+    @propertycache
+    def _decodefilterpats(self):
+        return self._loadfilter('decode')
+
     def adddatafilter(self, name, filter):
         self._datafilters[name] = filter
 
@@ -605,10 +613,10 @@ class localrepository(repo.repository):
             data = os.readlink(self.wjoin(filename))
         else:
             data = self.wopener(filename, 'r').read()
-        return self._filter(self._loadfilter("encode"), filename, data)
+        return self._filter(self._encodefilterpats, filename, data)
 
     def wwrite(self, filename, data, flags):
-        data = self._filter(self._loadfilter("decode"), filename, data)
+        data = self._filter(self._decodefilterpats, filename, data)
         try:
             os.unlink(self.wjoin(filename))
         except OSError:
@@ -621,7 +629,7 @@ class localrepository(repo.repository):
                 util.set_flags(self.wjoin(filename), False, True)
 
     def wwritedata(self, filename, data):
-        return self._filter(self._loadfilter("decode"), filename, data)
+        return self._filter(self._decodefilterpats, filename, data)
 
     def transaction(self, desc):
         tr = self._transref and self._transref() or None
