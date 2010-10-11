@@ -281,6 +281,8 @@ def unbundle(repo, proto, heads):
         heads = repo.heads()
         return their_heads == ['force'] or their_heads == heads
 
+    proto.redirect()
+
     # fail early if possible
     if not check_heads():
         return 'unsynced changes'
@@ -289,7 +291,6 @@ def unbundle(repo, proto, heads):
     fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
     fp = os.fdopen(fd, 'wb+')
     r = 0
-    proto.redirect()
     try:
         proto.getfile(fp)
         lock = repo.lock()
