@@ -10,7 +10,7 @@
   $ hg -R a ci -Am foo
   adding foo
   $ hgserve -R a --config web.push_ssl=False --config web.allow_push=* --encoding latin1
-  listening at http://localhost*:$HGPORT1/ (bound to 127.0.0.1:$HGPORT1) (glob)
+  listening at http://*:$HGPORT1/ (bound to 127.0.0.1:$HGPORT1) (glob)
   $ hg --encoding utf-8 clone http://localhost:$HGPORT1 b
   requesting all changes
   adding changesets
