@@ -247,6 +247,8 @@ quoting needed
   6
   $ log 'modifies(b)'
   4
+  $ log 'id(5)'
+  2
   $ log 'outgoing()'
   8
   9
@@ -276,6 +278,8 @@ quoting needed
   4
   3
   2
+  $ log 'rev(5)'
+  5
   $ log 'sort(limit(reverse(all()), 3))'
   7
   8

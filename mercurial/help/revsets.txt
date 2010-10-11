@@ -94,6 +94,9 @@ The following predicates are supported:
 ``heads(set)``
   Members of set with no children in set.
 
+``id(string)``
+  Revision non-ambiguously specified by the given hex string prefix
+
 ``keyword(string)``
   Search commit message, user name, and names of changed files for
   string.
@@ -132,6 +135,9 @@ The following predicates are supported:
 
 ``removes(pattern)``
   Changesets which remove files matching pattern.
+
+``rev(number)``
+  Revision with the given numeric identifier.
 
 ``reverse(set)``
   Reverse order of set.

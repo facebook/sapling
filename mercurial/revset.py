@@ -173,6 +173,23 @@ def func(repo, subset, a, b):
 
 # functions
 
+def node(repo, subset, x):
+    l = getargs(x, 1, 1, _("rev wants one argument"))
+    n = getstring(l[0], _("rev wants a string"))
+    if len(n) == 40:
+        rn = repo[n].rev()
+    else:
+        rn = repo.changelog.rev(repo.changelog._partialmatch(n))
+    return [r for r in subset if r == rn]
+
+def rev(repo, subset, x):
+    l = getargs(x, 1, 1, _("rev wants one argument"))
+    try:
+        l = int(getstring(l[0], _("rev wants a number")))
+    except ValueError:
+        raise error.ParseError(_("rev expects a number"))
+    return [r for r in subset if r == l]
+
 def p1(repo, subset, x):
     ps = set()
     cl = repo.changelog
@@ -501,6 +518,7 @@ symbols = {
     "min": minrev,
     "merge": merge,
     "modifies": modifies,
+    "id": node,
     "outgoing": outgoing,
     "p1": p1,
     "p2": p2,
@@ -508,6 +526,7 @@ symbols = {
     "present": present,
     "removes": removes,
     "reverse": reverse,
+    "rev": rev,
     "roots": roots,
     "sort": sort,
     "tag": tag,
