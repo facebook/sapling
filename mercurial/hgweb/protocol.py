@@ -67,6 +67,8 @@ def call(repo, req, cmd):
         req.respond(HTTP_OK, HGTYPE)
         return ['%d\n%s' % (rsp.res, val)]
     elif isinstance(rsp, wireproto.pusherr):
+        # drain the incoming bundle
+        req.drain()
         sys.stdout, sys.stderr = p.oldio
         rsp = '0\n%s\n' % rsp.res
         req.respond(HTTP_OK, HGTYPE, length=len(rsp))
