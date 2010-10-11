@@ -66,3 +66,8 @@ def call(repo, req, cmd):
         sys.stdout, sys.stderr = p.oldio
         req.respond(HTTP_OK, HGTYPE)
         return ['%d\n%s' % (rsp.res, val)]
+    elif isinstance(rsp, wireproto.pusherr):
+        sys.stdout, sys.stderr = p.oldio
+        rsp = '0\n%s\n' % rsp.res
+        req.respond(HTTP_OK, HGTYPE, length=len(rsp))
+        return [rsp]

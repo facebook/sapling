@@ -79,6 +79,9 @@ class sshserver(object):
         self.sendresponse('')
         self.sendresponse(str(rsp.res))
 
+    def sendpusherror(self, rsp):
+        self.sendresponse(rsp.res)
+
     def serve_forever(self):
         try:
             while self.serve_one():
@@ -92,6 +95,7 @@ class sshserver(object):
         str: sendresponse,
         wireproto.streamres: sendstream,
         wireproto.pushres: sendpushresponse,
+        wireproto.pusherr: sendpusherror,
     }
 
     def serve_one(self):

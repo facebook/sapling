@@ -142,6 +142,10 @@ class pushres(object):
     def __init__(self, res):
         self.res = res
 
+class pusherr(object):
+    def __init__(self, res):
+        self.res = res
+
 def dispatch(repo, proto, command):
     func, spec = commands[command]
     args = proto.getargs(spec)
@@ -285,7 +289,7 @@ def unbundle(repo, proto, heads):
 
     # fail early if possible
     if not check_heads():
-        return 'unsynced changes'
+        return pusherr('unsynced changes')
 
     # write bundle data to temporary file because it can be big
     fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
@@ -298,7 +302,7 @@ def unbundle(repo, proto, heads):
             if not check_heads():
                 # someone else committed/pushed/unbundled while we
                 # were transferring data
-                return 'unsynced changes'
+                return pusherr('unsynced changes')
 
             # push can proceed
             fp.seek(0)
