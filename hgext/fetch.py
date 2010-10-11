@@ -29,6 +29,8 @@ def fetch(ui, repo, source='default', **opts):
     order, use --switch-parent.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
+
+    Returns 0 on success.
     '''
 
     date = opts.get('date')
@@ -86,7 +88,7 @@ def fetch(ui, repo, source='default', **opts):
             if newchildren[0] != parent:
                 return hg.clean(repo, newchildren[0])
             else:
-                return
+                return 0
 
         # Are there more than one additional branch heads?
         newchildren = [n for n in newchildren if n != parent]
@@ -99,7 +101,7 @@ def fetch(ui, repo, source='default', **opts):
             ui.status(_('not merging with %d other new branch heads '
                         '(use "hg heads ." and "hg merge" to merge them)\n') %
                       (len(newheads) - 1))
-            return
+            return 1
 
         # Otherwise, let's merge.
         err = False
@@ -131,6 +133,8 @@ def fetch(ui, repo, source='default', **opts):
             ui.status(_('new changeset %d:%s merges remote changes '
                         'with local\n') % (repo.changelog.rev(n),
                                            short(n)))
+
+        return err
 
     finally:
         release(lock, wlock)

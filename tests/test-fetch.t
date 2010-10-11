@@ -305,6 +305,7 @@ heads) with a local change
   adding file changes
   added 3 changesets with 2 changes to 1 files (+2 heads)
   not merging with 1 other new branch heads (use "hg heads ." and "hg merge" to merge them)
+  [1]
 
 parent should be 3 (fetch did not merge anything)
 
