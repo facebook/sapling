@@ -62,6 +62,16 @@ creating repo with format.usefncache=false
   revlogv1
   store
 
+creating repo with format.dotencode=false
+
+  $ hg --config format.dotencode=false init old3
+  $ checknewrepo old3
+  store created
+  00changelog.i created
+  revlogv1
+  store
+  fncache
+
 test failure
 
   $ hg init local
