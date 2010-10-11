@@ -4316,7 +4316,7 @@ table = {
            _('remove (and delete) file even if added or modified')),
          ] + walkopts,
          _('[OPTION]... FILE...')),
-    "rename|mv":
+    "rename|move|mv":
         (rename,
          [('A', 'after', None, _('record a rename that has already occurred')),
           ('f', 'force', None,
