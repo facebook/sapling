@@ -927,7 +927,7 @@ def debugbuilddag(ui, repo, text,
             id, ps = data
             p1 = ps[0]
             if p1 != at:
-                update(ui, repo, node=p1, clean=True)
+                update(ui, repo, node=str(p1), clean=True)
                 at = p1
             if repo.dirstate.branch() != atbranch:
                 branch(ui, repo, atbranch, force=True)
@@ -3789,6 +3789,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
 
     if not rev:
         rev = node
+
+    rev = cmdutil.revsingle(repo, rev, rev).rev()
 
     if check and clean:
         raise util.Abort(_("cannot specify both -c/--check and -C/--clean"))
