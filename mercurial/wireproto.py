@@ -310,7 +310,7 @@ def unbundle(repo, proto, heads):
                 sys.stderr.write("abort: %s\n" % inst)
         finally:
             lock.release()
-            return pushres(r)
+        return pushres(r)
 
     finally:
         fp.close()
