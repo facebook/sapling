@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+import sys
+try:
+    import ssl
+except ImportError:
+    sys.exit(80)
 
 def check(a, b):
     if a != b:
