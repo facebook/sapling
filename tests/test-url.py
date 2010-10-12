@@ -9,7 +9,7 @@ def cert(cn):
 
 from mercurial.url import _verifycert
 
-# Test non-wildcard certificates        
+# Test non-wildcard certificates
 check(_verifycert(cert('example.com'), 'example.com'),
       None)
 check(_verifycert(cert('example.com'), 'www.example.com'),
