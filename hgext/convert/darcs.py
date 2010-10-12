@@ -7,22 +7,22 @@
 
 from common import NoRepo, checktool, commandline, commit, converter_source
 from mercurial.i18n import _
-from mercurial import util
+from mercurial import encoding, util
 import os, shutil, tempfile, re
 
 # The naming drift of ElementTree is fun!
 
 try:
-    from xml.etree.cElementTree import ElementTree
+    from xml.etree.cElementTree import ElementTree, XMLParser
 except ImportError:
     try:
-        from xml.etree.ElementTree import ElementTree
+        from xml.etree.ElementTree import ElementTree, XMLParser
     except ImportError:
         try:
-            from elementtree.cElementTree import ElementTree
+            from elementtree.cElementTree import ElementTree, XMLParser
         except ImportError:
             try:
-                from elementtree.ElementTree import ElementTree
+                from elementtree.ElementTree import ElementTree, XMLParser
             except ImportError:
                 ElementTree = None
 
@@ -88,12 +88,24 @@ class darcs_source(converter_source, commandline):
         self.ui.debug('cleaning up %s\n' % self.tmppath)
         shutil.rmtree(self.tmppath, ignore_errors=True)
 
+    def recode(self, s, encoding=None):
+        if isinstance(s, unicode):
+            # XMLParser returns unicode objects for anything it can't
+            # encode into ASCII. We convert them back to str to get
+            # recode's normal conversion behavior.
+            s = s.encode('latin-1')
+        return super(darcs_source, self).recode(s, encoding)
+
     def xml(self, cmd, **kwargs):
         # NOTE: darcs is currently encoding agnostic and will print
         # patch metadata byte-for-byte, even in the XML changelog.
         etree = ElementTree()
+        # While we are decoding the XML as latin-1 to be as liberal as
+        # possible, etree will still raise an exception if any
+        # non-printable characters are in the XML changelog.
+        parser = XMLParser(encoding='latin-1')
         fp = self._run(cmd, **kwargs)
-        etree.parse(fp)
+        etree.parse(fp, parser=parser)
         self.checkexit(fp.close())
         return etree.getroot()
 
