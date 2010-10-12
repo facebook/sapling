@@ -141,6 +141,15 @@ def _shrinktext(text, subfunc):
     Depending on subfunc also returns number of substitutions.'''
     return subfunc(r'$\1$', text)
 
+def _preselect(wstatus, changed):
+    '''Retrieves modfied and added files from a working directory state
+    and returns the subset of each contained in given changed files
+    retrieved from a change context.'''
+    modified, added = wstatus[:2]
+    modified = [f for f in modified if f in changed]
+    added = [f for f in added if f in changed]
+    return modified, added
+
 
 class kwtemplater(object):
     '''
@@ -509,18 +518,16 @@ def reposetup(ui, repo):
             return n
 
         def rollback(self, dryrun=False):
-            wlock = repo.wlock()
+            wlock = self.wlock()
             try:
                 if not dryrun:
                     changed = self['.'].files()
                 ret = super(kwrepo, self).rollback(dryrun)
                 if not dryrun:
                     ctx = self['.']
-                    modified, added = self[None].status()[:2]
-                    modified = [f for f in modified if f in changed]
-                    added = [f for f in added if f in changed]
-                    kwt.overwrite(ctx, added, True, False)
+                    modified, added = _preselect(self[None].status(), changed)
                     kwt.overwrite(ctx, modified, True, True)
+                    kwt.overwrite(ctx, added, True, False)
                 return ret
             finally:
                 wlock.release()
@@ -569,13 +576,11 @@ def reposetup(ui, repo):
             # therefore compare nodes before and after
             kwt.record = True
             ctx = repo['.']
-            modified, added = repo[None].status()[:2]
+            wstatus = repo[None].status()
             ret = orig(ui, repo, commitfunc, *pats, **opts)
             recctx = repo['.']
             if ctx != recctx:
-                changed = recctx.files()
-                modified = [f for f in modified if f in changed]
-                added = [f for f in added if f in changed]
+                modified, added = _preselect(wstatus, recctx.files())
                 kwt.restrict = False
                 kwt.overwrite(recctx, modified, False, True)
                 kwt.overwrite(recctx, added, False, True, True)
