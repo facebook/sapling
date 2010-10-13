@@ -51,8 +51,11 @@ Prepare source repo and patch:
   $ hg ci -A -m 0 a -d '0 0'
   $ echo 1 >> a
   $ cat << eof > log
-  > 1
-  > # comment for 1
+  > first line which can't start with '# '
+  > # second line is a comment but that shouldn't be a problem.
+  > A patch marker like this was more problematic even after d7452292f9d3:
+  > # HG changeset patch
+  > # User lines looks like this - but it _is_ just a comment
   > eof
   $ hg ci -l log -d '0 0'
   $ hg export -o p 1
@@ -72,14 +75,17 @@ Clone and apply patch:
   $ hg import ../c/p
   applying ../c/p
   $ hg log -v -r 1
-  changeset:   1:89bf2f6d8088
+  changeset:   1:e8cc66fbbaa6
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       a
   description:
-  1
-  # comment for 1
+  first line which can't start with '# '
+  # second line is a comment but that shouldn't be a problem.
+  A patch marker like this was more problematic even after d7452292f9d3:
+  # HG changeset patch
+  # User lines looks like this - but it _is_ just a comment
   
   
   $ cd ..
