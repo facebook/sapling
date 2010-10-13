@@ -174,8 +174,8 @@ def func(repo, subset, a, b):
 # functions
 
 def node(repo, subset, x):
-    l = getargs(x, 1, 1, _("rev wants one argument"))
-    n = getstring(l[0], _("rev wants a string"))
+    l = getargs(x, 1, 1, _("id wants one argument"))
+    n = getstring(l[0], _("id wants a string"))
     if len(n) == 40:
         rn = repo[n].rev()
     else:
