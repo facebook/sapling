@@ -14,7 +14,7 @@ were part of the actual repository.
 from node import nullid
 from i18n import _
 import os, struct, tempfile, shutil
-import changegroup, util, mdiff
+import changegroup, util, mdiff, discovery
 import localrepo, changelog, manifest, filelog, revlog, error
 
 class bundlerevlog(revlog.revlog):
@@ -288,3 +288,35 @@ def instance(ui, path, create):
     else:
         repopath, bundlename = parentpath, path
     return bundlerepository(ui, repopath, bundlename)
+
+def getremotechanges(ui, repo, other, revs=None, bundlename=None, force=False):
+    tmp = discovery.findcommonincoming(repo, other, heads=revs, force=force)
+    common, incoming, rheads = tmp
+    if not incoming:
+        try:
+            os.unlink(bundlename)
+        except:
+            pass
+        return other, None, None
+
+    bundle = None
+    if bundlename or not other.local():
+        # create a bundle (uncompressed if other repo is not local)
+
+        if revs is None and other.capable('changegroupsubset'):
+            revs = rheads
+
+        if revs is None:
+            cg = other.changegroup(incoming, "incoming")
+        else:
+            cg = other.changegroupsubset(incoming, revs, 'incoming')
+        bundletype = other.local() and "HG10BZ" or "HG10UN"
+        fname = bundle = changegroup.writebundle(cg, bundlename, bundletype)
+        # keep written bundle?
+        if bundlename:
+            bundle = None
+        if not other.local():
+            # use the created uncompressed bundlerepo
+            other = bundlerepository(ui, repo.root, fname)
+    return (other, incoming, bundle)
+

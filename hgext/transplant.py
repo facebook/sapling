@@ -15,8 +15,8 @@ map from a changeset hash to its hash in the source repository.
 
 from mercurial.i18n import _
 import os, tempfile
-from mercurial import bundlerepo, changegroup, cmdutil, hg, merge, match
-from mercurial import patch, revlog, util, error, discovery
+from mercurial import bundlerepo, cmdutil, hg, merge, match
+from mercurial import patch, revlog, util, error
 from mercurial import revset, help
 
 class transplantentry(object):
@@ -484,25 +484,6 @@ def transplant(ui, repo, *revs, **opts):
     and then resume where you left off by calling :hg:`transplant
     --continue/-c`.
     '''
-    def getremotechanges(repo, url):
-        sourcerepo = ui.expandpath(url)
-        source = hg.repository(ui, sourcerepo)
-        tmp = discovery.findcommonincoming(repo, source, force=True)
-        common, incoming, rheads = tmp
-        if not incoming:
-            return (source, None, None)
-
-        bundle = None
-        if not source.local():
-            if source.capable('changegroupsubset'):
-                cg = source.changegroupsubset(incoming, rheads, 'incoming')
-            else:
-                cg = source.changegroup(incoming, 'incoming')
-            bundle = changegroup.writebundle(cg, None, 'HG10UN')
-            source = bundlerepo.bundlerepository(ui, repo.root, bundle)
-
-        return (source, incoming, bundle)
-
     def incwalk(repo, incoming, branches, match=util.always):
         if not branches:
             branches = None
@@ -559,7 +540,10 @@ def transplant(ui, repo, *revs, **opts):
     bundle = None
     source = opts.get('source')
     if source:
-        (source, incoming, bundle) = getremotechanges(repo, source)
+        sourcerepo = ui.expandpath(source)
+        source = hg.repository(ui, sourcerepo)
+        source, incoming, bundle = bundlerepo.getremotechanges(ui, repo, source,
+                                    force=True)
     else:
         source = repo
 

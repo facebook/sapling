@@ -11,7 +11,7 @@ from lock import release
 from node import hex, nullid, nullrev, short
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
 import lock, util, extensions, error, encoding, node
-import cmdutil, discovery, url, changegroup
+import cmdutil, discovery, url
 import merge as mergemod
 import verify as verifymod
 import errno, os, shutil
@@ -423,37 +423,11 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source,
 
     if revs:
         revs = [other.lookup(rev) for rev in revs]
-    bundlename = opts["bundle"]
-    force = opts["force"]
-    tmp = discovery.findcommonincoming(repo, other, heads=revs, force=force)
-    common, incoming, rheads = tmp
-    if not incoming:
-        try:
-            os.unlink(bundlename)
-        except:
-            pass
+    other, incoming, bundle = bundlerepo.getremotechanges(ui, repo, other, revs,
+                                opts["bundle"], opts["force"])
+    if incoming is None:
         ui.status(_("no changes found\n"))
         return subreporecurse()
-
-    bundle = None
-    if bundlename or not other.local():
-        # create a bundle (uncompressed if other repo is not local)
-
-        if revs is None and other.capable('changegroupsubset'):
-            revs = rheads
-
-        if revs is None:
-            cg = other.changegroup(incoming, "incoming")
-        else:
-            cg = other.changegroupsubset(incoming, revs, 'incoming')
-        bundletype = other.local() and "HG10BZ" or "HG10UN"
-        fname = bundle = changegroup.writebundle(cg, bundlename, bundletype)
-        # keep written bundle?
-        if bundlename:
-            bundle = None
-        if not other.local():
-            # use the created uncompressed bundlerepo
-            other = bundlerepo.bundlerepository(ui, repo.root, fname)
 
     try:
         chlist = other.changelog.nodesbetween(incoming, revs)[0]
