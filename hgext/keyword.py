@@ -594,9 +594,14 @@ def reposetup(ui, repo):
     def kwfilectx_cmp(orig, self, fctx):
         # keyword affects data size, comparing wdir and filelog size does
         # not make sense
-        return self._filelog.cmp(self._filenode, fctx.data())
-    extensions.wrapfunction(context.filectx, 'cmp', kwfilectx_cmp)
+        if (fctx._filerev is None and
+            (self._repo._encodefilterpats or
+             kwt.match(fctx.path()) and not 'l' in fctx.flags()) or
+            self.size() == fctx.size()):
+            return self._filelog.cmp(self._filenode, fctx.data())
+        return True
 
+    extensions.wrapfunction(context.filectx, 'cmp', kwfilectx_cmp)
     extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
     extensions.wrapfunction(patch, 'diff', kw_diff)
     extensions.wrapfunction(cmdutil, 'copy', kw_copy)
