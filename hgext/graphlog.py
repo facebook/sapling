@@ -17,7 +17,7 @@ from mercurial.cmdutil import revrange, show_changeset
 from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
-from mercurial import bundlerepo, changegroup, cmdutil, commands, extensions
+from mercurial import cmdutil, commands, extensions
 from mercurial import hg, url, util, graphmod, discovery
 
 ASCIIDATA = 'ASC'
@@ -307,54 +307,16 @@ def gincoming(ui, repo, source="default", **opts):
     Nodes printed as an @ character are parents of the working
     directory.
     """
+    def subreporecurse():
+        return 1
 
     check_unsupported_flags(opts)
-    source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-    other = hg.repository(hg.remoteui(repo, opts), source)
-    revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
-    ui.status(_('comparing with %s\n') % url.hidepassword(source))
-    if revs:
-        revs = [other.lookup(rev) for rev in revs]
-    incoming = discovery.findincoming(repo, other, heads=revs,
-                                      force=opts["force"])
-    if not incoming:
-        try:
-            os.unlink(opts["bundle"])
-        except:
-            pass
-        ui.status(_("no changes found\n"))
-        return
-
-    cleanup = None
-    try:
-
-        fname = opts["bundle"]
-        if fname or not other.local():
-            # create a bundle (uncompressed if other repo is not local)
-            if revs is None:
-                cg = other.changegroup(incoming, "incoming")
-            else:
-                cg = other.changegroupsubset(incoming, revs, 'incoming')
-            bundletype = other.local() and "HG10BZ" or "HG10UN"
-            fname = cleanup = changegroup.writebundle(cg, fname, bundletype)
-            # keep written bundle?
-            if opts["bundle"]:
-                cleanup = None
-            if not other.local():
-                # use the created uncompressed bundlerepo
-                other = bundlerepo.bundlerepository(ui, repo.root, fname)
-
-        chlist = other.changelog.nodesbetween(incoming, revs)[0]
+    def display(other, chlist, displayer):
         revdag = graphrevs(other, chlist, opts)
-        displayer = show_changeset(ui, other, opts, buffered=True)
         showparents = [ctx.node() for ctx in repo[None].parents()]
         generate(ui, revdag, displayer, showparents, asciiedges)
 
-    finally:
-        if hasattr(other, 'close'):
-            other.close()
-        if cleanup:
-            os.unlink(cleanup)
+    hg._incoming(display, subreporecurse, ui, repo, source, opts, buffered=True)
 
 def uisetup(ui):
     '''Initialize the extension.'''

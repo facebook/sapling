@@ -408,8 +408,72 @@ def merge(repo, node, force=None, remind=True):
         repo.ui.status(_("(branch merge, don't forget to commit)\n"))
     return stats[3] > 0
 
+def _incoming(displaychlist, subreporecurse, ui, repo, source,
+        opts, buffered=False):
+    """
+    Helper for incoming / gincoming.
+    displaychlist gets called with
+        (remoterepo, incomingchangesetlist, displayer) parameters,
+    and is supposed to contain only code that can't be unified.
+    """
+    source, branches = parseurl(ui.expandpath(source), opts.get('branch'))
+    other = repository(remoteui(repo, opts), source)
+    ui.status(_('comparing with %s\n') % url.hidepassword(source))
+    revs, checkout = addbranchrevs(repo, other, branches, opts.get('rev'))
+
+    if revs:
+        revs = [other.lookup(rev) for rev in revs]
+    bundlename = opts["bundle"]
+    force = opts["force"]
+    tmp = discovery.findcommonincoming(repo, other, heads=revs, force=force)
+    common, incoming, rheads = tmp
+    if not incoming:
+        try:
+            os.unlink(bundlename)
+        except:
+            pass
+        ui.status(_("no changes found\n"))
+        return subreporecurse()
+
+    bundle = None
+    if bundlename or not other.local():
+        # create a bundle (uncompressed if other repo is not local)
+
+        if revs is None and other.capable('changegroupsubset'):
+            revs = rheads
+
+        if revs is None:
+            cg = other.changegroup(incoming, "incoming")
+        else:
+            cg = other.changegroupsubset(incoming, revs, 'incoming')
+        bundletype = other.local() and "HG10BZ" or "HG10UN"
+        fname = bundle = changegroup.writebundle(cg, bundlename, bundletype)
+        # keep written bundle?
+        if bundlename:
+            bundle = None
+        if not other.local():
+            # use the created uncompressed bundlerepo
+            other = bundlerepo.bundlerepository(ui, repo.root, fname)
+
+    try:
+        chlist = other.changelog.nodesbetween(incoming, revs)[0]
+        displayer = cmdutil.show_changeset(ui, other, opts, buffered)
+
+        # XXX once graphlog extension makes it into core,
+        # should be replaced by a if graph/else
+        displaychlist(other, chlist, displayer)
+
+        displayer.close()
+    finally:
+        if hasattr(other, 'close'):
+            other.close()
+        if bundle:
+            os.unlink(bundle)
+    subreporecurse()
+    return 0 # exit code is zero since we found incoming changes
+
 def incoming(ui, repo, source, opts):
-    def recurse():
+    def subreporecurse():
         ret = 1
         if opts.get('subrepos'):
             ctx = repo[None]
@@ -418,51 +482,10 @@ def incoming(ui, repo, source, opts):
                 ret = min(ret, sub.incoming(ui, source, opts))
         return ret
 
-    limit = cmdutil.loglimit(opts)
-    source, branches = parseurl(ui.expandpath(source), opts.get('branch'))
-    other = repository(remoteui(repo, opts), source)
-    ui.status(_('comparing with %s\n') % url.hidepassword(source))
-    revs, checkout = addbranchrevs(repo, other, branches, opts.get('rev'))
-    if revs:
-        revs = [other.lookup(rev) for rev in revs]
-
-    tmp = discovery.findcommonincoming(repo, other, heads=revs,
-                                       force=opts.get('force'))
-    common, incoming, rheads = tmp
-    if not incoming:
-        try:
-            os.unlink(opts["bundle"])
-        except:
-            pass
-        ui.status(_("no changes found\n"))
-        return recurse()
-
-    cleanup = None
-    try:
-        fname = opts["bundle"]
-        if fname or not other.local():
-            # create a bundle (uncompressed if other repo is not local)
-
-            if revs is None and other.capable('changegroupsubset'):
-                revs = rheads
-
-            if revs is None:
-                cg = other.changegroup(incoming, "incoming")
-            else:
-                cg = other.changegroupsubset(incoming, revs, 'incoming')
-            bundletype = other.local() and "HG10BZ" or "HG10UN"
-            fname = cleanup = changegroup.writebundle(cg, fname, bundletype)
-            # keep written bundle?
-            if opts["bundle"]:
-                cleanup = None
-            if not other.local():
-                # use the created uncompressed bundlerepo
-                other = bundlerepo.bundlerepository(ui, repo.root, fname)
-
-        chlist = other.changelog.nodesbetween(incoming, revs)[0]
+    def display(other, chlist, displayer):
+        limit = cmdutil.loglimit(opts)
         if opts.get('newest_first'):
             chlist.reverse()
-        displayer = cmdutil.show_changeset(ui, other, opts)
         count = 0
         for n in chlist:
             if limit is not None and count >= limit:
@@ -472,14 +495,7 @@ def incoming(ui, repo, source, opts):
                 continue
             count += 1
             displayer.show(other[n])
-        displayer.close()
-    finally:
-        if hasattr(other, 'close'):
-            other.close()
-        if cleanup:
-            os.unlink(cleanup)
-    recurse()
-    return 0 # exit code is zero since we found incoming changes
+    return _incoming(display, subreporecurse, ui, repo, source, opts)
 
 def outgoing(ui, repo, dest, opts):
     def recurse():
