@@ -357,10 +357,11 @@ class filectx(object):
 
         returns True if different than fctx.
         """
-        if not self._repo._encodefilterpats and self.size() != fctx.size():
-            return True
+        if (fctx._filerev is None and self._repo._encodefilterpats
+            or self.size() == fctx.size()):
+            return self._filelog.cmp(self._filenode, fctx.data())
 
-        return self._filelog.cmp(self._filenode, fctx.data())
+        return True
 
     def renamed(self):
         """check if file was actually renamed in this changeset revision
