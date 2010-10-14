@@ -459,12 +459,12 @@ def incoming(ui, repo, source, opts):
                 # use the created uncompressed bundlerepo
                 other = bundlerepo.bundlerepository(ui, repo.root, fname)
 
-        o = other.changelog.nodesbetween(incoming, revs)[0]
+        chlist = other.changelog.nodesbetween(incoming, revs)[0]
         if opts.get('newest_first'):
-            o.reverse()
+            chlist.reverse()
         displayer = cmdutil.show_changeset(ui, other, opts)
         count = 0
-        for n in o:
+        for n in chlist:
             if limit is not None and count >= limit:
                 break
             parents = [p for p in other.changelog.parents(n) if p != nullid]
