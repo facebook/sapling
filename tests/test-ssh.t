@@ -62,7 +62,7 @@ clone remote via stream
   $ hg clone -e "python ./dummyssh" --uncompressed ssh://user@dummy/remote local-stream
   streaming all changes
   4 files to transfer, 392 bytes of data
-  transferred 392 bytes in * seconds (*B/sec) (glob)
+  transferred 392 bytes in * seconds (*/sec) (glob)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd local-stream
