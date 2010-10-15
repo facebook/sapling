@@ -18,7 +18,7 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import cmdutil, commands, extensions
-from mercurial import hg, url, util, graphmod, discovery
+from mercurial import hg, util, graphmod
 
 ASCIIDATA = 'ASC'
 
@@ -280,19 +280,10 @@ def goutgoing(ui, repo, dest=None, **opts):
     """
 
     check_unsupported_flags(opts)
-    dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    dest, branches = hg.parseurl(dest, opts.get('branch'))
-    revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
-    other = hg.repository(hg.remoteui(ui, opts), dest)
-    if revs:
-        revs = [repo.lookup(rev) for rev in revs]
-    ui.status(_('comparing with %s\n') % url.hidepassword(dest))
-    o = discovery.findoutgoing(repo, other, force=opts.get('force'))
-    if not o:
-        ui.status(_("no changes found\n"))
+    o = hg._outgoing(ui, repo, dest, opts)
+    if o is None:
         return
 
-    o = repo.changelog.nodesbetween(o, revs)[0]
     revdag = graphrevs(repo, o, opts)
     displayer = show_changeset(ui, repo, opts, buffered=True)
     showparents = [ctx.node() for ctx in repo[None].parents()]

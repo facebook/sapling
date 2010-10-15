@@ -471,17 +471,7 @@ def incoming(ui, repo, source, opts):
             displayer.show(other[n])
     return _incoming(display, subreporecurse, ui, repo, source, opts)
 
-def outgoing(ui, repo, dest, opts):
-    def recurse():
-        ret = 1
-        if opts.get('subrepos'):
-            ctx = repo[None]
-            for subpath in sorted(ctx.substate):
-                sub = ctx.sub(subpath)
-                ret = min(ret, sub.outgoing(ui, dest, opts))
-        return ret
-
-    limit = cmdutil.loglimit(opts)
+def _outgoing(ui, repo, dest, opts):
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = parseurl(dest, opts.get('branch'))
     revs, checkout = addbranchrevs(repo, repo, branches, opts.get('rev'))
@@ -493,9 +483,25 @@ def outgoing(ui, repo, dest, opts):
     o = discovery.findoutgoing(repo, other, force=opts.get('force'))
     if not o:
         ui.status(_("no changes found\n"))
+        return None
+
+    return repo.changelog.nodesbetween(o, revs)[0]
+
+def outgoing(ui, repo, dest, opts):
+    def recurse():
+        ret = 1
+        if opts.get('subrepos'):
+            ctx = repo[None]
+            for subpath in sorted(ctx.substate):
+                sub = ctx.sub(subpath)
+                ret = min(ret, sub.outgoing(ui, dest, opts))
+        return ret
+
+    limit = cmdutil.loglimit(opts)
+    o = _outgoing(ui, repo, dest, opts)
+    if o is None:
         return recurse()
 
-    o = repo.changelog.nodesbetween(o, revs)[0]
     if opts.get('newest_first'):
         o.reverse()
     displayer = cmdutil.show_changeset(ui, repo, opts)
