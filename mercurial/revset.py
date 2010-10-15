@@ -193,21 +193,21 @@ def rev(repo, subset, x):
 def p1(repo, subset, x):
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, subset, x):
+    for r in getset(repo, range(len(repo)), x):
         ps.add(cl.parentrevs(r)[0])
     return [r for r in subset if r in ps]
 
 def p2(repo, subset, x):
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, subset, x):
+    for r in getset(repo, range(len(repo)), x):
         ps.add(cl.parentrevs(r)[1])
     return [r for r in subset if r in ps]
 
 def parents(repo, subset, x):
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, subset, x):
+    for r in getset(repo, range(len(repo)), x):
         ps.update(cl.parentrevs(r))
     return [r for r in subset if r in ps]
 
@@ -238,7 +238,7 @@ def limit(repo, subset, x):
 def children(repo, subset, x):
     cs = set()
     cl = repo.changelog
-    s = set(getset(repo, subset, x))
+    s = set(getset(repo, range(len(repo)), x))
     for r in xrange(0, len(repo)):
         for p in cl.parentrevs(r):
             if p in s:

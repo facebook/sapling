@@ -339,3 +339,20 @@ quoting needed
   0
   $ log '4::8 - 8'
   4
+
+issue2437
+
+  $ log '3 and p1(5)'
+  3
+  $ log '4 and p2(6)'
+  4
+  $ log '1 and parents(:2)'
+  1
+  $ log '2 and children(1:)'
+  2
+  $ log 'roots(all()) or roots(all())'
+  0
+  $ log 'heads(branch(é)) or heads(branch(é))'
+  9
+  $ log 'ancestors(8) and (heads(branch("-a-b-c-")) or heads(branch(é)))'
+  4
