@@ -9,7 +9,8 @@
 import os
 from mercurial import ui, hg, hook, error, encoding, templater
 from common import get_mtime, ErrorResponse, permhooks, caching
-from common import HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
+from common import HTTP_OK, HTTP_NOT_MODIFIED, HTTP_BAD_REQUEST
+from common import HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
 import webcommands, protocol, webutil
 
@@ -202,6 +203,9 @@ class hgweb(object):
             return tmpl('error', error=str(inst))
         except ErrorResponse, inst:
             req.respond(inst, ctype)
+            if inst.code == HTTP_NOT_MODIFIED:
+                # Not allowed to return a body on a 304
+                return ['']
             return tmpl('error', error=inst.message)
 
     def templater(self, req):
