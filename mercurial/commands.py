@@ -2563,10 +2563,16 @@ def merge(ui, repo, node=None, **opts):
     updates to the repository are allowed. The next commit will have
     two parents.
 
+    ``--tool`` can be used to specify the merge tool used for file
+    merges. It overrides the HGMERGE environment variable and your
+    configuration files.
+
     If no revision is specified, the working directory's parent is a
     head revision, and the current branch contains exactly one other
     head, the other head is merged with by default. Otherwise, an
     explicit revision with which to merge with must be provided.
+
+    :hg:`resolve` must be used to resolve unresolved files.
 
     To undo an uncommitted merge, use :hg:`update --clean .` which
     will check out a clean copy of the original merge parent, losing
@@ -2579,6 +2585,12 @@ def merge(ui, repo, node=None, **opts):
         raise util.Abort(_("please specify just one revision"))
     if not node:
         node = opts.get('rev')
+
+    t = opts.get('tool')
+    if t:
+        if 'HGMERGE' in os.environ:
+            os.environ['HGMERGE'] = t
+        ui.setconfig('ui', 'merge', t)
 
     if not node:
         branch = repo.changectx(None).branch()
@@ -2932,10 +2944,12 @@ def resolve(ui, repo, *pats, **opts):
 
     The resolve command can be used in the following ways:
 
-    - :hg:`resolve FILE...`: attempt to re-merge the specified files,
-      discarding any previous merge attempts. Re-merging is not
+    - :hg:`resolve [--tool] FILE...`: attempt to re-merge the specified
+      files, discarding any previous merge attempts. Re-merging is not
       performed for files already marked as resolved. Use ``--all/-a``
-      to selects all unresolved files.
+      to selects all unresolved files. ``--tool`` can be used to specify
+      the merge tool used for the given files. It overrides the HGMERGE
+      environment variable and your configuration files.
 
     - :hg:`resolve -m [FILE]`: mark a file as having been resolved
       (e.g. after having manually fixed-up the files). The default is
@@ -2964,6 +2978,12 @@ def resolve(ui, repo, *pats, **opts):
     if not (all or pats or show or mark or unmark):
         raise util.Abort(_('no files or directories specified; '
                            'use --all to remerge all files'))
+
+    t = opts.get('tool')
+    if t:
+        if 'HGMERGE' in os.environ:
+            os.environ['HGMERGE'] = t
+        ui.setconfig('ui', 'merge', t)
 
     ms = mergemod.mergestate(repo)
     m = cmdutil.match(repo, pats, opts)
@@ -4270,6 +4290,7 @@ table = {
     "^merge":
         (merge,
          [('f', 'force', None, _('force a merge with outstanding changes')),
+          ('t', 'tool', '', _('specify merge tool')),
           ('r', 'rev', '',
            _('revision to merge'), _('REV')),
           ('P', 'preview', None,
@@ -4338,6 +4359,7 @@ table = {
           ('l', 'list', None, _('list state of files needing merge')),
           ('m', 'mark', None, _('mark files as resolved')),
           ('u', 'unmark', None, _('mark files as unresolved')),
+          ('t', 'tool', '', _('specify merge tool')),
           ('n', 'no-status', None, _('hide status prefix'))]
           + walkopts,
           _('[OPTION]... [FILE]...')),
