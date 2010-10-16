@@ -148,7 +148,7 @@ quoting needed
   hg: parse error at 10: unexpected token: symbol
   [255]
   $ log 'date()'
-  hg: parse error: date wants a string
+  hg: parse error: date requires a string
   [255]
   $ log 'date'
   hg: parse error: can't use date here
@@ -166,7 +166,7 @@ quoting needed
   4
 
   $ log 'ancestor(1)'
-  hg: parse error: ancestor wants two arguments
+  hg: parse error: ancestor requires two arguments
   [255]
   $ log 'ancestor(4,5)'
   1
