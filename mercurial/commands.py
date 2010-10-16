@@ -3025,7 +3025,7 @@ def revert(ui, repo, *pats, **opts):
 
     .. note::
        This command is most likely not what you are looking for.
-       revert will partially overwrite content in the working
+       Revert will partially overwrite content in the working
        directory without changing the working directory parents. Use
        :hg:`update -r rev` to check out earlier revisions, or
        :hg:`update --clean .` to undo a merge which has added another
