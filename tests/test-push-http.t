@@ -13,12 +13,12 @@
   $ echo a >> a
   $ hg ci -mb
   $ req() {
-  > 	hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
-  > 	cat hg.pid >> $DAEMON_PIDS
-  > 	hg --cwd ../test2 push http://localhost:$HGPORT/
-  > 	kill `cat hg.pid`
-  > 	echo % serve errors
-  > 	cat errors.log
+  >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  >     cat hg.pid >> $DAEMON_PIDS
+  >     hg --cwd ../test2 push http://localhost:$HGPORT/
+  >     kill `cat hg.pid`
+  >     echo % serve errors
+  >     cat errors.log
   > }
   $ cd ../test
 

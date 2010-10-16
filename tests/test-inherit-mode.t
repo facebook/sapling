@@ -17,12 +17,12 @@ just in case somebody has a strange $TMPDIR
   > isdir = {}
   > for root, dirs, files in os.walk(sys.argv[1]):
   >     for d in dirs:
-  > 	name = os.path.join(root, d)
-  > 	isdir[name] = 1
-  > 	allnames.append(name)
+  >         name = os.path.join(root, d)
+  >         isdir[name] = 1
+  >         allnames.append(name)
   >     for f in files:
-  > 	name = os.path.join(root, f)
-  > 	allnames.append(name)
+  >         name = os.path.join(root, f)
+  >         allnames.append(name)
   > allnames.sort()
   > for name in allnames:
   >     suffix = name in isdir and '/' or ''

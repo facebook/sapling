@@ -95,7 +95,7 @@ final file versions in this repo:
   >     fmap="$prefix.fmap"
   >     repo="$prefix.repo"
   >     for i in $files; do
-  > 	echo "include $i" >> "$fmap"
+  >         echo "include $i" >> "$fmap"
   >     done
   >     hg -q convert $opts --filemap "$fmap" --datesort source "$repo"
   >     hg up -q -R "$repo"

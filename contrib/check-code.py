@@ -72,6 +72,7 @@ testfilters = [
 ]
 
 uprefix = r"^  \$ "
+uprefixc = r"^  > "
 utestpats = [
     (uprefix + r'.*\|\s*sed', "use regex test output patterns instead of sed"),
     (uprefix + r'(true|exit 0)', "explicit zero exit unnecessary"),
@@ -79,6 +80,7 @@ utestpats = [
     (uprefix + r'.*\|\| echo.*(fail|error)',
      "explicit exit code checks unnecessary"),
     (uprefix + r'set -e', "don't use set -e"),
+    (uprefixc + r'( *)\t', "don't use tabs to indent"),
 ]
 
 for p, m in testpats:

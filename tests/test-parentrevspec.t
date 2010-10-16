@@ -6,11 +6,11 @@
   >     p2=$3
   > 
   >     if [ "$p1" ]; then
-  > 	hg up -qC $p1
+  >         hg up -qC $p1
   >     fi
   > 
   >     if [ "$p2" ]; then
-  > 	HGMERGE=true hg merge -q $p2
+  >         HGMERGE=true hg merge -q $p2
   >     fi
   > 
   >     echo >> foo
@@ -41,8 +41,8 @@
   $ lookup()
   > {
   >     for rev in "$@"; do
-  > 	printf "$rev: "
-  > 	hg id -nr $rev
+  >         printf "$rev: "
+  >         hg id -nr $rev
   >     done
   >     true
   > }

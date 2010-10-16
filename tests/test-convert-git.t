@@ -116,7 +116,7 @@ Remove the directory, then try to replace it with a file
   >     fmap="$prefix.fmap"
   >     repo="$prefix.repo"
   >     for i in $files; do
-  > 	echo "include $i" >> "$fmap"
+  >         echo "include $i" >> "$fmap"
   >     done
   >     hg -q convert $opts --filemap "$fmap" --datesort git-repo2 "$repo"
   >     hg up -q -R "$repo"
