@@ -34,13 +34,13 @@ def findcommonincoming(repo, remote, heads=None, force=False):
     fetch = set()
     seen = set()
     seenbranch = set()
-    base = {}
+    base = set()
 
     if not heads:
         heads = remote.heads()
 
     if repo.changelog.tip() == nullid:
-        base[nullid] = 1
+        base.add(nullid)
         if heads != [nullid]:
             return [nullid], [nullid], list(heads)
         return [nullid], [], []
@@ -54,11 +54,11 @@ def findcommonincoming(repo, remote, heads=None, force=False):
         if h not in m:
             unknown.append(h)
         else:
-            base[h] = 1
+            base.add(h)
 
     heads = unknown
     if not unknown:
-        return base.keys(), [], []
+        return list(base), [], []
 
     req = set(unknown)
     reqcnt = 0
@@ -95,7 +95,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
                         fetch.add(n[1]) # earliest unknown
                     for p in n[2:4]:
                         if p in m:
-                            base[p] = 1 # latest known
+                            base.add(p) # latest known
 
                 for p in n[2:4]:
                     if p not in req and p not in m:
@@ -130,7 +130,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
                         repo.ui.debug("found new branch changeset %s\n" %
                                           short(p))
                         fetch.add(p)
-                        base[i] = 1
+                        base.add(i)
                     else:
                         repo.ui.debug("narrowed branch search to %s:%s\n"
                                       % (short(p), short(i)))
@@ -145,7 +145,8 @@ def findcommonincoming(repo, remote, heads=None, force=False):
             raise error.RepoError(_("already have changeset ")
                                   + short(f[:4]))
 
-    if base.keys() == [nullid]:
+    base = list(base)
+    if base == [nullid]:
         if force:
             repo.ui.warn(_("warning: repository is unrelated\n"))
         else:
@@ -157,7 +158,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
     repo.ui.progress(_('searching'), None)
     repo.ui.debug("%d total queries\n" % reqcnt)
 
-    return base.keys(), list(fetch), heads
+    return base, list(fetch), heads
 
 def findoutgoing(repo, remote, base=None, remoteheads=None, force=False):
     """Return list of nodes that are roots of subsets not in remote
