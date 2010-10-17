@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import urllib, urllib2, urlparse, httplib, os, re, socket, cStringIO, time
+import urllib, urllib2, urlparse, httplib, os, re, socket, cStringIO
 import __builtin__
 from i18n import _
 import keepalive, util
@@ -487,19 +487,13 @@ class httphandler(keepalive.HTTPHandler):
         return keepalive.HTTPHandler._start_transaction(self, h, req)
 
 def _verifycert(cert, hostname):
-    '''Verify that cert (in socket.getpeercert() format) matches hostname and is 
-    valid at this time. CRLs and subjectAltName are not handled.
+    '''Verify that cert (in socket.getpeercert() format) matches hostname.
+    CRLs and subjectAltName are not handled.
     
     Returns error message if any problems are found and None on success.
     '''
     if not cert:
         return _('no certificate received')
-    notafter = cert.get('notAfter')
-    if notafter and time.time() > ssl.cert_time_to_seconds(notafter):
-        return _('certificate expired %s') % notafter
-    notbefore = cert.get('notBefore')
-    if notbefore and time.time() < ssl.cert_time_to_seconds(notbefore):
-        return _('certificate not valid before %s') % notbefore
     dnsname = hostname.lower()
     for s in cert.get('subject', []):
         key, value = s[0]

@@ -1,9 +1,5 @@
 #!/usr/bin/env python
 import sys
-try:
-    import ssl
-except ImportError:
-    sys.exit(80)
 
 def check(a, b):
     if a != b:
@@ -36,17 +32,7 @@ check(_verifycert(cert('*.foo'), 'foo'),
 check(_verifycert(cert('*o'), 'foo'),
       'certificate is for *o')
 
-import time
-lastyear = time.gmtime().tm_year - 1
-nextyear = time.gmtime().tm_year + 1
-check(_verifycert({'notAfter': 'May  9 00:00:00 %s GMT' % lastyear},
-                  'example.com'),
-      'certificate expired May  9 00:00:00 %s GMT' % lastyear)
-check(_verifycert({'notBefore': 'May  9 00:00:00 %s GMT' % nextyear},
-                  'example.com'),
-      'certificate not valid before May  9 00:00:00 %s GMT' % nextyear)
-check(_verifycert({'notAfter': 'Sep 29 15:29:48 %s GMT' % nextyear,
-                   'subject': ()},
+check(_verifycert({'subject': ()},
                   'example.com'),
       'no commonName found in certificate')
 check(_verifycert(None, 'example.com'),
