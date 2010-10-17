@@ -9,47 +9,32 @@ from node import nullid, short
 from i18n import _
 import util, error
 
-def findincoming(repo, remote, base=None, heads=None, force=False):
+def findincoming(repo, remote, heads=None, force=False):
     """Return list of roots of the subsets of missing nodes from remote
 
-    If base dict is specified, assume that these nodes and their parents
-    exist on the remote side and that no child of a node of base exists
-    in both remote and repo.
-    Furthermore base will be updated to include the nodes that exists
-    in repo and remote but no children exists in repo and remote.
     If a list of heads is specified, return only nodes which are heads
     or ancestors of these heads.
 
-    All the ancestors of base are in repo and in remote.
+    All the ancestors of the list returned are in repo and in remote.
     All the descendants of the list returned are missing in repo.
     (and so we know that the rest of the nodes are missing in remote, see
     outgoing)
     """
-    return findcommonincoming(repo, remote, base, heads, force)[1]
+    return findcommonincoming(repo, remote, heads, force)[1]
 
-def findcommonincoming(repo, remote, base=None, heads=None, force=False):
+def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, missing roots, heads) used to identify
     missing nodes from remote.
 
-    If base dict is specified, assume that these nodes and their parents
-    exist on the remote side and that no child of a node of base exists
-    in both remote and repo.
-    Furthermore base will be updated to include the nodes that exists
-    in repo and remote but no children exists in both repo and remote.
-    In other words, base is the set of heads of the DAG resulting from
-    the intersection of the nodes from repo and remote.
     If a list of heads is specified, return only nodes which are heads
     or ancestors of these heads.
-
-    All the ancestors of base are in repo and in remote.
     """
     m = repo.changelog.nodemap
     search = []
     fetch = set()
     seen = set()
     seenbranch = set()
-    if base is None:
-        base = {}
+    base = {}
 
     if not heads:
         heads = remote.heads()
