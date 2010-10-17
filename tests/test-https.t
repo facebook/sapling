@@ -42,6 +42,50 @@ Can be dumped with:
   $ cat priv.pem pub.pem >> server.pem
   $ PRIV=`pwd`/server.pem
 
+  $ cat << EOT > pub-other.pem 
+  > -----BEGIN CERTIFICATE-----
+  > MIIBqzCCAVWgAwIBAgIJALwZS731c/ORMA0GCSqGSIb3DQEBBQUAMDExEjAQBgNV
+  > BAMMCWxvY2FsaG9zdDEbMBkGCSqGSIb3DQEJARYMaGdAbG9jYWxob3N0MB4XDTEw
+  > MTAxNDIwNDUxNloXDTM1MDYwNTIwNDUxNlowMTESMBAGA1UEAwwJbG9jYWxob3N0
+  > MRswGQYJKoZIhvcNAQkBFgxoZ0Bsb2NhbGhvc3QwXDANBgkqhkiG9w0BAQEFAANL
+  > ADBIAkEAsxsapLbHrqqUKuQBxdpK4G3m2LjtyrTSdpzzzFlecxd5yhNP6AyWrufo
+  > K4VMGo2xlu9xOo88nDSUNSKPuD09MwIDAQABo1AwTjAdBgNVHQ4EFgQUoIB1iMhN
+  > y868rpQ2qk9dHnU6ebswHwYDVR0jBBgwFoAUoIB1iMhNy868rpQ2qk9dHnU6ebsw
+  > DAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQUFAANBAJ544f125CsE7J2t55PdFaF6
+  > bBlNBb91FCywBgSjhBjf+GG3TNPwrPdc3yqeq+hzJiuInqbOBv9abmMyq8Wsoig=
+  > -----END CERTIFICATE-----
+  > EOT
+
+pub.pem patched with other notBefore / notAfter:
+
+  $ cat << EOT > pub-not-yet.pem 
+  > -----BEGIN CERTIFICATE-----
+  > MIIBqzCCAVWgAwIBAgIJANAXFFyWjGnRMA0GCSqGSIb3DQEBBQUAMDExEjAQBgNVBAMMCWxvY2Fs
+  > aG9zdDEbMBkGCSqGSIb3DQEJARYMaGdAbG9jYWxob3N0MB4XDTM1MDYwNTIwMzAxNFoXDTM1MDYw
+  > NTIwMzAxNFowMTESMBAGA1UEAwwJbG9jYWxob3N0MRswGQYJKoZIhvcNAQkBFgxoZ0Bsb2NhbGhv
+  > c3QwXDANBgkqhkiG9w0BAQEFAANLADBIAkEApjCWeYGrIa/Vo7LHaRF8ou0tbgHKE33Use/whCnK
+  > EUm34rDaXQd4lxxX6aDWg06n9tiVStAKTgQAHJY8j/xgSwIDAQABo1AwTjAdBgNVHQ4EFgQUE6sA
+  > +ammr24dGX0kpjxOgO45hzQwHwYDVR0jBBgwFoAUE6sA+ammr24dGX0kpjxOgO45hzQwDAYDVR0T
+  > BAUwAwEB/zANBgkqhkiG9w0BAQUFAANBAJXV41gWnkgC7jcpPpFRSUSZaxyzrXmD1CIqQf0WgVDb
+  > /12E0vR2DuZitgzUYtBaofM81aTtc0a2/YsrmqePGm0=
+  > -----END CERTIFICATE-----
+  > EOT
+  $ cat priv.pem pub-not-yet.pem > server-not-yet.pem
+
+  $ cat << EOT > pub-expired.pem 
+  > -----BEGIN CERTIFICATE-----
+  > MIIBqzCCAVWgAwIBAgIJANAXFFyWjGnRMA0GCSqGSIb3DQEBBQUAMDExEjAQBgNVBAMMCWxvY2Fs
+  > aG9zdDEbMBkGCSqGSIb3DQEJARYMaGdAbG9jYWxob3N0MB4XDTEwMTAxNDIwMzAxNFoXDTEwMTAx
+  > NDIwMzAxNFowMTESMBAGA1UEAwwJbG9jYWxob3N0MRswGQYJKoZIhvcNAQkBFgxoZ0Bsb2NhbGhv
+  > c3QwXDANBgkqhkiG9w0BAQEFAANLADBIAkEApjCWeYGrIa/Vo7LHaRF8ou0tbgHKE33Use/whCnK
+  > EUm34rDaXQd4lxxX6aDWg06n9tiVStAKTgQAHJY8j/xgSwIDAQABo1AwTjAdBgNVHQ4EFgQUE6sA
+  > +ammr24dGX0kpjxOgO45hzQwHwYDVR0jBBgwFoAUE6sA+ammr24dGX0kpjxOgO45hzQwDAYDVR0T
+  > BAUwAwEB/zANBgkqhkiG9w0BAQUFAANBAJfk57DTRf2nUbYaMSlVAARxMNbFGOjQhAUtY400GhKt
+  > 2uiKCNGKXVXD3AHWe13yHc5KttzbHQStE5Nm/DlWBWQ=
+  > -----END CERTIFICATE-----
+  > EOT
+  $ cat priv.pem pub-expired.pem > server-expired.pem
+
   $ hg init test
   $ cd test
   $ echo foo>foo
@@ -101,3 +145,32 @@ pull
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
   $ cd ..
+
+cacert
+
+  $ hg -R copy-pull pull --config web.cacerts=pub.pem
+  pulling from https://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/
+  abort: 127.0.0.1 certificate error: certificate is for localhost
+  [255]
+  $ hg -R copy-pull pull --config web.cacerts=pub-other.pem
+  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  [255]
+
+Test server cert which isn't valid yet
+
+  $ hg -R test serve -p $HGPORT1 -d --pid-file=hg1.pid --certificate=server-not-yet.pem  
+  $ cat hg1.pid >> $DAEMON_PIDS
+  $ hg -R copy-pull pull --config web.cacerts=pub-not-yet.pem https://localhost:$HGPORT1/
+  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  [255]
+
+Test server cert which no longer is valid
+
+  $ hg -R test serve -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem  
+  $ cat hg2.pid >> $DAEMON_PIDS
+  $ hg -R copy-pull pull --config web.cacerts=pub-expired.pem https://localhost:$HGPORT2/
+  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  [255]
