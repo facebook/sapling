@@ -433,7 +433,11 @@ def _checkshellalias(ui, args):
     cwd = os.getcwd()
     norepo = commands.norepo
     options = {}
-    args = fancyopts.fancyopts(args, commands.globalopts, options)
+
+    try:
+        args = fancyopts.fancyopts(args, commands.globalopts, options)
+    except fancyopts.getopt.GetoptError:
+        return
 
     if not args:
         return
