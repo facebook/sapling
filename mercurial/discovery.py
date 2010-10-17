@@ -9,19 +9,6 @@ from node import nullid, short
 from i18n import _
 import util, error
 
-def findincoming(repo, remote, heads=None, force=False):
-    """Return list of roots of the subsets of missing nodes from remote
-
-    If a list of heads is specified, return only nodes which are heads
-    or ancestors of these heads.
-
-    All the ancestors of the list returned are in repo and in remote.
-    All the descendants of the list returned are missing in repo.
-    (and so we know that the rest of the nodes are missing in remote, see
-    outgoing)
-    """
-    return findcommonincoming(repo, remote, heads, force)[1]
-
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, missing roots, heads) used to identify
     missing nodes from remote.
