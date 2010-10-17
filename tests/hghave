@@ -179,12 +179,21 @@ def has_pygments():
 def has_outer_repo():
     return matchoutput('hg root 2>&1', r'')
 
+def has_ssl():
+    try:
+        from OpenSSL.SSL import SysCallError, ZeroReturnError
+        import ssl
+        return True
+    except ImportError:
+        return False
+
 checks = {
     "baz": (has_baz, "GNU Arch baz client"),
     "bzr": (has_bzr, "Canonical's Bazaar client"),
     "bzr114": (has_bzr114, "Canonical's Bazaar client >= 1.14"),
     "cvs": (has_cvs, "cvs client/server"),
     "darcs": (has_darcs, "darcs client"),
+    "docutils": (has_docutils, "Docutils text processing library"),
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),
     "fifo": (has_fifo, "named pipes"),
@@ -198,7 +207,7 @@ checks = {
     "outer-repo": (has_outer_repo, "outer repo"),
     "p4": (has_p4, "Perforce server and client"),
     "pygments": (has_pygments, "Pygments source highlighting library"),
-    "docutils": (has_docutils, "Docutils text processing library"),
+    "ssl": (has_ssl, "python ssl and openssl modules"),
     "svn": (has_svn, "subversion client and admin tools"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
@@ -272,5 +281,3 @@ if __name__ == '__main__':
 
     if failures != 0:
         sys.exit(1)
-
-

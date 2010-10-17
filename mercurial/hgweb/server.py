@@ -180,7 +180,7 @@ class _shgwebhandler(_hgwebhandler):
     def do_write(self):
         from OpenSSL.SSL import SysCallError
         try:
-            super(_shgwebhandler, self).do_write()
+            _hgwebhandler.do_write(self)
         except SysCallError, inst:
             if inst.args[0] != errno.EPIPE:
                 raise
@@ -188,7 +188,7 @@ class _shgwebhandler(_hgwebhandler):
     def handle_one_request(self):
         from OpenSSL.SSL import SysCallError, ZeroReturnError
         try:
-            super(_shgwebhandler, self).handle_one_request()
+            _hgwebhandler.handle_one_request(self)
         except (SysCallError, ZeroReturnError):
             self.close_connection = True
             pass
