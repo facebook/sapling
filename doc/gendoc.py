@@ -38,9 +38,9 @@ def get_opts(opts):
         desc += default and _(" (default: %s)") % default or ""
         yield(", ".join(allopts), desc)
 
-def get_cmd(cmd):
+def get_cmd(cmd, cmdtable):
     d = {}
-    attr = table[cmd]
+    attr = cmdtable[cmd]
     cmds = cmd.lstrip("^").split("|")
 
     d['cmd'] = cmds[0]
@@ -71,8 +71,22 @@ def show_doc(ui):
 
     # print cmds
     section(_("Commands"))
+    commandprinter(ui, table)
+
+    # print topics
+    for names, sec, doc in helptable:
+        for name in names:
+            ui.write(".. _%s:\n" % name)
+        ui.write("\n")
+        section(sec)
+        if hasattr(doc, '__call__'):
+            doc = doc()
+        ui.write(doc)
+        ui.write("\n")
+
+def commandprinter(ui, cmdtable):
     h = {}
-    for c, attr in table.items():
+    for c, attr in cmdtable.items():
         f = c.split("|")[0]
         f = f.lstrip("^")
         h[f] = c
@@ -82,7 +96,7 @@ def show_doc(ui):
     for f in cmds:
         if f.startswith("debug"):
             continue
-        d = get_cmd(h[f])
+        d = get_cmd(h[f], cmdtable)
         # synopsis
         ui.write(".. _%s:\n\n" % d['cmd'])
         ui.write("``%s``\n" % d['synopsis'].replace("hg ","", 1))
@@ -104,16 +118,6 @@ def show_doc(ui):
         if d['aliases']:
             ui.write(_("    aliases: %s\n\n") % " ".join(d['aliases']))
 
-    # print topics
-    for names, sec, doc in helptable:
-        for name in names:
-            ui.write(".. _%s:\n" % name)
-        ui.write("\n")
-        section(sec)
-        if hasattr(doc, '__call__'):
-            doc = doc()
-        ui.write(doc)
-        ui.write("\n")
 
 if __name__ == "__main__":
     show_doc(sys.stdout)
