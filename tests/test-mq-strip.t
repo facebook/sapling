@@ -257,7 +257,7 @@ after strip of merge parent
 
 2 is parent of 3, only one strip should happen
 
-  $ hg strip 2 3
+  $ hg strip "roots(2)" 3
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg glog
   @  changeset:   2:264128213d29
@@ -333,11 +333,16 @@ after strip of merge parent
 
 2 different branches and a common ancestor: 1 strip
 
-  $ hg strip 1 2 4
+  $ hg strip 1 "2|4"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ restore
 
+stripping an empty revset
+
+  $ hg strip "1 and not 1"
+  abort: empty revision set
+  [255]
 
 remove branchy history for qimport tests
 
