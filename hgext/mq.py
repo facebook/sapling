@@ -2125,7 +2125,7 @@ def fold(ui, repo, *files, **opts):
     removed afterwards.
 
     The header for each folded patch will be concatenated with the
-    current patch header, separated by a line of '* * *'.
+    current patch header, separated by a line of ``* * *``.
 
     Returns 0 on success."""
 
