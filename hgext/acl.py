@@ -32,7 +32,7 @@ The order in which access checks are performed is:
 The allow and deny sections take key-value pairs.
 
 Branch-based Access Control
----------------------------
+...........................
 
 Use the ``acl.deny.branches`` and ``acl.allow.branches`` sections to
 have branch-based access control. Keys in these sections can be
@@ -47,7 +47,7 @@ The corresponding values can be either:
 - an asterisk, to match anyone;
 
 Path-based Access Control
--------------------------
+.........................
 
 Use the ``acl.deny`` and ``acl.allow`` sections to have path-based
 access control. Keys in these sections accept a subtree pattern (with
@@ -55,7 +55,7 @@ a glob syntax by default). The corresponding values follow the same
 syntax as the other sections above.
 
 Groups
-------
+......
 
 Group names must be prefixed with an ``@`` symbol. Specifying a group
 name has the same effect as specifying all the users in that group.
@@ -66,7 +66,7 @@ a Unix-like system, the list of users will be taken from the OS.
 Otherwise, an exception will be raised.
 
 Example Configuration
----------------------
+.....................
 
 ::
 
