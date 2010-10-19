@@ -46,7 +46,7 @@ def load(ui, name, path):
     else:
         shortname = name
     if shortname in _extensions:
-        return
+        return _extensions[shortname]
     _extensions[shortname] = None
     if path:
         # the module will be loaded in sys.modules
@@ -66,6 +66,7 @@ def load(ui, name, path):
             mod = importh(name)
     _extensions[shortname] = mod
     _order.append(shortname)
+    return mod
 
 def loadall(ui):
     result = ui.configitems("extensions")
