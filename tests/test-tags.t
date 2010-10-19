@@ -36,7 +36,7 @@ Setup:
 
 Try corrupting the cache
 
-  $ echo 'a b\n' > .hg/tags.cache
+  $ printf 'a b' > .hg/tags.cache
   $ hg identify
   .hg/tags.cache is corrupt, rebuilding it
   acb14030fe0a tip
