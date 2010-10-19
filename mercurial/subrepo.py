@@ -167,26 +167,33 @@ def subrelpath(sub):
         return sub._path
     return reporelpath(sub._repo)
 
-def _abssource(repo, push=False):
-    """return pull/push path of repo - either based on parent repo
-    .hgsub info or on the subrepos own config"""
+def _abssource(repo, push=False, abort=True):
+    """return pull/push path of repo - either based on parent repo .hgsub info
+    or on the top repo config. Abort or return None if no source found."""
     if hasattr(repo, '_subparent'):
         source = repo._subsource
         if source.startswith('/') or '://' in source:
             return source
-        parent = _abssource(repo._subparent, push)
-        if '://' in parent:
-            if parent[-1] == '/':
-                parent = parent[:-1]
-            r = urlparse.urlparse(parent + '/' + source)
-            r = urlparse.urlunparse((r[0], r[1],
-                                     posixpath.normpath(r[2]),
-                                     r[3], r[4], r[5]))
-            return r
-        return posixpath.normpath(os.path.join(parent, repo._subsource))
-    if push and repo.ui.config('paths', 'default-push'):
-        return repo.ui.config('paths', 'default-push', repo.root)
-    return repo.ui.config('paths', 'default', repo.root)
+        parent = _abssource(repo._subparent, push, abort=False)
+        if parent:
+            if '://' in parent:
+                if parent[-1] == '/':
+                    parent = parent[:-1]
+                r = urlparse.urlparse(parent + '/' + source)
+                r = urlparse.urlunparse((r[0], r[1],
+                                         posixpath.normpath(r[2]),
+                                         r[3], r[4], r[5]))
+                return r
+            else: # plain file system path
+                return posixpath.normpath(os.path.join(parent, repo._subsource))
+    else: # recursion reached top repo
+        if push and repo.ui.config('paths', 'default-push'):
+            return repo.ui.config('paths', 'default-push')
+        if repo.ui.config('paths', 'default'):
+            return repo.ui.config('paths', 'default')
+    if abort:
+        raise util.Abort(_("default path for subrepository %s not found") % 
+            reporelpath(repo))
 
 def itersubrepos(ctx1, ctx2):
     """find subrepos in ctx1 or ctx2"""
@@ -314,11 +321,12 @@ class hgsubrepo(abstractsubrepo):
             fp.write('[paths]\n')
 
             def addpathconfig(key, value):
-                fp.write('%s = %s\n' % (key, value))
-                self._repo.ui.setconfig('paths', key, value)
+                if value:
+                    fp.write('%s = %s\n' % (key, value))
+                    self._repo.ui.setconfig('paths', key, value)
 
-            defpath = _abssource(self._repo)
-            defpushpath = _abssource(self._repo, True)
+            defpath = _abssource(self._repo, abort=False)
+            defpushpath = _abssource(self._repo, True, abort=False)
             addpathconfig('default', defpath)
             if defpath != defpushpath:
                 addpathconfig('default-push', defpushpath)
