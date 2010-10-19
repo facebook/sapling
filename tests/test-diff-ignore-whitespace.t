@@ -390,3 +390,57 @@ Test whitespace changes and blank lines:
 
   $ hg ndiff -wB
 
+
+Test \r (carriage return) as used in "DOS" line endings:
+
+  $ printf 'hello world\r\n\r\ngoodbye\rworld\n' >foo
+
+  $ hg ndiff
+  diff -r 540c40a65b78 foo
+  --- a/foo
+  +++ b/foo
+  @@ -1,2 +1,3 @@
+  -hello world
+  -goodbye world
+  +hello world
+  +
+  +goodbyeworld
+world
+
+No completely blank lines to ignore:
+
+  $ hg ndiff --ignore-blank-lines
+  diff -r 540c40a65b78 foo
+  --- a/foo
+  +++ b/foo
+  @@ -1,2 +1,3 @@
+  -hello world
+  -goodbye world
+  +hello world
+  +
+  +goodbyeworld
+world
+
+Only new line noticed:
+
+  $ hg ndiff --ignore-space-change
+  diff -r 540c40a65b78 foo
+  --- a/foo
+  +++ b/foo
+  @@ -1,2 +1,3 @@
+   hello world
+  +
+   goodbye world
+
+  $ hg ndiff --ignore-all-space
+  diff -r 540c40a65b78 foo
+  --- a/foo
+  +++ b/foo
+  @@ -1,2 +1,3 @@
+   hello world
+  +
+   goodbye world
+
+New line not noticed when space change ignored:
+
+  $ hg ndiff --ignore-blank-lines --ignore-all-space

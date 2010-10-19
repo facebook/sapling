@@ -67,10 +67,10 @@ defaultopts = diffopts()
 
 def wsclean(opts, text, blank=True):
     if opts.ignorews:
-        text = re.sub('[ \t]+', '', text)
+        text = re.sub('[ \t\r]+', '', text)
     elif opts.ignorewsamount:
-        text = re.sub('[ \t]+', ' ', text)
-        text = re.sub('[ \t]+\n', '\n', text)
+        text = re.sub('[ \t\r]+', ' ', text)
+        text = text.replace(' \n', '\n')
     if blank and opts.ignoreblanklines:
         text = re.sub('\n+', '', text)
     return text
