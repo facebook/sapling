@@ -34,6 +34,17 @@ Setup:
   $ cacheexists
   tag cache exists
 
+Try corrupting the cache
+
+  $ echo 'a b\n' > .hg/tags.cache
+  $ hg identify
+  .hg/tags.cache is corrupt, rebuilding it
+  acb14030fe0a tip
+  $ cacheexists
+  tag cache exists
+  $ hg identify
+  acb14030fe0a tip
+
 Create local tag with long name:
 
   $ T=`hg identify --debug --id`

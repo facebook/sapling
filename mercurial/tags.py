@@ -176,16 +176,23 @@ def _readtagcache(ui, repo):
     cacheheads = []                     # list of headnode
     cachefnode = {}                     # map headnode to filenode
     if cachefile:
-        for line in cachelines:
-            if line == "\n":
-                break
-            line = line.rstrip().split()
-            cacherevs.append(int(line[0]))
-            headnode = bin(line[1])
-            cacheheads.append(headnode)
-            if len(line) == 3:
-                fnode = bin(line[2])
-                cachefnode[headnode] = fnode
+        try:
+            for line in cachelines:
+                if line == "\n":
+                    break
+                line = line.rstrip().split()
+                cacherevs.append(int(line[0]))
+                headnode = bin(line[1])
+                cacheheads.append(headnode)
+                if len(line) == 3:
+                    fnode = bin(line[2])
+                    cachefnode[headnode] = fnode
+        except (ValueError, TypeError):
+            # corruption of tags.cache, just recompute it
+            ui.warn(_('.hg/tags.cache is corrupt, rebuilding it\n'))
+            cacheheads = []
+            cacherevs = []
+            cachefnode = {}
 
     tipnode = repo.changelog.tip()
     tiprev = len(repo.changelog) - 1
