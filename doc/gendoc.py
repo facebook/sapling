@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, textwrap
 # import from the live mercurial repo
 sys.path.insert(0, "..")
 # fall back to pure modules if required C extensions are not available
@@ -21,7 +21,10 @@ def get_desc(docstr):
     if i != -1:
         desc = docstr[i + 2:]
     else:
-        desc = "    %s" % shortdesc
+        desc = shortdesc
+
+    desc = textwrap.dedent(desc)
+
     return (shortdesc, desc)
 
 def get_opts(opts):
@@ -69,7 +72,7 @@ def show_doc(ui):
     # print options
     section(ui, _("Options"))
     for optstr, desc in get_opts(globalopts):
-        ui.write("%s\n    %s\n\n" % (optstr, desc))
+        ui.write("%s\n%s\n\n" % (optstr, desc))
 
     # print cmds
     section(ui, _("Commands"))
@@ -102,19 +105,20 @@ def commandprinter(ui, cmdtable):
         subsection(ui, d['cmd'])
         # synopsis
         ui.write("``%s``\n" % d['synopsis'].replace("hg ","", 1))
+        ui.write("\n")
         # description
         ui.write("%s\n\n" % d['desc'][1])
         # options
         opt_output = list(d['opts'])
         if opt_output:
             opts_len = max([len(line[0]) for line in opt_output])
-            ui.write(_("    options:\n\n"))
+            ui.write(_("options:\n\n"))
             for optstr, desc in opt_output:
                 if desc:
                     s = "%-*s  %s" % (opts_len, optstr, desc)
                 else:
                     s = optstr
-                ui.write("    %s\n" % s)
+                ui.write("%s\n" % s)
             ui.write("\n")
         # aliases
         if d['aliases']:
