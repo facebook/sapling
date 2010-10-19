@@ -2589,7 +2589,7 @@ def merge(ui, repo, node=None, **opts):
     t = opts.get('tool')
     if t:
         if 'HGMERGE' in os.environ:
-            os.environ['HGMERGE'] = t
+            os.environ['HGMERGE'] = ''
         ui.setconfig('ui', 'merge', t)
 
     if not node:
@@ -2982,7 +2982,7 @@ def resolve(ui, repo, *pats, **opts):
     t = opts.get('tool')
     if t:
         if 'HGMERGE' in os.environ:
-            os.environ['HGMERGE'] = t
+            os.environ['HGMERGE'] = ''
         ui.setconfig('ui', 'merge', t)
 
     ms = mergemod.mergestate(repo)
