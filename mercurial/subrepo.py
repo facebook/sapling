@@ -154,14 +154,18 @@ def submerge(repo, wctx, mctx, actx):
     # record merged .hgsubstate
     writestate(repo, sm)
 
-def relpath(sub):
+def reporelpath(repo):
+    """return path to this (sub)repo as seen from outermost repo"""
+    parent = repo
+    while hasattr(parent, '_subparent'):
+        parent = parent._subparent
+    return repo.root[len(parent.root)+1:]
+
+def subrelpath(sub):
     """return path to this subrepo as seen from outermost repo"""
     if not hasattr(sub, '_repo'):
         return sub._path
-    parent = sub._repo
-    while hasattr(parent, '_subparent'):
-        parent = parent._subparent
-    return sub._repo.root[len(parent.root)+1:]
+    return reporelpath(sub._repo)
 
 def _abssource(repo, push=False):
     """return pull/push path of repo - either based on parent repo
@@ -332,7 +336,7 @@ class hgsubrepo(abstractsubrepo):
             return self._repo.status(ctx1, ctx2, **opts)
         except error.RepoLookupError, inst:
             self._repo.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
-                               % (inst, relpath(self)))
+                               % (inst, subrelpath(self)))
             return [], [], [], [], [], [], []
 
     def diff(self, diffopts, node2, match, prefix, **opts):
@@ -348,7 +352,7 @@ class hgsubrepo(abstractsubrepo):
                                    listsubrepos=True, **opts)
         except error.RepoLookupError, inst:
             self._repo.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
-                               % (inst, relpath(self)))
+                               % (inst, subrelpath(self)))
 
     def archive(self, archiver, prefix):
         abstractsubrepo.archive(self, archiver, prefix)
@@ -372,7 +376,7 @@ class hgsubrepo(abstractsubrepo):
         return self._repo._checknested(self._repo.wjoin(path))
 
     def commit(self, text, user, date):
-        self._repo.ui.debug("committing subrepo %s\n" % relpath(self))
+        self._repo.ui.debug("committing subrepo %s\n" % subrelpath(self))
         n = self._repo.commit(text, user, date)
         if not n:
             return self._repo['.'].hex() # different version checked out
@@ -381,7 +385,7 @@ class hgsubrepo(abstractsubrepo):
     def remove(self):
         # we can't fully delete the repository as it may contain
         # local-only history
-        self._repo.ui.note(_('removing subrepo %s\n') % relpath(self))
+        self._repo.ui.note(_('removing subrepo %s\n') % subrelpath(self))
         hg.clean(self._repo, node.nullid, False)
 
     def _get(self, state):
@@ -392,7 +396,7 @@ class hgsubrepo(abstractsubrepo):
             self._repo._subsource = source
             srcurl = _abssource(self._repo)
             self._repo.ui.status(_('pulling subrepo %s from %s\n')
-                                 % (relpath(self), srcurl))
+                                 % (subrelpath(self), srcurl))
             other = hg.repository(self._repo.ui, srcurl)
             self._repo.pull(other)
 
@@ -408,12 +412,12 @@ class hgsubrepo(abstractsubrepo):
         dst = self._repo[state[1]]
         anc = dst.ancestor(cur)
         if anc == cur:
-            self._repo.ui.debug("updating subrepo %s\n" % relpath(self))
+            self._repo.ui.debug("updating subrepo %s\n" % subrelpath(self))
             hg.update(self._repo, state[1])
         elif anc == dst:
-            self._repo.ui.debug("skipping subrepo %s\n" % relpath(self))
+            self._repo.ui.debug("skipping subrepo %s\n" % subrelpath(self))
         else:
-            self._repo.ui.debug("merging subrepo %s\n" % relpath(self))
+            self._repo.ui.debug("merging subrepo %s\n" % subrelpath(self))
             hg.merge(self._repo, state[1], remind=False)
 
     def push(self, force):
@@ -426,7 +430,7 @@ class hgsubrepo(abstractsubrepo):
 
         dsturl = _abssource(self._repo, True)
         self._repo.ui.status(_('pushing subrepo %s to %s\n') %
-            (relpath(self), dsturl))
+            (subrelpath(self), dsturl))
         other = hg.repository(self._repo.ui, dsturl)
         return self._repo.push(other, force)
 

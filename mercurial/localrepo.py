@@ -938,7 +938,7 @@ class localrepository(repo.repository):
                 for s in sorted(subs):
                     sub = wctx.sub(s)
                     self.ui.status(_('committing subrepository %s\n') %
-                        subrepo.relpath(sub))
+                        subrepo.subrelpath(sub))
                     sr = sub.commit(cctx._text, user, date)
                     state[s] = (state[s][0], sr)
                 subrepo.writestate(self, state)
