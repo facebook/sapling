@@ -103,6 +103,10 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
     directory's parent revision with the given name. If you specify
     a revision using -r REV (where REV may be an existing bookmark),
     the bookmark is assigned to that revision.
+
+    Bookmarks can be pushed and pulled between repositories (see :hg:`help
+    push` and :hg:`help pull`). This requires the bookmark extension to be
+    enabled for both the local and remote repositories.
     '''
     hexfn = ui.debugflag and hex or short
     marks = repo._bookmarks
