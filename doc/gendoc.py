@@ -8,6 +8,7 @@ from mercurial import encoding
 from mercurial.commands import table, globalopts
 from mercurial.i18n import _
 from mercurial.help import helptable
+from mercurial import extensions
 
 def get_desc(docstr):
     if not docstr:
@@ -67,6 +68,12 @@ def section(ui, s):
 def subsection(ui, s):
     ui.write("%s\n%s\n\n" % (s, '"' * encoding.colwidth(s)))
 
+def subsubsection(ui, s):
+    ui.write("%s\n%s\n\n" % (s, "." * encoding.colwidth(s)))
+
+def subsubsubsection(ui, s):
+    ui.write("%s\n%s\n\n" % (s, "#" * encoding.colwidth(s)))
+
 
 def show_doc(ui):
     # print options
@@ -76,7 +83,7 @@ def show_doc(ui):
 
     # print cmds
     section(ui, _("Commands"))
-    commandprinter(ui, table)
+    commandprinter(ui, table, subsection)
 
     # print topics
     for names, sec, doc in helptable:
@@ -89,7 +96,26 @@ def show_doc(ui):
         ui.write(doc)
         ui.write("\n")
 
-def commandprinter(ui, cmdtable):
+    section(ui, _("Extensions"))
+    ui.write(_("This section contains help for extensions that is distributed "
+               "together with Mercurial. Help for other extensions is available "
+               "in the help system."))
+    ui.write("\n\n"
+             ".. contents::\n"
+             "   :class: htmlonly\n"
+             "   :local:\n"
+             "   :depth: 1\n\n")
+
+    for extensionname in sorted(allextensionnames()):
+        mod = extensions.load(None, extensionname, None)
+        subsection(ui, extensionname)
+        ui.write("%s\n\n" % mod.__doc__)
+        cmdtable = getattr(mod, 'cmdtable', None)
+        if cmdtable:
+            subsubsection(ui, _('Commands'))
+            commandprinter(ui, cmdtable, subsubsubsection)
+
+def commandprinter(ui, cmdtable, sectionfunc):
     h = {}
     for c, attr in cmdtable.items():
         f = c.split("|")[0]
@@ -102,7 +128,7 @@ def commandprinter(ui, cmdtable):
         if f.startswith("debug"):
             continue
         d = get_cmd(h[f], cmdtable)
-        subsection(ui, d['cmd'])
+        sectionfunc(ui, d['cmd'])
         # synopsis
         ui.write("``%s``\n" % d['synopsis'].replace("hg ","", 1))
         ui.write("\n")
@@ -123,6 +149,18 @@ def commandprinter(ui, cmdtable):
         # aliases
         if d['aliases']:
             ui.write(_("    aliases: %s\n\n") % " ".join(d['aliases']))
+
+
+def allextensionnames():
+    extensionnames = []
+
+    extensionsdictionary = extensions.enabled()[0]
+    extensionnames.extend(extensionsdictionary.keys())
+
+    extensionsdictionary = extensions.disabled()[0]
+    extensionnames.extend(extensionsdictionary.keys())
+
+    return extensionnames
 
 
 if __name__ == "__main__":
