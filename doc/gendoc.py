@@ -58,19 +58,21 @@ def get_cmd(cmd, cmdtable):
 
     return d
 
-def show_doc(ui):
-    def section(s):
-        ui.write("%s\n%s\n\n" % (s, "-" * encoding.colwidth(s)))
-    def subsection(s):
-        ui.write("%s\n%s\n\n" % (s, '"' * encoding.colwidth(s)))
+def section(ui, s):
+    ui.write("%s\n%s\n\n" % (s, "-" * encoding.colwidth(s)))
 
+def subsection(ui, s):
+    ui.write("%s\n%s\n\n" % (s, '"' * encoding.colwidth(s)))
+
+
+def show_doc(ui):
     # print options
-    section(_("Options"))
+    section(ui, _("Options"))
     for optstr, desc in get_opts(globalopts):
         ui.write("%s\n    %s\n\n" % (optstr, desc))
 
     # print cmds
-    section(_("Commands"))
+    section(ui, _("Commands"))
     commandprinter(ui, table)
 
     # print topics
@@ -78,7 +80,7 @@ def show_doc(ui):
         for name in names:
             ui.write(".. _%s:\n" % name)
         ui.write("\n")
-        section(sec)
+        section(ui, sec)
         if hasattr(doc, '__call__'):
             doc = doc()
         ui.write(doc)

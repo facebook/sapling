@@ -14,6 +14,7 @@ Mercurial source code management system
 .. contents::
    :backlinks: top
    :class: htmlonly
+   :depth: 1
 
 
 Synopsis
