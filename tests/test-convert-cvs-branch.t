@@ -42,7 +42,7 @@ Branch the project
   $ cvscall up -r BRANCH > /dev/null
   cvs update: Updating .
 
-Modify file a, then b, then a 
+Modify file a, then b, then a
 
   $ sleep 1
   $ echo "2" > a

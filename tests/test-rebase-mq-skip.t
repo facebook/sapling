@@ -1,4 +1,4 @@
-This emulates the effects of an hg pull --rebase in which the remote repo 
+This emulates the effects of an hg pull --rebase in which the remote repo
 already has one local mq patch
 
   $ cat >> $HGRCPATH <<EOF

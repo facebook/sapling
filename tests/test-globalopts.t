@@ -339,6 +339,7 @@ Testing -h/--help:
    multirevs    Specifying Multiple Revisions
    revsets      Specifying Revision Sets
    diffs        Diff Formats
+   merge-tools  Merge Tools
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features
@@ -413,6 +414,7 @@ Testing -h/--help:
    multirevs    Specifying Multiple Revisions
    revsets      Specifying Revision Sets
    diffs        Diff Formats
+   merge-tools  Merge Tools
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features

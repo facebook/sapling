@@ -110,6 +110,7 @@ Short help:
    multirevs    Specifying Multiple Revisions
    revsets      Specifying Revision Sets
    diffs        Diff Formats
+   merge-tools  Merge Tools
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features
@@ -180,6 +181,7 @@ Short help:
    multirevs    Specifying Multiple Revisions
    revsets      Specifying Revision Sets
    diffs        Diff Formats
+   merge-tools  Merge Tools
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features
@@ -702,6 +704,7 @@ Test that default list of commands omits extension commands
    multirevs    Specifying Multiple Revisions
    revsets      Specifying Revision Sets
    diffs        Diff Formats
+   merge-tools  Merge Tools
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features
