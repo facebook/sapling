@@ -33,6 +33,7 @@
             <File Name="hgcommand.vim" />
             <File Name="patchreview.txt" />
             <File Name="patchreview.vim" />
+            <File Name="hgtest.vim" />
           </Component>
         </Directory>
       </Directory>

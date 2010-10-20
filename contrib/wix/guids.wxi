@@ -6,7 +6,7 @@
 
   <!-- contrib.wxs -->
   <?define contrib.guid = {F17D27B7-4A6B-4cd2-AE72-FED3CFAA585E} ?>
-  <?define contrib.vim.guid = {56B49B46-6657-405d-9E91-3FA68D011471} ?>
+  <?define contrib.vim.guid = {BB04903A-652D-4C4F-9590-2BD07A2304F2} ?>
 
   <!-- doc.wxs -->
   <?define doc.hg.1.html.guid = {AAAA3FDA-EDC5-4220-B59D-D342722358A2} ?>
