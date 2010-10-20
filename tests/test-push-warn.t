@@ -336,7 +336,7 @@ Using --new-branch to push new named branch:
   added 1 changesets with 1 changes to 1 files
 
 
-Checking prepush logic does not allow silently pushing 
+Checking prepush logic does not allow silently pushing
 multiple new heads:
 
   $ cd ..
@@ -480,7 +480,7 @@ in the clone b1 is now the head of B
   $ hg ci -Ama2
   adding a2
 
-a2 is now the new branch head of A, and a new topological head 
+a2 is now the new branch head of A, and a new topological head
 it replaces a former inner branch head, so it should at most warn about
 A, not B
 
