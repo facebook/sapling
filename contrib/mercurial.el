@@ -145,7 +145,7 @@ repository-related commands."
   :type 'string
   :group 'mercurial)
 
-(defcustom hg-outgoing-repository "default-push"
+(defcustom hg-outgoing-repository ""
   "The repository to which changes are pushed to by default.
 This should be a symbolic repository name, since it is used for all
 repository-related commands."
