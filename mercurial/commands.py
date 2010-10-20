@@ -2497,7 +2497,8 @@ def log(ui, repo, *pats, **opts):
             return
         if df and not df(ctx.date()[0]):
             return
-        if opts['user'] and not [k for k in opts['user'] if k in ctx.user()]:
+        if opts['user'] and not [k for k in opts['user']
+                                 if k.lower() in ctx.user().lower()]:
             return
         if opts.get('keyword'):
             for k in [kw.lower() for kw in opts['keyword']]:
