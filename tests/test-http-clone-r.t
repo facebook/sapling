@@ -92,7 +92,6 @@ clone remote via stream
   >       cd ..
   >    fi
   > done
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -104,7 +103,6 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 1 changesets, 1 total revisions
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -116,7 +114,6 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -128,7 +125,6 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -140,7 +136,6 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 4 changesets, 4 total revisions
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -152,7 +147,6 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -164,7 +158,6 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -176,7 +169,6 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   2 files, 4 changesets, 5 total revisions
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -188,7 +180,6 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   3 files, 5 changesets, 6 total revisions
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

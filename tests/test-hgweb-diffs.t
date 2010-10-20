@@ -471,7 +471,6 @@ diff removed file
 test import rev as raw-rev
 
   $ hg clone -r0 test test1
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

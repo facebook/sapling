@@ -11,7 +11,6 @@ Test basic functionality of url#rev syntax
   $ cd ..
 
   $ hg clone 'repo#foo' clone
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

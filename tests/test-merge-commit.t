@@ -100,7 +100,6 @@ on the remote parent:
 
   $ cd ..
   $ hg clone -U -r 1 -r 2 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

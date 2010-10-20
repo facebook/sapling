@@ -131,7 +131,6 @@ Testing applied patches, push and --force
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg --cwd .. clone -r 0 forcepush forcepush2
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

@@ -96,7 +96,6 @@ rebase b onto r1, skipping b2
 remote transplant
 
   $ hg clone -r 1 ../t ../remote
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -154,7 +153,6 @@ remote transplant with pull
   $ cat ../t.pid >> $DAEMON_PIDS
 
   $ hg clone -r 0 ../t ../rp
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -274,7 +272,6 @@ test transplant into empty repository
   $ hg init empty
   $ cd empty
   $ hg transplant -s ../t -b tip -a
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

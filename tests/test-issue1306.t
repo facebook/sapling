@@ -42,7 +42,6 @@ Initialize remote repo with branches:
 Try cloning -r branch:
 
   $ hg clone -rbr remote local1
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -62,7 +61,6 @@ Try cloning -r branch:
 Try cloning -rother clone#branch:
 
   $ hg clone -r0 remote#br local2
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -80,7 +78,6 @@ Try cloning -rother clone#branch:
 Try cloning -r1 clone#branch:
 
   $ hg clone -r1 remote#br local3
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

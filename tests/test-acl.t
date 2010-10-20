@@ -63,7 +63,6 @@
 
   $ cd ..
   $ hg clone -r 0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

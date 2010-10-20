@@ -93,7 +93,6 @@ trying clone -r
   abort: unknown revision 'donotexist'!
   [255]
   $ hg clone -r 0 static-http://localhost:$HGPORT/remote local0
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

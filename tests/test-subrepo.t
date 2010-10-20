@@ -632,7 +632,6 @@ Try the same, but with pull -u
   $ hg init issue1852c
   $ hg -R issue1852c pull -r0 -u issue1852a
   pulling from issue1852a
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

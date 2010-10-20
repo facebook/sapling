@@ -756,7 +756,6 @@ Issue2395: glog --style header and footer
 Incoming and outgoing:
 
   $ hg clone -U -r31 repo repo2
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

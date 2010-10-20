@@ -60,7 +60,6 @@ Test clone of revision with .hgeol
 
   $ cd ..
   $ hg clone -r 0 repo repo-4
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

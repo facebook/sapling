@@ -744,7 +744,6 @@ No expansion in destination with local configuration in origin only
 Clone to test incoming
 
   $ hg clone -r1 Test Test-a
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

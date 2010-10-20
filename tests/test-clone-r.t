@@ -85,7 +85,6 @@
   > done
   
   ---- hg clone -r 0 test test-0
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -99,7 +98,6 @@
   1 files, 1 changesets, 1 total revisions
   
   ---- hg clone -r 1 test test-1
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -113,7 +111,6 @@
   1 files, 2 changesets, 2 total revisions
   
   ---- hg clone -r 2 test test-2
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -127,7 +124,6 @@
   1 files, 3 changesets, 3 total revisions
   
   ---- hg clone -r 3 test test-3
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -141,7 +137,6 @@
   1 files, 4 changesets, 4 total revisions
   
   ---- hg clone -r 4 test test-4
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -155,7 +150,6 @@
   1 files, 2 changesets, 2 total revisions
   
   ---- hg clone -r 5 test test-5
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -169,7 +163,6 @@
   1 files, 3 changesets, 3 total revisions
   
   ---- hg clone -r 6 test test-6
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -183,7 +176,6 @@
   2 files, 4 changesets, 5 total revisions
   
   ---- hg clone -r 7 test test-7
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -197,7 +189,6 @@
   3 files, 5 changesets, 6 total revisions
   
   ---- hg clone -r 8 test test-8
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

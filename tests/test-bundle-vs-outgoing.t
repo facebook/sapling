@@ -105,7 +105,6 @@ check that "hg outgoing" really does the right thing
 sanity check of outgoing: expect revs 4 5 6 7 8
 
   $ hg clone -r3 . ../repo2
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

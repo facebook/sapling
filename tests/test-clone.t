@@ -306,7 +306,6 @@ Branch 'default' is checked out:
 Testing #<branch>:
 
   $ hg clone -u . a#stable ua
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -343,7 +342,6 @@ Same revision checked out in repo a and ua:
 Testing -u -r <branch>:
 
   $ hg clone -u . -r stable a ua
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -380,7 +378,6 @@ Same revision checked out in repo a and ua:
 Testing -r <branch>:
 
   $ hg clone -r stable a ua
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -442,7 +439,6 @@ iterable in addbranchrevs()
   > EOF
 
   $ python branchclone.py
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

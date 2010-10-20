@@ -236,7 +236,6 @@ Create partial clones
   $ rm -r empty
   $ hg init empty
   $ hg clone -r 3 test partial
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

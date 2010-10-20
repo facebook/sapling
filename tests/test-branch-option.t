@@ -18,7 +18,6 @@ test branch selection options
   $ hg tag -l z
   $ cd ..
   $ hg clone -r 0 branch branch2
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -97,7 +96,6 @@ clone branch b
 
   $ cd ..
   $ hg clone branch2#b branch3
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -114,7 +112,6 @@ clone branch b
 clone rev a branch b
 
   $ hg clone -r a branch2#b branch3
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

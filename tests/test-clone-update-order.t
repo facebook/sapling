@@ -24,7 +24,6 @@
   [255]
 
   $ hg clone -U .#other ../b -r 0 -r 1 -r 2 -b other
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -32,7 +31,6 @@
   $ rm -rf ../b
 
   $ hg clone -u . .#other ../b -r 0 -r 1 -r 2 -b other
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -42,7 +40,6 @@
   $ rm -rf ../b
 
   $ hg clone -u 0 .#other ../b -r 0 -r 1 -r 2 -b other
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -52,7 +49,6 @@
   $ rm -rf ../b
 
   $ hg clone -u 1 .#other ../b -r 0 -r 1 -r 2 -b other
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -62,7 +58,6 @@
   $ rm -rf ../b
 
   $ hg clone -u 2 .#other ../b -r 0 -r 1 -r 2 -b other
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -74,7 +69,6 @@
 Test -r mine ... mine is ignored:
 
   $ hg clone -u 2 .#other ../b -r mine -r 0 -r 1 -r 2 -b other
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -84,7 +78,6 @@ Test -r mine ... mine is ignored:
   $ rm -rf ../b
 
   $ hg clone .#other ../b -b default -b mine
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -94,7 +87,6 @@ Test -r mine ... mine is ignored:
   $ rm -rf ../b
 
   $ hg clone .#other ../b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

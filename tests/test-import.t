@@ -14,7 +14,6 @@
 import exported patch
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -45,7 +44,6 @@ import exported patch with external patcher
   > EOF
   $ chmod +x dummypatch.py
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -63,7 +61,6 @@ import exported patch with external patcher
 import of plain diff should fail without message
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -81,7 +78,6 @@ import of plain diff should fail without message
 import of plain diff should be ok with message
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -97,7 +93,6 @@ import of plain diff should be ok with message
 import of plain diff with specific date and user
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -130,7 +125,6 @@ import of plain diff with specific date and user
 import of plain diff should be ok with --no-commit
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -153,7 +147,6 @@ import of plain diff should be ok with --no-commit
 import of malformed plain diff should fail
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -175,7 +168,6 @@ used to hide a bug.
 
   $ mkdir dir
   $ hg clone -r0 a dir/b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -193,7 +185,6 @@ used to hide a bug.
 import from stdin
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -221,7 +212,6 @@ import two patches in one stream
 override commit message
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -247,7 +237,6 @@ override commit message
 plain diff in email, subject, message body
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -267,7 +256,6 @@ plain diff in email, subject, message body
 plain diff in email, no subject, message body
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -282,7 +270,6 @@ plain diff in email, no subject, message body
 plain diff in email, subject, no message body
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -297,7 +284,6 @@ plain diff in email, subject, no message body
 plain diff in email, no subject, no message body, should fail
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -314,7 +300,6 @@ plain diff in email, no subject, no message body, should fail
 hg export in email, should use patch header
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -345,7 +330,6 @@ The '---' tests the gitsendmail handling without proper mail headers
 plain diff in email, [PATCH] subject, message body with subject
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -394,7 +378,6 @@ importing a patch in a subdirectory failed at the commit stage
 hg import in a subdirectory
 
   $ hg clone -r0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

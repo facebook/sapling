@@ -27,7 +27,6 @@ check custom patch options are honored
 
   $ hg --cwd a export -o ../a.diff tip
   $ hg clone -r 0 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -64,7 +63,6 @@ Prepare source repo and patch:
 Clone and apply patch:
 
   $ hg clone -r 0 c d
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

@@ -49,7 +49,6 @@
   $ cd ..
 
   $ hg clone -r 3 a b
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
@@ -58,7 +57,6 @@
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg clone -r 4 a c
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

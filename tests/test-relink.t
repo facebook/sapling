@@ -40,7 +40,6 @@ Test files are read in binary mode
 clone and pull to break links
 
   $ hg clone --pull -r0 repo clone
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
