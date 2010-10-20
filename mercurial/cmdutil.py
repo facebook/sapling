@@ -117,7 +117,7 @@ def revsingle(repo, revspec, default='.'):
 
     l = revrange(repo, [revspec])
     if len(l) < 1:
-        raise util.Abort("empty revision set")
+        raise util.Abort(_('empty revision set'))
     return repo[l[-1]]
 
 def revpair(repo, revs):
