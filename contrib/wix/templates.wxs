@@ -76,6 +76,8 @@
             <File Id="gitweb.shortlog.tmpl"       Name="shortlog.tmpl" />
             <File Id="gitweb.summary.tmpl"        Name="summary.tmpl" />
             <File Id="gitweb.tags.tmpl"           Name="tags.tmpl" />
+            <File Id="gitweb.help.tmpl"           Name="help.tmpl" />
+            <File Id="gitweb.helptopics.tmpl"     Name="helptopics.tmpl" />
           </Component>
         </Directory>
 
@@ -101,6 +103,8 @@
             <File Id="monoblue.shortlog.tmpl"       Name="shortlog.tmpl" />
             <File Id="monoblue.summary.tmpl"        Name="summary.tmpl" />
             <File Id="monoblue.tags.tmpl"           Name="tags.tmpl" />
+            <File Id="monoblue.help.tmpl"           Name="help.tmpl" />
+            <File Id="monoblue.helptopics.tmpl"     Name="helptopics.tmpl" />
           </Component>
         </Directory>
 
@@ -125,6 +129,8 @@
             <File Id="paper.shortlog.tmpl"      Name="shortlog.tmpl" />
             <File Id="paper.shortlogentry.tmpl" Name="shortlogentry.tmpl" />
             <File Id="paper.tags.tmpl"          Name="tags.tmpl" />
+            <File Id="paper.help.tmpl"          Name="help.tmpl" />
+            <File Id="paper.helptopics.tmpl"    Name="helptopics.tmpl" />
           </Component>
         </Directory>
 

@@ -24,9 +24,9 @@
   <?define templates.root.guid = {111509CB-4C96-4035-80BC-F66A99CD5ACB} ?>
   <?define templates.atom.guid = {45FCDF84-DE27-44f4-AF6C-C41F5994AE0D} ?>
   <?define templates.coal.guid = {B63CCAAB-4EAF-43b4-901E-4BD13F5B78FC} ?>
-  <?define templates.gitweb.guid = {5B8DF9A1-F475-45a5-B8F0-FCEA04A3B074} ?>
-  <?define templates.monoblue.guid = {7BA492F4-98F3-4943-A981-0BFE1690CF6E} ?>
-  <?define templates.paper.guid = {294F69D5-EC96-4fa7-8569-DD76C9993F47} ?>
+  <?define templates.gitweb.guid = {D8BFE3ED-06DD-4C4D-A00D-6D825955F922} ?>
+  <?define templates.monoblue.guid = {A394B4D5-2AF7-4AAC-AEA8-E92176E5501E} ?>
+  <?define templates.paper.guid = {7C94B80D-FD0D-44E7-8489-F30A9E20A47F} ?>
   <?define templates.raw.guid = {04DE03A2-FBFD-4c5f-8DEA-5436DDF4689D} ?>
   <?define templates.rss.guid = {A7D608DE-0CF6-44f4-AF1E-EE30CC237FDA} ?>
   <?define templates.spartan.guid = {80222625-FA8F-44b1-86CE-1781EF375D09} ?>
