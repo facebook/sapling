@@ -350,8 +350,8 @@ class converter(object):
                 if "\n" in desc:
                     desc = desc.splitlines()[0]
                 # convert log message to local encoding without using
-                # tolocal() because encoding.encoding conver() use it as
-                # 'utf-8'
+                # tolocal() because the encoding.encoding convert()
+                # uses is 'utf-8'
                 self.ui.status("%d %s\n" % (num, recode(desc)))
                 self.ui.note(_("source: %s\n") % recode(c))
                 self.ui.progress(_('converting'), i, unit=_('revisions'),
