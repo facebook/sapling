@@ -2586,12 +2586,6 @@ def merge(ui, repo, node=None, **opts):
     if not node:
         node = opts.get('rev')
 
-    t = opts.get('tool')
-    if t:
-        if 'HGMERGE' in os.environ:
-            os.environ['HGMERGE'] = ''
-        ui.setconfig('ui', 'merge', t)
-
     if not node:
         branch = repo.changectx(None).branch()
         bheads = repo.branchheads(branch)
@@ -2632,7 +2626,12 @@ def merge(ui, repo, node=None, **opts):
         displayer.close()
         return 0
 
-    return hg.merge(repo, node, force=opts.get('force'))
+    try:
+        # ui.forcemerge is an internal variable, do not document
+        ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+        return hg.merge(repo, node, force=opts.get('force'))
+    finally:
+        ui.setconfig('ui', 'forcemerge', '')
 
 def outgoing(ui, repo, dest=None, **opts):
     """show changesets not found in the destination
@@ -2979,12 +2978,6 @@ def resolve(ui, repo, *pats, **opts):
         raise util.Abort(_('no files or directories specified; '
                            'use --all to remerge all files'))
 
-    t = opts.get('tool')
-    if t:
-        if 'HGMERGE' in os.environ:
-            os.environ['HGMERGE'] = ''
-        ui.setconfig('ui', 'merge', t)
-
     ms = mergemod.mergestate(repo)
     m = cmdutil.match(repo, pats, opts)
     ret = 0
@@ -3010,9 +3003,13 @@ def resolve(ui, repo, *pats, **opts):
                 a = repo.wjoin(f)
                 util.copyfile(a, a + ".resolve")
 
-                # resolve file
-                if ms.resolve(f, wctx, mctx):
-                    ret = 1
+                try:
+                    # resolve file
+                    ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                    if ms.resolve(f, wctx, mctx):
+                        ret = 1
+                finally:
+                    ui.setconfig('ui', 'forcemerge', '')
 
                 # replace filemerge's .orig file with our resolve file
                 util.rename(a + ".resolve", a + ".orig")

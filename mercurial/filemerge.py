@@ -54,7 +54,17 @@ def _picktool(repo, ui, path, binary, symlink):
             return True
         return False
 
-    # HGMERGE takes precedence
+    # forcemerge comes from command line arguments, highest priority
+    force = ui.config('ui', 'forcemerge')
+    if force:
+        toolpath = _findtool(ui, force)
+        if toolpath:
+            return (force, '"' + toolpath + '"')
+        else:
+            # mimic HGMERGE if given tool not found
+            return (force, force)
+
+    # HGMERGE takes next precedence
     hgmerge = os.environ.get("HGMERGE")
     if hgmerge:
         return (hgmerge, hgmerge)

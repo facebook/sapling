@@ -506,6 +506,49 @@ Premerge
   $ echo
   
 
+ui.merge specifies internal:other but is overruled by --tool=false
+
+  $ domerge -r 2 --config ui.merge=internal:other --tool=false
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+  # hg merge -r 2 --config ui.merge=internal:other --tool=false
+  merging f
+  merging f failed!
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  # cat f
+  revision 1
+  space
+  # hg stat
+  M f
+  ? f.orig
+  
+HGMERGE specifies internal:other but is overruled by --tool=false
+
+  $ HGMERGE=internal:other ; export HGMERGE
+  $ domerge -r 2 --tool=false
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+  # hg merge -r 2 --tool=false
+  merging f
+  merging f failed!
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  # cat f
+  revision 1
+  space
+  # hg stat
+  M f
+  ? f.orig
+  
+  $ unset HGMERGE # make sure HGMERGE doesn't interfere with remaining tests
+
 Default is silent simplemerge:
 
   $ domerge -r 3

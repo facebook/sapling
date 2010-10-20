@@ -7,7 +7,6 @@
   > f.write("merge %s %s %s" % (sys.argv[1], sys.argv[2], sys.argv[3]))
   > f.close()
   > EOF
-  $ HGMERGE="python ../merge"; export HGMERGE
 
 perform a test merge with possible renaming
 args:
@@ -49,7 +48,7 @@ $4 = expected result
   >     echo "--------------"
   >     echo "test L:$1 R:$2 W:$3 - $4"
   >     echo "--------------"
-  >     hg merge -y --debug --traceback
+  >     hg merge -y --debug --traceback --tool="python ../merge"
   > 
   >     echo "--------------"
   >     hg status -camC -X rev
