@@ -2491,7 +2491,7 @@ def strip(ui, repo, *revs, **opts):
     cl = repo.changelog
     revs = set(cmdutil.revrange(repo, revs))
     if not revs:
-        raise util.Abort("empty revision set")
+        raise util.Abort(_('empty revision set'))
 
     descendants = set(cl.descendants(*revs))
     strippedrevs = revs.union(descendants)
