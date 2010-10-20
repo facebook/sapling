@@ -856,20 +856,8 @@ User interface controls.
     Template string for commands that print changesets.
 ``merge``
     The conflict resolution program to use during a manual merge.
-    There are some internal tools available:
-
-    ``internal:local``
-        keep the local version
-    ``internal:other``
-        use the other version
-    ``internal:merge``
-        use the internal non-interactive merge tool
-    ``internal:fail``
-        fail to merge
-
-For more information on configuring merge tools see the
-merge-tools_ section.
-
+    For more information on merge tools see :hg:`help merge-tools`.
+    For configuring merge tools see the merge-tools_ section.
 ``patch``
     command to use to apply patches. Look for ``gpatch`` or ``patch`` in
     PATH if unset.

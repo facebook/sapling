@@ -1,0 +1,85 @@
+To merge files Mercurial uses merge tools.
+
+A merge tool combines two different versions of a file into a merged
+file. Merge tools are given the two files and the greatest common
+ancestor of the two file versions, so they can determine the changes
+made on both branches.
+
+The merge tools are used both for :hg:`resolve` and :hg:`merge`.
+
+Usually, the merge tool tries to automatically, by combining all the
+non-overlapping changes that occurred separately in the two different
+evolutions of the same initial base file. Furthermore, some
+interactive merge programs make it easier to manually resolve
+conflicting merges, either in a graphical way, or by inserting some
+conflict markers. Mercurial does not include any interactive merge
+programs but relies on external tools for that. External merge tools
+and their properties and usage is configured in merge-tools section -
+see hgrc(5).
+
+There are a some internal merge tools which can be used. The internal
+merge tools are:
+
+``internal:merge``
+   Uses the internal non-interactive merge tool for merging files.
+
+``internal:fail``
+   Rather than attempting to merge files that were modified on both
+   branches, it marks these files as unresolved. Then the resolve
+   command must be used to mark files resolved.
+
+``internal:local``
+   Uses the local version of files as the merged version.
+
+``internal:other``
+   Uses the remote version of files as the merged version.
+
+``internal:prompt``
+   Asks the user which of the local or the other version to keep as
+   the merged version.
+
+``internal:dump``
+   Creates three versions of the files to merge, containing the
+   contents of local, other and base. These files can then be used to
+   perform a merge manually. If the file merged is name ``a.txt``,
+   these files will accordingly be named ``a.txt.local``,
+   ``a.txt.other`` and ``a.txt.base`` and they will be placed in the
+   same directory as the file to merge.
+
+How Mercurial decides which merge program to use
+
+1. If the ``HGMERGE`` environment variable is present, it is used. If
+   specified it must be either an executable path or the name of an
+   application in your executable search path.
+
+2. If the filename of the file to be merged matches any of the
+   patterns in the merge-patterns configuration section, then the
+   corresponding merge tool is used, unless the file to be merged is a
+   symlink. Here binary capabilities of the merge tool are not
+   considered.
+
+3. If ui.merge is set, it is used.
+
+4. If any merge tools are present in the merge-tools configuration
+   section, and any of the tools can be found on the system, the
+   priority settings are used to determine which one to use. Binary,
+   symlink and GUI capabilities do also have to match.
+
+5. If a program named ``hgmerge`` exists on the system, it is used.
+
+6. If the file to be merged is not binary and is not a symlink, then
+   ``internal:merge`` is used.
+
+7. The merge fails.
+
+.. note::
+   After selecting a merge program, Mercurial will by default attempt
+   to merge the files using a simple merge algorithm first, to see if
+   they can be merged without conflicts. Only if there are conflicting
+   changes Mercurial will actually execute the merge program. Whether
+   to use the simple merge algorithm first can be controlled be the
+   premerge setting of the merge tool, which is enabled by default
+   unless the file is binary or symlink.
+
+See the merge-tools and ui sections of hgrc(5) for details on
+configuration of merge tools.
