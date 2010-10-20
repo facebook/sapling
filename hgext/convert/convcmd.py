@@ -344,7 +344,7 @@ class converter(object):
             c = None
 
             self.ui.status(_("converting...\n"))
-            for i, c in enumerate(t):                
+            for i, c in enumerate(t):
                 num -= 1
                 desc = self.commitcache[c].desc
                 if "\n" in desc:
