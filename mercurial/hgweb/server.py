@@ -214,6 +214,26 @@ class _httprequesthandleropenssl(_httprequesthandler):
             self.close_connection = True
             pass
 
+class _httprequesthandlerssl(_httprequesthandler):
+    """HTTPS handler based on Pythons ssl module (introduced in 2.6)"""
+
+    url_scheme = 'https'
+
+    @staticmethod
+    def preparehttpserver(httpserver, ssl_cert):
+        try:
+            import ssl
+            ssl.wrap_socket
+        except ImportError:
+            raise util.Abort(_("SSL support is unavailable"))
+        httpserver.socket = ssl.wrap_socket(httpserver.socket, server_side=True,
+            certfile=ssl_cert, ssl_version=ssl.PROTOCOL_SSLv3)
+
+    def setup(self):
+        self.connection = self.request
+        self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
+        self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
+
 try:
     from threading import activeCount
     _mixin = SocketServer.ThreadingMixIn
@@ -265,7 +285,10 @@ class IPv6HTTPServer(MercurialHTTPServer):
 def create_server(ui, app):
 
     if ui.config('web', 'certificate'):
-        handler = _httprequesthandleropenssl
+        if sys.version_info >= (2, 6):
+            handler = _httprequesthandlerssl
+        else:
+            handler = _httprequesthandleropenssl
     else:
         handler = _httprequesthandler
 
