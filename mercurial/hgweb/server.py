@@ -33,9 +33,14 @@ class _error_logger(object):
         for msg in seq:
             self.handler.log_error("HG error:  %s", msg)
 
-class _hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     url_scheme = 'http'
+
+    @staticmethod
+    def preparehttpserver(httpserver, ssl_cert):
+        """Prepare .socket of new HTTPServer instance"""
+        pass
 
     def __init__(self, *args, **kargs):
         self.protocol_version = 'HTTP/1.1'
@@ -168,9 +173,25 @@ class _hgwebhandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write(data)
         self.wfile.flush()
 
-class _shgwebhandler(_hgwebhandler):
+class _httprequesthandleropenssl(_httprequesthandler):
+    """HTTPS handler based on pyOpenSSL"""
 
     url_scheme = 'https'
+
+    @staticmethod
+    def preparehttpserver(httpserver, ssl_cert):
+        try:
+            import OpenSSL
+            OpenSSL.SSL.Context
+        except ImportError:
+            raise util.Abort(_("SSL support is unavailable"))
+        ctx = OpenSSL.SSL.Context(OpenSSL.SSL.SSLv23_METHOD)
+        ctx.use_privatekey_file(ssl_cert)
+        ctx.use_certificate_file(ssl_cert)
+        sock = socket.socket(httpserver.address_family, httpserver.socket_type)
+        httpserver.socket = OpenSSL.SSL.Connection(ctx, sock)
+        httpserver.server_bind()
+        httpserver.server_activate()
 
     def setup(self):
         self.connection = self.request
@@ -178,18 +199,18 @@ class _shgwebhandler(_hgwebhandler):
         self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
 
     def do_write(self):
-        from OpenSSL.SSL import SysCallError
+        import OpenSSL
         try:
-            _hgwebhandler.do_write(self)
-        except SysCallError, inst:
+            _httprequesthandler.do_write(self)
+        except OpenSSL.SSL.SysCallError, inst:
             if inst.args[0] != errno.EPIPE:
                 raise
 
     def handle_one_request(self):
-        from OpenSSL.SSL import SysCallError, ZeroReturnError
+        import OpenSSL
         try:
-            _hgwebhandler.handle_one_request(self)
-        except (SysCallError, ZeroReturnError):
+            _httprequesthandler.handle_one_request(self)
+        except (OpenSSL.SSL.SysCallError, OpenSSL.SSL.ZeroReturnError):
             self.close_connection = True
             pass
 
@@ -219,19 +240,7 @@ class MercurialHTTPServer(object, _mixin, BaseHTTPServer.HTTPServer):
         self.daemon_threads = True
         self.application = app
 
-        ssl_cert = ui.config('web', 'certificate')
-        if ssl_cert:
-            try:
-                from OpenSSL import SSL
-                ctx = SSL.Context(SSL.SSLv23_METHOD)
-            except ImportError:
-                raise util.Abort(_("SSL support is unavailable"))
-            ctx.use_privatekey_file(ssl_cert)
-            ctx.use_certificate_file(ssl_cert)
-            sock = socket.socket(self.address_family, self.socket_type)
-            self.socket = SSL.Connection(ctx, sock)
-            self.server_bind()
-            self.server_activate()
+        handler.preparehttpserver(self, ui.config('web', 'certificate'))
 
         prefix = ui.config('web', 'prefix', '')
         if prefix:
@@ -256,9 +265,9 @@ class IPv6HTTPServer(MercurialHTTPServer):
 def create_server(ui, app):
 
     if ui.config('web', 'certificate'):
-        handler = _shgwebhandler
+        handler = _httprequesthandleropenssl
     else:
-        handler = _hgwebhandler
+        handler = _httprequesthandler
 
     if ui.configbool('web', 'ipv6'):
         cls = IPv6HTTPServer
