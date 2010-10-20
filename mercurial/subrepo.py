@@ -192,7 +192,7 @@ def _abssource(repo, push=False, abort=True):
         if repo.ui.config('paths', 'default'):
             return repo.ui.config('paths', 'default')
     if abort:
-        raise util.Abort(_("default path for subrepository %s not found") % 
+        raise util.Abort(_("default path for subrepository %s not found") %
             reporelpath(repo))
 
 def itersubrepos(ctx1, ctx2):

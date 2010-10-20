@@ -489,7 +489,7 @@ class httphandler(keepalive.HTTPHandler):
 def _verifycert(cert, hostname):
     '''Verify that cert (in socket.getpeercert() format) matches hostname.
     CRLs and subjectAltName are not handled.
-    
+
     Returns error message if any problems are found and None on success.
     '''
     if not cert:

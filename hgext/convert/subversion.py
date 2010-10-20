@@ -651,7 +651,7 @@ class svn_source(converter_source):
                 else:
                     self.ui.debug('unknown path in revision %d: %s\n' % \
                                   (revnum, path))
-            elif kind == svn.core.svn_node_dir:                
+            elif kind == svn.core.svn_node_dir:
                 if ent.action == 'M':
                     # If the directory just had a prop change,
                     # then we shouldn't need to look for its children.
@@ -823,7 +823,7 @@ class svn_source(converter_source):
     def getfile(self, file, rev):
         # TODO: ra.get_file transmits the whole file instead of diffs.
         if file in self.removed:
-            raise IOError()         
+            raise IOError()
         mode = ''
         try:
             new_module, revnum = self.revsplit(rev)[1:]
@@ -892,7 +892,7 @@ class svn_source(converter_source):
         finally:
             if module is not None:
                 self.reparent(prevmodule)
-    
+
     def _getlog(self, paths, start, end, limit=0, discover_changed_paths=True,
                 strict_node_history=False):
         # Normalize path names, svn >= 1.5 only wants paths relative to

@@ -407,7 +407,7 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
 
 def _getlocal(ui, rpath):
     """Return (path, local ui object) for the given target path.
-    
+
     Takes paths in [cwd]/.hg/hgrc into account."
     """
     try:
