@@ -14,7 +14,8 @@ libdir = '@LIBDIR@'
 
 if libdir != '@' 'LIBDIR' '@':
     if not os.path.isabs(libdir):
-        libdir = os.path.join(os.path.dirname(__file__), libdir)
+        libdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                              libdir)
         libdir = os.path.abspath(libdir)
     sys.path.insert(0, libdir)
 
