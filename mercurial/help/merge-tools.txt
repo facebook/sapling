@@ -7,8 +7,9 @@ made on both branches.
 
 The merge tools are used both for :hg:`resolve` and :hg:`merge`.
 
-Usually, the merge tool tries to automatically, by combining all the
-non-overlapping changes that occurred separately in the two different
+Usually, the merge tool tries to automatically reconcile the files by
+combining all the non-overlapping changes that occurred separately in
+the two different
 evolutions of the same initial base file. Furthermore, some
 interactive merge programs make it easier to manually resolve
 conflicting merges, either in a graphical way, or by inserting some
@@ -41,10 +42,10 @@ merge tools are:
 ``internal:dump``
    Creates three versions of the files to merge, containing the
    contents of local, other and base. These files can then be used to
-   perform a merge manually. If the file merged is name ``a.txt``,
-   these files will accordingly be named ``a.txt.local``,
+   perform a merge manually. If the file to be merged is named
+   ``a.txt``, these files will accordingly be named ``a.txt.local``,
    ``a.txt.other`` and ``a.txt.base`` and they will be placed in the
-   same directory as the file to merge.
+   same directory as ``a.txt``.
 
 How Mercurial decides which merge program to use
 
@@ -77,8 +78,8 @@ How Mercurial decides which merge program to use
    to merge the files using a simple merge algorithm first, to see if
    they can be merged without conflicts. Only if there are conflicting
    changes Mercurial will actually execute the merge program. Whether
-   to use the simple merge algorithm first can be controlled be the
-   premerge setting of the merge tool, which is enabled by default
+   to use the simple merge algorithm first can be controlled by the
+   premerge setting of the merge tool. Premerge is enabled by default
    unless the file is binary or symlink.
 
 See the merge-tools and ui sections of hgrc(5) for details on
