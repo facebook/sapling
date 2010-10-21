@@ -98,7 +98,7 @@ i18n/hg.pot: $(PYTHON_FILES) mercurial/help/*.txt
 	  xgettext --package-name "Mercurial" \
 	  --msgid-bugs-address "<mercurial-devel@selenic.com>" \
 	  --copyright-holder "Matt Mackall <mpm@selenic.com> and others" \
-	  --from-code ISO-8859-1 --join --sort-by-file \
+	  --from-code ISO-8859-1 --join --sort-by-file --add-comments=i18n: \
 	  -d hg -p i18n -o hg.pot
 	$(PYTHON) i18n/posplit i18n/hg.pot
 
