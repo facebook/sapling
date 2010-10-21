@@ -2279,6 +2279,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     d = opts["base"]
     strip = opts["strip"]
     wlock = lock = None
+    msgs = []
 
     def tryone(ui, hunk):
         tmpname, message, user, date, branch, nodeid, p1, p2 = \
@@ -2329,7 +2330,10 @@ def import_(ui, repo, patch1, *patches, **opts):
             finally:
                 files = cmdutil.updatedir(ui, repo, files,
                                           similarity=sim / 100.0)
-            if not opts.get('no_commit'):
+            if opts.get('no_commit'):
+                if message:
+                    msgs.append(message)
+            else:
                 if opts.get('exact'):
                     m = None
                 else:
@@ -2378,6 +2382,8 @@ def import_(ui, repo, patch1, *patches, **opts):
             if not haspatch:
                 raise util.Abort(_('no diffs found'))
 
+        if msgs:
+            repo.opener('last-message.txt', 'wb').write('* * *\n'.join(msgs))
     finally:
         release(lock, wlock)
 
