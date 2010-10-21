@@ -2438,7 +2438,7 @@ def log(ui, repo, *pats, **opts):
     ancestors or descendants of the starting revision. --follow-first
     only follows the first parent of merge revisions.
 
-    If no revision range is specified, the default is tip:0 unless
+    If no revision range is specified, the default is ``tip:0`` unless
     --follow is set, in which case the working directory parent is
     used as the starting revision. You can specify a revision set for
     log, see :hg:`help revsets` for more information.
