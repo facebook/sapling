@@ -227,7 +227,7 @@ class _httprequesthandlerssl(_httprequesthandler):
         except ImportError:
             raise util.Abort(_("SSL support is unavailable"))
         httpserver.socket = ssl.wrap_socket(httpserver.socket, server_side=True,
-            certfile=ssl_cert, ssl_version=ssl.PROTOCOL_SSLv3)
+            certfile=ssl_cert, ssl_version=ssl.PROTOCOL_SSLv23)
 
     def setup(self):
         self.connection = self.request
