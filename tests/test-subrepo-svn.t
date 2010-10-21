@@ -69,6 +69,18 @@ add first svn sub with leading whitespaces
   $ hg ci -m1
   committing subrepository s
 
+make sure we avoid empty commits (issue2445)
+
+  $ hg sum
+  parent: 1:* tip (glob)
+   1
+  branch: default
+  commit: (clean)
+  update: (current)
+  $ hg ci -moops
+  nothing changed
+  [1]
+
 debugsub
 
   $ hg debugsub
@@ -80,6 +92,12 @@ change file in svn and hg, commit
 
   $ echo a >> a
   $ echo alpha >> s/alpha
+  $ hg sum
+  parent: 1:* tip (glob)
+   1
+  branch: default
+  commit: 1 modified, 1 subrepos
+  update: (current)
   $ hg commit -m 'Message!'
   committing subrepository s
   Sending*s/alpha (glob)

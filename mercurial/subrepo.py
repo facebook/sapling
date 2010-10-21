@@ -491,7 +491,7 @@ class svnsubrepo(abstractsubrepo):
         entries = doc.getElementsByTagName('entry')
         if not entries:
             return 0
-        return int(entries[0].getAttribute('revision') or 0)
+        return str(entries[0].getAttribute('revision')) or '0'
 
     def _wcchanged(self):
         """Return (changes, extchanges) where changes is True
