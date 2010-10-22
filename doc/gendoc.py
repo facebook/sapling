@@ -130,8 +130,13 @@ def commandprinter(ui, cmdtable, sectionfunc):
         d = get_cmd(h[f], cmdtable)
         sectionfunc(ui, d['cmd'])
         # synopsis
-        ui.write("``%s``\n" % d['synopsis'].replace("hg ","", 1))
-        ui.write("\n")
+        ui.write("::\n\n")
+        synopsislines = d['synopsis'].splitlines()
+        for line in synopsislines:
+            # some commands (such as rebase) have a multi-line
+            # synopsis
+            ui.write("   %s\n" % line.replace("hg ","", 1))
+        ui.write('\n')
         # description
         ui.write("%s\n\n" % d['desc'][1])
         # options
