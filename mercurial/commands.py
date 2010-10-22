@@ -2943,7 +2943,7 @@ def resolve(ui, repo, *pats, **opts):
 
     The resolve command can be used in the following ways:
 
-    - :hg:`resolve [--tool] FILE...`: attempt to re-merge the specified
+    - :hg:`resolve [--tool TOOL] FILE...`: attempt to re-merge the specified
       files, discarding any previous merge attempts. Re-merging is not
       performed for files already marked as resolved. Use ``--all/-a``
       to selects all unresolved files. ``--tool`` can be used to specify
