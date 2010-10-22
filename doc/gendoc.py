@@ -135,7 +135,7 @@ def commandprinter(ui, cmdtable, sectionfunc):
         for line in synopsislines:
             # some commands (such as rebase) have a multi-line
             # synopsis
-            ui.write("   %s\n" % line.replace("hg ","", 1))
+            ui.write("   %s\n" % line)
         ui.write('\n')
         # description
         ui.write("%s\n\n" % d['desc'][1])
