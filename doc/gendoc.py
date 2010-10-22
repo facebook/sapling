@@ -79,7 +79,7 @@ def show_doc(ui):
     # print options
     section(ui, _("Options"))
     for optstr, desc in get_opts(globalopts):
-        ui.write("%s\n%s\n\n" % (optstr, desc))
+        ui.write("%s\n    %s\n\n" % (optstr, desc))
 
     # print cmds
     section(ui, _("Commands"))
