@@ -1,5 +1,3 @@
-  $ HGMERGE=true; export HGMERGE
-
   $ hg init basic
   $ cd basic
 
@@ -20,7 +18,7 @@ basic operation
   $ echo b >> a
   $ hg commit -d '1 0' -m b
 
-  $ hg backout -d '2 0' tip
+  $ hg backout -d '2 0' tip --tool=true
   reverting a
   changeset 2:2929462c3dff backs out changeset 1:a820f4f40a57
   $ cat a
@@ -39,7 +37,7 @@ file that was removed is recreated
   $ hg rm a
   $ hg commit -d '1 0' -m b
 
-  $ hg backout -d '2 0' tip
+  $ hg backout -d '2 0' tip --tool=true
   adding a
   changeset 2:de31bdc76c0d backs out changeset 1:76862dcce372
   $ cat a
@@ -47,7 +45,7 @@ file that was removed is recreated
 
 backout of backout is as if nothing happened
 
-  $ hg backout -d '3 0' --merge tip
+  $ hg backout -d '3 0' --merge tip --tool=true
   removing a
   changeset 3:7f6d0f120113 backs out changeset 2:de31bdc76c0d
   $ cat a 2>/dev/null || echo cat: a: No such file or directory
@@ -102,7 +100,7 @@ remove line 1
   $ echo line 3 >> a
   $ hg commit -d '2 0' -m c
 
-  $ hg backout --merge -d '3 0' 1
+  $ hg backout --merge -d '3 0' 1 --tool=true
   reverting a
   created new head
   changeset 3:26b8ccb9ad91 backs out changeset 1:5a50a024c182
@@ -133,7 +131,7 @@ backout should not back out subsequent changesets
   adding b
 
 without --merge
-  $ hg backout -d '3 0' 1
+  $ hg backout -d '3 0' 1 --tool=true
   reverting a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg locate b
@@ -144,7 +142,7 @@ without --merge
   b
 
 with --merge
-  $ hg backout --merge -d '3 0' 1
+  $ hg backout --merge -d '3 0' 1 --tool=true
   reverting a
   created new head
   changeset 3:3202beb76721 backs out changeset 1:22bca4c721e5
@@ -201,7 +199,7 @@ backout of non-merge with parent should fail
 
 backout with valid parent should be ok
 
-  $ hg backout -d '5 0' --parent 2 4
+  $ hg backout -d '5 0' --parent 2 4 --tool=true
   removing d
   changeset 5:10e5328c8435 backs out changeset 4:b2f3bb92043e
 
@@ -210,7 +208,7 @@ backout with valid parent should be ok
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg backout -d '6 0' --parent 3 4
+  $ hg backout -d '6 0' --parent 3 4 --tool=true
   removing c
   changeset 5:033590168430 backs out changeset 4:b2f3bb92043e
 
@@ -236,7 +234,7 @@ named branches
   adding file2
 
 without --merge
-  $ hg backout -r 1
+  $ hg backout -r 1 --tool=true
   removing file1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch
@@ -248,7 +246,7 @@ without --merge
 
 with --merge
   $ hg update -qC
-  $ hg backout --merge -d '3 0' -r 1 -m 'backout on branch1'
+  $ hg backout --merge -d '3 0' -r 1 -m 'backout on branch1' --tool=true
   removing file1
   created new head
   changeset 3:d4e8f6db59fb backs out changeset 1:bf1602f437f3

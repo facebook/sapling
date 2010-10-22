@@ -278,7 +278,11 @@ def backout(ui, repo, node=None, rev=None, **opts):
     revert_opts['no_backup'] = None
     revert(ui, repo, **revert_opts)
     if not opts.get('merge') and op1 != node:
-        return hg.update(repo, op1)
+        try:
+            ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+            return hg.update(repo, op1)
+        finally:
+            ui.setconfig('ui', 'forcemerge', '')
 
     commit_opts = opts.copy()
     commit_opts['addremove'] = False
@@ -295,7 +299,11 @@ def backout(ui, repo, node=None, rev=None, **opts):
         hg.clean(repo, op1, show_stats=False)
         ui.status(_('merging with changeset %s\n')
                   % nice(repo.changelog.tip()))
-        return hg.merge(repo, hex(repo.changelog.tip()))
+        try:
+            ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+            return hg.merge(repo, hex(repo.changelog.tip()))
+        finally:
+            ui.setconfig('ui', 'forcemerge', '')
     return 0
 
 def bisect(ui, repo, rev=None, extra=None, command=None,
@@ -4005,6 +4013,8 @@ table = {
            _('merge with old dirstate parent after backout')),
           ('', 'parent', '',
            _('parent to choose when backing out merge'), _('REV')),
+          ('t', 'tool', '',
+           _('specify merge tool')),
           ('r', 'rev', '',
            _('revision to backout'), _('REV')),
          ] + walkopts + commitopts + commitopts2,
