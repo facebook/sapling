@@ -8,7 +8,7 @@ PREFIX=/usr/local
 export PREFIX
 PYTHON=python
 PURE=
-PYTHON_FILES:=$(shell find mercurial hgext doc -name '*.py')
+PYFILES:=$(shell find mercurial hgext doc -name '*.py')
 
 help:
 	@echo 'Commonly used make targets:'
@@ -85,7 +85,7 @@ test-%:
 
 update-pot: i18n/hg.pot
 
-i18n/hg.pot: $(PYTHON_FILES) mercurial/help/*.txt
+i18n/hg.pot: $(PYFILES) mercurial/help/*.txt
 	$(PYTHON) i18n/hggettext mercurial/commands.py \
 	  hgext/*.py hgext/*/__init__.py mercurial/help/*.txt > i18n/hg.pot
         # All strings marked for translation in Mercurial contain
@@ -94,7 +94,7 @@ i18n/hg.pot: $(PYTHON_FILES) mercurial/help/*.txt
         # parse them even though they are not marked for translation.
         # Extracting with an explicit encoding of ISO-8859-1 will make
         # xgettext "parse" and ignore them.
-	echo $(PYTHON_FILES) | xargs \
+	echo $(PYFILES) | xargs \
 	  xgettext --package-name "Mercurial" \
 	  --msgid-bugs-address "<mercurial-devel@selenic.com>" \
 	  --copyright-holder "Matt Mackall <mpm@selenic.com> and others" \
