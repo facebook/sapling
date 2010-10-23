@@ -538,6 +538,9 @@ def updatecurbookmark(orig, ui, repo, *args, **opts):
     return res
 
 def bmrevset(repo, subset, x):
+    """``bookmark([name])``
+    The named bookmark or all bookmarks.
+    """
     args = revset.getargs(x, 0, 1, _('bookmark takes one or no arguments'))
     if args:
         bm = revset.getstring(args[0],
@@ -548,14 +551,9 @@ def bmrevset(repo, subset, x):
         return [r for r in subset if r == bmrev]
     bms = set([repo.changelog.rev(bin(r)) for r in listbookmarks(repo).values()])
     return [r for r in subset if r in bms]
-revset.symbols['bookmark'] = bmrevset
 
-def revsetdoc():
-    doc = help.loaddoc('revsets')()
-    doc += _('\nAdded by the bookmarks extension:\n\n'
-           '``bookmark([name])``\n'
-           '  The named bookmark or all bookmarks.\n')
-    return doc
+def extsetup(ui):
+    revset.symbols['bookmark'] = bmrevset
 
 cmdtable = {
     "bookmarks":

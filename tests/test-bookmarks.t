@@ -83,6 +83,8 @@ bookmarks revset
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
+  $ hg help revsets | grep 'bookmark('
+      "bookmark([name])"
 
 bookmarks X and X2 moved to rev 1, Y at rev -1
 
