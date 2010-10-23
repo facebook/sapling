@@ -756,3 +756,30 @@ Test a help topic
       The reserved name "." indicates the working directory parent. If no
       working directory is checked out, it is equivalent to null. If an
       uncommitted merge is in progress, "." is the revision of the first parent.
+
+Test help hooks
+
+  $ cat > helphook1.py <<EOF
+  > from mercurial import help
+  > 
+  > def rewrite(topic, doc):
+  >     return doc + '\nhelphook1\n'
+  > 
+  > def extsetup(ui):
+  >     help.addtopichook('revsets', rewrite)
+  > EOF
+  $ cat > helphook2.py <<EOF
+  > from mercurial import help
+  > 
+  > def rewrite(topic, doc):
+  >     return doc + '\nhelphook2\n'
+  > 
+  > def extsetup(ui):
+  >     help.addtopichook('revsets', rewrite)
+  > EOF
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "helphook1 = `pwd`/helphook1.py" >> $HGRCPATH
+  $ echo "helphook2 = `pwd`/helphook2.py" >> $HGRCPATH
+  $ hg help revsets | grep helphook
+      helphook1
+      helphook2
