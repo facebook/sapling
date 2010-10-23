@@ -46,4 +46,4 @@ install: man
 	done
 
 clean:
-	$(RM) $(MAN) $(MAN:%=%.html) *.[0-9].gendoc.txt MANIFEST
+	$(RM) $(MAN) $(HTML) hg.1.gendoc.txt MANIFEST
