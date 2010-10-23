@@ -213,7 +213,7 @@ def patchbomb(ui, repo, *revs, **opts):
       hg email -o -m mbox &&    # generate an mbox file...
         mutt -R -f mbox         # ... and view it with mutt
       hg email -o -m mbox &&    # generate an mbox file ...
-        formail -s sendmail \   # ... and use formail to send from the mbox
+        formail -s sendmail \\   # ... and use formail to send from the mbox
           -bm -t < mbox         # ... using sendmail
 
     Before using this command, you will need to enable email in your
