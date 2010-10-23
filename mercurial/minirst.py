@@ -292,6 +292,17 @@ def addmargins(blocks):
             i += 2
     return blocks
 
+def prunecomments(blocks):
+    """Remove comments."""
+    i = 0
+    while i < len(blocks):
+        b = blocks[i]
+        if b['type'] == 'paragraph' and b['lines'][0].startswith('.. '):
+            del blocks[i]
+        else:
+            i += 1
+    return blocks
+
 _admonitionre = re.compile(r"\.\. (admonition|attention|caution|danger|"
                            r"error|hint|important|note|tip|warning)::",
                            flags=re.IGNORECASE)
@@ -405,6 +416,7 @@ def format(text, width, indent=0, keep=None):
     blocks = hgrole(blocks)
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
+    blocks = prunecomments(blocks)
     blocks = addmargins(blocks)
     blocks = findadmonitions(blocks)
     text = '\n'.join(formatblock(b, width) for b in blocks)
@@ -432,6 +444,7 @@ if __name__ == "__main__":
     blocks = debug(splitparagraphs, blocks)
     blocks = debug(updatefieldlists, blocks)
     blocks = debug(findsections, blocks)
+    blocks = debug(prunecomments, blocks)
     blocks = debug(addmargins, blocks)
     blocks = debug(findadmonitions, blocks)
     print '\n'.join(formatblock(b, 30) for b in blocks)
