@@ -2029,6 +2029,8 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
         ui.write(_('use "hg help extensions" for information on enabling '
                    'extensions\n'))
 
+    help.addtopichook('revsets', revset.makedoc)
+
     if name and name != 'shortlist':
         i = None
         if unknowncmd:
