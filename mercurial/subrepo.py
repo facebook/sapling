@@ -490,7 +490,7 @@ class svnsubrepo(abstractsubrepo):
         doc = xml.dom.minidom.parseString(output)
         entries = doc.getElementsByTagName('entry')
         if not entries:
-            return 0
+            return '0'
         return str(entries[0].getAttribute('revision')) or '0'
 
     def _wcchanged(self):

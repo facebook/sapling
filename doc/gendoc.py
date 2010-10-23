@@ -79,7 +79,7 @@ def show_doc(ui):
     # print options
     section(ui, _("Options"))
     for optstr, desc in get_opts(globalopts):
-        ui.write("%s\n%s\n\n" % (optstr, desc))
+        ui.write("%s\n    %s\n\n" % (optstr, desc))
 
     # print cmds
     section(ui, _("Commands"))
@@ -97,7 +97,7 @@ def show_doc(ui):
         ui.write("\n")
 
     section(ui, _("Extensions"))
-    ui.write(_("This section contains help for extensions that is distributed "
+    ui.write(_("This section contains help for extensions that are distributed "
                "together with Mercurial. Help for other extensions is available "
                "in the help system."))
     ui.write("\n\n"
@@ -130,8 +130,13 @@ def commandprinter(ui, cmdtable, sectionfunc):
         d = get_cmd(h[f], cmdtable)
         sectionfunc(ui, d['cmd'])
         # synopsis
-        ui.write("``%s``\n" % d['synopsis'].replace("hg ","", 1))
-        ui.write("\n")
+        ui.write("::\n\n")
+        synopsislines = d['synopsis'].splitlines()
+        for line in synopsislines:
+            # some commands (such as rebase) have a multi-line
+            # synopsis
+            ui.write("   %s\n" % line)
+        ui.write('\n')
         # description
         ui.write("%s\n\n" % d['desc'][1])
         # options

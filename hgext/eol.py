@@ -51,7 +51,7 @@ The extension uses an optional ``[eol]`` section in your hgrc file
 behavior. There are two settings:
 
 - ``eol.native`` (default ``os.linesep``) can be set to ``LF`` or
-  ``CRLF`` override the default interpretation of ``native`` for
+  ``CRLF`` to override the default interpretation of ``native`` for
   checkout. This can be used with :hg:`archive` on Unix, say, to
   generate an archive where files have line endings for Windows.
 

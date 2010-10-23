@@ -226,6 +226,8 @@ def uisetup(ui):
 def extsetup(ui):
     commands.globalopts.append(
         ('', 'color', 'auto',
+         # i18n: 'always', 'auto', and 'never' are keywords and should
+         # not be translated
          _("when to colorize (boolean, always, auto, or never)"),
          _('TYPE')))
 

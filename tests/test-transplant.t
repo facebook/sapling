@@ -59,6 +59,15 @@ rebase b onto r1
   1  r2
   0  r1
 
+test transplanted revset
+
+  $ hg log -r 'transplanted()' --template '{rev} {parents} {desc}\n'
+  5 1:d11e3596cc1a  b1
+  6  b2
+  7  b3
+  $ hg help revsets | grep transplanted
+      "transplanted(set)"
+
   $ hg clone ../t ../prune
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved

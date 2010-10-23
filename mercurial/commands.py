@@ -278,7 +278,11 @@ def backout(ui, repo, node=None, rev=None, **opts):
     revert_opts['no_backup'] = None
     revert(ui, repo, **revert_opts)
     if not opts.get('merge') and op1 != node:
-        return hg.update(repo, op1)
+        try:
+            ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+            return hg.update(repo, op1)
+        finally:
+            ui.setconfig('ui', 'forcemerge', '')
 
     commit_opts = opts.copy()
     commit_opts['addremove'] = False
@@ -295,7 +299,11 @@ def backout(ui, repo, node=None, rev=None, **opts):
         hg.clean(repo, op1, show_stats=False)
         ui.status(_('merging with changeset %s\n')
                   % nice(repo.changelog.tip()))
-        return hg.merge(repo, hex(repo.changelog.tip()))
+        try:
+            ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+            return hg.merge(repo, hex(repo.changelog.tip()))
+        finally:
+            ui.setconfig('ui', 'forcemerge', '')
     return 0
 
 def bisect(ui, repo, rev=None, extra=None, command=None,
@@ -2438,7 +2446,7 @@ def log(ui, repo, *pats, **opts):
     ancestors or descendants of the starting revision. --follow-first
     only follows the first parent of merge revisions.
 
-    If no revision range is specified, the default is tip:0 unless
+    If no revision range is specified, the default is ``tip:0`` unless
     --follow is set, in which case the working directory parent is
     used as the starting revision. You can specify a revision set for
     log, see :hg:`help revsets` for more information.
@@ -2943,7 +2951,7 @@ def resolve(ui, repo, *pats, **opts):
 
     The resolve command can be used in the following ways:
 
-    - :hg:`resolve [--tool] FILE...`: attempt to re-merge the specified
+    - :hg:`resolve [--tool TOOL] FILE...`: attempt to re-merge the specified
       files, discarding any previous merge attempts. Re-merging is not
       performed for files already marked as resolved. Use ``--all/-a``
       to selects all unresolved files. ``--tool`` can be used to specify
@@ -4005,6 +4013,8 @@ table = {
            _('merge with old dirstate parent after backout')),
           ('', 'parent', '',
            _('parent to choose when backing out merge'), _('REV')),
+          ('t', 'tool', '',
+           _('specify merge tool')),
           ('r', 'rev', '',
            _('revision to backout'), _('REV')),
          ] + walkopts + commitopts + commitopts2,
