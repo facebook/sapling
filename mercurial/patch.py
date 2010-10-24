@@ -686,6 +686,7 @@ class hunk(object):
         for x in xrange(self.lena):
             l = lr.readline()
             if l.startswith('---'):
+                # lines addition, old block is empty
                 lr.push(l)
                 break
             s = l[2:]
@@ -719,11 +720,15 @@ class hunk(object):
         for x in xrange(self.lenb):
             l = lr.readline()
             if l.startswith('\ '):
+                # XXX: the only way to hit this is with an invalid line range.
+                # The no-eol marker is not counted in the line range, but I
+                # guess there are diff(1) out there which behave differently.
                 s = self.b[-1][:-1]
                 self.b[-1] = s
                 self.hunk[hunki - 1] = s
                 continue
             if not l:
+                # line deletions, new block is empty and we hit EOF
                 lr.push(l)
                 break
             s = l[2:]
@@ -732,7 +737,7 @@ class hunk(object):
             elif l.startswith('  '):
                 u = ' ' + s
             elif len(self.b) == 0:
-                # this can happen when the hunk does not add any lines
+                # line deletions, new block is empty
                 lr.push(l)
                 break
             else:
