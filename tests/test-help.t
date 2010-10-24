@@ -114,6 +114,7 @@ Short help:
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features
+   subrepos     Subrepositories
    hgweb        Configuring hgweb
    glossary     Glossary
   
@@ -185,6 +186,7 @@ Short help:
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features
+   subrepos     Subrepositories
    hgweb        Configuring hgweb
    glossary     Glossary
 
@@ -708,6 +710,7 @@ Test that default list of commands omits extension commands
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features
+   subrepos     Subrepositories
    hgweb        Configuring hgweb
    glossary     Glossary
   

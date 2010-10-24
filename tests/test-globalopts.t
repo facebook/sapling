@@ -343,6 +343,7 @@ Testing -h/--help:
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features
+   subrepos     Subrepositories
    hgweb        Configuring hgweb
    glossary     Glossary
   
@@ -418,6 +419,7 @@ Testing -h/--help:
    templating   Template Usage
    urls         URL Paths
    extensions   Using additional features
+   subrepos     Subrepositories
    hgweb        Configuring hgweb
    glossary     Glossary
   

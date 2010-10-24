@@ -103,6 +103,7 @@ helptable = [
      loaddoc('templates')),
     (['urls'], _('URL Paths'), loaddoc('urls')),
     (["extensions"], _("Using additional features"), extshelp),
+    (["subrepo", "subrepos"], _("Subrepositories"), loaddoc('subrepos')),
     (["hgweb"], _("Configuring hgweb"), loaddoc('hgweb')),
     (["glossary"], _("Glossary"), loaddoc('glossary')),
 ]
