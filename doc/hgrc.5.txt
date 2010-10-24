@@ -797,6 +797,23 @@ Controls generic server settings.
     checking that all new file revisions specified in manifests are
     present. Default is False.
 
+``subpaths``
+""""""""""""
+Defines subrepositories source locations rewriting rules of the form::
+
+    <pattern> = <replacement>
+
+Where ``pattern`` is a regular expression matching the source and
+``replacement`` is the replacement string used to rewrite it. Groups
+can be matched in ``pattern`` and referenced in ``replacements``. For
+instance::
+
+    http://server/(.*)-hg/ = http://hg.server/\1/
+
+rewrites ``http://server/foo-hg/`` into ``http://hg.server/foo/``.
+
+All patterns are applied in definition order.
+
 ``trusted``
 """""""""""
 
