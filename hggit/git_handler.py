@@ -215,6 +215,10 @@ class GitHandler(object):
             # work around a timezone format change
             if int(timezone) % 60 != 0: #pragma: no cover
                 timezone = parse_timezone(timezone)
+                # Newer versions of Dulwich return a tuple here
+                if isinstance(timezone, tuple):
+                    timezone, neg_utc = timezone
+                    commmit._commit_timezone_neg_utc = neg_utc
             else:
                 timezone = -int(timezone)
             commit.commit_timezone = timezone
