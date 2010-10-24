@@ -205,11 +205,11 @@ class kwtemplater(object):
 
     def overwrite(self, ctx, candidates, lookup, expand, rekw=False):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        if self.restrict or lookup: # exclude kw_copy
+        if self.restrict or lookup or self.record: # exclude kw_copy
             candidates = self.iskwfile(candidates, ctx)
         if not candidates:
             return
-        commit = self.restrict and not lookup
+        kwcmd = self.restrict and lookup # kwexpand/kwshrink
         if self.restrict or expand and lookup:
             mf = ctx.manifest()
         fctx = ctx
@@ -234,7 +234,7 @@ class kwtemplater(object):
             if found:
                 self.ui.note(msg % f)
                 self.repo.wwrite(f, data, ctx.flags(f))
-                if commit:
+                if kwcmd:
                     self.repo.dirstate.normal(f)
                 elif self.record:
                     self.repo.dirstate.normallookup(f)

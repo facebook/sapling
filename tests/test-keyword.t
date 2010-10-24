@@ -440,6 +440,24 @@ record added file alone
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+record added keyword ignored file
+
+  $ echo '$Id$' > i
+  $ hg add i
+  $ hg --verbose record -d '1 13' -m recignored<<EOF
+  > y
+  > EOF
+  diff --git a/i b/i
+  new file mode 100644
+  examine changes to 'i'? [Ynsfdaq?] 
+  i
+  committed changeset 3:5f40fe93bbdc
+  $ cat i
+  $Id$
+  $ hg -q rollback
+  $ hg forget i
+  $ rm i
+
 Test patch queue repo
 
   $ hg init --mq
@@ -775,8 +793,12 @@ kwexpand/kwshrink on selected files
 
   $ mkdir x
   $ hg copy a x/a
+  $ hg --verbose kwshrink a
+  overwriting a shrinking keywords
+  $ hg status a
   $ hg --verbose kwexpand a
   overwriting a expanding keywords
+  $ hg status a
 
 kwexpand x/a should abort
 
