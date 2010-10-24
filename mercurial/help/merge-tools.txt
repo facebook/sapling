@@ -19,17 +19,17 @@ programs but relies on external tools for that.
 Available merge tools
 """""""""""""""""""""
 
-External merge tools and their properties and usage is configured in the
-merge-tools configuration section - see hgrc(5) - but they can often also just
+External merge tools and their properties are configured in the
+merge-tools configuration section - see hgrc(5) - but they can often just
 be named by their executable.
 
 A merge tool is generally usable if its executable can be found on the
-system and if it can handle the merge. The executable can be found on the
-system if it either is an absolute or relative executable path or the name of
-an application in the executable search path. The tool is assumed to be able
-to handle the merge if it can handle symlinks if the file is a symlink, if it
-can handle binary files if the file is binary, and if a GUI is available if the
-tool requires a GUI.
+system and if it can handle the merge. The executable is found if it
+is an absolute or relative executable path or the name of an
+application in the executable search path. The tool is assumed to be
+able to handle the merge if it can handle symlinks if the file is a
+symlink, if it can handle binary files if the file is binary, and if a
+GUI is available if the tool requires a GUI.
 
 There are a some internal merge tools which can be used. The internal
 merge tools are:
@@ -67,35 +67,35 @@ not handle symlinks or binary files.
 Choosing a merge tool
 """""""""""""""""""""
 
-Mercurial uses these rules when decing which merge tool to use:
+Mercurial uses these rules when deciding which merge tool to use:
 
-0. If a tool has been specified with the --tool option to merge or resolve, it
+1. If a tool has been specified with the --tool option to merge or resolve, it
    is used.  If it is the name of a tool in the merge-tools configuration, its
    configuration is used. Otherwise the specified tool must be executable by
    the shell.
 
-1. If the ``HGMERGE`` environment variable is present, its value is used and
+2. If the ``HGMERGE`` environment variable is present, its value is used and
    must be executable by the shell.
 
-2. If the filename of the file to be merged matches any of the patterns in the
+3. If the filename of the file to be merged matches any of the patterns in the
    merge-patterns configuration section, the first usable merge tool
    corresponding to a matching pattern is used. Here, binary capabilities of the
    merge tool are not considered.
 
-3. If ui.merge is set it will be considered next. If the value is not the name
+4. If ui.merge is set it will be considered next. If the value is not the name
    of a configured tool, the specified value is used and must be executable by
    the shell. Otherwise the named tool is used if it is usable.
 
-4. If any usable merge tools are present in the merge-tools configuration
-   section, the one with the higest priority is used.
+5. If any usable merge tools are present in the merge-tools configuration
+   section, the one with the highest priority is used.
 
 5. If a program named ``hgmerge`` can be found on the system, it is used - but
    it will by default not be used for symlinks and binary files.
 
-6. If the file to be merged is not binary and is not a symlink, then
+7. If the file to be merged is not binary and is not a symlink, then
    ``internal:merge`` is used.
 
-7. The merge of the file fails and must be resolved before commit.
+8. The merge of the file fails and must be resolved before commit.
 
 .. note::
    After selecting a merge program, Mercurial will by default attempt
