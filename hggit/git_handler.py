@@ -218,7 +218,7 @@ class GitHandler(object):
                 # Newer versions of Dulwich return a tuple here
                 if isinstance(timezone, tuple):
                     timezone, neg_utc = timezone
-                    commmit._commit_timezone_neg_utc = neg_utc
+                    commit._commit_timezone_neg_utc = neg_utc
             else:
                 timezone = -int(timezone)
             commit.commit_timezone = timezone
