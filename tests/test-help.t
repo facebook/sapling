@@ -194,8 +194,9 @@ Test short command list with verbose option
 
   $ hg -v help shortlist
   Mercurial Distributed SCM (version *) (glob)
+  (see http://mercurial.selenic.com for more information)
   
-  Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> and others
+  Copyright (C) 2005-2010 Matt Mackall and others
   This is free software; see the source for copying conditions. There is NO
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   
@@ -346,8 +347,9 @@ Test help option with version option
 
   $ hg add -h --version
   Mercurial Distributed SCM (version *) (glob)
+  (see http://mercurial.selenic.com for more information)
   
-  Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> and others
+  Copyright (C) 2005-2010 Matt Mackall and others
   This is free software; see the source for copying conditions. There is NO
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   
