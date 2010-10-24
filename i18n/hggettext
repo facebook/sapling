@@ -97,19 +97,25 @@ def docstrings(path):
         lineno = 1 + offset(src, mod.__doc__, path, 7)
         print poentry(path, lineno, mod.__doc__)
 
+    functions = list(getattr(mod, 'i18nfunctions', []))
+    functions = [(f, True) for f in functions]
+
     cmdtable = getattr(mod, 'cmdtable', {})
     if not cmdtable:
         # Maybe we are processing mercurial.commands?
         cmdtable = getattr(mod, 'table', {})
+    functions.extend((c[0], False) for c in cmdtable.itervalues())
 
-    for entry in cmdtable.itervalues():
-        func = entry[0]
+    for func, rstrip in functions:
         if func.__doc__:
             src = inspect.getsource(func)
             name = "%s.%s" % (path, func.__name__)
             lineno = func.func_code.co_firstlineno
-            lineno += offset(src, func.__doc__, name, 1)
-            print poentry(path, lineno, func.__doc__)
+            doc = func.__doc__
+            if rstrip:
+                doc = doc.rstrip()
+            lineno += offset(src, doc, name, 1)
+            print poentry(path, lineno, doc)
 
 
 def rawtext(path):

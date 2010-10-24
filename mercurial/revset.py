@@ -791,3 +791,6 @@ def makedoc(topic, doc):
     predicates = '\n'.join(predicates)
     doc = doc.replace('.. predicatesmarker', predicates)
     return doc
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = symbols.values()

@@ -625,3 +625,6 @@ cmdtable = {
          _('hg transplant [-s REPO] [-b BRANCH [-a]] [-p REV] '
            '[-m REV] [REV]...'))
 }
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = [revsettransplanted]

@@ -566,3 +566,6 @@ cmdtable = {
 }
 
 colortable = {'bookmarks.current': 'green'}
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = [bmrevset]
