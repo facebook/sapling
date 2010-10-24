@@ -145,8 +145,10 @@
   +b
   
 
-  $ hg email -m test.mbox -f quux -t foo -c bar -s test 0:tip
-  This patch series consists of 2 patches.
+  $ hg email -m test.mbox -f quux -t foo -c bar -s test 0:tip \
+  > --config extensions.progress= --config progress.assume-tty=1 \
+  > --config progress.delay=0 --config progress.refresh=0
+  \rwriting [                                                                 ] 0/3\rwriting [                                                                 ] 0/3\r                                                                                \r\r                                                                                \r\rwriting [====================>                                            ] 1/3\rwriting [====================>                                            ] 1/3\r                                                                                \r\r                                                                                \r\rwriting [==========================================>                      ] 2/3\rwriting [==========================================>                      ] 2/3\r                                                                                \rThis patch series consists of 2 patches.
   
   
   Write the introductory message for the patch series.
