@@ -35,13 +35,14 @@ There are a some internal merge tools which can be used. The internal
 merge tools are:
 
 ``internal:merge``
-   Uses the internal non-interactive simple merge algorithm for merging files.
-   It will fail if there are any conflicts.
+   Uses the internal non-interactive simple merge algorithm for merging
+   files. It will fail if there are any conflicts and leave markers in
+   the partially merged file.
 
 ``internal:fail``
    Rather than attempting to merge files that were modified on both
-   branches, it marks these files as unresolved. Then the resolve
-   command must be used to mark files resolved.
+   branches, it marks them as unresolved. The resolve command must be
+   used to resolve these conflicts.
 
 ``internal:local``
    Uses the local version of files as the merged version.
