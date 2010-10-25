@@ -169,10 +169,9 @@ def _runcatch(ui, args):
     except socket.error, inst:
         ui.warn(_("abort: %s\n") % inst.args[-1])
     except:
-        ui.warn(_("** unknown exception encountered, details follow\n"))
-        ui.warn(_("** report bug details to "
-                 "http://mercurial.selenic.com/bts/\n"))
-        ui.warn(_("** or mercurial@selenic.com\n"))
+        ui.warn(_("** unknown exception encountered,"
+                  " please report by visiting\n"))
+        ui.warn(_("**  http://mercurial.selenic.com/wiki/BugTracker\n"))
         ui.warn(_("** Python %s\n") % sys.version.replace('\n', ''))
         ui.warn(_("** Mercurial Distributed SCM (version %s)\n")
                % util.version())
