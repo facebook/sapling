@@ -63,9 +63,6 @@ manifest with descending
   <ul>
    <li><a href="/help">help</a></li>
   </ul>
-  <ul>
-  <li><a href="/help">help</a></li>
-  </ul>
   </div>
   
   <div class="main">
