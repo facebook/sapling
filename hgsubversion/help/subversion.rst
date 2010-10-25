@@ -40,7 +40,10 @@ issue ``hg clone http://python-nose.googlecode.com/svn/trunk nose-trunk``. This
 works with any directory with a Subversion repository, and is know as a single
 directory clone. Normally, converted changesets will be marked as belonging to
 the ``default`` branch, but this can be changed by using the ``-b/--branch``
-option introduced in Mercurial 1.5.
+option introduced in Mercurial 1.5. To force single directory clone, use
+hgsubversion.layout option (see below for detailed help) ::
+
+ $ hg clone --layout single svn+http://python-nose.googlecode.com/svn nose-hg
 
 Pulling new revisions into an already-converted repo is the same as from any
 other Mercurial source. Within the first example above, the following three
@@ -55,7 +58,9 @@ wanted is access to current and future history from Mercurial. The
 ``--startrev`` option with the ``HEAD`` argument causes the initial clone to
 only convert the latest revision; later pulls will convert all revisions
 following the first. Please note that this only works for single-directory
-clones.
+clones::
+
+ $ hg clone --startrev HEAD http://python-nose.googlecode.com/svn/trunk nose-hg
 
 Finding and displaying Subversion revisions
 -------------------------------------------
