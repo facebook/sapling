@@ -900,6 +900,11 @@ With win32text
   $ echo '[patch]' >> .hg/hgrc
   $ echo 'eol = crlf' >> .hg/hgrc
 
+Ignore win32text deprecation warning for now:
+
+  $ echo '[win32text]' >> .hg/hgrc
+  $ echo 'warn = no' >> .hg/hgrc
+
   $ echo d >> subdir/f1
   $ hg record -d '23 0' -mw1 <<EOF
   > y
