@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 import sys
 from _lsprof import Profiler, profiler_entry
 
