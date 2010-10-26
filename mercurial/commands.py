@@ -2784,7 +2784,11 @@ def pull(ui, repo, source="default", **opts):
     modheads = repo.pull(other, heads=revs, force=opts.get('force'))
     if checkout:
         checkout = str(repo.changelog.rev(other.lookup(checkout)))
-    return postincoming(ui, repo, modheads, opts.get('update'), checkout)
+    repo._subtoppath = source
+    try:
+        return postincoming(ui, repo, modheads, opts.get('update'), checkout)
+    finally:
+        del repo._subtoppath
 
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
@@ -2823,13 +2827,16 @@ def push(ui, repo, dest=None, **opts):
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
-    # push subrepos depth-first for coherent ordering
-    c = repo['']
-    subs = c.substate # only repos that are committed
-    for s in sorted(subs):
-        if not c.sub(s).push(opts.get('force')):
-            return False
-
+    repo._subtoppath = dest
+    try:
+        # push subrepos depth-first for coherent ordering
+        c = repo['']
+        subs = c.substate # only repos that are committed
+        for s in sorted(subs):
+            if not c.sub(s).push(opts.get('force')):
+                return False
+    finally:
+        del repo._subtoppath
     r = repo.push(other, opts.get('force'), revs=revs,
                   newbranch=opts.get('new_branch'))
     return r == 0

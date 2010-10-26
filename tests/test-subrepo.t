@@ -636,12 +636,23 @@ Try the same, but with pull -u
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
-  abort: default path for subrepository sub/repo not found
-  [255]
+  pulling subrepo sub/repo from issue1852a/sub/repo
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Try to push from the other side
 
-  $ hg -R issue1852a push issue1852c
-  pushing to issue1852c
-  abort: default path for subrepository sub/repo not found
-  [255]
+  $ hg -R issue1852a push `pwd`/issue1852c
+  pushing to $TESTTMP/sub/issue1852c
+  pushing subrepo sub/repo to $TESTTMP/sub/issue1852c/sub/repo
+  searching for changes
+  no changes found
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
