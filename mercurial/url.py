@@ -131,9 +131,9 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
                 raise util.Abort(_('http authorization required'))
 
             self.ui.write(_("http authorization required\n"))
-            self.ui.status(_("realm: %s\n") % realm)
+            self.ui.write(_("realm: %s\n") % realm)
             if user:
-                self.ui.status(_("user: %s\n") % user)
+                self.ui.write(_("user: %s\n") % user)
             else:
                 user = self.ui.prompt(_("user:"), default=None)
 
