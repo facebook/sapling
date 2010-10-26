@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from hgext import color
 
 # ensure errors aren't buffered

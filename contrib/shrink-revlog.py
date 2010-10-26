@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """\
 reorder a revlog (the manifest by default) to save space
 

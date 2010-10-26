@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import struct
 from mercurial import bdiff, mpatch
 

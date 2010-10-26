@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from mercurial.hg import parseurl
 
 def testparse(url, branch=[]):

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from mercurial import store
 
 auxencode = lambda f: store._auxencode(f, True)

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from mercurial import ui, dispatch, error
 
 testui = ui.ui()

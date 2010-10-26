@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from pprint import pprint
 from mercurial import minirst
 

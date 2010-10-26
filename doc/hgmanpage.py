@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # $Id: manpage.py 6110 2009-08-31 14:40:33Z grubert $
 # Author: Engelbert Gruber <grubert@users.sourceforge.net>

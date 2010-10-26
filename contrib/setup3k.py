@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # This is an experimental py3k-enabled mercurial setup script.
 #
