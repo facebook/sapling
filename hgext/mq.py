@@ -1542,7 +1542,7 @@ class queue(object):
             self.ui.warn(_("saved queue repository parents: %s %s\n") %
                          (short(qpp[0]), short(qpp[1])))
             if qupdate:
-                self.ui.status(_("queue directory updating\n"))
+                self.ui.status(_("updating queue directory\n"))
                 r = self.qrepo()
                 if not r:
                     self.ui.warn(_("Unable to load queue repository\n"))
