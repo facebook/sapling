@@ -692,7 +692,7 @@ class queue(object):
             n = repo.commit(message, ph.user, ph.date, match=match, force=True)
 
             if n is None:
-                raise util.Abort(_("repo commit failed"))
+                raise util.Abort(_("repository commit failed"))
 
             if update_status:
                 self.applied.append(statusentry(n, patchname))
