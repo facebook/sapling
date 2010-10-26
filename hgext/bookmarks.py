@@ -469,7 +469,7 @@ def push(oldpush, ui, repo, dest=None, **opts):
     return result
 
 def diffbookmarks(ui, repo, remote):
-    ui.status(_("searching for changes\n"))
+    ui.status(_("searching for changed bookmarks\n"))
 
     lmarks = repo.listkeys('bookmarks')
     rmarks = remote.listkeys('bookmarks')
@@ -479,7 +479,7 @@ def diffbookmarks(ui, repo, remote):
         ui.write("   %-25s %s\n" % (k, rmarks[k][:12]))
 
     if len(diff) <= 0:
-        ui.status(_("no changes found\n"))
+        ui.status(_("no changed bookmarks found\n"))
         return 1
     return 0
 
