@@ -45,6 +45,7 @@ num characters, or ``+<num>`` for the first num characters.
 import sys
 import time
 
+from mercurial.i18n import _
 from mercurial import util
 
 def spacejoin(*args):
@@ -62,6 +63,8 @@ class progbar(object):
     def resetstate(self):
         self.topics = []
         self.topicstates = {}
+        self.starttimes = {}
+        self.startvals = {}
         self.printed = False
         self.lastprint = time.time() + float(self.ui.config(
             'progress', 'delay', default=3))
@@ -72,7 +75,7 @@ class progbar(object):
             'progress', 'format',
             default=['topic', 'bar', 'number'])
 
-    def show(self, topic, pos, item, unit, total):
+    def show(self, now, topic, pos, item, unit, total):
         if not shouldprint(self.ui):
             return
         termwidth = self.width()
@@ -121,6 +124,26 @@ class progbar(object):
                 used += len(tail) + 1
             progwidth = termwidth - used - 3
             if total and pos <= total:
+                initial = self.startvals[topic]
+                target = total - initial
+                delta = pos - initial
+                if delta > 0:
+                    elapsed = now - self.starttimes[topic]
+                    if elapsed > float(
+                        self.ui.config('progress', 'estimate', default=2)):
+                        seconds = (elapsed * (target - delta)) // delta + 1
+                        minutes = seconds // 60
+                        if minutes < 10:
+                            seconds -= minutes * 60
+                            remaining = _("%dm%02ds") % (minutes, seconds)
+                        else:
+                            # we're going to ignore seconds in this case
+                            minutes += 1
+                            hours = minutes // 60
+                            minutes -= hours * 60
+                            remaining = _("%dh%02dm") % (hours, minutes)
+                        progwidth -= len(remaining) + 1
+                        tail = spacejoin(tail, remaining)
                 amt = pos * progwidth // total
                 bar = '=' * (amt - 1)
                 if amt > 0:
@@ -161,7 +184,10 @@ class progbar(object):
         return min(int(self.ui.config('progress', 'width', default=tw)), tw)
 
     def progress(self, topic, pos, item='', unit='', total=None):
+        now = time.time()
         if pos is None:
+            self.starttimes.pop(topic, None)
+            self.startvals.pop(topic, None)
             self.topicstates.pop(topic, None)
             # reset the progress bar if this is the outermost topic
             if self.topics and self.topics[0] == topic and self.printed:
@@ -173,13 +199,14 @@ class progbar(object):
               self.topics = self.topics[:self.topics.index(topic)]
         else:
             if topic not in self.topics:
+                self.starttimes[topic] = now
+                self.startvals[topic] = pos
                 self.topics.append(topic)
-            now = time.time()
             self.topicstates[topic] = pos, item, unit, total
             if now - self.lastprint >= self.refresh and self.topics:
                 self.lastprint = now
                 current = self.topics[-1]
-                self.show(current, *self.topicstates[current])
+                self.show(now, topic, *self.topicstates[topic])
 
 def uisetup(ui):
     class progressui(ui.__class__):
