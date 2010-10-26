@@ -451,7 +451,7 @@ def abort(repo, originalwd, target, state):
             # no backup of rebased cset versions needed
             repair.strip(repo.ui, repo, repo[strippoint].node())
         clearstatus(repo)
-        repo.ui.status(_('rebase aborted\n'))
+        repo.ui.warn(_('rebase aborted\n'))
         return 0
 
 def buildstate(repo, dest, src, base, detach):
