@@ -654,9 +654,11 @@ class queue(object):
 
             message = ph.message
             if not message:
+                # The commit message should not be translated
                 message = "imported patch %s\n" % patchname
             else:
                 if list:
+                    # The commit message should not be translated
                     message.append("\nimported patch %s" % patchname)
                 message = '\n'.join(message)
 
