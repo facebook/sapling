@@ -31,7 +31,7 @@ able to handle the merge if it can handle symlinks if the file is a
 symlink, if it can handle binary files if the file is binary, and if a
 GUI is available if the tool requires a GUI.
 
-There are a some internal merge tools which can be used. The internal
+There are some internal merge tools which can be used. The internal
 merge tools are:
 
 ``internal:merge``
