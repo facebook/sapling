@@ -62,9 +62,8 @@ commit in the parent repository to record the new combination.
 Deleting a Subrepository
 ------------------------
 
-To remove a subrepo from the parent repository, delete its reference
-from ``.hgsub``. Then, the subrepo tree will show up as a set of
-unknown files in :hg:`status`, and you can delete the files.
+To remove a subrepository from the parent repository, delete its
+reference from ``.hgsub``, then remove its files.
 
 Interaction with Mercurial Commands
 -----------------------------------
