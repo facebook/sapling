@@ -248,7 +248,7 @@ def findsections(blocks):
         # +------------------------------+
         if (block['type'] == 'paragraph' and
             len(block['lines']) == 2 and
-            len(block['lines'][0]) == len(block['lines'][1]) and
+            encoding.colwidth(block['lines'][0]) == len(block['lines'][1]) and
             _sectionre.match(block['lines'][1])):
             block['underline'] = block['lines'][1][0]
             block['type'] = 'section'
@@ -358,7 +358,7 @@ def formatblock(block, width):
         indent += '  '
         return indent + ('\n' + indent).join(block['lines'])
     if block['type'] == 'section':
-        underline = len(block['lines'][0]) * block['underline']
+        underline = encoding.colwidth(block['lines'][0]) * block['underline']
         return "%s%s\n%s%s" % (indent, block['lines'][0],indent, underline)
     if block['type'] == 'definition':
         term = indent + block['lines'][0]
