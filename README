@@ -1,3 +1,9 @@
+Mercurial
+=========
+
+Mercurial is a fast, easy to use, distributed revision control tool
+for software developers.
+
 Basic install:
 
  $ make            # see install targets
