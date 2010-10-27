@@ -8,7 +8,7 @@
 import re
 import parser, util, error, discovery
 import match as matchmod
-from i18n import _
+from i18n import _, gettext
 
 elements = {
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
@@ -785,10 +785,11 @@ def makedoc(topic, doc):
         text = symbols[name].__doc__
         if not text:
             continue
+        text = gettext(text.rstrip())
         lines = text.splitlines()
         lines[1:] = [('  ' + l.strip()) for l in lines[1:]]
         predicates.append('\n'.join(lines))
-    predicates = '\n'.join(predicates)
+    predicates = '\n\n'.join(predicates)
     doc = doc.replace('.. predicatesmarker', predicates)
     return doc
 
