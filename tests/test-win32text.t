@@ -393,16 +393,16 @@ and now for something completely different
 
 Trigger deprecation warning:
 
-  $ hg id
+  $ hg id -t
   win32text is deprecated: http://mercurial.selenic.com/wiki/Win32TextExtension
-  b910084e3c98+ tip
+  tip
 
 Disable warning:
 
   $ echo '[win32text]' >> .hg/hgrc
   $ echo 'warn = no' >> .hg/hgrc
-  $ hg id
-  b910084e3c98+ tip
+  $ hg id -t
+  tip
 
   $ rm f3 f4.bat bin
   $ hg co -C 2>&1 | python -c 'import sys, os; sys.stdout.write(sys.stdin.read().replace(os.getcwd(), "...."))'
