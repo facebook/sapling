@@ -175,7 +175,7 @@ def func(repo, subset, a, b):
 
 def node(repo, subset, x):
     """``id(string)``
-    Revision non-ambiguously specified by the given hex string prefix
+    Revision non-ambiguously specified by the given hex string prefix.
     """
     # i18n: "id" is a keyword
     l = getargs(x, 1, 1, _("id requires one argument"))
