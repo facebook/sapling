@@ -166,13 +166,13 @@ hg tags (latin-1)
 
   $ HGENCODING=latin-1 hg tags
   tip                                5:093c6077d1c8
-  é                                 3:ca661e7520de
+  é                                  3:ca661e7520de
 
 hg tags (utf-8)
 
   $ HGENCODING=utf-8 hg tags
   tip                                5:093c6077d1c8
-  Ã©                                 3:ca661e7520de
+  Ã©                                  3:ca661e7520de
 
 hg branches (ascii)
 
@@ -183,13 +183,13 @@ hg branches (ascii)
 hg branches (latin-1)
 
   $ HGENCODING=latin-1 hg branches
-  é                             5:093c6077d1c8
+  é                              5:093c6077d1c8
   default                        4:94db611b4196 (inactive)
 
 hg branches (utf-8)
 
   $ HGENCODING=utf-8 hg branches
-  Ã©                             5:093c6077d1c8
+  Ã©                              5:093c6077d1c8
   default                        4:94db611b4196 (inactive)
   $ echo '[ui]' >> .hg/hgrc
   $ echo 'fallbackencoding = koi8-r' >> .hg/hgrc

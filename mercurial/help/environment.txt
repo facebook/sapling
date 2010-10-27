@@ -24,6 +24,13 @@ HGENCODINGMODE
     "ignore", which drops them. This setting can be overridden with
     the --encodingmode command-line option.
 
+HGENCODINGAMBIGUOUS
+    This sets Mercurial's behavior for handling characters with
+    "ambiguous" widths like accented Latin characters with East Asian
+    fonts. By default, Mercurial assumes ambiguous characters are
+    narrow, set this variable to "wide" if such characters cause
+    formatting problems.
+
 HGMERGE
     An executable to use for resolving merge conflicts. The program
     will be executed with three arguments: local file, remote file,
