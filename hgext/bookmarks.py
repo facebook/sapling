@@ -541,9 +541,11 @@ def bmrevset(repo, subset, x):
     """``bookmark([name])``
     The named bookmark or all bookmarks.
     """
+    # i18n: "bookmark" is a keyword
     args = revset.getargs(x, 0, 1, _('bookmark takes one or no arguments'))
     if args:
         bm = revset.getstring(args[0],
+                              # i18n: "bookmark" is a keyword
                               _('the argument to bookmark must be a string'))
         bmrev = listbookmarks(repo).get(bm, None)
         if bmrev:
