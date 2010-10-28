@@ -348,7 +348,7 @@ def updatedir(ui, repo, patches, similarity=0):
 
     wctx = repo[None]
     for src, dst in copies:
-        wctx.copy(src, dst)
+        dirstatecopy(ui, repo, wctx, src, dst, cwd=cwd)
     if (not similarity) and removes:
         wctx.remove(sorted(removes), True)
 
@@ -366,6 +366,25 @@ def updatedir(ui, repo, patches, similarity=0):
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
     return sorted(files)
+
+def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
+    """Update the dirstate to reflect the intent of copying src to dst. For
+    different reasons it might not end with dst being marked as copied from src.
+    """
+    origsrc = repo.dirstate.copied(src) or src
+    if dst == origsrc: # copying back a copy?
+        if repo.dirstate[dst] not in 'mn' and not dryrun:
+            repo.dirstate.normallookup(dst)
+    else:
+        if repo.dirstate[origsrc] == 'a' and origsrc == src:
+            if not ui.quiet:
+                ui.warn(_("%s has not been committed yet, so no copy "
+                          "data will be stored for %s.\n")
+                        % (repo.pathto(origsrc, cwd), repo.pathto(dst, cwd)))
+            if repo.dirstate[dst] in '?r' and not dryrun:
+                wctx.add([dst])
+        elif not dryrun:
+            wctx.copy(origsrc, dst)
 
 def copy(ui, repo, pats, opts, rename=False):
     # called with the repo lock held
@@ -458,21 +477,7 @@ def copy(ui, repo, pats, opts, rename=False):
         targets[abstarget] = abssrc
 
         # fix up dirstate
-        origsrc = repo.dirstate.copied(abssrc) or abssrc
-        if abstarget == origsrc: # copying back a copy?
-            if state not in 'mn' and not dryrun:
-                repo.dirstate.normallookup(abstarget)
-        else:
-            if repo.dirstate[origsrc] == 'a' and origsrc == abssrc:
-                if not ui.quiet:
-                    ui.warn(_("%s has not been committed yet, so no copy "
-                              "data will be stored for %s.\n")
-                            % (repo.pathto(origsrc, cwd), reltarget))
-                if repo.dirstate[abstarget] in '?r' and not dryrun:
-                    wctx.add([abstarget])
-            elif not dryrun:
-                wctx.copy(origsrc, abstarget)
-
+        dirstatecopy(ui, repo, wctx, abssrc, abstarget, dryrun=dryrun, cwd=cwd)
         if rename and not dryrun:
             wctx.remove([abssrc], not after)
 

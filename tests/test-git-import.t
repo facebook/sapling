@@ -361,4 +361,25 @@ Move text file and patch as binary
   A binary2
     text2
   R text2
+  $ cd ..
 
+Consecutive import with renames (issue2459)
+
+  $ hg init issue2459
+  $ cd issue2459
+  $ hg import --no-commit --force - <<EOF
+  > diff --git a/a b/a
+  > new file mode 100644
+  > EOF
+  applying patch from stdin
+  $ hg import --no-commit --force - <<EOF
+  > diff --git a/a b/b
+  > rename from a
+  > rename to b
+  > EOF
+  applying patch from stdin
+  a has not been committed yet, so no copy data will be stored for b.
+  $ hg debugstate
+  a   0         -1 unset               b
+  $ hg ci -m done
+  $ cd ..
