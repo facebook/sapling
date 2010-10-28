@@ -81,3 +81,16 @@ Test overlapping renames (issue2388)
   A patchc
   R patcha
   $ cd ..
+
+Test renames with mq repo (issue2097)
+
+  $ hg init issue2097
+  $ cd issue2097
+  $ hg qnew p0
+  $ (cd .hg/patches && hg init)
+  $ hg qren p0 p1
+  $ hg debugstate --mq
+  $ hg ci --mq -mq0
+  nothing changed
+  [1]
+  $ cd ..

@@ -2400,7 +2400,7 @@ def rename(ui, repo, patch, name=None, **opts):
         os.makedirs(destdir)
     util.rename(q.join(patch), absdest)
     r = q.qrepo()
-    if r:
+    if r and patch in r.dirstate:
         wctx = r[None]
         wlock = r.wlock()
         try:
