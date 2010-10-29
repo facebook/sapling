@@ -17,7 +17,7 @@
 To set the pager that should be used, set the application variable::
 
   [pager]
-  pager = LESS='FSRX' less
+  pager = less -FRSX
 
 If no pager is set, the pager extensions uses the environment variable
 $PAGER. If neither pager.pager, nor $PAGER is set, no pager is used.
