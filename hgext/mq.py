@@ -839,8 +839,12 @@ class queue(object):
         insert = self.full_series_end()
         wlock = repo.wlock()
         try:
-            # if patch file write fails, abort early
-            p = self.opener(patchfn, "w")
+            try:
+                # if patch file write fails, abort early
+                p = self.opener(patchfn, "w")
+            except IOError, e:
+                raise util.Abort(_('cannot write patch "%s": %s')
+                                 % (patchfn, e.strerror))
             try:
                 if self.plainmode:
                     if user:
