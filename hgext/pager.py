@@ -22,12 +22,6 @@ To set the pager that should be used, set the application variable::
 If no pager is set, the pager extensions uses the environment variable
 $PAGER. If neither pager.pager, nor $PAGER is set, no pager is used.
 
-By default, the pager is only executed if a command has output. To
-force the pager to run even if a command prints nothing, set::
-
-  [pager]
-  force = True
-
 If you notice "BROKEN PIPE" error messages, you can disable them by
 setting::
 
@@ -63,7 +57,7 @@ import sys, os, signal, shlex, errno
 from mercurial import commands, dispatch, util, extensions
 from mercurial.i18n import _
 
-def _runpager(p, sigpipe=False):
+def _runpager(p):
     if not hasattr(os, 'fork'):
         sys.stderr = sys.stdout = util.popen(p, 'wb')
         return
@@ -74,8 +68,6 @@ def _runpager(p, sigpipe=False):
         os.dup2(fdout, sys.stdout.fileno())
         os.dup2(fdout, sys.stderr.fileno())
         os.close(fdout)
-        if sigpipe:
-            signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         return
     os.dup2(fdin, sys.stdin.fileno())
     os.close(fdin)
@@ -94,23 +86,6 @@ def uisetup(ui):
     if ui.plain():
         return
 
-    class pagerui(ui.__class__):
-        _pager = None
-        _pagerstarted = False
-
-        def write(self, *args, **opts):
-            if self._pager and not self._pagerstarted:
-                self._pagerstarted = True
-                self._pager()
-            return super(pagerui, self).write(*args, **opts)
-
-        def write_err(self, *args, **opts):
-            if self._pager and not self._pagerstarted:
-                self._pagerstarted = True
-                self._pager()
-            return super(pagerui, self).write(*args, **opts)
-    ui.__class__ = pagerui
-
     def pagecmd(orig, ui, options, cmd, cmdfunc):
         p = ui.config("pager", "pager", os.environ.get("PAGER"))
         if p and sys.stdout.isatty() and '--debugger' not in sys.argv:
@@ -122,11 +97,9 @@ def uisetup(ui):
                  (cmd not in ui.configlist('pager', 'ignore') and not attend))):
                 ui.setconfig('ui', 'formatted', ui.formatted())
                 ui.setconfig('ui', 'interactive', False)
-                sigpipe = ui.configbool('pager', 'quiet')
-                if ui.configbool('pager', 'force'):
-                    _runpager(p, sigpipe)
-                else:
-                    ui._pager = lambda: _runpager(p, sigpipe)
+                _runpager(p)
+                if ui.configbool('pager', 'quiet'):
+                    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         return orig(ui, options, cmd, cmdfunc)
 
     extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
