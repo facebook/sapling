@@ -863,9 +863,11 @@ class opener(object):
                 nlink = nlinks(f)
             except OSError:
                 nlink = 0
-                d = os.path.dirname(f)
-                if not os.path.isdir(d):
-                    makedirs(d, self.createmode)
+                dirname, basename = os.path.split(f)
+                # Avoid calling makedirs when the path points to a
+                # directory -- the open will raise IOError below.
+                if basename and not os.path.isdir(dirname):
+                    makedirs(dirname, self.createmode)
             if atomictemp:
                 return atomictempfile(f, mode, self.createmode)
             if nlink > 1:
