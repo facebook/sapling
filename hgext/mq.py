@@ -821,7 +821,11 @@ class queue(object):
         diffopts = self.diffopts({'git': opts.get('git')})
         self.check_reserved_name(patchfn)
         if os.path.exists(self.join(patchfn)):
-            raise util.Abort(_('patch "%s" already exists') % patchfn)
+            if os.path.isdir(self.join(patchfn)):
+                raise util.Abort(_('"%s" already exists as a directory')
+                                 % patchfn)
+            else:
+                raise util.Abort(_('patch "%s" already exists') % patchfn)
         if opts.get('include') or opts.get('exclude') or pats:
             match = cmdutil.match(repo, pats, opts)
             # detect missing files in pats
