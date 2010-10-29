@@ -19,11 +19,16 @@ import inspect
 import os
 
 from mercurial import commands
+from mercurial import demandimport
 from mercurial import extensions
 from mercurial import hg
 from mercurial import localrepo
 from mercurial import util as hgutil
 from mercurial.i18n import _
+
+demandimport.ignore.extend([
+    'collections',
+    ])
 
 import gitrepo, hgrepo
 from git_handler import GitHandler
