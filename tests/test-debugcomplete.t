@@ -212,7 +212,7 @@ Show all commands + options
   debugdata: 
   debugdate: extended
   debugfsinfo: 
-  debugindex: 
+  debugindex: format
   debugindexdot: 
   debuginstall: 
   debugpushkey: 

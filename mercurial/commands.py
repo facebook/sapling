@@ -1260,26 +1260,43 @@ def debugdate(ui, date, range=None, **opts):
         m = util.matchdate(range)
         ui.write("match: %s\n" % m(d[0]))
 
-def debugindex(ui, repo, file_):
+def debugindex(ui, repo, file_, **opts):
     """dump the contents of an index file"""
     r = None
     if repo:
         filelog = repo.file(file_)
         if len(filelog):
             r = filelog
+
+    format = opts.get('format', 0)
+    if format not in (0, 1):
+        raise util.abort("unknown format %d" % format)
+
     if not r:
         r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
-    ui.write("   rev    offset  length   base linkrev"
-             " nodeid       p1           p2\n")
+
+    if format == 0:
+        ui.write("   rev    offset  length   base linkrev"
+                 " nodeid       p1           p2\n")
+    elif format == 1:
+        ui.write("   rev flag   offset   length"
+                 "     size   base   link     p1     p2       nodeid\n")
+
     for i in r:
         node = r.node(i)
-        try:
-            pp = r.parents(node)
-        except:
-            pp = [nullid, nullid]
-        ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
-                i, r.start(i), r.length(i), r.base(i), r.linkrev(i),
-            short(node), short(pp[0]), short(pp[1])))
+        if format == 0:
+            try:
+                pp = r.parents(node)
+            except:
+                pp = [nullid, nullid]
+            ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
+                    i, r.start(i), r.length(i), r.base(i), r.linkrev(i),
+                    short(node), short(pp[0]), short(pp[1])))
+        elif format == 1:
+            pr = r.parentrevs(i)
+            ui.write("% 6d %04x % 8d % 8d % 8d % 6d % 6d % 6d % 6d %s\n" % (
+                    i, r.flags(i), r.start(i), r.length(i), r.rawsize(i),
+                    r.base(i), r.linkrev(i), pr[0], pr[1], short(node)))
 
 def debugindexdot(ui, repo, file_):
     """dump an index DAG as a graphviz dot file"""
@@ -4139,7 +4156,9 @@ table = {
          _('[-e] DATE [RANGE]')),
     "debugdata": (debugdata, [], _('FILE REV')),
     "debugfsinfo": (debugfsinfo, [], _('[PATH]')),
-    "debugindex": (debugindex, [], _('FILE')),
+    "debugindex": (debugindex,
+                   [('f', 'format', 0, _('revlog format'), _('FORMAT'))],
+                   _('FILE')),
     "debugindexdot": (debugindexdot, [], _('FILE')),
     "debuginstall": (debuginstall, [], ''),
     "debugpushkey": (debugpushkey, [], _('REPO NAMESPACE [KEY OLD NEW]')),

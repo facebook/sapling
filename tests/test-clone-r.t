@@ -37,12 +37,12 @@
   $ hg mv afile anotherfile
   $ hg commit -m "0.3m"
 
-  $ hg debugindex .hg/store/data/afile.i
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       3      0       0 362fef284ce2 000000000000 000000000000
-       1         3       5      1       1 125144f7e028 362fef284ce2 000000000000
-       2         8       7      2       2 4c982badb186 125144f7e028 000000000000
-       3        15       9      3       3 19b1fc555737 4c982badb186 000000000000
+  $ hg debugindex -f 1 .hg/store/data/afile.i
+     rev flag   offset   length     size   base   link     p1     p2       nodeid
+       0 0000        0        3        2      0      0     -1     -1 362fef284ce2
+       1 0000        3        5        4      1      1      0     -1 125144f7e028
+       2 0000        8        7        6      2      2      1     -1 4c982badb186
+       3 0000       15        9        8      3      3      2     -1 19b1fc555737
 
   $ hg debugindex .hg/store/data/adifferentfile.i
      rev    offset  length   base linkrev nodeid       p1           p2
