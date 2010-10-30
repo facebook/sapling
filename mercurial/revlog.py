@@ -1157,19 +1157,20 @@ class revlog(object):
     def _addrevision(self, node, text, transaction, link, p1, p2,
                      cachedelta, ifh, dfh):
 
-        def buildtext(cachedelta):
-            if text is not None:
-                return text
+        btext = [text]
+        def buildtext():
+            if btext[0] is not None:
+                return btext[0]
             # flush any pending writes here so we can read it in revision
             if dfh:
                 dfh.flush()
             ifh.flush()
             basetext = self.revision(self.node(cachedelta[0]))
-            patchedtext = mdiff.patch(basetext, cachedelta[1])
-            chk = hash(patchedtext, p1, p2)
+            btext[0] = mdiff.patch(basetext, cachedelta[1])
+            chk = hash(btext[0], p1, p2)
             if chk != node:
                 raise RevlogError(_("consistency error in delta"))
-            return patchedtext
+            return btext[0]
 
         curr = len(self)
         prev = curr - 1
@@ -1190,7 +1191,7 @@ class revlog(object):
             if cachedelta:
                 cacherev, d = cachedelta
                 if cacherev != deltarev:
-                    text = buildtext(cachedelta)
+                    text = buildtext()
                     d = None
             if d is None:
                 ptext = self.revision(deltanode)
@@ -1210,7 +1211,7 @@ class revlog(object):
             textlen = len(text)
         if (d is None or dist > textlen * 2 or
             (self.flags(base) & REVIDX_PUNCHED_FLAG)):
-            text = buildtext(cachedelta)
+            text = buildtext()
             data = compress(text)
             l = len(data[1]) + len(data[0])
             base = curr
