@@ -1356,7 +1356,7 @@ def commitforceeditor(repo, ctx, subs):
     olddir = os.getcwd()
     os.chdir(repo.root)
     text = repo.ui.edit("\n".join(edittext), ctx.user())
-    text = re.sub("(?m)^HG:.*\n", "", text)
+    text = re.sub("(?m)^HG:.*(\n|$)", "", text)
     os.chdir(olddir)
 
     if not text.strip():
