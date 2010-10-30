@@ -1194,15 +1194,14 @@ class revlog(object):
         d = None
         p1r, p2r = self.rev(p1), self.rev(p2)
 
-        if self._parentdelta:
-            deltarev, deltanode = p1r, p1
-            flags = REVIDX_PARENTDELTA
-        else:
-            deltarev, deltanode = prev, self.node(prev)
-
         # should we try to build a delta?
-        if deltarev != nullrev:
-            d = builddelta(deltarev)
+        if prev != nullrev:
+            d = builddelta(prev)
+            if self._parentdelta and prev != p1r:
+                d2 = builddelta(p1r)
+                if d2 < d:
+                    d = d2
+                    flags = REVIDX_PARENTDELTA
             dist, l, data, base = d
 
         # full versions are inserted when the needed deltas
