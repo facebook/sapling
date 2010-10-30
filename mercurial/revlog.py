@@ -1172,6 +1172,20 @@ class revlog(object):
                 raise RevlogError(_("consistency error in delta"))
             return btext[0]
 
+        def builddelta(rev):
+            # can we use the cached delta?
+            if cachedelta and cachedelta[0] == rev:
+                delta = cachedelta[1]
+            else:
+                t = buildtext()
+                ptext = self.revision(self.node(rev))
+                delta = mdiff.textdiff(ptext, t)
+            data = compress(delta)
+            l = len(data[1]) + len(data[0])
+            base = self.base(rev)
+            dist = l + offset - self.start(base)
+            return dist, l, data, base
+
         curr = len(self)
         prev = curr - 1
         base = curr
@@ -1187,17 +1201,8 @@ class revlog(object):
 
         # should we try to build a delta?
         if deltarev != nullrev:
-            # can we use the cached delta?
-            if cachedelta and cachedelta[0] == deltarev:
-                d = cachedelta[1]
-            else:
-                t = buildtext()
-                ptext = self.revision(deltanode)
-                d = mdiff.textdiff(ptext, t)
-            data = compress(d)
-            l = len(data[1]) + len(data[0])
-            base = self.base(deltarev)
-            dist = l + offset - self.start(base)
+            d = builddelta(deltarev)
+            dist, l, data, base = d
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
