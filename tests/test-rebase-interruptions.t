@@ -57,7 +57,7 @@ Rebasing B onto E:
   merging A
   warning: conflicts during merge.
   merging A failed!
-  abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
 Force a commit on C during the interruption:
@@ -89,7 +89,7 @@ Resume the rebasing:
   merging A
   warning: conflicts during merge.
   merging A failed!
-  abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
 Solve the conflict and go on:
@@ -143,7 +143,7 @@ Rebasing B onto E:
   merging A
   warning: conflicts during merge.
   merging A failed!
-  abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
 Force a commit on B' during the interruption:

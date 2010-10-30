@@ -50,7 +50,7 @@ Conflicting rebase:
   merging common
   warning: conflicts during merge.
   merging common failed!
-  abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
 Abort:
@@ -118,7 +118,7 @@ Rebase and abort without generating new changesets:
   merging c
   warning: conflicts during merge.
   merging c failed!
-  abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
   $ hg tglog

@@ -63,7 +63,7 @@ Rebase - generate a conflict:
   merging f
   warning: conflicts during merge.
   merging f failed!
-  abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
 Fix the 1st conflict:
@@ -74,7 +74,7 @@ Fix the 1st conflict:
   merging f
   warning: conflicts during merge.
   merging f failed!
-  abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
 Fix the 2nd conflict:

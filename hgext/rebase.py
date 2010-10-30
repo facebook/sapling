@@ -165,8 +165,8 @@ def rebase(ui, repo, **opts):
                 else:
                     stats = rebasenode(repo, rev, p1, p2, state)
                     if stats and stats[3] > 0:
-                        raise util.Abort(_('fix unresolved conflicts with hg '
-                                    'resolve then run hg rebase --continue'))
+                        raise util.Abort(_('unresolved conflicts (see hg '
+                                    'resolve, then hg rebase --continue)'))
                 updatedirstate(repo, rev, target, p2)
                 if not collapsef:
                     newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn)

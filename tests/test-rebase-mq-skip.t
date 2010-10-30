@@ -105,7 +105,7 @@ already has one local mq patch
   $ hg up -q qtip
 
   $ HGMERGE=internal:fail hg rebase
-  abort: fix unresolved conflicts with hg resolve then run hg rebase --continue
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
   $ HGMERGE=internal:local hg resolve --all
