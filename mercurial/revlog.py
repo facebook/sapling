@@ -1192,9 +1192,10 @@ class revlog(object):
         offset = self.end(prev)
         flags = 0
         d = None
+        p1r, p2r = self.rev(p1), self.rev(p2)
 
         if self._parentdelta:
-            deltarev, deltanode = self.rev(p1), p1
+            deltarev, deltanode = p1r, p1
             flags = REVIDX_PARENTDELTA
         else:
             deltarev, deltanode = prev, self.node(prev)
@@ -1220,7 +1221,7 @@ class revlog(object):
             base = curr
 
         e = (offset_type(offset, flags), l, textlen,
-             base, link, self.rev(p1), self.rev(p2), node)
+             base, link, p1r, p2r, node)
         self.index.insert(-1, e)
         self.nodemap[node] = curr
 
