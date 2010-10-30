@@ -105,10 +105,9 @@ class p4_source(converter_source):
         ui.status(_('collecting p4 changelists\n'))
         lastid = None
         for change in self.p4changes:
-            cmd = "p4 -G describe %s" % change
+            cmd = "p4 -G describe -s %s" % change
             stdout = util.popen(cmd, mode='rb')
             d = marshal.load(stdout)
-
             desc = self.recode(d["desc"])
             shortdesc = desc.split("\n", 1)[0]
             t = '%s %s' % (d["change"], repr(shortdesc)[1:-1])
