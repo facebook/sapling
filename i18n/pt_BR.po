@@ -3926,11 +3926,19 @@ msgid "\"%s\" cannot be used as the name of a patch"
 msgstr "\"%s\" não pode ser usado como nome de um patch"
 
 #, python-format
+msgid "\"%s\" already exists as a directory"
+msgstr "\"%s\" já existe, e é um diretório"
+
+#, python-format
 msgid "patch \"%s\" already exists"
 msgstr "o patch \"%s\" já existe"
 
 msgid "cannot manage merge changesets"
 msgstr "não se pode gerenciar revisões de mesclagem"
+
+#, python-format
+msgid "cannot write patch \"%s\": %s"
+msgstr "não é possível escrever o patch \"%s\": %s"
 
 #, python-format
 msgid "error unlinking %s\n"
@@ -5357,10 +5365,10 @@ msgstr "Para definir o pager a ser usado, defina a variável de aplicação::"
 
 msgid ""
 "  [pager]\n"
-"  pager = LESS='FSRX' less"
+"  pager = less -FRSX"
 msgstr ""
 "  [pager]\n"
-"  pager = LESS='FSRX' less"
+"  pager = less -FRSX"
 
 msgid ""
 "If no pager is set, the pager extensions uses the environment variable\n"
@@ -5369,20 +5377,6 @@ msgstr ""
 "Se nenhum pager estiver definido, as extensões de pager usa a variável\n"
 "ambiente $PAGER. Se nem pager.pager nem $PAGER estiverem definidas,\n"
 "nenhum pager será usado."
-
-msgid ""
-"By default, the pager is only executed if a command has output. To\n"
-"force the pager to run even if a command prints nothing, set::"
-msgstr ""
-"Por padrão, o pager será executado apenas se um comando gerar\n"
-"saída. Para forçar a execução do pager mesmo nesse caso, defina::"
-
-msgid ""
-"  [pager]\n"
-"  force = True"
-msgstr ""
-"  [pager]\n"
-"  force = True"
 
 msgid ""
 "If you notice \"BROKEN PIPE\" error messages, you can disable them by\n"
@@ -7176,6 +7170,10 @@ msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr "gravando remoção de %s como renomeação para %s (%d%% de similaridade)\n"
 
 #, python-format
+msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
+msgstr "%s ainda não foi consolidado, então dados de cópia não serão guardados para %s.\n"
+
+#, python-format
 msgid "%s: not copying - file is not managed\n"
 msgstr "%s: não copiado - o arquivo não é gerenciado\n"
 
@@ -7214,10 +7212,6 @@ msgstr "movendo %s para %s\n"
 #, python-format
 msgid "copying %s to %s\n"
 msgstr "copiando %s para %s\n"
-
-#, python-format
-msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
-msgstr "%s ainda não foi consolidado, então dados de cópia não serão guardados para %s.\n"
 
 msgid "no source or destination specified"
 msgstr "nenhuma origem ou destino especificado"
@@ -10693,6 +10687,9 @@ msgstr "ARQUIVO REV"
 
 msgid "[PATH]"
 msgstr "[CAMINHO]"
+
+msgid "revlog format"
+msgstr "formato do revlog"
 
 msgid "REPO NAMESPACE [KEY OLD NEW]"
 msgstr "REPOSITÓRIO NAMESPACE [CHAVE ANTIGO NOVO]"
@@ -16126,6 +16123,20 @@ msgstr "o push falhou:"
 msgid "push failed (unexpected response):"
 msgstr "o push falhou (resposta inesperada):"
 
+msgid ""
+"By default, the pager is only executed if a command has output. To\n"
+"force the pager to run even if a command prints nothing, set::"
+msgstr ""
+"Por padrão, o pager será executado apenas se um comando gerar\n"
+"saída. Para forçar a execução do pager mesmo nesse caso, defina::"
+
+msgid ""
+"  [pager]\n"
+"  force = True"
+msgstr ""
+"  [pager]\n"
+"  force = True"
+
 msgid "queue directory updating\n"
 msgstr "atualizando diretório da fila\n"
 
@@ -16145,4 +16156,3 @@ msgstr ""
 
 msgid "** report bug details to http://mercurial.selenic.com/bts/\n"
 msgstr "** reporte detalhes de problemas para http://mercurial.selenic.com/bts/\n"
-
