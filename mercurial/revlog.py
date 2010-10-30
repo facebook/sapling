@@ -1188,14 +1188,12 @@ class revlog(object):
         # should we try to build a delta?
         if deltarev != nullrev:
             # can we use the cached delta?
-            if cachedelta:
-                cacherev, d = cachedelta
-                if cacherev != deltarev:
-                    text = buildtext()
-                    d = None
-            if d is None:
+            if cachedelta and cachedelta[0] == deltarev:
+                d = cachedelta[1]
+            else:
+                t = buildtext()
                 ptext = self.revision(deltanode)
-                d = mdiff.textdiff(ptext, text)
+                d = mdiff.textdiff(ptext, t)
             data = compress(d)
             l = len(data[1]) + len(data[0])
             base = self.base(deltarev)
