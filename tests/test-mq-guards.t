@@ -434,3 +434,71 @@ hg qseries -m with color
 
   $ hg --config extensions.color= --config color.mode=ansi qseries -m --color=always
   \x1b[0;31;1mb.patch\x1b[0m (esc)
+
+
+excercise cornercases in "qselect --reapply"
+
+  $ hg qpop -a
+  popping c.patch
+  popping new.patch
+  patch queue now empty
+  $ hg qguard -- new.patch -not-new
+  $ hg qguard -- c.patch -not-c
+  $ hg qguard -- d.patch -not-d
+  $ hg qpush -a
+  applying new.patch
+  applying c.patch
+  applying d.patch
+  patch d.patch is empty
+  now at: d.patch
+  $ hg qguard -l
+  new.patch: -not-new
+  c.patch: -not-c
+  d.patch: -not-d
+  $ hg qselect --reapply not-d
+  popping guarded patches
+  popping d.patch
+  now at: c.patch
+  reapplying unguarded patches
+  cannot push 'd.patch' - guarded by '-not-d'
+  $ hg qser -v
+  0 A new.patch
+  1 A c.patch
+  2 G d.patch
+  $ hg qselect --reapply -n
+  guards deactivated
+  $ hg qpush
+  applying d.patch
+  patch d.patch is empty
+  now at: d.patch
+  $ hg qser -v
+  0 A new.patch
+  1 A c.patch
+  2 A d.patch
+  $ hg qselect --reapply not-c
+  popping guarded patches
+  popping d.patch
+  now at: c.patch
+  reapplying unguarded patches
+  applying d.patch
+  patch d.patch is empty
+  now at: d.patch
+  $ hg qser -v
+  0 A new.patch
+  1 A c.patch
+  2 A d.patch
+  $ hg qselect --reapply not-new
+  popping guarded patches
+  popping d.patch
+  popping c.patch
+  popping new.patch
+  patch queue now empty
+  reapplying unguarded patches
+  applying c.patch
+  applying d.patch
+  patch d.patch is empty
+  now at: d.patch
+  $ hg qser -v
+  0 G new.patch
+  1 A c.patch
+  2 A d.patch
