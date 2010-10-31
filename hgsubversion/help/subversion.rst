@@ -139,6 +139,12 @@ leaks appear to be persistent and unavoidable using the SWIG bindings. When
 using the new experimental Subvertpy bindings leaks have only been observed
 accessing FSFS repositories over the file protocol.
 
+Should the initial clone fail with an error, Mercurial will delete the entire
+repository, including any revisions successfully converted. This can be
+particularly undesirable for long-running clones. In these cases, we suggest
+using the ``-r/--rev`` option to only clone a few revisions initially. After
+that, an ``hg pull`` in the cloned repository will be perfectly safe.
+
 It is not possible to interact with more than one Subversion repository per
 Mercurial clone. Please note that this also applies to more than one path within
 a repository.
