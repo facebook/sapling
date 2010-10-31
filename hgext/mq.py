@@ -1012,12 +1012,10 @@ class queue(object):
     # if the exact patch name does not exist, we try a few
     # variations.  If strict is passed, we try only #1
     #
-    # 1) a number to indicate an offset in the series file
+    # 1) a number (as string) to indicate an offset in the series file
     # 2) a unique substring of the patch name was given
     # 3) patchname[-+]num to indicate an offset in the series file
     def lookup(self, patch, strict=False):
-        patch = patch and str(patch)
-
         def partialname(s):
             if s in self.series:
                 return s
@@ -2874,7 +2872,7 @@ def select(ui, repo, *args, **opts):
                 if i == 0:
                     q.pop(repo, all=True)
                 else:
-                    q.pop(repo, i - 1)
+                    q.pop(repo, str(i - 1))
                 break
     if popped:
         try:

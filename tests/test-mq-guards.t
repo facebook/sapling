@@ -478,19 +478,19 @@ excercise cornercases in "qselect --reapply"
   $ hg qselect --reapply not-c
   popping guarded patches
   popping d.patch
-  now at: c.patch
+  popping c.patch
+  now at: new.patch
   reapplying unguarded patches
   applying d.patch
   patch d.patch is empty
   now at: d.patch
   $ hg qser -v
   0 A new.patch
-  1 A c.patch
+  1 G c.patch
   2 A d.patch
   $ hg qselect --reapply not-new
   popping guarded patches
   popping d.patch
-  popping c.patch
   popping new.patch
   patch queue now empty
   reapplying unguarded patches
