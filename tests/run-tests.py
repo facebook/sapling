@@ -604,7 +604,7 @@ def run(cmd, options, replacements):
             raise
 
     for s, r in replacements:
-        output = output.replace(s, r)
+        output = re.sub(s, r, output)
     return ret, splitnewlines(output)
 
 def runone(options, test, skips, fails):
@@ -677,10 +677,10 @@ def runone(options, test, skips, fails):
         signal.alarm(options.timeout)
 
     ret, out = runner(testpath, options, [
-        (testtmp, '$TESTTMP'),
-        (':%s' % options.port, ':$HGPORT'),
-        (':%s' % (options.port + 1), ':$HGPORT1'),
-        (':%s' % (options.port + 2), ':$HGPORT2'),
+        (re.escape(testtmp), '$TESTTMP'),
+        (r':%s\b' % options.port, ':$HGPORT'),
+        (r':%s\b' % (options.port + 1), ':$HGPORT1'),
+        (r':%s\b' % (options.port + 2), ':$HGPORT2'),
         ])
     vlog("# Ret was:", ret)
 
