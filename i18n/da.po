@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-10-28 09:50+0200\n"
-"PO-Revision-Date: 2010-10-28 10:01+0200\n"
+"POT-Creation-Date: 2010-11-01 11:03+0100\n"
+"PO-Revision-Date: 2010-11-01 11:04+0100\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -3396,11 +3396,19 @@ msgid "\"%s\" cannot be used as the name of a patch"
 msgstr "\"%s\" kan ikke bruges som navnet på en rettelse"
 
 #, python-format
+msgid "\"%s\" already exists as a directory"
+msgstr "\"%s\" eksisterer allerede som et katalog"
+
+#, python-format
 msgid "patch \"%s\" already exists"
 msgstr "rettelsen \"%s\" findes allerede"
 
 msgid "cannot manage merge changesets"
 msgstr "kan ikke håndtere sammenføjninger"
+
+#, python-format
+msgid "cannot write patch \"%s\": %s"
+msgstr "kan ikke skrive patch \"%s\": %s"
 
 #, python-format
 msgid "error unlinking %s\n"
@@ -4723,27 +4731,15 @@ msgstr ""
 
 msgid ""
 "  [pager]\n"
-"  pager = LESS='FSRX' less"
+"  pager = less -FRSX"
 msgstr ""
 "  [pager]\n"
-"  pager = LESS='FSRX' less"
+"  pager = less -FRSX"
 
 msgid ""
 "If no pager is set, the pager extensions uses the environment variable\n"
 "$PAGER. If neither pager.pager, nor $PAGER is set, no pager is used."
 msgstr ""
-
-msgid ""
-"By default, the pager is only executed if a command has output. To\n"
-"force the pager to run even if a command prints nothing, set::"
-msgstr ""
-
-msgid ""
-"  [pager]\n"
-"  force = True"
-msgstr ""
-"  [pager]\n"
-"  force = True"
 
 msgid ""
 "If you notice \"BROKEN PIPE\" error messages, you can disable them by\n"
@@ -6225,6 +6221,12 @@ msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr "noterer fjernelse af %s som en omdøbning til %s (%d%% lighed)\n"
 
 #, python-format
+msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
+msgstr ""
+"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for %"
+"s.\n"
+
+#, python-format
 msgid "%s: not copying - file is not managed\n"
 msgstr "%s: kopierer ikke - filen er ikke versionsstyret\n"
 
@@ -6263,12 +6265,6 @@ msgstr "flytter %s til %s\n"
 #, python-format
 msgid "copying %s to %s\n"
 msgstr "kopierer %s til %s\n"
-
-#, python-format
-msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
-msgstr ""
-"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for %"
-"s.\n"
 
 msgid "no source or destination specified"
 msgstr "ingen kilde eller destination angivet"
@@ -9354,6 +9350,9 @@ msgstr "FIL REV"
 
 msgid "[PATH]"
 msgstr "[STI]"
+
+msgid "revlog format"
+msgstr ""
 
 msgid "REPO NAMESPACE [KEY OLD NEW]"
 msgstr ""
