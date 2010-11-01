@@ -981,7 +981,7 @@ class localrepository(repo.repository):
         """
 
         tr = lock = None
-        removed = ctx.removed()
+        removed = list(ctx.removed())
         p1, p2 = ctx.p1(), ctx.p2()
         m1 = p1.manifest().copy()
         m2 = p2.manifest()
