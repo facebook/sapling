@@ -485,17 +485,18 @@ class dirstate(object):
         work = []
         wadd = work.append
 
-        if self._checkcase:
-            normalize = self._normalize
-        else:
-            normalize = lambda x, y: x
-
         exact = skipstep3 = False
         if matchfn == match.exact: # match.exact
             exact = True
             dirignore = util.always # skip step 2
         elif match.files() and not match.anypats(): # match.match, no patterns
             skipstep3 = True
+
+        if self._checkcase:
+            normalize = self._normalize
+            skipstep3 = False
+        else:
+            normalize = lambda x, y: x
 
         files = sorted(match.files())
         subrepos.sort()
