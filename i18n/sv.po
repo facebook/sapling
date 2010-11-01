@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-10-21 15:40+0200\n"
-"PO-Revision-Date: 2010-10-21 16:56+0200\n"
+"POT-Creation-Date: 2010-11-01 13:33+0100\n"
+"PO-Revision-Date: 2010-11-01 13:42+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -36,7 +36,7 @@ msgid "Extensions"
 msgstr "Utökningar"
 
 msgid ""
-"This section contains help for extensions that is distributed together with "
+"This section contains help for extensions that are distributed together with "
 "Mercurial. Help for other extensions is available in the help system."
 msgstr ""
 "Den här sektioner innehåller hjälp för utökningar som levereras med "
@@ -402,11 +402,11 @@ msgstr "raderar fjärrbokmärket %s\n"
 msgid "bookmark %s does not exist on the local or remote repository!\n"
 msgstr "bokmärket %s existerar inte i lokal- eller fjärrarkiv!\n"
 
-msgid "searching for changes\n"
-msgstr "söker efter ändringar\n"
+msgid "searching for changed bookmarks\n"
+msgstr "söker efter ändrade bokmärken\n"
 
-msgid "no changes found\n"
-msgstr "inga ändringar hittades\n"
+msgid "no changed bookmarks found\n"
+msgstr "inga ändrade bokmärken hittades\n"
 
 #, python-format
 msgid "comparing with %s\n"
@@ -424,25 +424,20 @@ msgstr "bokmärke att exportera"
 msgid "compare bookmark"
 msgstr "jämför bokmärke"
 
+msgid ""
+"``bookmark([name])``\n"
+"    The named bookmark or all bookmarks."
+msgstr ""
+"``bookmark([namn])``\n"
+"    Det angivna bokmärket eller alla bokmärken."
+
+#. i18n: "bookmark" is a keyword
 msgid "bookmark takes one or no arguments"
 msgstr "bookmark tar ett eller inga argument"
 
+#. i18n: "bookmark" is a keyword
 msgid "the argument to bookmark must be a string"
 msgstr "argumentet till bookmark måste vara en sträng"
-
-msgid ""
-"\n"
-"Added by the bookmarks extension:"
-msgstr ""
-"\n"
-"Tillagda av bookmarks-utökningen:"
-
-msgid ""
-"``bookmark([name])``\n"
-"  The named bookmark or all bookmarks.\n"
-msgstr ""
-"``bookmark([namn])``\n"
-"  Det angivna bokmärket eller alla bokmärken.\n"
 
 msgid "force"
 msgstr "tvinga"
@@ -994,6 +989,8 @@ msgstr "ignorerar okänd färg/effekt %r (konfigurerad i color.%s)\n"
 msgid "win32console not found, please install pywin32\n"
 msgstr "win32console hittades inte, installera pywin32\n"
 
+#. i18n: 'always', 'auto', and 'never' are keywords and should
+#. not be translated
 msgid "when to colorize (boolean, always, auto, or never)"
 msgstr "när färgläggning ska ske (boolean, always, auto eller never)"
 
@@ -1940,7 +1937,7 @@ msgstr ""
 
 msgid ""
 "- ``eol.native`` (default ``os.linesep``) can be set to ``LF`` or\n"
-"  ``CRLF`` override the default interpretation of ``native`` for\n"
+"  ``CRLF`` to override the default interpretation of ``native`` for\n"
 "  checkout. This can be used with :hg:`archive` on Unix, say, to\n"
 "  generate an archive where files have line endings for Windows."
 msgstr ""
@@ -3162,6 +3159,9 @@ msgstr ""
 msgid "patch %s is empty\n"
 msgstr ""
 
+msgid "repository commit failed"
+msgstr ""
+
 msgid "patch failed, rejects left in working dir\n"
 msgstr ""
 
@@ -3208,11 +3208,19 @@ msgid "\"%s\" cannot be used as the name of a patch"
 msgstr ""
 
 #, python-format
+msgid "\"%s\" already exists as a directory"
+msgstr "\"%s\" finns redan som katalog"
+
+#, python-format
 msgid "patch \"%s\" already exists"
-msgstr ""
+msgstr "patchen \"%s\" existerar redan"
 
 msgid "cannot manage merge changesets"
 msgstr "kan inte hantera sammanfogningar"
+
+#, python-format
+msgid "cannot write patch \"%s\": %s"
+msgstr "kan inte skriva patchen \"%s\": %s"
 
 #, python-format
 msgid "error unlinking %s\n"
@@ -3335,8 +3343,8 @@ msgstr ""
 msgid "saved queue repository parents: %s %s\n"
 msgstr ""
 
-msgid "queue directory updating\n"
-msgstr ""
+msgid "updating queue directory\n"
+msgstr "uppdaterar kökatalog\n"
 
 msgid "Unable to load queue repository\n"
 msgstr ""
@@ -4436,27 +4444,15 @@ msgstr ""
 
 msgid ""
 "  [pager]\n"
-"  pager = LESS='FSRX' less"
+"  pager = less -FRSX"
 msgstr ""
+"  [pager]\n"
+"  pager = less -FRSX"
 
 msgid ""
 "If no pager is set, the pager extensions uses the environment variable\n"
 "$PAGER. If neither pager.pager, nor $PAGER is set, no pager is used."
 msgstr ""
-
-msgid ""
-"By default, the pager is only executed if a command has output. To\n"
-"force the pager to run even if a command prints nothing, set::"
-msgstr ""
-"Som standard körs bara pagineraren om ett kommando visar något. För att\n"
-"tvinga pagineraren att köra även om ett kommando inte visar något, sätt::"
-
-msgid ""
-"  [pager]\n"
-"  force = True"
-msgstr ""
-"  [pager]\n"
-"  force = True"
 
 msgid ""
 "If you notice \"BROKEN PIPE\" error messages, you can disable them by\n"
@@ -4712,6 +4708,9 @@ msgid ""
 "    hgrc. See the [email] section in hgrc(5) for details.\n"
 "    "
 msgstr ""
+
+msgid "no changes found\n"
+msgstr "inga ändringar hittades\n"
 
 msgid "specify at least one changeset with -r or -o"
 msgstr ""
@@ -5581,19 +5580,9 @@ msgid "outstanding local changes"
 msgstr ""
 
 msgid ""
-"\n"
-"Added by the transplant extension:"
-msgstr ""
-"\n"
-"Tillagda av transplant-utökningen:"
-
-msgid ""
 "``transplanted(set)``\n"
-"  Transplanted changesets in set.\n"
+"    Transplanted changesets in set."
 msgstr ""
-
-msgid "Specifying Revision Sets"
-msgstr "Ange Revisionsset"
 
 msgid "pull patches from REPO"
 msgstr ""
@@ -5778,6 +5767,11 @@ msgid ""
 "** = %sdecode:\n"
 msgstr ""
 
+msgid ""
+"win32text is deprecated: http://mercurial.selenic.com/wiki/"
+"Win32TextExtension\n"
+msgstr ""
+
 msgid "discover and advertise repositories on the local network"
 msgstr ""
 
@@ -5883,6 +5877,11 @@ msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr ""
 
 #, python-format
+msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
+msgstr ""
+"%s har inte arkiverats än, så ingen kopieringsinformation lagras för %s.\n"
+
+#, python-format
 msgid "%s: not copying - file is not managed\n"
 msgstr ""
 
@@ -5920,10 +5919,6 @@ msgstr ""
 
 #, python-format
 msgid "copying %s to %s\n"
-msgstr ""
-
-#, python-format
-msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
 msgstr ""
 
 msgid "no source or destination specified"
@@ -7067,7 +7062,7 @@ msgstr ""
 
 msgid ""
 " Internal patcher failure, please report this error to http://mercurial."
-"selenic.com/bts/\n"
+"selenic.com/wiki/BugTracker\n"
 msgstr ""
 
 msgid "Checking commit editor...\n"
@@ -7700,12 +7695,12 @@ msgstr ""
 "    följer bara den första föräldern i revisoner med sammanfogningar."
 
 msgid ""
-"    If no revision range is specified, the default is tip:0 unless\n"
+"    If no revision range is specified, the default is ``tip:0`` unless\n"
 "    --follow is set, in which case the working directory parent is\n"
 "    used as the starting revision. You can specify a revision set for\n"
 "    log, see :hg:`help revsets` for more information."
 msgstr ""
-"    Om ingen revisionsserie specificeras, används tip:0 som standard om\n"
+"    Om ingen revisionsserie specificeras, används ``tip:0`` som standard om\n"
 "    inte --follow är satt, då arbetskatalogens förälder används som första\n"
 "    revision. Du kan ange ett revisionsset för log, se :hg:`help revsets`\n"
 "    för mer information."
@@ -8188,7 +8183,8 @@ msgid "    The resolve command can be used in the following ways:"
 msgstr ""
 
 msgid ""
-"    - :hg:`resolve [--tool] FILE...`: attempt to re-merge the specified\n"
+"    - :hg:`resolve [--tool TOOL] FILE...`: attempt to re-merge the "
+"specified\n"
 "      files, discarding any previous merge attempts. Re-merging is not\n"
 "      performed for files already marked as resolved. Use ``--all/-a``\n"
 "      to selects all unresolved files. ``--tool`` can be used to specify\n"
@@ -8869,14 +8865,15 @@ msgstr "visa version och copyright-information"
 msgid "Mercurial Distributed SCM (version %s)\n"
 msgstr "Mercurial Distribuerad SCM (version %s)\n"
 
+msgid "(see http://mercurial.selenic.com for more information)"
+msgstr "(se http://mercurial.selenic.com för mer information)"
+
 msgid ""
-"\n"
-"Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> and others\n"
+"Copyright (C) 2005-2010 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"\n"
-"Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> och andra\n"
+"Copyright (C) 2005-2010 Matt Mackall och andra\n"
 "Detta är fri mjukvara; se källkoden för kopieringsvillkor. Det ges INGEN\n"
 "garanti; inte ens för SÄLJBARHET eller ATT PASSA FÖR ETT VISST ÄNDAMÅL.\n"
 
@@ -9072,6 +9069,9 @@ msgstr "sammanfoga med gamla dirstate-föräldern efter återkallning"
 msgid "parent to choose when backing out merge"
 msgstr "förälder att välja när en sammanfogning återkallas"
 
+msgid "specify merge tool"
+msgstr "ange sammanfogningsverktyg"
+
 msgid "revision to backout"
 msgstr "revision att återkalla"
 
@@ -9233,6 +9233,9 @@ msgstr "FIL REV"
 
 msgid "[PATH]"
 msgstr "[SÖKVÄG]"
+
+msgid "revlog format"
+msgstr ""
 
 msgid "REPO NAMESPACE [KEY OLD NEW]"
 msgstr ""
@@ -9437,9 +9440,6 @@ msgstr "[-r REV]"
 
 msgid "force a merge with outstanding changes"
 msgstr "tvinga en sammanfogning med utestående ändringar"
-
-msgid "specify merge tool"
-msgstr "ange sammanfogningsverktyg"
 
 msgid "revision to merge"
 msgstr "revision att sammanfoga"
@@ -9766,6 +9766,9 @@ msgstr ""
 msgid "unsupported file type (type is %s)"
 msgstr ""
 
+msgid "searching for changes\n"
+msgstr "söker efter ändringar\n"
+
 msgid "queries"
 msgstr "frågor"
 
@@ -9807,6 +9810,10 @@ msgstr "notera: osynkade fjärrändringar!\n"
 #, python-format
 msgid "abort: %s\n"
 msgstr "avbryter: %s\n"
+
+#, python-format
+msgid "(%s)\n"
+msgstr "(%s)\n"
 
 #, python-format
 msgid "hg: parse error at %s: %s\n"
@@ -9867,10 +9874,6 @@ msgstr ""
 msgid "hg: unknown command '%s'\n"
 msgstr ""
 
-#, python-format
-msgid "(%s)\n"
-msgstr ""
-
 msgid "(did you forget to compile extensions?)\n"
 msgstr ""
 
@@ -9895,13 +9898,10 @@ msgstr ""
 msgid "abort: out of memory\n"
 msgstr ""
 
-msgid "** unknown exception encountered, details follow\n"
+msgid "** unknown exception encountered, please report by visiting\n"
 msgstr ""
 
-msgid "** report bug details to http://mercurial.selenic.com/bts/\n"
-msgstr ""
-
-msgid "** or mercurial@selenic.com\n"
+msgid "**  http://mercurial.selenic.com/wiki/BugTracker\n"
 msgstr ""
 
 #, python-format
@@ -10074,6 +10074,9 @@ msgstr "Ange En Revision"
 msgid "Specifying Multiple Revisions"
 msgstr "Ange Flera Revisioner"
 
+msgid "Specifying Revision Sets"
+msgstr "Ange Revisionsset"
+
 msgid "Diff Formats"
 msgstr "Diff-format"
 
@@ -10088,6 +10091,9 @@ msgstr "URL-sökvägar"
 
 msgid "Using additional features"
 msgstr "Använda ytterligare funktioner"
+
+msgid "Subrepositories"
+msgstr "Underarkiv"
 
 msgid "Configuring hgweb"
 msgstr "Konfiguration av hgweb"
@@ -10370,6 +10376,15 @@ msgid ""
 "    settings include \"replace\", which replaces unknown characters, and\n"
 "    \"ignore\", which drops them. This setting can be overridden with\n"
 "    the --encodingmode command-line option."
+msgstr ""
+
+msgid ""
+"HGENCODINGAMBIGUOUS\n"
+"    This sets Mercurial's behavior for handling characters with\n"
+"    \"ambiguous\" widths like accented Latin characters with East Asian\n"
+"    fonts. By default, Mercurial assumes ambiguous characters are\n"
+"    narrow, set this variable to \"wide\" if such characters cause\n"
+"    formatting problems."
 msgstr ""
 
 msgid ""
@@ -11172,36 +11187,60 @@ msgid ""
 "made on both branches."
 msgstr ""
 
-msgid "The merge tools are used both for :hg:`resolve` and :hg:`merge`."
+msgid ""
+"Merge tools are used both for :hg:`resolve`, :hg:`merge`, :hg:`update`,\n"
+":hg:`backout` and in several extensions."
 msgstr ""
 
 msgid ""
-"Usually, the merge tool tries to automatically, by combining all the\n"
-"non-overlapping changes that occurred separately in the two different\n"
-"evolutions of the same initial base file. Furthermore, some\n"
+"Usually, the merge tool tries to automatically reconcile the files by\n"
+"combining all non-overlapping changes that occurred separately in\n"
+"the two different evolutions of the same initial base file. Furthermore, "
+"some\n"
 "interactive merge programs make it easier to manually resolve\n"
 "conflicting merges, either in a graphical way, or by inserting some\n"
 "conflict markers. Mercurial does not include any interactive merge\n"
-"programs but relies on external tools for that. External merge tools\n"
-"and their properties and usage is configured in merge-tools section -\n"
-"see hgrc(5)."
+"programs but relies on external tools for that."
 msgstr ""
 
 msgid ""
-"There are a some internal merge tools which can be used. The internal\n"
+"Available merge tools\n"
+"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+msgstr ""
+
+msgid ""
+"External merge tools and their properties are configured in the\n"
+"merge-tools configuration section - see hgrc(5) - but they can often just\n"
+"be named by their executable."
+msgstr ""
+
+msgid ""
+"A merge tool is generally usable if its executable can be found on the\n"
+"system and if it can handle the merge. The executable is found if it\n"
+"is an absolute or relative executable path or the name of an\n"
+"application in the executable search path. The tool is assumed to be\n"
+"able to handle the merge if it can handle symlinks if the file is a\n"
+"symlink, if it can handle binary files if the file is binary, and if a\n"
+"GUI is available if the tool requires a GUI."
+msgstr ""
+
+msgid ""
+"There are some internal merge tools which can be used. The internal\n"
 "merge tools are:"
 msgstr ""
 
 msgid ""
 "``internal:merge``\n"
-"   Uses the internal non-interactive merge tool for merging files."
+"   Uses the internal non-interactive simple merge algorithm for merging\n"
+"   files. It will fail if there are any conflicts and leave markers in\n"
+"   the partially merged file."
 msgstr ""
 
 msgid ""
 "``internal:fail``\n"
 "   Rather than attempting to merge files that were modified on both\n"
-"   branches, it marks these files as unresolved. Then the resolve\n"
-"   command must be used to mark files resolved."
+"   branches, it marks them as unresolved. The resolve command must be\n"
+"   used to resolve these conflicts."
 msgstr ""
 
 msgid ""
@@ -11211,7 +11250,7 @@ msgstr ""
 
 msgid ""
 "``internal:other``\n"
-"   Uses the remote version of files as the merged version."
+"   Uses the other version of files as the merged version."
 msgstr ""
 
 msgid ""
@@ -11224,63 +11263,93 @@ msgid ""
 "``internal:dump``\n"
 "   Creates three versions of the files to merge, containing the\n"
 "   contents of local, other and base. These files can then be used to\n"
-"   perform a merge manually. If the file merged is name ``a.txt``,\n"
-"   these files will accordingly be named ``a.txt.local``,\n"
+"   perform a merge manually. If the file to be merged is named\n"
+"   ``a.txt``, these files will accordingly be named ``a.txt.local``,\n"
 "   ``a.txt.other`` and ``a.txt.base`` and they will be placed in the\n"
-"   same directory as the file to merge."
-msgstr ""
-
-msgid "How Mercurial decides which merge program to use"
+"   same directory as ``a.txt``."
 msgstr ""
 
 msgid ""
-"1. If the ``HGMERGE`` environment variable is present, it is used. If\n"
-"   specified it must be either an executable path or the name of an\n"
-"   application in your executable search path."
+"Internal tools are always available and do not require a GUI but will by "
+"default\n"
+"not handle symlinks or binary files."
 msgstr ""
 
 msgid ""
-"2. If the filename of the file to be merged matches any of the\n"
-"   patterns in the merge-patterns configuration section, then the\n"
-"   corresponding merge tool is used, unless the file to be merged is a\n"
-"   symlink. Here binary capabilities of the merge tool are not\n"
-"   considered."
+"Choosing a merge tool\n"
+"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
 msgstr ""
 
-msgid "3. If ui.merge is set, it is used."
+msgid "Mercurial uses these rules when deciding which merge tool to use:"
 msgstr ""
 
 msgid ""
-"4. If any merge tools are present in the merge-tools configuration\n"
-"   section, and any of the tools can be found on the system, the\n"
-"   priority settings are used to determine which one to use. Binary,\n"
-"   symlink and GUI capabilities do also have to match."
-msgstr ""
-
-msgid "5. If a program named ``hgmerge`` exists on the system, it is used."
+"1. If a tool has been specified with the --tool option to merge or resolve, "
+"it\n"
+"   is used.  If it is the name of a tool in the merge-tools configuration, "
+"its\n"
+"   configuration is used. Otherwise the specified tool must be executable "
+"by\n"
+"   the shell."
 msgstr ""
 
 msgid ""
-"6. If the file to be merged is not binary and is not a symlink, then\n"
+"2. If the ``HGMERGE`` environment variable is present, its value is used "
+"and\n"
+"   must be executable by the shell."
+msgstr ""
+
+msgid ""
+"3. If the filename of the file to be merged matches any of the patterns in "
+"the\n"
+"   merge-patterns configuration section, the first usable merge tool\n"
+"   corresponding to a matching pattern is used. Here, binary capabilities of "
+"the\n"
+"   merge tool are not considered."
+msgstr ""
+
+msgid ""
+"4. If ui.merge is set it will be considered next. If the value is not the "
+"name\n"
+"   of a configured tool, the specified value is used and must be executable "
+"by\n"
+"   the shell. Otherwise the named tool is used if it is usable."
+msgstr ""
+
+msgid ""
+"5. If any usable merge tools are present in the merge-tools configuration\n"
+"   section, the one with the highest priority is used."
+msgstr ""
+
+msgid ""
+"6. If a program named ``hgmerge`` can be found on the system, it is used - "
+"but\n"
+"   it will by default not be used for symlinks and binary files."
+msgstr ""
+
+msgid ""
+"7. If the file to be merged is not binary and is not a symlink, then\n"
 "   ``internal:merge`` is used."
 msgstr ""
 
-msgid "7. The merge fails."
+msgid "8. The merge of the file fails and must be resolved before commit."
 msgstr ""
 
 msgid ""
 ".. note::\n"
 "   After selecting a merge program, Mercurial will by default attempt\n"
-"   to merge the files using a simple merge algorithm first, to see if\n"
-"   they can be merged without conflicts. Only if there are conflicting\n"
-"   changes Mercurial will actually execute the merge program. Whether\n"
-"   to use the simple merge algorithm first can be controlled be the\n"
-"   premerge setting of the merge tool, which is enabled by default\n"
-"   unless the file is binary or symlink."
+"   to merge the files using a simple merge algorithm first. Only if it "
+"doesn't\n"
+"   succeed because of conflicting changes Mercurial will actually execute "
+"the\n"
+"   merge program. Whether to use the simple merge algorithm first can be\n"
+"   controlled by the premerge setting of the merge tool. Premerge is enabled "
+"by\n"
+"   default unless the file is binary or a symlink."
 msgstr ""
 
 msgid ""
-"See the merge-tools and ui sections of hgrc(5) for details on\n"
+"See the merge-tools and ui sections of hgrc(5) for details on the\n"
 "configuration of merge tools.\n"
 msgstr ""
 
@@ -11529,195 +11598,7 @@ msgstr ""
 msgid "The following predicates are supported:"
 msgstr ""
 
-msgid ""
-"``adds(pattern)``\n"
-"  Changesets that add a file matching pattern."
-msgstr ""
-
-msgid ""
-"``all()``\n"
-"  All changesets, the same as ``0:tip``."
-msgstr ""
-
-msgid ""
-"``ancestor(single, single)``\n"
-"  Greatest common ancestor of the two changesets."
-msgstr ""
-
-msgid ""
-"``ancestors(set)``\n"
-"  Changesets that are ancestors of a changeset in set."
-msgstr ""
-
-msgid ""
-"``author(string)``\n"
-"  Alias for ``user(string)``."
-msgstr ""
-
-msgid ""
-"``branch(set)``\n"
-"  All changesets belonging to the branches of changesets in set."
-msgstr ""
-
-msgid ""
-"``children(set)``\n"
-"  Child changesets of changesets in set."
-msgstr ""
-
-msgid ""
-"``closed()``\n"
-"  Changeset is closed."
-msgstr ""
-
-msgid ""
-"``contains(pattern)``\n"
-"  Revision contains pattern."
-msgstr ""
-
-msgid ""
-"``date(interval)``\n"
-"  Changesets within the interval, see :hg:`help dates`."
-msgstr ""
-
-msgid ""
-"``descendants(set)``\n"
-"  Changesets which are descendants of changesets in set."
-msgstr ""
-
-msgid ""
-"``file(pattern)``\n"
-"  Changesets affecting files matched by pattern."
-msgstr ""
-
-msgid ""
-"``follow()``\n"
-"  An alias for ``::.`` (ancestors of the working copy's first parent)."
-msgstr ""
-
-msgid ""
-"``grep(regex)``\n"
-"  Like ``keyword(string)`` but accepts a regex. Use ``grep(r'...')``\n"
-"  to ensure special escape characters are handled correctly."
-msgstr ""
-
-msgid ""
-"``head()``\n"
-"  Changeset is a named branch head."
-msgstr ""
-
-msgid ""
-"``heads(set)``\n"
-"  Members of set with no children in set."
-msgstr ""
-
-msgid ""
-"``id(string)``\n"
-"  Revision non-ambiguously specified by the given hex string prefix"
-msgstr ""
-
-msgid ""
-"``keyword(string)``\n"
-"  Search commit message, user name, and names of changed files for\n"
-"  string."
-msgstr ""
-
-msgid ""
-"``limit(set, n)``\n"
-"  First n members of set."
-msgstr ""
-
-msgid ""
-"``max(set)``\n"
-"  Changeset with highest revision number in set."
-msgstr ""
-
-msgid ""
-"``min(set)``\n"
-"  Changeset with lowest revision number in set."
-msgstr ""
-
-msgid ""
-"``merge()``\n"
-"  Changeset is a merge changeset."
-msgstr ""
-
-msgid ""
-"``modifies(pattern)``\n"
-"  Changesets modifying files matched by pattern."
-msgstr ""
-
-msgid ""
-"``outgoing([path])``\n"
-"  Changesets not found in the specified destination repository, or the\n"
-"  default push location."
-msgstr ""
-
-msgid ""
-"``p1(set)``\n"
-"  First parent of changesets in set."
-msgstr ""
-
-msgid ""
-"``p2(set)``\n"
-"  Second parent of changesets in set."
-msgstr ""
-
-msgid ""
-"``parents(set)``\n"
-"  The set of all parents for all changesets in set."
-msgstr ""
-
-msgid ""
-"``present(set)``\n"
-"  An empty set, if any revision in set isn't found; otherwise,\n"
-"  all revisions in set."
-msgstr ""
-
-msgid ""
-"``removes(pattern)``\n"
-"  Changesets which remove files matching pattern."
-msgstr ""
-
-msgid ""
-"``rev(number)``\n"
-"  Revision with the given numeric identifier."
-msgstr ""
-
-msgid ""
-"``reverse(set)``\n"
-"  Reverse order of set."
-msgstr ""
-
-msgid ""
-"``roots(set)``\n"
-"  Changesets with no parent changeset in set."
-msgstr ""
-
-msgid ""
-"``sort(set[, [-]key...])``\n"
-"  Sort set by keys. The default sort order is ascending, specify a key\n"
-"  as ``-key`` to sort in descending order."
-msgstr ""
-
-msgid "  The keys can be:"
-msgstr ""
-
-msgid ""
-"  - ``rev`` for the revision number,\n"
-"  - ``branch`` for the branch name,\n"
-"  - ``desc`` for the commit message (description),\n"
-"  - ``user`` for user name (``author`` can be used as an alias),\n"
-"  - ``date`` for the commit date"
-msgstr ""
-
-msgid ""
-"``tag(name)``\n"
-"  The specified tag by name, or all tagged revisions if no name is given."
-msgstr ""
-
-msgid ""
-"``user(string)``\n"
-"  User name is string."
+msgid ".. predicatesmarker"
 msgstr ""
 
 msgid "Command line equivalents for :hg:`log`::"
@@ -11740,19 +11621,19 @@ msgstr ""
 msgid "- Changesets on the default branch::"
 msgstr "- Ändringar på default-grenen::"
 
-msgid "    hg log -r 'branch(default)'"
-msgstr "    hg log -r 'branch(default)'"
+msgid "    hg log -r \"branch(default)\""
+msgstr "    hg log -r \"branch(default)\""
 
 msgid "- Changesets on the default branch since tag 1.5 (excluding merges)::"
 msgstr ""
 
-msgid "    hg log -r 'branch(default) and 1.5:: and not merge()'"
-msgstr ""
+msgid "    hg log -r \"branch(default) and 1.5:: and not merge()\""
+msgstr "    hg log -r \"branch(default) and 1.5:: and not merge()\""
 
 msgid "- Open branch heads::"
 msgstr "- Öppna grenhuvuden::"
 
-msgid "    hg log -r 'head() and not closed()'"
+msgid "    hg log -r \"head() and not closed()\""
 msgstr ""
 
 msgid ""
@@ -11760,13 +11641,13 @@ msgid ""
 "  ``hgext/*``::"
 msgstr ""
 
-msgid "    hg log -r '1.3::1.5 and keyword(bug) and file(\"hgext/*\")'"
+msgid "    hg log -r \"1.3::1.5 and keyword(bug) and file('hgext/*')\""
 msgstr ""
 
 msgid "- Changesets in committed May 2008, sorted by user::"
 msgstr ""
 
-msgid "    hg log -r 'sort(date(\"May 2008\"), user)'"
+msgid "    hg log -r \"sort(date('May 2008'), user)\""
 msgstr ""
 
 msgid ""
@@ -11775,8 +11656,192 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    hg log -r '(keyword(bug) or keyword(issue)) and not ancestors(tagged"
-"())'\n"
+"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
+"())\"\n"
+msgstr ""
+
+msgid ""
+"Subrepositories let you nest external repositories or projects into a\n"
+"parent Mercurial repository, and make commands operate on them as a\n"
+"group. External Mercurial and Subversion projects are currently\n"
+"supported."
+msgstr ""
+
+msgid "Subrepositories are made of three components:"
+msgstr ""
+
+msgid ""
+"1. Nested repository checkouts. They can appear anywhere in the\n"
+"   parent working directory, and are Mercurial clones or Subversion\n"
+"   checkouts."
+msgstr ""
+
+msgid ""
+"2. Nested repository references. They are defined in ``.hgsub`` and\n"
+"   tell where the subrepository checkouts come from. Mercurial\n"
+"   subrepositories are referenced like:"
+msgstr ""
+
+msgid "     path/to/nested = https://example.com/nested/repo/path"
+msgstr ""
+
+msgid ""
+"   where ``path/to/nested`` is the checkout location relatively to the\n"
+"   parent Mercurial root, and ``https://example.com/nested/repo/path``\n"
+"   is the source repository path. The source can also reference a\n"
+"   filesystem path. Subversion repositories are defined with:"
+msgstr ""
+
+msgid "     path/to/nested = [svn]https://example.com/nested/trunk/path"
+msgstr ""
+
+msgid ""
+"   Note that ``.hgsub`` does not exist by default in Mercurial\n"
+"   repositories, you have to create and add it to the parent\n"
+"   repository before using subrepositories."
+msgstr ""
+
+msgid ""
+"3. Nested repository states. They are defined in ``.hgsubstate`` and\n"
+"   capture whatever information is required to restore the\n"
+"   subrepositories to the state they were committed in a parent\n"
+"   repository changeset. Mercurial automatically record the nested\n"
+"   repositories states when committing in the parent repository."
+msgstr ""
+
+msgid ""
+"   .. note::\n"
+"      The ``.hgsubstate`` file should not be edited manually."
+msgstr ""
+
+msgid ""
+"\n"
+"Adding a Subrepository\n"
+"----------------------"
+msgstr ""
+
+msgid ""
+"If ``.hgsub`` does not exist, create it and add it to the parent\n"
+"repository. Clone or checkout the external projects where you want it\n"
+"to live in the parent repository. Edit ``.hgsub`` and add the\n"
+"subrepository entry as described above. At this point, the\n"
+"subrepository is tracked and the next commit will record its state in\n"
+"``.hgsubstate`` and bind it to the committed changeset."
+msgstr ""
+
+msgid ""
+"Synchronizing a Subrepository\n"
+"-----------------------------"
+msgstr ""
+
+msgid ""
+"Subrepos do not automatically track the latest changeset of their\n"
+"sources. Instead, they are updated to the changeset that corresponds\n"
+"with the changeset checked out in the top-level changeset. This is so\n"
+"developers always get a consistent set of compatible code and\n"
+"libraries when they update."
+msgstr ""
+
+msgid ""
+"Thus, updating subrepos is a manual process. Simply check out target\n"
+"subrepo at the desired revision, test in the top-level repo, then\n"
+"commit in the parent repository to record the new combination."
+msgstr ""
+
+msgid ""
+"Deleting a Subrepository\n"
+"------------------------"
+msgstr ""
+
+msgid ""
+"To remove a subrepository from the parent repository, delete its\n"
+"reference from ``.hgsub``, then remove its files."
+msgstr ""
+
+msgid ""
+"Interaction with Mercurial Commands\n"
+"-----------------------------------"
+msgstr ""
+
+msgid ""
+":add: add does not recurse in subrepos unless -S/--subrepos is\n"
+"    specified. Subversion subrepositories are currently silently\n"
+"    ignored."
+msgstr ""
+
+msgid ""
+":archive: archive does not recurse in subrepositories unless\n"
+"    -S/--subrepos is specified."
+msgstr ""
+
+msgid ""
+":commit: commit creates a consistent snapshot of the state of the\n"
+"    entire project and its subrepositories. It does this by first\n"
+"    attempting to commit all modified subrepositories, then recording\n"
+"    their state and finally committing it in the parent repository."
+msgstr ""
+
+msgid ""
+":diff: diff does not recurse in subrepos unless -S/--subrepos is\n"
+"    specified. Changes are displayed as usual, on the subrepositories\n"
+"    elements. Subversion subrepositories are currently silently\n"
+"    ignored."
+msgstr ""
+
+msgid ""
+":incoming: incoming does not recurse in subrepos unless -S/--subrepos\n"
+"    is specified. Subversion subrepositories are currently silently\n"
+"    ignored."
+msgstr ""
+
+msgid ""
+":outgoing: outgoing does not recurse in subrepos unless -S/--subrepos\n"
+"    is specified. Subversion subrepositories are currently silently\n"
+"    ignored."
+msgstr ""
+
+msgid ""
+":pull: pull is not recursive since it is not clear what to pull prior\n"
+"    to running :hg:`update`. Listing and retrieving all\n"
+"    subrepositories changes referenced by the parent repository pulled\n"
+"    changesets is expensive at best, impossible in the Subversion\n"
+"    case."
+msgstr ""
+
+msgid ""
+":push: Mercurial will automatically push all subrepositories first\n"
+"    when the parent repository is being pushed. This ensures new\n"
+"    subrepository changes are available when referenced by top-level\n"
+"    repositories."
+msgstr ""
+
+msgid ""
+":status: status does not recurse into subrepositories unless\n"
+"    -S/--subrepos is specified. Subrepository changes are displayed as\n"
+"    regular Mercurial changes on the subrepository\n"
+"    elements. Subversion subrepositories are currently silently\n"
+"    ignored."
+msgstr ""
+
+msgid ""
+":update: update restores the subrepos in the state they were\n"
+"    originally committed in target changeset. If the recorded\n"
+"    changeset is not available in the current subrepository, Mercurial\n"
+"    will pull it in first before updating.  This means that updating\n"
+"    can require network access when using subrepositories."
+msgstr ""
+
+msgid ""
+"Remapping Subrepositories Sources\n"
+"---------------------------------"
+msgstr ""
+
+msgid ""
+"A subrepository source location may change during a project life,\n"
+"invalidating references stored in the parent repository history. To\n"
+"fix this, rewriting rules can be defined in parent repository ``hgrc``\n"
+"file or in Mercurial configuration. See the ``[subpaths]`` section in\n"
+"hgrc(5) for more details."
 msgstr ""
 
 msgid ""
@@ -12856,45 +12921,146 @@ msgstr "kan inte använda en lista i detta sammanhang"
 msgid "not a function: %s"
 msgstr "inte en funktion: %s"
 
+msgid ""
+"``id(string)``\n"
+"    Revision non-ambiguously specified by the given hex string prefix."
+msgstr ""
+
+#. i18n: "id" is a keyword
 msgid "id requires one argument"
 msgstr "id kräver ett argument"
 
+#. i18n: "id" is a keyword
 msgid "id requires a string"
 msgstr "id kräver en sträng"
 
+msgid ""
+"``rev(number)``\n"
+"    Revision with the given numeric identifier."
+msgstr ""
+
+#. i18n: "rev" is a keyword
 msgid "rev requires one argument"
 msgstr "rev kräver ett argument"
 
+#. i18n: "rev" is a keyword
 msgid "rev requires a number"
 msgstr "rev kräver ett nummer"
 
+#. i18n: "rev" is a keyword
 msgid "rev expects a number"
 msgstr "rev förväntar sig ett nummer"
 
+msgid ""
+"``p1(set)``\n"
+"    First parent of changesets in set."
+msgstr ""
+
+msgid ""
+"``p2(set)``\n"
+"    Second parent of changesets in set."
+msgstr ""
+
+msgid ""
+"``parents(set)``\n"
+"    The set of all parents for all changesets in set."
+msgstr ""
+
+msgid ""
+"``max(set)``\n"
+"    Changeset with highest revision number in set."
+msgstr ""
+
+msgid ""
+"``min(set)``\n"
+"    Changeset with lowest revision number in set."
+msgstr ""
+
+msgid ""
+"``limit(set, n)``\n"
+"    First n members of set."
+msgstr ""
+
+#. i18n: "limit" is a keyword
 msgid "limit requires two arguments"
 msgstr "limit kräver två argument"
 
+#. i18n: "limit" is a keyword
 msgid "limit requires a number"
 msgstr "limit kräver ett nummer"
 
+#. i18n: "limit" is a keyword
 msgid "limit expects a number"
 msgstr "limit förväntar sig ett nummer"
 
+msgid ""
+"``children(set)``\n"
+"    Child changesets of changesets in set."
+msgstr ""
+
+msgid ""
+"``branch(set)``\n"
+"    All changesets belonging to the branches of changesets in set."
+msgstr ""
+
+msgid ""
+"``ancestor(single, single)``\n"
+"    Greatest common ancestor of the two changesets."
+msgstr ""
+
+#. i18n: "ancestor" is a keyword
 msgid "ancestor requires two arguments"
 msgstr "ancestor kräver två argument"
 
+#. i18n: "ancestor" is a keyword
 msgid "ancestor arguments must be single revisions"
 msgstr "argument till ancestor måste vara singelrevisioner"
 
+msgid ""
+"``ancestors(set)``\n"
+"    Changesets that are ancestors of a changeset in set."
+msgstr ""
+
+msgid ""
+"``descendants(set)``\n"
+"    Changesets which are descendants of changesets in set."
+msgstr ""
+
+msgid ""
+"``follow()``\n"
+"    An alias for ``::.`` (ancestors of the working copy's first parent)."
+msgstr ""
+
+#. i18n: "follow" is a keyword
 msgid "follow takes no arguments"
 msgstr "follow tar inga argument"
 
+msgid ""
+"``date(interval)``\n"
+"    Changesets within the interval, see :hg:`help dates`."
+msgstr ""
+
+#. i18n: "date" is a keyword
 msgid "date requires a string"
 msgstr "date kräver en sträng"
 
+msgid ""
+"``keyword(string)``\n"
+"    Search commit message, user name, and names of changed files for\n"
+"    string."
+msgstr ""
+
+#. i18n: "keyword" is a keyword
 msgid "keyword requires a string"
 msgstr "keyword kräver en sträng"
 
+msgid ""
+"``grep(regex)``\n"
+"    Like ``keyword(string)`` but accepts a regex. Use ``grep(r'...')``\n"
+"    to ensure special escape characters are handled correctly."
+msgstr ""
+
+#. i18n: "grep" is a keyword
 msgid "grep requires a string"
 msgstr "grep kräver en sträng"
 
@@ -12902,33 +13068,121 @@ msgstr "grep kräver en sträng"
 msgid "invalid match pattern: %s"
 msgstr "ogiltigt träffmönster: %s"
 
+msgid ""
+"``author(string)``\n"
+"    Alias for ``user(string)``."
+msgstr ""
+
+#. i18n: "author" is a keyword
 msgid "author requires a string"
 msgstr "author kräver en sträng"
 
+msgid ""
+"``user(string)``\n"
+"    User name is string."
+msgstr ""
+
+msgid ""
+"``file(pattern)``\n"
+"    Changesets affecting files matched by pattern."
+msgstr ""
+
+#. i18n: "file" is a keyword
 msgid "file requires a pattern"
 msgstr "file kräver ett mönster"
 
+msgid ""
+"``contains(pattern)``\n"
+"    Revision contains pattern."
+msgstr ""
+
+#. i18n: "contains" is a keyword
 msgid "contains requires a pattern"
 msgstr "contains kräver ett mönster"
 
+msgid ""
+"``modifies(pattern)``\n"
+"    Changesets modifying files matched by pattern."
+msgstr ""
+
+#. i18n: "modifies" is a keyword
 msgid "modifies requires a pattern"
 msgstr "modifies kräver ett mönster"
 
+msgid ""
+"``adds(pattern)``\n"
+"    Changesets that add a file matching pattern."
+msgstr ""
+
+#. i18n: "adds" is a keyword
 msgid "adds requires a pattern"
 msgstr "adds kräver ett mönster"
 
+msgid ""
+"``removes(pattern)``\n"
+"    Changesets which remove files matching pattern."
+msgstr ""
+
+#. i18n: "removes" is a keyword
 msgid "removes requires a pattern"
 msgstr "removes kräver ett mänster"
 
+msgid ""
+"``merge()``\n"
+"    Changeset is a merge changeset."
+msgstr ""
+
+#. i18n: "merge" is a keyword
 msgid "merge takes no arguments"
 msgstr "merge tar inga argument"
 
+msgid ""
+"``closed()``\n"
+"    Changeset is closed."
+msgstr ""
+
+#. i18n: "closed" is a keyword
 msgid "closed takes no arguments"
 msgstr "closed tar inga argument"
 
+msgid ""
+"``head()``\n"
+"    Changeset is a named branch head."
+msgstr ""
+
+#. i18n: "head" is a keyword
 msgid "head takes no arguments"
 msgstr "head tar inga argument"
 
+msgid ""
+"``reverse(set)``\n"
+"    Reverse order of set."
+msgstr ""
+
+msgid ""
+"``present(set)``\n"
+"    An empty set, if any revision in set isn't found; otherwise,\n"
+"    all revisions in set."
+msgstr ""
+
+msgid ""
+"``sort(set[, [-]key...])``\n"
+"    Sort set by keys. The default sort order is ascending, specify a key\n"
+"    as ``-key`` to sort in descending order."
+msgstr ""
+
+msgid "    The keys can be:"
+msgstr ""
+
+msgid ""
+"    - ``rev`` for the revision number,\n"
+"    - ``branch`` for the branch name,\n"
+"    - ``desc`` for the commit message (description),\n"
+"    - ``user`` for user name (``author`` can be used as an alias),\n"
+"    - ``date`` for the commit date"
+msgstr ""
+
+#. i18n: "sort" is a keyword
 msgid "sort requires one or two arguments"
 msgstr "sort kräver ett eller två argument"
 
@@ -12939,15 +13193,45 @@ msgstr "sort-spec måste vara en sträng"
 msgid "unknown sort key %r"
 msgstr "okänd sorteringsnyckel %r"
 
+msgid ""
+"``all()``\n"
+"    All changesets, the same as ``0:tip``."
+msgstr ""
+
+#. i18n: "all" is a keyword
 msgid "all takes no arguments"
 msgstr "all tar inga argument"
 
+msgid ""
+"``heads(set)``\n"
+"    Members of set with no children in set."
+msgstr ""
+
+msgid ""
+"``roots(set)``\n"
+"    Changesets with no parent changeset in set."
+msgstr ""
+
+msgid ""
+"``outgoing([path])``\n"
+"    Changesets not found in the specified destination repository, or the\n"
+"    default push location."
+msgstr ""
+
+#. i18n: "outgoing" is a keyword
 msgid "outgoing requires a repository path"
 msgstr "outgoing kräver en arkivsökväg"
 
+msgid ""
+"``tag(name)``\n"
+"    The specified tag by name, or all tagged revisions if no name is given."
+msgstr ""
+
+#. i18n: "tag" is a keyword
 msgid "tag takes one or no arguments"
 msgstr "tag tar ett eller inga argument"
 
+#. i18n: "tag" is a keyword
 msgid "the argument to tag must be a string"
 msgstr "argumentet till tag måste vara en sträng"
 
