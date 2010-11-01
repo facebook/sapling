@@ -6187,8 +6187,8 @@ msgstr "rebaseando"
 msgid "changesets"
 msgstr "revisões"
 
-msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
-msgstr "corrija conflitos não resolvidos com hg resolve e então execute hg rebase --continue"
+msgid "unresolved conflicts (see hg resolve, then hg rebase --continue)"
+msgstr "conflitos não resolvidos (veja hg resolve, e em seguida hg rebase --continue)"
 
 #, python-format
 msgid "no changes, revision %d skipped\n"
