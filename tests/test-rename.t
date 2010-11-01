@@ -25,6 +25,17 @@ rename a single file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/c
 
+rename a single file using absolute paths
+
+  $ hg rename `pwd`/d1/d11/a1 `pwd`/d2/c
+  $ hg status -C
+  A d2/c
+    d1/d11/a1
+  R d1/d11/a1
+  $ hg update -C
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm d2/c
+
 rename --after a single file
 
   $ mv d1/d11/a1 d2/c
