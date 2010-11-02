@@ -99,7 +99,8 @@ def findliteralblocks(blocks):
     return blocks
 
 _bulletre = re.compile(r'(-|[0-9A-Za-z]+\.|\(?[0-9A-Za-z]+\)|\|) ')
-_optionre = re.compile(r'^(--[a-z-]+)((?:[ =][a-zA-Z][\w-]*)?  +)(.*)$')
+_optionre = re.compile(r'^(-([a-zA-Z0-9]), )?(--[a-z0-9-]+)'
+                       r'((.*)  +)(.*)$')
 _fieldre = re.compile(r':(?![: ])([^:]*)(?<! ):[ ]+(.*)')
 _definitionre = re.compile(r'[^ ]')
 
@@ -172,6 +173,42 @@ def updatefieldlists(blocks):
 
     return blocks
 
+
+def updateoptionlists(blocks):
+    i = 0
+    while i < len(blocks):
+        if blocks[i]['type'] != 'option':
+            i += 1
+            continue
+
+        optstrwidth = 0
+        j = i
+        while j < len(blocks) and blocks[j]['type'] == 'option':
+            m = _optionre.match(blocks[j]['lines'][0])
+
+            shortoption = m.group(2)
+            group3 = m.group(3)
+            longoption = group3[2:].strip()
+            desc = m.group(6).strip()
+            longoptionarg = m.group(5).strip()
+            blocks[j]['lines'][0] = desc
+
+            noshortop = ''
+            if not shortoption:
+                noshortop = '   '
+
+            opt = "%s%s" %   (shortoption and "-%s " % shortoption or '',
+                            ("%s--%s %s") % (noshortop, longoption,
+                                             longoptionarg))
+            opt = opt.rstrip()
+            blocks[j]['optstr'] = opt
+            optstrwidth = max(optstrwidth, encoding.colwidth(opt))
+            j += 1
+
+        for block in blocks[i:j]:
+            block['optstrwidth'] = optstrwidth
+        i = j + 1
+    return blocks
 
 def prunecontainers(blocks, keep):
     """Prune unwanted containers.
@@ -322,6 +359,17 @@ _admonitiontitles = {'attention': _('Attention:'),
                      'tip': _('Tip:'),
                      'warning': _('Warning!')}
 
+def formatoption(block, width):
+    desc = ' '.join(map(str.strip, block['lines']))
+    colwidth = encoding.colwidth(block['optstr'])
+    usablewidth = width - 1
+    hanging = block['optstrwidth']
+    initindent = '%s%s  ' % (block['optstr'], ' ' * ((hanging - colwidth)))
+    hangindent = ' ' * (encoding.colwidth(initindent) + 1)
+    return ' %s' % (util.wrap(desc, usablewidth,
+                                           initindent=initindent,
+                                           hangindent=hangindent))
+
 def formatblock(block, width):
     """Format a block according to width."""
     if width <= 0:
@@ -378,9 +426,7 @@ def formatblock(block, width):
             key = key.ljust(_fieldwidth)
         block['lines'][0] = key + block['lines'][0]
     elif block['type'] == 'option':
-        m = _optionre.match(block['lines'][0])
-        option, arg, rest = m.groups()
-        subindent = indent + (len(option) + len(arg)) * ' '
+        return formatoption(block, width)
 
     text = ' '.join(map(str.strip, block['lines']))
     return util.wrap(text, width=width,
@@ -400,6 +446,7 @@ def format(text, width, indent=0, keep=None):
     blocks = hgrole(blocks)
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
+    blocks = updateoptionlists(blocks)
     blocks = addmargins(blocks)
     blocks = prunecomments(blocks)
     blocks = findadmonitions(blocks)
@@ -427,6 +474,7 @@ if __name__ == "__main__":
     blocks = debug(inlineliterals, blocks)
     blocks = debug(splitparagraphs, blocks)
     blocks = debug(updatefieldlists, blocks)
+    blocks = debug(updateoptionlists, blocks)
     blocks = debug(findsections, blocks)
     blocks = debug(addmargins, blocks)
     blocks = debug(prunecomments, blocks)
