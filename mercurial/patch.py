@@ -995,10 +995,6 @@ def iterhunks(ui, fp, sourcefile=None):
     BFILE = 1
     context = None
     lr = linereader(fp)
-    # gitworkdone is True if a git operation (copy, rename, ...) was
-    # performed already for the current file. Useful when the file
-    # section may have no hunk.
-    gitworkdone = False
 
     while True:
         newfile = newgitfile = False
@@ -1032,7 +1028,6 @@ def iterhunks(ui, fp, sourcefile=None):
         elif x.startswith('diff --git'):
             # check for git diff, scanning the whole patch file if needed
             m = gitre.match(x)
-            gitworkdone = False
             if m:
                 afile, bfile = m.group(1, 2)
                 if not git:
@@ -1047,7 +1042,6 @@ def iterhunks(ui, fp, sourcefile=None):
                 if gp and (gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD')
                            or gp.mode):
                     afile = bfile
-                    gitworkdone = True
                 newgitfile = True
         elif x.startswith('---'):
             # check for a unified diff
@@ -1074,9 +1068,6 @@ def iterhunks(ui, fp, sourcefile=None):
             context = True
             afile = parsefilename(x)
             bfile = parsefilename(l2)
-
-        if newfile:
-            gitworkdone = False
 
         if newgitfile or newfile:
             emitfile = True
