@@ -83,7 +83,10 @@ def filteriterhunks(meta):
         applycurrent = False
         # Passing False instead of textmode because we should never
         # be ignoring EOL type.
-        if len(iterhunks.func_defaults) == 1:
+        if not iterhunks.func_defaults:
+            # Since 1.7 (cfedc529e4a1)
+            gen = iterhunks(ui, fp)
+        elif len(iterhunks.func_defaults) == 1:
             gen = iterhunks(ui, fp, sourcefile)
         else:
             gen = iterhunks(ui, fp, sourcefile, textmode)
