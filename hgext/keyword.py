@@ -191,10 +191,14 @@ class kwtemplater(object):
             return '$%s: %s $' % (kw, ekw)
         return subfunc(kwsub, data)
 
+    def linkctx(self, path, fileid):
+        '''Similar to filelog.linkrev, but returns a changectx.'''
+        return self.repo.filectx(path, fileid=fileid).changectx()
+
     def expand(self, path, node, data):
         '''Returns data with keywords expanded.'''
         if not self.restrict and self.match(path) and not util.binary(data):
-            ctx = self.repo.filectx(path, fileid=node).changectx()
+            ctx = self.linkctx(path, node)
             return self.substitute(data, path, ctx, self.re_kw.sub)
         return data
 
@@ -212,7 +216,7 @@ class kwtemplater(object):
         kwcmd = self.restrict and lookup # kwexpand/kwshrink
         if self.restrict or expand and lookup:
             mf = ctx.manifest()
-        fctx = ctx
+        lctx = ctx
         subn = (self.restrict or rekw) and self.re_kw.subn or self.re_kwexp.subn
         msg = (expand and _('overwriting %s expanding keywords\n')
                or _('overwriting %s shrinking keywords\n'))
@@ -225,8 +229,8 @@ class kwtemplater(object):
                 continue
             if expand:
                 if lookup:
-                    fctx = self.repo.filectx(f, fileid=mf[f]).changectx()
-                data, found = self.substitute(data, f, fctx, subn)
+                    lctx = self.linkctx(f, mf[f])
+                data, found = self.substitute(data, f, lctx, subn)
             elif self.restrict:
                 found = self.re_kw.search(data)
             else:
