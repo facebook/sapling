@@ -858,23 +858,34 @@ class opener(object):
             mode += "b" # for that other OS
 
         nlink = -1
-        if mode not in ("r", "rb"):
+        st_mode = None
+        dirname, basename = os.path.split(f)
+        # If basename is empty, then the path is malformed because it points
+        # to a directory. Let the posixfile() call below raise IOError.
+        if basename and mode not in ('r', 'rb'):
+            if atomictemp:
+                if not os.path.isdir(dirname):
+                    makedirs(dirname, self.createmode)
+                return atomictempfile(f, mode, self.createmode)
             try:
-                nlink = nlinks(f)
+                if 'w' in mode:
+                    st_mode = os.lstat(f).st_mode & 0777
+                    os.unlink(f)
+                    nlink = 0
+                else:
+                    nlink = nlinks(f)
             except OSError:
                 nlink = 0
-                dirname, basename = os.path.split(f)
-                # Avoid calling makedirs when the path points to a
-                # directory -- the open will raise IOError below.
-                if basename and not os.path.isdir(dirname):
+                if not os.path.isdir(dirname):
                     makedirs(dirname, self.createmode)
-            if atomictemp:
-                return atomictempfile(f, mode, self.createmode)
             if nlink > 1:
                 rename(mktempcopy(f), f)
         fp = posixfile(f, mode)
         if nlink == 0:
-            self._fixfilemode(f)
+            if st_mode is None:
+                self._fixfilemode(f)
+            else:
+                os.chmod(f, st_mode)
         return fp
 
     def symlink(self, src, dst):
