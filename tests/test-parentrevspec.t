@@ -69,12 +69,12 @@ some random lookups
   6^^^^^: 0
   6^^^^^^: -1
   6^1: 5
-  6^2: abort: unknown revision '6^2'!
+  6^2: hg: parse error at 1: syntax error
   6^^2: 4
   6^1^2: 4
-  6^^3: abort: unknown revision '6^^3'!
+  6^^3: hg: parse error at 1: syntax error
   $ lookup "6~" "6~1" "6~2" "6~3" "6~4" "6~5" "6~42" "6~1^2" "6~1^2~2"
-  6~: abort: unknown revision '6~'!
+  6~: hg: parse error at 1: syntax error
   6~1: 5
   6~2: 3
   6~3: 2
@@ -102,4 +102,4 @@ with a tag "foo^bar" pointing to rev 2
   $ hg tag -l -r 2 "foo^bar"
   $ lookup "foo^bar" "foo^bar^"
   foo^bar: 2
-  foo^bar^: abort: unknown revision 'foo^bar^'!
+  foo^bar^: hg: parse error at 3: syntax error

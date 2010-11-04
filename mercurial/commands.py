@@ -126,7 +126,7 @@ def annotate(ui, repo, *pats, **opts):
         lastfunc = funcmap[-1]
         funcmap[-1] = lambda x: "%s:%s" % (lastfunc(x), x[1])
 
-    ctx = repo[opts.get('rev')]
+    ctx = cmdutil.revsingle(repo, opts.get('rev'))
     m = cmdutil.match(repo, pats, opts)
     follow = not opts.get('no_follow')
     for abs in ctx.walk(m):
@@ -178,7 +178,7 @@ def archive(ui, repo, dest, **opts):
     Returns 0 on success.
     '''
 
-    ctx = repo[opts.get('rev')]
+    ctx = cmdutil.revsingle(repo, opts.get('rev'))
     if not ctx:
         raise util.Abort(_('no working directory: please specify a revision'))
     node = ctx.node()
@@ -243,7 +243,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
         opts['date'] = util.parsedate(date)
 
     cmdutil.bail_if_changed(repo)
-    node = repo.lookup(rev)
+    node = cmdutil.revsingle(repo, rev).node()
 
     op1, op2 = repo.dirstate.parents()
     a = repo.changelog.ancestor(op1, node)
@@ -408,7 +408,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                     raise util.Abort(_("%s killed") % command)
                 else:
                     transition = "bad"
-                ctx = repo[rev or '.']
+                ctx = cmdutil.revsingle(repo, rev)
+                rev = None # clear for future iterations
                 state[transition].append(ctx.node())
                 ui.status(_('Changeset %d:%s: %s\n') % (ctx, ctx, transition))
                 check_state(state, interactive=False)
@@ -572,11 +573,14 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
     Returns 0 on success, 1 if no changes found.
     """
-    revs = opts.get('rev') or None
+    revs = None
+    if 'rev' in opts:
+        revs = cmdutil.revrange(repo, opts['rev'])
+
     if opts.get('all'):
         base = ['null']
     else:
-        base = opts.get('base')
+        base = cmdutil.revrange(repo, opts.get('base'))
     if base:
         if dest:
             raise util.Abort(_("--base is incompatible with specifying "
@@ -1026,7 +1030,7 @@ def debugfsinfo(ui, path = "."):
 
 def debugrebuildstate(ui, repo, rev="tip"):
     """rebuild the dirstate as it would look like for the given revision"""
-    ctx = repo[rev]
+    ctx = cmdutil.revsingle(repo, rev)
     wlock = repo.wlock()
     try:
         repo.dirstate.rebuild(ctx.node(), ctx.manifest())
@@ -1140,12 +1144,12 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     Returns 0 on success.
     """
 
-    if not rev2:
-        rev2 = hex(nullid)
+    r1 = cmdutil.revsingle(repo, rev1).node()
+    r2 = cmdutil.revsingle(repo, rev2, 'null').node()
 
     wlock = repo.wlock()
     try:
-        repo.dirstate.setparents(repo.lookup(rev1), repo.lookup(rev2))
+        repo.dirstate.setparents(r1, r2)
     finally:
         wlock.release()
 
@@ -1174,9 +1178,8 @@ def debugstate(ui, repo, nodates=None):
         ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
 
 def debugsub(ui, repo, rev=None):
-    if rev == '':
-        rev = None
-    for k, v in sorted(repo[rev].substate.items()):
+    ctx = cmdutil.revsingle(repo, rev, None)
+    for k, v in sorted(ctx.substate.items()):
         ui.write('path %s\n' % k)
         ui.write(' source   %s\n' % v[0])
         ui.write(' revision %s\n' % v[1])
@@ -1435,7 +1438,7 @@ def debuginstall(ui):
 def debugrename(ui, repo, file1, *pats, **opts):
     """dump rename information"""
 
-    ctx = repo[opts.get('rev')]
+    ctx = cmdutil.revsingle(repo, opts.get('rev'))
     m = cmdutil.match(repo, (file1,) + pats, opts)
     for abs in ctx.walk(m):
         fctx = ctx[abs]
@@ -1808,10 +1811,9 @@ def heads(ui, repo, *branchrevs, **opts):
     Returns 0 if matching heads are found, 1 if not.
     """
 
-    if opts.get('rev'):
-        start = repo.lookup(opts['rev'])
-    else:
-        start = None
+    start = None
+    if 'rev' in opts:
+        start = cmdutil.revsingle(repo, opts['rev'], None).node()
 
     if opts.get('topo'):
         heads = [repo[h] for h in repo.heads(start)]
@@ -2200,7 +2202,7 @@ def identify(ui, repo, source=None,
             output.append("%s%s" % ('+'.join([str(p.rev()) for p in parents]),
                                     (changed) and "+" or ""))
     else:
-        ctx = repo[rev]
+        ctx = cmdutil.revsingle(repo, rev)
         if default or id:
             output = [hexfunc(ctx.node())]
         if num:
@@ -2443,7 +2445,7 @@ def locate(ui, repo, *pats, **opts):
     Returns 0 if a match is found, 1 otherwise.
     """
     end = opts.get('print0') and '\0' or '\n'
-    rev = opts.get('rev') or None
+    rev = cmdutil.revsingle(repo, opts.get('rev'), None).node()
 
     ret = 1
     m = cmdutil.match(repo, pats, opts, default='relglob')
@@ -2578,7 +2580,7 @@ def manifest(ui, repo, node=None, rev=None):
         node = rev
 
     decor = {'l':'644 @ ', 'x':'755 * ', '':'644   '}
-    ctx = repo[node]
+    ctx = cmdutil.revsingle(repo, node)
     for f in ctx:
         if ui.debugflag:
             ui.write("%40s " % hex(ctx.manifest()[f]))
@@ -2647,6 +2649,8 @@ def merge(ui, repo, node=None, **opts):
             raise util.Abort(_('working dir not at a head rev - '
                                'use "hg update" or merge with an explicit rev'))
         node = parent == bheads[0] and bheads[-1] or bheads[0]
+    else:
+        node = cmdutil.revsingle(repo, node).node()
 
     if opts.get('preview'):
         # find nodes that are ancestors of p2 but not of p1
@@ -2692,11 +2696,8 @@ def parents(ui, repo, file_=None, **opts):
 
     Returns 0 on success.
     """
-    rev = opts.get('rev')
-    if rev:
-        ctx = repo[rev]
-    else:
-        ctx = repo[None]
+
+    ctx = cmdutil.revsingle(repo, opts.get('rev'), None)
 
     if file_:
         m = cmdutil.match(repo, (file_,), opts)
@@ -3112,7 +3113,7 @@ def revert(ui, repo, *pats, **opts):
     if not opts.get('rev') and p2 != nullid:
         raise util.Abort(_('uncommitted merge - please provide a '
                            'specific revision'))
-    ctx = repo[opts.get('rev')]
+    ctx = cmdutil.revsingle(repo, opts.get('rev'))
     node = ctx.node()
     mf = ctx.manifest()
     if node == parent:
@@ -3721,7 +3722,7 @@ def tag(ui, repo, name1, *names, **opts):
     if not rev_ and repo.dirstate.parents()[1] != nullid:
         raise util.Abort(_('uncommitted merge - please provide a '
                            'specific revision'))
-    r = repo[rev_].node()
+    r = cmdutil.revsingle(repo, rev_).node()
 
     if not message:
         # we don't translate commit messages
