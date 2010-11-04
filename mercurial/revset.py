@@ -232,9 +232,13 @@ def p2(repo, subset, x):
     return [r for r in subset if r in ps]
 
 def parents(repo, subset, x):
-    """``parents(set)``
-    The set of all parents for all changesets in set.
+    """``parents([set])``
+    The set of all parents for all changesets in set, or the working directory.
     """
+    repo.ui.debug(repr(x), '\n')
+    if x is None:
+        return [r.rev() for r in repo[x].parents()]
+
     ps = set()
     cl = repo.changelog
     for r in getset(repo, range(len(repo)), x):

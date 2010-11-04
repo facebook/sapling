@@ -21,6 +21,7 @@
 null revision
   $ log 'p1()'
   $ log 'p2()'
+  $ log 'parents()'
 
 working dir with a single parent
   $ echo a > a
@@ -28,6 +29,8 @@ working dir with a single parent
   $ log 'p1()'
   0
   $ log 'p2()'
+  $ log 'parents()'
+  0
 
 merge in progress
   $ echo b > b
@@ -39,4 +42,7 @@ merge in progress
   $ log 'p1()'
   2
   $ log 'p2()'
+  1
+  $ log 'parents()'
+  2
   1
