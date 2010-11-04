@@ -202,9 +202,12 @@ def rev(repo, subset, x):
     return [r for r in subset if r == l]
 
 def p1(repo, subset, x):
-    """``p1(set)``
-    First parent of changesets in set.
+    """``p1([set])``
+    First parent of changesets in set, or the working directory.
     """
+    if x is None:
+        return [repo[x].parents()[0].rev()]
+
     ps = set()
     cl = repo.changelog
     for r in getset(repo, range(len(repo)), x):
@@ -212,9 +215,16 @@ def p1(repo, subset, x):
     return [r for r in subset if r in ps]
 
 def p2(repo, subset, x):
-    """``p2(set)``
-    Second parent of changesets in set.
+    """``p2([set])``
+    Second parent of changesets in set, or the working directory.
     """
+    if x is None:
+        ps = repo[x].parents()
+        try:
+            return [ps[1].rev()]
+        except IndexError:
+            return []
+
     ps = set()
     cl = repo.changelog
     for r in getset(repo, range(len(repo)), x):
