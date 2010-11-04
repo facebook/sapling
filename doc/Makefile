@@ -1,7 +1,8 @@
 SOURCES=$(wildcard *.[0-9].txt)
 MAN=$(SOURCES:%.txt=%)
 HTML=$(SOURCES:%.txt=%.html)
-GENDOC=gendoc.py ../mercurial/commands.py ../mercurial/help.py ../mercurial/help/*.txt
+GENDOC=gendoc.py ../mercurial/commands.py ../mercurial/help.py \
+	../mercurial/help/*.txt ../hgext/*.py ../hgext/*/__init__.py
 PREFIX=/usr/local
 MANDIR=$(PREFIX)/share/man
 INSTALL=install -c -m 644
