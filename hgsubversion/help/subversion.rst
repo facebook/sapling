@@ -3,13 +3,13 @@ Basic Use
 
 Converting a Subversion repository to Mercurial with hgsubversion is done by
 cloning it. Subversion repositories are specified using the same, regular URL
-syntax as Subversion uses. hgsubversion accepts URIs such as the following:
+syntax that Subversion uses. hgsubversion accepts URIs such as the following::
 
-- http://user:sekrit@example.com/repo
-- https://user@example.com/repo
-- svn://example.com/repo
-- svn+ssh://example.com/repo
-- file:///tmp/repo
+  http://user:sekrit@example.com/repo
+  https://user@example.com/repo
+  svn://example.com/repo
+  svn+ssh://example.com/repo
+  file:///tmp/repo
 
 In the case of the two first schemas, HTTP and HTTPS, the repository is first
 treated as a Mercurial repository, and a Subversion pull attempted should it
@@ -37,27 +37,27 @@ of these directories at the specified directory on the server.
 If you instead want to clone just a single directory or branch, clone the
 specific directory path. In the example above, to get *only* trunk, you would
 issue ``hg clone http://python-nose.googlecode.com/svn/trunk nose-trunk``. This
-works with any directory with a Subversion repository, and is know as a single
+works with any directory with a Subversion repository, and is known as a single
 directory clone. Normally, converted changesets will be marked as belonging to
 the ``default`` branch, but this can be changed by using the ``-b/--branch``
-option introduced in Mercurial 1.5. To force single directory clone, use
+option when using Mercurial 1.5 or later. To force single directory clone, use
 hgsubversion.layout option (see below for detailed help) ::
 
  $ hg clone --layout single svn+http://python-nose.googlecode.com/svn nose-hg
 
-Pulling new revisions into an already-converted repo is the same as from any
-other Mercurial source. Within the first example above, the following three
-commands are all equivalent::
+Pulling new revisions into an already-converted repository is the same
+as from any other Mercurial source. Within the first example above,
+the following three commands are all equivalent::
 
  $ hg pull
  $ hg pull default
  $ hg pull http://python-nose.googlecode.com/svn
 
-Sometimes, past repository history is of little or no interest, and all that is
-wanted is access to current and future history from Mercurial. The
-``--startrev`` option with the ``HEAD`` argument causes the initial clone to
-only convert the latest revision; later pulls will convert all revisions
-following the first. Please note that this only works for single-directory
+Sometimes, past repository history is of little or no interest, and
+all one wants is to start from today and work forward. Using
+``--startrev HEAD`` causes the initial clone to only convert the
+latest revision; later pulls will convert all subsequent
+revisions. Please note that this only works for single-directory
 clones::
 
  $ hg clone --startrev HEAD http://python-nose.googlecode.com/svn/trunk nose-hg
@@ -65,24 +65,35 @@ clones::
 Finding and displaying Subversion revisions
 -------------------------------------------
 
-For revealing the relationship between Mercurial changesets and Subversion
-revisions, hgsubversion provides three keywords, available when using Mercurial
-1.5 or later. The "svnrev" keyword is expanded to the original Subversion
-revision number. "svnpath" is the path within the repository that the changeset
-represents, and "svnuuid" is the Universally Unique Identifier of the Subversion
-repository. An example::
+For revealing the relationship between Mercurial changesets and
+Subversion revisions, hgsubversion provides three template keywords:
+
+  :svnrev: Expanded to the original Subversion revision number.
+  :svnpath: The path within the repository that the changeset represents.
+  :svnuuid: The Universally Unique Identifier of the Subversion repository.
+
+An example::
 
   $ hg log --template='{rev}:{node|short} {author|user}\nsvn: {svnrev}\n'
 
-For finding changesets from Subversion, hgsubversion extends revsets to provide
-two new selectors: ``fromsvn()`` and ``svnrev()``. (Revsets were introduced in
-Mercurial 1.6 and are accepted by several Mercurial commands for specifying
-revisions. See ``hg help revsets`` for details.) You can use ``fromsvn()`` to
-select all changesets that originate from Subversion, and ``svnrev(REV)`` to
-match changesets that originate in a specific Subversion revision. For example::
+The template keywords are available when using Mercurial 1.5 or later.
+
+For finding changesets from Subversion, hgsubversion extends revsets
+to provide two new selectors:
+
+  :fromsvn: Select changesets that originate from Subversion. Takes no
+    arguments.
+  :svnrev: Select changesets that originate in a specific Subversion
+    revision. Takes a revision argument.
+
+For example::
 
   $ hg log -r 'fromsvn()'
   $ hg log -r 'svnrev(500)'
+
+Revsets are available when using Mercurial 1.6 or later and are
+accepted by several Mercurial commands for specifying revisions. See
+``hg help revsets`` for details.
 
 Support for externals
 ---------------------
@@ -105,9 +116,9 @@ svn:externals properties as used in Subversion, and do not support the
 hgsubversion extended svn+http:// URL format.
 
 Issuing the command ``hg svn updateexternals`` with the ``.hgsvnexternals``
-example above would fetch the latest revision of repo1 into the subdirectory
-*./common1*, and revision 123 of repo2 into *dir2/common2*.  Note that 
-``.hgsvnexternals`` must be tracked by Mercurial before this will work.  If
+example above would fetch the latest revision of `repo1` into the subdirectory
+`./common1`, and revision 123 of `repo2` into `dir2/common2`. Note that
+``.hgsvnexternals`` must be tracked by Mercurial before this will work. If
 ``.hgsvnexternals`` is created or changed, it
 will not be pushed to the related Subversion repository, but its
 contents **will** be used to update ``svn:externals`` properties on the
@@ -119,7 +130,7 @@ Limitations
 Currently, pushing to Subversion destroys the original changesets and replaces
 them with new ones converted from the resulting commits. Due to the intricacies
 of Subversion semantics, these converted changesets may differ in subtle ways
-from the original Mercurial changests. For example, the commit date almost
+from the original Mercurial changesets. For example, the commit date almost
 always changes. This makes hgsubversion unsuitable for use as a two-way bridge.
 
 When converting from Subversion, hgsubversion does not recognize merge-info, and
@@ -127,10 +138,10 @@ does not create merges based on it. Similarly, Mercurial merges cannot be pushed
 to Subversion.
 
 Changesets that create tags cannot be pushed to Subversion, as support for
-creating Subversion tags has not been implemented, yet.
+creating Subversion tags has not yet been implemented.
 
 Standard layout does not work with repositories that use unconventional
-layouts. Thus, only a single directory clones can be made of such repositories.
+layouts. Thus, only single directory clones can be made of such repositories.
 
 When interacting with Subversion, hgsubversion relies on information about the
 previously converted changesets. This information will not be updated if pushing
@@ -139,9 +150,9 @@ stored metadata, run ``hg svn rebuildmeta [URI]``. This must also be done if any
 converted changesets are ever removed from the repository.
 
 Under certain circumstances a long-running conversion can leak substantial
-amounts of memory, on the order of 100MB per 1000 revisions converted. The
+amounts of memory, on the order of 100MB per 1000 converted revisions. The
 leaks appear to be persistent and unavoidable using the SWIG bindings. When
-using the new experimental Subvertpy bindings leaks have only been observed
+using the new experimental Subvertpy bindings, leaks have only been observed
 accessing FSFS repositories over the file protocol.
 
 Should the initial clone fail with an error, Mercurial will delete the entire
@@ -152,7 +163,7 @@ that, an ``hg pull`` in the cloned repository will be perfectly safe.
 
 It is not possible to interact with more than one Subversion repository per
 Mercurial clone. Please note that this also applies to more than one path within
-a repository.
+the same Subversion repository.
 
 Mercurial does not track directories, and as a result, any empty directories
 in Subversion cannot be represented in the resulting Mercurial repository.
@@ -167,17 +178,19 @@ Advanced Configuration
 The operation of hgsubversion can be customized by the following configuration
 settings:
 
-  hgsubversion.authormap
-    Path to a file for mapping usernames from  Subversion to Mercurial. For
+  ``hgsubversion.authormap``
+
+    Path to a file for mapping usernames from Subversion to Mercurial. For
     example::
 
       joe = Joe User <joe@example.com>
 
     Some Subversion conversion tools create revisions without
-    specifying an author.  Such author names are mapped to ``(no
+    specifying an author. Such author names are mapped to ``(no
     author)``, similar to how ``svn log`` will display them.
 
-  hgsubversion.defaulthost
+  ``hgsubversion.defaulthost``
+
     This option specifies the hostname to append to unmapped Subversion
     usernames. The default is to append the UUID of the Subversion repository
     as a hostname. That is, an author of ``bob`` may be mapped to
@@ -186,28 +199,33 @@ settings:
     If this option set to an empty string, the Subversion authors will be used
     with no hostname component.
 
-  hgsubversion.defaultauthors
+  ``hgsubversion.defaultauthors``
+
     Setting this boolean option to false will cause hgsubversion to abort a
     conversion if a revision has an author not listed in the author map.
 
-  hgsubversion.branch
-    Mark converted changesets as belonging to this branch or, if unspecifed,
+  ``hgsubversion.branch``
+
+    Mark converted changesets as belonging to this branch or, if unspecified,
     ``default``. Please note that this option is not supported for standard
     layout clones.
 
-  hgsubversion.branchmap
+  ``hgsubversion.branchmap``
+
     Path to a file for changing branch names during the conversion from
     Subversion to Mercurial.
 
-  hgsubversion.filemap
+  ``hgsubversion.filemap``
+
     Path to a file for filtering files during the conversion. Files may either
-    be excluded or included. See the documentation for ``hg convert`` for more
+    be included or excluded. See the documentation for ``hg convert`` for more
     information on filemaps.
 
-  hgsubversion.username, hgsubversion.password
+  ``hgsubversion.username``, ``hgsubversion.password``
+
     Set the username or password for accessing Subversion repositories.
 
-  hgsubversion.stupid
+  ``hgsubversion.stupid``
     Setting this boolean option to true will force using a slower method for
     pulling revisions from Subversion. This method is compatible with servers
     using very old versions of Subversion, and hgsubversion falls back to it
@@ -215,19 +233,23 @@ settings:
 
 The following options only have an effect on the initial clone of a repository:
 
-  hgsubversion.layout
-    Set the layout of the repository. ``standard`` assumes a normal
-    trunk/branches/tags layout. ``single`` means that the entire repository is
-    converted into a single branch. The default, ``auto``, causes hgsubversion to
-    assume a standard layout if any of trunk, branches, or tags exist within the
-    specified directory on the server.
+  ``hgsubversion.layout``
 
-  hgsubversion.startrev
+    Set the layout of the repository. ``standard`` assumes a normal
+    trunk/branches/tags layout. ``single`` means that the entire
+    repository is converted into a single branch. The default,
+    ``auto``, causes hgsubversion to assume a standard layout if any
+    of trunk, branches, or tags exist within the specified directory
+    on the server.
+
+  ``hgsubversion.startrev``
+
     Convert Subversion revisions starting at the one specified, either an
     integer revision or ``HEAD``; ``HEAD`` causes only the latest revision to be
     pulled. The default is to pull everything.
 
-  hgsubversion.tagpaths
+  ``hgsubversion.tagpaths``
+
     Specifies one or more paths in the Subversion repository that
     contain tags. The default is to only look in ``tags``. This option has no
     effect for single-directory clones.
@@ -240,7 +262,8 @@ in future pulls.
 Finally, the following environment variables can be used for testing a
 deployment of hgsubversion:
 
-  HGSUBVERSION_BINDINGS
+  ``HGSUBVERSION_BINDINGS``
+
     By default, hgsubversion will use Subvertpy, but fall back to the SWIG
     bindings. Set this variable to either ``SWIG`` or ``Subvertpy`` (case-
     insensitive) to force that set of bindings.
