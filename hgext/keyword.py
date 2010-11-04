@@ -170,13 +170,24 @@ class kwtemplater(object):
                                   for k, v in kwmaps)
         else:
             self.templates = _defaultkwmaps(self.ui)
-        escaped = '|'.join(map(re.escape, self.templates.keys()))
-        self.re_kw = re.compile(r'\$(%s)\$' % escaped)
-        self.re_kwexp = re.compile(r'\$(%s): [^$\n\r]*? \$' % escaped)
-
         templatefilters.filters.update({'utcdate': utcdate,
                                         'svnisodate': svnisodate,
                                         'svnutcdate': svnutcdate})
+
+    @util.propertycache
+    def escape(self):
+        '''Returns bar-separated and escaped keywords.'''
+        return '|'.join(map(re.escape, self.templates.keys()))
+
+    @util.propertycache
+    def rekw(self):
+        '''Returns regex for unexpanded keywords.'''
+        return re.compile(r'\$(%s)\$' % self.escape)
+
+    @util.propertycache
+    def rekwexp(self):
+        '''Returns regex for expanded keywords.'''
+        return re.compile(r'\$(%s): [^$\n\r]*? \$' % self.escape)
 
     def substitute(self, data, path, ctx, subfunc):
         '''Replaces keywords in data with expanded template.'''
@@ -199,7 +210,7 @@ class kwtemplater(object):
         '''Returns data with keywords expanded.'''
         if not self.restrict and self.match(path) and not util.binary(data):
             ctx = self.linkctx(path, node)
-            return self.substitute(data, path, ctx, self.re_kw.sub)
+            return self.substitute(data, path, ctx, self.rekw.sub)
         return data
 
     def iskwfile(self, cand, ctx):
@@ -217,7 +228,7 @@ class kwtemplater(object):
         if self.restrict or expand and lookup:
             mf = ctx.manifest()
         lctx = ctx
-        subn = (self.restrict or rekw) and self.re_kw.subn or self.re_kwexp.subn
+        re_kw = (self.restrict or rekw) and self.rekw or self.rekwexp
         msg = (expand and _('overwriting %s expanding keywords\n')
                or _('overwriting %s shrinking keywords\n'))
         for f in candidates:
@@ -230,11 +241,11 @@ class kwtemplater(object):
             if expand:
                 if lookup:
                     lctx = self.linkctx(f, mf[f])
-                data, found = self.substitute(data, f, lctx, subn)
+                data, found = self.substitute(data, f, lctx, re_kw.subn)
             elif self.restrict:
-                found = self.re_kw.search(data)
+                found = re_kw.search(data)
             else:
-                data, found = _shrinktext(data, subn)
+                data, found = _shrinktext(data, re_kw.subn)
             if found:
                 self.ui.note(msg % f)
                 self.repo.wwrite(f, data, ctx.flags(f))
@@ -246,7 +257,7 @@ class kwtemplater(object):
     def shrink(self, fname, text):
         '''Returns text with all keyword substitutions removed.'''
         if self.match(fname) and not util.binary(text):
-            return _shrinktext(text, self.re_kwexp.sub)
+            return _shrinktext(text, self.rekwexp.sub)
         return text
 
     def shrinklines(self, fname, lines):
@@ -254,7 +265,7 @@ class kwtemplater(object):
         if self.match(fname):
             text = ''.join(lines)
             if not util.binary(text):
-                return _shrinktext(text, self.re_kwexp.sub).splitlines(True)
+                return _shrinktext(text, self.rekwexp.sub).splitlines(True)
         return lines
 
     def wread(self, fname, data):
