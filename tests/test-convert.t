@@ -48,8 +48,8 @@
       --sourcesort  try to preserve source revisions order, only supported by
                     Mercurial sources.
   
-      If <REVMAP> isn't given, it will be put in a default location
-      (<dest>/.hg/shamap by default). The <REVMAP> is a simple text file that
+      If "REVMAP" isn't given, it will be put in a default location
+      ("<dest>/.hg/shamap" by default). The "REVMAP" is a simple text file that
       maps each source commit ID to the destination ID for that revision, like
       so:
   
@@ -143,7 +143,7 @@
       CVS source will use a sandbox (i.e. a checked-out copy) from CVS to
       indicate the starting point of what will be converted. Direct access to
       the repository files is not needed, unless of course the repository is
-      :local:. The conversion uses the top level directory in the sandbox to
+      ":local:". The conversion uses the top level directory in the sandbox to
       find the CVS repository, and then uses CVS rlog commands to find files to
       convert. This means that unless a filemap is given, all files under the
       starting directory will be converted, and that any directory
@@ -205,11 +205,11 @@
   
       convert.svn.branches
                   specify the directory containing branches. The defaults is
-                  branches.
+                  "branches".
       convert.svn.tags
-                  specify the directory containing tags. The default is tags.
+                  specify the directory containing tags. The default is "tags".
       convert.svn.trunk
-                  specify the name of the trunk branch The defauls is trunk.
+                  specify the name of the trunk branch The defauls is "trunk".
   
       Source history can be retrieved starting at a specific revision, instead
       of being integrally converted. Only single branch conversions are
@@ -225,7 +225,7 @@
       specification as source. It will convert all files in the source to a flat
       Mercurial repository, ignoring labels, branches and integrations. Note
       that when a depot path is given you then usually should specify a target
-      directory, because otherwise the target may be named ...-hg.
+      directory, because otherwise the target may be named "...-hg".
   
       It is possible to limit the amount of source history to be converted by
       specifying an initial Perforce revision:
