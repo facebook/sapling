@@ -464,6 +464,8 @@ def tsttest(test, options, replacements):
     after = {}
     expected = {}
     for n, l in enumerate(t):
+        if not l.endswith('\n'):
+            l += '\n'
         if l.startswith('  $ '): # commands
             after.setdefault(pos, []).append(l)
             prepos = pos
@@ -480,8 +482,6 @@ def tsttest(test, options, replacements):
             # non-command/result - queue up for merged output
             after.setdefault(pos, []).append(l)
 
-    if script and not script[-1].endswith('\n'):
-        script[-1] = script[-1] + '\n'
     script.append('echo %s %s $?\n' % (salt, n + 1))
 
     fd, name = tempfile.mkstemp(suffix='hg-tst')
