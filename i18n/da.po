@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-11-01 11:03+0100\n"
-"PO-Revision-Date: 2010-11-01 11:04+0100\n"
+"PO-Revision-Date: 2010-11-01 11:11+0100\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -12983,10 +12983,10 @@ msgstr "manglende parameter"
 
 #, python-format
 msgid "can't use %s here"
-msgstr ""
+msgstr "kan ikke bruge %s her"
 
 msgid "can't use a list in this context"
-msgstr ""
+msgstr "en liste kan ikke bruges i denne konteks"
 
 #, python-format
 msgid "not a function: %s"
@@ -13003,7 +13003,7 @@ msgstr "id kræver et argument"
 
 #. i18n: "id" is a keyword
 msgid "id requires a string"
-msgstr ""
+msgstr "id kræver en streng"
 
 msgid ""
 "``rev(number)``\n"
@@ -13012,11 +13012,11 @@ msgstr ""
 
 #. i18n: "rev" is a keyword
 msgid "rev requires one argument"
-msgstr ""
+msgstr "rev kræver et argument"
 
 #. i18n: "rev" is a keyword
 msgid "rev requires a number"
-msgstr ""
+msgstr "rev kræver et tal"
 
 #. i18n: "rev" is a keyword
 msgid "rev expects a number"
@@ -13297,20 +13297,23 @@ msgid ""
 "``tag(name)``\n"
 "    The specified tag by name, or all tagged revisions if no name is given."
 msgstr ""
+"``tag(navn)``\n"
+"    Den navngivne mærkat eller alle revisioner med en mærkat hvis der\n"
+"    ikke angives noget navn."
 
 #. i18n: "tag" is a keyword
 msgid "tag takes one or no arguments"
-msgstr ""
+msgstr "tag tager et eller to argumenter"
 
 #. i18n: "tag" is a keyword
 msgid "the argument to tag must be a string"
-msgstr ""
+msgstr "argumentet til tag skal være en streng"
 
 msgid "can't negate that"
 msgstr ""
 
 msgid "not a symbol"
-msgstr ""
+msgstr "ikke et symbol"
 
 msgid "empty query"
 msgstr "tomt forespørgsel"
@@ -13559,11 +13562,11 @@ msgid "certificate is for %s"
 msgstr "certifikatet er for %s"
 
 msgid "no commonName found in certificate"
-msgstr ""
+msgstr "fandt ikke noget commonName i certifikatet"
 
 #, python-format
 msgid "%s certificate error: %s"
-msgstr ""
+msgstr "%s certifikatfejl: %s"
 
 #, python-format
 msgid "command '%s' failed: %s"
@@ -13646,7 +13649,7 @@ msgstr "%.0f byte"
 
 #, python-format
 msgid "no port number associated with service '%s'"
-msgstr ""
+msgstr "der er ikke knyttet noget portnummer til servicen '%s'"
 
 msgid "cannot verify bundle or remote repos"
 msgstr "kan ikke verificere bundt eller fjerndepoter"
@@ -13703,7 +13706,7 @@ msgid "duplicate revision %d (%d)"
 msgstr "duplikeret revision %d (%d)"
 
 msgid "abandoned transaction found - run hg recover\n"
-msgstr ""
+msgstr "fandt efterladt transaktion - kør hg recover\n"
 
 #, python-format
 msgid "repository uses revlog format %d\n"
@@ -13737,7 +13740,7 @@ msgid "crosschecking files in changesets and manifests\n"
 msgstr "krydstjekker filer i ændringer og manifester\n"
 
 msgid "crosschecking"
-msgstr ""
+msgstr "krydstjekker"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
@@ -13765,7 +13768,7 @@ msgstr "manglende revlog!"
 
 #, python-format
 msgid "%s not in manifests"
-msgstr ""
+msgstr "%s findes ikke i manifestet"
 
 #, python-format
 msgid "unpacked size is %s, %s expected"
