@@ -217,3 +217,8 @@ verify subrepo is contained within the repo directory
 
   $ python -c "import os.path; print os.path.exists('s')"
   True
+
+update to nullrev (must delete the subrepo)
+
+  $ hg up null
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved

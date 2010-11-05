@@ -549,7 +549,7 @@ class svnsubrepo(abstractsubrepo):
                             'it has changes.\n' % self._path))
             return
         self._ui.note(_('removing subrepo %s\n') % self._path)
-        shutil.rmtree(self._ctx.repo.join(self._path))
+        shutil.rmtree(self._ctx._repo.wjoin(self._path))
 
     def get(self, state):
         status = self._svncommand(['checkout', state[0], '--revision', state[1]])
