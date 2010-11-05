@@ -29,6 +29,11 @@
   > mcount = !hg log \$@ --template='.' | wc -c | sed -e 's/ //g'
   > rt = root
   > tglog = glog --template "{rev}:{node|short}: '{desc}' {branches}\n"
+  > idalias = id
+  > idaliaslong = id
+  > idaliasshell = !echo test
+  > parentsshell1 = !echo one
+  > parentsshell2 = !echo two
   > 
   > [defaults]
   > mylog = -q
@@ -193,6 +198,35 @@ simple shell aliases
   |
   o  0:e63c23eaa88a: 'foo'
   
+
+
+shadowing
+
+  $ hg i
+  hg: command 'i' is ambiguous:
+      idalias idaliaslong idaliasshell identify import incoming init
+  [255]
+  $ hg id
+  7e7f92de180e tip
+  $ hg ida
+  hg: command 'ida' is ambiguous:
+      idalias idaliaslong idaliasshell
+  [255]
+  $ hg idalias
+  7e7f92de180e tip
+  $ hg idaliasl
+  7e7f92de180e tip
+  $ hg idaliass
+  test
+  $ hg parentsshell
+  hg: command 'parentsshell' is ambiguous:
+      parentsshell1 parentsshell2
+  [255]
+  $ hg parentsshell1
+  one
+  $ hg parentsshell2
+  two
+
 
 shell aliases with global options
 
