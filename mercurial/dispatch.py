@@ -453,7 +453,7 @@ def _checkshellalias(ui, args):
     cmd = args[0]
     try:
         aliases, entry = cmdutil.findcmd(cmd, cmdtable, lui.config("ui", "strict"))
-    except error.UnknownCommand:
+    except (error.AmbiguousCommand, error.UnknownCommand):
         commands.norepo = norepo
         os.chdir(cwd)
         return
