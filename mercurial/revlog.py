@@ -869,6 +869,8 @@ class revlog(object):
         return c
 
     def descendant(self, start, end):
+        if start == nullrev:
+            return True
         for i in self.descendants(start):
             if i == end:
                 return True
