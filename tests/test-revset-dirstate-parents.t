@@ -14,9 +14,11 @@
 
   $ try 'p1()'
   ('func', ('symbol', 'p1'), None)
-  -1
   $ try 'p2()'
   ('func', ('symbol', 'p2'), None)
+  $ try 'parents()'
+  ('func', ('symbol', 'parents'), None)
+  None
 
 null revision
   $ log 'p1()'
@@ -28,9 +30,11 @@ working dir with a single parent
   $ hg ci -Aqm0
   $ log 'p1()'
   0
+  $ log 'tag() and p1()'
   $ log 'p2()'
   $ log 'parents()'
   0
+  $ log 'tag() and parents()'
 
 merge in progress
   $ echo b > b
@@ -43,6 +47,7 @@ merge in progress
   2
   $ log 'p2()'
   1
+  $ log 'tag() and p2()'
   $ log 'parents()'
-  2
   1
+  2

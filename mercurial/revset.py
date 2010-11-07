@@ -206,7 +206,8 @@ def p1(repo, subset, x):
     First parent of changesets in set, or the working directory.
     """
     if x is None:
-        return [repo[x].parents()[0].rev()]
+        p = repo[x].parents()[0].rev()
+        return [r for r in subset if r == p]
 
     ps = set()
     cl = repo.changelog
@@ -221,7 +222,8 @@ def p2(repo, subset, x):
     if x is None:
         ps = repo[x].parents()
         try:
-            return [ps[1].rev()]
+            p = ps[1].rev()
+            return [r for r in subset if r == p]
         except IndexError:
             return []
 
@@ -237,7 +239,8 @@ def parents(repo, subset, x):
     """
     repo.ui.debug(repr(x), '\n')
     if x is None:
-        return [r.rev() for r in repo[x].parents()]
+        ps = tuple(p.rev() for p in repo[x].parents())
+        return [r for r in subset if r in ps]
 
     ps = set()
     cl = repo.changelog
