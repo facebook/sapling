@@ -43,17 +43,7 @@ def _getfileinfo(pathname):
 
 def nlinks(pathname):
     """Return number of hardlinks for the given file."""
-    links = _getfileinfo(pathname)[7]
-    if links < 2:
-        # Known to be wrong for most network drives
-        dirname = os.path.dirname(pathname)
-        if not dirname:
-            dirname = '.'
-        dt = win32file.GetDriveType(dirname + '\\')
-        if dt == 4 or dt == 1:
-            # Fake hardlink to force COW for network drives
-            links = 2
-    return links
+    return _getfileinfo(pathname)[7]
 
 def samefile(fpath1, fpath2):
     """Returns whether fpath1 and fpath2 refer to the same file. This is only

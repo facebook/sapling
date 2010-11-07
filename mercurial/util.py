@@ -716,6 +716,29 @@ def checklink(path):
     except (OSError, AttributeError):
         return False
 
+def checknlink(testfile):
+    '''check whether hardlink count reporting works properly'''
+    f = testfile + ".hgtmp"
+
+    try:
+        os_link(testfile, f)
+    except OSError, inst:
+        if inst.errno == errno.EINVAL:
+            # FS doesn't support creating hardlinks
+            return True
+        return False
+
+    try:
+        # nlinks() may behave differently for files on Windows shares if
+        # the file is open.
+        fd = open(f)
+        return nlinks(f) > 1
+    finally:
+        fd.close()
+        os.unlink(f)
+
+    return False
+
 def endswithsep(path):
     '''Check path ends with os.sep or os.altsep.'''
     return path.endswith(os.sep) or os.altsep and path.endswith(os.altsep)
@@ -840,6 +863,7 @@ class opener(object):
         else:
             self.auditor = always
         self.createmode = None
+        self._trustnlink = None
 
     @propertycache
     def _can_symlink(self):
@@ -873,13 +897,20 @@ class opener(object):
                     os.unlink(f)
                     nlink = 0
                 else:
+                    # nlinks() may behave differently for files on Windows
+                    # shares if the file is open.
+                    fd = open(f)
                     nlink = nlinks(f)
-            except OSError:
+                    fd.close()
+            except (OSError, IOError):
                 nlink = 0
                 if not os.path.isdir(dirname):
                     makedirs(dirname, self.createmode)
-            if nlink > 1:
-                rename(mktempcopy(f), f)
+            if nlink > 0:
+                if self._trustnlink is None:
+                    self._trustnlink = nlink > 1 or checknlink(f)
+                if nlink > 1 or not self._trustnlink:
+                    rename(mktempcopy(f), f)
         fp = posixfile(f, mode)
         if nlink == 0:
             if st_mode is None:
