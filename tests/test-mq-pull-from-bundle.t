@@ -33,6 +33,7 @@ Incoming to fresh repo:
   comparing with main.hg
   0: main: one added
   1: main: one updated
+  $ test -f ./fresh/.hg/hg-bundle* && echo 'temp. bundle file remained' || true
 
   $ hg -R fresh tincoming bundle:fresh+main.hg
   comparing with bundle:fresh+main.hg
@@ -58,6 +59,7 @@ Bundle queue:
 
   $ hg -R .hg/patches bundle --base=null ../queue.hgq
   1 changesets found
+  $ test -f ./fresh/.hg/hg-bundle* && echo 'temp. bundle file remained' || true
 
   $ cd ..
 
@@ -75,6 +77,7 @@ Incoming queue bundle:
   $ hg -R .hg/patches tincoming ../queue.hgq
   comparing with ../queue.hgq
   0: queue: two.patch added
+  $ test -f .hg/hg-bundle* && echo 'temp. bundle file remained' || true
 
 Pull queue bundle:
 
@@ -87,6 +90,7 @@ Pull queue bundle:
   added 1 changesets with 3 changes to 3 files
   merging series
   2 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  $ test -f .hg/patches/hg-bundle* && echo 'temp. bundle file remained' || true
 
   $ hg -R .hg/patches theads
   0: queue: two.patch added

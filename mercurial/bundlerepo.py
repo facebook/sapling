@@ -249,6 +249,8 @@ class bundlerepository(localrepo.localrepository):
     def close(self):
         """Close assigned bundle file immediately."""
         self.bundle.close()
+        if self.tempfile is not None:
+            os.unlink(self.tempfile)
 
     def __del__(self):
         del self.bundle
