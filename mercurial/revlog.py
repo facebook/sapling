@@ -607,8 +607,14 @@ class revlog(object):
         some rev in revs, i.e., each revision is *not* considered a
         descendant of itself.  Results are ordered by revision number (a
         topological sort)."""
+        first = min(revs)
+        if first == nullrev:
+            for i in self:
+                yield i
+            return
+
         seen = set(revs)
-        for i in xrange(min(revs) + 1, len(self)):
+        for i in xrange(first + 1, len(self)):
             for x in self.parentrevs(i):
                 if x != nullrev and x in seen:
                     seen.add(i)
