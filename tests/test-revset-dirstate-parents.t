@@ -18,7 +18,6 @@
   ('func', ('symbol', 'p2'), None)
   $ try 'parents()'
   ('func', ('symbol', 'parents'), None)
-  None
 
 null revision
   $ log 'p1()'

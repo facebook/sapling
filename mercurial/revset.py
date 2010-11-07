@@ -237,7 +237,6 @@ def parents(repo, subset, x):
     """``parents([set])``
     The set of all parents for all changesets in set, or the working directory.
     """
-    repo.ui.debug(repr(x), '\n')
     if x is None:
         ps = tuple(p.rev() for p in repo[x].parents())
         return [r for r in subset if r in ps]
