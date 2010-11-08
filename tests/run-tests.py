@@ -556,8 +556,9 @@ def tsttest(test, options, replacements):
                 postout.append("  " + lout)
             elif (el and
                   (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', lout) or
-                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', lout)) or
-                   el.endswith(" (esc)\n") and el.decode('string-escape') == l):
+                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', lout)
+                   or el.endswith(" (esc)\n") and
+                      el.decode('string-escape') == l)):
                 postout.append("  " + el) # fallback regex/glob/esc match
             else:
                 if needescape(lout):
