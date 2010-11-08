@@ -1925,7 +1925,7 @@ test outgoing:
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/utf	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,1 @@
-  +hÃ¶mma!
+  +h\xc3\xb6mma! (esc)
   
   Displaying [PATCH 3 of 8] charset=utf-8; content-transfer-encoding: quoted-printable ...
   Content-Type: text/plain; charset="us-ascii"
@@ -1996,7 +1996,7 @@ test outgoing:
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/isolatin	Thu Jan 01 00:00:05 1970 +0000
   @@ -0,0 +1,1 @@
-  +hömma!
+  +h\xf6mma! (esc)
   
   Displaying [PATCH 5 of 8] Added tag zero, zero.foo for changeset 8580ff50825a ...
   Content-Type: text/plain; charset="us-ascii"
