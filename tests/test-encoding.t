@@ -30,7 +30,7 @@ should fail with encoding error
   $ HGENCODING=ascii hg ci -l latin-1
   transaction abort!
   rollback completed
-  abort: decoding near ' encoded: È': 'ascii' codec can't decode byte 0xe9 in position 20: ordinal not in range(128)!
+  abort: decoding near ' encoded: \xe9': 'ascii' codec can't decode byte 0xe9 in position 20: ordinal not in range(128)! (esc)
   [255]
 
 these should work
@@ -41,7 +41,7 @@ these should work
   $ HGENCODING=utf-8 hg ci -l utf-8
   $ HGENCODING=latin-1 hg tag `cat latin-1-tag`
   $ HGENCODING=latin-1 hg branch `cat latin-1-tag`
-  marked working directory as branch È
+  marked working directory as branch \xe9 (esc)
   $ HGENCODING=latin-1 hg ci -m 'latin1 branch'
   $ rm .hg/branch
 
@@ -86,7 +86,7 @@ hg log (latin-1)
 
   $ hg --encoding latin-1 log
   changeset:   5:093c6077d1c8
-  branch:      È
+  branch:      \xe9 (esc)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -95,35 +95,35 @@ hg log (latin-1)
   changeset:   4:94db611b4196
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     Added tag È for changeset ca661e7520de
+  summary:     Added tag \xe9 for changeset ca661e7520de (esc)
   
   changeset:   3:ca661e7520de
-  tag:         È
+  tag:         \xe9 (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     utf-8 e' encoded: È
+  summary:     utf-8 e' encoded: \xe9 (esc)
   
   changeset:   2:650c6f3d55dd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     latin-1 e' encoded: È
+  summary:     latin-1 e' encoded: \xe9 (esc)
   
   changeset:   1:0e5b7e3f9c4a
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
-  summary:     koi8-r: “‘’‘ÿ = u'\u0440\u0442\u0443\u0442\u044c'
+  summary:     koi8-r: \xd2\xd4\xd5\xd4\xd8 = u'\\u0440\\u0442\\u0443\\u0442\\u044c' (esc)
   
   changeset:   0:1e78a93102a3
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
-  summary:     latin-1 e': È = u'\xe9'
+  summary:     latin-1 e': \xe9 = u'\\xe9' (esc)
   
 
 hg log (utf-8)
 
   $ hg --encoding utf-8 log
   changeset:   5:093c6077d1c8
-  branch:      √©
+  branch:      \xc3\xa9 (esc)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -132,28 +132,28 @@ hg log (utf-8)
   changeset:   4:94db611b4196
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     Added tag √© for changeset ca661e7520de
+  summary:     Added tag \xc3\xa9 for changeset ca661e7520de (esc)
   
   changeset:   3:ca661e7520de
-  tag:         √©
+  tag:         \xc3\xa9 (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     utf-8 e' encoded: √©
+  summary:     utf-8 e' encoded: \xc3\xa9 (esc)
   
   changeset:   2:650c6f3d55dd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     latin-1 e' encoded: √©
+  summary:     latin-1 e' encoded: \xc3\xa9 (esc)
   
   changeset:   1:0e5b7e3f9c4a
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
-  summary:     koi8-r: √í√î√ï√î√ò = u'\u0440\u0442\u0443\u0442\u044c'
+  summary:     koi8-r: \xc3\x92\xc3\x94\xc3\x95\xc3\x94\xc3\x98 = u'\\u0440\\u0442\\u0443\\u0442\\u044c' (esc)
   
   changeset:   0:1e78a93102a3
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
-  summary:     latin-1 e': √© = u'\xe9'
+  summary:     latin-1 e': \xc3\xa9 = u'\\xe9' (esc)
   
 
 hg tags (ascii)
@@ -166,13 +166,13 @@ hg tags (latin-1)
 
   $ HGENCODING=latin-1 hg tags
   tip                                5:093c6077d1c8
-  È                                  3:ca661e7520de
+  \xe9                                  3:ca661e7520de (esc)
 
 hg tags (utf-8)
 
   $ HGENCODING=utf-8 hg tags
   tip                                5:093c6077d1c8
-  √©                                  3:ca661e7520de
+  \xc3\xa9                                  3:ca661e7520de (esc)
 
 hg branches (ascii)
 
@@ -183,13 +183,13 @@ hg branches (ascii)
 hg branches (latin-1)
 
   $ HGENCODING=latin-1 hg branches
-  È                              5:093c6077d1c8
+  \xe9                              5:093c6077d1c8 (esc)
   default                        4:94db611b4196 (inactive)
 
 hg branches (utf-8)
 
   $ HGENCODING=utf-8 hg branches
-  √©                              5:093c6077d1c8
+  \xc3\xa9                              5:093c6077d1c8 (esc)
   default                        4:94db611b4196 (inactive)
   $ echo '[ui]' >> .hg/hgrc
   $ echo 'fallbackencoding = koi8-r' >> .hg/hgrc
@@ -198,7 +198,7 @@ hg log (utf-8)
 
   $ HGENCODING=utf-8 hg log
   changeset:   5:093c6077d1c8
-  branch:      √©
+  branch:      \xc3\xa9 (esc)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -207,28 +207,28 @@ hg log (utf-8)
   changeset:   4:94db611b4196
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     Added tag √© for changeset ca661e7520de
+  summary:     Added tag \xc3\xa9 for changeset ca661e7520de (esc)
   
   changeset:   3:ca661e7520de
-  tag:         √©
+  tag:         \xc3\xa9 (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     utf-8 e' encoded: √©
+  summary:     utf-8 e' encoded: \xc3\xa9 (esc)
   
   changeset:   2:650c6f3d55dd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     latin-1 e' encoded: √©
+  summary:     latin-1 e' encoded: \xc3\xa9 (esc)
   
   changeset:   1:0e5b7e3f9c4a
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
-  summary:     koi8-r: —Ä—Ç—É—Ç—å = u'\u0440\u0442\u0443\u0442\u044c'
+  summary:     koi8-r: \xd1\x80\xd1\x82\xd1\x83\xd1\x82\xd1\x8c = u'\\u0440\\u0442\\u0443\\u0442\\u044c' (esc)
   
   changeset:   0:1e78a93102a3
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
-  summary:     latin-1 e': –ò = u'\xe9'
+  summary:     latin-1 e': \xd0\x98 = u'\\xe9' (esc)
   
 
 hg log (dolphin)
@@ -237,7 +237,7 @@ hg log (dolphin)
   abort: unknown encoding: dolphin, please check your locale settings
   [255]
   $ HGENCODING=ascii hg branch `cat latin-1-tag`
-  abort: decoding near 'È': 'ascii' codec can't decode byte 0xe9 in position 0: ordinal not in range(128)!
+  abort: decoding near '\xe9': 'ascii' codec can't decode byte 0xe9 in position 0: ordinal not in range(128)! (esc)
   [255]
   $ cp latin-1-tag .hg/branch
   $ HGENCODING=latin-1 hg ci -m 'should fail'

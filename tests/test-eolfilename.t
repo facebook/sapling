@@ -9,11 +9,11 @@ test issue352
   $ A=`printf 'he\rllo'`
   $ echo foo > "$A"
   $ hg add
-  adding hello
+  adding he\rllo (esc)
   abort: '\n' and '\r' disallowed in filenames: 'he\rllo'
   [255]
   $ hg ci -A -m m
-  adding hello
+  adding he\rllo (esc)
   abort: '\n' and '\r' disallowed in filenames: 'he\rllo'
   [255]
   $ rm "$A"
@@ -31,7 +31,7 @@ test issue352
   [255]
   $ echo foo > "$A"
   $ hg debugwalk
-  f  hello  hello
+  f  he\rllo  he\rllo (esc)
   f  hell
   o  hell
   o
@@ -51,7 +51,7 @@ test issue2039
   $ touch "$A"
   $ touch "$B"
   $ hg status --color=always
-  [0;35;1;4m? foo[0m
-  [0;35;1;4mbar[0m
-  [0;35;1;4m? foo[0m
-  [0;35;1;4mbar.baz[0m
+  \x1b[0;35;1;4m? foo\x1b[0m (esc)
+  \x1b[0;35;1;4mbar\x1b[0m (esc)
+  \x1b[0;35;1;4m? foo\x1b[0m (esc)
+  \x1b[0;35;1;4mbar.baz\x1b[0m (esc)
