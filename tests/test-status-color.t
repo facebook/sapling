@@ -11,100 +11,100 @@
 hg status in repo root:
 
   $ hg status --color=always
-  [0;35;1;4m? a/1/in_a_1[0m
-  [0;35;1;4m? a/in_a[0m
-  [0;35;1;4m? b/1/in_b_1[0m
-  [0;35;1;4m? b/2/in_b_2[0m
-  [0;35;1;4m? b/in_b[0m
-  [0;35;1;4m? in_root[0m
+  \x1b[0;35;1;4m? a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_root\x1b[0m (esc)
 
 hg status . in repo root:
 
   $ hg status --color=always .
-  [0;35;1;4m? a/1/in_a_1[0m
-  [0;35;1;4m? a/in_a[0m
-  [0;35;1;4m? b/1/in_b_1[0m
-  [0;35;1;4m? b/2/in_b_2[0m
-  [0;35;1;4m? b/in_b[0m
-  [0;35;1;4m? in_root[0m
+  \x1b[0;35;1;4m? a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_root\x1b[0m (esc)
 
   $ hg status --color=always --cwd a
-  [0;35;1;4m? a/1/in_a_1[0m
-  [0;35;1;4m? a/in_a[0m
-  [0;35;1;4m? b/1/in_b_1[0m
-  [0;35;1;4m? b/2/in_b_2[0m
-  [0;35;1;4m? b/in_b[0m
-  [0;35;1;4m? in_root[0m
+  \x1b[0;35;1;4m? a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_root\x1b[0m (esc)
   $ hg status --color=always --cwd a .
-  [0;35;1;4m? 1/in_a_1[0m
-  [0;35;1;4m? in_a[0m
+  \x1b[0;35;1;4m? 1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_a\x1b[0m (esc)
   $ hg status --color=always --cwd a ..
-  [0;35;1;4m? 1/in_a_1[0m
-  [0;35;1;4m? in_a[0m
-  [0;35;1;4m? ../b/1/in_b_1[0m
-  [0;35;1;4m? ../b/2/in_b_2[0m
-  [0;35;1;4m? ../b/in_b[0m
-  [0;35;1;4m? ../in_root[0m
+  \x1b[0;35;1;4m? 1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../in_root\x1b[0m (esc)
 
   $ hg status --color=always --cwd b
-  [0;35;1;4m? a/1/in_a_1[0m
-  [0;35;1;4m? a/in_a[0m
-  [0;35;1;4m? b/1/in_b_1[0m
-  [0;35;1;4m? b/2/in_b_2[0m
-  [0;35;1;4m? b/in_b[0m
-  [0;35;1;4m? in_root[0m
+  \x1b[0;35;1;4m? a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_root\x1b[0m (esc)
   $ hg status --color=always --cwd b .
-  [0;35;1;4m? 1/in_b_1[0m
-  [0;35;1;4m? 2/in_b_2[0m
-  [0;35;1;4m? in_b[0m
+  \x1b[0;35;1;4m? 1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? 2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_b\x1b[0m (esc)
   $ hg status --color=always --cwd b ..
-  [0;35;1;4m? ../a/1/in_a_1[0m
-  [0;35;1;4m? ../a/in_a[0m
-  [0;35;1;4m? 1/in_b_1[0m
-  [0;35;1;4m? 2/in_b_2[0m
-  [0;35;1;4m? in_b[0m
-  [0;35;1;4m? ../in_root[0m
+  \x1b[0;35;1;4m? ../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? 1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? 2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../in_root\x1b[0m (esc)
 
   $ hg status --color=always --cwd a/1
-  [0;35;1;4m? a/1/in_a_1[0m
-  [0;35;1;4m? a/in_a[0m
-  [0;35;1;4m? b/1/in_b_1[0m
-  [0;35;1;4m? b/2/in_b_2[0m
-  [0;35;1;4m? b/in_b[0m
-  [0;35;1;4m? in_root[0m
+  \x1b[0;35;1;4m? a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_root\x1b[0m (esc)
   $ hg status --color=always --cwd a/1 .
-  [0;35;1;4m? in_a_1[0m
+  \x1b[0;35;1;4m? in_a_1\x1b[0m (esc)
   $ hg status --color=always --cwd a/1 ..
-  [0;35;1;4m? in_a_1[0m
-  [0;35;1;4m? ../in_a[0m
+  \x1b[0;35;1;4m? in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../in_a\x1b[0m (esc)
 
   $ hg status --color=always --cwd b/1
-  [0;35;1;4m? a/1/in_a_1[0m
-  [0;35;1;4m? a/in_a[0m
-  [0;35;1;4m? b/1/in_b_1[0m
-  [0;35;1;4m? b/2/in_b_2[0m
-  [0;35;1;4m? b/in_b[0m
-  [0;35;1;4m? in_root[0m
+  \x1b[0;35;1;4m? a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_root\x1b[0m (esc)
   $ hg status --color=always --cwd b/1 .
-  [0;35;1;4m? in_b_1[0m
+  \x1b[0;35;1;4m? in_b_1\x1b[0m (esc)
   $ hg status --color=always --cwd b/1 ..
-  [0;35;1;4m? in_b_1[0m
-  [0;35;1;4m? ../2/in_b_2[0m
-  [0;35;1;4m? ../in_b[0m
+  \x1b[0;35;1;4m? in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../in_b\x1b[0m (esc)
 
   $ hg status --color=always --cwd b/2
-  [0;35;1;4m? a/1/in_a_1[0m
-  [0;35;1;4m? a/in_a[0m
-  [0;35;1;4m? b/1/in_b_1[0m
-  [0;35;1;4m? b/2/in_b_2[0m
-  [0;35;1;4m? b/in_b[0m
-  [0;35;1;4m? in_root[0m
+  \x1b[0;35;1;4m? a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_root\x1b[0m (esc)
   $ hg status --color=always --cwd b/2 .
-  [0;35;1;4m? in_b_2[0m
+  \x1b[0;35;1;4m? in_b_2\x1b[0m (esc)
   $ hg status --color=always --cwd b/2 ..
-  [0;35;1;4m? ../1/in_b_1[0m
-  [0;35;1;4m? in_b_2[0m
-  [0;35;1;4m? ../in_b[0m
+  \x1b[0;35;1;4m? ../1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? ../in_b\x1b[0m (esc)
   $ cd ..
 
   $ hg init repo2
@@ -124,44 +124,44 @@ hg status . in repo root:
 hg status:
 
   $ hg status --color=always
-  [0;32;1mA added[0m
-  [0;31;1mR removed[0m
-  [0;36;1;4m! deleted[0m
-  [0;35;1;4m? unknown[0m
+  \x1b[0;32;1mA added\x1b[0m (esc)
+  \x1b[0;31;1mR removed\x1b[0m (esc)
+  \x1b[0;36;1;4m! deleted\x1b[0m (esc)
+  \x1b[0;35;1;4m? unknown\x1b[0m (esc)
 
 hg status modified added removed deleted unknown never-existed ignored:
 
   $ hg status --color=always modified added removed deleted unknown never-existed ignored
   never-existed: No such file or directory
-  [0;32;1mA added[0m
-  [0;31;1mR removed[0m
-  [0;36;1;4m! deleted[0m
-  [0;35;1;4m? unknown[0m
+  \x1b[0;32;1mA added\x1b[0m (esc)
+  \x1b[0;31;1mR removed\x1b[0m (esc)
+  \x1b[0;36;1;4m! deleted\x1b[0m (esc)
+  \x1b[0;35;1;4m? unknown\x1b[0m (esc)
 
   $ hg copy modified copied
 
 hg status -C:
 
   $ hg status --color=always -C
-  [0;32;1mA added[0m
-  [0;32;1mA copied[0m
-  [0;0m  modified[0m
-  [0;31;1mR removed[0m
-  [0;36;1;4m! deleted[0m
-  [0;35;1;4m? unknown[0m
+  \x1b[0;32;1mA added\x1b[0m (esc)
+  \x1b[0;32;1mA copied\x1b[0m (esc)
+  \x1b[0;0m  modified\x1b[0m (esc)
+  \x1b[0;31;1mR removed\x1b[0m (esc)
+  \x1b[0;36;1;4m! deleted\x1b[0m (esc)
+  \x1b[0;35;1;4m? unknown\x1b[0m (esc)
 
 hg status -A:
 
   $ hg status --color=always -A
-  [0;32;1mA added[0m
-  [0;32;1mA copied[0m
-  [0;0m  modified[0m
-  [0;31;1mR removed[0m
-  [0;36;1;4m! deleted[0m
-  [0;35;1;4m? unknown[0m
-  [0;30;1mI ignored[0m
-  [0;0mC .hgignore[0m
-  [0;0mC modified[0m
+  \x1b[0;32;1mA added\x1b[0m (esc)
+  \x1b[0;32;1mA copied\x1b[0m (esc)
+  \x1b[0;0m  modified\x1b[0m (esc)
+  \x1b[0;31;1mR removed\x1b[0m (esc)
+  \x1b[0;36;1;4m! deleted\x1b[0m (esc)
+  \x1b[0;35;1;4m? unknown\x1b[0m (esc)
+  \x1b[0;30;1mI ignored\x1b[0m (esc)
+  \x1b[0;0mC .hgignore\x1b[0m (esc)
+  \x1b[0;0mC modified\x1b[0m (esc)
 
 
   $ echo "^ignoreddir$" > .hgignore
@@ -175,7 +175,7 @@ hg status ignoreddir/file:
 hg status -i ignoreddir/file:
 
   $ hg status --color=always -i ignoreddir/file
-  [0;30;1mI ignoreddir/file[0m
+  \x1b[0;30;1mI ignoreddir/file\x1b[0m (esc)
   $ cd ..
 
 check 'status -q' and some combinations
@@ -201,11 +201,11 @@ test unknown color
   $ hg --config color.status.modified=periwinkle status --color=always
   ignoring unknown color/effect 'periwinkle' (configured in color.status.modified)
   M modified
-  [0;32;1mA added[0m
-  [0;32;1mA copied[0m
-  [0;31;1mR removed[0m
-  [0;36;1;4m! deleted[0m
-  [0;35;1;4m? unknown[0m
+  \x1b[0;32;1mA added\x1b[0m (esc)
+  \x1b[0;32;1mA copied\x1b[0m (esc)
+  \x1b[0;31;1mR removed\x1b[0m (esc)
+  \x1b[0;36;1;4m! deleted\x1b[0m (esc)
+  \x1b[0;35;1;4m? unknown\x1b[0m (esc)
 
 Run status with 2 different flags.
 Check if result is the same or different.
@@ -275,5 +275,5 @@ test 'resolve -l'
 hg resolve with one unresolved, one resolved:
 
   $ hg resolve --color=always -l
-  [0;31;1mU a[0m
-  [0;32;1mR b[0m
+  \x1b[0;31;1mU a\x1b[0m (esc)
+  \x1b[0;32;1mR b\x1b[0m (esc)

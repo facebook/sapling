@@ -61,20 +61,20 @@ Set up helpers
   > native = $1
   > EOF
   >     hg update
-  >     echo '% printrepr.py a.txt'
-  >     python $TESTDIR/printrepr.py < a.txt
+  >     echo '% a.txt'
+  >     cat a.txt
   >     echo '% hg cat a.txt'
-  >     hg cat a.txt | python $TESTDIR/printrepr.py
+  >     hg cat a.txt
   >     printf "fourth${EOL}" >> a.txt
-  >     echo '% printrepr.py a.txt'
-  >     python $TESTDIR/printrepr.py < a.txt
-  >     hg diff | python $TESTDIR/printrepr.py
+  >     echo '% a.txt'
+  >     cat a.txt
+  >     hg diff
   >     python ../switch-eol.py $1 a.txt
   >     echo '% hg diff only reports a single changed line:'
-  >     hg diff | python $TESTDIR/printrepr.py
+  >     hg diff
   >     echo "% reverting back to $1 format"
   >     hg revert a.txt
-  >     python $TESTDIR/printrepr.py < a.txt
+  >     cat a.txt
   >     printf "first\r\nsecond\n" > mixed.txt
   >     hg add mixed.txt
   >     echo "% hg commit of inconsistent .txt file marked as binary (should work)"
@@ -144,7 +144,7 @@ Basic tests
   $ dotest LF
   % hg clone repo repo-LF
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % printrepr.py a.txt
+  % a.txt
   first
   second
   third
@@ -152,7 +152,7 @@ Basic tests
   first
   second
   third
-  % printrepr.py a.txt
+  % a.txt
   first
   second
   third
@@ -188,19 +188,19 @@ Basic tests
   $ dotest CRLF
   % hg clone repo repo-CRLF
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % printrepr.py a.txt
-  first\r
-  second\r
-  third\r
+  % a.txt
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
   % hg cat a.txt
   first
   second
   third
-  % printrepr.py a.txt
-  first\r
-  second\r
-  third\r
-  fourth\r
+  % a.txt
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
+  fourth\r (esc)
   diff --git a/a.txt b/a.txt
   --- a/a.txt
   +++ b/a.txt
@@ -220,9 +220,9 @@ Basic tests
    third
   +fourth
   % reverting back to CRLF format
-  first\r
-  second\r
-  third\r
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
   % hg commit of inconsistent .txt file marked as binary (should work)
   % hg commit of inconsistent .txt file marked as native (should fail)
   abort: inconsistent newline style in a.txt
@@ -238,15 +238,15 @@ Basic tests
   $ dotest LF
   % hg clone repo repo-LF
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % printrepr.py a.txt
+  % a.txt
   first
   second
   third
   % hg cat a.txt
-  first\r
-  second\r
-  third\r
-  % printrepr.py a.txt
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
+  % a.txt
   first
   second
   third
@@ -255,20 +255,20 @@ Basic tests
   --- a/a.txt
   +++ b/a.txt
   @@ -1,3 +1,4 @@
-   first\r
-   second\r
-   third\r
-  +fourth\r
+   first\r (esc)
+   second\r (esc)
+   third\r (esc)
+  +fourth\r (esc)
   % switching encoding from '\n' to '\r\n'
   % hg diff only reports a single changed line:
   diff --git a/a.txt b/a.txt
   --- a/a.txt
   +++ b/a.txt
   @@ -1,3 +1,4 @@
-   first\r
-   second\r
-   third\r
-  +fourth\r
+   first\r (esc)
+   second\r (esc)
+   third\r (esc)
+  +fourth\r (esc)
   % reverting back to LF format
   first
   second
@@ -282,41 +282,41 @@ Basic tests
   $ dotest CRLF
   % hg clone repo repo-CRLF
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % printrepr.py a.txt
-  first\r
-  second\r
-  third\r
+  % a.txt
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
   % hg cat a.txt
-  first\r
-  second\r
-  third\r
-  % printrepr.py a.txt
-  first\r
-  second\r
-  third\r
-  fourth\r
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
+  % a.txt
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
+  fourth\r (esc)
   diff --git a/a.txt b/a.txt
   --- a/a.txt
   +++ b/a.txt
   @@ -1,3 +1,4 @@
-   first\r
-   second\r
-   third\r
-  +fourth\r
+   first\r (esc)
+   second\r (esc)
+   third\r (esc)
+  +fourth\r (esc)
   % switching encoding from '\r\n' to '\n'
   % hg diff only reports a single changed line:
   diff --git a/a.txt b/a.txt
   --- a/a.txt
   +++ b/a.txt
   @@ -1,3 +1,4 @@
-   first\r
-   second\r
-   third\r
-  +fourth\r
+   first\r (esc)
+   second\r (esc)
+   third\r (esc)
+  +fourth\r (esc)
   % reverting back to CRLF format
-  first\r
-  second\r
-  third\r
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
   % hg commit of inconsistent .txt file marked as binary (should work)
   % hg commit of inconsistent .txt file marked as native (should fail)
   abort: inconsistent newline style in a.txt

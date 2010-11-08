@@ -402,10 +402,9 @@ Test \r (carriage return) as used in "DOS" line endings:
   @@ -1,2 +1,3 @@
   -hello world
   -goodbye world
-  +hello world
-  +
-  +goodbyeworld
-world
+  +hello world\r (esc)
+  +\r (esc)
+  +goodbye\rworld (esc)
 
 No completely blank lines to ignore:
 
@@ -416,10 +415,9 @@ No completely blank lines to ignore:
   @@ -1,2 +1,3 @@
   -hello world
   -goodbye world
-  +hello world
-  +
-  +goodbyeworld
-world
+  +hello world\r (esc)
+  +\r (esc)
+  +goodbye\rworld (esc)
 
 Only new line noticed:
 
@@ -429,7 +427,7 @@ Only new line noticed:
   +++ b/foo
   @@ -1,2 +1,3 @@
    hello world
-  +
+  +\r (esc)
    goodbye world
 
   $ hg ndiff --ignore-all-space
@@ -438,7 +436,7 @@ Only new line noticed:
   +++ b/foo
   @@ -1,2 +1,3 @@
    hello world
-  +
+  +\r (esc)
    goodbye world
 
 New line not noticed when space change ignored:

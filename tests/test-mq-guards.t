@@ -218,9 +218,9 @@ list patches and guards with color
 
   $ hg --config extensions.color= qguard --config color.mode=ansi \
   >     -l --color=always
-  [0;30;1ma.patch[0m: [0;33m+1[0m [0;33m+2[0m [0;31m-3[0m
-  [0;34;1;4mb.patch[0m: [0;33m+2[0m
-  [0;30;1mc.patch[0m: [0;32munguarded[0m
+  \x1b[0;30;1ma.patch\x1b[0m: \x1b[0;33m+1\x1b[0m \x1b[0;33m+2\x1b[0m \x1b[0;31m-3\x1b[0m (esc)
+  \x1b[0;34;1;4mb.patch\x1b[0m: \x1b[0;33m+2\x1b[0m (esc)
+  \x1b[0;30;1mc.patch\x1b[0m: \x1b[0;32munguarded\x1b[0m (esc)
 
 should pop b.patch
 
@@ -310,10 +310,10 @@ and d.patch as Unapplied
 qseries again, but with color
 
   $ hg --config extensions.color= qseries -v --color=always
-  0 G [0;30;1mnew.patch[0m
-  1 G [0;30;1mb.patch[0m
-  2 A [0;34;1;4mc.patch[0m
-  3 U [0;30;1md.patch[0m
+  0 G \x1b[0;30;1mnew.patch\x1b[0m (esc)
+  1 G \x1b[0;30;1mb.patch\x1b[0m (esc)
+  2 A \x1b[0;34;1;4mc.patch\x1b[0m (esc)
+  3 U \x1b[0;30;1md.patch\x1b[0m (esc)
 
   $ hg qguard d.patch +2
 
@@ -433,4 +433,4 @@ the guards file was not ignored in the past
 hg qseries -m with color
 
   $ hg --config extensions.color= qseries -m --color=always
-  [0;31;1mb.patch[0m
+  \x1b[0;31;1mb.patch\x1b[0m (esc)

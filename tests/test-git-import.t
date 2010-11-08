@@ -352,10 +352,10 @@ Move text file and patch as binary
   > EOF
   applying patch from stdin
 
-  $ python $TESTDIR/printrepr.py < binary2
+  $ cat binary2
   a
   b
-  \x00
+  \x00 (no-eol) (esc)
 
   $ hg st --copies --change . 
   A binary2

@@ -33,9 +33,9 @@ simple with color
 
   $ hg --config extensions.color= grep --config color.mode=ansi \
   >     --color=always port port
-  port:4:ex[0;31;1mport[0m
-  port:4:va[0;31;1mport[0might
-  port:4:im[0;31;1mport[0m/export
+  port:4:ex\x1b[0;31;1mport\x1b[0m (esc)
+  port:4:va\x1b[0;31;1mport\x1b[0might (esc)
+  port:4:im\x1b[0;31;1mport\x1b[0m/export (esc)
 
 all
 

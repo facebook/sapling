@@ -66,7 +66,7 @@
   $ hg co 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch é
-  marked working directory as branch é
+  marked working directory as branch \xc3\xa9 (esc)
   $ hg ci -Aqm9
 
   $ hg tag -r6 1.0

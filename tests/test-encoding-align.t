@@ -52,9 +52,9 @@ check alignment of option descriptions in help
   
   options:
   
-   -s --opt1 \xe7\x9f\xad\xe5\x90\x8d          short width
+   -s --opt1 \xe7\x9f\xad\xe5\x90\x8d          short width (esc)
    -m --opt2 MIDDLE_       middle width
-   -l --opt3 \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d  long width
+   -l --opt3 \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d  long width (esc)
   
   use "hg -v help showoptlist" to show global options
 
@@ -96,42 +96,42 @@ commit(3)
 check alignment of user names in annotate
 
   $ hg annotate -u $M
-          \xe7\x9f\xad\xe5\x90\x8d: first line(2)
+          \xe7\x9f\xad\xe5\x90\x8d: first line(2) (esc)
        MIDDLE_: second line(2)
-  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d: third line(2)
+  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d: third line(2) (esc)
 
 check alignment of filenames in diffstat
 
   $ hg diff -c tip --stat
    MIDDLE_      |  1 +
-   \xe7\x9f\xad\xe5\x90\x8d         |  1 +
-   \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d |  1 +
+   \xe7\x9f\xad\xe5\x90\x8d         |  1 + (esc)
+   \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d |  1 + (esc)
    3 files changed, 3 insertions(+), 0 deletions(-)
 
 add branches/tags
 
   $ hg branch $S
-  marked working directory as branch \xe7\x9f\xad\xe5\x90\x8d
+  marked working directory as branch \xe7\x9f\xad\xe5\x90\x8d (esc)
   $ hg tag $S
   $ hg branch $M
   marked working directory as branch MIDDLE_
   $ hg tag $M
   $ hg branch $L
-  marked working directory as branch \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d
+  marked working directory as branch \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d (esc)
   $ hg tag $L
 
 check alignment of branches
 
   $ hg tags
   tip                                5:d745ff46155b
-  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d                       4:9259be597f19
+  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d                       4:9259be597f19 (esc)
   MIDDLE_                            3:b06c5b6def9e
-  \xe7\x9f\xad\xe5\x90\x8d                               2:64a70663cee8
+  \xe7\x9f\xad\xe5\x90\x8d                               2:64a70663cee8 (esc)
 
 check alignment of tags
 
   $ hg tags
   tip                                5:d745ff46155b
-  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d                       4:9259be597f19
+  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d                       4:9259be597f19 (esc)
   MIDDLE_                            3:b06c5b6def9e
-  \xe7\x9f\xad\xe5\x90\x8d                               2:64a70663cee8
+  \xe7\x9f\xad\xe5\x90\x8d                               2:64a70663cee8 (esc)

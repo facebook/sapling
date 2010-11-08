@@ -178,11 +178,11 @@ add an untracked file
 status --mq with color (issue2096)
 
   $ hg status --mq --config extensions.color= --color=always
-  [0;32;1mA .hgignore[0m
-  [0;32;1mA A[0m
-  [0;32;1mA B[0m
-  [0;32;1mA series[0m
-  [0;35;1;4m? flaf[0m
+  \x1b[0;32;1mA .hgignore\x1b[0m (esc)
+  \x1b[0;32;1mA A\x1b[0m (esc)
+  \x1b[0;32;1mA B\x1b[0m (esc)
+  \x1b[0;32;1mA series\x1b[0m (esc)
+  \x1b[0;35;1;4m? flaf\x1b[0m (esc)
 
 try the --mq option on a command provided by an extension
 
