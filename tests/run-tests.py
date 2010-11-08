@@ -531,29 +531,37 @@ def tsttest(test, options, replacements):
     postout = []
     ret = 0
     for n, l in enumerate(output):
-        if l.startswith(salt):
-            # add on last return code
-            ret = int(l.split()[2])
-            if ret != 0:
-                postout.append("  [%s]\n" % ret)
-            if pos in after:
-                postout += after.pop(pos)
-            pos = int(l.split()[1])
-        else:
+        lout, lcmd = l, None
+        if salt in l:
+            lout, lcmd = l.split(salt, 1)
+
+        if lout:
+            if lcmd:
+                lout += ' (no-eol)\n'
+
             el = None
             if pos in expected and expected[pos]:
                 el = expected[pos].pop(0)
 
-            if el == l: # perfect match (fast)
-                postout.append("  " + l)
+            if el == lout: # perfect match (fast)
+                postout.append("  " + lout)
             elif el and el.decode('string-escape') == l:
                 postout.append("  " + el)  # \-escape match
             elif (el and
-                  (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
-                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l))):
+                  (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', lout) or
+                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', lout))):
                 postout.append("  " + el) # fallback regex/glob match
             else:
-                postout.append("  " + l) # let diff deal with it
+                postout.append("  " + lout) # let diff deal with it
+
+        if lcmd:
+            # add on last return code
+            ret = int(lcmd.split()[1])
+            if ret != 0:
+                postout.append("  [%s]\n" % ret)
+            if pos in after:
+                postout += after.pop(pos)
+            pos = int(lcmd.split()[0])
 
     if pos in after:
         postout += after.pop(pos)

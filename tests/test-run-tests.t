@@ -2,6 +2,8 @@ Simple commands:
 
   $ echo foo
   foo
+  $ printf 'oh no'
+  oh no (no-eol)
   $ printf 'bar\nbaz\n' | cat
   bar
   baz
