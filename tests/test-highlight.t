@@ -583,19 +583,19 @@ errors encountered
   > 
   >     echo % hgweb filerevision, html
   >     "$TESTDIR/get-with-headers.py" localhost:$HGPORT "/file/tip/$2" \
-  >         | grep '<div class="parity0 source">' | $TESTDIR/printrepr.py
+  >         | grep '<div class="parity0 source">'
   >     echo % errors encountered
   >     cat errors.log
   > }
   $ hgserveget euc-jp eucjp.txt
   % HGENCODING=euc-jp hg serve
   % hgweb filerevision, html
-  <div class="parity0 source"><a href="#l1" id="l1">     1</a> \xb5\xfe</div>
+  <div class="parity0 source"><a href="#l1" id="l1">     1</a> \xb5\xfe</div> (esc)
   % errors encountered
   $ hgserveget utf-8 eucjp.txt
   % HGENCODING=utf-8 hg serve
   % hgweb filerevision, html
-  <div class="parity0 source"><a href="#l1" id="l1">     1</a> \xef\xbf\xbd\xef\xbf\xbd</div>
+  <div class="parity0 source"><a href="#l1" id="l1">     1</a> \xef\xbf\xbd\xef\xbf\xbd</div> (esc)
   % errors encountered
   $ hgserveget us-ascii eucjp.txt
   % HGENCODING=us-ascii hg serve

@@ -45,8 +45,13 @@ force LF
 
   $ hg --traceback --config patch.eol='LF' import eol.diff
   applying eol.diff
-  $ python -c 'print repr(file("a","rb").read())'
-  'a\nyyyy\ncc\n\nd\ne'
+  $ cat a
+  a
+  yyyy
+  cc
+  
+  d
+  e (no-eol)
   $ hg st
 
 
@@ -56,8 +61,13 @@ force CRLF
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --traceback --config patch.eol='CRLF' import eol.diff
   applying eol.diff
-  $ python -c 'print repr(file("a","rb").read())'
-  'a\r\nyyyy\r\ncc\r\n\r\nd\r\ne'
+  $ cat a
+  a\r (esc)
+  yyyy\r (esc)
+  cc\r (esc)
+  \r (esc)
+  d\r (esc)
+  e (no-eol)
   $ hg st
 
 
@@ -67,8 +77,13 @@ auto EOL on LF file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --traceback --config patch.eol='auto' import eol.diff
   applying eol.diff
-  $ python -c 'print repr(file("a","rb").read())'
-  'a\nyyyy\ncc\n\nd\ne'
+  $ cat a
+  a
+  yyyy
+  cc
+  
+  d
+  e (no-eol)
   $ hg st
 
 
@@ -78,8 +93,13 @@ auto EOL on CRLF file
   $ hg commit -m 'switch EOLs in a'
   $ hg --traceback --config patch.eol='auto' import eol.diff
   applying eol.diff
-  $ python -c 'print repr(file("a","rb").read())'
-  'a\r\nyyyy\r\ncc\r\n\r\nd\r\ne'
+  $ cat a
+  a\r (esc)
+  yyyy\r (esc)
+  cc\r (esc)
+  \r (esc)
+  d\r (esc)
+  e (no-eol)
   $ hg st
 
 
@@ -96,10 +116,12 @@ auto EOL on new file or source without any EOL
   $ rm neweol
   $ hg --traceback --config patch.eol='auto' import -m noeol noeol.diff
   applying noeol.diff
-  $ python -c 'print repr(file("noeol","rb").read())'
-  'noeol\r\nnoeol\n'
-  $ python -c 'print repr(file("neweol","rb").read())'
-  'neweol\nneweol\r\n'
+  $ cat noeol
+  noeol\r (esc)
+  noeol
+  $ cat neweol
+  neweol
+  neweol\r (esc)
   $ hg st
 
 
@@ -116,7 +138,9 @@ binary patch with --eol
 
   $ hg import --config patch.eol='CRLF' -m changeb bin.diff
   applying bin.diff
-  $ python -c 'print repr(file("b","rb").read())'
-  'a\x00\nc\r\nd'
+  $ cat b
+  a\x00 (esc)
+  c\r (esc)
+  d (no-eol)
   $ hg st
   $ cd ..

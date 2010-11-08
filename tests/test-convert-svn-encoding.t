@@ -128,8 +128,8 @@ Convert while testing all possible outputs
 
 Check tags are in UTF-8
 
-  $ python -c "print '\n'.join([('%r' % l) for l in file('.hgtags', 'rb').readlines()])"
-  '221c3fdaf24df5f14c0a64c597581e2eacfb47bb branch\xc3\xa9e\n'
-  '7a40952c2db29cf00d9e31df3749e98d8a4bdcbf branch\xc3\xa9\n'
+  $ cat .hgtags
+  221c3fdaf24df5f14c0a64c597581e2eacfb47bb branch\xc3\xa9e (esc)
+  7a40952c2db29cf00d9e31df3749e98d8a4bdcbf branch\xc3\xa9 (esc)
 
   $ cd ..

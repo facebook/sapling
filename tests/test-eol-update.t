@@ -54,23 +54,23 @@ Test EOL update
   > 
   >     hg update
   > 
-  >     echo '% printrepr.py a.txt (before)'
-  >     python $TESTDIR/printrepr.py < a.txt
+  >     echo '% a.txt (before)'
+  >     cat a.txt
   > 
   >     printf "first${EOL}third${EOL}" > a.txt
   > 
-  >     echo '% printrepr.py a.txt (after)'
-  >     python $TESTDIR/printrepr.py < a.txt
+  >     echo '% a.txt (after)'
+  >     cat a.txt
   >     echo '% hg diff'
-  >     hg diff | python $TESTDIR/printrepr.py
+  >     hg diff
   > 
   >     echo '% hg update 0'
   >     hg update 0
   > 
-  >     echo '% printrepr.py a.txt'
-  >     python $TESTDIR/printrepr.py < a.txt
+  >     echo '% a.txt'
+  >     cat a.txt
   >     echo '% hg diff'
-  >     hg diff | python $TESTDIR/printrepr.py
+  >     hg diff
   > 
   > 
   >     cd ..
@@ -87,11 +87,11 @@ Test EOL update
   
   % hg clone repo repo-LF
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % printrepr.py a.txt (before)
-  first\r
-  second\r
-  third\r
-  % printrepr.py a.txt (after)
+  % a.txt (before)
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
+  % a.txt (after)
   first
   third
   % hg diff
@@ -99,13 +99,13 @@ Test EOL update
   --- a/a.txt
   +++ b/a.txt
   @@ -1,3 +1,2 @@
-   first\r
-  -second\r
-   third\r
+   first\r (esc)
+  -second\r (esc)
+   third\r (esc)
   % hg update 0
   merging a.txt
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  % printrepr.py a.txt
+  % a.txt
   first
   third
   % hg diff
@@ -120,25 +120,25 @@ Test EOL update
   
   % hg clone repo repo-CRLF
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % printrepr.py a.txt (before)
-  first\r
-  second\r
-  third\r
-  % printrepr.py a.txt (after)
-  first\r
-  third\r
+  % a.txt (before)
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
+  % a.txt (after)
+  first\r (esc)
+  third\r (esc)
   % hg diff
   diff --git a/a.txt b/a.txt
   --- a/a.txt
   +++ b/a.txt
   @@ -1,3 +1,2 @@
-   first\r
-  -second\r
-   third\r
+   first\r (esc)
+  -second\r (esc)
+   third\r (esc)
   % hg update 0
   merging a.txt
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  % printrepr.py a.txt
+  % a.txt
   first
   third
   % hg diff
