@@ -454,6 +454,15 @@ def shtest(test, options, replacements):
     vlog("# Running", cmd)
     return run(cmd, options, replacements)
 
+needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
+escapesub = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
+escapemap = dict((chr(i), r'\x%02x' % i) for i in range(256))
+escapemap.update({'\\': '\\\\', '\r': r'\r'})
+def escapef(m):
+    return escapemap[m.group(0)]
+def stringescape(s):
+    return escapesub(escapef, s)
+
 def tsttest(test, options, replacements):
     t = open(test)
     out = []
@@ -545,13 +554,14 @@ def tsttest(test, options, replacements):
 
             if el == lout: # perfect match (fast)
                 postout.append("  " + lout)
-            elif el and el.decode('string-escape') == l:
-                postout.append("  " + el)  # \-escape match
             elif (el and
                   (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', lout) or
-                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', lout))):
-                postout.append("  " + el) # fallback regex/glob match
+                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', lout)) or
+                   el.endswith(" (esc)\n") and el.decode('string-escape') == l):
+                postout.append("  " + el) # fallback regex/glob/esc match
             else:
+                if needescape(lout):
+                    lout = stringescape(lout.rstrip('\n')) + " (esc)\n"
                 postout.append("  " + lout) # let diff deal with it
 
         if lcmd:
