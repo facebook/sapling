@@ -32,7 +32,7 @@ def revisions(repo, start, stop):
     cur = start
     while cur >= stop:
         ctx = repo[cur]
-        parents = [p.rev() for p in ctx.parents() if p.rev() != nullrev]
+        parents = set([p.rev() for p in ctx.parents() if p.rev() != nullrev])
         yield (cur, CHANGESET, ctx, sorted(parents))
         cur -= 1
 
@@ -47,7 +47,7 @@ def filerevs(repo, path, start, stop, limit=None):
     count = 0
     while filerev >= 0 and rev > stop:
         fctx = repo.filectx(path, fileid=filerev)
-        parents = [f.linkrev() for f in fctx.parents() if f.path() == path]
+        parents = set([f.linkrev() for f in fctx.parents() if f.path() == path])
         rev = fctx.rev()
         if rev <= start:
             yield (rev, CHANGESET, fctx.changectx(), sorted(parents))
@@ -65,7 +65,7 @@ def nodes(repo, nodes):
     include = set(nodes)
     for node in nodes:
         ctx = repo[node]
-        parents = [p.rev() for p in ctx.parents() if p.node() in include]
+        parents = set([p.rev() for p in ctx.parents() if p.node() in include])
         yield (ctx.rev(), CHANGESET, ctx, sorted(parents))
 
 def colored(dag):
