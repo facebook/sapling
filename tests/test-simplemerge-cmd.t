@@ -104,9 +104,9 @@ binary file
 
 binary file --text
 
-  $ python simplemerge -a -p binary-local base other 2>&1 | $TESTDIR/printrepr.py
+  $ python simplemerge -a -p binary-local base other 2>&1
   warning: binary-local looks like a binary file.
-  \x00local
+  \x00local (esc)
   base
   other
 

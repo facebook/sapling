@@ -34,13 +34,13 @@ test branch selection options
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --encoding utf-8 branch æ
-  marked working directory as branch æ
+  marked working directory as branch \xc3\xa6 (esc)
   $ echo ae1 > foo
   $ hg ci -d '0 0' -mae1
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --encoding utf-8 branch -f æ
-  marked working directory as branch æ
+  marked working directory as branch \xc3\xa6 (esc)
   $ echo ae2 > foo
   $ hg ci -d '0 0' -mae2
   created new head

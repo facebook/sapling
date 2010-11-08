@@ -357,6 +357,7 @@ test with a win32ext like setup (differing EOLs)
   $ hg transplant -s ../twin1 tip
   applying 2e849d776c17
   2e849d776c17 transplanted to 589cea8ba85b
-  $ python -c "print repr(file('b', 'rb').read())"
-  'a\r\nb\r\n'
+  $ cat b
+  a\r (esc)
+  b\r (esc)
   $ cd ..

@@ -148,7 +148,7 @@
   $ hg email -m test.mbox -f quux -t foo -c bar -s test 0:tip \
   > --config extensions.progress= --config progress.assume-tty=1 \
   > --config progress.delay=0 --config progress.refresh=0
-  \rwriting [                                                                 ] 0/3\rwriting [                                                                 ] 0/3\r                                                                                \r\r                                                                                \r\rwriting [====================>                                            ] 1/3\rwriting [====================>                                            ] 1/3\r                                                                                \r\r                                                                                \r\rwriting [==========================================>                      ] 2/3\rwriting [==========================================>                      ] 2/3\r                                                                                \rThis patch series consists of 2 patches.
+  \rwriting [                                                                 ] 0/3\rwriting [                                                                 ] 0/3\r                                                                                \r\r                                                                                \r\rwriting [====================>                                            ] 1/3\rwriting [====================>                                            ] 1/3\r                                                                                \r\r                                                                                \r\rwriting [==========================================>                      ] 2/3\rwriting [==========================================>                      ] 2/3\r                                                                                \rThis patch series consists of 2 patches. (esc)
   
   
   Write the introductory message for the patch series.
@@ -1925,7 +1925,7 @@ test outgoing:
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/utf	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,1 @@
-  +hÃ¶mma!
+  +h\xc3\xb6mma! (esc)
   
   Displaying [PATCH 3 of 8] charset=utf-8; content-transfer-encoding: quoted-printable ...
   Content-Type: text/plain; charset="us-ascii"
@@ -1996,7 +1996,7 @@ test outgoing:
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/isolatin	Thu Jan 01 00:00:05 1970 +0000
   @@ -0,0 +1,1 @@
-  +hömma!
+  +h\xf6mma! (esc)
   
   Displaying [PATCH 5 of 8] Added tag zero, zero.foo for changeset 8580ff50825a ...
   Content-Type: text/plain; charset="us-ascii"

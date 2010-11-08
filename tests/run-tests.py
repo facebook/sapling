@@ -454,6 +454,15 @@ def shtest(test, options, replacements):
     vlog("# Running", cmd)
     return run(cmd, options, replacements)
 
+needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
+escapesub = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
+escapemap = dict((chr(i), r'\x%02x' % i) for i in range(256))
+escapemap.update({'\\': '\\\\', '\r': r'\r'})
+def escapef(m):
+    return escapemap[m.group(0)]
+def stringescape(s):
+    return escapesub(escapef, s)
+
 def tsttest(test, options, replacements):
     t = open(test)
     out = []
@@ -464,6 +473,8 @@ def tsttest(test, options, replacements):
     after = {}
     expected = {}
     for n, l in enumerate(t):
+        if not l.endswith('\n'):
+            l += '\n'
         if l.startswith('  $ '): # commands
             after.setdefault(pos, []).append(l)
             prepos = pos
@@ -480,8 +491,6 @@ def tsttest(test, options, replacements):
             # non-command/result - queue up for merged output
             after.setdefault(pos, []).append(l)
 
-    if script and not script[-1].endswith('\n'):
-        script[-1] = script[-1] + '\n'
     script.append('echo %s %s $?\n' % (salt, n + 1))
 
     fd, name = tempfile.mkstemp(suffix='hg-tst')
@@ -531,29 +540,38 @@ def tsttest(test, options, replacements):
     postout = []
     ret = 0
     for n, l in enumerate(output):
-        if l.startswith(salt):
-            # add on last return code
-            ret = int(l.split()[2])
-            if ret != 0:
-                postout.append("  [%s]\n" % ret)
-            if pos in after:
-                postout += after.pop(pos)
-            pos = int(l.split()[1])
-        else:
+        lout, lcmd = l, None
+        if salt in l:
+            lout, lcmd = l.split(salt, 1)
+
+        if lout:
+            if lcmd:
+                lout += ' (no-eol)\n'
+
             el = None
             if pos in expected and expected[pos]:
                 el = expected[pos].pop(0)
 
-            if el == l: # perfect match (fast)
-                postout.append("  " + l)
-            elif el and el.decode('string-escape') == l:
-                postout.append("  " + el)  # \-escape match
+            if el == lout: # perfect match (fast)
+                postout.append("  " + lout)
             elif (el and
-                  (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
-                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l))):
-                postout.append("  " + el) # fallback regex/glob match
+                  (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', lout) or
+                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', lout)) or
+                   el.endswith(" (esc)\n") and el.decode('string-escape') == l):
+                postout.append("  " + el) # fallback regex/glob/esc match
             else:
-                postout.append("  " + l) # let diff deal with it
+                if needescape(lout):
+                    lout = stringescape(lout.rstrip('\n')) + " (esc)\n"
+                postout.append("  " + lout) # let diff deal with it
+
+        if lcmd:
+            # add on last return code
+            ret = int(lcmd.split()[1])
+            if ret != 0:
+                postout.append("  [%s]\n" % ret)
+            if pos in after:
+                postout += after.pop(pos)
+            pos = int(lcmd.split()[0])
 
     if pos in after:
         postout += after.pop(pos)

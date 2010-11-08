@@ -41,7 +41,7 @@ test qpush on empty series
   transaction abort!
   rollback completed
   cleaning up working directory...done
-  abort: decoding near 'é': 'ascii' codec can't decode byte 0xe9 in position 0: ordinal not in range(128)!
+  abort: decoding near '\xe9': 'ascii' codec can't decode byte 0xe9 in position 0: ordinal not in range(128)! (esc)
   [255]
   $ hg parents
   changeset:   0:bbd179dfa0a7

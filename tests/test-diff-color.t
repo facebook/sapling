@@ -32,15 +32,15 @@ Setup
 default context
 
   $ hg diff --nodates --color=always
-  [0;1mdiff -r cf9f4ba66af2 a[0m
-  [0;31;1m--- a/a[0m
-  [0;32;1m+++ b/a[0m
-  [0;35m@@ -2,7 +2,7 @@[0m
+  \x1b[0;1mdiff -r cf9f4ba66af2 a\x1b[0m (esc)
+  \x1b[0;31;1m--- a/a\x1b[0m (esc)
+  \x1b[0;32;1m+++ b/a\x1b[0m (esc)
+  \x1b[0;35m@@ -2,7 +2,7 @@\x1b[0m (esc)
    c
    a
    a
-  [0;31m-b[0m
-  [0;32m+dd[0m
+  \x1b[0;31m-b\x1b[0m (esc)
+  \x1b[0;32m+dd\x1b[0m (esc)
    a
    a
    c
@@ -48,21 +48,21 @@ default context
 --unified=2
 
   $ hg diff --nodates -U 2  --color=always
-  [0;1mdiff -r cf9f4ba66af2 a[0m
-  [0;31;1m--- a/a[0m
-  [0;32;1m+++ b/a[0m
-  [0;35m@@ -3,5 +3,5 @@[0m
+  \x1b[0;1mdiff -r cf9f4ba66af2 a\x1b[0m (esc)
+  \x1b[0;31;1m--- a/a\x1b[0m (esc)
+  \x1b[0;32;1m+++ b/a\x1b[0m (esc)
+  \x1b[0;35m@@ -3,5 +3,5 @@\x1b[0m (esc)
    a
    a
-  [0;31m-b[0m
-  [0;32m+dd[0m
+  \x1b[0;31m-b\x1b[0m (esc)
+  \x1b[0;32m+dd\x1b[0m (esc)
    a
    a
 
 diffstat
 
   $ hg diff --stat --color=always
-   a |  2 [0;32m+[0m[0;31m-[0m
+   a |  2 \x1b[0;32m+\x1b[0m\x1b[0;31m-\x1b[0m (esc)
    1 files changed, 1 insertions(+), 1 deletions(-)
   $ echo "record=" >> $HGRCPATH
   $ echo "[ui]" >> $HGRCPATH
@@ -77,17 +77,17 @@ record
   > y
   > y
   > EOF
-  [0;1mdiff --git a/a b/a[0m
-  [0;36;1mold mode 100644[0m
-  [0;36;1mnew mode 100755[0m
+  \x1b[0;1mdiff --git a/a b/a\x1b[0m (esc)
+  \x1b[0;36;1mold mode 100644\x1b[0m (esc)
+  \x1b[0;36;1mnew mode 100755\x1b[0m (esc)
   1 hunks, 1 lines changed
   examine changes to 'a'? [Ynsfdaq?] 
-  [0;35m@@ -2,7 +2,7 @@[0m
+  \x1b[0;35m@@ -2,7 +2,7 @@\x1b[0m (esc)
    c
    a
    a
-  [0;31m-b[0m
-  [0;32m+dd[0m
+  \x1b[0;31m-b\x1b[0m (esc)
+  \x1b[0;32m+dd\x1b[0m (esc)
    a
    a
    c
@@ -105,17 +105,17 @@ qrecord
   > y
   > y
   > EOF
-  [0;1mdiff --git a/a b/a[0m
-  [0;36;1mold mode 100644[0m
-  [0;36;1mnew mode 100755[0m
+  \x1b[0;1mdiff --git a/a b/a\x1b[0m (esc)
+  \x1b[0;36;1mold mode 100644\x1b[0m (esc)
+  \x1b[0;36;1mnew mode 100755\x1b[0m (esc)
   1 hunks, 1 lines changed
   examine changes to 'a'? [Ynsfdaq?] 
-  [0;35m@@ -2,7 +2,7 @@[0m
+  \x1b[0;35m@@ -2,7 +2,7 @@\x1b[0m (esc)
    c
    a
    a
-  [0;31m-b[0m
-  [0;32m+dd[0m
+  \x1b[0;31m-b\x1b[0m (esc)
+  \x1b[0;32m+dd\x1b[0m (esc)
    a
    a
    c

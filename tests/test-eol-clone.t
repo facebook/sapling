@@ -31,11 +31,11 @@ Clone
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-2
-  $ python $TESTDIR/printrepr.py < a.txt
-  first\r
-  second\r
-  third\r
-  $ hg cat a.txt | python $TESTDIR/printrepr.py
+  $ cat a.txt
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)
+  $ hg cat a.txt
   first
   second
   third
@@ -51,7 +51,7 @@ Test clone of repo with .hgeol in working dir, but no .hgeol in tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-3
 
-  $ python $TESTDIR/printrepr.py < a.txt
+  $ cat a.txt
   first
   second
   third
@@ -71,7 +71,7 @@ Test clone of revision with .hgeol
   [patterns]
   **.txt = native
 
-  $ python $TESTDIR/printrepr.py < a.txt
-  first\r
-  second\r
-  third\r
+  $ cat a.txt
+  first\r (esc)
+  second\r (esc)
+  third\r (esc)

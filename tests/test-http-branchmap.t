@@ -5,7 +5,7 @@
   > }
   $ hg init a
   $ hg --encoding utf-8 -R a branch æ
-  marked working directory as branch æ
+  marked working directory as branch \xc3\xa6 (esc)
   $ echo foo > a/foo
   $ hg -R a ci -Am foo
   adding foo
@@ -17,11 +17,11 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  updating to branch æ
+  updating to branch \xc3\xa6 (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --encoding utf-8 -R b log
   changeset:   0:867c11ce77b8
-  branch:      æ
+  branch:      \xc3\xa6 (esc)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -38,14 +38,14 @@
   remote: added 1 changesets with 1 changes to 1 files
   $ hg -R a --encoding utf-8 log
   changeset:   1:58e7c90d67cb
-  branch:      æ
+  branch:      \xc3\xa6 (esc)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     bar
   
   changeset:   0:867c11ce77b8
-  branch:      æ
+  branch:      \xc3\xa6 (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo
