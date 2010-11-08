@@ -887,3 +887,39 @@ File + limit + -ra:b, b < tip, (b - a) < limit:
   | |  summary:     (33) head
   | |
 
+Do not crash or produce strange graphs if history is buggy
+
+  $ commit 36 "buggy merge: identical parents" 35 35
+  $ hg glog -l5
+  @  changeset:   36:95fa8febd08a
+  |  tag:         tip
+  |  parent:      35:9159c3644c5e
+  |  parent:      35:9159c3644c5e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:36 1970 +0000
+  |  summary:     (36) buggy merge: identical parents
+  |
+  o  changeset:   35:9159c3644c5e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     0
+  |
+  o  changeset:   34:fea3ac5810e0
+  |  parent:      32:d06dffa21a31
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:34 1970 +0000
+  |  summary:     (34) head
+  |
+  | o  changeset:   33:68608f5145f9
+  | |  parent:      18:1aa84d96232a
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:33 1970 +0000
+  | |  summary:     (33) head
+  | |
+  o |    changeset:   32:d06dffa21a31
+  |\ \   parent:      27:886ed638191b
+  | | |  parent:      31:621d83e11f67
+  | | |  user:        test
+  | | |  date:        Thu Jan 01 00:00:32 1970 +0000
+  | | |  summary:     (32) expand
+  | | |

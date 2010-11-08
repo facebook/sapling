@@ -1289,6 +1289,9 @@ class queue(object):
             else:
                 match = cmdutil.matchall(repo)
             m, a, r, d = repo.status(match=match)[:4]
+            mm = set(mm)
+            aa = set(aa)
+            dd = set(dd)
 
             # we might end up with files that were added between
             # qtip and the dirstate parent, but then changed in the
@@ -1296,31 +1299,31 @@ class queue(object):
             # show up in the added section
             for x in m:
                 if x not in aa:
-                    mm.append(x)
+                    mm.add(x)
             # we might end up with files added by the local dirstate that
             # were deleted by the patch.  In this case, they should only
             # show up in the changed section.
             for x in a:
                 if x in dd:
-                    del dd[dd.index(x)]
-                    mm.append(x)
+                    dd.remove(x)
+                    mm.add(x)
                 else:
-                    aa.append(x)
+                    aa.add(x)
             # make sure any files deleted in the local dirstate
             # are not in the add or change column of the patch
             forget = []
             for x in d + r:
                 if x in aa:
-                    del aa[aa.index(x)]
+                    aa.remove(x)
                     forget.append(x)
                     continue
-                elif x in mm:
-                    del mm[mm.index(x)]
-                dd.append(x)
+                else:
+                    mm.discard(x)
+                dd.add(x)
 
-            m = list(set(mm))
-            r = list(set(dd))
-            a = list(set(aa))
+            m = list(mm)
+            r = list(dd)
+            a = list(aa)
             c = [filter(matchfn, l) for l in (m, a, r)]
             match = cmdutil.matchfiles(repo, set(c[0] + c[1] + c[2]))
             chunks = patch.diff(repo, patchparent, match=match,

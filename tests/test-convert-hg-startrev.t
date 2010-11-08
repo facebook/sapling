@@ -39,13 +39,32 @@
 
 Convert from null revision
 
-  $ hg convert --config convert.hg.startrev=null source empty
-  initializing destination empty repository
+  $ hg convert --config convert.hg.startrev=null source full
+  initializing destination full repository
   scanning source...
   sorting...
   converting...
+  5 0: add a b
+  4 1: add c
+  3 2: copy e from a, change b
+  2 3: change a
+  1 4: merge 2 and 3, copy d from b
+  0 5: change a
 
-  $ glog empty
+  $ glog full
+  o  5 "5: change a" files: a
+  |
+  o    4 "4: merge 2 and 3, copy d from b" files: d e
+  |\
+  | o  3 "3: change a" files: a
+  | |
+  o |  2 "2: copy e from a, change b" files: b e
+  | |
+  o |  1 "1: add c" files: c
+  |/
+  o  0 "0: add a b" files: a b
+  
+  $ rm -Rf full
 
 Convert from zero revision
 
