@@ -440,8 +440,8 @@ Test fuzziness (ambiguous patch location, fuzz=2)
 
 import with --no-commit should have written .hg/last-message.txt
 
-  $ printf '\n' | cat .hg/last-message.txt -
-  change
+  $ cat .hg/last-message.txt
+  change (no-eol)
 
 
 test fuzziness with eol=auto
