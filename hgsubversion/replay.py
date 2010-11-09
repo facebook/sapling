@@ -160,8 +160,8 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                 if is_link and data.startswith('link '):
                     data = data[len('link '):]
                 elif is_link:
-                    ui.warn('file marked as link, but contains data: '
-                            '%s (%r)\n' % (current_file, flags))
+                    ui.debug('file marked as link, but may contain data: '
+                             '%s (%r)\n' % (current_file, flags))
             else:
                 data = parentctx.filectx(path).data()
             return context.memfilectx(path=path,

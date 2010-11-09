@@ -9,14 +9,7 @@ class TestFetchSymlinks(test_util.TestBase):
 
     def test_symlinks(self, stupid=False):
         repo = self._load_fixture_and_fetch('symlinks.svndump', stupid)
-        # Check no symlink contains the 'link ' prefix
-        for rev in repo:
-            r = repo[rev]
-            for f in r.manifest():
-                if 'l' not in r[f].flags():
-                    continue
-                self.assertFalse(r[f].data().startswith('link '))
-        # Check symlinks in tip
+        # Check symlinks throughout history
         links = {
             0: {
                 'linka': 'a',
@@ -34,6 +27,16 @@ class TestFetchSymlinks(test_util.TestBase):
                 'd2/linka': 'b',
                 },
             3: {
+                },
+            4: {
+                'linka3': 'a',
+                },
+            5: {
+                'linka3': 'a',
+                },
+            6: {
+                'linka3': 'a',
+                'linka4': 'link to this',
                 },
             }
             

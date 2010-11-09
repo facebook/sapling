@@ -38,8 +38,6 @@ class RevisionData(object):
         self.exception = None
 
     def set(self, path, data, isexec=False, islink=False):
-        if islink:
-            data = 'link ' + data
         self.files[path] = data
         self.execfiles[path] = isexec
         self.symlinks[path] = islink

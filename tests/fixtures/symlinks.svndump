@@ -72,6 +72,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 2
 Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
 Content-length: 12
 
 PROPS-END
@@ -93,6 +94,7 @@ Node-action: add
 Prop-content-length: 33
 Text-content-length: 6
 Text-content-md5: c118dba188202a1efc975bef6064180b
+Text-content-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
 Content-length: 39
 
 K 11
@@ -108,6 +110,7 @@ Node-action: add
 Prop-content-length: 33
 Text-content-length: 6
 Text-content-md5: c118dba188202a1efc975bef6064180b
+Text-content-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
 Content-length: 39
 
 K 11
@@ -123,6 +126,7 @@ Node-action: add
 Prop-content-length: 33
 Text-content-length: 6
 Text-content-md5: c118dba188202a1efc975bef6064180b
+Text-content-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
 Content-length: 39
 
 K 11
@@ -171,6 +175,7 @@ Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/linka
 Text-copy-source-md5: c118dba188202a1efc975bef6064180b
+Text-copy-source-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
 Prop-content-length: 57
 Content-length: 57
 
@@ -216,6 +221,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 6
 Text-content-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Text-content-sha1: 7325442a5f7383205e66db563025d51535883784
 Content-length: 6
 
 link b
@@ -225,6 +231,7 @@ Node-kind: file
 Node-action: change
 Text-content-length: 6
 Text-content-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Text-content-sha1: 7325442a5f7383205e66db563025d51535883784
 Content-length: 6
 
 link b
@@ -257,6 +264,7 @@ Node-action: replace
 Prop-content-length: 10
 Text-content-length: 6
 Text-content-md5: edc3d3797971f12c7f5e1d106dd5cee2
+Text-content-sha1: eff1098d818d1f471af4a2cbdb0223e4e030a158
 Content-length: 16
 
 PROPS-END
@@ -269,6 +277,7 @@ Node-action: change
 Prop-content-length: 34
 Text-content-length: 5
 Text-content-md5: 6137cde4893c59f76f005a8123d8e8e6
+Text-content-sha1: c5d84736ba451747dd5f0eb9d17e104f3697ef47
 Content-length: 39
 
 K 13
@@ -278,4 +287,119 @@ V 0
 PROPS-END
 data
 
+
+Revision-number: 6
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 15
+recreate a link
+K 10
+svn:author
+V 6
+danchr
+K 8
+svn:date
+V 27
+2010-11-08T14:57:19.667088Z
+PROPS-END
+
+Node-path: trunk/linka3
+Node-kind: file
+Node-action: add
+Prop-content-length: 59
+Text-content-length: 6
+Text-content-md5: c118dba188202a1efc975bef6064180b
+Text-content-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
+Content-length: 65
+
+K 11
+svn:special
+V 1
+*
+K 14
+svn:needs-lock
+V 1
+*
+PROPS-END
+link a
+
+Revision-number: 7
+Prop-content-length: 128
+Content-length: 128
+
+K 7
+svn:log
+V 27
+delete property from a link
+K 10
+svn:author
+V 6
+danchr
+K 8
+svn:date
+V 27
+2010-11-08T14:57:40.331635Z
+PROPS-END
+
+Node-path: trunk/linka3
+Node-kind: file
+Node-action: change
+Prop-content-length: 33
+Content-length: 33
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+
+
+Revision-number: 8
+Prop-content-length: 145
+Content-length: 145
+
+K 7
+svn:log
+V 44
+add an uglily named file and a symlink to it
+K 10
+svn:author
+V 6
+danchr
+K 8
+svn:date
+V 27
+2010-11-08T15:11:12.267958Z
+PROPS-END
+
+Node-path: trunk/link to this
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 0
+Text-content-md5: d41d8cd98f00b204e9800998ecf8427e
+Text-content-sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/linka4
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 17
+Text-content-md5: aecd1324085a1fc5b7aa8950f92dcfb9
+Text-content-sha1: d22de0907c0b1878b057c873092e82fd9c50849b
+Content-length: 50
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link link to this
 
