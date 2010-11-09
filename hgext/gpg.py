@@ -227,7 +227,7 @@ def sign(ui, repo, *revs, **opts):
         data = node2txt(repo, n, sigver)
         sig = mygpg.sign(data)
         if not sig:
-            raise util.abort(_("error while signing"))
+            raise util.Abort(_("error while signing"))
         sig = binascii.b2a_base64(sig)
         sig = sig.replace("\n", "")
         sigmessage += "%s %s %s\n" % (hexnode, sigver, sig)
