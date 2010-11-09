@@ -141,7 +141,6 @@ class SVNMeta(object):
             if uuid:
                 f = open(os.path.join(self.meta_data_dir, 'uuid'), 'w')
                 f.write(uuid)
-                f.flush()
                 f.close()
             else:
                 raise hgutil.Abort('unable to operate on unrelated repository')

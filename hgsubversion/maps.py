@@ -69,7 +69,6 @@ class AuthorMap(dict):
 
         f.close()
         if writing:
-            writing.flush()
             writing.close()
 
     def __getitem__(self, author):
@@ -147,7 +146,6 @@ class Tags(dict):
         assert self.endrev is None
         f = open(self.path, 'w')
         f.write('%s\n' % self.VERSION)
-        f.flush()
         f.close()
 
     def update(self, other):
@@ -169,7 +167,6 @@ class Tags(dict):
         hash, revision = info
         f = open(self.path, 'a')
         f.write('%s %s %s\n' % (node.hex(hash), revision, tag))
-        f.flush()
         f.close()
         dict.__setitem__(self, tag, hash)
 
@@ -218,7 +215,6 @@ class RevMap(dict):
     def _write(self):
         f = open(self.path, 'w')
         f.write('%s\n' % self.VERSION)
-        f.flush()
         f.close()
 
     def __setitem__(self, key, hash):
@@ -226,7 +222,6 @@ class RevMap(dict):
         f = open(self.path, 'a')
         b = branch or ''
         f.write(str(revnum) + ' ' + node.hex(hash) + ' ' + b + '\n')
-        f.flush()
         f.close()
         if revnum > self.youngest or not self.youngest:
             self.youngest = revnum
@@ -362,7 +357,6 @@ class BranchMap(dict):
 
         f.close()
         if writing:
-            writing.flush()
             writing.close()
 
 class TagMap(dict):
@@ -420,5 +414,4 @@ class TagMap(dict):
 
         f.close()
         if writing:
-            writing.flush()
             writing.close()
