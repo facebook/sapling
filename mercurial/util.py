@@ -1328,15 +1328,26 @@ def uirepr(s):
 #### naming convention of below implementation follows 'textwrap' module
 
 class MBTextWrapper(textwrap.TextWrapper):
+    """
+    Extend TextWrapper for double-width characters.
+
+    Some Asian characters use two terminal columns instead of one.
+    A good example of this behavior can be seen with u'\u65e5\u672c',
+    the two Japanese characters for "Japan":
+    len() returns 2, but when printed to a terminal, they eat 4 columns.
+
+    (Note that this has nothing to do whatsoever with unicode
+    representation, or encoding of the underlying string)
+    """
     def __init__(self, **kwargs):
         textwrap.TextWrapper.__init__(self, **kwargs)
 
     def _cutdown(self, str, space_left):
         l = 0
         ucstr = unicode(str, encoding.encoding)
-        w = unicodedata.east_asian_width
+        colwidth = unicodedata.east_asian_width
         for i in xrange(len(ucstr)):
-            l += w(ucstr[i]) in 'WFA' and 2 or 1
+            l += colwidth(ucstr[i]) in 'WFA' and 2 or 1
             if space_left < l:
                 return (ucstr[:i].encode(encoding.encoding),
                         ucstr[i:].encode(encoding.encoding))
