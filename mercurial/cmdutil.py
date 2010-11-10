@@ -1180,11 +1180,20 @@ def walkchangerevs(repo, match, opts, prepare):
 
             # iterate from latest to oldest revision
             for rev, flparentlinkrevs, copied in filerevgen(filelog, last):
-                if rev > maxrev or rev not in ancestors:
-                    continue
-                # XXX insert 1327 fix here
-                if flparentlinkrevs:
-                    ancestors.update(flparentlinkrevs)
+                if not follow:
+                    if rev > maxrev:
+                        continue
+                else:
+                    # Note that last might not be the first interesting
+                    # rev to us:
+                    # if the file has been changed after maxrev, we'll
+                    # have linkrev(last) > maxrev, and we still need
+                    # to explore the file graph
+                    if rev not in ancestors:
+                        continue
+                    # XXX insert 1327 fix here
+                    if flparentlinkrevs:
+                        ancestors.update(flparentlinkrevs)
 
                 fncache.setdefault(rev, []).append(file_)
                 wanted.add(rev)
