@@ -111,7 +111,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=None):
             mod = getattr(mod, comp)
         for x in fromlist:
             # set requested submodules for demand load
-            if not(hasattr(mod, x)):
+            if not hasattr(mod, x):
                 setattr(mod, x, _demandmod(x, mod.__dict__, locals))
         return mod
 

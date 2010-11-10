@@ -1120,7 +1120,7 @@ def debugpushkey(ui, repopath, namespace, *keyinfo):
         key, old, new = keyinfo
         r = target.pushkey(namespace, key, old, new)
         ui.status(str(r) + '\n')
-        return not(r)
+        return not r
     else:
         for k, v in target.listkeys(namespace).iteritems():
             ui.write("%s\t%s\n" % (k.encode('string-escape'),
