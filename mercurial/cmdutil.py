@@ -1138,7 +1138,7 @@ def walkchangerevs(repo, match, opts, prepare):
                     continue
                 # only yield rev for which we have the changelog, it can
                 # happen while doing "hg log" during a pull or commit
-                if linkrev > maxrev or linkrev >= cl_count:
+                if linkrev >= cl_count:
                     break
 
                 parentlinkrevs = []
@@ -1180,7 +1180,7 @@ def walkchangerevs(repo, match, opts, prepare):
 
             # iterate from latest to oldest revision
             for rev, flparentlinkrevs, copied in filerevgen(filelog, last):
-                if rev not in ancestors:
+                if rev > maxrev or rev not in ancestors:
                     continue
                 # XXX insert 1327 fix here
                 if flparentlinkrevs:
