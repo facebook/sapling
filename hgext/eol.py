@@ -104,6 +104,9 @@ filters = {
     'to-lf': tolf,
     'to-crlf': tocrlf,
     'is-binary': isbinary,
+    # The following provide backwards compatibility with win32text
+    'cleverencode': tolf,
+    'cleverdecode': tocrlf
 }
 
 
