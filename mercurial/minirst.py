@@ -14,27 +14,8 @@ It cheats in a major way: nested blocks are not really nested. They
 are just indented blocks that look like they are nested. This relies
 on the user to keep the right indentation for the blocks.
 
-It only supports a small subset of reStructuredText:
-
-- sections
-
-- paragraphs
-
-- literal blocks
-
-- definition lists
-
-- specific admonitions
-
-- bullet lists (items must start with '-')
-
-- enumerated lists (no autonumbering)
-
-- field lists (colons cannot be escaped)
-
-- option lists (supports only long options without arguments)
-
-- inline literals (no other inline markup is not recognized)
+Remember to update http://mercurial.selenic.com/wiki/HelpStyleGuide
+when adding support for new constructs.
 """
 
 import re, sys
