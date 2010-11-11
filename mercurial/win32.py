@@ -102,12 +102,7 @@ def lookup_reg(key, valname=None, scope=None):
 
 def system_rcpath_win32():
     '''return default os-specific hgrc search path'''
-    proc = win32api.GetCurrentProcess()
-    try:
-        # This will fail on windows < NT
-        filename = win32process.GetModuleFileNameEx(proc, 0)
-    except:
-        filename = win32api.GetModuleFileName(0)
+    filename = win32api.GetModuleFileName(0)
     # Use mercurial.ini found in directory with hg.exe
     progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
     if os.path.isfile(progrc):

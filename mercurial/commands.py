@@ -1273,7 +1273,7 @@ def debugindex(ui, repo, file_, **opts):
 
     format = opts.get('format', 0)
     if format not in (0, 1):
-        raise util.abort("unknown format %d" % format)
+        raise util.Abort("unknown format %d" % format)
 
     if not r:
         r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
