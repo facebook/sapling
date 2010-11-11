@@ -9,6 +9,7 @@ from mercurial import revlog
 from mercurial import context
 from mercurial import node
 from mercurial import commands
+from mercurial import util as hgutil
 
 from hgsubversion import util
 from hgsubversion import svncommands
@@ -80,6 +81,14 @@ class UtilityTests(test_util.TestBase):
                      'rev': 6,
                      })
         self.assertMultiLineEqual(expected, actual)
+
+    def test_info_missing_metadata(self):
+        repo = self._load_fixture_and_fetch('two_heads.svndump')
+        test_util.rmtree(repo.join('svn'))
+        self.assertRaises(hgutil.Abort,
+                          repo.svnmeta)
+        self.assertRaises(hgutil.Abort,
+                          svncommands.info, self.ui, self.repo)
 
     def test_parent_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')

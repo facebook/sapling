@@ -134,22 +134,19 @@ class SVNMeta(object):
             return self.__uuid
 
     def _set_uuid(self, uuid):
-        if not uuid:
-            return
-        elif os.path.isfile(os.path.join(self.meta_data_dir, 'uuid')):
+        if os.path.isfile(os.path.join(self.meta_data_dir, 'uuid')):
             stored_uuid = self._get_uuid()
             assert stored_uuid
-            if uuid != stored_uuid:
+            if uuid and uuid != stored_uuid:
                 raise hgutil.Abort('unable to operate on unrelated repository')
+        elif uuid:
+            f = open(os.path.join(self.meta_data_dir, 'uuid'), 'w')
+            f.write(uuid)
+            f.close()
+            self.__uuid = uuid
         else:
-            if uuid:
-                f = open(os.path.join(self.meta_data_dir, 'uuid'), 'w')
-                f.write(uuid)
-                f.close()
-            else:
-                raise hgutil.Abort('unable to operate on unrelated repository')
-
-        self.__uuid = uuid
+            raise hgutil.Abort("hgsubversion metadata unavailable; "
+                               "please run 'hg svn rebuildmeta'")
 
     uuid = property(_get_uuid, _set_uuid, None,
                     'Error-checked UUID of source Subversion repository.')
