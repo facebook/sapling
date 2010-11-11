@@ -405,6 +405,12 @@ class TestBase(unittest.TestCase):
     def assertMultiLineEqual(self, first, second, msg=None):
         """Assert that two multi-line strings are equal. (Based on Py3k code.)
         """
+        try:
+            return super(TestBase, self).assertMultiLineEqual(first, second,
+                                                              msg)
+        except AttributeError:
+            pass
+
         self.assert_(isinstance(first, str),
                      ('First argument is not a string'))
         self.assert_(isinstance(second, str),
