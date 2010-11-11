@@ -220,8 +220,6 @@ def prepush(repo, remote, force, revs, newbranch):
             # - a local outgoing head descended from update
             # - a remote head that's known locally and not
             #   ancestral to an outgoing head
-            #
-            # New named branches cannot be created without --force.
 
             # 1. Create set of branches involved in the push.
             branches = set(repo[n].branch() for n in outg)
