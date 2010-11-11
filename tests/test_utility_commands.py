@@ -42,7 +42,7 @@ class UtilityTests(test_util.TestBase):
                      'branch': 'branches/the_branch',
                      'rev': 5,
                      })
-        self.assertEqual(actual, expected)
+        self.assertMultiLineEqual(actual, expected)
         hg.update(self.repo, 'default')
         u.pushbuffer()
         svncommands.info(u, self.repo)
@@ -53,7 +53,7 @@ class UtilityTests(test_util.TestBase):
                      'branch': 'trunk',
                      'rev': 6,
                      })
-        self.assertEqual(actual, expected)
+        self.assertMultiLineEqual(actual, expected)
         hg.update(self.repo, 'default')
         u.pushbuffer()
         svncommands.info(u, self.repo, rev=3)
@@ -64,7 +64,7 @@ class UtilityTests(test_util.TestBase):
                      'branch': 'branches/the_branch',
                      'rev': 5,
                      })
-        self.assertEqual(actual, expected)
+        self.assertMultiLineEqual(actual, expected)
 
     def test_info_single(self):
         self._load_fixture_and_fetch('two_heads.svndump', subdir='trunk')
@@ -79,7 +79,7 @@ class UtilityTests(test_util.TestBase):
                      'branch': 'trunk',
                      'rev': 6,
                      })
-        self.assertStringEqual(expected, actual)
+        self.assertMultiLineEqual(expected, actual)
 
     def test_parent_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')
@@ -189,7 +189,7 @@ class UtilityTests(test_util.TestBase):
         u = self.ui()
         u.pushbuffer()
         svncommands.genignore(u, self.repo, self.wc_path)
-        self.assertEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
+        self.assertMultiLineEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
                          '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
 
     def test_genignore_single(self):
@@ -198,7 +198,7 @@ class UtilityTests(test_util.TestBase):
         u = self.ui()
         u.pushbuffer()
         svncommands.genignore(u, self.repo, self.wc_path)
-        self.assertStringEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
+        self.assertMultiLineEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
                                '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
 
     def test_list_authors(self):
@@ -210,7 +210,7 @@ class UtilityTests(test_util.TestBase):
                                      args=[test_util.fileurl(self.repo_path)],
                                      authors=None)
         actual = u.popbuffer()
-        self.assertEqual(actual, 'Augie\nevil\n')
+        self.assertMultiLineEqual(actual, 'Augie\nevil\n')
 
 
     def test_list_authors_map(self):
@@ -220,7 +220,7 @@ class UtilityTests(test_util.TestBase):
         svncommands.listauthors(self.ui(),
                                      args=[test_util.fileurl(self.repo_path)],
                                      authors=author_path)
-        self.assertEqual(open(author_path).read(), 'Augie=\nevil=\n')
+        self.assertMultiLineEqual(open(author_path).read(), 'Augie=\nevil=\n')
 
 
 def suite():

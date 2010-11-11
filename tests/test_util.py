@@ -271,17 +271,6 @@ class TestBase(unittest.TestCase):
 
         _verify_our_modules()
 
-    def assertStringEqual(self, l, r):
-        try:
-            self.assertEqual(l, r, 'failed string equality check, see stdout for details')
-        except:
-            add_nl = lambda li: map(lambda x: x+'\n', li)
-            print 'failed expectation:'
-            print ''.join(difflib.unified_diff(
-                add_nl(l.splitlines()), add_nl(r.splitlines()),
-                fromfile='expected', tofile='got'))
-            raise
-
     def ui(self, stupid=False, layout='auto'):
         return testui(stupid, layout)
 
