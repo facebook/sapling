@@ -278,20 +278,30 @@ def prepush(repo, remote, force, revs, newbranch):
 
         # 5. Check for new heads.
         # If there are more heads after the push than before, a suitable
-        # warning, depending on unsynced status, is displayed.
+        # error message, depending on unsynced status, is displayed.
+        error = None
         for branch in branches:
-            if len(newmap[branch]) > len(oldmap[branch]):
+            newhs = set(newmap[branch])
+            oldhs = set(oldmap[branch])
+            if len(newhs) > len(oldhs):
+                if error is None:
+                    if branch:
+                        error = _("push creates new remote heads "
+                                  "on branch '%s'!") % branch
+                    else:
+                        error = _("push creates new remote heads!")
+                    if branch in unsynced:
+                        hint = _("you should pull and merge or "
+                                 "use push -f to force")
+                    else:
+                        hint = _("did you forget to merge? "
+                                 "use push -f to force")
                 if branch:
-                    msg = _("push creates new remote heads "
-                            "on branch '%s'!") % branch
-                else:
-                    msg = _("push creates new remote heads!")
-
-                if branch in unsynced:
-                    hint = _("you should pull and merge or use push -f to force")
-                else:
-                    hint = _("did you forget to merge? use push -f to force")
-                raise util.Abort(msg, hint=hint)
+                    repo.ui.debug("new remote heads on branch '%s'\n" % branch)
+                for h in (newhs - oldhs):
+                    repo.ui.debug("new remote head %s\n" % short(h))
+        if error:
+            raise util.Abort(error, hint=hint)
 
         # 6. Check for unsynced changes on involved branches.
         if unsynced:

@@ -30,6 +30,23 @@
   (you should pull and merge or use push -f to force)
   [255]
 
+  $ hg push --debug ../a
+  pushing to ../a
+  searching for changes
+  examining 1c9246a22a0a:d8d565842d04
+  found incomplete branch 1c9246a22a0a:d8d565842d04
+  searching: 1 queries
+  narrowing 1:1 d8d565842d04
+  found new branch changeset 1c9246a22a0a
+  found new changesets starting at 1c9246a22a0a
+  1 total queries
+  common changesets up to d8d565842d04
+  new remote heads on branch 'default'
+  new remote head 1e108cc5548c
+  abort: push creates new remote heads on branch 'default'!
+  (you should pull and merge or use push -f to force)
+  [255]
+
   $ hg pull ../a
   pulling from ../a
   searching for changes
