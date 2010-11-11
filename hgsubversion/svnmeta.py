@@ -44,7 +44,7 @@ class SVNMeta(object):
 
         if not os.path.isdir(self.meta_data_dir):
             os.makedirs(self.meta_data_dir)
-        self._set_uuid(uuid)
+        self.uuid = uuid
         # TODO: validate subdir too
         self.revmap = maps.RevMap(repo)
 
@@ -127,7 +127,11 @@ class SVNMeta(object):
         return self._editor
 
     def _get_uuid(self):
-        return open(os.path.join(self.meta_data_dir, 'uuid')).read()
+        try:
+            return self.__uuid
+        except AttributeError:
+            self.__uuid = open(os.path.join(self.meta_data_dir, 'uuid')).read()
+            return self.__uuid
 
     def _set_uuid(self, uuid):
         if not uuid:
@@ -144,6 +148,8 @@ class SVNMeta(object):
                 f.close()
             else:
                 raise hgutil.Abort('unable to operate on unrelated repository')
+
+        self.__uuid = uuid
 
     uuid = property(_get_uuid, _set_uuid, None,
                     'Error-checked UUID of source Subversion repository.')
