@@ -113,6 +113,10 @@ def rebuildmeta(ui, repo, args, **opts):
 
     numrevs = len(repo)
 
+    subdirfile = open(os.path.join(svnmetadir, 'subdir'), 'w')
+    subdirfile.write(subdir.strip('/'))
+    subdirfile.close()
+
     # ctx.children() visits all revisions in the repository after ctx. Calling
     # it would make us use O(revisions^2) time, so we perform an extra traversal
     # of the repository instead. During this traversal, we find all converted

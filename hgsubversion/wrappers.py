@@ -127,7 +127,7 @@ def push(repo, dest, force, revs):
     # TODO: do credentials specified in the URL still work?
     svnurl = repo.ui.expandpath(dest.svnurl)
     svn = dest.svn
-    meta = repo.svnmeta(svn.uuid)
+    meta = repo.svnmeta(svn.uuid, svn.subdir)
 
     # Strategy:
     # 1. Find all outgoing commits from this head

@@ -44,7 +44,7 @@ def _do_case(self, name, stupid, single):
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
                     'no .hg/svn directory in the destination!')
     dest = hg.repository(u, os.path.dirname(dest.path))
-    for tf in ('rev_map', 'uuid', 'tagmap', 'layout', ):
+    for tf in ('rev_map', 'uuid', 'tagmap', 'layout', 'subdir', ):
         stf = os.path.join(src.path, 'svn', tf)
         self.assertTrue(os.path.isfile(stf), '%r is missing!' % stf)
         dtf = os.path.join(dest.path, 'svn', tf)

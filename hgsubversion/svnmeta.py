@@ -32,7 +32,7 @@ def pickle_atomic(data, file_path, dir=None):
 
 class SVNMeta(object):
 
-    def __init__(self, repo, uuid=None, subdir=''):
+    def __init__(self, repo, uuid=None, subdir=None):
         """path is the path to the target hg repo.
 
         subdir is the subdirectory of the edits *on the svn server*.
@@ -45,7 +45,7 @@ class SVNMeta(object):
         if not os.path.isdir(self.meta_data_dir):
             os.makedirs(self.meta_data_dir)
         self.uuid = uuid
-        # TODO: validate subdir too
+        self.subdir = subdir
         self.revmap = maps.RevMap(repo)
 
         author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
@@ -56,12 +56,6 @@ class SVNMeta(object):
         branchmap = self.ui.config('hgsubversion', 'branchmap')
         tagmap = self.ui.config('hgsubversion', 'tagmap')
 
-        # FIXME: test that this hasn't changed! defer & compare?
-        if subdir:
-            # strip leading and trailing slashes
-            # collapse all repeated slashes to a single one
-            subdir = '/'.join(p for p in subdir.split('/') if p)
-        self.subdir = subdir
         self.branches = {}
         if os.path.exists(self.branch_info_file):
             f = open(self.branch_info_file)
@@ -125,6 +119,38 @@ class SVNMeta(object):
         if not hasattr(self, '_editor'):
             self._editor = editor.HgEditor(self)
         return self._editor
+
+    def _get_subdir(self):
+        return self.__subdir
+
+    def _set_subdir(self, subdir):
+        if subdir:
+            subdir = '/'.join(p for p in subdir.split('/') if p)
+
+        subdirfile = os.path.join(self.meta_data_dir, 'subdir')
+
+        if os.path.isfile(subdirfile):
+            stored_subdir = open(subdirfile).read()
+            assert stored_subdir is not None
+            if subdir is None:
+                self.__subdir = stored_subdir
+            elif subdir != stored_subdir:
+                raise hgutil.Abort('unable to work on a different path in the '
+                                   'repository')
+            else:
+                self.__subdir = subdir
+        elif subdir is not None:
+            f = open(subdirfile, 'w')
+            f.write(subdir)
+            f.close()
+            self.__subdir = subdir
+        else:
+            raise hgutil.Abort("hgsubversion metadata unavailable; "
+                               "please run 'hg svn rebuildmeta'")
+
+    subdir = property(_get_subdir, _set_subdir, None,
+                    'Error-checked sub-directory of source Subversion '
+                    'repository.')
 
     def _get_uuid(self):
         return self.__uuid
