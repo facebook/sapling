@@ -37,10 +37,16 @@ creating 'remote
   $ echo this > foo
   $ echo this > fooO
   $ hg ci -A -m "init" foo fooO
-  $ echo '[server]' > .hg/hgrc
-  $ echo 'uncompressed = True' >> .hg/hgrc
-  $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'changegroup = python ../printenv.py changegroup-in-remote 0 ../dummylog' >> .hg/hgrc
+  $ echo <<EOF > .hg/hgrc
+  > [server]
+  > uncompressed = True
+  > 
+  > [extensions]
+  > bookmarks =
+  > 
+  > [hooks]
+  > changegroup = python ../printenv.py changegroup-in-remote 0 ../dummylog
+  > EOF
   $ cd ..
 
 repo not found error
@@ -116,6 +122,8 @@ updating rc
   $ echo "default-push = ssh://user@dummy/remote" >> .hg/hgrc
   $ echo "[ui]" >> .hg/hgrc
   $ echo "ssh = python ../dummyssh" >> .hg/hgrc
+  $ echo '[extensions]' >> .hg/hgrc
+  $ echo 'bookmarks =' >> .hg/hgrc
 
 find outgoing
 
@@ -185,10 +193,52 @@ check remote tip
   $ hg ci -A -m z z
   created new head
 
+test pushkeys and bookmarks
+
+  $ cd ../local
+  $ echo '[extensions]' >> ../remote/.hg/hgrc
+  $ echo 'bookmarks =' >> ../remote/.hg/hgrc
+  $ hg debugpushkey --config ui.ssh="python ../dummyssh" ssh://user@dummy/remote namespaces
+  bookmarks	
+  namespaces	
+  $ hg book foo -r 0
+  $ hg out -B
+  comparing with ssh://user@dummy/remote
+  searching for changed bookmarks
+     foo                       1160648e36ce
+  $ hg push -B foo
+  pushing to ssh://user@dummy/remote
+  searching for changes
+  no changes found
+  exporting bookmark foo
+  $ hg debugpushkey --config ui.ssh="python ../dummyssh" ssh://user@dummy/remote bookmarks
+  foo	1160648e36cec0054048a7edc4110c6f84fde594
+  $ hg book -f foo
+  $ hg push
+  pushing to ssh://user@dummy/remote
+  searching for changes
+  no changes found
+  updating bookmark foo
+  $ hg book -d foo
+  $ hg in -B
+  comparing with ssh://user@dummy/remote
+  searching for changed bookmarks
+     foo                       a28a9d1a809c
+  $ hg book -f -r 0 foo
+  $ hg pull -B foo
+  pulling from ssh://user@dummy/remote
+  searching for changes
+  no changes found
+  updating bookmark foo
+  importing bookmark foo
+  $ hg book -d foo
+  $ hg push -B foo
+  deleting remote bookmark foo
+
 a bad, evil hook that prints to stdout
 
-  $ echo 'changegroup.stdout = python ../badhook' >> .hg/hgrc
-  $ cd ../local
+  $ echo '[hooks]' >> ../remote/.hg/hgrc
+  $ echo 'changegroup.stdout = python ../badhook' >> ../remote/.hg/hgrc
   $ echo r > r
   $ hg ci -A -m z r
 
@@ -228,6 +278,14 @@ push should succeed even though it has an unexpected response
   Got arguments 1:user@dummy 2:hg -R local serve --stdio
   Got arguments 1:user@dummy 2:hg -R $TESTTMP/local serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-  changegroup-in-remote hook: HG_NODE=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-  changegroup-in-remote hook: HG_NODE=1383141674ec756a6056f6a9097618482fe0f4a6 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
