@@ -66,6 +66,11 @@ like the deprecated win32text extension does. This means that you can
 disable win32text and enable eol and your filters will still work. You
 only need to these filters until you have prepared a ``.hgeol`` file.
 
+The ``win32text.forbid*`` hooks provided by the win32text extension
+have been unified into a single hook named ``eol.hook``. The hook will
+lookup the expected line endings from the ``.hgeol`` file, which means
+you must migrate to a ``.hgeol`` file first before using the hook.
+
 See :hg:`help patterns` for more information about the glob patterns
 used.
 """
