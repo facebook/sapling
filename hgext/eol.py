@@ -61,6 +61,11 @@ behavior. There are two settings:
   Such files are normally not touched under the assumption that they
   have mixed EOLs on purpose.
 
+The extension provides ``cleverencode:`` and ``cleverdecode:`` filters
+like the deprecated win32text extension does. This means that you can
+disable win32text and enable eol and your filters will still work. You
+only need to these filters until you have prepared a ``.hgeol`` file.
+
 See :hg:`help patterns` for more information about the glob patterns
 used.
 """
@@ -105,8 +110,8 @@ filters = {
     'to-crlf': tocrlf,
     'is-binary': isbinary,
     # The following provide backwards compatibility with win32text
-    'cleverencode': tolf,
-    'cleverdecode': tocrlf
+    'cleverencode:': tolf,
+    'cleverdecode:': tocrlf
 }
 
 
