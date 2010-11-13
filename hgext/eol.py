@@ -61,6 +61,11 @@ behavior. There are two settings:
   Such files are normally not touched under the assumption that they
   have mixed EOLs on purpose.
 
+The ``win32text.forbid*`` hooks provided by the win32text extension
+have been unified into a single hook named ``eol.hook``. The hook will
+lookup the expected line endings from the ``.hgeol`` file, which means
+you must migrate to a ``.hgeol`` file first before using the hook.
+
 See :hg:`help patterns` for more information about the glob patterns
 used.
 """
