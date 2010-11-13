@@ -176,6 +176,10 @@ def reposetup(ui, repo):
                 self._decode['NATIVE'] = 'to-crlf'
 
             eol = config.config()
+            # Our files should not be touched. The pattern must be
+            # inserted first override a '** = native' pattern.
+            eol.set('patterns', '.hg*', 'BIN')
+            # We can then parse the user's patterns.
             eol.parse('.hgeol', data)
 
             if eol.get('repository', 'native') == 'CRLF':
