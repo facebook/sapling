@@ -9,10 +9,6 @@
   >     data = data.replace('\n', '\r\n')
   >     file(path, 'wb').write(data)
   > EOF
-  $ cat > print.py <<EOF
-  > import sys
-  > print(sys.stdin.read().replace('\n', '<LF>').replace('\r', '<CR>').replace('\0', '<NUL>'))
-  > EOF
   $ echo '[hooks]' >> .hg/hgrc
   $ echo 'pretxncommit.crlf = python:hgext.win32text.forbidcrlf' >> .hg/hgrc
   $ echo 'pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf' >> .hg/hgrc
@@ -369,12 +365,13 @@ and now for something completely different
   $ python -c 'file("f4.bat", "wb").write("rem empty\x0D\x0A")'
   $ hg add f3 f4.bat
   $ hg ci -m 6
-  $ python print.py < bin
-  hello<NUL><CR><LF>
-  $ python print.py < f3
-  some<LF>text<LF>
-  $ python print.py < f4.bat
-  rem empty<CR><LF>
+  $ cat bin
+  hello\x00\r (esc)
+  $ cat f3
+  some
+  text
+  $ cat f4.bat
+  rem empty\r (esc)
   $ echo
   
   $ echo '[extensions]' >> .hg/hgrc
@@ -411,32 +408,33 @@ Disable warning:
   Before your next commit, please reconsider your encode/decode settings in 
   Mercurial.ini or ..../.hg/hgrc.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ python print.py < bin
-  hello<NUL><CR><LF>
-  $ python print.py < f3
-  some<CR><LF>text<CR><LF>
-  $ python print.py < f4.bat
-  rem empty<CR><LF>
+  $ cat bin
+  hello\x00\r (esc)
+  $ cat f3
+  some\r (esc)
+  text\r (esc)
+  $ cat f4.bat
+  rem empty\r (esc)
   $ echo
   
   $ python -c 'file("f5.sh", "wb").write("# empty\x0D\x0A")'
   $ hg add f5.sh
   $ hg ci -m 7
-  $ python print.py < f5.sh
-  # empty<CR><LF>
-  $ hg cat f5.sh | python print.py
-  # empty<LF>
+  $ cat f5.sh
+  # empty\r (esc)
+  $ hg cat f5.sh
+  # empty
   $ echo '% just linefeed' > linefeed
   $ hg ci -qAm 8 linefeed
-  $ python print.py < linefeed
-  % just linefeed<LF>
-  $ hg cat linefeed | python print.py
-  % just linefeed<LF>
+  $ cat linefeed
+  % just linefeed
+  $ hg cat linefeed
+  % just linefeed
   $ hg st -q
   $ hg revert -a linefeed
   no changes needed to linefeed
-  $ python print.py < linefeed
-  % just linefeed<LF>
+  $ cat linefeed
+  % just linefeed
   $ hg st -q
   $ echo modified >> linefeed
   $ hg st -q
@@ -444,5 +442,5 @@ Disable warning:
   $ hg revert -a
   reverting linefeed
   $ hg st -q
-  $ python print.py < linefeed
-  % just linefeed<CR><LF>
+  $ cat linefeed
+  % just linefeed\r (esc)
