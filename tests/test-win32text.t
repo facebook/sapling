@@ -402,11 +402,11 @@ Disable warning:
   tip
 
   $ rm f3 f4.bat bin
-  $ hg co -C 2>&1 | python -c 'import sys, os; sys.stdout.write(sys.stdin.read().replace(os.getcwd(), "...."))'
+  $ hg co -C
   WARNING: f4.bat already has CRLF line endings
   and does not need EOL conversion by the win32text plugin.
   Before your next commit, please reconsider your encode/decode settings in 
-  Mercurial.ini or ..../.hg/hgrc.
+  Mercurial.ini or $TESTTMP/t/.hg/hgrc.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat bin
   hello\x00\r (esc)
