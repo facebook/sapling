@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, re, xml.dom.minidom, shutil, urlparse, posixpath
+import errno, os, re, xml.dom.minidom, shutil, subprocess, urlparse, posixpath
 from i18n import _
 import config, util, node, error, cmdutil
 hg = None
@@ -576,7 +576,87 @@ class svnsubrepo(abstractsubrepo):
         return self._svncommand(['cat'], name)
 
 
+class gitsubrepo(object):
+    def __init__(self, ctx, path, state):
+        # TODO add git version check.
+        self._state = state
+        self._ctx = ctx
+        self._path = ctx._repo.wjoin(path)
+        self._ui = ctx._repo.ui
+
+    def _gitcommand(self, commands):
+        return self._gitdir(commands)[0]
+
+    def _gitdir(self, commands):
+        commands = ['--no-pager', '--git-dir=%s/.git' % self._path,
+                    '--work-tree=%s' % self._path] + commands
+        return self._gitnodir(commands)
+
+    def _gitnodir(self, commands):
+        """Calls the git command
+
+        The methods tries to call the git command. versions previor to 1.6.0
+        are not supported and very probably fail.
+        """
+        cmd = ['git'] + commands
+        cmd = [util.shellquote(arg) for arg in cmd]
+        cmd = util.quotecommand(' '.join(cmd))
+
+        # print git's stderr, which is mostly progress and useful info
+        p = subprocess.Popen(cmd, shell=True, bufsize=-1,
+                             close_fds=(os.name == 'posix'),
+                             stdout=subprocess.PIPE)
+        retdata = p.stdout.read()
+        # wait for the child to exit to avoid race condition.
+        p.wait()
+
+        if p.returncode != 0:
+            # there are certain error codes that are ok
+            command = None
+            for arg in commands:
+                if not arg.startswith('-'):
+                    command = arg
+                    break
+            if command == 'cat-file':
+                return retdata, p.returncode
+            if command in ('commit', 'status') and p.returncode == 1:
+                return retdata, p.returncode
+            # for all others, abort
+            raise util.Abort('git %s error %d' % (command, p.returncode))
+
+        return retdata, p.returncode
+
+    def _gitstate(self):
+        return self._gitcommand(['rev-parse', 'HEAD']).strip()
+
+    def _githavelocally(self, revision):
+        out, code = self._gitdir(['cat-file', '-e', revision])
+        return code == 0
+
+    def dirty(self):
+        if self._state[1] != self._gitstate(): # version checked out changed?
+            return True
+        # check for staged changes or modified files; ignore untracked files
+        # docs say --porcelain flag is future-proof format
+        changed = self._gitcommand(['status', '--porcelain',
+                                    '--untracked-files=no'])
+        return bool(changed.strip())
+
+    def commit(self, text, user, date):
+        cmd = ['commit', '-a', '-m', text]
+        if user:
+            cmd += ['--author', user]
+        if date:
+            # git's date parser silently ignores when seconds < 1e9
+            # convert to ISO8601
+            cmd += ['--date', util.datestr(date, '%Y-%m-%dT%H:%M:%S %1%2')]
+        self._gitcommand(cmd)
+        # make sure commit works otherwise HEAD might not exist under certain
+        # circumstances
+        return self._gitstate()
+
 types = {
     'hg': hgsubrepo,
     'svn': svnsubrepo,
+    'git': gitsubrepo,
     }
