@@ -175,3 +175,21 @@ user a pulls, merges, commits
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+
+update to a revision without the subrepo, keeping the local git repository
+
+  $ cd ../t
+  $ hg up 0
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ ls s -a
+  .
+  ..
+  .git
+
+  $ hg up 2
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ ls s -a
+  .
+  ..
+  .git
+  g

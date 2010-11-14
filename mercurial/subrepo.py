@@ -678,7 +678,14 @@ class gitsubrepo(object):
     def get(self, state):
         source, revision, kind = state
         self._fetch(source, revision)
-        if self._gitstate() == revision:
+        # if the repo was set to be bare, unbare it
+        if self._gitcommand(['config', '--get', 'core.bare']
+                            ).strip() == 'true':
+            self._gitcommand(['config', 'core.bare', 'false'])
+            if self._gitstate() == revision:
+                self._gitcommand(['reset', '--hard', 'HEAD'])
+                return
+        elif self._gitstate() == revision:
             return
         current, bm = self._gitbranchmap()
         if revision not in bm:
@@ -741,6 +748,24 @@ class gitsubrepo(object):
             self._ui.warn(_('no branch checked out in subrepo %s\n'
                             'nothing to push') % self._relpath)
             return False
+
+    def remove(self):
+        if self.dirty():
+            self._ui.warn(_('not removing repo %s because '
+                            'it has changes.\n') % self._path)
+            return
+        # we can't fully delete the repository as it may contain
+        # local-only history
+        self._ui.note(_('removing subrepo %s\n') % self._path)
+        self._gitcommand(['config', 'core.bare', 'true'])
+        for f in os.listdir(self._path):
+            if f == '.git':
+                continue
+            path = os.path.join(self._path, f)
+            if os.path.isdir(path) and not os.path.islink(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
 
 types = {
     'hg': hgsubrepo,
