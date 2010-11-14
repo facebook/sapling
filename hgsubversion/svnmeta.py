@@ -127,20 +127,18 @@ class SVNMeta(object):
         return self._editor
 
     def _get_uuid(self):
-        try:
-            return self.__uuid
-        except AttributeError:
-            self.__uuid = open(os.path.join(self.meta_data_dir, 'uuid')).read()
-            return self.__uuid
+        return self.__uuid
 
     def _set_uuid(self, uuid):
-        if os.path.isfile(os.path.join(self.meta_data_dir, 'uuid')):
-            stored_uuid = self._get_uuid()
+        uuidfile = os.path.join(self.meta_data_dir, 'uuid')
+        if os.path.isfile(uuidfile):
+            stored_uuid = open(uuidfile).read()
             assert stored_uuid
             if uuid and uuid != stored_uuid:
                 raise hgutil.Abort('unable to operate on unrelated repository')
+            self.__uuid = uuid or stored_uuid
         elif uuid:
-            f = open(os.path.join(self.meta_data_dir, 'uuid'), 'w')
+            f = open(uuidfile, 'w')
             f.write(uuid)
             f.close()
             self.__uuid = uuid
