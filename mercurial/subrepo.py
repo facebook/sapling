@@ -581,6 +581,7 @@ class gitsubrepo(object):
         # TODO add git version check.
         self._state = state
         self._ctx = ctx
+        self._relpath = path
         self._path = ctx._repo.wjoin(path)
         self._ui = ctx._repo.ui
 
@@ -633,6 +634,18 @@ class gitsubrepo(object):
         out, code = self._gitdir(['cat-file', '-e', revision])
         return code == 0
 
+    def _fetch(self, source, revision):
+        if not os.path.exists('%s/.git' % self._path):
+            self._ui.status(_('cloning subrepo %s\n') % self._relpath)
+            self._gitnodir(['clone', source, self._path])
+        if self._githavelocally(revision):
+            return
+        self._ui.status(_('pulling subrepo %s\n') % self._relpath)
+        self._gitcommand(['fetch', '--all', '-q'])
+        if not self._githavelocally(revision):
+            raise util.Abort(_("revision %s does not exist in subrepo %s\n") %
+                               (revision, self._path))
+
     def dirty(self):
         if self._state[1] != self._gitstate(): # version checked out changed?
             return True
@@ -641,6 +654,16 @@ class gitsubrepo(object):
         changed = self._gitcommand(['status', '--porcelain',
                                     '--untracked-files=no'])
         return bool(changed.strip())
+
+    def get(self, state):
+        source, revision, kind = state
+        self._fetch(source, revision)
+        if self._gitstate() != revision:
+            self._ui.warn(_('checking out detached HEAD in subrepo %s\n') %
+                          self._relpath)
+            self._ui.warn(_('check out a git branch if you intend '
+                            'to make changes\n'))
+            self._gitcommand(['checkout', '-q', revision])
 
     def commit(self, text, user, date):
         cmd = ['commit', '-a', '-m', text]

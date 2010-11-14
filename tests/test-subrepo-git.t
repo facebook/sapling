@@ -56,3 +56,28 @@ record a new commit from upstream
   path s
    source   ../gitroot
    revision 126f2a14290cd5ce061fdedc430170e8d39e1c5a
+
+clone root
+
+  $ hg clone . ../tc
+  updating to branch default
+  cloning subrepo s
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ../tc
+  $ hg debugsub
+  path s
+   source   ../gitroot
+   revision 126f2a14290cd5ce061fdedc430170e8d39e1c5a
+
+update to previous substate
+
+  $ hg update 1
+  checking out detached HEAD in subrepo s
+  check out a git branch if you intend to make changes
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat s/g
+  g
+  $ hg debugsub
+  path s
+   source   ../gitroot
+   revision da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
