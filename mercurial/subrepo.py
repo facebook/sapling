@@ -678,6 +678,25 @@ class gitsubrepo(object):
         # circumstances
         return self._gitstate()
 
+    def merge(self, state):
+        source, revision, kind = state
+        self._fetch(source, revision)
+        base = self._gitcommand(['merge-base', revision,
+                                 self._state[1]]).strip()
+        if base == revision:
+            self.get(state) # fast forward merge
+        elif base != self._state[1]:
+            self._gitcommand(['merge', '--no-commit', revision])
+
+    def push(self, force):
+        cmd = ['push']
+        if force:
+            cmd.append('--force')
+        # as subrepos have no notion of "where to push to" we
+        # assume origin master. This is git's default
+        self._gitcommand(cmd + ['origin', 'master', '-q'])
+        return True
+
 types = {
     'hg': hgsubrepo,
     'svn': svnsubrepo,
