@@ -40,14 +40,19 @@ add subrepo clone
    source   ../gitroot
    revision da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
 
-record a new commit from upstream
+record a new commit from upstream from a different branch
 
   $ cd ../gitroot
+  $ git checkout -b testing
+  Switched to a new branch 'testing'
   $ echo gg >> g
   $ git commit -q -a -m gg
 
   $ cd ../t/s
   $ git pull -q
+  $ git checkout -b testing origin/testing
+  Switched to a new branch 'testing'
+  Branch testing set up to track remote branch testing from origin.
 
   $ cd ..
   $ hg commit -m 'update git subrepo'
@@ -72,8 +77,7 @@ clone root
 update to previous substate
 
   $ hg update 1
-  checking out detached HEAD in subrepo s
-  check out a git branch if you intend to make changes
+  Switched to a new branch 'master'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat s/g
   g

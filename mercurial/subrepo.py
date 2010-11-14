@@ -634,6 +634,26 @@ class gitsubrepo(object):
         out, code = self._gitdir(['cat-file', '-e', revision])
         return code == 0
 
+    def _gitbranchmap(self):
+        'returns the current branch and a map from git revision to branch[es]'
+        bm = {}
+        redirects = {}
+        current = None
+        out = self._gitcommand(['branch', '-a', '--no-color',
+                                '--verbose', '--abbrev=40'])
+        for line in out.split('\n'):
+            if not line:
+                continue
+            if line[2:].startswith('(no branch)'):
+                continue
+            branch, revision = line[2:].split()[:2]
+            if revision == '->':
+                continue # ignore remote/HEAD redirects
+            if line[0] == '*':
+                current = branch
+            bm.setdefault(revision, []).append(branch)
+        return current, bm
+
     def _fetch(self, source, revision):
         if not os.path.exists('%s/.git' % self._path):
             self._ui.status(_('cloning subrepo %s\n') % self._relpath)
@@ -658,12 +678,32 @@ class gitsubrepo(object):
     def get(self, state):
         source, revision, kind = state
         self._fetch(source, revision)
-        if self._gitstate() != revision:
+        if self._gitstate() == revision:
+            return
+        current, bm = self._gitbranchmap()
+        if revision not in bm:
+            # no branch to checkout, check it out with no branch
             self._ui.warn(_('checking out detached HEAD in subrepo %s\n') %
                           self._relpath)
             self._ui.warn(_('check out a git branch if you intend '
                             'to make changes\n'))
             self._gitcommand(['checkout', '-q', revision])
+            return
+        branches = bm[revision]
+        firstlocalbranch = None
+        for b in branches:
+            if b == 'master':
+                # master trumps all other branches
+                self._gitcommand(['checkout', 'master'])
+                return
+            if not firstlocalbranch and not b.startswith('remotes/'):
+                firstlocalbranch = b
+        if firstlocalbranch:
+            self._gitcommand(['checkout', firstlocalbranch])
+        else:
+            remote = branches[0]
+            local = remote.split('/')[-1]
+            self._gitcommand(['checkout', '-b', local, remote])
 
     def commit(self, text, user, date):
         cmd = ['commit', '-a', '-m', text]
@@ -692,10 +732,15 @@ class gitsubrepo(object):
         cmd = ['push']
         if force:
             cmd.append('--force')
-        # as subrepos have no notion of "where to push to" we
-        # assume origin master. This is git's default
-        self._gitcommand(cmd + ['origin', 'master', '-q'])
-        return True
+        # push the currently checked out branch
+        current, bm = self._gitbranchmap()
+        if current:
+            self._gitcommand(cmd + ['origin', current, '-q'])
+            return True
+        else:
+            self._ui.warn(_('no branch checked out in subrepo %s\n'
+                            'nothing to push') % self._relpath)
+            return False
 
 types = {
     'hg': hgsubrepo,
