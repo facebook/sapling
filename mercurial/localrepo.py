@@ -819,15 +819,20 @@ class localrepository(repo.repository):
             if not crev:
                 self.ui.debug(" %s: searching for copy revision for %s\n" %
                               (fname, cfname))
-                for ancestor in self['.'].ancestors():
+                for ancestor in self[None].ancestors():
                     if cfname in ancestor:
                         crev = ancestor[cfname].filenode()
                         break
 
-            self.ui.debug(" %s: copy %s:%s\n" % (fname, cfname, hex(crev)))
-            meta["copy"] = cfname
-            meta["copyrev"] = hex(crev)
-            fparent1, fparent2 = nullid, newfparent
+            if crev:
+                self.ui.debug(" %s: copy %s:%s\n" % (fname, cfname, hex(crev)))
+                meta["copy"] = cfname
+                meta["copyrev"] = hex(crev)
+                fparent1, fparent2 = nullid, newfparent
+            else:
+                self.ui.warn(_("warning: can't find ancestor for '%s' "
+                               "copied from '%s'!\n") % (fname, cfname))
+
         elif fparent2 != nullid:
             # is one parent an ancestor of the other?
             fparentancestor = flog.ancestor(fparent1, fparent2)
