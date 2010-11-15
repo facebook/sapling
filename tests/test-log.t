@@ -1020,6 +1020,15 @@ log -p -R repo
   summary:     add foo, related
   
 
+Also check when maxrev < lastrevfilelog
+
+  $ hg --traceback log -f -r4 foo
+  changeset:   4:88176d361b69
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add foo, related
+  
+
 Issue2383: hg log showing _less_ differences than hg diff
 
   $ hg init issue2383
@@ -1092,3 +1101,19 @@ Diff here should be the same:
   +b
   
   $ cd ..
+
+'hg log -r rev fn' when last(filelog(fn)) != rev
+
+  $ hg init simplelog; cd simplelog
+  $ echo f > a
+  $ hg ci -Am'a' -d '0 0'
+  adding a
+  $ echo f >> a
+  $ hg ci -Am'a bis' -d '1 0'
+
+  $ hg log -r0 a
+  changeset:   0:9f758d63dcde
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
