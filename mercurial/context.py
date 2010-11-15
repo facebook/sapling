@@ -821,6 +821,11 @@ class workingctx(changectx):
         finally:
             wlock.release()
 
+    def ancestors(self):
+        for a in self._repo.changelog.ancestors(
+            *[p.rev() for p in self._parents]):
+            yield changectx(self._repo, a)
+
     def remove(self, list, unlink=False):
         if unlink:
             for f in list:
