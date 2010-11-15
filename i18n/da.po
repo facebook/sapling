@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-10-28 09:50+0200\n"
-"PO-Revision-Date: 2010-10-28 10:01+0200\n"
+"POT-Creation-Date: 2010-11-01 11:03+0100\n"
+"PO-Revision-Date: 2010-11-01 11:11+0100\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "MIME-Version: 1.0\n"
@@ -3396,11 +3396,19 @@ msgid "\"%s\" cannot be used as the name of a patch"
 msgstr "\"%s\" kan ikke bruges som navnet på en rettelse"
 
 #, python-format
+msgid "\"%s\" already exists as a directory"
+msgstr "\"%s\" eksisterer allerede som et katalog"
+
+#, python-format
 msgid "patch \"%s\" already exists"
 msgstr "rettelsen \"%s\" findes allerede"
 
 msgid "cannot manage merge changesets"
 msgstr "kan ikke håndtere sammenføjninger"
+
+#, python-format
+msgid "cannot write patch \"%s\": %s"
+msgstr "kan ikke skrive patch \"%s\": %s"
 
 #, python-format
 msgid "error unlinking %s\n"
@@ -4723,27 +4731,15 @@ msgstr ""
 
 msgid ""
 "  [pager]\n"
-"  pager = LESS='FSRX' less"
+"  pager = less -FRSX"
 msgstr ""
 "  [pager]\n"
-"  pager = LESS='FSRX' less"
+"  pager = less -FRSX"
 
 msgid ""
 "If no pager is set, the pager extensions uses the environment variable\n"
 "$PAGER. If neither pager.pager, nor $PAGER is set, no pager is used."
 msgstr ""
-
-msgid ""
-"By default, the pager is only executed if a command has output. To\n"
-"force the pager to run even if a command prints nothing, set::"
-msgstr ""
-
-msgid ""
-"  [pager]\n"
-"  force = True"
-msgstr ""
-"  [pager]\n"
-"  force = True"
 
 msgid ""
 "If you notice \"BROKEN PIPE\" error messages, you can disable them by\n"
@@ -6225,6 +6221,12 @@ msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr "noterer fjernelse af %s som en omdøbning til %s (%d%% lighed)\n"
 
 #, python-format
+msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
+msgstr ""
+"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for %"
+"s.\n"
+
+#, python-format
 msgid "%s: not copying - file is not managed\n"
 msgstr "%s: kopierer ikke - filen er ikke versionsstyret\n"
 
@@ -6263,12 +6265,6 @@ msgstr "flytter %s til %s\n"
 #, python-format
 msgid "copying %s to %s\n"
 msgstr "kopierer %s til %s\n"
-
-#, python-format
-msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
-msgstr ""
-"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for %"
-"s.\n"
 
 msgid "no source or destination specified"
 msgstr "ingen kilde eller destination angivet"
@@ -9354,6 +9350,9 @@ msgstr "FIL REV"
 
 msgid "[PATH]"
 msgstr "[STI]"
+
+msgid "revlog format"
+msgstr ""
 
 msgid "REPO NAMESPACE [KEY OLD NEW]"
 msgstr ""
@@ -12984,10 +12983,10 @@ msgstr "manglende parameter"
 
 #, python-format
 msgid "can't use %s here"
-msgstr ""
+msgstr "kan ikke bruge %s her"
 
 msgid "can't use a list in this context"
-msgstr ""
+msgstr "en liste kan ikke bruges i denne konteks"
 
 #, python-format
 msgid "not a function: %s"
@@ -13004,7 +13003,7 @@ msgstr "id kræver et argument"
 
 #. i18n: "id" is a keyword
 msgid "id requires a string"
-msgstr ""
+msgstr "id kræver en streng"
 
 msgid ""
 "``rev(number)``\n"
@@ -13013,11 +13012,11 @@ msgstr ""
 
 #. i18n: "rev" is a keyword
 msgid "rev requires one argument"
-msgstr ""
+msgstr "rev kræver et argument"
 
 #. i18n: "rev" is a keyword
 msgid "rev requires a number"
-msgstr ""
+msgstr "rev kræver et tal"
 
 #. i18n: "rev" is a keyword
 msgid "rev expects a number"
@@ -13298,20 +13297,23 @@ msgid ""
 "``tag(name)``\n"
 "    The specified tag by name, or all tagged revisions if no name is given."
 msgstr ""
+"``tag(navn)``\n"
+"    Den navngivne mærkat eller alle revisioner med en mærkat hvis der\n"
+"    ikke angives noget navn."
 
 #. i18n: "tag" is a keyword
 msgid "tag takes one or no arguments"
-msgstr ""
+msgstr "tag tager et eller to argumenter"
 
 #. i18n: "tag" is a keyword
 msgid "the argument to tag must be a string"
-msgstr ""
+msgstr "argumentet til tag skal være en streng"
 
 msgid "can't negate that"
 msgstr ""
 
 msgid "not a symbol"
-msgstr ""
+msgstr "ikke et symbol"
 
 msgid "empty query"
 msgstr "tomt forespørgsel"
@@ -13560,11 +13562,11 @@ msgid "certificate is for %s"
 msgstr "certifikatet er for %s"
 
 msgid "no commonName found in certificate"
-msgstr ""
+msgstr "fandt ikke noget commonName i certifikatet"
 
 #, python-format
 msgid "%s certificate error: %s"
-msgstr ""
+msgstr "%s certifikatfejl: %s"
 
 #, python-format
 msgid "command '%s' failed: %s"
@@ -13647,7 +13649,7 @@ msgstr "%.0f byte"
 
 #, python-format
 msgid "no port number associated with service '%s'"
-msgstr ""
+msgstr "der er ikke knyttet noget portnummer til servicen '%s'"
 
 msgid "cannot verify bundle or remote repos"
 msgstr "kan ikke verificere bundt eller fjerndepoter"
@@ -13704,7 +13706,7 @@ msgid "duplicate revision %d (%d)"
 msgstr "duplikeret revision %d (%d)"
 
 msgid "abandoned transaction found - run hg recover\n"
-msgstr ""
+msgstr "fandt efterladt transaktion - kør hg recover\n"
 
 #, python-format
 msgid "repository uses revlog format %d\n"
@@ -13738,7 +13740,7 @@ msgid "crosschecking files in changesets and manifests\n"
 msgstr "krydstjekker filer i ændringer og manifester\n"
 
 msgid "crosschecking"
-msgstr ""
+msgstr "krydstjekker"
 
 #, python-format
 msgid "changeset refers to unknown manifest %s"
@@ -13766,7 +13768,7 @@ msgstr "manglende revlog!"
 
 #, python-format
 msgid "%s not in manifests"
-msgstr ""
+msgstr "%s findes ikke i manifestet"
 
 #, python-format
 msgid "unpacked size is %s, %s expected"
