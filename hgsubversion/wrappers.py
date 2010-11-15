@@ -306,7 +306,10 @@ def pull(repo, source, heads=[], force=False):
                             msg = util.default_commit_msg
                         else:
                             msg = [s.strip() for s in msg.splitlines() if s][0]
-                        w = hgutil.termwidth()
+                        if getattr(ui, 'termwidth', False):
+                            w = ui.termwidth()
+                        else:
+                            w = hgutil.termwidth()
                         bits = (r.revnum, r.author, msg)
                         ui.status(('[r%d] %s: %s' % bits)[:w] + '\n')
                         util.progress(ui, 'pull', r.revnum - start, total=total)
