@@ -1270,10 +1270,10 @@ class queue(object):
             # and then commit.
             #
             # this should really read:
-            #   mm, dd, aa, aa2 = repo.status(tip, patchparent)[:4]
+            #   mm, dd, aa = repo.status(top, patchparent)[:4]
             # but we do it backwards to take advantage of manifest/chlog
             # caching against the next repo.status call
-            mm, aa, dd, aa2 = repo.status(patchparent, top)[:4]
+            mm, aa, dd = repo.status(patchparent, top)[:3]
             changes = repo.changelog.read(top)
             man = repo.manifest.read(changes[0])
             aaa = aa[:]
