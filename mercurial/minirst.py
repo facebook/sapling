@@ -278,7 +278,8 @@ def prunecomments(blocks):
     i = 0
     while i < len(blocks):
         b = blocks[i]
-        if b['type'] == 'paragraph' and b['lines'][0].startswith('.. '):
+        if b['type'] == 'paragraph' and (b['lines'][0].startswith('.. ') or
+                                         b['lines'] == ['..']):
             del blocks[i]
             if i < len(blocks) and blocks[i]['type'] == 'margin':
                 del blocks[i]

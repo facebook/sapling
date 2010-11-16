@@ -221,6 +221,10 @@ Some text.
    .. An indented comment
 
    Some indented text.
+
+..
+
+Empty comment above
 """
 
 debugformat('comments', comments, 30)
