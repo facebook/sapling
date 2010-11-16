@@ -504,7 +504,8 @@ def tsttest(test, options, replacements):
         vlog("# Running", cmd)
         exitcode, output = run(cmd, options, replacements)
         # do not merge output if skipped, return hghave message instead
-        if exitcode == SKIPPED_STATUS:
+        # similarly, with --debug, output is None
+        if exitcode == SKIPPED_STATUS or output is None:
             return exitcode, output
     finally:
         os.remove(name)
