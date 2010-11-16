@@ -181,14 +181,14 @@ update to a revision without the subrepo, keeping the local git repository
   $ cd ../t
   $ hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ ls s -a
+  $ ls -a s
   .
   ..
   .git
 
   $ hg up 2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ ls s -a
+  $ ls -a s
   .
   ..
   .git
