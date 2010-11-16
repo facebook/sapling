@@ -280,6 +280,8 @@ def prunecomments(blocks):
         b = blocks[i]
         if b['type'] == 'paragraph' and b['lines'][0].startswith('.. '):
             del blocks[i]
+            if i < len(blocks) and blocks[i]['type'] == 'margin':
+                del blocks[i]
         else:
             i += 1
     return blocks
@@ -397,8 +399,8 @@ def format(text, width, indent=0, keep=None):
     blocks = hgrole(blocks)
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
-    blocks = prunecomments(blocks)
     blocks = addmargins(blocks)
+    blocks = prunecomments(blocks)
     blocks = findadmonitions(blocks)
     text = '\n'.join(formatblock(b, width) for b in blocks)
     if keep is None:
@@ -425,7 +427,7 @@ if __name__ == "__main__":
     blocks = debug(splitparagraphs, blocks)
     blocks = debug(updatefieldlists, blocks)
     blocks = debug(findsections, blocks)
-    blocks = debug(prunecomments, blocks)
     blocks = debug(addmargins, blocks)
+    blocks = debug(prunecomments, blocks)
     blocks = debug(findadmonitions, blocks)
     print '\n'.join(formatblock(b, 30) for b in blocks)
