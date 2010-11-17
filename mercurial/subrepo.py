@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import errno, os, re, xml.dom.minidom, shutil, urlparse, posixpath
-import stat
+import stat, subprocess
 from i18n import _
 import config, util, node, error, cmdutil
 hg = None
@@ -481,12 +481,15 @@ class svnsubrepo(abstractsubrepo):
         env = dict(os.environ)
         # Avoid localized output, preserve current locale for everything else.
         env['LC_MESSAGES'] = 'C'
-        write, read, err = util.popen3(cmd, env=env, newlines=True)
-        retdata = read.read()
-        err = err.read().strip()
-        if err:
-            raise util.Abort(err)
-        return retdata
+        p = subprocess.Popen(cmd, shell=True, bufsize=-1,
+                             close_fds=util.closefds,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             universal_newlines=True, env=env)
+        stdout, stderr = p.communicate()
+        stderr = stderr.strip()
+        if stderr:
+            raise util.Abort(stderr)
+        return stdout
 
     def _wcrev(self):
         output = self._svncommand(['info', '--xml'])
