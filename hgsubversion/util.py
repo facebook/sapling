@@ -205,6 +205,9 @@ templatekeywords = {
 }
 
 def revset_fromsvn(repo, subset, x):
+    '''``fromsvn()``
+    Select changesets that originate from Subversion.
+    '''
     args = revset.getargs(x, 0, 0, "fromsvn takes no arguments")
 
     def matches(r):
@@ -214,6 +217,9 @@ def revset_fromsvn(repo, subset, x):
     return [r for r in subset if matches(r)]
 
 def revset_svnrev(repo, subset, x):
+    '''``svnrev(number)``
+    Select changesets that originate in the given Subversion revision.
+    '''
     args = revset.getargs(x, 1, 1, "svnrev takes one argument")
 
     rev = revset.getstring(args[0],
