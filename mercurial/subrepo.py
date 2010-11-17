@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import errno, os, re, xml.dom.minidom, shutil, urlparse, posixpath
+import stat
 from i18n import _
 import config, util, node, error, cmdutil
 hg = None
@@ -549,7 +550,18 @@ class svnsubrepo(abstractsubrepo):
                             'it has changes.\n' % self._path))
             return
         self._ui.note(_('removing subrepo %s\n') % self._path)
-        shutil.rmtree(self._ctx._repo.wjoin(self._path))
+
+        def onerror(function, path, excinfo):
+            if function is not os.remove:
+                raise
+            # read-only files cannot be unlinked under Windows
+            s = os.stat(path)
+            if (s.st_mode & stat.S_IWRITE) != 0:
+                raise
+            os.chmod(path, stat.S_IMODE(s.st_mode) | stat.S_IWRITE)
+            os.remove(path)
+
+        shutil.rmtree(self._ctx._repo.wjoin(self._path), onerror=onerror)
 
     def get(self, state):
         status = self._svncommand(['checkout', state[0], '--revision', state[1]])
