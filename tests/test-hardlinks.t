@@ -10,6 +10,19 @@
   >     find $1 -type f | python $TESTTMP/nlinks.py
   > }
 
+Some implementations of cp can't create hardlinks (replaces 'cp -al' on Linux):
+
+  $ cat > linkcp.py <<EOF
+  > from mercurial import util
+  > import sys
+  > util.copyfiles(sys.argv[1], sys.argv[2], hardlink=True)
+  > EOF
+
+  $ linkcp()
+  > {
+  >     python $TESTTMP/linkcp.py $1 $2
+  > }
+
 Prepare repo r1:
 
   $ mkdir r1
@@ -151,4 +164,69 @@ Committing a change to f1 in r1 must break up hardlink f1.i in r2:
   1 r2/.hg/store/data/d1/f2.i
   1 r2/.hg/store/data/f1.i
   1 r2/.hg/store/fncache
+
+
+  $ cd r3
+  $ hg tip --template '{rev}:{node|short}\n'
+  11:a6451b6bc41f
+  $ echo bla > f1
+  $ hg ci -m1
+  $ cd ..
+
+Create hardlinked copy r4 of r3 (on Linux, we would call 'cp -al'):
+
+  $ linkcp r3 r4
+
+r4 has hardlinks in the working dir (not just inside .hg):
+
+  $ nlinksdir r4
+  2 r4/.hg/00changelog.i
+  2 r4/.hg/branch
+  2 r4/.hg/branchheads.cache
+  2 r4/.hg/dirstate
+  2 r4/.hg/hgrc
+  2 r4/.hg/last-message.txt
+  2 r4/.hg/requires
+  2 r4/.hg/store/00changelog.i
+  2 r4/.hg/store/00manifest.i
+  2 r4/.hg/store/data/d1/f2.d
+  2 r4/.hg/store/data/d1/f2.i
+  2 r4/.hg/store/data/f1.i
+  2 r4/.hg/store/fncache
+  2 r4/.hg/store/undo
+  2 r4/.hg/tags.cache
+  2 r4/.hg/undo.branch
+  2 r4/.hg/undo.desc
+  2 r4/.hg/undo.dirstate
+  2 r4/d1/data1
+  2 r4/d1/f2
+  2 r4/f1
+
+Update back to revision 11 in r4 should break hardlink of file f1:
+
+  $ hg -R r4 up 11
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ nlinksdir r4
+  2 r4/.hg/00changelog.i
+  1 r4/.hg/branch
+  2 r4/.hg/branchheads.cache
+  1 r4/.hg/dirstate
+  2 r4/.hg/hgrc
+  2 r4/.hg/last-message.txt
+  2 r4/.hg/requires
+  2 r4/.hg/store/00changelog.i
+  2 r4/.hg/store/00manifest.i
+  2 r4/.hg/store/data/d1/f2.d
+  2 r4/.hg/store/data/d1/f2.i
+  2 r4/.hg/store/data/f1.i
+  2 r4/.hg/store/fncache
+  2 r4/.hg/store/undo
+  2 r4/.hg/tags.cache
+  2 r4/.hg/undo.branch
+  2 r4/.hg/undo.desc
+  2 r4/.hg/undo.dirstate
+  2 r4/d1/data1
+  2 r4/d1/f2
+  1 r4/f1
 
