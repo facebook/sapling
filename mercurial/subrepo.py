@@ -564,7 +564,12 @@ class svnsubrepo(abstractsubrepo):
             os.chmod(path, stat.S_IMODE(s.st_mode) | stat.S_IWRITE)
             os.remove(path)
 
-        shutil.rmtree(self._ctx._repo.wjoin(self._path), onerror=onerror)
+        path = self._ctx._repo.wjoin(self._path)
+        shutil.rmtree(path, onerror=onerror)
+        try:
+            os.removedirs(os.path.dirname(path))
+        except OSError:
+            pass
 
     def get(self, state):
         status = self._svncommand(['checkout', state[0], '--revision', state[1]])
