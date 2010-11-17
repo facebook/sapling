@@ -105,10 +105,6 @@ class svnremoterepo(mercurial.repo.repository):
             self.ui.traceback()
             raise hgutil.Abort(e)
 
-    @property
-    def svnuuid(self):
-        return self.svn.uuid
-
     def url(self):
         return self.path
 
