@@ -144,7 +144,7 @@ if sys.platform == 'darwin':
         try:
             fd = os.open(path, O_SYMLINK)
         except OSError, err:
-            if err.errno is errno.ENOENT:
+            if err.errno == errno.ENOENT:
                 return path
             raise
 

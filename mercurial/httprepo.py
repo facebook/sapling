@@ -68,7 +68,7 @@ class httprepository(wireproto.wirerepository):
         raise util.Abort(_('operation not supported over http'))
 
     def _callstream(self, cmd, **args):
-        if cmd is 'pushkey':
+        if cmd == 'pushkey':
             args['data'] = ''
         data = args.pop('data', None)
         headers = args.pop('headers', {})
