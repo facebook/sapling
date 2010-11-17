@@ -63,11 +63,15 @@ first revision, no sub
 
 add first svn sub with leading whitespaces
 
-  $ echo "s = [svn]       $SVNREPO/src" >> .hgsub
+  $ echo "s =        [svn]       $SVNREPO/src" >> .hgsub
+  $ echo "subdir/s = [svn]       $SVNREPO/src" >> .hgsub
   $ svn co --quiet "$SVNREPO"/src s
+  $ mkdir subdir
+  $ svn co --quiet "$SVNREPO"/src subdir/s
   $ hg add .hgsub
   $ hg ci -m1
   committing subrepository s
+  committing subrepository subdir/s
 
 make sure we avoid empty commits (issue2445)
 
@@ -85,6 +89,9 @@ debugsub
 
   $ hg debugsub
   path s
+   source   file://*/svn-repo/src (glob)
+   revision 2
+  path subdir/s
    source   file://*/svn-repo/src (glob)
    revision 2
 
@@ -112,6 +119,9 @@ change file in svn and hg, commit
   path s
    source   file://*/svn-repo/src (glob)
    revision 3
+  path subdir/s
+   source   file://*/svn-repo/src (glob)
+   revision 2
 
   $ echo a > s/a
 
@@ -170,9 +180,10 @@ this commit fails because of externals changes
   $ hg diff --subrepos -r 1:2 | grep -v diff
   --- a/.hgsubstate	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgsubstate	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,1 +1,1 @@
+  @@ -1,2 +1,2 @@
   -2 s
   +3 s
+   2 subdir/s
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
@@ -195,6 +206,14 @@ clone
   $ cd ..
   $ hg clone t tc | fix_path
   updating to branch default
+  A    tc/subdir/s/alpha
+   U   tc/subdir/s
+  
+  Fetching external item into 'tc/subdir/s/externals'
+  A    tc/subdir/s/externals/other
+  Checked out external at revision 1.
+  
+  Checked out revision 2.
   A    tc/s/alpha
    U   tc/s
   
@@ -212,6 +231,9 @@ debugsub in clone
   path s
    source   file://*/svn-repo/src (glob)
    revision 3
+  path subdir/s
+   source   file://*/svn-repo/src (glob)
+   revision 2
 
 verify subrepo is contained within the repo directory
 
@@ -222,3 +244,4 @@ update to nullrev (must delete the subrepo)
 
   $ hg up null
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ ls
