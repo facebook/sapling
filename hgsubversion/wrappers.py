@@ -63,10 +63,11 @@ def incoming(orig, ui, repo, source='default', **opts):
     if 'subversion' not in other.capabilities:
         return orig(ui, repo, source, **opts)
 
-    meta = repo.svnmeta()
+    svn = other.svn
+    meta = repo.svnmeta(svn.uuid, svn.subdir)
 
     ui.status('incoming changes from %s\n' % other.svnurl)
-    for r in other.svn.revisions(start=meta.revmap.youngest):
+    for r in svn.revisions(start=meta.revmap.youngest):
         ui.status('\n')
         for label, attr in revmeta:
             l1 = label + ':'
@@ -83,7 +84,8 @@ def outgoing(repo, dest=None, heads=None, force=False):
 
     # split off #rev; TODO implement --revision/#rev support
     svnurl, revs, checkout = util.parseurl(dest.svnurl, heads)
-    meta = repo.svnmeta()
+    svn = dest.svn
+    meta = repo.svnmeta(svn.uuid, svn.subdir)
     parent = repo.parents()[0].node()
     hashes = meta.revmap.hashes()
     return util.outgoing_revisions(repo, hashes, parent)
@@ -209,7 +211,7 @@ def push(repo, dest, force, revs):
                     rebasemap[node.bin(rebasesrc)] = child.node()
             outgoing = [rebasemap.get(n) or n for n in outgoing]
         # TODO: stop constantly creating the SVNMeta instances.
-        meta = repo.svnmeta(svn.uuid)
+        meta = repo.svnmeta(svn.uuid, svn.subdir)
         hashes = meta.revmap.hashes()
     util.swap_out_encoding(old_encoding)
     return 1 # so we get a sane exit status, see hg's commands.push
