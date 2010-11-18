@@ -1006,7 +1006,7 @@ class queue(object):
         raise util.Abort(_("patch %s not in series") % patch)
 
     def push(self, repo, patch=None, force=False, list=False,
-             mergeq=None, all=False, move=False):
+             mergeq=None, all=False, move=False, exact=False):
         diffopts = self.diffopts()
         wlock = repo.wlock()
         try:
@@ -1015,7 +1015,7 @@ class queue(object):
                 heads += ls
             if not heads:
                 heads = [nullid]
-            if repo.dirstate.parents()[0] not in heads:
+            if repo.dirstate.parents()[0] not in heads and not exact:
                 self.ui.status(_("(working directory not at a head)\n"))
 
             if not self.series:
@@ -1061,6 +1061,18 @@ class queue(object):
                 return 1
             if not force:
                 self.check_localchanges(repo)
+
+            if exact:
+                if move:
+                    raise util.Abort(_("cannot use --exact and --move together"))
+                if self.applied:
+                    raise util.Abort(_("cannot push --exact with applied patches"))
+                root = self.series[start]
+                target = patchheader(self.join(root), self.plainmode).parent
+                if not target:
+                    raise util.Abort(_("%s does not have a parent recorded" % root))
+                if not repo[target] == repo['.']:
+                    hg.update(repo, target)
 
             if move:
                 if not patch:
@@ -2338,7 +2350,8 @@ def push(ui, repo, patch=None, **opts):
         mergeq = queue(ui, repo.join(""), newpath)
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
     ret = q.push(repo, patch, force=opts.get('force'), list=opts.get('list'),
-                 mergeq=mergeq, all=opts.get('all'), move=opts.get('move'))
+                 mergeq=mergeq, all=opts.get('all'), move=opts.get('move'),
+                 exact=opts.get('exact'))
     return ret
 
 def pop(ui, repo, patch=None, **opts):
@@ -3114,6 +3127,7 @@ cmdtable = {
     "^qpush":
         (push,
          [('f', 'force', None, _('apply on top of local changes')),
+          ('e', 'exact', None, _('apply the target patch to its recorded parent')),
           ('l', 'list', None, _('list patch name in commit text')),
           ('a', 'all', None, _('apply all patches')),
           ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
