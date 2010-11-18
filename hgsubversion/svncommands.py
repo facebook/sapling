@@ -302,8 +302,15 @@ def update(ui, args, repo, clean=False, **opts):
     """update to a specified Subversion revision number
     """
 
-    assert len(args) == 1
-    rev = int(args[0])
+    try:
+        rev = int(args[0])
+    except IndexError:
+        raise error.CommandError('svn',
+                                 "no revision number specified for 'update'")
+    except ValueError:
+        raise error.Abort("'%s' is not a valid Subversion revision number"
+                          % args[0])
+
     meta = repo.svnmeta()
 
     answers = []
@@ -457,6 +464,9 @@ def svn(ui, repo, subcommand, *args, **opts):
                 candidates.append(c)
         if len(candidates) == 1:
             subcommand = candidates[0]
+        elif not candidates:
+            raise error.CommandError('svn',
+                                     "unknown subcommand '%s'" % subcommand)
         else:
             raise error.AmbiguousCommand(subcommand, candidates)
 
