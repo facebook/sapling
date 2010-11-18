@@ -21,7 +21,15 @@ def state(ctx, ui):
     p = config.config()
     def read(f, sections=None, remap=None):
         if f in ctx:
-            p.parse(f, ctx[f].data(), sections, remap, read)
+            try:
+                data = ctx[f].data()
+            except IOError, err:
+                if err.errno != errno.ENOENT:
+                    raise
+                # handle missing subrepo spec files as removed
+                ui.warn(_("warning: subrepo spec file %s not found\n") % f)
+                return
+            p.parse(f, data, sections, remap, read)
         else:
             raise util.Abort(_("subrepo spec file %s not found") % f)
 
