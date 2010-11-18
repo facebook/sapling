@@ -98,7 +98,7 @@ class engine(object):
         v = self._get(mapping, key)
         if not hasattr(v, '__iter__'):
             raise SyntaxError(_("error expanding '%s%%%s'")
-                              % (key, format))
+                              % (key, parsed))
         lm = mapping.copy()
         for i in v:
             if isinstance(i, dict):
