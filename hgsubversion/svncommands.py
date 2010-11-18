@@ -89,7 +89,8 @@ def rebuildmeta(ui, repo, args, **opts):
     elif len(args) > 1:
         raise hgutil.Abort('rebuildmeta takes 1 or no arguments')
     uuid = None
-    url = repo.ui.expandpath(dest or 'default-push', dest or 'default')
+    url = repo.ui.expandpath(dest or repo.ui.config('paths', 'default-push') or
+                             repo.ui.config('paths', 'default') or '')
     svn = svnrepo.svnremoterepo(ui, url).svn
     subdir = svn.subdir
     svnmetadir = os.path.join(repo.path, 'svn')

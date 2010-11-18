@@ -82,13 +82,31 @@ class UtilityTests(test_util.TestBase):
                      })
         self.assertMultiLineEqual(expected, actual)
 
-    def test_info_missing_metadata(self):
-        repo = self._load_fixture_and_fetch('two_heads.svndump')
-        test_util.rmtree(repo.join('svn'))
+    def test_missing_metadata(self):
+        self._load_fixture_and_fetch('two_heads.svndump')
+        test_util.rmtree(self.repo.join('svn'))
         self.assertRaises(hgutil.Abort,
-                          repo.svnmeta)
+                          self.repo.svnmeta)
         self.assertRaises(hgutil.Abort,
-                          svncommands.info, self.ui, self.repo)
+                          svncommands.info,
+                          self.ui(), repo=self.repo, args=[])
+        self.assertRaises(hgutil.Abort,
+                          svncommands.genignore,
+                          self.ui(), repo=self.repo, args=[])
+
+        os.remove(self.repo.join('hgrc'))
+        self.assertRaises(hgutil.Abort,
+                          self.repo.svnmeta)
+        self.assertRaises(hgutil.Abort,
+                          svncommands.info,
+                          self.ui(), repo=self.repo, args=[])
+        self.assertRaises(hgutil.Abort,
+                          svncommands.genignore,
+                          self.ui(), repo=self.repo, args=[])
+
+        self.assertRaises(hgutil.Abort,
+                          svncommands.rebuildmeta,
+                          self.ui(), repo=self.repo, args=[])
 
     def test_parent_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')

@@ -78,6 +78,8 @@ class svnremoterepo(mercurial.repo.repository):
         self.ui = ui
         if path is None:
             path = self.ui.config('paths', 'default')
+        if not path:
+            raise hgutil.Abort('no Subversion URL specified')
         self.path = path
         self.capabilities = set(['lookup', 'subversion'])
 

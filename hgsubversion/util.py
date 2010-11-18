@@ -82,6 +82,8 @@ def version(ui):
 
 
 def normalize_url(url):
+    if not url:
+        return url
     if url.startswith('svn+http://') or url.startswith('svn+https://'):
         url = url[4:]
     url, revs, checkout = parseurl(url)
