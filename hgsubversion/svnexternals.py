@@ -310,3 +310,12 @@ def getchanges(ui, repo, parentctx, exts):
             if fn in parentctx:
                 updates[fn] = None
     return updates
+
+def parse(ctx):
+    """Return the externals definitions stored in ctx as a (possibly empty)
+    externalsfile().
+    """
+    external = externalsfile()
+    if '.hgsvnexternals' in ctx:
+        external.read(ctx['.hgsvnexternals'].data())
+    return external

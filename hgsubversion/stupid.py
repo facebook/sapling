@@ -349,9 +349,7 @@ def fetch_externals(svn, branchpath, r, parentctx):
     Return an externalsfile instance or None if there are no externals
     to convert and never were.
     """
-    externals = svnexternals.externalsfile()
-    if '.hgsvnexternals' in parentctx:
-        externals.read(parentctx['.hgsvnexternals'].data())
+    externals = svnexternals.parse(parentctx)
     # Detect property additions only, changes are handled by checking
     # existing entries individually. Projects are unlikely to store
     # externals on many different root directories, so we trade code

@@ -84,13 +84,6 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
     return added, deleted
 
 
-def _externals(ctx):
-    ext = svnexternals.externalsfile()
-    if '.hgsvnexternals' in ctx:
-        ext.read(ctx['.hgsvnexternals'].data())
-    return ext
-
-
 def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     """Build and send a commit from Mercurial to Subversion.
     """
@@ -104,8 +97,8 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     elif parent_branch and parent_branch != 'default':
         branch_path = 'branches/%s' % parent_branch
 
-    extchanges = list(svnexternals.diff(_externals(parent),
-                                        _externals(rev_ctx)))
+    extchanges = list(svnexternals.diff(svnexternals.parse(parent),
+                                        svnexternals.parse(rev_ctx)))
     addeddirs, deleteddirs = _getdirchanges(svn, branch_path, parent, rev_ctx,
                                             rev_ctx.files(), extchanges)
     deleteddirs = set(deleteddirs)

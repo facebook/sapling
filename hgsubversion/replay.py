@@ -35,16 +35,10 @@ def updateexternals(ui, meta, current):
 
         p, b, bp = meta.split_branch_path(path)
         if bp not in branches:
-            external = svnexternals.externalsfile()
             parent = meta.get_parent_revision(revnum, b)
             pctx = meta.repo[parent]
-            if '.hgsvnexternals' in pctx:
-                external.read(pctx['.hgsvnexternals'].data())
-            branches[bp] = (external, pctx)
-        else:
-            external = branches[bp][0]
-
-        external[p] = entry
+            branches[bp] = (svnexternals.parse(pctx), pctx)
+        branches[bp][0][p] = entry
 
     # register externals file changes
     for bp, (external, pctx) in branches.iteritems():
