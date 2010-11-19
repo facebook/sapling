@@ -20,6 +20,42 @@ class ReplayException(Exception):
     exception.
     """
 
+def updateexternals(ui, meta, current):
+    # TODO fix and re-enable externals for single-directory clones
+    if not current.externals or meta.layout == 'single':
+        return
+
+    # accumulate externals records for all branches
+    revnum = current.rev.revnum
+    branches = {}
+    for path, entry in current.externals.iteritems():
+        if not meta.is_path_valid(path):
+            ui.warn('WARNING: Invalid path %s in externals\n' % path)
+            continue
+
+        p, b, bp = meta.split_branch_path(path)
+        if bp not in branches:
+            external = svnexternals.externalsfile()
+            parent = meta.get_parent_revision(revnum, b)
+            pctx = meta.repo[parent]
+            if '.hgsvnexternals' in pctx:
+                external.read(pctx['.hgsvnexternals'].data())
+            branches[bp] = external
+        else:
+            external = branches[bp]
+
+        external[p] = entry
+
+    # register externals file changes
+    for bp, external in branches.iteritems():
+        if bp and bp[-1] != '/':
+            bp += '/'
+        path = (bp and bp + '.hgsvnexternals') or '.hgsvnexternals'
+        if external:
+            current.set(path, external.write(), False, False)
+        else:
+            current.delete(path)
+
 def convert_rev(ui, meta, svn, r, tbdelta):
 
     editor = meta.editor
@@ -35,40 +71,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
     current = editor.current
     current.findmissing(svn)
 
-    # update externals
-    # TODO fix and re-enable externals for single-directory clones
-    if current.externals and not meta.layout == 'single':
-
-        # accumulate externals records for all branches
-        revnum = current.rev.revnum
-        branches = {}
-        for path, entry in current.externals.iteritems():
-            if not meta.is_path_valid(path):
-                ui.warn('WARNING: Invalid path %s in externals\n' % path)
-                continue
-
-            p, b, bp = meta.split_branch_path(path)
-            if bp not in branches:
-                external = svnexternals.externalsfile()
-                parent = meta.get_parent_revision(revnum, b)
-                pctx = meta.repo[parent]
-                if '.hgsvnexternals' in pctx:
-                    external.read(pctx['.hgsvnexternals'].data())
-                branches[bp] = external
-            else:
-                external = branches[bp]
-
-            external[p] = entry
-
-        # register externals file changes
-        for bp, external in branches.iteritems():
-            if bp and bp[-1] != '/':
-                bp += '/'
-            path = (bp and bp + '.hgsvnexternals') or '.hgsvnexternals'
-            if external:
-                current.set(path, external.write(), False, False)
-            else:
-                current.delete(path)
+    updateexternals(ui, meta, current)
 
     if current.exception is not None:  #pragma: no cover
         traceback.print_exception(*current.exception)
