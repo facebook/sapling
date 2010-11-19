@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import errno, os, re, xml.dom.minidom, shutil, urlparse, posixpath
-import stat, subprocess
+import stat, subprocess, tarfile
 from i18n import _
 import config, util, node, error, cmdutil
 hg = None
@@ -613,15 +613,15 @@ class gitsubrepo(object):
         self._path = ctx._repo.wjoin(path)
         self._ui = ctx._repo.ui
 
-    def _gitcommand(self, commands):
-        return self._gitdir(commands)[0]
+    def _gitcommand(self, commands, stream=False):
+        return self._gitdir(commands, stream=stream)[0]
 
-    def _gitdir(self, commands):
+    def _gitdir(self, commands, stream=False):
         commands = ['--no-pager', '--git-dir=%s/.git' % self._path,
                     '--work-tree=%s' % self._path] + commands
-        return self._gitnodir(commands)
+        return self._gitnodir(commands, stream=stream)
 
-    def _gitnodir(self, commands):
+    def _gitnodir(self, commands, stream=False):
         """Calls the git command
 
         The methods tries to call the git command. versions previor to 1.6.0
@@ -633,8 +633,11 @@ class gitsubrepo(object):
 
         # print git's stderr, which is mostly progress and useful info
         p = subprocess.Popen(cmd, shell=True, bufsize=-1,
-                             close_fds=(os.name == 'posix'),
+                             close_fds=util.closefds,
                              stdout=subprocess.PIPE)
+        if stream:
+            return p.stdout, None
+
         retdata = p.stdout.read()
         # wait for the child to exit to avoid race condition.
         p.wait()
@@ -794,6 +797,20 @@ class gitsubrepo(object):
                 shutil.rmtree(path)
             else:
                 os.remove(path)
+
+    def archive(self, archiver, prefix):
+        source, revision = self._state
+        self._fetch(source, revision)
+
+        # Parse git's native archive command.
+        # This should be much faster than manually traversing the trees
+        # and objects with many subprocess calls.
+        tarstream = self._gitcommand(['archive', revision], stream=True)
+        tar = tarfile.open(fileobj=tarstream, mode='r|')
+        for info in tar:
+            archiver.addfile(os.path.join(prefix, self._relpath, info.name),
+                             info.mode, info.issym(),
+                             tar.extractfile(info).read())
 
 types = {
     'hg': hgsubrepo,

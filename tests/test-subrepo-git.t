@@ -193,3 +193,17 @@ update to a revision without the subrepo, keeping the local git repository
   ..
   .git
   g
+
+archive subrepos
+
+  $ cd ../t
+  $ hg archive --subrepos -r tip ../archive
+  pulling subrepo s
+  $ cd ../archive
+  $ cat s/f
+  f
+  $ cat s/g
+  g
+  gg
+  ggg
+
