@@ -389,10 +389,6 @@ def fetch_externals(svn, branchpath, r, parentctx):
             externals[dir] = values.get('svn:externals', '')
         except IOError:
             externals[dir] = ''
-
-    if not externals and '.hgsvnexternals' not in parentctx:
-        # Do not create empty externals files
-        return None
     return externals
 
 
@@ -604,17 +600,20 @@ def convert_rev(ui, meta, svn, r, tbdelta):
             files_touched, filectxfn2 = fetch_branchrev(
                 svn, meta, b, branches[b], r, parentctx)
 
+        externals = {}
         if meta.layout != 'single':
             externals = fetch_externals(svn, branches[b], r, parentctx)
-            if externals is not None:
-                files_touched.append('.hgsvnexternals')
+            externals = svnexternals.getchanges(ui, meta.repo, parentctx,
+                                                externals)
+            files_touched.extend(externals)
 
         def filectxfn(repo, memctx, path):
-            if path == '.hgsvnexternals':
-                if not externals:
+            if path in externals:
+                if externals[path] is None:
                     raise IOError(errno.ENOENT, 'no externals')
-                return context.memfilectx(path=path, data=externals.write(),
-                                          islink=False, isexec=False, copied=None)
+                return context.memfilectx(path=path, data=externals[path],
+                                          islink=False, isexec=False,
+                                          copied=None)
             for bad in bad_branch_paths[b]:
                 if path.startswith(bad):
                     raise IOError(errno.ENOENT, 'Path %s is bad' % path)

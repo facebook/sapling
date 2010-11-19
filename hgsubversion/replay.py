@@ -40,21 +40,23 @@ def updateexternals(ui, meta, current):
             pctx = meta.repo[parent]
             if '.hgsvnexternals' in pctx:
                 external.read(pctx['.hgsvnexternals'].data())
-            branches[bp] = external
+            branches[bp] = (external, pctx)
         else:
-            external = branches[bp]
+            external = branches[bp][0]
 
         external[p] = entry
 
     # register externals file changes
-    for bp, external in branches.iteritems():
+    for bp, (external, pctx) in branches.iteritems():
         if bp and bp[-1] != '/':
             bp += '/'
-        path = (bp and bp + '.hgsvnexternals') or '.hgsvnexternals'
-        if external:
-            current.set(path, external.write(), False, False)
-        else:
-            current.delete(path)
+        updates = svnexternals.getchanges(ui, meta.repo, pctx, external)
+        for fn, data in updates.iteritems():
+            path = (bp and bp + fn) or fn
+            if data is not None:
+                current.set(path, data, False, False)
+            else:
+                current.delete(path)
 
 def convert_rev(ui, meta, svn, r, tbdelta):
 
@@ -143,12 +145,6 @@ def convert_rev(ui, meta, svn, r, tbdelta):
                 continue
             extra.update({'branch': parentctx.extra().get('branch', None),
                           'close': 1})
-
-        if '.hgsvnexternals' not in parentctx and '.hgsvnexternals' in files:
-            # Do not register empty externals files
-            if (files['.hgsvnexternals'] in current.files
-                and not current.files[files['.hgsvnexternals']]):
-                del files['.hgsvnexternals']
 
         def filectxfn(repo, memctx, path):
             current_file = files[path]

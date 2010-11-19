@@ -287,3 +287,26 @@ def updateexternals(ui, args, repo, **opts):
             raise hgutil.Abort(_('unknown update actions: %r') % action)
 
     file(repo.join('svn/externals'), 'wb').write(newext)
+
+def getchanges(ui, repo, parentctx, exts):
+    """Take a parent changectx and the new externals definitions as an
+    externalsfile and return a dictionary mapping the special file
+    hgsubversion needs for externals bookkeeping, to their new content
+    as raw bytes or None if the file has to be removed.
+    """
+    files = {
+        '.hgsvnexternals': None,
+        }
+    if exts:
+        files['.hgsvnexternals'] = exts.write()
+
+    # Should the really be updated?
+    updates = {}
+    for fn, data in files.iteritems():
+        if data is not None:
+            if fn not in parentctx or parentctx[fn].data() != data:
+                updates[fn] = data
+        else:
+            if fn in parentctx:
+                updates[fn] = None
+    return updates
