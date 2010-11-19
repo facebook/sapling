@@ -13,6 +13,8 @@ try:
 except ImportError:
     pass
 
+ignoredfiles = set(['.hgtags', '.hgsvnexternals'])
+
 b_re = re.compile(r'^\+\+\+ b\/([^\n]*)', re.MULTILINE)
 a_re = re.compile(r'^--- a\/([^\n]*)', re.MULTILINE)
 devnull_re = re.compile(r'^([-+]{3}) /dev/null', re.MULTILINE)

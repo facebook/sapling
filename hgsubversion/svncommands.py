@@ -64,9 +64,7 @@ def verify(ui, repo, *args, **opts):
             ui.write('difference in file %s\n' % fn)
             result = 1
 
-    hgfiles = set(ctx)
-    hgfiles.discard('.hgtags')
-    hgfiles.discard('.hgsvnexternals')
+    hgfiles = set(ctx) - util.ignoredfiles
     if hgfiles != svnfiles:
         missing = set(hgfiles).symmetric_difference(svnfiles)
         ui.write('missing files: %s\n' % (', '.join(missing)))

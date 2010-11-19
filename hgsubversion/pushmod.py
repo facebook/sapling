@@ -2,7 +2,7 @@ from mercurial import util as hgutil
 
 import svnwrap
 import svnexternals
-
+import util
 
 class NoFilesException(Exception):
     """Exception raised when you try and commit without files.
@@ -106,9 +106,7 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     props = {}
     copies = {}
     for file in rev_ctx.files():
-        if file in ('.hgsvnexternals',
-                    '.hgtags',
-                    ):
+        if file in util.ignoredfiles:
             continue
         new_data = base_data = ''
         action = ''
