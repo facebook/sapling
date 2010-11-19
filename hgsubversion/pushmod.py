@@ -97,8 +97,8 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     elif parent_branch and parent_branch != 'default':
         branch_path = 'branches/%s' % parent_branch
 
-    extchanges = list(svnexternals.diff(svnexternals.parse(parent),
-                                        svnexternals.parse(rev_ctx)))
+    extchanges = svnexternals.diff(svnexternals.parse(parent),
+                                   svnexternals.parse(rev_ctx))
     addeddirs, deleteddirs = _getdirchanges(svn, branch_path, parent, rev_ctx,
                                             rev_ctx.files(), extchanges)
     deleteddirs = set(deleteddirs)
