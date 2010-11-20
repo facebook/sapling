@@ -191,3 +191,44 @@ Rebasing C onto E detaching from B and collapsing:
 
   $ cd ..
 
+Rebasing across null as ancestor
+  $ hg clone -q -U a a5
+
+  $ cd a5
+
+  $ echo x > x
+
+  $ hg add x
+
+  $ hg ci -m "extra branch"
+  created new head
+
+  $ hg tglog
+  @  5: 'extra branch'
+  
+  o  4: 'E'
+  |
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  
+  $ hg rebase --detach -s 1 -d tip
+  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg tglog
+  @  5: 'D'
+  |
+  o  4: 'C'
+  |
+  o  3: 'B'
+  |
+  o  2: 'extra branch'
+  
+  o  1: 'E'
+  |
+  o  0: 'A'
+  

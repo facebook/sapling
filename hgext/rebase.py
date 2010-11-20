@@ -485,7 +485,7 @@ def buildstate(repo, dest, src, base, detach):
             srcancestors = set(repo.changelog.ancestors(source))
             baseancestors = set(repo.changelog.ancestors(commonbase.rev()))
             detachset = srcancestors - baseancestors
-            detachset.remove(commonbase.rev())
+            detachset.discard(commonbase.rev())
     else:
         if base:
             cwd = repo[base].rev()
