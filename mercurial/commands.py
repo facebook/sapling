@@ -3105,14 +3105,15 @@ def revert(ui, repo, *pats, **opts):
             raise util.Abort(_("you can't specify a revision and a date"))
         opts["rev"] = cmdutil.finddate(ui, repo, opts["date"])
 
+    parent, p2 = repo.dirstate.parents()
+    if not opts.get('rev') and p2 != nullid:
+        raise util.Abort(_('uncommitted merge - '
+                           'use "hg update", see "hg help revert"'))
+
     if not pats and not opts.get('all'):
         raise util.Abort(_('no files or directories specified; '
                            'use --all to revert the whole repo'))
 
-    parent, p2 = repo.dirstate.parents()
-    if not opts.get('rev') and p2 != nullid:
-        raise util.Abort(_('uncommitted merge - please provide a '
-                           'specific revision'))
     ctx = cmdutil.revsingle(repo, opts.get('rev'))
     node = ctx.node()
     mf = ctx.manifest()
