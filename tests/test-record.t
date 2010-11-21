@@ -883,7 +883,7 @@ Abort early when a merge is in progress
   (branch merge, don't forget to commit)
 
   $ hg record -m'will abort'
-  abort: cannot partially commit a merge (use hg commit instead)
+  abort: cannot partially commit a merge (use "hg commit" instead)
   [255]
 
   $ hg up -C

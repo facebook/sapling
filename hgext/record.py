@@ -429,7 +429,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
         merge = len(repo[None].parents()) > 1
         if merge:
             raise util.Abort(_('cannot partially commit a merge '
-                               '(use hg commit instead)'))
+                               '(use "hg commit" instead)'))
 
         changes = repo.status(match=match)[:3]
         diffopts = mdiff.diffopts(git=True, nodates=True)
