@@ -149,6 +149,7 @@ pypats = [
     (r'raise Exception', "don't raise generic exceptions"),
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "warning: unwrapped ui message"),
+    (r' is\s+(not\s+)?["\'0-9-]', "object comparison with literal"),
 ]
 
 pyfilters = [

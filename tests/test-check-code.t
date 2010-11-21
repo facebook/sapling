@@ -52,3 +52,44 @@
    >     y = format(x)
    any/all/format not available in Python 2.4
   [1]
+
+  $ cat > is-op.py <<EOF
+  > # is-operator comparing number or string literal
+  > x = None
+  > y = x is 'foo'
+  > y = x is "foo"
+  > y = x is 5346
+  > y = x is -6
+  > y = x is not 'foo'
+  > y = x is not "foo"
+  > y = x is not 5346
+  > y = x is not -6
+  > EOF
+
+  $ "$check_code" ./is-op.py
+  ./is-op.py:3:
+   > y = x is 'foo'
+   object comparison with literal
+  ./is-op.py:4:
+   > y = x is "foo"
+   object comparison with literal
+  ./is-op.py:5:
+   > y = x is 5346
+   object comparison with literal
+  ./is-op.py:6:
+   > y = x is -6
+   object comparison with literal
+  ./is-op.py:7:
+   > y = x is not 'foo'
+   object comparison with literal
+  ./is-op.py:8:
+   > y = x is not "foo"
+   object comparison with literal
+  ./is-op.py:9:
+   > y = x is not 5346
+   object comparison with literal
+  ./is-op.py:10:
+   > y = x is not -6
+   object comparison with literal
+  [1]
+
