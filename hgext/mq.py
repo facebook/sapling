@@ -1523,7 +1523,7 @@ class queue(object):
                 l = line.rstrip()
                 l = l[10:].split(' ')
                 qpp = [bin(x) for x in l]
-            elif datastart != None:
+            elif datastart is not None:
                 l = line.rstrip()
                 n, name = l.split(':', 1)
                 if n:

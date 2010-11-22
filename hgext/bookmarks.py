@@ -137,7 +137,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         write(repo)
         return
 
-    if mark != None:
+    if mark is not None:
         if "\n" in mark:
             raise util.Abort(_("bookmark name cannot contain newlines"))
         mark = mark.strip()

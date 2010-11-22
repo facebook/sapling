@@ -715,7 +715,7 @@ methods = {
 }
 
 def optimize(x, small):
-    if x == None:
+    if x is None:
         return 0, x
 
     smallbonus = 1

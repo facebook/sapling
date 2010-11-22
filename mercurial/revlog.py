@@ -212,7 +212,7 @@ class lazyparser(object):
             return None
         self.mapfind_count += 1
         last = self.l - 1
-        while self.index[last] != None:
+        while self.index[last] is not None:
             if last == 0:
                 self.all = 1
                 self.allmap = 1

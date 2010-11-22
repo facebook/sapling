@@ -401,7 +401,7 @@ class transplanter(object):
 
 def hasnode(repo, node):
     try:
-        return repo.changelog.rev(node) != None
+        return repo.changelog.rev(node) is not None
     except error.RevlogError:
         return False
 

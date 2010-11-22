@@ -1054,7 +1054,7 @@ def strdate(string, format, defaults=[]):
 
     # NOTE: unixtime = localunixtime + offset
     offset, date = timezone(string), string
-    if offset != None:
+    if offset is not None:
         date = " ".join(string.split()[:-1])
 
     # add missing elements from defaults

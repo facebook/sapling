@@ -130,7 +130,7 @@ class config(object):
                 name = m.group(1)
                 if sections and section not in sections:
                     continue
-                if self.get(section, name) != None:
+                if self.get(section, name) is not None:
                     del self._data[section][name]
                 continue
 

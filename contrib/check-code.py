@@ -150,6 +150,8 @@ pypats = [
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "warning: unwrapped ui message"),
     (r' is\s+(not\s+)?["\'0-9-]', "object comparison with literal"),
+    (r' [=!]=\s+(True|False|None)',
+     "comparison with singleton, use 'is' or 'is not' instead"),
 ]
 
 pyfilters = [

@@ -34,7 +34,7 @@ def _verify(repo):
         raise util.Abort(_("cannot verify bundle or remote repos"))
 
     def err(linkrev, msg, filename=None):
-        if linkrev != None:
+        if linkrev is not None:
             badrevs.add(linkrev)
         else:
             linkrev = '?'

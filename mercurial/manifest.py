@@ -171,19 +171,19 @@ class manifest(revlog.revlog):
                         raise AssertionError(
                                 _("failed to remove %s from manifest") % f)
                     l = ""
-                if dstart != None and dstart <= start and dend >= start:
+                if dstart is not None and dstart <= start and dend >= start:
                     if dend < end:
                         dend = end
                     if l:
                         dline.append(l)
                 else:
-                    if dstart != None:
+                    if dstart is not None:
                         delta.append([dstart, dend, "".join(dline)])
                     dstart = start
                     dend = end
                     dline = [l]
 
-            if dstart != None:
+            if dstart is not None:
                 delta.append([dstart, dend, "".join(dline)])
             # apply the delta to the addlist, and get a delta for addrevision
             cachedelta = (self.rev(p1), addlistdelta(addlist, delta))

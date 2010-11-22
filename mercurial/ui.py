@@ -589,7 +589,7 @@ class ui(object):
         termination.
         '''
 
-        if pos == None or not self.debugflag:
+        if pos is None or not self.debugflag:
             return
 
         if unit:

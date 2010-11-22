@@ -179,7 +179,7 @@ class changectx(object):
         """
         # deal with workingctxs
         n2 = c2._node
-        if n2 == None:
+        if n2 is None:
             n2 = c2._parents[0]._node
         n = self._repo.changelog.ancestor(self._node, n2)
         return changectx(self._repo, n)

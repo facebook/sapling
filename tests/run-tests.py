@@ -594,7 +594,7 @@ def run(cmd, options, replacements):
         tochild.close()
         output = fromchild.read()
         ret = fromchild.close()
-        if ret == None:
+        if ret is None:
             ret = 0
     else:
         proc = Popen4(cmd)
@@ -714,7 +714,7 @@ def runone(options, test, skips, fails):
     # If we're not in --debug mode and reference output file exists,
     # check test output against it.
     if options.debug:
-        refout = None                   # to match out == None
+        refout = None                   # to match "out is None"
     elif os.path.exists(ref):
         f = open(ref, "r")
         refout = splitnewlines(f.read())
