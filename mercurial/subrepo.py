@@ -665,6 +665,10 @@ class gitsubrepo(object):
         out, code = self._gitdir(['cat-file', '-e', revision])
         return code == 0
 
+    def _gitisancestor(self, r1, r2):
+        base = self._gitcommand(['merge-base', r1, r2]).strip()
+        return base == r1
+
     def _gitbranchmap(self):
         'returns the current branch and a map from git revision to branch[es]'
         bm = {}
@@ -767,17 +771,31 @@ class gitsubrepo(object):
             self._gitcommand(['merge', '--no-commit', revision])
 
     def push(self, force):
+        # if a branch in origin contains the revision, nothing to do
+        current, bm = self._gitbranchmap()
+        for revision, branches in bm.iteritems():
+            for b in branches:
+                if b.startswith('remotes/origin'):
+                    if self._gitisancestor(self._state[1], revision):
+                        return True
+        # otherwise, try to push the currently checked out branch
         cmd = ['push']
         if force:
             cmd.append('--force')
-        # push the currently checked out branch
-        current, bm = self._gitbranchmap()
         if current:
+            # determine if the current branch is even useful
+            if not self._gitisancestor(self._state[1], current):
+                self._ui.warn(_('unrelated git branch checked out '
+                                'in subrepo %s\n') % self._relpath)
+                return False
+            self._ui.status(_('pushing branch %s of subrepo %s\n') %
+                            (current, self._relpath))
             self._gitcommand(cmd + ['origin', current, '-q'])
             return True
         else:
             self._ui.warn(_('no branch checked out in subrepo %s\n'
-                            'nothing to push') % self._relpath)
+                            'cannot push revision %s') %
+                          (self._relpath, self._state[1]))
             return False
 
     def remove(self):

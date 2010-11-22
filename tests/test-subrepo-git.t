@@ -134,6 +134,7 @@ user b push changes
 
   $ hg push
   pushing to $TESTTMP/t
+  pushing branch testing of subrepo s
   searching for changes
   adding changesets
   adding manifests
@@ -170,11 +171,43 @@ user a pulls, merges, commits
    revision f47b465e1bce645dbf37232a00574aa1546ca8d3
   $ hg push
   pushing to $TESTTMP/t
+  pushing branch testing of subrepo s
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+
+make upstream git changes
+
+  $ cd ..
+  $ git clone -q gitroot gitclone
+  $ cd gitclone
+  $ echo ff >> f
+  $ git commit -q -a -m ff
+  $ echo fff >> f
+  $ git commit -q -a -m fff
+  $ git push -q origin testing
+
+make and push changes to hg without updating the subrepo
+
+  $ cd ../t
+  $ hg clone . ../td
+  updating to branch default
+  cloning subrepo s
+  checking out detached HEAD in subrepo s
+  check out a git branch if you intend to make changes
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ../td
+  $ echo aa >> a
+  $ hg commit -m aa
+  $ hg push
+  pushing to $TESTTMP/t
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
 
 update to a revision without the subrepo, keeping the local git repository
 
