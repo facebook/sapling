@@ -178,7 +178,19 @@ class localrepository(repo.repository):
 
     @propertycache
     def dirstate(self):
-        return dirstate.dirstate(self.opener, self.ui, self.root)
+        warned = [0]
+        def validate(node):
+            try:
+                r = self.changelog.rev(node)
+                return node
+            except error.LookupError:
+                if not warned[0]:
+                    warned[0] = True
+                    self.ui.warn(_("warning: ignoring unknown"
+                                   " working parent %s!\n" % short(node)))
+                return nullid
+
+        return dirstate.dirstate(self.opener, self.ui, self.root, validate)
 
     def __getitem__(self, changeid):
         if changeid is None:

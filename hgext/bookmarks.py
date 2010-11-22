@@ -348,14 +348,12 @@ def reposetup(ui, repo):
             return result
 
         def addchangegroup(self, *args, **kwargs):
-            parents = self.dirstate.parents()
-
             result = super(bookmark_repo, self).addchangegroup(*args, **kwargs)
             if result > 1:
                 # We have more heads than before
                 return result
             node = self.changelog.tip()
-
+            parents = self.dirstate.parents()
             self._bookmarksupdate(parents, node)
             return result
 

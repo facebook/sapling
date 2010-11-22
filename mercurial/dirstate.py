@@ -36,7 +36,7 @@ def _decdirs(dirs, path):
 
 class dirstate(object):
 
-    def __init__(self, opener, ui, root):
+    def __init__(self, opener, ui, root, validate):
         '''Create a new dirstate object.
 
         opener is an open()-like callable that can be used to open the
@@ -44,6 +44,7 @@ class dirstate(object):
         the dirstate.
         '''
         self._opener = opener
+        self._validate = validate
         self._root = root
         self._rootdir = os.path.join(root, '')
         self._dirty = False
@@ -197,7 +198,7 @@ class dirstate(object):
             yield x
 
     def parents(self):
-        return self._pl
+        return [self._validate(p) for p in self._pl]
 
     def branch(self):
         return self._branch
