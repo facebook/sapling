@@ -105,7 +105,7 @@ def pofile(fpath, **kwargs):
     ... finally:
     ...     os.unlink(tmpf)
     """
-    if kwargs.get('autodetect_encoding', True) == True:
+    if kwargs.get('autodetect_encoding', True):
         enc = detect_encoding(fpath)
     else:
         enc = kwargs.get('encoding', default_encoding)
@@ -159,7 +159,7 @@ def mofile(fpath, **kwargs):
     ...     finally:
     ...         os.unlink(tmpf)
     """
-    if kwargs.get('autodetect_encoding', True) == True:
+    if kwargs.get('autodetect_encoding', True):
         enc = detect_encoding(fpath, True)
     else:
         enc = kwargs.get('encoding', default_encoding)
