@@ -68,7 +68,7 @@ Three additional date template filters are provided::
 
 The default template mappings (view with :hg:`kwdemo -d`) can be
 replaced with customized keywords and templates. Again, run
-:hg:`kwdemo` to control the results of your config changes.
+:hg:`kwdemo` to control the results of your configuration changes.
 
 Before changing/disabling active keywords, run :hg:`kwshrink` to avoid
 the risk of inadvertently storing expanded keywords in the change
