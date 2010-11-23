@@ -722,10 +722,7 @@ def checknlink(testfile):
 
     try:
         os_link(testfile, f)
-    except OSError, inst:
-        if inst.errno == errno.EINVAL:
-            # FS doesn't support creating hardlinks
-            return True
+    except OSError:
         return False
 
     try:
