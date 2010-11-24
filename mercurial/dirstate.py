@@ -7,7 +7,7 @@
 
 from node import nullid
 from i18n import _
-import util, ignore, osutil, parsers
+import util, ignore, osutil, parsers, encoding
 import struct, os, stat, errno
 import cStringIO
 
@@ -201,7 +201,7 @@ class dirstate(object):
         return [self._validate(p) for p in self._pl]
 
     def branch(self):
-        return self._branch
+        return encoding.tolocal(self._branch)
 
     def setparents(self, p1, p2=nullid):
         self._dirty = self._dirtypl = True
@@ -210,8 +210,8 @@ class dirstate(object):
     def setbranch(self, branch):
         if branch in ['tip', '.', 'null']:
             raise util.Abort(_('the name \'%s\' is reserved') % branch)
-        self._branch = branch
-        self._opener("branch", "w").write(branch + '\n')
+        self._branch = encoding.fromlocal(branch)
+        self._opener("branch", "w").write(self._branch + '\n')
 
     def _read(self):
         self._map = {}

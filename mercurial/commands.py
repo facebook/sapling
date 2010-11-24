@@ -488,15 +488,14 @@ def branch(ui, repo, label=None, **opts):
         repo.dirstate.setbranch(label)
         ui.status(_('reset working directory to branch %s\n') % label)
     elif label:
-        utflabel = encoding.fromlocal(label)
-        if not opts.get('force') and utflabel in repo.branchtags():
+        if not opts.get('force') and label in repo.branchtags():
             if label not in [p.branch() for p in repo.parents()]:
                 raise util.Abort(_('a branch of the same name already exists'
                                    " (use 'hg update' to switch to it)"))
-        repo.dirstate.setbranch(utflabel)
+        repo.dirstate.setbranch(label)
         ui.status(_('marked working directory as branch %s\n') % label)
     else:
-        ui.write("%s\n" % encoding.tolocal(repo.dirstate.branch()))
+        ui.write("%s\n" % repo.dirstate.branch())
 
 def branches(ui, repo, active=False, closed=False):
     """list repository named branches
@@ -525,9 +524,8 @@ def branches(ui, repo, active=False, closed=False):
 
     for isactive, node, tag in branches:
         if (not active) or isactive:
-            encodedtag = encoding.tolocal(tag)
             if ui.quiet:
-                ui.write("%s\n" % encodedtag)
+                ui.write("%s\n" % tag)
             else:
                 hn = repo.lookup(node)
                 if isactive:
@@ -543,10 +541,10 @@ def branches(ui, repo, active=False, closed=False):
                     notice = _(' (inactive)')
                 if tag == repo.dirstate.branch():
                     label = 'branches.current'
-                rev = str(node).rjust(31 - encoding.colwidth(encodedtag))
+                rev = str(node).rjust(31 - encoding.colwidth(tag))
                 rev = ui.label('%s:%s' % (rev, hexfunc(hn)), 'log.changeset')
-                encodedtag = ui.label(encodedtag, label)
-                ui.write("%s %s%s\n" % (encodedtag, rev, notice))
+                tag = ui.label(tag, label)
+                ui.write("%s %s%s\n" % (tag, rev, notice))
 
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
@@ -1830,8 +1828,7 @@ def heads(ui, repo, *branchrevs, **opts):
             heads += [repo[h] for h in ls if rev(h) in descendants]
 
     if branchrevs:
-        decode, encode = encoding.fromlocal, encoding.tolocal
-        branches = set(repo[decode(br)].branch() for br in branchrevs)
+        branches = set(repo[br].branch() for br in branchrevs)
         heads = [h for h in heads if h.branch() in branches]
 
     if not opts.get('closed'):
@@ -1844,7 +1841,7 @@ def heads(ui, repo, *branchrevs, **opts):
     if branchrevs:
         haveheads = set(h.branch() for h in heads)
         if branches - haveheads:
-            headless = ', '.join(encode(b) for b in branches - haveheads)
+            headless = ', '.join(b for b in branches - haveheads)
             msg = _('no open branch heads found on branches %s')
             if opts.get('rev'):
                 msg += _(' (started at %s)' % opts['rev'])
@@ -2209,7 +2206,7 @@ def identify(ui, repo, source=None,
             output.append(str(ctx.rev()))
 
     if repo.local() and default and not ui.quiet:
-        b = encoding.tolocal(ctx.branch())
+        b = ctx.branch()
         if b != 'default':
             output.append("(%s)" % b)
 
@@ -2219,7 +2216,7 @@ def identify(ui, repo, source=None,
             output.append(t)
 
     if branch:
-        output.append(encoding.tolocal(ctx.branch()))
+        output.append(ctx.branch())
 
     if tags:
         output.extend(ctx.tags())
@@ -2623,7 +2620,7 @@ def merge(ui, repo, node=None, **opts):
         node = opts.get('rev')
 
     if not node:
-        branch = repo.changectx(None).branch()
+        branch = repo[None].branch()
         bheads = repo.branchheads(branch)
         if len(bheads) > 2:
             raise util.Abort(_(

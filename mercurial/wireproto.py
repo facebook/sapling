@@ -44,14 +44,7 @@ class wirerepository(repo.repository):
             branchmap = {}
             for branchpart in d.splitlines():
                 branchname, branchheads = branchpart.split(' ', 1)
-                branchname = urllib.unquote(branchname)
-                # Earlier servers (1.3.x) send branch names in (their) local
-                # charset. The best we can do is assume it's identical to our
-                # own local charset, in case it's not utf-8.
-                try:
-                    branchname.decode('utf-8')
-                except UnicodeDecodeError:
-                    branchname = encoding.fromlocal(branchname)
+                branchname = encoding.tolocal(urllib.unquote(branchname))
                 branchheads = decodelist(branchheads)
                 branchmap[branchname] = branchheads
             return branchmap
@@ -162,7 +155,7 @@ def branchmap(repo, proto):
     branchmap = repo.branchmap()
     heads = []
     for branch, nodes in branchmap.iteritems():
-        branchname = urllib.quote(branch)
+        branchname = urllib.quote(encoding.fromlocal(branch))
         branchnodes = encodelist(nodes)
         heads.append('%s %s' % (branchname, branchnodes))
     return '\n'.join(heads)

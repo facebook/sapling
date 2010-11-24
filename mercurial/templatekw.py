@@ -148,7 +148,6 @@ def showauthor(repo, ctx, templ, **args):
 def showbranches(**args):
     branch = args['ctx'].branch()
     if branch != 'default':
-        branch = encoding.tolocal(branch)
         return showlist('branch', [branch], plural='branches', **args)
 
 def showchildren(**args):

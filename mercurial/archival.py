@@ -8,7 +8,7 @@
 from i18n import _
 from node import hex
 import cmdutil
-import util
+import util, encoding
 import cStringIO, os, stat, tarfile, time, zipfile
 import zlib, gzip
 
@@ -243,7 +243,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     if repo.ui.configbool("ui", "archivemeta", True):
         def metadata():
             base = 'repo: %s\nnode: %s\nbranch: %s\n' % (
-                repo[0].hex(), hex(node), ctx.branch())
+                repo[0].hex(), hex(node), encoding.fromlocal(ctx.branch()))
 
             tags = ''.join('tag: %s\n' % t for t in ctx.tags()
                            if repo.tagtype(t) == 'global')

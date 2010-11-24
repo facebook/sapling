@@ -240,6 +240,4 @@ hg log (dolphin)
   abort: decoding near '\xe9': 'ascii' codec can't decode byte 0xe9 in position 0: ordinal not in range(128)! (esc)
   [255]
   $ cp latin-1-tag .hg/branch
-  $ HGENCODING=latin-1 hg ci -m 'should fail'
-  abort: branch name not in UTF-8!
-  [255]
+  $ HGENCODING=latin-1 hg ci -m 'auto-promote legacy name'

@@ -801,7 +801,6 @@ class changeset_printer(object):
         branch = ctx.branch()
         # don't show the default branch name
         if branch != 'default':
-            branch = encoding.tolocal(branch)
             self.ui.write(_("branch:      %s\n") % branch,
                           label='log.branch')
         for tag in self.repo.nodetags(changenode):
@@ -1357,8 +1356,7 @@ def commitforceeditor(repo, ctx, subs):
     if ctx.p2():
         edittext.append(_("HG: branch merge"))
     if ctx.branch():
-        edittext.append(_("HG: branch '%s'")
-                        % encoding.tolocal(ctx.branch()))
+        edittext.append(_("HG: branch '%s'") % ctx.branch())
     edittext.extend([_("HG: subrepo %s") % s for s in subs])
     edittext.extend([_("HG: added %s") % f for f in added])
     edittext.extend([_("HG: changed %s") % f for f in modified])

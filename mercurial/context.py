@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, short, hex
 from i18n import _
-import ancestor, bdiff, error, util, subrepo, patch
+import ancestor, bdiff, error, util, subrepo, patch, encoding
 import os, errno, stat
 
 propertycache = util.propertycache
@@ -109,7 +109,7 @@ class changectx(object):
     def description(self):
         return self._changeset[4]
     def branch(self):
-        return self._changeset[5].get("branch")
+        return encoding.tolocal(self._changeset[5].get("branch"))
     def extra(self):
         return self._changeset[5]
     def tags(self):
@@ -591,9 +591,8 @@ class workingctx(changectx):
         if extra:
             self._extra = extra.copy()
         if 'branch' not in self._extra:
-            branch = self._repo.dirstate.branch()
             try:
-                branch = branch.decode('UTF-8').encode('UTF-8')
+                branch = encoding.fromlocal(self._repo.dirstate.branch())
             except UnicodeDecodeError:
                 raise util.Abort(_('branch name not in UTF-8!'))
             self._extra['branch'] = branch
@@ -715,7 +714,7 @@ class workingctx(changectx):
         assert self._clean is not None  # must call status first
         return self._clean
     def branch(self):
-        return self._extra['branch']
+        return encoding.tolocal(self._extra['branch'])
     def extra(self):
         return self._extra
 
@@ -1048,7 +1047,7 @@ class memctx(object):
     def clean(self):
         return self._status[6]
     def branch(self):
-        return self._extra['branch']
+        return encoding.tolocal(self._extra['branch'])
     def extra(self):
         return self._extra
     def flags(self, f):
