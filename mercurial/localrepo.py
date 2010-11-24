@@ -187,7 +187,7 @@ class localrepository(repo.repository):
                 if not warned[0]:
                     warned[0] = True
                     self.ui.warn(_("warning: ignoring unknown"
-                                   " working parent %s!\n" % short(node)))
+                                   " working parent %s!\n") % short(node))
                 return nullid
 
         return dirstate.dirstate(self.opener, self.ui, self.root, validate)
