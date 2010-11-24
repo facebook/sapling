@@ -25,7 +25,7 @@ def encodelist(l, sep=' '):
 class wirerepository(repo.repository):
     def lookup(self, key):
         self.requirecap('lookup', _('look up remote revision'))
-        d = self._call("lookup", key=key)
+        d = self._call("lookup", key=encoding.fromlocal(key))
         success, data = d[:-1].split(" ", 1)
         if int(success):
             return bin(data)
@@ -213,7 +213,7 @@ def listkeys(repo, proto, namespace):
 
 def lookup(repo, proto, key):
     try:
-        r = hex(repo.lookup(key))
+        r = hex(repo.lookup(encoding.tolocal(key)))
         success = 1
     except Exception, inst:
         r = str(inst)
