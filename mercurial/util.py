@@ -1116,6 +1116,8 @@ def parsedate(date, formats=None, defaults=None):
     # to UTC+14
     if abs(when) > 0x7fffffff:
         raise Abort(_('date exceeds 32 bits: %d') % when)
+    if when < 0:
+        raise Abort(_('negative date value: %d') % when)
     if offset < -50400 or offset > 43200:
         raise Abort(_('impossible time zone offset: %d') % offset)
     return when, offset
