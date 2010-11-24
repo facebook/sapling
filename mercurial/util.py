@@ -1015,7 +1015,11 @@ def makedate():
         tz = time.altzone
     else:
         tz = time.timezone
-    return time.mktime(lt), tz
+    t = time.mktime(lt)
+    if t < 0:
+        hint = _("check your clock")
+        raise Abort(_("negative timestamp: %d") % t, hint=hint)
+    return t, tz
 
 def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     """represent a (unixtime, offset) tuple as a localized time.
