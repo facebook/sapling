@@ -31,7 +31,7 @@ branching.
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex, short
 from mercurial import util, commands, repair, extensions, pushkey, hg, url
-from mercurial import revset
+from mercurial import revset, encoding
 import os
 
 def write(repo):
@@ -52,7 +52,7 @@ def write(repo):
     try:
         file = repo.opener('bookmarks', 'w', atomictemp=True)
         for refspec, node in refs.iteritems():
-            file.write("%s %s\n" % (hex(node), refspec))
+            file.write("%s %s\n" % (hex(node), encoding.fromlocal(refspec)))
         file.rename()
 
         # touch 00changelog.i so hgweb reloads bookmarks (no lock needed)
@@ -233,6 +233,7 @@ def reposetup(ui, repo):
                 bookmarks = {}
                 for line in self.opener('bookmarks'):
                     sha, refspec = line.strip().split(' ', 1)
+                    refspec = encoding.tolocal(refspec)
                     bookmarks[refspec] = self.changelog.lookup(sha)
             except:
                 pass
