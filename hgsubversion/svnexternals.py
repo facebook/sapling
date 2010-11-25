@@ -8,8 +8,8 @@ try:
     from mercurial import subrepo
     # require svnsubrepo and hg >= 1.7.1
     subrepo.svnsubrepo
-    hgutil.checklink
-except ImportError:
+    hgutil.checknlink
+except (ImportError, AttributeError), e:
     subrepo = None
 
 import util
@@ -88,8 +88,8 @@ def diff(ext1, ext2):
 class BadDefinition(Exception):
     pass
 
-re_defold = re.compile(r'^\s*(.*?)\s+(?:-r\s*(\d+)\s+)?([a-zA-Z]+://.*)\s*$')
-re_defnew = re.compile(r'^\s*(?:-r\s*(\d+)\s+)?((?:[a-zA-Z]+://|\^/).*)\s+(\S+)\s*$')
+re_defold = re.compile(r'^\s*(.*?)\s+(?:-r\s*(\d+|\{REV\})\s+)?([a-zA-Z]+://.*)\s*$')
+re_defnew = re.compile(r'^\s*(?:-r\s*(\d+|\{REV\})\s+)?((?:[a-zA-Z]+://|\^/).*)\s+(\S+)\s*$')
 re_scheme = re.compile(r'^[a-zA-Z]+://')
 
 def parsedefinition(line):
@@ -118,6 +118,19 @@ def parsedefinition(line):
         norevline = line
     return (path, rev, source, pegrev, norevline)
 
+class RelativeSourceError(Exception):
+    pass
+
+def resolvesource(ui, svnroot, source):
+    if re_scheme.search(source):
+        return source
+    if source.startswith('^/'):
+        if svnroot is None:
+            raise RelativeSourceError()
+        return svnroot + source[1:]
+    ui.warn(_('ignoring unsupported non-fully qualified external: %r' % source))
+    return None
+
 def parsedefinitions(ui, repo, svnroot, exts):
     """Return (targetdir, revision, source) tuples. Fail if nested
     targetdirs are detected. source is an svn project URL.
@@ -130,12 +143,8 @@ def parsedefinitions(ui, repo, svnroot, exts):
             except BadDefinition:
                 ui.warn(_('ignoring invalid external definition: %r' % line))
                 continue
-            if re_scheme.search(source):
-                pass
-            elif source.startswith('^/'):
-                source = svnroot + source[1:]
-            else:
-                ui.warn(_('ignoring unsupported non-fully qualified external: %r' % source))
+            source = resolvesource(ui, svnroot, source)
+            if source is None:
                 continue
             wpath = hgutil.pconvert(os.path.join(base, path))
             wpath = hgutil.canonpath(repo.root, '', wpath)
@@ -373,4 +382,30 @@ def parse(ui, ctx):
 if subrepo:
     class svnsubrepo(subrepo.svnsubrepo):
         def __init__(self, ctx, path, state):
+            state = (state[0].split(':', 1)[1], state[1])
             super(svnsubrepo, self).__init__(ctx, path, state)
+
+        def get(self, state):
+            # Resolve source first
+            line = state[0].split(':', 1)[1]
+            source, pegrev = parsedefinition(line)[2:4]
+            try:
+                # Getting the root SVN repository URL is expensive.
+                # Assume the externals is absolute.
+                source = resolvesource(self._ui, None, source)
+            except RelativeSourceError:
+                svnurl = self._ctx._repo.ui.expandpath('default')
+                svnroot = getsvninfo(util.normalize_url(svnurl))[1]
+                source = resolvesource(self._ui, svnroot, source)
+            if pegrev is not None:
+                source = source + '@' + pegrev
+            return super(svnsubrepo, self).get((source, state[1]))
+
+        def dirty(self):
+            # You cannot compare anything with HEAD. Just accept it
+            # can be anything.
+            wcrev = self._wcrev()
+            if (wcrev == 'HEAD' or self._state[1] == 'HEAD' or
+                wcrev == self._state[1]) and not self._wcchanged()[0]:
+                return False
+            return True

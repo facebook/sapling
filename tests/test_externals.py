@@ -1,8 +1,17 @@
 import test_util
 
-import os, unittest
+import os, unittest, sys
 
 from mercurial import commands
+from mercurial import util as hgutil
+try:
+    from mercurial import subrepo
+    # require svnsubrepo and hg >= 1.7.1
+    subrepo.svnsubrepo
+    hgutil.checknlink
+except (ImportError, AttributeError), e:
+    print >>sys.stderr, 'test_externals: skipping .hgsub tests'
+    subrepo = None
 
 from hgsubversion import svnexternals
 
@@ -204,6 +213,33 @@ deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
 
     def test_hgsub_stupid(self):
         self.test_hgsub(True)
+
+    def test_updatehgsub(self):
+        def checkdeps(ui, repo, rev, deps, nodeps):
+            commands.update(ui, repo, node=str(rev))
+            for d in deps:
+                p = os.path.join(repo.root, d)
+                self.assertTrue(os.path.isdir(p),
+                                'missing: %s@%r' % (d, repo[None].rev()))
+            for d in nodeps:
+                p = os.path.join(repo.root, d)
+                self.assertTrue(not os.path.isdir(p),
+                                'unexpected: %s@%r' % (d, repo[None].rev()))
+
+        if subrepo is None:
+            return
+
+        ui = self.ui()
+        repo = self._load_fixture_and_fetch('externals.svndump',
+                                            stupid=0, externals='subrepos')
+        checkdeps(ui, repo, 0, ['deps/project1'], [])
+        checkdeps(ui, repo, 1, ['deps/project1', 'deps/project2'], [])
+        checkdeps(ui, repo, 2, ['subdir/deps/project1', 'subdir2/deps/project1',
+                   'deps/project2'],
+                  ['deps/project1'])
+        checkdeps(ui, repo, 3, ['subdir/deps/project1', 'deps/project2'],
+                  ['subdir2/deps/project1'])
+        checkdeps(ui, repo, 4, ['subdir/deps/project1'], ['deps/project2'])
 
 class TestPushExternals(test_util.TestBase):
     def setUp(self):

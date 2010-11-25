@@ -51,8 +51,8 @@ try:
     from mercurial import subrepo
     # require svnsubrepo and hg >= 1.7.1
     subrepo.svnsubrepo
-    hgutil.checklink
-except ImportError:
+    hgutil.checknlink
+except (ImportError, AttributeError), e:
     subrepo = None
 
 import svncommands
