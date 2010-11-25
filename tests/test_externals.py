@@ -34,19 +34,32 @@ class TestFetchExternals(test_util.TestBase):
         # Taken from svn book
         samples = [
             ('third-party/sounds             http://svn.example.com/repos/sounds',
-             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds', None)),
+             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds', None,
+              'third-party/sounds             http://svn.example.com/repos/sounds')),
+
             ('third-party/skins -r148        http://svn.example.com/skinproj',
-             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None)),
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None,
+              'third-party/skins -r{REV}        http://svn.example.com/skinproj')),
+
             ('third-party/skins -r 148        http://svn.example.com/skinproj',
-             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None)),
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None,
+              'third-party/skins -r {REV}        http://svn.example.com/skinproj')),
+
             ('http://svn.example.com/repos/sounds third-party/sounds',
-             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds', None)),
+             ('third-party/sounds', None, 'http://svn.example.com/repos/sounds', None,
+              'http://svn.example.com/repos/sounds third-party/sounds')),
+
             ('-r148 http://svn.example.com/skinproj third-party/skins',
-             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None)),
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None,
+              '-r{REV} http://svn.example.com/skinproj third-party/skins')),
+
             ('-r 148 http://svn.example.com/skinproj third-party/skins',
-             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None)),
+             ('third-party/skins', '148', 'http://svn.example.com/skinproj', None,
+              '-r {REV} http://svn.example.com/skinproj third-party/skins')),
+
             ('http://svn.example.com/skin-maker@21 third-party/skins/toolkit',
-             ('third-party/skins/toolkit', None, 'http://svn.example.com/skin-maker', '21')),
+             ('third-party/skins/toolkit', None, 'http://svn.example.com/skin-maker', '21',
+              'http://svn.example.com/skin-maker@21 third-party/skins/toolkit')),
             ]
 
         for line, expected in samples:

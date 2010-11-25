@@ -79,8 +79,8 @@ def diff(ext1, ext2):
 class BadDefinition(Exception):
     pass
 
-re_defold = re.compile(r'^(.*?)\s+(?:-r\s*(\d+)\s+)?([a-zA-Z]+://.*)$')
-re_defnew = re.compile(r'^(?:-r\s*(\d+)\s+)?((?:[a-zA-Z]+://|\^/).*)\s+(.*)$')
+re_defold = re.compile(r'^\s*(.*?)\s+(?:-r\s*(\d+)\s+)?([a-zA-Z]+://.*)\s*$')
+re_defnew = re.compile(r'^\s*(?:-r\s*(\d+)\s+)?((?:[a-zA-Z]+://|\^/).*)\s+(\S+)\s*$')
 re_scheme = re.compile(r'^[a-zA-Z]+://')
 
 def parsedefinition(line):
@@ -90,8 +90,7 @@ def parsedefinition(line):
     # The parsing is probably not correct wrt path with whitespaces or
     # potential quotes. svn documentation is not really talkative about
     # these either.
-    line = line.strip()
-    pegrev = None
+    pegrev, revgroup = None, 1
     m = re_defnew.search(line)
     if m:
         rev, source, path = m.group(1, 2, 3)
@@ -101,8 +100,14 @@ def parsedefinition(line):
         m = re_defold.search(line)
         if not m:
             raise BadDefinition()
+        revgroup = 2
         path, rev, source = m.group(1, 2, 3)
-    return (path, rev, source, pegrev)
+    try:
+        nrev = int(rev)
+        norevline = line[:m.start(revgroup)] + '{REV}' + line[m.end(revgroup):]
+    except (TypeError, ValueError):
+        norevline = line
+    return (path, rev, source, pegrev, norevline)
 
 def parsedefinitions(ui, repo, svnroot, exts):
     """Return (targetdir, revision, source) tuples. Fail if nested
@@ -112,7 +117,7 @@ def parsedefinitions(ui, repo, svnroot, exts):
     for base in sorted(exts):
         for line in exts[base]:
             try:
-                path, rev, source, pegrev = parsedefinition(line)
+                path, rev, source, pegrev, norevline = parsedefinition(line)
             except BadDefinition:
                 ui.warn(_('ignoring invalid external definition: %r' % line))
                 continue
@@ -125,7 +130,7 @@ def parsedefinitions(ui, repo, svnroot, exts):
                 continue
             wpath = hgutil.pconvert(os.path.join(base, path))
             wpath = hgutil.canonpath(repo.root, '', wpath)
-            defs.append((wpath, rev, source, pegrev))
+            defs.append((wpath, rev, source, pegrev, norevline, base))
     # Check target dirs are not nested
     defs.sort()
     for i, d in enumerate(defs):
