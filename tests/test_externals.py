@@ -242,13 +242,10 @@ deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
         checkdeps(ui, repo, 4, ['subdir/deps/project1'], ['deps/project2'])
 
 class TestPushExternals(test_util.TestBase):
-    def setUp(self):
-        test_util.TestBase.setUp(self)
+    def test_push_externals(self, stupid=False):
         test_util.load_fixture_and_fetch('pushexternals.svndump',
                                          self.repo_path,
                                          self.wc_path)
-
-    def test_push_externals(self, stupid=False):
         # Add a new reference on an existing and non-existing directory
         changes = [
             ('.hgsvnexternals', '.hgsvnexternals',
@@ -295,6 +292,71 @@ class TestPushExternals(test_util.TestBase):
     def test_push_externals_stupid(self):
         self.test_push_externals(True)
 
+    def test_push_hgsub(self, stupid=False):
+        if subrepo is None:
+            return
+
+        test_util.load_fixture_and_fetch('pushexternals.svndump',
+                                         self.repo_path,
+                                         self.wc_path,
+                                         externals='subrepos')
+        # Add a new reference on an existing and non-existing directory
+        changes = [
+            ('.hgsub', '.hgsub', """\
+dir/deps/project2 = [hgsubversion] dir:^/externals/project2 deps/project2
+subdir1/deps/project1 = [hgsubversion] subdir1:^/externals/project1 deps/project1
+subdir2/deps/project2 = [hgsubversion] subdir2:^/externals/project2 deps/project2
+"""),
+            ('.hgsubstate', '.hgsubstate', """\
+HEAD dir/deps/project2
+HEAD subdir1/deps/project1
+HEAD subdir2/deps/project2
+"""),
+            ('subdir1/a', 'subdir1/a', 'a'),
+            ('subdir2/a', 'subdir2/a', 'a'),
+            ]
+        self.svnco('externals/project2', '2', 'dir/deps/project2')
+        self.svnco('externals/project1', '2', 'subdir1/deps/project1')
+        self.svnco('externals/project2', '2', 'subdir2/deps/project2')
+        self.commitchanges(changes)
+        self.pushrevisions(stupid)
+        self.assertchanges(changes, self.repo['tip'])
+
+        # Check .hgsub and .hgsubstate were not pushed
+        self.assertEqual(['dir', 'subdir1', 'subdir1/a','subdir2',
+                          'subdir2/a'], self.svnls('trunk'))
+
+        # Remove all references from one directory, add a new one
+        # to the other (test multiline entries)
+        changes = [
+            ('.hgsub', '.hgsub', """\
+subdir1/deps/project1 = [hgsubversion] subdir1:^/externals/project1 deps/project1
+subdir1/deps/project2 = [hgsubversion] subdir1:^/externals/project2 deps/project2
+"""),
+            ('.hgsubstate', '.hgsubstate', """\
+HEAD subdir1/deps/project1
+HEAD subdir1/deps/project2
+"""),
+            # This removal used to trigger the parent directory removal
+            ('subdir1/a', None, None),
+            ]
+        self.svnco('externals/project1', '2', 'subdir1/deps/project1')
+        self.svnco('externals/project2', '2', 'subdir1/deps/project2')
+        self.commitchanges(changes)
+        self.pushrevisions(stupid)
+        self.assertchanges(changes, self.repo['tip'])
+        # Check subdir2/a is still there even if the externals were removed
+        self.assertTrue('subdir2/a' in self.repo['tip'])
+        self.assertTrue('subdir1/a' not in self.repo['tip'])
+
+        # Test externals removal
+        changes = [
+            ('.hgsub', None, None),
+            ('.hgsubstate', None, None),
+            ]
+        self.commitchanges(changes)
+        self.pushrevisions(stupid)
+        self.assertchanges(changes, self.repo['tip'])
 
 def suite():
     all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExternals),

@@ -337,6 +337,20 @@ class TestBase(unittest.TestCase):
         entries.sort()
         return entries
 
+    def svnco(self, svnpath, rev, path):
+        path = os.path.join(self.wc_path, path)
+        subpath = os.path.dirname(path)
+        if not os.path.isdir(subpath):
+            os.makedirs(subpath)
+        svnpath = fileurl(self.repo_path + '/' + svnpath)
+        args = ['svn', 'co', '-r', rev, svnpath, path]
+        p = subprocess.Popen(args,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+        stdout, stderr = p.communicate()
+        if p.returncode:
+            raise Exception('svn co failed on %s: %r' % (svnpath, stderr))
+
     def commitchanges(self, changes, parent='tip', message='automated test'):
         """Commit changes to mercurial directory
 

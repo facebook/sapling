@@ -409,3 +409,10 @@ if subrepo:
                 wcrev == self._state[1]) and not self._wcchanged()[0]:
                 return False
             return True
+
+        def commit(self, text, user, date):
+            rev = super(svnsubrepo, self).commit(text, user, date)
+            # Keep unversioned externals unversioned
+            if self._state[1] == 'HEAD':
+                rev = 'HEAD'
+            return rev
