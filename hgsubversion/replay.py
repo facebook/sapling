@@ -37,7 +37,7 @@ def updateexternals(ui, meta, current):
         if bp not in branches:
             parent = meta.get_parent_revision(revnum, b)
             pctx = meta.repo[parent]
-            branches[bp] = (svnexternals.parse(pctx), pctx)
+            branches[bp] = (svnexternals.parse(ui, pctx), pctx)
         branches[bp][0][p] = entry
 
     # register externals file changes

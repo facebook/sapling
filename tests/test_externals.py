@@ -139,6 +139,72 @@ class TestFetchExternals(test_util.TestBase):
                   ['subdir2/deps/project1'], repo, 3)
         checkdeps(['subdir/deps/project1'], ['deps/project2'], repo, 4)
 
+    def test_hgsub(self, stupid=False):
+        repo = self._load_fixture_and_fetch('externals.svndump',
+                                            externals='subrepos',
+                                            stupid=stupid)
+        self.assertEqual("""\
+deps/project1 = [hgsubversion] :^/externals/project1 deps/project1
+""", repo[0]['.hgsub'].data())
+        self.assertEqual("""\
+HEAD deps/project1
+""", repo[0]['.hgsubstate'].data())
+
+        self.assertEqual("""\
+deps/project1 = [hgsubversion] :^/externals/project1 deps/project1
+deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
+""", repo[1]['.hgsub'].data())
+        self.assertEqual("""\
+HEAD deps/project1
+2 deps/project2
+""", repo[1]['.hgsubstate'].data())
+
+        self.assertEqual("""\
+deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
+subdir/deps/project1 = [hgsubversion] subdir:^/externals/project1 deps/project1
+subdir2/deps/project1 = [hgsubversion] subdir2:^/externals/project1 deps/project1
+""", repo[2]['.hgsub'].data())
+        self.assertEqual("""\
+2 deps/project2
+HEAD subdir/deps/project1
+HEAD subdir2/deps/project1
+""", repo[2]['.hgsubstate'].data())
+
+        self.assertEqual("""\
+deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
+subdir/deps/project1 = [hgsubversion] subdir:^/externals/project1 deps/project1
+""", repo[3]['.hgsub'].data())
+        self.assertEqual("""\
+2 deps/project2
+HEAD subdir/deps/project1
+""", repo[3]['.hgsubstate'].data())
+
+        self.assertEqual("""\
+subdir/deps/project1 = [hgsubversion] subdir:^/externals/project1 deps/project1
+""", repo[4]['.hgsub'].data())
+        self.assertEqual("""\
+HEAD subdir/deps/project1
+""", repo[4]['.hgsubstate'].data())
+
+        self.assertEqual("""\
+deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
+subdir2/deps/project1 = [hgsubversion] subdir2:^/externals/project1 deps/project1
+""", repo[5]['.hgsub'].data())
+        self.assertEqual("""\
+2 deps/project2
+HEAD subdir2/deps/project1
+""", repo[5]['.hgsubstate'].data())
+
+        self.assertEqual("""\
+deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
+""", repo[6]['.hgsub'].data())
+        self.assertEqual("""\
+2 deps/project2
+""", repo[6]['.hgsubstate'].data())
+
+    def test_hgsub_stupid(self):
+        self.test_hgsub(True)
+
 class TestPushExternals(test_util.TestBase):
     def setUp(self):
         test_util.TestBase.setUp(self)

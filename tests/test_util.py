@@ -172,7 +172,7 @@ def load_svndump_fixture(path, fixture_name):
 
 def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False,
                            subdir='', noupdate=True, layout='auto',
-                           startrev=0):
+                           startrev=0, externals=None):
     load_svndump_fixture(repo_path, fixture_name)
     if subdir:
         repo_path += '/' + subdir
@@ -188,6 +188,8 @@ def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False,
         cmd.append('--stupid')
     if noupdate:
         cmd.append('--noupdate')
+    if externals:
+        cmd[:0] = ['--config', 'hgsubversion.externals=%s' % externals]
 
     dispatch.dispatch(cmd)
 
@@ -275,7 +277,7 @@ class TestBase(unittest.TestCase):
         return testui(stupid, layout)
 
     def _load_fixture_and_fetch(self, fixture_name, subdir=None, stupid=False,
-                                layout='auto', startrev=0):
+                                layout='auto', startrev=0, externals=None):
         if layout == 'single':
             if subdir is None:
                 subdir = 'trunk'
@@ -284,7 +286,7 @@ class TestBase(unittest.TestCase):
         return load_fixture_and_fetch(fixture_name, self.repo_path,
                                       self.wc_path, subdir=subdir,
                                       stupid=stupid, layout=layout,
-                                      startrev=startrev)
+                                      startrev=startrev, externals=externals)
 
     def _add_svn_rev(self, changes):
         '''changes is a dict of filename -> contents'''

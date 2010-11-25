@@ -343,13 +343,13 @@ def getcopies(svn, meta, branch, branchpath, r, files, parentctx):
             hgcopies.update({k: v})
     return hgcopies
 
-def fetch_externals(svn, branchpath, r, parentctx):
+def fetch_externals(ui, svn, branchpath, r, parentctx):
     """Extract svn:externals for the current revision and branch
 
     Return an externalsfile instance or None if there are no externals
     to convert and never were.
     """
-    externals = svnexternals.parse(parentctx)
+    externals = svnexternals.parse(ui, parentctx)
     # Detect property additions only, changes are handled by checking
     # existing entries individually. Projects are unlikely to store
     # externals on many different root directories, so we trade code
@@ -600,7 +600,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
 
         externals = {}
         if meta.layout != 'single':
-            externals = fetch_externals(svn, branches[b], r, parentctx)
+            externals = fetch_externals(ui, svn, branches[b], r, parentctx)
             externals = svnexternals.getchanges(ui, meta.repo, parentctx,
                                                 externals)
             files_touched.extend(externals)

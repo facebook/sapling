@@ -3,6 +3,15 @@ import cStringIO
 import os, re, shutil, stat, subprocess
 from mercurial import util as hgutil
 from mercurial.i18n import _
+
+try:
+    from mercurial import subrepo
+    # require svnsubrepo and hg >= 1.7.1
+    subrepo.svnsubrepo
+    hgutil.checklink
+except ImportError:
+    subrepo = None
+
 import util
 
 class externalsfile(dict):
@@ -301,11 +310,32 @@ def getchanges(ui, repo, parentctx, exts):
     hgsubversion needs for externals bookkeeping, to their new content
     as raw bytes or None if the file has to be removed.
     """
-    files = {
-        '.hgsvnexternals': None,
-        }
-    if exts:
-        files['.hgsvnexternals'] = exts.write()
+    mode = ui.config('hgsubversion', 'externals', 'svnexternals')
+    if mode == 'svnexternals':
+        files = {
+            '.hgsvnexternals': None,
+            }
+        if exts:
+            files['.hgsvnexternals'] = exts.write()
+    elif mode == 'subrepos':
+        # XXX: clobering the subrepos files is good enough for now
+        files = {
+            '.hgsub': None,
+            '.hgsubstate': None,
+            }
+        if exts:
+            defs = parsedefinitions(ui, repo, '', exts)
+            hgsub, hgsubstate = [], []
+            for path, rev, source, pegrev, norevline, base in sorted(defs):
+                hgsub.append('%s = [hgsubversion] %s:%s\n'
+                             % (path, base, norevline))
+                if rev is None:
+                    rev = 'HEAD'
+                hgsubstate.append('%s %s\n' % (rev, path))
+            files['.hgsub'] = ''.join(hgsub)
+            files['.hgsubstate'] = ''.join(hgsubstate)
+    else:
+        raise hgutil.Abort(_('unknown externals modes: %s') % mode)
 
     # Should the really be updated?
     updates = {}
@@ -318,11 +348,29 @@ def getchanges(ui, repo, parentctx, exts):
                 updates[fn] = None
     return updates
 
-def parse(ctx):
+def parse(ui, ctx):
     """Return the externals definitions stored in ctx as a (possibly empty)
     externalsfile().
     """
     external = externalsfile()
-    if '.hgsvnexternals' in ctx:
-        external.read(ctx['.hgsvnexternals'].data())
+    mode = ui.config('hgsubversion', 'externals', 'svnexternals')
+    if mode == 'svnexternals':
+        if '.hgsvnexternals' in ctx:
+            external.read(ctx['.hgsvnexternals'].data())
+    elif mode == 'subrepos':
+        for path in ctx.substate:
+            src, rev = ctx.substate[path][:2]
+            base, norevline = src.split(':', 1)
+            base = base.strip()
+            if rev is None:
+                rev = 'HEAD'
+            line = norevline.replace('{REV}', rev)
+            external.setdefault(base, []).append(line)
+    else:
+        raise hgutil.Abort(_('unknown externals modes: %s') % mode)
     return external
+
+if subrepo:
+    class svnsubrepo(subrepo.svnsubrepo):
+        def __init__(self, ctx, path, state):
+            super(svnsubrepo, self).__init__(ctx, path, state)

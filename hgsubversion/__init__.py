@@ -47,10 +47,19 @@ try:
 except ImportError:
    revset = None
 
+try:
+    from mercurial import subrepo
+    # require svnsubrepo and hg >= 1.7.1
+    subrepo.svnsubrepo
+    hgutil.checklink
+except ImportError:
+    subrepo = None
+
 import svncommands
 import util
 import svnrepo
 import wrappers
+import svnexternals
 
 svnopts = [
     ('', 'stupid', None,
@@ -154,6 +163,9 @@ def extsetup():
 
     if revset:
         revset.symbols.update(util.revsets)
+
+    if subrepo:
+        subrepo.types['hgsubversion'] = svnexternals.svnsubrepo
 
 def reposetup(ui, repo):
     if repo.local():
