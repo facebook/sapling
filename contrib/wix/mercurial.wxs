@@ -8,6 +8,12 @@
 
   <?include guids.wxi ?>
 
+  <?if $(var.Platform) = "x64" ?>
+    <?define IsX64 = yes ?>
+  <?else?>
+    <?define IsX64 = no ?>
+  <?endif?>
+
   <Product Id='*'
     Name='Mercurial $(var.Version)' 
     UpgradeCode='$(var.ProductUpgradeCode)'
@@ -52,10 +58,8 @@
         <Directory Id='INSTALLDIR' Name='Mercurial'>
           <Component Id='MainExecutable' Guid='$(var.ComponentMainExecutableGUID)'>
             <File Id='hgEXE' Name='hg.exe' Source='dist\hg.exe' KeyPath='yes' />
-            <File Id='libraryZIP' Name='library.zip' Source='dist\library.zip' />
-            <File Id='pythonDLL' Name='python26.dll' Source='dist\python26.dll' />
             <Environment Id="Environment" Name="PATH" Part="last" System="yes"
-                         Permanent="no" Value="[INSTALLDIR]" Action="set" />
+                         Permanent="no" Value="[INSTALLDIR]bin" Action="set" />
           </Component>
           <Component Id='ReadMe' Guid='$(var.ReadMe.guid)'>
               <File Id='ReadMe' Name='ReadMe.html' Source='contrib\win32\ReadMe.html'
@@ -65,6 +69,7 @@
             <File Id='COPYING' Name='COPYING.rtf' Source='contrib\wix\COPYING.rtf'
                   KeyPath='yes'/>
           </Component>
+
           <Directory Id='HGRCD' Name='hgrc.d'>
             <Component Id='mercurial.rc' Guid='$(var.mercurial.rc.guid)'>
               <File Id='mercurial.rc' Name='Mercurial.rc' Source='contrib\win32\mercurial.ini'
@@ -73,6 +78,12 @@
             <Component Id='mergetools.rc' Guid='$(var.mergetools.rc.guid)'>
               <File Id='mergetools.rc' Name='MergeTools.rc' Source='contrib\mergetools.hgrc'
                     ReadOnly='yes' KeyPath='yes'/>
+            </Component>
+          </Directory>
+
+          <Directory Id='binFolder' Name='bin'>
+            <Component Id='HgCmd' Guid='$(var.hgcmd.guid)'>
+                <File Id='Hg.Cmd' Name='hg.cmd' KeyPath='yes' Source='contrib\wix\hg.cmd' />
             </Component>
           </Directory>
         </Directory>
@@ -101,12 +112,14 @@
       <Feature Id='MainProgram' Title='Program' Description='Mercurial command line app'
              Level='1' Absent='disallow' >
         <ComponentRef Id='MainExecutable' />
+        <ComponentRef Id='distOutput' />
         <ComponentRef Id='ProgramMenuDir' />
         <ComponentRef Id='ReadMe' />
         <ComponentRef Id='COPYING' />
         <ComponentRef Id='mercurial.rc' />
         <ComponentRef Id='mergetools.rc' />
         <ComponentRef Id='helpFolder' />
+        <ComponentRef Id='HgCmd' />
         <ComponentGroupRef Id='templatesFolder' />
         <MergeRef Id='VCRuntime' />
         <MergeRef Id='VCRuntimePolicy' />
