@@ -2,6 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?include guids.wxi ?>
+  <?include defines.wxi ?>
 
   <Fragment>
     <ComponentGroup Id="contribFolder">
@@ -13,7 +14,7 @@
   <Fragment>
     <DirectoryRef Id="INSTALLDIR">
       <Directory Id="contribdir" Name="contrib" FileSource="$(var.SourceDir)">
-        <Component Id="contrib" Guid="$(var.contrib.guid)">
+        <Component Id="contrib" Guid="$(var.contrib.guid)" Win64='$(var.IsX64)'>
           <File Name="bash_completion" KeyPath="yes" />
           <File Name="hgk" />
           <File Name="hgweb.fcgi" />
@@ -27,7 +28,7 @@
           <File Name="zsh_completion" />
         </Component>
         <Directory Id="vimdir" Name="vim">
-          <Component Id="contrib.vim" Guid="$(var.contrib.vim.guid)">
+          <Component Id="contrib.vim" Guid="$(var.contrib.vim.guid)" Win64='$(var.IsX64)'>
             <File Name="hg-menu.vim" KeyPath="yes" />
             <File Name="HGAnnotate.vim" />
             <File Name="hgcommand.vim" />

@@ -2,11 +2,12 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?include guids.wxi ?>
+  <?include defines.wxi ?>
 
   <Fragment>
     <DirectoryRef Id="INSTALLDIR">
       <Directory Id="helpdir" Name="help" FileSource="$(var.SourceDir)">
-        <Component Id="helpFolder" Guid="$(var.helpFolder.guid)">
+        <Component Id="helpFolder" Guid="$(var.helpFolder.guid)" Win64='$(var.IsX64)'>
           <File Name="config.txt" KeyPath="yes" />
           <File Name="dates.txt" />
           <File Name="diffs.txt" />

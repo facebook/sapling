@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
+  <?include defines.wxi ?>
+
   <?define hglocales =
     da;de;el;fr;it;ja;pt_BR;sv;zh_CN;zh_TW
   ?>
@@ -19,7 +21,7 @@
         <?foreach LOC in $(var.hglocales) ?>
           <Directory Id="hg.locale.$(var.LOC)" Name="$(var.LOC)">
             <Directory Id="hg.locale.$(var.LOC).LC_MESSAGES" Name="LC_MESSAGES">
-              <Component Id="hg.locale.$(var.LOC)" Guid="*">
+              <Component Id="hg.locale.$(var.LOC)" Guid="*" Win64='$(var.IsX64)'>
                 <File Id="hg.mo.$(var.LOC)" Name="hg.mo" KeyPath="yes" />
               </Component>
             </Directory>

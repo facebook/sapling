@@ -2,10 +2,11 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?include guids.wxi ?>
+  <?include defines.wxi ?>
 
   <Fragment>
     <DirectoryRef Id="INSTALLDIR" FileSource="$(var.SourceDir)">
-      <Component Id="distOutput" Guid="$(var.dist.guid)">
+      <Component Id="distOutput" Guid="$(var.dist.guid)" Win64='$(var.IsX64)'>
         <File Name="library.zip" KeyPath="yes" />
         <File Name="mercurial.base85.pyd" />
         <File Name="mercurial.bdiff.pyd" />

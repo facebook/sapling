@@ -2,6 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?include guids.wxi ?>
+  <?include defines.wxi ?>
 
   <?define hg_po_langs = 
     da;de;el;fr;it;ja;pt_BR;sv;zh_CN;zh_TW
@@ -10,7 +11,7 @@
   <Fragment>
     <DirectoryRef Id="INSTALLDIR">
       <Directory Id="i18ndir" Name="i18n" FileSource="$(var.SourceDir)">
-        <Component Id="i18nFolder" Guid="$(var.i18nFolder.guid)">
+        <Component Id="i18nFolder" Guid="$(var.i18nFolder.guid)" Win64='$(var.IsX64)'>
           <File Name="hggettext" KeyPath="yes" />
           <?foreach LANG in $(var.hg_po_langs) ?>
             <File Id="hg.$(var.LANG).po" 

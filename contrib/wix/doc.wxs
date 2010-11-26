@@ -2,6 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?include guids.wxi ?>
+  <?include defines.wxi ?>
 
   <Fragment>
     <ComponentGroup Id="docFolder">
@@ -15,7 +16,7 @@
   <Fragment>
     <DirectoryRef Id="INSTALLDIR">
       <Directory Id="docdir" Name="doc" FileSource="$(var.SourceDir)">
-        <Component Id="doc.hg.1.html" Guid="$(var.doc.hg.1.html.guid)">
+        <Component Id="doc.hg.1.html" Guid="$(var.doc.hg.1.html.guid)" Win64='$(var.IsX64)'>
           <File Name="hg.1.html" KeyPath="yes">
             <Shortcut Id="hg1StartMenu" Directory="ProgramMenuDir"
                       Name="Mercurial Command Reference"
@@ -23,7 +24,7 @@
             />
           </File>
         </Component>
-        <Component Id="doc.hgignore.5.html" Guid="$(var.doc.hgignore.5.html.guid)">
+        <Component Id="doc.hgignore.5.html" Guid="$(var.doc.hgignore.5.html.guid)" Win64='$(var.IsX64)'>
           <File Name="hgignore.5.html" KeyPath="yes">
             <Shortcut Id="hgignore5StartMenu" Directory="ProgramMenuDir"
                       Name="Mercurial Ignore Files"
@@ -31,7 +32,7 @@
             />
           </File>
         </Component>
-        <Component Id="doc.hgrc.5.html" Guid="$(var.doc.hgrc.5.html)">
+        <Component Id="doc.hgrc.5.html" Guid="$(var.doc.hgrc.5.html)" Win64='$(var.IsX64)'>
           <File Name="hgrc.5.html" KeyPath="yes">
             <Shortcut Id="hgrc5StartMenu" Directory="ProgramMenuDir"
                       Name="Mercurial Configuration Files"
@@ -39,7 +40,7 @@
             />
           </File>
         </Component>
-        <Component Id="doc.style.css" Guid="$(var.doc.style.css)">
+        <Component Id="doc.style.css" Guid="$(var.doc.style.css)" Win64='$(var.IsX64)'>
           <File Name="style.css" KeyPath="yes" />
         </Component>
       </Directory>
