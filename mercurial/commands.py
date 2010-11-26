@@ -3322,7 +3322,7 @@ def serve(ui, repo, **opts):
     """start stand-alone webserver
 
     Start a local HTTP repository browser and pull server. You can use
-    this for ad-hoc sharing and browing of repositories. It is
+    this for ad-hoc sharing and browsing of repositories. It is
     recommended to use a real web server to serve a repository for
     longer periods of time.
 
