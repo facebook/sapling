@@ -33,11 +33,6 @@
            CompressionLevel='high' />
     <Property Id='DiskPrompt' Value="Mercurial $(var.Version) Installation [1]" />
 
-    <?if $(var.Platform) = "x86" ?>
-      <Condition Message = "This x86 installer may not be used on a x64 platform">
-          NOT VersionNT64
-      </Condition>
-    <?endif?>
     <Condition Message='Mercurial MSI installers require Windows XP or higher'>
         VersionNT >= 501
     </Condition>
