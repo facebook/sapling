@@ -2,6 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?include guids.wxi ?>
+  <?include defines.wxi ?>
 
   <Fragment>
     <ComponentGroup Id="templatesFolder">
@@ -26,7 +27,7 @@
 
       <Directory Id="templatesdir" Name="templates" FileSource="$(var.SourceDir)">
 
-        <Component Id="templates.root" Guid="$(var.templates.root.guid)">
+        <Component Id="templates.root" Guid="$(var.templates.root.guid)" Win64='$(var.IsX64)'>
           <File Name="map-cmdline.changelog" KeyPath="yes" />
           <File Name="map-cmdline.compact" />
           <File Name="map-cmdline.default" />
@@ -35,7 +36,7 @@
         </Component>
 
         <Directory Id="templates.atomdir" Name="atom">
-          <Component Id="templates.atom" Guid="$(var.templates.atom.guid)">
+          <Component Id="templates.atom" Guid="$(var.templates.atom.guid)" Win64='$(var.IsX64)'>
             <File Id="atom.changelog.tmpl"      Name="changelog.tmpl" KeyPath="yes" />
             <File Id="atom.changelogentry.tmpl" Name="changelogentry.tmpl" />
             <File Id="atom.error.tmpl"          Name="error.tmpl" />
@@ -48,14 +49,14 @@
         </Directory>
 
         <Directory Id="templates.coaldir" Name="coal">
-          <Component Id="templates.coal" Guid="$(var.templates.coal.guid)">
+          <Component Id="templates.coal" Guid="$(var.templates.coal.guid)" Win64='$(var.IsX64)'>
             <File Id="coal.header.tmpl" Name="header.tmpl" KeyPath="yes" />
             <File Id="coal.map"         Name="map" />
           </Component>
         </Directory>
 
         <Directory Id="templates.gitwebdir" Name="gitweb">
-          <Component Id="templates.gitweb" Guid="$(var.templates.gitweb.guid)">
+          <Component Id="templates.gitweb" Guid="$(var.templates.gitweb.guid)" Win64='$(var.IsX64)'>
             <File Id="gitweb.branches.tmpl"       Name="branches.tmpl" KeyPath="yes" />
             <File Id="gitweb.changelog.tmpl"      Name="changelog.tmpl" />
             <File Id="gitweb.changelogentry.tmpl" Name="changelogentry.tmpl" />
@@ -82,7 +83,7 @@
         </Directory>
 
         <Directory Id="templates.monobluedir" Name="monoblue">
-          <Component Id="templates.monoblue" Guid="$(var.templates.monoblue.guid)">
+          <Component Id="templates.monoblue" Guid="$(var.templates.monoblue.guid)" Win64='$(var.IsX64)'>
             <File Id="monoblue.branches.tmpl"       Name="branches.tmpl" KeyPath="yes" />
             <File Id="monoblue.changelog.tmpl"      Name="changelog.tmpl" />
             <File Id="monoblue.changelogentry.tmpl" Name="changelogentry.tmpl" />
@@ -109,7 +110,7 @@
         </Directory>
 
         <Directory Id="templates.paperdir" Name="paper">
-          <Component Id="templates.paper" Guid="$(var.templates.paper.guid)">
+          <Component Id="templates.paper" Guid="$(var.templates.paper.guid)" Win64='$(var.IsX64)'>
             <File Id="paper.branches.tmpl"      Name="branches.tmpl" KeyPath="yes" />
             <File Id="paper.changeset.tmpl"     Name="changeset.tmpl" />
             <File Id="paper.error.tmpl"         Name="error.tmpl" />
@@ -135,7 +136,7 @@
         </Directory>
 
         <Directory Id="templates.rawdir" Name="raw">
-          <Component Id="templates.raw" Guid="$(var.templates.raw.guid)">
+          <Component Id="templates.raw" Guid="$(var.templates.raw.guid)" Win64='$(var.IsX64)'>
             <File Id="raw.changeset.tmpl"    Name="changeset.tmpl" KeyPath="yes" />
             <File Id="raw.error.tmpl"        Name="error.tmpl" />
             <File Id="raw.fileannotate.tmpl" Name="fileannotate.tmpl" />
@@ -148,7 +149,7 @@
         </Directory>
 
         <Directory Id="templates.rssdir" Name="rss">
-          <Component Id="templates.rss" Guid="$(var.templates.rss.guid)">
+          <Component Id="templates.rss" Guid="$(var.templates.rss.guid)" Win64='$(var.IsX64)'>
             <File Id="rss.changelog.tmpl"      Name="changelog.tmpl" KeyPath="yes" />
             <File Id="rss.changelogentry.tmpl" Name="changelogentry.tmpl" />
             <File Id="rss.error.tmpl"          Name="error.tmpl" />
@@ -162,7 +163,7 @@
         </Directory>
 
         <Directory Id="templates.spartandir" Name="spartan">
-          <Component Id="templates.spartan" Guid="$(var.templates.spartan.guid)">
+          <Component Id="templates.spartan" Guid="$(var.templates.spartan.guid)" Win64='$(var.IsX64)'>
             <File Id="spartan.branches.tmpl"       Name="branches.tmpl" KeyPath="yes" />
             <File Id="spartan.changelog.tmpl"      Name="changelog.tmpl" />
             <File Id="spartan.changelogentry.tmpl" Name="changelogentry.tmpl" />
@@ -188,7 +189,7 @@
         </Directory>
 
         <Directory Id="templates.staticdir" Name="static">
-          <Component Id="templates.static" Guid="$(var.templates.static.guid)">
+          <Component Id="templates.static" Guid="$(var.templates.static.guid)" Win64='$(var.IsX64)'>
             <File Id="static.background.png"     Name="background.png" KeyPath="yes" />
             <File Id="static.coal.file.png"      Name="coal-file.png" />
             <File Id="static.coal.folder.png"    Name="coal-folder.png" />

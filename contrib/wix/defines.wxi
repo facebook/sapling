@@ -1,0 +1,9 @@
+<Include>
+
+  <?if $(var.Platform) = "x64" ?>
+    <?define IsX64 = yes ?>
+  <?else?>
+    <?define IsX64 = no ?>
+  <?endif?>
+
+</Include>
