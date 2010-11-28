@@ -670,12 +670,15 @@ class gitsubrepo(object):
         return base == r1
 
     def _gitbranchmap(self):
-        'returns the current branch and a map from git revision to branch[es]'
-        bm = {}
-        redirects = {}
+        '''returns 3 things:
+        the current branch,
+        a map from git branch to revision
+        a map from revision to branches'''
+        branch2rev = {}
+        rev2branch = {}
         current = None
         out = self._gitcommand(['branch', '-a', '--no-color',
-                                '--verbose', '--abbrev=40'])
+                                '--verbose', '--no-abbrev'])
         for line in out.split('\n'):
             if line[2:].startswith('(no branch)'):
                 continue
@@ -684,8 +687,9 @@ class gitsubrepo(object):
                 continue # ignore remote/HEAD redirects
             if line[0] == '*':
                 current = branch
-            bm.setdefault(revision, []).append(branch)
-        return current, bm
+            branch2rev[branch] = revision
+            rev2branch.setdefault(revision, []).append(branch)
+        return current, branch2rev, rev2branch
 
     def _fetch(self, source, revision):
         if not os.path.exists('%s/.git' % self._path):
@@ -719,8 +723,8 @@ class gitsubrepo(object):
                 return
         elif self._gitstate() == revision:
             return
-        current, bm = self._gitbranchmap()
-        if revision not in bm:
+        current, branch2rev, rev2branch = self._gitbranchmap()
+        if revision not in rev2branch:
             # no branch to checkout, check it out with no branch
             self._ui.warn(_('checking out detached HEAD in subrepo %s\n') %
                           self._relpath)
@@ -728,7 +732,7 @@ class gitsubrepo(object):
                             'to make changes\n'))
             self._gitcommand(['checkout', '-q', revision])
             return
-        branches = bm[revision]
+        branches = rev2branch[revision]
         firstlocalbranch = None
         for b in branches:
             if b == 'master':
@@ -768,12 +772,11 @@ class gitsubrepo(object):
 
     def push(self, force):
         # if a branch in origin contains the revision, nothing to do
-        current, bm = self._gitbranchmap()
-        for revision, branches in bm.iteritems():
-            for b in branches:
-                if b.startswith('remotes/origin'):
-                    if self._gitisancestor(self._state[1], revision):
-                        return True
+        current, branch2rev, rev2branch = self._gitbranchmap()
+        for b, revision in branch2rev.iteritems():
+            if b.startswith('remotes/origin'):
+                if self._gitisancestor(self._state[1], revision):
+                    return True
         # otherwise, try to push the currently checked out branch
         cmd = ['push']
         if force:
