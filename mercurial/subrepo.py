@@ -691,6 +691,19 @@ class gitsubrepo(object):
             rev2branch.setdefault(revision, []).append(branch)
         return current, branch2rev, rev2branch
 
+    def _gittracking(self, branches):
+        'return map of remote branch to local tracking branch'
+        # assumes no more than one local tracking branch for each remote
+        tracking = {}
+        for b in branches:
+            if b.startswith('remotes/'):
+                continue
+            remote = self._gitcommand(['config', 'branch.%s.remote' % b])
+            if remote:
+                ref = self._gitcommand(['config', 'branch.%s.merge' % b])
+                tracking['remotes/%s/%s' % (remote, ref.split('/')[-1])] = b
+        return tracking
+
     def _fetch(self, source, revision):
         if not os.path.exists('%s/.git' % self._path):
             self._ui.status(_('cloning subrepo %s\n') % self._relpath)
@@ -724,13 +737,17 @@ class gitsubrepo(object):
         elif self._gitstate() == revision:
             return
         current, branch2rev, rev2branch = self._gitbranchmap()
-        if revision not in rev2branch:
+
+        def rawcheckout():
             # no branch to checkout, check it out with no branch
             self._ui.warn(_('checking out detached HEAD in subrepo %s\n') %
                           self._relpath)
             self._ui.warn(_('check out a git branch if you intend '
                             'to make changes\n'))
             self._gitcommand(['checkout', '-q', revision])
+
+        if revision not in rev2branch:
+            rawcheckout()
             return
         branches = rev2branch[revision]
         firstlocalbranch = None
@@ -743,10 +760,34 @@ class gitsubrepo(object):
                 firstlocalbranch = b
         if firstlocalbranch:
             self._gitcommand(['checkout', firstlocalbranch])
-        else:
-            remote = branches[0]
+            return
+
+        tracking = self._gittracking(branch2rev.keys())
+        # choose a remote branch already tracked if possible
+        remote = branches[0]
+        if remote not in tracking:
+            for b in branches:
+                if b in tracking:
+                    remote = b
+                    break
+
+        if remote not in tracking:
+            # create a new local tracking branch
             local = remote.split('/')[-1]
             self._gitcommand(['checkout', '-b', local, remote])
+        elif self._gitisancestor(branch2rev[tracking[remote]], remote):
+            # When updating to a tracked remote branch,
+            # if the local tracking branch is downstream of it,
+            # a normal `git pull` would have performed a "fast-forward merge"
+            # which is equivalent to updating the local branch to the remote.
+            # Since we are only looking at branching at update, we need to
+            # detect this situation and perform this action lazily.
+            if tracking[remote] != current:
+                self._gitcommand(['checkout', tracking[remote]])
+            self._gitcommand(['merge', '--ff', remote])
+        else:
+            # a real merge would be required, just checkout the revision
+            rawcheckout()
 
     def commit(self, text, user, date):
         cmd = ['commit', '-a', '-m', text]

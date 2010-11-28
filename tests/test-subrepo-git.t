@@ -209,6 +209,31 @@ make and push changes to hg without updating the subrepo
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
+sync to upstream git, distribute changes
+
+  $ cd ../ta
+  $ hg pull -u -q
+  $ cd s
+  $ git pull -q
+  $ cd ..
+  $ hg commit -m 'git upstream sync'
+  committing subrepository $TESTTMP/ta/s
+  $ hg debugsub
+  path s
+   source   ../gitroot
+   revision 32a343883b74769118bb1d3b4b1fbf9156f4dddc
+  $ hg push -q
+
+  $ cd ../tb
+  $ hg pull -q
+  $ hg update
+  pulling subrepo s
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg debugsub
+  path s
+   source   ../gitroot
+   revision 32a343883b74769118bb1d3b4b1fbf9156f4dddc
+
 update to a revision without the subrepo, keeping the local git repository
 
   $ cd ../t
@@ -230,7 +255,7 @@ update to a revision without the subrepo, keeping the local git repository
 archive subrepos
 
   $ cd ../t
-  $ hg archive --subrepos -r tip ../archive
+  $ hg archive --subrepos -r 5 ../archive
   pulling subrepo s
   $ cd ../archive
   $ cat s/f
@@ -239,4 +264,3 @@ archive subrepos
   g
   gg
   ggg
-
