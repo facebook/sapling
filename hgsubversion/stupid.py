@@ -653,7 +653,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
         meta.mapbranch(extra)
         current_ctx = context.memctx(meta.repo,
                                      [parentctx.node(), revlog.nullid],
-                                     r.message or util.default_commit_msg,
+                                     r.message or util.default_commit_msg(ui),
                                      files_touched,
                                      filectxfn,
                                      meta.authors[r.author],

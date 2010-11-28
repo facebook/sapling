@@ -12,6 +12,7 @@ from mercurial import util as hgutil
 
 from hgsubversion import maps
 from hgsubversion import svncommands
+from hgsubversion import util
 
 class MapTests(test_util.TestBase):
     @property
@@ -305,6 +306,32 @@ class MapTests(test_util.TestBase):
 
     def test_tagren_changed_stupid(self):
         self.test_tagren_changed(True)
+
+    def test_empty_log_message(self, stupid=False):
+        repo = self._load_fixture_and_fetch('empty-log-message.svndump',
+                                            stupid=stupid)
+
+        self.assertEqual(repo['tip'].description(), '...')
+
+        test_util.rmtree(self.wc_path)
+
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'defaultmessage', 'blyf')
+        commands.clone(ui, test_util.fileurl(self.repo_path), self.wc_path)
+
+        self.assertEqual(self.repo['tip'].description(), 'blyf')
+
+        test_util.rmtree(self.wc_path)
+
+        ui = self.ui(stupid)
+        ui.setconfig('hgsubversion', 'defaultmessage', '')
+        commands.clone(ui, test_util.fileurl(self.repo_path), self.wc_path)
+
+        self.assertEqual(self.repo['tip'].description(), '')
+
+
+    def test_empty_log_message_stupid(self):
+        self.test_empty_log_message(True)
 
 def suite():
     return unittest.TestLoader().loadTestsFromTestCase(MapTests)

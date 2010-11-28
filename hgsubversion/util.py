@@ -149,7 +149,9 @@ def outgoing_revisions(repo, reverse_map, sourcerev):
     if sourcerev.node() != node.nullid:
         return outgoing_rev_hashes
 
-default_commit_msg = '*** empty log message ***'
+def default_commit_msg(ui):
+    return ui.config('hgsubversion', 'defaultmessage',
+                     '...')
 
 def describe_commit(ui, h, b):
     ui.note(' committed to "%s" as %s\n' % ((b or 'default'), node.short(h)))

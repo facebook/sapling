@@ -205,6 +205,11 @@ settings:
     If this option set to an empty string, the Subversion authors will be used
     with no hostname component.
 
+  ``hgsubversion.defaultmessage``
+
+    This option selects what to substitute for an empty log
+    message. The default is to substitute three dots, or ``...``.
+
   ``hgsubversion.defaultauthors``
 
     Setting this boolean option to false will cause hgsubversion to abort a

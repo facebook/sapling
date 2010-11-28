@@ -305,7 +305,7 @@ def pull(repo, source, heads=[], force=False):
                         if r.message:
                             msg = r.message.strip()
                         if not msg:
-                            msg = util.default_commit_msg
+                            msg = util.default_commit_msg(ui)
                         else:
                             msg = [s.strip() for s in msg.splitlines() if s][0]
                         if getattr(ui, 'termwidth', False):
