@@ -311,7 +311,7 @@ class MapTests(test_util.TestBase):
         repo = self._load_fixture_and_fetch('empty-log-message.svndump',
                                             stupid=stupid)
 
-        self.assertEqual(repo['tip'].description(), '...')
+        self.assertEqual(repo['tip'].description(), '')
 
         test_util.rmtree(self.wc_path)
 
@@ -320,14 +320,6 @@ class MapTests(test_util.TestBase):
         commands.clone(ui, test_util.fileurl(self.repo_path), self.wc_path)
 
         self.assertEqual(self.repo['tip'].description(), 'blyf')
-
-        test_util.rmtree(self.wc_path)
-
-        ui = self.ui(stupid)
-        ui.setconfig('hgsubversion', 'defaultmessage', '')
-        commands.clone(ui, test_util.fileurl(self.repo_path), self.wc_path)
-
-        self.assertEqual(self.repo['tip'].description(), '')
 
 
     def test_empty_log_message_stupid(self):
