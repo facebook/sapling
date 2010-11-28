@@ -638,7 +638,7 @@ class gitsubrepo(object):
         if stream:
             return p.stdout, None
 
-        retdata = p.stdout.read()
+        retdata = p.stdout.read().strip()
         # wait for the child to exit to avoid race condition.
         p.wait()
 
@@ -659,14 +659,14 @@ class gitsubrepo(object):
         return retdata, p.returncode
 
     def _gitstate(self):
-        return self._gitcommand(['rev-parse', 'HEAD']).strip()
+        return self._gitcommand(['rev-parse', 'HEAD'])
 
     def _githavelocally(self, revision):
         out, code = self._gitdir(['cat-file', '-e', revision])
         return code == 0
 
     def _gitisancestor(self, r1, r2):
-        base = self._gitcommand(['merge-base', r1, r2]).strip()
+        base = self._gitcommand(['merge-base', r1, r2])
         return base == r1
 
     def _gitbranchmap(self):
@@ -677,8 +677,6 @@ class gitsubrepo(object):
         out = self._gitcommand(['branch', '-a', '--no-color',
                                 '--verbose', '--abbrev=40'])
         for line in out.split('\n'):
-            if not line:
-                continue
             if line[2:].startswith('(no branch)'):
                 continue
             branch, revision = line[2:].split()[:2]
@@ -708,14 +706,13 @@ class gitsubrepo(object):
         # docs say --porcelain flag is future-proof format
         changed = self._gitcommand(['status', '--porcelain',
                                     '--untracked-files=no'])
-        return bool(changed.strip())
+        return bool(changed)
 
     def get(self, state):
         source, revision, kind = state
         self._fetch(source, revision)
         # if the repo was set to be bare, unbare it
-        if self._gitcommand(['config', '--get', 'core.bare']
-                            ).strip() == 'true':
+        if self._gitcommand(['config', '--bool', 'core.bare']) == 'true':
             self._gitcommand(['config', 'core.bare', 'false'])
             if self._gitstate() == revision:
                 self._gitcommand(['reset', '--hard', 'HEAD'])
@@ -763,8 +760,7 @@ class gitsubrepo(object):
     def merge(self, state):
         source, revision, kind = state
         self._fetch(source, revision)
-        base = self._gitcommand(['merge-base', revision,
-                                 self._state[1]]).strip()
+        base = self._gitcommand(['merge-base', revision, self._state[1]])
         if base == revision:
             self.get(state) # fast forward merge
         elif base != self._state[1]:
