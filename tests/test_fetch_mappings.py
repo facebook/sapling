@@ -66,7 +66,7 @@ class MapTests(test_util.TestBase):
         self.test_author_map_closing_author(True)
 
     def test_author_map_no_author(self, stupid=False):
-        self._load_fixture_and_fetch('no-author.svndump')
+        self._load_fixture_and_fetch('no-author.svndump', stupid=stupid)
         users = set(self.repo[r].user() for r in self.repo)
         expected_users = ['(no author)@%s' % self.repo.svnmeta().uuid]
         self.assertEqual(sorted(users), expected_users)
