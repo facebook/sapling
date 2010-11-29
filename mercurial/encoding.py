@@ -95,7 +95,7 @@ def tolocal(s):
     for e in ('UTF-8', fallbackencoding):
         try:
             u = s.decode(e) # attempt strict decoding
-            if u == 'UTF-8':
+            if e == 'UTF-8':
                 return localstr(s, u.encode(encoding, "replace"))
             else:
                 return localstr(u.encode('UTF-8'),
