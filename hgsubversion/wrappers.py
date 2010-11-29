@@ -54,14 +54,14 @@ def parents(orig, ui, repo, *args, **opts):
     return 0
 
 
-def incoming(orig, ui, repo, source='default', **opts):
+def incoming(orig, ui, repo, origsource='default', **opts):
     """show incoming revisions from Subversion
     """
 
-    source, revs, checkout = util.parseurl(ui.expandpath(source))
+    source, revs, checkout = util.parseurl(ui.expandpath(origsource))
     other = hg.repository(ui, source)
     if 'subversion' not in other.capabilities:
-        return orig(ui, repo, source, **opts)
+        return orig(ui, repo, origsource, **opts)
 
     svn = other.svn
     meta = repo.svnmeta(svn.uuid, svn.subdir)
