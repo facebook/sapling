@@ -274,6 +274,6 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     if subrepos:
         for subpath in ctx.substate:
             sub = ctx.sub(subpath)
-            sub.archive(archiver, prefix)
+            sub.archive(repo.ui, archiver, prefix)
 
     archiver.done()

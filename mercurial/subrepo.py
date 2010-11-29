@@ -304,13 +304,21 @@ class abstractsubrepo(object):
         """return file flags"""
         return ''
 
-    def archive(self, archiver, prefix):
-        for name in self.files():
+    def archive(self, ui, archiver, prefix):
+        files = self.files()
+        total = len(files)
+        relpath = subrelpath(self)
+        ui.progress(_('archiving (%s)') % relpath, 0,
+                    unit=_('files'), total=total)
+        for i, name in enumerate(files):
             flags = self.fileflags(name)
             mode = 'x' in flags and 0755 or 0644
             symlink = 'l' in flags
             archiver.addfile(os.path.join(prefix, self._path, name),
                              mode, symlink, self.filedata(name))
+            ui.progress(_('archiving (%s)') % relpath, i + 1,
+                        unit=_('files'), total=total)
+        ui.progress(_('archiving (%s)') % relpath, None)
 
 
 class hgsubrepo(abstractsubrepo):
@@ -373,14 +381,14 @@ class hgsubrepo(abstractsubrepo):
             self._repo.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
                                % (inst, subrelpath(self)))
 
-    def archive(self, archiver, prefix):
-        abstractsubrepo.archive(self, archiver, prefix)
+    def archive(self, ui, archiver, prefix):
+        abstractsubrepo.archive(self, ui, archiver, prefix)
 
         rev = self._state[1]
         ctx = self._repo[rev]
         for subpath in ctx.substate:
             s = subrepo(ctx, subpath)
-            s.archive(archiver, os.path.join(prefix, self._path))
+            s.archive(ui, archiver, os.path.join(prefix, self._path))
 
     def dirty(self):
         r = self._state[1]
@@ -860,7 +868,7 @@ class gitsubrepo(abstractsubrepo):
             else:
                 os.remove(path)
 
-    def archive(self, archiver, prefix):
+    def archive(self, ui, archiver, prefix):
         source, revision = self._state
         self._fetch(source, revision)
 
@@ -869,10 +877,16 @@ class gitsubrepo(abstractsubrepo):
         # and objects with many subprocess calls.
         tarstream = self._gitcommand(['archive', revision], stream=True)
         tar = tarfile.open(fileobj=tarstream, mode='r|')
-        for info in tar:
+        relpath = subrelpath(self)
+        ui.progress(_('archiving (%s)') % relpath, 0, unit=_('files'))
+        for i, info in enumerate(tar):
             archiver.addfile(os.path.join(prefix, self._relpath, info.name),
                              info.mode, info.issym(),
                              tar.extractfile(info).read())
+            ui.progress(_('archiving (%s)') % relpath, i + 1,
+                        unit=_('files'))
+        ui.progress(_('archiving (%s)') % relpath, None)
+
 
 types = {
     'hg': hgsubrepo,

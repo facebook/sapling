@@ -221,9 +221,47 @@ Status between revisions:
    z1
   +z2
 
-Test archiving to a directory tree:
+Enable progress extension for archive tests:
 
-  $ hg archive --subrepos ../archive
+  $ cp $HGRCPATH $HGRCPATH.no-progress
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > progress =
+  > [progress]
+  > assume-tty = 1
+  > delay = 0
+  > refresh = 0
+  > width = 60
+  > EOF
+
+Test archiving to a directory tree (the doubled lines in the output
+only show up in the test output, not in real usage):
+
+  $ hg archive --subrepos ../archive 2>&1 | $TESTDIR/filtercr.py
+  
+  archiving [                                           ] 0/3
+  archiving [                                           ] 0/3
+  archiving [=============>                             ] 1/3
+  archiving [=============>                             ] 1/3
+  archiving [===========================>               ] 2/3
+  archiving [===========================>               ] 2/3
+  archiving [==========================================>] 3/3
+  archiving [==========================================>] 3/3
+                                                              
+  archiving (foo) [                                     ] 0/3
+  archiving (foo) [                                     ] 0/3
+  archiving (foo) [===========>                         ] 1/3
+  archiving (foo) [===========>                         ] 1/3
+  archiving (foo) [=======================>             ] 2/3
+  archiving (foo) [=======================>             ] 2/3
+  archiving (foo) [====================================>] 3/3
+  archiving (foo) [====================================>] 3/3
+                                                              
+  archiving (foo/bar) [                                 ] 0/1
+  archiving (foo/bar) [                                 ] 0/1
+  archiving (foo/bar) [================================>] 1/1
+  archiving (foo/bar) [================================>] 1/1
+                                                              \r (esc)
   $ find ../archive | sort
   ../archive
   ../archive/.hg_archival.txt
@@ -239,7 +277,35 @@ Test archiving to a directory tree:
 
 Test archiving to zip file (unzip output is unstable):
 
-  $ hg archive --subrepos ../archive.zip
+  $ hg archive --subrepos ../archive.zip 2>&1 | $TESTDIR/filtercr.py
+  
+  archiving [                                           ] 0/3
+  archiving [                                           ] 0/3
+  archiving [=============>                             ] 1/3
+  archiving [=============>                             ] 1/3
+  archiving [===========================>               ] 2/3
+  archiving [===========================>               ] 2/3
+  archiving [==========================================>] 3/3
+  archiving [==========================================>] 3/3
+                                                              
+  archiving (foo) [                                     ] 0/3
+  archiving (foo) [                                     ] 0/3
+  archiving (foo) [===========>                         ] 1/3
+  archiving (foo) [===========>                         ] 1/3
+  archiving (foo) [=======================>             ] 2/3
+  archiving (foo) [=======================>             ] 2/3
+  archiving (foo) [====================================>] 3/3
+  archiving (foo) [====================================>] 3/3
+                                                              
+  archiving (foo/bar) [                                 ] 0/1
+  archiving (foo/bar) [                                 ] 0/1
+  archiving (foo/bar) [================================>] 1/1
+  archiving (foo/bar) [================================>] 1/1
+                                                              \r (esc)
+
+Disable progress extension and cleanup:
+
+  $ mv $HGRCPATH.no-progress $HGRCPATH
 
 Clone and test outgoing:
 
