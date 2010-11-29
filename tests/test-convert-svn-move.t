@@ -103,10 +103,13 @@ Convert files being replaced by directories
   scanning source...
   sorting...
   converting...
-  3 initial
-  2 clobber symlink
-  1 clobber1
-  0 clobber2
+  6 initial
+  5 clobber symlink
+  4 clobber1
+  3 clobber2
+  2 adddb
+  1 branch
+  0 clobberdir
 
   $ cd hg-repo
 
@@ -115,6 +118,7 @@ Manifest before
   $ hg -v manifest -r 1
   644   a
   644   d/b
+  644   d2/a
   644 @ dlink
   644 @ dlink2
   644   dlink3
@@ -124,6 +128,7 @@ Manifest after clobber1
   $ hg -v manifest -r 2
   644   a/b
   644   d/b
+  644   d2/a
   644   dlink/b
   644 @ dlink2
   644   dlink3
@@ -133,6 +138,18 @@ Manifest after clobber2
   $ hg -v manifest -r 3
   644   a/b
   644   d/b
+  644   d2/a
+  644   dlink/b
+  644 @ dlink2
+  644 @ dlink3
+
+Manifest after clobberdir
+
+  $ hg -v manifest -r 6
+  644   a/b
+  644   d/b
+  644   d2/a
+  644   d2/c
   644   dlink/b
   644 @ dlink2
   644 @ dlink3
@@ -165,20 +182,24 @@ Test convert progress bar'
   scanning [  <=>                                                             ] 2
   scanning [   <=>                                                            ] 3
   scanning [    <=>                                                           ] 4
+  scanning [     <=>                                                          ] 5
+  scanning [      <=>                                                         ] 6
+  scanning [       <=>                                                        ] 7
                                                                                   
-  converting [                                                              ] 0/4
-  getting files [==========>                                                ] 1/5
-  getting files [======================>                                    ] 2/5
-  getting files [==================================>                        ] 3/5
-  getting files [==============================================>            ] 4/5
-  getting files [==========================================================>] 5/5
+  converting [                                                              ] 0/7
+  getting files [========>                                                  ] 1/6
+  getting files [==================>                                        ] 2/6
+  getting files [============================>                              ] 3/6
+  getting files [======================================>                    ] 4/6
+  getting files [================================================>          ] 5/6
+  getting files [==========================================================>] 6/6
                                                                                   
-  converting [==============>                                               ] 1/4
+  converting [=======>                                                      ] 1/7
   scanning paths [                                                          ] 0/1
                                                                                   
   getting files [==========================================================>] 1/1
                                                                                   
-  converting [==============================>                               ] 2/4
+  converting [================>                                             ] 2/7
   scanning paths [                                                          ] 0/2
   scanning paths [============================>                             ] 1/2
                                                                                   
@@ -187,16 +208,50 @@ Test convert progress bar'
   getting files [===========================================>               ] 3/4
   getting files [==========================================================>] 4/4
                                                                                   
-  converting [=============================================>                ] 3/4
+  converting [=========================>                                    ] 3/7
   scanning paths [                                                          ] 0/1
                                                                                   
   getting files [==========================================================>] 1/1
+                                                                                  
+  converting [==================================>                           ] 4/7
+  scanning paths [                                                          ] 0/1
+                                                                                  
+  getting files [==========================================================>] 1/1
+                                                                                  
+  converting [===========================================>                  ] 5/7
+  scanning paths [                                                          ] 0/3
+  scanning paths [==================>                                       ] 1/3
+  scanning paths [=====================================>                    ] 2/3
+                                                                                  
+  getting files [======>                                                    ] 1/8
+  getting files [=============>                                             ] 2/8
+  getting files [=====================>                                     ] 3/8
+  getting files [============================>                              ] 4/8
+  getting files [===================================>                       ] 5/8
+  getting files [===========================================>               ] 6/8
+  getting files [==================================================>        ] 7/8
+  getting files [==========================================================>] 8/8
+                                                                                  
+  converting [====================================================>         ] 6/7
+  scanning paths [                                                          ] 0/1
+                                                                                  
+  getting files [======>                                                    ] 1/8
+  getting files [=============>                                             ] 2/8
+  getting files [=====================>                                     ] 3/8
+  getting files [============================>                              ] 4/8
+  getting files [===================================>                       ] 5/8
+  getting files [===========================================>               ] 6/8
+  getting files [==================================================>        ] 7/8
+  getting files [==========================================================>] 8/8
                                                                                   
   initializing destination hg-progress repository
   scanning source...
   sorting...
   converting...
-  3 initial
-  2 clobber symlink
-  1 clobber1
-  0 clobber2
+  6 initial
+  5 clobber symlink
+  4 clobber1
+  3 clobber2
+  2 adddb
+  1 branch
+  0 clobberdir

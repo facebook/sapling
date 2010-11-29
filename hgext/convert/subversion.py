@@ -656,13 +656,20 @@ class svn_source(converter_source):
                     # If the directory just had a prop change,
                     # then we shouldn't need to look for its children.
                     continue
-                elif ent.action == 'R' and parents:
+                if ent.action == 'R' and parents:
                     # If a directory is replacing a file, mark the previous
                     # file as deleted
                     pmodule, prevnum = self.revsplit(parents[0])[1:]
                     pkind = self._checkpath(entrypath, prevnum, pmodule)
                     if pkind == svn.core.svn_node_file:
                         removed.add(self.recode(entrypath))
+                    elif pkind == svn.core.svn_node_dir:
+                        # We do not know what files were kept or removed,
+                        # mark them all as changed.
+                        for childpath in self._iterfiles(pmodule, prevnum):
+                            childpath = self.getrelpath("/" + childpath)
+                            if childpath:
+                                changed.add(self.recode(childpath))
 
                 for childpath in self._iterfiles(path, revnum):
                     childpath = self.getrelpath("/" + childpath)
