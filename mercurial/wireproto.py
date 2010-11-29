@@ -76,17 +76,20 @@ class wirerepository(repo.repository):
         if not self.capable('pushkey'):
             return False
         d = self._call("pushkey",
-                      namespace=namespace, key=key, old=old, new=new)
+                       namespace=encoding.fromlocal(namespace),
+                       key=encoding.fromlocal(key),
+                       old=encoding.fromlocal(old),
+                       new=encoding.fromlocal(new))
         return bool(int(d))
 
     def listkeys(self, namespace):
         if not self.capable('pushkey'):
             return {}
-        d = self._call("listkeys", namespace=namespace)
+        d = self._call("listkeys", namespace=encoding.fromlocal(namespace))
         r = {}
         for l in d.splitlines():
             k, v = l.split('\t')
-            r[k.decode('string-escape')] = v.decode('string-escape')
+            r[encoding.tolocal(k)] = encoding.tolocal(v)
         return r
 
     def stream_out(self):
@@ -206,9 +209,9 @@ def hello(repo, proto):
     return "capabilities: %s\n" % (capabilities(repo, proto))
 
 def listkeys(repo, proto, namespace):
-    d = pushkeymod.list(repo, namespace).items()
-    t = '\n'.join(['%s\t%s' % (k.encode('string-escape'),
-                               v.encode('string-escape')) for k, v in d])
+    d = pushkeymod.list(repo, encoding.tolocal(namespace)).items()
+    t = '\n'.join(['%s\t%s' % (encoding.fromlocal(k), encoding.fromlocal(v))
+                   for k, v in d])
     return t
 
 def lookup(repo, proto, key):
@@ -221,7 +224,21 @@ def lookup(repo, proto, key):
     return "%s %s\n" % (success, r)
 
 def pushkey(repo, proto, namespace, key, old, new):
-    r = pushkeymod.push(repo, namespace, key, old, new)
+    # compatibility with pre-1.8 clients which were accidentally
+    # sending raw binary nodes rather than utf-8-encoded hex
+    if len(new) == 20 and new.encode('string-escape') != new:
+        # looks like it could be a binary node
+        try:
+            u = new.decode('utf-8')
+            new = encoding.tolocal(new) # but cleanly decodes as UTF-8
+        except UnicodeDecodeError:
+            pass # binary, leave unmodified
+    else:
+        new = encoding.tolocal(new) # normal path
+
+    r = pushkeymod.push(repo,
+                        encoding.tolocal(namespace), encoding.tolocal(key),
+                        encoding.tolocal(old), new)
     return '%s\n' % int(r)
 
 def _allowstream(ui):

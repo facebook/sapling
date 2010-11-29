@@ -334,7 +334,7 @@ def reposetup(ui, repo):
             rb = remote.listkeys('bookmarks')
             for k in rb.keys():
                 if k in self._bookmarks:
-                    nr, nl = rb[k], self._bookmarks[k]
+                    nr, nl = rb[k], hex(self._bookmarks[k])
                     if nr in self:
                         cr = self[nr]
                         cl = self[nl]

@@ -214,7 +214,7 @@ test pushkeys and bookmarks
   $ hg debugpushkey --config ui.ssh="python ../dummyssh" ssh://user@dummy/remote bookmarks
   foo	1160648e36cec0054048a7edc4110c6f84fde594
   $ hg book -f foo
-  $ hg push
+  $ hg push --traceback
   pushing to ssh://user@dummy/remote
   searching for changes
   no changes found
