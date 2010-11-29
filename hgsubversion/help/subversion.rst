@@ -98,8 +98,9 @@ accepted by several Mercurial commands for specifying revisions. See
 Support for externals
 ---------------------
 
-When using a standard layout, ``svn:externals`` properties are serialized into
-a single ``.hgsvnexternals`` file having the following syntax::
+When using a standard layout, ``svn:externals`` properties are (by
+default) serialized into a single ``.hgsvnexternals`` file having the
+following syntax::
 
   [.]
    common1 http://path/to/external/svn/repo1
@@ -123,6 +124,11 @@ example above would fetch the latest revision of `repo1` into the subdirectory
 will not be pushed to the related Subversion repository, but its
 contents **will** be used to update ``svn:externals`` properties on the
 related Subversion repository.
+
+Alternatively, one can use the ``hgsubversion.externals`` in hgrc to
+specify ``subrepos`` as the externals mode. In this mode, ``.hgsub``
+and ``.hgsubstate`` files will be used instead of
+``.hgsvnexternals``. This feature requires Mercurial 1.7.1 or later.
 
 Limitations
 -----------
@@ -230,6 +236,12 @@ settings:
     pulling revisions from Subversion. This method is compatible with servers
     using very old versions of Subversion, and hgsubversion falls back to it
     when necessary.
+
+  ``hgsubversion.externals``
+    Set to ``subrepos`` to switch to subrepos-based externals support
+    (requires Mercurial 1.7.1 or later.) Default is ``svnexternals``,
+    which uses a custom hgsubversion-specific format and works on
+    older versions of Mercurial.
 
 The following options only have an effect on the initial clone of a repository:
 
