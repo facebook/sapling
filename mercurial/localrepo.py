@@ -949,6 +949,7 @@ class localrepository(repo.repository):
 
             # commit subs
             if subs or removedsubs:
+                pstate = subrepo.substate(self['.'])
                 state = wctx.substate.copy()
                 for s in sorted(subs):
                     sub = wctx.sub(s)
@@ -956,7 +957,19 @@ class localrepository(repo.repository):
                         subrepo.subrelpath(sub))
                     sr = sub.commit(cctx._text, user, date)
                     state[s] = (state[s][0], sr)
-                subrepo.writestate(self, state)
+
+                changed = False
+                if len(pstate) != len(state):
+                    changed = True
+                if not changed:
+                    for newstate in state:
+                        if state[newstate][1] != pstate[newstate]:
+                            changed = True
+                if changed:
+                    subrepo.writestate(self, state)
+                elif (changes[0] == ['.hgsubstate'] and changes[1] == [] and
+                     changes[2] == []):
+                    return None
 
             # Save commit message in case this transaction gets rolled back
             # (e.g. by a pretxncommit hook).  Leave the content alone on
