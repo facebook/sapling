@@ -206,6 +206,37 @@ test .hg_archival.txt
   abort: unknown archive type 'bogus'
   [255]
 
+enable progress extension:
+
+  $ cp $HGRCPATH $HGRCPATH.no-progress
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > progress =
+  > [progress]
+  > assume-tty = 1
+  > delay = 0
+  > refresh = 0
+  > width = 60
+  > EOF
+
+  $ hg archive ../with-progress 2>&1 | $TESTDIR/filtercr.py
+  
+  archiving [                                           ] 0/4
+  archiving [                                           ] 0/4
+  archiving [=========>                                 ] 1/4
+  archiving [=========>                                 ] 1/4
+  archiving [====================>                      ] 2/4
+  archiving [====================>                      ] 2/4
+  archiving [===============================>           ] 3/4
+  archiving [===============================>           ] 3/4
+  archiving [==========================================>] 4/4
+  archiving [==========================================>] 4/4
+                                                              \r (esc)
+
+cleanup after progress extension test:
+
+  $ cp $HGRCPATH.no-progress $HGRCPATH
+
 server errors
 
   $ cat errors.log
