@@ -1,5 +1,6 @@
 import os
 import pickle
+import sys
 import unittest
 
 # wrapped in a try/except because of weirdness in how
@@ -7,7 +8,8 @@ import unittest
 try:
     import test_util
 except ImportError:
-    from tests import test_util
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+    import test_util
 
 from mercurial import hg
 from mercurial import ui

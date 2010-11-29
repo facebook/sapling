@@ -1,5 +1,6 @@
 import os
 import pickle
+import sys
 import unittest
 
 from mercurial import hg
@@ -10,7 +11,8 @@ from mercurial import ui
 try:
     import test_util
 except ImportError:
-    from tests import test_util
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+    import test_util
 
 from hgsubversion import wrappers
 
