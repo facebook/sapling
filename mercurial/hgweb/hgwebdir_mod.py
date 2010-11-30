@@ -153,10 +153,11 @@ class hgwebdir(object):
                 # nested indexes and hgwebs
 
                 repos = dict(self.repos)
-                while virtual:
-                    real = repos.get(virtual)
+                virtualrepo = virtual
+                while virtualrepo:
+                    real = repos.get(virtualrepo)
                     if real:
-                        req.env['REPO_NAME'] = virtual
+                        req.env['REPO_NAME'] = virtualrepo
                         try:
                             repo = hg.repository(self.ui, real)
                             return hgweb(repo).run_wsgi(req)
@@ -166,16 +167,16 @@ class hgwebdir(object):
                         except error.RepoError, inst:
                             raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
 
-                    # browse subdirectories
-                    subdir = virtual + '/'
-                    if [r for r in repos if r.startswith(subdir)]:
-                        req.respond(HTTP_OK, ctype)
-                        return self.makeindex(req, tmpl, subdir)
-
-                    up = virtual.rfind('/')
+                    up = virtualrepo.rfind('/')
                     if up < 0:
                         break
-                    virtual = virtual[:up]
+                    virtualrepo = virtualrepo[:up]
+
+                # browse subdirectories
+                subdir = virtual + '/'
+                if [r for r in repos if r.startswith(subdir)]:
+                    req.respond(HTTP_OK, ctype)
+                    return self.makeindex(req, tmpl, subdir)
 
                 # prefixes not found
                 req.respond(HTTP_NOT_FOUND, ctype)

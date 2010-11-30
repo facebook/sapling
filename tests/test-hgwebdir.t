@@ -77,7 +77,7 @@ should give a 404 - repo is not published
   404 Not Found
   
   
-  error: repository c not found
+  error: repository c/file/tip/c not found
   [1]
 
 atom-log without basedir
