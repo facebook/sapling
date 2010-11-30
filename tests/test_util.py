@@ -23,6 +23,7 @@ from mercurial import hg
 from mercurial import i18n
 from mercurial import node
 from mercurial import ui
+from mercurial import util
 from mercurial import extensions
 
 try:
@@ -137,8 +138,7 @@ def requiresoption(option):
     return decorator
 
 def filtermanifest(manifest):
-    return filter(lambda x: x not in ('.hgtags', '.hgsvnexternals', ),
-                  manifest)
+    return [f for f in manifest if f not in util.ignoredfiles]
 
 def fileurl(path):
     path = os.path.abspath(path).replace(os.sep, '/')
