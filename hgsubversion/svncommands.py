@@ -17,7 +17,7 @@ import util
 import svnexternals
 
 
-def verify(ui, repo, *args, **opts):
+def verify(ui, repo, args=None, **opts):
     '''verify current revision against Subversion repository
     '''
 
