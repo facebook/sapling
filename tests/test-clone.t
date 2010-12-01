@@ -41,6 +41,12 @@ Default operation:
   checking files
   2 files, 11 changesets, 11 total revisions
 
+Invalid dest '' must abort:
+
+  $ hg clone . ''
+  abort: No such file or directory
+  [255]
+
 No update, with debug option:
 
   $ hg --debug clone -U . ../c
@@ -98,6 +104,12 @@ Use --pull:
   crosschecking files in changesets and manifests
   checking files
   2 files, 11 changesets, 11 total revisions
+
+Invalid dest '' with --pull must abort (issue2528):
+
+  $ hg clone --pull a ''
+  abort: No such file or directory
+  [255]
 
 Clone to '.':
 

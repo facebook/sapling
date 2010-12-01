@@ -203,8 +203,13 @@ changesets. You can define subsequent aliases using earlier ones::
 
 ``auth``
 """"""""
-Authentication credentials for HTTP authentication. Each line has
-the following format::
+
+Authentication credentials for HTTP authentication. This section
+allows you to store usernames and passwords for use when logging
+*into* HTTP servers. See the web_ configuration section if you want to
+configure *who* can login to your HTTP server.
+
+Each line has the following format::
 
     <name>.<argument> = <value>
 
@@ -920,7 +925,29 @@ User interface controls.
 
 ``web``
 """""""
-Web interface configuration.
+
+Web interface configuration. The settings in this section apply to
+both the builtin webserver (started by :hg:`serve`) and the script you
+run through a webserver (``hgweb.cgi`` and the derivatives for FastCGI
+and WSGI).
+
+The Mercurial webserver does no authentication (it does not prompt for
+usernames and passwords to validate *who* users are), but it does do
+authorization (it grants or denies access for *authenticated users*
+based on settings in this section). You must either configure your
+webserver to do authentication for you, or disable the authorization
+checks.
+
+For a quick setup in a trusted environment, e.g., a private LAN, where
+you want it to accept pushes from anybody, you can use the following
+command line::
+
+    $ hg --config web.allow_push=* --config web.push_ssl=False serve
+
+Note that this will allow anybody to push anything to the server and
+that this should not be used for public servers.
+
+The full set of options is:
 
 ``accesslog``
     Where to output the access log. Default is stdout.
