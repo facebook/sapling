@@ -78,10 +78,10 @@ class _demandmod(object):
         self._load()
         setattr(self._module, attr, val)
 
-def _demandimport(name, globals=None, locals=None, fromlist=None, level=None):
+def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
     if not locals or name in ignore or fromlist == ('*',):
         # these cases we can't really delay
-        if level is None:
+        if level == -1:
             return _origimport(name, globals, locals, fromlist)
         else:
             return _origimport(name, globals, locals, fromlist, level)
@@ -91,7 +91,10 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=None):
             base, rest = name.split('.', 1)
             # email.__init__ loading email.mime
             if globals and globals.get('__name__', None) == base:
-                return _origimport(name, globals, locals, fromlist)
+                if level != -1:
+                    return _origimport(name, globals, locals, fromlist, level)
+                else:
+                    return _origimport(name, globals, locals, fromlist)
             # if a is already demand-loaded, add b to its submodule list
             if base in locals:
                 if isinstance(locals[base], _demandmod):
@@ -99,7 +102,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=None):
                 return locals[base]
         return _demandmod(name, globals, locals)
     else:
-        if level is not None:
+        if level != -1:
             # from . import b,c,d or from .a import b,c,d
             return _origimport(name, globals, locals, fromlist, level)
         # from a import b,c,d
