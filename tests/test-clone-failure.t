@@ -39,7 +39,6 @@ Source of wrong type
   >     rm a
   > else
   >     echo "abort: repository a not found!"
-  >     echo 255
   > fi
   abort: repository a not found!
 
