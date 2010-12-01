@@ -399,6 +399,13 @@ Direct clone from bundle (all-history)
   
   $ rm -r full-clone
 
+When cloning from a non-copiable repository into '', do not
+recurse infinitely (issue 2528)
+
+  $ hg clone full.hg ''
+  abort: No such file or directory
+  [255]
+
 test for http://mercurial.selenic.com/bts/issue216
 
 Unbundle incremental bundles into fresh empty in one go

@@ -841,7 +841,7 @@ def makedirs(name, mode=None):
     except OSError, err:
         if err.errno == errno.EEXIST:
             return
-        if err.errno != errno.ENOENT:
+        if not name or err.errno != errno.ENOENT:
             raise
     parent = os.path.abspath(os.path.dirname(name))
     makedirs(parent, mode)
