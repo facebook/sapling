@@ -11,5 +11,5 @@ fred = <unloaded module 're'>
 fred.sub = <function sub at 0x?>
 fred = <proxied module 're'>
 re = <unloaded module 'sys'>
-re.stderr = <open file '<stderr>', mode 'w' at 0x?>
+re.stderr = <open file '<whatever>', mode 'w' at 0x?>
 re = <proxied module 'sys'>
