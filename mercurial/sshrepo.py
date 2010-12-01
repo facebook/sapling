@@ -91,10 +91,11 @@ class sshrepository(wireproto.wirerepository):
             size = util.fstat(self.pipee).st_size
             if size == 0:
                 break
-            l = self.pipee.readline()
-            if not l:
+            s = self.pipee.read(size)
+            if not s:
                 break
-            self.ui.status(_("remote: "), l)
+            for l in s.splitlines():
+                self.ui.status(_("remote: "), l, '\n')
 
     def _abort(self, exception):
         self.cleanup()
