@@ -203,8 +203,13 @@ changesets. You can define subsequent aliases using earlier ones::
 
 ``auth``
 """"""""
-Authentication credentials for HTTP authentication. Each line has
-the following format::
+
+Authentication credentials for HTTP authentication. This section
+allows you to store usernames and passwords for use when logging
+*into* HTTP servers. See the web_ configuration section if you want to
+configure *who* can login to your HTTP server.
+
+Each line has the following format::
 
     <name>.<argument> = <value>
 
