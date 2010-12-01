@@ -833,6 +833,7 @@ class atomictempfile(object):
 
 def makedirs(name, mode=None):
     """recursive directory creation with parent mode inheritance"""
+    parent = os.path.abspath(os.path.dirname(name))
     try:
         os.mkdir(name)
         if mode is not None:
@@ -841,9 +842,8 @@ def makedirs(name, mode=None):
     except OSError, err:
         if err.errno == errno.EEXIST:
             return
-        if not name or err.errno != errno.ENOENT:
+        if not name or parent == name or err.errno != errno.ENOENT:
             raise
-    parent = os.path.abspath(os.path.dirname(name))
     makedirs(parent, mode)
     makedirs(name, mode)
 
