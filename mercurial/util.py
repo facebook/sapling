@@ -1099,7 +1099,7 @@ def parsedate(date, formats=None, defaults=None):
         if not defaults:
             defaults = {}
         now = makedate()
-        for part in "d mb yY HI M S".split():
+        for part in ("d", "mb", "yY", "HI", "M", "S"):
             if part not in defaults:
                 if part[0] in "HMS":
                     defaults[part] = "00"
@@ -1146,7 +1146,7 @@ def matchdate(date):
 
     def upper(date):
         d = dict(mb="12", HI="23", M="59", S="59")
-        for days in "31 30 29".split():
+        for days in ("31", "30", "29"):
             try:
                 d["d"] = days
                 return parsedate(date, extendeddateformats, d)[0]

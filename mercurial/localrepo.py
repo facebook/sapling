@@ -733,7 +733,7 @@ class localrepository(repo.repository):
         self._branchcachetip = None
 
     def invalidate(self):
-        for a in "changelog manifest".split():
+        for a in ("changelog", "manifest"):
             if a in self.__dict__:
                 delattr(self, a)
         self.invalidatecaches()

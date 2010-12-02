@@ -230,7 +230,8 @@ class dirstate(object):
             self._pl = p
 
     def invalidate(self):
-        for a in "_map _copymap _foldmap _branch _pl _dirs _ignore".split():
+        for a in ("_map", "_copymap", "_foldmap", "_branch", "_pl", "_dirs",
+                "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
         self._dirty = False
