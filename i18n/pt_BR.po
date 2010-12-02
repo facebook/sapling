@@ -2446,6 +2446,18 @@ msgstr ""
 "  quebras de linha seja intencional."
 
 msgid ""
+"The ``win32text.forbid*`` hooks provided by the win32text extension\n"
+"have been unified into a single hook named ``eol.hook``. The hook will\n"
+"lookup the expected line endings from the ``.hgeol`` file, which means\n"
+"you must migrate to a ``.hgeol`` file first before using the hook."
+msgstr ""
+"Os ganchos ``win32text.forbid*`` fornecidos pela extensão win32text\n"
+"foram unificados em um único gancho chamado ``eol.hook``. Esse\n"
+"gancho procura pela configuração de quebra de linha no arquivo\n"
+"``.hgeol``, de modo que você precisa migrar para um arquivo\n"
+"``.hgeol`` para poder usar o gancho."
+
+msgid ""
 "See :hg:`help patterns` for more information about the glob patterns\n"
 "used.\n"
 msgstr ""
@@ -3468,12 +3480,12 @@ msgstr ""
 msgid ""
 "The default template mappings (view with :hg:`kwdemo -d`) can be\n"
 "replaced with customized keywords and templates. Again, run\n"
-":hg:`kwdemo` to control the results of your config changes."
+":hg:`kwdemo` to control the results of your configuration changes."
 msgstr ""
 "Os mapeamentos de modelo padrões (veja com :hg:`kwdemo -d`) podem\n"
 "ser substituídos com palavras chave customizáveis e modelos.\n"
 "Novamente, execute :hg:`kwdemo` para controlar os resultados de\n"
-" suas mudanças na configuração."
+"suas mudanças na configuração."
 
 msgid ""
 "Before changing/disabling active keywords, run :hg:`kwshrink` to avoid\n"
@@ -4030,6 +4042,18 @@ msgstr "a fila de patches agora está vazia\n"
 
 msgid "cannot refresh a revision with children"
 msgstr "não se pode renovar uma revisão com filhos"
+
+#, python-format
+msgid "warning: not refreshing %s\n"
+msgstr "aviso: %s não será atualizado\n"
+
+#, python-format
+msgid "warning: not adding %s\n"
+msgstr "aviso: %s não será adicionado\n"
+
+#, python-format
+msgid "warning: not removing %s\n"
+msgstr "aviso: %s não será removido\n"
 
 msgid "refresh interrupted while patch was popped! (revert --all, qpush to recover)\n"
 msgstr "renovação interrompida enquanto o patch foi desempilhado! (revert --all, qpush para recuperar)\n"
@@ -14735,6 +14759,10 @@ msgstr "repositório %s"
 msgid "working directory of %s"
 msgstr "diretório de trabalho de %s"
 
+#, python-format
+msgid "warning: can't find ancestor for '%s' copied from '%s'!\n"
+msgstr "aviso: não é possível encontrar o ancestral de '%s' copiado a partir de '%s'!\n"
+
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr "não é possível consolidar parcialmente uma mesclagem (não especifique arquivos ou padrões)"
 
@@ -15651,6 +15679,10 @@ msgstr "não é possível criar novo repositório http estático"
 #, python-format
 msgid "invalid entry in fncache, line %s"
 msgstr "entrada inválida na fncache, linha %s"
+
+#, python-format
+msgid "warning: subrepo spec file %s not found\n"
+msgstr "aviso: arquivo spec de sub-repositório %s não encontrado\n"
 
 #, python-format
 msgid "subrepo spec file %s not found"

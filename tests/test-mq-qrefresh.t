@@ -550,9 +550,7 @@ test when deleting
   $ hg qrefresh
   warning: not removing .hgsub
   warning: not removing .hgsubstate
-  refresh interrupted while patch was popped! (revert --all, qpush to recover)
-  abort: No such file or directory: $TESTTMP/repo-2499/.hgsub
-  [255]
+  warning: subrepo spec file .hgsub not found
   $ hg status
   ! .hgsub
   ! .hgsubstate

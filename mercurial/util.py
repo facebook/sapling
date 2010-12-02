@@ -833,6 +833,7 @@ class atomictempfile(object):
 
 def makedirs(name, mode=None):
     """recursive directory creation with parent mode inheritance"""
+    parent = os.path.abspath(os.path.dirname(name))
     try:
         os.mkdir(name)
         if mode is not None:
@@ -841,9 +842,8 @@ def makedirs(name, mode=None):
     except OSError, err:
         if err.errno == errno.EEXIST:
             return
-        if not name or err.errno != errno.ENOENT:
+        if not name or parent == name or err.errno != errno.ENOENT:
             raise
-    parent = os.path.abspath(os.path.dirname(name))
     makedirs(parent, mode)
     makedirs(name, mode)
 
@@ -1015,7 +1015,11 @@ def makedate():
         tz = time.altzone
     else:
         tz = time.timezone
-    return time.mktime(lt), tz
+    t = time.mktime(lt)
+    if t < 0:
+        hint = _("check your clock")
+        raise Abort(_("negative timestamp: %d") % t, hint=hint)
+    return t, tz
 
 def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     """represent a (unixtime, offset) tuple as a localized time.
@@ -1116,6 +1120,8 @@ def parsedate(date, formats=None, defaults=None):
     # to UTC+14
     if abs(when) > 0x7fffffff:
         raise Abort(_('date exceeds 32 bits: %d') % when)
+    if when < 0:
+        raise Abort(_('negative date value: %d') % when)
     if offset < -50400 or offset > 43200:
         raise Abort(_('impossible time zone offset: %d') % offset)
     return when, offset

@@ -33,7 +33,8 @@ This extension is not needed for:
 Note that there are some limitations on using this extension:
 
 - You should use single encoding in one repository.
-
+- If the repository path ends with 0x5c, .hg/hgrc cannot be read.
+- win32mbcs is not compatible with fixutf8 extention.
 
 By default, win32mbcs uses encoding.encoding decided by Mercurial.
 You can specify the encoding by config option::
@@ -48,7 +49,7 @@ import os, sys
 from mercurial.i18n import _
 from mercurial import util, encoding
 
-_encoding = None                                # see reposetup()
+_encoding = None                                # see extsetup
 
 def decode(arg):
     if isinstance(arg, str):
@@ -136,7 +137,7 @@ problematic_encodings = '''big5 big5-tw csbig5 big5hkscs big5-hkscs
  sjis s_jis shift_jis_2004 shiftjis2004 sjis_2004 sjis2004
  shift_jisx0213 shiftjisx0213 sjisx0213 s_jisx0213 950 cp950 ms950 '''
 
-def reposetup(ui, repo):
+def extsetup(ui):
     # TODO: decide use of config section for this extension
     if not os.path.supports_unicode_filenames:
         ui.warn(_("[win32mbcs] cannot activate on this platform.\n"))
@@ -149,6 +150,10 @@ def reposetup(ui, repo):
         for f in funcs.split():
             wrapname(f, wrapper)
         wrapname("mercurial.osutil.listdir", wrapperforlistdir)
-        ui.debug("[win32mbcs] activated with encoding: %s\n"
-                 % _encoding)
+        # Check sys.args manually instead of using ui.debug() because
+        # command line options is not yet applied when
+        # extensions.loadall() is called.
+        if '--debug' in sys.argv:
+            ui.write("[win32mbcs] activated with encoding: %s\n"
+                     % _encoding)
 

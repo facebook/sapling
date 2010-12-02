@@ -56,19 +56,19 @@ should fail
   404 Not Found
   
   
-  error: repository circle not found
+  error: repository circle/al/file/tip/a not found
   [1]
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/circle/b/file/tip/a?style=raw'
   404 Not Found
   
   
-  error: repository circle not found
+  error: repository circle/b/file/tip/a not found
   [1]
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/circle/c/file/tip/a?style=raw'
   404 Not Found
   
   
-  error: repository circle not found
+  error: repository circle/c/file/tip/a not found
   [1]
 
 collections errors

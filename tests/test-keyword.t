@@ -553,7 +553,8 @@ Copy ignored file to ignored file: no overwriting
   $ hg forget i
   $ rm i
 
-cp symlink (becomes regular file), and hg copy after
+cp symlink file; hg cp -A symlink file (part1)
+- copied symlink points to kwfile: overwrite
 
   $ cp sym i
   $ ls -l i
@@ -601,6 +602,26 @@ Status after rollback:
   A c
   $ hg update --clean
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+cp symlink file; hg cp -A symlink file (part2)
+- copied symlink points to kw ignored file: do not overwrite
+
+  $ cat a > i
+  $ ln -s i symignored
+  $ hg commit -Am 'fake expansion in ignored and symlink' i symignored
+  $ cp symignored x
+  $ hg copy --after --verbose symignored x
+  copying symignored to x
+  $ head -n 1 x
+  expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
+  $ hg forget x
+  $ rm x
+
+  $ hg rollback
+  rolling back to revision 1 (undo commit)
+  $ hg update --clean
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm i symignored
 
 Custom keywordmaps as argument to kwdemo
 

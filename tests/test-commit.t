@@ -22,6 +22,9 @@ commit date test
   $ hg commit -d '111111111111 0' -m commit-7
   abort: date exceeds 32 bits: 111111111111
   [255]
+  $ hg commit -d '-7654321 3600' -m commit-7
+  abort: negative date value: -7654321
+  [255]
 
 commit added file that has been deleted
 

@@ -86,7 +86,7 @@ from mercurial import commands, context, cmdutil, dispatch, filelog, extensions
 from mercurial import localrepo, match, patch, templatefilters, templater, util
 from mercurial.hgweb import webcommands
 from mercurial.i18n import _
-import re, shutil, tempfile
+import os, re, shutil, tempfile
 
 commands.optionalrepo += ' kwdemo'
 
@@ -570,17 +570,31 @@ def reposetup(ui, repo):
     def kw_copy(orig, ui, repo, pats, opts, rename=False):
         '''Wraps cmdutil.copy so that copy/rename destinations do not
         contain expanded keywords.
-        Note that the source may also be a symlink as:
+        Note that the source of a regular file destination may also be a
+        symlink:
         hg cp sym x                -> x is symlink
         cp sym x; hg cp -A sym x   -> x is file (maybe expanded keywords)
-        '''
+        For the latter we have to follow the symlink to find out whether its
+        target is configured for expansion and we therefore must unexpand the
+        keywords in the destination.'''
         orig(ui, repo, pats, opts, rename)
         if opts.get('dry_run'):
             return
         wctx = repo[None]
+        cwd = repo.getcwd()
+
+        def haskwsource(dest):
+            '''Returns true if dest is a regular file and configured for
+            expansion or a symlink which points to a file configured for
+            expansion. '''
+            source = repo.dirstate.copied(dest)
+            if 'l' in wctx.flags(source):
+                source = util.canonpath(repo.root, cwd,
+                                        os.path.realpath(source))
+            return kwt.match(source)
+
         candidates = [f for f in repo.dirstate.copies() if
-                      kwt.match(repo.dirstate.copied(f)) and
-                      not 'l' in wctx.flags(f)]
+                      not 'l' in wctx.flags(f) and haskwsource(f)]
         kwt.overwrite(wctx, candidates, False, False)
 
     def kw_dorecord(orig, ui, repo, commitfunc, *pats, **opts):
