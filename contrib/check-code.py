@@ -8,6 +8,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re, glob, os, sys
+import keyword
 import optparse
 
 def repquote(m):
@@ -136,6 +137,8 @@ pypats = [
     (r'(?<!def)\s+(callable)\(',
      "callable not available in Python 3, use hasattr(f, '__call__')"),
     (r'if\s.*\selse', "if ... else form not available in Python 2.4"),
+    (r'^\s*(%s)\s\s' % '|'.join(keyword.kwlist),
+     "gratuitous whitespace after Python keyword"),
     (r'([\(\[]\s\S)|(\S\s[\)\]])', "gratuitous whitespace in () or []"),
 #    (r'\s\s=', "gratuitous whitespace before ="),
     (r'[^>< ](\+=|-=|!=|<>|<=|>=|<<=|>>=)\S',
