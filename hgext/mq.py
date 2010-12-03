@@ -1076,7 +1076,7 @@ class queue(object):
 
             if move:
                 if not patch:
-                    raise  util.Abort(_("please specify the patch to move"))
+                    raise util.Abort(_("please specify the patch to move"))
                 for i, rpn in enumerate(self.full_series[start:]):
                     # strip markers for patch guards
                     if self.guard_re.split(rpn, 1)[0] == patch:

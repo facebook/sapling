@@ -1220,7 +1220,7 @@ class localrepository(repo.repository):
     def heads(self, start=None):
         heads = self.changelog.heads(start)
         # sort the output in rev descending order
-        return  sorted(heads, key=self.changelog.rev, reverse=True)
+        return sorted(heads, key=self.changelog.rev, reverse=True)
 
     def branchheads(self, branch=None, start=None, closed=False):
         '''return a (possibly filtered) list of heads for the given branch

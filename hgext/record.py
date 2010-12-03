@@ -344,10 +344,10 @@ def filterpatch(ui, chunks):
             # new hunk
             if resp_file[0] is None and resp_all[0] is None:
                 chunk.pretty(ui)
-            r = total == 1 and prompt(_('record this change to %r?') %
-                                      chunk.filename()) \
-                           or  prompt(_('record change %d/%d to %r?') %
-                                      (pos, total, chunk.filename()))
+            r = (total == 1
+                 and prompt(_('record this change to %r?') % chunk.filename())
+                 or prompt(_('record change %d/%d to %r?') %
+                           (pos, total, chunk.filename())))
             if r:
                 if fixoffset:
                     chunk = copy.copy(chunk)
