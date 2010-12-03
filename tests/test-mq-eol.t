@@ -141,3 +141,67 @@ push again without LF and compare revisions
   $ hg qpop
   popping eol.diff
   patch queue now empty
+  $ cd ..
+
+
+Test .rej file EOL are left unchanged
+
+  $ hg init testeol
+  $ cd testeol
+  $ python -c "file('a', 'wb').write('1\r\n2\r\n3\r\n4')"
+  $ hg ci -Am adda
+  adding a
+  $ python -c "file('a', 'wb').write('1\r\n2\r\n33\r\n4')"
+  $ hg qnew patch1
+  $ hg qpop
+  popping patch1
+  patch queue now empty
+  $ python -c "file('a', 'wb').write('1\r\n22\r\n33\r\n4')"
+  $ hg ci -m changea
+
+  $ hg --config 'patch.eol=LF' qpush
+  applying patch1
+  patching file a
+  Hunk #1 FAILED at 0
+  1 out of 1 hunks FAILED -- saving rejects to file a.rej
+  patch failed, unable to continue (try -v)
+  patch failed, rejects left in working dir
+  errors during apply, please fix and refresh patch1
+  [2]
+  $ hg qpop
+  popping patch1
+  patch queue now empty
+  $ cat a.rej
+  --- a
+  +++ a
+  @@ -1,4 +1,4 @@
+   1\r (esc)
+   2\r (esc)
+  -3\r (esc)
+  +33\r (esc)
+   4
+  \ No newline at end of file
+
+  $ hg --config 'patch.eol=auto' qpush
+  applying patch1
+  patching file a
+  Hunk #1 FAILED at 0
+  1 out of 1 hunks FAILED -- saving rejects to file a.rej
+  patch failed, unable to continue (try -v)
+  patch failed, rejects left in working dir
+  errors during apply, please fix and refresh patch1
+  [2]
+  $ hg qpop
+  popping patch1
+  patch queue now empty
+  $ cat a.rej
+  --- a
+  +++ a
+  @@ -1,4 +1,4 @@
+   1\r (esc)
+   2\r (esc)
+  -3\r (esc)
+  +33\r (esc)
+   4
+  \ No newline at end of file
+  $ cd ..
