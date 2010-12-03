@@ -40,7 +40,7 @@ def get_opts(opts):
         if longopt:
             allopts.append("--%s" % longopt)
         desc += default and _(" (default: %s)") % default or ""
-        yield(", ".join(allopts), desc)
+        yield (", ".join(allopts), desc)
 
 def get_cmd(cmd, cmdtable):
     d = {}

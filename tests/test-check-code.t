@@ -34,7 +34,7 @@
    gratuitous whitespace in () or []
   ./wrong.py:2:
    >     del(arg2)
-   del isn't a function
+   Python keyword is not a function
   ./wrong.py:3:
    >     return ( 5+6, 9)
    missing whitespace in expression
