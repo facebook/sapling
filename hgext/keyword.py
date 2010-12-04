@@ -101,6 +101,13 @@ restricted = 'merge kwexpand kwshrink record qrecord resolve transplant'
 # names of extensions using dorecord
 recordextensions = 'record'
 
+colortable = {
+    'kwfiles.enabled': 'green bold',
+    'kwfiles.enabledunknown': 'green',
+    'kwfiles.ignored': 'bold',
+    'kwfiles.ignoredunknown': 'none'
+}
+
 # date like in cvs' $Date
 utcdate = lambda x: util.datestr((x[0], 0), '%Y/%m/%d %H:%M:%S')
 # date like in svn's $Date
@@ -110,7 +117,6 @@ svnutcdate = lambda x: util.datestr((x[0], 0), '%Y-%m-%d %H:%M:%SZ')
 
 # make keyword tools accessible
 kwtools = {'templater': None, 'hgcmd': ''}
-
 
 def _defaultkwmaps(ui):
     '''Returns default keywordmaps according to keywordset configuration.'''
@@ -447,10 +453,12 @@ def files(ui, repo, *pats, **opts):
     if opts.get('all') or opts.get('ignore'):
         showfiles += ([f for f in files if f not in kwfiles],
                       [f for f in unknown if f not in kwunknown])
-    for char, filenames in zip('KkIi', showfiles):
+    kwlabels = 'enabled enabledunknown ignored ignoredunknown'.split()
+    kwstates = zip('KkIi', showfiles, kwlabels)
+    for char, filenames, kwstate in kwstates:
         fmt = (opts.get('all') or ui.verbose) and '%s %%s\n' % char or '%s\n'
         for f in filenames:
-            ui.write(fmt % repo.pathto(f, cwd))
+            ui.write(fmt % repo.pathto(f, cwd), label='kwfiles.' + kwstate)
 
 def shrink(ui, repo, *pats, **opts):
     '''revert expanded keywords in the working directory
