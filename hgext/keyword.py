@@ -103,6 +103,7 @@ recordextensions = 'record'
 
 colortable = {
     'kwfiles.enabled': 'green bold',
+    'kwfiles.deleted': 'cyan bold underline',
     'kwfiles.enabledunknown': 'green',
     'kwfiles.ignored': 'bold',
     'kwfiles.ignoredunknown': 'none'
@@ -445,16 +446,17 @@ def files(ui, repo, *pats, **opts):
         files = sorted(modified + added + clean)
     wctx = repo[None]
     kwfiles = kwt.iskwfile(files, wctx)
+    kwdeleted = kwt.iskwfile(deleted, wctx)
     kwunknown = kwt.iskwfile(unknown, wctx)
     if not opts.get('ignore') or opts.get('all'):
-        showfiles = kwfiles, kwunknown
+        showfiles = kwfiles, kwdeleted, kwunknown
     else:
-        showfiles = [], []
+        showfiles = [], [], []
     if opts.get('all') or opts.get('ignore'):
         showfiles += ([f for f in files if f not in kwfiles],
                       [f for f in unknown if f not in kwunknown])
-    kwlabels = 'enabled enabledunknown ignored ignoredunknown'.split()
-    kwstates = zip('KkIi', showfiles, kwlabels)
+    kwlabels = 'enabled deleted enabledunknown ignored ignoredunknown'.split()
+    kwstates = zip('K!kIi', showfiles, kwlabels)
     for char, filenames, kwstate in kwstates:
         fmt = (opts.get('all') or ui.verbose) and '%s %%s\n' % char or '%s\n'
         for f in filenames:
