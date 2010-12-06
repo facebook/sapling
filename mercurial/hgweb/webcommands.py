@@ -550,7 +550,8 @@ def annotate(web, req, tmpl):
                    "targetline": targetline,
                    "line": l,
                    "lineid": "l%d" % (lineno + 1),
-                   "linenumber": "% 6d" % (lineno + 1)}
+                   "linenumber": "% 6d" % (lineno + 1),
+                   "revdate": f.date()}
 
     return tmpl("fileannotate",
                 file=f,
