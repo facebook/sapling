@@ -275,7 +275,7 @@ static int diff(struct line *a, int an, struct line *b, int bn,
 		/* sentinel end hunk */
 		curr->next = (struct hunk *)malloc(sizeof(struct hunk));
 		if (!curr->next)
-			return NULL;
+			return -1;
 		curr = curr->next;
 		curr->a1 = curr->a2 = an;
 		curr->b1 = curr->b2 = bn;
