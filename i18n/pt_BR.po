@@ -6911,15 +6911,19 @@ msgstr ""
 msgid "Note that there are some limitations on using this extension:"
 msgstr "Note que há algumas limitações no uso desta extensão:"
 
-msgid "- You should use single encoding in one repository."
-msgstr "- Você deve usar uma única codificação em um repositório."
+msgid ""
+"- You should use single encoding in one repository.\n"
+"- If the repository path ends with 0x5c, .hg/hgrc cannot be read.\n"
+"- win32mbcs is not compatible with fixutf8 extention."
+msgstr ""
+"- Você deve usar uma única codificação por repositório.\n"
+"- Se o caminho do repositório for terminado por 0x5c, .hg/hgrc não poderá ser lido.\n"
+"- win32mbcs não é compatível com a extensão fixutf8."
 
 msgid ""
-"\n"
 "By default, win32mbcs uses encoding.encoding decided by Mercurial.\n"
 "You can specify the encoding by config option::"
 msgstr ""
-"\n"
 "Por padrão, win32mbcs usa a configuração encoding.encoding do Mercurial.\n"
 "Você pode especificar a codificação através da opção de configuração::"
 
@@ -9870,7 +9874,7 @@ msgstr "inicia um servidor web auto-suficiente"
 
 msgid ""
 "    Start a local HTTP repository browser and pull server. You can use\n"
-"    this for ad-hoc sharing and browing of repositories. It is\n"
+"    this for ad-hoc sharing and browsing of repositories. It is\n"
 "    recommended to use a real web server to serve a repository for\n"
 "    longer periods of time."
 msgstr ""
@@ -15913,6 +15917,13 @@ msgstr "Hardlinks não suportados"
 msgid "could not symlink to %r: %s"
 msgstr "impossível criar link simbólico para %r: %s"
 
+msgid "check your clock"
+msgstr "verifique seu relógio"
+
+#, python-format
+msgid "negative timestamp: %d"
+msgstr "timestamp negativo: %d"
+
 #, python-format
 msgid "invalid date: %r"
 msgstr "data inválida: %r"
@@ -15920,6 +15931,10 @@ msgstr "data inválida: %r"
 #, python-format
 msgid "date exceeds 32 bits: %d"
 msgstr "data supera 32 bit: %d"
+
+#, python-format
+msgid "negative date value: %d"
+msgstr "valor de data negativo: %d"
 
 #, python-format
 msgid "impossible time zone offset: %d"
@@ -16154,3 +16169,7 @@ msgstr "o push falhou:"
 
 msgid "push failed (unexpected response):"
 msgstr "o push falhou (resposta inesperada):"
+
+msgid "- You should use single encoding in one repository."
+msgstr "- Você deve usar uma única codificação em um repositório."
+
