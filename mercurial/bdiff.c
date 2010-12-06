@@ -57,12 +57,10 @@ struct pos {
 	int pos, len;
 };
 
+struct hunk;
 struct hunk {
 	int a1, a2, b1, b2;
-};
-
-struct hunklist {
-	struct hunk *base, *head;
+	struct hunk *next;
 };
 
 int splitlines(const char *a, int len, struct line **lr)
@@ -223,8 +221,8 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 	return mk + mb;
 }
 
-static void recurse(struct line *a, struct line *b, struct pos *pos,
-		    int a1, int a2, int b1, int b2, struct hunklist *l)
+static struct hunk *recurse(struct line *a, struct line *b, struct pos *pos,
+			    int a1, int a2, int b1, int b2, struct hunk *l)
 {
 	int i, j, k;
 
@@ -232,51 +230,66 @@ static void recurse(struct line *a, struct line *b, struct pos *pos,
 		/* find the longest match in this chunk */
 		k = longest_match(a, b, pos, a1, a2, b1, b2, &i, &j);
 		if (!k)
-			return;
+			return l;
 
 		/* and recurse on the remaining chunks on either side */
-		recurse(a, b, pos, a1, i, b1, j, l);
-		l->head->a1 = i;
-		l->head->a2 = i + k;
-		l->head->b1 = j;
-		l->head->b2 = j + k;
-		l->head++;
-		/* tail-recursion didn't happen, so doing equivalent iteration */
+		l = recurse(a, b, pos, a1, i, b1, j, l);
+		if (!l)
+			return NULL;
+
+		l->next = (struct hunk *)malloc(sizeof(struct hunk));
+		if (!l->next)
+			return NULL;
+
+		l = l->next;
+		l->a1 = i;
+		l->a2 = i + k;
+		l->b1 = j;
+		l->b2 = j + k;
+		l->next = NULL;
+
+		/* tail-recursion didn't happen, so do equivalent iteration */
 		a1 = i + k;
 		b1 = j + k;
 	}
 }
 
-static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
+static int diff(struct line *a, int an, struct line *b, int bn,
+		 struct hunk *base)
 {
-	struct hunklist l;
 	struct hunk *curr;
 	struct pos *pos;
-	int t;
+	int t, count = 0;
 
 	/* allocate and fill arrays */
 	t = equatelines(a, an, b, bn);
 	pos = (struct pos *)calloc(bn ? bn : 1, sizeof(struct pos));
-	/* we can't have more matches than lines in the shorter file */
-	l.head = l.base = (struct hunk *)malloc(sizeof(struct hunk) *
-	                                        ((an<bn ? an:bn) + 1));
 
-	if (pos && l.base && t) {
+	if (pos && t) {
 		/* generate the matching block list */
-		recurse(a, b, pos, 0, an, 0, bn, &l);
-		l.head->a1 = l.head->a2 = an;
-		l.head->b1 = l.head->b2 = bn;
-		l.head++;
+
+		curr = recurse(a, b, pos, 0, an, 0, bn, base);
+		if (!curr)
+			return -1;
+
+		/* sentinel end hunk */
+		curr->next = (struct hunk *)malloc(sizeof(struct hunk));
+		if (!curr->next)
+			return NULL;
+		curr = curr->next;
+		curr->a1 = curr->a2 = an;
+		curr->b1 = curr->b2 = bn;
+		curr->next = NULL;
 	}
 
 	free(pos);
 
 	/* normalize the hunk list, try to push each hunk towards the end */
-	for (curr = l.base; curr != l.head; curr++) {
-		struct hunk *next = curr + 1;
+	for (curr = base->next; curr; curr = curr->next) {
+		struct hunk *next = curr->next;
 		int shift = 0;
 
-		if (next == l.head)
+		if (!next)
 			break;
 
 		if (curr->a2 == next->a1)
@@ -297,16 +310,26 @@ static struct hunklist diff(struct line *a, int an, struct line *b, int bn)
 		next->a1 += shift;
 	}
 
-	return l;
+	for (curr = base->next; curr; curr = curr->next)
+		count++;
+	return count;
+}
+
+static void freehunks(struct hunk *l)
+{
+	struct hunk *n;
+	for (; l; l = n) {
+		n = l->next;
+		free(l);
+	}
 }
 
 static PyObject *blocks(PyObject *self, PyObject *args)
 {
 	PyObject *sa, *sb, *rl = NULL, *m;
 	struct line *a, *b;
-	struct hunklist l = {NULL, NULL};
-	struct hunk *h;
-	int an, bn, pos = 0;
+	struct hunk l, *h;
+	int an, bn, count, pos = 0;
 
 	if (!PyArg_ParseTuple(args, "SS:bdiff", &sa, &sb))
 		return NULL;
@@ -317,12 +340,16 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 	if (!a || !b)
 		goto nomem;
 
-	l = diff(a, an, b, bn);
-	rl = PyList_New(l.head - l.base);
-	if (!l.head || !rl)
+	l.next = NULL;
+	count = diff(a, an, b, bn, &l);
+	if (count < 0)
 		goto nomem;
 
-	for (h = l.base; h != l.head; h++) {
+	rl = PyList_New(count);
+	if (!rl)
+		goto nomem;
+
+	for (h = l.next; h; h = h->next) {
 		m = Py_BuildValue("iiii", h->a1, h->a2, h->b1, h->b2);
 		PyList_SetItem(rl, pos, m);
 		pos++;
@@ -331,7 +358,7 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 nomem:
 	free(a);
 	free(b);
-	free(l.base);
+	freehunks(l.next);
 	return rl ? rl : PyErr_NoMemory();
 }
 
@@ -340,10 +367,9 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	char *sa, *sb;
 	PyObject *result = NULL;
 	struct line *al, *bl;
-	struct hunklist l = {NULL, NULL};
-	struct hunk *h;
+	struct hunk l, *h;
 	char encode[12], *rb;
-	int an, bn, len = 0, la, lb;
+	int an, bn, len = 0, la, lb, count;
 
 	if (!PyArg_ParseTuple(args, "s#s#:bdiff", &sa, &la, &sb, &lb))
 		return NULL;
@@ -353,13 +379,14 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	if (!al || !bl)
 		goto nomem;
 
-	l = diff(al, an, bl, bn);
-	if (!l.head)
+	l.next = NULL;
+	count = diff(al, an, bl, bn, &l);
+	if (count < 0)
 		goto nomem;
 
 	/* calculate length of output */
 	la = lb = 0;
-	for (h = l.base; h != l.head; h++) {
+	for (h = l.next; h; h = h->next) {
 		if (h->a1 != la || h->b1 != lb)
 			len += 12 + bl[h->b1].l - bl[lb].l;
 		la = h->a2;
@@ -375,7 +402,7 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	rb = PyBytes_AsString(result);
 	la = lb = 0;
 
-	for (h = l.base; h != l.head; h++) {
+	for (h = l.next; h; h = h->next) {
 		if (h->a1 != la || h->b1 != lb) {
 			len = bl[h->b1].l - bl[lb].l;
 			*(uint32_t *)(encode)     = htonl(al[la].l - al->l);
@@ -392,7 +419,7 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 nomem:
 	free(al);
 	free(bl);
-	free(l.base);
+	freehunks(l.next);
 	return result ? result : PyErr_NoMemory();
 }
 
