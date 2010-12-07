@@ -70,6 +70,8 @@ class tarit(object):
             self.fileobj.write('\010')                 # compression method
             # Python 2.6 deprecates self.filename
             fname = getattr(self, 'name', None) or self.filename
+            if fname and fname.endswith('.gz'):
+                fname = fname[:-3]
             flags = 0
             if fname:
                 flags = gzip.FNAME
