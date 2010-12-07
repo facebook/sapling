@@ -713,7 +713,12 @@ class gitsubrepo(object):
         if self._githavelocally(revision):
             return
         self._ui.status(_('pulling subrepo %s\n') % self._relpath)
-        self._gitcommand(['fetch', '--all', '-q'])
+        # first try from origin
+        self._gitcommand(['fetch'])
+        if self._githavelocally(revision):
+            return
+        # then try from known subrepo source
+        self._gitcommand(['fetch', source])
         if not self._githavelocally(revision):
             raise util.Abort(_("revision %s does not exist in subrepo %s\n") %
                                (revision, self._path))
@@ -833,7 +838,7 @@ class gitsubrepo(object):
                 return False
             self._ui.status(_('pushing branch %s of subrepo %s\n') %
                             (current, self._relpath))
-            self._gitcommand(cmd + ['origin', current, '-q'])
+            self._gitcommand(cmd + ['origin', current])
             return True
         else:
             self._ui.warn(_('no branch checked out in subrepo %s\n'
