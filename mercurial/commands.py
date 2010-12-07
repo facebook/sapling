@@ -3712,9 +3712,8 @@ def tag(ui, repo, name1, *names, **opts):
             if n in repo.tags():
                 raise util.Abort(_('tag \'%s\' already exists '
                                    '(use -f to force)') % n)
-    if not rev_ and repo.dirstate.parents()[1] != nullid:
-        raise util.Abort(_('uncommitted merge - please provide a '
-                           'specific revision'))
+    if not opts.get('local') and repo.dirstate.parents()[1] != nullid:
+        raise util.Abort(_('uncommitted merge'))
     r = repo[rev_].node()
 
     if not message:

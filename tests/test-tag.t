@@ -208,3 +208,37 @@ local tag with .hgtags modified
   ? editor
   $ hg tag --local baz
   $ hg revert --no-backup .hgtags
+
+  $ cd ..
+
+tagging on an uncommitted merge (issue2542)
+
+  $ hg init repo-tag-uncommitted-merge
+  $ cd repo-tag-uncommitted-merge
+  $ echo c1 > f1
+  $ hg ci -Am0
+  adding f1
+  $ hg branch b1
+  marked working directory as branch b1
+  $ echo c2 >> f1
+  $ hg ci -m1
+  $ hg up default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge b1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ hg tag t1
+  abort: uncommitted merge
+  [255]
+  $ hg status
+  M f1
+  $ hg tag --rev 1 t2
+  abort: uncommitted merge
+  [255]
+  $ hg tag --rev 1 --local t3
+  $ hg tags -v
+  tip                                1:9466ada9ee90
+  t3                                 1:9466ada9ee90 local
+
+  $ cd ..
