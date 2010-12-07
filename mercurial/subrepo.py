@@ -719,10 +719,9 @@ class gitsubrepo(object):
         if self._state[1] != self._gitstate(): # version checked out changed?
             return True
         # check for staged changes or modified files; ignore untracked files
-        # docs say --porcelain flag is future-proof format
-        changed = self._gitcommand(['status', '--porcelain',
-                                    '--untracked-files=no'])
-        return bool(changed)
+        status = self._gitcommand(['status'])
+        return ('\n# Changed but not updated:' in status or
+                '\n# Changes to be committed:' in status)
 
     def get(self, state):
         source, revision, kind = state
