@@ -43,16 +43,13 @@ add subrepo clone
 record a new commit from upstream from a different branch
 
   $ cd ../gitroot
-  $ git checkout -b testing
-  Switched to a new branch 'testing'
+  $ git checkout -q -b testing
   $ echo gg >> g
   $ git commit -q -a -m gg
 
   $ cd ../t/s
-  $ git pull -q
-  $ git checkout -b testing origin/testing
-  Switched to a new branch 'testing'
-  Branch testing set up to track remote branch testing from origin.
+  $ git pull -q >/dev/null 2>/dev/null
+  $ git checkout -q -b testing origin/testing >/dev/null
 
   $ cd ..
   $ hg commit -m 'update git subrepo'
@@ -76,8 +73,7 @@ clone root
 
 update to previous substate
 
-  $ hg update 1
-  Switched to a new branch 'master'
+  $ hg update 1 2>/dev/null
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat s/g
   g
@@ -132,7 +128,7 @@ clone root separately, make different local change
 
 user b push changes
 
-  $ hg push
+  $ hg push 2>/dev/null
   pushing to $TESTTMP/t
   pushing branch testing of subrepo s
   searching for changes
@@ -152,8 +148,7 @@ user a pulls, merges, commits
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  $ hg merge
-  Automatic merge went well; stopped before committing as requested
+  $ hg merge 2>/dev/null
   pulling subrepo s
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -169,7 +164,7 @@ user a pulls, merges, commits
   path s
    source   ../gitroot
    revision f47b465e1bce645dbf37232a00574aa1546ca8d3
-  $ hg push
+  $ hg push 2>/dev/null
   pushing to $TESTTMP/t
   pushing branch testing of subrepo s
   searching for changes
@@ -187,7 +182,7 @@ make upstream git changes
   $ git commit -q -a -m ff
   $ echo fff >> f
   $ git commit -q -a -m fff
-  $ git push -q origin testing
+  $ git push origin testing 2>/dev/null
 
 make and push changes to hg without updating the subrepo
 
@@ -214,7 +209,7 @@ sync to upstream git, distribute changes
   $ cd ../ta
   $ hg pull -u -q
   $ cd s
-  $ git pull -q
+  $ git pull -q >/dev/null 2>/dev/null
   $ cd ..
   $ hg commit -m 'git upstream sync'
   committing subrepository $TESTTMP/ta/s
@@ -226,7 +221,7 @@ sync to upstream git, distribute changes
 
   $ cd ../tb
   $ hg pull -q
-  $ hg update
+  $ hg update 2>/dev/null
   pulling subrepo s
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugsub
@@ -254,8 +249,9 @@ update to a revision without the subrepo, keeping the local git repository
 
 archive subrepos
 
-  $ cd ../t
-  $ hg archive --subrepos -r 5 ../archive
+  $ cd ../tc
+  $ hg pull -q
+  $ hg archive --subrepos -r 5 ../archive 2>/dev/null
   pulling subrepo s
   $ cd ../archive
   $ cat s/f
