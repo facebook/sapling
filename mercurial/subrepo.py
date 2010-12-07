@@ -682,8 +682,11 @@ class gitsubrepo(object):
             if line[2:].startswith('(no branch)'):
                 continue
             branch, revision = line[2:].split()[:2]
-            if revision == '->':
+            if revision == '->' or branch.endswith('/HEAD'):
                 continue # ignore remote/HEAD redirects
+            if '/' in branch and not branch.startswith('remotes/'):
+                # old git compatability
+                branch = 'remotes/' + branch
             if line[0] == '*':
                 current = branch
             branch2rev[branch] = revision
