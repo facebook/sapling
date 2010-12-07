@@ -617,11 +617,10 @@ class gitsubrepo(object):
         return self._gitdir(commands, stream=stream)[0]
 
     def _gitdir(self, commands, stream=False):
-        commands = ['--no-pager', '--git-dir=%s/.git' % self._path,
-                    '--work-tree=%s' % self._path] + commands
-        return self._gitnodir(commands, stream=stream)
+        commands = ['--no-pager'] + commands
+        return self._gitnodir(commands, stream=stream, cwd=self._path)
 
-    def _gitnodir(self, commands, stream=False):
+    def _gitnodir(self, commands, stream=False, cwd=None):
         """Calls the git command
 
         The methods tries to call the git command. versions previor to 1.6.0
@@ -632,7 +631,7 @@ class gitsubrepo(object):
         cmd = util.quotecommand(' '.join(cmd))
 
         # print git's stderr, which is mostly progress and useful info
-        p = subprocess.Popen(cmd, shell=True, bufsize=-1,
+        p = subprocess.Popen(cmd, shell=True, bufsize=-1, cwd=cwd,
                              close_fds=util.closefds,
                              stdout=subprocess.PIPE)
         if stream:
