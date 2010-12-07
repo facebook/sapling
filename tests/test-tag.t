@@ -78,13 +78,20 @@
   $ cat .hg/localtags
   d4f0d2909abc9290e2773c08837d70c1794e3f5a bleah1
 
+tagging on a non-head revision
+
   $ hg update 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg tag -l localblah
   $ hg tag "foobar"
+  abort: not at a branch head (use -f to force)
+  [255]
+  $ hg tag -f "foobar"
   $ cat .hgtags
   acb14030fe0a21b60322c440ad2d20cf7685a376 foobar
   $ cat .hg/localtags
   d4f0d2909abc9290e2773c08837d70c1794e3f5a bleah1
+  acb14030fe0a21b60322c440ad2d20cf7685a376 localblah
 
   $ hg tag -l 'xx
   > newline'
@@ -102,6 +109,7 @@ cloning local tags
   tag:         bleah
   tag:         bleah0
   tag:         foobar
+  tag:         localblah
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     test
@@ -156,10 +164,10 @@ doesn't end with EOL
   > f = file('.hg/localtags', 'w'); f.write(last); f.close()
   > EOF
   $ cat .hg/localtags; echo
-  d4f0d2909abc9290e2773c08837d70c1794e3f5a bleah1
+  acb14030fe0a21b60322c440ad2d20cf7685a376 localblah
   $ hg tag -l localnewline
   $ cat .hg/localtags; echo
-  d4f0d2909abc9290e2773c08837d70c1794e3f5a bleah1
+  acb14030fe0a21b60322c440ad2d20cf7685a376 localblah
   c2899151f4e76890c602a2597a650a72666681bf localnewline
   
 
@@ -197,6 +205,7 @@ test custom commit messages
   custom tag message
   second line
 
+
 local tag with .hgtags modified
 
   $ hg tag hgtags-modified
@@ -208,6 +217,31 @@ local tag with .hgtags modified
   ? editor
   $ hg tag --local baz
   $ hg revert --no-backup .hgtags
+
+
+tagging when at named-branch-head that's not a topo-head
+
+  $ hg up default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge -t internal:local
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m 'merge named branch'
+  $ hg up 11
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg tag new-topo-head
+
+
+tagging on null rev
+
+  $ hg up null
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg tag nullrev
+  abort: not at a branch head (use -f to force)
+  [255]
+
+  $ hg init empty
+  $ hg tag -R empty nullrev
 
   $ cd ..
 
