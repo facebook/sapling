@@ -59,8 +59,16 @@ record a new commit from upstream from a different branch
    source   ../gitroot
    revision 126f2a14290cd5ce061fdedc430170e8d39e1c5a
 
+make $GITROOT pushable, by replacing it with a clone with nothing checked out
+
+  $ cd ..
+  $ git clone gitroot gitrootbare --bare -q
+  $ rm -rf gitroot
+  $ mv gitrootbare gitroot
+
 clone root
 
+  $ cd t
   $ hg clone . ../tc
   updating to branch default
   cloning subrepo s
@@ -82,16 +90,9 @@ update to previous substate
    source   ../gitroot
    revision da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
 
-make $GITROOT pushable, by replacing it with a clone with nothing checked out
-
-  $ cd ..
-  $ git clone gitroot gitrootbare --bare -q
-  $ rm -rf gitroot
-  $ mv gitrootbare gitroot
-
 clone root, make local change
 
-  $ cd t
+  $ cd ../t
   $ hg clone . ../ta
   updating to branch default
   cloning subrepo s
