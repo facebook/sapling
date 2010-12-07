@@ -208,12 +208,11 @@ Fastforward merge:
   $ hg branch
   foo
   $ hg commit -m'Merge ff into foo'
+  created new head
   $ hg parents
-  changeset:   6:917eb54e1b4b
+  changeset:   6:6af8030670c9
   branch:      foo
   tag:         tip
-  parent:      4:98d14f698afe
-  parent:      5:6683a60370cb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Merge ff into foo

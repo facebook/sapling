@@ -413,6 +413,7 @@ Check prepush logic with merged branches:
   (branch merge, don't forget to commit)
 
   $ hg -R k ci -m merge
+  created new head
 
   $ hg -R k push -r a j
   pushing to j
