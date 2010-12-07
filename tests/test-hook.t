@@ -73,8 +73,8 @@ test generic hooks
   [1]
   $ hg cat b
   pre-cat hook: HG_ARGS=cat b HG_OPTS={'rev': '', 'decode': None, 'exclude': [], 'output': '', 'include': []} HG_PATS=['b'] 
-  post-cat hook: HG_ARGS=cat b HG_OPTS={'rev': '', 'decode': None, 'exclude': [], 'output': '', 'include': []} HG_PATS=['b'] HG_RESULT=0 
   b
+  post-cat hook: HG_ARGS=cat b HG_OPTS={'rev': '', 'decode': None, 'exclude': [], 'output': '', 'include': []} HG_PATS=['b'] HG_RESULT=0 
 
   $ cd ../b
   $ hg pull ../a

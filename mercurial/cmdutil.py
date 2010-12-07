@@ -233,7 +233,8 @@ def make_file(repo, pat, node=None,
     writable = 'w' in mode or 'a' in mode
 
     if not pat or pat == '-':
-        return writable and sys.stdout or sys.stdin
+        fp = writable and sys.stdout or sys.stdin
+        return os.fdopen(os.dup(fp.fileno()), mode)
     if hasattr(pat, 'write') and writable:
         return pat
     if hasattr(pat, 'read') and 'r' in mode:
