@@ -162,9 +162,8 @@ def showdescription(repo, ctx, templ, **args):
     return ctx.description().strip()
 
 def showdiffstat(repo, ctx, templ, **args):
-    diff = patch.diff(repo, ctx.parents()[0].node(), ctx.node())
     files, adds, removes = 0, 0, 0
-    for i in patch.diffstatdata(util.iterlines(diff)):
+    for i in patch.diffstatdata(util.iterlines(ctx.diff())):
         files += 1
         adds += i[1]
         removes += i[2]
