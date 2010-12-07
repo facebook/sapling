@@ -452,7 +452,7 @@ def copyfile(src, dest):
     else:
         try:
             shutil.copyfile(src, dest)
-            shutil.copystat(src, dest)
+            shutil.copymode(src, dest)
         except shutil.Error, inst:
             raise Abort(str(inst))
 
