@@ -613,14 +613,14 @@ class gitsubrepo(object):
         self._path = ctx._repo.wjoin(path)
         self._ui = ctx._repo.ui
 
-    def _gitcommand(self, commands, stream=False):
-        return self._gitdir(commands, stream=stream)[0]
+    def _gitcommand(self, commands, env=None, stream=False):
+        return self._gitdir(commands, env=env, stream=stream)[0]
 
-    def _gitdir(self, commands, stream=False):
+    def _gitdir(self, commands, env=None, stream=False):
         commands = ['--no-pager'] + commands
-        return self._gitnodir(commands, stream=stream, cwd=self._path)
+        return self._gitnodir(commands, env=env, stream=stream, cwd=self._path)
 
-    def _gitnodir(self, commands, stream=False, cwd=None):
+    def _gitnodir(self, commands, env=None, stream=False, cwd=None):
         """Calls the git command
 
         The methods tries to call the git command. versions previor to 1.6.0
@@ -631,7 +631,7 @@ class gitsubrepo(object):
         cmd = util.quotecommand(' '.join(cmd))
 
         # print git's stderr, which is mostly progress and useful info
-        p = subprocess.Popen(cmd, shell=True, bufsize=-1, cwd=cwd,
+        p = subprocess.Popen(cmd, shell=True, bufsize=-1, cwd=cwd, env=env,
                              close_fds=util.closefds,
                              stdout=subprocess.PIPE)
         if stream:
@@ -789,13 +789,15 @@ class gitsubrepo(object):
 
     def commit(self, text, user, date):
         cmd = ['commit', '-a', '-m', text]
+        env = os.environ.copy()
         if user:
             cmd += ['--author', user]
         if date:
             # git's date parser silently ignores when seconds < 1e9
             # convert to ISO8601
-            cmd += ['--date', util.datestr(date, '%Y-%m-%dT%H:%M:%S %1%2')]
-        self._gitcommand(cmd)
+            env['GIT_AUTHOR_DATE'] = util.datestr(date,
+                                                  '%Y-%m-%dT%H:%M:%S %1%2')
+        self._gitcommand(cmd, env=env)
         # make sure commit works otherwise HEAD might not exist under certain
         # circumstances
         return self._gitstate()
