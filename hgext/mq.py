@@ -793,6 +793,19 @@ class queue(object):
             return top, patch
         return None, None
 
+    def check_substate(self, repo):
+        '''return list of subrepos at a different revision than substate.
+        Abort if any subrepos have uncommitted changes.'''
+        inclsubs = []
+        wctx = repo[None]
+        for s in wctx.substate:
+            if wctx.sub(s).dirty(True):
+                raise util.Abort(
+                    _("uncommitted changes in subrepository %s") % s)
+            elif wctx.sub(s).dirty():
+                inclsubs.append(s)
+        return inclsubs
+
     def check_localchanges(self, repo, force=False, refresh=True):
         m, a, r, d = repo.status()[:4]
         if (m or a or r or d) and not force:
@@ -826,16 +839,23 @@ class queue(object):
                                  % patchfn)
             else:
                 raise util.Abort(_('patch "%s" already exists') % patchfn)
+
+        inclsubs = self.check_substate(repo)
+        if inclsubs:
+            inclsubs.append('.hgsubstate')
         if opts.get('include') or opts.get('exclude') or pats:
+            if inclsubs:
+                pats = list(pats or []) + inclsubs
             match = cmdutil.match(repo, pats, opts)
             # detect missing files in pats
             def badfn(f, msg):
-                raise util.Abort('%s: %s' % (f, msg))
+                if f != '.hgsubstate': # .hgsubstate is auto-created
+                    raise util.Abort('%s: %s' % (f, msg))
             match.bad = badfn
             m, a, r, d = repo.status(match=match)[:4]
         else:
             m, a, r, d = self.check_localchanges(repo, force=True)
-            match = cmdutil.matchfiles(repo, m + a + r)
+            match = cmdutil.matchfiles(repo, m + a + r + inclsubs)
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot manage merge changesets'))
         commitfiles = m + a + r
@@ -1259,6 +1279,8 @@ class queue(object):
             if repo.changelog.heads(top) != [top]:
                 raise util.Abort(_("cannot refresh a revision with children"))
 
+            inclsubs = self.check_substate(repo)
+
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
             ph = patchheader(self.join(patchfn), self.plainmode)
@@ -1337,7 +1359,7 @@ class queue(object):
             r = list(dd)
             a = list(aa)
             c = [filter(matchfn, l) for l in (m, a, r)]
-            match = cmdutil.matchfiles(repo, set(c[0] + c[1] + c[2]))
+            match = cmdutil.matchfiles(repo, set(c[0] + c[1] + c[2] + inclsubs))
             chunks = patch.diff(repo, patchparent, match=match,
                                 changes=c, opts=diffopts)
             for chunk in chunks:

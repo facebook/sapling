@@ -236,9 +236,10 @@ def subrepo(ctx, path):
 
 class abstractsubrepo(object):
 
-    def dirty(self):
-        """returns true if the dirstate of the subrepo does not match
-        current stored state
+    def dirty(self, ignoreupdate=False):
+        """returns true if the dirstate of the subrepo is dirty or does not
+        match current stored state. If ignoreupdate is true, only check
+        whether the subrepo has uncommitted changes in its dirstate.
         """
         raise NotImplementedError
 
@@ -390,12 +391,13 @@ class hgsubrepo(abstractsubrepo):
             s = subrepo(ctx, subpath)
             s.archive(ui, archiver, os.path.join(prefix, self._path))
 
-    def dirty(self):
+    def dirty(self, ignoreupdate=False):
         r = self._state[1]
-        if r == '':
+        if r == '' and not ignoreupdate: # no state recorded
             return True
         w = self._repo[None]
-        if w.p1() != self._repo[r]: # version checked out change
+        # version checked out changed?
+        if w.p1() != self._repo[r] and not ignoreupdate:
             return True
         return w.dirty() # working directory changed
 
@@ -538,9 +540,10 @@ class svnsubrepo(abstractsubrepo):
                     return True, True
         return bool(changes), False
 
-    def dirty(self):
-        if self._wcrev() == self._state[1] and not self._wcchanged()[0]:
-            return False
+    def dirty(self, ignoreupdate=False):
+        if not self._wcchanged()[0]:
+            if self._wcrev() == self._state[1] and not ignoreupdate:
+                return False
         return True
 
     def commit(self, text, user, date):
