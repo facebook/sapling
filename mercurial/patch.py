@@ -485,6 +485,15 @@ class patchfile(object):
         for x, s in enumerate(self.lines):
             self.hash.setdefault(s, []).append(x)
 
+    def makerejlines(self, fname):
+        base = os.path.basename(fname)
+        yield "--- %s\n+++ %s\n" % (base, base)
+        for x in self.rej:
+            for l in x.hunk:
+                yield l
+                if l[-1] != '\n':
+                    yield "\n\ No newline at end of file\n"
+
     def write_rej(self):
         # our rejects are a little different from patch(1).  This always
         # creates rejects in the same form as the original patch.  A file
@@ -499,16 +508,9 @@ class patchfile(object):
             _("%d out of %d hunks FAILED -- saving rejects to file %s\n") %
             (len(self.rej), self.hunks, fname))
 
-        def rejlines():
-            base = os.path.basename(self.fname)
-            yield "--- %s\n+++ %s\n" % (base, base)
-            for x in self.rej:
-                for l in x.hunk:
-                    yield l
-                    if l[-1] != '\n':
-                        yield "\n\ No newline at end of file\n"
-
-        self.writelines(fname, rejlines())
+        fp = self.opener(fname, 'w')
+        fp.writelines(self.makerejlines(self.fname))
+        fp.close()
 
     def apply(self, h):
         if not h.complete():
