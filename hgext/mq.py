@@ -1310,18 +1310,12 @@ class queue(object):
             # local dirstate. in this case, we want them to only
             # show up in the added section
             for x in m:
-                if x == '.hgsub' or x == '.hgsubstate':
-                    self.ui.warn(_('warning: not refreshing %s\n') % x)
-                    continue
                 if x not in aa:
                     mm.add(x)
             # we might end up with files added by the local dirstate that
             # were deleted by the patch.  In this case, they should only
             # show up in the changed section.
             for x in a:
-                if x == '.hgsub' or x == '.hgsubstate':
-                    self.ui.warn(_('warning: not adding %s\n') % x)
-                    continue
                 if x in dd:
                     dd.remove(x)
                     mm.add(x)
@@ -1331,9 +1325,6 @@ class queue(object):
             # are not in the add or change column of the patch
             forget = []
             for x in d + r:
-                if x == '.hgsub' or x == '.hgsubstate':
-                    self.ui.warn(_('warning: not removing %s\n') % x)
-                    continue
                 if x in aa:
                     aa.remove(x)
                     forget.append(x)
