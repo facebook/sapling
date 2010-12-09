@@ -614,7 +614,6 @@ class gitsubrepo(abstractsubrepo):
         return self._gitdir(commands, env=env, stream=stream)[0]
 
     def _gitdir(self, commands, env=None, stream=False):
-        commands = ['--no-pager'] + commands
         return self._gitnodir(commands, env=env, stream=stream, cwd=self._path)
 
     def _gitnodir(self, commands, env=None, stream=False, cwd=None):
@@ -623,6 +622,7 @@ class gitsubrepo(abstractsubrepo):
         The methods tries to call the git command. versions previor to 1.6.0
         are not supported and very probably fail.
         """
+        self._ui.debug('%s: git %s\n' % (self._relpath, ' '.join(commands)))
         # print git's stderr, which is mostly progress and useful info
         p = subprocess.Popen(['git'] + commands, bufsize=-1, cwd=cwd, env=env,
                              close_fds=util.closefds,
@@ -636,15 +636,12 @@ class gitsubrepo(abstractsubrepo):
 
         if p.returncode != 0 and p.returncode != 1:
             # there are certain error codes that are ok
-            command = None
-            for arg in commands:
-                if not arg.startswith('-'):
-                    command = arg
-                    break
+            command = commands[0]
             if command == 'cat-file':
                 return retdata, p.returncode
             # for all others, abort
-            raise util.Abort('git %s error %d' % (command, p.returncode))
+            raise util.Abort('git %s error %d in %s' %
+                             (command, p.returncode, self._relpath))
 
         return retdata, p.returncode
 
