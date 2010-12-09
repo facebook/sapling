@@ -484,13 +484,10 @@ class svnsubrepo(abstractsubrepo):
     def _svncommand(self, commands, filename=''):
         path = os.path.join(self._ctx._repo.origroot, self._path, filename)
         cmd = ['svn'] + commands + [path]
-        cmd = [util.shellquote(arg) for arg in cmd]
-        cmd = util.quotecommand(' '.join(cmd))
         env = dict(os.environ)
         # Avoid localized output, preserve current locale for everything else.
         env['LC_MESSAGES'] = 'C'
-        p = subprocess.Popen(cmd, shell=True, bufsize=-1,
-                             close_fds=util.closefds,
+        p = subprocess.Popen(cmd, bufsize=-1, close_fds=util.closefds,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              universal_newlines=True, env=env)
         stdout, stderr = p.communicate()
@@ -626,12 +623,8 @@ class gitsubrepo(abstractsubrepo):
         The methods tries to call the git command. versions previor to 1.6.0
         are not supported and very probably fail.
         """
-        cmd = ['git'] + commands
-        cmd = [util.shellquote(arg) for arg in cmd]
-        cmd = util.quotecommand(' '.join(cmd))
-
         # print git's stderr, which is mostly progress and useful info
-        p = subprocess.Popen(cmd, shell=True, bufsize=-1, cwd=cwd, env=env,
+        p = subprocess.Popen(['git'] + commands, bufsize=-1, cwd=cwd, env=env,
                              close_fds=util.closefds,
                              stdout=subprocess.PIPE)
         if stream:
