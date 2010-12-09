@@ -641,7 +641,7 @@ class gitsubrepo(abstractsubrepo):
         # wait for the child to exit to avoid race condition.
         p.wait()
 
-        if p.returncode != 0:
+        if p.returncode != 0 and p.returncode != 1:
             # there are certain error codes that are ok
             command = None
             for arg in commands:
@@ -649,8 +649,6 @@ class gitsubrepo(abstractsubrepo):
                     command = arg
                     break
             if command == 'cat-file':
-                return retdata, p.returncode
-            if command in ('commit', 'status') and p.returncode == 1:
                 return retdata, p.returncode
             # for all others, abort
             raise util.Abort('git %s error %d' % (command, p.returncode))
