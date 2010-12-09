@@ -604,7 +604,7 @@ class svnsubrepo(abstractsubrepo):
         return self._svncommand(['cat'], name)
 
 
-class gitsubrepo(object):
+class gitsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         # TODO add git version check.
         self._state = state
