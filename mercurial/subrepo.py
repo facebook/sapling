@@ -813,8 +813,12 @@ class gitsubrepo(abstractsubrepo):
     def push(self, force):
         # if a branch in origin contains the revision, nothing to do
         current, branch2rev, rev2branch = self._gitbranchmap()
+        if self._state[1] in rev2branch:
+            for b in rev2branch[self._state[1]]:
+                if b.startswith('remotes/origin/'):
+                    return True
         for b, revision in branch2rev.iteritems():
-            if b.startswith('remotes/origin'):
+            if b.startswith('remotes/origin/'):
                 if self._gitisancestor(self._state[1], revision):
                     return True
         # otherwise, try to push the currently checked out branch
