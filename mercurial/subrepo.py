@@ -623,10 +623,14 @@ class gitsubrepo(abstractsubrepo):
         are not supported and very probably fail.
         """
         self._ui.debug('%s: git %s\n' % (self._relpath, ' '.join(commands)))
-        # print git's stderr, which is mostly progress and useful info
+        # unless ui.quiet is set, print git's stderr,
+        # which is mostly progress and useful info
+        errpipe = None
+        if self._ui.quiet:
+            errpipe = open(os.devnull, 'w')
         p = subprocess.Popen(['git'] + commands, bufsize=-1, cwd=cwd, env=env,
                              close_fds=util.closefds,
-                             stdout=subprocess.PIPE)
+                             stdout=subprocess.PIPE, stderr=errpipe)
         if stream:
             return p.stdout, None
 
