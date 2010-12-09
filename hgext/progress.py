@@ -55,6 +55,19 @@ def shouldprint(ui):
     return (getattr(sys.stderr, 'isatty', None) and
             (sys.stderr.isatty() or ui.configbool('progress', 'assume-tty')))
 
+def fmtremaining(seconds):
+    if seconds < 60:
+        return _("%02ds") % (seconds)
+    minutes = seconds // 60
+    if minutes < 60:
+        seconds -= minutes * 60
+        return _("%dm%02ds") % (minutes, seconds)
+    # we're going to ignore seconds in this case
+    minutes += 1
+    hours = minutes // 60
+    minutes -= hours * 60
+    return _("%dh%02dm") % (hours, minutes)
+
 class progbar(object):
     def __init__(self, ui):
         self.ui = ui
@@ -132,16 +145,7 @@ class progbar(object):
                     if elapsed > float(
                         self.ui.config('progress', 'estimate', default=2)):
                         seconds = (elapsed * (target - delta)) // delta + 1
-                        minutes = seconds // 60
-                        if minutes < 10:
-                            seconds -= minutes * 60
-                            remaining = _("%dm%02ds") % (minutes, seconds)
-                        else:
-                            # we're going to ignore seconds in this case
-                            minutes += 1
-                            hours = minutes // 60
-                            minutes -= hours * 60
-                            remaining = _("%dh%02dm") % (hours, minutes)
+                        remaining = fmtremaining(seconds)
                         progwidth -= len(remaining) + 1
                         tail = spacejoin(tail, remaining)
                 amt = pos * progwidth // total
