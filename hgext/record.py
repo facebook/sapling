@@ -42,7 +42,7 @@ def scanpatch(fp):
         line = lr.readline()
         if not line:
             break
-        if line.startswith('diff --git a/'):
+        if line.startswith('diff --git a/') or line.startswith('diff -r '):
             def notheader(line):
                 s = line.split(None, 1)
                 return not s or s[0] not in ('---', 'diff')
@@ -70,7 +70,8 @@ class header(object):
 
     XXX shoudn't we move this to mercurial/patch.py ?
     """
-    diff_re = re.compile('diff --git a/(.*) b/(.*)$')
+    diffgit_re = re.compile('diff --git a/(.*) b/(.*)$')
+    diff_re = re.compile('diff -r .* (.*)$')
     allhunks_re = re.compile('(?:index|new file|deleted file) ')
     pretty_re = re.compile('(?:new file|deleted file) ')
     special_re = re.compile('(?:index|new|deleted|copy|rename) ')
@@ -110,10 +111,14 @@ class header(object):
                 return True
 
     def files(self):
-        fromfile, tofile = self.diff_re.match(self.header[0]).groups()
-        if fromfile == tofile:
-            return [fromfile]
-        return [fromfile, tofile]
+        match = self.diffgit_re.match(self.header[0])
+        if match:
+            fromfile, tofile = match.groups()
+            if fromfile == tofile:
+                return [fromfile]
+            return [fromfile, tofile]
+        else:
+            return self.diff_re.match(self.header[0]).groups()
 
     def filename(self):
         return self.files()[-1]
