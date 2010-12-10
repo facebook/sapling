@@ -61,6 +61,7 @@ class progbar(object):
 
     def resetstate(self):
         self.topics = []
+        self.topicstates = {}
         self.printed = False
         self.lastprint = time.time() + float(self.ui.config(
             'progress', 'delay', default=3))
@@ -161,17 +162,24 @@ class progbar(object):
 
     def progress(self, topic, pos, item='', unit='', total=None):
         if pos is None:
-            if self.topics and self.topics[-1] == topic and self.printed:
+            self.topicstates.pop(topic, None)
+            # reset the progress bar if this is the outermost topic
+            if self.topics and self.topics[0] == topic and self.printed:
                 self.complete()
                 self.resetstate()
+            # truncate the list of topics assuming all topics within
+            # this one are also closed
+            if topic in self.topics:
+              self.topics = self.topics[:self.topics.index(topic)]
         else:
             if topic not in self.topics:
                 self.topics.append(topic)
             now = time.time()
-            if (now - self.lastprint >= self.refresh
-                and topic == self.topics[-1]):
+            self.topicstates[topic] = pos, item, unit, total
+            if now - self.lastprint >= self.refresh and self.topics:
                 self.lastprint = now
-                self.show(topic, pos, item, unit, total)
+                current = self.topics[-1]
+                self.show(current, *self.topicstates[current])
 
 def uisetup(ui):
     class progressui(ui.__class__):

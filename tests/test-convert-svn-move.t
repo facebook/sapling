@@ -196,13 +196,11 @@ Test convert progress bar'
                                                                                   
   converting [=======>                                                      ] 1/7
   scanning paths [                                                          ] 0/1
-                                                                                  
   getting files [==========================================================>] 1/1
                                                                                   
   converting [================>                                             ] 2/7
   scanning paths [                                                          ] 0/2
   scanning paths [============================>                             ] 1/2
-                                                                                  
   getting files [=============>                                             ] 1/4
   getting files [============================>                              ] 2/4
   getting files [===========================================>               ] 3/4
@@ -210,19 +208,16 @@ Test convert progress bar'
                                                                                   
   converting [=========================>                                    ] 3/7
   scanning paths [                                                          ] 0/1
-                                                                                  
   getting files [==========================================================>] 1/1
                                                                                   
   converting [==================================>                           ] 4/7
   scanning paths [                                                          ] 0/1
-                                                                                  
   getting files [==========================================================>] 1/1
                                                                                   
   converting [===========================================>                  ] 5/7
   scanning paths [                                                          ] 0/3
   scanning paths [==================>                                       ] 1/3
   scanning paths [=====================================>                    ] 2/3
-                                                                                  
   getting files [======>                                                    ] 1/8
   getting files [=============>                                             ] 2/8
   getting files [=====================>                                     ] 3/8
@@ -234,7 +229,6 @@ Test convert progress bar'
                                                                                   
   converting [====================================================>         ] 6/7
   scanning paths [                                                          ] 0/1
-                                                                                  
   getting files [======>                                                    ] 1/8
   getting files [=============>                                             ] 2/8
   getting files [=====================>                                     ] 3/8
