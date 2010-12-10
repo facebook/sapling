@@ -258,18 +258,36 @@ class httpsendfile(object):
     defines a __len__ attribute to feed the Content-Length header.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, ui, *args, **kwargs):
         # We can't just "self._data = open(*args, **kwargs)" here because there
         # is an "open" function defined in this module that shadows the global
         # one
+        self.ui = ui
         self._data = __builtin__.open(*args, **kwargs)
-        self.read = self._data.read
         self.seek = self._data.seek
         self.close = self._data.close
         self.write = self._data.write
+        self._len = os.fstat(self._data.fileno()).st_size
+        self._pos = 0
+        self._total = len(self) / 1024 * 2
+
+    def read(self, *args, **kwargs):
+        try:
+            ret = self._data.read(*args, **kwargs)
+        except EOFError:
+            self.ui.progress(_('sending'), None)
+        self._pos += len(ret)
+        # We pass double the max for total because we currently have
+        # to send the bundle twice in the case of a server that
+        # requires authentication. Since we can't know until we try
+        # once whether authentication will be required, just lie to
+        # the user and maybe the push succeeds suddenly at 50%.
+        self.ui.progress(_('sending'), self._pos / 1024,
+                         unit=_('kb'), total=self._total)
+        return ret
 
     def __len__(self):
-        return os.fstat(self._data.fileno()).st_size
+        return self._len
 
 def _gen_sendfile(connection):
     def _sendfile(self, data):

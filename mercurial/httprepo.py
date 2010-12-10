@@ -160,7 +160,7 @@ class httprepository(wireproto.wirerepository):
                     break
 
         tempname = changegroup.writebundle(cg, None, type)
-        fp = url.httpsendfile(tempname, "rb")
+        fp = url.httpsendfile(self.ui, tempname, "rb")
         headers = {'Content-Type': 'application/mercurial-0.1'}
 
         try:
