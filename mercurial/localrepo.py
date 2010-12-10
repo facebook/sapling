@@ -1501,8 +1501,13 @@ class localrepository(repo.repository):
             group = cl.group(msng_cl_lst, identity, collect)
             for cnt, chnk in enumerate(group):
                 yield chnk
-                self.ui.progress(_('bundling changes'), cnt, unit=_('chunks'))
-            self.ui.progress(_('bundling changes'), None)
+                # revlog.group yields three entries per node, so
+                # dividing by 3 gives an approximation of how many
+                # nodes have been processed.
+                self.ui.progress(_('bundling'), cnt / 3,
+                                 unit=_('changesets'))
+            changecount = cnt / 3
+            self.ui.progress(_('bundling'), None)
 
             prune(mnfst, msng_mnfst_set)
             add_extra_nodes(1, msng_mnfst_set)
@@ -1514,10 +1519,17 @@ class localrepository(repo.repository):
             group = mnfst.group(msng_mnfst_lst,
                                 lambda mnode: msng_mnfst_set[mnode],
                                 filenode_collector(changedfiles))
+            efiles = {}
             for cnt, chnk in enumerate(group):
+                if cnt % 3 == 1:
+                    mnode = chnk[:20]
+                    efiles.update(mnfst.readdelta(mnode))
                 yield chnk
-                self.ui.progress(_('bundling manifests'), cnt, unit=_('chunks'))
-            self.ui.progress(_('bundling manifests'), None)
+                # see above comment for why we divide by 3
+                self.ui.progress(_('bundling'), cnt / 3,
+                                 unit=_('manifests'), total=changecount)
+            self.ui.progress(_('bundling'), None)
+            efiles = len(efiles)
 
             # These are no longer needed, dereference and toss the memory for
             # them.
@@ -1531,8 +1543,7 @@ class localrepository(repo.repository):
                     msng_filenode_set.setdefault(fname, {})
                     changedfiles.add(fname)
             # Go through all our files in order sorted by name.
-            cnt = 0
-            for fname in sorted(changedfiles):
+            for idx, fname in enumerate(sorted(changedfiles)):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
@@ -1555,13 +1566,16 @@ class localrepository(repo.repository):
                     group = filerevlog.group(nodeiter,
                                              lambda fnode: missingfnodes[fnode])
                     for chnk in group:
+                        # even though we print the same progress on
+                        # most loop iterations, put the progress call
+                        # here so that time estimates (if any) can be updated
                         self.ui.progress(
-                            _('bundling files'), cnt, item=fname, unit=_('chunks'))
-                        cnt += 1
+                            _('bundling'), idx, item=fname,
+                            unit=_('files'), total=efiles)
                         yield chnk
             # Signal that no more groups are left.
             yield changegroup.closechunk()
-            self.ui.progress(_('bundling files'), None)
+            self.ui.progress(_('bundling'), None)
 
             if msng_cl_lst:
                 self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
@@ -1609,20 +1623,30 @@ class localrepository(repo.repository):
             collect = changegroup.collector(cl, mmfs, changedfiles)
 
             for cnt, chnk in enumerate(cl.group(nodes, identity, collect)):
-                self.ui.progress(_('bundling changes'), cnt, unit=_('chunks'))
+                # revlog.group yields three entries per node, so
+                # dividing by 3 gives an approximation of how many
+                # nodes have been processed.
+                self.ui.progress(_('bundling'), cnt / 3, unit=_('changesets'))
                 yield chnk
-            self.ui.progress(_('bundling changes'), None)
+            changecount = cnt / 3
+            self.ui.progress(_('bundling'), None)
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
+            efiles = {}
             for cnt, chnk in enumerate(mnfst.group(nodeiter,
                                                    lookuplinkrev_func(mnfst))):
-                self.ui.progress(_('bundling manifests'), cnt, unit=_('chunks'))
+                if cnt % 3 == 1:
+                    mnode = chnk[:20]
+                    efiles.update(mnfst.readdelta(mnode))
+                # see above comment for why we divide by 3
+                self.ui.progress(_('bundling'), cnt / 3,
+                                 unit=_('manifests'), total=changecount)
                 yield chnk
-            self.ui.progress(_('bundling manifests'), None)
+            efiles = len(efiles)
+            self.ui.progress(_('bundling'), None)
 
-            cnt = 0
-            for fname in sorted(changedfiles):
+            for idx, fname in enumerate(sorted(changedfiles)):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
@@ -1634,10 +1658,10 @@ class localrepository(repo.repository):
                     lookup = lookuplinkrev_func(filerevlog)
                     for chnk in filerevlog.group(nodeiter, lookup):
                         self.ui.progress(
-                            _('bundling files'), cnt, item=fname, unit=_('chunks'))
-                        cnt += 1
+                            _('bundling'), idx, item=fname,
+                            total=efiles, unit=_('files'))
                         yield chnk
-            self.ui.progress(_('bundling files'), None)
+            self.ui.progress(_('bundling'), None)
 
             yield changegroup.closechunk()
 

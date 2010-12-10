@@ -90,38 +90,38 @@ Extension disabled for lack of a hook
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -166,38 +166,38 @@ Extension disabled for lack of acl.sources
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -245,38 +245,38 @@ No [acl.allow]/[acl.deny]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -333,38 +333,38 @@ Empty [acl.allow]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -420,38 +420,38 @@ fred is allowed inside foo/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -512,38 +512,38 @@ Empty [acl.deny]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -601,38 +601,38 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -695,38 +695,38 @@ fred is allowed inside foo/, but not foo/Bar/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -786,38 +786,38 @@ fred is allowed inside foo/, but not foo/Bar/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -879,38 +879,38 @@ barney is allowed everywhere
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -974,38 +974,38 @@ wilma can change files with a .txt extension
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1074,38 +1074,38 @@ file specified by acl.config does not exist
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1168,38 +1168,38 @@ betty is allowed inside foo/ by a acl.config file
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1274,38 +1274,38 @@ acl.config can set only [acl.allow]/[acl.deny]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1370,38 +1370,38 @@ fred is always allowed
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1462,38 +1462,38 @@ no one is allowed inside foo/Bar/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1558,38 +1558,38 @@ OS-level groups
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1651,38 +1651,38 @@ OS-level groups
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling changes: 0 chunks
-  bundling changes: 1 chunks
-  bundling changes: 2 chunks
-  bundling changes: 3 chunks
-  bundling changes: 4 chunks
-  bundling changes: 5 chunks
-  bundling changes: 6 chunks
-  bundling changes: 7 chunks
-  bundling changes: 8 chunks
-  bundling changes: 9 chunks
-  bundling manifests: 0 chunks
-  bundling manifests: 1 chunks
-  bundling manifests: 2 chunks
-  bundling manifests: 3 chunks
-  bundling manifests: 4 chunks
-  bundling manifests: 5 chunks
-  bundling manifests: 6 chunks
-  bundling manifests: 7 chunks
-  bundling manifests: 8 chunks
-  bundling manifests: 9 chunks
-  bundling files: foo/Bar/file.txt 0 chunks
-  bundling files: foo/Bar/file.txt 1 chunks
-  bundling files: foo/Bar/file.txt 2 chunks
-  bundling files: foo/Bar/file.txt 3 chunks
-  bundling files: foo/file.txt 4 chunks
-  bundling files: foo/file.txt 5 chunks
-  bundling files: foo/file.txt 6 chunks
-  bundling files: foo/file.txt 7 chunks
-  bundling files: quux/file.py 8 chunks
-  bundling files: quux/file.py 9 chunks
-  bundling files: quux/file.py 10 chunks
-  bundling files: quux/file.py 11 chunks
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 0 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 0/3 manifests (0.00%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 1/3 manifests (33.33%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 2/3 manifests (66.67%)
+  bundling: 3/3 manifests (100.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/Bar/file.txt 0/3 files (0.00%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 1/3 files (33.33%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: quux/file.py 2/3 files (66.67%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
