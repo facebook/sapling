@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import cStringIO, email.Parser, os, re
+import cStringIO, email.Parser, os, errno, re
 import tempfile, zlib
 
 from i18n import _
@@ -429,10 +429,16 @@ class patchfile(object):
         # Ensure supplied data ends in fname, being a regular file or
         # a symlink. cmdutil.updatedir will -too magically- take care
         # of setting it to the proper type afterwards.
+        st_mode = None
         islink = os.path.islink(fname)
         if islink:
             fp = cStringIO.StringIO()
         else:
+            try:
+                st_mode = os.lstat(fname).st_mode & 0777
+            except OSError, e:
+                if e.errno != errno.ENOENT:
+                    raise
             fp = self.opener(fname, 'w')
         try:
             if self.eolmode == 'auto':
@@ -451,6 +457,8 @@ class patchfile(object):
                 fp.writelines(lines)
             if islink:
                 self.opener.symlink(fp.getvalue(), fname)
+            if st_mode is not None:
+                os.chmod(fname, st_mode)
         finally:
             fp.close()
 
