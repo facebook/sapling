@@ -333,6 +333,8 @@ class hgsubrepo(abstractsubrepo):
 
             def addpathconfig(key, value):
                 if value:
+                    if not os.path.isabs(value):
+                        value = os.path.relpath(os.path.abspath(value), root)
                     fp.write('%s = %s\n' % (key, value))
                     self._repo.ui.setconfig('paths', key, value)
 
