@@ -483,7 +483,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             cmdutil.bail_if_changed(repo)
             return hg.clean(repo, node)
 
-def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
+def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
+             rename=None, inactive=False):
     '''track a line of development with movable markers
 
     Bookmarks are pointers to certain commits that move when
@@ -514,7 +515,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         if mark is None:
             raise util.Abort(_("new bookmark name required"))
         marks[mark] = marks[rename]
-        if repo._bookmarkcurrent == rename:
+        if repo._bookmarkcurrent == rename and not inactive:
             bookmarks.setcurrent(repo, mark)
         del marks[rename]
         bookmarks.write(repo)
@@ -549,7 +550,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             marks[mark] = repo.lookup(rev)
         else:
             marks[mark] = repo.changectx('.').node()
-        if repo.changectx('.').node() == marks[mark]:
+        if not inactive and repo.changectx('.').node() == marks[mark]:
             bookmarks.setcurrent(repo, mark)
         bookmarks.write(repo)
         return
@@ -4469,8 +4470,9 @@ table = {
          [('f', 'force', False, _('force')),
           ('r', 'rev', '', _('revision'), _('REV')),
           ('d', 'delete', False, _('delete a given bookmark')),
-          ('m', 'rename', '', _('rename a given bookmark'), _('NAME'))],
-         _('hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]')),
+          ('m', 'rename', '', _('rename a given bookmark'), _('NAME')),
+          ('i', 'inactive', False, _('do not mark a new bookmark active'))],
+         _('hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]')),
     "branch":
         (branch,
          [('f', 'force', None,
