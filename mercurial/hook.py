@@ -136,8 +136,9 @@ def hook(ui, repo, name, throw=False, **args):
                 if cmd.count(':') >= 2:
                     path, cmd = cmd[7:].rsplit(':', 1)
                     path = util.expandpath(path)
-                    mod = extensions.loadpath(os.path.join(repo.root, path),
-                                              'hghook.%s' % hname)
+                    if repo:
+                        path = os.path.join(repo.root, path)
+                    mod = extensions.loadpath(path, 'hghook.%s' % hname)
                     hookfn = getattr(mod, cmd)
                 else:
                     hookfn = cmd[7:].strip()
