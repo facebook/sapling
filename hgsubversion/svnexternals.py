@@ -343,6 +343,8 @@ def getchanges(ui, repo, parentctx, exts):
                 hgsubstate.append('%s %s\n' % (rev, path))
             files['.hgsub'] = ''.join(hgsub)
             files['.hgsubstate'] = ''.join(hgsubstate)
+    elif mode == 'ignore':
+        files = {}
     else:
         raise hgutil.Abort(_('unknown externals modes: %s') % mode)
 
@@ -375,6 +377,8 @@ def parse(ui, ctx):
                 rev = 'HEAD'
             line = norevline.replace('{REV}', rev)
             external.setdefault(base, []).append(line)
+    elif mode == 'ignore':
+        pass
     else:
         raise hgutil.Abort(_('unknown externals modes: %s') % mode)
     return external

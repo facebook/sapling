@@ -316,7 +316,7 @@ settings:
     Set to ``subrepos`` to switch to subrepos-based externals support
     (requires Mercurial 1.7.1 or later.) Default is ``svnexternals``,
     which uses a custom hgsubversion-specific format and works on
-    older versions of Mercurial.
+    older versions of Mercurial. Use ``ignore`` to avoid converting externals.
 
 The following options only have an effect on the initial clone of a repository:
 

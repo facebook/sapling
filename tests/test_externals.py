@@ -214,6 +214,15 @@ deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
     def test_hgsub_stupid(self):
         self.test_hgsub(True)
 
+    def test_ignore(self):
+        repo = self._load_fixture_and_fetch('externals.svndump',
+                                            externals='ignore')
+        for rev in repo:
+            ctx = repo[rev]
+            self.assertTrue('.hgsvnexternals' not in ctx)
+            self.assertTrue('.hgsub' not in ctx)
+            self.assertTrue('.hgsubstate' not in ctx)
+
     def test_updatehgsub(self):
         def checkdeps(ui, repo, rev, deps, nodeps):
             commands.update(ui, repo, node=str(rev))
