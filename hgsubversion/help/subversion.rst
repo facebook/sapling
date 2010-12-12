@@ -98,9 +98,18 @@ accepted by several Mercurial commands for specifying revisions. See
 Support for externals
 ---------------------
 
-When using a standard layout, ``svn:externals`` properties are (by
-default) serialized into a single ``.hgsvnexternals`` file having the
-following syntax::
+Subversion externals conversion is implemented for standard layouts.
+
+Using .hgsvnexternals (default mode)
+====================================
+
+.hgsvnexternals has been implemented before Mercurial supported proper
+subrepositories. Externals as subrepositories should now be preferred
+as they offer almost all .hgsvnexternals features with the benefit of
+a better integration with Mercurial commands.
+
+``svn:externals`` properties are serialized into a single
+``.hgsvnexternals`` file having the following syntax::
 
   [.]
    common1 http://path/to/external/svn/repo1
@@ -129,6 +138,67 @@ Alternatively, one can use the ``hgsubversion.externals`` in hgrc to
 specify ``subrepos`` as the externals mode. In this mode, ``.hgsub``
 and ``.hgsubstate`` files will be used instead of
 ``.hgsvnexternals``. This feature requires Mercurial 1.7.1 or later.
+
+
+Using Subrepositories
+=====================
+
+Set:
+
+  [hgsubversion]
+  externals = subrepos
+
+to enable this mode.
+
+``svn:externals`` properties are serialized into the subrepositories
+metadata files, ``.hgsub`` and ``.hgsubstate``. The following
+``svn:externals`` entry:
+
+  -r23 ^/externals/project1 deps/project1
+
+set on the "subdir" directory becomes:
+
+    (.hgsub)
+    subdir/deps/project1 = [hgsubversion] subdir:-r{REV} ^/externals/project1 deps/project1
+
+    (.hgsubstate)
+    23 subdir/deps/project1
+
+At this point everything works like a regular svn subrepository. The
+right part of the .hgsub entry reads like:
+
+    TARGETDIR:REWRITTEN_EXTERNAL_DEFINITION
+
+where REWRITTEN_EXTERNAL_DEFINITION is like the original definition
+with the revision identifier replaced with {REV}.
+
+This mode has the following limitations:
+
+* Require Mercurial >= 1.7.1 to work correctly on all platforms.
+
+* "hgsubversion" subrepositories require hgsubversion extension to be
+  available. To operate transparently on ``svn:externals`` we have to
+  stay as close as possible to their original property
+  format. Besides, relative externals require a parent subversion
+  repository to be resolved while stock Mercurial only supports
+  absolute subversion paths.
+
+* Leading or trailing whitespaces in the external definitions are lost
+
+* Leading or trailing whitespaces in the target directory are lost
+
+* The external definition should not contain {REV}
+
+* Unversioned definitions are pulled but the behaviour upon
+  update/merge is not clearly defined. We tried to preserve the
+  .hgsubstate as "HEAD" but the subrepository will probably not be
+  updated when the hg repository is updated. Given subrepositories
+  were designed not to support unversioned dependencies, this is
+  unlikely to be fixed.
+
+* .hgsub and .hgsubstate are currently overwritten and
+  non-[hgsubversion] subrepos entries are lost. This could be fixed by
+  editing these files more carefully.
 
 Limitations
 -----------
