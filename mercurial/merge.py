@@ -255,6 +255,9 @@ def applyupdates(repo, action, wctx, mctx, actx):
     wctx is the working copy context
     mctx is the context to be merged into the working copy
     actx is the context of the common ancestor
+
+    Return a tuple of counts (updated, merged, removed, unresolved) that
+    describes how many files were affected by the update.
     """
 
     updated, merged, removed, unresolved = 0, 0, 0, 0
@@ -462,6 +465,8 @@ def update(repo, node, branchmerge, force, partial):
                  use 'hg update -C' to discard changes)
     3 = abort: uncommitted local changes
     4 = incompatible options (checked in commands.py)
+
+    Return the same tuple as applyupdates().
     """
 
     onode = node
