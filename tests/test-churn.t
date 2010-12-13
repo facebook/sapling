@@ -139,3 +139,22 @@ this was failing with a ZeroDivisionError
   $ hg churn
   test      0 
   $ cd ..
+
+Ignore trailing or leading spaces in emails
+
+  $ cd repo
+  $ touch bar
+  $ hg ci -Am'bar' -u 'user4 <user4@x.com>'
+  adding bar
+  $ touch foo
+  $ hg ci -Am'foo' -u 'user4 < user4@x.com >'
+  adding foo
+  $ hg log -l2 --template '[{author|email}]\n'
+  [ user4@x.com ]
+  [user4@x.com]
+  $ hg churn -c
+  user1            4 *********************************************************
+  user3            3 *******************************************
+  user4@x.com      2 *****************************
+  user2            2 *****************************
+  with space       1 **************

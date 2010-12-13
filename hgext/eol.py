@@ -11,18 +11,20 @@ configuration file every time you run an ``hg`` command. The
 configuration files. It uses two sections, ``[patterns]`` and
 ``[repository]``.
 
-The ``[patterns]`` section specifies the line endings used in the
-working directory. The format is specified by a file pattern. The
-first match is used, so put more specific patterns first. The
-available line endings are ``LF``, ``CRLF``, and ``BIN``.
+The ``[patterns]`` section specifies how line endings should be
+converted between the working copy and the repository. The format is
+specified by a file pattern. The first match is used, so put more
+specific patterns first. The available line endings are ``LF``,
+``CRLF``, and ``BIN``.
 
 Files with the declared format of ``CRLF`` or ``LF`` are always
-checked out in that format and files declared to be binary (``BIN``)
-are left unchanged. Additionally, ``native`` is an alias for the
-platform's default line ending: ``LF`` on Unix (including Mac OS X)
-and ``CRLF`` on Windows. Note that ``BIN`` (do nothing to line
-endings) is Mercurial's default behaviour; it is only needed if you
-need to override a later, more general pattern.
+checked out and stored in the repository in that format and files
+declared to be binary (``BIN``) are left unchanged. Additionally,
+``native`` is an alias for checking out in the platform's default line
+ending: ``LF`` on Unix (including Mac OS X) and ``CRLF`` on
+Windows. Note that ``BIN`` (do nothing to line endings) is Mercurial's
+default behaviour; it is only needed if you need to override a later,
+more general pattern.
 
 The optional ``[repository]`` section specifies the line endings to
 use for files stored in the repository. It has a single setting,
@@ -45,6 +47,10 @@ Example versioned ``.hgeol`` file::
 
   [repository]
   native = LF
+
+.. note::
+   The rules will first apply when files are touched in the working
+   copy, e.g. by updating to null and back to tip to touch all files.
 
 The extension uses an optional ``[eol]`` section in your hgrc file
 (not the ``.hgeol`` file) for settings that control the overall
