@@ -145,6 +145,9 @@ def getrenamedfn(repo, endrev=None):
 def showauthor(repo, ctx, templ, **args):
     return ctx.user()
 
+def showbranch(**args):
+    return args['ctx'].branch()
+
 def showbranches(**args):
     branch = args['ctx'].branch()
     if branch != 'default':
@@ -247,6 +250,7 @@ def showtags(**args):
 # revcache - a cache dictionary for the current revision
 keywords = {
     'author': showauthor,
+    'branch': showbranch,
     'branches': showbranches,
     'children': showchildren,
     'date': showdate,

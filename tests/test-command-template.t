@@ -570,7 +570,7 @@ Issue2130: xml output for 'hg heads' is malformed
 
 Keys work:
 
-  $ for key in author branches date desc file_adds file_dels file_mods \
+  $ for key in author branch branches date desc file_adds file_dels file_mods \
   >         file_copies file_copies_switch files \
   >         manifest node parents rev tags diffstat extras; do
   >     for mode in '' --verbose --debug; do
@@ -604,6 +604,33 @@ Keys work:
   author--debug: other@place
   author--debug: A. N. Other <other@place>
   author--debug: User Name <user@hostname>
+  branch: default
+  branch: default
+  branch: default
+  branch: default
+  branch: foo
+  branch: default
+  branch: default
+  branch: default
+  branch: default
+  branch--verbose: default
+  branch--verbose: default
+  branch--verbose: default
+  branch--verbose: default
+  branch--verbose: foo
+  branch--verbose: default
+  branch--verbose: default
+  branch--verbose: default
+  branch--verbose: default
+  branch--debug: default
+  branch--debug: default
+  branch--debug: default
+  branch--debug: default
+  branch--debug: foo
+  branch--debug: default
+  branch--debug: default
+  branch--debug: default
+  branch--debug: default
   branches: 
   branches: 
   branches: 
