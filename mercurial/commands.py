@@ -3665,16 +3665,23 @@ def tag(ui, repo, name1, *names, **opts):
 
     Tags are used to name particular revisions of the repository and are
     very useful to compare different revisions, to go back to significant
-    earlier versions or to mark branch points as releases, etc.
+    earlier versions or to mark branch points as releases, etc. Changing
+    an existing tag is normally disallowed; use -f/--force to override.
 
     If no revision is given, the parent of the working directory is
     used, or tip if no revision is checked out.
 
     To facilitate version control, distribution, and merging of tags,
-    they are stored as a file named ".hgtags" which is managed
-    similarly to other project files and can be hand-edited if
-    necessary. The file '.hg/localtags' is used for local tags (not
-    shared among repositories).
+    they are stored as a file named ".hgtags" which is managed similarly
+    to other project files and can be hand-edited if necessary. This
+    also means that tagging creates a new commit. The file
+    ".hg/localtags" is used for local tags (not shared among
+    repositories).
+
+    Tag commits are usually made at the head of a branch. If the parent
+    of the working directory is not a branch head, :hg:`tag` aborts; use
+    -f/--force to force the tag commit to be based on a non-head
+    changeset.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
@@ -3717,9 +3724,13 @@ def tag(ui, repo, name1, *names, **opts):
             if n in repo.tags():
                 raise util.Abort(_('tag \'%s\' already exists '
                                    '(use -f to force)') % n)
-    if not rev_ and repo.dirstate.parents()[1] != nullid:
-        raise util.Abort(_('uncommitted merge - please provide a '
-                           'specific revision'))
+    if not opts.get('local'):
+        p1, p2 = repo.dirstate.parents()
+        if p2 != nullid:
+            raise util.Abort(_('uncommitted merge'))
+        bheads = repo.branchheads()
+        if not opts.get('force') and bheads and p1 not in bheads:
+            raise util.Abort(_('not at a branch head (use -f to force)'))
     r = cmdutil.revsingle(repo, rev_).node()
 
     if not message:
@@ -4481,7 +4492,7 @@ table = {
          _('[OPTION]... [FILE]...')),
     "tag":
         (tag,
-         [('f', 'force', None, _('replace existing tag')),
+         [('f', 'force', None, _('force tag')),
           ('l', 'local', None, _('make the tag local')),
           ('r', 'rev', '',
            _('revision to tag'), _('REV')),
