@@ -196,3 +196,15 @@ test custom commit messages
   $ hg log -l1 --template "{desc}\n"
   custom tag message
   second line
+
+local tag with .hgtags modified
+
+  $ hg tag hgtags-modified
+  $ hg rollback
+  rolling back to revision 11 (undo commit)
+  $ hg st
+  M .hgtags
+  ? .hgtags.orig
+  ? editor
+  $ hg tag --local baz
+  $ hg revert --no-backup .hgtags
