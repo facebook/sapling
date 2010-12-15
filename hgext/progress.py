@@ -131,7 +131,7 @@ class progbar(object):
             if not needprogress:
                 head = spacejoin(head, add)
             else:
-                tail = spacejoin(add, tail)
+                tail = spacejoin(tail, add)
         if needprogress:
             used = 0
             if head:
