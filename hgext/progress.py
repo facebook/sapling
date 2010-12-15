@@ -28,7 +28,7 @@ The following settings are available::
   [progress]
   delay = 3 # number of seconds (float) before showing the progress bar
   refresh = 0.1 # time in seconds between refreshes of the progress bar
-  format = topic bar number # format of the progress bar
+  format = topic bar number estimate # format of the progress bar
   width = <none> # if set, the maximum width of the progress information
                  # (that is, min(width, term width) will be used)
   clear-complete = True # clear the progress bar after it's done
@@ -90,7 +90,7 @@ class progbar(object):
             'progress', 'refresh', default=0.1))
         self.order = self.ui.configlist(
             'progress', 'format',
-            default=['topic', 'bar', 'number'])
+            default=['topic', 'bar', 'number', 'estimate'])
 
     def show(self, now, topic, pos, item, unit, total):
         if not shouldprint(self.ui):
