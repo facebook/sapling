@@ -660,6 +660,12 @@ class gitsubrepo(abstractsubrepo):
     def _gitstate(self):
         return self._gitcommand(['rev-parse', 'HEAD'])
 
+    def _gitcurrentbranch(self):
+        current, err = self._gitdir(['symbolic-ref', 'HEAD', '--quiet'])
+        if err:
+            current = None
+        return current
+
     def _githavelocally(self, revision):
         out, code = self._gitdir(['cat-file', '-e', revision])
         return code == 0
@@ -670,16 +676,12 @@ class gitsubrepo(abstractsubrepo):
 
     def _gitbranchmap(self):
         '''returns 3 things:
-        the current branch,
         a map from git branch to revision
-        a map from revision to branches'''
+        a map from revision to branches
+        a map from remote branch to local tracking branch'''
         branch2rev = {}
         rev2branch = {}
         tracking = {}
-        current, err = self._gitdir(['symbolic-ref', 'HEAD', '--quiet'])
-        if err:
-            current = None
-
         out = self._gitcommand(['for-each-ref', '--format',
                                 '%(objectname) %(refname) %(upstream) end'])
         for line in out.split('\n'):
@@ -693,7 +695,7 @@ class gitsubrepo(abstractsubrepo):
             if upstream:
                 # assumes no more than one local tracking branch for a remote
                 tracking[upstream] = ref
-        return current, branch2rev, rev2branch, tracking
+        return branch2rev, rev2branch, tracking
 
     def _fetch(self, source, revision):
         if not os.path.exists('%s/.git' % self._path):
@@ -731,7 +733,7 @@ class gitsubrepo(abstractsubrepo):
                 return
         elif self._gitstate() == revision:
             return
-        current, branch2rev, rev2branch, tracking = self._gitbranchmap()
+        branch2rev, rev2branch, tracking = self._gitbranchmap()
 
         def rawcheckout():
             # no branch to checkout, check it out with no branch
@@ -776,7 +778,7 @@ class gitsubrepo(abstractsubrepo):
             # which is equivalent to updating the local branch to the remote.
             # Since we are only looking at branching at update, we need to
             # detect this situation and perform this action lazily.
-            if tracking[remote] != current:
+            if tracking[remote] != self._gitcurrentbranch():
                 self._gitcommand(['checkout', tracking[remote]])
             self._gitcommand(['merge', '--ff', remote])
         else:
@@ -809,7 +811,7 @@ class gitsubrepo(abstractsubrepo):
 
     def push(self, force):
         # if a branch in origin contains the revision, nothing to do
-        current, branch2rev, rev2branch, tracking = self._gitbranchmap()
+        branch2rev, rev2branch, tracking = self._gitbranchmap()
         if self._state[1] in rev2branch:
             for b in rev2branch[self._state[1]]:
                 if b.startswith('refs/remotes/origin/'):
@@ -822,6 +824,8 @@ class gitsubrepo(abstractsubrepo):
         cmd = ['push']
         if force:
             cmd.append('--force')
+
+        current = self._gitcurrentbranch()
         if current:
             # determine if the current branch is even useful
             if not self._gitisancestor(self._state[1], current):
