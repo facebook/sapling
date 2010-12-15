@@ -169,14 +169,8 @@ Test convert progress bar'
   > delay = 0
   > refresh = 0
   > EOF
-  $ cat > filtercr.py <<EOF
-  > import sys, re
-  > for line in sys.stdin:
-  >     line = re.sub(r'\r+[^\n]', lambda m: '\n' + m.group()[-1:], line)
-  >     sys.stdout.write(line)
-  > EOF
 
-  $ hg convert svn-repo hg-progress 2>&1 | python filtercr.py
+  $ hg convert svn-repo hg-progress 2>&1 | $TESTDIR/filtercr.py
   
   scanning [ <=>                                                              ] 1
   scanning [  <=>                                                             ] 2
@@ -249,3 +243,4 @@ Test convert progress bar'
   2 adddb
   1 branch
   0 clobberdir
+  

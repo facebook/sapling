@@ -23,14 +23,6 @@
   > }
   > EOF
 
-  $ cat > filtercr.py <<EOF
-  > import sys, re
-  > for line in sys.stdin:
-  >     line = re.sub(r'\r+[^\n]', lambda m: '\n' + m.group()[-1:], line)
-  >     sys.stdout.write(line)
-  > print
-  > EOF
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "progress=" >> $HGRCPATH
   $ echo "loop=`pwd`/loop.py" >> $HGRCPATH
@@ -39,14 +31,14 @@
 
 test default params, display nothing because of delay
 
-  $ hg -y loop 3 2>&1 | python filtercr.py
+  $ hg -y loop 3 2>&1 | $TESTDIR/filtercr.py
   
   $ echo "delay=0" >> $HGRCPATH
   $ echo "refresh=0" >> $HGRCPATH
 
 test with delay=0, refresh=0
 
-  $ hg -y loop 3 2>&1 | python filtercr.py
+  $ hg -y loop 3 2>&1 | $TESTDIR/filtercr.py
   
   loop [                                                                    ] 0/3
   loop [=====================>                                              ] 1/3
@@ -55,12 +47,13 @@ test with delay=0, refresh=0
 
 test refresh is taken in account
 
-  $ hg -y --config progress.refresh=100 loop 3 2>&1 | python filtercr.py
+  $ hg -y --config progress.refresh=100 loop 3 2>&1 | $TESTDIR/filtercr.py
   
 
 test format options 1
 
-  $ hg -y --config 'progress.format=number topic item+2' loop 2 2>&1 | python filtercr.py
+  $ hg -y --config 'progress.format=number topic item+2' loop 2 2>&1 \
+  > | $TESTDIR/filtercr.py
   
   0/2 loop lo
   1/2 loop lo
@@ -68,7 +61,8 @@ test format options 1
 
 test format options 2
 
-  $ hg -y --config 'progress.format=number item-3 bar' loop 2 2>&1 | python filtercr.py
+  $ hg -y --config 'progress.format=number item-3 bar' loop 2 2>&1 \
+  > | $TESTDIR/filtercr.py
   
   0/2 p.0 [                                                                     ]
   1/2 p.1 [=================================>                                   ]
@@ -76,7 +70,8 @@ test format options 2
 
 test format options and indeterminate progress
 
-  $ hg -y --config 'progress.format=number item bar' loop -- -2 2>&1 | python filtercr.py
+  $ hg -y --config 'progress.format=number item bar' loop -- -2 2>&1 \
+  > | $TESTDIR/filtercr.py
   
   0 loop.0               [ <=>                                                  ]
   1 loop.1               [  <=>                                                 ]
@@ -84,7 +79,7 @@ test format options and indeterminate progress
 
 make sure things don't fall over if count > total
 
-  $ hg -y loop --total 4 6 2>&1 | python filtercr.py
+  $ hg -y loop --total 4 6 2>&1 | $TESTDIR/filtercr.py
   
   loop [                                                                    ] 0/4
   loop [================>                                                   ] 1/4
@@ -96,5 +91,5 @@ make sure things don't fall over if count > total
 
 test immediate progress completion
 
-  $ hg -y loop 0 2>&1 | python filtercr.py
+  $ hg -y loop 0 2>&1 | $TESTDIR/filtercr.py
   
