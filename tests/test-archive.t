@@ -214,6 +214,7 @@ enable progress extension:
   > progress =
   > [progress]
   > assume-tty = 1
+  > format = topic bar number
   > delay = 0
   > refresh = 0
   > width = 60
