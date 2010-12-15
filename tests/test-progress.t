@@ -94,3 +94,49 @@ test immediate progress completion
 
   $ hg -y loop 0 2>&1 | $TESTDIR/filtercr.py
   
+
+test delay time estimates
+
+  $ cat > mocktime.py <<EOF
+  > import os
+  > import time
+  > 
+  > class mocktime(object):
+  >     def __init__(self, increment):
+  >         self.time = 0
+  >         self.increment = increment
+  >     def __call__(self):
+  >         self.time += self.increment
+  >         return self.time
+  > 
+  > def uisetup(ui):
+  >     time.time = mocktime(int(os.environ.get('MOCKTIME', '11')))
+  > EOF
+
+  $ echo "[extensions]" > $HGRCPATH
+  $ echo "mocktime=`pwd`/mocktime.py" >> $HGRCPATH
+  $ echo "progress=" >> $HGRCPATH
+  $ echo "loop=`pwd`/loop.py" >> $HGRCPATH
+  $ echo "[progress]" >> $HGRCPATH
+  $ echo "assume-tty=1" >> $HGRCPATH
+  $ echo "delay=25" >> $HGRCPATH
+  $ echo "width=60" >> $HGRCPATH
+
+  $ hg -y loop 8 2>&1 | python $TESTDIR/filtercr.py
+  
+  loop [=========>                                ] 2/8 1m07s
+  loop [===============>                            ] 3/8 56s
+  loop [=====================>                      ] 4/8 45s
+  loop [==========================>                 ] 5/8 34s
+  loop [================================>           ] 6/8 23s
+  loop [=====================================>      ] 7/8 12s
+                                                              \r (esc)
+
+  $ MOCKTIME=10000 hg -y loop 4 2>&1 | python $TESTDIR/filtercr.py
+  
+  loop [                                                ] 0/4
+  loop [=========>                                ] 1/4 8h21m
+  loop [====================>                     ] 2/4 5h34m
+  loop [==============================>           ] 3/4 2h47m
+                                                              \r (esc)
+
