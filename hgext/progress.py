@@ -36,10 +36,11 @@ The following settings are available::
   assume-tty = False # if true, ALWAYS show a progress bar, unless
                      # disable is given
 
-Valid entries for the format field are topic, bar, number, unit, and
-item. item defaults to the last 20 characters of the item, but this
-can be changed by adding either ``-<num>`` which would take the last
-num characters, or ``+<num>`` for the first num characters.
+Valid entries for the format field are topic, bar, number, unit,
+estimate, and item. item defaults to the last 20 characters of the
+item, but this can be changed by adding either ``-<num>`` which would
+take the last num characters, or ``+<num>`` for the first num
+characters.
 """
 
 import sys
@@ -128,6 +129,8 @@ class progbar(object):
                 needprogress = True
             elif indicator == 'unit' and unit:
                 add = unit
+            elif indicator == 'estimate':
+                add = self.estimate(topic, pos, total, now)
             if not needprogress:
                 head = spacejoin(head, add)
             else:
@@ -140,17 +143,6 @@ class progbar(object):
                 used += len(tail) + 1
             progwidth = termwidth - used - 3
             if total and pos <= total:
-                initial = self.startvals[topic]
-                target = total - initial
-                delta = pos - initial
-                if delta > 0:
-                    elapsed = now - self.starttimes[topic]
-                    if elapsed > float(
-                        self.ui.config('progress', 'estimate', default=2)):
-                        seconds = (elapsed * (target - delta)) // delta + 1
-                        remaining = fmtremaining(seconds)
-                        progwidth -= len(remaining) + 1
-                        tail = spacejoin(tail, remaining)
                 amt = pos * progwidth // total
                 bar = '=' * (amt - 1)
                 if amt > 0:
@@ -189,6 +181,18 @@ class progbar(object):
     def width(self):
         tw = self.ui.termwidth()
         return min(int(self.ui.config('progress', 'width', default=tw)), tw)
+
+    def estimate(self, topic, pos, total, now):
+        initialpos = self.startvals[topic]
+        target = total - initialpos
+        delta = pos - initialpos
+        if delta > 0:
+            elapsed = now - self.starttimes[topic]
+            if elapsed > float(
+                self.ui.config('progress', 'estimate', default=2)):
+                seconds = (elapsed * (target - delta)) // delta + 1
+                return fmtremaining(seconds)
+        return ''
 
     def progress(self, topic, pos, item='', unit='', total=None):
         now = time.time()
