@@ -718,9 +718,8 @@ class gitsubrepo(abstractsubrepo):
         if self._state[1] != self._gitstate(): # version checked out changed?
             return True
         # check for staged changes or modified files; ignore untracked files
-        status = self._gitcommand(['status'])
-        return ('\n# Changed but not updated:' in status or
-                '\n# Changes to be committed:' in status)
+        out, code = self._gitdir(['diff-index', '--quiet', 'HEAD'])
+        return code == 1
 
     def get(self, state):
         source, revision, kind = state
