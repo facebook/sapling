@@ -57,15 +57,18 @@ def shouldprint(ui):
 
 def fmtremaining(seconds):
     if seconds < 60:
+        # i18n: format XX seconds as "XXs"
         return _("%02ds") % (seconds)
     minutes = seconds // 60
     if minutes < 60:
         seconds -= minutes * 60
+        # i18n: format X minutes and YY seconds as "XmYYs"
         return _("%dm%02ds") % (minutes, seconds)
     # we're going to ignore seconds in this case
     minutes += 1
     hours = minutes // 60
     minutes -= hours * 60
+    # i18n: format X hours and YY minutes as "XhYYm"
     return _("%dh%02dm") % (hours, minutes)
 
 class progbar(object):
