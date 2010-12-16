@@ -252,27 +252,29 @@ tagging on an uncommitted merge (issue2542)
   $ echo c1 > f1
   $ hg ci -Am0
   adding f1
+  $ echo c2 > f2
+  $ hg ci -Am1
+  adding f2
+  $ hg co -q 0
   $ hg branch b1
   marked working directory as branch b1
-  $ echo c2 >> f1
-  $ hg ci -m1
+  $ hg ci -m2
   $ hg up default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge b1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
   $ hg tag t1
   abort: uncommitted merge
   [255]
   $ hg status
-  M f1
   $ hg tag --rev 1 t2
   abort: uncommitted merge
   [255]
   $ hg tag --rev 1 --local t3
   $ hg tags -v
-  tip                                1:9466ada9ee90
-  t3                                 1:9466ada9ee90 local
+  tip                                2:8a8f787d0d5c
+  t3                                 1:c3adabd1a5f4 local
 
   $ cd ..
