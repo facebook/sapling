@@ -21,7 +21,7 @@ def substate(ctx):
             for l in ctx['.hgsubstate'].data().splitlines():
                 revision, path = l.split(" ", 1)
                 rev[path] = revision
-        except IOError as err:
+        except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
     return rev
