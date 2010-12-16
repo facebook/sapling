@@ -141,3 +141,9 @@ test delay time estimates
   loop [==============================>           ] 3/4 2h47m
                                                               \r (esc)
 
+Time estimates should not fail when there's no end point:
+  $ hg -y loop -- -4 2>&1 | python $TESTDIR/filtercr.py
+  
+  loop [ <=>                                              ] 2
+  loop [  <=>                                             ] 3
+                                                              \r (esc)

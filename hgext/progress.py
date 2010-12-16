@@ -183,6 +183,8 @@ class progbar(object):
         return min(int(self.ui.config('progress', 'width', default=tw)), tw)
 
     def estimate(self, topic, pos, total, now):
+        if total is None:
+            return ''
         initialpos = self.startvals[topic]
         target = total - initialpos
         delta = pos - initialpos
