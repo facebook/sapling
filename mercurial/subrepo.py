@@ -13,19 +13,6 @@ hg = None
 
 nullstate = ('', '', 'empty')
 
-
-def substate(ctx):
-    rev = {}
-    if '.hgsubstate' in ctx:
-        try:
-            for l in ctx['.hgsubstate'].data().splitlines():
-                revision, path = l.split(" ", 1)
-                rev[path] = revision
-        except IOError, err:
-            if err.errno != errno.ENOENT:
-                raise
-    return rev
-
 def state(ctx, ui):
     """return a state dict, mapping subrepo paths configured in .hgsub
     to tuple: (source from .hgsub, revision from .hgsubstate, kind
@@ -52,7 +39,15 @@ def state(ctx, ui):
     for path, src in ui.configitems('subpaths'):
         p.set('subpaths', path, src, ui.configsource('subpaths', path))
 
-    rev = substate(ctx)
+    rev = {}
+    if '.hgsubstate' in ctx:
+        try:
+            for l in ctx['.hgsubstate'].data().splitlines():
+                revision, path = l.split(" ", 1)
+                rev[path] = revision
+        except IOError, err:
+            if err.errno != errno.ENOENT:
+                raise
 
     state = {}
     for path, src in p[''].items():
