@@ -487,6 +487,7 @@ class path_auditor(object):
     '''ensure that a filesystem path contains no banned components.
     the following properties of a path are checked:
 
+    - ends with a directory separator
     - under top-level .hg
     - starts at the root of a windows drive
     - contains ".."
@@ -504,6 +505,9 @@ class path_auditor(object):
     def __call__(self, path):
         if path in self.audited:
             return
+        # AIX ignores "/" at end of path, others raise EISDIR.
+        if endswithsep(path):
+            raise Abort(_("path ends in directory separator: %s") % path)
         normpath = os.path.normcase(path)
         parts = splitpath(normpath)
         if (os.path.splitdrive(path)[0]
