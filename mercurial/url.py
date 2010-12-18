@@ -545,6 +545,9 @@ if has_https:
                 self.ui.debug('%s certificate successfully verified\n' %
                               self.host)
             else:
+                self.ui.warn(_("warning: %s certificate not verified "
+                               "(check web.cacerts config setting)\n") % 
+                             self.host)
                 httplib.HTTPSConnection.connect(self)
 
     class httpsconnection(BetterHTTPS):

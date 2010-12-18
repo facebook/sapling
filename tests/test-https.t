@@ -106,6 +106,7 @@ Test server address cannot be reused
 clone via pull
 
   $ hg clone https://localhost:$HGPORT/ copy-pull
+  warning: localhost certificate not verified (check web.cacerts config setting)
   requesting all changes
   adding changesets
   adding manifests
@@ -131,6 +132,7 @@ pull
   $ echo '[hooks]' >> .hg/hgrc
   $ echo "changegroup = python '$TESTDIR'/printenv.py changegroup" >> .hg/hgrc
   $ hg pull
+  warning: localhost certificate not verified (check web.cacerts config setting)
   changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=https://localhost:$HGPORT/ 
   pulling from https://localhost:$HGPORT/
   searching for changes
