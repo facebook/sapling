@@ -903,6 +903,29 @@ class gitsubrepo(abstractsubrepo):
         ui.progress(_('archiving (%s)') % relpath, None)
 
 
+    def status(self, rev2, **opts):
+        rev1 = self._state[1]
+        modified, added, removed = [], [], []
+        if rev2:
+            command = ['diff-tree', rev1, rev2]
+        else:
+            command = ['diff-index', rev1]
+        out = self._gitcommand(command)
+        for line in out.split('\n'):
+            tab = line.find('\t')
+            if tab == -1:
+                continue
+            status, f = line[tab - 1], line[tab + 1:]
+            if status == 'M':
+                modified.append(f)
+            elif status == 'A':
+                added.append(f)
+            elif status == 'D':
+                removed.append(f)
+
+        deleted = unknown = ignored = clean = []
+        return modified, added, removed, deleted, unknown, ignored, clean
+
 types = {
     'hg': hgsubrepo,
     'svn': svnsubrepo,

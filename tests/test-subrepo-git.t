@@ -52,6 +52,8 @@ record a new commit from upstream from a different branch
   $ git checkout -q -b testing origin/testing >/dev/null
 
   $ cd ..
+  $ hg status --subrepos
+  M s/g
   $ hg commit -m 'update git subrepo'
   committing subrepository s
   $ hg debugsub
@@ -99,6 +101,8 @@ clone root, make local change
 
   $ cd ../ta
   $ echo ggg >> s/g
+  $ hg status --subrepos
+  M s/g
   $ hg commit -m ggg
   committing subrepository s
   $ hg debugsub
@@ -119,6 +123,8 @@ clone root separately, make different local change
   $ git add f
   $ cd ..
 
+  $ hg status --subrepos
+  A s/f
   $ hg commit -m f
   committing subrepository s
   $ hg debugsub
@@ -160,6 +166,10 @@ user a pulls, merges, commits
   ggg
   $ hg commit -m 'merge'
   committing subrepository s
+  $ hg status --subrepos --rev 1:5
+  M .hgsubstate
+  M s/g
+  A s/f
   $ hg debugsub
   path s
    source   ../gitroot
@@ -282,6 +292,8 @@ create nested repo
 nested commit
 
   $ echo ffff >> inner/s/f
+  $ hg status --subrepos
+  M inner/s/f
   $ hg commit -m nested
   committing subrepository inner
   committing subrepository inner/s
