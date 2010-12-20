@@ -38,7 +38,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2010-09-22 13:26+0200\n"
-"PO-Revision-Date: 2010-09-24 02:15+0200\n"
+"PO-Revision-Date: 2010-12-04 19:28+0100\n"
 "Last-Translator: Martin Roppelt <m.p.roppelt@web.de>\n"
 "Language-Team: German (http://transifex.net/projects/p/mercurial/team/de/) "
 "<>\n"
@@ -5864,7 +5864,7 @@ msgid "email addresses of copy recipients"
 msgstr "Emailadressen von CC-Empfängern"
 
 msgid "ask for confirmation before sending"
-msgstr ""
+msgstr "Vor dem Abschicken bestätigen"
 
 msgid "add diffstat output to messages"
 msgstr "Fügt Ausgabe von diffstat hinzu"
@@ -5895,7 +5895,7 @@ msgid "message identifier to reply to"
 msgstr "Antwortadresse (reply-to)"
 
 msgid "flags to add in subject prefixes"
-msgstr ""
+msgstr "Diese Stichwörter zu Betreffs-Präfixen hinzufügen"
 
 msgid "email addresses of recipients"
 msgstr "Emailadressen der Empfänger"
@@ -5929,7 +5929,7 @@ msgid "hg email [OPTION]... [DEST]..."
 msgstr "hg email [OPTION]... [ZIEL]..."
 
 msgid "show progress bars for some actions"
-msgstr ""
+msgstr "Bei einigen Befehlen Fortschrittsbalken zeigen"
 
 msgid ""
 "This extension uses the progress information logged by hg commands\n"
@@ -5965,35 +5965,46 @@ msgid "command to delete untracked files from the working directory"
 msgstr "Löscht nicht versionierte Dateien aus dem Arbeitsverzeichnis"
 
 msgid "removes files not tracked by Mercurial"
-msgstr ""
+msgstr "Entfernt nicht von Mercurial versionierte Dateien"
 
 msgid ""
 "    Delete files not known to Mercurial. This is useful to test local\n"
 "    and uncommitted changes in an otherwise-clean source tree."
 msgstr ""
+"    Entferne Dateien, die Mercurial nicht bekannt sind. Nützlich, um\n"
+"    lokale und nicht versionierte Dateien in einem ansonsten\n"
+"    unveränderten Projektarchiv zu testen."
 
 msgid "    This means that purge will delete:"
-msgstr ""
+msgstr "    Das heißt, purge wird das folgende löschen:"
 
 msgid ""
 "    - Unknown files: files marked with \"?\" by :hg:`status`\n"
 "    - Empty directories: in fact Mercurial ignores directories unless\n"
 "      they contain files under source control management"
 msgstr ""
+"    - Unbekannte Dateien: Dateien, die :hg:`status` mit \"?\\\" markiert\n"
+"    - Leere Verzeichnisse: Mercurial ignoriert Verzeichnisse, solange\n"
+"      sie keine Dateien unter Versionsverwaltung enthalten."
 
 msgid "    But it will leave untouched:"
-msgstr ""
+msgstr "    Aber das folgende unberührt lassen:"
 
 msgid ""
 "    - Modified and unmodified tracked files\n"
 "    - Ignored files (unless --all is specified)\n"
 "    - New files added to the repository (with :hg:`add`)"
 msgstr ""
+"    - Veränderte und unveränderte Dateien unter Versionsverwaltung\n"
+"    - Ignorierte Dateien (es sei denn --all wurde angegeben)\n"
+"    - Neu hinzugefügte Dateien (mit :hg:`add`)"
 
 msgid ""
 "    If directories are given on the command line, only files in these\n"
 "    directories are considered."
 msgstr ""
+"    Wenn auf der Befehlzeile Verzeichnisse angegeben wurden, werden\n"
+"    nur Dateien in diesen Verzeichnissen einbezogen."
 
 msgid ""
 "    Be careful with purge, as you could irreversibly delete some files\n"
@@ -6002,28 +6013,33 @@ msgid ""
 "    option.\n"
 "    "
 msgstr ""
+"    Seien Sie mit purge vorsichtig, da Sie Dateien unwiderbringlich\n"
+"    löschen könnten, die Sie nicht zum Projektarchiv hinzugefügt\n"
+"    haben. Wenn Sie nur die Liste der Dateien sehen wollen, die dieses\n"
+"    Programm entfernen würde, nutzen Sie die Option --print.\n"
+"    "
 
 #, python-format
 msgid "%s cannot be removed"
-msgstr ""
+msgstr "%s kann nicht entfernt werden"
 
 #, python-format
 msgid "warning: %s\n"
-msgstr ""
+msgstr "Warnung: %s\n"
 
 #, python-format
 msgid "Removing file %s\n"
-msgstr ""
+msgstr "Entferne Datei %s\n"
 
 #, python-format
 msgid "Removing directory %s\n"
-msgstr ""
+msgstr "Entferne Verzeichnis %s\n"
 
 msgid "abort if an error occurs"
-msgstr ""
+msgstr "Bei Fehler abbrechen"
 
 msgid "purge ignored files too"
-msgstr ""
+msgstr "Auch ignorierte Dateien entfernen"
 
 msgid "print filenames instead of deleting them"
 msgstr "Zeigt Dateinamen an, statt sie zu entfernen"
@@ -6033,7 +6049,7 @@ msgstr ""
 "Beendet Dateinamen mit NUL zur Nutzung mit xargs (implizert -p/--print)"
 
 msgid "hg purge [OPTION]... [DIR]..."
-msgstr ""
+msgstr "hg purge [OPTION]... [DIR]..."
 
 msgid "command to move sets of revisions to a different ancestor"
 msgstr "Verknüpft Änderungssätze mit einem anderen Vorgänger"
