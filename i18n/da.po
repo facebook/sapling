@@ -17,14 +17,14 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-11-01 11:03+0100\n"
-"PO-Revision-Date: 2010-11-01 11:11+0100\n"
+"POT-Creation-Date: 2010-12-10 12:44+0100\n"
+"PO-Revision-Date: 2010-12-10 12:46+0100\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
+"Language: Danish\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #, python-format
@@ -2070,6 +2070,13 @@ msgstr ""
 "  antagelse af at de har miksede linieskift med vilje."
 
 msgid ""
+"The ``win32text.forbid*`` hooks provided by the win32text extension\n"
+"have been unified into a single hook named ``eol.hook``. The hook will\n"
+"lookup the expected line endings from the ``.hgeol`` file, which means\n"
+"you must migrate to a ``.hgeol`` file first before using the hook."
+msgstr ""
+
+msgid ""
 "See :hg:`help patterns` for more information about the glob patterns\n"
 "used.\n"
 msgstr ""
@@ -2767,8 +2774,8 @@ msgstr "dette system ser ikke ud til at understøtte inotify"
 #, python-format
 msgid "*** the current per-user limit on the number of inotify watches is %s\n"
 msgstr ""
-"*** den nuværende grænse pr bruger for antallet af inotify overvågninger er %"
-"s\n"
+"*** den nuværende grænse pr bruger for antallet af inotify overvågninger er "
+"%s\n"
 
 msgid "*** this limit is too low to watch every directory in this repository\n"
 msgstr ""
@@ -2975,7 +2982,7 @@ msgstr ""
 msgid ""
 "The default template mappings (view with :hg:`kwdemo -d`) can be\n"
 "replaced with customized keywords and templates. Again, run\n"
-":hg:`kwdemo` to control the results of your config changes."
+":hg:`kwdemo` to control the results of your configuration changes."
 msgstr ""
 
 msgid ""
@@ -3408,7 +3415,7 @@ msgstr "kan ikke håndtere sammenføjninger"
 
 #, python-format
 msgid "cannot write patch \"%s\": %s"
-msgstr "kan ikke skrive patch \"%s\": %s"
+msgstr "kan ikke skrive rettelse \"%s\": %s"
 
 #, python-format
 msgid "error unlinking %s\n"
@@ -3500,6 +3507,18 @@ msgstr "køen af rettelser er nu tom\n"
 
 msgid "cannot refresh a revision with children"
 msgstr "kan ikke genopfriske en revision som har børn"
+
+#, python-format
+msgid "warning: not refreshing %s\n"
+msgstr "advarsel: genopfrisker ikke %s\n"
+
+#, python-format
+msgid "warning: not adding %s\n"
+msgstr "advarsel: tilføjer ikke %s\n"
+
+#, python-format
+msgid "warning: not removing %s\n"
+msgstr "advarsel: fjerner ikke %s\n"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
@@ -5362,8 +5381,8 @@ msgstr ""
 msgid "changesets"
 msgstr "ændringer"
 
-msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
-msgstr "ret uløste konflikter med hg resolve og kør så hg rebase --continue"
+msgid "unresolved conflicts (see hg resolve, then hg rebase --continue)"
+msgstr "uløste konflikter (se først hg resolve og dernæst hg rebase --continue)"
 
 #, python-format
 msgid "no changes, revision %d skipped\n"
@@ -5967,11 +5986,13 @@ msgstr ""
 msgid "Note that there are some limitations on using this extension:"
 msgstr ""
 
-msgid "- You should use single encoding in one repository."
+msgid ""
+"- You should use single encoding in one repository.\n"
+"- If the repository path ends with 0x5c, .hg/hgrc cannot be read.\n"
+"- win32mbcs is not compatible with fixutf8 extention."
 msgstr ""
 
 msgid ""
-"\n"
 "By default, win32mbcs uses encoding.encoding decided by Mercurial.\n"
 "You can specify the encoding by config option::"
 msgstr ""
@@ -6223,8 +6244,8 @@ msgstr "noterer fjernelse af %s som en omdøbning til %s (%d%% lighed)\n"
 #, python-format
 msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
 msgstr ""
-"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for %"
-"s.\n"
+"%s er endnu ikke comitted, så der vil ikke blive gemt kopieringsdata for "
+"%s.\n"
 
 #, python-format
 msgid "%s: not copying - file is not managed\n"
@@ -8561,7 +8582,7 @@ msgstr ""
 
 msgid ""
 "    Start a local HTTP repository browser and pull server. You can use\n"
-"    this for ad-hoc sharing and browing of repositories. It is\n"
+"    this for ad-hoc sharing and browsing of repositories. It is\n"
 "    recommended to use a real web server to serve a repository for\n"
 "    longer periods of time."
 msgstr ""
@@ -11704,11 +11725,11 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged())"
-"\"\n"
+"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
+"())\"\n"
 msgstr ""
-"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged())"
-"\"\n"
+"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
+"())\"\n"
 
 msgid ""
 "Subrepositories let you nest external repositories or projects into a\n"
@@ -12167,7 +12188,7 @@ msgstr ""
 msgid ""
 "Paths in the local filesystem can either point to Mercurial\n"
 "repositories or to bundle files (as created by :hg:`bundle` or :hg:`\n"
-"incoming --bundle`)."
+"incoming --bundle`). See also :hg:`help paths`."
 msgstr ""
 
 msgid ""
@@ -12526,6 +12547,10 @@ msgstr "depot %s"
 #, python-format
 msgid "working directory of %s"
 msgstr "arbejdskatalog for %s"
+
+#, python-format
+msgid "warning: can't find ancestor for '%s' copied from '%s'!\n"
+msgstr ""
 
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr ""
@@ -13369,6 +13394,10 @@ msgid "invalid entry in fncache, line %s"
 msgstr ""
 
 #, python-format
+msgid "warning: subrepo spec file %s not found\n"
+msgstr "advarsel: underdepot spec-fil %s blev ikke fundet\n"
+
+#, python-format
 msgid "subrepo spec file %s not found"
 msgstr "underdepot spec-fil %s blev ikke fundet"
 
@@ -13591,6 +13620,13 @@ msgstr "Hardlinks er ikke supporteret"
 msgid "could not symlink to %r: %s"
 msgstr "kunne ikke lave et symbolsk link til %r: %s"
 
+msgid "check your clock"
+msgstr ""
+
+#, python-format
+msgid "negative timestamp: %d"
+msgstr ""
+
 #, python-format
 msgid "invalid date: %r"
 msgstr "ugyldig dato: %r"
@@ -13598,6 +13634,10 @@ msgstr "ugyldig dato: %r"
 #, python-format
 msgid "date exceeds 32 bits: %d"
 msgstr "dato overskrider 32 bit: %d"
+
+#, python-format
+msgid "negative date value: %d"
+msgstr ""
 
 #, python-format
 msgid "impossible time zone offset: %d"
