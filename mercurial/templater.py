@@ -7,7 +7,192 @@
 
 from i18n import _
 import sys, os
-import util, config, templatefilters
+import util, config, templatefilters, parser, error
+
+# template parsing
+
+elements = {
+    "(": (20, ("group", 1, ")"), ("func", 1, ")")),
+    ",": (2, None, ("list", 2)),
+    "|": (5, None, ("|", 5)),
+    "%": (6, None, ("%", 6)),
+    ")": (0, None, None),
+    "symbol": (0, ("symbol",), None),
+    "string": (0, ("string",), None),
+    "end": (0, None, None),
+}
+
+def tokenizer(data):
+    program, start, end = data
+    pos = start
+    while pos < end:
+        c = program[pos]
+        if c.isspace(): # skip inter-token whitespace
+            pass
+        elif c in "(,)%|": # handle simple operators
+            yield (c, None, pos)
+        elif (c in '"\'' or c == 'r' and
+              program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
+            if c == 'r':
+                pos += 1
+                c = program[pos]
+                decode = lambda x: x
+            else:
+                decode = lambda x: x.decode('string-escape')
+            pos += 1
+            s = pos
+            while pos < end: # find closing quote
+                d = program[pos]
+                if d == '\\': # skip over escaped characters
+                    pos += 2
+                    continue
+                if d == c:
+                    yield ('string', decode(program[s:pos]), s)
+                    break
+                pos += 1
+            else:
+                raise error.ParseError(_("unterminated string"), s)
+        elif c.isalnum() or c in '_':
+            s = pos
+            pos += 1
+            while pos < end: # find end of symbol
+                d = program[pos]
+                if not (d.isalnum() or d == "_"):
+                    break
+                pos += 1
+            sym = program[s:pos]
+            yield ('symbol', sym, s)
+            pos -= 1
+        elif c == '}':
+            pos += 1
+            break
+        else:
+            raise error.ParseError(_("syntax error"), pos)
+        pos += 1
+    data[2] = pos
+    yield ('end', None, pos)
+
+def compiletemplate(tmpl, context):
+    parsed = []
+    pos, stop = 0, len(tmpl)
+    p = parser.parser(tokenizer, elements)
+
+    while pos < stop:
+        n = tmpl.find('{', pos)
+        if n < 0:
+            parsed.append(("string", tmpl[pos:]))
+            break
+        if n > 0 and tmpl[n - 1] == '\\':
+            # escaped
+            parsed.append(("string", tmpl[pos:n - 1] + "{"))
+            pos = n + 1
+            continue
+        if n > pos:
+            parsed.append(("string", tmpl[pos:n]))
+
+        pd = [tmpl, n + 1, stop]
+        parsed.append(p.parse(pd))
+        pos = pd[2]
+
+    return [compileexp(e, context) for e in parsed]
+
+def compileexp(exp, context):
+    t = exp[0]
+    if t in methods:
+        return methods[t](exp, context)
+    raise error.ParseError(_("unknown method '%s'") % t)
+
+# template evaluation
+
+def getsymbol(exp):
+    if exp[0] == 'symbol':
+        return exp[1]
+    raise error.ParseError(_("expected a symbol"))
+
+def getlist(x):
+    if not x:
+        return []
+    if x[0] == 'list':
+        return getlist(x[1]) + [x[2]]
+    return [x]
+
+def getfilter(exp, context):
+    f = getsymbol(exp)
+    if f not in context._filters:
+        raise error.ParseError(_("unknown function '%s'") % f)
+    return context._filters[f]
+
+def gettemplate(exp, context):
+    if exp[0] == 'string':
+        return compiletemplate(exp[1], context)
+    if exp[0] == 'symbol':
+        return context._load(exp[1])
+    raise error.ParseError(_("expected template specifier"))
+
+def runstring(context, mapping, data):
+    return data
+
+def runsymbol(context, mapping, key):
+    v = mapping.get(key)
+    if v is None:
+        v = context._defaults.get(key, '')
+    if hasattr(v, '__call__'):
+        return v(**mapping)
+    return v
+
+def buildfilter(exp, context):
+    func, data = compileexp(exp[1], context)
+    filt = getfilter(exp[2], context)
+    return (runfilter, (func, data, filt))
+
+def runfilter(context, mapping, data):
+    func, data, filt = data
+    return filt(func(context, mapping, data))
+
+def buildmap(exp, context):
+    func, data = compileexp(exp[1], context)
+    ctmpl = gettemplate(exp[2], context)
+    return (runmap, (func, data, ctmpl))
+
+def runmap(context, mapping, data):
+    func, data, ctmpl = data
+    d = func(context, mapping, data)
+    lm = mapping.copy()
+
+    for i in d:
+        if isinstance(i, dict):
+            lm.update(i)
+            for f, d in ctmpl:
+                yield f(context, lm, d)
+        else:
+            # v is not an iterable of dicts, this happen when 'key'
+            # has been fully expanded already and format is useless.
+            # If so, return the expanded value.
+            yield i
+
+def buildfunc(exp, context):
+    n = getsymbol(exp[1])
+    args = [compileexp(x, context) for x in getlist(exp[2])]
+    if n in context._filters:
+        if len(args) != 1:
+            raise error.ParseError(_("filter %s expects one argument") % n)
+        f = context._filters[n]
+        return (runfilter, (args[0][0], args[0][1], f))
+    elif n in context._funcs:
+        f = context._funcs[n]
+        return (f, args)
+
+methods = {
+    "string": lambda e, c: (runstring, e[1]),
+    "symbol": lambda e, c: (runsymbol, e[1]),
+    "group": lambda e, c: compileexp(e[1], c),
+#    ".": buildmember,
+    "|": buildfilter,
+    "%": buildmap,
+    "func": buildfunc,
+    }
+
+# template engine
 
 path = ['templates', '../templates']
 stringify = templatefilters.stringify
@@ -66,104 +251,18 @@ class engine(object):
         self._defaults = defaults
         self._cache = {}
 
+    def _load(self, t):
+        '''load, parse, and cache a template'''
+        if t not in self._cache:
+            self._cache[t] = compiletemplate(self._loader(t), self)
+        return self._cache[t]
+
     def process(self, t, mapping):
         '''Perform expansion. t is name of map element to expand.
         mapping contains added elements for use during expansion. Is a
         generator.'''
-        return _flatten(self._process(self._load(t), mapping))
-
-    def _load(self, t):
-        '''load, parse, and cache a template'''
-        if t not in self._cache:
-            self._cache[t] = self._parse(self._loader(t))
-        return self._cache[t]
-
-    def _get(self, mapping, key):
-        v = mapping.get(key)
-        if v is None:
-            v = self._defaults.get(key, '')
-        if hasattr(v, '__call__'):
-            v = v(**mapping)
-        return v
-
-    def _filter(self, mapping, parts):
-        filters, val = parts
-        x = self._get(mapping, val)
-        for f in filters:
-            x = f(x)
-        return x
-
-    def _format(self, mapping, args):
-        key, parsed = args
-        v = self._get(mapping, key)
-        if not hasattr(v, '__iter__'):
-            raise SyntaxError(_("error expanding '%s%%%s'")
-                              % (key, parsed))
-        lm = mapping.copy()
-        for i in v:
-            if isinstance(i, dict):
-                lm.update(i)
-                yield self._process(parsed, lm)
-            else:
-                # v is not an iterable of dicts, this happen when 'key'
-                # has been fully expanded already and format is useless.
-                # If so, return the expanded value.
-                yield i
-
-    def _parse(self, tmpl):
-        '''preparse a template'''
-        parsed = []
-        pos, stop = 0, len(tmpl)
-        while pos < stop:
-            n = tmpl.find('{', pos)
-            if n < 0:
-                parsed.append((None, tmpl[pos:stop]))
-                break
-            if n > 0 and tmpl[n - 1] == '\\':
-                # escaped
-                parsed.append((None, tmpl[pos:n - 1] + "{"))
-                pos = n + 1
-                continue
-            if n > pos:
-                parsed.append((None, tmpl[pos:n]))
-
-            pos = n
-            n = tmpl.find('}', pos)
-            if n < 0:
-                # no closing
-                parsed.append((None, tmpl[pos:stop]))
-                break
-
-            expr = tmpl[pos + 1:n]
-            pos = n + 1
-
-            if '%' in expr:
-                # the keyword should be formatted with a template
-                key, t = expr.split('%')
-                parsed.append((self._format, (key.strip(),
-                                              self._load(t.strip()))))
-            elif '|' in expr:
-                # process the keyword value with one or more filters
-                parts = expr.split('|')
-                val = parts[0].strip()
-                try:
-                    filters = [self._filters[f.strip()] for f in parts[1:]]
-                except KeyError, i:
-                    raise SyntaxError(_("unknown filter '%s'") % i[0])
-                parsed.append((self._filter, (filters, val)))
-            else:
-                # just get the keyword
-                parsed.append((self._get, expr.strip()))
-
-        return parsed
-
-    def _process(self, parsed, mapping):
-        '''Render a template. Returns a generator.'''
-        for f, e in parsed:
-            if f:
-                yield f(mapping, e)
-            else:
-                yield e
+        return _flatten(func(self, mapping, data) for func, data in
+                         self._load(t))
 
 engines = {'default': engine}
 

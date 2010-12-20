@@ -22,6 +22,7 @@ class parser(object):
         self._tokenizer = tokenizer
         self._elements = elements
         self._methods = methods
+        self.current = None
     def _advance(self):
         'advance the tokenizer'
         t = self.current
@@ -76,7 +77,7 @@ class parser(object):
     def parse(self, message):
         'generate a parse tree from a message'
         self._iter = self._tokenizer(message)
-        self.current = self._iter.next()
+        self._advance()
         return self._parse()
     def eval(self, tree):
         'recursively evaluate a parse tree using node methods'
