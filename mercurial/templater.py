@@ -214,6 +214,8 @@ class templater(object):
         if not t in self.cache:
             try:
                 self.cache[t] = open(self.map[t][1]).read()
+            except KeyError, inst:
+                raise util.Abort(_('"%s" not in template map') % inst.args[0])
             except IOError, inst:
                 raise IOError(inst.args[0], _('template file %s: %s') %
                               (self.map[t][1], inst.args[1]))

@@ -449,7 +449,7 @@ Error if style missing key:
 
   $ echo 'q = q' > t
   $ hg log --style ./t
-  abort: ./t: no key named 'changeset'
+  abort: "changeset" not in template map
   [255]
 
 Error if include fails:
