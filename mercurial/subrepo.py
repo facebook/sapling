@@ -727,8 +727,9 @@ class gitsubrepo(abstractsubrepo):
             raise util.Abort(_("revision %s does not exist in subrepo %s\n") %
                                (revision, self._path))
 
-    def dirty(self):
-        if self._state[1] != self._gitstate(): # version checked out changed?
+    def dirty(self, ignoreupdate=False):
+        # version checked out changed?
+        if not ignoreupdate and self._state[1] != self._gitstate():
             return True
         # check for staged changes or modified files; ignore untracked files
         out, code = self._gitdir(['diff-index', '--quiet', 'HEAD'])
