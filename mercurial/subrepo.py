@@ -886,9 +886,14 @@ class gitsubrepo(abstractsubrepo):
         relpath = subrelpath(self)
         ui.progress(_('archiving (%s)') % relpath, 0, unit=_('files'))
         for i, info in enumerate(tar):
+            if info.isdir():
+                continue
+            if info.issym():
+                data = info.linkname
+            else:
+                data = tar.extractfile(info).read()
             archiver.addfile(os.path.join(prefix, self._relpath, info.name),
-                             info.mode, info.issym(),
-                             tar.extractfile(info).read())
+                             info.mode, info.issym(), data)
             ui.progress(_('archiving (%s)') % relpath, i + 1,
                         unit=_('files'))
         ui.progress(_('archiving (%s)') % relpath, None)
