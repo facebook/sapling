@@ -34,7 +34,7 @@ add subrepo clone
   $ git clone -q ../gitroot s
   $ hg add .hgsub
   $ hg commit -m 'new git subrepo'
-  committing subrepository $TESTTMP/t/s
+  committing subrepository s
   $ hg debugsub
   path s
    source   ../gitroot
@@ -53,7 +53,7 @@ record a new commit from upstream from a different branch
 
   $ cd ..
   $ hg commit -m 'update git subrepo'
-  committing subrepository $TESTTMP/t/s
+  committing subrepository s
   $ hg debugsub
   path s
    source   ../gitroot
@@ -100,7 +100,7 @@ clone root, make local change
   $ cd ../ta
   $ echo ggg >> s/g
   $ hg commit -m ggg
-  committing subrepository $TESTTMP/ta/s
+  committing subrepository s
   $ hg debugsub
   path s
    source   ../gitroot
@@ -120,7 +120,7 @@ clone root separately, make different local change
   $ cd ..
 
   $ hg commit -m f
-  committing subrepository $TESTTMP/tb/s
+  committing subrepository s
   $ hg debugsub
   path s
    source   ../gitroot
@@ -159,7 +159,7 @@ user a pulls, merges, commits
   gg
   ggg
   $ hg commit -m 'merge'
-  committing subrepository $TESTTMP/ta/s
+  committing subrepository s
   $ hg debugsub
   path s
    source   ../gitroot
@@ -212,7 +212,7 @@ sync to upstream git, distribute changes
   $ git pull -q >/dev/null 2>/dev/null
   $ cd ..
   $ hg commit -m 'git upstream sync'
-  committing subrepository $TESTTMP/ta/s
+  committing subrepository s
   $ hg debugsub
   path s
    source   ../gitroot
@@ -260,3 +260,35 @@ archive subrepos
   g
   gg
   ggg
+
+create nested repo
+
+  $ cd ..
+  $ hg init outer
+  $ cd outer
+  $ echo b>b
+  $ hg add b
+  $ hg commit -m b
+
+  $ hg clone ../t inner
+  updating to branch default
+  cloning subrepo s
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo inner = inner > .hgsub
+  $ hg add .hgsub
+  $ hg commit -m 'nested sub'
+  committing subrepository inner
+
+nested commit
+
+  $ echo ffff >> inner/s/f
+  $ hg commit -m nested
+  committing subrepository inner
+  committing subrepository inner/s
+
+nested archive
+
+  $ hg archive --subrepos ../narchive
+  $ ls ../narchive/inner/s
+  f
+  g

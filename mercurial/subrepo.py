@@ -172,6 +172,8 @@ def reporelpath(repo):
 
 def subrelpath(sub):
     """return path to this subrepo as seen from outermost repo"""
+    if hasattr(sub, '_relpath'):
+        return sub._relpath
     if not hasattr(sub, '_repo'):
         return sub._path
     return reporelpath(sub._repo)
@@ -617,15 +619,17 @@ class gitsubrepo(abstractsubrepo):
         # TODO add git version check.
         self._state = state
         self._ctx = ctx
-        self._relpath = path
-        self._path = ctx._repo.wjoin(path)
+        self._path = path
+        self._relpath = os.path.join(reporelpath(ctx._repo), path)
+        self._abspath = ctx._repo.wjoin(path)
         self._ui = ctx._repo.ui
 
     def _gitcommand(self, commands, env=None, stream=False):
         return self._gitdir(commands, env=env, stream=stream)[0]
 
     def _gitdir(self, commands, env=None, stream=False):
-        return self._gitnodir(commands, env=env, stream=stream, cwd=self._path)
+        return self._gitnodir(commands, env=env, stream=stream,
+                              cwd=self._abspath)
 
     def _gitnodir(self, commands, env=None, stream=False, cwd=None):
         """Calls the git command
@@ -711,9 +715,9 @@ class gitsubrepo(abstractsubrepo):
         return tracking
 
     def _fetch(self, source, revision):
-        if not os.path.exists('%s/.git' % self._path):
+        if not os.path.exists(os.path.join(self._abspath, '.git')):
             self._ui.status(_('cloning subrepo %s\n') % self._relpath)
-            self._gitnodir(['clone', source, self._path])
+            self._gitnodir(['clone', source, self._abspath])
         if self._githavelocally(revision):
             return
         self._ui.status(_('pulling subrepo %s\n') % self._relpath)
@@ -725,7 +729,7 @@ class gitsubrepo(abstractsubrepo):
         self._gitcommand(['fetch', source])
         if not self._githavelocally(revision):
             raise util.Abort(_("revision %s does not exist in subrepo %s\n") %
-                               (revision, self._path))
+                               (revision, self._relpath))
 
     def dirty(self, ignoreupdate=False):
         # version checked out changed?
@@ -859,16 +863,16 @@ class gitsubrepo(abstractsubrepo):
     def remove(self):
         if self.dirty():
             self._ui.warn(_('not removing repo %s because '
-                            'it has changes.\n') % self._path)
+                            'it has changes.\n') % self._relpath)
             return
         # we can't fully delete the repository as it may contain
         # local-only history
-        self._ui.note(_('removing subrepo %s\n') % self._path)
+        self._ui.note(_('removing subrepo %s\n') % self._relpath)
         self._gitcommand(['config', 'core.bare', 'true'])
-        for f in os.listdir(self._path):
+        for f in os.listdir(self._abspath):
             if f == '.git':
                 continue
-            path = os.path.join(self._path, f)
+            path = os.path.join(self._abspath, f)
             if os.path.isdir(path) and not os.path.islink(path):
                 shutil.rmtree(path)
             else:
@@ -892,7 +896,7 @@ class gitsubrepo(abstractsubrepo):
                 data = info.linkname
             else:
                 data = tar.extractfile(info).read()
-            archiver.addfile(os.path.join(prefix, self._relpath, info.name),
+            archiver.addfile(os.path.join(prefix, self._path, info.name),
                              info.mode, info.issym(), data)
             ui.progress(_('archiving (%s)') % relpath, i + 1,
                         unit=_('files'))
