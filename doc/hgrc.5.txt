@@ -709,8 +709,8 @@ Configuration for extensions that need to send email messages.
 ``port``
     Optional. Port to connect to on mail server. Default: 25.
 ``tls``
-    Optional. Whether to connect to mail server using TLS. True or
-    False. Default: False.
+    Optional. Method to enable TLS when connecting to mail server: starttls,
+    smtps or none. Default: none.
 ``username``
     Optional. User name for authenticating with the SMTP server.
     Default: none.
