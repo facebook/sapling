@@ -678,27 +678,37 @@ class gitsubrepo(abstractsubrepo):
         return base == r1
 
     def _gitbranchmap(self):
-        '''returns 3 things:
+        '''returns 2 things:
         a map from git branch to revision
-        a map from revision to branches
-        a map from remote branch to local tracking branch'''
+        a map from revision to branches'''
         branch2rev = {}
         rev2branch = {}
-        tracking = {}
+
         out = self._gitcommand(['for-each-ref', '--format',
-                                '%(objectname) %(refname) %(upstream) end'])
+                                '%(objectname) %(refname)'])
         for line in out.split('\n'):
-            revision, ref, upstream = line.split(' ')[:3]
+            revision, ref = line.split(' ')
             if ref.startswith('refs/tags/'):
                 continue
             if ref.startswith('refs/remotes/') and ref.endswith('/HEAD'):
                 continue # ignore remote/HEAD redirects
             branch2rev[ref] = revision
             rev2branch.setdefault(revision, []).append(ref)
-            if upstream:
-                # assumes no more than one local tracking branch for a remote
-                tracking[upstream] = ref
-        return branch2rev, rev2branch, tracking
+        return branch2rev, rev2branch
+
+    def _gittracking(self, branches):
+        'return map of remote branch to local tracking branch'
+        # assumes no more than one local tracking branch for each remote
+        tracking = {}
+        for b in branches:
+            if b.startswith('refs/remotes/'):
+                continue
+            remote = self._gitcommand(['config', 'branch.%s.remote' % b])
+            if remote:
+                ref = self._gitcommand(['config', 'branch.%s.merge' % b])
+                tracking['refs/remotes/%s/%s' %
+                         (remote, ref.split('/', 2)[2])] = b
+        return tracking
 
     def _fetch(self, source, revision):
         if not os.path.exists('%s/.git' % self._path):
@@ -735,7 +745,7 @@ class gitsubrepo(abstractsubrepo):
                 return
         elif self._gitstate() == revision:
             return
-        branch2rev, rev2branch, tracking = self._gitbranchmap()
+        branch2rev, rev2branch = self._gitbranchmap()
 
         def rawcheckout():
             # no branch to checkout, check it out with no branch
@@ -761,6 +771,7 @@ class gitsubrepo(abstractsubrepo):
             self._gitcommand(['checkout', firstlocalbranch])
             return
 
+        tracking = self._gittracking(branch2rev.keys())
         # choose a remote branch already tracked if possible
         remote = branches[0]
         if remote not in tracking:
@@ -813,7 +824,7 @@ class gitsubrepo(abstractsubrepo):
 
     def push(self, force):
         # if a branch in origin contains the revision, nothing to do
-        branch2rev, rev2branch, tracking = self._gitbranchmap()
+        branch2rev, rev2branch = self._gitbranchmap()
         if self._state[1] in rev2branch:
             for b in rev2branch[self._state[1]]:
                 if b.startswith('refs/remotes/origin/'):
