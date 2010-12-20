@@ -528,7 +528,7 @@ if has_https:
                               self.host)
             else:
                 self.ui.warn(_("warning: %s certificate not verified "
-                               "(check web.cacerts config setting)\n") % 
+                               "(check web.cacerts config setting)\n") %
                              self.host)
                 httplib.HTTPSConnection.connect(self)
 
