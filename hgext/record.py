@@ -420,15 +420,16 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
     def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
 
-        Its job is to interactively filter local changes, and accordingly
-        prepare working dir into a state, where the job can be delegated to
-        non-interactive commit command such as 'commit' or 'qrefresh'.
+        Its job is to interactively filter local changes, and
+        accordingly prepare working directory into a state in which the
+        job can be delegated to a non-interactive commit command such as
+        'commit' or 'qrefresh'.
 
-        After the actual job is done by non-interactive command, working dir
-        state is restored to original.
+        After the actual job is done by non-interactive command, the
+        working directory is restored to its original state.
 
-        In the end we'll record interesting changes, and everything else will be
-        left in place, so the user can continue his work.
+        In the end we'll record interesting changes, and everything else
+        will be left in place, so the user can continue working.
         """
 
         merge = len(repo[None].parents()) > 1
@@ -508,11 +509,13 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                     raise util.Abort(str(err))
             del fp
 
-            # 4. We prepared working directory according to filtered patch.
-            #    Now is the time to delegate the job to commit/qrefresh or the like!
+            # 4. We prepared working directory according to filtered
+            #    patch. Now is the time to delegate the job to
+            #    commit/qrefresh or the like!
 
-            # it is important to first chdir to repo root -- we'll call a
-            # highlevel command with list of pathnames relative to repo root
+            # it is important to first chdir to repo root -- we'll call
+            # a highlevel command with list of pathnames relative to
+            # repo root
             cwd = os.getcwd()
             os.chdir(repo.root)
             try:
