@@ -408,8 +408,6 @@ def qrecord(ui, repo, patch, *pats, **opts):
     def committomq(ui, repo, *pats, **opts):
         mq.new(ui, repo, patch, *pats, **opts)
 
-    opts = opts.copy()
-    opts['force'] = True    # always 'qnew -f'
     dorecord(ui, repo, committomq, *pats, **opts)
 
 
@@ -557,11 +555,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
 cmdtable = {
     "record":
-        (record,
-
-         # add commit options
-         commands.table['^commit|ci'][1],
-
+        (record, commands.table['^commit|ci'][1], # same options as commit
          _('hg record [OPTION]... [FILE]...')),
 }
 
@@ -574,11 +568,7 @@ def uisetup(ui):
 
     qcmdtable = {
     "qrecord":
-        (qrecord,
-
-         # add qnew options, except '--force'
-         [opt for opt in mq.cmdtable['^qnew'][1] if opt[1] != 'force'],
-
+        (qrecord, mq.cmdtable['^qnew'][1], # same options as qnew
          _('hg qrecord [OPTION]... PATCH [FILE]...')),
     }
 
