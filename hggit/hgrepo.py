@@ -1,3 +1,5 @@
+import os
+
 from mercurial.node import bin
 
 from git_handler import GitHandler
@@ -48,11 +50,21 @@ def generate_repo_subclass(baseclass):
 
             return (tags, tagtypes)
 
+        def gitrefs(self):
+            tagfile = self.join(os.path.join('git-remote-refs'))
+            if os.path.exists(tagfile):
+                tf = open(tagfile, 'rb')
+                tagdata = tf.read().split('\n')
+                td = [line.split(' ', 1) for line in tagdata if line]
+                return dict([(name, bin(sha)) for sha, name in td])
+            return {}
+
         def tags(self):
             if not hasattr(self, 'tagscache'):
                 # mercurial 1.4
-                return super(hgrepo, self).tags()
-
+                tmp = super(hgrepo, self).tags()
+                tmp.update(self.gitrefs())
+                return tmp
             if self.tagscache:
                 return self.tagscache
 

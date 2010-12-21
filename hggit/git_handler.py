@@ -747,25 +747,33 @@ class GitHandler(object):
                          ' bookmarks enabled?\n'))
 
     def update_remote_branches(self, remote_name, refs):
-        def _set_hg_tag(head, sha):
-            # refs contains all the refs in the server, not just the ones
-            # we are pulling
-            if sha not in self.git.object_store:
-                return
-            hgsha = bin(self.map_hg_get(sha))
-            tag = '%s/%s' % (remote_name, head)
-            self.repo.tag(tag, hgsha, '', True, None, None)
-
+        tagfile = self.repo.join(os.path.join('git-remote-refs'))
+        tags = self.repo.gitrefs()
+        # since we re-write all refs for this remote each time, prune
+        # all entries matching this remote from our tags list now so
+        # that we avoid any stale refs hanging around forever
+        for t in list(tags):
+            if t.startswith(remote_name + '/'):
+                del tags[t]
+        store = self.git.object_store
         for ref_name, sha in refs.iteritems():
             if ref_name.startswith('refs/heads'):
+                if sha not in store:
+                    continue
+                hgsha = self.map_hg_get(sha)
                 head = ref_name[11:]
-                _set_hg_tag(head, sha)
-
+                tags['/'.join((remote_name, head))] = hgsha
+                # TODO(durin42): what is this doing?
                 new_ref = 'refs/remotes/%s/%s' % (remote_name, head)
                 self.git.refs[new_ref] = sha
             elif (ref_name.startswith('refs/tags')
                   and not ref_name.endswith('^{}')):
                 self.git.refs[ref_name] = sha
+
+        tf = open(tagfile, 'wb')
+        for tag, node in tags.iteritems():
+            tf.write('%s %s\n' % (node, tag))
+        tf.close()
 
 
     ## UTILITY FUNCTIONS
