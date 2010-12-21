@@ -755,6 +755,7 @@ class GitHandler(object):
         for t in list(tags):
             if t.startswith(remote_name + '/'):
                 del tags[t]
+        tags = dict((k, hex(v)) for k, v in tags.iteritems())
         store = self.git.object_store
         for ref_name, sha in refs.iteritems():
             if ref_name.startswith('refs/heads'):
