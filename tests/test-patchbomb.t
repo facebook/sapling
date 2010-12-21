@@ -145,6 +145,17 @@
   +b
   
 
+.hg/last-email.txt
+
+  $ cat > editor << '__EOF__'
+  > #!/bin/sh
+  > echo "a precious introductory message" > "$1"
+  > __EOF__
+  $ chmod +x editor
+  $ HGEDITOR="'`pwd`'"/editor hg email -n -t foo -s test -r 0:tip > /dev/null
+  $ cat .hg/last-email.txt
+  a precious introductory message
+
   $ hg email -m test.mbox -f quux -t foo -c bar -s test 0:tip \
   > --config extensions.progress= --config progress.assume-tty=1 \
   > --config progress.delay=0 --config progress.refresh=0
