@@ -13,6 +13,7 @@ from mercurial.node import hex, bin, nullid
 from mercurial import context, util as hgutil
 from mercurial import error
 
+import _ssh
 import util
 
 class GitHandler(object):
@@ -67,7 +68,6 @@ class GitHandler(object):
         for hgsha, gitsha in sorted(self._map_hg.iteritems()):
             file.write("%s %s\n" % (gitsha, hgsha))
         file.rename()
-
 
     def load_tags(self):
         self.tags = {}
@@ -890,6 +890,10 @@ class GitHandler(object):
             return string.decode('ascii', 'replace').encode('utf-8')
 
     def get_transport_and_path(self, uri):
+        # pass hg's ui.ssh config to dulwich
+        if not issubclass(client.get_ssh_vendor, _ssh.SSHVendor):
+            client.get_ssh_vendor = _ssh.generate_ssh_vendor(self.ui)
+
         for handler, transport in (("git://", client.TCPGitClient),
                                    ("git@", client.SSHGitClient),
                                    ("git+ssh://", client.SSHGitClient)):
