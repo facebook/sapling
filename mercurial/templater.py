@@ -282,7 +282,7 @@ class templater(object):
         self.filters.update(filters)
         self.defaults = defaults
         self.minchunk, self.maxchunk = minchunk, maxchunk
-        self.engines = {}
+        self.ecache = {}
 
         if not mapfile:
             return
@@ -322,10 +322,10 @@ class templater(object):
 
     def __call__(self, t, **mapping):
         ttype = t in self.map and self.map[t][0] or 'default'
-        proc = self.engines.get(ttype)
-        if proc is None:
-            proc = engines[ttype](self.load, self.filters, self.defaults)
-            self.engines[ttype] = proc
+        if ttype not in self.ecache:
+            self.ecache[ttype] = engines[ttype](self.load,
+                                                 self.filters, self.defaults)
+        proc = self.ecache[ttype]
 
         stream = proc.process(t, mapping)
         if self.minchunk:
