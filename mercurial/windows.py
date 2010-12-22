@@ -160,9 +160,10 @@ def shellquote(s):
 
 def quotecommand(cmd):
     """Build a command string suitable for os.popen* calls."""
-    # The extra quotes are needed because popen* runs the command
-    # through the current COMSPEC. cmd.exe suppress enclosing quotes.
-    return '"' + cmd + '"'
+    if sys.version_info < (2, 7, 1):
+        # Python versions since 2.7.1 do this extra quoting themselves
+        return '"' + cmd + '"'
+    return cmd
 
 def popen(command, mode='r'):
     # Work around "popen spawned process may not write to stdout
