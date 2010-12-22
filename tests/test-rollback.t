@@ -72,8 +72,9 @@ rollback by pretxncommit saves commit message (issue 1635)
 
   $ cat .hg/last-message.txt ; echo
   precious commit message
-  $ echo '% same thing, but run $EDITOR'
-  % same thing, but run $EDITOR
+
+same thing, but run $EDITOR
+
   $ cat > editor << '__EOF__'
   > #!/bin/sh
   > echo "another precious commit message" > "$1"
@@ -87,6 +88,4 @@ rollback by pretxncommit saves commit message (issue 1635)
   [255]
   $ cat .hg/last-message.txt
   another precious commit message
-
-.hg/last-message.txt:
 
