@@ -20,6 +20,6 @@ tests-%:
 	(cd $(CREW) ; $(MAKE) clean ) && \
 	cd tests && $(PYTHON) $(CREW)/tests/run-tests.py $(TESTFLAGS)
 
-all-version-tests: tests-1.4.3 tests-1.5.4 tests-1.6.2 tests-tip
+all-version-tests: tests-1.4.3 tests-1.5.4 tests-1.6.2 tests-1.7.2 tests-tip
 
 .PHONY: tests all-version-tests
