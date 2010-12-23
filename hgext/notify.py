@@ -215,8 +215,8 @@ class notifier(object):
                 s = ctx.description().lstrip().split('\n', 1)[0].rstrip()
                 subject = '%s: %s' % (self.root, s)
         maxsubject = int(self.ui.config('notify', 'maxsubject', 67))
-        if maxsubject and len(subject) > maxsubject:
-            subject = subject[:maxsubject - 3] + '...'
+        if maxsubject:
+            subject = util.ellipsis(subject, maxsubject)
         msg['Subject'] = mail.headencode(self.ui, subject,
                                          self.charsets, self.test)
 
