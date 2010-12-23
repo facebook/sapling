@@ -391,9 +391,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
             return '1'
         return str(val)
     origcmd = cmd
-    if os.name == 'nt' and sys.version_info < (2, 7, 1):
-        # Python versions since 2.7.1 do this extra quoting themselves
-        cmd = '"%s"' % cmd
+    cmd = quotecommand(cmd)
     env = dict(os.environ)
     env.update((k, py2shell(v)) for k, v in environ.iteritems())
     env['HG'] = hgexecutable()
