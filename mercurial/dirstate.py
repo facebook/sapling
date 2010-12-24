@@ -80,7 +80,9 @@ class dirstate(object):
     @propertycache
     def _pl(self):
         try:
-            st = self._opener("dirstate").read(40)
+            fp = self._opener("dirstate")
+            st = fp.read(40)
+            fp.close()
             l = len(st)
             if l == 40:
                 return st[:20], st[20:40]

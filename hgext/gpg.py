@@ -244,7 +244,9 @@ def sign(ui, repo, *revs, **opts):
                            "(please commit .hgsigs manually "
                            "or use --force)"))
 
-    repo.wfile(".hgsigs", "ab").write(sigmessage)
+    sigsfile = repo.wfile(".hgsigs", "ab")
+    sigsfile.write(sigmessage)
+    sigsfile.close()
 
     if '.hgsigs' not in repo.dirstate:
         repo[None].add([".hgsigs"])

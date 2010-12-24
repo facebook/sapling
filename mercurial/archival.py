@@ -84,6 +84,7 @@ class tarit(object):
 
     def __init__(self, dest, mtime, kind=''):
         self.mtime = mtime
+        self.fileobj = None
 
         def taropen(name, mode, fileobj=None):
             if kind == 'gz':
@@ -93,8 +94,10 @@ class tarit(object):
                 gzfileobj = self.GzipFileWithTime(name, mode + 'b',
                                                   zlib.Z_BEST_COMPRESSION,
                                                   fileobj, timestamp=mtime)
+                self.fileobj = gzfileobj
                 return tarfile.TarFile.taropen(name, mode, gzfileobj)
             else:
+                self.fileobj = fileobj
                 return tarfile.open(name, mode + kind, fileobj)
 
         if isinstance(dest, str):
@@ -120,6 +123,8 @@ class tarit(object):
 
     def done(self):
         self.z.close()
+        if self.fileobj:
+            self.fileobj.close()
 
 class tellable(object):
     '''provide tell method for zipfile.ZipFile when writing to http

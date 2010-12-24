@@ -32,6 +32,7 @@ class mergestate(object):
                 else:
                     bits = l[:-1].split("\0")
                     self._state[bits[0]] = bits[1:]
+            f.close()
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
@@ -42,6 +43,7 @@ class mergestate(object):
             f.write(hex(self._local) + "\n")
             for d, v in self._state.iteritems():
                 f.write("\0".join([d] + v) + "\n")
+            f.close()
             self._dirty = False
     def add(self, fcl, fco, fca, fd, flags):
         hash = util.sha1(fcl.path()).hexdigest()
@@ -67,6 +69,7 @@ class mergestate(object):
         state, hash, lfile, afile, anode, ofile, flags = self._state[dfile]
         f = self._repo.opener("merge/" + hash)
         self._repo.wwrite(dfile, f.read(), flags)
+        f.close()
         fcd = wctx[dfile]
         fco = octx[ofile]
         fca = self._repo.filectx(afile, fileid=anode)

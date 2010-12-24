@@ -27,13 +27,17 @@ def _playback(journal, report, opener, entries, unlink=True):
     for f, o, ignore in entries:
         if o or not unlink:
             try:
-                opener(f, 'a').truncate(o)
+                fp = opener(f, 'a')
+                fp.truncate(o)
+                fp.close()
             except IOError:
                 report(_("failed to truncate %s\n") % f)
                 raise
         else:
             try:
-                fn = opener(f).name
+                fp = opener(f)
+                fn = fp.name
+                fp.close()
                 os.unlink(fn)
             except (IOError, OSError), inst:
                 if inst.errno != errno.ENOENT:
@@ -169,7 +173,10 @@ class transaction(object):
 def rollback(opener, file, report):
     entries = []
 
-    for l in open(file).readlines():
+    fp = open(file)
+    lines = fp.readlines()
+    fp.close()
+    for l in lines:
         f, o = l.split('\0')
         entries.append((f, int(o), None))
 

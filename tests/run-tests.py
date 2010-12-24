@@ -231,6 +231,8 @@ def parseargs():
                 if line and not line.startswith('#'):
                     blacklist[line] = filename
 
+            f.close()
+
         options.blacklist = blacklist
 
     return (options, args)
@@ -490,6 +492,8 @@ def tsttest(test, options, replacements):
         else:
             # non-command/result - queue up for merged output
             after.setdefault(pos, []).append(l)
+
+    t.close()
 
     script.append('echo %s %s $?\n' % (salt, n + 1))
 
@@ -927,7 +931,9 @@ def runtests(options, tests):
                 continue
 
             if options.keywords:
-                t = open(test).read().lower() + test.lower()
+                fp = open(test)
+                t = fp.read().lower() + test.lower()
+                fp.close()
                 for k in options.keywords.lower().split():
                     if k in t:
                         break

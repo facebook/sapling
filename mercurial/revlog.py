@@ -243,6 +243,7 @@ class revlog(object):
         try:
             f = self.opener(self.indexfile)
             i = f.read()
+            f.close()
             if len(i) > 0:
                 v = struct.unpack(versionformat, i[:4])[0]
         except IOError, inst:
@@ -1167,6 +1168,7 @@ class revlog(object):
                 if not dfh and not self._inline:
                     # addrevision switched from inline to conventional
                     # reopen the index
+                    ifh.close()
                     dfh = self.opener(self.datafile, "a")
                     ifh = self.opener(self.indexfile, "a")
         finally:
@@ -1226,6 +1228,7 @@ class revlog(object):
             f = self.opener(self.datafile)
             f.seek(0, 2)
             actual = f.tell()
+            f.close()
             dd = actual - expected
         except IOError, inst:
             if inst.errno != errno.ENOENT:
@@ -1236,6 +1239,7 @@ class revlog(object):
             f = self.opener(self.indexfile)
             f.seek(0, 2)
             actual = f.tell()
+            f.close()
             s = self._io.size
             i = max(0, actual // s)
             di = actual - (i * s)

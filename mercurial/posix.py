@@ -77,20 +77,26 @@ def set_flags(f, l, x):
     if l:
         if not stat.S_ISLNK(s):
             # switch file to link
-            data = open(f).read()
+            fp = open(f)
+            data = fp.read()
+            fp.close()
             os.unlink(f)
             try:
                 os.symlink(data, f)
             except:
                 # failed to make a link, rewrite file
-                open(f, "w").write(data)
+                fp = open(f, "w")
+                fp.write(data)
+                fp.close()
         # no chmod needed at this point
         return
     if stat.S_ISLNK(s):
         # switch link to file
         data = os.readlink(f)
         os.unlink(f)
-        open(f, "w").write(data)
+        fp = open(f, "w")
+        fp.write(data)
+        fp.close()
         s = 0666 & ~umask # avoid restatting for chmod
 
     sx = s & 0100

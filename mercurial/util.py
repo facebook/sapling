@@ -198,7 +198,10 @@ def tempfilter(s, cmd):
         if code:
             raise Abort(_("command '%s' failed: %s") %
                         (cmd, explain_exit(code)))
-        return open(outname, 'rb').read()
+        fp = open(outname, 'rb')
+        r = fp.read()
+        fp.close()
+        return r
     finally:
         try:
             if inname:
@@ -591,7 +594,10 @@ def readlock(pathname):
             raise
     except AttributeError: # no symlink in os
         pass
-    return posixfile(pathname).read()
+    fp = posixfile(pathname)
+    r = fp.read()
+    fp.close()
+    return r
 
 def fstat(fp):
     '''stat file object that may not have fileno method.'''

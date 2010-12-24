@@ -98,7 +98,9 @@ class statichttprepository(localrepo.localrepository):
                 raise
             # check if it is a non-empty old-style repository
             try:
-                self.opener("00changelog.i").read(1)
+                fp = self.opener("00changelog.i")
+                fp.read(1)
+                fp.close()
             except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise

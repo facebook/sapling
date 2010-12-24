@@ -679,7 +679,9 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             parents.reverse()
         prev = (parents and parents[0]) or nullid
 
+        shouldclose = False
         if not fp:
+            shouldclose = True
             fp = make_file(repo, template, node, total=total, seqno=seqno,
                            revwidth=revwidth, mode='ab')
         if fp != sys.stdout and hasattr(fp, 'name'):
@@ -700,7 +702,8 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         for chunk in patch.diff(repo, prev, node, opts=opts):
             fp.write(chunk)
 
-        fp.flush()
+        if shouldclose:
+            fp.close()
 
     for seqno, rev in enumerate(revs):
         single(rev, seqno + 1, fp)

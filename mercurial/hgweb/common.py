@@ -119,7 +119,10 @@ def staticfile(directory, fname, req):
         os.stat(path)
         ct = mimetypes.guess_type(path)[0] or "text/plain"
         req.respond(HTTP_OK, ct, length = os.path.getsize(path))
-        return open(path, 'rb').read()
+        fp = open(path, 'rb')
+        data = fp.read()
+        fp.close()
+        return data
     except TypeError:
         raise ErrorResponse(HTTP_SERVER_ERROR, 'illegal filename')
     except OSError, err:

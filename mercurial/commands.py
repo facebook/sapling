@@ -750,6 +750,7 @@ def cat(ui, repo, file1, *pats, **opts):
         if opts.get('decode'):
             data = repo.wwritedata(abs, data)
         fp.write(data)
+        fp.close()
         err = 0
     return err
 

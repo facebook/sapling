@@ -294,14 +294,18 @@ class hginstallscripts(install_scripts):
             libdir =  uplevel * ('..' + os.sep) + self.install_lib[len(common):]
 
         for outfile in self.outfiles:
-            data = open(outfile, 'rb').read()
+            fp = open(outfile, 'rb')
+            data = fp.read()
+            fp.close()
 
             # skip binary files
             if '\0' in data:
                 continue
 
             data = data.replace('@LIBDIR@', libdir.encode('string_escape'))
-            open(outfile, 'wb').write(data)
+            fp = open(outfile, 'wb')
+            fp.write(data)
+            fp.close()
 
 cmdclass = {'build_mo': hgbuildmo,
             'build_ext': hgbuildext,

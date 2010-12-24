@@ -248,7 +248,9 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
         fc = 0
         if not re.match(match, f):
             continue
-        pre = post = open(f).read()
+        fp = open(f)
+        pre = post = fp.read()
+        fp.close()
         if "no-" + "check-code" in pre:
             break
         for p, r in filters:

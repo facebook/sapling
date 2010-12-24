@@ -251,6 +251,7 @@ class queue(object):
         try:
             fh = open(os.path.join(path, 'patches.queue'))
             cur = fh.read().rstrip()
+            fh.close()
             if not cur:
                 curpath = os.path.join(path, 'patches')
             else:
@@ -1781,7 +1782,9 @@ class queue(object):
                                 _('need --name to import a patch from -'))
                         text = sys.stdin.read()
                     else:
-                        text = url.open(self.ui, filename).read()
+                        fp = url.open(self.ui, filename)
+                        text = fp.read()
+                        fp.close()
                 except (OSError, IOError):
                     raise util.Abort(_("unable to read file %s") % filename)
                 if not patchname:
@@ -1790,6 +1793,7 @@ class queue(object):
                 checkfile(patchname)
                 patchf = self.opener(patchname, "w")
                 patchf.write(text)
+                patchf.close()
             if not force:
                 checkseries(patchname)
             if patchname not in self.series:
@@ -2787,6 +2791,7 @@ def qqueue(ui, repo, name=None, **opts):
         try:
             fh = repo.opener(_allqueues, 'r')
             queues = [queue.strip() for queue in fh if queue.strip()]
+            fh.close()
             if current not in queues:
                 queues.append(current)
         except IOError:

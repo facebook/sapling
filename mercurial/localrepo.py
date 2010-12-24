@@ -283,6 +283,8 @@ class localrepository(repo.repository):
         # committed tags are stored in UTF-8
         writetags(fp, names, encoding.fromlocal, prevtags)
 
+        fp.close()
+
         if '.hgtags' not in self.dirstate:
             self[None].add(['.hgtags'])
 
