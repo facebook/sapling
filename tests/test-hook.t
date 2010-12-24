@@ -68,13 +68,13 @@ pretxncommit and commit hooks can see both parents of merge
 test generic hooks
 
   $ hg id
-  pre-identify hook: HG_ARGS=id HG_OPTS={'tags': None, 'rev': '', 'num': None, 'branch': None, 'id': None} HG_PATS=[] 
+  pre-identify hook: HG_ARGS=id HG_OPTS={'branch': None, 'id': None, 'num': None, 'rev': '', 'tags': None} HG_PATS=[] 
   warning: pre-identify hook exited with status 1
   [1]
   $ hg cat b
-  pre-cat hook: HG_ARGS=cat b HG_OPTS={'rev': '', 'decode': None, 'exclude': [], 'output': '', 'include': []} HG_PATS=['b'] 
+  pre-cat hook: HG_ARGS=cat b HG_OPTS={'decode': None, 'exclude': [], 'include': [], 'output': '', 'rev': ''} HG_PATS=['b'] 
   b
-  post-cat hook: HG_ARGS=cat b HG_OPTS={'rev': '', 'decode': None, 'exclude': [], 'output': '', 'include': []} HG_PATS=['b'] HG_RESULT=0 
+  post-cat hook: HG_ARGS=cat b HG_OPTS={'decode': None, 'exclude': [], 'include': [], 'output': '', 'rev': ''} HG_PATS=['b'] HG_RESULT=0 
 
   $ cd ../b
   $ hg pull ../a

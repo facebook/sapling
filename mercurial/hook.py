@@ -92,6 +92,12 @@ def _exthook(ui, repo, name, cmd, args, throw):
     for k, v in args.iteritems():
         if hasattr(v, '__call__'):
             v = v()
+        if isinstance(v, dict):
+            # make the dictionary element order stable across Python
+            # implementations
+            v = ('{' +
+                 ', '.join('%r: %r' % i for i in sorted(v.iteritems())) +
+                 '}')
         env['HG_' + k.upper()] = v
 
     if repo:
