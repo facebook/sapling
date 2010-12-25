@@ -315,6 +315,11 @@ Broken disabled extension and command:
   
   use "hg help extensions" for information on enabling extensions
 
+  $ cat > hgext/forest.py <<EOF
+  > cmdtable = None
+  > EOF
   $ hg --config extensions.path=./path.py help foo > /dev/null
+  warning: error finding commands in $TESTTMP/hgext/forest.py
   hg: unknown command 'foo'
+  warning: error finding commands in $TESTTMP/hgext/forest.py
   [255]

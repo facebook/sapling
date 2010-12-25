@@ -248,7 +248,7 @@ def disabledext(name):
     if name in paths:
         return _disabledhelp(paths[name])
 
-def disabledcmd(cmd, strict=False):
+def disabledcmd(ui, cmd, strict=False):
     '''import disabled extensions until cmd is found.
     returns (cmdname, extname, doc)'''
 
@@ -265,6 +265,10 @@ def disabledcmd(cmd, strict=False):
             aliases, entry = cmdutil.findcmd(cmd,
                 getattr(mod, 'cmdtable', {}), strict)
         except (error.AmbiguousCommand, error.UnknownCommand):
+            return
+        except Exception:
+            ui.warn(_('warning: error finding commands in %s\n') % path)
+            ui.traceback()
             return
         for c in aliases:
             if c.startswith(cmd):
