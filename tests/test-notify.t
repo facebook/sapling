@@ -302,3 +302,49 @@ test merge
   changeset 22c88b85aa27 in b
   description: merge
   (run 'hg update' to get a working copy)
+
+truncate multi-byte subject
+
+  $ cat <<EOF >> $HGRCPATH
+  > [notify]
+  > maxsubject = 4
+  > EOF
+  $ echo a >> a/a
+  $ hg --cwd a --encoding utf-8 commit -A -d '0 0' \
+  >   -m `python -c 'print "\xc3\xa0\xc3\xa1\xc3\xa2\xc3\xa3\xc3\xa4"'`
+  $ hg --traceback --cwd b --encoding utf-8 pull ../a | \
+  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  pulling from ../a
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 8bit
+  X-Test: foo
+  Date: * (glob)
+  Subject: \xc3\xa0... (esc)
+  From: test@test.com
+  X-Hg-Notification: changeset 4a47f01c1356
+  Message-Id: <*> (glob)
+  To: baz@test.com, foo@bar
+  
+  changeset 4a47f01c1356 in b
+  description: \xc3\xa0\xc3\xa1\xc3\xa2\xc3\xa3\xc3\xa4 (esc)
+  diffstat:
+  
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  diffs (7 lines):
+  
+  diff -r 22c88b85aa27 -r 4a47f01c1356 a
+  --- a/a	Thu Jan 01 00:00:03 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,2 +1,3 @@
+   a
+   a
+  +a
+  (run 'hg update' to get a working copy)

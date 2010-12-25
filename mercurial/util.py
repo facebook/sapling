@@ -1242,12 +1242,23 @@ def email(author):
         r = None
     return author[author.find('<') + 1:r]
 
+def _ellipsis(text, maxlength):
+    if len(text) <= maxlength:
+        return text, False
+    else:
+        return "%s..." % (text[:maxlength - 3]), True
+
 def ellipsis(text, maxlength=400):
     """Trim string to at most maxlength (default: 400) characters."""
-    if len(text) <= maxlength:
-        return text
-    else:
-        return "%s..." % (text[:maxlength - 3])
+    try:
+        # use unicode not to split at intermediate multi-byte sequence
+        utext, truncated = _ellipsis(text.decode(encoding.encoding),
+                                     maxlength)
+        if not truncated:
+            return text
+        return utext.encode(encoding.encoding)
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return _ellipsis(text, maxlength)[0]
 
 def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
     '''yield every hg repository under path, recursively.'''
