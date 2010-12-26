@@ -10,7 +10,7 @@ This server doesn't do range requests so it's basically only good for
 one pull
 
   $ cat > dumb.py <<EOF
-  > import BaseHTTPServer, SimpleHTTPServer, os, signal
+  > import BaseHTTPServer, SimpleHTTPServer, os, signal, sys
   > 
   > def run(server_class=BaseHTTPServer.HTTPServer,
   >         handler_class=SimpleHTTPServer.SimpleHTTPRequestHandler):
@@ -18,7 +18,7 @@ one pull
   >     httpd = server_class(server_address, handler_class)
   >     httpd.serve_forever()
   > 
-  > signal.signal(signal.SIGTERM, lambda x: sys.exit(0))
+  > signal.signal(signal.SIGTERM, lambda x, y: sys.exit(0))
   > run()
   > EOF
   $ python dumb.py 2>/dev/null &
