@@ -299,20 +299,18 @@ def rename(src, dst):
         # rename is safe to do.
         # The temporary name is chosen at random to avoid the situation
         # where a file is left lying around from a previous aborted run.
-        # The usual race condition this introduces can't be avoided as
-        # we need the name to rename into, and not the file itself. Due
-        # to the nature of the operation however, any races will at worst
-        # lead to the rename failing and the current operation aborting.
 
-        def tempname(prefix):
-            for tries in xrange(10):
-                temp = '%s-%08x' % (prefix, random.randint(0, 0xffffffff))
-                if not os.path.exists(temp):
-                    return temp
+        for tries in xrange(10):
+            temp = '%s-%08x' % (dst, random.randint(0, 0xffffffff))
+            try:
+                os.rename(dst, temp)  # raises OSError EEXIST if temp exists
+                break
+            except OSError, e:
+                if e.errno != errno.EEXIST:
+                    raise
+        else:
             raise IOError, (errno.EEXIST, "No usable temporary filename found")
 
-        temp = tempname(dst)
-        os.rename(dst, temp)
         try:
             os.unlink(temp)
         except:
