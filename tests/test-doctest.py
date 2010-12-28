@@ -13,6 +13,9 @@ doctest.testmod(mercurial.dagparser, optionflags=doctest.NORMALIZE_WHITESPACE)
 import mercurial.match
 doctest.testmod(mercurial.match)
 
+import mercurial.url
+doctest.testmod(mercurial.url)
+
 import mercurial.encoding
 doctest.testmod(mercurial.encoding)
 
