@@ -721,21 +721,37 @@ def checklink(path):
 
 def checknlink(testfile):
     '''check whether hardlink count reporting works properly'''
-    f = testfile + ".hgtmp"
 
+    # testfile may be open, so we need a separate file for checking to
+    # work around issue2543 (or testfile may get lost on Samba shares)
+    f1 = testfile + ".hgtmp1"
+    if os.path.lexists(f1):
+        return False
     try:
-        os_link(testfile, f)
-    except OSError:
+        posixfile(f1, 'w').close()
+    except IOError:
         return False
 
+    f2 = testfile + ".hgtmp2"
+    fd = None
     try:
+        try:
+            os_link(f1, f2)
+        except OSError:
+            return False
+
         # nlinks() may behave differently for files on Windows shares if
         # the file is open.
-        fd = open(f)
-        return nlinks(f) > 1
+        fd = open(f2)
+        return nlinks(f2) > 1
     finally:
-        fd.close()
-        os.unlink(f)
+        if fd is not None:
+            fd.close()
+        for f in (f1, f2):
+            try:
+                os.unlink(f)
+            except OSError:
+                pass
 
     return False
 
