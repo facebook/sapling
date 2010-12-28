@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-11-01 13:33+0100\n"
-"PO-Revision-Date: 2010-11-01 13:42+0100\n"
+"POT-Creation-Date: 2010-12-19 19:38+0100\n"
+"PO-Revision-Date: 2010-12-19 19:40+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -1884,20 +1884,22 @@ msgid ""
 msgstr ""
 
 msgid ""
-"The ``[patterns]`` section specifies the line endings used in the\n"
-"working directory. The format is specified by a file pattern. The\n"
-"first match is used, so put more specific patterns first. The\n"
-"available line endings are ``LF``, ``CRLF``, and ``BIN``."
+"The ``[patterns]`` section specifies how line endings should be\n"
+"converted between the working copy and the repository. The format is\n"
+"specified by a file pattern. The first match is used, so put more\n"
+"specific patterns first. The available line endings are ``LF``,\n"
+"``CRLF``, and ``BIN``."
 msgstr ""
 
 msgid ""
 "Files with the declared format of ``CRLF`` or ``LF`` are always\n"
-"checked out in that format and files declared to be binary (``BIN``)\n"
-"are left unchanged. Additionally, ``native`` is an alias for the\n"
-"platform's default line ending: ``LF`` on Unix (including Mac OS X)\n"
-"and ``CRLF`` on Windows. Note that ``BIN`` (do nothing to line\n"
-"endings) is Mercurial's default behaviour; it is only needed if you\n"
-"need to override a later, more general pattern."
+"checked out and stored in the repository in that format and files\n"
+"declared to be binary (``BIN``) are left unchanged. Additionally,\n"
+"``native`` is an alias for checking out in the platform's default line\n"
+"ending: ``LF`` on Unix (including Mac OS X) and ``CRLF`` on\n"
+"Windows. Note that ``BIN`` (do nothing to line endings) is Mercurial's\n"
+"default behaviour; it is only needed if you need to override a later,\n"
+"more general pattern."
 msgstr ""
 
 msgid ""
@@ -1930,6 +1932,12 @@ msgid ""
 msgstr ""
 
 msgid ""
+".. note::\n"
+"   The rules will first apply when files are touched in the working\n"
+"   copy, e.g. by updating to null and back to tip to touch all files."
+msgstr ""
+
+msgid ""
 "The extension uses an optional ``[eol]`` section in your hgrc file\n"
 "(not the ``.hgeol`` file) for settings that control the overall\n"
 "behavior. There are two settings:"
@@ -1948,6 +1956,13 @@ msgid ""
 "  means that there is both ``CRLF`` and ``LF`` present in the file.\n"
 "  Such files are normally not touched under the assumption that they\n"
 "  have mixed EOLs on purpose."
+msgstr ""
+
+msgid ""
+"The ``win32text.forbid*`` hooks provided by the win32text extension\n"
+"have been unified into a single hook named ``eol.hook``. The hook will\n"
+"lookup the expected line endings from the ``.hgeol`` file, which means\n"
+"you must migrate to a ``.hgeol`` file first before using the hook."
 msgstr ""
 
 msgid ""
@@ -2828,7 +2843,7 @@ msgstr ""
 msgid ""
 "The default template mappings (view with :hg:`kwdemo -d`) can be\n"
 "replaced with customized keywords and templates. Again, run\n"
-":hg:`kwdemo` to control the results of your config changes."
+":hg:`kwdemo` to control the results of your configuration changes."
 msgstr ""
 
 msgid ""
@@ -3312,6 +3327,18 @@ msgstr ""
 
 msgid "cannot refresh a revision with children"
 msgstr ""
+
+#, python-format
+msgid "warning: not refreshing %s\n"
+msgstr "varning: uppdaterar inte %s\n"
+
+#, python-format
+msgid "warning: not adding %s\n"
+msgstr "varning: lägger inte till %s\n"
+
+#, python-format
+msgid "warning: not removing %s\n"
+msgstr "varning: tar inte bort %s\n"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
@@ -5057,8 +5084,8 @@ msgstr ""
 msgid "changesets"
 msgstr "ändringar"
 
-msgid "fix unresolved conflicts with hg resolve then run hg rebase --continue"
-msgstr "fixa olösta konflikter med hg resolve, kör sedan hg rebase --continue"
+msgid "unresolved conflicts (see hg resolve, then hg rebase --continue)"
+msgstr "olösta konflikter (se hg resolve, sedan hg rebase --continue)"
 
 #, python-format
 msgid "no changes, revision %d skipped\n"
@@ -5647,11 +5674,13 @@ msgstr ""
 msgid "Note that there are some limitations on using this extension:"
 msgstr ""
 
-msgid "- You should use single encoding in one repository."
+msgid ""
+"- You should use single encoding in one repository.\n"
+"- If the repository path ends with 0x5c, .hg/hgrc cannot be read.\n"
+"- win32mbcs is not compatible with fixutf8 extention."
 msgstr ""
 
 msgid ""
-"\n"
 "By default, win32mbcs uses encoding.encoding decided by Mercurial.\n"
 "You can specify the encoding by config option::"
 msgstr ""
@@ -8417,7 +8446,7 @@ msgstr "starta fristående webbserver"
 
 msgid ""
 "    Start a local HTTP repository browser and pull server. You can use\n"
-"    this for ad-hoc sharing and browing of repositories. It is\n"
+"    this for ad-hoc sharing and browsing of repositories. It is\n"
 "    recommended to use a real web server to serve a repository for\n"
 "    longer periods of time."
 msgstr ""
@@ -8657,12 +8686,14 @@ msgstr "    Namnge en specifik revision med <namn>."
 msgid ""
 "    Tags are used to name particular revisions of the repository and are\n"
 "    very useful to compare different revisions, to go back to significant\n"
-"    earlier versions or to mark branch points as releases, etc."
+"    earlier versions or to mark branch points as releases, etc. Changing\n"
+"    an existing tag is normally disallowed; use -f/--force to override."
 msgstr ""
 "    Märken används för att namnge specifika revisioner i arkivet och är\n"
 "    väldigt användbara för at jämföra olika revisioner, för att gå\n"
 "    tillbaka till tidigare versioner eller för att markera förgreningar\n"
-"    som releaser, osv."
+"    som releaser, osv. Att ändra ett existerande märke är normalt inte\n"
+"    tillåtet; använd -f/--force för att tvinga."
 
 msgid ""
 "    If no revision is given, the parent of the working directory is\n"
@@ -8673,20 +8704,33 @@ msgstr ""
 
 msgid ""
 "    To facilitate version control, distribution, and merging of tags,\n"
-"    they are stored as a file named \".hgtags\" which is managed\n"
-"    similarly to other project files and can be hand-edited if\n"
-"    necessary. The file '.hg/localtags' is used for local tags (not\n"
-"    shared among repositories)."
+"    they are stored as a file named \".hgtags\" which is managed similarly\n"
+"    to other project files and can be hand-edited if necessary. This\n"
+"    also means that tagging creates a new commit. The file\n"
+"    \".hg/localtags\" is used for local tags (not shared among\n"
+"    repositories)."
 msgstr ""
 "    För att underlätta versionshantering, distribution, och sammanfogning\n"
 "    av märken, lagras de som en fil vid namn \".hgtags\" som hanteras på\n"
 "    samma sätt som andra projektfiler och kan ändras för hand vid behov.\n"
-"    Filen '.hg/localtags' används för lokala märken (ej delad i arkiv)."
+"    Filen \".hg/localtags\" används för lokala märken (ej delad i arkiv)."
+
+msgid ""
+"    Tag commits are usually made at the head of a branch. If the parent\n"
+"    of the working directory is not a branch head, :hg:`tag` aborts; use\n"
+"    -f/--force to force the tag commit to be based on a non-head\n"
+"    changeset."
+msgstr ""
+"    Arkivering av märken görs vanligtvis på huvudet av en gren. Om\n"
+"    föräldern till arbetskatalogen inte är ett grenhuvud, så avbryts\n"
+"    :hg:`tag`; använd -f/--force för att tvinga arkiveringen."
 
 msgid ""
 "    Since tag names have priority over branch names during revision\n"
 "    lookup, using an existing branch name as a tag name is discouraged."
 msgstr ""
+"    Eftersom märkesnamn har prioritet över grennamn vid uppslagning av\n"
+"    revisioner, avråds det att använda existerande grennamn som märkesnamn."
 
 msgid "tag names must be unique"
 msgstr "märkesnamn måste vara unika"
@@ -8712,6 +8756,12 @@ msgstr "märket '%s' är inte ett lokalt märke"
 #, python-format
 msgid "tag '%s' already exists (use -f to force)"
 msgstr "märket '%s' existerar redan (använd -f för att tvinga)"
+
+msgid "uncommitted merge"
+msgstr "oarkiverad sammanfogning"
+
+msgid "not at a branch head (use -f to force)"
+msgstr "inte vid ett grenhuvud (använd -f för att tvinga)"
 
 msgid "list repository tags"
 msgstr "lista arkivmärken"
@@ -9615,8 +9665,8 @@ msgstr "visa differens från revision"
 msgid "list the changed files of a revision"
 msgstr "visa de ändrade filerna från en revision"
 
-msgid "replace existing tag"
-msgstr "ersätt existerande märke"
+msgid "force tag"
+msgstr "tvinga märkning"
 
 msgid "make the tag local"
 msgstr "gör märket lokalt"
@@ -12108,7 +12158,7 @@ msgstr ""
 msgid ""
 "Paths in the local filesystem can either point to Mercurial\n"
 "repositories or to bundle files (as created by :hg:`bundle` or :hg:`\n"
-"incoming --bundle`)."
+"incoming --bundle`). See also :hg:`help paths`."
 msgstr ""
 
 msgid ""
@@ -12460,6 +12510,10 @@ msgstr ""
 #, python-format
 msgid "working directory of %s"
 msgstr ""
+
+#, python-format
+msgid "warning: can't find ancestor for '%s' copied from '%s'!\n"
+msgstr "varning: kan inte hitta anfader för '%s', kopierad från '%s'!\n"
 
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr ""
@@ -13295,6 +13349,10 @@ msgid "invalid entry in fncache, line %s"
 msgstr ""
 
 #, python-format
+msgid "warning: subrepo spec file %s not found\n"
+msgstr ""
+
+#, python-format
 msgid "subrepo spec file %s not found"
 msgstr ""
 
@@ -13495,6 +13553,13 @@ msgid "%s certificate error: %s"
 msgstr "%s certifikatfel: %s"
 
 #, python-format
+msgid ""
+"warning: %s certificate not verified (check web.cacerts config setting)\n"
+msgstr ""
+"varning: %s-certificatet overifierad (kontrollera inställningen "
+"web.cacerts)\n"
+
+#, python-format
 msgid "command '%s' failed: %s"
 msgstr "kommandot '%s' misslyckades: %s"
 
@@ -13517,17 +13582,28 @@ msgstr ""
 msgid "could not symlink to %r: %s"
 msgstr ""
 
+msgid "check your clock"
+msgstr "kontrollera din klocka"
+
+#, python-format
+msgid "negative timestamp: %d"
+msgstr "negativ tidsstämpel: %d"
+
 #, python-format
 msgid "invalid date: %r"
 msgstr "ogiltigt datum: %r"
 
 #, python-format
 msgid "date exceeds 32 bits: %d"
-msgstr ""
+msgstr "datum överskrider 32 bitar: %d"
+
+#, python-format
+msgid "negative date value: %d"
+msgstr "negativt datumvärde: %d"
 
 #, python-format
 msgid "impossible time zone offset: %d"
-msgstr ""
+msgstr "omöjlig tidzonsoffset: %d"
 
 #, python-format
 msgid "invalid day spec: %s"
@@ -13535,43 +13611,43 @@ msgstr ""
 
 #, python-format
 msgid "%.0f GB"
-msgstr ""
+msgstr "%.0f GB"
 
 #, python-format
 msgid "%.1f GB"
-msgstr ""
+msgstr "%.1f GB"
 
 #, python-format
 msgid "%.2f GB"
-msgstr ""
+msgstr "%.2f GB"
 
 #, python-format
 msgid "%.0f MB"
-msgstr ""
+msgstr "%.0f MB"
 
 #, python-format
 msgid "%.1f MB"
-msgstr ""
+msgstr "%.1f MB"
 
 #, python-format
 msgid "%.2f MB"
-msgstr ""
+msgstr "%.2f MB"
 
 #, python-format
 msgid "%.0f KB"
-msgstr ""
+msgstr "%.0f KB"
 
 #, python-format
 msgid "%.1f KB"
-msgstr ""
+msgstr "%.1f KB"
 
 #, python-format
 msgid "%.2f KB"
-msgstr ""
+msgstr "%.2f KB"
 
 #, python-format
 msgid "%.0f bytes"
-msgstr ""
+msgstr "%.0f bytes"
 
 #, python-format
 msgid "no port number associated with service '%s'"
