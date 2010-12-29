@@ -1079,11 +1079,16 @@ def strdate(string, format, defaults=[]):
         date = " ".join(string.split()[:-1])
 
     # add missing elements from defaults
-    for part in defaults:
+    usenow = False # default to using biased defaults
+    for part in ("S", "M", "HI", "d", "mb", "yY"): # decreasing specificity
         found = [True for p in part if ("%"+p) in format]
         if not found:
-            date += "@" + defaults[part]
+            date += "@" + defaults[part][usenow]
             format += "@%" + part[0]
+        else:
+            # We've found a specific time element, less specific time
+            # elements are relative to today
+            usenow = True
 
     timetuple = time.strptime(date, format)
     localunixtime = int(calendar.timegm(timetuple))
@@ -1095,8 +1100,8 @@ def strdate(string, format, defaults=[]):
         unixtime = localunixtime + offset
     return unixtime, offset
 
-def parsedate(date, formats=None, defaults=None):
-    """parse a localized date/time string and return a (unixtime, offset) tuple.
+def parsedate(date, formats=None, bias={}):
+    """parse a localized date/time and return a (unixtime, offset) tuple.
 
     The date may be a "unixtime offset" string or in one of the specified
     formats. If the date already is a (unixtime, offset) tuple, it is returned.
@@ -1112,15 +1117,22 @@ def parsedate(date, formats=None, defaults=None):
         when, offset = map(int, date.split(' '))
     except ValueError:
         # fill out defaults
-        if not defaults:
-            defaults = {}
         now = makedate()
+        defaults = {}
+        nowmap = {}
         for part in ("d", "mb", "yY", "HI", "M", "S"):
-            if part not in defaults:
+            # this piece is for rounding the specific end of unknowns
+            b = bias.get(part)
+            if b is None:
                 if part[0] in "HMS":
-                    defaults[part] = "00"
+                    b = "00"
                 else:
-                    defaults[part] = datestr(now, "%" + part[0])
+                    b = "0"
+
+            # this piece is for matching the generic end to today's date
+            n = datestr(now, "%" + part[0])
+
+            defaults[part] = (b, n)
 
         for format in formats:
             try:
@@ -1154,6 +1166,22 @@ def matchdate(date):
 
     '>{date}' on or after a given date
 
+    >>> p1 = parsedate("10:29:59")
+    >>> p2 = parsedate("10:30:00")
+    >>> p3 = parsedate("10:30:59")
+    >>> p4 = parsedate("10:31:00")
+    >>> p5 = parsedate("Sep 15 10:30:00 1999")
+    >>> f = matchdate("10:30")
+    >>> f(p1[0])
+    False
+    >>> f(p2[0])
+    True
+    >>> f(p3[0])
+    True
+    >>> f(p4[0])
+    False
+    >>> f(p5[0])
+    False
     """
 
     def lower(date):
