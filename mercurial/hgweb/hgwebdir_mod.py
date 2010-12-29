@@ -64,6 +64,8 @@ class hgwebdir(object):
 
         if not isinstance(self.conf, (dict, list, tuple)):
             map = {'paths': 'hgweb-paths'}
+            if not os.path.exists(self.conf):
+                raise util.Abort(_('config file %s not found!') % self.conf)
             u.readconfig(self.conf, remap=map, trust=True)
             paths = u.configitems('hgweb-paths')
         elif isinstance(self.conf, (list, tuple)):
