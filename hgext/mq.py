@@ -86,6 +86,8 @@ class patchheader(object):
         parent = None
         format = None
         subject = None
+        branch = None
+        nodeid = None
         diffstart = 0
 
         for line in file(pf):
@@ -106,6 +108,10 @@ class patchheader(object):
                     date = line[7:]
                 elif line.startswith("# Parent "):
                     parent = line[9:]
+                elif line.startswith("# Branch "):
+                    branch = line[9:]
+                elif line.startswith("# Node ID "):
+                    nodeid = line[10:]
                 elif not line.startswith("# ") and line:
                     message.append(line)
                     format = None
@@ -134,6 +140,9 @@ class patchheader(object):
 
         eatdiff(message)
         eatdiff(comments)
+        # Remember the exact starting line of the patch diffs before consuming
+        # empty lines, for external use by TortoiseHg and others
+        self.diffstartline = len(comments)
         eatempty(message)
         eatempty(comments)
 
@@ -147,6 +156,9 @@ class patchheader(object):
         self.user = user
         self.date = date
         self.parent = parent
+        # nodeid and branch are for external use by TortoiseHg and others
+        self.nodeid = nodeid
+        self.branch = branch
         self.haspatch = diffstart > 1
         self.plainmode = plainmode
 
