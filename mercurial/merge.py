@@ -312,7 +312,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
             if f == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx)
             try:
-                util.unlink(repo.wjoin(f))
+                util.unlinkpath(repo.wjoin(f))
             except OSError, inst:
                 if inst.errno != errno.ENOENT:
                     repo.ui.warn(_("update failed to remove %s: %s!\n") %
@@ -350,7 +350,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
                 repo.ui.note(_("moving %s to %s\n") % (f, fd))
                 t = wctx.filectx(f).data()
                 repo.wwrite(fd, t, flags)
-                util.unlink(repo.wjoin(f))
+                util.unlinkpath(repo.wjoin(f))
             if f2:
                 repo.ui.note(_("getting %s to %s\n") % (f2, fd))
                 t = mctx.filectx(f2).data()

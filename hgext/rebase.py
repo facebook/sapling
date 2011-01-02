@@ -215,7 +215,7 @@ def rebase(ui, repo, **opts):
         clearstatus(repo)
         ui.note(_("rebase completed\n"))
         if os.path.exists(repo.sjoin('undo')):
-            util.unlink(repo.sjoin('undo'))
+            util.unlinkpath(repo.sjoin('undo'))
         if skipped:
             ui.note(_("%d revisions have been skipped\n") % len(skipped))
     finally:
@@ -393,7 +393,7 @@ def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
 def clearstatus(repo):
     'Remove the status files'
     if os.path.exists(repo.join("rebasestate")):
-        util.unlink(repo.join("rebasestate"))
+        util.unlinkpath(repo.join("rebasestate"))
 
 def restorestatus(repo):
     'Restore a previously stored status'

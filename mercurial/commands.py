@@ -3250,7 +3250,7 @@ def revert(ui, repo, *pats, **opts):
                     continue
                 audit_path(f)
                 try:
-                    util.unlink(repo.wjoin(f))
+                    util.unlinkpath(repo.wjoin(f))
                 except OSError:
                     pass
                 repo.dirstate.remove(f)

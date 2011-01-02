@@ -829,7 +829,7 @@ class workingctx(changectx):
         if unlink:
             for f in list:
                 try:
-                    util.unlink(self._repo.wjoin(f))
+                    util.unlinkpath(self._repo.wjoin(f))
                 except OSError, inst:
                     if inst.errno != errno.ENOENT:
                         raise

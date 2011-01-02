@@ -1146,7 +1146,7 @@ class queue(object):
                 for f in all_files:
                     if f not in repo.dirstate:
                         try:
-                            util.unlink(repo.wjoin(f))
+                            util.unlinkpath(repo.wjoin(f))
                         except OSError, inst:
                             if inst.errno != errno.ENOENT:
                                 raise
@@ -1240,7 +1240,7 @@ class queue(object):
                     raise util.Abort(_("deletions found between repo revs"))
                 for f in a:
                     try:
-                        util.unlink(repo.wjoin(f))
+                        util.unlinkpath(repo.wjoin(f))
                     except OSError, e:
                         if e.errno != errno.ENOENT:
                             raise

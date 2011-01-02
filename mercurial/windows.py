@@ -276,7 +276,7 @@ def _removedirs(name):
             break
         head, tail = os.path.split(head)
 
-def unlink(f):
+def unlinkpath(f):
     """unlink and remove the directory if it is empty"""
     os.unlink(f)
     # try removing directories that might now be empty

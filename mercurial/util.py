@@ -431,7 +431,7 @@ def checksignature(func):
 
     return check
 
-def unlink(f):
+def unlinkpath(f):
     """unlink and remove the directory if it is empty"""
     os.unlink(f)
     # try removing directories that might now be empty
