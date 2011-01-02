@@ -2533,7 +2533,7 @@ def strip(ui, repo, *revs, **opts):
     backup = 'all'
     if opts.get('backup'):
         backup = 'strip'
-    elif opts.get('no-backup') or opts.get('nobackup'):
+    elif opts.get('no_backup') or opts.get('nobackup'):
         backup = 'none'
 
     cl = repo.changelog
