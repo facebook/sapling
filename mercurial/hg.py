@@ -551,6 +551,6 @@ def remoteui(src, opts):
             dst.setconfig(sect, key, val)
     v = src.config('web', 'cacerts')
     if v:
-        dst.setconfig('web', 'cacerts', v)
+        dst.setconfig('web', 'cacerts', util.expandpath(v))
 
     return dst

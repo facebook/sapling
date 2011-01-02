@@ -512,6 +512,8 @@ if has_https:
         def connect(self):
             if hasattr(self, 'ui'):
                 cacerts = self.ui.config('web', 'cacerts')
+                if cacerts:
+                    cacerts = util.expandpath(cacerts)
             else:
                 cacerts = None
 
