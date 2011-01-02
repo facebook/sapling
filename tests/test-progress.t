@@ -141,6 +141,23 @@ test delay time estimates
   loop [==============================>           ] 3/4 2h47m
                                                               \r (esc)
 
+  $ MOCKTIME=1000000 hg -y loop 4 2>&1 | python $TESTDIR/filtercr.py
+  
+  loop [                                                ] 0/4
+  loop [=========>                                ] 1/4 5w00d
+  loop [====================>                     ] 2/4 3w03d
+  loop [=============================>           ] 3/4 11d14h
+                                                              \r (esc)
+
+
+  $ MOCKTIME=14000000 hg -y loop 4 2>&1 | python $TESTDIR/filtercr.py
+  
+  loop [                                                ] 0/4
+  loop [=========>                                ] 1/4 1y18w
+  loop [===================>                     ] 2/4 46w03d
+  loop [=============================>           ] 3/4 23w02d
+                                                              \r (esc)
+
 Time estimates should not fail when there's no end point:
   $ hg -y loop -- -4 2>&1 | python $TESTDIR/filtercr.py
   

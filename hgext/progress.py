@@ -69,8 +69,29 @@ def fmtremaining(seconds):
     minutes += 1
     hours = minutes // 60
     minutes -= hours * 60
-    # i18n: format X hours and YY minutes as "XhYYm"
-    return _("%dh%02dm") % (hours, minutes)
+    if hours < 30:
+        # i18n: format X hours and YY minutes as "XhYYm"
+        return _("%dh%02dm") % (hours, minutes)
+    # we're going to ignore minutes in this case
+    hours += 1
+    days = hours // 24
+    hours -= days * 24
+    if days < 15:
+        # i18n: format X days and YY hours as "XdYYh"
+        return _("%dd%02dh") % (days, hours)
+    # we're going to ignore hours in this case
+    days += 1
+    weeks = days // 7
+    days -= weeks * 7
+    if weeks < 55:
+        # i18n: format X weeks and YY days as "XwYYd"
+        return _("%dw%02dd") % (weeks, days)
+    # we're going to ignore days and treat a year as 52 weeks
+    weeks += 1
+    years = weeks // 52
+    weeks -= years * 52
+    # i18n: format X years and YY weeks as "XyYYw"
+    return _("%dy%02dw") % (years, weeks)
 
 class progbar(object):
     def __init__(self, ui):
