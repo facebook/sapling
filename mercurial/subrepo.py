@@ -398,8 +398,8 @@ class hgsubrepo(abstractsubrepo):
         if r == '' and not ignoreupdate: # no state recorded
             return True
         w = self._repo[None]
-        # version checked out changed?
         if w.p1() != self._repo[r] and not ignoreupdate:
+            # different version checked out
             return True
         return w.dirty() # working directory changed
 
@@ -744,8 +744,8 @@ class gitsubrepo(abstractsubrepo):
                                (revision, self._relpath))
 
     def dirty(self, ignoreupdate=False):
-        # version checked out changed?
         if not ignoreupdate and self._state[1] != self._gitstate():
+            # different version checked out
             return True
         # check for staged changes or modified files; ignore untracked files
         out, code = self._gitdir(['diff-index', '--quiet', 'HEAD'])
