@@ -83,8 +83,7 @@ def perfindex(ui, repo):
     import mercurial.changelog
     def d():
         t = repo.changelog.tip()
-        repo.changelog = mercurial.changelog.changelog(repo.sopener)
-        repo.changelog._loadindexmap()
+        repo.invalidate()
     timer(d)
 
 def perfstartup(ui, repo):

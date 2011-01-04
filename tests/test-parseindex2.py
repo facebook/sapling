@@ -21,7 +21,7 @@ def py_parseindex(data, inline) :
     index = []
     nodemap =  {nullid: nullrev}
     n = off = 0
-    # if we're not using lazymap, always read the whole index
+
     l = len(data) - s
     append = index.append
     if inline:

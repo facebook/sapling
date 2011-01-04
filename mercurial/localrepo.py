@@ -1412,9 +1412,6 @@ class localrepository(repo.repository):
         # Nor do we know which filenodes are missing.
         msng_filenode_set = {}
 
-        junk = mnfst.index[len(mnfst) - 1] # Get around a bug in lazyindex
-        junk = None
-
         # A changeset always belongs to itself, so the changenode lookup
         # function for a changenode is identity.
         def identity(x):
