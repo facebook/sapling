@@ -284,12 +284,12 @@ qpop
 qpush with dump of tag cache
 Dump the tag cache to ensure that it has exactly one head after qpush.
 
-  $ rm -f .hg/tags.cache
+  $ rm -f .hg/cache/tags
   $ hg tags > /dev/null
 
-.hg/tags.cache (pre qpush):
+.hg/cache/tags (pre qpush):
 
-  $ cat .hg/tags.cache
+  $ cat .hg/cache/tags
   1 [\da-f]{40} (re)
   
   $ hg qpush
@@ -297,9 +297,9 @@ Dump the tag cache to ensure that it has exactly one head after qpush.
   now at: test.patch
   $ hg tags > /dev/null
 
-.hg/tags.cache (post qpush):
+.hg/cache/tags (post qpush):
 
-  $ cat .hg/tags.cache
+  $ cat .hg/cache/tags
   2 [\da-f]{40} (re)
   
   $ checkundo qpush

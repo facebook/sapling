@@ -1,4 +1,4 @@
-  $ branchcache=.hg/branchheads.cache
+  $ branchcache=.hg/cache/branchheads
 
   $ hg init t
   $ cd t

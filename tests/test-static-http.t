@@ -64,7 +64,7 @@ one pull
 
 check for HTTP opener failures when cachefile does not exist
 
-  $ rm .hg/*.cache
+  $ rm .hg/cache/*
   $ cd ../local
   $ echo '[hooks]' >> .hg/hgrc
   $ echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc

@@ -105,7 +105,8 @@ group can still write everything
   $ python ../printmodes.py ../push
   00770 ../push/.hg/
   00660 ../push/.hg/00changelog.i
-  00660 ../push/.hg/branchheads.cache
+  00770 ../push/.hg/cache/
+  00660 ../push/.hg/cache/branchheads
   00660 ../push/.hg/requires
   00770 ../push/.hg/store/
   00660 ../push/.hg/store/00changelog.i

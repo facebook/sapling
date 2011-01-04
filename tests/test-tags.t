@@ -1,7 +1,7 @@
 Helper functions:
 
   $ cacheexists() {
-  >   [ -f .hg/tags.cache ] && echo "tag cache exists" || echo "no tag cache"
+  >   [ -f .hg/cache/tags ] && echo "tag cache exists" || echo "no tag cache"
   > }
 
   $ dumptags() {
@@ -36,9 +36,9 @@ Setup:
 
 Try corrupting the cache
 
-  $ printf 'a b' > .hg/tags.cache
+  $ printf 'a b' > .hg/cache/tags
   $ hg identify
-  .hg/tags.cache is corrupt, rebuilding it
+  .hg/cache/tags is corrupt, rebuilding it
   acb14030fe0a tip
   $ cacheexists
   tag cache exists
@@ -69,13 +69,13 @@ Create a tag behind hg's back:
 
 Repeat with cold tag cache:
 
-  $ rm -f .hg/tags.cache
+  $ rm -f .hg/cache/tags
   $ hg identify
   b9154636be93 tip
 
 And again, but now unable to write tag cache:
 
-  $ rm -f .hg/tags.cache
+  $ rm -f .hg/cache/tags
   $ chmod 555 .hg
   $ hg identify
   b9154636be93 tip
@@ -216,7 +216,7 @@ Detailed dump of tag info:
 
 Dump cache:
 
-  $ cat .hg/tags.cache
+  $ cat .hg/cache/tags
   4 0c192d7d5e6b78a714de54a2e9627952a877e25a 0c04f2a8af31de17fab7422878ee5a2dadbc943d
   3 6fa450212aeb2a21ed616a54aea39a4a27894cd7 7d3b718c964ef37b89e550ebdafd5789e76ce1b0
   2 7a94127795a33c10a370c93f731fd9fea0b79af6 0c04f2a8af31de17fab7422878ee5a2dadbc943d
@@ -325,7 +325,7 @@ Strip 2: destroy whole branch, no old head exposed
   $ hg tags                  # partly stale
   tip                                4:735c3ca72986
   bar                                0:bbd179dfa0a7
-  $ rm -f .hg/tags.cache
+  $ rm -f .hg/cache/tags
   $ hg tags                  # cold cache
   tip                                4:735c3ca72986
   bar                                0:bbd179dfa0a7

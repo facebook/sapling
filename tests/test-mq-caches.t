@@ -1,4 +1,4 @@
-  $ branches=.hg/branchheads.cache
+  $ branches=.hg/cache/branchheads
   $ echo '[extensions]' >> $HGRCPATH
   $ echo 'mq =' >> $HGRCPATH
 

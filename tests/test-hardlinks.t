@@ -182,7 +182,8 @@ r4 has hardlinks in the working dir (not just inside .hg):
   $ nlinksdir r4
   2 r4/.hg/00changelog.i
   2 r4/.hg/branch
-  2 r4/.hg/branchheads.cache
+  2 r4/.hg/cache/branchheads
+  2 r4/.hg/cache/tags
   2 r4/.hg/dirstate
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt
@@ -194,7 +195,6 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/store/data/f1.i
   2 r4/.hg/store/fncache
   2 r4/.hg/store/undo
-  2 r4/.hg/tags.cache
   2 r4/.hg/undo.branch
   2 r4/.hg/undo.desc
   2 r4/.hg/undo.dirstate
@@ -210,7 +210,8 @@ Update back to revision 11 in r4 should break hardlink of file f1:
   $ nlinksdir r4
   2 r4/.hg/00changelog.i
   1 r4/.hg/branch
-  2 r4/.hg/branchheads.cache
+  2 r4/.hg/cache/branchheads
+  2 r4/.hg/cache/tags
   1 r4/.hg/dirstate
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt
@@ -222,7 +223,6 @@ Update back to revision 11 in r4 should break hardlink of file f1:
   2 r4/.hg/store/data/f1.i
   2 r4/.hg/store/fncache
   2 r4/.hg/store/undo
-  2 r4/.hg/tags.cache
   2 r4/.hg/undo.branch
   2 r4/.hg/undo.desc
   2 r4/.hg/undo.dirstate
