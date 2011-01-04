@@ -59,6 +59,14 @@ HGPLAIN
     Equivalent options set via command line flags or environment
     variables are not overridden.
 
+HGPLAINEXCEPT
+    This is a comma-separated list of features to preserve when
+    HGPLAIN is enabled. Currently the only value supported is "i18n",
+    which preserves internationalization in plain mode.
+
+    Setting HGPLAINEXCEPT to anything (even an empty string) will
+    enable plain mode.
+
 HGUSER
     This is the string used as the author of a commit. If not set,
     available values will be considered in this order:

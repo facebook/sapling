@@ -278,15 +278,22 @@ class ui(object):
     def plain(self):
         '''is plain mode active?
 
-        Plain mode means that all configuration variables which affect the
-        behavior and output of Mercurial should be ignored. Additionally, the
-        output should be stable, reproducible and suitable for use in scripts or
-        applications.
+        Plain mode means that all configuration variables which affect
+        the behavior and output of Mercurial should be
+        ignored. Additionally, the output should be stable,
+        reproducible and suitable for use in scripts or applications.
 
-        The only way to trigger plain mode is by setting the `HGPLAIN'
-        environment variable.
+        The only way to trigger plain mode is by setting either the
+        `HGPLAIN' or `HGPLAINEXCEPT' environment variables.
+
+        The return value can either be False, True, or a list of
+        features that plain mode should not apply to (e.g., i18n,
+        progress, etc).
         '''
-        return 'HGPLAIN' in os.environ
+        if 'HGPLAIN' not in os.environ and 'HGPLAINEXCEPT' not in os.environ:
+            return False
+        exceptions = os.environ.get('HGPLAINEXCEPT', '').strip().split(',')
+        return exceptions or True
 
     def username(self):
         """Return default username to be used in commits.

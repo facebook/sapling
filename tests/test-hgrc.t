@@ -133,3 +133,39 @@ plain hgrc
   none: ui.verbose=False
   none: ui.debug=True
   none: ui.quiet=False
+
+plain mode with exceptions
+
+  $ cat > plain.py <<EOF
+  > def uisetup(ui):
+  >     ui.write('plain: %r\n' % ui.plain())
+  > EOF
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "plain=./plain.py" >> $HGRCPATH
+  $ HGPLAINEXCEPT=; export HGPLAINEXCEPT
+  $ hg showconfig --config ui.traceback=True --debug
+  plain: ['']
+  read config from: $TESTTMP/hgrc
+  $TESTTMP/hgrc:15: extensions.plain=./plain.py
+  none: ui.traceback=True
+  none: ui.verbose=False
+  none: ui.debug=True
+  none: ui.quiet=False
+  $ unset HGPLAIN
+  $ hg showconfig --config ui.traceback=True --debug
+  plain: ['']
+  read config from: $TESTTMP/hgrc
+  $TESTTMP/hgrc:15: extensions.plain=./plain.py
+  none: ui.traceback=True
+  none: ui.verbose=False
+  none: ui.debug=True
+  none: ui.quiet=False
+  $ HGPLAINEXCEPT=i18n; export HGPLAINEXCEPT
+  $ hg showconfig --config ui.traceback=True --debug
+  plain: ['i18n']
+  read config from: $TESTTMP/hgrc
+  $TESTTMP/hgrc:15: extensions.plain=./plain.py
+  none: ui.traceback=True
+  none: ui.verbose=False
+  none: ui.debug=True
+  none: ui.quiet=False
