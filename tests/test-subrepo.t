@@ -656,3 +656,22 @@ Try to push from the other side
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+
+Check status of files when none of them belong to the first
+subrepository:
+
+  $ hg init subrepo-status
+  $ cd subrepo-status
+  $ hg init subrepo-1
+  $ hg init subrepo-2
+  $ cd subrepo-2
+  $ touch file
+  $ hg add file
+  $ cd ..
+  $ echo subrepo-1 = subrepo-1 > .hgsub
+  $ echo subrepo-2 = subrepo-2 >> .hgsub
+  $ hg add .hgsub
+  $ hg ci -m 'Added subrepos'
+  committing subrepository subrepo-1
+  committing subrepository subrepo-2
+  $ hg st subrepo-2/file

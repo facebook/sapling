@@ -503,7 +503,7 @@ class dirstate(object):
         i, j = 0, 0
         while i < len(files) and j < len(subrepos):
             subpath = subrepos[j] + "/"
-            if not files[i].startswith(subpath):
+            if files[i] < subpath:
                 i += 1
                 continue
             while files and files[i].startswith(subpath):
