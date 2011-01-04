@@ -544,7 +544,7 @@ class svnsubrepo(abstractsubrepo):
 
     def dirty(self, ignoreupdate=False):
         if not self._wcchanged()[0]:
-            if self._wcrev() == self._state[1] and not ignoreupdate:
+            if self._wcrev() == self._state[1] or ignoreupdate:
                 return False
         return True
 
