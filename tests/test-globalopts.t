@@ -347,7 +347,7 @@ Testing -h/--help:
    hgweb        Configuring hgweb
    glossary     Glossary
   
-  use "hg -v help" to show aliases and global options
+  use "hg -v help" to show builtin aliases and global options
 
   $ hg --help
   Mercurial Distributed SCM
@@ -423,7 +423,7 @@ Testing -h/--help:
    hgweb        Configuring hgweb
    glossary     Glossary
   
-  use "hg -v help" to show aliases and global options
+  use "hg -v help" to show builtin aliases and global options
 
 Not tested: --debugger
 

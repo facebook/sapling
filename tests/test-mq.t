@@ -77,7 +77,7 @@ help
    qunapplied   print the patches not yet applied
    strip        strip changesets and all their descendants from the repository
   
-  use "hg -v help mq" to show aliases and global options
+  use "hg -v help mq" to show builtin aliases and global options
 
   $ hg init a
   $ cd a
