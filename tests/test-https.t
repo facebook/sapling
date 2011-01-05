@@ -154,11 +154,12 @@ cacert configured in local repo
   no changes found
   $ mv copy-pull/.hg/hgrc.bu copy-pull/.hg/hgrc
 
-cacert configured globally
+cacert configured globally, also testing expansion of environment
+variables in the filename
 
   $ echo "[web]" >> $HGRCPATH
-  $ echo "cacerts=`pwd`/pub.pem" >> $HGRCPATH
-  $ hg -R copy-pull pull
+  $ echo 'cacerts=$P/pub.pem' >> $HGRCPATH
+  $ P=`pwd` hg -R copy-pull pull
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found

@@ -118,7 +118,7 @@ Short help:
    hgweb        Configuring hgweb
    glossary     Glossary
   
-  use "hg -v help" to show aliases and global options
+  use "hg -v help" to show builtin aliases and global options
 
   $ hg -q help
    add          add the specified files on the next commit
@@ -416,7 +416,7 @@ Test ambiguous command help
    add         add the specified files on the next commit
    addremove   add all new files, delete all missing files
   
-  use "hg -v help ad" to show aliases and global options
+  use "hg -v help ad" to show builtin aliases and global options
 
 Test command without options
 
@@ -716,7 +716,7 @@ Test that default list of commands omits extension commands
    hgweb        Configuring hgweb
    glossary     Glossary
   
-  use "hg -v help" to show aliases and global options
+  use "hg -v help" to show builtin aliases and global options
 
 Test list of commands with command with no help text
 
@@ -727,7 +727,7 @@ Test list of commands with command with no help text
   
    nohelp   (no help text available)
   
-  use "hg -v help helpext" to show aliases and global options
+  use "hg -v help helpext" to show builtin aliases and global options
 
 Test a help topic
 
