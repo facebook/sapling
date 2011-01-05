@@ -991,10 +991,11 @@ The full set of options is:
     third-party tools like email notification hooks can construct
     URLs. Example: ``http://hgserver/repos/``.
 ``cacerts``
-    Path to file containing a list of PEM encoded certificate authority
-    certificates. If specified on the client, then it will verify the identity
-    of remote HTTPS servers with these certificates. The form must be
-    as follows::
+    Path to file containing a list of PEM encoded certificate
+    authority certificates. Environment variables and ``~user``
+    constructs are expanded in the filename. If specified on the
+    client, then it will verify the identity of remote HTTPS servers
+    with these certificates. The form must be as follows::
 
         -----BEGIN CERTIFICATE-----
         ... (certificate in base64 PEM encoding) ...
