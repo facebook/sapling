@@ -1088,13 +1088,18 @@ class revlog(object):
 
         bins = [self._chunk(r) for r in chain]
         text = mdiff.patches(text, bins)
+
+        text = self._checkhash(text, node)
+
+        self._cache = (node, rev, text)
+        return text
+
+    def _checkhash(self, text, node):
         p1, p2 = self.parents(node)
         if (node != hash(text, p1, p2) and
             not (self.flags(rev) & REVIDX_PUNCHED_FLAG)):
             raise RevlogError(_("integrity check failed on %s:%d")
                               % (self.indexfile, rev))
-
-        self._cache = (node, rev, text)
         return text
 
     def checkinlinesize(self, tr, fp=None):
