@@ -7,6 +7,17 @@
 
 import revlog
 
+def _parsemeta(text):
+    if not text.startswith('\1\n'):
+        return {}
+    s = text.index('\1\n', 2)
+    mt = text[2:s]
+    m = {}
+    for l in mt.splitlines():
+        k, v = l.split(": ", 1)
+        m[k] = v
+    return m
+
 class filelog(revlog.revlog):
     def __init__(self, opener, path):
         revlog.revlog.__init__(self, opener,
@@ -19,18 +30,6 @@ class filelog(revlog.revlog):
         s = t.index('\1\n', 2)
         return t[s + 2:]
 
-    def _readmeta(self, node):
-        t = self.revision(node)
-        if not t.startswith('\1\n'):
-            return {}
-        s = t.index('\1\n', 2)
-        mt = t[2:s]
-        m = {}
-        for l in mt.splitlines():
-            k, v = l.split(": ", 1)
-            m[k] = v
-        return m
-
     def add(self, text, meta, transaction, link, p1=None, p2=None):
         if meta or text.startswith('\1\n'):
             mt = ["%s: %s\n" % (k, v) for k, v in sorted(meta.iteritems())]
@@ -40,7 +39,8 @@ class filelog(revlog.revlog):
     def renamed(self, node):
         if self.parents(node)[0] != revlog.nullid:
             return False
-        m = self._readmeta(node)
+        t = self.revision(node)
+        m = _parsemeta(t)
         if m and "copy" in m:
             return (m["copy"], revlog.bin(m["copyrev"]))
         return False
