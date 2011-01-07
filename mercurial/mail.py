@@ -33,7 +33,7 @@ email.Header.Header.__dict__['__init__'] = _unifiedheaderinit
 def _smtp(ui):
     '''build an smtp connection and return a function to send mail'''
     local_hostname = ui.config('smtp', 'local_hostname')
-    tls = ui.config('smtp', 'tls')
+    tls = ui.config('smtp', 'tls', 'none')
     # backward compatible: when tls = true, we use starttls.
     starttls = tls == 'starttls' or util.parsebool(tls)
     smtps = tls == 'smtps'
