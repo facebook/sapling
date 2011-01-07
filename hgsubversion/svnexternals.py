@@ -405,12 +405,12 @@ if subrepo:
                 source = source + '@' + pegrev
             return super(svnsubrepo, self).get((source, state[1]))
 
-        def dirty(self):
+        def dirty(self, ignoreupdate=False):
             # You cannot compare anything with HEAD. Just accept it
             # can be anything.
             wcrev = self._wcrev()
             if (wcrev == 'HEAD' or self._state[1] == 'HEAD' or
-                wcrev == self._state[1]) and not self._wcchanged()[0]:
+                wcrev == self._state[1] or ignoreupdate) and not self._wcchanged()[0]:
                 return False
             return True
 
