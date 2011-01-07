@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" svn || exit 80
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
   $ echo "record=" >> $HGRCPATH
