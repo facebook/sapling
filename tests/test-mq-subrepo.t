@@ -4,6 +4,8 @@
   $ echo "[diff]" >> $HGRCPATH
   $ echo "nodates=1" >> $HGRCPATH
 
+  $ stdin=`pwd`/stdin.tmp
+
 fn to create new repository w/dirty subrepo, and cd into it
   $ mkrepo() {
   >     hg init $1
@@ -21,41 +23,42 @@ fn to create dirty subrepo
   > }
 
   $ testadd() {
-  >     local stdin=`cat`
+  >     cat - > "$stdin"
   >     mksubrepo sub
   >     echo sub = sub >> .hgsub
   >     hg add .hgsub
   >     echo % abort when adding .hgsub w/dirty subrepo
   >     hg status -S
   >     echo '%' $*
-  >     echo "$stdin" | hg $*
+  >     cat "$stdin" | hg $*
   >     echo [$?]
   >     hg -R sub ci -m0sub
   >     echo % update substate when adding .hgsub w/clean updated subrepo
   >     hg status -S
   >     echo '%' $*
-  >     echo "$stdin" | hg $*
+  >     cat "$stdin" | hg $*
   >     hg debugsub
   > }
 
   $ testmod() {
-  >     local stdin=`cat`
+  >     cat - > "$stdin"
   >     mksubrepo sub2
   >     echo sub2 = sub2 >> .hgsub
   >     echo % abort when modifying .hgsub w/dirty subrepo
   >     hg status -S
   >     echo '%' $*
-  >     echo "$stdin" | hg $*
+  >     cat "$stdin" | hg $*
   >     echo [$?]
   >     hg -R sub2 ci -m0sub2
   >     echo % update substate when modifying .hgsub w/clean updated subrepo
   >     hg status -S
   >     echo '%' $*
-  >     echo "$stdin" | hg $*
+  >     cat "$stdin" | hg $*
   >     hg debugsub
   > }
 
   $ testrm1() {
+  >     cat - > "$stdin"
   >     mksubrepo sub3
   >     echo sub3 = sub3 >> .hgsub
   >     hg ci -Aqmsub3
@@ -65,11 +68,13 @@ fn to create dirty subrepo
   >     echo % update substate when removing .hgsub w/dirty subrepo
   >     hg status -S
   >     echo '%' $*
-  >     echo "$stdin" | hg $*
+  >     cat "$stdin" | hg $*
   >     echo % debugsub should be empty
   >     hg debugsub
   > }
+
   $ testrm2() {
+  >     cat - > "$stdin"
   >     mksubrepo sub4
   >     echo sub4 = sub4 >> .hgsub
   >     hg ci -Aqmsub4
@@ -78,7 +83,7 @@ fn to create dirty subrepo
   >     echo % update substate when removing .hgsub w/clean updated subrepo
   >     hg status -S
   >     echo '%' $*
-  >     echo "$stdin" | hg $*
+  >     cat "$stdin" | hg $*
   >     echo % debugsub should be empty
   >     hg debugsub
   > }
