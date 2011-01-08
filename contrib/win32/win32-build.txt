@@ -34,7 +34,7 @@ matching the mercurial version you want to build (32-bit or 64-bit).
   Inno Setup
       http://www.jrsoftware.org/isdl.php#qsp
 
-      Get and install ispack-5.3.10.exe which includes Inno Setup Processor,
+      Get and install ispack-5.3.10.exe or later (includes Inno Setup Processor),
       which is necessary to package Mercurial.
 
   ISTool - optional
@@ -45,6 +45,9 @@ matching the mercurial version you want to build (32-bit or 64-bit).
 
   Docutils
       http://docutils.sourceforge.net/
+
+  CA Certs file
+      http://curl.haxx.se/ca/cacert.pem
 
 And, of course, Mercurial itself.
 
@@ -73,7 +76,7 @@ Building instructions with MSVC 2008 Express Edition:
     "C:\Program Files\Microsoft Visual Studio 9.0\VC\vcvarsall.bat" x86_amd64
     python setup.py py2exe -b 3
 
-Copy add_path.exe into the dist directory that just got created.
+Copy add_path.exe and cacert.pem files into the dist directory that just got created.
 
 If you are using Python up to version 2.5.4, copy mfc71.dll into the dist
 directory that just got created.
