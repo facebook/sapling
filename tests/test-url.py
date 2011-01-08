@@ -36,3 +36,7 @@ check(_verifycert({'subject': ()},
       'no commonName found in certificate')
 check(_verifycert(None, 'example.com'),
       'no certificate received')
+
+# Unicode (IDN) certname isn't supported
+check(_verifycert(cert(u'\u4f8b.jp'), 'example.jp'),
+      'IDN in certificate not supported')

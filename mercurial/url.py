@@ -498,7 +498,11 @@ def _verifycert(cert, hostname):
     for s in cert.get('subject', []):
         key, value = s[0]
         if key == 'commonName':
-            certname = value.lower()
+            try:
+                # 'subject' entries are unicode
+                certname = value.lower().encode('ascii')
+            except UnicodeEncodeError:
+                return _('IDN in certificate not supported')
             if (certname == dnsname or
                 '.' in dnsname and certname == '*.' + dnsname.split('.', 1)[1]):
                 return None
