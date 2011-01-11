@@ -113,7 +113,7 @@ class lock(object):
         # held, or can race and break valid lock.
         try:
             l = lock(self.f + '.break', timeout=0)
-            os.unlink(self.f)
+            util.unlink(self.f)
             l.release()
         except error.LockError:
             return locker
@@ -126,7 +126,7 @@ class lock(object):
             if self.releasefn:
                 self.releasefn()
             try:
-                os.unlink(self.f)
+                util.unlink(self.f)
             except OSError:
                 pass
 
