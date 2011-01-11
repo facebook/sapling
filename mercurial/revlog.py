@@ -221,6 +221,7 @@ class revlog(object):
         self.index = []
         self._shallowroot = shallowroot
         self._parentdelta = 0
+        self._pcache = {}
 
         v = REVLOG_DEFAULT_VERSION
         if hasattr(opener, 'options') and 'defversion' in opener.options:
@@ -703,6 +704,9 @@ class revlog(object):
                 pass
 
     def _partialmatch(self, id):
+        if id in self._pcache:
+            return self._pcache[id]
+
         if len(id) < 40:
             try:
                 # hex(node)[:...]
@@ -712,6 +716,7 @@ class revlog(object):
                 nl = [n for n in nl if hex(n).startswith(id)]
                 if len(nl) > 0:
                     if len(nl) == 1:
+                        self._pcache[id] = nl[0]
                         return nl[0]
                     raise LookupError(id, self.indexfile,
                                       _('ambiguous identifier'))
