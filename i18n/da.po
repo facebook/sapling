@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-12-10 12:44+0100\n"
-"PO-Revision-Date: 2010-12-10 12:46+0100\n"
+"POT-Creation-Date: 2011-01-04 12:03+0100\n"
+"PO-Revision-Date: 2011-01-04 12:15+0100\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "Language: Danish\n"
@@ -1142,10 +1142,10 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    If <REVMAP> isn't given, it will be put in a default location\n"
-"    (<dest>/.hg/shamap by default). The <REVMAP> is a simple text file\n"
-"    that maps each source commit ID to the destination ID for that\n"
-"    revision, like so::"
+"    If ``REVMAP`` isn't given, it will be put in a default location\n"
+"    (``<dest>/.hg/shamap`` by default). The ``REVMAP`` is a simple\n"
+"    text file that maps each source commit ID to the destination ID\n"
+"    for that revision, like so::"
 msgstr ""
 
 msgid "      <source ID> <destination ID>"
@@ -1251,15 +1251,25 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    --config convert.hg.ignoreerrors=False    (boolean)\n"
-"        ignore integrity errors when reading. Use it to fix Mercurial\n"
-"        repositories with missing revlogs, by converting from and to\n"
-"        Mercurial.\n"
-"    --config convert.hg.saverev=False         (boolean)\n"
-"        store original revision ID in changeset (forces target IDs to\n"
-"        change)\n"
-"    --config convert.hg.startrev=0            (hg revision identifier)\n"
-"        convert start revision and its descendants"
+"    The Mercurial source recognizes the following configuration\n"
+"    options, which you can set on the command line with ``--config``:"
+msgstr ""
+
+msgid ""
+"    :convert.hg.ignoreerrors: ignore integrity errors when reading.\n"
+"        Use it to fix Mercurial repositories with missing revlogs, by\n"
+"        converting from and to Mercurial. Default is False."
+msgstr ""
+
+msgid ""
+"    :convert.hg.saverev: store original. revision ID in changeset\n"
+"        (forces target IDs to change). It takes and boolean argument\n"
+"        and defaults to False."
+msgstr ""
+
+msgid ""
+"    :convert.hg.startrev: convert start revision and its descendants.\n"
+"        It takes a hg revision identifier and defaults to 0."
 msgstr ""
 
 msgid ""
@@ -1271,45 +1281,59 @@ msgid ""
 "    CVS source will use a sandbox (i.e. a checked-out copy) from CVS\n"
 "    to indicate the starting point of what will be converted. Direct\n"
 "    access to the repository files is not needed, unless of course the\n"
-"    repository is :local:. The conversion uses the top level directory\n"
-"    in the sandbox to find the CVS repository, and then uses CVS rlog\n"
-"    commands to find files to convert. This means that unless a\n"
-"    filemap is given, all files under the starting directory will be\n"
+"    repository is ``:local:``. The conversion uses the top level\n"
+"    directory in the sandbox to find the CVS repository, and then uses\n"
+"    CVS rlog commands to find files to convert. This means that unless\n"
+"    a filemap is given, all files under the starting directory will be\n"
 "    converted, and that any directory reorganization in the CVS\n"
 "    sandbox is ignored."
 msgstr ""
 
-msgid "    The options shown are the defaults."
+msgid "    The following options can be used with ``--config``:"
 msgstr ""
 
 msgid ""
-"    --config convert.cvsps.cache=True         (boolean)\n"
-"        Set to False to disable remote log caching, for testing and\n"
-"        debugging purposes.\n"
-"    --config convert.cvsps.fuzz=60            (integer)\n"
-"        Specify the maximum time (in seconds) that is allowed between\n"
-"        commits with identical user and log message in a single\n"
-"        changeset. When very large files were checked in as part of a\n"
-"        changeset then the default may not be long enough.\n"
-"    --config convert.cvsps.mergeto='{{mergetobranch ([-\\w]+)}}'\n"
-"        Specify a regular expression to which commit log messages are\n"
-"        matched. If a match occurs, then the conversion process will\n"
-"        insert a dummy revision merging the branch on which this log\n"
-"        message occurs to the branch indicated in the regex.\n"
-"    --config convert.cvsps.mergefrom='{{mergefrombranch ([-\\w]+)}}'\n"
-"        Specify a regular expression to which commit log messages are\n"
-"        matched. If a match occurs, then the conversion process will\n"
-"        add the most recent revision on the branch indicated in the\n"
-"        regex as the second parent of the changeset.\n"
-"    --config hook.cvslog\n"
-"        Specify a Python function to be called at the end of gathering\n"
-"        the CVS log. The function is passed a list with the log entries,\n"
-"        and can modify the entries in-place, or add or delete them.\n"
-"    --config hook.cvschangesets\n"
-"        Specify a Python function to be called after the changesets\n"
-"        are calculated from the the CVS log. The function is passed\n"
-"        a list with the changeset entries, and can modify the changesets\n"
-"        in-place, or add or delete them."
+"    :convert.cvsps.cache: Set to False to disable remote log caching,\n"
+"        for testing and debugging purposes. Default is True."
+msgstr ""
+
+msgid ""
+"    :convert.cvsps.fuzz: Specify the maximum time (in seconds) that is\n"
+"        allowed between commits with identical user and log message in\n"
+"        a single changeset. When very large files were checked in as\n"
+"        part of a changeset then the default may not be long enough.\n"
+"        The default is 60."
+msgstr ""
+
+msgid ""
+"    :convert.cvsps.mergeto: Specify a regular expression to which\n"
+"        commit log messages are matched. If a match occurs, then the\n"
+"        conversion process will insert a dummy revision merging the\n"
+"        branch on which this log message occurs to the branch\n"
+"        indicated in the regex. Default is ``{{mergetobranch\n"
+"        ([-\\w]+)}}``"
+msgstr ""
+
+msgid ""
+"    :convert.cvsps.mergefrom: Specify a regular expression to which\n"
+"        commit log messages are matched. If a match occurs, then the\n"
+"        conversion process will add the most recent revision on the\n"
+"        branch indicated in the regex as the second parent of the\n"
+"        changeset. Default is ``{{mergefrombranch ([-\\w]+)}}``"
+msgstr ""
+
+msgid ""
+"    :hook.cvslog: Specify a Python function to be called at the end of\n"
+"        gathering the CVS log. The function is passed a list with the\n"
+"        log entries, and can modify the entries in-place, or add or\n"
+"        delete them."
+msgstr ""
+
+msgid ""
+"    :hook.cvschangesets: Specify a Python function to be called after\n"
+"        the changesets are calculated from the the CVS log. The\n"
+"        function is passed a list with the changeset entries, and can\n"
+"        modify the changesets in-place, or add or delete them."
 msgstr ""
 
 msgid ""
@@ -1326,24 +1350,33 @@ msgstr ""
 
 msgid ""
 "    Subversion source detects classical trunk/branches/tags layouts.\n"
-"    By default, the supplied \"svn://repo/path/\" source URL is\n"
-"    converted as a single branch. If \"svn://repo/path/trunk\" exists it\n"
-"    replaces the default branch. If \"svn://repo/path/branches\" exists,\n"
-"    its subdirectories are listed as possible branches. If\n"
-"    \"svn://repo/path/tags\" exists, it is looked for tags referencing\n"
-"    converted branches. Default \"trunk\", \"branches\" and \"tags\" values\n"
-"    can be overridden with following options. Set them to paths\n"
+"    By default, the supplied ``svn://repo/path/`` source URL is\n"
+"    converted as a single branch. If ``svn://repo/path/trunk`` exists\n"
+"    it replaces the default branch. If ``svn://repo/path/branches``\n"
+"    exists, its subdirectories are listed as possible branches. If\n"
+"    ``svn://repo/path/tags`` exists, it is looked for tags referencing\n"
+"    converted branches. Default ``trunk``, ``branches`` and ``tags``\n"
+"    values can be overridden with following options. Set them to paths\n"
 "    relative to the source URL, or leave them blank to disable auto\n"
 "    detection."
 msgstr ""
 
+msgid "    The following options can be set with ``--config``:"
+msgstr ""
+
 msgid ""
-"    --config convert.svn.branches=branches    (directory name)\n"
-"        specify the directory containing branches\n"
-"    --config convert.svn.tags=tags            (directory name)\n"
-"        specify the directory containing tags\n"
-"    --config convert.svn.trunk=trunk          (directory name)\n"
-"        specify the name of the trunk branch"
+"    :convert.svn.branches: specify the directory containing branches.\n"
+"        The defaults is ``branches``."
+msgstr ""
+
+msgid ""
+"    :convert.svn.tags: specify the directory containing tags. The\n"
+"        default is ``tags``."
+msgstr ""
+
+msgid ""
+"    :convert.svn.trunk: specify the name of the trunk branch The\n"
+"        defauls is ``trunk``."
 msgstr ""
 
 msgid ""
@@ -1353,8 +1386,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    --config convert.svn.startrev=0           (svn revision number)\n"
-"        specify start Subversion revision."
+"    :convert.svn.startrev: specify start Subversion revision number.\n"
+"        The default is 0."
 msgstr ""
 
 msgid ""
@@ -1368,17 +1401,17 @@ msgid ""
 "    source to a flat Mercurial repository, ignoring labels, branches\n"
 "    and integrations. Note that when a depot path is given you then\n"
 "    usually should specify a target directory, because otherwise the\n"
-"    target may be named ...-hg."
+"    target may be named ``...-hg``."
 msgstr ""
 
 msgid ""
 "    It is possible to limit the amount of source history to be\n"
-"    converted by specifying an initial Perforce revision."
+"    converted by specifying an initial Perforce revision:"
 msgstr ""
 
 msgid ""
-"    --config convert.p4.startrev=0            (perforce changelist number)\n"
-"        specify initial Perforce revision."
+"    :convert.p4.startrev: specify initial Perforce revision, a\n"
+"        Perforce changelist number)."
 msgstr ""
 
 msgid ""
@@ -1386,17 +1419,24 @@ msgid ""
 "    '''''''''''''''''''''"
 msgstr ""
 
-msgid ""
-"    --config convert.hg.clonebranches=False   (boolean)\n"
-"        dispatch source branches in separate clones.\n"
-"    --config convert.hg.tagsbranch=default    (branch name)\n"
-"        tag revisions branch name\n"
-"    --config convert.hg.usebranchnames=True   (boolean)\n"
-"        preserve branch names"
+msgid "    The following options are supported:"
 msgstr ""
 
-msgid "    "
-msgstr "    "
+msgid ""
+"    :convert.hg.clonebranches: dispatch source branches in separate\n"
+"        clones. The default is False."
+msgstr ""
+
+msgid ""
+"    :convert.hg.tagsbranch: branch name for tag revisions, defaults to\n"
+"        ``default``."
+msgstr ""
+
+msgid ""
+"    :convert.hg.usebranchnames: preserve branch names. The default is\n"
+"        True\n"
+"    "
+msgstr ""
 
 msgid "create changeset information from CVS"
 msgstr ""
@@ -1962,32 +2002,35 @@ msgstr ""
 "``[repository]``."
 
 msgid ""
-"The ``[patterns]`` section specifies the line endings used in the\n"
-"working directory. The format is specified by a file pattern. The\n"
-"first match is used, so put more specific patterns first. The\n"
-"available line endings are ``LF``, ``CRLF``, and ``BIN``."
+"The ``[patterns]`` section specifies how line endings should be\n"
+"converted between the working copy and the repository. The format is\n"
+"specified by a file pattern. The first match is used, so put more\n"
+"specific patterns first. The available line endings are ``LF``,\n"
+"``CRLF``, and ``BIN``."
 msgstr ""
-"Sektionen ``[patterns]`` angiver hvilken type linieskift der skal\n"
-"bruges i arbejdskataloget. Typen er angivet ved et filmønster. Den\n"
-"første træffer bliver brugt, så skriv mere specifikke mønstre først.\n"
-"De mulige linieskifttyper er ``LF``, ``CRLF`` og ``BIN``."
+"Sektionen ``[patterns]`` angiver hvordan linieskift skal konverteres\n"
+"mellem arbejdskataloget og depotet. Formatet angives med et\n"
+"filmønster. Den første træffer bliver brugt, så skriv mere specifikke\n"
+"mønstre først. De mulige linieskifttyper er ``LF``, ``CRLF`` og\n"
+"``BIN``."
 
 msgid ""
 "Files with the declared format of ``CRLF`` or ``LF`` are always\n"
-"checked out in that format and files declared to be binary (``BIN``)\n"
-"are left unchanged. Additionally, ``native`` is an alias for the\n"
-"platform's default line ending: ``LF`` on Unix (including Mac OS X)\n"
-"and ``CRLF`` on Windows. Note that ``BIN`` (do nothing to line\n"
-"endings) is Mercurial's default behaviour; it is only needed if you\n"
-"need to override a later, more general pattern."
+"checked out and stored in the repository in that format and files\n"
+"declared to be binary (``BIN``) are left unchanged. Additionally,\n"
+"``native`` is an alias for checking out in the platform's default line\n"
+"ending: ``LF`` on Unix (including Mac OS X) and ``CRLF`` on\n"
+"Windows. Note that ``BIN`` (do nothing to line endings) is Mercurial's\n"
+"default behaviour; it is only needed if you need to override a later,\n"
+"more general pattern."
 msgstr ""
-"Filer deklareret som ``CRLF`` eller ``LF`` bliver altid hentet ud i\n"
-"dette format og filer deklareret som binære (``BIN``) bliver ikke\n"
-"ændret. Desuden er ``native`` et alias for platforms normale\n"
-"linieskift: ``LF`` på Unix (samt Mac OS X) og ``CRLF`` på Windows.\n"
-"Bemærk at ``BIN`` (gør ingenting ved linieskift) er Mercurials\n"
-"standardopførsel; det er kun nødvendigt at bruge den hvis du skal\n"
-"overskrive et senere og mere generelt mønster."
+"Filer deklareret som ``CRLF`` eller ``LF`` bliver altid hentet ud og\n"
+"gemt i depotet i dette format og filer deklareret som binære (``BIN``)\n"
+"bliver ikke ændret. Desuden er ``native`` et alias for platformens\n"
+"normale linieskift: ``LF`` på Unix (samt Mac OS X) og ``CRLF`` på\n"
+"Windows. Bemærk at ``BIN`` (gør ingenting ved linieskift) er\n"
+"Mercurials standardopførsel; det er kun nødvendigt at bruge den hvis\n"
+"du skal overskrive et senere og mere generelt mønster."
 
 msgid ""
 "The optional ``[repository]`` section specifies the line endings to\n"
@@ -2036,6 +2079,12 @@ msgstr ""
 "  native = LF"
 
 msgid ""
+".. note::\n"
+"   The rules will first apply when files are touched in the working\n"
+"   copy, e.g. by updating to null and back to tip to touch all files."
+msgstr ""
+
+msgid ""
 "The extension uses an optional ``[eol]`` section in your hgrc file\n"
 "(not the ``.hgeol`` file) for settings that control the overall\n"
 "behavior. There are two settings:"
@@ -2068,6 +2117,13 @@ msgstr ""
 "  Inkonsistent betyder at der er både ``CRLF`` og ``LF`` linieskift\n"
 "  til stedet i filen. Sådanne filer bliver normalt ikke rørt under\n"
 "  antagelse af at de har miksede linieskift med vilje."
+
+msgid ""
+"The extension provides ``cleverencode:`` and ``cleverdecode:`` filters\n"
+"like the deprecated win32text extension does. This means that you can\n"
+"disable win32text and enable eol and your filters will still work. You\n"
+"only need to these filters until you have prepared a ``.hgeol`` file."
+msgstr ""
 
 msgid ""
 "The ``win32text.forbid*`` hooks provided by the win32text extension\n"
@@ -3392,6 +3448,10 @@ msgstr "ingen rettelser anvendt"
 msgid "working directory revision is not qtip"
 msgstr "arbejdskatalogets revision er ikke qtip"
 
+#, python-format
+msgid "uncommitted changes in subrepository %s"
+msgstr "udeponerede ændringer i underdepot %s"
+
 msgid "local changes found, refresh first"
 msgstr "lokale ændringer fundet, genopfrisk først"
 
@@ -3460,6 +3520,16 @@ msgstr "alle rettelser er i øjeblikket anvendt\n"
 msgid "patch series already fully applied\n"
 msgstr "serien af rettelser er allerede anvendt fuldt ud\n"
 
+msgid "cannot use --exact and --move together"
+msgstr "kan ikke bruge --exact og --move sammen"
+
+msgid "cannot push --exact with applied patches"
+msgstr "kan push --exact med anvendte rettelser"
+
+#, python-format
+msgid "%s does not have a parent recorded"
+msgstr "%s har ikke gemt nogen forælder"
+
 msgid "please specify the patch to move"
 msgstr "angiv venligst lappen der skal flyttes"
 
@@ -3507,18 +3577,6 @@ msgstr "køen af rettelser er nu tom\n"
 
 msgid "cannot refresh a revision with children"
 msgstr "kan ikke genopfriske en revision som har børn"
-
-#, python-format
-msgid "warning: not refreshing %s\n"
-msgstr "advarsel: genopfrisker ikke %s\n"
-
-#, python-format
-msgid "warning: not adding %s\n"
-msgstr "advarsel: tilføjer ikke %s\n"
-
-#, python-format
-msgid "warning: not removing %s\n"
-msgstr "advarsel: fjerner ikke %s\n"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
@@ -4486,6 +4544,9 @@ msgstr "hg qpop [-a] [-f] [RETTELSE | INDEKS]"
 msgid "apply on top of local changes"
 msgstr "anvend ovenpå lokale ændringer"
 
+msgid "apply the target patch to its recorded parent"
+msgstr ""
+
 msgid "list patch name in commit text"
 msgstr ""
 
@@ -4987,6 +5048,11 @@ msgid ""
 msgstr ""
 
 msgid ""
+"    In case email sending fails, you will find a backup of your series\n"
+"    introductory message in ``.hg/last-email.txt``."
+msgstr ""
+
+msgid ""
 "      hg email -r 3000          # send patch 3000 only\n"
 "      hg email -r 3000 -r 3001  # send patches 3000 and 3001\n"
 "      hg email -r 3000:3005     # send patches 3000 through 3005\n"
@@ -5177,7 +5243,7 @@ msgid ""
 "  [progress]\n"
 "  delay = 3 # number of seconds (float) before showing the progress bar\n"
 "  refresh = 0.1 # time in seconds between refreshes of the progress bar\n"
-"  format = topic bar number # format of the progress bar\n"
+"  format = topic bar number estimate # format of the progress bar\n"
 "  width = <none> # if set, the maximum width of the progress information\n"
 "                 # (that is, min(width, term width) will be used)\n"
 "  clear-complete = True # clear the progress bar after it's done\n"
@@ -5187,10 +5253,26 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Valid entries for the format field are topic, bar, number, unit, and\n"
-"item. item defaults to the last 20 characters of the item, but this\n"
-"can be changed by adding either ``-<num>`` which would take the last\n"
-"num characters, or ``+<num>`` for the first num characters.\n"
+"Valid entries for the format field are topic, bar, number, unit,\n"
+"estimate, and item. item defaults to the last 20 characters of the\n"
+"item, but this can be changed by adding either ``-<num>`` which would\n"
+"take the last num characters, or ``+<num>`` for the first num\n"
+"characters.\n"
+msgstr ""
+
+#. i18n: format XX seconds as "XXs"
+#, python-format
+msgid "%02ds"
+msgstr ""
+
+#. i18n: format X minutes and YY seconds as "XmYYs"
+#, python-format
+msgid "%dm%02ds"
+msgstr ""
+
+#. i18n: format X hours and YY minutes as "XhYYm"
+#, python-format
+msgid "%dh%02dm"
 msgstr ""
 
 msgid "command to delete untracked files from the working directory"
@@ -5382,7 +5464,8 @@ msgid "changesets"
 msgstr "ændringer"
 
 msgid "unresolved conflicts (see hg resolve, then hg rebase --continue)"
-msgstr "uløste konflikter (se først hg resolve og dernæst hg rebase --continue)"
+msgstr ""
+"uløste konflikter (se først hg resolve og dernæst hg rebase --continue)"
 
 #, python-format
 msgid "no changes, revision %d skipped\n"
@@ -5578,8 +5661,8 @@ msgstr "'mq' udvidelsen er ikke indlæst"
 msgid "running non-interactively, use commit instead"
 msgstr "kører ikke interaktivt, brug commit i stedet"
 
-msgid "cannot partially commit a merge (use hg commit instead)"
-msgstr "kan ikke deponere en sammenføjning partielt (brug i stedet hg commit)"
+msgid "cannot partially commit a merge (use \"hg commit\" instead)"
+msgstr "kan ikke deponere en sammenføjning partielt (brug i stedet \"hg commit\")"
 
 msgid "no changes to record\n"
 msgstr "ingen ændringer at optage\n"
@@ -6175,6 +6258,9 @@ msgstr "kan ikke give præfix ved arkivering til filer"
 #, python-format
 msgid "unknown archive type '%s'"
 msgstr "ukendt depottype '%s'"
+
+msgid "archiving"
+msgstr "arkiverer"
 
 msgid "invalid changegroup"
 msgstr "ugyldig changegroup"
@@ -8502,6 +8588,9 @@ msgstr ""
 msgid "you can't specify a revision and a date"
 msgstr "du kan ikke specificeret en revision og en dato"
 
+msgid "uncommitted merge - use \"hg update\", see \"hg help revert\""
+msgstr ""
+
 msgid "no files or directories specified; use --all to revert the whole repo"
 msgstr ""
 "ingen filer eller mapper specificeret; brug --all for at føre hele repo'et "
@@ -8813,7 +8902,8 @@ msgstr ""
 msgid ""
 "    Tags are used to name particular revisions of the repository and are\n"
 "    very useful to compare different revisions, to go back to significant\n"
-"    earlier versions or to mark branch points as releases, etc."
+"    earlier versions or to mark branch points as releases, etc. Changing\n"
+"    an existing tag is normally disallowed; use -f/--force to override."
 msgstr ""
 
 msgid ""
@@ -8823,10 +8913,18 @@ msgstr ""
 
 msgid ""
 "    To facilitate version control, distribution, and merging of tags,\n"
-"    they are stored as a file named \".hgtags\" which is managed\n"
-"    similarly to other project files and can be hand-edited if\n"
-"    necessary. The file '.hg/localtags' is used for local tags (not\n"
-"    shared among repositories)."
+"    they are stored as a file named \".hgtags\" which is managed similarly\n"
+"    to other project files and can be hand-edited if necessary. This\n"
+"    also means that tagging creates a new commit. The file\n"
+"    \".hg/localtags\" is used for local tags (not shared among\n"
+"    repositories)."
+msgstr ""
+
+msgid ""
+"    Tag commits are usually made at the head of a branch. If the parent\n"
+"    of the working directory is not a branch head, :hg:`tag` aborts; use\n"
+"    -f/--force to force the tag commit to be based on a non-head\n"
+"    changeset."
 msgstr ""
 
 msgid ""
@@ -8858,6 +8956,12 @@ msgstr "mærkaten '%s' er ikke en lokal mærkat"
 #, python-format
 msgid "tag '%s' already exists (use -f to force)"
 msgstr "mærkaten '%s' eksisterer allerede (brug -f for at gennemtvinge)"
+
+msgid "uncommitted merge"
+msgstr "udeponeret sammenføjning"
+
+msgid "not at a branch head (use -f to force)"
+msgstr "ej ved et grenhoved (brug -f for at gennemtvinge)"
 
 msgid "list repository tags"
 msgstr "vis depotmærkater"
@@ -9752,8 +9856,8 @@ msgstr "vis forskelle fra revision"
 msgid "list the changed files of a revision"
 msgstr "vis de ændrede filer i en revision"
 
-msgid "replace existing tag"
-msgstr "erstat eksisterende mærkat"
+msgid "force tag"
+msgstr "gennemtving markering"
 
 msgid "make the tag local"
 msgstr "gør mærkaten lokal"
@@ -10131,6 +10235,10 @@ msgstr "*** import af udvidelse %s fra %s fejlede: %s\n"
 #, python-format
 msgid "*** failed to import extension %s: %s\n"
 msgstr "*** import af udvidelse %s fejlede: %s\n"
+
+#, python-format
+msgid "warning: error finding commands in %s\n"
+msgstr "advarsel: fejl ved søgning efter kommandoer i %s\n"
 
 #, python-format
 msgid "couldn't find merge tool %s\n"
@@ -11514,6 +11622,13 @@ msgid ""
 "Regexp pattern matching is anchored at the root of the repository."
 msgstr ""
 
+msgid ""
+"To read name patterns from a file, use ``listfile:`` or ``listfile0:``.\n"
+"The latter expects null delimited patterns while the former expects line\n"
+"feeds. Each string read from the file is itself treated as a file\n"
+"pattern."
+msgstr ""
+
 msgid "Plain examples::"
 msgstr ""
 
@@ -11539,8 +11654,15 @@ msgstr ""
 msgid "Regexp examples::"
 msgstr ""
 
+msgid "  re:.*\\.c$      any name ending in \".c\", anywhere in the repository"
+msgstr ""
+
+msgid "File examples::"
+msgstr "Fillisteeksempler::"
+
 msgid ""
-"  re:.*\\.c$      any name ending in \".c\", anywhere in the repository\n"
+"  listfile:list.txt  read list from list.txt with one file pattern per line\n"
+"  listfile0:list.txt read list from list.txt with null byte delimiters\n"
 msgstr ""
 
 msgid "Mercurial supports several ways to specify individual revisions."
@@ -11959,8 +12081,9 @@ msgid ":author: String. The unmodified author of the changeset."
 msgstr ""
 
 msgid ""
-":branches: String. The name of the branch on which the changeset was\n"
-"    committed. Will be empty if the branch name was default."
+":branches: List of strings. The name of the branch on which the\n"
+"    changeset was committed. Will be empty if the branch name was\n"
+"    default."
 msgstr ""
 
 msgid ":children: List of strings. The children of the changeset."
@@ -12344,6 +12467,10 @@ msgid "(branch merge, don't forget to commit)\n"
 msgstr "(grensammenføjning, glem ikke at deponere)\n"
 
 #, python-format
+msgid "config file %s not found!"
+msgstr "konfigurationsfilen %s blev ikke fundet!"
+
+#, python-format
 msgid "error reading %s/.hg/hgrc: %s\n"
 msgstr "fejl ved læsning af %s/.hg/hgrc: %s\n"
 
@@ -12490,6 +12617,10 @@ msgid ".hg/sharedpath points to nonexistent directory %s"
 msgstr ".hg/sharedpath peger på et ikke-eksisterende katalog %s"
 
 #, python-format
+msgid "warning: ignoring unknown working parent %s!\n"
+msgstr "advarsel: ignorerer ukendt forælder %s til arbejdsbiblioteket!\n"
+
+#, python-format
 msgid "%r cannot be used in a tag name"
 msgstr "%r kan ikke bruges i et mærkatnavnet"
 
@@ -12596,33 +12727,27 @@ msgstr ""
 msgid "%d changesets found\n"
 msgstr "fandt %d ændringer\n"
 
-msgid "bundling changes"
-msgstr "bundter ændringer"
+msgid "bundling"
+msgstr "bundter"
 
-msgid "chunks"
-msgstr ""
-
-msgid "bundling manifests"
-msgstr "bundter manifester"
+msgid "manifests"
+msgstr "manifester"
 
 #, python-format
 msgid "empty or missing revlog for %s"
 msgstr "tom eller manglende revlog for %s"
 
-msgid "bundling files"
-msgstr "bundter filer"
-
 msgid "adding changesets\n"
 msgstr "tilføjer ændringer\n"
+
+msgid "chunks"
+msgstr ""
 
 msgid "received changelog group is empty"
 msgstr "modtagen changelog-gruppe er tom"
 
 msgid "adding manifests\n"
 msgstr "tilføjer manifester\n"
-
-msgid "manifests"
-msgstr "manifester"
 
 msgid "adding file changes\n"
 msgstr "tilføjer filændringer\n"
@@ -12665,6 +12790,12 @@ msgstr "%d filer at overføre, %s data\n"
 msgid "transferred %s in %.1f seconds (%s/sec)\n"
 msgstr "overførte %s i %.1f sekunder (%s/sek)\n"
 
+msgid "can't use TLS: Python SSL support not installed"
+msgstr "kan ikke bruge TLS: Python SSL support er ikke installeret"
+
+msgid "(using smtps)\n"
+msgstr "(bruger smtps)\n"
+
 msgid "smtp.host not configured - cannot send mail"
 msgstr ""
 
@@ -12672,11 +12803,8 @@ msgstr ""
 msgid "sending mail: smtp host %s, port %s\n"
 msgstr "sender mail: smtp host %s, port %s\n"
 
-msgid "can't use TLS: Python SSL support not installed"
-msgstr "kan ikke bruge TLS: Python SSL support er ikke installeret"
-
-msgid "(using tls)\n"
-msgstr "(bruger tsl)\n"
+msgid "(using starttls)\n"
+msgstr "(bruger starttls)\n"
 
 #, python-format
 msgid "(authenticating to mail server as %s)\n"
@@ -12715,6 +12843,10 @@ msgstr "ugyldigt mønster (%s): %s"
 
 msgid "invalid pattern"
 msgstr "ugyldig mønster"
+
+#, python-format
+msgid "unable to read file list (%s)"
+msgstr "kan ikke læse filliste (%s)"
 
 #, python-format
 msgid "diff context lines count must be an integer, not %r"
@@ -13048,18 +13180,19 @@ msgid "rev expects a number"
 msgstr "rev forventer et revisionsnummer"
 
 msgid ""
-"``p1(set)``\n"
-"    First parent of changesets in set."
+"``p1([set])``\n"
+"    First parent of changesets in set, or the working directory."
 msgstr ""
 
 msgid ""
-"``p2(set)``\n"
-"    Second parent of changesets in set."
+"``p2([set])``\n"
+"    Second parent of changesets in set, or the working directory."
 msgstr ""
 
 msgid ""
-"``parents(set)``\n"
-"    The set of all parents for all changesets in set."
+"``parents([set])``\n"
+"    The set of all parents for all changesets in set, or the working "
+"directory."
 msgstr ""
 
 msgid ""
@@ -13438,6 +13571,10 @@ msgid "unknown subrepo type %s"
 msgstr "ukendt underdepottype %s"
 
 #, python-format
+msgid "archiving (%s)"
+msgstr "arkiverer (%s)"
+
+#, python-format
 msgid "warning: error \"%s\" in subrepository \"%s\"\n"
 msgstr "advarsel: fejl \"%s\" i underdepot \"%s\"\n"
 
@@ -13461,6 +13598,39 @@ msgid "not removing repo %s because it has changes.\n"
 msgstr "fjerner ikke depotet %s fordi det er ændret.\n"
 
 #, python-format
+msgid "cloning subrepo %s\n"
+msgstr "kloner underdepot %s\n"
+
+#, python-format
+msgid "pulling subrepo %s\n"
+msgstr "hiver underdepot %s\n"
+
+#, python-format
+msgid "revision %s does not exist in subrepo %s\n"
+msgstr "revision %s findes ikke i underdepot %s\n"
+
+#, python-format
+msgid "checking out detached HEAD in subrepo %s\n"
+msgstr ""
+
+msgid "check out a git branch if you intend to make changes\n"
+msgstr ""
+
+#, python-format
+msgid "unrelated git branch checked out in subrepo %s\n"
+msgstr ""
+
+#, python-format
+msgid "pushing branch %s of subrepo %s\n"
+msgstr "skubber gren %s af underdepot %s\n"
+
+#, python-format
+msgid ""
+"no branch checked out in subrepo %s\n"
+"cannot push revision %s"
+msgstr ""
+
+#, python-format
 msgid "%s, line %s: %s\n"
 msgstr "%s, linie %s: %s\n"
 
@@ -13474,20 +13644,34 @@ msgstr "knude '%s' er ikke korrekt formet"
 msgid ".hg/tags.cache is corrupt, rebuilding it\n"
 msgstr ""
 
+#, python-format
+msgid "unknown method '%s'"
+msgstr "ukendt metode '%s'"
+
+msgid "expected a symbol"
+msgstr "forventede et symbol"
+
+#, python-format
+msgid "unknown function '%s'"
+msgstr "ukendt funktion '%s'"
+
+msgid "expected template specifier"
+msgstr ""
+
+#, python-format
+msgid "filter %s expects one argument"
+msgstr "filter %s kræver et argument"
+
 msgid "unmatched quotes"
 msgstr ""
 
 #, python-format
-msgid "error expanding '%s%%%s'"
-msgstr "fejl ved ekspansion af '%s%%%s'"
-
-#, python-format
-msgid "unknown filter '%s'"
-msgstr "ukendt filter '%s'"
-
-#, python-format
 msgid "style not found: %s"
 msgstr ""
+
+#, python-format
+msgid "\"%s\" not in template map"
+msgstr "\"%s\" er ikke i skabelon-fil"
 
 #, python-format
 msgid "template file %s: %s"
@@ -13580,6 +13764,9 @@ msgstr "http godkendelse: bruger %s, kodeord %s\n"
 msgid "ignoring invalid [auth] key '%s'\n"
 msgstr "ignorerer ugyldig [auth] nøgle '%s'\n"
 
+msgid "kb"
+msgstr ""
+
 msgid "certificate checking requires Python 2.6"
 msgstr ""
 
@@ -13598,8 +13785,17 @@ msgid "%s certificate error: %s"
 msgstr "%s certifikatfejl: %s"
 
 #, python-format
+msgid ""
+"warning: %s certificate not verified (check web.cacerts config setting)\n"
+msgstr ""
+
+#, python-format
 msgid "command '%s' failed: %s"
 msgstr "kommandoen '%s' fejlede: %s"
+
+#, python-format
+msgid "path ends in directory separator: %s"
+msgstr ""
 
 #, python-format
 msgid "path contains illegal component: %s"
