@@ -506,22 +506,38 @@ class httphandler(keepalive.HTTPHandler):
 
 def _verifycert(cert, hostname):
     '''Verify that cert (in socket.getpeercert() format) matches hostname.
-    CRLs and subjectAltName are not handled.
+    CRLs is not handled.
 
     Returns error message if any problems are found and None on success.
     '''
     if not cert:
         return _('no certificate received')
     dnsname = hostname.lower()
+    def matchdnsname(certname):
+        return (certname == dnsname or
+                '.' in dnsname and certname == '*.' + dnsname.split('.', 1)[1])
+
+    san = cert.get('subjectAltName', [])
+    if san:
+        certnames = [value.lower() for key, value in san if key == 'DNS']
+        for name in certnames:
+            if matchdnsname(name):
+                return None
+        return _('certificate is for %s') % ', '.join(certnames)
+
+    # subject is only checked when subjectAltName is empty
     for s in cert.get('subject', []):
         key, value = s[0]
         if key == 'commonName':
-            certname = value.lower()
-            if (certname == dnsname or
-                '.' in dnsname and certname == '*.' + dnsname.split('.', 1)[1]):
+            try:
+                # 'subject' entries are unicode
+                certname = value.lower().encode('ascii')
+            except UnicodeEncodeError:
+                return _('IDN in certificate not supported')
+            if matchdnsname(certname):
                 return None
             return _('certificate is for %s') % certname
-    return _('no commonName found in certificate')
+    return _('no commonName or subjectAltName found in certificate')
 
 if has_https:
     class BetterHTTPS(httplib.HTTPSConnection):
