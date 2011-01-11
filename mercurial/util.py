@@ -919,7 +919,9 @@ class opener(object):
                     fd = open(f)
                     nlink = nlinks(f)
                     fd.close()
-            except (OSError, IOError):
+            except (OSError, IOError), e:
+                if e.errno != errno.ENOENT:
+                    raise
                 nlink = 0
                 if not os.path.isdir(dirname):
                     makedirs(dirname, self.createmode)
