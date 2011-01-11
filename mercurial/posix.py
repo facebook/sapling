@@ -13,6 +13,7 @@ posixfile = open
 nulldev = '/dev/null'
 normpath = os.path.normpath
 samestat = os.path.samestat
+unlink = os.unlink
 rename = os.rename
 expandglobs = False
 

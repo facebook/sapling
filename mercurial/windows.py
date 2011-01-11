@@ -285,6 +285,46 @@ def unlinkpath(f):
     except OSError:
         pass
 
+def unlink(f):
+    '''try to implement POSIX' unlink semantics on Windows'''
+
+    # POSIX allows to unlink and rename open files. Windows has serious
+    # problems with doing that:
+    # - Calling os.unlink (or os.rename) on a file f fails if f or any
+    #   hardlinked copy of f has been opened with Python's open(). There is no
+    #   way such a file can be deleted or renamed on Windows (other than
+    #   scheduling the delete or rename for the next reboot).
+    # - Calling os.unlink on a file that has been opened with Mercurial's
+    #   posixfile (or comparable methods) will delay the actual deletion of
+    #   the file for as long as the file is held open. The filename is blocked
+    #   during that time and cannot be used for recreating a new file under
+    #   that same name ("zombie file"). Directories containing such zombie files
+    #   cannot be removed or moved.
+    # A file that has been opened with posixfile can be renamed, so we rename
+    # f to a random temporary name before calling os.unlink on it. This allows
+    # callers to recreate f immediately while having other readers do their
+    # implicit zombie filename blocking on a temporary name.
+
+    for tries in xrange(10):
+        temp = '%s-%08x' % (f, random.randint(0, 0xffffffff))
+        try:
+            os.rename(f, temp)  # raises OSError EEXIST if temp exists
+            break
+        except OSError, e:
+            if e.errno != errno.EEXIST:
+                raise
+    else:
+        raise IOError, (errno.EEXIST, "No usable temporary filename found")
+
+    try:
+        os.unlink(temp)
+    except:
+        # Some very rude AV-scanners on Windows may cause this unlink to fail.
+        # Not aborting here just leaks the temp file, whereas aborting at this
+        # point may leave serious inconsistencies. Ideally, we would notify
+        # the user in this case here.
+        pass
+
 def rename(src, dst):
     '''atomically rename file src to dst, replacing dst if it exists'''
     try:
@@ -292,35 +332,7 @@ def rename(src, dst):
     except OSError, e:
         if e.errno != errno.EEXIST:
             raise
-
-        # On windows, rename to existing file is not allowed, so we
-        # must delete destination first. But if a file is open, unlink
-        # schedules it for delete but does not delete it. Rename
-        # happens immediately even for open files, so we rename
-        # destination to a temporary name, then delete that. Then
-        # rename is safe to do.
-        # The temporary name is chosen at random to avoid the situation
-        # where a file is left lying around from a previous aborted run.
-
-        for tries in xrange(10):
-            temp = '%s-%08x' % (dst, random.randint(0, 0xffffffff))
-            try:
-                os.rename(dst, temp)  # raises OSError EEXIST if temp exists
-                break
-            except OSError, e:
-                if e.errno != errno.EEXIST:
-                    raise
-        else:
-            raise IOError, (errno.EEXIST, "No usable temporary filename found")
-
-        try:
-            os.unlink(temp)
-        except:
-            # Some rude AV-scanners on Windows may cause the unlink to
-            # fail. Not aborting here just leaks the temp file, whereas
-            # aborting at this point may leave serious inconsistencies.
-            # Ideally, we would notify the user here.
-            pass
+        unlink(dst)
         os.rename(src, dst)
 
 def spawndetached(args):
