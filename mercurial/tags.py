@@ -99,9 +99,6 @@ def _readtags(ui, repo, lines, fn, recode=None):
         except TypeError:
             warn(_("node '%s' is not well formed") % nodehex)
             continue
-        if nodebin not in repo.changelog.nodemap:
-            # silently ignore as pull -r might cause this
-            continue
 
         # update filetags
         hist = []
