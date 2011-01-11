@@ -289,7 +289,9 @@ def rename(src, dst):
     '''atomically rename file src to dst, replacing dst if it exists'''
     try:
         os.rename(src, dst)
-    except OSError: # FIXME: check err (EEXIST ?)
+    except OSError, e:
+        if e.errno != errno.EEXIST:
+            raise
 
         # On windows, rename to existing file is not allowed, so we
         # must delete destination first. But if a file is open, unlink
