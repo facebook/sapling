@@ -172,8 +172,8 @@ class revlogio(object):
 
     def parseindex(self, fp, data, inline):
         # call the C implementation to parse the index data
-        index, nodemap, cache = parsers.parse_index(data, inline)
-        return index, nodemap, cache
+        index, cache = parsers.parse_index2(data, inline)
+        return index, None, cache
 
     def packentry(self, entry, node, version, rev):
         p = _pack(indexformatng, *entry)
@@ -218,7 +218,6 @@ class revlog(object):
         self.opener = opener
         self._cache = None
         self._chunkcache = (0, '')
-        self.nodemap = {nullid: nullrev}
         self.index = []
         self._shallowroot = shallowroot
         self._parentdelta = 0
@@ -267,13 +266,23 @@ class revlog(object):
                 d = self._io.parseindex(f, i, self._inline)
             except (ValueError, IndexError):
                 raise RevlogError(_("index %s is corrupted") % (self.indexfile))
-            self.index, self.nodemap, self._chunkcache = d
+            self.index, n, self._chunkcache = d
+            if n:
+                self.nodemap = n
             if not self._chunkcache:
                 self._chunkclear()
 
         # add the magic null revision at -1 (if it hasn't been done already)
         if self.index == [] or self.index[-1][7] != nullid:
             self.index.append((0, 0, 0, -1, -1, -1, -1, nullid))
+
+    @util.propertycache
+    def nodemap(self):
+        n = {nullid: nullrev}
+        i = self.index
+        for r in xrange(len(i) - 1):
+            n[i[r][7]] = r
+        return n
 
     def tip(self):
         return self.node(len(self.index) - 2)

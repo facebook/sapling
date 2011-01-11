@@ -81,8 +81,9 @@ def perfmanifest(ui, repo):
 
 def perfindex(ui, repo):
     import mercurial.changelog
+    n = repo["tip"].node()
     def d():
-        t = repo.changelog.tip()
+        repo[n]
         repo.invalidate()
     timer(d)
 

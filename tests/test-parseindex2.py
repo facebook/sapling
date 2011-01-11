@@ -50,7 +50,7 @@ def py_parseindex(data, inline) :
     # add the magic null revision at -1
     index.append((0, 0, 0, -1, -1, -1, -1, nullid))
 
-    return index, nodemap, cache
+    return index, cache
 
 
 data_inlined = '\x00\x01\x00\x01\x00\x00\x00\x00\x00\x00\x01\x8c' \
@@ -97,10 +97,10 @@ data_non_inlined = '\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01D\x19' \
 def runtest() :
 
     py_res_1 = py_parseindex(data_inlined, True)
-    c_res_1 = parsers.parse_index(data_inlined, True)
+    c_res_1 = parsers.parse_index2(data_inlined, True)
 
     py_res_2 = py_parseindex(data_non_inlined, False)
-    c_res_2 = parsers.parse_index(data_non_inlined, False)
+    c_res_2 = parsers.parse_index2(data_non_inlined, False)
 
     if py_res_1 != c_res_1:
         print "Parse index result (with inlined data) differs!"
