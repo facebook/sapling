@@ -911,7 +911,7 @@ class opener(object):
                 return atomictempfile(f, mode, self.createmode)
             try:
                 if 'w' in mode:
-                    os.unlink(f)
+                    unlink(f)
                     nlink = 0
                 else:
                     # nlinks() may behave differently for files on Windows
