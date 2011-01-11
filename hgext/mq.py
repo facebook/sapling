@@ -2942,7 +2942,7 @@ def reposetup(ui, repo):
 
             mqtags = [(patch.node, patch.name) for patch in q.applied]
 
-            if mqtags[-1][0] not in self.changelog.nodemap:
+            if mqtags[-1][0] not in self:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(mqtags[-1][0]))
                 return result
@@ -2967,7 +2967,7 @@ def reposetup(ui, repo):
 
             cl = self.changelog
             qbasenode = q.applied[0].node
-            if qbasenode not in cl.nodemap:
+            if qbasenode not in self:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(qbasenode))
                 return super(mqrepo, self)._branchtags(partial, lrev)
