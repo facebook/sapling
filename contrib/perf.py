@@ -84,8 +84,8 @@ def perfindex(ui, repo):
     mercurial.revlog._prereadsize = 2**24 # disable old lazy parser
     n = repo["tip"].node()
     def d():
-        repo[n]
         repo.invalidate()
+        repo[n]
     timer(d)
 
 def perfstartup(ui, repo):
