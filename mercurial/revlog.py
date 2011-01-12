@@ -283,6 +283,7 @@ class revlog(object):
         i = self.index
         for r in xrange(len(i) - 1):
             n[i[r][7]] = r
+        self.rev = self._revmap
         return n
 
     def tip(self):
@@ -292,11 +293,20 @@ class revlog(object):
     def __iter__(self):
         for i in xrange(len(self)):
             yield i
-    def rev(self, node):
+    def _revmap(self, node):
         try:
             return self.nodemap[node]
         except KeyError:
             raise LookupError(node, self.indexfile, _('no node'))
+
+    def rev(self, node):
+        if node == nullid:
+            return nullrev
+        i = self.index
+        for r in xrange(len(i) - 2, -1, -1):
+            if i[r][7] == node:
+                return r
+        raise LookupError(node, self.indexfile, _('no node'))
     def node(self, rev):
         return self.index[rev][7]
     def linkrev(self, rev):
@@ -711,8 +721,8 @@ class revlog(object):
             try:
                 # hex(node)[:...]
                 l = len(id) // 2  # grab an even number of digits
-                bin_id = bin(id[:l * 2])
-                nl = [n for n in self.nodemap if n[:l] == bin_id]
+                prefix = bin(id[:l * 2])
+                nl = [e[7] for e in self.index if e[7].startswith(prefix)]
                 nl = [n for n in nl if hex(n).startswith(id)]
                 if len(nl) > 0:
                     if len(nl) == 1:
