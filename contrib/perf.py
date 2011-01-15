@@ -81,7 +81,6 @@ def perfmanifest(ui, repo):
 
 def perfindex(ui, repo):
     import mercurial.revlog
-    mercurial.revlog._prereadsize = 2**24 # disable old lazy parser
     n = repo["tip"].node()
     def d():
         repo.invalidate()
