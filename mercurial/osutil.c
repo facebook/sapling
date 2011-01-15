@@ -436,7 +436,14 @@ static PyObject *posixfile(PyObject *self, PyObject *args, PyObject *kwds)
 	}
 	else
 		flags = _O_TEXT;
-	if (plus) {
+	if (m0 == 'r' && !plus) {
+		flags |= _O_RDONLY;
+		access = GENERIC_READ;
+	} else {
+		/*
+		work around http://support.microsoft.com/kb/899149 and
+		set _O_RDWR for 'w' and 'a', even if mode has no '+'
+		*/
 		flags |= _O_RDWR;
 		access = GENERIC_READ | GENERIC_WRITE;
 		fpmode[fppos++] = '+';
@@ -446,25 +453,13 @@ static PyObject *posixfile(PyObject *self, PyObject *args, PyObject *kwds)
 	switch (m0) {
 	case 'r':
 		creation = OPEN_EXISTING;
-		if (!plus) {
-			flags |= _O_RDONLY;
-			access = GENERIC_READ;
-		}
 		break;
 	case 'w':
 		creation = CREATE_ALWAYS;
-		if (!plus) {
-			access = GENERIC_WRITE;
-			flags |= _O_WRONLY;
-		}
 		break;
 	case 'a':
 		creation = OPEN_ALWAYS;
 		flags |= _O_APPEND;
-		if (!plus) {
-			flags |= _O_WRONLY;
-			access = GENERIC_WRITE;
-		}
 		break;
 	default:
 		PyErr_Format(PyExc_ValueError,
