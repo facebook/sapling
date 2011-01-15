@@ -352,8 +352,8 @@ static PyObject *parse_index2(PyObject *self, PyObject *args)
 	inlined = inlined_obj && PyObject_IsTrue(inlined_obj);
 
 	/* If no data is inlined, we know the size of the index list in
-	 * advance: size divided by size of one one revlog record (64 bytes)
-	 * plus one for the nullid */
+	 * advance: size divided by the size of one revlog record (64 bytes)
+	 * plus one for nullid */
 	index = inlined ? PyList_New(0) : PyList_New(size / 64 + 1);
 	if (!index)
 		goto quit;
