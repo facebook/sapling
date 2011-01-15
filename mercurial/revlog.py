@@ -126,7 +126,7 @@ class revlogoldio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatv0)
 
-    def parseindex(self, fp, data, inline):
+    def parseindex(self, data, inline):
         s = self.size
         index = []
         nodemap =  {nullid: nullrev}
@@ -170,7 +170,7 @@ class revlogio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatng)
 
-    def parseindex(self, fp, data, inline):
+    def parseindex(self, data, inline):
         # call the C implementation to parse the index data
         index, cache = parsers.parse_index2(data, inline)
         return index, None, cache
@@ -264,7 +264,7 @@ class revlog(object):
             self._io = revlogoldio()
         if i:
             try:
-                d = self._io.parseindex(f, i, self._inline)
+                d = self._io.parseindex(i, self._inline)
             except (ValueError, IndexError):
                 raise RevlogError(_("index %s is corrupted") % (self.indexfile))
             self.index, n, self._chunkcache = d
