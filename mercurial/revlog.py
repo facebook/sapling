@@ -176,7 +176,10 @@ class revlogio(object):
     def parseindex(self, data, inline):
         # call the C implementation to parse the index data
         index, cache = parsers.parse_index2(data, inline)
-        return index, None, cache
+        nodemap = None
+        if not data:
+            nodemap = {nullid: nullrev}
+        return index, nodemap, cache
 
     def packentry(self, entry, node, version, rev):
         p = _pack(indexformatng, *entry)
