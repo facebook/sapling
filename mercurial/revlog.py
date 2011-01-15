@@ -143,6 +143,9 @@ class revlogoldio(object):
             nodemap[e[6]] = n
             n += 1
 
+        # add the magic null revision at -1
+        index.append((0, 0, 0, -1, -1, -1, -1, nullid))
+
         return index, nodemap, None
 
     def packentry(self, entry, node, version, rev):
@@ -262,20 +265,15 @@ class revlog(object):
         self._io = revlogio()
         if self.version == REVLOGV0:
             self._io = revlogoldio()
-        if i:
-            try:
-                d = self._io.parseindex(i, self._inline)
-            except (ValueError, IndexError):
-                raise RevlogError(_("index %s is corrupted") % (self.indexfile))
-            self.index, n, self._chunkcache = d
-            if n:
-                self.nodemap = n
-            if not self._chunkcache:
-                self._chunkclear()
-
-        # add the magic null revision at -1 (if it hasn't been done already)
-        if self.index == [] or self.index[-1][7] != nullid:
-            self.index.append((0, 0, 0, -1, -1, -1, -1, nullid))
+        try:
+            d = self._io.parseindex(i, self._inline)
+        except (ValueError, IndexError):
+            raise RevlogError(_("index %s is corrupted") % (self.indexfile))
+        self.index, n, self._chunkcache = d
+        if n:
+            self.nodemap = n
+        if not self._chunkcache:
+            self._chunkclear()
 
     @util.propertycache
     def nodemap(self):
