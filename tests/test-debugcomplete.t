@@ -75,6 +75,7 @@ Show debug commands if there are no other candidates
   debugdata
   debugdate
   debugfsinfo
+  debugignore
   debugindex
   debugindexdot
   debuginstall
@@ -214,6 +215,7 @@ Show all commands + options
   debugdata: 
   debugdate: extended
   debugfsinfo: 
+  debugignore: 
   debugindex: format
   debugindexdot: 
   debuginstall: 

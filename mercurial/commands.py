@@ -1351,6 +1351,11 @@ def debugdate(ui, date, range=None, **opts):
         m = util.matchdate(range)
         ui.write("match: %s\n" % m(d[0]))
 
+def debugignore(ui, repo, *values, **opts):
+    """display the combined ignore pattern"""
+    ignore = repo.dirstate._ignore
+    ui.write("%s\n" % ignore.includepat)
+
 def debugindex(ui, repo, file_, **opts):
     """dump the contents of an index file"""
     r = None
@@ -4347,6 +4352,7 @@ table = {
          _('[-e] DATE [RANGE]')),
     "debugdata": (debugdata, [], _('FILE REV')),
     "debugfsinfo": (debugfsinfo, [], _('[PATH]')),
+    "debugignore": (debugignore, [], ''),
     "debugindex": (debugindex,
                    [('f', 'format', 0, _('revlog format'), _('FORMAT'))],
                    _('FILE')),

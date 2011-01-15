@@ -39,11 +39,11 @@ class match(object):
         self._anypats = bool(include or exclude)
 
         if include:
-            im = _buildmatch(_normalize(include, 'glob', root, cwd, auditor),
-                             '(?:/|$)')
+            pats = _normalize(include, 'glob', root, cwd, auditor)
+            self.includepat, im = _buildmatch(pats, '(?:/|$)')
         if exclude:
-            em = _buildmatch(_normalize(exclude, 'glob', root, cwd, auditor),
-                             '(?:/|$)')
+            pats = _normalize(exclude, 'glob', root, cwd, auditor)
+            self.excludepat, em = _buildmatch(pats, '(?:/|$)')
         if exact:
             self._files = patterns
             pm = self.exact
@@ -51,7 +51,7 @@ class match(object):
             pats = _normalize(patterns, default, root, cwd, auditor)
             self._files = _roots(pats)
             self._anypats = self._anypats or _anypats(pats)
-            pm = _buildmatch(pats, '$')
+            self.patternspat, pm = _buildmatch(pats, '$')
 
         if patterns or exact:
             if include:
@@ -246,7 +246,7 @@ def _buildmatch(pats, tail):
         pat = '(?:%s)' % '|'.join([_regex(k, p, tail) for (k, p) in pats])
         if len(pat) > 20000:
             raise OverflowError()
-        return re.compile(pat).match
+        return pat, re.compile(pat).match
     except OverflowError:
         # We're using a Python with a tiny regex engine and we
         # made it explode, so we'll divide the pattern list in two
@@ -254,8 +254,9 @@ def _buildmatch(pats, tail):
         l = len(pats)
         if l < 2:
             raise
-        a, b = _buildmatch(pats[:l//2], tail), _buildmatch(pats[l//2:], tail)
-        return lambda s: a(s) or b(s)
+        pata, a = _buildmatch(pats[:l//2], tail),
+        patb, b = _buildmatch(pats[l//2:], tail)
+        return pat, lambda s: a(s) or b(s)
     except re.error:
         for k, p in pats:
             try:

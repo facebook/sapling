@@ -120,3 +120,5 @@ Check it does not ignore the current directory '.':
   $ hg status .
   A b.o
 
+  $ hg debugignore
+  (?:(?:|.*/)[^/]*(?:/|$))
