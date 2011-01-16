@@ -70,9 +70,8 @@ The default template mappings (view with :hg:`kwdemo -d`) can be
 replaced with customized keywords and templates. Again, run
 :hg:`kwdemo` to control the results of your configuration changes.
 
-Before changing/disabling active keywords, run :hg:`kwshrink` to avoid
-the risk of inadvertently storing expanded keywords in the change
-history.
+Before changing/disabling active keywords, you must run :hg:`kwshrink`
+to avoid storing expanded keywords in the change history.
 
 To force expansion after enabling it, or a configuration change, run
 :hg:`kwexpand`.
@@ -465,8 +464,7 @@ def files(ui, repo, *pats, **opts):
 def shrink(ui, repo, *pats, **opts):
     '''revert expanded keywords in the working directory
 
-    Run before changing/disabling active keywords or if you experience
-    problems with :hg:`import` or :hg:`merge`.
+    Must be run before changing/disabling active keywords.
 
     kwshrink refuses to run if given files contain local changes.
     '''
