@@ -275,6 +275,7 @@ class revlog(object):
         self.index, n, self._chunkcache = d
         if n:
             self.nodemap = n
+            self.rev = self._revmap
         if not self._chunkcache:
             self._chunkclear()
 
