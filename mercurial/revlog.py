@@ -272,9 +272,9 @@ class revlog(object):
             d = self._io.parseindex(i, self._inline)
         except (ValueError, IndexError):
             raise RevlogError(_("index %s is corrupted") % (self.indexfile))
-        self.index, n, self._chunkcache = d
-        if n:
-            self.nodemap = n
+        self.index, nodemap, self._chunkcache = d
+        if nodemap is not None:
+            self.nodemap = nodemap
             self.rev = self._revmap
         if not self._chunkcache:
             self._chunkclear()
