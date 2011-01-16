@@ -1672,6 +1672,8 @@ class localrepository(repo.repository):
         """Add the changegroup returned by source.read() to this repo.
         srctype is a string like 'push', 'pull', or 'unbundle'.  url is
         the URL of the repo where this changegroup is coming from.
+        If lock is not None, the function takes ownership of the lock
+        and releases it after the changegroup is added.
 
         Return an integer summarizing the change to this repo:
         - nothing changed or no source: 0
