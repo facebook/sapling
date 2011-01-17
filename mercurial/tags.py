@@ -152,7 +152,7 @@ def _readtagcache(ui, repo):
     set, caller is responsible for reading tag info from each head.'''
 
     try:
-        cachefile = repo.opener(os.path.join('cache', 'tags'), 'r')
+        cachefile = repo.opener('cache/tags', 'r')
         # force reading the file for static-http
         cachelines = iter(cachefile)
     except IOError:
@@ -249,8 +249,7 @@ def _readtagcache(ui, repo):
 def _writetagcache(ui, repo, heads, tagfnode, cachetags):
 
     try:
-        cachefile = repo.opener(os.path.join('cache', 'tags'), 'w',
-                                atomictemp=True)
+        cachefile = repo.opener('cache/tags', 'w', atomictemp=True)
     except (OSError, IOError):
         return
 
