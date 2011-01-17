@@ -439,9 +439,7 @@ def clone(orig, ui, source, dest=None, **opts):
                 data['branches'] = branches
                 ui.setconfig('hgsubversion', 'branch', branches[-1])
 
-        # NOTE: this breaks on Mercurial 1.6, where passing a repository
-        # object to hg.clone() will abort. Mercurial 1.6.1 fixed it.
-        data['srcrepo'], data['dstrepo'] = orig(ui, srcrepo, dest, **opts)
+        data['srcrepo'], data['dstrepo'] = orig(ui, origsource, dest, **opts)
 
     for opt, (section, name) in optionmap.iteritems():
         if opt in opts and opts[opt]:
