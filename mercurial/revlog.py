@@ -871,12 +871,12 @@ class revlog(object):
         bins = [self._chunk(r) for r in chain]
         text = mdiff.patches(text, bins)
 
-        text = self._checkhash(text, node)
+        text = self._checkhash(text, node, rev)
 
         self._cache = (node, rev, text)
         return text
 
-    def _checkhash(self, text, node):
+    def _checkhash(self, text, node, rev):
         p1, p2 = self.parents(node)
         if (node != hash(text, p1, p2) and
             not (self.flags(rev) & REVIDX_PUNCHED_FLAG)):
