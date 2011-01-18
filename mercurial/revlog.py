@@ -176,10 +176,7 @@ class revlogio(object):
     def parseindex(self, data, inline):
         # call the C implementation to parse the index data
         index, cache = parsers.parse_index2(data, inline)
-        nodemap = None
-        if not data:
-            nodemap = {nullid: nullrev}
-        return index, nodemap, cache
+        return index, None, cache
 
     def packentry(self, entry, node, version, rev):
         p = _pack(indexformatng, *entry)
@@ -228,6 +225,8 @@ class revlog(object):
         self._shallowroot = shallowroot
         self._parentdelta = 0
         self._pcache = {}
+        self._nodecache = {nullid: nullrev}
+        self._nodepos = None
 
         v = REVLOG_DEFAULT_VERSION
         if hasattr(opener, 'options') and 'defversion' in opener.options:
@@ -274,19 +273,9 @@ class revlog(object):
             raise RevlogError(_("index %s is corrupted") % (self.indexfile))
         self.index, nodemap, self._chunkcache = d
         if nodemap is not None:
-            self.nodemap = nodemap
-            self.rev = self._revmap
+            self.nodemap = self._nodecache = nodemap
         if not self._chunkcache:
             self._chunkclear()
-
-    @util.propertycache
-    def nodemap(self):
-        n = {nullid: nullrev}
-        i = self.index
-        for r in xrange(len(i) - 1):
-            n[i[r][7]] = r
-        self.rev = self._revmap
-        return n
 
     def tip(self):
         return self.node(len(self.index) - 2)
@@ -295,20 +284,31 @@ class revlog(object):
     def __iter__(self):
         for i in xrange(len(self)):
             yield i
-    def _revmap(self, node):
-        try:
-            return self.nodemap[node]
-        except KeyError:
-            raise LookupError(node, self.indexfile, _('no node'))
+
+    @util.propertycache
+    def nodemap(self):
+        n = self.rev(self.node(0))
+        return self._nodecache
 
     def rev(self, node):
-        if node == nullid:
-            return nullrev
-        i = self.index
-        for r in xrange(len(i) - 2, -1, -1):
-            if i[r][7] == node:
-                return r
-        raise LookupError(node, self.indexfile, _('no node'))
+        try:
+            return self._nodecache[node]
+        except KeyError:
+            n = self._nodecache
+            if node in n:
+                return n[node]
+            i = self.index
+            p = self._nodepos
+            if p is None:
+                p = len(i) - 2
+            for r in xrange(p, -1, -1):
+                v = i[r][7]
+                n[v] = r
+                if v == node:
+                    self._nodepos = r - 1
+                    return r
+            raise LookupError(node, self.indexfile, _('no node'))
+
     def node(self, rev):
         return self.index[rev][7]
     def linkrev(self, rev):
