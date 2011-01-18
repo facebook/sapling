@@ -743,7 +743,7 @@ def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
 
     Commit changes to the given files into the repository. Unlike a
-    centralized RCS, this operation is a local operation. See
+    centralized SCM, this operation is a local operation. See
     :hg:`push` for a way to actively distribute your changes.
 
     If a list of files is omitted, all changes reported by :hg:`status`
