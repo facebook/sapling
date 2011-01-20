@@ -128,7 +128,8 @@ def resolvesource(ui, svnroot, source):
         if svnroot is None:
             raise RelativeSourceError()
         return svnroot + source[1:]
-    ui.warn(_('ignoring unsupported non-fully qualified external: %r' % source))
+    ui.warn(_('ignoring unsupported non-fully qualified external: %r\n'
+              % source))
     return None
 
 def parsedefinitions(ui, repo, svnroot, exts):
@@ -141,7 +142,7 @@ def parsedefinitions(ui, repo, svnroot, exts):
             try:
                 path, rev, source, pegrev, norevline = parsedefinition(line)
             except BadDefinition:
-                ui.warn(_('ignoring invalid external definition: %r' % line))
+                ui.warn(_('ignoring invalid external definition: %r\n' % line))
                 continue
             source = resolvesource(ui, svnroot, source)
             if source is None:
