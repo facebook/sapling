@@ -295,8 +295,6 @@ class revlog(object):
             return self._nodecache[node]
         except KeyError:
             n = self._nodecache
-            if node in n:
-                return n[node]
             i = self.index
             p = self._nodepos
             if p is None:
