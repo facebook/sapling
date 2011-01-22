@@ -170,6 +170,8 @@ def termwidth():
     try:
         # Query stderr to avoid problems with redirections
         screenbuf = win32console.GetStdHandle(win32console.STD_ERROR_HANDLE)
+        if screenbuf is None:
+            return 79
         try:
             window = screenbuf.GetConsoleScreenBufferInfo()['Window']
             width = window.Right - window.Left
