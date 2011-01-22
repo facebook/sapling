@@ -123,6 +123,25 @@ change file in svn and hg, commit
    source   file://*/svn-repo/src (glob)
    revision 2
 
+add an unrelated revision in svn and update the subrepo to without
+bringing any changes.
+
+  $ svn mkdir --parents "$SVNREPO/unrelated" -m 'create unrelated'
+  
+  Committed revision 4.
+  $ svn up s
+  
+  Fetching external item into 's/externals'
+  External at revision 1.
+  
+  At revision 4.
+  $ hg sum
+  parent: 2:* tip (glob)
+   Message!
+  branch: default
+  commit: (clean)
+  update: (current)
+
   $ echo a > s/a
 
 should be empty despite change to s/a
@@ -139,14 +158,14 @@ add a commit from svn
   A    externals/other
   Updated external to revision 1.
   
-  Updated to revision 3.
+  Updated to revision 4.
   $ echo xyz >> alpha
   $ svn propset svn:mime-type 'text/xml' alpha
   property 'svn:mime-type' set on 'alpha'
   $ svn ci -m 'amend a from svn'
   Sending        src/alpha
   Transmitting file data .
-  Committed revision 4.
+  Committed revision 5.
   $ cd ../../sub/t
 
 this commit from hg will fail

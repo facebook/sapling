@@ -508,13 +508,23 @@ class svnsubrepo(abstractsubrepo):
             raise util.Abort(stderr)
         return stdout
 
-    def _wcrev(self):
+    def _wcrevs(self):
+        # Get the working directory revision as well as the last
+        # commit revision so we can compare the subrepo state with
+        # both. We used to store the working directory one.
         output = self._svncommand(['info', '--xml'])
         doc = xml.dom.minidom.parseString(output)
         entries = doc.getElementsByTagName('entry')
-        if not entries:
-            return '0'
-        return str(entries[0].getAttribute('revision')) or '0'
+        lastrev, rev = '0', '0'
+        if entries:
+            rev = str(entries[0].getAttribute('revision')) or '0'
+            commits = entries[0].getElementsByTagName('commit')
+            if commits:
+                lastrev = str(commits[0].getAttribute('revision')) or '0'
+        return (lastrev, rev)
+
+    def _wcrev(self):
+        return self._wcrevs()[0]
 
     def _wcchanged(self):
         """Return (changes, extchanges) where changes is True
@@ -544,7 +554,7 @@ class svnsubrepo(abstractsubrepo):
 
     def dirty(self, ignoreupdate=False):
         if not self._wcchanged()[0]:
-            if self._wcrev() == self._state[1] or ignoreupdate:
+            if self._state[1] in self._wcrevs() or ignoreupdate:
                 return False
         return True
 
