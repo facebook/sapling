@@ -255,10 +255,7 @@ def parsepatch(fp):
 
 def filterpatch(ui, chunks):
     """Interactively filter patch chunks into applied-only chunks"""
-    chunks = list(chunks)
-    chunks.reverse()
-    seen = set()
-    def consumefile():
+    def consumefile(chunks):
         """fetch next portion from chunks until a 'header' is seen
         NB: header == new-file mark
         """
@@ -266,10 +263,12 @@ def filterpatch(ui, chunks):
         while chunks:
             if isinstance(chunks[-1], header):
                 break
-            else:
-                consumed.append(chunks.pop())
+            consumed.append(chunks.pop())
         return consumed
 
+    chunks = list(chunks)
+    chunks.reverse()
+    seen = set()
     resp_all = [None]   # this two are changed from inside prompt,
     resp_file = [None]  # so can't be usual variables
     applied = {}        # 'filename' -> [] of chunks
@@ -332,7 +331,7 @@ def filterpatch(ui, chunks):
             fixoffset = 0
             hdr = ''.join(chunk.header)
             if hdr in seen:
-                consumefile()
+                consumefile(chunks)
                 continue
             seen.add(hdr)
             if resp_all[0] is None:
@@ -342,9 +341,9 @@ def filterpatch(ui, chunks):
             if r:
                 applied[chunk.filename()] = [chunk]
                 if chunk.allhunks():
-                    applied[chunk.filename()] += consumefile()
+                    applied[chunk.filename()] += consumefile(chunks)
             else:
-                consumefile()
+                consumefile(chunks)
         else:
             # new hunk
             if resp_file[0] is None and resp_all[0] is None:
