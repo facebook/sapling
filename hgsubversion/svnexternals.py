@@ -408,9 +408,14 @@ if subrepo:
         def dirty(self, ignoreupdate=False):
             # You cannot compare anything with HEAD. Just accept it
             # can be anything.
-            wcrev = self._wcrev()
-            if (wcrev == 'HEAD' or self._state[1] == 'HEAD' or
-                wcrev == self._state[1] or ignoreupdate) and not self._wcchanged()[0]:
+            if hasattr(self, '_wcrevs'):
+                wcrevs = self._wcrevs()
+            else:
+                wcrev = self._wcrev()
+                wcrevs = (wcrev, wcrev)
+            if (('HEAD' in wcrevs or self._state[1] == 'HEAD' or
+                self._state[1] in wcrevs or ignoreupdate)
+                and not self._wcchanged()[0]):
                 return False
             return True
 
