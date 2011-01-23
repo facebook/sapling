@@ -355,6 +355,9 @@ def demo(ui, repo, *args, **opts):
     ui.note(_('creating temporary repository at %s\n') % tmpdir)
     repo = localrepo.localrepository(ui, tmpdir, True)
     ui.setconfig('keyword', fn, '')
+    svn = ui.configbool('keywordset', 'svn')
+    # explicitly set keywordset for demo output
+    ui.setconfig('keywordset', 'svn', svn)
 
     uikwmaps = ui.configitems('keywordmaps')
     if args or opts.get('rcfile'):
@@ -362,7 +365,10 @@ def demo(ui, repo, *args, **opts):
         if uikwmaps:
             ui.status(_('\textending current template maps\n'))
         if opts.get('default') or not uikwmaps:
-            ui.status(_('\toverriding default template maps\n'))
+            if svn:
+                ui.status(_('\toverriding default svn keywordset\n'))
+            else:
+                ui.status(_('\toverriding default cvs keywordset\n'))
         if opts.get('rcfile'):
             ui.readconfig(opts.get('rcfile'))
         if args:
@@ -374,7 +380,10 @@ def demo(ui, repo, *args, **opts):
             ui.readconfig(repo.join('hgrc'))
         kwmaps = dict(ui.configitems('keywordmaps'))
     elif opts.get('default'):
-        ui.status(_('\n\tconfiguration using default keyword template maps\n'))
+        if svn:
+            ui.status(_('\n\tconfiguration using default svn keywordset\n'))
+        else:
+            ui.status(_('\n\tconfiguration using default cvs keywordset\n'))
         kwmaps = _defaultkwmaps(ui)
         if uikwmaps:
             ui.status(_('\tdisabling current template maps\n'))
@@ -388,6 +397,7 @@ def demo(ui, repo, *args, **opts):
     reposetup(ui, repo)
     ui.write('[extensions]\nkeyword =\n')
     demoitems('keyword', ui.configitems('keyword'))
+    demoitems('keywordset', ui.configitems('keywordset'))
     demoitems('keywordmaps', kwmaps.iteritems())
     keywords = '$' + '$\n$'.join(sorted(kwmaps.keys())) + '$\n'
     repo.wopener(fn, 'w').write(keywords)

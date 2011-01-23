@@ -17,6 +17,8 @@ as it would succeed without uisetup otherwise
   keyword =
   [keyword]
   demo.txt = 
+  [keywordset]
+  svn = False
   [keywordmaps]
   Author = {author|user}
   Date = {date|utcdate}
@@ -40,6 +42,8 @@ as it would succeed without uisetup otherwise
   keyword =
   [keyword]
   demo.txt = 
+  [keywordset]
+  svn = False
   [keywordmaps]
   Branch = {branches}
   $Branch: demobranch $
@@ -633,6 +637,8 @@ Custom keywordmaps as argument to kwdemo
   b = ignore
   demo.txt = 
   i = ignore
+  [keywordset]
+  svn = False
   [keywordmaps]
   Xinfo = {author}: {desc}
   $Xinfo: test: hg keyword configuration and expansion example $
