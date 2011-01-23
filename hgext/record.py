@@ -266,13 +266,7 @@ def filterpatch(ui, chunks):
             consumed.append(chunks.pop())
         return consumed
 
-    chunks = list(chunks)
-    chunks.reverse()
-    seen = set()
-    resp_all = [None]   # this two are changed from inside prompt,
-    resp_file = [None]  # so can't be usual variables
-    applied = {}        # 'filename' -> [] of chunks
-    def prompt(query):
+    def prompt(skipfile, skipall, query):
         """prompt query, and process base inputs
 
         - y/n for the rest of file
@@ -280,13 +274,12 @@ def filterpatch(ui, chunks):
         - ? (help)
         - q (quit)
 
-        Returns True/False and sets reps_all and resp_file as
-        appropriate.
+        Return True/False and possibly updated skipfile and skipall.
         """
-        if resp_all[0] is not None:
-            return resp_all[0]
-        if resp_file[0] is not None:
-            return resp_file[0]
+        if skipall is not None:
+            return skipall, skipfile, skipall
+        if skipfile is not None:
+            return skipfile, skipfile, skipall
         while True:
             resps = _('[Ynsfdaq?]')
             choices = (_('&Yes, record this change'),
@@ -311,33 +304,40 @@ def filterpatch(ui, chunks):
             elif r == 1: # no
                 ret = False
             elif r == 2: # Skip
-                ret = resp_file[0] = False
+                ret = skipfile = False
             elif r == 3: # file (Record remaining)
-                ret = resp_file[0] = True
+                ret = skipfile = True
             elif r == 4: # done, skip remaining
-                ret = resp_all[0] = False
+                ret = skipall = False
             elif r == 5: # all
-                ret = resp_all[0] = True
+                ret = skipall = True
             elif r == 6: # quit
                 raise util.Abort(_('user quit'))
-            return ret
+            return ret, skipfile, skipall
+
+    chunks = list(chunks)
+    chunks.reverse()
+    seen = set()
+    applied = {}        # 'filename' -> [] of chunks
+    skipfile, skipall = None, None
     pos, total = 0, len(chunks) - 1
     while chunks:
         pos = total - len(chunks) + 1
         chunk = chunks.pop()
         if isinstance(chunk, header):
             # new-file mark
-            resp_file = [None]
+            skipfile = None
             fixoffset = 0
             hdr = ''.join(chunk.header)
             if hdr in seen:
                 consumefile(chunks)
                 continue
             seen.add(hdr)
-            if resp_all[0] is None:
+            if skipall is None:
                 chunk.pretty(ui)
-            r = prompt(_('examine changes to %s?') %
-                       _(' and ').join(map(repr, chunk.files())))
+            msg = (_('examine changes to %s?') %
+                   _(' and ').join(map(repr, chunk.files())))
+            r, skipfile, skipall = prompt(skipfile, skipall, msg)
             if r:
                 applied[chunk.filename()] = [chunk]
                 if chunk.allhunks():
@@ -346,12 +346,13 @@ def filterpatch(ui, chunks):
                 consumefile(chunks)
         else:
             # new hunk
-            if resp_file[0] is None and resp_all[0] is None:
+            if skipfile is None and skipall is None:
                 chunk.pretty(ui)
-            r = (total == 1
-                 and prompt(_('record this change to %r?') % chunk.filename())
-                 or prompt(_('record change %d/%d to %r?') %
-                           (pos, total, chunk.filename())))
+            msg = (total == 1
+                   and (_('record this change to %r?') % chunk.filename())
+                   or (_('record change %d/%d to %r?') %
+                       (pos, total, chunk.filename())))
+            r, skipfile, skipall = prompt(skipfile, skipall, msg)
             if r:
                 if fixoffset:
                     chunk = copy.copy(chunk)
