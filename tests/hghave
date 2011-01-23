@@ -101,15 +101,6 @@ def has_inotify():
 def has_fifo():
     return hasattr(os, "mkfifo")
 
-def has_hotshot():
-    try:
-        # hotshot.stats tests hotshot and many problematic dependencies
-        # like profile.
-        import hotshot.stats
-        return True
-    except ImportError:
-        return False
-
 def has_lsprof():
     try:
         import _lsprof
@@ -198,7 +189,6 @@ checks = {
     "fifo": (has_fifo, "named pipes"),
     "git": (has_git, "git command line client"),
     "gpg": (has_gpg, "gpg client"),
-    "hotshot": (has_hotshot, "python hotshot module"),
     "icasefs": (has_icasefs, "case insensitive file system"),
     "inotify": (has_inotify, "inotify extension support"),
     "lsprof": (has_lsprof, "python lsprof module"),
