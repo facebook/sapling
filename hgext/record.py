@@ -178,7 +178,7 @@ class hunk(object):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
 def parsepatch(fp):
-    """patch -> [] of hunks """
+    """patch -> [] of headers -> [] of hunks """
     class parser(object):
         """patch parsing state machine"""
         def __init__(self):
@@ -189,7 +189,7 @@ def parsepatch(fp):
             self.context = []
             self.before = []
             self.hunk = []
-            self.stream = []
+            self.headers = []
 
         def addrange(self, limits):
             fromstart, fromend, tostart, toend, proc = limits
@@ -202,7 +202,6 @@ def parsepatch(fp):
                 h = hunk(self.header, self.fromline, self.toline, self.proc,
                          self.before, self.hunk, context)
                 self.header.hunks.append(h)
-                self.stream.append(h)
                 self.fromline += len(self.before) + h.removed
                 self.toline += len(self.before) + h.added
                 self.before = []
@@ -219,12 +218,12 @@ def parsepatch(fp):
         def newfile(self, hdr):
             self.addcontext([])
             h = header(hdr)
-            self.stream.append(h)
+            self.headers.append(h)
             self.header = h
 
         def finished(self):
             self.addcontext([])
-            return self.stream
+            return self.headers
 
         transitions = {
             'file': {'context': addcontext,
@@ -253,18 +252,8 @@ def parsepatch(fp):
         state = newstate
     return p.finished()
 
-def filterpatch(ui, chunks):
+def filterpatch(ui, headers):
     """Interactively filter patch chunks into applied-only chunks"""
-    def consumefile(chunks):
-        """fetch next portion from chunks until a 'header' is seen
-        NB: header == new-file mark
-        """
-        consumed = []
-        while chunks:
-            if isinstance(chunks[-1], header):
-                break
-            consumed.append(chunks.pop())
-        return consumed
 
     def prompt(skipfile, skipall, query):
         """prompt query, and process base inputs
@@ -315,43 +304,39 @@ def filterpatch(ui, chunks):
                 raise util.Abort(_('user quit'))
             return ret, skipfile, skipall
 
-    chunks = list(chunks)
-    chunks.reverse()
     seen = set()
     applied = {}        # 'filename' -> [] of chunks
     skipfile, skipall = None, None
-    pos, total = 0, len(chunks) - 1
-    while chunks:
-        pos = total - len(chunks) + 1
-        chunk = chunks.pop()
-        if isinstance(chunk, header):
-            # new-file mark
-            skipfile = None
-            fixoffset = 0
-            hdr = ''.join(chunk.header)
-            if hdr in seen:
-                consumefile(chunks)
-                continue
-            seen.add(hdr)
-            if skipall is None:
-                chunk.pretty(ui)
-            msg = (_('examine changes to %s?') %
-                   _(' and ').join(map(repr, chunk.files())))
-            r, skipfile, skipall = prompt(skipfile, skipall, msg)
-            if r:
-                applied[chunk.filename()] = [chunk]
-                if chunk.allhunks():
-                    applied[chunk.filename()] += consumefile(chunks)
-            else:
-                consumefile(chunks)
-        else:
-            # new hunk
+    # XXX: operation count is weird: it counts headers and hunks
+    # except for the first header. It probably comes from the previous
+    # mixed header/hunk stream representation.
+    pos, total = -1, sum((len(h.hunks) + 1) for h in headers) - 1
+    for h in headers:
+        pos += len(h.hunks) + 1
+        skipfile = None
+        fixoffset = 0
+        hdr = ''.join(h.header)
+        if hdr in seen:
+            continue
+        seen.add(hdr)
+        if skipall is None:
+            h.pretty(ui)
+        msg = (_('examine changes to %s?') %
+               _(' and ').join(map(repr, h.files())))
+        r, skipfile, skipall = prompt(skipfile, skipall, msg)
+        if not r:
+            continue
+        applied[h.filename()] = [h]
+        if h.allhunks():
+            applied[h.filename()] += h.hunks
+            continue
+        for i, chunk in enumerate(h.hunks):
             if skipfile is None and skipall is None:
                 chunk.pretty(ui)
             msg = (total == 1
                    and (_('record this change to %r?') % chunk.filename())
                    or (_('record change %d/%d to %r?') %
-                       (pos, total, chunk.filename())))
+                       (pos - len(h.hunks) + i + 1, total, chunk.filename())))
             r, skipfile, skipall = prompt(skipfile, skipall, msg)
             if r:
                 if fixoffset:
