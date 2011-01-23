@@ -285,7 +285,9 @@ Modify end of plain file, no EOL
 Modify end of plain file, add EOL
 
   $ echo >> plain
-  $ hg record -d '10 0' -m eol plain <<EOF
+  $ echo 1 > plain2
+  $ hg add plain2
+  $ hg record -d '10 0' -m eol plain plain2 <<EOF
   > y
   > y
   > y
@@ -300,16 +302,23 @@ Modify end of plain file, add EOL
   -7264f99c5f5ff3261504828afa4fb4d406c3af54
   \ No newline at end of file
   +7264f99c5f5ff3261504828afa4fb4d406c3af54
-  record this change to 'plain'? [Ynsfdaq?] 
+  record change 1/3 to 'plain'? [Ynsfdaq?] 
+  diff --git a/plain2 b/plain2
+  new file mode 100644
+  examine changes to 'plain2'? [Ynsfdaq?] 
 
-Modify beginning, trim end, record both
+Modify beginning, trim end, record both, add another file to test
+changes numbering
 
   $ rm plain
   $ for i in 2 2 3 4 5 6 7 8 9 10; do
   >   echo $i >> plain
   > done
+  $ echo 2 >> plain2
 
-  $ hg record -d '10 0' -m begin-and-end plain <<EOF
+  $ hg record -d '10 0' -m begin-and-end plain plain2 <<EOF
+  > y
+  > y
   > y
   > y
   > y
@@ -323,23 +332,30 @@ Modify beginning, trim end, record both
    2
    3
    4
-  record change 1/2 to 'plain'? [Ynsfdaq?] 
+  record change 1/4 to 'plain'? [Ynsfdaq?] 
   @@ -8,5 +8,3 @@
    8
    9
    10
   -11
   -7264f99c5f5ff3261504828afa4fb4d406c3af54
-  record change 2/2 to 'plain'? [Ynsfdaq?] 
+  record change 2/4 to 'plain'? [Ynsfdaq?] 
+  diff --git a/plain2 b/plain2
+  1 hunks, 1 lines changed
+  examine changes to 'plain2'? [Ynsfdaq?] 
+  @@ -1,1 +1,2 @@
+   1
+  +2
+  record change 4/4 to 'plain2'? [Ynsfdaq?] 
 
   $ hg tip -p
-  changeset:   11:efca65c9b09e
+  changeset:   11:21df83db12b8
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:10 1970 +0000
   summary:     begin-and-end
   
-  diff -r cd07d48e8cbe -r efca65c9b09e plain
+  diff -r ddb8b281c3ff -r 21df83db12b8 plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:10 1970 +0000
   @@ -1,4 +1,4 @@
@@ -354,6 +370,12 @@ Modify beginning, trim end, record both
    10
   -11
   -7264f99c5f5ff3261504828afa4fb4d406c3af54
+  diff -r ddb8b281c3ff -r 21df83db12b8 plain2
+  --- a/plain2	Thu Jan 01 00:00:10 1970 +0000
+  +++ b/plain2	Thu Jan 01 00:00:10 1970 +0000
+  @@ -1,1 +1,2 @@
+   1
+  +2
   
 
 Trim beginning, modify end
@@ -396,13 +418,13 @@ Record end
   record change 2/2 to 'plain'? [Ynsfdaq?] 
 
   $ hg tip -p
-  changeset:   12:7d1e66983c15
+  changeset:   12:99337501826f
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     end-only
   
-  diff -r efca65c9b09e -r 7d1e66983c15 plain
+  diff -r 21df83db12b8 -r 99337501826f plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:11 1970 +0000
   @@ -7,4 +7,4 @@
@@ -432,13 +454,13 @@ Record beginning
   record this change to 'plain'? [Ynsfdaq?] 
 
   $ hg tip -p
-  changeset:   13:a09fc62a0e61
+  changeset:   13:bbd45465d540
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:12 1970 +0000
   summary:     begin-only
   
-  diff -r 7d1e66983c15 -r a09fc62a0e61 plain
+  diff -r 99337501826f -r bbd45465d540 plain
   --- a/plain	Thu Jan 01 00:00:11 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:12 1970 +0000
   @@ -1,6 +1,3 @@
@@ -533,13 +555,13 @@ Record beginning, middle
   record change 3/3 to 'plain'? [Ynsfdaq?] 
 
   $ hg tip -p
-  changeset:   15:7d137997f3a6
+  changeset:   15:f34a7937ec33
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:14 1970 +0000
   summary:     middle-only
   
-  diff -r c0b8e5fb0be6 -r 7d137997f3a6 plain
+  diff -r 82c065d0b850 -r f34a7937ec33 plain
   --- a/plain	Thu Jan 01 00:00:13 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:14 1970 +0000
   @@ -1,5 +1,10 @@
@@ -573,13 +595,13 @@ Record end
   record this change to 'plain'? [Ynsfdaq?] 
 
   $ hg tip -p
-  changeset:   16:4959e3ff13eb
+  changeset:   16:f9900b71a04c
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     end-only
   
-  diff -r 7d137997f3a6 -r 4959e3ff13eb plain
+  diff -r f34a7937ec33 -r f9900b71a04c plain
   --- a/plain	Thu Jan 01 00:00:14 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:15 1970 +0000
   @@ -9,3 +9,5 @@
@@ -610,13 +632,13 @@ Record end
   record this change to 'subdir/a'? [Ynsfdaq?] 
 
   $ hg tip -p
-  changeset:   18:40698cd490b2
+  changeset:   18:61be427a9deb
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:16 1970 +0000
   summary:     subdir-change
   
-  diff -r 661eacdc08b9 -r 40698cd490b2 subdir/a
+  diff -r a7ffae4d61cb -r 61be427a9deb subdir/a
   --- a/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   +++ b/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   @@ -1,1 +1,2 @@
@@ -709,13 +731,13 @@ s, all
   examine changes to 'subdir/f2'? [Ynsfdaq?] 
 
   $ hg tip -p
-  changeset:   20:d2d8c25276a8
+  changeset:   20:b3df3dda369a
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:18 1970 +0000
   summary:     x
   
-  diff -r 25eb2a7694fb -r d2d8c25276a8 subdir/f2
+  diff -r 6e02d6c9906d -r b3df3dda369a subdir/f2
   --- a/subdir/f2	Thu Jan 01 00:00:17 1970 +0000
   +++ b/subdir/f2	Thu Jan 01 00:00:18 1970 +0000
   @@ -1,1 +1,2 @@
@@ -733,13 +755,13 @@ f
   examine changes to 'subdir/f1'? [Ynsfdaq?] 
 
   $ hg tip -p
-  changeset:   21:1013f51ce32f
+  changeset:   21:38ec577f126b
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:19 1970 +0000
   summary:     y
   
-  diff -r d2d8c25276a8 -r 1013f51ce32f subdir/f1
+  diff -r b3df3dda369a -r 38ec577f126b subdir/f1
   --- a/subdir/f1	Thu Jan 01 00:00:18 1970 +0000
   +++ b/subdir/f1	Thu Jan 01 00:00:19 1970 +0000
   @@ -1,1 +1,2 @@
@@ -768,7 +790,7 @@ Preserve chmod +x
   record this change to 'subdir/f1'? [Ynsfdaq?] 
 
   $ hg tip --config diff.git=True -p
-  changeset:   22:5df857735621
+  changeset:   22:3261adceb075
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:20 1970 +0000
@@ -804,7 +826,7 @@ Preserve execute permission on original
   record this change to 'subdir/f1'? [Ynsfdaq?] 
 
   $ hg tip --config diff.git=True -p
-  changeset:   23:a4ae36a78715
+  changeset:   23:b429867550db
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:21 1970 +0000
@@ -842,7 +864,7 @@ Preserve chmod -x
   record this change to 'subdir/f1'? [Ynsfdaq?] 
 
   $ hg tip --config diff.git=True -p
-  changeset:   24:1460f6e47966
+  changeset:   24:0b082130c20a
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:22 1970 +0000
@@ -865,7 +887,7 @@ Preserve chmod -x
 Abort early when a merge is in progress
 
   $ hg up 4
-  1 files updated, 0 files merged, 5 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 6 files removed, 0 files unresolved
 
   $ touch iwillmergethat
   $ hg add iwillmergethat
@@ -876,7 +898,7 @@ Abort early when a merge is in progress
   $ hg ci -m'new head'
 
   $ hg up default
-  5 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  6 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ hg merge thatbranch
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -921,14 +943,14 @@ Ignore win32text deprecation warning for now:
   record this change to 'subdir/f1'? [Ynsfdaq?] 
 
   $ hg tip -p
-  changeset:   26:5bacc1f6e9cf
+  changeset:   26:b8306e70edc4
   tag:         tip
-  parent:      24:1460f6e47966
+  parent:      24:0b082130c20a
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
   summary:     w1
   
-  diff -r 1460f6e47966 -r 5bacc1f6e9cf subdir/f1
+  diff -r 0b082130c20a -r b8306e70edc4 subdir/f1
   --- a/subdir/f1	Thu Jan 01 00:00:22 1970 +0000
   +++ b/subdir/f1	Thu Jan 01 00:00:23 1970 +0000
   @@ -3,3 +3,4 @@
