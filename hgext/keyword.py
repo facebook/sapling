@@ -636,8 +636,6 @@ def reposetup(ui, repo):
         finally:
             wlock.release()
 
-    repo.__class__ = kwrepo
-
     def kwfilectx_cmp(orig, self, fctx):
         # keyword affects data size, comparing wdir and filelog size does
         # not make sense
@@ -660,6 +658,8 @@ def reposetup(ui, repo):
             extensions.wrapfunction(record, 'dorecord', kw_dorecord)
         except KeyError:
             pass
+
+    repo.__class__ = kwrepo
 
 cmdtable = {
     'kwdemo':
