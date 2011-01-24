@@ -158,13 +158,13 @@ qrecord a.patch
   -2
   +2 2
    3
-  record change 1/6 to '1.txt'? [Ynsfdaq?] 
+  record change 1/4 to '1.txt'? [Ynsfdaq?] 
   @@ -3,3 +3,3 @@
    3
   -4
   +4 4
    5
-  record change 2/6 to '1.txt'? [Ynsfdaq?] 
+  record change 2/4 to '1.txt'? [Ynsfdaq?] 
   diff --git a/2.txt b/2.txt
   1 hunks, 1 lines changed
   examine changes to '2.txt'? [Ynsfdaq?] 
@@ -175,7 +175,7 @@ qrecord a.patch
    c
    d
    e
-  record change 4/6 to '2.txt'? [Ynsfdaq?] 
+  record change 3/4 to '2.txt'? [Ynsfdaq?] 
   diff --git a/dir/a.txt b/dir/a.txt
   1 hunks, 1 lines changed
   examine changes to 'dir/a.txt'? [Ynsfdaq?] 
@@ -255,7 +255,7 @@ qrecord b.patch
   -4
   +4 4
    5
-  record change 1/3 to '1.txt'? [Ynsfdaq?] 
+  record change 1/2 to '1.txt'? [Ynsfdaq?] 
   diff --git a/dir/a.txt b/dir/a.txt
   1 hunks, 1 lines changed
   examine changes to 'dir/a.txt'? [Ynsfdaq?] 
@@ -265,7 +265,7 @@ qrecord b.patch
    
    someone
    up
-  record change 3/3 to 'dir/a.txt'? [Ynsfdaq?] 
+  record change 2/2 to 'dir/a.txt'? [Ynsfdaq?] 
 
 After qrecord b.patch 'tip'
 

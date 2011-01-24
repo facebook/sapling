@@ -301,12 +301,9 @@ def filterpatch(ui, headers):
     seen = set()
     applied = {}        # 'filename' -> [] of chunks
     skipfile, skipall = None, None
-    # XXX: operation count is weird: it counts headers and hunks
-    # except for the first header. It probably comes from the previous
-    # mixed header/hunk stream representation.
-    pos, total = -1, sum((len(h.hunks) + 1) for h in headers) - 1
+    pos, total = 1, sum(len(h.hunks) for h in headers)
     for h in headers:
-        pos += len(h.hunks) + 1
+        pos += len(h.hunks)
         skipfile = None
         fixoffset = 0
         hdr = ''.join(h.header)
@@ -330,7 +327,7 @@ def filterpatch(ui, headers):
             msg = (total == 1
                    and (_('record this change to %r?') % chunk.filename())
                    or (_('record change %d/%d to %r?') %
-                       (pos - len(h.hunks) + i + 1, total, chunk.filename())))
+                       (pos - len(h.hunks) + i, total, chunk.filename())))
             r, skipfile, skipall = prompt(skipfile, skipall, msg)
             if r:
                 if fixoffset:

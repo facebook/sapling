@@ -302,7 +302,7 @@ Modify end of plain file, add EOL
   -7264f99c5f5ff3261504828afa4fb4d406c3af54
   \ No newline at end of file
   +7264f99c5f5ff3261504828afa4fb4d406c3af54
-  record change 1/3 to 'plain'? [Ynsfdaq?] 
+  record change 1/2 to 'plain'? [Ynsfdaq?] 
   diff --git a/plain2 b/plain2
   new file mode 100644
   examine changes to 'plain2'? [Ynsfdaq?] 
@@ -332,21 +332,21 @@ changes numbering
    2
    3
    4
-  record change 1/4 to 'plain'? [Ynsfdaq?] 
+  record change 1/3 to 'plain'? [Ynsfdaq?] 
   @@ -8,5 +8,3 @@
    8
    9
    10
   -11
   -7264f99c5f5ff3261504828afa4fb4d406c3af54
-  record change 2/4 to 'plain'? [Ynsfdaq?] 
+  record change 2/3 to 'plain'? [Ynsfdaq?] 
   diff --git a/plain2 b/plain2
   1 hunks, 1 lines changed
   examine changes to 'plain2'? [Ynsfdaq?] 
   @@ -1,1 +1,2 @@
    1
   +2
-  record change 4/4 to 'plain2'? [Ynsfdaq?] 
+  record change 3/3 to 'plain2'? [Ynsfdaq?] 
 
   $ hg tip -p
   changeset:   11:21df83db12b8
