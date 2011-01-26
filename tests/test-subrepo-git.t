@@ -301,6 +301,6 @@ nested commit
 nested archive
 
   $ hg archive --subrepos ../narchive
-  $ ls ../narchive/inner/s
+  $ ls ../narchive/inner/s | grep -v pax_global_header
   f
   g
