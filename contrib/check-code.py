@@ -65,7 +65,7 @@ testpats = [
     ('^([^"\']|("[^"]*")|(\'[^\']*\'))*\\^', "^ must be quoted"),
     (r'^source\b', "don't use 'source', use '.'"),
     (r'touch -d', "don't use 'touch -d', use 'touch -t' instead"),
-    (r'ls\s+[^-]+\s+-', "options to 'ls' must come before filenames"),
+    (r'ls\s+[^|-]+\s+-', "options to 'ls' must come before filenames"),
 ]
 
 testfilters = [
