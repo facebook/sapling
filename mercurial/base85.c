@@ -178,3 +178,8 @@ PyMODINIT_FUNC initbase85(void)
 	b85prep();
 }
 #endif
+
+/* Local Variables:      */
+/* c-file-style: "linux" */
+/* indent-tabs-mode: t   */
+/* End:                  */

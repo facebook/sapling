@@ -451,3 +451,7 @@ PyMODINIT_FUNC initbdiff(void)
 }
 #endif
 
+/* Local Variables:      */
+/* c-file-style: "linux" */
+/* indent-tabs-mode: t   */
+/* End:                  */
