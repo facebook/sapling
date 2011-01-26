@@ -913,6 +913,8 @@ class opener(object):
                     # shares if the file is open.
                     fd = open(f)
                     nlink = nlinks(f)
+                    if nlink < 1:
+                        nlink = 2 # force mktempcopy (issue1922)
                     fd.close()
             except (OSError, IOError):
                 nlink = 0
