@@ -468,8 +468,3 @@ initmpatch(void)
 	mpatch_Error = PyErr_NewException("mpatch.mpatchError", NULL, NULL);
 }
 #endif
-
-/* Local Variables:      */
-/* c-file-style: "linux" */
-/* indent-tabs-mode: t   */
-/* End:                  */

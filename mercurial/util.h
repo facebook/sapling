@@ -103,7 +103,3 @@
 
 #endif /* _HG_UTIL_H_ */
 
-/* Local Variables:      */
-/* c-file-style: "linux" */
-/* indent-tabs-mode: t   */
-/* End:                  */

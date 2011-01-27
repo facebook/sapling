@@ -438,8 +438,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
-/* Local Variables:      */
-/* c-file-style: "linux" */
-/* indent-tabs-mode: t   */
-/* End:                  */

@@ -647,8 +647,3 @@ void init_inotify(void)
 		define_consts(dict);
 }
 #endif
-
-/* Local Variables:      */
-/* c-file-style: "linux" */
-/* indent-tabs-mode: t   */
-/* End:                  */

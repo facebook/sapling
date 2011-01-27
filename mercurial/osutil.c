@@ -552,8 +552,3 @@ PyMODINIT_FUNC initosutil(void)
 	Py_InitModule3("osutil", methods, osutil_doc);
 }
 #endif
-
-/* Local Variables:      */
-/* c-file-style: "linux" */
-/* indent-tabs-mode: t   */
-/* End:                  */

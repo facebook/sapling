@@ -416,7 +416,3 @@ PyMODINIT_FUNC initparsers(void)
 }
 #endif
 
-/* Local Variables:      */
-/* c-file-style: "linux" */
-/* indent-tabs-mode: t   */
-/* End:                  */
