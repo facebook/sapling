@@ -4,7 +4,7 @@ Valid URLs are of the form::
   file://local/filesystem/path[#revision]
   http://[user[:pass]@]host[:port]/[path][#revision]
   https://[user[:pass]@]host[:port]/[path][#revision]
-  ssh://[user[:pass]@]host[:port]/[path][#revision]
+  ssh://[user@]host[:port]/[path][#revision]
 
 Paths in the local filesystem can either point to Mercurial
 repositories or to bundle files (as created by :hg:`bundle` or :hg:`
