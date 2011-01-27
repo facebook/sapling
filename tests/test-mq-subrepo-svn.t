@@ -5,7 +5,7 @@
   $ echo "[diff]" >> $HGRCPATH
   $ echo "nodates=1" >> $HGRCPATH
 
-fn to create new repository w/dirty subrepo, and cd into it
+fn to create new repository, and cd into it
   $ mkrepo() {
   >     hg init $1
   >     cd $1
