@@ -48,9 +48,8 @@ def write(repo):
     try:
         bms = repo.opener('bookmarks').read()
     except IOError:
-        bms = None
-    if bms is not None:
-        repo.opener('undo.bookmarks', 'w').write(bms)
+        bms = ''
+    repo.opener('undo.bookmarks', 'w').write(bms)
 
     if repo._bookmarkcurrent not in refs:
         setcurrent(repo, None)
@@ -263,10 +262,14 @@ def reposetup(ui, repo):
                 file.close()
             return mark
 
-        def rollback(self, *args):
+        def rollback(self, dryrun=False):
             if os.path.exists(self.join('undo.bookmarks')):
-                util.rename(self.join('undo.bookmarks'), self.join('bookmarks'))
-            return super(bookmark_repo, self).rollback(*args)
+                if not dryrun:
+                    util.rename(self.join('undo.bookmarks'), self.join('bookmarks'))
+                elif not os.path.exists(self.sjoin("undo")):
+                    # avoid "no rollback information available" message
+                    return 0
+            return super(bookmark_repo, self).rollback(dryrun)
 
         def lookup(self, key):
             if key in self._bookmarks:

@@ -8797,8 +8797,8 @@ msgid "use \"hg help\" for the full list of commands or \"hg -v\" for details"
 msgstr "use \"hg help\" para a lista completa de comandos ou \"hg -v\" para detalhes"
 
 #, python-format
-msgid "use \"hg -v help%s\" to show aliases and global options"
-msgstr "use \"hg -v help%s\" para mostrar apelidos de comandos e opções globais"
+msgid "use \"hg -v help%s\" to show builtin aliases and global options"
+msgstr "use \"hg -v help%s\" para mostrar apelidos pré-definidos de comandos e opções globais"
 
 #, python-format
 msgid "use \"hg -v help %s\" to show global options"
@@ -14599,6 +14599,10 @@ msgid "(branch merge, don't forget to commit)\n"
 msgstr "(mesclagem de ramo, não esqueça de consolidar)\n"
 
 #, python-format
+msgid "config file %s not found!"
+msgstr "arquivo de configuração %s não encontrado!"
+
+#, python-format
 msgid "error reading %s/.hg/hgrc: %s\n"
 msgstr "erro ao ler %s/.hg/hgrc: %s\n"
 
@@ -15926,8 +15930,11 @@ msgstr "nenhum certificado recebido"
 msgid "certificate is for %s"
 msgstr "o certificado é para %s"
 
-msgid "no commonName found in certificate"
-msgstr "nenhum commonName encontrado no certificado"
+msgid "IDN in certificate not supported"
+msgstr "IDN no certificado não é suportado"
+
+msgid "no commonName or subjectAltName found in certificate"
+msgstr "nenhum commonName ou subjectAltName encontrado no certificado"
 
 #, python-format
 msgid "%s certificate error: %s"
