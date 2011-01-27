@@ -6,6 +6,12 @@
 
   $ echo qqq>qqq.txt
 
+rollback dry run without rollback information
+
+  $ hg rollback
+  no rollback information available
+  [1]
+
 add file
 
   $ hg add
@@ -83,5 +89,12 @@ can you be added again?
   $ hg bookmarks markb
   $ hg bookmarks
    * markb                     0:07f494440405
+
+rollback dry run with rollback information
+
+  $ hg rollback -n
+  $ hg bookmarks
+   * markb                     0:07f494440405
+
   $ cd ..
 
