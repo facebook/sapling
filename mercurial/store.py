@@ -213,6 +213,9 @@ class basicstore(object):
     def copylist(self):
         return ['requires'] + _data.split()
 
+    def write(self):
+        pass
+
 class encodedstore(basicstore):
     def __init__(self, path, opener, pathjoiner):
         self.pathjoiner = pathjoiner
@@ -243,10 +246,12 @@ class fncache(object):
     def __init__(self, opener):
         self.opener = opener
         self.entries = None
+        self._dirty = False
 
     def _load(self):
         '''fill the entries from the fncache file'''
         self.entries = set()
+        self._dirty = False
         try:
             fp = self.opener('fncache', mode='rb')
         except IOError:
@@ -265,12 +270,22 @@ class fncache(object):
             fp.write(encodedir(p) + '\n')
         fp.close()
         self.entries = set(files)
+        self._dirty = False
+
+    def write(self):
+        if not self._dirty:
+            return
+        fp = self.opener('fncache', mode='wb', atomictemp=True)
+        for p in self.entries:
+            fp.write(encodedir(p) + '\n')
+        fp.rename()
+        self._dirty = False
 
     def add(self, fn):
         if self.entries is None:
             self._load()
         if fn not in self.entries:
-            self.opener('fncache', 'ab').write(encodedir(fn) + '\n')
+            self._dirty = True
             self.entries.add(fn)
 
     def __contains__(self, fn):
@@ -327,6 +342,9 @@ class fncachestore(basicstore):
              ' 00manifest.d 00manifest.i 00changelog.d 00changelog.i')
         return (['requires', '00changelog.i'] +
                 [self.pathjoiner('store', f) for f in d.split()])
+
+    def write(self):
+        self.fncache.write()
 
 def store(requirements, path, opener, pathjoiner=None):
     pathjoiner = pathjoiner or os.path.join

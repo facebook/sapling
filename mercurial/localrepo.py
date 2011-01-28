@@ -781,8 +781,8 @@ class localrepository(repo.repository):
             l.lock()
             return l
 
-        l = self._lock(self.sjoin("lock"), wait, None, self.invalidate,
-                       _('repository %s') % self.origroot)
+        l = self._lock(self.sjoin("lock"), wait, self.store.write,
+                       self.invalidate, _('repository %s') % self.origroot)
         self._lockref = weakref.ref(l)
         return l
 
