@@ -6,7 +6,7 @@ Init repo1:
   $ hg add
   adding a
   $ hg ci -m first
-  $ cat .hg/store/fncache
+  $ cat .hg/store/fncache | sort
   data/a.i
 
 Testing a.i/b:
@@ -16,7 +16,7 @@ Testing a.i/b:
   $ hg add
   adding a.i/b
   $ hg ci -m second
-  $ cat .hg/store/fncache
+  $ cat .hg/store/fncache | sort
   data/a.i
   data/a.i.hg/b.i
 
@@ -27,10 +27,10 @@ Testing a.i.hg/c:
   $ hg add
   adding a.i.hg/c
   $ hg ci -m third
-  $ cat .hg/store/fncache
+  $ cat .hg/store/fncache | sort
   data/a.i
-  data/a.i.hg/b.i
   data/a.i.hg.hg/c.i
+  data/a.i.hg/b.i
 
 Testing verify:
 

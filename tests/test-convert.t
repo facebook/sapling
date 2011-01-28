@@ -381,7 +381,7 @@ testing: convert must not produce duplicate entries in fncache
 
 contents of fncache file:
 
-  $ cat b/.hg/store/fncache
+  $ cat b/.hg/store/fncache | sort
   data/a.i
   data/b.i
 
