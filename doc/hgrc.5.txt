@@ -423,6 +423,24 @@ Example for ``~/.hgrc``::
   myfeature = ~/.hgext/myfeature.py
 
 
+``hostfingerprints``
+""""""""""""""""""""
+
+Fingerprints of the certificates of known HTTPS servers.
+A HTTPS connection to a server with a fingerprint configured here will
+only succeed if the servers certificate matches the fingerprint.
+This is very similar to how ssh known hosts works.
+The fingerprint is the SHA-1 hash value of the DER encoded certificate.
+The CA chain and web.cacerts is not used for servers with a fingerprint.
+
+For example::
+
+    [hostfingerprints]
+    hg.intevation.org = 38:76:52:7c:87:26:9a:8f:4a:f8:d3:de:08:45:3b:ea:d6:4b:ee:cc
+
+This feature is only supported when using Python 2.6 or later.
+
+
 ``format``
 """"""""""
 
