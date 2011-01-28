@@ -15844,7 +15844,7 @@ msgid "transaction abort!\n"
 msgstr "transação abortada!\n"
 
 msgid "rollback completed\n"
-msgstr "desfazer completo\n"
+msgstr "desfazimento completado\n"
 
 msgid "rollback failed - please run hg recover\n"
 msgstr "rollback falhou - por favor execute hg recover\n"
@@ -15941,6 +15941,18 @@ msgid "%s certificate error: %s"
 msgstr "erro no certificado de %s: %s"
 
 #, python-format
+msgid "invalid certificate for %s with fingerprint %s"
+msgstr "certificado inválido para %s com impressão digital %s"
+
+#, python-format
+msgid "warning: %s certificate with fingerprint %s not verified (check hostfingerprints or web.cacerts config setting)\n"
+msgstr "aviso: o certificado %s com impressão digital %s não foi verificado (verifique as opções de configuração hostfingerprints e web.cacerts)\n"
+
+#, python-format
+msgid "no certificate for %s with fingerprint"
+msgstr "nenhum certificado para %s com impressão digital"
+
+#, python-format
 msgid "warning: %s certificate not verified (check web.cacerts config setting)\n"
 msgstr "aviso: certificado %s não verificado (confira a opção de configuração web.cacerts)\n"
 
@@ -15950,7 +15962,7 @@ msgstr "falha ao executar o comando '%s' : %s"
 
 #, python-format
 msgid "path contains illegal component: %s"
-msgstr "o caminho contém componente ilegais: %s"
+msgstr "o caminho contém um componente ilegal: %s"
 
 #, python-format
 msgid "path %r is inside repo %r"
@@ -15980,7 +15992,7 @@ msgstr "data inválida: %r"
 
 #, python-format
 msgid "date exceeds 32 bits: %d"
-msgstr "data supera 32 bit: %d"
+msgstr "data supera 32 bits: %d"
 
 #, python-format
 msgid "negative date value: %d"
@@ -16032,7 +16044,7 @@ msgstr "%.2f KB"
 
 #, python-format
 msgid "%.0f bytes"
-msgstr "%.0f byte"
+msgstr "%.0f bytes"
 
 #, python-format
 msgid "no port number associated with service '%s'"
