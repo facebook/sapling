@@ -1030,6 +1030,9 @@ The full set of options is:
     You can use OpenSSL's CA certificate file if your platform has one.
     On most Linux systems this will be ``/etc/ssl/certs/ca-certificates.crt``.
     Otherwise you will have to generate this file manually.
+
+    To disable SSL verification temporarily, specify ``--insecure`` from
+    command line.
 ``contact``
     Name or email address of the person in charge of the repository.
     Defaults to ui.username or ``$EMAIL`` or "unknown" if unset or empty.

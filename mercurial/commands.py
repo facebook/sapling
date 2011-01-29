@@ -3943,6 +3943,8 @@ remoteopts = [
      _('specify ssh command to use'), _('CMD')),
     ('', 'remotecmd', '',
      _('specify hg command to run on the remote side'), _('CMD')),
+    ('', 'insecure', None,
+     _('do not verify server certificate (ignoring web.cacerts config)')),
 ]
 
 walkopts = [
