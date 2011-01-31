@@ -264,3 +264,35 @@ update to nullrev (must delete the subrepo)
   $ hg up null
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ ls
+
+Check hg update --clean
+  $ cd $TESTTMP/sub/t
+  $ cd s
+  $ echo c0 > alpha
+  $ echo c1 > f1
+  $ echo c1 > f2
+  $ svn add f1 -q
+  $ svn status
+  ?       a
+  X       externals
+  ?       f2
+  M       alpha
+  A       f1
+  
+  Performing status on external item at 'externals'
+  $ cd ..
+  $ hg update -C
+  
+  Fetching external item into '$TESTTMP/sub/t/s/externals'
+  Checked out external at revision 1.
+  
+  Checked out revision 3.
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd s
+  $ svn status
+  ?       a
+  X       externals
+  ?       f1
+  ?       f2
+  
+  Performing status on external item at 'externals'

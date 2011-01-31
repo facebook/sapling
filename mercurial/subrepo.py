@@ -82,7 +82,7 @@ def writestate(repo, state):
                 ''.join(['%s %s\n' % (state[s][1], s)
                          for s in sorted(state)]), '')
 
-def submerge(repo, wctx, mctx, actx):
+def submerge(repo, wctx, mctx, actx, overwrite):
     """delegated from merge.applyupdates: merging of .hgsubstate file
     in working context, merging context and ancestor context"""
     if mctx == actx: # backwards?
@@ -114,7 +114,7 @@ def submerge(repo, wctx, mctx, actx):
                 continue
             elif ld == a: # other side changed
                 debug(s, "other changed, get", r)
-                wctx.sub(s).get(r)
+                wctx.sub(s).get(r, overwrite)
                 sm[s] = r
             elif ld[0] != r[0]: # sources differ
                 if repo.ui.promptchoice(
@@ -123,11 +123,11 @@ def submerge(repo, wctx, mctx, actx):
                       % (s, l[0], r[0]),
                       (_('&Local'), _('&Remote')), 0):
                     debug(s, "prompt changed, get", r)
-                    wctx.sub(s).get(r)
+                    wctx.sub(s).get(r, overwrite)
                     sm[s] = r
             elif ld[1] == a[1]: # local side is unchanged
                 debug(s, "other side changed, get", r)
-                wctx.sub(s).get(r)
+                wctx.sub(s).get(r, overwrite)
                 sm[s] = r
             else:
                 debug(s, "both sides changed, merge with", r)
@@ -260,13 +260,13 @@ class abstractsubrepo(object):
         """
         raise NotImplementedError
 
-    def get(self, state):
+    def get(self, state, overwrite=False):
         """run whatever commands are needed to put the subrepo into
         this state
         """
         raise NotImplementedError
 
-    def merge(self, state):
+    def merge(self, state, overwrite=False):
         """merge currently-saved state with the new state."""
         raise NotImplementedError
 
@@ -419,7 +419,7 @@ class hgsubrepo(abstractsubrepo):
             other = hg.repository(self._repo.ui, srcurl)
             self._repo.pull(other)
 
-    def get(self, state):
+    def get(self, state, overwrite=False):
         self._get(state)
         source, revision, kind = state
         self._repo.ui.debug("getting subrepo %s\n" % self._path)
@@ -589,7 +589,9 @@ class svnsubrepo(abstractsubrepo):
         except OSError:
             pass
 
-    def get(self, state):
+    def get(self, state, overwrite=False):
+        if overwrite:
+            self._svncommand(['revert', '--recursive', self._path])
         status = self._svncommand(['checkout', state[0], '--revision', state[1]])
         if not re.search('Checked out revision [0-9]+.', status):
             raise util.Abort(status.splitlines()[-1])
