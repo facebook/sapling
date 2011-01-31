@@ -123,6 +123,9 @@ def push(repo, dest, force, revs):
     """
     assert not revs, 'designated revisions for push remains unimplemented.'
     cmdutil.bail_if_changed(repo)
+    checkpush = getattr(repo, 'checkpush', None)
+    if checkpush:
+        checkpush(force, revs)
     ui = repo.ui
     old_encoding = util.swap_out_encoding()
     # TODO: implement --rev/#rev support
