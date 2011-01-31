@@ -2919,7 +2919,7 @@ def reposetup(ui, repo):
             return super(mqrepo, self).commit(text, user, date, match, force,
                                               editor, extra)
 
-        def push(self, remote, force=False, revs=None, newbranch=False):
+        def checkpush(self, force, revs):
             if self.mq.applied and not force:
                 haspatches = True
                 if revs:
@@ -2930,7 +2930,7 @@ def reposetup(ui, repo):
                     haspatches = bool([n for n in revs if n in applied])
                 if haspatches:
                     raise util.Abort(_('source has mq patches applied'))
-            return super(mqrepo, self).push(remote, force, revs, newbranch)
+            super(mqrepo, self).checkpush(force, revs)
 
         def _findtags(self):
             '''augment tags from base class with patch tags'''

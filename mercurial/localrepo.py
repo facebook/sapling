@@ -1305,6 +1305,13 @@ class localrepository(repo.repository):
         finally:
             lock.release()
 
+    def checkpush(self, force, revs):
+        """Extensions can override this function if additional checks have
+        to be performed before pushing, or call it if they override push
+        command.
+        """
+        pass
+
     def push(self, remote, force=False, revs=None, newbranch=False):
         '''Push outgoing changesets (limited by revs) from the current
         repository to remote. Return an integer:
@@ -1321,6 +1328,7 @@ class localrepository(repo.repository):
         # unbundle assumes local user cannot lock remote repo (new ssh
         # servers, http servers).
 
+        self.checkpush(force, revs)
         lock = None
         unbundle = remote.capable('unbundle')
         if not unbundle:
