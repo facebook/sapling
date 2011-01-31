@@ -304,3 +304,21 @@ nested archive
   $ ls ../narchive/inner/s | grep -v pax_global_header
   f
   g
+
+Check hg update --clean
+  $ cd $TESTTMP/t
+  $ echo  > s/g
+  $ cd s
+  $ echo c1 > f1
+  $ echo c1 > f2
+  $ git add f1
+  $ git status --short
+  A  f1
+   M g
+  ?? f2
+  $ cd ..
+  $ hg update -C > /dev/null 2>/dev/null
+  $ cd s
+  $ git status --short
+  ?? f1
+  ?? f2

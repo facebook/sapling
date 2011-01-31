@@ -761,8 +761,24 @@ class gitsubrepo(abstractsubrepo):
                 self._gitcommand(['reset', '--hard', 'HEAD'])
                 return
         elif self._gitstate() == revision:
+            if overwrite:
+                # first reset the index to unmark new files for commit, because 
+                # reset --hard will otherwise throw away files added for commit,
+                # not just unmark them.
+                self._gitcommand(['reset', 'HEAD'])
+                self._gitcommand(['reset', '--hard', 'HEAD'])
             return
         branch2rev, rev2branch = self._gitbranchmap()
+
+        def checkout(args):
+            cmd = ['checkout']
+            if overwrite:
+                # first reset the index to unmark new files for commit, because
+                # the -f option will otherwise throw away files added for
+                # commit, not just unmark them.
+                self._gitcommand(['reset', 'HEAD'])
+                cmd.append('-f')
+            self._gitcommand(cmd + args)
 
         def rawcheckout():
             # no branch to checkout, check it out with no branch
@@ -770,7 +786,7 @@ class gitsubrepo(abstractsubrepo):
                           self._relpath)
             self._ui.warn(_('check out a git branch if you intend '
                             'to make changes\n'))
-            self._gitcommand(['checkout', '-q', revision])
+            checkout(['-q', revision])
 
         if revision not in rev2branch:
             rawcheckout()
@@ -780,12 +796,12 @@ class gitsubrepo(abstractsubrepo):
         for b in branches:
             if b == 'refs/heads/master':
                 # master trumps all other branches
-                self._gitcommand(['checkout', 'refs/heads/master'])
+                checkout(['refs/heads/master'])
                 return
             if not firstlocalbranch and not b.startswith('refs/remotes/'):
                 firstlocalbranch = b
         if firstlocalbranch:
-            self._gitcommand(['checkout', firstlocalbranch])
+            checkout([firstlocalbranch])
             return
 
         tracking = self._gittracking(branch2rev.keys())
@@ -800,7 +816,7 @@ class gitsubrepo(abstractsubrepo):
         if remote not in tracking:
             # create a new local tracking branch
             local = remote.split('/', 2)[2]
-            self._gitcommand(['checkout', '-b', local, remote])
+            checkout(['-b', local, remote])
         elif self._gitisancestor(branch2rev[tracking[remote]], remote):
             # When updating to a tracked remote branch,
             # if the local tracking branch is downstream of it,
@@ -809,7 +825,7 @@ class gitsubrepo(abstractsubrepo):
             # Since we are only looking at branching at update, we need to
             # detect this situation and perform this action lazily.
             if tracking[remote] != self._gitcurrentbranch():
-                self._gitcommand(['checkout', tracking[remote]])
+                checkout([tracking[remote]])
             self._gitcommand(['merge', '--ff', remote])
         else:
             # a real merge would be required, just checkout the revision
