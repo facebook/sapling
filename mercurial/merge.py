@@ -249,7 +249,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 def actionkey(a):
     return a[1] == 'r' and -1 or 0, a
 
-def applyupdates(repo, action, wctx, mctx, actx):
+def applyupdates(repo, action, wctx, mctx, actx, overwrite):
     """apply the merge action list to the working directory
 
     wctx is the working copy context
@@ -310,7 +310,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
             repo.ui.note(_("removing %s\n") % f)
             audit_path(f)
             if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx)
+                subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
             try:
                 util.unlinkpath(repo.wjoin(f))
             except OSError, inst:
@@ -320,7 +320,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
             removed += 1
         elif m == "m": # merge
             if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx))
+                subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx), overwrite)
                 continue
             f2, fd, flags, move = a[2:]
             r = ms.resolve(fd, wctx, mctx)
@@ -343,7 +343,7 @@ def applyupdates(repo, action, wctx, mctx, actx):
             t = None
             updated += 1
             if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx)
+                subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
         elif m == "d": # directory rename
             f2, fd, flags = a[2:]
             if f:
@@ -534,7 +534,7 @@ def update(repo, node, branchmerge, force, partial):
         if not partial:
             repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
-        stats = applyupdates(repo, action, wc, p2, pa)
+        stats = applyupdates(repo, action, wc, p2, pa, overwrite)
 
         if not partial:
             repo.dirstate.setparents(fp1, fp2)
