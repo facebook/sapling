@@ -34,7 +34,7 @@ Note that there are some limitations on using this extension:
 
 - You should use single encoding in one repository.
 - If the repository path ends with 0x5c, .hg/hgrc cannot be read.
-- win32mbcs is not compatible with fixutf8 extention.
+- win32mbcs is not compatible with fixutf8 extension.
 
 By default, win32mbcs uses encoding.encoding decided by Mercurial.
 You can specify the encoding by config option::

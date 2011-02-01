@@ -280,15 +280,15 @@ Check hg update --clean
   A       f1
   
   Performing status on external item at 'externals'
-  $ cd ..
-  $ hg update -C
+  $ cd ../..
+  $ hg -R t update -C
   
-  Fetching external item into '$TESTTMP/sub/t/s/externals'
+  Fetching external item into 't/s/externals'
   Checked out external at revision 1.
   
   Checked out revision 3.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd s
+  $ cd t/s
   $ svn status
   ?       a
   X       externals
