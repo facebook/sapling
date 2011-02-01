@@ -1391,48 +1391,48 @@ def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')
 
-#### naming convention of below implementation follows 'textwrap' module
+# delay import of textwrap
+def MBTextWrapper(**kwargs):
+    class tw(textwrap.TextWrapper):
+        """
+        Extend TextWrapper for double-width characters.
 
-class MBTextWrapper(textwrap.TextWrapper):
-    """
-    Extend TextWrapper for double-width characters.
+        Some Asian characters use two terminal columns instead of one.
+        A good example of this behavior can be seen with u'\u65e5\u672c',
+        the two Japanese characters for "Japan":
+        len() returns 2, but when printed to a terminal, they eat 4 columns.
 
-    Some Asian characters use two terminal columns instead of one.
-    A good example of this behavior can be seen with u'\u65e5\u672c',
-    the two Japanese characters for "Japan":
-    len() returns 2, but when printed to a terminal, they eat 4 columns.
+        (Note that this has nothing to do whatsoever with unicode
+        representation, or encoding of the underlying string)
+        """
+        def __init__(self, **kwargs):
+            textwrap.TextWrapper.__init__(self, **kwargs)
 
-    (Note that this has nothing to do whatsoever with unicode
-    representation, or encoding of the underlying string)
-    """
-    def __init__(self, **kwargs):
-        textwrap.TextWrapper.__init__(self, **kwargs)
+        def _cutdown(self, str, space_left):
+            l = 0
+            ucstr = unicode(str, encoding.encoding)
+            colwidth = unicodedata.east_asian_width
+            for i in xrange(len(ucstr)):
+                l += colwidth(ucstr[i]) in 'WFA' and 2 or 1
+                if space_left < l:
+                    return (ucstr[:i].encode(encoding.encoding),
+                            ucstr[i:].encode(encoding.encoding))
+            return str, ''
 
-    def _cutdown(self, str, space_left):
-        l = 0
-        ucstr = unicode(str, encoding.encoding)
-        colwidth = unicodedata.east_asian_width
-        for i in xrange(len(ucstr)):
-            l += colwidth(ucstr[i]) in 'WFA' and 2 or 1
-            if space_left < l:
-                return (ucstr[:i].encode(encoding.encoding),
-                        ucstr[i:].encode(encoding.encoding))
-        return str, ''
+        # overriding of base class
+        def _handle_long_word(self, reversed_chunks, cur_line, cur_len, width):
+            space_left = max(width - cur_len, 1)
 
-    # ----------------------------------------
-    # overriding of base class
+            if self.break_long_words:
+                cut, res = self._cutdown(reversed_chunks[-1], space_left)
+                cur_line.append(cut)
+                reversed_chunks[-1] = res
+            elif not cur_line:
+                cur_line.append(reversed_chunks.pop())
 
-    def _handle_long_word(self, reversed_chunks, cur_line, cur_len, width):
-        space_left = max(width - cur_len, 1)
-
-        if self.break_long_words:
-            cut, res = self._cutdown(reversed_chunks[-1], space_left)
-            cur_line.append(cut)
-            reversed_chunks[-1] = res
-        elif not cur_line:
-            cur_line.append(reversed_chunks.pop())
-
-#### naming convention of above implementation follows 'textwrap' module
+    global MBTextWrapper
+    MBTextWrapper = tw
+    return tw(**kwargs)
 
 def wrap(line, width, initindent='', hangindent=''):
     maxindent = max(len(hangindent), len(initindent))
