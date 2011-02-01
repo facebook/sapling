@@ -306,19 +306,26 @@ nested archive
   g
 
 Check hg update --clean
-  $ cd $TESTTMP/t
+  $ cd $TESTTMP/ta
   $ echo  > s/g
   $ cd s
   $ echo c1 > f1
   $ echo c1 > f2
   $ git add f1
-  $ git status --short
-  A  f1
-   M g
-  ?? f2
   $ cd ..
-  $ hg update -C > /dev/null 2>/dev/null
-  $ cd s
-  $ git status --short
-  ?? f1
-  ?? f2
+  $ hg status -S
+  M s/g
+  A s/f1
+  $ ls s
+  f
+  f1
+  f2
+  g
+  $ hg update --clean
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status -S
+  $ ls s
+  f
+  f1
+  f2
+  g
