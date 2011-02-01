@@ -1109,4 +1109,5 @@ def main():
         time.sleep(1)
         cleanup(options)
 
-main()
+if __name__ == '__main__':
+    main()
