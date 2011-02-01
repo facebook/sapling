@@ -179,16 +179,16 @@ Show all commands + options
   $ hg debugcommands
   add: include, exclude, subrepos, dry-run
   annotate: rev, follow, no-follow, text, user, file, date, number, changeset, line-number, include, exclude
-  clone: noupdate, updaterev, rev, branch, pull, uncompressed, ssh, remotecmd
+  clone: noupdate, updaterev, rev, branch, pull, uncompressed, ssh, remotecmd, insecure
   commit: addremove, close-branch, include, exclude, message, logfile, date, user
   diff: rev, change, text, git, nodates, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, unified, stat, include, exclude, subrepos
   export: output, switch-parent, rev, text, git, nodates
   forget: include, exclude
-  init: ssh, remotecmd
+  init: ssh, remotecmd, insecure
   log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, patch, git, limit, no-merges, stat, style, template, include, exclude
   merge: force, tool, rev, preview
-  pull: update, force, rev, branch, ssh, remotecmd
-  push: force, rev, branch, new-branch, ssh, remotecmd
+  pull: update, force, rev, branch, ssh, remotecmd, insecure
+  push: force, rev, branch, new-branch, ssh, remotecmd, insecure
   remove: after, force, include, exclude
   serve: accesslog, daemon, daemon-pipefds, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, templates, style, ipv6, certificate
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, change, include, exclude, subrepos
@@ -200,7 +200,7 @@ Show all commands + options
   bisect: reset, good, bad, skip, command, noupdate
   branch: force, clean
   branches: active, closed
-  bundle: force, rev, branch, base, all, type, ssh, remotecmd
+  bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure
   cat: output, rev, decode, include, exclude
   copy: after, force, include, exclude, dry-run
   debugancestor: 
@@ -228,10 +228,10 @@ Show all commands + options
   help: 
   identify: rev, num, id, branch, tags
   import: strip, base, force, no-commit, exact, import-branch, message, logfile, date, user, similarity
-  incoming: force, newest-first, bundle, rev, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, subrepos
+  incoming: force, newest-first, bundle, rev, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, insecure, subrepos
   locate: rev, print0, fullpath, include, exclude
   manifest: rev
-  outgoing: force, rev, newest-first, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, subrepos
+  outgoing: force, rev, newest-first, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, insecure, subrepos
   parents: rev, style, template
   paths: 
   recover: 

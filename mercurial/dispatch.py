@@ -552,6 +552,9 @@ def _dispatch(ui, args):
     if options['noninteractive']:
         ui.setconfig('ui', 'interactive', 'off')
 
+    if cmdoptions.get('insecure', False):
+        ui.setconfig('web', 'cacerts', '')
+
     if options['help']:
         return commands.help_(ui, cmd, options['version'])
     elif options['version']:

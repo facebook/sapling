@@ -163,15 +163,30 @@ variables in the filename
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found
+  $ P=`pwd` hg -R copy-pull pull --insecure
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+  pulling from https://localhost:$HGPORT/
+  searching for changes
+  no changes found
 
 cacert mismatch
 
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/
-  abort: 127.0.0.1 certificate error: certificate is for localhost
+  abort: 127.0.0.1 certificate error: certificate is for localhost (use --insecure to connect insecurely)
   [255]
+  $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/ --insecure
+  warning: 127.0.0.1 certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+  pulling from https://127.0.0.1:$HGPORT/
+  searching for changes
+  no changes found
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem
   abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
   [255]
+  $ hg -R copy-pull pull --config web.cacerts=pub-other.pem --insecure
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+  pulling from https://localhost:$HGPORT/
+  searching for changes
+  no changes found
 
 Test server cert which isn't valid yet
 
