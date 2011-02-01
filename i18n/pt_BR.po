@@ -6937,6 +6937,15 @@ msgstr ""
 "- win32mbcs não é compatível com a extensão fixutf8."
 
 msgid ""
+"- You should use single encoding in one repository.\n"
+"- If the repository path ends with 0x5c, .hg/hgrc cannot be read.\n"
+"- win32mbcs is not compatible with fixutf8 extension."
+msgstr ""
+"- Você deve usar uma única codificação por repositório.\n"
+"- Se o caminho do repositório for terminado por 0x5c, .hg/hgrc não poderá ser lido.\n"
+"- win32mbcs não é compatível com a extensão fixutf8."
+
+msgid ""
 "By default, win32mbcs uses encoding.encoding decided by Mercurial.\n"
 "You can specify the encoding by config option::"
 msgstr ""
@@ -10462,6 +10471,9 @@ msgstr "especifica comando ssh a ser usado"
 
 msgid "specify hg command to run on the remote side"
 msgstr "especifica comando hg para executar do lado remoto"
+
+msgid "do not verify server certificate (ignoring web.cacerts config)"
+msgstr "não verifica o certificado do servidor (ignorando a opção de configuração web.cacerts)"
 
 msgid "PATTERN"
 msgstr "PADRÃO"
@@ -15844,7 +15856,7 @@ msgid "transaction abort!\n"
 msgstr "transação abortada!\n"
 
 msgid "rollback completed\n"
-msgstr "desfazer completo\n"
+msgstr "desfazimento completado\n"
 
 msgid "rollback failed - please run hg recover\n"
 msgstr "rollback falhou - por favor execute hg recover\n"
@@ -15937,8 +15949,20 @@ msgid "no commonName or subjectAltName found in certificate"
 msgstr "nenhum commonName ou subjectAltName encontrado no certificado"
 
 #, python-format
-msgid "%s certificate error: %s"
-msgstr "erro no certificado de %s: %s"
+msgid "%s certificate error: %s (use --insecure to connect insecurely)"
+msgstr "erro no certificado de %s: %s (use --insecure para conectar de modo inseguro)"
+
+#, python-format
+msgid "invalid certificate for %s with fingerprint %s"
+msgstr "certificado inválido para %s com impressão digital %s"
+
+#, python-format
+msgid "warning: %s certificate with fingerprint %s not verified (check hostfingerprints or web.cacerts config setting)\n"
+msgstr "aviso: o certificado %s com impressão digital %s não foi verificado (verifique as opções de configuração hostfingerprints e web.cacerts)\n"
+
+#, python-format
+msgid "no certificate for %s with fingerprint"
+msgstr "nenhum certificado para %s com impressão digital"
 
 #, python-format
 msgid "warning: %s certificate not verified (check web.cacerts config setting)\n"
@@ -15950,7 +15974,7 @@ msgstr "falha ao executar o comando '%s' : %s"
 
 #, python-format
 msgid "path contains illegal component: %s"
-msgstr "o caminho contém componente ilegais: %s"
+msgstr "o caminho contém um componente ilegal: %s"
 
 #, python-format
 msgid "path %r is inside repo %r"
@@ -15980,7 +16004,7 @@ msgstr "data inválida: %r"
 
 #, python-format
 msgid "date exceeds 32 bits: %d"
-msgstr "data supera 32 bit: %d"
+msgstr "data supera 32 bits: %d"
 
 #, python-format
 msgid "negative date value: %d"
@@ -16032,7 +16056,7 @@ msgstr "%.2f KB"
 
 #, python-format
 msgid "%.0f bytes"
-msgstr "%.0f byte"
+msgstr "%.0f bytes"
 
 #, python-format
 msgid "no port number associated with service '%s'"
@@ -16219,6 +16243,9 @@ msgstr "o push falhou:"
 
 msgid "push failed (unexpected response):"
 msgstr "o push falhou (resposta inesperada):"
+
+msgid "%s certificate error: %s"
+msgstr "erro no certificado de %s: %s"
 
 msgid "replace existing tag"
 msgstr "substitui etiqueta existente"
