@@ -250,6 +250,10 @@ deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
                   ['subdir2/deps/project1'])
         checkdeps(ui, repo, 4, ['subdir/deps/project1'], ['deps/project2'])
 
+        # Test update --clean, used to crash
+        repo.wwrite('subdir/deps/project1/a', 'foobar', '')
+        commands.update(ui, repo, node='4', clean=True)
+
 class TestPushExternals(test_util.TestBase):
     def test_push_externals(self, stupid=False):
         test_util.load_fixture_and_fetch('pushexternals.svndump',

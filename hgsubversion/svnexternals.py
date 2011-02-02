@@ -390,7 +390,7 @@ if subrepo:
             state = (state[0].split(':', 1)[1], state[1])
             super(svnsubrepo, self).__init__(ctx, path, state)
 
-        def get(self, state):
+        def get(self, state, *args, **kwargs):
             # Resolve source first
             line = state[0].split(':', 1)[1]
             source, pegrev = parsedefinition(line)[2:4]
@@ -404,7 +404,9 @@ if subrepo:
                 source = resolvesource(self._ui, svnroot, source)
             if pegrev is not None:
                 source = source + '@' + pegrev
-            return super(svnsubrepo, self).get((source, state[1]))
+            state = (source, state[1])
+            # hg-1.7.4-c19b9282d3a7 introduced the overwrite argument
+            return super(svnsubrepo, self).get(state, *args, **kwargs)
 
         def dirty(self, ignoreupdate=False):
             # You cannot compare anything with HEAD. Just accept it
