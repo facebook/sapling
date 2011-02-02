@@ -580,6 +580,7 @@ def tsttest(test, options, replacements):
 
     return exitcode, postout
 
+wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, options, replacements):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
@@ -611,7 +612,7 @@ def run(cmd, options, replacements):
             proc.tochild.close()
             output = proc.fromchild.read()
             ret = proc.wait()
-            if os.WIFEXITED(ret):
+            if wifexited(ret):
                 ret = os.WEXITSTATUS(ret)
         except Timeout:
             vlog('# Process %d timed out - killing it' % proc.pid)
