@@ -742,7 +742,7 @@ def checknlink(testfile):
 
         # nlinks() may behave differently for files on Windows shares if
         # the file is open.
-        fd = open(f2)
+        fd = posixfile(f2)
         return nlinks(f2) > 1
     finally:
         if fd is not None:
@@ -916,7 +916,7 @@ class opener(object):
                 else:
                     # nlinks() may behave differently for files on Windows
                     # shares if the file is open.
-                    fd = open(f)
+                    fd = posixfile(f)
                     nlink = nlinks(f)
                     if nlink < 1:
                         nlink = 2 # force mktempcopy (issue1922)
