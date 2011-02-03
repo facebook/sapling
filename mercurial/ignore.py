@@ -86,7 +86,8 @@ def ignore(root, files, warn):
                      (f, inst.strerror))
 
     allpats = []
-    [allpats.extend(patlist) for patlist in pats.values()]
+    for patlist in pats.values():
+        allpats.extend(patlist)
     if not allpats:
         return util.never
 

@@ -1242,7 +1242,8 @@ class localrepository(repo.repository):
                     self.ui.status(_("skipping missing subrepository: %s\n")
                                    % subpath)
 
-        [l.sort() for l in r]
+        for l in r:
+            l.sort()
         return r
 
     def heads(self, start=None):

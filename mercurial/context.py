@@ -722,7 +722,8 @@ class workingctx(changectx):
 
     def tags(self):
         t = []
-        [t.extend(p.tags()) for p in self.parents()]
+        for p in self.parents():
+            t.extend(p.tags())
         return t
 
     def children(self):
