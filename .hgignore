@@ -9,6 +9,8 @@ syntax: glob
 *.so
 *.pyd
 *.pyc
+*.pyo
+*$py.class
 *.swp
 *.prof
 \#*\#
