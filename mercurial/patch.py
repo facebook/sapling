@@ -1529,6 +1529,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 yield text
 
 def diffstatdata(lines):
+    diffre = re.compile('^diff .*-r [a-z0-9]+\s(.*)$')
+
     filename, adds, removes = None, 0, 0
     for line in lines:
         if line.startswith('diff'):
@@ -1539,9 +1541,9 @@ def diffstatdata(lines):
             adds, removes = 0, 0
             if line.startswith('diff --git'):
                 filename = gitre.search(line).group(1)
-            else:
+            elif line.startswith('diff -r'):
                 # format: "diff -r ... -r ... filename"
-                filename = line.split(None, 5)[-1]
+                filename = diffre.search(line).group(1)
         elif line.startswith('+') and not line.startswith('+++'):
             adds += 1
         elif line.startswith('-') and not line.startswith('---'):

@@ -46,3 +46,20 @@ Binary git diffstat:
    b |  Bin 
    1 files changed, 0 insertions(+), 0 deletions(-)
 
+  $ hg ci -m createb
+
+  $ printf '\0' > "file with spaces"
+  $ hg add "file with spaces"
+
+Filename with spaces diffstat:
+
+  $ hg diff --stat
+   file with spaces |    0 
+   1 files changed, 0 insertions(+), 0 deletions(-)
+
+Filename with spaces git diffstat:
+
+  $ hg diff --stat --git
+   file with spaces |  Bin 
+   1 files changed, 0 insertions(+), 0 deletions(-)
+	
