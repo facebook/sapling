@@ -506,7 +506,7 @@ class dirstate(object):
             if files[i] < subpath:
                 i += 1
                 continue
-            while files and files[i].startswith(subpath):
+            while i < len(files) and files[i].startswith(subpath):
                 del files[i]
             j += 1
 

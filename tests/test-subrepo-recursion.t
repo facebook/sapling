@@ -346,3 +346,15 @@ Test missing subrepo:
   $ rm -r foo
   $ hg status -S
   warning: error "unknown revision '65903cebad86f1a84bd4f1134f62fa7dcb7a1c98'" in subrepository "foo"
+
+Issue2619: IndexError: list index out of range on hg add with subrepos
+The subrepo must sorts after the explicit filename.
+
+  $ cd ..
+  $ hg init test
+  $ cd test
+  $ hg init x
+  $ echo "x = x" >> .hgsub
+  $ hg add .hgsub
+  $ touch a x/a
+  $ hg add a x/a
