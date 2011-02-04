@@ -204,26 +204,22 @@ def archive(ui, repo, dest, **opts):
 def backout(ui, repo, node=None, rev=None, **opts):
     '''reverse effect of earlier changeset
 
-    The backout command merges the reverse effect of the reverted
-    changeset into the working directory.
+    Prepare a new changeset with the effect of REV undone in the
+    current working directory.
 
-    With the --merge option, it first commits the reverted changes
-    as a new changeset. This new changeset is a child of the reverted
-    changeset.
-    The --merge option remembers the parent of the working directory
-    before starting the backout, then merges the new head with that
-    changeset afterwards.
-    This will result in an explicit merge in the history.
+    If REV is the parent of the working directory, then this changeset
+    is committed automatically. Otherwise, hg needs to merge the
+    changes and the merged result is left uncommitted.
 
-    If you backout a changeset other than the original parent of the
-    working directory, the result of this merge is not committed,
-    as with a normal merge. Otherwise, no merge is needed and the
-    commit is automatic.
+    By default, the pending changeset will have one parent,
+    maintaining a linear history. With --merge, the pending changeset
+    will instead have two parents: the old parent of the working
+    directory and a child of REV that simply undoes REV.
 
-    Note that the default behavior (without --merge) has changed in
-    version 1.7. To restore the previous default behavior, use
-    :hg:`backout --merge` and then :hg:`update --clean .` to get rid of
-    the ongoing merge.
+    Before version 1.7, the default behavior was equivalent to
+    specifying --merge followed by :hg:`update --clean .` to cancel
+    the merge and leave the child of REV as a head to be merged
+    separately.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
