@@ -58,7 +58,7 @@ def addremove(ui, repo, *pats, **opts):
     repository.
 
     New files are ignored if they match any of the patterns in
-    .hgignore. As with add, these changes take effect at the next
+    ``.hgignore``. As with add, these changes take effect at the next
     commit.
 
     Use the -s/--similarity option to detect renamed files. With a
@@ -668,12 +668,12 @@ def clone(ui, source, dest=None, **opts):
     basename of the source.
 
     The location of the source is added to the new repository's
-    .hg/hgrc file, as the default to be used for future pulls.
+    ``.hg/hgrc`` file, as the default to be used for future pulls.
 
     See :hg:`help urls` for valid source format details.
 
     It is possible to specify an ``ssh://`` URL as the destination, but no
-    .hg/hgrc and working directory will be created on the remote side.
+    ``.hg/hgrc`` and working directory will be created on the remote side.
     Please see :hg:`help urls` for important details about ``ssh://`` URLs.
 
     A set of changesets (tags, or branch names) to pull may be specified
