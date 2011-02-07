@@ -1333,3 +1333,563 @@ Disable the fakegroups trick to get real failures
   acl: "unlikelytoexist" not defined in [acl.groups]
   error: pretxnchangegroup.acl hook failed: group 'unlikelytoexist' is undefined
   abort: group 'unlikelytoexist' is undefined
+
+
+Branch acl tests setup
+
+  $ init_config
+  $ cd b
+  $ hg up
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch foobar
+  marked working directory as branch foobar
+  $ hg commit -m 'create foobar'
+  $ echo 'foo contents' > abc.txt
+  $ hg add abc.txt
+  $ hg commit -m 'foobar contents'
+  $ cd ..
+  $ hg --cwd a pull ../b
+  pulling from ../b
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads)
+
+Create additional changeset on foobar branch
+
+  $ cd a
+  $ hg up -C foobar
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 'foo contents2' > abc.txt
+  $ hg commit -m 'foobar contents2'
+  $ cd ..
+
+
+No branch acls specified
+
+  $ do_push astro
+  Pushing as user astro
+  hgrc = """
+  [acl]
+  sources = push
+  [extensions]
+  """
+  pushing to ../b
+  searching for changes
+  common changesets up to 07e028174695
+  4 changesets found
+  list of changesets:
+  ef1ea85a6374b77d6da9dcda9541f498f2d17df7
+  f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
+  911600dab2ae7a9baff75958b84fe606851ce955
+  4ea792ff64284af438188103a0ee8aca1724fb8c
+  adding changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 4 changesets
+  bundling: 1/4 manifests (25.00%)
+  bundling: 2/4 manifests (50.00%)
+  bundling: 3/4 manifests (75.00%)
+  bundling: 4/4 manifests (100.00%)
+  bundling: abc.txt 0/4 files (0.00%)
+  bundling: foo/Bar/file.txt 1/4 files (25.00%)
+  bundling: foo/file.txt 2/4 files (50.00%)
+  bundling: quux/file.py 3/4 files (75.00%)
+  changesets: 1 chunks
+  add changeset ef1ea85a6374
+  changesets: 2 chunks
+  add changeset f9cafe1212c8
+  changesets: 3 chunks
+  add changeset 911600dab2ae
+  changesets: 4 chunks
+  add changeset 4ea792ff6428
+  adding manifests
+  manifests: 1/4 chunks (25.00%)
+  manifests: 2/4 chunks (50.00%)
+  manifests: 3/4 chunks (75.00%)
+  manifests: 4/4 chunks (100.00%)
+  adding file changes
+  adding abc.txt revisions
+  files: 1/4 chunks (25.00%)
+  adding foo/Bar/file.txt revisions
+  files: 2/4 chunks (50.00%)
+  adding foo/file.txt revisions
+  files: 3/4 chunks (75.00%)
+  adding quux/file.py revisions
+  files: 4/4 chunks (100.00%)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
+  calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: acl.allow.branches not enabled
+  acl: acl.deny.branches not enabled
+  acl: acl.allow not enabled
+  acl: acl.deny not enabled
+  acl: branch access granted: "ef1ea85a6374" on branch "default"
+  acl: allowing changeset ef1ea85a6374
+  acl: branch access granted: "f9cafe1212c8" on branch "default"
+  acl: allowing changeset f9cafe1212c8
+  acl: branch access granted: "911600dab2ae" on branch "default"
+  acl: allowing changeset 911600dab2ae
+  acl: branch access granted: "4ea792ff6428" on branch "foobar"
+  acl: allowing changeset 4ea792ff6428
+  updating the branch cache
+  checking for updated bookmarks
+  repository tip rolled back to revision 2 (undo push)
+  working directory now based on revision 2
+  2:07e028174695
+  
+
+Branch acl deny test
+
+  $ echo "[acl.deny.branches]" >> $config
+  $ echo "foobar = *" >> $config
+  $ do_push astro
+  Pushing as user astro
+  hgrc = """
+  [acl]
+  sources = push
+  [extensions]
+  [acl.deny.branches]
+  foobar = *
+  """
+  pushing to ../b
+  searching for changes
+  common changesets up to 07e028174695
+  invalidating branch cache (tip differs)
+  4 changesets found
+  list of changesets:
+  ef1ea85a6374b77d6da9dcda9541f498f2d17df7
+  f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
+  911600dab2ae7a9baff75958b84fe606851ce955
+  4ea792ff64284af438188103a0ee8aca1724fb8c
+  adding changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 4 changesets
+  bundling: 1/4 manifests (25.00%)
+  bundling: 2/4 manifests (50.00%)
+  bundling: 3/4 manifests (75.00%)
+  bundling: 4/4 manifests (100.00%)
+  bundling: abc.txt 0/4 files (0.00%)
+  bundling: foo/Bar/file.txt 1/4 files (25.00%)
+  bundling: foo/file.txt 2/4 files (50.00%)
+  bundling: quux/file.py 3/4 files (75.00%)
+  changesets: 1 chunks
+  add changeset ef1ea85a6374
+  changesets: 2 chunks
+  add changeset f9cafe1212c8
+  changesets: 3 chunks
+  add changeset 911600dab2ae
+  changesets: 4 chunks
+  add changeset 4ea792ff6428
+  adding manifests
+  manifests: 1/4 chunks (25.00%)
+  manifests: 2/4 chunks (50.00%)
+  manifests: 3/4 chunks (75.00%)
+  manifests: 4/4 chunks (100.00%)
+  adding file changes
+  adding abc.txt revisions
+  files: 1/4 chunks (25.00%)
+  adding foo/Bar/file.txt revisions
+  files: 2/4 chunks (50.00%)
+  adding foo/file.txt revisions
+  files: 3/4 chunks (75.00%)
+  adding quux/file.py revisions
+  files: 4/4 chunks (100.00%)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
+  calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: acl.allow.branches not enabled
+  acl: acl.deny.branches enabled, 1 entries for user astro
+  acl: acl.allow not enabled
+  acl: acl.deny not enabled
+  acl: branch access granted: "ef1ea85a6374" on branch "default"
+  acl: allowing changeset ef1ea85a6374
+  acl: branch access granted: "f9cafe1212c8" on branch "default"
+  acl: allowing changeset f9cafe1212c8
+  acl: branch access granted: "911600dab2ae" on branch "default"
+  acl: allowing changeset 911600dab2ae
+  error: pretxnchangegroup.acl hook failed: acl: user "astro" denied on branch "foobar" (changeset "4ea792ff6428")
+  transaction abort!
+  rollback completed
+  abort: acl: user "astro" denied on branch "foobar" (changeset "4ea792ff6428")
+  no rollback information available
+  2:07e028174695
+  
+
+Branch acl empty allow test
+
+  $ init_config
+  $ echo "[acl.allow.branches]" >> $config
+  $ do_push astro
+  Pushing as user astro
+  hgrc = """
+  [acl]
+  sources = push
+  [extensions]
+  [acl.allow.branches]
+  """
+  pushing to ../b
+  searching for changes
+  common changesets up to 07e028174695
+  4 changesets found
+  list of changesets:
+  ef1ea85a6374b77d6da9dcda9541f498f2d17df7
+  f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
+  911600dab2ae7a9baff75958b84fe606851ce955
+  4ea792ff64284af438188103a0ee8aca1724fb8c
+  adding changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 4 changesets
+  bundling: 1/4 manifests (25.00%)
+  bundling: 2/4 manifests (50.00%)
+  bundling: 3/4 manifests (75.00%)
+  bundling: 4/4 manifests (100.00%)
+  bundling: abc.txt 0/4 files (0.00%)
+  bundling: foo/Bar/file.txt 1/4 files (25.00%)
+  bundling: foo/file.txt 2/4 files (50.00%)
+  bundling: quux/file.py 3/4 files (75.00%)
+  changesets: 1 chunks
+  add changeset ef1ea85a6374
+  changesets: 2 chunks
+  add changeset f9cafe1212c8
+  changesets: 3 chunks
+  add changeset 911600dab2ae
+  changesets: 4 chunks
+  add changeset 4ea792ff6428
+  adding manifests
+  manifests: 1/4 chunks (25.00%)
+  manifests: 2/4 chunks (50.00%)
+  manifests: 3/4 chunks (75.00%)
+  manifests: 4/4 chunks (100.00%)
+  adding file changes
+  adding abc.txt revisions
+  files: 1/4 chunks (25.00%)
+  adding foo/Bar/file.txt revisions
+  files: 2/4 chunks (50.00%)
+  adding foo/file.txt revisions
+  files: 3/4 chunks (75.00%)
+  adding quux/file.py revisions
+  files: 4/4 chunks (100.00%)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
+  calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: acl.allow.branches enabled, 0 entries for user astro
+  acl: acl.deny.branches not enabled
+  acl: acl.allow not enabled
+  acl: acl.deny not enabled
+  error: pretxnchangegroup.acl hook failed: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
+  transaction abort!
+  rollback completed
+  abort: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
+  no rollback information available
+  2:07e028174695
+  
+
+Branch acl allow other
+
+  $ init_config
+  $ echo "[acl.allow.branches]" >> $config
+  $ echo "* = george" >> $config
+  $ do_push astro
+  Pushing as user astro
+  hgrc = """
+  [acl]
+  sources = push
+  [extensions]
+  [acl.allow.branches]
+  * = george
+  """
+  pushing to ../b
+  searching for changes
+  common changesets up to 07e028174695
+  4 changesets found
+  list of changesets:
+  ef1ea85a6374b77d6da9dcda9541f498f2d17df7
+  f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
+  911600dab2ae7a9baff75958b84fe606851ce955
+  4ea792ff64284af438188103a0ee8aca1724fb8c
+  adding changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 4 changesets
+  bundling: 1/4 manifests (25.00%)
+  bundling: 2/4 manifests (50.00%)
+  bundling: 3/4 manifests (75.00%)
+  bundling: 4/4 manifests (100.00%)
+  bundling: abc.txt 0/4 files (0.00%)
+  bundling: foo/Bar/file.txt 1/4 files (25.00%)
+  bundling: foo/file.txt 2/4 files (50.00%)
+  bundling: quux/file.py 3/4 files (75.00%)
+  changesets: 1 chunks
+  add changeset ef1ea85a6374
+  changesets: 2 chunks
+  add changeset f9cafe1212c8
+  changesets: 3 chunks
+  add changeset 911600dab2ae
+  changesets: 4 chunks
+  add changeset 4ea792ff6428
+  adding manifests
+  manifests: 1/4 chunks (25.00%)
+  manifests: 2/4 chunks (50.00%)
+  manifests: 3/4 chunks (75.00%)
+  manifests: 4/4 chunks (100.00%)
+  adding file changes
+  adding abc.txt revisions
+  files: 1/4 chunks (25.00%)
+  adding foo/Bar/file.txt revisions
+  files: 2/4 chunks (50.00%)
+  adding foo/file.txt revisions
+  files: 3/4 chunks (75.00%)
+  adding quux/file.py revisions
+  files: 4/4 chunks (100.00%)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
+  calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: acl.allow.branches enabled, 0 entries for user astro
+  acl: acl.deny.branches not enabled
+  acl: acl.allow not enabled
+  acl: acl.deny not enabled
+  error: pretxnchangegroup.acl hook failed: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
+  transaction abort!
+  rollback completed
+  abort: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
+  no rollback information available
+  2:07e028174695
+  
+  $ do_push george
+  Pushing as user george
+  hgrc = """
+  [acl]
+  sources = push
+  [extensions]
+  [acl.allow.branches]
+  * = george
+  """
+  pushing to ../b
+  searching for changes
+  common changesets up to 07e028174695
+  4 changesets found
+  list of changesets:
+  ef1ea85a6374b77d6da9dcda9541f498f2d17df7
+  f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
+  911600dab2ae7a9baff75958b84fe606851ce955
+  4ea792ff64284af438188103a0ee8aca1724fb8c
+  adding changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 4 changesets
+  bundling: 1/4 manifests (25.00%)
+  bundling: 2/4 manifests (50.00%)
+  bundling: 3/4 manifests (75.00%)
+  bundling: 4/4 manifests (100.00%)
+  bundling: abc.txt 0/4 files (0.00%)
+  bundling: foo/Bar/file.txt 1/4 files (25.00%)
+  bundling: foo/file.txt 2/4 files (50.00%)
+  bundling: quux/file.py 3/4 files (75.00%)
+  changesets: 1 chunks
+  add changeset ef1ea85a6374
+  changesets: 2 chunks
+  add changeset f9cafe1212c8
+  changesets: 3 chunks
+  add changeset 911600dab2ae
+  changesets: 4 chunks
+  add changeset 4ea792ff6428
+  adding manifests
+  manifests: 1/4 chunks (25.00%)
+  manifests: 2/4 chunks (50.00%)
+  manifests: 3/4 chunks (75.00%)
+  manifests: 4/4 chunks (100.00%)
+  adding file changes
+  adding abc.txt revisions
+  files: 1/4 chunks (25.00%)
+  adding foo/Bar/file.txt revisions
+  files: 2/4 chunks (50.00%)
+  adding foo/file.txt revisions
+  files: 3/4 chunks (75.00%)
+  adding quux/file.py revisions
+  files: 4/4 chunks (100.00%)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
+  calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: acl.allow.branches enabled, 1 entries for user george
+  acl: acl.deny.branches not enabled
+  acl: acl.allow not enabled
+  acl: acl.deny not enabled
+  acl: branch access granted: "ef1ea85a6374" on branch "default"
+  acl: allowing changeset ef1ea85a6374
+  acl: branch access granted: "f9cafe1212c8" on branch "default"
+  acl: allowing changeset f9cafe1212c8
+  acl: branch access granted: "911600dab2ae" on branch "default"
+  acl: allowing changeset 911600dab2ae
+  acl: branch access granted: "4ea792ff6428" on branch "foobar"
+  acl: allowing changeset 4ea792ff6428
+  updating the branch cache
+  checking for updated bookmarks
+  repository tip rolled back to revision 2 (undo push)
+  working directory now based on revision 2
+  2:07e028174695
+  
+
+Branch acl conflicting allow
+asterisk ends up applying to all branches and allowing george to
+push foobar into the remote
+
+  $ init_config
+  $ echo "[acl.allow.branches]" >> $config
+  $ echo "foobar = astro" >> $config
+  $ echo "* = george" >> $config
+  $ do_push george
+  Pushing as user george
+  hgrc = """
+  [acl]
+  sources = push
+  [extensions]
+  [acl.allow.branches]
+  foobar = astro
+  * = george
+  """
+  pushing to ../b
+  searching for changes
+  common changesets up to 07e028174695
+  invalidating branch cache (tip differs)
+  4 changesets found
+  list of changesets:
+  ef1ea85a6374b77d6da9dcda9541f498f2d17df7
+  f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
+  911600dab2ae7a9baff75958b84fe606851ce955
+  4ea792ff64284af438188103a0ee8aca1724fb8c
+  adding changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 4 changesets
+  bundling: 1/4 manifests (25.00%)
+  bundling: 2/4 manifests (50.00%)
+  bundling: 3/4 manifests (75.00%)
+  bundling: 4/4 manifests (100.00%)
+  bundling: abc.txt 0/4 files (0.00%)
+  bundling: foo/Bar/file.txt 1/4 files (25.00%)
+  bundling: foo/file.txt 2/4 files (50.00%)
+  bundling: quux/file.py 3/4 files (75.00%)
+  changesets: 1 chunks
+  add changeset ef1ea85a6374
+  changesets: 2 chunks
+  add changeset f9cafe1212c8
+  changesets: 3 chunks
+  add changeset 911600dab2ae
+  changesets: 4 chunks
+  add changeset 4ea792ff6428
+  adding manifests
+  manifests: 1/4 chunks (25.00%)
+  manifests: 2/4 chunks (50.00%)
+  manifests: 3/4 chunks (75.00%)
+  manifests: 4/4 chunks (100.00%)
+  adding file changes
+  adding abc.txt revisions
+  files: 1/4 chunks (25.00%)
+  adding foo/Bar/file.txt revisions
+  files: 2/4 chunks (50.00%)
+  adding foo/file.txt revisions
+  files: 3/4 chunks (75.00%)
+  adding quux/file.py revisions
+  files: 4/4 chunks (100.00%)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
+  calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: acl.allow.branches enabled, 1 entries for user george
+  acl: acl.deny.branches not enabled
+  acl: acl.allow not enabled
+  acl: acl.deny not enabled
+  acl: branch access granted: "ef1ea85a6374" on branch "default"
+  acl: allowing changeset ef1ea85a6374
+  acl: branch access granted: "f9cafe1212c8" on branch "default"
+  acl: allowing changeset f9cafe1212c8
+  acl: branch access granted: "911600dab2ae" on branch "default"
+  acl: allowing changeset 911600dab2ae
+  acl: branch access granted: "4ea792ff6428" on branch "foobar"
+  acl: allowing changeset 4ea792ff6428
+  updating the branch cache
+  checking for updated bookmarks
+  repository tip rolled back to revision 2 (undo push)
+  working directory now based on revision 2
+  2:07e028174695
+  
+Branch acl conflicting deny
+
+  $ init_config
+  $ echo "[acl.deny.branches]" >> $config
+  $ echo "foobar = astro" >> $config
+  $ echo "default = astro" >> $config
+  $ echo "* = george" >> $config
+  $ do_push george
+  Pushing as user george
+  hgrc = """
+  [acl]
+  sources = push
+  [extensions]
+  [acl.deny.branches]
+  foobar = astro
+  default = astro
+  * = george
+  """
+  pushing to ../b
+  searching for changes
+  common changesets up to 07e028174695
+  invalidating branch cache (tip differs)
+  4 changesets found
+  list of changesets:
+  ef1ea85a6374b77d6da9dcda9541f498f2d17df7
+  f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
+  911600dab2ae7a9baff75958b84fe606851ce955
+  4ea792ff64284af438188103a0ee8aca1724fb8c
+  adding changesets
+  bundling: 1 changesets
+  bundling: 2 changesets
+  bundling: 3 changesets
+  bundling: 4 changesets
+  bundling: 1/4 manifests (25.00%)
+  bundling: 2/4 manifests (50.00%)
+  bundling: 3/4 manifests (75.00%)
+  bundling: 4/4 manifests (100.00%)
+  bundling: abc.txt 0/4 files (0.00%)
+  bundling: foo/Bar/file.txt 1/4 files (25.00%)
+  bundling: foo/file.txt 2/4 files (50.00%)
+  bundling: quux/file.py 3/4 files (75.00%)
+  changesets: 1 chunks
+  add changeset ef1ea85a6374
+  changesets: 2 chunks
+  add changeset f9cafe1212c8
+  changesets: 3 chunks
+  add changeset 911600dab2ae
+  changesets: 4 chunks
+  add changeset 4ea792ff6428
+  adding manifests
+  manifests: 1/4 chunks (25.00%)
+  manifests: 2/4 chunks (50.00%)
+  manifests: 3/4 chunks (75.00%)
+  manifests: 4/4 chunks (100.00%)
+  adding file changes
+  adding abc.txt revisions
+  files: 1/4 chunks (25.00%)
+  adding foo/Bar/file.txt revisions
+  files: 2/4 chunks (50.00%)
+  adding foo/file.txt revisions
+  files: 3/4 chunks (75.00%)
+  adding quux/file.py revisions
+  files: 4/4 chunks (100.00%)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
+  calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: acl.allow.branches not enabled
+  acl: acl.deny.branches enabled, 1 entries for user george
+  acl: acl.allow not enabled
+  acl: acl.deny not enabled
+  error: pretxnchangegroup.acl hook failed: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")
+  transaction abort!
+  rollback completed
+  abort: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")
+  no rollback information available
+  2:07e028174695
+  
