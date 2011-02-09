@@ -329,3 +329,117 @@ Check hg update --clean
   f1
   f2
   g
+
+Sticky subrepositories, no changes
+  $ cd $TESTTMP/ta
+  $ hg id -n
+  7
+  $ cd s
+  $ git rev-parse HEAD
+  32a343883b74769118bb1d3b4b1fbf9156f4dddc
+  $ cd ..
+  $ hg update 1 > /dev/null 2>&1
+  $ hg id -n
+  1
+  $ cd s
+  $ git rev-parse HEAD
+  da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
+  $ cd ..
+
+Sticky subrepositorys, file changes
+  $ touch s/f1
+  $ cd s
+  $ git add f1
+  $ cd ..
+  $ hg id -n
+  1
+  $ cd s
+  $ git rev-parse HEAD
+  da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
+  $ cd ..
+  $ hg update 4
+   subrepository sources for s differ
+  use (l)ocal source (da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7) or (r)emote source (aa84837ccfbdfedcdcdeeedc309d73e6eb069edc)?
+   l
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  4+
+  $ cd s
+  $ git rev-parse HEAD
+  da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
+  $ cd ..
+  $ hg update --clean tip > /dev/null 2>&1 
+
+Sticky subrepository, revision updates
+  $ hg id -n
+  7
+  $ cd s
+  $ git rev-parse HEAD
+  32a343883b74769118bb1d3b4b1fbf9156f4dddc
+  $ cd ..
+  $ cd s
+  $ git checkout aa84837ccfbdfedcdcdeeedc309d73e6eb069edc
+  Previous HEAD position was 32a3438... fff
+  HEAD is now at aa84837... f
+  $ cd ..
+  $ hg update 1
+   subrepository sources for s differ (in checked out version)
+  use (l)ocal source (32a343883b74769118bb1d3b4b1fbf9156f4dddc) or (r)emote source (da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7)?
+   l
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  1+
+  $ cd s
+  $ git rev-parse HEAD
+  aa84837ccfbdfedcdcdeeedc309d73e6eb069edc
+  $ cd ..
+
+Sticky subrepository, file changes and revision updates
+  $ touch s/f1
+  $ cd s
+  $ git add f1
+  $ git rev-parse HEAD
+  aa84837ccfbdfedcdcdeeedc309d73e6eb069edc
+  $ cd ..
+  $ hg id -n
+  1+
+  $ hg update 7
+   subrepository sources for s differ
+  use (l)ocal source (32a343883b74769118bb1d3b4b1fbf9156f4dddc) or (r)emote source (32a343883b74769118bb1d3b4b1fbf9156f4dddc)?
+   l
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  7
+  $ cd s
+  $ git rev-parse HEAD
+  aa84837ccfbdfedcdcdeeedc309d73e6eb069edc
+  $ cd ..
+
+Sticky repository, update --clean
+  $ hg update --clean tip
+  Previous HEAD position was aa84837... f
+  HEAD is now at 32a3438... fff
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  7
+  $ cd s
+  $ git rev-parse HEAD
+  32a343883b74769118bb1d3b4b1fbf9156f4dddc
+  $ cd ..
+
+Test subrepo already at intended revision:
+  $ cd s
+  $ git checkout 32a343883b74769118bb1d3b4b1fbf9156f4dddc
+  HEAD is now at 32a3438... fff
+  $ cd ..
+  $ hg update 1
+  Previous HEAD position was 32a3438... fff
+  HEAD is now at da5f5b1... g
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  1
+  $ cd s
+  $ git rev-parse HEAD
+  da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
+  $ cd ..
+

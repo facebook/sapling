@@ -706,3 +706,125 @@ Check hg update --clean
   $ hg status -S
   ? s/b
   ? s/c
+
+Sticky subrepositories, no changes
+  $ cd $TESTTMP/sub/t
+  $ hg id
+  925c17564ef8 tip
+  $ hg -R s id
+  12a213df6fa9 tip
+  $ hg -R t id  
+  52c0adc0515a tip
+  $ hg update 11
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id
+  365661e5936a
+  $ hg -R s id
+  fc627a69481f
+  $ hg -R t id  
+  e95bcfa18a35
+
+Sticky subrepositorys, file changes
+  $ touch s/f1
+  $ touch t/f1
+  $ hg add -S s/f1
+  $ hg add -S t/f1
+  $ hg id
+  365661e5936a
+  $ hg -R s id
+  fc627a69481f+
+  $ hg -R t id  
+  e95bcfa18a35+
+  $ hg update tip
+   subrepository sources for s differ
+  use (l)ocal source (fc627a69481f) or (r)emote source (12a213df6fa9)?
+   l
+   subrepository sources for t differ
+  use (l)ocal source (e95bcfa18a35) or (r)emote source (52c0adc0515a)?
+   l
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id
+  925c17564ef8+ tip
+  $ hg -R s id
+  fc627a69481f+
+  $ hg -R t id  
+  e95bcfa18a35+
+  $ hg update --clean tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Sticky subrepository, revision updates
+  $ hg id
+  925c17564ef8 tip
+  $ hg -R s id
+  12a213df6fa9 tip
+  $ hg -R t id  
+  52c0adc0515a tip
+  $ cd s
+  $ hg update -r -2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ../t
+  $ hg update -r 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ..
+  $ hg update 10
+   subrepository sources for t differ (in checked out version)
+  use (l)ocal source (7af322bc1198) or (r)emote source (20a0db6fbf6c)?
+   l
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id
+  e45c8b14af55+
+  $ hg -R s id
+  1c833a7a9e3a
+  $ hg -R t id  
+  7af322bc1198
+
+Sticky subrepository, file changes and revision updates
+  $ touch s/f1
+  $ touch t/f1
+  $ hg add -S s/f1
+  $ hg add -S t/f1
+  $ hg id
+  e45c8b14af55+
+  $ hg -R s id
+  1c833a7a9e3a+
+  $ hg -R t id  
+  7af322bc1198+
+  $ hg update tip
+   subrepository sources for s differ
+  use (l)ocal source (1c833a7a9e3a) or (r)emote source (12a213df6fa9)?
+   l
+   subrepository sources for t differ
+  use (l)ocal source (7af322bc1198) or (r)emote source (52c0adc0515a)?
+   l
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id
+  925c17564ef8 tip
+  $ hg -R s id
+  1c833a7a9e3a+
+  $ hg -R t id  
+  7af322bc1198+
+
+Sticky repository, update --clean
+  $ hg update --clean tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id
+  925c17564ef8 tip
+  $ hg -R s id
+  12a213df6fa9 tip
+  $ hg -R t id  
+  52c0adc0515a tip
+
+Test subrepo already at intended revision:
+  $ cd s
+  $ hg update fc627a69481f
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ..
+  $ hg update 11
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  11+
+  $ hg -R s id
+  fc627a69481f
+  $ hg -R t id 
+  e95bcfa18a35

@@ -163,6 +163,17 @@ def submerge(repo, wctx, mctx, actx, overwrite):
     # record merged .hgsubstate
     writestate(repo, sm)
 
+def _updateprompt(ui, sub, dirty, local, remote):
+    if dirty:
+        msg = (_(' subrepository sources for %s differ\n'
+                 'use (l)ocal source (%s) or (r)emote source (%s)?\n')
+               % (subrelpath(sub), local, remote))
+    else:
+        msg = (_(' subrepository sources for %s differ (in checked out version)\n'
+                 'use (l)ocal source (%s) or (r)emote source (%s)?\n')
+               % (subrelpath(sub), local, remote))
+    return ui.promptchoice(msg, (_('&Local'), _('&Remote')), 0)
+
 def reporelpath(repo):
     """return path to this (sub)repo as seen from outermost repo"""
     parent = repo
@@ -442,14 +453,26 @@ class hgsubrepo(abstractsubrepo):
         cur = self._repo['.']
         dst = self._repo[state[1]]
         anc = dst.ancestor(cur)
-        if anc == cur:
-            self._repo.ui.debug("updating subrepo %s\n" % subrelpath(self))
-            hg.update(self._repo, state[1])
-        elif anc == dst:
-            self._repo.ui.debug("skipping subrepo %s\n" % subrelpath(self))
+
+        def mergefunc():
+            if anc == cur:
+                self._repo.ui.debug("updating subrepo %s\n" % subrelpath(self))
+                hg.update(self._repo, state[1])
+            elif anc == dst:
+                self._repo.ui.debug("skipping subrepo %s\n" % subrelpath(self))
+            else:
+                self._repo.ui.debug("merging subrepo %s\n" % subrelpath(self))
+                hg.merge(self._repo, state[1], remind=False)
+
+        wctx = self._repo[None]
+        if self.dirty():
+            if anc != dst:
+                if _updateprompt(self._repo.ui, self, wctx.dirty(), cur, dst):
+                    mergefunc()
+            else:
+                mergefunc()
         else:
-            self._repo.ui.debug("merging subrepo %s\n" % subrelpath(self))
-            hg.merge(self._repo, state[1], remind=False)
+            mergefunc()
 
     def push(self, force):
         # push subrepos depth-first for coherent ordering
@@ -608,10 +631,12 @@ class svnsubrepo(abstractsubrepo):
         self._ui.status(status)
 
     def merge(self, state):
-        old = int(self._state[1])
-        new = int(state[1])
-        if new > old:
-            self.get(state)
+        old = self._state[1]
+        new = state[1]
+        if new != self._wcrev():
+            dirty = old == self._wcrev() or self._wcchanged()[0]
+            if _updateprompt(self._ui, self, dirty, self._wcrev(), new):
+                self.get(state, False)
 
     def push(self, force):
         # push is a no-op for SVN
@@ -850,10 +875,21 @@ class gitsubrepo(abstractsubrepo):
         source, revision, kind = state
         self._fetch(source, revision)
         base = self._gitcommand(['merge-base', revision, self._state[1]])
-        if base == revision:
-            self.get(state) # fast forward merge
-        elif base != self._state[1]:
-            self._gitcommand(['merge', '--no-commit', revision])
+        out, code = self._gitdir(['diff-index', '--quiet', 'HEAD'])
+
+        def mergefunc():
+            if base == revision:
+                self.get(state) # fast forward merge
+            elif base != self._state[1]:
+                self._gitcommand(['merge', '--no-commit', revision])
+
+        if self.dirty():
+            if self._gitstate() != revision:
+                dirty = self._gitstate() == self._state[1] or code != 0
+                if _updateprompt(self._ui, self, dirty, self._state[1], revision):
+                    mergefunc()
+        else:
+            mergefunc()
 
     def push(self, force):
         # if a branch in origin contains the revision, nothing to do

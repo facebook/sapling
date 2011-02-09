@@ -296,3 +296,145 @@ Check hg update --clean
   ? *    f2 (glob)
   
   Performing status on external item at 'externals'
+
+Sticky subrepositories, no changes
+  $ cd $TESTTMP/sub/t
+  $ hg id -n
+  2
+  $ cd s
+  $ svnversion
+  3
+  $ cd ..
+  $ hg update 1
+  U    $TESTTMP/sub/t/s/alpha
+  
+  Fetching external item into '$TESTTMP/sub/t/s/externals'
+  Checked out external at revision 1.
+  
+  Checked out revision 2.
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  1
+  $ cd s
+  $ svnversion
+  2
+  $ cd ..
+
+Sticky subrepositorys, file changes
+  $ touch s/f1
+  $ cd s
+  $ svn add f1
+  A         f1
+  $ cd ..
+  $ hg id -n
+  1
+  $ cd s
+  $ svnversion
+  2M
+  $ cd ..
+  $ hg update tip
+   subrepository sources for s differ
+  use (l)ocal source (2) or (r)emote source (3)?
+   l
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  2+
+  $ cd s
+  $ svnversion
+  2M
+  $ cd ..
+  $ hg update --clean tip
+  U    $TESTTMP/sub/t/s/alpha
+  
+  Fetching external item into '$TESTTMP/sub/t/s/externals'
+  Checked out external at revision 1.
+  
+  Checked out revision 3.
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Sticky subrepository, revision updates
+  $ hg id -n
+  2
+  $ cd s
+  $ svnversion
+  3
+  $ cd ..
+  $ cd s
+  $ svn update -r 1
+  U    alpha
+   U   .
+  
+  Fetching external item into 'externals'
+  Updated external to revision 1.
+  
+  Updated to revision 1.
+  $ cd ..
+  $ hg update 1
+   subrepository sources for s differ (in checked out version)
+  use (l)ocal source (1) or (r)emote source (2)?
+   l
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  1+
+  $ cd s
+  $ svnversion
+  1
+  $ cd ..
+
+Sticky subrepository, file changes and revision updates
+  $ touch s/f1
+  $ cd s
+  $ svn add f1
+  A         f1
+  $ svnversion
+  1M
+  $ cd ..
+  $ hg id -n
+  1+
+  $ hg update tip
+   subrepository sources for s differ
+  use (l)ocal source (1) or (r)emote source (3)?
+   l
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  2
+  $ cd s
+  $ svnversion
+  1M
+  $ cd ..
+
+Sticky repository, update --clean
+  $ hg update --clean tip
+  U    $TESTTMP/sub/t/s/alpha
+   U   $TESTTMP/sub/t/s
+  
+  Fetching external item into '$TESTTMP/sub/t/s/externals'
+  Checked out external at revision 1.
+  
+  Checked out revision 3.
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  2
+  $ cd s
+  $ svnversion
+  3
+  $ cd ..
+
+Test subrepo already at intended revision:
+  $ cd s
+  $ svn update -r 2
+  U    alpha
+  
+  Fetching external item into 'externals'
+  Updated external to revision 1.
+  
+  Updated to revision 2.
+  $ cd ..
+  $ hg update 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -n
+  1+
+  $ cd s
+  $ svnversion
+  2
+  $ cd ..
