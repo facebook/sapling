@@ -112,7 +112,7 @@ extensions.wrapfunction(localrepo.localrepository, 'nodetags', sortednodetags)
 try:
     from mercurial import discovery
     kwname = 'heads'
-    if 'remoteheads' in inspect.getargspec(discovery.findoutgoing)[0]:
+    if hg.util.version() > 1.6:
         kwname = 'remoteheads'
     def findoutgoing(orig, local, remote, *args, **kwargs):
         kw = {}
