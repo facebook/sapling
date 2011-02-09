@@ -269,7 +269,7 @@ class abstractsubrepo(object):
         """
         raise NotImplementedError
 
-    def merge(self, state, overwrite=False):
+    def merge(self, state):
         """merge currently-saved state with the new state."""
         raise NotImplementedError
 
