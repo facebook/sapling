@@ -31,7 +31,7 @@ branching.
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex, short
 from mercurial import util, commands, repair, extensions, pushkey, hg, url
-from mercurial import revset, encoding
+from mercurial import encoding
 from mercurial import bookmarks
 import os
 
@@ -353,27 +353,6 @@ def updatecurbookmark(orig, ui, repo, *args, **opts):
     bookmarks.setcurrent(repo, rev)
     return res
 
-def bmrevset(repo, subset, x):
-    """``bookmark([name])``
-    The named bookmark or all bookmarks.
-    """
-    # i18n: "bookmark" is a keyword
-    args = revset.getargs(x, 0, 1, _('bookmark takes one or no arguments'))
-    if args:
-        bm = revset.getstring(args[0],
-                              # i18n: "bookmark" is a keyword
-                              _('the argument to bookmark must be a string'))
-        bmrev = bookmarks.listbookmarks(repo).get(bm, None)
-        if bmrev:
-            bmrev = repo.changelog.rev(bin(bmrev))
-        return [r for r in subset if r == bmrev]
-    bms = set([repo.changelog.rev(bin(r))
-               for r in bookmarks.listbookmarks(repo).values()])
-    return [r for r in subset if r in bms]
-
-def extsetup(ui):
-    revset.symbols['bookmark'] = bmrevset
-
 cmdtable = {
     "bookmarks":
         (bookmark,
@@ -385,6 +364,3 @@ cmdtable = {
 }
 
 colortable = {'bookmarks.current': 'green'}
-
-# tell hggettext to extract docstrings from these functions:
-i18nfunctions = [bmrevset]

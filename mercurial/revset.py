@@ -7,6 +7,7 @@
 
 import re
 import parser, util, error, discovery
+import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _, gettext
 
@@ -664,12 +665,31 @@ def tag(repo, subset, x):
 def tagged(repo, subset, x):
     return tag(repo, subset, x)
 
+def bookmark(repo, subset, x):
+    """``bookmark([name])``
+    The named bookmark or all bookmarks.
+    """
+    # i18n: "bookmark" is a keyword
+    args = getargs(x, 0, 1, _('bookmark takes one or no arguments'))
+    if args:
+        bm = getstring(args[0],
+                       # i18n: "bookmark" is a keyword
+                       _('the argument to bookmark must be a string'))
+        bmrev = bookmarksmod.listbookmarks(repo).get(bm, None)
+        if bmrev:
+            bmrev = repo[bmrev].rev()
+        return [r for r in subset if r == bmrev]
+    bms = set([repo[r].rev()
+               for r in bookmarksmod.listbookmarks(repo).values()])
+    return [r for r in subset if r in bms]
+
 symbols = {
     "adds": adds,
     "all": getall,
     "ancestor": ancestor,
     "ancestors": ancestors,
     "author": author,
+    "bookmark": bookmark,
     "branch": branch,
     "children": children,
     "closed": closed,
