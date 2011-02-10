@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import changegroup
+import changegroup, bookmarks
 from node import nullrev, short
 from i18n import _
 import os
@@ -105,6 +105,13 @@ def strip(ui, repo, node, backup="all"):
             saveheads.difference_update(parents)
             saveheads.add(r)
 
+    bm = repo._bookmarks
+    updatebm = []
+    for m in bm:
+        rev = repo[bm[m]].rev()
+        if rev in tostrip:
+            updatebm.append(m)
+
     saveheads = [cl.node(r) for r in saveheads]
     files = _collectfiles(repo, striprev)
 
@@ -155,6 +162,11 @@ def strip(ui, repo, node, backup="all"):
             f.close()
             if not keeppartialbundle:
                 os.unlink(chgrpfile)
+
+        for m in updatebm:
+            bm[m] = repo['.'].node()
+        bookmarks.write(repo)
+
     except:
         if backupfile:
             ui.warn(_("strip failed, full bundle stored in '%s'\n")

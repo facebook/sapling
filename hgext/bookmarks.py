@@ -129,36 +129,6 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
                         label=label)
         return
 
-def _revstostrip(changelog, node):
-    srev = changelog.rev(node)
-    tostrip = [srev]
-    saveheads = []
-    for r in xrange(srev, len(changelog)):
-        parents = changelog.parentrevs(r)
-        if parents[0] in tostrip or parents[1] in tostrip:
-            tostrip.append(r)
-            if parents[1] != nullrev:
-                for p in parents:
-                    if p not in tostrip and p > srev:
-                        saveheads.append(p)
-    return [r for r in tostrip if r not in saveheads]
-
-def strip(oldstrip, ui, repo, node, backup="all"):
-    """Strip bookmarks if revisions are stripped using
-    the mercurial.strip method. This usually happens during
-    qpush and qpop"""
-    revisions = _revstostrip(repo.changelog, node)
-    marks = repo._bookmarks
-    update = []
-    for mark, n in marks.iteritems():
-        if repo.changelog.rev(n) in revisions:
-            update.append(mark)
-    oldstrip(ui, repo, node, backup)
-    if len(update) > 0:
-        for m in update:
-            marks[m] = repo.changectx('.').node()
-        bookmarks.write(repo)
-
 def reposetup(ui, repo):
     if not repo.local():
         return
@@ -315,7 +285,6 @@ def outgoing(oldoutgoing, ui, repo, dest=None, **opts):
         return oldoutgoing(ui, repo, dest, **opts)
 
 def uisetup(ui):
-    extensions.wrapfunction(repair, "strip", strip)
     if ui.configbool('bookmarks', 'track.current'):
         extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
 
