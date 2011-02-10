@@ -196,9 +196,6 @@ def push(oldpush, ui, repo, dest=None, **opts):
     return result
 
 def uisetup(ui):
-    if ui.configbool('bookmarks', 'track.current'):
-        extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
-
     entry = extensions.wrapcommand(commands.table, 'pull', pull)
     entry[1].append(('B', 'bookmark', [],
                      _("bookmark to import"),
@@ -207,19 +204,6 @@ def uisetup(ui):
     entry[1].append(('B', 'bookmark', [],
                      _("bookmark to export"),
                      _('BOOKMARK')))
-
-def updatecurbookmark(orig, ui, repo, *args, **opts):
-    '''Set the current bookmark
-
-    If the user updates to a bookmark we update the .hg/bookmarks.current
-    file.
-    '''
-    res = orig(ui, repo, *args, **opts)
-    rev = opts['rev']
-    if not rev and len(args) > 0:
-        rev = args[0]
-    bookmarks.setcurrent(repo, rev)
-    return res
 
 cmdtable = {
     "bookmarks":

@@ -3893,9 +3893,14 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
         rev = cmdutil.finddate(ui, repo, date)
 
     if clean or check:
-        return hg.clean(repo, rev)
+        ret = hg.clean(repo, rev)
     else:
-        return hg.update(repo, rev)
+        ret = hg.update(repo, rev)
+
+    if repo.ui.configbool('bookmarks', 'track.current'):
+        bookmarks.setcurrent(repo, rev)
+
+    return ret
 
 def verify(ui, repo):
     """verify the integrity of the repository
