@@ -32,69 +32,8 @@ from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex, short
 from mercurial import util, commands, repair, extensions, pushkey, hg, url
 from mercurial import revset, encoding
+from mercurial import bookmarks
 import os
-
-def write(repo):
-    '''Write bookmarks
-
-    Write the given bookmark => hash dictionary to the .hg/bookmarks file
-    in a format equal to those of localtags.
-
-    We also store a backup of the previous state in undo.bookmarks that
-    can be copied back on rollback.
-    '''
-    refs = repo._bookmarks
-
-    try:
-        bms = repo.opener('bookmarks').read()
-    except IOError:
-        bms = ''
-    repo.opener('undo.bookmarks', 'w').write(bms)
-
-    if repo._bookmarkcurrent not in refs:
-        setcurrent(repo, None)
-    wlock = repo.wlock()
-    try:
-        file = repo.opener('bookmarks', 'w', atomictemp=True)
-        for refspec, node in refs.iteritems():
-            file.write("%s %s\n" % (hex(node), encoding.fromlocal(refspec)))
-        file.rename()
-
-        # touch 00changelog.i so hgweb reloads bookmarks (no lock needed)
-        try:
-            os.utime(repo.sjoin('00changelog.i'), None)
-        except OSError:
-            pass
-
-    finally:
-        wlock.release()
-
-def setcurrent(repo, mark):
-    '''Set the name of the bookmark that we are currently on
-
-    Set the name of the bookmark that we are on (hg update <bookmark>).
-    The name is recorded in .hg/bookmarks.current
-    '''
-    current = repo._bookmarkcurrent
-    if current == mark:
-        return
-
-    refs = repo._bookmarks
-
-    # do not update if we do update to a rev equal to the current bookmark
-    if (mark and mark not in refs and
-        current and refs[current] == repo.changectx('.').node()):
-        return
-    if mark not in refs:
-        mark = ''
-    wlock = repo.wlock()
-    try:
-        file = repo.opener('bookmarks.current', 'w', atomictemp=True)
-        file.write(mark)
-        file.rename()
-    finally:
-        wlock.release()
-    repo._bookmarkcurrent = mark
 
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
     '''track a line of development with movable markers
@@ -127,8 +66,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         marks[mark] = marks[rename]
         del marks[rename]
         if repo._bookmarkcurrent == rename:
-            setcurrent(repo, mark)
-        write(repo)
+            bookmarks.setcurrent(repo, mark)
+        bookmarks.write(repo)
         return
 
     if delete:
@@ -137,9 +76,9 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         if mark not in marks:
             raise util.Abort(_("a bookmark of this name does not exist"))
         if mark == repo._bookmarkcurrent:
-            setcurrent(repo, None)
+            bookmarks.setcurrent(repo, None)
         del marks[mark]
-        write(repo)
+        bookmarks.write(repo)
         return
 
     if mark is not None:
@@ -159,8 +98,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             marks[mark] = repo.lookup(rev)
         else:
             marks[mark] = repo.changectx('.').node()
-        setcurrent(repo, mark)
-        write(repo)
+        bookmarks.setcurrent(repo, mark)
+        bookmarks.write(repo)
         return
 
     if mark is None:
@@ -218,7 +157,7 @@ def strip(oldstrip, ui, repo, node, backup="all"):
     if len(update) > 0:
         for m in update:
             marks[m] = repo.changectx('.').node()
-        write(repo)
+        bookmarks.write(repo)
 
 def reposetup(ui, repo):
     if not repo.local():
@@ -290,7 +229,7 @@ def reposetup(ui, repo):
                         marks[mark] = node
                         update = True
             if update:
-                write(self)
+                bookmarks.write(self)
 
         def commitctx(self, ctx, error=False):
             """Add a revision to the repository and
@@ -331,7 +270,7 @@ def reposetup(ui, repo):
                             self.ui.warn(_("not updating divergent"
                                            " bookmark %s\n") % k)
             if changed:
-                write(repo)
+                bookmarks.write(repo)
 
             return result
 
@@ -405,7 +344,7 @@ def pushbookmark(repo, key, old, new):
             if new not in repo:
                 return False
             marks[key] = repo[new].node()
-        write(repo)
+        bookmarks.write(repo)
         return True
     finally:
         w.release()
@@ -432,7 +371,7 @@ def pull(oldpull, ui, repo, source="default", **opts):
             # explicit pull overrides local bookmark if any
             ui.status(_("importing bookmark %s\n") % b)
             repo._bookmarks[b] = repo[rb[b]].node()
-        write(repo)
+        bookmarks.write(repo)
 
     return result
 
@@ -542,7 +481,7 @@ def updatecurbookmark(orig, ui, repo, *args, **opts):
     rev = opts['rev']
     if not rev and len(args) > 0:
         rev = args[0]
-    setcurrent(repo, rev)
+    bookmarks.setcurrent(repo, rev)
     return res
 
 def bmrevset(repo, subset, x):
