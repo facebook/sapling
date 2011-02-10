@@ -342,27 +342,12 @@ def push(oldpush, ui, repo, dest=None, **opts):
 
     return result
 
-def diffbookmarks(ui, repo, remote):
-    ui.status(_("searching for changed bookmarks\n"))
-
-    lmarks = repo.listkeys('bookmarks')
-    rmarks = remote.listkeys('bookmarks')
-
-    diff = sorted(set(rmarks) - set(lmarks))
-    for k in diff:
-        ui.write("   %-25s %s\n" % (k, rmarks[k][:12]))
-
-    if len(diff) <= 0:
-        ui.status(_("no changed bookmarks found\n"))
-        return 1
-    return 0
-
 def incoming(oldincoming, ui, repo, source="default", **opts):
     if opts.get('bookmarks'):
         source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), source)
         ui.status(_('comparing with %s\n') % url.hidepassword(source))
-        return diffbookmarks(ui, repo, other)
+        return bookmarks.diff(ui, repo, other)
     else:
         return oldincoming(ui, repo, source, **opts)
 
@@ -372,7 +357,7 @@ def outgoing(oldoutgoing, ui, repo, dest=None, **opts):
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), dest)
         ui.status(_('comparing with %s\n') % url.hidepassword(dest))
-        return diffbookmarks(ui, other, repo)
+        return bookmarks.diff(ui, other, repo)
     else:
         return oldoutgoing(ui, repo, dest, **opts)
 

@@ -149,3 +149,18 @@ def pushbookmark(repo, key, old, new):
         return True
     finally:
         w.release()
+
+def diff(ui, repo, remote):
+    ui.status(_("searching for changed bookmarks\n"))
+
+    lmarks = repo.listkeys('bookmarks')
+    rmarks = remote.listkeys('bookmarks')
+
+    diff = sorted(set(rmarks) - set(lmarks))
+    for k in diff:
+        ui.write("   %-25s %s\n" % (k, rmarks[k][:12]))
+
+    if len(diff) <= 0:
+        ui.status(_("no changed bookmarks found\n"))
+        return 1
+    return 0
