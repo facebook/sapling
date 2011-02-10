@@ -164,7 +164,6 @@ def reposetup(ui, repo):
         return
 
     class bookmark_repo(repo.__class__):
-
         @util.propertycache
         def _bookmarks(self):
             return bookmarks.read(self)
@@ -187,22 +186,6 @@ def reposetup(ui, repo):
                 key = self._bookmarks[key]
             return super(bookmark_repo, self).lookup(key)
 
-        def _bookmarksupdate(self, parents, node):
-            marks = self._bookmarks
-            update = False
-            if ui.configbool('bookmarks', 'track.current'):
-                mark = self._bookmarkcurrent
-                if mark and marks[mark] in parents:
-                    marks[mark] = node
-                    update = True
-            else:
-                for mark, n in marks.items():
-                    if n in parents:
-                        marks[mark] = node
-                        update = True
-            if update:
-                bookmarks.write(self)
-
         def commitctx(self, ctx, error=False):
             """Add a revision to the repository and
             move the bookmark"""
@@ -215,7 +198,7 @@ def reposetup(ui, repo):
                 if parents[1] == nullid:
                     parents = (parents[0],)
 
-                self._bookmarksupdate(parents, node)
+                bookmarks.update(self, parents, node)
                 return node
             finally:
                 wlock.release()
@@ -275,7 +258,7 @@ def reposetup(ui, repo):
                 return result
             node = self.changelog.tip()
             parents = self.dirstate.parents()
-            self._bookmarksupdate(parents, node)
+            bookmarks.update(self, parents, node)
             return result
 
         def _findtags(self):
