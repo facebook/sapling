@@ -295,7 +295,7 @@ class cmdalias(object):
             ui.debug("alias '%s' shadows command '%s'\n" %
                      (self.name, self.cmdname))
 
-        if self.definition.startswith('!'):
+        if hasattr(self, 'shell'):
             return self.fn(ui, *args, **opts)
         else:
             try:
