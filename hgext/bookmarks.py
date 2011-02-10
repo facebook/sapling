@@ -227,12 +227,6 @@ def reposetup(ui, repo):
             bookmarks.update(self, parents, node)
             return result
 
-        def _findtags(self):
-            """Merge bookmarks with normal tags"""
-            (tags, tagtypes) = super(bookmark_repo, self)._findtags()
-            tags.update(self._bookmarks)
-            return (tags, tagtypes)
-
     repo.__class__ = bookmark_repo
 
 def pull(oldpull, ui, repo, source="default", **opts):
