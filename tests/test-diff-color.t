@@ -97,7 +97,8 @@ record
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
   $ hg rollback
-  rolling back to revision 0 (undo commit)
+  repository tip rolled back to revision 0 (undo commit)
+  working directory now based on revision 0
 
 qrecord
 

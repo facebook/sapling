@@ -204,7 +204,8 @@ backout with valid parent should be ok
   changeset 5:10e5328c8435 backs out changeset 4:b2f3bb92043e
 
   $ hg rollback
-  rolling back to revision 4 (undo commit)
+  repository tip rolled back to revision 4 (undo commit)
+  working directory now based on revision 4
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

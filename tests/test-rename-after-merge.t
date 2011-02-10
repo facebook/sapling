@@ -97,7 +97,8 @@ Commit issue 1476:
   copies:      c2 (c1)
 
   $ hg rollback
-  rolling back to revision 2 (undo commit)
+  repository tip rolled back to revision 2 (undo commit)
+  working directory now based on revision 2 and 1
 
   $ hg up -C .
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved

@@ -20,7 +20,8 @@
   
   $ hg status
   $ hg rollback
-  rolling back to revision -1 (undo commit)
+  repository tip rolled back to revision -1 (undo commit)
+  working directory now based on revision -1
   $ hg verify
   checking changesets
   checking manifests
@@ -37,7 +38,8 @@ Test issue 902
   $ hg branch test
   marked working directory as branch test
   $ hg rollback
-  rolling back to revision -1 (undo commit)
+  repository tip rolled back to revision -1 (undo commit)
+  working directory now based on revision -1
   $ hg branch
   default
 
@@ -54,8 +56,9 @@ Test rollback of hg before issue 902 was fixed
   marked working directory as branch test
   $ rm .hg/undo.branch
   $ hg rollback
-  rolling back to revision -1 (undo commit)
+  repository tip rolled back to revision -1 (undo commit)
   Named branch could not be reset, current branch still is: test
+  working directory now based on revision -1
   $ hg branch
   test
 

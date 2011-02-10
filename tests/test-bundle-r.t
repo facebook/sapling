@@ -200,7 +200,8 @@
   checking files
   4 files, 9 changesets, 7 total revisions
   $ hg rollback
-  rolling back to revision 4 (undo pull)
+  repository tip rolled back to revision 4 (undo pull)
+  working directory now based on revision -1
   $ cd ..
 
 should fail
@@ -276,7 +277,8 @@ revision 8
   checking files
   4 files, 9 changesets, 7 total revisions
   $ hg rollback
-  rolling back to revision 2 (undo unbundle)
+  repository tip rolled back to revision 2 (undo unbundle)
+  working directory now based on revision 2
 
 revision 2
 
@@ -300,7 +302,8 @@ revision 4
   checking files
   2 files, 5 changesets, 5 total revisions
   $ hg rollback
-  rolling back to revision 2 (undo unbundle)
+  repository tip rolled back to revision 2 (undo unbundle)
+  working directory now based on revision 2
   $ hg unbundle ../test-bundle-branch2.hg
   adding changesets
   adding manifests
@@ -319,7 +322,8 @@ revision 6
   checking files
   3 files, 7 changesets, 6 total revisions
   $ hg rollback
-  rolling back to revision 2 (undo unbundle)
+  repository tip rolled back to revision 2 (undo unbundle)
+  working directory now based on revision 2
   $ hg unbundle ../test-bundle-cset-7.hg
   adding changesets
   adding manifests

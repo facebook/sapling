@@ -227,7 +227,8 @@ local tag with .hgtags modified
 
   $ hg tag hgtags-modified
   $ hg rollback
-  rolling back to revision 13 (undo commit)
+  repository tip rolled back to revision 13 (undo commit)
+  working directory now based on revision 13
   $ hg st
   M .hgtags
   ? .hgtags.orig

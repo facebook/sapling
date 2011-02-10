@@ -265,7 +265,8 @@ Remove nonexistent tag:
 Undo a tag with rollback:
 
   $ hg rollback             # destroy rev 5 (restore bar)
-  rolling back to revision 4 (undo commit)
+  repository tip rolled back to revision 4 (undo commit)
+  working directory now based on revision 4
   $ hg tags
   tip                                4:0c192d7d5e6b
   bar                                1:78391a272241

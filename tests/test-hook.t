@@ -221,7 +221,8 @@ outgoing hooks can see env vars
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
   $ hg rollback
-  rolling back to revision 3 (undo pull)
+  repository tip rolled back to revision 3 (undo pull)
+  working directory now based on revision 0
 
 preoutgoing hook can prevent outgoing changes
 

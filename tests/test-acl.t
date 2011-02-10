@@ -142,7 +142,8 @@ Extension disabled for lack of a hook
   added 3 changesets with 3 changes to 3 files
   updating the branch cache
   checking for updated bookmarks
-  rolling back to revision 0 (undo push)
+  repository tip rolled back to revision 0 (undo push)
+  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -221,7 +222,8 @@ Extension disabled for lack of acl.sources
   acl: changes have source "push" - skipping
   updating the branch cache
   checking for updated bookmarks
-  rolling back to revision 0 (undo push)
+  repository tip rolled back to revision 0 (undo push)
+  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -310,7 +312,8 @@ No [acl.allow]/[acl.deny]
   acl: allowing changeset 911600dab2ae
   updating the branch cache
   checking for updated bookmarks
-  rolling back to revision 0 (undo push)
+  repository tip rolled back to revision 0 (undo push)
+  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -945,7 +948,8 @@ barney is allowed everywhere
   acl: allowing changeset 911600dab2ae
   updating the branch cache
   checking for updated bookmarks
-  rolling back to revision 0 (undo push)
+  repository tip rolled back to revision 0 (undo push)
+  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -1341,7 +1345,8 @@ acl.config can set only [acl.allow]/[acl.deny]
   acl: allowing changeset 911600dab2ae
   updating the branch cache
   checking for updated bookmarks
-  rolling back to revision 0 (undo push)
+  repository tip rolled back to revision 0 (undo push)
+  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -1438,7 +1443,8 @@ fred is always allowed
   acl: allowing changeset 911600dab2ae
   updating the branch cache
   checking for updated bookmarks
-  rolling back to revision 0 (undo push)
+  repository tip rolled back to revision 0 (undo push)
+  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -1628,7 +1634,8 @@ OS-level groups
   acl: allowing changeset 911600dab2ae
   updating the branch cache
   checking for updated bookmarks
-  rolling back to revision 0 (undo push)
+  repository tip rolled back to revision 0 (undo push)
+  working directory now based on revision 0
   0:6675d58eff77
   
 

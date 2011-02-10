@@ -42,7 +42,8 @@ Pull multiple revisions with update:
   $ hg -q parents
   0:bbd179dfa0a7
   $ hg rollback
-  rolling back to revision -1 (undo pull)
+  repository tip rolled back to revision -1 (undo pull)
+  working directory now based on revision -1
 
   $ hg pull -qr 0 ../repo
   $ hg log

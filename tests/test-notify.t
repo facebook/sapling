@@ -152,7 +152,8 @@ pull (minimal config)
 fail for config file is missing
 
   $ hg --cwd b rollback
-  rolling back to revision 0 (undo pull)
+  repository tip rolled back to revision 0 (undo pull)
+  working directory now based on revision 0
   $ hg --cwd b pull ../a 2>&1 | grep 'error.*\.notify\.conf' > /dev/null && echo pull failed
   pull failed
   $ touch ".notify.conf"
@@ -160,7 +161,8 @@ fail for config file is missing
 pull
 
   $ hg --cwd b rollback
-  rolling back to revision 0 (undo pull)
+  repository tip rolled back to revision 0 (undo pull)
+  working directory now based on revision 0
   $ hg --traceback --cwd b pull ../a  | \
   >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
   pulling from ../a
@@ -204,7 +206,8 @@ pull
 pull
 
   $ hg --cwd b rollback
-  rolling back to revision 0 (undo pull)
+  repository tip rolled back to revision 0 (undo pull)
+  working directory now based on revision 0
   $ hg --traceback --cwd b pull ../a | \
   >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
   pulling from ../a

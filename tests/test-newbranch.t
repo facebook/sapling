@@ -105,7 +105,8 @@ There should be only one default branch head
 Test for invalid branch cache:
 
   $ hg rollback
-  rolling back to revision 4 (undo commit)
+  repository tip rolled back to revision 4 (undo commit)
+  working directory now based on revision 4 and 3
 
   $ cp $branchcache .hg/bc-invalid
 

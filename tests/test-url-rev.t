@@ -101,7 +101,8 @@ Changing original repo:
 
   $ cd clone
   $ hg rollback
-  rolling back to revision 1 (undo push)
+  repository tip rolled back to revision 1 (undo push)
+  working directory now based on revision 1
 
   $ hg -q incoming
   2:faba9097cad4
@@ -145,7 +146,8 @@ No new revs, no update:
   0:1f0dee641bb7
 
   $ hg rollback
-  rolling back to revision 1 (undo pull)
+  repository tip rolled back to revision 1 (undo pull)
+  working directory now based on revision 1
 
   $ hg up -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -166,7 +168,8 @@ Pull -u takes us back to branch foo:
   summary:     new head of branch foo
   
   $ hg rollback
-  rolling back to revision 1 (undo pull)
+  repository tip rolled back to revision 1 (undo pull)
+  working directory now based on revision 0
 
   $ hg up -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -49,7 +49,7 @@
   no changes found
 
   $ hg rollback --dry-run --verbose
-  rolling back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/)
+  repository tip rolled back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/)
 
 Issue622: hg init && hg pull -u URL doesn't checkout default branch
 

@@ -63,7 +63,8 @@ expect success
   remote: changegroup hook: HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_URL=remote:http:*:  (glob)
   % serve errors
   $ hg rollback
-  rolling back to revision 0 (undo serve)
+  repository tip rolled back to revision 0 (undo serve)
+  working directory now based on revision 0
 
 expect authorization error: all users denied
 
