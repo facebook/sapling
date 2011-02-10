@@ -129,23 +129,6 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
                         label=label)
         return
 
-def reposetup(ui, repo):
-    if not repo.local():
-        return
-
-    class bookmark_repo(repo.__class__):
-        def addchangegroup(self, *args, **kwargs):
-            result = super(bookmark_repo, self).addchangegroup(*args, **kwargs)
-            if result > 1:
-                # We have more heads than before
-                return result
-            node = self.changelog.tip()
-            parents = self.dirstate.parents()
-            bookmarks.update(self, parents, node)
-            return result
-
-    repo.__class__ = bookmark_repo
-
 def pull(oldpull, ui, repo, source="default", **opts):
     # translate bookmark args to rev args for actual pull
     if opts.get('bookmark'):
