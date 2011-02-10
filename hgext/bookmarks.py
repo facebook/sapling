@@ -169,23 +169,6 @@ def reposetup(ui, repo):
                 key = self._bookmarks[key]
             return super(bookmark_repo, self).lookup(key)
 
-        def commitctx(self, ctx, error=False):
-            """Add a revision to the repository and
-            move the bookmark"""
-            wlock = self.wlock() # do both commit and bookmark with lock held
-            try:
-                node  = super(bookmark_repo, self).commitctx(ctx, error)
-                if node is None:
-                    return None
-                parents = self.changelog.parents(node)
-                if parents[1] == nullid:
-                    parents = (parents[0],)
-
-                bookmarks.update(self, parents, node)
-                return node
-            finally:
-                wlock.release()
-
         def pull(self, remote, heads=None, force=False):
             result = super(bookmark_repo, self).pull(remote, heads, force)
 

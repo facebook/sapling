@@ -987,7 +987,11 @@ class localrepository(repo.repository):
                         _('note: commit message saved in %s\n') % msgfn)
                 raise
 
-            # update dirstate and mergestate
+            # update bookmarks, dirstate and mergestate
+            parents = (p1, p2)
+            if p2 == nullid:
+                parents = (p1,)
+            bookmarks.update(self, parents, ret)
             for f in changes[0] + changes[1]:
                 self.dirstate.normal(f)
             for f in changes[2]:
