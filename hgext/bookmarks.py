@@ -276,34 +276,6 @@ def reposetup(ui, repo):
 
     repo.__class__ = bookmark_repo
 
-def listbookmarks(repo):
-    # We may try to list bookmarks on a repo type that does not
-    # support it (e.g., statichttprepository).
-    if not hasattr(repo, '_bookmarks'):
-        return {}
-
-    d = {}
-    for k, v in repo._bookmarks.iteritems():
-        d[k] = hex(v)
-    return d
-
-def pushbookmark(repo, key, old, new):
-    w = repo.wlock()
-    try:
-        marks = repo._bookmarks
-        if hex(marks.get(key, '')) != old:
-            return False
-        if new == '':
-            del marks[key]
-        else:
-            if new not in repo:
-                return False
-            marks[key] = repo[new].node()
-        bookmarks.write(repo)
-        return True
-    finally:
-        w.release()
-
 def pull(oldpull, ui, repo, source="default", **opts):
     # translate bookmark args to rev args for actual pull
     if opts.get('bookmark'):
@@ -424,8 +396,6 @@ def uisetup(ui):
     entry[1].append(('B', 'bookmarks', False,
                      _("compare bookmark")))
 
-    pushkey.register('bookmarks', pushbookmark, listbookmarks)
-
 def updatecurbookmark(orig, ui, repo, *args, **opts):
     '''Set the current bookmark
 
@@ -449,11 +419,12 @@ def bmrevset(repo, subset, x):
         bm = revset.getstring(args[0],
                               # i18n: "bookmark" is a keyword
                               _('the argument to bookmark must be a string'))
-        bmrev = listbookmarks(repo).get(bm, None)
+        bmrev = bookmarks.listbookmarks(repo).get(bm, None)
         if bmrev:
             bmrev = repo.changelog.rev(bin(bmrev))
         return [r for r in subset if r == bmrev]
-    bms = set([repo.changelog.rev(bin(r)) for r in listbookmarks(repo).values()])
+    bms = set([repo.changelog.rev(bin(r))
+               for r in bookmarks.listbookmarks(repo).values()])
     return [r for r in subset if r in bms]
 
 def extsetup(ui):

@@ -5,13 +5,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import bookmarks
+
 def _nslist(repo):
     n = {}
     for k in _namespaces:
         n[k] = ""
     return n
 
-_namespaces = {"namespaces": (lambda *x: False, _nslist)}
+_namespaces = {"namespaces": (lambda *x: False, _nslist),
+               "bookmarks": (bookmarks.pushbookmark, bookmarks.listbookmarks)}
 
 def register(namespace, pushkey, listkeys):
     _namespaces[namespace] = (pushkey, listkeys)

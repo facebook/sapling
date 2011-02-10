@@ -121,3 +121,31 @@ def update(repo, parents, node):
                 update = True
     if update:
         write(repo)
+
+def listbookmarks(repo):
+    # We may try to list bookmarks on a repo type that does not
+    # support it (e.g., statichttprepository).
+    if not hasattr(repo, '_bookmarks'):
+        return {}
+
+    d = {}
+    for k, v in repo._bookmarks.iteritems():
+        d[k] = hex(v)
+    return d
+
+def pushbookmark(repo, key, old, new):
+    w = repo.wlock()
+    try:
+        marks = repo._bookmarks
+        if hex(marks.get(key, '')) != old:
+            return False
+        if new == '':
+            del marks[key]
+        else:
+            if new not in repo:
+                return False
+            marks[key] = repo[new].node()
+        write(repo)
+        return True
+    finally:
+        w.release()
