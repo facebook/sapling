@@ -93,6 +93,8 @@ can you be added again?
 rollback dry run with rollback information
 
   $ hg rollback -n
+  no rollback information available
+  [1]
   $ hg bookmarks
    * markb                     0:07f494440405
 

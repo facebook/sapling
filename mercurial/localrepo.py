@@ -716,6 +716,9 @@ class localrepository(repo.repository):
                 transaction.rollback(self.sopener, self.sjoin("undo"),
                                      self.ui.warn)
                 util.rename(self.join("undo.dirstate"), self.join("dirstate"))
+                if os.path.exists(self.join('undo.bookmarks')):
+                    util.rename(self.join('undo.bookmarks'),
+                                self.join('bookmarks'))
                 try:
                     branch = self.opener("undo.branch").read()
                     self.dirstate.setbranch(branch)
