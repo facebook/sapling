@@ -164,14 +164,6 @@ def reposetup(ui, repo):
         return
 
     class bookmark_repo(repo.__class__):
-        @util.propertycache
-        def _bookmarks(self):
-            return bookmarks.read(self)
-
-        @util.propertycache
-        def _bookmarkcurrent(self):
-            return bookmarks.readcurrent(self)
-
         def rollback(self, dryrun=False):
             if os.path.exists(self.join('undo.bookmarks')):
                 if not dryrun:

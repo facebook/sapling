@@ -8,7 +8,7 @@
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import repo, changegroup, subrepo, discovery, pushkey
-import changelog, dirstate, filelog, manifest, context
+import changelog, dirstate, filelog, manifest, context, bookmarks
 import lock, transaction, store, encoding
 import util, extensions, hook, error
 import match as matchmod
@@ -161,6 +161,13 @@ class localrepository(repo.repository):
                 parts.pop()
         return False
 
+    @util.propertycache
+    def _bookmarks(self):
+        return bookmarks.read(self)
+
+    @util.propertycache
+    def _bookmarkcurrent(self):
+        return bookmarks.readcurrent(self)
 
     @propertycache
     def changelog(self):
