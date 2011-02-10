@@ -10,6 +10,40 @@ from mercurial.node import nullid, nullrev, bin, hex, short
 from mercurial import encoding
 import os
 
+def read(repo):
+    '''Parse .hg/bookmarks file and return a dictionary
+
+    Bookmarks are stored as {HASH}\\s{NAME}\\n (localtags format) values
+    in the .hg/bookmarks file.
+    Read the file and return a (name=>nodeid) dictionary
+    '''
+    try:
+        bookmarks = {}
+        for line in repo.opener('bookmarks'):
+            sha, refspec = line.strip().split(' ', 1)
+            refspec = encoding.tolocal(refspec)
+            bookmarks[refspec] = repo.changelog.lookup(sha)
+    except:
+        pass
+    return bookmarks
+
+def readcurrent(repo):
+    '''Get the current bookmark
+
+    If we use gittishsh branches we have a current bookmark that
+    we are on. This function returns the name of the bookmark. It
+    is stored in .hg/bookmarks.current
+    '''
+    mark = None
+    if os.path.exists(repo.join('bookmarks.current')):
+        file = repo.opener('bookmarks.current')
+        # No readline() in posixfile_nt, reading everything is cheap
+        mark = (file.readlines() or [''])[0]
+        if mark == '':
+            mark = None
+        file.close()
+    return mark
+
 def write(repo):
     '''Write bookmarks
 

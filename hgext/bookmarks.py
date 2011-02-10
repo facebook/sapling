@@ -167,39 +167,11 @@ def reposetup(ui, repo):
 
         @util.propertycache
         def _bookmarks(self):
-            '''Parse .hg/bookmarks file and return a dictionary
-
-            Bookmarks are stored as {HASH}\\s{NAME}\\n (localtags format) values
-            in the .hg/bookmarks file.
-            Read the file and return a (name=>nodeid) dictionary
-            '''
-            try:
-                bookmarks = {}
-                for line in self.opener('bookmarks'):
-                    sha, refspec = line.strip().split(' ', 1)
-                    refspec = encoding.tolocal(refspec)
-                    bookmarks[refspec] = self.changelog.lookup(sha)
-            except:
-                pass
-            return bookmarks
+            return bookmarks.read(self)
 
         @util.propertycache
         def _bookmarkcurrent(self):
-            '''Get the current bookmark
-
-            If we use gittishsh branches we have a current bookmark that
-            we are on. This function returns the name of the bookmark. It
-            is stored in .hg/bookmarks.current
-            '''
-            mark = None
-            if os.path.exists(self.join('bookmarks.current')):
-                file = self.opener('bookmarks.current')
-                # No readline() in posixfile_nt, reading everything is cheap
-                mark = (file.readlines() or [''])[0]
-                if mark == '':
-                    mark = None
-                file.close()
-            return mark
+            return bookmarks.readcurrent(self)
 
         def rollback(self, dryrun=False):
             if os.path.exists(self.join('undo.bookmarks')):
