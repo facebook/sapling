@@ -1301,25 +1301,49 @@ class localrepository(repo.repository):
             common, fetch, rheads = tmp
             if not fetch:
                 self.ui.status(_("no changes found\n"))
-                return 0
-
-            if heads is None and fetch == [nullid]:
-                self.ui.status(_("requesting all changes\n"))
-            elif heads is None and remote.capable('changegroupsubset'):
-                # issue1320, avoid a race if remote changed after discovery
-                heads = rheads
-
-            if heads is None:
-                cg = remote.changegroup(fetch, 'pull')
+                result = 0
             else:
-                if not remote.capable('changegroupsubset'):
+                if heads is None and fetch == [nullid]:
+                    self.ui.status(_("requesting all changes\n"))
+                elif heads is None and remote.capable('changegroupsubset'):
+                    # issue1320, avoid a race if remote changed after discovery
+                    heads = rheads
+
+                if heads is None:
+                    cg = remote.changegroup(fetch, 'pull')
+                elif not remote.capable('changegroupsubset'):
                     raise util.Abort(_("partial pull cannot be done because "
-                                       "other repository doesn't support "
-                                       "changegroupsubset."))
-                cg = remote.changegroupsubset(fetch, heads, 'pull')
-            return self.addchangegroup(cg, 'pull', remote.url(), lock=lock)
+                                           "other repository doesn't support "
+                                           "changegroupsubset."))
+                else:
+                    cg = remote.changegroupsubset(fetch, heads, 'pull')
+                result = self.addchangegroup(cg, 'pull', remote.url(),
+                                             lock=lock)
         finally:
             lock.release()
+
+        self.ui.debug("checking for updated bookmarks\n")
+        rb = remote.listkeys('bookmarks')
+        changed = False
+        for k in rb.keys():
+            if k in self._bookmarks:
+                nr, nl = rb[k], self._bookmarks[k]
+                if nr in self:
+                    cr = self[nr]
+                    cl = self[nl]
+                    if cl.rev() >= cr.rev():
+                        continue
+                    if cr in cl.descendants():
+                        self._bookmarks[k] = cr.node()
+                        changed = True
+                        self.ui.status(_("updating bookmark %s\n") % k)
+                    else:
+                        self.ui.warn(_("not updating divergent"
+                                       " bookmark %s\n") % k)
+        if changed:
+            bookmarks.write(self)
+
+        return result
 
     def checkpush(self, force, revs):
         """Extensions can override this function if additional checks have
@@ -1350,29 +1374,45 @@ class localrepository(repo.repository):
         if not unbundle:
             lock = remote.lock()
         try:
-            ret = discovery.prepush(self, remote, force, revs, newbranch)
-            if ret[0] is None:
-                # and here we return 0 for "nothing to push" or 1 for
-                # "something to push but I refuse"
-                return ret[1]
-
-            cg, remote_heads = ret
-            if unbundle:
-                # local repo finds heads on server, finds out what revs it must
-                # push.  once revs transferred, if server finds it has
-                # different heads (someone else won commit/push race), server
-                # aborts.
-                if force:
-                    remote_heads = ['force']
-                # ssh: return remote's addchangegroup()
-                # http: return remote's addchangegroup() or 0 for error
-                return remote.unbundle(cg, remote_heads, 'push')
-            else:
-                # we return an integer indicating remote head count change
-                return remote.addchangegroup(cg, 'push', self.url(), lock=lock)
+            cg, remote_heads = discovery.prepush(self, remote, force, revs,
+                                                 newbranch)
+            ret = remote_heads
+            if cg is not None:
+                if unbundle:
+                    # local repo finds heads on server, finds out what
+                    # revs it must push. once revs transferred, if server
+                    # finds it has different heads (someone else won
+                    # commit/push race), server aborts.
+                    if force:
+                        remote_heads = ['force']
+                    # ssh: return remote's addchangegroup()
+                    # http: return remote's addchangegroup() or 0 for error
+                    ret = remote.unbundle(cg, remote_heads, 'push')
+                else:
+                    # we return an integer indicating remote head count change
+                    ret = remote.addchangegroup(cg, 'push', self.url(),
+                                                lock=lock)
         finally:
             if lock is not None:
                 lock.release()
+
+        self.ui.debug("checking for updated bookmarks\n")
+        rb = remote.listkeys('bookmarks')
+        for k in rb.keys():
+            if k in self._bookmarks:
+                nr, nl = rb[k], hex(self._bookmarks[k])
+                if nr in self:
+                    cr = self[nr]
+                    cl = self[nl]
+                    if cl in cr.descendants():
+                        r = remote.pushkey('bookmarks', k, nr, nl)
+                        if r:
+                            self.ui.status(_("updating bookmark %s\n") % k)
+                        else:
+                            self.ui.warn(_('updating bookmark %s'
+                                           ' failed!\n') % k)
+
+        return ret
 
     def changegroupinfo(self, nodes, source):
         if self.ui.verbose or source == 'bundle':

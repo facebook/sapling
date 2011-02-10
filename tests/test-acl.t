@@ -141,6 +141,7 @@ Extension disabled for lack of a hook
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   updating the branch cache
+  checking for updated bookmarks
   rolling back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -219,6 +220,7 @@ Extension disabled for lack of acl.sources
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: changes have source "push" - skipping
   updating the branch cache
+  checking for updated bookmarks
   rolling back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -307,6 +309,7 @@ No [acl.allow]/[acl.deny]
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: allowing changeset 911600dab2ae
   updating the branch cache
+  checking for updated bookmarks
   rolling back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -941,6 +944,7 @@ barney is allowed everywhere
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: allowing changeset 911600dab2ae
   updating the branch cache
+  checking for updated bookmarks
   rolling back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1336,6 +1340,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: allowing changeset 911600dab2ae
   updating the branch cache
+  checking for updated bookmarks
   rolling back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1432,6 +1437,7 @@ fred is always allowed
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: allowing changeset 911600dab2ae
   updating the branch cache
+  checking for updated bookmarks
   rolling back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1621,6 +1627,7 @@ OS-level groups
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: allowing changeset 911600dab2ae
   updating the branch cache
+  checking for updated bookmarks
   rolling back to revision 0 (undo push)
   0:6675d58eff77
   
