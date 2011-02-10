@@ -284,6 +284,7 @@ Testing -h/--help:
    archive      create an unversioned archive of a repository revision
    backout      reverse effect of earlier changeset
    bisect       subdivision search of changesets
+   bookmarks    track a line of development with movable markers
    branch       set or show the current branch name
    branches     list repository named branches
    bundle       create a changegroup file
@@ -360,6 +361,7 @@ Testing -h/--help:
    archive      create an unversioned archive of a repository revision
    backout      reverse effect of earlier changeset
    bisect       subdivision search of changesets
+   bookmarks    track a line of development with movable markers
    branch       set or show the current branch name
    branches     list repository named branches
    bundle       create a changegroup file

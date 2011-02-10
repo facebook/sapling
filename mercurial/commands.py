@@ -457,6 +457,100 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             cmdutil.bail_if_changed(repo)
             return hg.clean(repo, node)
 
+def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=None):
+    '''track a line of development with movable markers
+
+    Bookmarks are pointers to certain commits that move when
+    committing. Bookmarks are local. They can be renamed, copied and
+    deleted. It is possible to use bookmark names in :hg:`merge` and
+    :hg:`update` to merge and update respectively to a given bookmark.
+
+    You can use :hg:`bookmark NAME` to set a bookmark on the working
+    directory's parent revision with the given name. If you specify
+    a revision using -r REV (where REV may be an existing bookmark),
+    the bookmark is assigned to that revision.
+
+    Bookmarks can be pushed and pulled between repositories (see :hg:`help
+    push` and :hg:`help pull`). This requires the bookmark extension to be
+    enabled for both the local and remote repositories.
+    '''
+    hexfn = ui.debugflag and hex or short
+    marks = repo._bookmarks
+    cur   = repo.changectx('.').node()
+
+    if rename:
+        if rename not in marks:
+            raise util.Abort(_("a bookmark of this name does not exist"))
+        if mark in marks and not force:
+            raise util.Abort(_("a bookmark of the same name already exists"))
+        if mark is None:
+            raise util.Abort(_("new bookmark name required"))
+        marks[mark] = marks[rename]
+        del marks[rename]
+        if repo._bookmarkcurrent == rename:
+            bookmarks.setcurrent(repo, mark)
+        bookmarks.write(repo)
+        return
+
+    if delete:
+        if mark is None:
+            raise util.Abort(_("bookmark name required"))
+        if mark not in marks:
+            raise util.Abort(_("a bookmark of this name does not exist"))
+        if mark == repo._bookmarkcurrent:
+            bookmarks.setcurrent(repo, None)
+        del marks[mark]
+        bookmarks.write(repo)
+        return
+
+    if mark is not None:
+        if "\n" in mark:
+            raise util.Abort(_("bookmark name cannot contain newlines"))
+        mark = mark.strip()
+        if not mark:
+            raise util.Abort(_("bookmark names cannot consist entirely of "
+                               "whitespace"))
+        if mark in marks and not force:
+            raise util.Abort(_("a bookmark of the same name already exists"))
+        if ((mark in repo.branchtags() or mark == repo.dirstate.branch())
+            and not force):
+            raise util.Abort(
+                _("a bookmark cannot have the name of an existing branch"))
+        if rev:
+            marks[mark] = repo.lookup(rev)
+        else:
+            marks[mark] = repo.changectx('.').node()
+        bookmarks.setcurrent(repo, mark)
+        bookmarks.write(repo)
+        return
+
+    if mark is None:
+        if rev:
+            raise util.Abort(_("bookmark name required"))
+        if len(marks) == 0:
+            ui.status(_("no bookmarks set\n"))
+        else:
+            for bmark, n in marks.iteritems():
+                if ui.configbool('bookmarks', 'track.current'):
+                    current = repo._bookmarkcurrent
+                    if bmark == current and n == cur:
+                        prefix, label = '*', 'bookmarks.current'
+                    else:
+                        prefix, label = ' ', ''
+                else:
+                    if n == cur:
+                        prefix, label = '*', 'bookmarks.current'
+                    else:
+                        prefix, label = ' ', ''
+
+                if ui.quiet:
+                    ui.write("%s\n" % bmark, label=label)
+                else:
+                    ui.write(" %s %-25s %d:%s\n" % (
+                        prefix, bmark, repo.changelog.rev(n), hexfn(n)),
+                        label=label)
+        return
+
 def branch(ui, repo, label=None, **opts):
     """set or show the current branch name
 
@@ -2806,6 +2900,16 @@ def pull(ui, repo, source="default", **opts):
     other = hg.repository(hg.remoteui(repo, opts), source)
     ui.status(_('pulling from %s\n') % url.hidepassword(source))
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
+
+    if opts.get('bookmark'):
+        if not revs:
+            revs = []
+        rb = other.listkeys('bookmarks')
+        for b in opts['bookmark']:
+            if b not in rb:
+                raise util.Abort(_('remote bookmark %s not found!') % b)
+            revs.append(rb[b])
+
     if revs:
         try:
             revs = [other.lookup(rev) for rev in revs]
@@ -2819,9 +2923,20 @@ def pull(ui, repo, source="default", **opts):
         checkout = str(repo.changelog.rev(other.lookup(checkout)))
     repo._subtoppath = source
     try:
-        return postincoming(ui, repo, modheads, opts.get('update'), checkout)
+        ret = postincoming(ui, repo, modheads, opts.get('update'), checkout)
+
     finally:
         del repo._subtoppath
+
+    # update specified bookmarks
+    if opts.get('bookmark'):
+        for b in opts['bookmark']:
+            # explicit pull overrides local bookmark if any
+            ui.status(_("importing bookmark %s\n") % b)
+            repo._bookmarks[b] = repo[rb[b]].node()
+        bookmarks.write(repo)
+
+    return ret
 
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
@@ -2852,6 +2967,17 @@ def push(ui, repo, dest=None, **opts):
 
     Returns 0 if push was successful, 1 if nothing to push.
     """
+
+    if opts.get('bookmark'):
+        for b in opts['bookmark']:
+            # translate -B options to -r so changesets get pushed
+            if b in repo._bookmarks:
+                opts.setdefault('rev', []).append(b)
+            else:
+                # if we try to push a deleted bookmark, translate it to null
+                # this lets simultaneous -r, -b options continue working
+                opts.setdefault('rev', []).append("null")
+
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest, opts.get('branch'))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
@@ -2870,9 +2996,33 @@ def push(ui, repo, dest=None, **opts):
                 return False
     finally:
         del repo._subtoppath
-    r = repo.push(other, opts.get('force'), revs=revs,
-                  newbranch=opts.get('new_branch'))
-    return r == 0
+    result = repo.push(other, opts.get('force'), revs=revs,
+                       newbranch=opts.get('new_branch'))
+
+    result = (result == 0)
+
+    if opts.get('bookmark'):
+        rb = other.listkeys('bookmarks')
+        for b in opts['bookmark']:
+            # explicit push overrides remote bookmark if any
+            if b in repo._bookmarks:
+                ui.status(_("exporting bookmark %s\n") % b)
+                new = repo[b].hex()
+            elif b in rb:
+                ui.status(_("deleting remote bookmark %s\n") % b)
+                new = '' # delete
+            else:
+                ui.warn(_('bookmark %s does not exist on the local '
+                          'or remote repository!\n') % b)
+                return 2
+            old = rb.get(b, '')
+            r = other.pushkey('bookmarks', b, old, new)
+            if not r:
+                ui.warn(_('updating bookmark %s failed!\n') % b)
+                if not result:
+                    result = 2
+
+    return result
 
 def recover(ui, repo):
     """roll back an interrupted transaction
@@ -4091,6 +4241,13 @@ table = {
            _('use command to check changeset state'), _('CMD')),
           ('U', 'noupdate', False, _('do not update to target'))],
          _("[-gbsr] [-U] [-c CMD] [REV]")),
+    "bookmarks":
+        (bookmark,
+         [('f', 'force', False, _('force')),
+          ('r', 'rev', '', _('revision'), _('REV')),
+          ('d', 'delete', False, _('delete a given bookmark')),
+          ('m', 'rename', '', _('rename a given bookmark'), _('NAME'))],
+         _('hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]')),
     "branch":
         (branch,
          [('f', 'force', None,
@@ -4396,6 +4553,7 @@ table = {
            _('run even when remote repository is unrelated')),
           ('r', 'rev', [],
            _('a remote changeset intended to be added'), _('REV')),
+          ('B', 'bookmark', [], _("bookmark to pull"), _('BOOKMARK')),
           ('b', 'branch', [],
            _('a specific branch you would like to pull'), _('BRANCH')),
          ] + remoteopts,
@@ -4406,6 +4564,7 @@ table = {
           ('r', 'rev', [],
            _('a changeset intended to be included in the destination'),
            _('REV')),
+          ('B', 'bookmark', [], _("bookmark to push"), _('BOOKMARK')),
           ('b', 'branch', [],
            _('a specific branch you would like to push'), _('BRANCH')),
           ('', 'new-branch', False, _('allow pushing a new branch')),
