@@ -520,6 +520,8 @@ class localrepository(repo.repository):
         n = self.changelog._match(key)
         if n:
             return n
+        if key in self._bookmarks:
+            return self._bookmarks[key]
         if key in self.tags():
             return self.tags()[key]
         if key in self.branchtags():

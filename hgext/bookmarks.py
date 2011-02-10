@@ -134,11 +134,6 @@ def reposetup(ui, repo):
         return
 
     class bookmark_repo(repo.__class__):
-        def lookup(self, key):
-            if key in self._bookmarks:
-                key = self._bookmarks[key]
-            return super(bookmark_repo, self).lookup(key)
-
         def pull(self, remote, heads=None, force=False):
             result = super(bookmark_repo, self).pull(remote, heads, force)
 
