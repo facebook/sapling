@@ -11,6 +11,7 @@ from i18n import _, gettext
 
 _extensions = {}
 _order = []
+_ignore = ['hbisect']
 
 def extensions():
     for name in _order:
@@ -45,6 +46,8 @@ def load(ui, name, path):
         shortname = name[6:]
     else:
         shortname = name
+    if shortname in _ignore:
+        return None
     if shortname in _extensions:
         return _extensions[shortname]
     _extensions[shortname] = None
