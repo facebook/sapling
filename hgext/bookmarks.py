@@ -356,5 +356,3 @@ cmdtable = {
           ('m', 'rename', '', _('rename a given bookmark'), _('NAME'))],
          _('hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]')),
 }
-
-colortable = {'bookmarks.current': 'green'}
