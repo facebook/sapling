@@ -9,7 +9,7 @@ from node import hex, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
 import os, re, sys, difflib, time, tempfile
-import hg, util, revlog, extensions, copies, error
+import hg, util, revlog, extensions, copies, error, bookmarks
 import patch, help, mdiff, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
@@ -2399,6 +2399,13 @@ def incoming(ui, repo, source="default", **opts):
     if opts.get('bundle') and opts.get('subrepos'):
         raise util.Abort(_('cannot combine --bundle and --subrepos'))
 
+    if opts.get('bookmarks'):
+        source, branches = hg.parseurl(ui.expandpath(source),
+                                       opts.get('branch'))
+        other = hg.repository(hg.remoteui(repo, opts), source)
+        ui.status(_('comparing with %s\n') % url.hidepassword(source))
+        return bookmarks.diff(ui, repo, other)
+
     ret = hg.incoming(ui, repo, source, opts)
     return ret
 
@@ -2675,6 +2682,14 @@ def outgoing(ui, repo, dest=None, **opts):
 
     Returns 0 if there are outgoing changes, 1 otherwise.
     """
+
+    if opts.get('bookmarks'):
+        dest = ui.expandpath(dest or 'default-push', dest or 'default')
+        dest, branches = hg.parseurl(dest, opts.get('branch'))
+        other = hg.repository(hg.remoteui(repo, opts), dest)
+        ui.status(_('comparing with %s\n') % url.hidepassword(dest))
+        return bookmarks.diff(ui, other, repo)
+
     ret = hg.outgoing(ui, repo, dest, opts)
     return ret
 
@@ -4287,6 +4302,7 @@ table = {
            _('file to store the bundles into'), _('FILE')),
           ('r', 'rev', [],
            _('a remote changeset intended to be added'), _('REV')),
+          ('B', 'bookmarks', False, _("compare bookmarks")),
           ('b', 'branch', [],
            _('a specific branch you would like to pull'), _('BRANCH')),
          ] + logopts + remoteopts + subrepoopts,
@@ -4355,6 +4371,7 @@ table = {
            _('a changeset intended to be included in the destination'),
            _('REV')),
           ('n', 'newest-first', None, _('show newest record first')),
+          ('B', 'bookmarks', False, _("compare bookmarks")),
           ('b', 'branch', [],
            _('a specific branch you would like to push'), _('BRANCH')),
          ] + logopts + remoteopts + subrepoopts,

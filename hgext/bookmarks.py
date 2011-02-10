@@ -195,25 +195,6 @@ def push(oldpush, ui, repo, dest=None, **opts):
 
     return result
 
-def incoming(oldincoming, ui, repo, source="default", **opts):
-    if opts.get('bookmarks'):
-        source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-        other = hg.repository(hg.remoteui(repo, opts), source)
-        ui.status(_('comparing with %s\n') % url.hidepassword(source))
-        return bookmarks.diff(ui, repo, other)
-    else:
-        return oldincoming(ui, repo, source, **opts)
-
-def outgoing(oldoutgoing, ui, repo, dest=None, **opts):
-    if opts.get('bookmarks'):
-        dest = ui.expandpath(dest or 'default-push', dest or 'default')
-        dest, branches = hg.parseurl(dest, opts.get('branch'))
-        other = hg.repository(hg.remoteui(repo, opts), dest)
-        ui.status(_('comparing with %s\n') % url.hidepassword(dest))
-        return bookmarks.diff(ui, other, repo)
-    else:
-        return oldoutgoing(ui, repo, dest, **opts)
-
 def uisetup(ui):
     if ui.configbool('bookmarks', 'track.current'):
         extensions.wrapcommand(commands.table, 'update', updatecurbookmark)
@@ -226,12 +207,6 @@ def uisetup(ui):
     entry[1].append(('B', 'bookmark', [],
                      _("bookmark to export"),
                      _('BOOKMARK')))
-    entry = extensions.wrapcommand(commands.table, 'incoming', incoming)
-    entry[1].append(('B', 'bookmarks', False,
-                     _("compare bookmark")))
-    entry = extensions.wrapcommand(commands.table, 'outgoing', outgoing)
-    entry[1].append(('B', 'bookmarks', False,
-                     _("compare bookmark")))
 
 def updatecurbookmark(orig, ui, repo, *args, **opts):
     '''Set the current bookmark
