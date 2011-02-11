@@ -330,8 +330,8 @@ to the aliases of the commands defined.
 ``diff``
 """"""""
 
-Settings used when displaying diffs. They are all Boolean and
-defaults to False.
+Settings used when displaying diffs. Everything except for ``unified`` is a
+Boolean and defaults to False.
 
 ``git``
     Use git extended diff format.
@@ -345,6 +345,8 @@ defaults to False.
     Ignore changes in the amount of white space.
 ``ignoreblanklines``
     Ignore changes whose lines are all blank.
+``unified``
+    Number of lines of context to show.
 
 ``email``
 """""""""
