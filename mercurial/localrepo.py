@@ -399,6 +399,13 @@ class localrepository(repo.repository):
                 tags.sort()
         return self.nodetagscache.get(node, [])
 
+    def nodebookmarks(self, node):
+        marks = []
+        for bookmark, n in self._bookmarks.iteritems():
+            if n == node:
+                marks.append(bookmark)
+        return sorted(marks)
+
     def _branchtags(self, partial, lrev):
         # TODO: rename this function?
         tiprev = len(self) - 1
