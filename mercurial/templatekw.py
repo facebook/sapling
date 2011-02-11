@@ -153,6 +153,10 @@ def showbranches(**args):
     if branch != 'default':
         return showlist('branch', [branch], plural='branches', **args)
 
+def showbookmarks(**args):
+    bookmarks = args['ctx'].bookmarks()
+    return showlist('bookmark', bookmarks, **args)
+
 def showchildren(**args):
     ctx = args['ctx']
     childrevs = ['%d:%s' % (cctx, cctx) for cctx in ctx.children()]
@@ -252,6 +256,7 @@ keywords = {
     'author': showauthor,
     'branch': showbranch,
     'branches': showbranches,
+    'bookmarks': showbookmarks,
     'children': showchildren,
     'date': showdate,
     'desc': showdescription,
