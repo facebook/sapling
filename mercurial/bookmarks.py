@@ -38,7 +38,7 @@ def readcurrent(repo):
     if os.path.exists(repo.join('bookmarks.current')):
         file = repo.opener('bookmarks.current')
         # No readline() in posixfile_nt, reading everything is cheap
-        mark = (file.readlines() or [''])[0]
+        mark = encoding.tolocal((file.readlines() or [''])[0])
         if mark == '':
             mark = None
         file.close()
