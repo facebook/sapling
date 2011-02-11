@@ -36,7 +36,6 @@ look up bookmark
 
   $ hg log -r X
   changeset:   0:f7b1eb17ad24
-  tag:         X
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -66,8 +65,6 @@ bookmarks revset
 
   $ hg log -r 'bookmark()'
   changeset:   1:925d80f479bb
-  tag:         X
-  tag:         X2
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -76,8 +73,6 @@ bookmarks revset
   $ hg log -r 'bookmark(Y)'
   $ hg log -r 'bookmark(X2)'
   changeset:   1:925d80f479bb
-  tag:         X
-  tag:         X2
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -166,10 +161,7 @@ look up stripped bookmark name
 
   $ hg log -r '"x  y"'
   changeset:   2:0316ce92851d
-  tag:         X2
-  tag:         Y
   tag:         tip
-  tag:         x  y
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2

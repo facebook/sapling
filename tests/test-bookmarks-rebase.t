@@ -41,9 +41,7 @@ rebase
 
   $ hg log
   changeset:   3:9163974d1cb5
-  tag:         one
   tag:         tip
-  tag:         two
   parent:      1:925d80f479bb
   parent:      2:db815d6d32e6
   user:        test

@@ -360,7 +360,6 @@ class localrepository(repo.repository):
             if node != nullid:
                 tags[encoding.tolocal(name)] = node
         tags['tip'] = self.changelog.tip()
-        tags.update(self._bookmarks)
         tagtypes = dict([(encoding.tolocal(name), value)
                          for (name, value) in tagtypes.iteritems()])
         return (tags, tagtypes)
