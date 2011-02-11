@@ -226,6 +226,9 @@ class cmdalias(object):
                     elif int(m.groups()[0]) <= len(args):
                         return m.group()
                     else:
+                        ui.debug(_("No argument found for substitution"
+                                   "of %i variable in alias '%s' definition.")
+                                 % (int(m.groups()[0]), self.name))
                         return ''
                 cmd = re.sub(r'\$(\d+|\$)', _checkvar, self.definition[1:])
                 replace = dict((str(i + 1), arg) for i, arg in enumerate(args))
