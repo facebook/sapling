@@ -282,11 +282,17 @@ class queue(object):
     @util.propertycache
     def applied(self):
         if os.path.exists(self.join(self.status_path)):
-            def parse(l):
-                n, name = l.split(':', 1)
-                return statusentry(bin(n), name)
+            def parselines(lines):
+                for l in lines:
+                    entry = l.split(':', 1)
+                    if len(entry) > 1:
+                        n, name = entry
+                        yield statusentry(bin(n), name)
+                    elif l.strip():
+                        self.ui.warn(_('malformated mq status line: %s\n') % entry)
+                    # else we ignore empty lines
             lines = self.opener(self.status_path).read().splitlines()
-            return [parse(l) for l in lines]
+            return list(parselines(lines))
         return []
 
     @util.propertycache

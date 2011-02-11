@@ -917,6 +917,25 @@ bad node in status
   copy to copy
   $ cd ..
 
+empty lines in status
+
+  $ hg init emptystatus
+  $ cd emptystatus
+  $ hg qinit
+  $ printf '\n\n' > .hg/patches/status
+  $ hg qser
+  $ cd ..
+
+bad line in status (without ":")
+
+  $ hg init badstatus
+  $ cd badstatus
+  $ hg qinit
+  $ printf 'babar has no colon in this line\n' > .hg/patches/status
+  $ hg qser
+  malformated mq status line: ['babar has no colon in this line']
+  $ cd ..
+
 
 test file addition in slow path
 
