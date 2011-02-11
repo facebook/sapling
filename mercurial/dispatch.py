@@ -221,15 +221,17 @@ class cmdalias(object):
             def fn(ui, *args):
                 env = {'HG_ARGS': ' '.join((self.name,) + args)}
                 def _checkvar(m):
-                    if int(m.groups()[0]) <= len(args):
+                    if m.groups()[0] == '$':
+                        return m.group()
+                    elif int(m.groups()[0]) <= len(args):
                         return m.group()
                     else:
                         return ''
-                cmd = re.sub(r'\$(\d+)', _checkvar, self.definition[1:])
+                cmd = re.sub(r'\$(\d+|\$)', _checkvar, self.definition[1:])
                 replace = dict((str(i + 1), arg) for i, arg in enumerate(args))
                 replace['0'] = self.name
                 replace['@'] = ' '.join(args)
-                cmd = util.interpolate(r'\$', replace, cmd)
+                cmd = util.interpolate(r'\$', replace, cmd, escape_prefix=True)
                 return util.system(cmd, environ=env)
             self.fn = fn
             return

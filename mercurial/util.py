@@ -1502,7 +1502,7 @@ except NameError:
                 return False
         return True
 
-def interpolate(prefix, mapping, s, fn=None):
+def interpolate(prefix, mapping, s, fn=None, escape_prefix=False):
     """Return the result of interpolating items in the mapping into string s.
 
     prefix is a single character string, or a two character string with
@@ -1511,9 +1511,20 @@ def interpolate(prefix, mapping, s, fn=None):
 
     fn is an optional function that will be applied to the replacement text
     just before replacement.
+
+    escape_prefix is an optional flag that allows using doubled prefix for
+    its escaping.
     """
     fn = fn or (lambda s: s)
-    r = re.compile(r'%s(%s)' % (prefix, '|'.join(mapping.keys())))
+    patterns = '|'.join(mapping.keys())
+    if escape_prefix:
+        patterns += '|' + prefix
+        if len(prefix) > 1:
+            prefix_char = prefix[1:]
+        else:
+            prefix_char = prefix
+        mapping[prefix_char] = prefix_char
+    r = re.compile(r'%s(%s)' % (prefix, patterns))
     return r.sub(lambda x: fn(mapping[x.group()[1:]]), s)
 
 def getport(port):
