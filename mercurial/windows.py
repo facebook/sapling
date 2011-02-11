@@ -71,22 +71,45 @@ def _is_win_9x():
         return 'command' in os.environ.get('comspec', '')
 
 def openhardlinks():
-    return not _is_win_9x() and "win32api" in globals()
+    return not _is_win_9x()
+
+_HKEY_LOCAL_MACHINE = 0x80000002L
 
 def system_rcpath():
-    try:
-        return system_rcpath_win32()
-    except:
-        return [r'c:\mercurial\mercurial.ini']
+    '''return default os-specific hgrc search path'''
+    rcpath = []
+    filename = executable_path()
+    # Use mercurial.ini found in directory with hg.exe
+    progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
+    if os.path.isfile(progrc):
+        rcpath.append(progrc)
+        return rcpath
+    # Use hgrc.d found in directory with hg.exe
+    progrcd = os.path.join(os.path.dirname(filename), 'hgrc.d')
+    if os.path.isdir(progrcd):
+        for f, kind in osutil.listdir(progrcd):
+            if f.endswith('.rc'):
+                rcpath.append(os.path.join(progrcd, f))
+        return rcpath
+    # else look for a system rcpath in the registry
+    value = lookup_reg('SOFTWARE\\Mercurial', None, _HKEY_LOCAL_MACHINE)
+    if not isinstance(value, str) or not value:
+        return rcpath
+    value = value.replace('/', os.sep)
+    for p in value.split(os.pathsep):
+        if p.lower().endswith('mercurial.ini'):
+            rcpath.append(p)
+        elif os.path.isdir(p):
+            for f, kind in osutil.listdir(p):
+                if f.endswith('.rc'):
+                    rcpath.append(os.path.join(p, f))
+    return rcpath
 
 def user_rcpath():
     '''return os-specific hgrc search path to the user dir'''
-    try:
-        path = user_rcpath_win32()
-    except:
-        home = os.path.expanduser('~')
-        path = [os.path.join(home, 'mercurial.ini'),
-                os.path.join(home, '.hgrc')]
+    home = os.path.expanduser('~')
+    path = [os.path.join(home, 'mercurial.ini'),
+            os.path.join(home, '.hgrc')]
     userprofile = os.environ.get('USERPROFILE')
     if userprofile:
         path.append(os.path.join(userprofile, 'mercurial.ini'))
@@ -105,10 +128,6 @@ def sshargs(sshcmd, host, user, port):
     pflag = 'plink' in sshcmd.lower() and '-P' or '-p'
     args = user and ("%s@%s" % (user, host)) or host
     return port and ("%s %s %s" % (args, pflag, port)) or args
-
-def testpid(pid):
-    '''return False if pid dead, True if running or not known'''
-    return True
 
 def set_flags(f, l, x):
     pass
@@ -208,12 +227,6 @@ def find_exe(command):
             return executable
     return findexisting(os.path.expanduser(os.path.expandvars(command)))
 
-def set_signal_handler():
-    try:
-        set_signal_handler_win32()
-    except NameError:
-        pass
-
 def statfiles(files):
     '''Stat each file in files and yield stat or None if file does not exist.
     Cluster and cache stat per directory to minimize number of OS stat calls.'''
@@ -240,11 +253,6 @@ def statfiles(files):
                 dmap = {}
             cache = dircache.setdefault(dir, dmap)
         yield cache.get(base, None)
-
-def getuser():
-    '''return name of current user'''
-    raise error.Abort(_('user name not available - set USERNAME '
-                       'environment variable'))
 
 def username(uid=None):
     """Return the name of the user with the given uid.
@@ -335,37 +343,6 @@ def rename(src, dst):
         unlink(dst)
         os.rename(src, dst)
 
-def spawndetached(args):
-    # No standard library function really spawns a fully detached
-    # process under win32 because they allocate pipes or other objects
-    # to handle standard streams communications. Passing these objects
-    # to the child process requires handle inheritance to be enabled
-    # which makes really detached processes impossible.
-    class STARTUPINFO:
-        dwFlags = subprocess.STARTF_USESHOWWINDOW
-        hStdInput = None
-        hStdOutput = None
-        hStdError = None
-        wShowWindow = subprocess.SW_HIDE
-
-    args = subprocess.list2cmdline(args)
-    # Not running the command in shell mode makes python26 hang when
-    # writing to hgweb output socket.
-    comspec = os.environ.get("COMSPEC", "cmd.exe")
-    args = comspec + " /c " + args
-    hp, ht, pid, tid = subprocess.CreateProcess(
-        None, args,
-        # no special security
-        None, None,
-        # Do not inherit handles
-        0,
-        # DETACHED_PROCESS
-        0x00000008,
-        os.environ,
-        os.getcwd(),
-        STARTUPINFO())
-    return pid
-
 def gethgcmd():
     return [sys.executable] + sys.argv[:1]
 
@@ -380,10 +357,6 @@ def groupmembers(name):
     # Don't support groups on Windows for now
     raise KeyError()
 
-try:
-    # override functions with win32 versions if possible
-    from win32 import *
-except ImportError:
-    pass
+from win32 import *
 
 expandglobs = True

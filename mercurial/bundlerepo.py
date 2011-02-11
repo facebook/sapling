@@ -251,11 +251,6 @@ class bundlerepository(localrepo.localrepository):
         self.bundle.close()
         if self.tempfile is not None:
             os.unlink(self.tempfile)
-
-    def __del__(self):
-        del self.bundle
-        if self.tempfile is not None:
-            os.unlink(self.tempfile)
         if self._tempparent:
             shutil.rmtree(self._tempparent, True)
 

@@ -188,6 +188,13 @@ Log -R full.hg in fresh empty
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.0
   
+Make sure bundlerepo doesn't leak tempfiles (issue2491)
+
+  $ ls .hg
+  00changelog.i
+  cache
+  requires
+  store
 
 Pull ../full.hg into empty (with hook)
 

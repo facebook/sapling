@@ -36,7 +36,7 @@ look up bookmark
 
   $ hg log -r X
   changeset:   0:f7b1eb17ad24
-  tag:         X
+  bookmark:    X
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -54,8 +54,8 @@ bookmark rev -1 again
 list bookmarks
 
   $ hg bookmarks
-   * X2                        0:f7b1eb17ad24
    * X                         0:f7b1eb17ad24
+   * X2                        0:f7b1eb17ad24
      Y                         -1:000000000000
 
   $ echo b > b
@@ -66,8 +66,8 @@ bookmarks revset
 
   $ hg log -r 'bookmark()'
   changeset:   1:925d80f479bb
-  tag:         X
-  tag:         X2
+  bookmark:    X
+  bookmark:    X2
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -76,8 +76,8 @@ bookmarks revset
   $ hg log -r 'bookmark(Y)'
   $ hg log -r 'bookmark(X2)'
   changeset:   1:925d80f479bb
-  tag:         X
-  tag:         X2
+  bookmark:    X
+  bookmark:    X2
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -89,8 +89,8 @@ bookmarks revset
 bookmarks X and X2 moved to rev 1, Y at rev -1
 
   $ hg bookmarks
-   * X2                        1:925d80f479bb
    * X                         1:925d80f479bb
+   * X2                        1:925d80f479bb
      Y                         -1:000000000000
 
 bookmark rev 0 again
@@ -104,10 +104,10 @@ bookmark rev 0 again
 bookmarks X and X2 moved to rev 2, Y at rev -1, Z at rev 0
 
   $ hg bookmarks
-   * X2                        2:0316ce92851d
    * X                         2:0316ce92851d
-     Z                         0:f7b1eb17ad24
+   * X2                        2:0316ce92851d
      Y                         -1:000000000000
+     Z                         0:f7b1eb17ad24
 
 rename nonexistent bookmark
 
@@ -166,10 +166,10 @@ look up stripped bookmark name
 
   $ hg log -r '"x  y"'
   changeset:   2:0316ce92851d
-  tag:         X2
-  tag:         Y
+  bookmark:    X2
+  bookmark:    Y
+  bookmark:    x  y
   tag:         tip
-  tag:         x  y
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2

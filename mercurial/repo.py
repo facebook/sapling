@@ -35,3 +35,6 @@ class repository(object):
 
     def cancopy(self):
         return self.local()
+
+    def close(self):
+        pass

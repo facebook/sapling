@@ -13,6 +13,7 @@ posixfile = open
 nulldev = '/dev/null'
 normpath = os.path.normpath
 samestat = os.path.samestat
+os_link = os.link
 unlink = os.unlink
 rename = os.rename
 expandglobs = False
@@ -23,6 +24,10 @@ os.umask(umask)
 def openhardlinks():
     '''return true if it is safe to hold open file handles to hardlinks'''
     return True
+
+def nlinks(name):
+    '''return number of hardlinks for the given file'''
+    return os.lstat(name).st_nlink
 
 def rcfiles(path):
     rcs = [os.path.join(path, 'hgrc')]

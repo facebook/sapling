@@ -360,7 +360,6 @@ class localrepository(repo.repository):
             if node != nullid:
                 tags[encoding.tolocal(name)] = node
         tags['tip'] = self.changelog.tip()
-        tags.update(self._bookmarks)
         tagtypes = dict([(encoding.tolocal(name), value)
                          for (name, value) in tagtypes.iteritems()])
         return (tags, tagtypes)
@@ -398,6 +397,13 @@ class localrepository(repo.repository):
             for tags in self.nodetagscache.itervalues():
                 tags.sort()
         return self.nodetagscache.get(node, [])
+
+    def nodebookmarks(self, node):
+        marks = []
+        for bookmark, n in self._bookmarks.iteritems():
+            if n == node:
+                marks.append(bookmark)
+        return sorted(marks)
 
     def _branchtags(self, partial, lrev):
         # TODO: rename this function?

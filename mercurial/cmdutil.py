@@ -806,6 +806,9 @@ class changeset_printer(object):
         if branch != 'default':
             self.ui.write(_("branch:      %s\n") % branch,
                           label='log.branch')
+        for bookmark in self.repo.nodebookmarks(changenode):
+            self.ui.write(_("bookmark:    %s\n") % bookmark,
+                    label='log.bookmark')
         for tag in self.repo.nodetags(changenode):
             self.ui.write(_("tag:         %s\n") % tag,
                           label='log.tag')

@@ -530,7 +530,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         if len(marks) == 0:
             ui.status(_("no bookmarks set\n"))
         else:
-            for bmark, n in marks.iteritems():
+            for bmark, n in sorted(marks.iteritems()):
                 if ui.configbool('bookmarks', 'track.current'):
                     current = repo._bookmarkcurrent
                     if bmark == current and n == cur:

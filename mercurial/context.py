@@ -114,6 +114,8 @@ class changectx(object):
         return self._changeset[5]
     def tags(self):
         return self._repo.nodetags(self._node)
+    def bookmarks(self):
+        return self._repo.nodebookmarks(self._node)
 
     def parents(self):
         """return contexts for each parent changeset"""

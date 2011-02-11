@@ -482,7 +482,7 @@ proc makewindow {} {
     .bar.file add command -label "Quit" -command doquit
     menu .bar.help
     .bar add cascade -label "Help" -menu .bar.help
-    .bar.help add command -label "About gitk" -command about
+    .bar.help add command -label "About hgk" -command about
     . configure -menu .bar
 
     if {![info exists geometry(canv1)]} {
@@ -867,9 +867,9 @@ proc about {} {
 	return
     }
     toplevel $w
-    wm title $w "About gitk"
+    wm title $w "About hgk"
     message $w.m -text {
-Gitk version 1.2
+Hgk version 1.2
 
 Copyright © 2005 Paul Mackerras
 
