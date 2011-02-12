@@ -88,3 +88,49 @@ qpush should fail the same way as below
   applying patch1
   unable to read patch1
   [1]
+
+Test qpush to a patch below the currently applied patch.
+
+  $ hg qq -c guardedseriesorder
+  $ hg qnew a
+  $ hg qguard +block
+  $ hg qnew b
+  $ hg qnew c
+
+  $ hg qpop -a
+  popping c
+  popping b
+  popping a
+  patch queue now empty
+
+try to push and pop while a is guarded
+
+  $ hg qpush a
+  cannot push 'a' - guarded by ['+block']
+  [1]
+  $ hg qpush -a
+  applying b
+  patch b is empty
+  applying c
+  patch c is empty
+  now at: c
+
+now try it when a is unguarded, and we're at the top of the queue
+  $ hg qsel block
+  number of guarded, applied patches has changed from 1 to 0
+  $ hg qpush b
+  abort: cannot push to a previous patch: b
+  [255]
+  $ hg qpush a
+  abort: cannot push to a previous patch: a
+  [255]
+
+and now we try it one more time with a unguarded, while we're not at the top of the queue
+
+  $ hg qpop b
+  popping c
+  now at: b
+  $ hg qpush a
+  abort: cannot push to a previous patch: a
+  [255]
+
