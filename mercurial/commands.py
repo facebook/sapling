@@ -207,16 +207,16 @@ def backout(ui, repo, node=None, rev=None, **opts):
     Prepare a new changeset with the effect of REV undone in the
     current working directory.
 
-    If REV is the parent of the working directory, then this changeset
+    If REV is the parent of the working directory, then this new changeset
     is committed automatically. Otherwise, hg needs to merge the
     changes and the merged result is left uncommitted.
 
     By default, the pending changeset will have one parent,
     maintaining a linear history. With --merge, the pending changeset
     will instead have two parents: the old parent of the working
-    directory and a child of REV that simply undoes REV.
+    directory and a new child of REV that simply undoes REV.
 
-    Before version 1.7, the default behavior was equivalent to
+    Before version 1.7, the behavior without --merge was equivalent to
     specifying --merge followed by :hg:`update --clean .` to cancel
     the merge and leave the child of REV as a head to be merged
     separately.
