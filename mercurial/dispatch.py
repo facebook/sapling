@@ -589,8 +589,12 @@ def _dispatch(ui, args):
     msg = ' '.join(' ' in a and repr(a) or a for a in fullargs)
     ui.log("command", msg + "\n")
     d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
-    return runcommand(lui, repo, cmd, fullargs, ui, options, d,
-                      cmdpats, cmdoptions)
+    try:
+        return runcommand(lui, repo, cmd, fullargs, ui, options, d,
+                          cmdpats, cmdoptions)
+    finally:
+        if repo:
+            repo.close()
 
 def _runcommand(ui, options, cmd, cmdfunc):
     def checkargs():
