@@ -71,6 +71,38 @@ def netlocunsplit(host, port, user=None, passwd=None):
         return userpass + '@' + hostport
     return hostport
 
+def readauthforuri(ui, uri):
+    # Read configuration
+    config = dict()
+    for key, val in ui.configitems('auth'):
+        if '.' not in key:
+            ui.warn(_("ignoring invalid [auth] key '%s'\n") % key)
+            continue
+        group, setting = key.rsplit('.', 1)
+        gdict = config.setdefault(group, dict())
+        if setting in ('username', 'cert', 'key'):
+            val = util.expandpath(val)
+        gdict[setting] = val
+
+    # Find the best match
+    scheme, hostpath = uri.split('://', 1)
+    bestlen = 0
+    bestauth = None
+    for auth in config.itervalues():
+        prefix = auth.get('prefix')
+        if not prefix:
+            continue
+        p = prefix.split('://', 1)
+        if len(p) > 1:
+            schemes, prefix = [p[0]], p[1]
+        else:
+            schemes = (auth.get('schemes') or 'https').split()
+        if (prefix == '*' or hostpath.startswith(prefix)) and \
+            len(prefix) > bestlen and scheme in schemes:
+            bestlen = len(prefix)
+            bestauth = auth
+    return bestauth
+
 _safe = ('abcdefghijklmnopqrstuvwxyz'
          'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
          '0123456789' '_.-/')
@@ -149,36 +181,7 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
         self.ui.debug(msg % (user, passwd and '*' * len(passwd) or 'not set'))
 
     def readauthtoken(self, uri):
-        # Read configuration
-        config = dict()
-        for key, val in self.ui.configitems('auth'):
-            if '.' not in key:
-                self.ui.warn(_("ignoring invalid [auth] key '%s'\n") % key)
-                continue
-            group, setting = key.rsplit('.', 1)
-            gdict = config.setdefault(group, dict())
-            if setting in ('username', 'cert', 'key'):
-                val = util.expandpath(val)
-            gdict[setting] = val
-
-        # Find the best match
-        scheme, hostpath = uri.split('://', 1)
-        bestlen = 0
-        bestauth = None
-        for auth in config.itervalues():
-            prefix = auth.get('prefix')
-            if not prefix:
-                continue
-            p = prefix.split('://', 1)
-            if len(p) > 1:
-                schemes, prefix = [p[0]], p[1]
-            else:
-                schemes = (auth.get('schemes') or 'https').split()
-            if (prefix == '*' or hostpath.startswith(prefix)) and \
-                len(prefix) > bestlen and scheme in schemes:
-                bestlen = len(prefix)
-                bestauth = auth
-        return bestauth
+        return readauthforuri(self.ui, uri)
 
 class proxyhandler(urllib2.ProxyHandler):
     def __init__(self, ui):
