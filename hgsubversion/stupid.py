@@ -536,7 +536,7 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
             branches[branchname] = branchpath
     return branches
 
-def convert_rev(ui, meta, svn, r, tbdelta):
+def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
     # this server fails at replay
 
     branches = branches_in_paths(meta, tbdelta, r.paths, r.revnum,

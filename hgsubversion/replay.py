@@ -52,14 +52,15 @@ def updateexternals(ui, meta, current):
             else:
                 current.delete(path)
 
-def convert_rev(ui, meta, svn, r, tbdelta):
+def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
     editor = meta.editor
     editor.current.clear()
     editor.current.rev = r
 
-    if meta.revmap.oldest <= 0:
-        # no prior revisions are known, so fetch the entire revision contents
+    if firstrun and meta.revmap.oldest <= 0:
+        # We know nothing about this project, so fetch everything before
+        # trying to apply deltas.
         ui.debug('replay: fetching full revision\n')
         svn.get_revision(r.revnum, editor)
     else:

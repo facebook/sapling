@@ -294,6 +294,7 @@ def pull(repo, source, heads=[], force=False):
     try:
         try:
             # start converting revisions
+            firstrun = True
             for r in svn.revisions(start=start, stop=stopat_rev):
                 if (r.author is None and
                     r.message == 'This is an empty revision for padding.'):
@@ -320,7 +321,8 @@ def pull(repo, source, heads=[], force=False):
                         util.progress(ui, 'pull', r.revnum - start, total=total)
 
                         meta.save_tbdelta(tbdelta)
-                        close = pullfuns[have_replay](ui, meta, svn, r, tbdelta)
+                        close = pullfuns[have_replay](ui, meta, svn, r, tbdelta,
+                                                      firstrun)
                         meta.committags(r, close)
                         for branch, parent in close.iteritems():
                             if parent in (None, node.nullid):
@@ -329,6 +331,7 @@ def pull(repo, source, heads=[], force=False):
 
                         meta.save()
                         converted = True
+                        firstrun = False
 
                     except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
                         ui.status('%s\n' % e.message)
