@@ -60,6 +60,7 @@ def convert_rev(ui, meta, svn, r, tbdelta):
 
     if meta.revmap.oldest <= 0:
         # no prior revisions are known, so fetch the entire revision contents
+        ui.debug('replay: fetching full revision\n')
         svn.get_revision(r.revnum, editor)
     else:
         svn.get_replay(r.revnum, editor, meta.revmap.oldest)
