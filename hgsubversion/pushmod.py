@@ -33,12 +33,16 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
     in either list.
     """
     def finddirs(path, includeself=False):
-        if includeself:
+        if includeself and path:
             yield path
         pos = path.rfind('/')
         while pos != -1:
             yield path[:pos]
             pos = path.rfind('/', 0, pos)
+        # Include the root path, properties can be set explicitely on it
+        # (like externals), and you want to preserve it if there are any
+        # other child item still existing.
+        yield ''
 
     def getctxdirs(ctx, keptdirs, extdirs):
         dirs = {}

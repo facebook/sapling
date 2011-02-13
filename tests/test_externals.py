@@ -362,6 +362,20 @@ HEAD subdir1/deps/project2
         self.assertTrue('subdir2/a' in self.repo['tip'])
         self.assertTrue('subdir1/a' not in self.repo['tip'])
 
+        # Move the externals so they are defined on the base directory,
+        # this used to cause full branch removal when deleting the .hgsub
+        changes = [
+            ('.hgsub', '.hgsub', """\
+subdir1/deps/project1 = [hgsubversion] :^/externals/project1 subdir1/deps/project1
+"""),
+            ('.hgsubstate', '.hgsubstate', """\
+HEAD subdir1/deps/project1
+"""),
+            ]
+        self.commitchanges(changes)
+        self.pushrevisions(stupid)
+        self.assertchanges(changes, self.repo['tip'])
+
         # Test externals removal
         changes = [
             ('.hgsub', None, None),
