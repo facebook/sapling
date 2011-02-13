@@ -88,7 +88,7 @@ def readauthforuri(ui, uri):
     scheme, hostpath = uri.split('://', 1)
     bestlen = 0
     bestauth = None
-    for auth in config.itervalues():
+    for group, auth in config.iteritems():
         prefix = auth.get('prefix')
         if not prefix:
             continue
@@ -100,7 +100,7 @@ def readauthforuri(ui, uri):
         if (prefix == '*' or hostpath.startswith(prefix)) and \
             len(prefix) > bestlen and scheme in schemes:
             bestlen = len(prefix)
-            bestauth = auth
+            bestauth = group, auth
     return bestauth
 
 _safe = ('abcdefghijklmnopqrstuvwxyz'
@@ -155,9 +155,11 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
             return (user, passwd)
 
         if not user:
-            auth = self.readauthtoken(authuri)
-            if auth:
+            res = readauthforuri(self.ui, authuri)
+            if res:
+                group, auth = res
                 user, passwd = auth.get('username'), auth.get('password')
+                self.ui.debug("using auth.%s.* for authentication\n" % group)
         if not user or not passwd:
             if not self.ui.interactive():
                 raise util.Abort(_('http authorization required'))
@@ -179,9 +181,6 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def _writedebug(self, user, passwd):
         msg = _('http auth: user %s, password %s\n')
         self.ui.debug(msg % (user, passwd and '*' * len(passwd) or 'not set'))
-
-    def readauthtoken(self, uri):
-        return readauthforuri(self.ui, uri)
 
 class proxyhandler(urllib2.ProxyHandler):
     def __init__(self, ui):
@@ -624,7 +623,13 @@ if has_https:
             return keepalive.KeepAliveHandler._start_transaction(self, h, req)
 
         def https_open(self, req):
-            self.auth = self.pwmgr.readauthtoken(req.get_full_url())
+            res = readauthforuri(self.ui, req.get_full_url())
+            if res:
+                group, auth = res
+                self.auth = auth
+                self.ui.debug("using auth.%s.* for authentication\n" % group)
+            else:
+                self.auth = None
             return self.do_open(self._makeconnection, req)
 
         def _makeconnection(self, host, port=None, *args, **kwargs):
