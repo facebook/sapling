@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import osutil, encoding
+import encoding
 import ctypes, errno, os, struct, subprocess
 
 _kernel32 = ctypes.windll.kernel32
@@ -221,36 +221,6 @@ def executable_path():
     elif len == size:
         raise ctypes.WinError(_ERROR_INSUFFICIENT_BUFFER)
     return buf.value
-
-def system_rcpath_win32():
-    '''return default os-specific hgrc search path'''
-    rcpath = []
-    filename = executable_path()
-    # Use mercurial.ini found in directory with hg.exe
-    progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
-    if os.path.isfile(progrc):
-        rcpath.append(progrc)
-        return rcpath
-    # Use hgrc.d found in directory with hg.exe
-    progrcd = os.path.join(os.path.dirname(filename), 'hgrc.d')
-    if os.path.isdir(progrcd):
-        for f, kind in osutil.listdir(progrcd):
-            if f.endswith('.rc'):
-                rcpath.append(os.path.join(progrcd, f))
-        return rcpath
-    # else look for a system rcpath in the registry
-    value = lookup_reg('SOFTWARE\\Mercurial', None, _HKEY_LOCAL_MACHINE)
-    if not isinstance(value, str) or not value:
-        return rcpath
-    value = value.replace('/', os.sep)
-    for p in value.split(os.pathsep):
-        if p.lower().endswith('mercurial.ini'):
-            rcpath.append(p)
-        elif os.path.isdir(p):
-            for f, kind in osutil.listdir(p):
-                if f.endswith('.rc'):
-                    rcpath.append(os.path.join(p, f))
-    return rcpath
 
 def user_rcpath_win32():
     '''return os-specific hgrc search path to the user dir'''
