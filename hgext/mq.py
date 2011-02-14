@@ -1061,15 +1061,17 @@ class queue(object):
             # go backwards with qpush)
             if patch:
                 info = self.isapplied(patch)
-                if info:
-                    if info[0] < len(self.applied) - 1:
-                        raise util.Abort(
-                            _("cannot push to a previous patch: %s") % patch)
+                if info and info[0] >= len(self.applied) - 1:
                     self.ui.warn(
                         _('qpush: %s is already at the top\n') % patch)
                     return 0
+
                 pushable, reason = self.pushable(patch)
-                if not pushable:
+                if pushable:
+                    if self.series.index(patch) < self.series_end():
+                        raise util.Abort(
+                            _("cannot push to a previous patch: %s") % patch)
+                else:
                     if reason:
                         reason = _('guarded by %r') % reason
                     else:
