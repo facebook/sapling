@@ -222,12 +222,6 @@ def executable_path():
         raise ctypes.WinError(_ERROR_INSUFFICIENT_BUFFER)
     return buf.value
 
-def user_rcpath_win32():
-    '''return os-specific hgrc search path to the user dir'''
-    userdir = os.path.expanduser('~')
-    return [os.path.join(userdir, 'mercurial.ini'),
-            os.path.join(userdir, '.hgrc')]
-
 def getuser():
     '''return name of current user'''
     adv = ctypes.windll.advapi32

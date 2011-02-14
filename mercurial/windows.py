@@ -107,12 +107,9 @@ def system_rcpath():
 
 def user_rcpath():
     '''return os-specific hgrc search path to the user dir'''
-    try:
-        path = user_rcpath_win32()
-    except:
-        home = os.path.expanduser('~')
-        path = [os.path.join(home, 'mercurial.ini'),
-                os.path.join(home, '.hgrc')]
+    home = os.path.expanduser('~')
+    path = [os.path.join(home, 'mercurial.ini'),
+            os.path.join(home, '.hgrc')]
     userprofile = os.environ.get('USERPROFILE')
     if userprofile:
         path.append(os.path.join(userprofile, 'mercurial.ini'))
