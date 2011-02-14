@@ -211,9 +211,8 @@ def lookup_reg(key, valname=None, scope=None):
         finally:
             adv.RegCloseKey(kh.value)
 
-def system_rcpath_win32():
-    '''return default os-specific hgrc search path'''
-    rcpath = []
+def executable_path():
+    '''return full path of hg.exe'''
     size = 600
     buf = ctypes.create_string_buffer(size + 1)
     len = _kernel32.GetModuleFileNameA(None, ctypes.byref(buf), size)
@@ -221,7 +220,12 @@ def system_rcpath_win32():
         raise ctypes.WinError()
     elif len == size:
         raise ctypes.WinError(_ERROR_INSUFFICIENT_BUFFER)
-    filename = buf.value
+    return buf.value
+
+def system_rcpath_win32():
+    '''return default os-specific hgrc search path'''
+    rcpath = []
+    filename = executable_path()
     # Use mercurial.ini found in directory with hg.exe
     progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
     if os.path.isfile(progrc):
