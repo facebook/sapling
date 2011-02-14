@@ -554,16 +554,6 @@ class path_auditor(object):
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
 
-def nlinks(pathname):
-    """Return number of hardlinks for the given file."""
-    return os.lstat(pathname).st_nlink
-
-if hasattr(os, 'link'):
-    os_link = os.link
-else:
-    def os_link(src, dst):
-        raise OSError(0, _("Hardlinks not supported"))
-
 def lookup_reg(key, name=None, scope=None):
     return None
 

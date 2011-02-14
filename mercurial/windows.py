@@ -71,7 +71,7 @@ def _is_win_9x():
         return 'command' in os.environ.get('comspec', '')
 
 def openhardlinks():
-    return not _is_win_9x() and "win32api" in globals()
+    return not _is_win_9x()
 
 def system_rcpath():
     try:
@@ -105,10 +105,6 @@ def sshargs(sshcmd, host, user, port):
     pflag = 'plink' in sshcmd.lower() and '-P' or '-p'
     args = user and ("%s@%s" % (user, host)) or host
     return port and ("%s %s %s" % (args, pflag, port)) or args
-
-def testpid(pid):
-    '''return False if pid dead, True if running or not known'''
-    return True
 
 def set_flags(f, l, x):
     pass
@@ -208,12 +204,6 @@ def find_exe(command):
             return executable
     return findexisting(os.path.expanduser(os.path.expandvars(command)))
 
-def set_signal_handler():
-    try:
-        set_signal_handler_win32()
-    except NameError:
-        pass
-
 def statfiles(files):
     '''Stat each file in files and yield stat or None if file does not exist.
     Cluster and cache stat per directory to minimize number of OS stat calls.'''
@@ -240,11 +230,6 @@ def statfiles(files):
                 dmap = {}
             cache = dircache.setdefault(dir, dmap)
         yield cache.get(base, None)
-
-def getuser():
-    '''return name of current user'''
-    raise error.Abort(_('user name not available - set USERNAME '
-                       'environment variable'))
 
 def username(uid=None):
     """Return the name of the user with the given uid.
@@ -335,37 +320,6 @@ def rename(src, dst):
         unlink(dst)
         os.rename(src, dst)
 
-def spawndetached(args):
-    # No standard library function really spawns a fully detached
-    # process under win32 because they allocate pipes or other objects
-    # to handle standard streams communications. Passing these objects
-    # to the child process requires handle inheritance to be enabled
-    # which makes really detached processes impossible.
-    class STARTUPINFO:
-        dwFlags = subprocess.STARTF_USESHOWWINDOW
-        hStdInput = None
-        hStdOutput = None
-        hStdError = None
-        wShowWindow = subprocess.SW_HIDE
-
-    args = subprocess.list2cmdline(args)
-    # Not running the command in shell mode makes python26 hang when
-    # writing to hgweb output socket.
-    comspec = os.environ.get("COMSPEC", "cmd.exe")
-    args = comspec + " /c " + args
-    hp, ht, pid, tid = subprocess.CreateProcess(
-        None, args,
-        # no special security
-        None, None,
-        # Do not inherit handles
-        0,
-        # DETACHED_PROCESS
-        0x00000008,
-        os.environ,
-        os.getcwd(),
-        STARTUPINFO())
-    return pid
-
 def gethgcmd():
     return [sys.executable] + sys.argv[:1]
 
@@ -380,10 +334,6 @@ def groupmembers(name):
     # Don't support groups on Windows for now
     raise KeyError()
 
-try:
-    # override functions with win32 versions if possible
-    from win32 import *
-except ImportError:
-    pass
+from win32 import *
 
 expandglobs = True

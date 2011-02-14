@@ -9,7 +9,7 @@
   <?define contrib.vim.guid = {BB04903A-652D-4C4F-9590-2BD07A2304F2} ?>
 
   <!-- dist.wxs -->
-  <?define dist.guid = {0F63D160-0740-4BAF-BF25-0C6930310F51} ?>
+  <?define dist.guid = {C3B634A4-1B05-4A40-94A9-38EE853CF693} ?>
 
   <!-- doc.wxs -->
   <?define doc.hg.1.html.guid = {AAAA3FDA-EDC5-4220-B59D-D342722358A2} ?>

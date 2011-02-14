@@ -16,23 +16,14 @@
         <File Name="mercurial.parsers.pyd" />
         <File Name="pyexpat.pyd" />
         <File Name="python26.dll" />
-        <File Name="pythoncom26.dll" />
-        <File Name="pywintypes26.dll" />
         <File Name="bz2.pyd" />
         <File Name="select.pyd" />
         <File Name="unicodedata.pyd" />
-        <File Name="win32api.pyd" />
-        <File Name="win32com.shell.shell.pyd" />
-        <File Name="win32console.pyd" />
-        <File Name="win32file.pyd" />
-        <File Name="win32gui.pyd" />
-        <File Name="win32pipe.pyd" />
-        <File Name="win32process.pyd" />
+        <File Name="_ctypes.pyd" />
         <File Name="_elementtree.pyd" />
         <File Name="_hashlib.pyd" />
         <File Name="_socket.pyd" />
         <File Name="_ssl.pyd" />
-        <File Name="_win32sysloader.pyd" />
       </Component>
     </DirectoryRef>
   </Fragment>
