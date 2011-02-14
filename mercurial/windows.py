@@ -75,7 +75,7 @@ def openhardlinks():
 
 _HKEY_LOCAL_MACHINE = 0x80000002L
 
-def system_rcpath_win32():
+def system_rcpath():
     '''return default os-specific hgrc search path'''
     rcpath = []
     filename = executable_path()
@@ -104,12 +104,6 @@ def system_rcpath_win32():
                 if f.endswith('.rc'):
                     rcpath.append(os.path.join(p, f))
     return rcpath
-
-def system_rcpath():
-    try:
-        return system_rcpath_win32()
-    except:
-        return [r'c:\mercurial\mercurial.ini']
 
 def user_rcpath():
     '''return os-specific hgrc search path to the user dir'''
