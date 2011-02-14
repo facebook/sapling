@@ -31,8 +31,9 @@ def os_link(src, dst):
 def _getfileinfo(pathname):
     """Return number of hardlinks for the given file."""
     try:
-        fh = win32file.CreateFile(pathname,
-            win32file.GENERIC_READ, win32file.FILE_SHARE_READ,
+        fh = win32file.CreateFile(pathname, 0,
+            win32file.FILE_SHARE_READ | win32file.FILE_SHARE_WRITE |
+            win32file.FILE_SHARE_DELETE,
             None, win32file.OPEN_EXISTING, 0, None)
     except pywintypes.error:
         raise OSError(errno.ENOENT, 'The system cannot find the file specified')
