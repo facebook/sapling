@@ -1805,6 +1805,8 @@ class queue(object):
             self.added.append(patchname)
             patchname = None
 
+        self.removeundo(repo)
+
 def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
