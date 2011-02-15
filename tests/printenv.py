@@ -39,13 +39,6 @@ env = [k for k, v in os.environ.iteritems()
        if k.startswith("HG_") and v]
 env.sort()
 
-# edit the variable part of the variable
-url = os.environ.get("HG_URL", "")
-if url.startswith("file:"):
-    os.environ["HG_URL"] = "file:"
-elif url.startswith("remote:http"):
-    os.environ["HG_URL"] = "remote:http"
-
 out.write("%s hook: " % name)
 for v in env:
     out.write("%s=%s " % (v, os.environ[v]))

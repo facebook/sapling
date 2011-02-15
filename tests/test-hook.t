@@ -78,11 +78,11 @@ test generic hooks
 
   $ cd ../b
   $ hg pull ../a
-  prechangegroup hook: HG_SOURCE=pull HG_URL=file: 
-  changegroup hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file: 
-  incoming hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file: 
-  incoming hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_SOURCE=pull HG_URL=file: 
-  incoming hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_SOURCE=pull HG_URL=file: 
+  prechangegroup hook: HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
+  changegroup hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
+  incoming hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
+  incoming hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
+  incoming hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   pulling from ../a
   searching for changes
   adding changesets
@@ -178,7 +178,7 @@ prechangegroup hook can prevent incoming changes
   $ echo '[hooks]' > .hg/hgrc
   $ echo 'prechangegroup.forbid = python ../printenv.py prechangegroup.forbid 1' >> .hg/hgrc
   $ hg pull ../a
-  prechangegroup.forbid hook: HG_SOURCE=pull HG_URL=file: 
+  prechangegroup.forbid hook: HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   pulling from ../a
   searching for changes
   abort: prechangegroup.forbid hook exited with status 1
@@ -192,7 +192,7 @@ incoming changes no longer there after
   $ echo 'pretxnchangegroup.forbid1 = python ../printenv.py pretxnchangegroup.forbid 1' >> .hg/hgrc
   $ hg pull ../a
   4:539e4b31b6dc
-  pretxnchangegroup.forbid hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/b HG_SOURCE=pull HG_URL=file: 
+  pretxnchangegroup.forbid hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/b HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   pulling from ../a
   searching for changes
   adding changesets
