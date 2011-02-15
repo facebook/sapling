@@ -126,7 +126,7 @@ change file in svn and hg, commit
 add an unrelated revision in svn and update the subrepo to without
 bringing any changes.
 
-  $ svn mkdir --parents "$SVNREPO/unrelated" -m 'create unrelated'
+  $ svn mkdir "$SVNREPO/unrelated" -m 'create unrelated'
   
   Committed revision 4.
   $ svn up s
@@ -273,11 +273,11 @@ Check hg update --clean
   $ echo c1 > f2
   $ svn add f1 -q
   $ svn status
-  ?       a
-  X       externals
-  ?       f2
-  M       alpha
-  A       f1
+  ? *    a (glob)
+  X *    externals (glob)
+  ? *    f2 (glob)
+  M *    alpha (glob)
+  A *    f1 (glob)
   
   Performing status on external item at 'externals'
   $ cd ../..
@@ -290,9 +290,9 @@ Check hg update --clean
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd t/s
   $ svn status
-  ?       a
-  X       externals
-  ?       f1
-  ?       f2
+  ? *    a (glob)
+  X *    externals (glob)
+  ? *    f1 (glob)
+  ? *    f2 (glob)
   
   Performing status on external item at 'externals'

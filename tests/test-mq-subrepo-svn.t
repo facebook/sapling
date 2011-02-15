@@ -34,7 +34,7 @@ qnew on repo w/svn subrepo
   Checked out revision 1.
   $ echo 'sub = [svn]sub' >> .hgsub
   $ hg add .hgsub
-  $ hg status -S
+  $ hg status -S -X '**/format'
   A .hgsub
   ? sub/.svn/entries
   $ hg qnew -m0 0.diff
@@ -44,7 +44,7 @@ qnew on repo w/svn subrepo
   $ svn add a
   A         a
   $ svn st
-  A       a
+  A*    a (glob)
   $ cd ..
   $ hg status -S        # doesn't show status for svn subrepos (yet)
   $ hg qnew -m1 1.diff
