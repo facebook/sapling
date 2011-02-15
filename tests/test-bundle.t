@@ -1,5 +1,3 @@
-  $ cp "$TESTDIR"/printenv.py .
-
 Setting up test
 
   $ hg init test
@@ -199,7 +197,7 @@ Make sure bundlerepo doesn't leak tempfiles (issue2491)
 Pull ../full.hg into empty (with hook)
 
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
+  $ echo 'changegroup = python "$TESTDIR"/printenv.py changegroup' >> .hg/hgrc
 
 doesn't work (yet ?)
 

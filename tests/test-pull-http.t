@@ -1,5 +1,4 @@
 
-  $ cp "$TESTDIR"/printenv.py .
   $ hg init test
   $ cd test
   $ echo a > a

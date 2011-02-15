@@ -1,5 +1,4 @@
 
-  $ cp "$TESTDIR"/printenv.py .
   $ hg init test
   $ cd test
   $ echo foo>foo
@@ -75,7 +74,7 @@ pull
 
   $ cd copy-pull
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
+  $ echo 'changegroup = python "$TESTDIR"/printenv.py changegroup' >> .hg/hgrc
   $ hg pull
   changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=http://localhost:$HGPORT1/ 
   pulling from http://localhost:$HGPORT1/

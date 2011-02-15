@@ -1,5 +1,4 @@
 
-  $ cp "$TESTDIR"/printenv.py .
   $ hg clone http://localhost:$HGPORT/ copy
   abort: error: Connection refused
   [255]
@@ -67,7 +66,7 @@ check for HTTP opener failures when cachefile does not exist
   $ rm .hg/cache/*
   $ cd ../local
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'changegroup = python ../printenv.py changegroup' >> .hg/hgrc
+  $ echo 'changegroup = python "$TESTDIR"/printenv.py changegroup' >> .hg/hgrc
   $ hg pull
   changegroup hook: HG_NODE=4ac2e3648604439c580c69b09ec9d93a88d93432 HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/remote 
   pulling from static-http://localhost:$HGPORT/remote

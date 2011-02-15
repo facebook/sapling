@@ -1,12 +1,9 @@
 # simple script to be used in hooks
-# copy it to the current directory when the test starts:
-#
-#     cp "$TESTDIR"/printenv.py .
 #
 # put something like this in the repo .hg/hgrc:
 #
 #     [hooks]
-#     changegroup = python ../printenv.py <hookname> [exit] [output]
+#     changegroup = python "$TESTDIR"/printenv.py <hookname> [exit] [output]
 #
 #   - <hookname> is a mandatory argument (e.g. "changegroup")
 #   - [exit] is the exit code of the hook (default: 0)

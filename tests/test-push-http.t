@@ -1,5 +1,4 @@
 
-  $ cp "$TESTDIR"/printenv.py .
   $ hg init test
   $ cd test
   $ echo a > a
@@ -53,7 +52,7 @@ expect success
 
   $ echo 'allow_push = *' >> .hg/hgrc
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'changegroup = python ../printenv.py changegroup 0' >> .hg/hgrc
+  $ echo 'changegroup = python "$TESTDIR"/printenv.py changegroup 0' >> .hg/hgrc
   $ req
   pushing to http://localhost:$HGPORT/
   searching for changes
