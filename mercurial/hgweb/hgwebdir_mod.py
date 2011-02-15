@@ -33,13 +33,24 @@ def findrepos(paths):
             repos.append((prefix, root))
             continue
         roothead = os.path.normpath(os.path.abspath(roothead))
-        for path in util.walkrepos(roothead, followsym=True, recurse=recurse):
-            path = os.path.normpath(path)
-            name = util.pconvert(path[len(roothead):]).strip('/')
-            if prefix:
-                name = prefix + '/' + name
-            repos.append((name, path))
+        paths = util.walkrepos(roothead, followsym=True, recurse=recurse)
+        repos.extend(urlrepos(prefix, roothead, paths))
     return repos
+
+def urlrepos(prefix, roothead, paths):
+    """yield url paths and filesystem paths from a list of repo paths
+
+    >>> list(urlrepos('hg', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
+    [('hg/r', '/opt/r'), ('hg/r/r', '/opt/r/r'), ('hg/', '/opt')]
+    >>> list(urlrepos('', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
+    [('r', '/opt/r'), ('r/r', '/opt/r/r'), ('', '/opt')]
+    """
+    for path in paths:
+        path = os.path.normpath(path)
+        name = util.pconvert(path[len(roothead):]).strip('/')
+        if prefix:
+            name = prefix + '/' + name
+        yield name, path
 
 class hgwebdir(object):
     refreshinterval = 20

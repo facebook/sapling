@@ -22,5 +22,8 @@ doctest.testmod(mercurial.util)
 import mercurial.encoding
 doctest.testmod(mercurial.encoding)
 
+import mercurial.hgweb.hgwebdir_mod
+doctest.testmod(mercurial.hgweb.hgwebdir_mod)
+
 import hgext.convert.cvsps
 doctest.testmod(hgext.convert.cvsps)
