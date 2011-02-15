@@ -933,6 +933,12 @@ class localrepository(repo.repository):
                 if '.hgsubstate' not in changes[0]:
                     changes[0].insert(0, '.hgsubstate')
 
+            if subs and not self.ui.configbool('ui', 'commitsubrepos', True):
+                changedsubs = [s for s in subs if wctx.sub(s).dirty(True)]
+                if changedsubs:
+                    raise util.Abort(_("uncommitted changes in subrepo %s")
+                                     % changedsubs[0])
+
             # make sure all explicit patterns are matched
             if not force and match.files():
                 matched = set(changes[0] + changes[1] + changes[2])

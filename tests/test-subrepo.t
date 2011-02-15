@@ -75,16 +75,19 @@ add sub sub
   commit: (clean)
   update: (current)
 
-bump sub rev
+bump sub rev (and check it is ignored by ui.commitsubrepos)
 
   $ echo b > s/a
   $ hg -R s ci -ms1
-  $ hg ci -m3
+  $ hg --config ui.commitsubrepos=no ci -m3
   committing subrepository s
 
-leave sub dirty
+leave sub dirty (and check ui.commitsubrepos=no aborts the commit)
 
   $ echo c > s/a
+  $ hg --config ui.commitsubrepos=no ci -m4
+  abort: uncommitted changes in subrepo s
+  [255]
   $ hg ci -m4
   committing subrepository s
   $ hg tip -R s

@@ -878,6 +878,11 @@ User interface controls.
     be prompted to enter a username. If no username is entered, the
     default ``USER@HOST`` is used instead.
     Default is False.
+``commitsubrepos``
+    Whether to commit modified subrepositories when committing the
+    parent repository. If False and one subrepository has uncommitted
+    changes, abort the commit.
+    Default is True.
 ``debug``
     Print debugging information. True or False. Default is False.
 ``editor``
