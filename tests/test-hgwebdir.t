@@ -99,6 +99,7 @@ rss-log without basedir
   > rcoll=$root/**
   > star=*
   > starstar=**
+  > astar=webdir/a/*
   > EOF
   $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
   >     -A access-paths.log -E error-paths-2.log
@@ -130,6 +131,8 @@ should succeed, slashy names
   /starstar/webdir/b/
   /starstar/webdir/b/d/
   /starstar/webdir/c/
+  /astar/
+  /astar/.hg/patches/
   
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=paper'
   200 Script output follows
@@ -322,6 +325,22 @@ should succeed, slashy names
   <td class="indexlinks"></td>
   </tr>
   
+  <tr class="parity0">
+  <td><a href="/astar/?style=paper">astar</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">* ago</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity1">
+  <td><a href="/astar/.hg/patches/?style=paper">astar/.hg/patches</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">* ago</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
   </table>
   </div>
   </div>
@@ -470,7 +489,7 @@ Test [paths] '*' extension
   
   a
 
-est [paths] '**' extension
+Test [paths] '**' extension
 
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/?style=raw'
   200 Script output follows
@@ -486,6 +505,12 @@ est [paths] '**' extension
   200 Script output follows
   
   d
+
+Test [paths] '*' in a repo root
+
+  $ hg id http://localhost:$HGPORT1/astar
+  8580ff50825a
+
   $ "$TESTDIR/killdaemons.py"
   $ cat > paths.conf <<EOF
   > [paths]

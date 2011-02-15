@@ -41,16 +41,14 @@ def urlrepos(prefix, roothead, paths):
     """yield url paths and filesystem paths from a list of repo paths
 
     >>> list(urlrepos('hg', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
-    [('hg/r', '/opt/r'), ('hg/r/r', '/opt/r/r'), ('hg/', '/opt')]
+    [('hg/r', '/opt/r'), ('hg/r/r', '/opt/r/r'), ('hg', '/opt')]
     >>> list(urlrepos('', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
     [('r', '/opt/r'), ('r/r', '/opt/r/r'), ('', '/opt')]
     """
     for path in paths:
         path = os.path.normpath(path)
-        name = util.pconvert(path[len(roothead):]).strip('/')
-        if prefix:
-            name = prefix + '/' + name
-        yield name, path
+        yield (prefix + '/' +
+               util.pconvert(path[len(roothead):]).lstrip('/')).strip('/'), path
 
 class hgwebdir(object):
     refreshinterval = 20
