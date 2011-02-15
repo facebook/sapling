@@ -1355,7 +1355,10 @@ def debugdate(ui, date, range=None, **opts):
 def debugignore(ui, repo, *values, **opts):
     """display the combined ignore pattern"""
     ignore = repo.dirstate._ignore
-    ui.write("%s\n" % ignore.includepat)
+    if hasattr(ignore, 'includepat'):
+        ui.write("%s\n" % ignore.includepat)
+    else:
+        raise util.Abort(_("no ignore patterns found"))
 
 def debugindex(ui, repo, file_, **opts):
     """dump the contents of an index file"""
