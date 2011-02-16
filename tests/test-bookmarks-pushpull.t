@@ -1,9 +1,6 @@
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "bookmarks=" >> $HGRCPATH
 
-  $ echo "[bookmarks]" >> $HGRCPATH
-  $ echo "track.current = True" >> $HGRCPATH
-
 initialize
 
   $ hg init a

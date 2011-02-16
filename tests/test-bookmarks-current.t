@@ -2,7 +2,6 @@
   $ echo "bookmarks=" >> $HGRCPATH
 
   $ echo "[bookmarks]" >> $HGRCPATH
-  $ echo "track.current = True" >> $HGRCPATH
 
   $ hg init
 

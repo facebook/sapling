@@ -41,7 +41,6 @@ rebase
 
   $ hg log
   changeset:   3:9163974d1cb5
-  bookmark:    one
   bookmark:    two
   tag:         tip
   parent:      1:925d80f479bb
@@ -57,6 +56,7 @@ rebase
   summary:     2
   
   changeset:   1:925d80f479bb
+  bookmark:    one
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1

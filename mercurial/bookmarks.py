@@ -109,16 +109,10 @@ def setcurrent(repo, mark):
 def update(repo, parents, node):
     marks = repo._bookmarks
     update = False
-    if repo.ui.configbool('bookmarks', 'track.current'):
-        mark = repo._bookmarkcurrent
-        if mark and marks[mark] in parents:
-            marks[mark] = node
-            update = True
-    else:
-        for mark, n in marks.items():
-            if n in parents:
-                marks[mark] = node
-                update = True
+    mark = repo._bookmarkcurrent
+    if mark and marks[mark] in parents:
+        marks[mark] = node
+        update = True
     if update:
         write(repo)
 

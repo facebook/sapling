@@ -54,8 +54,8 @@ bookmark rev -1 again
 list bookmarks
 
   $ hg bookmarks
-   * X                         0:f7b1eb17ad24
-   * X2                        0:f7b1eb17ad24
+     X                         0:f7b1eb17ad24
+     X2                        0:f7b1eb17ad24
      Y                         -1:000000000000
 
   $ echo b > b
@@ -65,23 +65,21 @@ list bookmarks
 bookmarks revset
 
   $ hg log -r 'bookmark()'
-  changeset:   1:925d80f479bb
+  changeset:   0:f7b1eb17ad24
   bookmark:    X
   bookmark:    X2
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1
+  summary:     0
   
   $ hg log -r 'bookmark(Y)'
   $ hg log -r 'bookmark(X2)'
-  changeset:   1:925d80f479bb
+  changeset:   0:f7b1eb17ad24
   bookmark:    X
   bookmark:    X2
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1
+  summary:     0
   
   $ hg help revsets | grep 'bookmark('
       "bookmark([name])"
@@ -89,23 +87,26 @@ bookmarks revset
 bookmarks X and X2 moved to rev 1, Y at rev -1
 
   $ hg bookmarks
-   * X                         1:925d80f479bb
-   * X2                        1:925d80f479bb
+     X                         0:f7b1eb17ad24
+     X2                        0:f7b1eb17ad24
      Y                         -1:000000000000
 
 bookmark rev 0 again
 
   $ hg bookmark -r 0 Z
 
+  $ hg update X
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c > c
   $ hg add c
   $ hg commit -m 2
+  created new head
 
-bookmarks X and X2 moved to rev 2, Y at rev -1, Z at rev 0
+bookmarks X moved to rev 2, Y at rev -1, Z at rev 0
 
   $ hg bookmarks
-   * X                         2:0316ce92851d
-   * X2                        2:0316ce92851d
+   * X                         2:db815d6d32e6
+     X2                        0:f7b1eb17ad24
      Y                         -1:000000000000
      Z                         0:f7b1eb17ad24
 
@@ -128,8 +129,8 @@ force rename to existent bookmark
 list bookmarks
 
   $ hg bookmark
-   * X2                        2:0316ce92851d
-   * Y                         2:0316ce92851d
+     X2                        0:f7b1eb17ad24
+   * Y                         2:db815d6d32e6
      Z                         0:f7b1eb17ad24
 
 rename without new name
@@ -157,19 +158,19 @@ bookmark name with spaces should be stripped
 list bookmarks
 
   $ hg bookmarks
-   * X2                        2:0316ce92851d
-   * Y                         2:0316ce92851d
+     X2                        0:f7b1eb17ad24
+     Y                         2:db815d6d32e6
      Z                         0:f7b1eb17ad24
-   * x  y                      2:0316ce92851d
+   * x  y                      2:db815d6d32e6
 
 look up stripped bookmark name
 
   $ hg log -r '"x  y"'
-  changeset:   2:0316ce92851d
-  bookmark:    X2
+  changeset:   2:db815d6d32e6
   bookmark:    Y
   bookmark:    x  y
   tag:         tip
+  parent:      0:f7b1eb17ad24
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -195,10 +196,10 @@ force bookmark with existing name
 list bookmarks
 
   $ hg bookmark
-   * X2                        2:0316ce92851d
-   * Y                         2:0316ce92851d
-   * Z                         2:0316ce92851d
-   * x  y                      2:0316ce92851d
+     X2                        0:f7b1eb17ad24
+     Y                         2:db815d6d32e6
+   * Z                         2:db815d6d32e6
+     x  y                      2:db815d6d32e6
 
 revision but no bookmark name
 

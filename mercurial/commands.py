@@ -532,17 +532,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             ui.status(_("no bookmarks set\n"))
         else:
             for bmark, n in sorted(marks.iteritems()):
-                if ui.configbool('bookmarks', 'track.current'):
-                    current = repo._bookmarkcurrent
-                    if bmark == current and n == cur:
-                        prefix, label = '*', 'bookmarks.current'
-                    else:
-                        prefix, label = ' ', ''
+                current = repo._bookmarkcurrent
+                if bmark == current and n == cur:
+                    prefix, label = '*', 'bookmarks.current'
                 else:
-                    if n == cur:
-                        prefix, label = '*', 'bookmarks.current'
-                    else:
-                        prefix, label = ' ', ''
+                    prefix, label = ' ', ''
 
                 if ui.quiet:
                     ui.write("%s\n" % bmark, label=label)
@@ -4059,7 +4053,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     else:
         ret = hg.update(repo, rev)
 
-    if repo.ui.configbool('bookmarks', 'track.current'):
+    if brev in repo._bookmarks:
         bookmarks.setcurrent(repo, brev)
 
     return ret

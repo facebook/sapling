@@ -61,7 +61,7 @@ strip to revision 1
 list bookmarks
 
   $ hg book
-   * test                      1:8cf31af87a2b
+     test                      1:8cf31af87a2b
    * test2                     1:8cf31af87a2b
 
 immediate rollback and reentrancy issue
