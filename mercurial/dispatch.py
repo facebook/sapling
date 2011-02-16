@@ -226,7 +226,7 @@ class cmdalias(object):
                     elif int(m.groups()[0]) <= len(args):
                         return m.group()
                     else:
-                        ui.debug(_("No argument found for substitution"
+                        ui.debug(_("No argument found for substitution "
                                    "of %i variable in alias '%s' definition.")
                                  % (int(m.groups()[0]), self.name))
                         return ''
