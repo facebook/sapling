@@ -261,10 +261,8 @@ Test https with cacert and fingerprint through proxy
 Test https with cert problems through proxy
 
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --config web.cacerts=pub-other.pem
-  pulling from https://localhost:$HGPORT/
-  searching for changes
-  no changes found
+  abort: error: _ssl.c:499: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
+  [255]
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --config web.cacerts=pub-expired.pem https://localhost:$HGPORT2/
-  pulling from https://localhost:$HGPORT2/
-  searching for changes
-  no changes found
+  abort: error: _ssl.c:499: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
+  [255]

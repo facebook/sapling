@@ -542,13 +542,20 @@ def _verifycert(cert, hostname):
     return _('no commonName or subjectAltName found in certificate')
 
 if has_https:
-    class BetterHTTPS(httplib.HTTPSConnection):
-        send = keepalive.safesend
+    class httpsconnection(httplib.HTTPSConnection):
+        response_class = keepalive.HTTPResponse
+        # must be able to send big bundle as stream.
+        send = _gen_sendfile(keepalive.safesend)
+        getresponse = keepalive.wrapgetresponse(httplib.HTTPSConnection)
 
         def connect(self):
             self.sock = _create_connection((self.host, self.port))
 
             host = self.host
+            if self.realhostport: # use CONNECT proxy
+                something = _generic_proxytunnel(self)
+                host = self.realhostport.rsplit(':', 1)[0]
+
             cacerts = self.ui.config('web', 'cacerts')
             hostfingerprint = self.ui.config('hostfingerprints', host)
 
@@ -591,22 +598,6 @@ if has_https:
                     self.ui.warn(_('warning: %s certificate not verified '
                                    '(check web.cacerts config setting)\n') %
                                  host)
-
-    class httpsconnection(BetterHTTPS):
-        response_class = keepalive.HTTPResponse
-        # must be able to send big bundle as stream.
-        send = _gen_sendfile(BetterHTTPS.send)
-        getresponse = keepalive.wrapgetresponse(httplib.HTTPSConnection)
-
-        def connect(self):
-            if self.realhostport: # use CONNECT proxy
-                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.sock.connect((self.host, self.port))
-                if _generic_proxytunnel(self):
-                    self.sock = _ssl_wrap_socket(self.sock, self.key_file,
-                            self.cert_file)
-            else:
-                BetterHTTPS.connect(self)
 
     class httpshandler(keepalive.KeepAliveHandler, urllib2.HTTPSHandler):
         def __init__(self, ui):
