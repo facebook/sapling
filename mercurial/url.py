@@ -291,16 +291,16 @@ class httpsendfile(object):
     def __len__(self):
         return self._len
 
-def _gen_sendfile(connection):
+def _gen_sendfile(orgsend):
     def _sendfile(self, data):
         # send a file
         if isinstance(data, httpsendfile):
             # if auth required, some data sent twice, so rewind here
             data.seek(0)
             for chunk in util.filechunkiter(data):
-                connection.send(self, chunk)
+                orgsend(self, chunk)
         else:
-            connection.send(self, data)
+            orgsend(self, data)
     return _sendfile
 
 has_https = hasattr(urllib2, 'HTTPSHandler')
@@ -353,7 +353,7 @@ if has_https:
 
 class httpconnection(keepalive.HTTPConnection):
     # must be able to send big bundle as stream.
-    send = _gen_sendfile(keepalive.HTTPConnection)
+    send = _gen_sendfile(keepalive.HTTPConnection.send)
 
     def connect(self):
         if has_https and self.realhostport: # use CONNECT proxy
@@ -595,7 +595,7 @@ if has_https:
     class httpsconnection(BetterHTTPS):
         response_class = keepalive.HTTPResponse
         # must be able to send big bundle as stream.
-        send = _gen_sendfile(BetterHTTPS)
+        send = _gen_sendfile(BetterHTTPS.send)
         getresponse = keepalive.wrapgetresponse(httplib.HTTPSConnection)
 
         def connect(self):
