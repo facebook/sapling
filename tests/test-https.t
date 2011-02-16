@@ -224,3 +224,47 @@ Fingerprints
 - ignores that certificate doesn't match hostname
   $ hg -R copy-pull id https://127.0.0.1:$HGPORT/
   5fed3813f7f5
+
+Prepare for connecting through proxy
+
+  $ kill `cat hg1.pid`
+  $ sleep 1
+
+  $ ("$TESTDIR/tinyproxy.py" $HGPORT1 localhost >proxy.log 2>&1 </dev/null &
+  $ echo $! > proxy.pid)
+  $ cat proxy.pid >> $DAEMON_PIDS
+  $ sleep 2
+
+  $ echo "[http_proxy]" >> copy-pull/.hg/hgrc
+  $ echo "always=True" >> copy-pull/.hg/hgrc
+  $ echo "[hostfingerprints]" >> copy-pull/.hg/hgrc
+  $ echo "localhost =" >> copy-pull/.hg/hgrc
+
+Test unvalidated https through proxy
+
+  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --insecure --traceback
+  pulling from https://localhost:$HGPORT/
+  searching for changes
+  no changes found
+
+Test https with cacert and fingerprint through proxy
+
+  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --config web.cacerts=pub.pem
+  pulling from https://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://127.0.0.1:$HGPORT/
+  pulling from https://127.0.0.1:$HGPORT/
+  searching for changes
+  no changes found
+
+Test https with cert problems through proxy
+
+  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --config web.cacerts=pub-other.pem
+  pulling from https://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --config web.cacerts=pub-expired.pem https://localhost:$HGPORT2/
+  pulling from https://localhost:$HGPORT2/
+  searching for changes
+  no changes found
