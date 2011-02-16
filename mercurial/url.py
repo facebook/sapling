@@ -546,12 +546,13 @@ if has_https:
         send = keepalive.safesend
 
         def connect(self):
+            self.sock = _create_connection((self.host, self.port))
+
             host = self.host
             cacerts = self.ui.config('web', 'cacerts')
             hostfingerprint = self.ui.config('hostfingerprints', host)
 
             if cacerts and not hostfingerprint:
-                sock = _create_connection((self.host, self.port))
                 self.sock = _ssl_wrap_socket(self.sock, self.key_file,
                     self.cert_file, cert_reqs=CERT_REQUIRED,
                     ca_certs=util.expandpath(cacerts))
@@ -562,7 +563,8 @@ if has_https:
                                        'insecurely)') % (host, msg))
                 self.ui.debug('%s certificate successfully verified\n' % host)
             else:
-                httplib.HTTPSConnection.connect(self)
+                self.sock = _ssl_wrap_socket(self.sock, self.key_file,
+                    self.cert_file)
                 if hasattr(self.sock, 'getpeercert'):
                     peercert = self.sock.getpeercert(True)
                     peerfingerprint = util.sha1(peercert).hexdigest()
