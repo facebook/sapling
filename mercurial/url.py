@@ -546,23 +546,21 @@ if has_https:
         send = keepalive.safesend
 
         def connect(self):
+            host = self.host
             cacerts = self.ui.config('web', 'cacerts')
-            if cacerts:
-                cacerts = util.expandpath(cacerts)
+            hostfingerprint = self.ui.config('hostfingerprints', host)
 
-            hostfingerprint = self.ui.config('hostfingerprints', self.host)
             if cacerts and not hostfingerprint:
                 sock = _create_connection((self.host, self.port))
-                self.sock = _ssl_wrap_socket(sock, self.key_file,
-                        self.cert_file, cert_reqs=CERT_REQUIRED,
-                        ca_certs=cacerts)
-                msg = _verifycert(self.sock.getpeercert(), self.host)
+                self.sock = _ssl_wrap_socket(self.sock, self.key_file,
+                    self.cert_file, cert_reqs=CERT_REQUIRED,
+                    ca_certs=util.expandpath(cacerts))
+                msg = _verifycert(self.sock.getpeercert(), host)
                 if msg:
                     raise util.Abort(_('%s certificate error: %s '
                                        '(use --insecure to connect '
-                                       'insecurely)') % (self.host, msg))
-                self.ui.debug('%s certificate successfully verified\n' %
-                              self.host)
+                                       'insecurely)') % (host, msg))
+                self.ui.debug('%s certificate successfully verified\n' % host)
             else:
                 httplib.HTTPSConnection.connect(self)
                 if hasattr(self.sock, 'getpeercert'):
@@ -575,22 +573,22 @@ if has_https:
                                 hostfingerprint.replace(':', '').lower():
                             raise util.Abort(_('invalid certificate for %s '
                                                'with fingerprint %s') %
-                                             (self.host, nicefingerprint))
+                                             (host, nicefingerprint))
                         self.ui.debug('%s certificate matched fingerprint %s\n' %
-                                      (self.host, nicefingerprint))
+                                      (host, nicefingerprint))
                     else:
                         self.ui.warn(_('warning: %s certificate '
                                        'with fingerprint %s not verified '
                                        '(check hostfingerprints or web.cacerts '
                                        'config setting)\n') %
-                                     (self.host, nicefingerprint))
+                                     (host, nicefingerprint))
                 else: # python 2.5 ?
                     if hostfingerprint:
-                        raise util.Abort(_('no certificate for %s '
-                                           'with fingerprint') % self.host)
+                        raise util.Abort(_('no certificate for %s with '
+                                           'configured hostfingerprint') % host)
                     self.ui.warn(_('warning: %s certificate not verified '
                                    '(check web.cacerts config setting)\n') %
-                                 self.host)
+                                 host)
 
     class httpsconnection(BetterHTTPS):
         response_class = keepalive.HTTPResponse
