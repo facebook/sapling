@@ -4036,6 +4036,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     if not rev:
         rev = node
 
+    # if we defined a bookmark, we have to remember the original bookmark name
+    brev = rev
     rev = cmdutil.revsingle(repo, rev, rev).rev()
 
     if check and clean:
@@ -4058,7 +4060,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
         ret = hg.update(repo, rev)
 
     if repo.ui.configbool('bookmarks', 'track.current'):
-        bookmarks.setcurrent(repo, rev)
+        bookmarks.setcurrent(repo, brev)
 
     return ret
 
