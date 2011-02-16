@@ -212,3 +212,10 @@ bookmark name with whitespace only
   $ hg bookmark ' '
   abort: bookmark names cannot consist entirely of whitespace
   [255]
+
+invalid bookmark
+
+  $ hg bookmark 'foo:bar'
+  abort: bookmark 'foo:bar' contains illegal character
+  [255]
+

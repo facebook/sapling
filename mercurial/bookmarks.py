@@ -7,8 +7,14 @@
 
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex, short
-from mercurial import encoding
+from mercurial import encoding, util
 import os
+
+def valid(mark):
+    for c in (':', '\0', '\n', '\r'):
+        if c in mark:
+            return False
+    return True
 
 def read(repo):
     '''Parse .hg/bookmarks file and return a dictionary
@@ -63,8 +69,14 @@ def write(repo):
 
     if repo._bookmarkcurrent not in refs:
         setcurrent(repo, None)
+    for mark in refs.keys():
+        if not valid(mark):
+            raise util.Abort(_("bookmark '%s' contains illegal "
+                "character" % mark))
+
     wlock = repo.wlock()
     try:
+
         file = repo.opener('bookmarks', 'w', atomictemp=True)
         for refspec, node in refs.iteritems():
             file.write("%s %s\n" % (hex(node), encoding.fromlocal(refspec)))
@@ -97,6 +109,10 @@ def setcurrent(repo, mark):
         return
     if mark not in refs:
         mark = ''
+    if not valid(mark):
+        raise util.Abort(_("bookmark '%s' contains illegal "
+            "character" % mark))
+
     wlock = repo.wlock()
     try:
         file = repo.opener('bookmarks.current', 'w', atomictemp=True)
