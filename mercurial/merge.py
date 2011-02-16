@@ -508,6 +508,11 @@ def update(repo, node, branchmerge, force, partial):
             if not force and (wc.files() or wc.deleted()):
                 raise util.Abort(_("outstanding uncommitted changes "
                                    "(use 'hg status' to list changes)"))
+            for s in wc.substate:
+                if wc.sub(s).dirty():
+                    raise util.Abort(_("outstanding uncommitted changes in "
+                                       "subrepository '%s'") % s)
+
         elif not overwrite:
             if pa == p1 or pa == p2: # linear
                 pass # all good
