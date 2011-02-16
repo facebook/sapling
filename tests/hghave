@@ -173,6 +173,8 @@ def has_outer_repo():
 def has_ssl():
     try:
         import ssl
+        import OpenSSL
+        OpenSSL.SSL.Context
         return True
     except ImportError:
         return False
