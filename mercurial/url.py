@@ -546,12 +546,9 @@ if has_https:
         send = keepalive.safesend
 
         def connect(self):
-            if hasattr(self, 'ui'):
-                cacerts = self.ui.config('web', 'cacerts')
-                if cacerts:
-                    cacerts = util.expandpath(cacerts)
-            else:
-                cacerts = None
+            cacerts = self.ui.config('web', 'cacerts')
+            if cacerts:
+                cacerts = util.expandpath(cacerts)
 
             hostfingerprint = self.ui.config('hostfingerprints', self.host)
             if cacerts and not hostfingerprint:
