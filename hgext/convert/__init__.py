@@ -145,7 +145,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         Use it to fix Mercurial repositories with missing revlogs, by
         converting from and to Mercurial. Default is False.
 
-    :convert.hg.saverev: store original. revision ID in changeset
+    :convert.hg.saverev: store original revision ID in changeset
         (forces target IDs to change). It takes and boolean argument
         and defaults to False.
 
@@ -249,7 +249,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     It is possible to limit the amount of source history to be
     converted by specifying an initial Perforce revision:
 
-    :convert.p4.startrev: specify initial Perforce revision, a
+    :convert.p4.startrev: specify initial Perforce revision (a
         Perforce changelist number).
 
     Mercurial Destination
@@ -264,7 +264,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         ``default``.
 
     :convert.hg.usebranchnames: preserve branch names. The default is
-        True
+        True.
     """
     return convcmd.convert(ui, src, dest, revmapfile, **opts)
 
