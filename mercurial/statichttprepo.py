@@ -115,9 +115,7 @@ class statichttprepository(localrepo.localrepository):
                 raise error.RepoError(_("requirement '%s' not supported") % r)
 
         # setup store
-        def pjoin(a, b):
-            return a + '/' + b
-        self.store = store.store(requirements, self.path, opener, pjoin)
+        self.store = store.store(requirements, self.path, opener)
         self.spath = self.store.path
         self.sopener = self.store.opener
         self.sjoin = self.store.join
