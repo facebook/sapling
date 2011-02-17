@@ -886,7 +886,8 @@ class gitsubrepo(abstractsubrepo):
         if self.dirty():
             if self._gitstate() != revision:
                 dirty = self._gitstate() == self._state[1] or code != 0
-                if _updateprompt(self._ui, self, dirty, self._state[1][:7], revision[:7]):
+                if _updateprompt(self._ui, self, dirty,
+                                 self._state[1][:7], revision[:7]):
                     mergefunc()
         else:
             mergefunc()
