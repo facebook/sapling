@@ -203,11 +203,13 @@ class hgwebdir(object):
 
         def archivelist(ui, nodeid, url):
             allowed = ui.configlist("web", "allow_archive", untrusted=True)
+            archives = []
             for i in [('zip', '.zip'), ('gz', '.tar.gz'), ('bz2', '.tar.bz2')]:
                 if i[0] in allowed or ui.configbool("web", "allow" + i[0],
                                                     untrusted=True):
-                    yield {"type" : i[0], "extension": i[1],
-                           "node": nodeid, "url": url}
+                    archives.append({"type" : i[0], "extension": i[1],
+                                     "node": nodeid, "url": url})
+            return archives
 
         def rawentries(subdir="", **map):
 
