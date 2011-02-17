@@ -1,3 +1,4 @@
+  $ HGFOO=BAR; export HGFOO
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > graphlog=
@@ -34,6 +35,10 @@
   > idaliasshell = !echo test
   > parentsshell1 = !echo one
   > parentsshell2 = !echo two
+  > escaped1 = !echo 'test\$\$test'
+  > escaped2 = !echo "HGFOO is \$\$HGFOO"
+  > escaped3 = !echo "\$1 is \$\$\$1"
+  > escaped4 = !echo '\$\$0' '\$\$@'
   > 
   > [defaults]
   > mylog = -q
@@ -277,6 +282,18 @@ shell alias defined in other repo
   main
   $ hg --cwd .. mainalias
   main
+
+
+shell aliases with escaped $ chars
+
+  $ hg escaped1
+  test$test
+  $ hg escaped2
+  HGFOO is BAR
+  $ hg escaped3 HGFOO
+  HGFOO is BAR
+  $ hg escaped4 test
+  $0 $@
 
 
 invalid arguments
