@@ -131,7 +131,7 @@
                   repositories with missing revlogs, by converting from and to
                   Mercurial. Default is False.
       convert.hg.saverev
-                  store original. revision ID in changeset (forces target IDs to
+                  store original revision ID in changeset (forces target IDs to
                   change). It takes and boolean argument and defaults to False.
       convert.hg.startrev
                   convert start revision and its descendants. It takes a hg
@@ -231,7 +231,7 @@
       specifying an initial Perforce revision:
   
       convert.p4.startrev
-                  specify initial Perforce revision, a Perforce changelist
+                  specify initial Perforce revision (a Perforce changelist
                   number).
   
       Mercurial Destination
@@ -245,7 +245,7 @@
       convert.hg.tagsbranch
                   branch name for tag revisions, defaults to "default".
       convert.hg.usebranchnames
-                  preserve branch names. The default is True
+                  preserve branch names. The default is True.
   
   options:
   
