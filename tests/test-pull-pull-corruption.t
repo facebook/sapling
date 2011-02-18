@@ -42,10 +42,10 @@ start a pull...
 ... and start another pull before the first one has finished
 
   $ sleep 1
-  $ hg pull ../source2 2>/dev/null
-  pulling from ../source2
   pulling from ../source1
   requesting all changes
+  $ hg pull ../source2 2>/dev/null
+  pulling from ../source2
   adding changesets
   adding manifests
   adding file changes

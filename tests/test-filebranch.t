@@ -55,10 +55,10 @@ Merging:
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg merge -v
-  merging for foo
   resolving manifests
   getting bar
   merging foo
+  merging for foo
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

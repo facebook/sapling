@@ -219,13 +219,13 @@ but true.executable set to cat found in PATH works:
   true.executable=cat
   # hg update -C 1
   # hg merge -r 2
+  merging f
   revision 1
   space
   revision 0
   space
   revision 2
   space
-  merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   # cat f
@@ -244,13 +244,13 @@ and true.executable set to cat with path works:
   true.executable=cat
   # hg update -C 1
   # hg merge -r 2 --config merge-tools.true.executable=cat
+  merging f
   revision 1
   space
   revision 0
   space
   revision 2
   space
-  merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   # cat f
@@ -598,6 +598,7 @@ Default is silent simplemerge:
   true.executable=cat
   # hg update -C 1
   # hg merge -r 3 --config merge-tools.true.premerge=False
+  merging f
   revision 1
   space
   revision 0
@@ -605,7 +606,6 @@ Default is silent simplemerge:
   revision 0
   space
   revision 3
-  merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   # cat f
@@ -631,6 +631,7 @@ Tool execution
   # hg update -C 1
   $ hg merge -r 2 --config merge-tools.true.executable=head --config merge-tools.true.args='$base $local $other $output' \
   >   | sed 's,==> .* <==,==> ... <==,g'
+  merging f
   ==> ... <==
   revision 0
   space
@@ -646,7 +647,6 @@ Tool execution
   ==> ... <==
   revision 1
   space
-  merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ aftermerge
@@ -757,13 +757,13 @@ cat is a bad merge-tool and doesn't change:
   true.executable=cat
   # hg update -C 1
   # hg merge -y -r 2 --config merge-tools.true.checkchanged=1
+  merging f
   revision 1
   space
   revision 0
   space
   revision 2
   space
-  merging f
    output file f appears unchanged
   was merge successful (yn)? n
   merging f failed!

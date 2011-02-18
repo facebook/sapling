@@ -72,8 +72,8 @@ merge should fail
   [255]
 merge of b expected
   $ hg merge -f 1
-  merging for b
   merging b
+  merging for b
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg diff --nodates
@@ -153,8 +153,8 @@ merge of b should fail
   [255]
 merge of b expected
   $ hg merge -f 2
-  merging for b
   merging b
+  merging for b
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg diff --nodates

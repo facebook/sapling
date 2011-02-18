@@ -76,17 +76,17 @@ test generic hooks
 
   $ cd ../b
   $ hg pull ../a
-  prechangegroup hook: HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
-  changegroup hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
-  incoming hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
-  incoming hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
-  incoming hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   pulling from ../a
   searching for changes
+  prechangegroup hook: HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
+  changegroup hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
+  incoming hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
+  incoming hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
+  incoming hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   (run 'hg update' to get a working copy)
 
 tag hooks can see env vars
@@ -176,9 +176,9 @@ prechangegroup hook can prevent incoming changes
   $ echo '[hooks]' > .hg/hgrc
   $ echo 'prechangegroup.forbid = python "$TESTDIR"/printenv.py prechangegroup.forbid 1' >> .hg/hgrc
   $ hg pull ../a
-  prechangegroup.forbid hook: HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   pulling from ../a
   searching for changes
+  prechangegroup.forbid hook: HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   abort: prechangegroup.forbid hook exited with status 1
   [255]
 
@@ -189,14 +189,14 @@ incoming changes no longer there after
   $ echo 'pretxnchangegroup.forbid0 = hg tip -q' >> .hg/hgrc
   $ echo 'pretxnchangegroup.forbid1 = python "$TESTDIR"/printenv.py pretxnchangegroup.forbid 1' >> .hg/hgrc
   $ hg pull ../a
-  4:539e4b31b6dc
-  pretxnchangegroup.forbid hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/b HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   pulling from ../a
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  4:539e4b31b6dc
+  pretxnchangegroup.forbid hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/b HG_SOURCE=pull HG_URL=file:$TESTTMP/a 
   transaction abort!
   rollback completed
   abort: pretxnchangegroup.forbid1 hook exited with status 1
@@ -211,11 +211,11 @@ outgoing hooks can see env vars
   $ echo 'preoutgoing = python "$TESTDIR"/printenv.py preoutgoing' >> ../a/.hg/hgrc
   $ echo 'outgoing = python "$TESTDIR"/printenv.py outgoing' >> ../a/.hg/hgrc
   $ hg pull ../a
-  preoutgoing hook: HG_SOURCE=pull 
-  outgoing hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_SOURCE=pull 
   pulling from ../a
   searching for changes
+  preoutgoing hook: HG_SOURCE=pull 
   adding changesets
+  outgoing hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_SOURCE=pull 
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
@@ -227,10 +227,10 @@ preoutgoing hook can prevent outgoing changes
 
   $ echo 'preoutgoing.forbid = python "$TESTDIR"/printenv.py preoutgoing.forbid 1' >> ../a/.hg/hgrc
   $ hg pull ../a
-  preoutgoing hook: HG_SOURCE=pull 
-  preoutgoing.forbid hook: HG_SOURCE=pull 
   pulling from ../a
   searching for changes
+  preoutgoing hook: HG_SOURCE=pull 
+  preoutgoing.forbid hook: HG_SOURCE=pull 
   abort: preoutgoing.forbid hook exited with status 1
   [255]
 

@@ -38,11 +38,11 @@ Merge them and display *_ISLINK vars
 merge heads
 
   $ hg merge --tool="python ../echo.py"
+  merging l
   HG_FILE l
   HG_MY_ISLINK 1
   HG_OTHER_ISLINK 0
   HG_BASE_ISLINK 0
-  merging l
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -54,9 +54,9 @@ merge working directory
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg copy l l2
   $ HGMERGE="python ../echo.py" hg up 3
+  merging l2
   HG_FILE l2
   HG_MY_ISLINK 1
   HG_OTHER_ISLINK 0
   HG_BASE_ISLINK 0
-  merging l2
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved

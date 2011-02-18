@@ -386,6 +386,10 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
 
     if out is specified, it is assumed to be a file-like object that has a
     write() method. stdout and stderr will be redirected to out.'''
+    try:
+        sys.stdout.flush()
+    except Exception:
+        pass
     def py2shell(val):
         'convert python object into string that is useful to shell'
         if val is None or val is False:
