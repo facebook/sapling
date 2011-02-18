@@ -71,7 +71,7 @@ def build_opener(ui, authinfo):
         """return a function that opens files over http"""
         p = base
         def o(path, mode="r", atomictemp=None):
-            if 'a' in mode or 'w' in mode:
+            if mode not in ('r', 'rb'):
                 raise IOError('Permission denied')
             f = "/".join((p, urllib.quote(path)))
             return httprangereader(f, urlopener)
