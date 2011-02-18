@@ -51,6 +51,10 @@ class RepoLookupError(RepoError):
 class CapabilityError(RepoError):
     pass
 
+class RequirementError(RepoError):
+    """Exception raised if .hg/requires has an unknown entry."""
+    pass
+
 class LockError(IOError):
     def __init__(self, errno, strerror, filename, desc):
         IOError.__init__(self, errno, strerror, filename)

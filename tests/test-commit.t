@@ -92,6 +92,15 @@ An empty date was interpreted as epoch origin
   $ hg commit -d '' -m commit-no-date
   $ hg tip --template '{date|isodate}\n' | grep '1970'
   [1]
+
+Make sure we do not obscure unknown requires file entries (issue2649)
+
+  $ echo foo >> foo
+  $ echo fake >> .hg/requires
+  $ hg commit -m bla
+  abort: requirement 'fake' not supported!
+  [255]
+
   $ cd ..
 
 

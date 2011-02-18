@@ -576,6 +576,8 @@ def _dispatch(ui, args):
             if not repo.local():
                 raise util.Abort(_("repository '%s' is not local") % path)
             ui.setconfig("bundle", "mainreporoot", repo.root)
+        except error.RequirementError:
+            raise
         except error.RepoError:
             if cmd not in commands.optionalrepo.split():
                 if args and not path: # try to infer -R from command args

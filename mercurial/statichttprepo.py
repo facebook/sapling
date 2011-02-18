@@ -112,7 +112,8 @@ class statichttprepository(localrepo.localrepository):
         # check them
         for r in requirements:
             if r not in self.supported:
-                raise error.RepoError(_("requirement '%s' not supported") % r)
+                raise error.RequirementError(
+                        _("requirement '%s' not supported") % r)
 
         # setup store
         self.store = store.store(requirements, self.path, opener)

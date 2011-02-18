@@ -67,3 +67,16 @@ remote with tags?
   $ hg id -t http://localhost:$HGPORT1/
   abort: can't query remote revision number, branch, or tags
   [255]
+
+Make sure we do not obscure unknown requires file entries (issue2649)
+
+  $ echo fake >> .hg/requires
+  $ hg id
+  abort: requirement 'fake' not supported!
+  [255]
+
+  $ cd ..
+  $ hg id test
+  abort: requirement 'fake' not supported!
+  [255]
+

@@ -75,7 +75,8 @@ class localrepository(repo.repository):
                 if inst.errno != errno.ENOENT:
                     raise
             for r in requirements - self.supported:
-                raise error.RepoError(_("requirement '%s' not supported") % r)
+                raise error.RequirementError(
+                          _("requirement '%s' not supported") % r)
 
         self.sharedpath = self.path
         try:
