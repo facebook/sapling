@@ -102,27 +102,36 @@ trying clone -r
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-test with "/" URI (issue 747)
+test with "/" URI (issue 747) and subrepo
 
   $ hg init
+  $ hg init sub
+  $ hg -R sub tag not-empty
+  $ echo sub=sub > .hgsub
   $ echo a > a
-  $ hg add a
-  $ hg ci -ma
+  $ hg add a .hgsub
+  $ hg -q ci -ma
   $ hg clone static-http://localhost:$HGPORT/ local2
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 1 changesets with 3 changes to 3 files
   updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  pulling subrepo sub from static-http://localhost:$HGPORT/sub
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd local2
   $ hg verify
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  1 files, 1 changesets, 1 total revisions
+  3 files, 1 changesets, 3 total revisions
   $ cat a
   a
   $ hg paths
