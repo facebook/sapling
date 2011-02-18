@@ -230,7 +230,7 @@ Show all commands + options
   grep: print0, all, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
   heads: rev, topo, active, closed, style, template
   help: 
-  identify: rev, num, id, branch, tags
+  identify: rev, num, id, branch, tags, bookmarks
   import: strip, base, force, no-commit, exact, import-branch, message, logfile, date, user, similarity
   incoming: force, newest-first, bundle, rev, bookmarks, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, insecure, subrepos
   locate: rev, print0, fullpath, include, exclude

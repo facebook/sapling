@@ -62,10 +62,28 @@ with remote http repo
   $ hg id http://localhost:$HGPORT1/
   cb9a9f314b8b
 
+remote with rev number?
+
+  $ hg id -n http://localhost:$HGPORT1/
+  abort: can't query remote revision number, branch, tags, or bookmarks
+  [255]
+
 remote with tags?
 
   $ hg id -t http://localhost:$HGPORT1/
-  abort: can't query remote revision number, branch, or tags
+  abort: can't query remote revision number, branch, tags, or bookmarks
+  [255]
+
+remote with branch?
+
+  $ hg id -b http://localhost:$HGPORT1/
+  abort: can't query remote revision number, branch, tags, or bookmarks
+  [255]
+
+remote with bookmarks?
+
+  $ hg id -B http://localhost:$HGPORT1/
+  abort: can't query remote revision number, branch, tags, or bookmarks
   [255]
 
 Make sure we do not obscure unknown requires file entries (issue2649)

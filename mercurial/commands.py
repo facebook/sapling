@@ -2240,8 +2240,8 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
             else:
                 ui.write("%s\n" % opt)
 
-def identify(ui, repo, source=None,
-             rev=None, num=None, id=None, branch=None, tags=None):
+def identify(ui, repo, source=None, rev=None,
+             num=None, id=None, branch=None, tags=None, bookmarks=None):
     """identify the working copy or specified revision
 
     With no revision, print a summary of the current state of the
@@ -2263,7 +2263,7 @@ def identify(ui, repo, source=None,
                            "(.hg not found)"))
 
     hexfunc = ui.debugflag and hex or short
-    default = not (num or id or branch or tags)
+    default = not (num or id or branch or tags or bookmarks)
     output = []
 
     revs = []
@@ -2277,9 +2277,9 @@ def identify(ui, repo, source=None,
             rev = revs[0]
         if not rev:
             rev = "tip"
-        if num or branch or tags:
-            raise util.Abort(
-                _("can't query remote revision number, branch, or tags"))
+        if num or branch or tags or bookmarks:
+            raise util.Abort(_("can't query remote revision number,"
+                             " branch, tags, or bookmarks"))
         output = [hexfunc(repo.lookup(rev))]
     elif not rev:
         ctx = repo[None]
@@ -2310,11 +2310,19 @@ def identify(ui, repo, source=None,
         if t:
             output.append(t)
 
+        # multiple bookmarks for a single parent separated by '/'
+        bm = '/'.join(ctx.bookmarks())
+        if bm:
+            output.append(bm)
+
     if branch:
         output.append(ctx.branch())
 
     if tags:
         output.extend(ctx.tags())
+
+    if bookmarks:
+        output.extend(ctx.bookmarks())
 
     ui.write("%s\n" % ' '.join(output))
 
@@ -4460,8 +4468,9 @@ table = {
           ('n', 'num', None, _('show local revision number')),
           ('i', 'id', None, _('show global revision id')),
           ('b', 'branch', None, _('show branch')),
-          ('t', 'tags', None, _('show tags'))],
-         _('[-nibt] [-r REV] [SOURCE]')),
+          ('t', 'tags', None, _('show tags')),
+          ('B', 'bookmarks', None, _('show bookmarks'))],
+         _('[-nibtB] [-r REV] [SOURCE]')),
     "import|patch":
         (import_,
          [('p', 'strip', 1,

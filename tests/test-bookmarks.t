@@ -240,3 +240,7 @@ test summary
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
 
+test id
+
+  $ hg id
+  db815d6d32e6 tip Y/Z/x  y
