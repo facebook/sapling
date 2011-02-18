@@ -254,7 +254,7 @@ def _buildmatch(pats, tail):
         l = len(pats)
         if l < 2:
             raise
-        pata, a = _buildmatch(pats[:l//2], tail),
+        pata, a = _buildmatch(pats[:l//2], tail)
         patb, b = _buildmatch(pats[l//2:], tail)
         return pat, lambda s: a(s) or b(s)
     except re.error:
