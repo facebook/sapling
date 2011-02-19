@@ -521,7 +521,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             marks[mark] = repo.lookup(rev)
         else:
             marks[mark] = repo.changectx('.').node()
-        bookmarks.setcurrent(repo, mark)
+        if repo.changectx('.').node() == marks[mark]:
+            bookmarks.setcurrent(repo, mark)
         bookmarks.write(repo)
         return
 
