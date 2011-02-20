@@ -71,13 +71,12 @@ permhooks.append(checkauthz)
 
 class ErrorResponse(Exception):
     def __init__(self, code, message=None, headers=[]):
-        Exception.__init__(self)
+        if message is None:
+            message = _statusmessage(code)
+        Exception.__init__(self, code, message)
         self.code = code
+        self.message = message
         self.headers = headers
-        if message is not None:
-            self.message = message
-        else:
-            self.message = _statusmessage(code)
 
 def _statusmessage(code):
     from BaseHTTPServer import BaseHTTPRequestHandler
