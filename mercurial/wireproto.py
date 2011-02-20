@@ -80,7 +80,12 @@ class wirerepository(repo.repository):
                        key=encoding.fromlocal(key),
                        old=encoding.fromlocal(old),
                        new=encoding.fromlocal(new))
-        return bool(int(d))
+        try:
+            d = bool(int(d))
+        except ValueError:
+            raise error.ResponseError(
+                _('push failed (unexpected response):'), d)
+        return d
 
     def listkeys(self, namespace):
         if not self.capable('pushkey'):
