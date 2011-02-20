@@ -1,3 +1,7 @@
+Translations are optional:
+
+  $ "$TESTDIR/hghave" gettext || exit 80
+
 Test that translations are compiled and installed correctly.
 
 Default encoding in tests is "ascii" and the translation is encoded

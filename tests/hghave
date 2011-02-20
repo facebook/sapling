@@ -108,6 +108,9 @@ def has_lsprof():
     except ImportError:
         return False
 
+def has_gettext():
+    return matchoutput('msgfmt --version', 'GNU gettext-tools')
+
 def has_git():
     return matchoutput('git --version 2>&1', r'^git version')
 
@@ -189,6 +192,7 @@ checks = {
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
     "execbit": (has_executablebit, "executable bit"),
     "fifo": (has_fifo, "named pipes"),
+    "gettext": (has_gettext, "GNU Gettext (msgfmt)"),
     "git": (has_git, "git command line client"),
     "gpg": (has_gpg, "gpg client"),
     "icasefs": (has_icasefs, "case insensitive file system"),
