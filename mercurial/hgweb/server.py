@@ -68,7 +68,7 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             self.do_write()
-        except StandardError:
+        except Exception:
             self._start_response("500 Internal Server Error", [])
             self._write("Internal Server Error")
             tb = "".join(traceback.format_exception(*sys.exc_info()))
