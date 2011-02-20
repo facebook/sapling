@@ -114,17 +114,17 @@ class hgweb(object):
 
         cmd = req.form.get('cmd', [''])[0]
         if protocol.iscmd(cmd):
-            if query:
-                raise ErrorResponse(HTTP_NOT_FOUND)
-            if cmd in perms:
-                try:
+            try:
+                if query:
+                    raise ErrorResponse(HTTP_NOT_FOUND)
+                if cmd in perms:
                     self.check_perm(req, perms[cmd])
-                except ErrorResponse, inst:
-                    if cmd == 'unbundle':
-                        req.drain()
-                    req.respond(inst, protocol.HGTYPE)
-                    return '0\n%s\n' % inst.message
-            return protocol.call(self.repo, req, cmd)
+                return protocol.call(self.repo, req, cmd)
+            except ErrorResponse, inst:
+                if cmd == 'unbundle':
+                    req.drain()
+                req.respond(inst, protocol.HGTYPE)
+                return '0\n%s\n' % inst.message
 
         # translate user-visible url structure to internal structure
 
