@@ -15,7 +15,7 @@
   >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
   >     cat hg.pid >> $DAEMON_PIDS
   >     hg --cwd ../test2 push http://localhost:$HGPORT/
-  >     kill `cat hg.pid`
+  >     "$TESTDIR/killdaemons.py"
   >     echo % serve errors
   >     cat errors.log
   > }
