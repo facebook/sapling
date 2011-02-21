@@ -106,7 +106,7 @@ Test for invalid branch cache:
 
   $ hg rollback
   repository tip rolled back to revision 4 (undo commit)
-  working directory now based on revision 4 and 3
+  working directory now based on revisions 4 and 3
 
   $ cp $branchcache .hg/bc-invalid
 
