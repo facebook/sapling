@@ -3705,6 +3705,8 @@ def summary(ui, repo, **opts):
         ui.write(_('parent: %d:%s ') % (p.rev(), str(p)),
                  label='log.changeset')
         ui.write(' '.join(p.tags()), label='log.tag')
+        if p.bookmarks():
+            ui.write(' ' + ' '.join(p.bookmarks()), label='log.bookmark')
         if p.rev() == -1:
             if not len(repo):
                 ui.write(_(' (empty repository)'))
@@ -3824,6 +3826,15 @@ def summary(ui, repo, **opts):
         o = repo.changelog.nodesbetween(o, None)[0]
         if o:
             t.append(_('%d outgoing') % len(o))
+        if 'bookmarks' in other.listkeys('namespaces'):
+            lmarks = repo.listkeys('bookmarks')
+            rmarks = other.listkeys('bookmarks')
+            diff = set(rmarks) - set(lmarks)
+            if len(diff) > 0:
+                t.append(_('%d incoming bookmarks') % len(diff))
+            diff = set(lmarks) - set(rmarks)
+            if len(diff) > 0:
+                t.append(_('%d outgoing bookmarks') % len(diff))
 
         if t:
             ui.write(_('remote: %s\n') % (', '.join(t)))
