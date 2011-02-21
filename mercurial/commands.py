@@ -2502,6 +2502,9 @@ def incoming(ui, repo, source="default", **opts):
         source, branches = hg.parseurl(ui.expandpath(source),
                                        opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), source)
+        if 'bookmarks' not in other.listkeys('namespaces'):
+            ui.warn(_("remote doesn't support bookmarks\n"))
+            return 0
         ui.status(_('comparing with %s\n') % url.hidepassword(source))
         return bookmarks.diff(ui, repo, other)
 
@@ -2786,6 +2789,9 @@ def outgoing(ui, repo, dest=None, **opts):
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), dest)
+        if 'bookmarks' not in other.listkeys('namespaces'):
+            ui.warn(_("remote doesn't support bookmarks\n"))
+            return 0
         ui.status(_('comparing with %s\n') % url.hidepassword(dest))
         return bookmarks.diff(ui, other, repo)
 
