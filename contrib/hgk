@@ -1156,16 +1156,21 @@ proc drawcommitline {level} {
 }
 
 proc drawtags {id x xt y1} {
-    global idtags idheads idotherrefs commitinfo
+    global bookmarkcurrent idtags idbookmarks idheads idotherrefs commitinfo
     global linespc lthickness
     global canv mainfont idline rowtextx
 
     set marks {}
+    set nbookmarks 0
     set ntags 0
     set nheads 0
     if {[info exists idtags($id)]} {
 	set marks $idtags($id)
 	set ntags [llength $marks]
+    }
+    if {[info exists idbookmarks($id)]} {
+	set marks [concat $marks $idbookmarks($id)]
+	set nbookmarks [llength $idbookmarks($id)]
     }
     if {[info exists idheads($id)]} {
 	set headmark [lindex $commitinfo($id) 7]
@@ -1173,9 +1178,6 @@ proc drawtags {id x xt y1} {
 	    lappend marks $headmark
 	    set nheads 1
 	}
-    }
-    if {[info exists idotherrefs($id)]} {
-	set marks [concat $marks $idotherrefs($id)]
     }
     if {$marks eq {}} {
 	return $xt
@@ -1205,16 +1207,25 @@ proc drawtags {id x xt y1} {
 		       -width 1 -outline black -fill yellow -tags tag.$id]
 	    $canv bind $t <1> [list showtag $tag 1]
 	    set rowtextx($idline($id)) [expr {$xr + $linespc}]
-	} else {
-	    # draw a head or other ref
-	    if {[incr nheads -1] >= 0} {
-		set col green
-	    } else {
-		set col "#ddddff"
-	    }
-	    set xl [expr $xl - $delta/2]
-	    $canv create polygon $x $yt $xr $yt $xr $yb $x $yb \
-		-width 1 -outline black -fill $col -tags tag.$id
+	} elseif {[incr nbookmarks -1] >= 0} {
+            # draw a tag
+            set col gray50
+            if {[string compare $bookmarkcurrent $tag] == 0} {
+                set col gray
+            }
+            set xl [expr $xl - $delta/2]
+            $canv create polygon $x $yt $xr $yt $xr $yb $x $yb \
+                -width 1 -outline black -fill $col -tags tag.$id
+        } else {
+            # draw a head or other ref
+            if {[incr nheads -1] >= 0} {
+                set col green
+            } else {
+                set col "#ddddff"
+            }
+            set xl [expr $xl - $delta/2]
+            $canv create polygon $x $yt $xr $yt $xr $yb $x $yb \
+                -width 1 -outline black -fill $col -tags tag.$id
 	}
 	set t [$canv create text $xl $y1 -anchor w -text $tag \
 		   -font $mainfont -tags tag.$id]
