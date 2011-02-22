@@ -177,7 +177,7 @@ class GitHandler(object):
         export = [node for node in nodes if not hex(node) in self._map_hg]
         total = len(export)
         for i, rev in enumerate(export):
-            util.progress(self.ui, 'import', i, total=total)
+            util.progress(self.ui, 'importing', i, total=total)
             ctx = self.repo.changectx(rev)
             state = ctx.extra().get('hg-git', None)
             if state == 'octopus':
@@ -185,7 +185,7 @@ class GitHandler(object):
                               "of octopus explosion\n" % ctx.rev())
                 continue
             self.export_hg_commit(rev)
-        util.progress(self.ui, 'import', None, total=total)
+        util.progress(self.ui, 'importing', None, total=total)
 
 
     # convert this commit into git objects
@@ -406,10 +406,10 @@ class GitHandler(object):
         # import each of the commits, oldest first
         total = len(commits)
         for i, csha in enumerate(commits):
-            util.progress(self.ui, 'import', i, total=total, unit='commits')
+            util.progress(self.ui, 'importing', i, total=total, unit='commits')
             commit = convert_list[csha]
             self.import_git_commit(commit)
-        util.progress(self.ui, 'import', None, total=total, unit='commits')
+        util.progress(self.ui, 'importing', None, total=total, unit='commits')
 
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
