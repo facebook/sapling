@@ -12,8 +12,6 @@ import struct, os, bz2, zlib, tempfile
 def getchunk(source):
     """return the next chunk from changegroup 'source' as a string"""
     d = source.read(4)
-    if not d:
-        return ""
     l = struct.unpack(">l", d)[0]
     if l <= 4:
         return ""
@@ -148,8 +146,6 @@ class unbundle10(object):
 
     def chunklength(self):
         d = self.read(4)
-        if not d:
-            return 0
         l = max(0, struct.unpack(">l", d)[0] - 4)
         if l and self.callback:
             self.callback()
