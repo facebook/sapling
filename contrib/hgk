@@ -2355,7 +2355,7 @@ proc selectline {l isnew} {
     global lineid linehtag linentag linedtag
     global canvy0 linespc parents nparents children
     global cflist currentid sha1entry
-    global commentend idtags idline linknum
+    global commentend idtags idbookmarks idline linknum
 
     $canv delete hover
     normalline
@@ -2432,6 +2432,14 @@ proc selectline {l isnew} {
     }
     $ctext insert end "Author: [lindex $info 1]  [lindex $info 2]\n"
     $ctext insert end "Committer: [lindex $info 3]  [lindex $info 4]\n"
+    if {[info exists idbookmarks($id)]} {
+	$ctext insert end "Bookmarks:"
+	foreach bookmark $idbookmarks($id) {
+	    $ctext insert end " $bookmark"
+	}
+	$ctext insert end "\n"
+    }
+
     if {[info exists idtags($id)]} {
 	$ctext insert end "Tags:"
 	foreach tag $idtags($id) {
