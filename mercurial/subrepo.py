@@ -659,6 +659,7 @@ class gitsubrepo(abstractsubrepo):
         self._path = path
         self._relpath = os.path.join(reporelpath(ctx._repo), path)
         self._abspath = ctx._repo.wjoin(path)
+        self._subparent = ctx._repo
         self._ui = ctx._repo.ui
 
     def _gitcommand(self, commands, env=None, stream=False):
@@ -751,10 +752,14 @@ class gitsubrepo(abstractsubrepo):
                          (remote, ref.split('/', 2)[2])] = b
         return tracking
 
+    def _abssource(self, source):
+        self._subsource = source
+        return _abssource(self)
+
     def _fetch(self, source, revision):
         if not os.path.exists(os.path.join(self._abspath, '.git')):
             self._ui.status(_('cloning subrepo %s\n') % self._relpath)
-            self._gitnodir(['clone', source, self._abspath])
+            self._gitnodir(['clone', self._abssource(source), self._abspath])
         if self._githavelocally(revision):
             return
         self._ui.status(_('pulling subrepo %s\n') % self._relpath)
@@ -763,7 +768,7 @@ class gitsubrepo(abstractsubrepo):
         if self._githavelocally(revision):
             return
         # then try from known subrepo source
-        self._gitcommand(['fetch', source])
+        self._gitcommand(['fetch', self._abssource(source)])
         if not self._githavelocally(revision):
             raise util.Abort(_("revision %s does not exist in subrepo %s\n") %
                                (revision, self._relpath))
