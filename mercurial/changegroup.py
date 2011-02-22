@@ -151,7 +151,7 @@ class unbundle10(object):
         return self._stream.close()
 
     def chunklength(self):
-        d = readexactly(stream, 4)
+        d = readexactly(self._stream, 4)
         l = struct.unpack(">l", d)[0]
         if l <= 4:
             if l:
