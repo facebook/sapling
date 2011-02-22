@@ -23,6 +23,8 @@ def getchunk(stream):
     d = readexactly(stream, 4)
     l = struct.unpack(">l", d)[0]
     if l <= 4:
+        if l:
+            raise util.Abort(_("invalid chunk length %d") % l)
         return ""
     return readexactly(stream, l - 4)
 
@@ -149,11 +151,15 @@ class unbundle10(object):
         return self._stream.close()
 
     def chunklength(self):
-        d = readexactly(self._stream, 4)
-        l = max(0, struct.unpack(">l", d)[0] - 4)
-        if l and self.callback:
+        d = readexactly(stream, 4)
+        l = struct.unpack(">l", d)[0]
+        if l <= 4:
+            if l:
+                raise util.Abort(_("invalid chunk length %d") % l)
+            return 0
+        if self.callback:
             self.callback()
-        return l
+        return l - 4
 
     def chunk(self):
         """return the next chunk from changegroup 'source' as a string"""
