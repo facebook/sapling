@@ -70,6 +70,8 @@ def convertsink(ui, path, type):
                 return sink(ui, path)
         except NoRepo, inst:
             ui.note(_("convert: %s\n") % inst)
+        except MissingTool, inst:
+            raise util.Abort(_('%s\n') % inst)
     raise util.Abort(_('%s: unknown repository type') % path)
 
 class progresssource(object):
