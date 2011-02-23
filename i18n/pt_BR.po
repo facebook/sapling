@@ -7093,8 +7093,12 @@ msgid "cannot create new bundle repository"
 msgstr "não é possível criar novo repositório de bundle"
 
 #, python-format
-msgid "premature EOF reading chunk (got %d bytes, expected %d)"
-msgstr "fim de arquivo prematuro lendo trecho (%d bytes obtidos, %d esperados)"
+msgid "stream ended unexpectedly (got %d bytes, expected %d)"
+msgstr "dados recebidos terminaram inesperadamente (%d bytes obtidos, %d esperados)"
+
+#, python-format
+msgid "invalid chunk length %d"
+msgstr "comprimento de trecho inválido %d"
 
 #, python-format
 msgid "%s: not a Mercurial bundle"
@@ -9044,6 +9048,9 @@ msgstr ""
 msgid "cannot combine --bundle and --subrepos"
 msgstr "não é possível combinar --bundle e --subrepos"
 
+msgid "remote doesn't support bookmarks\n"
+msgstr "o repositório remoto não suporta marcadores\n"
+
 msgid "create a new repository in the given directory"
 msgstr "cria um novo repositório no diretório pedido"
 
@@ -10146,6 +10153,14 @@ msgstr "1 ou mais de entrada"
 #, python-format
 msgid "%d outgoing"
 msgstr "%d de saída"
+
+#, python-format
+msgid "%d incoming bookmarks"
+msgstr "%d marcadores a serem trazidos"
+
+#, python-format
+msgid "%d outgoing bookmarks"
+msgstr "%d marcadores a serem enviados"
 
 #, python-format
 msgid "remote: %s\n"
@@ -14870,12 +14885,12 @@ msgid "no interrupted transaction available\n"
 msgstr "nenhuma transação interrompida disponível\n"
 
 #, python-format
-msgid "rolling back to revision %s (undo %s: %s)\n"
-msgstr "executando rollback para a revisão %s (desfazimento de %s: %s)\n"
+msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
+msgstr "executando rollback da tip do repositório para a revisão %s (desfazimento de %s: %s)\n"
 
 #, python-format
-msgid "rolling back to revision %s (undo %s)\n"
-msgstr "executando rollback para a revisão %s (desfazimento de %s)\n"
+msgid "repository tip rolled back to revision %s (undo %s)\n"
+msgstr "executando rollback da tip do repositório para a revisão %s (desfazimento de %s)\n"
 
 msgid "rolling back unknown transaction\n"
 msgstr "desfazendo transação desconhecida\n"
@@ -14883,6 +14898,14 @@ msgstr "desfazendo transação desconhecida\n"
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr "O ramo nomeado não pode ser redefinido, o ramo corrente ainda é: %s\n"
+
+#, python-format
+msgid "working directory now based on revisions %d and %d\n"
+msgstr "o diretório de trabalho está agora baseado nas revisões %d e %d\n"
+
+#, python-format
+msgid "working directory now based on revision %d\n"
+msgstr "o diretório de trabalho está agora baseado na revisão %d\n"
 
 msgid "no rollback information available\n"
 msgstr "nenhuma informação de desfazimento disponível\n"
@@ -15164,6 +15187,10 @@ msgstr "nada para mesclar (use 'hg update' ou verifique 'hg heads')"
 
 msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
 msgstr "alterações não consolidadas pendentes (use 'hg status' para listar as mudanças)"
+
+#, python-format
+msgid "outstanding uncommitted changes in subrepository '%s'"
+msgstr "mudanças não consolidadas pendentes no sub-repositório '%s'"
 
 msgid "crosses branches (merge branches or use --clean to discard changes)"
 msgstr "atravessa ramos (mescle os ramos ou use --clean para descartar mudanças)"
@@ -16415,14 +16442,14 @@ msgstr "(primeira revisão danificada parece ser %d)\n"
 msgid "look up remote revision"
 msgstr "procurar revisão remota"
 
+msgid "push failed (unexpected response):"
+msgstr "o push falhou (resposta inesperada):"
+
 msgid "look up remote changes"
 msgstr "procurar mudanças remotas"
 
 msgid "push failed:"
 msgstr "o push falhou:"
-
-msgid "push failed (unexpected response):"
-msgstr "o push falhou (resposta inesperada):"
 
 msgid "options:"
 msgstr "opções:"
