@@ -2502,6 +2502,9 @@ def incoming(ui, repo, source="default", **opts):
         source, branches = hg.parseurl(ui.expandpath(source),
                                        opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), source)
+        if 'bookmarks' not in other.listkeys('namespaces'):
+            ui.warn(_("remote doesn't support bookmarks\n"))
+            return 0
         ui.status(_('comparing with %s\n') % url.hidepassword(source))
         return bookmarks.diff(ui, repo, other)
 
@@ -2786,6 +2789,9 @@ def outgoing(ui, repo, dest=None, **opts):
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), dest)
+        if 'bookmarks' not in other.listkeys('namespaces'):
+            ui.warn(_("remote doesn't support bookmarks\n"))
+            return 0
         ui.status(_('comparing with %s\n') % url.hidepassword(dest))
         return bookmarks.diff(ui, other, repo)
 
@@ -3699,6 +3705,8 @@ def summary(ui, repo, **opts):
         ui.write(_('parent: %d:%s ') % (p.rev(), str(p)),
                  label='log.changeset')
         ui.write(' '.join(p.tags()), label='log.tag')
+        if p.bookmarks():
+            ui.write(' ' + ' '.join(p.bookmarks()), label='log.bookmark')
         if p.rev() == -1:
             if not len(repo):
                 ui.write(_(' (empty repository)'))
@@ -3818,6 +3826,15 @@ def summary(ui, repo, **opts):
         o = repo.changelog.nodesbetween(o, None)[0]
         if o:
             t.append(_('%d outgoing') % len(o))
+        if 'bookmarks' in other.listkeys('namespaces'):
+            lmarks = repo.listkeys('bookmarks')
+            rmarks = other.listkeys('bookmarks')
+            diff = set(rmarks) - set(lmarks)
+            if len(diff) > 0:
+                t.append(_('%d incoming bookmarks') % len(diff))
+            diff = set(lmarks) - set(rmarks)
+            if len(diff) > 0:
+                t.append(_('%d outgoing bookmarks') % len(diff))
 
         if t:
             ui.write(_('remote: %s\n') % (', '.join(t)))

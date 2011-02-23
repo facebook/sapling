@@ -742,9 +742,13 @@ class localrepository(repo.repository):
                 self.invalidate()
                 self.dirstate.invalidate()
                 self.destroyed()
-                self.ui.status(_("working directory now based on "
-                                 "revision %s\n") % (
-                    _(' and ').join(str(p.rev()) for p in self.parents())))
+                parents = tuple([p.rev() for p in self.parents()])
+                if len(parents) > 1:
+                    self.ui.status(_("working directory now based on "
+                                     "revisions %d and %d\n") % parents)
+                else:
+                    self.ui.status(_("working directory now based on "
+                                     "revision %d\n") % parents)
             else:
                 self.ui.warn(_("no rollback information available\n"))
                 return 1

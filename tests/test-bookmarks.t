@@ -225,3 +225,12 @@ invalid bookmark
   abort: bookmark 'foo:bar' contains illegal character
   [255]
 
+test summary
+
+  $ hg summary
+  parent: 2:db815d6d32e6 tip Y Z x  y
+   2
+  branch: default
+  commit: (clean)
+  update: 1 new changesets, 2 branch heads (merge)
+

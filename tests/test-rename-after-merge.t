@@ -98,7 +98,7 @@ Commit issue 1476:
 
   $ hg rollback
   repository tip rolled back to revision 2 (undo commit)
-  working directory now based on revision 2 and 1
+  working directory now based on revisions 2 and 1
 
   $ hg up -C .
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved

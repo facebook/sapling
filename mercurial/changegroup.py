@@ -9,20 +9,24 @@ from i18n import _
 import util
 import struct, os, bz2, zlib, tempfile
 
-def getchunk(source):
-    """return the next chunk from changegroup 'source' as a string"""
-    d = source.read(4)
-    if not d:
-        return ""
+def readexactly(stream, n):
+    '''read n bytes from stream.read and abort if less was available'''
+    s = stream.read(n)
+    if len(s) < n:
+        raise util.Abort(_("stream ended unexpectedly"
+                           " (got %d bytes, expected %d)")
+                          % (len(s), n))
+    return s
+
+def getchunk(stream):
+    """return the next chunk from stream as a string"""
+    d = readexactly(stream, 4)
     l = struct.unpack(">l", d)[0]
     if l <= 4:
+        if l:
+            raise util.Abort(_("invalid chunk length %d") % l)
         return ""
-    d = source.read(l - 4)
-    if len(d) < l - 4:
-        raise util.Abort(_("premature EOF reading chunk"
-                           " (got %d bytes, expected %d)")
-                          % (len(d), l - 4))
-    return d
+    return readexactly(stream, l - 4)
 
 def chunkheader(length):
     """return a changegroup chunk header (string)"""
@@ -147,31 +151,28 @@ class unbundle10(object):
         return self._stream.close()
 
     def chunklength(self):
-        d = self.read(4)
-        if not d:
+        d = readexactly(self._stream, 4)
+        l = struct.unpack(">l", d)[0]
+        if l <= 4:
+            if l:
+                raise util.Abort(_("invalid chunk length %d") % l)
             return 0
-        l = max(0, struct.unpack(">l", d)[0] - 4)
-        if l and self.callback:
+        if self.callback:
             self.callback()
-        return l
+        return l - 4
 
     def chunk(self):
         """return the next chunk from changegroup 'source' as a string"""
         l = self.chunklength()
-        d = self.read(l)
-        if len(d) < l:
-            raise util.Abort(_("premature EOF reading chunk"
-                               " (got %d bytes, expected %d)")
-                             % (len(d), l))
-        return d
+        return readexactly(self._stream, l)
 
     def parsechunk(self):
         l = self.chunklength()
         if not l:
             return {}
-        h = self.read(80)
+        h = readexactly(self._stream, 80)
         node, p1, p2, cs = struct.unpack("20s20s20s20s", h)
-        data = self.read(l - 80)
+        data = readexactly(self._stream, l - 80)
         return dict(node=node, p1=p1, p2=p2, cs=cs, data=data)
 
 class headerlessfixup(object):
@@ -182,12 +183,12 @@ class headerlessfixup(object):
         if self._h:
             d, self._h = self._h[:n], self._h[n:]
             if len(d) < n:
-                d += self._fh.read(n - len(d))
+                d += readexactly(self._fh, n - len(d))
             return d
-        return self._fh.read(n)
+        return readexactly(self._fh, n)
 
 def readbundle(fh, fname):
-    header = fh.read(6)
+    header = readexactly(fh, 6)
 
     if not fname:
         fname = "stream"

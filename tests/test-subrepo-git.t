@@ -305,6 +305,15 @@ nested archive
   f
   g
 
+relative source expansion
+
+  $ cd ..
+  $ mkdir d
+  $ hg clone t d/t
+  updating to branch default
+  cloning subrepo s
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
 Check hg update --clean
   $ cd $TESTTMP/ta
   $ echo  > s/g

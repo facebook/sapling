@@ -276,6 +276,7 @@ proc parsecommit {id contents listed olds} {
     set comdate {}
     set rev {}
     set branch {}
+    set bookmark {}
     if {![info exists nchildren($id)]} {
 	set children($id) {}
 	set nchildren($id) 0
@@ -314,7 +315,9 @@ proc parsecommit {id contents listed olds} {
 		    set rev [lindex $line 1]
         } elseif {$tag == "branch"} {
 		    set branch [join [lrange $line 1 end]]
-		}
+        } elseif {$tag == "bookmark"} {
+		    set bookmark [join [lrange $line 1 end]]
+        }
 	    }
 	} else {
 	    if {$comment == {}} {
@@ -338,7 +341,7 @@ proc parsecommit {id contents listed olds} {
 	set comdate [clock format $comdate -format "%Y-%m-%d %H:%M:%S"]
     }
     set commitinfo($id) [list $headline $auname $audate \
-			     $comname $comdate $comment $rev $branch]
+			     $comname $comdate $comment $rev $branch $bookmark]
 
     if {[info exists firstparents]} {
         set i [lsearch $firstparents $id]
@@ -369,7 +372,7 @@ proc parsecommit {id contents listed olds} {
 }
 
 proc readrefs {} {
-    global tagids idtags headids idheads tagcontents env curid
+    global bookmarkcurrent bookmarkids tagids idtags idbookmarks headids idheads tagcontents env curid
 
     set status [catch {exec $env(HG) --config ui.report_untrusted=false id} curid]
     if { $status != 0 } {
@@ -417,6 +420,28 @@ proc readrefs {} {
         }
     }
 
+    set status [catch {exec $env(HG) --config ui.report_untrusted=false bookmarks} bookmarks]
+    if { $status != 0 } {
+        puts $::errorInfo
+        if { ![string equal $::errorCode NONE] } {
+            exit 2
+        }
+    }
+    set lines [split $bookmarks "\n"]
+    set bookmarkcurrent 0
+    foreach f $lines {
+	regexp {(\S+)$} $f full
+	regsub {\s+(\S+)$} $f "" direct
+	set sha [split $full ':']
+	set bookmark [lindex $sha 1]
+	set current [string first " * " $direct)]
+	regsub {^\s(\*|\s)\s} $direct "" direct
+	lappend bookmarkids($direct) $bookmark
+	lappend idbookmarks($bookmark) $direct
+	if {$current >= 0} {
+		set bookmarkcurrent $direct
+	}
+    }
 }
 
 proc readotherrefs {base dname excl} {
@@ -1042,7 +1067,7 @@ proc drawcommitline {level} {
     global canv canv2 canv3 mainfont namefont canvy linespc
     global lineid linehtag linentag linedtag commitinfo
     global colormap numcommits currentparents dupparents
-    global idtags idline idheads idotherrefs
+    global idtags idline idheads idotherrefs idbookmarks
     global lineno lthickness mainline mainlinearrow sidelines
     global commitlisted rowtextx idpos lastuse displist
     global oldnlines olddlevel olddisplist
@@ -1100,7 +1125,7 @@ proc drawcommitline {level} {
     set rowtextx($lineno) $xt
     set idpos($id) [list $x $xt $y1]
     if {[info exists idtags($id)] || [info exists idheads($id)]
-	|| [info exists idotherrefs($id)]} {
+	|| [info exists idotherrefs($id)] || [info exists idbookmarks($id)]} {
 	set xt [drawtags $id $x $xt $y1]
     }
     set headline [lindex $commitinfo($id) 0]
@@ -1131,16 +1156,21 @@ proc drawcommitline {level} {
 }
 
 proc drawtags {id x xt y1} {
-    global idtags idheads idotherrefs commitinfo
+    global bookmarkcurrent idtags idbookmarks idheads idotherrefs commitinfo
     global linespc lthickness
     global canv mainfont idline rowtextx
 
     set marks {}
+    set nbookmarks 0
     set ntags 0
     set nheads 0
     if {[info exists idtags($id)]} {
 	set marks $idtags($id)
 	set ntags [llength $marks]
+    }
+    if {[info exists idbookmarks($id)]} {
+	set marks [concat $marks $idbookmarks($id)]
+	set nbookmarks [llength $idbookmarks($id)]
     }
     if {[info exists idheads($id)]} {
 	set headmark [lindex $commitinfo($id) 7]
@@ -1148,9 +1178,6 @@ proc drawtags {id x xt y1} {
 	    lappend marks $headmark
 	    set nheads 1
 	}
-    }
-    if {[info exists idotherrefs($id)]} {
-	set marks [concat $marks $idotherrefs($id)]
     }
     if {$marks eq {}} {
 	return $xt
@@ -1180,16 +1207,25 @@ proc drawtags {id x xt y1} {
 		       -width 1 -outline black -fill yellow -tags tag.$id]
 	    $canv bind $t <1> [list showtag $tag 1]
 	    set rowtextx($idline($id)) [expr {$xr + $linespc}]
-	} else {
-	    # draw a head or other ref
-	    if {[incr nheads -1] >= 0} {
-		set col green
-	    } else {
-		set col "#ddddff"
-	    }
-	    set xl [expr $xl - $delta/2]
-	    $canv create polygon $x $yt $xr $yt $xr $yb $x $yb \
-		-width 1 -outline black -fill $col -tags tag.$id
+	} elseif {[incr nbookmarks -1] >= 0} {
+            # draw a tag
+            set col gray50
+            if {[string compare $bookmarkcurrent $tag] == 0} {
+                set col gray
+            }
+            set xl [expr $xl - $delta/2]
+            $canv create polygon $x $yt $xr $yt $xr $yb $x $yb \
+                -width 1 -outline black -fill $col -tags tag.$id
+        } else {
+            # draw a head or other ref
+            if {[incr nheads -1] >= 0} {
+                set col green
+            } else {
+                set col "#ddddff"
+            }
+            set xl [expr $xl - $delta/2]
+            $canv create polygon $x $yt $xr $yt $xr $yb $x $yb \
+                -width 1 -outline black -fill $col -tags tag.$id
 	}
 	set t [$canv create text $xl $y1 -anchor w -text $tag \
 		   -font $mainfont -tags tag.$id]
@@ -2319,7 +2355,7 @@ proc selectline {l isnew} {
     global lineid linehtag linentag linedtag
     global canvy0 linespc parents nparents children
     global cflist currentid sha1entry
-    global commentend idtags idline linknum
+    global commentend idtags idbookmarks idline linknum
 
     $canv delete hover
     normalline
@@ -2396,6 +2432,14 @@ proc selectline {l isnew} {
     }
     $ctext insert end "Author: [lindex $info 1]  [lindex $info 2]\n"
     $ctext insert end "Committer: [lindex $info 3]  [lindex $info 4]\n"
+    if {[info exists idbookmarks($id)]} {
+	$ctext insert end "Bookmarks:"
+	foreach bookmark $idbookmarks($id) {
+	    $ctext insert end " $bookmark"
+	}
+	$ctext insert end "\n"
+    }
+
     if {[info exists idtags($id)]} {
 	$ctext insert end "Tags:"
 	foreach tag $idtags($id) {
@@ -3840,8 +3884,12 @@ proc wrcomcan {} {
 }
 
 proc listrefs {id} {
-    global idtags idheads idotherrefs
+    global idtags idheads idotherrefs idbookmarks
 
+    set w {}
+    if {[info exists idbookmarks($id)]} {
+	set w $idbookmarks($id)
+    }
     set x {}
     if {[info exists idtags($id)]} {
 	set x $idtags($id)
@@ -3854,26 +3902,29 @@ proc listrefs {id} {
     if {[info exists idotherrefs($id)]} {
 	set z $idotherrefs($id)
     }
-    return [list $x $y $z]
+    return [list $w $x $y $z]
 }
 
 proc rereadrefs {} {
-    global idtags idheads idotherrefs
-    global tagids headids otherrefids
+    global idbookmarks idtags idheads idotherrefs
+    global bookmarkids tagids headids otherrefids
 
     set refids [concat [array names idtags] \
-		    [array names idheads] [array names idotherrefs]]
+		    [array names idheads] [array names idotherrefs] \
+		    [array names idbookmarks]]
     foreach id $refids {
 	if {![info exists ref($id)]} {
 	    set ref($id) [listrefs $id]
 	}
     }
-    foreach v {tagids idtags headids idheads otherrefids idotherrefs} {
+    foreach v {tagids idtags headids idheads otherrefids idotherrefs \
+        bookmarkids idbookmarks} {
 	catch {unset $v}
     }
     readrefs
     set refids [lsort -unique [concat $refids [array names idtags] \
-			[array names idheads] [array names idotherrefs]]]
+			[array names idheads] [array names idotherrefs] \
+			[array names idbookmarks]]]
     foreach id $refids {
 	set v [listrefs $id]
 	if {![info exists ref($id)] || $ref($id) != $v} {
