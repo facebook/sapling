@@ -99,3 +99,29 @@ We'd rather not warn on divergent renames done in the same changeset (issue2113)
    b3
    b4
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+Check for issue2642
+
+  $ hg init t
+  $ cd t
+
+  $ echo c0 > f1
+  $ hg ci -Aqm0
+
+  $ hg up null -q
+  $ echo c1 > f1 # backport
+  $ hg ci -Aqm1
+  $ hg mv f1 f2
+  $ hg ci -qm2
+
+  $ hg up 0 -q
+  $ hg merge 1 -q --tool internal:local
+  $ hg ci -qm3
+
+  $ hg merge 2
+  merging f1 and f2 to f2
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ cat f2
+  c0

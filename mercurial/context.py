@@ -550,10 +550,14 @@ class filectx(object):
         return None
 
     def ancestors(self):
-        seen = set(str(self))
+        seen = set()
         visit = [self]
         while visit:
-            for parent in visit.pop(0).parents():
+            parents = visit.pop(0).parents()
+            if len(parents) > 1 and parents[1].rev() > parents[0].rev():
+                # make sure we return ancestors in reverse revision order
+                parents = reversed(parents)
+            for parent in parents:
                 s = str(parent)
                 if s not in seen:
                     visit.append(parent)
