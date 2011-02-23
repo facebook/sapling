@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-01-04 12:03+0100\n"
-"PO-Revision-Date: 2011-01-04 12:15+0100\n"
+"POT-Creation-Date: 2011-02-23 15:32+0100\n"
+"PO-Revision-Date: 2011-02-23 15:34+0100\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "Language: Danish\n"
@@ -45,8 +45,8 @@ msgid ""
 "Mercurial. Help for other extensions is available in the help system."
 msgstr ""
 
-msgid "options:"
-msgstr "tilvalg:"
+msgid "Options:"
+msgstr "Valgmuligheder:"
 
 #, python-format
 msgid "    aliases: %s"
@@ -288,202 +288,6 @@ msgstr ""
 #, python-format
 msgid "acl: access denied for changeset %s"
 msgstr "acl: adgang nægtet til ændring %s"
-
-msgid "track a line of development with movable markers"
-msgstr ""
-
-msgid ""
-"Bookmarks are local movable markers to changesets. Every bookmark\n"
-"points to a changeset identified by its hash. If you commit a\n"
-"changeset that is based on a changeset that has a bookmark on it, the\n"
-"bookmark shifts to the new changeset."
-msgstr ""
-"Bogmærker er lokale markeringer af ændringer. Ethvert bogmærke peger\n"
-"på en ændring som er identificeret ved dennes hashværdi. Hvis du\n"
-"deponerer en ændring som er baseret på en ændring med et bogmærke\n"
-"tilknyttet, så vil bogmærket bliver flyttet til den nye ændring."
-
-msgid ""
-"It is possible to use bookmark names in every revision lookup (e.g.\n"
-":hg:`merge`, :hg:`update`)."
-msgstr ""
-"Man kan bruge navne på bogmærker alle steder hvor en revision bliver\n"
-"brugt (e.g. :hg:`merge`, :hg:`update`)."
-
-msgid ""
-"By default, when several bookmarks point to the same changeset, they\n"
-"will all move forward together. It is possible to obtain a more\n"
-"git-like experience by adding the following configuration option to\n"
-"your configuration file::"
-msgstr ""
-"Når flere bogmærker peget på samme ændring, så vil de som udgangspunkt\n"
-"bliver flyttet fremad sammen. Man kan opnå en mere git-agtig opførsel\n"
-"ved at tilføje følgende til din konfigurationsfil::"
-
-msgid ""
-"  [bookmarks]\n"
-"  track.current = True"
-msgstr ""
-"  [bookmarks]\n"
-"  track.current = True"
-
-msgid ""
-"This will cause Mercurial to track the bookmark that you are currently\n"
-"using, and only update it. This is similar to git's approach to\n"
-"branching.\n"
-msgstr ""
-"Dette vil få Mercurial til at holde styr på hvilket bogmærke du bruger\n"
-"i øjeblikket og Mercurial vil så kun opdatere dette. Det minder om\n"
-"git's måde at lave grene på.\n"
-
-msgid ""
-"    Bookmarks are pointers to certain commits that move when\n"
-"    committing. Bookmarks are local. They can be renamed, copied and\n"
-"    deleted. It is possible to use bookmark names in :hg:`merge` and\n"
-"    :hg:`update` to merge and update respectively to a given bookmark."
-msgstr ""
-"    Bogmærker er pegepinde til bestemte ændringer og pegepindene\n"
-"    flytter sig når man deponerer nye ændringer. Bogmærkerne er\n"
-"    lokale. De kan omdøbes, kopieres og slettes. Det er muligt at\n"
-"    bruge navne på bogmærker i :hg:`merge` og :hg:`update` for\n"
-"    respektivt at sammenføje eller opdatere til det givne bogmærke."
-
-msgid ""
-"    You can use :hg:`bookmark NAME` to set a bookmark on the working\n"
-"    directory's parent revision with the given name. If you specify\n"
-"    a revision using -r REV (where REV may be an existing bookmark),\n"
-"    the bookmark is assigned to that revision."
-msgstr ""
-"    Du kan bruge :hg:`bookmark NAVN` for at sætte et bogmærke på\n"
-"    arbejdskatalogets forælderrevision med det givne navn. Hvis du\n"
-"    specificerer en revision med -r REV (hvor REV kan være et\n"
-"    eksisterende bogmærke), så bliver bogmærket tildelt denne\n"
-"    revision."
-
-msgid ""
-"    Bookmarks can be pushed and pulled between repositories (see :hg:`help\n"
-"    push` and :hg:`help pull`). This requires the bookmark extension to be\n"
-"    enabled for both the local and remote repositories.\n"
-"    "
-msgstr ""
-"    Bogmærker kan bliver skubbet og hevet mellem depoter (se :hg:`help\n"
-"    push` og :hg:`help pull`). Dette kræver at bookmark-udviddelsen er\n"
-"    slået til i både lokal- og fjerndepotet.\n"
-"    "
-
-msgid "a bookmark of this name does not exist"
-msgstr "et bogmærke med dette navn findes ikke"
-
-msgid "a bookmark of the same name already exists"
-msgstr "et bogmærke med samme navn findes allerede"
-
-msgid "new bookmark name required"
-msgstr "nyt bogmærkenavn påkrævet"
-
-msgid "bookmark name required"
-msgstr "bogmærkenavn påkrævet"
-
-msgid "bookmark name cannot contain newlines"
-msgstr "bogmærkenavn kan ikke indeholde linieskift"
-
-msgid "bookmark names cannot consist entirely of whitespace"
-msgstr "bogmærkenavne kan ikke bestå udelukkende af tomrum"
-
-msgid "a bookmark cannot have the name of an existing branch"
-msgstr "et bogmærke kan ikke hedde det samme som en eksisterende gren"
-
-msgid "no bookmarks set\n"
-msgstr "der er ingen bogmærker\n"
-
-#, python-format
-msgid "updating bookmark %s\n"
-msgstr "opdaterer bogmærke %s\n"
-
-#, python-format
-msgid "not updating divergent bookmark %s\n"
-msgstr "opdaterer ikke divergerende bogmærke %s\n"
-
-#, python-format
-msgid "updating bookmark %s failed!\n"
-msgstr "opdatering af bogmærke %s fejlede!\n"
-
-#, python-format
-msgid "remote bookmark %s not found!"
-msgstr "fjern-bogmærke %s blev ikke fundet!"
-
-#, python-format
-msgid "importing bookmark %s\n"
-msgstr "importerer bogmærke %s\n"
-
-#, python-format
-msgid "exporting bookmark %s\n"
-msgstr "eksporterer bogmærke %s\n"
-
-#, python-format
-msgid "deleting remote bookmark %s\n"
-msgstr "sletter fjern-bogmærke %s\n"
-
-#, python-format
-msgid "bookmark %s does not exist on the local or remote repository!\n"
-msgstr "bogmærke %s eksisterer ikke i hverken lokal- eller fjerndepotet!\n"
-
-msgid "searching for changed bookmarks\n"
-msgstr "leder efter ændrede bogmærker\n"
-
-msgid "no changed bookmarks found\n"
-msgstr "fandt ingen ændrede bogmærker\n"
-
-#, python-format
-msgid "comparing with %s\n"
-msgstr "sammenligner med %s\n"
-
-msgid "bookmark to import"
-msgstr "bogmærke der skal importeres"
-
-msgid "BOOKMARK"
-msgstr "BOGMÆRKE"
-
-msgid "bookmark to export"
-msgstr "bogmærke der skal eksporteres"
-
-msgid "compare bookmark"
-msgstr "sammenlign bogmærke"
-
-msgid ""
-"``bookmark([name])``\n"
-"    The named bookmark or all bookmarks."
-msgstr ""
-"``bookmark([name])``\n"
-"    Det navngivne bogmærke eller alle bogmærker."
-
-#. i18n: "bookmark" is a keyword
-msgid "bookmark takes one or no arguments"
-msgstr "bookmark tager et eller to argumenter"
-
-#. i18n: "bookmark" is a keyword
-msgid "the argument to bookmark must be a string"
-msgstr "argumentet til bookmark skal være en streng"
-
-msgid "force"
-msgstr "gennemtving"
-
-msgid "REV"
-msgstr "REV"
-
-msgid "revision"
-msgstr "revision"
-
-msgid "delete a given bookmark"
-msgstr "slet et givent bogmærke"
-
-msgid "NAME"
-msgstr "NAVN"
-
-msgid "rename a given bookmark"
-msgstr "omdøb et givet bogmærke"
-
-msgid "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
-msgstr "hg bookmarks [-f] [-d] [-m NAVN] [-r REV] [NAVN]"
 
 msgid "hooks for integrating with the Bugzilla bug tracker"
 msgstr ""
@@ -790,6 +594,9 @@ msgstr ""
 "    blev ændret (efter arbejdskatalogets revision eller argumentet til\n"
 "    --rev, hvis givet).\n"
 "    "
+
+msgid "REV"
+msgstr "REV"
 
 msgid "show children of the specified revision"
 msgstr "vis børn af den givne revision"
@@ -1262,7 +1069,7 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    :convert.hg.saverev: store original. revision ID in changeset\n"
+"    :convert.hg.saverev: store original revision ID in changeset\n"
 "        (forces target IDs to change). It takes and boolean argument\n"
 "        and defaults to False."
 msgstr ""
@@ -1410,7 +1217,7 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    :convert.p4.startrev: specify initial Perforce revision, a\n"
+"    :convert.p4.startrev: specify initial Perforce revision (a\n"
 "        Perforce changelist number)."
 msgstr ""
 
@@ -1434,7 +1241,7 @@ msgstr ""
 
 msgid ""
 "    :convert.hg.usebranchnames: preserve branch names. The default is\n"
-"        True\n"
+"        True.\n"
 "    "
 msgstr ""
 
@@ -2287,6 +2094,9 @@ msgstr ""
 msgid "pass option to comparison program"
 msgstr "videregiv argument til sammenligningsprogram"
 
+msgid "revision"
+msgstr "revision"
+
 msgid "change made by revision"
 msgstr "ændring lavet i revision"
 
@@ -3042,9 +2852,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Before changing/disabling active keywords, run :hg:`kwshrink` to avoid\n"
-"the risk of inadvertently storing expanded keywords in the change\n"
-"history."
+"Before changing/disabling active keywords, you must run :hg:`kwshrink`\n"
+"to avoid storing expanded keywords in the change history."
 msgstr ""
 
 msgid ""
@@ -3107,15 +2916,25 @@ msgstr ""
 msgid "\textending current template maps\n"
 msgstr "\tudvider aktuelle skabeloner\n"
 
-msgid "\toverriding default template maps\n"
-msgstr "\toverskriver standard skabelon\n"
+msgid "\toverriding default svn keywordset\n"
+msgstr "\toverskriver standard svn skabelon\n"
+
+msgid "\toverriding default cvs keywordset\n"
+msgstr "\toverskriver standard cvs skabelon\n"
 
 msgid ""
 "\n"
-"\tconfiguration using default keyword template maps\n"
+"\tconfiguration using default svn keywordset\n"
 msgstr ""
 "\n"
-"\tkonfiguration med standard nøgleordskabelon\n"
+"\tkonfiguration med standard svn nøgleordskabelon\n"
+
+msgid ""
+"\n"
+"\tconfiguration using default cvs keywordset\n"
+msgstr ""
+"\n"
+"\tkonfiguration med standard cvs nøgleordskabelon\n"
 
 msgid "\tdisabling current template maps\n"
 msgstr "deaktiverer nuævrende skabelon\n"
@@ -3194,12 +3013,8 @@ msgstr ""
 msgid "revert expanded keywords in the working directory"
 msgstr "før ekspanderede nøgleord tilbge i arbejdskataloget"
 
-msgid ""
-"    Run before changing/disabling active keywords or if you experience\n"
-"    problems with :hg:`import` or :hg:`merge`."
+msgid "    Must be run before changing/disabling active keywords."
 msgstr ""
-"    Brug denne kommando før du ændrer/deaktiverer nøgleord eller hvis\n"
-"    du oplever problemer med :hg:`import` eller :hg:`merge`."
 
 msgid ""
 "    kwshrink refuses to run if given files contain local changes.\n"
@@ -3496,12 +3311,12 @@ msgid "no patches in series\n"
 msgstr "ingen patches i serien\n"
 
 #, python-format
-msgid "cannot push to a previous patch: %s"
-msgstr "kan ikke skubbe til en tidligere rettelse: %s"
-
-#, python-format
 msgid "qpush: %s is already at the top\n"
 msgstr "qpush: %s er allerede ved toppen\n"
+
+#, python-format
+msgid "cannot push to a previous patch: %s"
+msgstr "kan ikke skubbe til en tidligere rettelse: %s"
 
 #, python-format
 msgid "guarded by %r"
@@ -4478,6 +4293,9 @@ msgstr "hg qheader [RETTELSE]"
 msgid "import file in patch directory"
 msgstr "importer en fil i rettelsesbiblioteket"
 
+msgid "NAME"
+msgstr "NAVN"
+
 msgid "name of patch file"
 msgstr "navn på rettelse"
 
@@ -5089,6 +4907,10 @@ msgid ""
 "    "
 msgstr ""
 
+#, python-format
+msgid "comparing with %s\n"
+msgstr "sammenligner med %s\n"
+
 msgid "no changes found\n"
 msgstr "fandt ingen ændringer\n"
 
@@ -5273,6 +5095,21 @@ msgstr ""
 #. i18n: format X hours and YY minutes as "XhYYm"
 #, python-format
 msgid "%dh%02dm"
+msgstr ""
+
+#. i18n: format X days and YY hours as "XdYYh"
+#, python-format
+msgid "%dd%02dh"
+msgstr ""
+
+#. i18n: format X weeks and YY days as "XwYYd"
+#, python-format
+msgid "%dw%02dd"
+msgstr ""
+
+#. i18n: format X years and YY weeks as "XyYYw"
+#, python-format
+msgid "%dy%02dw"
 msgstr ""
 
 msgid "command to delete untracked files from the working directory"
@@ -5662,7 +5499,8 @@ msgid "running non-interactively, use commit instead"
 msgstr "kører ikke interaktivt, brug commit i stedet"
 
 msgid "cannot partially commit a merge (use \"hg commit\" instead)"
-msgstr "kan ikke deponere en sammenføjning partielt (brug i stedet \"hg commit\")"
+msgstr ""
+"kan ikke deponere en sammenføjning partielt (brug i stedet \"hg commit\")"
 
 msgid "no changes to record\n"
 msgstr "ingen ændringer at optage\n"
@@ -6072,7 +5910,7 @@ msgstr ""
 msgid ""
 "- You should use single encoding in one repository.\n"
 "- If the repository path ends with 0x5c, .hg/hgrc cannot be read.\n"
-"- win32mbcs is not compatible with fixutf8 extention."
+"- win32mbcs is not compatible with fixutf8 extension."
 msgstr ""
 
 msgid ""
@@ -6262,6 +6100,16 @@ msgstr "ukendt depottype '%s'"
 msgid "archiving"
 msgstr "arkiverer"
 
+#, python-format
+msgid "bookmark '%s' contains illegal character"
+msgstr ""
+
+msgid "searching for changed bookmarks\n"
+msgstr "leder efter ændrede bogmærker\n"
+
+msgid "no changed bookmarks found\n"
+msgstr "fandt ingen ændrede bogmærker\n"
+
 msgid "invalid changegroup"
 msgstr "ugyldig changegroup"
 
@@ -6276,8 +6124,12 @@ msgid "cannot create new bundle repository"
 msgstr ""
 
 #, python-format
-msgid "premature EOF reading chunk (got %d bytes, expected %d)"
-msgstr "for tidlig EOF ved læsning af chunk (fik %d bytes, forventede %d)"
+msgid "stream ended unexpectedly (got %d bytes, expected %d)"
+msgstr "stream stoppede uventet (fik %d bytes, forventede %d)"
+
+#, python-format
+msgid "invalid chunk length %d"
+msgstr "ugyldigt længde på chunk: %d"
 
 #, python-format
 msgid "%s: not a Mercurial bundle"
@@ -6403,6 +6255,10 @@ msgstr "ændring:     %d:%s\n"
 #, python-format
 msgid "branch:      %s\n"
 msgstr "gren:        %s\n"
+
+#, python-format
+msgid "bookmark:    %s\n"
+msgstr "bogmærke:    %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
@@ -6578,12 +6434,12 @@ msgstr "    Tilføj alle nye filer og fjern alle manglende filer fra depotet."
 
 msgid ""
 "    New files are ignored if they match any of the patterns in\n"
-"    .hgignore. As with add, these changes take effect at the next\n"
+"    ``.hgignore``. As with add, these changes take effect at the next\n"
 "    commit."
 msgstr ""
 "    Nye filer bliver ignoreret hvis de matcher et af mønstrene i\n"
-"    .hgignore. Som ved add, så træder disse ændringer først i kræft\n"
-"    ved næste commit."
+"    ``.hgignore``. Som ved add, så træder disse ændringer først i\n"
+"    kræft ved næste commit."
 
 msgid ""
 "    Use the -s/--similarity option to detect renamed files. With a\n"
@@ -6696,37 +6552,28 @@ msgid "reverse effect of earlier changeset"
 msgstr "omgør effekten af tidligere ændringer"
 
 msgid ""
-"    The backout command merges the reverse effect of the reverted\n"
-"    changeset into the working directory."
+"    Prepare a new changeset with the effect of REV undone in the\n"
+"    current working directory."
 msgstr ""
 
 msgid ""
-"    With the --merge option, it first commits the reverted changes\n"
-"    as a new changeset. This new changeset is a child of the reverted\n"
-"    changeset.\n"
-"    The --merge option remembers the parent of the working directory\n"
-"    before starting the backout, then merges the new head with that\n"
-"    changeset afterwards.\n"
-"    This will result in an explicit merge in the history."
-msgstr ""
-"    Med --merge tilvalget bliver de omgjorte ændringer først deponeret\n"
-"    som en ny ændring. Denne nye ændring vil være et barn af den\n"
-"    omgjorte ændring. Derefter bliver det nye hoved sammenføjet med\n"
-"    arbejdskatalogets forælderrevision. Derved skabes der en eksplicit\n"
-"    sammenføjning i historien."
-
-msgid ""
-"    If you backout a changeset other than the original parent of the\n"
-"    working directory, the result of this merge is not committed,\n"
-"    as with a normal merge. Otherwise, no merge is needed and the\n"
-"    commit is automatic."
+"    If REV is the parent of the working directory, then this changeset\n"
+"    is committed automatically. Otherwise, hg needs to merge the\n"
+"    changes and the merged result is left uncommitted."
 msgstr ""
 
 msgid ""
-"    Note that the default behavior (without --merge) has changed in\n"
-"    version 1.7. To restore the previous default behavior, use\n"
-"    :hg:`backout --merge` and then :hg:`update --clean .` to get rid of\n"
-"    the ongoing merge."
+"    By default, the pending changeset will have one parent,\n"
+"    maintaining a linear history. With --merge, the pending changeset\n"
+"    will instead have two parents: the old parent of the working\n"
+"    directory and a child of REV that simply undoes REV."
+msgstr ""
+
+msgid ""
+"    Before version 1.7, the default behavior was equivalent to\n"
+"    specifying --merge followed by :hg:`update --clean .` to cancel\n"
+"    the merge and leave the child of REV as a head to be merged\n"
+"    separately."
 msgstr ""
 
 msgid "please specify just one revision"
@@ -6835,6 +6682,71 @@ msgstr "Ændring %d:%s: %s\n"
 #, python-format
 msgid "Testing changeset %d:%s (%d changesets remaining, ~%d tests)\n"
 msgstr "Tester ændring %d:%s (%d ændringer tilbage, ~%d test)\n"
+
+msgid "track a line of development with movable markers"
+msgstr ""
+
+msgid ""
+"    Bookmarks are pointers to certain commits that move when\n"
+"    committing. Bookmarks are local. They can be renamed, copied and\n"
+"    deleted. It is possible to use bookmark names in :hg:`merge` and\n"
+"    :hg:`update` to merge and update respectively to a given bookmark."
+msgstr ""
+"    Bogmærker er pegepinde til bestemte ændringer og pegepindene\n"
+"    flytter sig når man deponerer nye ændringer. Bogmærkerne er\n"
+"    lokale. De kan omdøbes, kopieres og slettes. Det er muligt at\n"
+"    bruge navne på bogmærker i :hg:`merge` og :hg:`update` for\n"
+"    respektivt at sammenføje eller opdatere til det givne bogmærke."
+
+msgid ""
+"    You can use :hg:`bookmark NAME` to set a bookmark on the working\n"
+"    directory's parent revision with the given name. If you specify\n"
+"    a revision using -r REV (where REV may be an existing bookmark),\n"
+"    the bookmark is assigned to that revision."
+msgstr ""
+"    Du kan bruge :hg:`bookmark NAVN` for at sætte et bogmærke på\n"
+"    arbejdskatalogets forælderrevision med det givne navn. Hvis du\n"
+"    specificerer en revision med -r REV (hvor REV kan være et\n"
+"    eksisterende bogmærke), så bliver bogmærket tildelt denne\n"
+"    revision."
+
+msgid ""
+"    Bookmarks can be pushed and pulled between repositories (see :hg:`help\n"
+"    push` and :hg:`help pull`). This requires both the local and remote\n"
+"    repositories to support bookmarks. For versions prior to 1.8, this "
+"means\n"
+"    the bookmarks extension must be enabled.\n"
+"    "
+msgstr ""
+"    Bogmærker kan skubbes og hives mellem depoter (se :hg:`help push`\n"
+"    og :hg:`help pull`). Dette kræver at både lokal- og fjerndepotet\n"
+"    understøtter bogmærker. For versioner før 1.8 betyder det at\n"
+"    bookmark-udviddelsen skal være slået til.\n"
+"    "
+
+msgid "a bookmark of this name does not exist"
+msgstr "et bogmærke med dette navn findes ikke"
+
+msgid "a bookmark of the same name already exists"
+msgstr "et bogmærke med samme navn findes allerede"
+
+msgid "new bookmark name required"
+msgstr "nyt bogmærkenavn påkrævet"
+
+msgid "bookmark name required"
+msgstr "bogmærkenavn påkrævet"
+
+msgid "bookmark name cannot contain newlines"
+msgstr "bogmærkenavn kan ikke indeholde linieskift"
+
+msgid "bookmark names cannot consist entirely of whitespace"
+msgstr "bogmærkenavne kan ikke bestå udelukkende af tomrum"
+
+msgid "a bookmark cannot have the name of an existing branch"
+msgstr "et bogmærke kan ikke hedde det samme som en eksisterende gren"
+
+msgid "no bookmarks set\n"
+msgstr "der er ingen bogmærker\n"
 
 msgid "set or show the current branch name"
 msgstr "angiv eller vis navnet på den aktuelle gren"
@@ -7014,23 +6926,23 @@ msgstr ""
 
 msgid ""
 "    The location of the source is added to the new repository's\n"
-"    .hg/hgrc file, as the default to be used for future pulls."
+"    ``.hg/hgrc`` file, as the default to be used for future pulls."
 msgstr ""
-"    Placeringen af kilden tilføjes til det nye depots .hg/hgrc fil som\n"
-"    den nye standard for fremtidige kald til 'hg pull'."
+"    Placeringen af kilden tilføjes til det nye depots ``.hg/hgrc`` fil\n"
+"    som den nye standard for fremtidige kald til :hg:`pull`."
 
 msgid "    See :hg:`help urls` for valid source format details."
 msgstr "    Se :hg:`help urls` for detaljer om gyldige formatter for kilden."
 
 msgid ""
 "    It is possible to specify an ``ssh://`` URL as the destination, but no\n"
-"    .hg/hgrc and working directory will be created on the remote side.\n"
+"    ``.hg/hgrc`` and working directory will be created on the remote side.\n"
 "    Please see :hg:`help urls` for important details about ``ssh://`` URLs."
 msgstr ""
 "    Det er muligt at specificere en ``ssh://`` URL som destination,\n"
-"    men der vil ikke bliver oprettet nogen .hg/hgrc fil eller noget\n"
-"    arbejdskatalog på den anden side. Se venligst :hg:`help urls` for\n"
-"    vigtige detaljer om ``ssh://`` URLer."
+"    men der vil ikke bliver oprettet nogen ``.hg/hgrc`` fil eller\n"
+"    noget arbejdskatalog på den anden side. Se venligst :hg:`help\n"
+"    urls` for vigtige detaljer om ``ssh://`` URLer."
 
 msgid ""
 "    A set of changesets (tags, or branch names) to pull may be specified\n"
@@ -7139,11 +7051,11 @@ msgstr "lægger de specificerede filer eller alle udestående ændringer i depot
 
 msgid ""
 "    Commit changes to the given files into the repository. Unlike a\n"
-"    centralized RCS, this operation is a local operation. See\n"
+"    centralized SCM, this operation is a local operation. See\n"
 "    :hg:`push` for a way to actively distribute your changes."
 msgstr ""
 "    Deponerer ændringer i de angivne filer ind i depotet. Dette er en\n"
-"    lokal operation, i modsætning til et centraliseret RCS. Se\n"
+"    lokal operation, i modsætning til et centraliseret SCM. Se\n"
 "    :hg:`push` for en måde til aktivt distribuere dine ændringer."
 
 msgid ""
@@ -7400,6 +7312,12 @@ msgstr "ugyldig revisionsidentification %s"
 
 msgid "parse and display a date"
 msgstr "fortolk og vis en dato"
+
+msgid "display the combined ignore pattern"
+msgstr ""
+
+msgid "no ignore patterns found"
+msgstr "fandt ingen ignore mønstre"
 
 msgid "dump the contents of an index file"
 msgstr "dump indholdet af en indeksfil"
@@ -7763,8 +7681,10 @@ msgstr ""
 "detaljer"
 
 #, python-format
-msgid "use \"hg -v help%s\" to show aliases and global options"
-msgstr "brug \"hg -v help%s\" for at vise aliaser og globale valgmuligheder"
+msgid "use \"hg -v help%s\" to show builtin aliases and global options"
+msgstr ""
+"brug \"hg -v help%s\" for at vise indbyggede aliaser og globale "
+"valgmuligheder"
 
 #, python-format
 msgid "use \"hg -v help %s\" to show global options"
@@ -7966,6 +7886,9 @@ msgstr ""
 
 msgid "cannot combine --bundle and --subrepos"
 msgstr ""
+
+msgid "remote doesn't support bookmarks\n"
+msgstr "fjerdepotet understøtter ikke bogmærker\n"
 
 msgid "create a new repository in the given directory"
 msgstr "opret et nyt depot i det givne katalog"
@@ -8295,12 +8218,20 @@ msgid ""
 "    "
 msgstr ""
 
+#, python-format
+msgid "remote bookmark %s not found!"
+msgstr "fjern-bogmærke %s blev ikke fundet!"
+
 msgid ""
 "other repository doesn't support revision lookup, so a rev cannot be "
 "specified."
 msgstr ""
 "det andet depot understøtter ikke revisionsopslag, så en revision kan ikke "
 "angives."
+
+#, python-format
+msgid "importing bookmark %s\n"
+msgstr "importerer bogmærke %s\n"
 
 msgid "push changes to the specified destination"
 msgstr "skub ændringer til den angivne destination"
@@ -8357,6 +8288,22 @@ msgstr ""
 #, python-format
 msgid "pushing to %s\n"
 msgstr "skubber til %s\n"
+
+#, python-format
+msgid "exporting bookmark %s\n"
+msgstr "eksporterer bogmærke %s\n"
+
+#, python-format
+msgid "deleting remote bookmark %s\n"
+msgstr "sletter fjern-bogmærke %s\n"
+
+#, python-format
+msgid "bookmark %s does not exist on the local or remote repository!\n"
+msgstr "bogmærke %s eksisterer ikke i hverken lokal- eller fjerndepotet!\n"
+
+#, python-format
+msgid "updating bookmark %s failed!\n"
+msgstr "opdatering af bogmærke %s fejlede!\n"
 
 msgid "roll back an interrupted transaction"
 msgstr ""
@@ -8887,6 +8834,14 @@ msgid "%d outgoing"
 msgstr "%d udgående"
 
 #, python-format
+msgid "%d incoming bookmarks"
+msgstr "%d indgående bogmærker"
+
+#, python-format
+msgid "%d outgoing bookmarks"
+msgstr "%d udgående bogmærker"
+
+#, python-format
 msgid "remote: %s\n"
 msgstr "fjernsystem: %s\n"
 
@@ -9185,6 +9140,9 @@ msgstr "specificer ssh kommandoen som skal bruges"
 msgid "specify hg command to run on the remote side"
 msgstr "angiv hg kommando som skal udføres på fjernsystemet"
 
+msgid "do not verify server certificate (ignoring web.cacerts config)"
+msgstr ""
+
 msgid "PATTERN"
 msgstr ""
 
@@ -9340,6 +9298,18 @@ msgstr "undlad at opdatere til målet"
 
 msgid "[-gbsr] [-U] [-c CMD] [REV]"
 msgstr "[-gbsr] [-U] [-c KOMMANDO] [REV]"
+
+msgid "force"
+msgstr "gennemtving"
+
+msgid "delete a given bookmark"
+msgstr "slet et givent bogmærke"
+
+msgid "rename a given bookmark"
+msgstr "omdøb et givet bogmærke"
+
+msgid "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
+msgstr "hg bookmarks [-f] [-d] [-m NAVN] [-r REV] [NAVN]"
 
 msgid "set branch name even if it shadows an existing branch"
 msgstr "sæt grennavnet selv hvis det overskygger en eksisterende gren"
@@ -9619,6 +9589,9 @@ msgstr "fil hvor bundterne skal gemmes"
 msgid "a remote changeset intended to be added"
 msgstr ""
 
+msgid "compare bookmarks"
+msgstr "sammenlign bogmærker"
+
 msgid "a specific branch you would like to pull"
 msgstr "en bestemt gren du gerne vil hive ned"
 
@@ -9715,11 +9688,20 @@ msgstr "opdater til det nye gren-hovede hvis ændringer blev trukket ned"
 msgid "run even when remote repository is unrelated"
 msgstr "kør selv hvis fjerndepotet er urelateret"
 
+msgid "BOOKMARK"
+msgstr "BOGMÆRKE"
+
+msgid "bookmark to pull"
+msgstr "bogmærke der skal hentes"
+
 msgid "[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"
 msgstr "[-u] [-f] [-r REV]... [-e KOMMANDO] [--remotecmd KOMMANDO] [KILDE]"
 
 msgid "force push"
 msgstr "gennemtving skubning"
+
+msgid "bookmark to push"
+msgstr "bogmærke der skal skubbes"
 
 msgid "allow pushing a new branch"
 msgstr ""
@@ -10163,6 +10145,11 @@ msgstr "** Udvidelser indlæst: %s\n"
 #, python-format
 msgid "no definition for alias '%s'\n"
 msgstr "ingen definition for alias '%s'\n"
+
+#, python-format
+msgid ""
+"No argument found for substitution of %i variable in alias '%s' definition."
+msgstr ""
 
 #, python-format
 msgid ""
@@ -11971,7 +11958,10 @@ msgid ""
 ":commit: commit creates a consistent snapshot of the state of the\n"
 "    entire project and its subrepositories. It does this by first\n"
 "    attempting to commit all modified subrepositories, then recording\n"
-"    their state and finally committing it in the parent repository."
+"    their state and finally committing it in the parent\n"
+"    repository. Mercurial can be made to abort if any subrepository\n"
+"    content is modified by setting \"ui.commitsubrepos=no\" in a\n"
+"    configuration file (see :hg:`help config`)."
 msgstr ""
 
 msgid ""
@@ -12300,13 +12290,13 @@ msgid ""
 "  file://local/filesystem/path[#revision]\n"
 "  http://[user[:pass]@]host[:port]/[path][#revision]\n"
 "  https://[user[:pass]@]host[:port]/[path][#revision]\n"
-"  ssh://[user[:pass]@]host[:port]/[path][#revision]"
+"  ssh://[user@]host[:port]/[path][#revision]"
 msgstr ""
 "  local/filesystem/path[#revision]\n"
 "  file://local/filesystem/path[#revision]\n"
 "  http://[user[:pass]@]host[:port]/[path][#revision]\n"
 "  https://[user[:pass]@]host[:port]/[path][#revision]\n"
-"  ssh://[user[:pass]@]host[:port]/[path][#revision]"
+"  ssh://[user@]host[:port]/[path][#revision]"
 
 msgid ""
 "Paths in the local filesystem can either point to Mercurial\n"
@@ -12649,12 +12639,12 @@ msgid "no interrupted transaction available\n"
 msgstr "ingen afbrudt transaktion tilgængelig\n"
 
 #, python-format
-msgid "rolling back to revision %s (undo %s: %s)\n"
-msgstr ""
+msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
+msgstr "spidsen af depotet rullet tilbage til revision %s (omgør %s: %s)\n"
 
 #, python-format
-msgid "rolling back to revision %s (undo %s)\n"
-msgstr "ruller tilbage til revision %s (omgør %s)\n"
+msgid "repository tip rolled back to revision %s (undo %s)\n"
+msgstr "spidsen af depotet rullet tilbage til revision %s (omgør %s)\n"
 
 msgid "rolling back unknown transaction\n"
 msgstr "ruller ukendt transaktion tilbage\n"
@@ -12663,6 +12653,14 @@ msgstr "ruller ukendt transaktion tilbage\n"
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr ""
 "Navngiven gren kunne ikke nulstilles, den nuværende gren er stadig: %s\n"
+
+#, python-format
+msgid "working directory now based on revisions %d and %d\n"
+msgstr "arbejdsbiblioteket er nu baseret på revisionerne %d og %d\n\n"
+
+#, python-format
+msgid "working directory now based on revision %d\n"
+msgstr "arbejdsbiblioteket er nu baseret på revision %d\n"
 
 msgid "no rollback information available\n"
 msgstr "ingen tilbagerulningsinformation til stede\n"
@@ -12690,6 +12688,10 @@ msgstr ""
 
 msgid "can't commit subrepos without .hgsub"
 msgstr "kan ikke deponere underdepoter uden .hgsub"
+
+#, python-format
+msgid "uncommitted changes in subrepo %s"
+msgstr "udeponerede ændringer i underdepot %s"
 
 msgid "file not found!"
 msgstr "filen blev ikke fundet!"
@@ -12722,6 +12724,14 @@ msgid ""
 "partial pull cannot be done because other repository doesn't support "
 "changegroupsubset."
 msgstr ""
+
+#, python-format
+msgid "updating bookmark %s\n"
+msgstr "opdaterer bogmærke %s\n"
+
+#, python-format
+msgid "not updating divergent bookmark %s\n"
+msgstr "opdaterer ikke divergerende bogmærke %s\n"
 
 #, python-format
 msgid "%d changesets found\n"
@@ -12933,6 +12943,10 @@ msgstr "intet at sammenføje (brug 'hg update' eller kontroller 'hg heads')"
 msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
 msgstr ""
 "udestående ikke-deponerede ændringer (brug 'hg status' for at se ændringer)"
+
+#, python-format
+msgid "outstanding uncommitted changes in subrepository '%s'"
+msgstr "udeponerede ændringer i underdepot '%s'"
 
 msgid "crosses branches (merge branches or use --clean to discard changes)"
 msgstr ""
@@ -13467,6 +13481,21 @@ msgstr "tag tager et eller to argumenter"
 msgid "the argument to tag must be a string"
 msgstr "argumentet til tag skal være en streng"
 
+msgid ""
+"``bookmark([name])``\n"
+"    The named bookmark or all bookmarks."
+msgstr ""
+"``bookmark([name])``\n"
+"    Det navngivne bogmærke eller alle bogmærker."
+
+#. i18n: "bookmark" is a keyword
+msgid "bookmark takes one or no arguments"
+msgstr "bookmark tager et eller to argumenter"
+
+#. i18n: "bookmark" is a keyword
+msgid "the argument to bookmark must be a string"
+msgstr "argumentet til bookmark skal være en streng"
+
 msgid "can't negate that"
 msgstr ""
 
@@ -13563,6 +13592,18 @@ msgid ""
 msgstr ""
 
 #, python-format
+msgid ""
+" subrepository sources for %s differ\n"
+"use (l)ocal source (%s) or (r)emote source (%s)?\n"
+msgstr ""
+
+#, python-format
+msgid ""
+" subrepository sources for %s differ (in checked out version)\n"
+"use (l)ocal source (%s) or (r)emote source (%s)?\n"
+msgstr ""
+
+#, python-format
 msgid "default path for subrepository %s not found"
 msgstr ""
 
@@ -13641,7 +13682,7 @@ msgstr ""
 msgid "node '%s' is not well formed"
 msgstr "knude '%s' er ikke korrekt formet"
 
-msgid ".hg/tags.cache is corrupt, rebuilding it\n"
+msgid ".hg/cache/tags is corrupt, rebuilding it\n"
 msgstr ""
 
 #, python-format
@@ -13739,6 +13780,10 @@ msgstr "kodeord: "
 msgid "edit failed"
 msgstr "redigering fejlede"
 
+#, python-format
+msgid "ignoring invalid [auth] key '%s'\n"
+msgstr "ignorerer ugyldig [auth] nøgle '%s'\n"
+
 msgid "http authorization required"
 msgstr ""
 
@@ -13760,10 +13805,6 @@ msgstr "bruger:"
 msgid "http auth: user %s, password %s\n"
 msgstr "http godkendelse: bruger %s, kodeord %s\n"
 
-#, python-format
-msgid "ignoring invalid [auth] key '%s'\n"
-msgstr "ignorerer ugyldig [auth] nøgle '%s'\n"
-
 msgid "kb"
 msgstr ""
 
@@ -13777,12 +13818,29 @@ msgstr "modtog ikke noget certifikat"
 msgid "certificate is for %s"
 msgstr "certifikatet er for %s"
 
-msgid "no commonName found in certificate"
-msgstr "fandt ikke noget commonName i certifikatet"
+msgid "IDN in certificate not supported"
+msgstr "IDN er ikke supporteret i certifikatet"
+
+msgid "no commonName or subjectAltName found in certificate"
+msgstr "fandt ikke noget commonName eller subjectAltName i certifikatet"
 
 #, python-format
-msgid "%s certificate error: %s"
-msgstr "%s certifikatfejl: %s"
+msgid "%s certificate error: %s (use --insecure to connect insecurely)"
+msgstr ""
+
+#, python-format
+msgid "invalid certificate for %s with fingerprint %s"
+msgstr ""
+
+#, python-format
+msgid ""
+"warning: %s certificate with fingerprint %s not verified (check "
+"hostfingerprints or web.cacerts config setting)\n"
+msgstr ""
+
+#, python-format
+msgid "no certificate for %s with configured hostfingerprint"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -13808,9 +13866,6 @@ msgstr "stien %r er inde i repo %r"
 #, python-format
 msgid "path %r traverses symbolic link %r"
 msgstr "stien %r følger symbolsk link %r"
-
-msgid "Hardlinks not supported"
-msgstr "Hardlinks er ikke supporteret"
 
 #, python-format
 msgid "could not symlink to %r: %s"
@@ -14054,17 +14109,14 @@ msgstr "fandt %d integritetsfejl!\n"
 msgid "(first damaged changeset appears to be %d)\n"
 msgstr "(første beskadigede ændring er tilsyneladende %d)\n"
 
-msgid "user name not available - set USERNAME environment variable"
-msgstr "der er ikke noget brugernavn - sæt USERNAME miljøvariabel"
-
 msgid "look up remote revision"
 msgstr ""
+
+msgid "push failed (unexpected response):"
+msgstr "skub fejlede (uventet svar):"
 
 msgid "look up remote changes"
 msgstr ""
 
 msgid "push failed:"
 msgstr "skub fejlede:"
-
-msgid "push failed (unexpected response):"
-msgstr "skub fejlede (uventet svar):"
