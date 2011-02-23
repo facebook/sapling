@@ -230,7 +230,7 @@ def make_filename(repo, pat, node,
 def make_file(repo, pat, node=None,
               total=None, seqno=None, revwidth=None, mode='wb', pathname=None):
 
-    writable = 'w' in mode or 'a' in mode
+    writable = mode not in ('r', 'rb')
 
     if not pat or pat == '-':
         fp = writable and sys.stdout or sys.stdin
