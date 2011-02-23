@@ -764,12 +764,8 @@ class gitsubrepo(abstractsubrepo):
         if self._githavelocally(revision):
             return
         self._ui.status(_('pulling subrepo %s\n') % self._relpath)
-        # first try from origin
+        # try only origin: the originally cloned repo
         self._gitcommand(['fetch'])
-        if self._githavelocally(revision):
-            return
-        # then try from known subrepo source
-        self._gitcommand(['fetch', self._abssource(source)])
         if not self._githavelocally(revision):
             raise util.Abort(_("revision %s does not exist in subrepo %s\n") %
                                (revision, self._relpath))
