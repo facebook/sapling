@@ -36,7 +36,7 @@ try:
             category=DeprecationWarning)
 
 except ImportError:
-    pass
+    svn = None
 
 class SvnPathNotFound(Exception):
     pass
@@ -209,11 +209,8 @@ class svn_source(converter_source):
                 issvnurl(ui, url)):
             raise NoRepo(_("%s does not look like a Subversion repository")
                          % url)
-
-        try:
-            SubversionException
-        except NameError:
-            raise MissingTool(_('Subversion python bindings could not be loaded'))
+        if svn is None:
+            raise MissingTool(_('Could not load Subversion python bindings'))
 
         try:
             version = svn.core.SVN_VER_MAJOR, svn.core.SVN_VER_MINOR
@@ -960,6 +957,9 @@ class svn_sink(converter_sink, commandline):
         return self.join('hg-authormap')
 
     def __init__(self, ui, path):
+
+        if svn is None:
+            raise MissingTool(_('Could not load Subversion python bindings'))
         converter_sink.__init__(self, ui, path)
         commandline.__init__(self, ui, 'svn')
         self.delete = []
