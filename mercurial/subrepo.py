@@ -730,7 +730,8 @@ class gitsubrepo(abstractsubrepo):
                                 '%(objectname) %(refname)'])
         for line in out.split('\n'):
             revision, ref = line.split(' ')
-            if ref.startswith('refs/tags/'):
+            if (not ref.startswith('refs/heads/') and
+                not ref.startswith('refs/remotes/')):
                 continue
             if ref.startswith('refs/remotes/') and ref.endswith('/HEAD'):
                 continue # ignore remote/HEAD redirects
