@@ -1,7 +1,7 @@
 # Japanese translation for Mercurial
 # Mercurial 日本語翻訳
 #
-# Copyright (C) 2009-2010 the Mercurial team
+# Copyright (C) 2009-2011 the Mercurial team
 #
 # ========================================
 # 【翻訳用語集】
@@ -102,7 +102,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-02-19 18:04+0900\n"
+"POT-Creation-Date: 2011-02-23 22:54+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -13523,12 +13523,12 @@ msgid "no interrupted transaction available\n"
 msgstr "中断されたトランザクションはありません\n"
 
 #, python-format
-msgid "rolling back to revision %s (undo %s: %s)\n"
-msgstr "リビジョン %s へ巻き戻し中 (%s の取り消し: %s)\n"
+msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
+msgstr "tip をリビジョン %s に巻き戻しました (取り消し %s: %s)\n"
 
 #, python-format
-msgid "rolling back to revision %s (undo %s)\n"
-msgstr "リビジョン %s へ巻き戻し中 (%s の取り消し)\n"
+msgid "repository tip rolled back to revision %s (undo %s)\n"
+msgstr "tip をリビジョン %s に巻き戻しました (取り消し %s)\n"
 
 msgid "rolling back unknown transaction\n"
 msgstr "未知のトランザクションの巻き戻し中\n"
@@ -13536,6 +13536,10 @@ msgstr "未知のトランザクションの巻き戻し中\n"
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr "名前つきブランチはリセットできませんので、 %s のままです\n"
+
+#, python-format
+msgid "working directory now based on revision %s\n"
+msgstr "作業領域の親リビジョンを %s にしました\n"
 
 msgid "no rollback information available\n"
 msgstr "利用可能なロールバック情報がありません\n"
@@ -13821,6 +13825,10 @@ msgstr "マージは不要です('hg update' か 'hg heads' を使用してく�
 
 msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
 msgstr "未コミット変更があります('hg status' で変更一覧表示可能)"
+
+#, python-format
+msgid "outstanding uncommitted changes in subrepository '%s'"
+msgstr "副リポジトリ %s に未コミット変更あり"
 
 msgid "crosses branches (merge branches or use --clean to discard changes)"
 msgstr ""
@@ -14992,11 +15000,11 @@ msgstr "(最初の不整合は %d の模様)\n"
 msgid "look up remote revision"
 msgstr "連携先でのリビジョンの検索"
 
+msgid "push failed (unexpected response):"
+msgstr "履歴反映に失敗(未知のレスポンス):"
+
 msgid "look up remote changes"
 msgstr "連携先での変更の検索"
 
 msgid "push failed:"
 msgstr "履歴反映に失敗:"
-
-msgid "push failed (unexpected response):"
-msgstr "履歴反映に失敗(未知のレスポンス):"
