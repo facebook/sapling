@@ -681,9 +681,10 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
         shouldclose = False
         if not fp:
-            shouldclose = True
             fp = make_file(repo, template, node, total=total, seqno=seqno,
                            revwidth=revwidth, mode='ab')
+            if fp != template:
+                shouldclose = True
         if fp != sys.stdout and hasattr(fp, 'name'):
             repo.ui.note("%s\n" % fp.name)
 
