@@ -269,6 +269,13 @@ push should succeed even though it has an unexpected response
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     z
   
+
+passwords in ssh urls are not supported
+
+  $ hg push ssh://user:erroneouspwd@dummy/remote
+  abort: password in URL not supported!
+  [255]
+
   $ cd ..
   $ cat dummylog
   Got arguments 1:user@dummy 2:hg -R nonexistent serve --stdio
