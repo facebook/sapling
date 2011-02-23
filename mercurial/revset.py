@@ -794,7 +794,7 @@ def optimize(x, small):
             w = 100 # very slow
         elif f == "ancestor":
             w = 1 * smallbonus
-        elif f == "reverse limit":
+        elif f in "reverse limit":
             w = 0
         elif f in "sort":
             w = 10 # assume most sorts look at changelog
