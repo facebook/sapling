@@ -730,6 +730,12 @@ class workingctx(changectx):
             t.extend(p.tags())
         return t
 
+    def bookmarks(self):
+        b = []
+        for p in self.parents():
+            b.extend(p.bookmarks())
+        return b
+
     def children(self):
         return []
 
