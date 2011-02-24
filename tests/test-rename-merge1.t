@@ -125,3 +125,33 @@ Check for issue2642
 
   $ cat f2
   c0
+
+Check for issue2089
+
+  $ hg init repo2089
+  $ cd repo2089
+
+  $ echo 0 > A
+  $ hg -q ci -Am 0
+
+  $ hg -q up -C null
+  $ echo 1 > A
+  $ hg -q ci -Am 1
+
+  $ hg -q up -C 0
+  $ hg merge 1 -q --tool internal:local
+  $ echo 2 > A
+  $ hg -q ci -m 2
+
+  $ hg -q up -C 1
+  $ hg mv A a
+  $ hg -q ci -Am 3
+
+  $ hg -q up -C 2
+  $ hg merge 3
+  merging A and a to a
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ cat a
+  2
