@@ -1,6 +1,5 @@
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "rebase=" >> $HGRCPATH
-  $ echo "bookmarks=" >> $HGRCPATH
 
 initialize repository
 

@@ -1,6 +1,3 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "bookmarks=" >> $HGRCPATH
-
 initialize
 
   $ hg init a

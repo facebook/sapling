@@ -40,9 +40,6 @@ creating 'remote
   > [server]
   > uncompressed = True
   > 
-  > [extensions]
-  > bookmarks =
-  > 
   > [hooks]
   > changegroup = python "$TESTDIR"/printenv.py changegroup-in-remote 0 ../dummylog
   > EOF
@@ -121,8 +118,6 @@ updating rc
   $ echo "default-push = ssh://user@dummy/remote" >> .hg/hgrc
   $ echo "[ui]" >> .hg/hgrc
   $ echo "ssh = python ../dummyssh" >> .hg/hgrc
-  $ echo '[extensions]' >> .hg/hgrc
-  $ echo 'bookmarks =' >> .hg/hgrc
 
 find outgoing
 
@@ -195,8 +190,6 @@ check remote tip
 test pushkeys and bookmarks
 
   $ cd ../local
-  $ echo '[extensions]' >> ../remote/.hg/hgrc
-  $ echo 'bookmarks =' >> ../remote/.hg/hgrc
   $ hg debugpushkey --config ui.ssh="python ../dummyssh" ssh://user@dummy/remote namespaces
   bookmarks	
   namespaces	

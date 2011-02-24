@@ -1,5 +1,4 @@
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "bookmarks=" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
 
   $ hg init

@@ -1,8 +1,3 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "bookmarks=" >> $HGRCPATH
-
-  $ echo "[bookmarks]" >> $HGRCPATH
-
   $ hg init
 
 no bookmarks
