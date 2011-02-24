@@ -7013,7 +7013,7 @@ msgstr ""
 
 #, python-format
 msgid "bookmark '%s' contains illegal character"
-msgstr ""
+msgstr "Lesezeichen '%s' enthält illegale Zeichen"
 
 #, fuzzy
 msgid "searching for changed bookmarks\n"
@@ -7165,9 +7165,9 @@ msgstr "Änderung:        %d:%s\n"
 msgid "branch:      %s\n"
 msgstr "Zweig:           %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "bookmark:    %s\n"
-msgstr "Zusammenfassung: %s\n"
+msgstr "Lesezeichen:     %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
@@ -7653,7 +7653,6 @@ msgstr ""
 "    Lesezeichen bei :hg: `merge` und :hg:`update` zu nutzen, um auf das\n"
 "    angegebene Lesezeichen zu aktualisieren."
 
-#, fuzzy
 msgid ""
 "    You can use :hg:`bookmark NAME` to set a bookmark on the working\n"
 "    directory's parent revision with the given name. If you specify\n"
@@ -7674,6 +7673,11 @@ msgid ""
 "    the bookmarks extension must be enabled.\n"
 "    "
 msgstr ""
+"    Lesezeichen können zwischen Mercurial Archiven ausgetauscht werden.\n"
+"    (siehe :hg:`help push` bzw. :hg:`help pull`). Beide Archive müssen dafür\n"
+"    Lesezeichen unterstützen. Bis Mercurial version 1.8 muss hierfür die\n"
+"    Lesezeichenerweiterung (bookmarks extension) angeschaltet werden.\n"
+"    "
 
 msgid "a bookmark of this name does not exist"
 msgstr "Es existiert kein Lesezeichen mit diesem Namen"
@@ -16517,7 +16521,7 @@ msgstr "sort verlangt ein oder zwei Argumente"
 
 #. i18n: "bookmark" is a keyword
 msgid "the argument to bookmark must be a string"
-msgstr ""
+msgstr "'bookmark' erwartet eine Zeichenkette als Parameter"
 
 msgid "can't negate that"
 msgstr "kann dies nicht negieren"
