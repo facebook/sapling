@@ -1228,8 +1228,7 @@ class localrepository(repo.repository):
                 if fn in mf1:
                     if (fn not in deleted and
                         (mf1.flags(fn) != mf2.flags(fn) or
-                         (mf1[fn] != mf2[fn] and
-                          (mf2[fn] or ctx1[fn].cmp(ctx2[fn]))))):
+                         mf1[fn] != mf2[fn])):
                         modified.append(fn)
                     elif listclean:
                         clean.append(fn)
