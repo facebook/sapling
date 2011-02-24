@@ -127,8 +127,11 @@ def update(repo, parents, node):
     update = False
     mark = repo._bookmarkcurrent
     if mark and marks[mark] in parents:
-        marks[mark] = node
-        update = True
+        old = repo[marks[mark]]
+        new = repo[node]
+        if new in old.descendants():
+            marks[mark] = new.node()
+            update = True
     if update:
         write(repo)
 
