@@ -7,7 +7,11 @@ from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo
 from dulwich import client
 
-from hgext import bookmarks
+try:
+    from mercurial import bookmarks
+    bookmarks.update
+except ImportError:
+    from hgext import bookmarks
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
 from mercurial import context, util as hgutil
