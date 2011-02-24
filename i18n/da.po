@@ -18,7 +18,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2011-02-23 15:32+0100\n"
-"PO-Revision-Date: 2011-02-23 15:34+0100\n"
+"PO-Revision-Date: 2011-02-24 12:04+0100\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "Language: Danish\n"
@@ -837,6 +837,10 @@ msgid ""
 "  branches.current = green\n"
 "  branches.inactive = none"
 msgstr ""
+"  branches.active = none\n"
+"  branches.closed = black bold\n"
+"  branches.current = green\n"
+"  branches.inactive = none"
 
 msgid ""
 "The color extension will try to detect whether to use ANSI codes or\n"
@@ -1400,7 +1404,7 @@ msgid "revisions"
 msgstr "revisioner"
 
 msgid "scanning"
-msgstr ""
+msgstr "skanner"
 
 #, python-format
 msgid "unknown sort mode: %s"
@@ -1499,7 +1503,7 @@ msgid "collecting CVS rlog\n"
 msgstr "samler CVS rlog\n"
 
 msgid "not a CVS sandbox"
-msgstr ""
+msgstr "ikke en CVS sandkasse"
 
 #, python-format
 msgid "reading cvs log cache %s\n"
@@ -1571,10 +1575,10 @@ msgstr "Python ElementTree modulet er ikke tilstede"
 
 #, python-format
 msgid "%s repository format is unsupported, please upgrade"
-msgstr ""
+msgstr "%s depotformatet er ikke supporteret, opgrader venligst"
 
 msgid "failed to detect repository format!"
-msgstr ""
+msgstr "kunne ikke detektere depotformatet!"
 
 msgid "internal calling inconsistency"
 msgstr "intern kaldeinkonsistens"
@@ -1584,7 +1588,7 @@ msgstr "fejl i filafbildning"
 
 #, python-format
 msgid "%s:%d: path to %s is missing\n"
-msgstr ""
+msgstr "%s:%d: stien til %s mangler\n"
 
 #, python-format
 msgid "%s:%d: %r already in %s list\n"
@@ -1592,7 +1596,7 @@ msgstr "%s:%d: %r er allerede i %s listen\n"
 
 #, python-format
 msgid "%s:%d: superfluous / in %s %r\n"
-msgstr ""
+msgstr "%s:%d: overflødig / i %s %r\n"
 
 #, python-format
 msgid "%s:%d: unknown directive %r\n"
@@ -1779,7 +1783,7 @@ msgid "unable to cope with svn output"
 msgstr "kan ikke håndtere svn output"
 
 msgid "writing Subversion tags is not yet implemented\n"
-msgstr ""
+msgstr "skrivning af Subversion mærkater er endnu ikke implementeret\n"
 
 msgid "automatically manage newlines in repository files"
 msgstr "automatisk håndtering af linieskift i depotfiler"
@@ -1989,16 +1993,27 @@ msgid ""
 "  #cmd.cdiff = gdiff\n"
 "  #opts.cdiff = -Nprc5"
 msgstr ""
+"  [extdiff]\n"
+"  # tilføj ny kommando som kører GNU diff(1) i 'context diff' modus\n"
+"  cdiff = gdiff -Nprc5\n"
+"  ## eller den gamle måde:\n"
+"  #cmd.cdiff = gdiff\n"
+"  #opts.cdiff = -Nprc5"
 
 msgid ""
 "  # add new command called vdiff, runs kdiff3\n"
 "  vdiff = kdiff3"
 msgstr ""
+"  # tilføj en ny kommando ved navn vdiff som kører kdiff3\n"
+"  vdiff = kdiff3"
 
 msgid ""
 "  # add new command called meld, runs meld (no need to name twice)\n"
 "  meld ="
 msgstr ""
+"  # tilføj en ny kommando ved navn meld som kører meld (ingen grund\n"
+"  # til at angive navnet to gange)\n"
+"  meld ="
 
 msgid ""
 "  # add new command called vimdiff, runs gvimdiff with DirDiff plugin\n"
@@ -2007,9 +2022,15 @@ msgid ""
 "  # your .vimrc\n"
 "  vimdiff = gvim -f '+next' '+execute \"DirDiff\" argv(0) argv(1)'"
 msgstr ""
+"  # tilføj en ny kommando ved navn vimdiff som kører gvimdiff med\n"
+"  # DirDiff udvidelsen (se\n"
+"  # http://www.vim.org/scripts/script.php?script_id=102) Brugere fra\n"
+"  # ikke-engelsktalende lande bør putte \"let g:DirDiffDynamicDiffText\n"
+"  # = 1\" i deres .vimrc\n"
+"  vimdiff = gvim -f '+next' '+execute \"DirDiff\" argv(0) argv(1)'"
 
 msgid "Tool arguments can include variables that are expanded at runtime::"
-msgstr ""
+msgstr "Argumenterne til værktøjerne kan indeholde variabler som bliver erstattet på runtime::"
 
 msgid ""
 "  $parent1, $plabel1 - filename, descriptive label of first parent\n"
@@ -2017,6 +2038,10 @@ msgid ""
 "  $parent2, $plabel2 - filename, descriptive label of second parent\n"
 "  $parent is an alias for $parent1."
 msgstr ""
+"  $parent1, $plabel1 - filnavn, beskrivelse af første forælder\n"
+"  $child,   $clabel  - filnavn, beskrivelse af barnerevisionen\n"
+"  $parent2, $plabel2 - filnavn, beskrivelse af anden forælder\n"
+"  $parent er et alias for $parent1."
 
 msgid ""
 "The extdiff extension will look in your [diff-tools] and [merge-tools]\n"
@@ -2089,7 +2114,7 @@ msgid "comparison program to run"
 msgstr "sammenligningsprogram der skal køres"
 
 msgid "OPT"
-msgstr ""
+msgstr "TILVALG"
 
 msgid "pass option to comparison program"
 msgstr "videregiv argument til sammenligningsprogram"
@@ -2121,7 +2146,7 @@ msgid "pull, update and merge in one command"
 msgstr "træk, opdater og sammenføj i en kommando"
 
 msgid "pull changes from a remote repository, merge new changes if needed."
-msgstr ""
+msgstr "hent ændringer fra fjerndepot, sammenføj nye ændringer hvis nødvendigt"
 
 msgid ""
 "    This finds all changes from the repository at the specified path\n"
@@ -2150,6 +2175,8 @@ msgid ""
 "    Returns 0 on success.\n"
 "    "
 msgstr ""
+"    Returnerer 0 ved succes.\n"
+"    "
 
 msgid ""
 "working dir not at branch tip (use \"hg update\" to check out branch tip)"
@@ -2303,7 +2330,7 @@ msgid "the key id to sign with"
 msgstr "nøgle ID der skal underskrives med"
 
 msgid "TEXT"
-msgstr ""
+msgstr "TEKST"
 
 msgid "commit message"
 msgstr "deponeringsbesked"
@@ -2412,6 +2439,9 @@ msgid ""
 "  # If you want hyperlinks (optional)\n"
 "  baseurl = http://server/path/to/repo\n"
 msgstr ""
+"  [web]\n"
+"  # Hvis du vil have hyperlinks (valgfrit)\n"
+"  baseurl = http://server/sti/til/depot\n"
 
 #, python-format
 msgid "%s returned an error: %s"
@@ -2451,6 +2481,8 @@ msgid ""
 "  [hgk]\n"
 "  path=/location/of/hgk"
 msgstr ""
+"  [hgk]\n"
+"  path=/placering/af/hgk"
 
 msgid ""
 "hgk can make use of the extdiff extension to visualize revisions.\n"
@@ -2722,7 +2754,7 @@ msgid "rescanning due to .hgignore change\n"
 msgstr "genskanner på grund af ændring af .hgignore\n"
 
 msgid "cannot start: socket is already bound"
-msgstr ""
+msgstr "kan ikke starte: soklen er allerede i brug"
 
 msgid ""
 "cannot start: tried linking .hg/inotify.sock to a temporary socket but .hg/"
@@ -2806,7 +2838,7 @@ msgid ""
 msgstr ""
 
 msgid "Example::"
-msgstr ""
+msgstr "Eksempel::"
 
 msgid ""
 "    [keyword]\n"
