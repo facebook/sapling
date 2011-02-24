@@ -1366,7 +1366,7 @@ def debugindex(ui, repo, file_, **opts):
 
     format = opts.get('format', 0)
     if format not in (0, 1):
-        raise util.Abort("unknown format %d" % format)
+        raise util.Abort(_("unknown format %d") % format)
 
     if not r:
         r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
@@ -2279,7 +2279,7 @@ def identify(ui, repo, source=None,
             rev = "tip"
         if num or branch or tags:
             raise util.Abort(
-                "can't query remote revision number, branch, or tags")
+                _("can't query remote revision number, branch, or tags"))
         output = [hexfunc(repo.lookup(rev))]
     elif not rev:
         ctx = repo[None]
