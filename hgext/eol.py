@@ -6,7 +6,7 @@ directory. That way you can get CRLF line endings on Windows and LF on
 Unix/Mac, thereby letting everybody use their OS native line endings.
 
 The extension reads its configuration from a versioned ``.hgeol``
-configuration file every time you run an ``hg`` command. The
+configuration file found in the root of the working copy. The
 ``.hgeol`` file use the same syntax as all other Mercurial
 configuration files. It uses two sections, ``[patterns]`` and
 ``[repository]``.
