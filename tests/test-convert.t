@@ -204,12 +204,12 @@
       The following options can be set with "--config":
   
       convert.svn.branches
-                  specify the directory containing branches. The defaults is
+                  specify the directory containing branches. The default is
                   "branches".
       convert.svn.tags
                   specify the directory containing tags. The default is "tags".
       convert.svn.trunk
-                  specify the name of the trunk branch The defauls is "trunk".
+                  specify the name of the trunk branch. The default is "trunk".
   
       Source history can be retrieved starting at a specific revision, instead
       of being integrally converted. Only single branch conversions are

@@ -311,6 +311,9 @@ class svn_source(converter_source):
                 return None
             path = (cfgpath or name).strip('/')
             if not self.exists(path, rev):
+                if self.module.endswith(path) and name == 'trunk':
+                    # we are converting from inside this directory
+                    return None
                 if cfgpath:
                     raise util.Abort(_('expected %s to be at %r, but not found')
                                  % (name, path))
@@ -758,7 +761,8 @@ class svn_source(converter_source):
             author = author and self.recode(author) or ''
             try:
                 branch = self.module.split("/")[-1]
-                if branch == 'trunk':
+                trunkname = self.ui.config('convert', 'svn.trunk', 'trunk')
+                if branch == trunkname.strip('/'):
                     branch = ''
             except IndexError:
                 branch = None

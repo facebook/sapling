@@ -9,6 +9,8 @@
   > [extensions]
   > convert = 
   > graphlog =
+  > [convert]
+  > svn.trunk = mytrunk
   > EOF
 
   $ svnadmin create svn-repo
@@ -27,20 +29,20 @@ Initial svn import
 
   $ mkdir projB
   $ cd projB
-  $ mkdir trunk
+  $ mkdir mytrunk
   $ mkdir tags
   $ cd ..
 
   $ svnurl="file://$svnpath/svn-repo/proj%20B"
   $ svn import -m "init projB" projB "$svnurl" | fixpath
-  Adding         projB/trunk
+  Adding         projB/mytrunk
   Adding         projB/tags
   
   Committed revision 1.
 
 Update svn repository
 
-  $ svn co "$svnurl"/trunk B | fixpath
+  $ svn co "$svnurl"/mytrunk B | fixpath
   Checked out revision 1.
   $ cd B
   $ echo hello > 'letter .txt'
@@ -57,7 +59,7 @@ Update svn repository
   Transmitting file data .
   Committed revision 3.
 
-  $ svn copy -m "tag v0.1" "$svnurl"/trunk "$svnurl"/tags/v0.1
+  $ svn copy -m "tag v0.1" "$svnurl"/mytrunk "$svnurl"/tags/v0.1
   
   Committed revision 4.
 
@@ -94,7 +96,7 @@ Update svn repository again
   Transmitting file data ..
   Committed revision 6.
 
-  $ svn copy -m "tag v0.2" "$svnurl"/trunk "$svnurl"/tags/v0.2
+  $ svn copy -m "tag v0.2" "$svnurl"/mytrunk "$svnurl"/tags/v0.2
   
   Committed revision 7.
 
@@ -143,7 +145,7 @@ Test incremental conversion
 
 Test filemap
   $ echo 'include letter2.txt' > filemap
-  $ hg convert --filemap filemap "$svnurl"/trunk fmap
+  $ hg convert --filemap filemap "$svnurl"/mytrunk fmap
   initializing destination fmap repository
   scanning source...
   sorting...
@@ -154,6 +156,8 @@ Test filemap
   2 nice day
   1 second letter
   0 work in progress
+  $ hg -R fmap branch -q
+  default
   $ hg glog -R fmap --template '{rev} {desc|firstline} files: {files}\n'
   o  1 work in progress files: letter2.txt
   |
@@ -161,12 +165,14 @@ Test filemap
   
 
 Test stop revision
-  $ hg convert --rev 1 "$svnurl"/trunk stoprev
+  $ hg convert --rev 1 "$svnurl"/mytrunk stoprev
   initializing destination stoprev repository
   scanning source...
   sorting...
   converting...
   0 init projB
+  $ hg -R stoprev branch -q
+  default
 
 Check convert_revision extra-records.
 This is also the only place testing more than one extra field in a revision.
@@ -174,5 +180,5 @@ This is also the only place testing more than one extra field in a revision.
   $ cd stoprev
   $ hg tip --debug | grep extra
   extra:       branch=default
-  extra:       convert_revision=svn:........-....-....-....-............/proj B/trunk@1 (re)
+  extra:       convert_revision=svn:........-....-....-....-............/proj B/mytrunk@1 (re)
   $ cd ..
