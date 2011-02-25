@@ -89,6 +89,8 @@
 # server                サーバ
 # subrepo               副リポジトリ
 # summary               要約(情報)
+# support(, not)        (未)サポート
+# support(, un)         (未)サポート
 # tag                   タグ
 # tracked xxxx          構成管理対象の xxxx
 # xxxxx type            xxxx 種別
@@ -102,7 +104,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-02-23 22:54+0900\n"
+"POT-Creation-Date: 2011-02-24 11:19+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -628,7 +630,7 @@ msgstr "%s か %s の buzilla ユーザ ID を見つけることができませ�
 
 #, python-format
 msgid "bugzilla version %s not supported"
-msgstr "bugzilla のバージョン %s をサポートしていません"
+msgstr "bugzilla のバージョン %s は未サポートです"
 
 msgid ""
 "changeset {node|short} in repo {root} refers to bug {bug}.\n"
@@ -1410,7 +1412,7 @@ msgstr "%s: 変換元リポジトリ種別が不正です"
 
 #, python-format
 msgid "%s: missing or unsupported repository"
-msgstr "%s: リポジトリが見つからないか、 サポートされていない形式です"
+msgstr "%s: リポジトリが見つからないか、 未サポートな形式です"
 
 #, python-format
 msgid "%s: invalid destination repository type"
@@ -1488,7 +1490,7 @@ msgid "more than one sort mode specified"
 msgstr "整列オプションの指定が過剰です"
 
 msgid "--sourcesort is not supported by this data source"
-msgstr "指定の変換元では --sourcesort を指定できません"
+msgstr "指定の変換元は --sourcesort が未サポートです"
 
 #, python-format
 msgid "%s does not look like a CVS checkout"
@@ -2858,8 +2860,8 @@ msgid ""
 "like CVS' $Log$, are not supported. A keyword template map \"Log =\n"
 "{desc}\" expands to the first line of the changeset description.\n"
 msgstr ""
-"複数行に渡る展開や、 CVS の $Log$ のような増加する内容の展開はサポート\n"
-"していません。 キーワードテンプレート設定 \"Log = {desc}\" は、\n"
+"複数行に渡る展開や、 CVS の $Log$ のような増加する内容の展開は\n"
+"未サポートです。 キーワードテンプレート設定 \"Log = {desc}\" は、\n"
 "コミットメッセージの最初の一行を埋め込みます。\n"
 
 #, python-format
@@ -5715,7 +5717,7 @@ msgid ""
 msgstr ""
 
 msgid "hardlinks are not supported on this system"
-msgstr "このシステム上ではハードリンクはサポートしていません"
+msgstr "このシステム上ではハードリンクが未サポートです"
 
 #, python-format
 msgid "relinking %s to %s\n"
@@ -6340,8 +6342,12 @@ msgid "cannot create new bundle repository"
 msgstr "バンドルリポジトリの新規作成はできません"
 
 #, python-format
-msgid "premature EOF reading chunk (got %d bytes, expected %d)"
-msgstr "予期しない EOF (%d バイトのみ読込済、 本当は %d バイト)"
+msgid "stream ended unexpectedly (got %d bytes, expected %d)"
+msgstr "予期せぬデータ終端 (実データ:%d バイト 期待データ:%d バイト)"
+
+#, python-format
+msgid "invalid chunk length %d"
+msgstr "不正なデータ長: %d"
 
 #, python-format
 msgid "%s: not a Mercurial bundle"
@@ -8246,6 +8252,9 @@ msgstr ""
 msgid "cannot combine --bundle and --subrepos"
 msgstr "--bundle と --subrepos は組み合わせられません"
 
+msgid "remote doesn't support bookmarks\n"
+msgstr "連携先リポジトリはブックマークが未サポートです\n"
+
 msgid "create a new repository in the given directory"
 msgstr "指定されたディレクトリでの新規リポジトリの作成"
 
@@ -9320,11 +9329,19 @@ msgid "update: %d new changesets, %d branch heads (merge)\n"
 msgstr "update 候補     : %d の新規リビジョン、 %d のブランチヘッド(マージ)\n"
 
 msgid "1 or more incoming"
-msgstr "1つ以上のリビジョンの取り込み"
+msgstr "取り込み対象リビジョン(incoming)あり"
 
 #, python-format
 msgid "%d outgoing"
-msgstr "%d 個のリビジョンの反映"
+msgstr "%d 個の反映候補リビジョン(outgoing)"
+
+#, python-format
+msgid "%d incoming bookmarks"
+msgstr "%d 個の取り込み候補ブックマーク(incoming)"
+
+#, python-format
+msgid "%d outgoing bookmarks"
+msgstr "%d 個の更新候補ブックマーク(outgoing)"
 
 #, python-format
 msgid "remote: %s\n"
@@ -13281,7 +13298,7 @@ msgstr ""
 "  こちらが優先されます。\n"
 
 msgid "remote branch lookup not supported"
-msgstr "連携先リポジトリではブランチ検索機能はサポートされていません"
+msgstr "連携先リポジトリはブランチ検索機能が未サポートです"
 
 msgid "dirstate branch not accessible"
 msgstr "dirstate のブランチ情報にアクセスできません"
@@ -13314,10 +13331,10 @@ msgstr "複製先 '%s' は空ではありません"
 msgid ""
 "src repository does not support revision lookup and so doesn't support clone "
 "by revision"
-msgstr "指定の複製元では、 リビジョン指定付きでの複製ができません"
+msgstr "指定の複製元は、 リビジョン指定付き複製が未サポートです"
 
 msgid "clone from remote to remote not supported"
-msgstr "リモートからリモートの複製はサポートしていません"
+msgstr "リモートからリモートの複製は未サポートです"
 
 #, python-format
 msgid "updating to branch %s\n"
@@ -13421,10 +13438,10 @@ msgstr "予期せぬ接続終了"
 
 #, python-format
 msgid "unsupported URL component: \"%s\""
-msgstr "URL 要素 \"%s\" はサポートされていません"
+msgstr "URL 要素 \"%s\" は未サポートです"
 
 msgid "operation not supported over http"
-msgstr "http リポジトリでは使用できない機能を必要としています"
+msgstr "http リポジトリでは未サポートの機能です"
 
 msgid "authorization failed"
 msgstr "認証に失敗"
@@ -13484,7 +13501,7 @@ msgstr "%sというリポジトリは既に存在しています"
 
 #, python-format
 msgid "requirement '%s' not supported"
-msgstr "必須機能 '%s' はサポートされていません"
+msgstr "必須機能 '%s' が未サポートです"
 
 #, python-format
 msgid ".hg/sharedpath points to nonexistent directory %s"
@@ -13538,8 +13555,12 @@ msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr "名前つきブランチはリセットできませんので、 %s のままです\n"
 
 #, python-format
-msgid "working directory now based on revision %s\n"
-msgstr "作業領域の親リビジョンを %s にしました\n"
+msgid "working directory now based on revisions %d and %d\n"
+msgstr "%d と %d が作業領域の親リビジョンになりました\n"
+
+#, python-format
+msgid "working directory now based on revision %d\n"
+msgstr "%d が作業領域の親リビジョンになりました\n"
 
 msgid "no rollback information available\n"
 msgstr "利用可能なロールバック情報がありません\n"
@@ -13932,7 +13953,7 @@ msgstr "不正なパッチ: %s %s"
 
 #, python-format
 msgid "unsupported parser state: %s"
-msgstr "サポートしていないパーサの状態です: %s"
+msgstr "未サポートなパーサ状態です: %s"
 
 #, python-format
 msgid "patch command failed: %s"
@@ -13974,7 +13995,7 @@ msgstr "リビジョンの除外に失敗: 部分的なバンドルを '%s' に�
 
 #, python-format
 msgid "cannot %s; remote repository does not support the %r capability"
-msgstr "%s できません。 機能 %s はリモートリポジトリでは未サポートです"
+msgstr "%s ができません。 連携先は機能 %r が未サポートです"
 
 #, python-format
 msgid "unknown compression type %r"
