@@ -383,3 +383,18 @@ Mixed tests
   % hg commit
   % hg status
   $ rm -r mixed
+
+Test issue2569 -- eol extension takes write lock on reading:
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo 'eol =' >> $HGRCPATH
+  $ hg init repo
+  $ cd repo
+  $ touch .hgeol
+  $ hg status
+  ? .hgeol
+  $ chmod -R -w .hg
+  $ sleep 1
+  $ touch .hgeol
+  $ hg status --traceback
+  ? .hgeol

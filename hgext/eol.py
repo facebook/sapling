@@ -82,7 +82,7 @@ used.
 """
 
 from mercurial.i18n import _
-from mercurial import util, config, extensions, match
+from mercurial import util, config, extensions, match, error
 import re, os
 
 # Matches a lone LF, i.e., one that is not part of CRLF.
@@ -254,13 +254,16 @@ def reposetup(ui, repo):
                     for f, e in self.dirstate._map.iteritems():
                         self.dirstate._map[f] = (e[0], e[1], -1, 0)
                     self.dirstate._dirty = True
-                    # Touch the cache to update mtime. TODO: are we sure this
-                    # always enought to update the mtime, or should we write a
-                    # bit to the file?
+                    # Touch the cache to update mtime.
                     self.opener("eol.cache", "w").close()
-                finally:
-                    if wlock is not None:
-                        wlock.release()
+                    wlock.release()
+                except error.LockUnavailable:
+                    # If we cannot lock the repository and clear the
+                    # dirstate, then a commit might not see all files
+                    # as modified. But if we cannot lock the
+                    # repository, then we can also not make a commit,
+                    # so ignore the error.
+                    pass
 
         def commitctx(self, ctx, error=False):
             for f in sorted(ctx.added() + ctx.modified()):
