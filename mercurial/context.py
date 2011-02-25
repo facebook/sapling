@@ -550,19 +550,15 @@ class filectx(object):
         return None
 
     def ancestors(self):
-        seen = set()
-        visit = [self]
-        while visit:
-            parents = visit.pop(0).parents()
-            if len(parents) > 1 and parents[1].rev() > parents[0].rev():
-                # make sure we return ancestors in reverse revision order
-                parents = reversed(parents)
-            for parent in parents:
-                s = str(parent)
-                if s not in seen:
-                    visit.append(parent)
-                    seen.add(s)
-                    yield parent
+        visit = {}
+        c = self
+        while True:
+            for parent in c.parents():
+                visit[(parent.rev(), parent.node())] = parent
+            if not visit:
+                break
+            c = visit.pop(max(visit))
+            yield c
 
 class workingctx(changectx):
     """A workingctx object makes access to data related to
