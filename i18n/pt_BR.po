@@ -1514,7 +1514,7 @@ msgstr "    As seguintes opções podem ser definidas com ``--config``:"
 
 msgid ""
 "    :convert.svn.branches: specify the directory containing branches.\n"
-"        The defaults is ``branches``."
+"        The default is ``branches``."
 msgstr ""
 "    :convert.svn.branches: especifica o diretório que contém ramos.\n"
 "        O valor padrão é ``branches``."
@@ -1527,8 +1527,8 @@ msgstr ""
 "        O valor padrão é ``tags``."
 
 msgid ""
-"    :convert.svn.trunk: specify the name of the trunk branch The\n"
-"        defauls is ``trunk``."
+"    :convert.svn.trunk: specify the name of the trunk branch. The\n"
+"        default is ``trunk``."
 msgstr ""
 "    :convert.svn.trunk: especifica o nome do ramo trunk.\n"
 "        O valor padrão é ``trunk``."
@@ -1767,6 +1767,10 @@ msgstr "%s: tipo de repositório de destino inválido"
 #, python-format
 msgid "convert: %s\n"
 msgstr "convert: %s\n"
+
+#, python-format
+msgid "%s\n"
+msgstr "%s\n"
 
 #, python-format
 msgid "%s: unknown repository type"
@@ -2074,8 +2078,8 @@ msgstr "svn: não é possível sondar o repositório remoto; a conversão irá a
 msgid "%s does not look like a Subversion repository"
 msgstr "%s não parece ser um repositório do Subversion"
 
-msgid "Subversion python bindings could not be loaded"
-msgstr "Os módulos Python para o Subversion não puderam ser carregados"
+msgid "Could not load Subversion python bindings"
+msgstr "Não foi possível carregar os módulos python do Subversion"
 
 #, python-format
 msgid "Subversion python bindings %d.%d found, 1.4 or later required"
@@ -2171,15 +2175,15 @@ msgstr ""
 
 msgid ""
 "The extension reads its configuration from a versioned ``.hgeol``\n"
-"configuration file every time you run an ``hg`` command. The\n"
+"configuration file found in the root of the working copy. The\n"
 "``.hgeol`` file use the same syntax as all other Mercurial\n"
 "configuration files. It uses two sections, ``[patterns]`` and\n"
 "``[repository]``."
 msgstr ""
 "A extensão lê sua configuração de um arquivo versionado chamado\n"
-"``.hgeol`` cada vez que você executar um comando ``hg``. O arquivo\n"
+"``.hgeol`` localizado no raiz da cópia de trabalho. O arquivo\n"
 "``.hgeol`` usa a mesma sintaxe que outros arquivos de configuração\n"
-"do Mercurial. Ele usa duas seções ``[patterns]`` e ``[repository]``."
+"do Mercurial. Ele usa duas seções, ``[patterns]`` e ``[repository]``."
 
 msgid ""
 "The ``[patterns]`` section specifies how line endings should be\n"
@@ -7552,7 +7556,7 @@ msgstr ""
 "    o efeito da revisão REV."
 
 msgid ""
-"    If REV is the parent of the working directory, then this changeset\n"
+"    If REV is the parent of the working directory, then this new changeset\n"
 "    is committed automatically. Otherwise, hg needs to merge the\n"
 "    changes and the merged result is left uncommitted."
 msgstr ""
@@ -7565,21 +7569,21 @@ msgid ""
 "    By default, the pending changeset will have one parent,\n"
 "    maintaining a linear history. With --merge, the pending changeset\n"
 "    will instead have two parents: the old parent of the working\n"
-"    directory and a child of REV that simply undoes REV."
+"    directory and a new child of REV that simply undoes REV."
 msgstr ""
 "    Por padrão, a revisão pendente terá apenas um pai, mantendo assim\n"
 "    um histórico linear. Se a opção --merge for usada, a revisão\n"
 "    pendente terá dois pais: o antigo pai do diretório de trabalho e\n"
-"    uma revisão filha de REV que desfaz o conteúdo de REV."
+"    uma nova revisão filha de REV que desfaz o conteúdo de REV."
 
 msgid ""
-"    Before version 1.7, the default behavior was equivalent to\n"
+"    Before version 1.7, the behavior without --merge was equivalent to\n"
 "    specifying --merge followed by :hg:`update --clean .` to cancel\n"
 "    the merge and leave the child of REV as a head to be merged\n"
 "    separately."
 msgstr ""
-"    Antes da versao 1.7 do Mercurial, o comportamento padrão do\n"
-"    comando backout era equivalente a especificar --merge seguido por\n"
+"    Antes da versao 1.7 do Mercurial, o comportamento do comando\n"
+"    backout sem --merge era equivalente a especificar --merge seguido por\n"
 "    :hg:`update --clean .`, cancelando a mesclagem e deixando a filha\n"
 "    de REV como uma cabeça a ser mesclada explicitamente."
 
@@ -8415,6 +8419,10 @@ msgstr "nenhum padrão de arquivos ignorados encontrado"
 msgid "dump the contents of an index file"
 msgstr "extrai o conteúdo de um arquivo de índice"
 
+#, python-format
+msgid "unknown format %d"
+msgstr "formato desconhecido %d"
+
 msgid "dump an index DAG as a graphviz dot file"
 msgstr "extrai os dados de um índice DAG como um arquivo .dot do graphviz"
 
@@ -8920,6 +8928,9 @@ msgstr ""
 "    mudanças não gravadas no diretório de trabalho, uma lista de\n"
 "    etiquetas para esta revisão e um nome de ramo para ramos\n"
 "    diferentes do default."
+
+msgid "can't query remote revision number, branch, tags, or bookmarks"
+msgstr "não é possível consultar o número de revisão, ramo, etiquetas ou marcadores remotos"
 
 msgid "import an ordered set of patches"
 msgstr "importa um conjunto ordenado de patches"
@@ -10428,11 +10439,11 @@ msgid "(see http://mercurial.selenic.com for more information)"
 msgstr "(veja http://mercurial.selenic.com para mais informações)"
 
 msgid ""
-"Copyright (C) 2005-2010 Matt Mackall and others\n"
+"Copyright (C) 2005-2011 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"Copyright (C) 2005-2010 Matt Mackall e outros\n"
+"Copyright (C) 2005-2011 Matt Mackall e outros\n"
 "Este software é livre; veja os fontes para condições de cópia. Não\n"
 "há garantias, nem mesmo de adequação para qualquer propósito em\n"
 "particular.\n"
@@ -10911,8 +10922,11 @@ msgstr "exibe ramo"
 msgid "show tags"
 msgstr "exibe etiquetas"
 
-msgid "[-nibt] [-r REV] [SOURCE]"
-msgstr "[-nibt] [-r REV] [ORIGEM]"
+msgid "show bookmarks"
+msgstr "exibe marcadores"
+
+msgid "[-nibtB] [-r REV] [SOURCE]"
+msgstr "[-nibtB] [-r REV] [ORIGEM]"
 
 msgid "directory strip option for patch. This has the same meaning as the corresponding patch option"
 msgstr "opção de remoção de diretório para o patch. Tem o mesmo significado da opção correspondente do utilitário patch"
@@ -15846,6 +15860,9 @@ msgstr "atenção: conflitos durante a mesclagem.\n"
 msgid "couldn't parse location %s"
 msgstr "não foi possível processar localização %s"
 
+msgid "password in URL not supported"
+msgstr "senha na URL não é suportada"
+
 msgid "could not create remote repo"
 msgstr "não foi possível criar repositório remoto"
 
@@ -16451,6 +16468,9 @@ msgstr "procurar mudanças remotas"
 msgid "push failed:"
 msgstr "o push falhou:"
 
+msgid "Subversion python bindings could not be loaded"
+msgstr "Os módulos Python para o Subversion não puderam ser carregados"
+
 msgid "options:"
 msgstr "opções:"
 
@@ -16701,9 +16721,6 @@ msgstr "erro ao expandir '%s%%%s'"
 
 msgid "unknown filter '%s'"
 msgstr "filtro '%s' desconhecido"
-
-msgid "Hardlinks not supported"
-msgstr "Hardlinks não suportados"
 
 msgid "user name not available - set USERNAME environment variable"
 msgstr "nome de usuário indisponível - defina a variável de ambiente USERNAME"
