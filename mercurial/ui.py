@@ -122,8 +122,8 @@ class ui(object):
             self.quiet = not self.debugflag and self.configbool('ui', 'quiet')
             if self.verbose and self.quiet:
                 self.quiet = self.verbose = False
-            self._reportuntrusted = self.configbool("ui", "report_untrusted",
-                                        True)
+            self._reportuntrusted = self.debugflag or self.configbool("ui",
+                "report_untrusted", True)
             self.tracebackflag = self.configbool('ui', 'traceback', False)
 
         if section in (None, 'trusted'):

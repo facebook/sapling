@@ -136,6 +136,25 @@ untrusted
 .ignoring untrusted configuration option paths.local = /another/path
 . local = /another/path
 
+# report_untrusted enabled without debug hides warnings
+# different user, different group
+trusted
+    global = /some/path
+untrusted
+. . global = /some/path
+. . local = /another/path
+
+# report_untrusted enabled with debug shows warnings
+# different user, different group
+Not trusting file .hg/hgrc from untrusted user abc, group def
+trusted
+ignoring untrusted configuration option paths.local = /another/path
+    global = /some/path
+untrusted
+. . global = /some/path
+.ignoring untrusted configuration option paths.local = /another/path
+. local = /another/path
+
 # ui.readconfig sections
 quux
 

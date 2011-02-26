@@ -11,7 +11,8 @@ basehgrc = f.read()
 f.close()
 
 def testui(user='foo', group='bar', tusers=(), tgroups=(),
-           cuser='foo', cgroup='bar', debug=False, silent=False):
+           cuser='foo', cgroup='bar', debug=False, silent=False,
+           report=True):
     # user, group => owners of the file
     # tusers, tgroups => trusted users/groups
     # cuser, cgroup => user/group of the current process
@@ -61,6 +62,7 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
 
     u = ui.ui()
     u.setconfig('ui', 'debug', str(bool(debug)))
+    u.setconfig('ui', 'report_untrusted', str(bool(report)))
     u.readconfig('.hg/hgrc')
     if silent:
         return u
@@ -130,6 +132,12 @@ testui(user='abc', group='def', cuser=None)
 
 print "# prints debug warnings"
 u = testui(user='abc', group='def', cuser='foo', debug=True)
+
+print "# report_untrusted enabled without debug hides warnings"
+u = testui(user='abc', group='def', cuser='foo', report=False)
+
+print "# report_untrusted enabled with debug shows warnings"
+u = testui(user='abc', group='def', cuser='foo', debug=True, report=False)
 
 print "# ui.readconfig sections"
 filename = 'foobar'
