@@ -1,6 +1,6 @@
 # Swedish translation for Mercurial
 # Svensk översättning för Mercurial
-# Copyright (C) 2009-2010 Matt Mackall and others
+# Copyright (C) 2009-2011 Matt Mackall and others
 #
 # Translation dictionary:
 #
@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2010-12-19 19:38+0100\n"
-"PO-Revision-Date: 2010-12-19 19:40+0100\n"
+"POT-Creation-Date: 2011-02-26 09:27+0100\n"
+"PO-Revision-Date: 2011-02-26 16:29+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -42,8 +42,8 @@ msgstr ""
 "Den här sektioner innehåller hjälp för utökningar som levereras med "
 "Mercurial. Hjälp för andra utälningar är tillgängliga i hjälpsystemet."
 
-msgid "options:"
-msgstr "flaggor:"
+msgid "Options:"
+msgstr "Flaggor:"
 
 #, python-format
 msgid "    aliases: %s"
@@ -290,174 +290,6 @@ msgstr ""
 
 #, python-format
 msgid "acl: access denied for changeset %s"
-msgstr ""
-
-msgid "track a line of development with movable markers"
-msgstr ""
-
-msgid ""
-"Bookmarks are local movable markers to changesets. Every bookmark\n"
-"points to a changeset identified by its hash. If you commit a\n"
-"changeset that is based on a changeset that has a bookmark on it, the\n"
-"bookmark shifts to the new changeset."
-msgstr ""
-
-msgid ""
-"It is possible to use bookmark names in every revision lookup (e.g.\n"
-":hg:`merge`, :hg:`update`)."
-msgstr ""
-
-msgid ""
-"By default, when several bookmarks point to the same changeset, they\n"
-"will all move forward together. It is possible to obtain a more\n"
-"git-like experience by adding the following configuration option to\n"
-"your configuration file::"
-msgstr ""
-
-msgid ""
-"  [bookmarks]\n"
-"  track.current = True"
-msgstr ""
-
-msgid ""
-"This will cause Mercurial to track the bookmark that you are currently\n"
-"using, and only update it. This is similar to git's approach to\n"
-"branching.\n"
-msgstr ""
-
-msgid ""
-"    Bookmarks are pointers to certain commits that move when\n"
-"    committing. Bookmarks are local. They can be renamed, copied and\n"
-"    deleted. It is possible to use bookmark names in :hg:`merge` and\n"
-"    :hg:`update` to merge and update respectively to a given bookmark."
-msgstr ""
-
-msgid ""
-"    You can use :hg:`bookmark NAME` to set a bookmark on the working\n"
-"    directory's parent revision with the given name. If you specify\n"
-"    a revision using -r REV (where REV may be an existing bookmark),\n"
-"    the bookmark is assigned to that revision."
-msgstr ""
-
-msgid ""
-"    Bookmarks can be pushed and pulled between repositories (see :hg:`help\n"
-"    push` and :hg:`help pull`). This requires the bookmark extension to be\n"
-"    enabled for both the local and remote repositories.\n"
-"    "
-msgstr ""
-
-msgid "a bookmark of this name does not exist"
-msgstr ""
-
-msgid "a bookmark of the same name already exists"
-msgstr ""
-
-msgid "new bookmark name required"
-msgstr ""
-
-msgid "bookmark name required"
-msgstr ""
-
-msgid "bookmark name cannot contain newlines"
-msgstr ""
-
-msgid "bookmark names cannot consist entirely of whitespace"
-msgstr "bokmärksnamn kan inte bestå enbart av blanktecken"
-
-msgid "a bookmark cannot have the name of an existing branch"
-msgstr ""
-
-msgid "no bookmarks set\n"
-msgstr "inga bokmärken satta\n"
-
-#, python-format
-msgid "updating bookmark %s\n"
-msgstr "uppdaterar bokmärket %s\n"
-
-#, python-format
-msgid "not updating divergent bookmark %s\n"
-msgstr ""
-
-#, python-format
-msgid "updating bookmark %s failed!\n"
-msgstr "uppdatering av bokmärket %s misslyckades!\n"
-
-#, python-format
-msgid "remote bookmark %s not found!"
-msgstr ""
-
-#, python-format
-msgid "importing bookmark %s\n"
-msgstr "importerar bokmärket %s\n"
-
-#, python-format
-msgid "exporting bookmark %s\n"
-msgstr "exporterar bokmärket %s\n"
-
-#, python-format
-msgid "deleting remote bookmark %s\n"
-msgstr "raderar fjärrbokmärket %s\n"
-
-#, python-format
-msgid "bookmark %s does not exist on the local or remote repository!\n"
-msgstr "bokmärket %s existerar inte i lokal- eller fjärrarkiv!\n"
-
-msgid "searching for changed bookmarks\n"
-msgstr "söker efter ändrade bokmärken\n"
-
-msgid "no changed bookmarks found\n"
-msgstr "inga ändrade bokmärken hittades\n"
-
-#, python-format
-msgid "comparing with %s\n"
-msgstr "jämför med %s\n"
-
-msgid "bookmark to import"
-msgstr "bokmärke att importera"
-
-msgid "BOOKMARK"
-msgstr "BOKMÄRKE"
-
-msgid "bookmark to export"
-msgstr "bokmärke att exportera"
-
-msgid "compare bookmark"
-msgstr "jämför bokmärke"
-
-msgid ""
-"``bookmark([name])``\n"
-"    The named bookmark or all bookmarks."
-msgstr ""
-"``bookmark([namn])``\n"
-"    Det angivna bokmärket eller alla bokmärken."
-
-#. i18n: "bookmark" is a keyword
-msgid "bookmark takes one or no arguments"
-msgstr "bookmark tar ett eller inga argument"
-
-#. i18n: "bookmark" is a keyword
-msgid "the argument to bookmark must be a string"
-msgstr "argumentet till bookmark måste vara en sträng"
-
-msgid "force"
-msgstr "tvinga"
-
-msgid "REV"
-msgstr "REV"
-
-msgid "revision"
-msgstr "revision"
-
-msgid "delete a given bookmark"
-msgstr ""
-
-msgid "NAME"
-msgstr "NAMN"
-
-msgid "rename a given bookmark"
-msgstr ""
-
-msgid "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
 msgstr ""
 
 msgid "hooks for integrating with the Bugzilla bug tracker"
@@ -743,6 +575,9 @@ msgid ""
 "    argument to --rev if given) is printed.\n"
 "    "
 msgstr ""
+
+msgid "REV"
+msgstr "REV"
 
 msgid "show children of the specified revision"
 msgstr ""
@@ -1066,10 +901,10 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    If <REVMAP> isn't given, it will be put in a default location\n"
-"    (<dest>/.hg/shamap by default). The <REVMAP> is a simple text file\n"
-"    that maps each source commit ID to the destination ID for that\n"
-"    revision, like so::"
+"    If ``REVMAP`` isn't given, it will be put in a default location\n"
+"    (``<dest>/.hg/shamap`` by default). The ``REVMAP`` is a simple\n"
+"    text file that maps each source commit ID to the destination ID\n"
+"    for that revision, like so::"
 msgstr ""
 
 msgid "      <source ID> <destination ID>"
@@ -1177,15 +1012,25 @@ msgstr ""
 "    '''''''''''''''"
 
 msgid ""
-"    --config convert.hg.ignoreerrors=False    (boolean)\n"
-"        ignore integrity errors when reading. Use it to fix Mercurial\n"
-"        repositories with missing revlogs, by converting from and to\n"
-"        Mercurial.\n"
-"    --config convert.hg.saverev=False         (boolean)\n"
-"        store original revision ID in changeset (forces target IDs to\n"
-"        change)\n"
-"    --config convert.hg.startrev=0            (hg revision identifier)\n"
-"        convert start revision and its descendants"
+"    The Mercurial source recognizes the following configuration\n"
+"    options, which you can set on the command line with ``--config``:"
+msgstr ""
+
+msgid ""
+"    :convert.hg.ignoreerrors: ignore integrity errors when reading.\n"
+"        Use it to fix Mercurial repositories with missing revlogs, by\n"
+"        converting from and to Mercurial. Default is False."
+msgstr ""
+
+msgid ""
+"    :convert.hg.saverev: store original revision ID in changeset\n"
+"        (forces target IDs to change). It takes and boolean argument\n"
+"        and defaults to False."
+msgstr ""
+
+msgid ""
+"    :convert.hg.startrev: convert start revision and its descendants.\n"
+"        It takes a hg revision identifier and defaults to 0."
 msgstr ""
 
 msgid ""
@@ -1199,45 +1044,59 @@ msgid ""
 "    CVS source will use a sandbox (i.e. a checked-out copy) from CVS\n"
 "    to indicate the starting point of what will be converted. Direct\n"
 "    access to the repository files is not needed, unless of course the\n"
-"    repository is :local:. The conversion uses the top level directory\n"
-"    in the sandbox to find the CVS repository, and then uses CVS rlog\n"
-"    commands to find files to convert. This means that unless a\n"
-"    filemap is given, all files under the starting directory will be\n"
+"    repository is ``:local:``. The conversion uses the top level\n"
+"    directory in the sandbox to find the CVS repository, and then uses\n"
+"    CVS rlog commands to find files to convert. This means that unless\n"
+"    a filemap is given, all files under the starting directory will be\n"
 "    converted, and that any directory reorganization in the CVS\n"
 "    sandbox is ignored."
 msgstr ""
 
-msgid "    The options shown are the defaults."
+msgid "    The following options can be used with ``--config``:"
 msgstr ""
 
 msgid ""
-"    --config convert.cvsps.cache=True         (boolean)\n"
-"        Set to False to disable remote log caching, for testing and\n"
-"        debugging purposes.\n"
-"    --config convert.cvsps.fuzz=60            (integer)\n"
-"        Specify the maximum time (in seconds) that is allowed between\n"
-"        commits with identical user and log message in a single\n"
-"        changeset. When very large files were checked in as part of a\n"
-"        changeset then the default may not be long enough.\n"
-"    --config convert.cvsps.mergeto='{{mergetobranch ([-\\w]+)}}'\n"
-"        Specify a regular expression to which commit log messages are\n"
-"        matched. If a match occurs, then the conversion process will\n"
-"        insert a dummy revision merging the branch on which this log\n"
-"        message occurs to the branch indicated in the regex.\n"
-"    --config convert.cvsps.mergefrom='{{mergefrombranch ([-\\w]+)}}'\n"
-"        Specify a regular expression to which commit log messages are\n"
-"        matched. If a match occurs, then the conversion process will\n"
-"        add the most recent revision on the branch indicated in the\n"
-"        regex as the second parent of the changeset.\n"
-"    --config hook.cvslog\n"
-"        Specify a Python function to be called at the end of gathering\n"
-"        the CVS log. The function is passed a list with the log entries,\n"
-"        and can modify the entries in-place, or add or delete them.\n"
-"    --config hook.cvschangesets\n"
-"        Specify a Python function to be called after the changesets\n"
-"        are calculated from the the CVS log. The function is passed\n"
-"        a list with the changeset entries, and can modify the changesets\n"
-"        in-place, or add or delete them."
+"    :convert.cvsps.cache: Set to False to disable remote log caching,\n"
+"        for testing and debugging purposes. Default is True."
+msgstr ""
+
+msgid ""
+"    :convert.cvsps.fuzz: Specify the maximum time (in seconds) that is\n"
+"        allowed between commits with identical user and log message in\n"
+"        a single changeset. When very large files were checked in as\n"
+"        part of a changeset then the default may not be long enough.\n"
+"        The default is 60."
+msgstr ""
+
+msgid ""
+"    :convert.cvsps.mergeto: Specify a regular expression to which\n"
+"        commit log messages are matched. If a match occurs, then the\n"
+"        conversion process will insert a dummy revision merging the\n"
+"        branch on which this log message occurs to the branch\n"
+"        indicated in the regex. Default is ``{{mergetobranch\n"
+"        ([-\\w]+)}}``"
+msgstr ""
+
+msgid ""
+"    :convert.cvsps.mergefrom: Specify a regular expression to which\n"
+"        commit log messages are matched. If a match occurs, then the\n"
+"        conversion process will add the most recent revision on the\n"
+"        branch indicated in the regex as the second parent of the\n"
+"        changeset. Default is ``{{mergefrombranch ([-\\w]+)}}``"
+msgstr ""
+
+msgid ""
+"    :hook.cvslog: Specify a Python function to be called at the end of\n"
+"        gathering the CVS log. The function is passed a list with the\n"
+"        log entries, and can modify the entries in-place, or add or\n"
+"        delete them."
+msgstr ""
+
+msgid ""
+"    :hook.cvschangesets: Specify a Python function to be called after\n"
+"        the changesets are calculated from the the CVS log. The\n"
+"        function is passed a list with the changeset entries, and can\n"
+"        modify the changesets in-place, or add or delete them."
 msgstr ""
 
 msgid ""
@@ -1256,24 +1115,33 @@ msgstr ""
 
 msgid ""
 "    Subversion source detects classical trunk/branches/tags layouts.\n"
-"    By default, the supplied \"svn://repo/path/\" source URL is\n"
-"    converted as a single branch. If \"svn://repo/path/trunk\" exists it\n"
-"    replaces the default branch. If \"svn://repo/path/branches\" exists,\n"
-"    its subdirectories are listed as possible branches. If\n"
-"    \"svn://repo/path/tags\" exists, it is looked for tags referencing\n"
-"    converted branches. Default \"trunk\", \"branches\" and \"tags\" values\n"
-"    can be overridden with following options. Set them to paths\n"
+"    By default, the supplied ``svn://repo/path/`` source URL is\n"
+"    converted as a single branch. If ``svn://repo/path/trunk`` exists\n"
+"    it replaces the default branch. If ``svn://repo/path/branches``\n"
+"    exists, its subdirectories are listed as possible branches. If\n"
+"    ``svn://repo/path/tags`` exists, it is looked for tags referencing\n"
+"    converted branches. Default ``trunk``, ``branches`` and ``tags``\n"
+"    values can be overridden with following options. Set them to paths\n"
 "    relative to the source URL, or leave them blank to disable auto\n"
 "    detection."
 msgstr ""
 
+msgid "    The following options can be set with ``--config``:"
+msgstr ""
+
 msgid ""
-"    --config convert.svn.branches=branches    (directory name)\n"
-"        specify the directory containing branches\n"
-"    --config convert.svn.tags=tags            (directory name)\n"
-"        specify the directory containing tags\n"
-"    --config convert.svn.trunk=trunk          (directory name)\n"
-"        specify the name of the trunk branch"
+"    :convert.svn.branches: specify the directory containing branches.\n"
+"        The defaults is ``branches``."
+msgstr ""
+
+msgid ""
+"    :convert.svn.tags: specify the directory containing tags. The\n"
+"        default is ``tags``."
+msgstr ""
+
+msgid ""
+"    :convert.svn.trunk: specify the name of the trunk branch The\n"
+"        defauls is ``trunk``."
 msgstr ""
 
 msgid ""
@@ -1283,8 +1151,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    --config convert.svn.startrev=0           (svn revision number)\n"
-"        specify start Subversion revision."
+"    :convert.svn.startrev: specify start Subversion revision number.\n"
+"        The default is 0."
 msgstr ""
 
 msgid ""
@@ -1300,17 +1168,17 @@ msgid ""
 "    source to a flat Mercurial repository, ignoring labels, branches\n"
 "    and integrations. Note that when a depot path is given you then\n"
 "    usually should specify a target directory, because otherwise the\n"
-"    target may be named ...-hg."
+"    target may be named ``...-hg``."
 msgstr ""
 
 msgid ""
 "    It is possible to limit the amount of source history to be\n"
-"    converted by specifying an initial Perforce revision."
+"    converted by specifying an initial Perforce revision:"
 msgstr ""
 
 msgid ""
-"    --config convert.p4.startrev=0            (perforce changelist number)\n"
-"        specify initial Perforce revision."
+"    :convert.p4.startrev: specify initial Perforce revision (a\n"
+"        Perforce changelist number)."
 msgstr ""
 
 msgid ""
@@ -1320,16 +1188,23 @@ msgstr ""
 "    Mercurial-destination\n"
 "    '''''''''''''''''''''"
 
-msgid ""
-"    --config convert.hg.clonebranches=False   (boolean)\n"
-"        dispatch source branches in separate clones.\n"
-"    --config convert.hg.tagsbranch=default    (branch name)\n"
-"        tag revisions branch name\n"
-"    --config convert.hg.usebranchnames=True   (boolean)\n"
-"        preserve branch names"
+msgid "    The following options are supported:"
 msgstr ""
 
-msgid "    "
+msgid ""
+"    :convert.hg.clonebranches: dispatch source branches in separate\n"
+"        clones. The default is False."
+msgstr ""
+
+msgid ""
+"    :convert.hg.tagsbranch: branch name for tag revisions, defaults to\n"
+"        ``default``."
+msgstr ""
+
+msgid ""
+"    :convert.hg.usebranchnames: preserve branch names. The default is\n"
+"        True.\n"
+"    "
 msgstr ""
 
 msgid "create changeset information from CVS"
@@ -1475,6 +1350,10 @@ msgstr "%s: ogiltig typ för destinationsarkiv"
 #, python-format
 msgid "convert: %s\n"
 msgstr "convert: %s\n"
+
+#, python-format
+msgid "%s\n"
+msgstr "%s\n"
 
 #, python-format
 msgid "%s: unknown repository type"
@@ -1784,7 +1663,7 @@ msgstr ""
 msgid "%s does not look like a Subversion repository"
 msgstr "%s verkar inte vara ett Subversion-arkiv"
 
-msgid "Subversion python bindings could not be loaded"
+msgid "Could not load Subversion python bindings"
 msgstr ""
 
 #, python-format
@@ -1877,7 +1756,7 @@ msgstr ""
 
 msgid ""
 "The extension reads its configuration from a versioned ``.hgeol``\n"
-"configuration file every time you run an ``hg`` command. The\n"
+"configuration file found in the root of the working copy. The\n"
 "``.hgeol`` file use the same syntax as all other Mercurial\n"
 "configuration files. It uses two sections, ``[patterns]`` and\n"
 "``[repository]``."
@@ -1956,6 +1835,13 @@ msgid ""
 "  means that there is both ``CRLF`` and ``LF`` present in the file.\n"
 "  Such files are normally not touched under the assumption that they\n"
 "  have mixed EOLs on purpose."
+msgstr ""
+
+msgid ""
+"The extension provides ``cleverencode:`` and ``cleverdecode:`` filters\n"
+"like the deprecated win32text extension does. This means that you can\n"
+"disable win32text and enable eol and your filters will still work. You\n"
+"only need to these filters until you have prepared a ``.hgeol`` file."
 msgstr ""
 
 msgid ""
@@ -2118,6 +2004,9 @@ msgstr ""
 
 msgid "pass option to comparison program"
 msgstr ""
+
+msgid "revision"
+msgstr "revision"
 
 msgid "change made by revision"
 msgstr "ändring gjord av revision"
@@ -2847,9 +2736,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Before changing/disabling active keywords, run :hg:`kwshrink` to avoid\n"
-"the risk of inadvertently storing expanded keywords in the change\n"
-"history."
+"Before changing/disabling active keywords, you must run :hg:`kwshrink`\n"
+"to avoid storing expanded keywords in the change history."
 msgstr ""
 
 msgid ""
@@ -2912,12 +2800,20 @@ msgstr ""
 msgid "\textending current template maps\n"
 msgstr ""
 
-msgid "\toverriding default template maps\n"
+msgid "\toverriding default svn keywordset\n"
+msgstr ""
+
+msgid "\toverriding default cvs keywordset\n"
 msgstr ""
 
 msgid ""
 "\n"
-"\tconfiguration using default keyword template maps\n"
+"\tconfiguration using default svn keywordset\n"
+msgstr ""
+
+msgid ""
+"\n"
+"\tconfiguration using default cvs keywordset\n"
 msgstr ""
 
 msgid "\tdisabling current template maps\n"
@@ -2988,9 +2884,7 @@ msgstr ""
 msgid "revert expanded keywords in the working directory"
 msgstr ""
 
-msgid ""
-"    Run before changing/disabling active keywords or if you experience\n"
-"    problems with :hg:`import` or :hg:`merge`."
+msgid "    Must be run before changing/disabling active keywords."
 msgstr ""
 
 msgid ""
@@ -3212,6 +3106,10 @@ msgstr ""
 msgid "working directory revision is not qtip"
 msgstr ""
 
+#, python-format
+msgid "uncommitted changes in subrepository %s"
+msgstr "oarkiverade ändringar i underarkivet %s"
+
 msgid "local changes found, refresh first"
 msgstr ""
 
@@ -3256,11 +3154,11 @@ msgid "no patches in series\n"
 msgstr ""
 
 #, python-format
-msgid "cannot push to a previous patch: %s"
-msgstr ""
+msgid "qpush: %s is already at the top\n"
+msgstr "qpush: %s är redan på toppen\n"
 
 #, python-format
-msgid "qpush: %s is already at the top\n"
+msgid "cannot push to a previous patch: %s"
 msgstr ""
 
 #, python-format
@@ -3279,6 +3177,16 @@ msgstr ""
 
 msgid "patch series already fully applied\n"
 msgstr ""
+
+msgid "cannot use --exact and --move together"
+msgstr "kan inte använda --exact och --move tillsammans"
+
+msgid "cannot push --exact with applied patches"
+msgstr "kan inte trycka --exakt med applicerade patchar"
+
+#, python-format
+msgid "%s does not have a parent recorded"
+msgstr "%s har inte en angiven förälder"
 
 msgid "please specify the patch to move"
 msgstr "ange patchen som ska flyttas"
@@ -3327,18 +3235,6 @@ msgstr ""
 
 msgid "cannot refresh a revision with children"
 msgstr ""
-
-#, python-format
-msgid "warning: not refreshing %s\n"
-msgstr "varning: uppdaterar inte %s\n"
-
-#, python-format
-msgid "warning: not adding %s\n"
-msgstr "varning: lägger inte till %s\n"
-
-#, python-format
-msgid "warning: not removing %s\n"
-msgstr "varning: tar inte bort %s\n"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
@@ -4143,6 +4039,9 @@ msgstr ""
 msgid "import file in patch directory"
 msgstr ""
 
+msgid "NAME"
+msgstr "NAMN"
+
 msgid "name of patch file"
 msgstr ""
 
@@ -4208,6 +4107,9 @@ msgstr "hg qpop [-a] [-f] [PATCH | INDEX]"
 
 msgid "apply on top of local changes"
 msgstr ""
+
+msgid "apply the target patch to its recorded parent"
+msgstr "applicera patchen på dess angivna förälder"
 
 msgid "list patch name in commit text"
 msgstr ""
@@ -4700,6 +4602,13 @@ msgid ""
 msgstr ""
 
 msgid ""
+"    In case email sending fails, you will find a backup of your series\n"
+"    introductory message in ``.hg/last-email.txt``."
+msgstr ""
+"    Om sändning av mailet misslyckas, kommer du att hitta en backup av\n"
+"    introduktionsmeddelandet i ``.hg/last-email.txt``."
+
+msgid ""
 "      hg email -r 3000          # send patch 3000 only\n"
 "      hg email -r 3000 -r 3001  # send patches 3000 and 3001\n"
 "      hg email -r 3000:3005     # send patches 3000 through 3005\n"
@@ -4735,6 +4644,10 @@ msgid ""
 "    hgrc. See the [email] section in hgrc(5) for details.\n"
 "    "
 msgstr ""
+
+#, python-format
+msgid "comparing with %s\n"
+msgstr "jämför med %s\n"
 
 msgid "no changes found\n"
 msgstr "inga ändringar hittades\n"
@@ -4884,7 +4797,7 @@ msgid ""
 "  [progress]\n"
 "  delay = 3 # number of seconds (float) before showing the progress bar\n"
 "  refresh = 0.1 # time in seconds between refreshes of the progress bar\n"
-"  format = topic bar number # format of the progress bar\n"
+"  format = topic bar number estimate # format of the progress bar\n"
 "  width = <none> # if set, the maximum width of the progress information\n"
 "                 # (that is, min(width, term width) will be used)\n"
 "  clear-complete = True # clear the progress bar after it's done\n"
@@ -4894,11 +4807,42 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Valid entries for the format field are topic, bar, number, unit, and\n"
-"item. item defaults to the last 20 characters of the item, but this\n"
-"can be changed by adding either ``-<num>`` which would take the last\n"
-"num characters, or ``+<num>`` for the first num characters.\n"
+"Valid entries for the format field are topic, bar, number, unit,\n"
+"estimate, and item. item defaults to the last 20 characters of the\n"
+"item, but this can be changed by adding either ``-<num>`` which would\n"
+"take the last num characters, or ``+<num>`` for the first num\n"
+"characters.\n"
 msgstr ""
+
+#. i18n: format XX seconds as "XXs"
+#, python-format
+msgid "%02ds"
+msgstr "%02ds"
+
+#. i18n: format X minutes and YY seconds as "XmYYs"
+#, python-format
+msgid "%dm%02ds"
+msgstr "%dm%02ds"
+
+#. i18n: format X hours and YY minutes as "XhYYm"
+#, python-format
+msgid "%dh%02dm"
+msgstr "%dt%02dm"
+
+#. i18n: format X days and YY hours as "XdYYh"
+#, python-format
+msgid "%dd%02dh"
+msgstr "%dd%02dt"
+
+#. i18n: format X weeks and YY days as "XwYYd"
+#, python-format
+msgid "%dw%02dd"
+msgstr "%dv%02dd"
+
+#. i18n: format X years and YY weeks as "XyYYw"
+#, python-format
+msgid "%dy%02dw"
+msgstr "%då%02dv"
 
 msgid "command to delete untracked files from the working directory"
 msgstr ""
@@ -5269,8 +5213,9 @@ msgstr ""
 msgid "running non-interactively, use commit instead"
 msgstr ""
 
-msgid "cannot partially commit a merge (use hg commit instead)"
+msgid "cannot partially commit a merge (use \"hg commit\" instead)"
 msgstr ""
+"kan inte delvis arkivera en sammanfogning (använd \"hg commit\" istället)"
 
 msgid "no changes to record\n"
 msgstr ""
@@ -5677,7 +5622,7 @@ msgstr ""
 msgid ""
 "- You should use single encoding in one repository.\n"
 "- If the repository path ends with 0x5c, .hg/hgrc cannot be read.\n"
-"- win32mbcs is not compatible with fixutf8 extention."
+"- win32mbcs is not compatible with fixutf8 extension."
 msgstr ""
 
 msgid ""
@@ -5840,6 +5785,19 @@ msgstr ""
 msgid "unknown archive type '%s'"
 msgstr ""
 
+msgid "archiving"
+msgstr "arkiverar"
+
+#, python-format
+msgid "bookmark '%s' contains illegal character"
+msgstr "bokmärket '%' innehåller ogiltiga tecken"
+
+msgid "searching for changed bookmarks\n"
+msgstr "söker efter ändrade bokmärken\n"
+
+msgid "no changed bookmarks found\n"
+msgstr "inga ändrade bokmärken hittades\n"
+
 msgid "invalid changegroup"
 msgstr ""
 
@@ -5854,8 +5812,13 @@ msgid "cannot create new bundle repository"
 msgstr ""
 
 #, python-format
-msgid "premature EOF reading chunk (got %d bytes, expected %d)"
-msgstr ""
+msgid "stream ended unexpectedly (got %d bytes, expected %d)"
+msgstr "strömmen slutade abrupt (fick %d bytes av förväntade %d)"
+
+# python-format
+#, python-format
+msgid "invalid chunk length %d"
+msgstr "ogiltig styckelängd %d"
 
 #, python-format
 msgid "%s: not a Mercurial bundle"
@@ -5979,6 +5942,10 @@ msgstr "ändring:     %d:%s\n"
 #, python-format
 msgid "branch:      %s\n"
 msgstr "gren:        %s\n"
+
+#, python-format
+msgid "bookmark:    %s\n"
+msgstr "bokmärke:    %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
@@ -6154,12 +6121,12 @@ msgstr ""
 
 msgid ""
 "    New files are ignored if they match any of the patterns in\n"
-"    .hgignore. As with add, these changes take effect at the next\n"
+"    ``.hgignore``. As with add, these changes take effect at the next\n"
 "    commit."
 msgstr ""
 "    Nya filer ignoreras om de överrensstämmer något av mönstren i\n"
-"    .hgignore. Precis som med add, kommer ändringarna att träda i kraft vid\n"
-"    nästa arkivering."
+"    ``.hgignore``. Precis som med add, kommer ändringarna att träda i kraft\n"
+"     vid nästa arkivering."
 
 msgid ""
 "    Use the -s/--similarity option to detect renamed files. With a\n"
@@ -6285,50 +6252,41 @@ msgid "reverse effect of earlier changeset"
 msgstr "omvänd effekten från en tidigare ändring"
 
 msgid ""
-"    The backout command merges the reverse effect of the reverted\n"
-"    changeset into the working directory."
+"    Prepare a new changeset with the effect of REV undone in the\n"
+"    current working directory."
 msgstr ""
-"    Kommandot backout sammanfogar den omvända effekven av den återkallade\n"
-"    ändringen i arbetskatalogen."
+"    Förbered en ny ändring där effekterna av REV ogörs i arbetskatalogen."
 
 msgid ""
-"    With the --merge option, it first commits the reverted changes\n"
-"    as a new changeset. This new changeset is a child of the reverted\n"
-"    changeset.\n"
-"    The --merge option remembers the parent of the working directory\n"
-"    before starting the backout, then merges the new head with that\n"
-"    changeset afterwards.\n"
-"    This will result in an explicit merge in the history."
+"    If REV is the parent of the working directory, then this new changeset\n"
+"    is committed automatically. Otherwise, hg needs to merge the\n"
+"    changes and the merged result is left uncommitted."
 msgstr ""
-"    Med flaggan --merge arkiveras först de återkallade ändringarna som en\n"
-"    ny ändring. Denna ny ändring är en ättling till den återkallade\n"
-"    ändringen.\n"
-"    Flaggan --merge kommer ihåg arbetskatalogens förälder innan\n"
-"    återkallningen påbörjas, och sammanfogar sedan det nya huvudet med den\n"
-"    ändringen efteråt.\n"
-"    Detta resulterar i en explicit sammanfogning i historiken"
+"    Om REV är förälder till arbetskatalogen, så arkiveras denna ändring\n"
+"    automatiskt. Annars krävs att hg sammanfogar ändringarna och det\n"
+"    sammanfogade resultatet lämnas oarkiverat."
 
 msgid ""
-"    If you backout a changeset other than the original parent of the\n"
-"    working directory, the result of this merge is not committed,\n"
-"    as with a normal merge. Otherwise, no merge is needed and the\n"
-"    commit is automatic."
+"    By default, the pending changeset will have one parent,\n"
+"    maintaining a linear history. With --merge, the pending changeset\n"
+"    will instead have two parents: the old parent of the working\n"
+"    directory and a new child of REV that simply undoes REV."
 msgstr ""
-"    Om du tar tillbaka en annan ändring än originalföräldern till\n"
-"    arbetskatalogen, så arkiveras inte resultatet av sammanfogningen, som\n"
-"    vid en normal sammanfogning. Annars behövs ingen sammanfogning, och\n"
-"    arkiveringen är automatisk."
+"    Som standard kommer ändringen att ha en förälder, för att bibehålla en\n"
+"    linjär historik. Med --merge kommer ändringen istället att ha två\n"
+"    föräldrar: den gamla föräldern från arbetskatalogen och ett nytt barn\n"
+"    av REV som helt enkelt ogör REV."
 
 msgid ""
-"    Note that the default behavior (without --merge) has changed in\n"
-"    version 1.7. To restore the previous default behavior, use\n"
-"    :hg:`backout --merge` and then :hg:`update --clean .` to get rid of\n"
-"    the ongoing merge."
+"    Before version 1.7, the behavior without --merge was equivalent to\n"
+"    specifying --merge followed by :hg:`update --clean .` to cancel\n"
+"    the merge and leave the child of REV as a head to be merged\n"
+"    separately."
 msgstr ""
-"    Notera att standardförfarandet (utan --merge) har ändrats i version\n"
-"    1.7. För att återställa det gamla standardförfarandet, använd :hg:`\n"
-"    backout --merge` och sedan :hg:`update --clean .` för att bli av med\n"
-"    den pågående sammanfogningen."
+"    Innan version 1.7, så var beteendet utan --merge ekvivalent med att\n"
+"    specificera --merge följt av :hg:`update --clean .` för att ångra\n"
+"    sammanfogningen och lämna barnet till REV som ett huvud att\n"
+"    sammanfogas separat."
 
 msgid "please specify just one revision"
 msgstr "specificera bara en revision"
@@ -6448,6 +6406,69 @@ msgstr "Ändring %d:%s: %s\n"
 #, python-format
 msgid "Testing changeset %d:%s (%d changesets remaining, ~%d tests)\n"
 msgstr "Testar ändring %d:%s (%d ändringar kvar, ~%d test)\n"
+
+msgid "track a line of development with movable markers"
+msgstr "spåra viss utveckling med flyttbara markörer"
+
+msgid ""
+"    Bookmarks are pointers to certain commits that move when\n"
+"    committing. Bookmarks are local. They can be renamed, copied and\n"
+"    deleted. It is possible to use bookmark names in :hg:`merge` and\n"
+"    :hg:`update` to merge and update respectively to a given bookmark."
+msgstr ""
+"    Bokmärken är pekare till utvalda arkiveringar som flyttar vid\n"
+"    arkivering. Bokmärken är lokala. De kan döpas om, kopieras och\n"
+"    raderas. Det är möjligt att använda bokmärkesnamn i :hg:`merge` och\n"
+"    :hg:`update` för att sammanfoga och uppdatera till ett visst bokmärke."
+
+msgid ""
+"    You can use :hg:`bookmark NAME` to set a bookmark on the working\n"
+"    directory's parent revision with the given name. If you specify\n"
+"    a revision using -r REV (where REV may be an existing bookmark),\n"
+"    the bookmark is assigned to that revision."
+msgstr ""
+"    Du kan använda :hg:`bookmark NAMN` för att sätta ett bokmärke på\n"
+"    arbetskatalogens föräldrarevision med det angivna namnet. Om du anger\n"
+"    en revision med -r REV (där REV kan vara ett existerande bokmärke), så\n"
+"    tilldelas bokmärket till den revisionen."
+
+msgid ""
+"    Bookmarks can be pushed and pulled between repositories (see :hg:`help\n"
+"    push` and :hg:`help pull`). This requires both the local and remote\n"
+"    repositories to support bookmarks. For versions prior to 1.8, this "
+"means\n"
+"    the bookmarks extension must be enabled.\n"
+"    "
+msgstr ""
+"    Bokmärken kan tryckas och dras mellan arkiv (se :hg:`help push` och\n"
+"    :hg:`help pull`). Detta kräver att både det lokala och fjärrarkivet\n"
+"    stödjer bokmärken. För versioner innan 1.8, så betyder det att\n"
+"    bookmarks-utökningen måste vara aktiverad.\n"
+"    "
+
+msgid "a bookmark of this name does not exist"
+msgstr "ett bokmärke med det namnet existerar inte"
+
+msgid "a bookmark of the same name already exists"
+msgstr "ett bokmärke med det namnet existerar redan"
+
+msgid "new bookmark name required"
+msgstr "nytt bokmärkesnamn krävs"
+
+msgid "bookmark name required"
+msgstr "bokmärkesnamn krävs"
+
+msgid "bookmark name cannot contain newlines"
+msgstr "bokmärkesnamn kan inte innehålla radbrytningar"
+
+msgid "bookmark names cannot consist entirely of whitespace"
+msgstr "bokmärkesnamn kan inte bara bestå av blanktecken"
+
+msgid "a bookmark cannot have the name of an existing branch"
+msgstr "ett bokmärket kan inte ha samma namn som en existerande gren"
+
+msgid "no bookmarks set\n"
+msgstr "inget bokmärke satt\n"
 
 msgid "set or show the current branch name"
 msgstr "sätt eller visa det aktuella grennamnet"
@@ -6642,21 +6663,21 @@ msgstr ""
 
 msgid ""
 "    The location of the source is added to the new repository's\n"
-"    .hg/hgrc file, as the default to be used for future pulls."
+"    ``.hg/hgrc`` file, as the default to be used for future pulls."
 msgstr ""
-"    Källans plats kommer att läggas till i det nya arkivets .hg/hgrc-fil\n"
-"    som standardplats att användas för framtida dragningar."
+"    Källans plats kommer att läggas till i det nya arkivets\n"
+"    ``.hg/hgrc``-fil som standardplats att användas för framtida dragningar."
 
 msgid "    See :hg:`help urls` for valid source format details."
 msgstr "    Se :hg:`help urls` för detaljer om giltiga källformat."
 
 msgid ""
 "    It is possible to specify an ``ssh://`` URL as the destination, but no\n"
-"    .hg/hgrc and working directory will be created on the remote side.\n"
+"    ``.hg/hgrc`` and working directory will be created on the remote side.\n"
 "    Please see :hg:`help urls` for important details about ``ssh://`` URLs."
 msgstr ""
 "    Det är möjligt att specificera en ``ssh://``-URL som destination, men\n"
-"    ingen .hg/hgrc och arbetskatalog skapas på fjärrsidan.\n"
+"    ingen ``.hg/hgrc`` och arbetskatalog skapas på fjärrsidan.\n"
 "    Se :hg:`help urls` för viktiga detaljer om ``ssh://``-URLer."
 
 msgid ""
@@ -6761,11 +6782,11 @@ msgstr "arkivera de angivna filerna eller alla ändringar"
 
 msgid ""
 "    Commit changes to the given files into the repository. Unlike a\n"
-"    centralized RCS, this operation is a local operation. See\n"
+"    centralized SCM, this operation is a local operation. See\n"
 "    :hg:`push` for a way to actively distribute your changes."
 msgstr ""
 "    Arkiverar ändringar för de angivna filerna i arkivet. Till skillnad\n"
-"    från ett centralicerat RCS, är detta en lokal operation. Se :hg:`push`\n"
+"    från ett centralicerat SCM, är detta en lokal operation. Se :hg:`push`\n"
 "    för ett sätt att aktivt distribuera dina ändringar."
 
 msgid ""
@@ -7040,8 +7061,18 @@ msgstr ""
 msgid "parse and display a date"
 msgstr ""
 
+msgid "display the combined ignore pattern"
+msgstr "visa det sammansatta ignoreringsmönstret"
+
+msgid "no ignore patterns found"
+msgstr "inget ignoreringsmönster hittades"
+
 msgid "dump the contents of an index file"
 msgstr ""
+
+#, python-format
+msgid "unknown format %d"
+msgstr "okänt format %d"
 
 msgid "dump an index DAG as a graphviz dot file"
 msgstr ""
@@ -7421,8 +7452,9 @@ msgstr ""
 "använd \"hg help\" för en full kommandolista eller \"hg -v\" för detaljer"
 
 #, python-format
-msgid "use \"hg -v help%s\" to show aliases and global options"
-msgstr "använd \"hg -v help%s\" för att visa alias och globala flaggor"
+msgid "use \"hg -v help%s\" to show builtin aliases and global options"
+msgstr ""
+"använd \"hg -v help%s\" för att visa inbyggda alias och globala flaggor"
 
 #, python-format
 msgid "use \"hg -v help %s\" to show global options"
@@ -7544,6 +7576,9 @@ msgstr ""
 "    oarkiverade ändringar i arbetskatalogen, en lista av märken för den\n"
 "    här revisionen och ett grennamn för grenar som inte är default."
 
+msgid "can't query remote revision number, branch, tags, or bookmarks"
+msgstr "kan inte efterfråga revisionsnummer, gren, märken eller bokmärken"
+
 msgid "import an ordered set of patches"
 msgstr ""
 
@@ -7642,6 +7677,9 @@ msgstr ""
 
 msgid "cannot combine --bundle and --subrepos"
 msgstr ""
+
+msgid "remote doesn't support bookmarks\n"
+msgstr "fjärrserver stödjer inte bokmärken\n"
 
 msgid "create a new repository in the given directory"
 msgstr "skapa ett nytt arkiv i den angivna katalogen"
@@ -8002,12 +8040,20 @@ msgstr ""
 "    filer.\n"
 "    "
 
+#, python-format
+msgid "remote bookmark %s not found!"
+msgstr "fjärrbokmärket %s hittades inte!"
+
 msgid ""
 "other repository doesn't support revision lookup, so a rev cannot be "
 "specified."
 msgstr ""
 "det andra arkivet stödjer inte revisionsuppslag, så en revision kan inte "
 "anges."
+
+#, python-format
+msgid "importing bookmark %s\n"
+msgstr "importerar bokmärket %s\n"
 
 msgid "push changes to the specified destination"
 msgstr "tryck ändringar till den specificerade destinationen"
@@ -8076,6 +8122,22 @@ msgstr ""
 #, python-format
 msgid "pushing to %s\n"
 msgstr "trycker till %s\n"
+
+#, python-format
+msgid "exporting bookmark %s\n"
+msgstr "exporterar bokmärket %s\n"
+
+#, python-format
+msgid "deleting remote bookmark %s\n"
+msgstr "raderar fjärrbokmärket %s\n"
+
+#, python-format
+msgid "bookmark %s does not exist on the local or remote repository!\n"
+msgstr "bokmärket %s existerar inte i lokal- eller fjärrarkiv!\n"
+
+#, python-format
+msgid "updating bookmark %s failed!\n"
+msgstr "uppdatering av bokmärket %s misslyckades!\n"
 
 msgid "roll back an interrupted transaction"
 msgstr "ångra en avbruten transaktion"
@@ -8343,6 +8405,9 @@ msgstr ""
 
 msgid "you can't specify a revision and a date"
 msgstr "du kan inte specificera en revision och ett datum"
+
+msgid "uncommitted merge - use \"hg update\", see \"hg help revert\""
+msgstr "oarkiverad sammanfogning - använd \"hg update\", se \"hg help revert\""
 
 msgid "no files or directories specified; use --all to revert the whole repo"
 msgstr ""
@@ -8671,6 +8736,14 @@ msgid "%d outgoing"
 msgstr "%d utgående"
 
 #, python-format
+msgid "%d incoming bookmarks"
+msgstr "%d inkommande bokmärken"
+
+#, python-format
+msgid "%d outgoing bookmarks"
+msgstr "%d utgående bokmärken"
+
+#, python-format
 msgid "remote: %s\n"
 msgstr "fjärran: %s\n"
 
@@ -8919,11 +8992,11 @@ msgid "(see http://mercurial.selenic.com for more information)"
 msgstr "(se http://mercurial.selenic.com för mer information)"
 
 msgid ""
-"Copyright (C) 2005-2010 Matt Mackall and others\n"
+"Copyright (C) 2005-2011 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"Copyright (C) 2005-2010 Matt Mackall och andra\n"
+"Copyright (C) 2005-2011 Matt Mackall och andra\n"
 "Detta är fri mjukvara; se källkoden för kopieringsvillkor. Det ges INGEN\n"
 "garanti; inte ens för SÄLJBARHET eller ATT PASSA FÖR ETT VISST ÄNDAMÅL.\n"
 
@@ -8992,6 +9065,10 @@ msgstr "specificera ssh-kommando att använda"
 
 msgid "specify hg command to run on the remote side"
 msgstr "specificera hg-kommando att köra på andra sidan"
+
+msgid "do not verify server certificate (ignoring web.cacerts config)"
+msgstr ""
+"verifiera inte servercertifikatet (ignorerar web.cacerts-konfiguration)"
 
 msgid "PATTERN"
 msgstr "MÖNSTER"
@@ -9148,6 +9225,18 @@ msgstr "uppdatera inte till målet"
 
 msgid "[-gbsr] [-U] [-c CMD] [REV]"
 msgstr "[-gbsr] [-U] [-c KMD] [REV]"
+
+msgid "force"
+msgstr "tvinga"
+
+msgid "delete a given bookmark"
+msgstr "ta bort angivet bokmärke"
+
+msgid "rename a given bookmark"
+msgstr "döp om angivet bokmärke"
+
+msgid "hg bookmarks [-f] [-d] [-m NAME] [-r REV] [NAME]"
+msgstr "hg bookmarks [-f] [-d] [-m NAMN] [-r REV] [NAMN]"
 
 msgid "set branch name even if it shadows an existing branch"
 msgstr "sätt grennamnet även om det döljer en existerande gren"
@@ -9387,8 +9476,11 @@ msgstr "visa grenar"
 msgid "show tags"
 msgstr "visa märken"
 
-msgid "[-nibt] [-r REV] [SOURCE]"
-msgstr "[-nibt] [-r REV] [KÄLLA]"
+msgid "show bookmarks"
+msgstr "visa bokmärken"
+
+msgid "[-nibtB] [-r REV] [SOURCE]"
+msgstr "[-nibtB] [-r REV] [KÄLLA]"
 
 msgid ""
 "directory strip option for patch. This has the same meaning as the "
@@ -9427,6 +9519,9 @@ msgstr "fil att lagra buntarna i"
 
 msgid "a remote changeset intended to be added"
 msgstr "en fjärrändring som avses att läggas till"
+
+msgid "compare bookmarks"
+msgstr "jämför bokmärken"
 
 msgid "a specific branch you would like to pull"
 msgstr "en specifik gren som du vill dra"
@@ -9524,11 +9619,20 @@ msgstr "uppdatera till nytt grenhuvud om ändringar drogs"
 msgid "run even when remote repository is unrelated"
 msgstr "kör även när fjärrarkivet är orelaterat"
 
+msgid "BOOKMARK"
+msgstr "BOKMÄRKE"
+
+msgid "bookmark to pull"
+msgstr "bokmärke att dra"
+
 msgid "[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"
 msgstr "[-u] [-f] [-r REV]... [-e KMD] [--remotecmd KMD] [KÄLLA]"
 
 msgid "force push"
 msgstr "tvinga tryckning"
+
+msgid "bookmark to push"
+msgstr "bokmärke att trycka"
 
 msgid "allow pushing a new branch"
 msgstr "tillåt att trycka en ny gren"
@@ -9972,6 +10076,11 @@ msgstr ""
 
 #, python-format
 msgid ""
+"No argument found for substitution of %i variable in alias '%s' definition."
+msgstr ""
+
+#, python-format
+msgid ""
 "error in definition for alias '%s': %s may only be given on the command "
 "line\n"
 msgstr ""
@@ -10037,6 +10146,10 @@ msgstr ""
 #, python-format
 msgid "*** failed to import extension %s: %s\n"
 msgstr ""
+
+#, python-format
+msgid "warning: error finding commands in %s\n"
+msgstr "varning: kunde inte hitta kommandon i %s\n"
 
 #, python-format
 msgid "couldn't find merge tool %s\n"
@@ -11473,6 +11586,13 @@ msgstr ""
 "För att använda reguljära uttryck från Perl/Python, börja ett namn med\n"
 "``re:``. Regexp-mönstermatchning har sin början i arkivroten."
 
+msgid ""
+"To read name patterns from a file, use ``listfile:`` or ``listfile0:``.\n"
+"The latter expects null delimited patterns while the former expects line\n"
+"feeds. Each string read from the file is itself treated as a file\n"
+"pattern."
+msgstr ""
+
 msgid "Plain examples::"
 msgstr "Råa exempel::"
 
@@ -11507,10 +11627,17 @@ msgstr ""
 msgid "Regexp examples::"
 msgstr "Regexp-exempel::"
 
-msgid ""
-"  re:.*\\.c$      any name ending in \".c\", anywhere in the repository\n"
+msgid "  re:.*\\.c$      any name ending in \".c\", anywhere in the repository"
 msgstr ""
-"  re:.*\\.c$      alla namn som slutar med \".c\", var som helst i arkivet\n"
+"  re:.*\\.c$      alla namn som slutar med \".c\", var som helst i arkivet"
+
+msgid "File examples::"
+msgstr "Filexempel::"
+
+msgid ""
+"  listfile:list.txt  read list from list.txt with one file pattern per line\n"
+"  listfile0:list.txt read list from list.txt with null byte delimiters\n"
+msgstr ""
 
 msgid "Mercurial supports several ways to specify individual revisions."
 msgstr "Mercurial stöder flera sätt att ange individuella revisioner."
@@ -11828,7 +11955,10 @@ msgid ""
 ":commit: commit creates a consistent snapshot of the state of the\n"
 "    entire project and its subrepositories. It does this by first\n"
 "    attempting to commit all modified subrepositories, then recording\n"
-"    their state and finally committing it in the parent repository."
+"    their state and finally committing it in the parent\n"
+"    repository. Mercurial can be made to abort if any subrepository\n"
+"    content is modified by setting \"ui.commitsubrepos=no\" in a\n"
+"    configuration file (see :hg:`help config`)."
 msgstr ""
 
 msgid ""
@@ -11936,8 +12066,9 @@ msgid ":author: String. The unmodified author of the changeset."
 msgstr ""
 
 msgid ""
-":branches: String. The name of the branch on which the changeset was\n"
-"    committed. Will be empty if the branch name was default."
+":branches: List of strings. The name of the branch on which the\n"
+"    changeset was committed. Will be empty if the branch name was\n"
+"    default."
 msgstr ""
 
 msgid ":children: List of strings. The children of the changeset."
@@ -12152,7 +12283,7 @@ msgid ""
 "  file://local/filesystem/path[#revision]\n"
 "  http://[user[:pass]@]host[:port]/[path][#revision]\n"
 "  https://[user[:pass]@]host[:port]/[path][#revision]\n"
-"  ssh://[user[:pass]@]host[:port]/[path][#revision]"
+"  ssh://[user@]host[:port]/[path][#revision]"
 msgstr ""
 
 msgid ""
@@ -12308,6 +12439,10 @@ msgid "(branch merge, don't forget to commit)\n"
 msgstr ""
 
 #, python-format
+msgid "config file %s not found!"
+msgstr "konfigurationsfilen %s hittades inte!"
+
+#, python-format
 msgid "error reading %s/.hg/hgrc: %s\n"
 msgstr ""
 
@@ -12454,6 +12589,10 @@ msgid ".hg/sharedpath points to nonexistent directory %s"
 msgstr ""
 
 #, python-format
+msgid "warning: ignoring unknown working parent %s!\n"
+msgstr ""
+
+#, python-format
 msgid "%r cannot be used in a tag name"
 msgstr ""
 
@@ -12482,12 +12621,12 @@ msgid "no interrupted transaction available\n"
 msgstr ""
 
 #, python-format
-msgid "rolling back to revision %s (undo %s: %s)\n"
-msgstr "återgår till revisionen %s (ångra %s: %s)\n"
+msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
+msgstr "arkivtopp tillbakadragen till revision %s (ångra %s: %s)\n"
 
 #, python-format
-msgid "rolling back to revision %s (undo %s)\n"
-msgstr "återgår till revisionen %s (ångra %s)\n"
+msgid "repository tip rolled back to revision %s (undo %s)\n"
+msgstr "arkivtopp tillbakadragen till revision %s (ångra %s)\n"
 
 msgid "rolling back unknown transaction\n"
 msgstr "återkallar okänd transaktion\n"
@@ -12495,6 +12634,14 @@ msgstr "återkallar okänd transaktion\n"
 #, python-format
 msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr ""
+
+#, python-format
+msgid "working directory now based on revisions %d and %d\n"
+msgstr "arbetskatalogen är nu baserad på revisionerna %d och %d\n"
+
+#, python-format
+msgid "working directory now based on revision %d\n"
+msgstr "arbetskatalogen är nu baserad på revision %d\n"
 
 msgid "no rollback information available\n"
 msgstr ""
@@ -12517,9 +12664,14 @@ msgstr "varning: kan inte hitta anfader för '%s', kopierad från '%s'!\n"
 
 msgid "cannot partially commit a merge (do not specify files or patterns)"
 msgstr ""
+"kan inte delvis arkivera en sammanfogning (ange inte filer eller mönster"
 
 msgid "can't commit subrepos without .hgsub"
 msgstr "kan inte arkivera underarkiv utan .hgsub"
+
+#, python-format
+msgid "uncommitted changes in subrepo %s"
+msgstr "oarkiverade ändringar i underarkivet %s"
 
 msgid "file not found!"
 msgstr "filen hittades inte!"
@@ -12556,36 +12708,38 @@ msgstr ""
 "changegroupsubset."
 
 #, python-format
+msgid "updating bookmark %s\n"
+msgstr "uppdaterar bokmärket %s\n"
+
+#, python-format
+msgid "not updating divergent bookmark %s\n"
+msgstr "uppdaterar inte divergent bokmärke %s\n"
+
+#, python-format
 msgid "%d changesets found\n"
 msgstr "%d ändringar hittades\n"
 
-msgid "bundling changes"
-msgstr "buntar ändringar"
+msgid "bundling"
+msgstr "buntar"
 
-msgid "chunks"
-msgstr "stycken"
-
-msgid "bundling manifests"
-msgstr "buntar manifest"
+msgid "manifests"
+msgstr "manifest"
 
 #, python-format
 msgid "empty or missing revlog for %s"
-msgstr "tom eller saknad revlog för %s"
-
-msgid "bundling files"
-msgstr "buntar filer"
+msgstr "tom eller ingen revlog för %s"
 
 msgid "adding changesets\n"
 msgstr "lägger till ändringar\n"
+
+msgid "chunks"
+msgstr "stycken"
 
 msgid "received changelog group is empty"
 msgstr "mottagen ändringsgrupp är tom"
 
 msgid "adding manifests\n"
 msgstr "lägger till manifest\n"
-
-msgid "manifests"
-msgstr "manifest"
 
 msgid "adding file changes\n"
 msgstr "lägger till filändringar\n"
@@ -12628,6 +12782,12 @@ msgstr "%d filer att överföra, %s med data\n"
 msgid "transferred %s in %.1f seconds (%s/sec)\n"
 msgstr "överförde %s på %.1f sekunder (%s/sek)\n"
 
+msgid "can't use TLS: Python SSL support not installed"
+msgstr "kan inte använda TLS: Pythons SSL-stöd är inte installerat"
+
+msgid "(using smtps)\n"
+msgstr "(använder smtps)\n"
+
 msgid "smtp.host not configured - cannot send mail"
 msgstr "smtp.host är inte konfigurerad - kan inte sända mail"
 
@@ -12635,11 +12795,8 @@ msgstr "smtp.host är inte konfigurerad - kan inte sända mail"
 msgid "sending mail: smtp host %s, port %s\n"
 msgstr "sänder mail: smtp-server %s, port %s\n"
 
-msgid "can't use TLS: Python SSL support not installed"
-msgstr "kan inte använda TLS: Pythons SSL-stöd är inte installerat"
-
-msgid "(using tls)\n"
-msgstr "(använder tls)\n"
+msgid "(using starttls)\n"
+msgstr "(använder starttls)\n"
 
 #, python-format
 msgid "(authenticating to mail server as %s)\n"
@@ -12678,6 +12835,10 @@ msgstr "ogiltigt mönster (%s): %s"
 
 msgid "invalid pattern"
 msgstr "ogiltigt mönster"
+
+#, python-format
+msgid "unable to read file list (%s)"
+msgstr "kan inte läsa fillistan (%s)"
 
 #, python-format
 msgid "diff context lines count must be an integer, not %r"
@@ -12764,6 +12925,10 @@ msgstr ""
 msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
 msgstr ""
 
+#, python-format
+msgid "outstanding uncommitted changes in subrepository '%s'"
+msgstr "kvarvarande oarkiverade ändringar i underarkivet '%s'"
+
 msgid "crosses branches (merge branches or use --clean to discard changes)"
 msgstr ""
 
@@ -12777,7 +12942,7 @@ msgid "Caution:"
 msgstr ""
 
 msgid "!Danger!"
-msgstr ""
+msgstr "!Fara!"
 
 msgid "Error:"
 msgstr "Fel:"
@@ -13006,18 +13171,19 @@ msgid "rev expects a number"
 msgstr "rev förväntar sig ett nummer"
 
 msgid ""
-"``p1(set)``\n"
-"    First parent of changesets in set."
+"``p1([set])``\n"
+"    First parent of changesets in set, or the working directory."
 msgstr ""
 
 msgid ""
-"``p2(set)``\n"
-"    Second parent of changesets in set."
+"``p2([set])``\n"
+"    Second parent of changesets in set, or the working directory."
 msgstr ""
 
 msgid ""
-"``parents(set)``\n"
-"    The set of all parents for all changesets in set."
+"``parents([set])``\n"
+"    The set of all parents for all changesets in set, or the working "
+"directory."
 msgstr ""
 
 msgid ""
@@ -13289,6 +13455,21 @@ msgstr "tag tar ett eller inga argument"
 msgid "the argument to tag must be a string"
 msgstr "argumentet till tag måste vara en sträng"
 
+msgid ""
+"``bookmark([name])``\n"
+"    The named bookmark or all bookmarks."
+msgstr ""
+"``bookmark([namn])``\n"
+"    Det angivna bokmärket eller alla bokmärken."
+
+#. i18n: "bookmark" is a keyword
+msgid "bookmark takes one or no arguments"
+msgstr "bookmark tar ett eller inga argument"
+
+#. i18n: "bookmark" is a keyword
+msgid "the argument to bookmark must be a string"
+msgstr "argumentet till bookmark måste vara en sträng"
+
 msgid "can't negate that"
 msgstr "kan inte negera det"
 
@@ -13317,6 +13498,9 @@ msgstr ""
 #, python-format
 msgid "couldn't parse location %s"
 msgstr ""
+
+msgid "password in URL not supported"
+msgstr "lösenord i URL stödjs inte"
 
 msgid "could not create remote repo"
 msgstr ""
@@ -13385,12 +13569,28 @@ msgid ""
 msgstr ""
 
 #, python-format
+msgid ""
+" subrepository sources for %s differ\n"
+"use (l)ocal source (%s) or (r)emote source (%s)?\n"
+msgstr ""
+
+#, python-format
+msgid ""
+" subrepository sources for %s differ (in checked out version)\n"
+"use (l)ocal source (%s) or (r)emote source (%s)?\n"
+msgstr ""
+
+#, python-format
 msgid "default path for subrepository %s not found"
 msgstr ""
 
 #, python-format
 msgid "unknown subrepo type %s"
 msgstr ""
+
+#, python-format
+msgid "archiving (%s)"
+msgstr "arkiverar (s)"
 
 #, python-format
 msgid "warning: error \"%s\" in subrepository \"%s\"\n"
@@ -13402,11 +13602,11 @@ msgstr ""
 
 #, python-format
 msgid "pulling subrepo %s from %s\n"
-msgstr "drar subarkivet %s från %s\n"
+msgstr "drar underarkivet %s från %s\n"
 
 #, python-format
 msgid "pushing subrepo %s to %s\n"
-msgstr "trycker subarkivet %s från %s\n"
+msgstr "trycker underarkivet %s till %s\n"
 
 msgid "cannot commit svn externals"
 msgstr ""
@@ -13414,6 +13614,41 @@ msgstr ""
 #, python-format
 msgid "not removing repo %s because it has changes.\n"
 msgstr "raderar inte arkivet %s eftersom den har ändringar.\n"
+
+#, python-format
+msgid "cloning subrepo %s\n"
+msgstr "klonar underarkivet %s\n"
+
+#, python-format
+msgid "pulling subrepo %s\n"
+msgstr "drar underarkivet %s\n"
+
+#, python-format
+msgid "revision %s does not exist in subrepo %s\n"
+msgstr "revisionen %s existerar inte i underarkivet %s\n"
+
+#, python-format
+msgid "checking out detached HEAD in subrepo %s\n"
+msgstr "hämtar ut löst HEAD i underarkivet %s\n"
+
+msgid "check out a git branch if you intend to make changes\n"
+msgstr "hämta ut en git-gren om du tänker göra ändringer\n"
+
+#, python-format
+msgid "unrelated git branch checked out in subrepo %s\n"
+msgstr "obesläktar git-gren hämtar i underarkivet %s\n"
+
+#, python-format
+msgid "pushing branch %s of subrepo %s\n"
+msgstr "trycker grenen %s från underarkivet %s\n"
+
+#, python-format
+msgid ""
+"no branch checked out in subrepo %s\n"
+"cannot push revision %s"
+msgstr ""
+"ingen gren uthämtar i underarkivet %s\n"
+"kan inte trycka revison %s"
 
 #, python-format
 msgid "%s, line %s: %s\n"
@@ -13426,23 +13661,37 @@ msgstr ""
 msgid "node '%s' is not well formed"
 msgstr ""
 
-msgid ".hg/tags.cache is corrupt, rebuilding it\n"
-msgstr ".hg/tags.cache är korrupt, bygger om den\n"
+msgid ".hg/cache/tags is corrupt, rebuilding it\n"
+msgstr ".hg/cache/tags är korrupt, bygger om den\n"
+
+#, python-format
+msgid "unknown method '%s'"
+msgstr "okänd metod '%s'"
+
+msgid "expected a symbol"
+msgstr "förväntade en symbol"
+
+#, python-format
+msgid "unknown function '%s'"
+msgstr "okänd funktion '%s'"
+
+msgid "expected template specifier"
+msgstr "förväntade mallspecifikation"
+
+#, python-format
+msgid "filter %s expects one argument"
+msgstr "filtret %s kräver ett argument"
 
 msgid "unmatched quotes"
 msgstr ""
 
 #, python-format
-msgid "error expanding '%s%%%s'"
-msgstr ""
-
-#, python-format
-msgid "unknown filter '%s'"
-msgstr ""
-
-#, python-format
 msgid "style not found: %s"
 msgstr ""
+
+#, python-format
+msgid "\"%s\" not in template map"
+msgstr "\"%s\" finns inte i mallistan"
 
 #, python-format
 msgid "template file %s: %s"
@@ -13510,6 +13759,10 @@ msgstr ""
 msgid "edit failed"
 msgstr ""
 
+#, python-format
+msgid "ignoring invalid [auth] key '%s'\n"
+msgstr "ignorerar ogiltig [auth]-nyckel '%s'\n"
+
 msgid "http authorization required"
 msgstr "http-autenticiering krävs"
 
@@ -13531,9 +13784,8 @@ msgstr "användare:"
 msgid "http auth: user %s, password %s\n"
 msgstr "http-auth: användare %s, lösenord %s\n"
 
-#, python-format
-msgid "ignoring invalid [auth] key '%s'\n"
-msgstr "ignorerar ogiltig [auth]-nyckel '%s'\n"
+msgid "kb"
+msgstr "kb"
 
 msgid "certificate checking requires Python 2.6"
 msgstr "certifikatkontroll kräver Python 2.6"
@@ -13545,23 +13797,46 @@ msgstr "inget certifikat mottaget"
 msgid "certificate is for %s"
 msgstr "certifikat är för %s"
 
-msgid "no commonName found in certificate"
-msgstr "inget commonName hittades i certifikat"
+msgid "IDN in certificate not supported"
+msgstr "IDN i certifikat stöds inte"
+
+msgid "no commonName or subjectAltName found in certificate"
+msgstr "inget commonName eller subjectAltName hittades i certifikat"
 
 #, python-format
-msgid "%s certificate error: %s"
-msgstr "%s certifikatfel: %s"
+msgid "%s certificate error: %s (use --insecure to connect insecurely)"
+msgstr "%s-certifikatfel: %s (använd --insecure för att ansluta osäkert)"
+
+#, python-format
+msgid "invalid certificate for %s with fingerprint %s"
+msgstr "ogiltigt certifikat för %s med fingeravtrycket %s"
+
+#, python-format
+msgid ""
+"warning: %s certificate with fingerprint %s not verified (check "
+"hostfingerprints or web.cacerts config setting)\n"
+msgstr ""
+"varning: %s-certificatet med fingeravtrycket %s overifierad (kontrollera "
+"hostfingerprints inställningen web.cacerts)\n"
+
+#, python-format
+msgid "no certificate for %s with configured hostfingerprint"
+msgstr "inget certifikat för %s med konfigurerat fingeravtryck"
 
 #, python-format
 msgid ""
 "warning: %s certificate not verified (check web.cacerts config setting)\n"
 msgstr ""
-"varning: %s-certificatet overifierad (kontrollera inställningen "
-"web.cacerts)\n"
+"varning: %s-certificatet overifierad (kontrollera inställningen web."
+"cacerts)\n"
 
 #, python-format
 msgid "command '%s' failed: %s"
 msgstr "kommandot '%s' misslyckades: %s"
+
+#, python-format
+msgid "path ends in directory separator: %s"
+msgstr "sökvägen slutar med en katalogseparator: %s"
 
 #, python-format
 msgid "path contains illegal component: %s"
@@ -13573,9 +13848,6 @@ msgstr ""
 
 #, python-format
 msgid "path %r traverses symbolic link %r"
-msgstr ""
-
-msgid "Hardlinks not supported"
 msgstr ""
 
 #, python-format
@@ -13820,17 +14092,14 @@ msgstr "%d integritetsfel påträffades!\n"
 msgid "(first damaged changeset appears to be %d)\n"
 msgstr "(första skadade ändringen verkar vara %d)\n"
 
-msgid "user name not available - set USERNAME environment variable"
-msgstr "användarnamnet är inte tillgängligt - sätt miljövariabeln USERNAME"
-
 msgid "look up remote revision"
 msgstr "söker fjärrevision"
+
+msgid "push failed (unexpected response):"
+msgstr "tryckning misslyckades (oväntat svar):"
 
 msgid "look up remote changes"
 msgstr "söker fjärrändringar"
 
 msgid "push failed:"
 msgstr "tryckning misslyckades:"
-
-msgid "push failed (unexpected response):"
-msgstr "tryckning misslyckades (oväntat svar):"
