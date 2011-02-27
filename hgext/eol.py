@@ -144,6 +144,8 @@ def hook(ui, repo, node, hooktype, **kwargs):
                 elif target == "to-crlf" and singlelf.search(data):
                     raise util.Abort(_("%s should not have LF line endings")
                                      % f)
+                # Ignore other rules for this file
+                break
 
 
 def preupdate(ui, repo, hooktype, parent1, parent2):
