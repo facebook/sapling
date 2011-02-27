@@ -25,6 +25,9 @@ keywords are usually available for templating a log-like command:
 
 :author: String. The unmodified author of the changeset.
 
+:branch: String. The name of the branch on which the changeset was
+    committed.
+
 :branches: List of strings. The name of the branch on which the
     changeset was committed. Will be empty if the branch name was
     default.
