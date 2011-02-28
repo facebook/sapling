@@ -101,6 +101,20 @@ _hg_branches()
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$branches' -- "$cur"))
 }
 
+_hg_bookmarks()
+{
+    local bookmarks="$(_hg_cmd bookmarks -q)"
+    local IFS=$'\n'
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$bookmarks' -- "$cur"))
+}
+
+_hg_labels()
+{
+    _hg_tags
+    _hg_branches
+    _hg_bookmarks
+}
+
 # this is "kind of" ugly...
 _hg_count_non_option()
 {
@@ -200,12 +214,10 @@ _hg_command_specific()
 
     if [ "$cmd" != status ] && [ "$prev" = -r ] || [ "$prev" == --rev ]; then
 	if [ $canonical = 1 ]; then
-	    _hg_tags
-	    _hg_branches
+	    _hg_labels
 	    return 0
 	elif [[ status != "$cmd"* ]]; then
-	    _hg_tags
-	    _hg_branches
+            _hg_labels
 	    return 0
 	else
 	    return 1
@@ -220,12 +232,10 @@ _hg_command_specific()
 	    if _hg_ext_mq_patchlist qapplied && [ "${COMPREPLY[*]}" ]; then
 		return 0
 	    fi
-	    _hg_tags
-	    _hg_branches
+	    _hg_labels
 	;;
 	manifest|update)
-	    _hg_tags
-	    _hg_branches
+	    _hg_labels
 	;;
 	pull|push|outgoing|incoming)
 	    _hg_paths
@@ -238,8 +248,7 @@ _hg_command_specific()
 	    _hg_status "u"
 	;;
 	merge)
-	    _hg_tags
-	    _hg_branches
+	    _hg_labels
 	;;
 	commit|record)
 	    _hg_status "mar"
@@ -378,8 +387,7 @@ _hg_cmd_qsave()
 
 _hg_cmd_strip()
 {
-    _hg_tags
-    _hg_branches
+    _hg_labels
 }
 
 _hg_cmd_qcommit()
@@ -497,8 +505,7 @@ _hg_cmd_bisect()
 
     case "$subcmd" in
 	good|bad)
-	    _hg_tags
-	    _hg_branches
+	    _hg_labels
 	    ;;
     esac
 
@@ -534,8 +541,7 @@ _hg_cmd_email()
 	    ;;
     esac
 
-    _hg_tags
-    _hg_branches
+    _hg_labels
     return
 }
 
@@ -543,8 +549,7 @@ _hg_cmd_email()
 # gpg
 _hg_cmd_sign()
 {
-    _hg_tags
-    _hg_branches
+    _hg_labels
 }
 
 
@@ -564,8 +569,7 @@ _hg_cmd_transplant()
     esac
 
     # all other transplant options values and command parameters are revisions
-    _hg_tags
-    _hg_branches
+    _hg_labels
     return
 }
 
