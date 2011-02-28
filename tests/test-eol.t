@@ -403,9 +403,9 @@ Test issue2569 -- eol extension takes write lock on reading:
 Test cleverencode: and cleverdecode: aliases for win32text extension
 
   $ echo '[encode]' >> $HGRCPATH
-  $ echo '**.txt = cleverencode: =' >> $HGRCPATH
+  $ echo '**.txt = cleverencode:' >> $HGRCPATH
   $ echo '[decode]' >> $HGRCPATH
-  $ echo '**.txt = cleverdecode: =' >> $HGRCPATH
+  $ echo '**.txt = cleverdecode:' >> $HGRCPATH
 
   $ hg init win32compat
   $ cd win32compat
