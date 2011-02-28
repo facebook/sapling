@@ -426,3 +426,17 @@ Check that both files have LF line-endings in the repository:
   foo
   bar
   baz
+
+Test handling of a broken .hgeol file:
+
+  $ touch .hgeol
+  $ hg add .hgeol
+  $ hg commit -m 'clean version'
+  $ echo "bad" > .hgeol
+  $ hg status
+  warning: ignoring .hgeol file due to parse error at .hgeol:1: bad
+  M .hgeol
+  $ hg revert .hgeol
+  warning: ignoring .hgeol file due to parse error at .hgeol:1: bad
+  $ hg status
+  ? .hgeol.orig

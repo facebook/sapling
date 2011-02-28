@@ -152,7 +152,11 @@ def hook(ui, repo, node, hooktype, **kwargs):
 
 def preupdate(ui, repo, hooktype, parent1, parent2):
     #print "preupdate for %s: %s -> %s" % (repo.root, parent1, parent2)
-    repo.readhgeol(parent1)
+    try:
+        repo.readhgeol(parent1)
+    except error.ParseError, inst:
+        ui.warn(_("warning: ignoring .hgeol file due to parse error "
+                  "at %s: %s\n") % (inst.args[1], inst.args[0]))
     return False
 
 def uisetup(ui):
@@ -233,7 +237,12 @@ def reposetup(ui, repo):
             return match.match(self.root, '', [], include, exclude)
 
         def _hgcleardirstate(self):
-            self._eolfile = self.readhgeol() or self.readhgeol('tip')
+            try:
+                self._eolfile = self.readhgeol() or self.readhgeol('tip')
+            except error.ParseError, inst:
+                ui.warn(_("warning: ignoring .hgeol file due to parse error "
+                          "at %s: %s\n") % (inst.args[1], inst.args[0]))
+                self._eolfile = None
 
             if not self._eolfile:
                 self._eolfile = util.never
