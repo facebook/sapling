@@ -398,3 +398,31 @@ Test issue2569 -- eol extension takes write lock on reading:
   $ touch .hgeol
   $ hg status --traceback
   ? .hgeol
+  $ cd ..
+
+Test cleverencode: and cleverdecode: aliases for win32text extension
+
+  $ echo '[encode]' >> $HGRCPATH
+  $ echo '**.txt = cleverencode: =' >> $HGRCPATH
+  $ echo '[decode]' >> $HGRCPATH
+  $ echo '**.txt = cleverdecode: =' >> $HGRCPATH
+
+  $ hg init win32compat
+  $ cd win32compat
+  $ printf "foo\r\nbar\r\nbaz\r\n" > win.txt
+  $ printf "foo\nbar\nbaz\n" > unix.txt
+  $ hg add
+  adding unix.txt
+  adding win.txt
+  $ hg commit -m checkin
+
+Check that both files have LF line-endings in the repository:
+
+  $ hg cat win.txt
+  foo
+  bar
+  baz
+  $ hg cat unix.txt
+  foo
+  bar
+  baz
