@@ -2957,7 +2957,9 @@ def reposetup(ui, repo):
 
             mqtags = [(patch.node, patch.name) for patch in q.applied]
 
-            if mqtags[-1][0] not in self:
+            try:
+                r = self.changelog.rev(mqtags[-1][0])
+            except error.RepoLookupError:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(mqtags[-1][0]))
                 return result
@@ -2982,12 +2984,13 @@ def reposetup(ui, repo):
 
             cl = self.changelog
             qbasenode = q.applied[0].node
-            if qbasenode not in self:
+            try:
+                qbase = cl.rev(qbasenode)
+            except error.LookupError:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(qbasenode))
                 return super(mqrepo, self)._branchtags(partial, lrev)
 
-            qbase = cl.rev(qbasenode)
             start = lrev + 1
             if start < qbase:
                 # update the cache (excluding the patches) and save it

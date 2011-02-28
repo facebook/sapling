@@ -51,6 +51,22 @@ test qpush on empty series
   summary:     add foo
   
 
+test corrupt status file
+  $ hg qpush
+  applying patch1
+  now at: patch1
+  $ cp .hg/patches/status .hg/patches/status.orig
+  $ hg qpop
+  popping patch1
+  patch queue now empty
+  $ cp .hg/patches/status.orig .hg/patches/status
+  $ hg qpush
+  mq status file refers to unknown node * (glob)
+  abort: working directory revision is not qtip
+  [255]
+  $ rm .hg/patches/status .hg/patches/status.orig
+
+
 bar should be gone; other unknown/ignored files should still be around
 
   $ hg status -A
