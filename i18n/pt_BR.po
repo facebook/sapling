@@ -2328,13 +2328,16 @@ msgid ""
 "The ``win32text.forbid*`` hooks provided by the win32text extension\n"
 "have been unified into a single hook named ``eol.hook``. The hook will\n"
 "lookup the expected line endings from the ``.hgeol`` file, which means\n"
-"you must migrate to a ``.hgeol`` file first before using the hook."
+"you must migrate to a ``.hgeol`` file first before using the hook.\n"
+"Remember to enable the eol extension in the repository where you\n"
+"install the hook."
 msgstr ""
 "Os ganchos ``win32text.forbid*`` fornecidos pela extensão win32text\n"
 "foram unificados em um único gancho chamado ``eol.hook``. Esse\n"
 "gancho procura pela configuração de quebra de linha no arquivo\n"
 "``.hgeol``, de modo que você precisa migrar para um arquivo\n"
-"``.hgeol`` para poder usar o gancho."
+"``.hgeol`` para poder usar o gancho. Lembre-se de habilitar a\n"
+"extensão eol no repositório onde você tiver instalado o gancho."
 
 msgid ""
 "See :hg:`help patterns` for more information about the glob patterns\n"
@@ -2350,6 +2353,10 @@ msgstr "%s não deve ter quebras de linha CRLF"
 #, python-format
 msgid "%s should not have LF line endings"
 msgstr "%s não deve ter quebras de linha LF"
+
+#, python-format
+msgid "warning: ignoring .hgeol file due to parse error at %s: %s\n"
+msgstr "aviso: arquivo .hgeol ignorado por erro de leitura em %s: %s\n"
 
 msgid "the eol extension is incompatible with the win32text extension"
 msgstr "a extensão eol é incompatível com a extensão win32text"
@@ -3682,6 +3689,10 @@ msgid ""
 msgstr ""
 "Você gerenciará por padrão uma fila de patches chamada \"patches\". Você\n"
 "pode criar outras filas independentes usando o comando :hg:`qqueue`.\n"
+
+#, python-format
+msgid "malformated mq status line: %s\n"
+msgstr "linha de status da mq malformada: %s\n"
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
@@ -14216,6 +14227,11 @@ msgstr ""
 
 msgid ":author: String. The unmodified author of the changeset."
 msgstr ":author: String. O autor da revisão, sem modificações."
+
+msgid ""
+":branch: String. The name of the branch on which the changeset was\n"
+"    committed."
+msgstr ":branch: String. O nome do ramo no qual a revisão foi consolidada."
 
 msgid ""
 ":branches: List of strings. The name of the branch on which the\n"
