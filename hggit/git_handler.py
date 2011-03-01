@@ -570,8 +570,12 @@ class GitHandler(object):
 
         for rev in revs:
             ctx = self.repo[rev]
-            heads = [t for t in ctx.tags() if t in self.local_heads()]
-            tags = [t for t in ctx.tags() if t in self.tags]
+            if getattr(ctx, 'bookmarks', None):
+                labels = lambda c: ctx.tags() + ctx.bookmarks()
+            else:
+                labels = lambda c: ctx.tags()
+            heads = [t for t in labels(ctx) if t in self.local_heads()]
+            tags = [t for t in labels(ctx) if t in self.tags]
 
             if not (heads or tags):
                 raise hgutil.Abort("revision %s cannot be pushed since"
