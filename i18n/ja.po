@@ -104,7 +104,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-02-24 11:19+0900\n"
+"POT-Creation-Date: 2011-03-01 15:32+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -1201,7 +1201,7 @@ msgstr ""
 
 msgid ""
 "    :convert.svn.branches: specify the directory containing branches.\n"
-"        The defaults is ``branches``."
+"        The default is ``branches``."
 msgstr ""
 
 msgid ""
@@ -1210,8 +1210,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    :convert.svn.trunk: specify the name of the trunk branch The\n"
-"        defauls is ``trunk``."
+"    :convert.svn.trunk: specify the name of the trunk branch. The\n"
+"        default is ``trunk``."
 msgstr ""
 
 msgid ""
@@ -1421,6 +1421,10 @@ msgstr "%s: 変換先リポジトリ種別が不正です"
 #, python-format
 msgid "convert: %s\n"
 msgstr "変換: %s\n"
+
+#, python-format
+msgid "%s\n"
+msgstr "%s\n"
 
 #, python-format
 msgid "%s: unknown repository type"
@@ -1734,7 +1738,7 @@ msgstr ""
 msgid "%s does not look like a Subversion repository"
 msgstr "%s は Subversion 形式ではないと思われます"
 
-msgid "Subversion python bindings could not be loaded"
+msgid "Could not load Subversion python bindings"
 msgstr "Subversion python バインディングが読み込めません"
 
 #, python-format
@@ -1827,7 +1831,7 @@ msgstr ""
 
 msgid ""
 "The extension reads its configuration from a versioned ``.hgeol``\n"
-"configuration file every time you run an ``hg`` command. The\n"
+"configuration file found in the root of the working copy. The\n"
 "``.hgeol`` file use the same syntax as all other Mercurial\n"
 "configuration files. It uses two sections, ``[patterns]`` and\n"
 "``[repository]``."
@@ -1921,7 +1925,9 @@ msgid ""
 "The ``win32text.forbid*`` hooks provided by the win32text extension\n"
 "have been unified into a single hook named ``eol.hook``. The hook will\n"
 "lookup the expected line endings from the ``.hgeol`` file, which means\n"
-"you must migrate to a ``.hgeol`` file first before using the hook."
+"you must migrate to a ``.hgeol`` file first before using the hook.\n"
+"Remember to enable the eol extension in the repository where you\n"
+"install the hook."
 msgstr ""
 
 msgid ""
@@ -1935,6 +1941,10 @@ msgstr ""
 
 #, python-format
 msgid "%s should not have LF line endings"
+msgstr ""
+
+#, python-format
+msgid "warning: ignoring .hgeol file due to parse error at %s: %s\n"
 msgstr ""
 
 msgid "the eol extension is incompatible with the win32text extension"
@@ -3151,6 +3161,10 @@ msgstr ""
 "特に指定が無い場合、 パッチは \"patches\" という名前のキューで管理\n"
 "されます。  :hg:`qqueue` を使うことで、 相互に独立した別の管理キューを\n"
 "作成することができます。\n"
+
+#, python-format
+msgid "malformated mq status line: %s\n"
+msgstr "不正な MQ 状態行: %s\n"
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
@@ -6791,12 +6805,12 @@ msgstr ""
 "    作業領域で作成します。"
 
 msgid ""
-"    If REV is the parent of the working directory, then this changeset\n"
+"    If REV is the parent of the working directory, then this new changeset\n"
 "    is committed automatically. Otherwise, hg needs to merge the\n"
 "    changes and the merged result is left uncommitted."
 msgstr ""
 "    対象リビジョンが、 作業領域の親リビジョンの場合、\n"
-"    打ち消しリビジョンは自動的にコミットされます。\n"
+"    新規作成された打ち消しリビジョンは、 自動的にコミットされます。\n"
 "    それ以外の場合は、 マージが実施されますが、\n"
 "    マージ結果はコミットされません。"
 
@@ -6804,23 +6818,23 @@ msgid ""
 "    By default, the pending changeset will have one parent,\n"
 "    maintaining a linear history. With --merge, the pending changeset\n"
 "    will instead have two parents: the old parent of the working\n"
-"    directory and a child of REV that simply undoes REV."
+"    directory and a new child of REV that simply undoes REV."
 msgstr ""
 "    特に指定が無い場合、 打ち消しリビジョンは、\n"
 "    単一の親リビジョンしか持たない、\n"
 "    一直線の履歴となるように作成されます。\n"
 "    --merge を指定した場合は、 2つの親リビジョンを持つようになります。\n"
 "    一方の親は作業領域の親リビジョン、\n"
-"    もう一方は、 打ち消しリビジョン (＝ 打ち消し対象の子リビジョン)\n"
+"    もう一方は、 打ち消しリビジョン (＝ 打ち消し対象の新規子リビジョン)\n"
 "    です。"
 
 msgid ""
-"    Before version 1.7, the default behavior was equivalent to\n"
+"    Before version 1.7, the behavior without --merge was equivalent to\n"
 "    specifying --merge followed by :hg:`update --clean .` to cancel\n"
 "    the merge and leave the child of REV as a head to be merged\n"
 "    separately."
 msgstr ""
-"    1.8 版より前の本コマンドの挙動は、\n"
+"    1.8 版より前の本コマンドの --merge 無し時挙動は、\n"
 "    打消しを --merge 付きで実行した後で、\n"
 "    :hg:`update --clean .` を実行した場合と等価です。\n"
 "    ここでの :hg:`update --clean .` 実行は、\n"
@@ -7624,6 +7638,10 @@ msgstr ""
 msgid "dump the contents of an index file"
 msgstr "インデックスファイルの内容表示"
 
+#, python-format
+msgid "unknown format %d"
+msgstr "未知のフォーマット: %d"
+
 msgid "dump an index DAG as a graphviz dot file"
 msgstr "インデックス DAG の graphviz 向け .dot ファイルを生成"
 
@@ -8128,6 +8146,9 @@ msgstr ""
 "    変更がある場合は \"+\"、 当該リビジョンにタグが付いている場合はタグの\n"
 "    一覧、 default 以外のブランチの場合にはブランチ名が、 ハッシュ値の後に\n"
 "    続きます。"
+
+msgid "can't query remote revision number, branch, tags, or bookmarks"
+msgstr "リビジョン番号/ブランチ/タグ/ブックマークは遠隔問い合わせできません"
 
 msgid "import an ordered set of patches"
 msgstr "パッチの順次取り込み"
@@ -9597,11 +9618,11 @@ msgid "(see http://mercurial.selenic.com for more information)"
 msgstr "(詳細は http://mercurial.selenic.com を参照のこと)"
 
 msgid ""
-"Copyright (C) 2005-2010 Matt Mackall and others\n"
+"Copyright (C) 2005-2011 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"Copyright (C) 2005-2010 Matt Mackall 他\n"
+"Copyright (C) 2005-2011 Matt Mackall 他\n"
 "本製品はフリーソフトウェアです。\n"
 "頒布条件に関しては同梱されるライセンス条項をお読みください。\n"
 "市場適合性や特定用途への可否を含め、 本製品は無保証です。\n"
@@ -10080,8 +10101,11 @@ msgstr "ブランチ名を表示"
 msgid "show tags"
 msgstr "タグを表示"
 
-msgid "[-nibt] [-r REV] [SOURCE]"
-msgstr "[-nibt] [-r REV] [SOURCE]"
+msgid "show bookmarks"
+msgstr "ブックマークの表示"
+
+msgid "[-nibtB] [-r REV] [SOURCE]"
+msgstr "[-nibtB] [-r REV] [SOURCE]"
 
 msgid ""
 "directory strip option for patch. This has the same meaning as the "
@@ -12886,6 +12910,11 @@ msgid ":author: String. The unmodified author of the changeset."
 msgstr ":author: 文字列。 リビジョンの作者名(記録情報そのまま)。"
 
 msgid ""
+":branch: String. The name of the branch on which the changeset was\n"
+"    committed."
+msgstr ":branch: 文字列。 リビジョンの属するブランチ名。"
+
+msgid ""
 ":branches: List of strings. The name of the branch on which the\n"
 "    changeset was committed. Will be empty if the branch name was\n"
 "    default."
@@ -14419,6 +14448,9 @@ msgstr "警告: マージ中に衝突を発見。\n"
 #, python-format
 msgid "couldn't parse location %s"
 msgstr "URL %s の解析に失敗"
+
+msgid "password in URL not supported"
+msgstr "パスワード付き URL は未サポートです"
 
 msgid "could not create remote repo"
 msgstr "遠隔ホストとの連携に失敗"
