@@ -5,7 +5,7 @@
   > {
   >     tr '\\' /
   > }
-  $ cat > $HGRCPATH <<EOF
+  $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert = 
   > graphlog =

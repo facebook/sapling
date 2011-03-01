@@ -1,6 +1,6 @@
 Test the EOL hook
 
-  $ cat > $HGRCPATH <<EOF
+  $ cat >> $HGRCPATH <<EOF
   > [diff]
   > git = True
   > EOF

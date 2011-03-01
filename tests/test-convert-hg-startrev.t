@@ -1,5 +1,5 @@
 
-  $ cat > $HGRCPATH <<EOF
+  $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > graphlog =
   > convert =

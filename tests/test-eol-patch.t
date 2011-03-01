@@ -1,6 +1,6 @@
 Test EOL patching
 
-  $ cat > $HGRCPATH <<EOF
+  $ cat >> $HGRCPATH <<EOF
   > [diff]
   > git = 1
   > EOF

@@ -1,6 +1,6 @@
 Testing cloning with the EOL extension
 
-  $ cat > $HGRCPATH <<EOF
+  $ cat >> $HGRCPATH <<EOF
   > [diff]
   > git = True
   > 

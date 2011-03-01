@@ -1,7 +1,7 @@
 
   $ "$TESTDIR/hghave" svn svn-bindings || exit 80
 
-  $ cat > $HGRCPATH <<EOF
+  $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert = 
   > graphlog =
