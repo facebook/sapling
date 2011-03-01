@@ -159,7 +159,12 @@ _hg_commands() {
 
 _hg_revrange() {
   compset -P 1 '*:'
+  _hg_labels "$@"
+}
+
+_hg_labels() {
   _hg_tags "$@"
+  _hg_bookmarks "$@"
 }
 
 _hg_tags() {
@@ -171,6 +176,19 @@ _hg_tags() {
     tags+=(${tag/ #    [0-9]#:*})
   done
   (( $#tags )) && _describe -t tags 'tags' tags
+}
+
+_hg_bookmarks() {
+  typeset -a bookmark bookmarks
+
+  _hg_cmd bookmarks | while read -A bookmark
+  do
+    if test -z ${bookmark[-1]:#[0-9]*}
+    then
+      bookmarks+=($bookmark[-2])
+    fi
+  done
+  (( $#bookmarks )) && _describe -t bookmarks 'bookmarks' bookmarks
 }
 
 # likely merge candidates
@@ -393,7 +411,7 @@ _hg_cmd_addremove() {
 
 _hg_cmd_annotate() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
-  '(--rev -r)'{-r+,--rev}'[annotate the specified revision]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[annotate the specified revision]:revision:_hg_labels' \
   '(--follow -f)'{-f,--follow}'[follow file copies and renames]' \
   '(--text -a)'{-a,--text}'[treat all files as text]' \
   '(--user -u)'{-u,--user}'[list the author]' \
@@ -407,7 +425,7 @@ _hg_cmd_archive() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
   '--no-decode[do not pass files through decoders]' \
   '(--prefix -p)'{-p+,--prefix}'[directory prefix for files in archive]:' \
-  '(--rev -r)'{-r+,--rev}'[revision to distribute]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[revision to distribute]:revision:_hg_labels' \
   '(--type -t)'{-t+,--type}'[type of distribution to create]:archive type:(files tar tbz2 tgz uzip zip)' \
   '*:destination:_files'
 }
@@ -418,7 +436,7 @@ _hg_cmd_backout() {
     '(--date -d)'{-d+,--date}'[record datecode as commit date]:date code:' \
     '--parent[parent to choose when backing out merge]' \
     '(--user -u)'{-u+,--user}'[record user as commiter]:user:' \
-    '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_tags' \
+    '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_labels' \
     '(--message -m)'{-m+,--message}'[use <text> as commit message]:text:' \
     '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt'
 }
@@ -426,11 +444,20 @@ _hg_cmd_backout() {
 _hg_cmd_bisect() {
   _arguments -s -w : $_hg_global_opts \
   '(-)'{-r,--reset}'[reset bisect state]' \
-  '(--good -g --bad -b --skip -s --reset -r)'{-g,--good}'[mark changeset good]'::revision:_hg_tags \
-  '(--good -g --bad -b --skip -s --reset -r)'{-b,--bad}'[mark changeset bad]'::revision:_hg_tags \
+  '(--good -g --bad -b --skip -s --reset -r)'{-g,--good}'[mark changeset good]'::revision:_hg_labels \
+  '(--good -g --bad -b --skip -s --reset -r)'{-b,--bad}'[mark changeset bad]'::revision:_hg_labels \
   '(--good -g --bad -b --skip -s --reset -r)'{-s,--skip}'[skip testing changeset]' \
   '(--command -c --noupdate -U)'{-c+,--command}'[use command to check changeset state]':commands:_command_names \
   '(--command -c --noupdate -U)'{-U,--noupdate}'[do not update to target]'
+}
+
+_hg_cmd_bookmarks() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--force -f)'{-f,--force}'[force]' \
+  '(--rev -r --delete -d --rename -m)'{-r+,--rev}'[revision]:revision:_hg_labels' \
+  '(--rev -r --delete -d --rename -m)'{-d,--delete}'[delete a given bookmark]' \
+  '(--rev -r --delete -d --rename -m)'{-m+,--rename}'[rename a given bookmark]:bookmark:_hg_bookmarks' \
+  ':bookmark:_hg_bookmarks'
 }
 
 _hg_cmd_branch() {
@@ -447,7 +474,7 @@ _hg_cmd_branches() {
 _hg_cmd_bundle() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
   '(--force -f)'{-f,--force}'[run even when remote repository is unrelated]' \
-  '(2)*--base[a base changeset to specify instead of a destination]:revision:_hg_tags' \
+  '(2)*--base[a base changeset to specify instead of a destination]:revision:_hg_labels' \
   ':output file:_files' \
   ':destination repository:_files -/'
 }
@@ -455,7 +482,7 @@ _hg_cmd_bundle() {
 _hg_cmd_cat() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
   '(--output -o)'{-o+,--output}'[print output to file with formatted name]:filespec:' \
-  '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_labels' \
   '*:file:_hg_files'
 }
 
@@ -510,7 +537,7 @@ _hg_cmd_export() {
   _arguments -s -w : $_hg_global_opts $_hg_diff_opts \
   '(--outout -o)'{-o+,--output}'[print output to file with formatted name]:filespec:' \
   '--switch-parent[diff against the second parent]' \
-  '*:revision:_hg_tags'
+  '*:revision:_hg_labels'
 }
 
 _hg_cmd_grep() {
@@ -529,7 +556,7 @@ _hg_cmd_grep() {
 
 _hg_cmd_heads() {
   _arguments -s -w : $_hg_global_opts $_hg_style_opts \
-  '(--rev -r)'{-r+,--rev}'[show only heads which are descendants of rev]:revision:_hg_tags'
+  '(--rev -r)'{-r+,--rev}'[show only heads which are descendants of rev]:revision:_hg_labels'
 }
 
 _hg_cmd_help() {
@@ -539,7 +566,7 @@ _hg_cmd_help() {
 
 _hg_cmd_identify() {
   _arguments -s -w : $_hg_global_opts \
-  '(--rev -r)'{-r+,--rev}'[identify the specified rev]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[identify the specified rev]:revision:_hg_labels' \
   '(--num -n)'{-n+,--num}'[show local revision number]' \
   '(--id -i)'{-i+,--id}'[show global revision id]' \
   '(--branch -b)'{-b+,--branch}'[show branch]' \
@@ -572,7 +599,7 @@ _hg_cmd_init() {
 
 _hg_cmd_locate() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
-  '(--rev -r)'{-r+,--rev}'[search repository as it stood at revision]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[search repository as it stood at revision]:revision:_hg_labels' \
   '(--print0 -0)'{-0,--print0}'[end filenames with NUL, for use with xargs]' \
   '(--fullpath -f)'{-f,--fullpath}'[print complete paths]' \
   '*:search pattern:_hg_files'
@@ -589,13 +616,13 @@ _hg_cmd_log() {
   '(--no-merges -M)'{-M,--no-merges}'[do not show merges]' \
   '(--only-merges -m)'{-m,--only-merges}'[show only merges]' \
   '(--patch -p)'{-p,--patch}'[show patch]' \
-  '(--prune -P)'{-P+,--prune}'[do not display revision or any of its ancestors]:revision:_hg_tags' \
+  '(--prune -P)'{-P+,--prune}'[do not display revision or any of its ancestors]:revision:_hg_labels' \
   '*:files:_hg_files'
 }
 
 _hg_cmd_manifest() {
   _arguments -s -w : $_hg_global_opts \
-  ':revision:_hg_tags'
+  ':revision:_hg_labels'
 }
 
 _hg_cmd_merge() {
@@ -618,7 +645,7 @@ _hg_cmd_outgoing() {
 
 _hg_cmd_parents() {
   _arguments -s -w : $_hg_global_opts $_hg_style_opts \
-  '(--rev -r)'{-r+,--rev}'[show parents of the specified rev]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[show parents of the specified rev]:revision:_hg_labels' \
   ':last modified file:_hg_files'
 }
 
@@ -638,7 +665,7 @@ _hg_cmd_pull() {
 _hg_cmd_push() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
   '(--force -f)'{-f,--force}'[force push]' \
-  '(--rev -r)'{-r+,--rev}'[a specific revision you would like to push]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[a specific revision you would like to push]:revision:_hg_labels' \
   ':destination:_hg_remote'
 }
 
@@ -679,7 +706,7 @@ _hg_cmd_revert() {
 
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_dryrun_opts \
   '(--all -a :)'{-a,--all}'[revert all changes when no arguments given]' \
-  '(--rev -r)'{-r+,--rev}'[revision to revert to]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[revision to revert to]:revision:_hg_labels' \
   '--no-backup[do not save backup copies of files]' \
   '*:file:->diff_files'
 
@@ -729,7 +756,7 @@ _hg_cmd_status() {
   '(--no-status -n)'{-n,--no-status}'[hide status prefix]' \
   '(--copies -C)'{-C,--copies}'[show source of copied files]' \
   '(--print0 -0)'{-0,--print0}'[end filenames with NUL, for use with xargs]' \
-  '--rev[show difference from revision]:revision:_hg_tags' \
+  '--rev[show difference from revision]:revision:_hg_labels' \
   '*:files:_files'
 }
 
@@ -744,7 +771,7 @@ _hg_cmd_tag() {
   '(--message -m)'{-m+,--message}'[message for tag commit log entry]:message:' \
   '(--date -d)'{-d+,--date}'[record datecode as commit date]:date code:' \
   '(--user -u)'{-u+,--user}'[record user as commiter]:user:' \
-  '(--rev -r)'{-r+,--rev}'[revision to tag]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[revision to tag]:revision:_hg_labels' \
   ':tag name:'
 }
 
@@ -762,34 +789,11 @@ _hg_cmd_unbundle() {
 _hg_cmd_update() {
   _arguments -s -w : $_hg_global_opts \
   '(--clean -C)'{-C,--clean}'[overwrite locally modified files]' \
-  '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_tags' \
-  ':revision:_hg_tags'
+  '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_labels' \
+  ':revision:_hg_labels'
 }
 
 ## extensions ##
-
-# bookmarks
-_hg_bookmarks() {
-  typeset -a bookmark bookmarks
-
-  _hg_cmd bookmarks | while read -A bookmark
-  do
-    if test -z ${bookmark[-1]:#[0-9]*}
-    then
-      bookmarks+=($bookmark[-2])
-    fi
-  done
-  (( $#bookmarks )) && _describe -t bookmarks 'bookmarks' bookmarks
-}
-
-_hg_cmd_bookmarks() {
-  _arguments -s -w : $_hg_global_opts \
-  '(--force -f)'{-f,--force}'[force]' \
-  '(--rev -r --delete -d --rename -m)'{-r+,--rev}'[revision]:revision:_hg_tags' \
-  '(--rev -r --delete -d --rename -m)'{-d,--delete}'[delete a given bookmark]' \
-  '(--rev -r --delete -d --rename -m)'{-m+,--rename}'[rename a given bookmark]:bookmark:_hg_bookmarks' \
-  ':bookmark:_hg_bookmarks'
-}
 
 # HGK
 _hg_cmd_view() {
@@ -970,7 +974,7 @@ _hg_cmd_strip() {
   '(--force -f)'{-f,--force}'[force multi-head removal]' \
   '(--backup -b)'{-b,--backup}'[bundle unrelated changesets]' \
   '(--nobackup -n)'{-n,--nobackup}'[no backups]' \
-  ':revision:_hg_tags'
+  ':revision:_hg_labels'
 }
 
 # Patchbomb
@@ -983,7 +987,7 @@ _hg_cmd_email() {
   '--bundlename[name of the bundle attachment file (default: bundle)]:' \
   '*'{-r+,--rev}'[search in given revision range]:revision:_hg_revrange' \
   '--force[run even when remote repository is unrelated (with -b/--bundle)]' \
-  '*--base[a base changeset to specify instead of a destination (with -b/--bundle)]:revision:_hg_tags' \
+  '*--base[a base changeset to specify instead of a destination (with -b/--bundle)]:revision:_hg_labels' \
   '--intro[send an introduction email for a single patch]' \
   '(--inline -i --attach -a)'{-a,--attach}'[send patches as attachments]' \
   '(--attach -a --inline -i)'{-i,--inline}'[send patches as inline attachments]' \
