@@ -191,7 +191,8 @@ handle subrepos safely on qrefresh
 
   $ hg qpop -qa
   patch queue now empty
-  $ EXTRA='hg qnew -m2 2.diff' testrm1 qrefresh
+  $ EXTRA='hg qnew -m2 2.diff'
+  $ testrm1 qrefresh
   adding a
   % update substate when removing .hgsub w/dirty subrepo
   M sub3/a
@@ -201,12 +202,14 @@ handle subrepos safely on qrefresh
 
   $ hg qpop -qa
   patch queue now empty
-  $ EXTRA='hg qnew -m3 3.diff' testrm2 qrefresh
+  $ EXTRA='hg qnew -m3 3.diff'
+  $ testrm2 qrefresh
   adding a
   % update substate when removing .hgsub w/clean updated subrepo
   R .hgsub
   % qrefresh
   % debugsub should be empty
+  $ EXTRA=
 
   $ cd ..
 
@@ -315,7 +318,7 @@ handle subrepos safely on qrecord
 
   $ hg qpop -qa
   patch queue now empty
-  $ EXTRA= testrm1 qrecord --config ui.interactive=1 -m2 2.diff <<EOF
+  $ testrm1 qrecord --config ui.interactive=1 -m2 2.diff <<EOF
   > y
   > y
   > EOF
@@ -331,7 +334,7 @@ handle subrepos safely on qrecord
 
   $ hg qpop -qa
   patch queue now empty
-  $ EXTRA= testrm2 qrecord --config ui.interactive=1 -m3 3.diff <<EOF
+  $ testrm2 qrecord --config ui.interactive=1 -m3 3.diff <<EOF
   > y
   > y
   > EOF
