@@ -137,6 +137,8 @@ ignore = [
     # raise ImportError if x not defined
     '__main__',
     '_ssl', # conditional imports in the stdlib, issue1964
+    'rfc822',
+    'mimetools',
     ]
 
 def enable():
