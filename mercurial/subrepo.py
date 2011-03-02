@@ -759,8 +759,10 @@ class gitsubrepo(abstractsubrepo):
 
     def _fetch(self, source, revision):
         if not os.path.exists(os.path.join(self._abspath, '.git')):
-            self._ui.status(_('cloning subrepo %s\n') % self._relpath)
-            self._gitnodir(['clone', self._abssource(source), self._abspath])
+            source = self._abssource(source)
+            self._ui.status(_('cloning subrepo %s from %s\n') %
+                            (self._relpath, source))
+            self._gitnodir(['clone', source, self._abspath])
         if self._githavelocally(revision):
             return
         self._ui.status(_('pulling subrepo %s\n') % self._relpath)

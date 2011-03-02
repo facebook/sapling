@@ -73,7 +73,7 @@ clone root
   $ cd t
   $ hg clone . ../tc
   updating to branch default
-  cloning subrepo s
+  cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../tc
   $ hg debugsub
@@ -96,7 +96,7 @@ clone root, make local change
   $ cd ../t
   $ hg clone . ../ta
   updating to branch default
-  cloning subrepo s
+  cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ../ta
@@ -115,7 +115,7 @@ clone root separately, make different local change
   $ cd ../t
   $ hg clone . ../tb
   updating to branch default
-  cloning subrepo s
+  cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ../tb/s
@@ -199,7 +199,7 @@ make and push changes to hg without updating the subrepo
   $ cd ../t
   $ hg clone . ../td
   updating to branch default
-  cloning subrepo s
+  cloning subrepo s from $TESTTMP/gitroot
   checking out detached HEAD in subrepo s
   check out a git branch if you intend to make changes
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -282,7 +282,7 @@ create nested repo
 
   $ hg clone ../t inner
   updating to branch default
-  cloning subrepo s
+  cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo inner = inner > .hgsub
   $ hg add .hgsub
@@ -311,7 +311,7 @@ relative source expansion
   $ mkdir d
   $ hg clone t d/t
   updating to branch default
-  cloning subrepo s
+  cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Check hg update --clean
