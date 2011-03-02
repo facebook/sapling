@@ -37,7 +37,10 @@ svn propset -F externals svn:externals .
 svn ci -m "set externals on ."
 # Add another one
 cat > externals <<EOF
+# A comment, then an empty line, then a blank line
+
 ^/externals/project1 deps/project1
+    
 -r2 ^/externals/project2@2 deps/project2
 EOF
 svn propset -F externals svn:externals .

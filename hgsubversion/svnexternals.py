@@ -139,6 +139,9 @@ def parsedefinitions(ui, repo, svnroot, exts):
     defs = []
     for base in sorted(exts):
         for line in exts[base]:
+            if not line.strip() or line.lstrip().startswith('#'):
+                # Ignore comments and blank lines
+                continue
             try:
                 path, rev, source, pegrev, norevline = parsedefinition(line)
             except BadDefinition:

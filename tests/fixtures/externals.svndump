@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: ac40e40a-7fbf-47e1-90a7-c1de12a5b013
+UUID: 2fcff1c7-6cef-40bf-9072-468ceec83032
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2009-05-03T14:07:14.149596Z
+2011-02-25T14:33:01.299441Z
 PROPS-END
 
 Revision-number: 1
@@ -27,7 +27,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:14.234026Z
+2011-02-25T14:33:01.321997Z
 PROPS-END
 
 Node-path: branches
@@ -72,7 +72,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:15.135488Z
+2011-02-25T14:33:02.082464Z
 PROPS-END
 
 Node-path: externals/project1
@@ -134,7 +134,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:16.180110Z
+2011-02-25T14:33:03.076026Z
 PROPS-END
 
 Node-path: trunk
@@ -179,19 +179,22 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:17.092210Z
+2011-02-25T14:33:04.058124Z
 PROPS-END
 
 Node-path: trunk
 Node-kind: dir
 Node-action: change
-Prop-content-length: 111
-Content-length: 111
+Prop-content-length: 169
+Content-length: 169
 
 K 13
 svn:externals
-V 76
+V 133
+# A comment, then an empty line, then a blank line
+
 ^/externals/project1 deps/project1
+    
 -r2 ^/externals/project2@2 deps/project2
 
 PROPS-END
@@ -212,7 +215,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:18.165337Z
+2011-02-25T14:33:05.096545Z
 PROPS-END
 
 Node-path: trunk
@@ -272,7 +275,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:21.092911Z
+2011-02-25T14:33:08.059874Z
 PROPS-END
 
 Node-path: branches/branch1
@@ -306,7 +309,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:23.097507Z
+2011-02-25T14:33:10.059295Z
 PROPS-END
 
 Node-path: branches/branch2
@@ -344,7 +347,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:24.086967Z
+2011-02-25T14:33:11.058317Z
 PROPS-END
 
 Node-path: trunk/subdir
@@ -366,7 +369,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:25.093557Z
+2011-02-25T14:33:12.058270Z
 PROPS-END
 
 Node-path: trunk/subdir2
@@ -393,7 +396,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:27.088306Z
+2011-02-25T14:33:14.058780Z
 PROPS-END
 
 Node-path: externals/project2
@@ -415,7 +418,7 @@ pmezard
 K 8
 svn:date
 V 27
-2009-05-03T14:07:28.065953Z
+2011-02-25T14:33:15.045928Z
 PROPS-END
 
 Node-path: trunk/a

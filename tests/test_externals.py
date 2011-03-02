@@ -81,8 +81,12 @@ class TestFetchExternals(test_util.TestBase):
  ^/externals/project1 deps/project1
 """
         self.assertEqual(ref0, repo[0]['.hgsvnexternals'].data())
-        ref1 = """[.]
+        ref1 = """\
+[.]
+ # A comment, then an empty line, then a blank line
+ 
  ^/externals/project1 deps/project1
+     
  -r2 ^/externals/project2@2 deps/project2
 """
         self.assertEqual(ref1, repo[1]['.hgsvnexternals'].data())
