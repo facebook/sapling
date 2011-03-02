@@ -2921,8 +2921,9 @@ def reposetup(ui, repo):
 
         def abort_if_wdir_patched(self, errmsg, force=False):
             if self.mq.applied and not force:
-                parent = self.dirstate.parents()[0]
-                if parent in [s.node for s in self.mq.applied]:
+                parents = self.dirstate.parents()
+                patches = [s.node for s in self.mq.applied]
+                if parents[0] in patches or parents[1] in patches:
                     raise util.Abort(errmsg)
 
         def commit(self, text="", user=None, date=None, match=None,

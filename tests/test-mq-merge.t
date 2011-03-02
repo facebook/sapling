@@ -1,3 +1,32 @@
+Setup extension:
+
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "mq =" >> $HGRCPATH
+  $ echo "[mq]" >> $HGRCPATH
+  $ echo "git = keep" >> $HGRCPATH
+
+Test merge with mq changeset as the second parent:
+
+  $ hg init m
+  $ cd m
+  $ touch a b c
+  $ hg add a
+  $ hg commit -m a
+  $ hg add b
+  $ hg qnew -d "0 0" b
+  $ hg update 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg add c
+  $ hg commit -m c
+  created new head
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -m merge
+  abort: cannot commit over an applied mq patch
+  [255]
+  $ cd ..
+
 Issue529: mq aborts when merging patch deleting files
 
   $ checkundo()
@@ -6,11 +35,6 @@ Issue529: mq aborts when merging patch deleting files
   >         echo ".hg/store/undo still exists"
   >     fi
   > }
-
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq =" >> $HGRCPATH
-  $ echo "[mq]" >> $HGRCPATH
-  $ echo "git = keep" >> $HGRCPATH
 
 Commit two dummy files in "init" changeset:
 
