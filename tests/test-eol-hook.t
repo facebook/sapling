@@ -1,9 +1,5 @@
 Test the EOL hook
 
-  $ cat >> $HGRCPATH <<EOF
-  > [diff]
-  > git = True
-  > EOF
   $ hg init main
   $ cat > main/.hg/hgrc <<EOF
   > [extensions]

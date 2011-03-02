@@ -1,9 +1,6 @@
 Testing cloning with the EOL extension
 
   $ cat >> $HGRCPATH <<EOF
-  > [diff]
-  > git = True
-  > 
   > [extensions]
   > eol =
   > 

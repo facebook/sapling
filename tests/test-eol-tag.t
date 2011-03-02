@@ -3,9 +3,6 @@ http://mercurial.selenic.com/bts/issue2493
 Testing tagging with the EOL extension
 
   $ cat >> $HGRCPATH <<EOF
-  > [diff]
-  > git = True
-  > 
   > [extensions]
   > eol =
   > 
