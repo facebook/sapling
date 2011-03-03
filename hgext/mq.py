@@ -1898,7 +1898,7 @@ def qimport(ui, repo, *filename, **opts):
     With -g/--git, patches imported with --rev will use the git diff
     format. See the diffs help topic for information on why this is
     important for preserving rename/copy information and permission
-    changes.
+    changes. Use :hg:`qfinish` to remove changesets from mq control.
 
     To import a patch from standard input, pass - as the patch file.
     When importing from standard input, a patch name must be specified
