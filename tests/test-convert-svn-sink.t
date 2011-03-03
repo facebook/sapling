@@ -1,5 +1,5 @@
 
-  $ "$TESTDIR/hghave" svn svn-bindings no-outer-repo || exit 80
+  $ "$TESTDIR/hghave" svn no-outer-repo || exit 80
 
   $ fixpath()
   > {

@@ -942,6 +942,7 @@ exit 1
 
 class svn_sink(converter_sink, commandline):
     commit_re = re.compile(r'Committed revision (\d+).', re.M)
+    uuid_re = re.compile(r'Repository UUID:\s*(\S+)', re.M)
 
     def prerun(self):
         if self.wc:
@@ -962,8 +963,6 @@ class svn_sink(converter_sink, commandline):
 
     def __init__(self, ui, path):
 
-        if svn is None:
-            raise MissingTool(_('Could not load Subversion python bindings'))
         converter_sink.__init__(self, ui, path)
         commandline.__init__(self, ui, 'svn')
         self.delete = []
@@ -1010,8 +1009,8 @@ class svn_sink(converter_sink, commandline):
             fp.close()
             util.set_flags(hook, False, True)
 
-        xport = transport.SvnRaTransport(url=geturl(path))
-        self.uuid = svn.ra.get_uuid(xport.ra)
+        output = self.run0('info')
+        self.uuid = self.uuid_re.search(output).group(1).strip()
 
     def wjoin(self, *names):
         return os.path.join(self.wc, *names)
