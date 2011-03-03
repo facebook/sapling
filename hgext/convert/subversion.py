@@ -259,6 +259,7 @@ class svn_source(converter_source):
             except ValueError:
                 raise util.Abort(_('svn: revision %s is not an integer') % rev)
 
+        self.trunkname = self.ui.config('convert', 'svn.trunk', 'trunk').strip('/')
         self.startrev = self.ui.config('convert', 'svn.startrev', default=0)
         try:
             self.startrev = int(self.startrev)
@@ -761,9 +762,8 @@ class svn_source(converter_source):
             author = author and self.recode(author) or ''
             try:
                 branch = self.module.split("/")[-1]
-                trunkname = self.ui.config('convert', 'svn.trunk', 'trunk')
-                if branch == trunkname.strip('/'):
-                    branch = ''
+                if branch == self.trunkname:
+                    branch = None
             except IndexError:
                 branch = None
 
