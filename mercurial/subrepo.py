@@ -625,7 +625,8 @@ class svnsubrepo(abstractsubrepo):
     def get(self, state, overwrite=False):
         if overwrite:
             self._svncommand(['revert', '--recursive'])
-        status = self._svncommand(['checkout', state[0], '--revision', state[1]])
+        status = self._svncommand(['checkout', '--force', state[0],
+                                   '--revision', state[1]])
         if not re.search('Checked out revision [0-9]+.', status):
             raise util.Abort(status.splitlines()[-1])
         self._ui.status(status)
