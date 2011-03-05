@@ -261,6 +261,8 @@ def expandpats(pats):
     return ret
 
 def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
+    if pats == ("",):
+        pats = []
     if not globbed and default == 'relpath':
         pats = expandpats(pats or [])
     m = matchmod.match(repo.root, repo.getcwd(), pats,
