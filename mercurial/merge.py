@@ -74,7 +74,10 @@ class mergestate(object):
         fco = octx[ofile]
         fca = self._repo.filectx(afile, fileid=anode)
         r = filemerge.filemerge(self._repo, self._local, lfile, fcd, fco, fca)
-        if not r:
+        if r is None:
+            # no real conflict
+            del self._state[dfile]
+        elif not r:
             self.mark(dfile, 'r')
         return r
 
