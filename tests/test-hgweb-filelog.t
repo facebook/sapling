@@ -656,6 +656,84 @@ should show base link, use spartan because it shows it
   </html>
   
 
+rss log
+
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/rss-log/tip/a')
+  200 Script output follows
+  
+  <?xml version="1.0" encoding="ascii"?>
+  <rss version="2.0">
+    <channel>
+      <link>http://*:$HGPORT/</link> (glob)
+      <language>en-us</language>
+  
+      <title>test: a history</title>
+      <description>a revision history</description>
+      <item>
+      <title>second a</title>
+      <link>http://*:$HGPORT/log01de2d66a28d/a</link> (glob)
+      <description><![CDATA[second a]]></description>
+      <author>&#116;&#101;&#115;&#116;</author>
+      <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
+  </item>
+  <item>
+      <title>first a</title>
+      <link>http://*:$HGPORT/log5ed941583260/a</link> (glob)
+      <description><![CDATA[first a]]></description>
+      <author>&#116;&#101;&#115;&#116;</author>
+      <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
+  </item>
+  
+    </channel>
+  </rss>
+
+atom log
+
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/atom-log/tip/a')
+  200 Script output follows
+  
+  <?xml version="1.0" encoding="ascii"?>
+  <feed xmlns="http://www.w3.org/2005/Atom">
+   <id>http://*:$HGPORT/atom-log/tip/a</id> (glob)
+   <link rel="self" href="http://*:$HGPORT/atom-log/tip/a"/> (glob)
+   <title>test: a history</title>
+   <updated>1970-01-01T00:00:00+00:00</updated>
+  
+   <entry>
+    <title>second a</title>
+    <id>http://*:$HGPORT/#changeset-01de2d66a28df5549090991dccda788726948517</id> (glob)
+    <link href="http://*:$HGPORT/rev/01de2d66a28d"/> (glob)
+    <author>
+     <name>test</name>
+     <email>&#116;&#101;&#115;&#116;</email>
+    </author>
+    <updated>1970-01-01T00:00:00+00:00</updated>
+    <published>1970-01-01T00:00:00+00:00</published>
+    <content type="xhtml">
+     <div xmlns="http://www.w3.org/1999/xhtml">
+      <pre xml:space="preserve">second a</pre>
+     </div>
+    </content>
+   </entry>
+   <entry>
+    <title>first a</title>
+    <id>http://*:$HGPORT/#changeset-5ed941583260248620985524192fdc382ef57c36</id> (glob)
+    <link href="http://*:$HGPORT/rev/5ed941583260"/> (glob)
+    <author>
+     <name>test</name>
+     <email>&#116;&#101;&#115;&#116;</email>
+    </author>
+    <updated>1970-01-01T00:00:00+00:00</updated>
+    <published>1970-01-01T00:00:00+00:00</published>
+    <content type="xhtml">
+     <div xmlns="http://www.w3.org/1999/xhtml">
+      <pre xml:space="preserve">first a</pre>
+     </div>
+    </content>
+   </entry>
+  
+  </feed>
+
 errors
 
   $ cat errors.log
