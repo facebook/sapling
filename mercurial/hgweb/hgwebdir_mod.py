@@ -40,9 +40,10 @@ def findrepos(paths):
 def urlrepos(prefix, roothead, paths):
     """yield url paths and filesystem paths from a list of repo paths
 
-    >>> list(urlrepos('hg', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
+    >>> conv = lambda seq: [(v, util.pconvert(p)) for v,p in seq]
+    >>> conv(urlrepos('hg', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
     [('hg/r', '/opt/r'), ('hg/r/r', '/opt/r/r'), ('hg', '/opt')]
-    >>> list(urlrepos('', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
+    >>> conv(urlrepos('', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
     [('r', '/opt/r'), ('r/r', '/opt/r/r'), ('', '/opt')]
     """
     for path in paths:
