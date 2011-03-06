@@ -131,27 +131,27 @@ Check for issue2089
   $ hg init repo2089
   $ cd repo2089
 
-  $ echo 0 > A
-  $ hg -q ci -Am 0
+  $ echo c0 > f1
+  $ hg ci -Aqm0
 
-  $ hg -q up -C null
-  $ echo 1 > A
-  $ hg -q ci -Am 1
+  $ hg up null -q
+  $ echo c1 > f1
+  $ hg ci -Aqm1
 
-  $ hg -q up -C 0
+  $ hg up 0 -q
   $ hg merge 1 -q --tool internal:local
-  $ echo 2 > A
-  $ hg -q ci -m 2
+  $ echo c2 > f1
+  $ hg ci -qm2
 
-  $ hg -q up -C 1
-  $ hg mv A a
-  $ hg -q ci -Am 3
+  $ hg up 1 -q
+  $ hg mv f1 f2
+  $ hg ci -Aqm3
 
-  $ hg -q up -C 2
+  $ hg up 2 -q
   $ hg merge 3
-  merging A and a to a
+  merging f1 and f2 to f2
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
-  $ cat a
-  2
+  $ cat f2
+  c2
