@@ -560,9 +560,13 @@ if has_https:
             hostfingerprint = self.ui.config('hostfingerprints', host)
 
             if cacerts and not hostfingerprint:
+                cacerts = util.expandpath(cacerts)
+                if not os.path.exists(cacerts):
+                    raise util.Abort(_('could not find '
+                                       'web.cacerts: %s') % cacerts)
                 self.sock = _ssl_wrap_socket(self.sock, self.key_file,
                     self.cert_file, cert_reqs=CERT_REQUIRED,
-                    ca_certs=util.expandpath(cacerts))
+                    ca_certs=cacerts)
                 msg = _verifycert(self.sock.getpeercert(), host)
                 if msg:
                     raise util.Abort(_('%s certificate error: %s '
