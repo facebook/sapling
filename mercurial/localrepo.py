@@ -976,7 +976,7 @@ class localrepository(repo.repository):
             for f in changes[0]:
                 if f in ms and ms[f] == 'u':
                     raise util.Abort(_("unresolved merge conflicts "
-                                                    "(see hg resolve)"))
+                                       "(see hg help resolve)"))
 
             cctx = context.workingctx(self, text, user, date, extra, changes)
             if editor:

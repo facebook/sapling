@@ -38,7 +38,7 @@ Correct the conflict without marking the file as resolved
 
   $ echo "ABCD" > A
   $ hg commit -m "Merged"
-  abort: unresolved merge conflicts (see hg resolve)
+  abort: unresolved merge conflicts (see hg help resolve)
   [255]
 
 Mark the conflict as resolved and commit
