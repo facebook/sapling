@@ -227,8 +227,8 @@ def parseargs():
                 continue
 
             for line in f.readlines():
-                line = line.strip()
-                if line and not line.startswith('#'):
+                line = line.split('#', 1)[0].strip()
+                if line:
                     blacklist[line] = filename
 
             f.close()
