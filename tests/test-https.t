@@ -96,6 +96,12 @@ pub.pem patched with other notBefore / notAfter:
   $ hg serve -p $HGPORT -d --pid-file=../hg0.pid --certificate=$PRIV
   $ cat ../hg0.pid >> $DAEMON_PIDS
 
+cacert not found
+
+  $ hg in --config web.cacerts=no-such.pem https://localhost:$HGPORT/
+  abort: could not find web.cacerts: no-such.pem
+  [255]
+
 Test server address cannot be reused
 
   $ hg serve -p $HGPORT --certificate=$PRIV 2>&1
