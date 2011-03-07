@@ -11774,7 +11774,7 @@ msgid "[-fC] [NAME]"
 msgstr ""
 
 msgid "show only branches that have unmerged heads"
-msgstr "Zeigt nur Branches mit mehreren Köpfen"
+msgstr "Zeigt nur Branches deren Köpfe nicht zusammengeführt wurden"
 
 msgid "show normal and closed branches"
 msgstr "Zeigt normale und geschlossene Branches"
