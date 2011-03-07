@@ -9,9 +9,10 @@ import heapq
 
 def ancestor(a, b, pfunc):
     """
-    return a minimal-distance ancestor of nodes a and b, or None if there is no
-    such ancestor. Note that there can be several ancestors with the same
-    (minimal) distance, and the one returned is arbitrary.
+    Returns the common ancestor of a and b that is furthest from a
+    root (as measured by longest path) or None if no ancestor is
+    found. If there are multiple common ancestors at the same
+    distance, the first one found is returned.
 
     pfunc must return a list of parent vertices for a given vertex
     """
@@ -22,6 +23,7 @@ def ancestor(a, b, pfunc):
     a, b = sorted([a, b])
 
     # find depth from root of all ancestors
+    # depth is stored as a negative for heapq
     parentcache = {}
     visit = [a, b]
     depth = {}
@@ -39,6 +41,7 @@ def ancestor(a, b, pfunc):
                 if p not in depth:
                     visit.append(p)
             if visit[-1] == vertex:
+                # -(maximum distance of parents + 1)
                 depth[vertex] = min([depth[p] for p in pl]) - 1
                 visit.pop()
 
