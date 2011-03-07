@@ -466,39 +466,40 @@ class filectx(object):
         else:
             base = self
 
-        # find all ancestors
-        needed = {base: 1}
+        # This algorithm would prefer to be recursive, but Python is a
+        # bit recursion-hostile. Instead we do an iterative
+        # depth-first search.
+
         visit = [base]
-        files = [base._path]
-        while visit:
-            f = visit.pop(0)
-            for p in parents(f):
-                if p not in needed:
-                    needed[p] = 1
-                    visit.append(p)
-                    if p._path not in files:
-                        files.append(p._path)
-                else:
-                    # count how many times we'll use this
-                    needed[p] += 1
-
-        # sort by revision (per file) which is a topological order
-        visit = []
-        for f in files:
-            visit.extend(n for n in needed if n._path == f)
-
         hist = {}
-        for f in sorted(visit, key=lambda x: x.rev()):
-            curr = decorate(f.data(), f)
-            for p in parents(f):
-                curr = pair(hist[p], curr)
-                # trim the history of unneeded revs
-                needed[p] -= 1
-                if not needed[p]:
-                    del hist[p]
-            hist[f] = curr
+        pcache = {}
+        needed = {base: 1}
+        while visit:
+            f = visit[-1]
+            if f not in pcache:
+                pcache[f] = parents(f)
 
-        return zip(hist[f][0], hist[f][1].splitlines(True))
+            ready = True
+            pl = pcache[f]
+            for p in pl:
+                if p not in hist:
+                    ready = False
+                    visit.append(p)
+                    needed[p] = needed.get(p, 0) + 1
+            if ready:
+                visit.pop()
+                curr = decorate(f.data(), f)
+                for p in pl:
+                    curr = pair(hist[p], curr)
+                    if needed[p] == 1:
+                        del hist[p]
+                    else:
+                        needed[p] -= 1
+
+                hist[f] = curr
+                pcache[f] = []
+
+        return zip(hist[base][0], hist[base][1].splitlines(True))
 
     def ancestor(self, fc2, actx=None):
         """
