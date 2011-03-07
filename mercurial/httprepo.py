@@ -224,6 +224,10 @@ def instance(ui, path, create):
             # No luck, try older compatibility check.
             inst.between([(nullid, nullid)])
         return inst
-    except error.RepoError:
-        ui.note('(falling back to static-http)\n')
-        return statichttprepo.instance(ui, "static-" + path, create)
+    except error.RepoError, httpexception:
+        try:
+            r = statichttprepo.instance(ui, "static-" + path, create)
+            ui.note('(falling back to static-http)\n')
+            return r
+        except error.RepoError:
+            raise httpexception # use the original http RepoError instead
