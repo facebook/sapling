@@ -329,7 +329,7 @@ Don't crash if the subrepo is missing
   abort: subrepo s is missing
   [255]
   $ hg update -C
-  cloning subrepo s
+  cloning subrepo s from $TESTTMP/gitroot
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum | grep commit
   commit: (clean)
