@@ -128,7 +128,7 @@ class httprepository(wireproto.wirerepository):
         try:
             proto = resp.getheader('content-type')
         except AttributeError:
-            proto = resp.headers['content-type']
+            proto = resp.headers.get('content-type', '')
 
         safeurl = util.hidepassword(self._url)
         # accept old "text/plain" and "application/hg-changegroup" for now
@@ -139,7 +139,7 @@ class httprepository(wireproto.wirerepository):
             raise error.RepoError(
                 _("'%s' does not appear to be an hg repository:\n"
                   "---%%<--- (%s)\n%s\n---%%<---\n")
-                % (safeurl, proto, resp.read()))
+                % (safeurl, proto or 'no content-type', resp.read()))
 
         if proto.startswith('application/mercurial-'):
             try:
