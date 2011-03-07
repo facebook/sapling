@@ -540,7 +540,7 @@ def update(repo, node, branchmerge, force, partial):
         action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
 
         ### apply phase
-        if not branchmerge or fastforward: # just jump to the new rev
+        if not branchmerge: # just jump to the new rev
             fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
         if not partial:
             repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
@@ -549,7 +549,7 @@ def update(repo, node, branchmerge, force, partial):
 
         if not partial:
             repo.dirstate.setparents(fp1, fp2)
-            recordupdates(repo, action, branchmerge and not fastforward)
+            recordupdates(repo, action, branchmerge)
             if not branchmerge and not fastforward:
                 repo.dirstate.setbranch(p2.branch())
     finally:
