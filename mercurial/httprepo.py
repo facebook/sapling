@@ -73,8 +73,7 @@ class httprepository(wireproto.wirerepository):
         data = args.pop('data', None)
         headers = args.pop('headers', {})
         self.ui.debug("sending %s command\n" % cmd)
-        q = {"cmd": cmd}
-        q.update(args)
+        q = [('cmd', cmd)] + sorted(args.items())
         qs = '?%s' % urllib.urlencode(q)
         cu = "%s%s" % (self._url, qs)
         req = urllib2.Request(cu, data, headers)
