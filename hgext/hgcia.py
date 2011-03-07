@@ -198,7 +198,7 @@ class hgcia(object):
     def sendrpc(self, msg):
         srv = xmlrpclib.Server(self.ciaurl)
         res = srv.hub.deliver(msg)
-        if res is not True:
+        if res is not True and res != 'queued.':
             raise util.Abort(_('%s returned an error: %s') %
                              (self.ciaurl, res))
 

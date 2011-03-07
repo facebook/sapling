@@ -19,12 +19,7 @@ Fast-forward:
   $ hg merge b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg branch
-  default
-  $ hg parent --template '{rev}:{node|short} {branches}: {desc}\n'
-  1:06c2121185be b: b
   $ hg ci -Ammerge
-  created new head
 
 Bogus fast-forward should fail:
 

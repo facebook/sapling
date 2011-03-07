@@ -314,6 +314,26 @@ relative source expansion
   cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+Don't crash if the subrepo is missing
+
+  $ hg clone t missing -q
+  $ cd missing
+  $ rm -rf s
+  $ hg status -S
+  $ hg sum | grep commit
+  commit: 1 subrepos
+  $ hg push -q
+  abort: subrepo s is missing
+  [255]
+  $ hg commit -qm missing
+  abort: subrepo s is missing
+  [255]
+  $ hg update -C
+  cloning subrepo s
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg sum | grep commit
+  commit: (clean)
+
 Check hg update --clean
   $ cd $TESTTMP/ta
   $ echo  > s/g
