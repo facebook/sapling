@@ -3,6 +3,7 @@
 [merge-tools]
 kdiff3.args=--auto --L1 base --L2 local --L3 other $base $local $other -o $output
 kdiff3.regkey=Software\KDiff3
+kdiff3.regkeyalt=Software\Wow6432Node\KDiff3
 kdiff3.regappend=\kdiff3.exe
 kdiff3.fixeol=True
 kdiff3.gui=True
@@ -10,6 +11,7 @@ kdiff3.diffargs=--L1 '$plabel1' --L2 '$clabel' $parent $child
 
 gvimdiff.args=--nofork -d -g -O $local $other $base
 gvimdiff.regkey=Software\Vim\GVim
+gvimdiff.regkeyalt=Software\Wow6432Node\Vim\GVim
 gvimdiff.regname=path
 gvimdiff.priority=-9
 
@@ -36,6 +38,7 @@ xxdiff.priority=-8
 xxdiff.diffargs=--title1 '$plabel1' $parent --title2 '$clabel' $child
 
 diffmerge.regkey=Software\SourceGear\SourceGear DiffMerge\
+diffmerge.regkeyalt=Software\Wow6432Node\SourceGear\SourceGear DiffMerge\
 diffmerge.regname=Location
 diffmerge.priority=-7
 diffmerge.args=-nosplash -merge -title1=local -title2=merged -title3=other $local $base $other -result=$output
@@ -45,6 +48,7 @@ diffmerge.diffargs=--nosplash --title1='$plabel1' --title2='$clabel' $parent $ch
 
 p4merge.args=$base $local $other $output
 p4merge.regkey=Software\Perforce\Environment
+p4merge.regkeyalt=Software\Wow6432Node\Perforce\Environment
 p4merge.regname=P4INSTROOT
 p4merge.regappend=\p4merge.exe
 p4merge.gui=True
@@ -53,6 +57,7 @@ p4merge.diffargs=$parent $child
 
 tortoisemerge.args=/base:$base /mine:$local /theirs:$other /merged:$output
 tortoisemerge.regkey=Software\TortoiseSVN
+tortoisemerge.regkeyalt=Software\Wow6432Node\TortoiseSVN
 tortoisemerge.checkchanged=True
 tortoisemerge.gui=True
 tortoisemerge.priority=-8
@@ -60,6 +65,7 @@ tortoisemerge.diffargs=/base:$parent /mine:$child /basename:'$plabel1' /minename
 
 ecmerge.args=$base $local $other --mode=merge3 --title0=base --title1=local --title2=other --to=$output
 ecmerge.regkey=Software\Elli\xc3\xa9 Computing\Merge
+ecmerge.regkeyalt=Software\Wow6432Node\Elli\xc3\xa9 Computing\Merge
 ecmerge.gui=True
 ecmerge.diffargs=$parent $child --mode=diff2 --title1='$plabel1' --title2='$clabel'
 
@@ -84,6 +90,7 @@ bcompare.diffargs=-lro -lefttitle='$plabel1' -righttitle='$clabel' -solo -expand
 
 winmerge.args=/e /x /wl /ub /dl other /dr local $other $local $output
 winmerge.regkey=Software\Thingamahoochie\WinMerge
+winmerge.regkeyalt=Software\Wow6432Node\Thingamahoochie\WinMerge\
 winmerge.regname=Executable
 winmerge.checkchanged=True
 winmerge.gui=True
@@ -106,6 +113,7 @@ diffuse.gui=True
 diffuse.diffargs=$parent $child
 
 UltraCompare.regkey=Software\Microsoft\Windows\CurrentVersion\App Paths\UC.exe
+UltraCompare.regkeyalt=Software\Wow6432Node\Microsoft\Windows\CurrentVersion\App Paths\UC.exe
 UltraCompare.args = $base $local $other -title1 base -title3 other
 UltraCompare.priority = -2
 UltraCompare.gui = True

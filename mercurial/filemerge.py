@@ -25,8 +25,10 @@ _internal = ['internal:' + s
 def _findtool(ui, tool):
     if tool in _internal:
         return tool
-    k = _toolstr(ui, tool, "regkey")
-    if k:
+    for kn in ("regkey", "regkeyalt"):
+        k = _toolstr(ui, tool, kn)
+        if not k:
+            continue
         p = util.lookup_reg(k, _toolstr(ui, tool, "regname"))
         if p:
             p = util.find_exe(p + _toolstr(ui, tool, "regappend"))

@@ -556,6 +556,12 @@ Supported arguments:
   tool. Mercurial will search for this key first under
   ``HKEY_CURRENT_USER`` and then under ``HKEY_LOCAL_MACHINE``.
   Default: None
+``regkeyalt``
+  An alternate Windows registry key to try if the first key is not
+  found.  The alternate key uses the same ``regname`` and ``regappend``
+  semantics of the primary key.  The most common use for this key
+  is to search for 32bit applications on 64bit operating systems.
+  Default: None
 ``regname``
   Name of value to read from specified registry key. Defaults to the
   unnamed (default) value.
