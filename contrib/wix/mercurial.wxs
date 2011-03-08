@@ -62,7 +62,7 @@
           <Component Id='MainExecutable' Guid='$(var.ComponentMainExecutableGUID)' Win64='$(var.IsX64)'>
             <File Id='hgEXE' Name='hg.exe' Source='dist\hg.exe' KeyPath='yes' />
             <Environment Id="Environment" Name="PATH" Part="last" System="yes"
-                         Permanent="no" Value="[INSTALLDIR]bin" Action="set" />
+                         Permanent="no" Value="[INSTALLDIR]" Action="set" />
           </Component>
           <Component Id='ReadMe' Guid='$(var.ReadMe.guid)' Win64='$(var.IsX64)'>
               <File Id='ReadMe' Name='ReadMe.html' Source='contrib\win32\ReadMe.html'
@@ -93,11 +93,6 @@
             </Component>
           </Directory>
 
-          <Directory Id='binFolder' Name='bin'>
-            <Component Id='HgCmd' Guid='$(var.hgcmd.guid)' Win64='$(var.IsX64)'>
-                <File Id='Hg.Cmd' Name='hg.cmd' KeyPath='yes' Source='contrib\wix\hg.cmd' />
-            </Component>
-          </Directory>
         </Directory>
       </Directory>
 
@@ -140,7 +135,6 @@
         <ComponentRef Id='paths.rc' />
         <ComponentRef Id='cacert.pem' />
         <ComponentRef Id='helpFolder' />
-        <ComponentRef Id='HgCmd' />
         <ComponentGroupRef Id='templatesFolder' />
         <MergeRef Id='VCRuntime' />
         <MergeRef Id='VCRuntimePolicy' />
