@@ -155,7 +155,7 @@ user a pulls, merges, commits
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg merge 2>/dev/null
-  pulling subrepo s
+  pulling subrepo s from $TESTTMP/gitroot
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat s/f
@@ -232,7 +232,7 @@ sync to upstream git, distribute changes
   $ cd ../tb
   $ hg pull -q
   $ hg update 2>/dev/null
-  pulling subrepo s
+  pulling subrepo s from $TESTTMP/gitroot
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugsub
   path s
@@ -262,7 +262,7 @@ archive subrepos
   $ cd ../tc
   $ hg pull -q
   $ hg archive --subrepos -r 5 ../archive 2>/dev/null
-  pulling subrepo s
+  pulling subrepo s from $TESTTMP/gitroot
   $ cd ../archive
   $ cat s/f
   f
