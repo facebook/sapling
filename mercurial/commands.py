@@ -4053,7 +4053,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
 
-    if not rev:
+    if rev is None or rev == '':
         rev = node
 
     # if we defined a bookmark, we have to remember the original bookmark name

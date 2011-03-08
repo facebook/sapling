@@ -20,6 +20,22 @@ This command is ancient:
   summary:     test
   
 
+Verify that updating to revision 0 via commands.update() works properly
+
+  $ cat <<EOF > update_to_rev0.py
+  > from mercurial import ui, hg, commands
+  > myui = ui.ui()
+  > repo = hg.repository(myui, path='.')
+  > commands.update(myui, repo, rev=0)
+  > EOF
+  $ hg up null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ python ./update_to_rev0.py
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg identify -n
+  0
+ 
+
 Poke around at hashes:
 
   $ hg manifest --debug
