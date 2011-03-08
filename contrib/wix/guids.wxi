@@ -47,6 +47,5 @@
   <?define paths.rc.guid = {F9ADF21D-5F0B-4934-8CD9-14BE63664721} ?>
   <?define cacert.pem.guid = {EC1B2630-FE21-46E6-915B-A6545AF703D4} ?>
   <?define ProgramMenuDir.guid = {D5A63320-1238-489B-B68B-CF053E9577CA} ?>
-  <?define hgcmd.guid = {65CCC756-E72E-4C5F-901E-D575EDC80DB3} ?>
 
 </Include>
