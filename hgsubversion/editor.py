@@ -8,6 +8,7 @@ from mercurial import node
 
 import svnwrap
 import util
+import svnexternals
 
 class RevisionData(object):
 
@@ -268,6 +269,13 @@ class HgEditor(svnwrap.Editor):
                 for k, v in copies.iteritems():
                     if util.issamefile(parentctx, fromctx, v):
                         self.current.copies[k] = v
+        # Copy the externals definitions of copied directories
+        fromext = svnexternals.parse(self.ui, fromctx)
+        for p, v in fromext.iteritems():
+            pp = p and (p + '/') or ''
+            if pp.startswith(frompath):
+                dest = (path + '/' + pp[len(frompath):]).rstrip('/')
+                self.current.externals[dest] = v
         return path
 
     @svnwrap.ieditor

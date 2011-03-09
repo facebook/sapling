@@ -258,6 +258,20 @@ deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
         repo.wwrite('subdir/deps/project1/a', 'foobar', '')
         commands.update(ui, repo, node='4', clean=True)
 
+    def test_mergeexternals(self, stupid=False):
+        repo = self._load_fixture_and_fetch('mergeexternals.svndump',
+                                            externals='subrepos',
+                                            stupid=stupid)
+        # Check merged directories externals are fine
+        self.assertEqual("""\
+d1/ext = [hgsubversion] d1:^/trunk/common/ext ext
+d2/ext = [hgsubversion] d2:^/trunk/common/ext ext
+d3/ext3 = [hgsubversion] d3:^/trunk/common/ext ext3
+""", repo['tip']['.hgsub'].data())
+
+    def test_mergeexternals_stupid(self):
+        self.test_mergeexternals(True)
+
 class TestPushExternals(test_util.TestBase):
     def test_push_externals(self, stupid=False):
         test_util.load_fixture_and_fetch('pushexternals.svndump',
