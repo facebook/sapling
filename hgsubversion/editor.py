@@ -231,11 +231,11 @@ class HgEditor(svnwrap.Editor):
         if tag:
             changeid = self.meta.tags[tag]
             source_rev, source_branch = self.meta.get_source_rev(changeid)[:2]
-            cp_f = ''
+            frompath = ''
         else:
             source_rev = copyfrom_revision
-            cp_f, source_branch = self.meta.split_branch_path(copyfrom_path)[:2]
-            if cp_f == '' and br_path == '':
+            frompath, source_branch = self.meta.split_branch_path(copyfrom_path)[:2]
+            if frompath == '' and br_path == '':
                 assert br_path is not None
                 tmp = source_branch, source_rev, self.current.rev.revnum
                 self.meta.branches[branch] = tmp
@@ -243,17 +243,17 @@ class HgEditor(svnwrap.Editor):
         if new_hash == node.nullid:
             self.current.missing.add('%s/' % path)
             return path
-        cp_f_ctx = self.repo.changectx(new_hash)
-        if cp_f != '/' and cp_f != '':
-            cp_f = '%s/' % cp_f
+        fromctx = self.repo.changectx(new_hash)
+        if frompath != '/' and frompath != '':
+            frompath = '%s/' % frompath
         else:
-            cp_f = ''
+            frompath = ''
         copies = {}
-        for f in cp_f_ctx:
-            if not f.startswith(cp_f):
+        for f in fromctx:
+            if not f.startswith(frompath):
                 continue
-            f2 = f[len(cp_f):]
-            fctx = cp_f_ctx.filectx(f)
+            f2 = f[len(frompath):]
+            fctx = fromctx.filectx(f)
             fp_c = path + '/' + f2
             self.current.set(fp_c, fctx.data(), 'x' in fctx.flags(), 'l' in fctx.flags())
             if fp_c in self.current.deleted:
@@ -267,7 +267,7 @@ class HgEditor(svnwrap.Editor):
             if parentid != revlog.nullid:
                 parentctx = self.repo.changectx(parentid)
                 for k, v in copies.iteritems():
-                    if util.issamefile(parentctx, cp_f_ctx, v):
+                    if util.issamefile(parentctx, fromctx, v):
                         self.current.copies[k] = v
         return path
 
