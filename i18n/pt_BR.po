@@ -14975,8 +14975,8 @@ msgstr "nenhuma correspondência sob o diretório!"
 msgid "file not tracked!"
 msgstr "arquivo não rastreado!"
 
-msgid "unresolved merge conflicts (see hg resolve)"
-msgstr "conflitos de mesclagem não resolvidos (veja hg resolve)"
+msgid "unresolved merge conflicts (see hg help resolve)"
+msgstr "conflitos de mesclagem não resolvidos (veja hg help resolve)"
 
 #, python-format
 msgid "committing subrepository %s\n"
@@ -16022,6 +16022,10 @@ msgid "check out a git branch if you intend to make changes\n"
 msgstr "obtenha um ramo do git se você pretender fazer mudanças\n"
 
 #, python-format
+msgid "subrepo %s is missing"
+msgstr "o sub-repositório %s está faltando"
+
+#, python-format
 msgid "unrelated git branch checked out in subrepo %s\n"
 msgstr "ramo do git não relacionado obtido no sub-repositório %s\n"
 
@@ -16189,6 +16193,10 @@ msgstr "IDN no certificado não é suportado"
 
 msgid "no commonName or subjectAltName found in certificate"
 msgstr "nenhum commonName ou subjectAltName encontrado no certificado"
+
+#, python-format
+msgid "could not find web.cacerts: %s"
+msgstr "não foi possível encontrar web.cacerts: %s"
 
 #, python-format
 msgid "%s certificate error: %s (use --insecure to connect insecurely)"
