@@ -252,14 +252,13 @@ class HgEditor(svnwrap.Editor):
         for f in fromctx:
             if not f.startswith(frompath):
                 continue
-            f2 = f[len(frompath):]
             fctx = fromctx.filectx(f)
-            fp_c = path + '/' + f2
-            self.current.set(fp_c, fctx.data(), 'x' in fctx.flags(), 'l' in fctx.flags())
-            if fp_c in self.current.deleted:
-                del self.current.deleted[fp_c]
+            dest = path + '/' + f[len(frompath):]
+            self.current.set(dest, fctx.data(), 'x' in fctx.flags(), 'l' in fctx.flags())
+            if dest in self.current.deleted:
+                del self.current.deleted[dest]
             if branch == source_branch:
-                copies[fp_c] = f
+                copies[dest] = f
         if copies:
             # Preserve the directory copy records if no file was changed between
             # the source and destination revisions, or discard it completely.
