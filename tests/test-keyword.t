@@ -209,7 +209,7 @@ Pull from bundle and trigger notify
   To: Test
   
   changeset a2392c293916 in $TESTTMP/Test
-  details: *cmd=changeset;node=a2392c293916 (glob)
+  details: $TESTTMP/Test?cmd=changeset;node=a2392c293916
   description:
   	addsym
   

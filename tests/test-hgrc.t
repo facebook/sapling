@@ -20,12 +20,12 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   $ cd foobar
   $ cat .hg/hgrc
   [paths]
-  default = */foo%bar (glob)
+  default = $TESTTMP/foo%bar
   $ hg paths
-  default = */foo%bar (glob)
+  default = $TESTTMP/foo%bar
   $ hg showconfig
-  bundle.mainreporoot=*/foobar (glob)
-  paths.default=*/foo%bar (glob)
+  bundle.mainreporoot=$TESTTMP/foobar
+  paths.default=$TESTTMP/foo%bar
   $ cd ..
 
 issue1829: wrong indentation

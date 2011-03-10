@@ -410,7 +410,7 @@ Verify strip protects against stripping wc parent when there are uncommited mods
   abort: local changes found
   [255]
   $ hg strip tip --keep
-  saved backup bundle to * (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg log --graph
   @  changeset:   0:9ab35a2d17cb
      tag:         tip
