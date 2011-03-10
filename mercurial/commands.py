@@ -1175,6 +1175,7 @@ def showconfig(ui, repo, *values, **opts):
         if len(items) > 1 or items and sections:
             raise util.Abort(_('only one config item permitted'))
     for section, name, value in ui.walkconfig(untrusted=untrusted):
+        value = str(value).replace('\n', '\\n')
         sectname = section + '.' + name
         if values:
             for v in values:

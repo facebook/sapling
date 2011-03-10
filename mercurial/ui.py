@@ -273,7 +273,7 @@ class ui(object):
         cfg = self._data(untrusted)
         for section in cfg.sections():
             for name, value in self.configitems(section, untrusted):
-                yield section, name, str(value).replace('\n', '\\n')
+                yield section, name, value
 
     def plain(self):
         '''is plain mode active?
