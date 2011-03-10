@@ -122,6 +122,9 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
                 props.setdefault(file, {})['svn:executable'] = '*'
             if 'l' in fctx.flags():
                 props.setdefault(file, {})['svn:special'] = '*'
+            isbinary = hgutil.binary(new_data)
+            if isbinary:
+                props.setdefault(file, {})['svn:mime-type'] = 'application/octet-stream'
 
             if file not in parent:
                 renamed = fctx.renamed()
@@ -141,6 +144,8 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
                 if ('l' in parent.filectx(file).flags()
                     and 'l' not in rev_ctx.filectx(file).flags()):
                     props.setdefault(file, {})['svn:special'] = None
+                if hgutil.binary(base_data) and not isbinary:
+                    props.setdefault(file, {})['svn:mime-type'] = None
                 action = 'modify'
         else:
             pos = file.rfind('/')
@@ -178,11 +183,7 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
         if tf in file_data and tf != ntf:
             file_data[ntf] = file_data[tf]
             if tf in props:
-                props[ntf] = props[tf]
-                del props[tf]
-            if hgutil.binary(file_data[ntf][1]):
-                props.setdefault(ntf, {}).update(props.get(ntf, {}))
-                props.setdefault(ntf, {})['svn:mime-type'] = 'application/octet-stream'
+                props[ntf] = props.pop(tf)
             del file_data[tf]
 
     addeddirs = [svnpath(d) for d in addeddirs]

@@ -92,11 +92,17 @@ class TestSingleDir(test_util.TestBase):
                                           islink=False,
                                           isexec=False,
                                           copied=False)
+            elif path == 'adding_binary':
+                return context.memfilectx(path=path,
+                                          data='\0binary',
+                                          islink=False,
+                                          isexec=False,
+                                          copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['tip'].node(), node.nullid),
                              'automated test',
-                             ['adding_file'],
+                             ['adding_file', 'adding_binary'],
                              file_callback,
                              'an_author',
                              '2009-10-19 18:49:30 -0500',
@@ -105,6 +111,13 @@ class TestSingleDir(test_util.TestBase):
         hg.update(repo, repo['tip'].node())
         self.pushrevisions()
         self.assertTrue('adding_file' in self.svnls(''))
+        self.assertEqual('application/octet-stream',
+                         self.svnpropget('adding_binary', 'svn:mime-type'))
+        # Now add another commit and test mime-type being reset
+        changes = [('adding_binary', 'adding_binary', 'no longer binary')]
+        self.commitchanges(changes)
+        self.pushrevisions()
+        self.assertEqual('', self.svnpropget('adding_binary', 'svn:mime-type'))
 
     def test_push_single_dir_at_subdir(self):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
