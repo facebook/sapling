@@ -177,12 +177,11 @@ class transplanter(object):
             lock.release()
             wlock.release()
 
-    def filter(self, filter, changelog, patchfile):
+    def filter(self, filter, node, changelog, patchfile):
         '''arbitrarily rewrite changeset before applying it'''
 
         self.ui.status(_('filtering %s\n') % patchfile)
         user, date, msg = (changelog[1], changelog[2], changelog[4])
-
         fd, headerfile = tempfile.mkstemp(prefix='hg-transplant-')
         fp = os.fdopen(fd, 'w')
         fp.write("# HG changeset patch\n")
@@ -194,7 +193,9 @@ class transplanter(object):
         try:
             util.system('%s %s %s' % (filter, util.shellquote(headerfile),
                                    util.shellquote(patchfile)),
-                        environ={'HGUSER': changelog[1]},
+                        environ={'HGUSER': changelog[1],
+                                 'HGREVISION': revlog.hex(node),
+                                 },
                         onerr=util.Abort, errprefix=_('filter failed'))
             user, date, msg = self.parselog(file(headerfile))[1:4]
         finally:
@@ -209,7 +210,7 @@ class transplanter(object):
         date = "%d %d" % (time, timezone)
         extra = {'transplant_source': node}
         if filter:
-            (user, date, message) = self.filter(filter, cl, patchfile)
+            (user, date, message) = self.filter(filter, node, cl, patchfile)
 
         if log:
             # we don't translate messages inserted into commits

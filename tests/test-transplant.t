@@ -330,6 +330,27 @@ test filter with failed patch
   [255]
   $ cd ..
 
+test environment passed to filter
+
+  $ hg init filter-environment
+  $ cd filter-environment
+  $ cat <<'EOF' >test-filter-environment
+  > #!/bin/sh
+  > echo "Transplant by $HGUSER" >> $1
+  > echo "Transplant from rev $HGREVISION" >> $1
+  > EOF
+  $ chmod +x test-filter-environment
+  $ hg transplant -s ../t --filter ./test-filter-environment 0
+  filtering * (glob)
+  applying 17ab29e464c6
+  17ab29e464c6 transplanted to 5190e68026a0
+
+  $ hg log --template '{rev} {parents} {desc}\n'
+  0  r1
+  Transplant by test
+  Transplant from rev 17ab29e464c6ca53e329470efe2a9918ac617a6f
+  $ cd ..
+
 
 test with a win32ext like setup (differing EOLs)
 
