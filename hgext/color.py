@@ -203,7 +203,7 @@ def uisetup(ui):
     if mode == 'win32':
         if w32effects is None:
             # only warn if color.mode is explicitly set to win32
-            ui.warn(_('win32console not found, please install pywin32\n'))
+            ui.warn(_('warning: failed to set color mode to %s\n') % mode)
             return
         _effects.update(w32effects)
     elif mode != 'ansi':
@@ -231,52 +231,96 @@ def extsetup(ui):
          _("when to colorize (boolean, always, auto, or never)"),
          _('TYPE')))
 
-try:
-    import re, pywintypes, win32console as win32c
+if os.name != 'nt':
+    w32effects = None
+else:
+    import re, ctypes
+
+    _kernel32 = ctypes.windll.kernel32
+
+    _WORD = ctypes.c_ushort
+
+    _INVALID_HANDLE_VALUE = -1
+
+    class _COORD(ctypes.Structure):
+        _fields_ = [('X', ctypes.c_short),
+                    ('Y', ctypes.c_short)]
+
+    class _SMALL_RECT(ctypes.Structure):
+        _fields_ = [('Left', ctypes.c_short),
+                    ('Top', ctypes.c_short),
+                    ('Right', ctypes.c_short),
+                    ('Bottom', ctypes.c_short)]
+
+    class _CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
+        _fields_ = [('dwSize', _COORD),
+                    ('dwCursorPosition', _COORD),
+                    ('wAttributes', _WORD),
+                    ('srWindow', _SMALL_RECT),
+                    ('dwMaximumWindowSize', _COORD)]
+
+    _STD_OUTPUT_HANDLE = 0xfffffff5L # (DWORD)-11
+    _STD_ERROR_HANDLE = 0xfffffff4L  # (DWORD)-12
+
+    _FOREGROUND_BLUE = 0x0001
+    _FOREGROUND_GREEN = 0x0002
+    _FOREGROUND_RED = 0x0004
+    _FOREGROUND_INTENSITY = 0x0008
+
+    _BACKGROUND_BLUE = 0x0010
+    _BACKGROUND_GREEN = 0x0020
+    _BACKGROUND_RED = 0x0040
+    _BACKGROUND_INTENSITY = 0x0080
+
+    _COMMON_LVB_REVERSE_VIDEO = 0x4000
+    _COMMON_LVB_UNDERSCORE = 0x8000
 
     # http://msdn.microsoft.com/en-us/library/ms682088%28VS.85%29.aspx
     w32effects = {
         'none': -1,
         'black': 0,
-        'red': win32c.FOREGROUND_RED,
-        'green': win32c.FOREGROUND_GREEN,
-        'yellow': win32c.FOREGROUND_RED | win32c.FOREGROUND_GREEN,
-        'blue': win32c.FOREGROUND_BLUE,
-        'magenta': win32c.FOREGROUND_BLUE | win32c.FOREGROUND_RED,
-        'cyan': win32c.FOREGROUND_BLUE | win32c.FOREGROUND_GREEN,
-        'white': (win32c.FOREGROUND_RED | win32c.FOREGROUND_GREEN |
-                  win32c.FOREGROUND_BLUE),
-        'bold': win32c.FOREGROUND_INTENSITY,
+        'red': _FOREGROUND_RED,
+        'green': _FOREGROUND_GREEN,
+        'yellow': _FOREGROUND_RED | _FOREGROUND_GREEN,
+        'blue': _FOREGROUND_BLUE,
+        'magenta': _FOREGROUND_BLUE | _FOREGROUND_RED,
+        'cyan': _FOREGROUND_BLUE | _FOREGROUND_GREEN,
+        'white': _FOREGROUND_RED | _FOREGROUND_GREEN | _FOREGROUND_BLUE,
+        'bold': _FOREGROUND_INTENSITY,
         'black_background': 0x100,                  # unused value > 0x0f
-        'red_background': win32c.BACKGROUND_RED,
-        'green_background': win32c.BACKGROUND_GREEN,
-        'yellow_background': win32c.BACKGROUND_RED | win32c.BACKGROUND_GREEN,
-        'blue_background': win32c.BACKGROUND_BLUE,
-        'purple_background': win32c.BACKGROUND_BLUE | win32c.BACKGROUND_RED,
-        'cyan_background': win32c.BACKGROUND_BLUE | win32c.BACKGROUND_GREEN,
-        'white_background': (win32c.BACKGROUND_RED | win32c.BACKGROUND_GREEN |
-                             win32c.BACKGROUND_BLUE),
-        'bold_background': win32c.BACKGROUND_INTENSITY,
-        'underline': win32c.COMMON_LVB_UNDERSCORE,  # double-byte charsets only
-        'inverse': win32c.COMMON_LVB_REVERSE_VIDEO, # double-byte charsets only
+        'red_background': _BACKGROUND_RED,
+        'green_background': _BACKGROUND_GREEN,
+        'yellow_background': _BACKGROUND_RED | _BACKGROUND_GREEN,
+        'blue_background': _BACKGROUND_BLUE,
+        'purple_background': _BACKGROUND_BLUE | _BACKGROUND_RED,
+        'cyan_background': _BACKGROUND_BLUE | _BACKGROUND_GREEN,
+        'white_background': (_BACKGROUND_RED | _BACKGROUND_GREEN |
+                             _BACKGROUND_BLUE),
+        'bold_background': _BACKGROUND_INTENSITY,
+        'underline': _COMMON_LVB_UNDERSCORE,  # double-byte charsets only
+        'inverse': _COMMON_LVB_REVERSE_VIDEO, # double-byte charsets only
     }
 
-    passthrough = set([win32c.FOREGROUND_INTENSITY,
-                       win32c.BACKGROUND_INTENSITY,
-                       win32c.COMMON_LVB_UNDERSCORE,
-                       win32c.COMMON_LVB_REVERSE_VIDEO])
+    passthrough = set([_FOREGROUND_INTENSITY,
+                       _BACKGROUND_INTENSITY,
+                       _COMMON_LVB_UNDERSCORE,
+                       _COMMON_LVB_REVERSE_VIDEO])
 
-    try:
-        stdout = win32c.GetStdHandle(win32c.STD_OUTPUT_HANDLE)
-        if stdout is None:
-            raise ImportError()
-        origattr = stdout.GetConsoleScreenBufferInfo()['Attributes']
-    except pywintypes.error:
-        # stdout may be defined but not support
-        # GetConsoleScreenBufferInfo(), when called from subprocess or
-        # redirected.
-        raise ImportError()
-    ansire = re.compile('\033\[([^m]*)m([^\033]*)(.*)', re.MULTILINE | re.DOTALL)
+    stdout = _kernel32.GetStdHandle(
+                  _STD_OUTPUT_HANDLE)  # don't close the handle returned
+    if stdout is None or stdout == _INVALID_HANDLE_VALUE:
+        w32effects = None
+    else:
+        csbi = _CONSOLE_SCREEN_BUFFER_INFO()
+        if not _kernel32.GetConsoleScreenBufferInfo(
+                    stdout, ctypes.byref(csbi)):
+            # stdout may not support GetConsoleScreenBufferInfo()
+            # when called from subprocess or redirected
+            w32effects = None
+        else:
+            origattr = csbi.wAttributes
+            ansire = re.compile('\033\[([^m]*)m([^\033]*)(.*)',
+                                re.MULTILINE | re.DOTALL)
 
     def win32print(text, orig, **opts):
         label = opts.get('label', '')
@@ -308,12 +352,9 @@ try:
             for sattr in m.group(1).split(';'):
                 if sattr:
                     attr = mapcolor(int(sattr), attr)
-            stdout.SetConsoleTextAttribute(attr)
+            _kernel32.SetConsoleTextAttribute(stdout, attr)
             orig(m.group(2), **opts)
             m = re.match(ansire, m.group(3))
 
         # Explicity reset original attributes
-        stdout.SetConsoleTextAttribute(origattr)
-
-except ImportError:
-    w32effects = None
+        _kernel32.SetConsoleTextAttribute(stdout, origattr)
