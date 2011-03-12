@@ -7,6 +7,7 @@
 
 from node import hex
 import encoding, patch, util, error
+from i18n import gettext
 
 def showlist(name, values, plural=None, **args):
     '''expand set of values.
@@ -143,12 +144,20 @@ def getrenamedfn(repo, endrev=None):
 
 
 def showauthor(repo, ctx, templ, **args):
+    """:author: String. The unmodified author of the changeset."""
     return ctx.user()
 
 def showbranch(**args):
+    """:branch: String. The name of the branch on which the changeset was
+    committed.
+    """
     return args['ctx'].branch()
 
 def showbranches(**args):
+    """:branches: List of strings. The name of the branch on which the
+    changeset was committed. Will be empty if the branch name was
+    default.
+    """
     branch = args['ctx'].branch()
     if branch != 'default':
         return showlist('branch', [branch], plural='branches', **args)
@@ -158,17 +167,23 @@ def showbookmarks(**args):
     return showlist('bookmark', bookmarks, **args)
 
 def showchildren(**args):
+    """:children: List of strings. The children of the changeset."""
     ctx = args['ctx']
     childrevs = ['%d:%s' % (cctx, cctx) for cctx in ctx.children()]
     return showlist('children', childrevs, **args)
 
 def showdate(repo, ctx, templ, **args):
+    """:date: Date information. The date when the changeset was committed."""
     return ctx.date()
 
 def showdescription(repo, ctx, templ, **args):
+    """:desc: String. The text of the changeset description."""
     return ctx.description().strip()
 
 def showdiffstat(repo, ctx, templ, **args):
+    """:diffstat: String. Statistics of changes with the following format:
+    "modified files: +added/-removed lines"
+    """
     files, adds, removes = 0, 0, 0
     for i in patch.diffstatdata(util.iterlines(ctx.diff())):
         files += 1
@@ -184,10 +199,14 @@ def showextras(**args):
         yield templ('extra', **args)
 
 def showfileadds(**args):
+    """:file_adds: List of strings. Files added by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
     return showlist('file_add', getfiles(repo, ctx, revcache)[1], **args)
 
 def showfilecopies(**args):
+    """:file_copies: List of strings. Files copied in this changeset with
+    their sources.
+    """
     cache, ctx = args['cache'], args['ctx']
     copies = args['revcache'].get('copies')
     if copies is None:
@@ -207,25 +226,37 @@ def showfilecopies(**args):
 # provided before calling the templater, usually with a --copies
 # command line switch.
 def showfilecopiesswitch(**args):
+    """:file_copies_switch: List of strings. Like "file_copies" but displayed
+    only if the --copied switch is set.
+    """
     copies = args['revcache'].get('copies') or []
     c = [{'name': x[0], 'source': x[1]} for x in copies]
     return showlist('file_copy', c, plural='file_copies', **args)
 
 def showfiledels(**args):
+    """:file_dels: List of strings. Files removed by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
     return showlist('file_del', getfiles(repo, ctx, revcache)[2], **args)
 
 def showfilemods(**args):
+    """:file_mods: List of strings. Files modified by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
     return showlist('file_mod', getfiles(repo, ctx, revcache)[0], **args)
 
 def showfiles(**args):
+    """:files: List of strings. All files modified, added, or removed by this
+    changeset.
+    """
     return showlist('file', args['ctx'].files(), **args)
 
 def showlatesttag(repo, ctx, templ, cache, **args):
+    """:latesttag: String. Most recent global tag in the ancestors of this
+    changeset.
+    """
     return getlatesttags(repo, ctx, cache)[2]
 
 def showlatesttagdistance(repo, ctx, templ, cache, **args):
+    """:latesttagdistance: Integer. Longest path to the latest tag."""
     return getlatesttags(repo, ctx, cache)[1]
 
 def showmanifest(**args):
@@ -236,12 +267,17 @@ def showmanifest(**args):
     return templ('manifest', **args)
 
 def shownode(repo, ctx, templ, **args):
+    """:node: String. The changeset identification hash, as a 40 hexadecimal
+    digit string.
+    """
     return ctx.hex()
 
 def showrev(repo, ctx, templ, **args):
+    """:rev: Integer. The repository-local changeset revision number."""
     return ctx.rev()
 
 def showtags(**args):
+    """:tags: List of strings. Any tags associated with the changeset."""
     return showlist('tag', args['ctx'].tags(), **args)
 
 # keywords are callables like:
@@ -276,3 +312,20 @@ keywords = {
     'tags': showtags,
 }
 
+def makedoc(topic, doc):
+    """Generate and include keyword help in templating topic."""
+    kw = []
+    for name in sorted(keywords):
+        text = (keywords[name].__doc__ or '').rstrip()
+        if not text:
+            continue
+        text = gettext(text)
+        lines = text.splitlines()
+        lines[1:] = [('  ' + l.strip()) for l in lines[1:]]
+        kw.append('\n'.join(lines))
+    kw = '\n\n'.join(kw)
+    doc = doc.replace('.. keywordsmarker', kw)
+    return doc
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = keywords.values()

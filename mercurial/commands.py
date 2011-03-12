@@ -2142,6 +2142,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
                    'extensions\n'))
 
     help.addtopichook('revsets', revset.makedoc)
+    help.addtopichook('templates', templatekw.makedoc)
 
     if name and name != 'shortlist':
         i = None

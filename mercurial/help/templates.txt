@@ -23,52 +23,7 @@ Strings in curly braces are called keywords. The availability of
 keywords depends on the exact context of the templater. These
 keywords are usually available for templating a log-like command:
 
-:author: String. The unmodified author of the changeset.
-
-:branch: String. The name of the branch on which the changeset was
-    committed.
-
-:branches: List of strings. The name of the branch on which the
-    changeset was committed. Will be empty if the branch name was
-    default.
-
-:children: List of strings. The children of the changeset.
-
-:date: Date information. The date when the changeset was committed.
-
-:desc: String. The text of the changeset description.
-
-:diffstat: String. Statistics of changes with the following format:
-    "modified files: +added/-removed lines"
-
-:files: List of strings. All files modified, added, or removed by this
-    changeset.
-
-:file_adds: List of strings. Files added by this changeset.
-
-:file_copies: List of strings. Files copied in this changeset with
-    their sources.
-
-:file_copies_switch: List of strings. Like "file_copies" but displayed
-    only if the --copied switch is set.
-
-:file_mods: List of strings. Files modified by this changeset.
-
-:file_dels: List of strings. Files removed by this changeset.
-
-:node: String. The changeset identification hash, as a 40 hexadecimal
-    digit string.
-
-:parents: List of strings. The parents of the changeset.
-
-:rev: Integer. The repository-local changeset revision number.
-
-:tags: List of strings. Any tags associated with the changeset.
-
-:latesttag: String. Most recent global tag in the ancestors of this
-    changeset.
-
-:latesttagdistance: Integer. Longest path to the latest tag.
+.. keywordsmarker
 
 The "date" keyword does not produce human-readable output. If you
 want to use a date in your output, you can use a filter to process
