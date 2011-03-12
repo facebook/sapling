@@ -13,7 +13,7 @@ import hg, util, revlog, extensions, copies, error, bookmarks
 import patch, help, mdiff, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
-import minirst, revset
+import minirst, revset, templatefilters
 import dagparser
 
 # Commands start here, listed alphabetically
@@ -2143,6 +2143,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
 
     help.addtopichook('revsets', revset.makedoc)
     help.addtopichook('templates', templatekw.makedoc)
+    help.addtopichook('templates', templatefilters.makedoc)
 
     if name and name != 'shortlist':
         i = None

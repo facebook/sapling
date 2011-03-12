@@ -7,9 +7,12 @@
 
 import cgi, re, os, time, urllib
 import encoding, node, util
+from i18n import gettext
 
 def addbreaks(text):
-    '''replace raw newlines with xhtml line breaks.'''
+    """:addbreaks: Any text. Add an XHTML "<br />" tag before the end of
+    every line except the last.
+    """
     return text.replace('\n', '<br/>\n')
 
 agescales = [("year", 3600 * 24 * 365),
@@ -21,7 +24,9 @@ agescales = [("year", 3600 * 24 * 365),
              ("second", 1)]
 
 def age(date):
-    '''turn a (timestamp, tzoff) tuple into an age string.'''
+    """:age: Date. Returns a human-readable date/time difference between the
+    given date/time and the current date/time.
+    """
 
     def plural(t, c):
         if c == 1:
@@ -45,13 +50,24 @@ def age(date):
             return '%s ago' % fmt(t, n)
 
 def basename(path):
+    """:basename: Any text. Treats the text as a path, and returns the last
+    component of the path after splitting by the path separator
+    (ignoring trailing separators). For example, "foo/bar/baz" becomes
+    "baz" and "foo/bar//" becomes "bar".
+    """
     return os.path.basename(path)
 
 def datefilter(text):
+    """:date: Date. Returns a date in a Unix date format, including the
+    timezone: "Mon Sep 04 15:13:13 2006 0700".
+    """
     return util.datestr(text)
 
 def domain(author):
-    '''get domain of author, or empty string if none.'''
+    """:domain: Any text. Finds the first string that looks like an email
+    address, and extracts just the domain component. Example: ``User
+    <user@example.com>`` becomes ``example.com``.
+    """
     f = author.find('@')
     if f == -1:
         return ''
@@ -62,9 +78,16 @@ def domain(author):
     return author
 
 def email(text):
+    """:email: Any text. Extracts the first string that looks like an email
+    address. Example: ``User <user@example.com>`` becomes
+    ``user@example.com``.
+    """
     return util.email(text)
 
 def escape(text):
+    """:escape: Any text. Replaces the special XML/XHTML characters "&", "<"
+    and ">" with XML entities.
+    """
     return cgi.escape(text, True)
 
 para_re = None
@@ -96,28 +119,43 @@ def fill(text, width):
                     for para, rest in findparas()])
 
 def fill68(text):
+    """:fill68: Any text. Wraps the text to fit in 68 columns."""
     return fill(text, 68)
 
 def fill76(text):
+    """:fill76: Any text. Wraps the text to fit in 76 columns."""
     return fill(text, 76)
 
 def firstline(text):
-    '''return the first line of text'''
+    """:firstline: Any text. Returns the first line of text."""
     try:
         return text.splitlines(True)[0].rstrip('\r\n')
     except IndexError:
         return ''
 
 def hexfilter(text):
+    """:hex: Any text. Convert a binary Mercurial node identifier into
+    its long hexadecimal representation.
+    """
     return node.hex(text)
 
 def hgdate(text):
+    """:hgdate: Date. Returns the date as a pair of numbers: "1157407993
+    25200" (Unix timestamp, timezone offset).
+    """
     return "%d %d" % text
 
 def isodate(text):
+    """:isodate: Date. Returns the date in ISO 8601 format: "2009-08-18 13:00
+    +0200".
+    """
     return util.datestr(text, '%Y-%m-%d %H:%M %1%2')
 
 def isodatesec(text):
+    """:isodatesec: Date. Returns the date in ISO 8601 format, including
+    seconds: "2009-08-18 13:00:13 +0200". See also the rfc3339date
+    filter.
+    """
     return util.datestr(text, '%Y-%m-%d %H:%M:%S %1%2')
 
 def indent(text, prefix):
@@ -176,12 +214,17 @@ def jsonescape(s):
     return ''.join(_uescape(c) for c in s)
 
 def localdate(text):
+    """:localdate: Date. Converts a date to local date."""
     return (text[0], util.makedate()[1])
 
 def nonempty(str):
+    """:nonempty: Any text. Returns '(none)' if the string is empty."""
     return str or "(none)"
 
 def obfuscate(text):
+    """:obfuscate: Any text. Returns the input text rendered as a sequence of
+    XML entities.
+    """
     text = unicode(text, encoding.encoding, 'replace')
     return ''.join(['&#%d;' % ord(c) for c in text])
 
@@ -193,7 +236,7 @@ def permissions(flags):
     return "-rw-r--r--"
 
 def person(author):
-    '''get name of author, or else username.'''
+    """:person: Any text. Returns the text before an email address."""
     if not '@' in author:
         return author
     f = author.find('<')
@@ -202,31 +245,46 @@ def person(author):
     return author[:f].rstrip()
 
 def rfc3339date(text):
+    """:rfc3339date: Date. Returns a date using the Internet date format
+    specified in RFC 3339: "2009-08-18T13:00:13+02:00".
+    """
     return util.datestr(text, "%Y-%m-%dT%H:%M:%S%1:%2")
 
 def rfc822date(text):
+    """:rfc822date: Date. Returns a date using the same format used in email
+    headers: "Tue, 18 Aug 2009 13:00:13 +0200".
+    """
     return util.datestr(text, "%a, %d %b %Y %H:%M:%S %1%2")
 
 def short(text):
+    """:short: Changeset hash. Returns the short form of a changeset hash,
+    i.e. a 12 hexadecimal digit string.
+    """
     return text[:12]
 
 def shortdate(text):
+    """:shortdate: Date. Returns a date like "2006-09-18"."""
     return util.shortdate(text)
 
 def stringescape(text):
     return text.encode('string_escape')
 
 def stringify(thing):
-    '''turn nested template iterator into string.'''
+    """:stringify: Any type. Turns the value into text by converting values into
+    text and concatenating them.
+    """
     if hasattr(thing, '__iter__') and not isinstance(thing, str):
         return "".join([stringify(t) for t in thing if t is not None])
     return str(thing)
 
 def strip(text):
+    """:strip: Any text. Strips all leading and trailing whitespace."""
     return text.strip()
 
 def stripdir(text):
-    '''Treat the text as path and strip a directory level, if possible.'''
+    """:stripdir: Treat the text as path and strip a directory level, if
+    possible. For example, "foo" and "foo/bar" becomes "foo".
+    """
     dir = os.path.dirname(text)
     if dir == "":
         return os.path.basename(text)
@@ -234,12 +292,19 @@ def stripdir(text):
         return dir
 
 def tabindent(text):
+    """:tabindent: Any text. Returns the text, with every line except the
+    first starting with a tab character.
+    """
     return indent(text, '\t')
 
 def urlescape(text):
+    """:urlescape: Any text. Escapes all "special" characters. For example,
+    "foo bar" becomes "foo%20bar".
+    """
     return urllib.quote(text)
 
 def userfilter(text):
+    """:user: Any text. Returns the user portion of an email address."""
     return util.shortuser(text)
 
 def xmlescape(text):
@@ -286,3 +351,21 @@ filters = {
     "user": userfilter,
     "xmlescape": xmlescape,
 }
+
+def makedoc(topic, doc):
+    """Generate and include templatefilters help in templating topic."""
+    entries = []
+    for name in sorted(filters):
+        text = (filters[name].__doc__ or '').rstrip()
+        if not text:
+            continue
+        text = gettext(text)
+        lines = text.splitlines()
+        lines[1:] = [('  ' + l.strip()) for l in lines[1:]]
+        entries.append('\n'.join(lines))
+    entries = '\n\n'.join(entries)
+    doc = doc.replace('.. filtersmarker', entries)
+    return doc
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = filters.values()
