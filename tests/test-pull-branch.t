@@ -134,3 +134,30 @@ Should succeed because there is only one head on our branch:
   not updating, since new heads added
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
+Make changes on new branch on tt
+
+  $ hg branch branchC
+  marked working directory as branch branchC
+  $ echo b1 > bar 
+  $ hg ci -Am "commit on branchC"
+  adding bar
+
+Make changes on default branch on t
+
+  $ cd ../t
+  $ hg up -C default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo a1 > bar 
+  $ hg ci -Am "commit on default"
+  adding bar
+
+Pull branchC from tt
+
+  $ hg pull ../tt
+  pulling from ../tt
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads)

@@ -2989,7 +2989,10 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
         else:
             ui.status(_("not updating, since new heads added\n"))
     if modheads > 1:
-        ui.status(_("(run 'hg heads' to see heads, 'hg merge' to merge)\n"))
+        if (len(repo.branchheads()) > 1):
+            ui.status(_("(run 'hg heads' to see heads, 'hg merge' to merge)\n"))
+        else:
+            ui.status(_("(run 'hg heads' to see heads)\n"))
     else:
         ui.status(_("(run 'hg update' to get a working copy)\n"))
 
