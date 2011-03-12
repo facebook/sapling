@@ -205,6 +205,7 @@ def changelog(web, req, tmpl, shortlog=False):
                          "rev": i,
                          "node": hex(n),
                          "tags": webutil.nodetagsdict(web.repo, n),
+                         "bookmarks": webutil.nodebookmarksdict(web.repo, n),
                          "inbranch": webutil.nodeinbranch(web.repo, ctx),
                          "branches": webutil.nodebranchdict(web.repo, ctx)
                         })
@@ -247,6 +248,8 @@ def shortlog(web, req, tmpl):
 def changeset(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
     showtags = webutil.showtag(web.repo, tmpl, 'changesettag', ctx.node())
+    showbookmarks = webutil.showbookmark(web.repo, tmpl, 'changesetbookmark',
+                                         ctx.node())
     showbranch = webutil.nodebranchnodefault(ctx)
 
     files = []
@@ -270,6 +273,7 @@ def changeset(web, req, tmpl):
                 parent=webutil.parents(ctx),
                 child=webutil.children(ctx),
                 changesettag=showtags,
+                changesetbookmark=showbookmarks,
                 changesetbranch=showbranch,
                 author=ctx.user(),
                 desc=ctx.description(),
@@ -277,6 +281,7 @@ def changeset(web, req, tmpl):
                 files=files,
                 archives=web.archivelist(ctx.hex()),
                 tags=webutil.nodetagsdict(web.repo, ctx.node()),
+                bookmarks=webutil.nodebookmarksdict(web.repo, ctx.node()),
                 branch=webutil.nodebranchnodefault(ctx),
                 inbranch=webutil.nodeinbranch(web.repo, ctx),
                 branches=webutil.nodebranchdict(web.repo, ctx))
@@ -721,7 +726,7 @@ def graph(web, req, tmpl):
         user = cgi.escape(templatefilters.person(ctx.user()))
         branch = ctx.branch()
         branch = branch, web.repo.branchtags().get(branch) == ctx.node()
-        data.append((node, vtx, edges, desc, user, age, branch, ctx.tags()))
+        data.append((node, vtx, edges, desc, user, age, branch, ctx.tags(), ctx.bookmarks()))
 
     return tmpl('graph', rev=rev, revcount=revcount, uprev=uprev,
                 lessvars=lessvars, morevars=morevars, downrev=downrev,

@@ -61,7 +61,7 @@ revision
   <div class="main">
   
   <h2><a href="/">test</a></h2>
-  <h3>changeset 0:0cd96de13884  </h3>
+  <h3>changeset 0:0cd96de13884   </h3>
   
   <form class="search" action="/log">
   
@@ -286,7 +286,7 @@ revision
   <div class="main">
   
   <h2><a href="/">test</a></h2>
-  <h3>changeset 0:0cd96de13884  </h3>
+  <h3>changeset 0:0cd96de13884   </h3>
   
   <form class="search" action="/log">
   

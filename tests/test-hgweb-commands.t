@@ -15,6 +15,7 @@ Set up the repo
   adding da/foo
   adding foo
   $ hg tag 1.0
+  $ hg bookmark something
   $ echo another > foo
   $ hg branch stable
   marked working directory as branch stable
@@ -244,7 +245,7 @@ Logs and changes
    <tr class="parity0">
     <td class="age">1970-01-01</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/1d22e65f027e">branch</a><span class="branchhead">stable</span> <span class="tag">tip</span> </td>
+    <td class="description"><a href="/rev/1d22e65f027e">branch</a><span class="branchhead">stable</span> <span class="tag">tip</span> <span class="tag">something</span> </td>
    </tr>
    <tr class="parity1">
     <td class="age">1970-01-01</td>
@@ -314,7 +315,7 @@ Logs and changes
   <div class="main">
   
   <h2><a href="/">test</a></h2>
-  <h3>changeset 0:2ef0ac749a14  <span class="tag">1.0</span> </h3>
+  <h3>changeset 0:2ef0ac749a14  <span class="tag">1.0</span>  </h3>
   
   <form class="search" action="/log">
   
@@ -811,7 +812,7 @@ Overviews
   <script>
   <!-- hide script content
   
-  var data = [["1d22e65f027e", [0, 1], [[0, 0, 1]], "branch", "test", "1970-01-01", ["stable", true], ["tip"]], ["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"]]];
+  var data = [["1d22e65f027e", [0, 1], [[0, 0, 1]], "branch", "test", "1970-01-01", ["stable", true], ["tip"], ["something"]], ["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], []]];
   var graph = new Graph();
   graph.scale(39);
   
@@ -1070,7 +1071,7 @@ Graph json escape of multibyte character
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/graph/' \
   >     | grep '^var data ='
-  var data = [["40b4d6888e92", [0, 1], [[0, 0, 1]], "\u80fd", "test", "1970-01-01", ["stable", true], ["tip"]], ["1d22e65f027e", [0, 1], [[0, 0, 1]], "branch", "test", "1970-01-01", ["stable", false], []], ["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"]]];
+  var data = [["40b4d6888e92", [0, 1], [[0, 0, 1]], "\u80fd", "test", "1970-01-01", ["stable", true], ["tip"], ["something"]], ["1d22e65f027e", [0, 1], [[0, 0, 1]], "branch", "test", "1970-01-01", ["stable", false], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], []]];
 
 ERRORS ENCOUNTERED
 

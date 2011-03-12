@@ -289,6 +289,12 @@ Some tests for hgweb in an empty repository
   				tagspan += '<span class="tag">' + tag + '</span> ';
   			}
   		}
+  		if (cur[8].length) {
+  			for (var b in cur[8]) {
+  				var bookmark = cur[8][b];
+  				tagspan += '<span class="tag">' + bookmark + '</span> ';
+  			}
+  		}
   		tagspan += '</span>';
   	}
   	

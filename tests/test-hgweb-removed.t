@@ -56,7 +56,7 @@ revision
   <div class="main">
   
   <h2><a href="/">test</a></h2>
-  <h3>changeset 1:c78f6c5cbea9  <span class="tag">tip</span> </h3>
+  <h3>changeset 1:c78f6c5cbea9  <span class="tag">tip</span>  </h3>
   
   <form class="search" action="/log">
   
