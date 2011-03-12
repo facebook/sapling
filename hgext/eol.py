@@ -260,13 +260,15 @@ def reposetup(ui, repo):
 
             if eolmtime > cachemtime:
                 ui.debug("eol: detected change in .hgeol\n")
-                # TODO: we could introduce a method for this in dirstate.
                 wlock = None
                 try:
                     wlock = self.wlock()
-                    for f, e in self.dirstate._map.iteritems():
-                        self.dirstate._map[f] = (e[0], e[1], -1, 0)
-                    self.dirstate._dirty = True
+                    for f in self.dirstate:
+                        if self.dirstate[f] == 'n':
+                            # all normal files need to be looked at
+                            # again since the new .hgeol file might no
+                            # longer match a file it matched before
+                            self.dirstate.normallookup(f)
                     # Touch the cache to update mtime.
                     self.opener("eol.cache", "w").close()
                     wlock.release()
