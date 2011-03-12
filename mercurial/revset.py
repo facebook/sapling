@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import parser, util, error, discovery, help
+import parser, util, error, discovery, help, hbisect
 import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _
@@ -683,12 +683,27 @@ def bookmark(repo, subset, x):
                for r in bookmarksmod.listbookmarks(repo).values()])
     return [r for r in subset if r in bms]
 
+def bisected(repo, subset, x):
+    """``bisected(string)``
+    Changesets marked in the specified bisect state (good, bad, skip).
+    """
+    state = getstring(x, _("bisect requires a string")).lower()
+    if state not in ('good', 'bad', 'skip', 'unknown'):
+        raise ParseError(_('invalid bisect state'))
+    marked = set(repo.changelog.rev(n) for n in hbisect.load_state(repo)[state])
+    l = []
+    for r in subset:
+        if r in marked:
+            l.append(r)
+    return l
+
 symbols = {
     "adds": adds,
     "all": getall,
     "ancestor": ancestor,
     "ancestors": ancestors,
     "author": author,
+    "bisected": bisected,
     "bookmark": bookmark,
     "branch": branch,
     "children": children,

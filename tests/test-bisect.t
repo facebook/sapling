@@ -377,6 +377,44 @@ reproduce AssertionError, issue1445
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     msg 6
   
+  $ hg log -r "bisected(good)"
+  changeset:   0:b99c7b9c8e11
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     msg 0
+  
+  changeset:   5:7874a09ea728
+  user:        test
+  date:        Thu Jan 01 00:00:05 1970 +0000
+  summary:     msg 5
+  
+  $ hg log -r "bisected(bad)"
+  changeset:   6:a3d5c6fdf0d3
+  user:        test
+  date:        Thu Jan 01 00:00:06 1970 +0000
+  summary:     msg 6
+  
+  $ hg log -r "bisected(skip)"
+  changeset:   1:5cd978ea5149
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     msg 1
+  
+  changeset:   2:db07c04beaca
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     msg 2
+  
+  changeset:   3:b53bea5e2fcb
+  user:        test
+  date:        Thu Jan 01 00:00:03 1970 +0000
+  summary:     msg 3
+  
+  changeset:   4:9b2ba8336a65
+  user:        test
+  date:        Thu Jan 01 00:00:04 1970 +0000
+  summary:     msg 4
+  
 
   $ set +e
 
