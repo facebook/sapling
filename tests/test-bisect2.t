@@ -416,10 +416,14 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   summary:     merge 10,13
   
   Not all ancestors of this changeset have been checked.
-  To check the other ancestors, start from the common ancestor, dab8161ac8fc.
-  $ hg bisect -g 8 # dab8161ac8fc
+  Use bisect --extend to continue the bisection from
+  the common ancestor, dab8161ac8fc.
+  $ hg bisect --extend
+  Extending search to changeset 8:dab8161ac8fc
+  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg bisect -g # dab8161ac8fc
   Testing changeset 9:3c77083deb4a (3 changesets remaining, ~1 tests)
-  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect -b
   The first bad revision is:
   changeset:   9:3c77083deb4a

@@ -303,7 +303,8 @@ def backout(ui, repo, node=None, rev=None, **opts):
     return 0
 
 def bisect(ui, repo, rev=None, extra=None, command=None,
-               reset=None, good=None, bad=None, skip=None, noupdate=None):
+               reset=None, good=None, bad=None, skip=None, extend=None,
+               noupdate=None):
     """subdivision search of changesets
 
     This command helps to find changesets which introduce problems. To
@@ -326,6 +327,17 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     Returns 0 on success.
     """
+    def extendbisectrange(nodes, good):
+        # bisect is incomplete when it ends on a merge node and
+        # one of the parent was not checked.
+        parents = repo[nodes[0]].parents()
+        if len(parents) > 1:
+            side = good and state['bad'] or state['good']
+            num = len(set(i.node() for i in parents) & set(side))
+            if num == 1:
+                 return parents[0].ancestor(parents[1])
+        return None
+
     def print_result(nodes, good):
         displayer = cmdutil.show_changeset(ui, repo, {})
         if len(nodes) == 1:
@@ -336,14 +348,12 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 ui.write(_("The first bad revision is:\n"))
             displayer.show(repo[nodes[0]])
             parents = repo[nodes[0]].parents()
-            if len(parents) > 1:
-                side = good and state['bad'] or state['good']
-                num = len(set(i.node() for i in parents) & set(side))
-                if num == 1:
-                    common = parents[0].ancestor(parents[1])
-                    ui.write(_('Not all ancestors of this changeset have been'
-                               ' checked.\nTo check the other ancestors, start'
-                               ' from the common ancestor, %s.\n' % common))
+            extendnode = extendbisectrange(nodes, good)
+            if extendnode is not None:
+                ui.write(_('Not all ancestors of this changeset have been'
+                           ' checked.\nUse bisect --extend to continue the '
+                           'bisection from\nthe common ancestor, %s.\n')
+                         % short(extendnode.node()))
         else:
             # multiple possible revisions
             if good:
@@ -376,7 +386,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             bad = True
         else:
             reset = True
-    elif extra or good + bad + skip + reset + bool(command) > 1:
+    elif extra or good + bad + skip + reset + extend + bool(command) > 1:
         raise util.Abort(_('incompatible arguments'))
 
     if reset:
@@ -440,6 +450,18 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     # actually bisect
     nodes, changesets, good = hbisect.bisect(repo.changelog, state)
+    if extend:
+        if not changesets:
+            extendnode = extendbisectrange(nodes, good)
+            if extendnode is not None:
+                ui.write(_("Extending search to changeset %d:%s\n"
+                         % (extendnode.rev(), short(extendnode.node()))))
+                if noupdate:
+                    return
+                cmdutil.bail_if_changed(repo)
+                return hg.clean(repo, extendnode.node())
+        raise util.Abort(_("nothing to extend"))
+
     if changesets == 0:
         print_result(nodes, good)
     else:
@@ -4272,6 +4294,7 @@ table = {
           ('g', 'good', False, _('mark changeset good')),
           ('b', 'bad', False, _('mark changeset bad')),
           ('s', 'skip', False, _('skip testing changeset')),
+          ('e', 'extend', False, _('extend the bisect range')),
           ('c', 'command', '',
            _('use command to check changeset state'), _('CMD')),
           ('U', 'noupdate', False, _('do not update to target'))],

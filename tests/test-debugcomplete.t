@@ -199,7 +199,7 @@ Show all commands + options
   addremove: similarity, include, exclude, dry-run
   archive: no-decode, prefix, rev, type, subrepos, include, exclude
   backout: merge, parent, tool, rev, include, exclude, message, logfile, date, user
-  bisect: reset, good, bad, skip, command, noupdate
+  bisect: reset, good, bad, skip, extend, command, noupdate
   bookmarks: force, rev, delete, rename
   branch: force, clean
   branches: active, closed
