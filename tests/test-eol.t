@@ -398,6 +398,7 @@ Test issue2569 -- eol extension takes write lock on reading:
   $ touch .hgeol
   $ hg status --traceback
   ? .hgeol
+  $ chmod -R u+w .hg
   $ cd ..
 
 Test cleverencode: and cleverdecode: aliases for win32text extension
