@@ -21,7 +21,7 @@ hg debugsub with remapping
    source   C:\libs\foo-lib\
    revision 
 
-test cummulative remapping, the $HGRCPATH file is loaded first
+test cumulative remapping, the $HGRCPATH file is loaded first
 
   $ echo '[subpaths]' >> $HGRCPATH
   $ echo 'libfoo = libbar' >> $HGRCPATH
