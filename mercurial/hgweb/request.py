@@ -66,7 +66,7 @@ class wsgirequest(object):
 
     def drain(self):
         '''need to read all data from request, httplib is half-duplex'''
-        length = int(self.env.get('CONTENT_LENGTH', 0) or 0)
+        length = int(self.env.get('CONTENT_LENGTH') or 0)
         for s in util.filechunkiter(self.inp, limit=length):
             pass
 
