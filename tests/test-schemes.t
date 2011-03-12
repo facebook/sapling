@@ -25,7 +25,7 @@ check that {1} syntax works
 
   $ hg incoming --debug parts://localhost
   using http://localhost:$HGPORT/
-  sending between command
+  sending capabilities command
   comparing with parts://localhost
   sending heads command
   searching for changes

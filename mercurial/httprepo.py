@@ -52,10 +52,13 @@ class httprepository(wireproto.wirerepository):
 
     # look up capabilities only when needed
 
+    def _fetchcaps(self):
+        self.caps = set(self._call('capabilities').split())
+
     def get_caps(self):
         if self.caps is None:
             try:
-                self.caps = set(self._call('capabilities').split())
+                self._fetchcaps()
             except error.RepoError:
                 self.caps = set()
             self.ui.debug('capabilities: %s\n' %
@@ -195,7 +198,13 @@ def instance(ui, path, create):
             inst = httpsrepository(ui, path)
         else:
             inst = httprepository(ui, path)
-        inst.between([(nullid, nullid)])
+        try:
+            # Try to do useful work when checking compatibility.
+            # Usually saves a roundtrip since we want the caps anyway.
+            inst._fetchcaps()
+        except error.RepoError:
+            # No luck, try older compatibility check.
+            inst.between([(nullid, nullid)])
         return inst
     except error.RepoError:
         ui.note('(falling back to static-http)\n')
