@@ -129,7 +129,7 @@ def json(obj):
     else:
         raise TypeError('cannot encode type %s' % obj.__class__.__name__)
 
-def uescape(c):
+def _uescape(c):
     if ord(c) < 0x80:
         return c
     else:
@@ -143,7 +143,7 @@ _escapes = [
 def jsonescape(s):
     for k, v in _escapes:
         s = s.replace(k, v)
-    return ''.join(uescape(c) for c in s)
+    return ''.join(_uescape(c) for c in s)
 
 def nonempty(str):
     return str or "(none)"
