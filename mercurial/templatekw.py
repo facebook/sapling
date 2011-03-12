@@ -163,6 +163,9 @@ def showbranches(**args):
         return showlist('branch', [branch], plural='branches', **args)
 
 def showbookmarks(**args):
+    """:bookmarks: List of strings. Any bookmarks associated with the
+    changeset.
+    """
     bookmarks = args['ctx'].bookmarks()
     return showlist('bookmark', bookmarks, **args)
 

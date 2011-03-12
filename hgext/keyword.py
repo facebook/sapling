@@ -109,11 +109,14 @@ colortable = {
 }
 
 # date like in cvs' $Date
-utcdate = lambda x: util.datestr((x[0], 0), '%Y/%m/%d %H:%M:%S')
+def utcdate(text):
+    return util.datestr((text[0], 0), '%Y/%m/%d %H:%M:%S')
 # date like in svn's $Date
-svnisodate = lambda x: util.datestr(x, '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
+def svnisodate(text):
+    return util.datestr(text, '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
 # date like in svn's $Id
-svnutcdate = lambda x: util.datestr((x[0], 0), '%Y-%m-%d %H:%M:%SZ')
+def svnutcdate(text):
+    return util.datestr((text[0], 0), '%Y-%m-%d %H:%M:%SZ')
 
 # make keyword tools accessible
 kwtools = {'templater': None, 'hgcmd': ''}
