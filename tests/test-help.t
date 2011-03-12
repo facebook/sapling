@@ -765,6 +765,14 @@ Test a help topic
       working directory is checked out, it is equivalent to null. If an
       uncommitted merge is in progress, "." is the revision of the first parent.
 
+Test templating help
+
+  $ hg help templating | egrep '(desc|diffstat|firstline|nonempty)  '
+      desc        String. The text of the changeset description.
+      diffstat    String. Statistics of changes with the following format:
+      firstline   Any text. Returns the first line of text.
+      nonempty    Any text. Returns '(none)' if the string is empty.
+
 Test help hooks
 
   $ cat > helphook1.py <<EOF
