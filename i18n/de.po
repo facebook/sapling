@@ -14,7 +14,7 @@
 # Begriffe vermissen, während neue Nutzer sich eh noch nichts unter den
 # Begriffen vorstellen können und entweder `hg help` oder Google bemühen
 # müssen.
-# Gleichzeitig bringt fördert Suche nach "Mercurial Etikett" wenig
+# Gleichzeitig fördert die Suche nach "Mercurial Etikett" wenig
 # Brauchbares zu Tage.
 # Hier sollten diese krassen Eindeutschungen nur in der Erklärung zu "tag"
 # verwendet, sonst aber eher vermieden werden.
@@ -66,14 +66,17 @@ msgid ""
 "This section contains help for extensions that are distributed together with "
 "Mercurial. Help for other extensions is available in the help system."
 msgstr ""
+"Dieser Abschnitt enthält Hilfe für Erweiterungen, die zusammen mit Mercurial "
+"ausgeliefert werden. Hilfe für andere Erweiterungen sind über das Hilfe-System "
+"erreichbar."
 
 #, fuzzy
 msgid "Options:"
-msgstr "Optionen"
+msgstr "Optionen:"
 
 #, python-format
 msgid "    aliases: %s"
-msgstr "    Aliasse: %s"
+msgstr "    Aliase: %s"
 
 msgid "hooks for controlling repository access"
 msgstr "Hooks zur Zugriffsverwaltung"
@@ -132,6 +135,8 @@ msgid ""
 "Branch-based Access Control\n"
 "..........................."
 msgstr ""
+"Branch-basierte Zugriffskontrolle\n"
+"..........................."
 
 msgid ""
 "Use the ``acl.deny.branches`` and ``acl.allow.branches`` sections to\n"
@@ -163,6 +168,8 @@ msgid ""
 "Path-based Access Control\n"
 "........................."
 msgstr ""
+"Pfad-basierte Zugriffskontrolle\n"
+"........................."
 
 msgid ""
 "Use the ``acl.deny`` and ``acl.allow`` sections to have path-based\n"
@@ -180,6 +187,8 @@ msgid ""
 "Groups\n"
 "......"
 msgstr ""
+"Gruppen\n"
+"......"
 
 msgid ""
 "Group names must be prefixed with an ``@`` symbol. Specifying a group\n"
@@ -1345,6 +1354,8 @@ msgid ""
 "    The Mercurial source recognizes the following configuration\n"
 "    options, which you can set on the command line with ``--config``:"
 msgstr ""
+"    Die Mercurial Source kennt die folgenden Konfigurations-Optionen\n"
+"    die Sie auf der Kommando-Zeile mit ``--config`` setzen können"
 
 msgid ""
 "    :convert.hg.ignoreerrors: ignore integrity errors when reading.\n"
