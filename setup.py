@@ -56,6 +56,7 @@ from distutils.spawn import spawn, find_executable
 from distutils.ccompiler import new_compiler
 from distutils.errors import CCompilerError
 from distutils.sysconfig import get_python_inc
+from distutils.version import StrictVersion
 
 scripts = ['hg']
 if os.name == 'nt':
@@ -379,7 +380,7 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
     version = runcmd(['/usr/bin/xcodebuild', '-version'], {}).splitlines()[0]
     # Also parse only first digit, because 3.2.1 can't be parsed nicely
     if (version.startswith('Xcode') and
-        int(version.split()[1].split('.')[0]) >= 4):
+        StrictVersion(version.split()[1]) >= StrictVersion('4.0')):
         os.environ['ARCHFLAGS'] = '-arch i386 -arch x86_64'
 
 setup(name='mercurial',
