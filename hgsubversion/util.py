@@ -203,10 +203,22 @@ def _templatehelper(ctx, kw):
     else:
         raise hgutil.Abort('unrecognized hgsubversion keyword %s' % kw)
 
+def svnrevkw(**args):
+    """:svnrev: String. Converted subversion revision number."""
+    return _templatehelper(args['ctx'], 'svnrev')
+
+def svnpathkw(**args):
+    """:svnpath: String. Converted subversion revision project path."""
+    return _templatehelper(args['ctx'], 'svnpath')
+
+def svnuuidkw(**args):
+    """:svnuuid: String. Converted subversion revision repository identifier."""
+    return _templatehelper(args['ctx'], 'svnuuid')
+
 templatekeywords = {
-    'svnrev': (lambda repo, ctx, templ, **a: _templatehelper(ctx, 'svnrev')),
-    'svnpath': (lambda repo, ctx, templ, **a: _templatehelper(ctx, 'svnpath')),
-    'svnuuid': (lambda repo, ctx, templ, **a: _templatehelper(ctx, 'svnuuid')),
+    'svnrev': svnrevkw,
+    'svnpath': svnpathkw,
+    'svnuuid': svnuuidkw,
 }
 
 def revset_fromsvn(repo, subset, x):
