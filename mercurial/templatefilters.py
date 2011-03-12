@@ -44,6 +44,12 @@ def age(date):
         if n >= 2 or s == 1:
             return '%s ago' % fmt(t, n)
 
+def basename(path):
+    return os.path.basename(path)
+
+def datefilter(text):
+    return util.datestr(text)
+
 def domain(author):
     '''get domain of author, or empty string if none.'''
     f = author.find('@')
@@ -54,6 +60,12 @@ def domain(author):
     if f >= 0:
         author = author[:f]
     return author
+
+def email(text):
+    return util.email(text)
+
+def escape(text):
+    return cgi.escape(text, True)
 
 para_re = None
 space_re = None
@@ -83,12 +95,30 @@ def fill(text, width):
     return "".join([space_re.sub(' ', util.wrap(para, width=width)) + rest
                     for para, rest in findparas()])
 
+def fill68(text):
+    return fill(text, 68)
+
+def fill76(text):
+    return fill(text, 76)
+
 def firstline(text):
     '''return the first line of text'''
     try:
         return text.splitlines(True)[0].rstrip('\r\n')
     except IndexError:
         return ''
+
+def hexfilter(text):
+    return node.hex(text)
+
+def hgdate(text):
+    return "%d %d" % text
+
+def isodate(text):
+    return util.datestr(text, '%Y-%m-%d %H:%M %1%2')
+
+def isodatesec(text):
+    return util.datestr(text, '%Y-%m-%d %H:%M:%S %1%2')
 
 def indent(text, prefix):
     '''indent each non-empty line of text after first with prefix.'''
@@ -145,6 +175,9 @@ def jsonescape(s):
         s = s.replace(k, v)
     return ''.join(_uescape(c) for c in s)
 
+def localdate(text):
+    return (text[0], util.makedate()[1])
+
 def nonempty(str):
     return str or "(none)"
 
@@ -168,11 +201,29 @@ def person(author):
         return util.shortuser(author)
     return author[:f].rstrip()
 
+def rfc3339date(text):
+    return util.datestr(text, "%Y-%m-%dT%H:%M:%S%1:%2")
+
+def rfc822date(text):
+    return util.datestr(text, "%a, %d %b %Y %H:%M:%S %1%2")
+
+def short(text):
+    return text[:12]
+
+def shortdate(text):
+    return util.shortdate(text)
+
+def stringescape(text):
+    return text.encode('string_escape')
+
 def stringify(thing):
     '''turn nested template iterator into string.'''
     if hasattr(thing, '__iter__') and not isinstance(thing, str):
         return "".join([stringify(t) for t in thing if t is not None])
     return str(thing)
+
+def strip(text):
+    return text.strip()
 
 def stripdir(text):
     '''Treat the text as path and strip a directory level, if possible.'''
@@ -181,6 +232,15 @@ def stripdir(text):
         return os.path.basename(text)
     else:
         return dir
+
+def tabindent(text):
+    return indent(text, '\t')
+
+def urlescape(text):
+    return urllib.quote(text)
+
+def userfilter(text):
+    return util.shortuser(text)
 
 def xmlescape(text):
     text = (text
@@ -194,35 +254,35 @@ def xmlescape(text):
 filters = {
     "addbreaks": addbreaks,
     "age": age,
-    "basename": os.path.basename,
-    "date": lambda x: util.datestr(x),
+    "basename": basename,
+    "date": datefilter,
     "domain": domain,
-    "email": util.email,
-    "escape": lambda x: cgi.escape(x, True),
-    "fill68": lambda x: fill(x, width=68),
-    "fill76": lambda x: fill(x, width=76),
+    "email": email,
+    "escape": escape,
+    "fill68": fill68,
+    "fill76": fill76,
     "firstline": firstline,
-    "hex": node.hex,
-    "hgdate": lambda x: "%d %d" % x,
-    "isodate": lambda x: util.datestr(x, '%Y-%m-%d %H:%M %1%2'),
-    "isodatesec": lambda x: util.datestr(x, '%Y-%m-%d %H:%M:%S %1%2'),
+    "hex": hexfilter,
+    "hgdate": hgdate,
+    "isodate": isodate,
+    "isodatesec": isodatesec,
     "json": json,
     "jsonescape": jsonescape,
-    "localdate": lambda x: (x[0], util.makedate()[1]),
+    "localdate": localdate,
     "nonempty": nonempty,
     "obfuscate": obfuscate,
     "permissions": permissions,
     "person": person,
-    "rfc3339date": lambda x: util.datestr(x, "%Y-%m-%dT%H:%M:%S%1:%2"),
-    "rfc822date": lambda x: util.datestr(x, "%a, %d %b %Y %H:%M:%S %1%2"),
-    "short": lambda x: x[:12],
-    "shortdate": util.shortdate,
-    "stringescape": lambda x: x.encode('string_escape'),
+    "rfc3339date": rfc3339date,
+    "rfc822date": rfc822date,
+    "short": short,
+    "shortdate": shortdate,
+    "stringescape": stringescape,
     "stringify": stringify,
-    "strip": lambda x: x.strip(),
+    "strip": strip,
     "stripdir": stripdir,
-    "tabindent": lambda x: indent(x, '\t'),
-    "urlescape": lambda x: urllib.quote(x),
-    "user": lambda x: util.shortuser(x),
+    "tabindent": tabindent,
+    "urlescape": urlescape,
+    "user": userfilter,
     "xmlescape": xmlescape,
 }
