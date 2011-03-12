@@ -136,6 +136,7 @@ tip - two revisions
   <li><a href="/shortlog/01de2d66a28d">log</a></li>
   <li><a href="/graph/01de2d66a28d">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -234,6 +235,7 @@ second version - two revisions
   <li><a href="/shortlog/01de2d66a28d">log</a></li>
   <li><a href="/graph/01de2d66a28d">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -332,6 +334,7 @@ first deleted - one revision
   <li><a href="/shortlog/5ed941583260">log</a></li>
   <li><a href="/graph/5ed941583260">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -425,6 +428,7 @@ first version - one revision
   <li><a href="/shortlog/5ed941583260">log</a></li>
   <li><a href="/graph/5ed941583260">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -514,6 +518,7 @@ before addition - error
   <li><a href="/shortlog">log</a></li>
   <li><a href="/graph">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   <li><a href="/help">help</a></li>
   </ul>

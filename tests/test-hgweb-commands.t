@@ -205,6 +205,7 @@ Logs and changes
   <li class="active">log</li>
   <li><a href="/graph/1d22e65f027e">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -297,6 +298,7 @@ Logs and changes
    <li><a href="/shortlog/2ef0ac749a14">log</a></li>
    <li><a href="/graph/2ef0ac749a14">graph</a></li>
    <li><a href="/tags">tags</a></li>
+   <li><a href="/bookmarks">bookmarks</a></li>
    <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -410,6 +412,7 @@ Logs and changes
   <li><a href="/shortlog">log</a></li>
   <li><a href="/graph">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   <li><a href="/help">help</a></li>
   </ul>

@@ -141,6 +141,18 @@ tagentry = '
       {node|short}
     </td>
   </tr>'
+bookmarks = bookmarks.tmpl
+bookmarkentry = '
+  <tr class="tagEntry parity{parity}">
+    <td>
+      <a href="{url}rev/{node|short}{sessionvars%urlparameter}">
+        {bookmark|escape}
+      </a>
+    </td>
+    <td class="node">
+      {node|short}
+    </td>
+  </tr>'
 branches = branches.tmpl
 branchentry = '
   <tr class="tagEntry parity{parity}">
