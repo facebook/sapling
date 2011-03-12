@@ -81,7 +81,7 @@ def firstline(text):
     except IndexError:
         return ''
 
-def nl2br(text):
+def addbreaks(text):
     '''replace raw newlines with xhtml line breaks.'''
     return text.replace('\n', '<br/>\n')
 
@@ -192,7 +192,7 @@ def nonempty(str):
     return str or "(none)"
 
 filters = {
-    "addbreaks": nl2br,
+    "addbreaks": addbreaks,
     "age": age,
     "basename": os.path.basename,
     "date": lambda x: util.datestr(x),
