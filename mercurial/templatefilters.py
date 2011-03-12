@@ -6,8 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import cgi, re, os, time, urllib
-import encoding, node, util
-from i18n import gettext
+import encoding, node, util, help
 
 def addbreaks(text):
     """:addbreaks: Any text. Add an XHTML "<br />" tag before the end of
@@ -353,19 +352,7 @@ filters = {
 }
 
 def makedoc(topic, doc):
-    """Generate and include templatefilters help in templating topic."""
-    entries = []
-    for name in sorted(filters):
-        text = (filters[name].__doc__ or '').rstrip()
-        if not text:
-            continue
-        text = gettext(text)
-        lines = text.splitlines()
-        lines[1:] = [('  ' + l.strip()) for l in lines[1:]]
-        entries.append('\n'.join(lines))
-    entries = '\n\n'.join(entries)
-    doc = doc.replace('.. filtersmarker', entries)
-    return doc
+    return help.makeitemsdoc(topic, doc, '.. filtersmarker', filters)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = filters.values()

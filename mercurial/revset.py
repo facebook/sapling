@@ -6,10 +6,10 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import parser, util, error, discovery
+import parser, util, error, discovery, help
 import bookmarks as bookmarksmod
 import match as matchmod
-from i18n import _, gettext
+from i18n import _
 
 elements = {
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
@@ -815,19 +815,7 @@ def match(spec):
     return mfunc
 
 def makedoc(topic, doc):
-    """Generate and include predicates help in revsets topic."""
-    predicates = []
-    for name in sorted(symbols):
-        text = symbols[name].__doc__
-        if not text:
-            continue
-        text = gettext(text.rstrip())
-        lines = text.splitlines()
-        lines[1:] = [('  ' + l.strip()) for l in lines[1:]]
-        predicates.append('\n'.join(lines))
-    predicates = '\n\n'.join(predicates)
-    doc = doc.replace('.. predicatesmarker', predicates)
-    return doc
+    return help.makeitemsdoc(topic, doc, '.. predicatesmarker', symbols)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()

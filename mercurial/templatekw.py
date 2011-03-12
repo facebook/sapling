@@ -6,8 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from node import hex
-import encoding, patch, util, error
-from i18n import gettext
+import encoding, patch, util, error, help
 
 def showlist(name, values, plural=None, **args):
     '''expand set of values.
@@ -316,19 +315,7 @@ keywords = {
 }
 
 def makedoc(topic, doc):
-    """Generate and include keyword help in templating topic."""
-    kw = []
-    for name in sorted(keywords):
-        text = (keywords[name].__doc__ or '').rstrip()
-        if not text:
-            continue
-        text = gettext(text)
-        lines = text.splitlines()
-        lines[1:] = [('  ' + l.strip()) for l in lines[1:]]
-        kw.append('\n'.join(lines))
-    kw = '\n\n'.join(kw)
-    doc = doc.replace('.. keywordsmarker', kw)
-    return doc
+    return help.makeitemsdoc(topic, doc, '.. keywordsmarker', keywords)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()

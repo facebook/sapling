@@ -115,3 +115,19 @@ helphooks = {
 
 def addtopichook(topic, rewriter):
     helphooks.setdefault(topic, []).append(rewriter)
+
+def makeitemsdoc(topic, doc, marker, items):
+    """Extract docstring from the items key to function mapping, build a
+    .single documentation block and use it to overwrite the marker in doc
+    """
+    entries = []
+    for name in sorted(items):
+        text = (items[name].__doc__ or '').rstrip()
+        if not text:
+            continue
+        text = gettext(text)
+        lines = text.splitlines()
+        lines[1:] = [('  ' + l.strip()) for l in lines[1:]]
+        entries.append('\n'.join(lines))
+    entries = '\n\n'.join(entries)
+    return doc.replace(marker, entries)
