@@ -2292,6 +2292,7 @@ def identify(ui, repo, source=None, rev=None,
     output = []
 
     revs = []
+    bms = []
     if source:
         source, branches = hg.parseurl(ui.expandpath(source))
         repo = hg.repository(ui, source)
@@ -2302,10 +2303,19 @@ def identify(ui, repo, source=None, rev=None,
             rev = revs[0]
         if not rev:
             rev = "tip"
-        if num or branch or tags or bookmarks:
-            raise util.Abort(_("can't query remote revision number,"
-                             " branch, tags, or bookmarks"))
-        output = [hexfunc(repo.lookup(rev))]
+        if num or branch or tags:
+            raise util.Abort(
+                _("can't query remote revision number, branch, or tags"))
+
+        remoterev = repo.lookup(rev)
+        if default or id:
+            output = [hexfunc(remoterev)]
+
+        if 'bookmarks' in repo.listkeys('namespaces'):
+            hexremoterev = hex(remoterev)
+            bms = [bm for bm, bmrev in repo.listkeys('bookmarks').iteritems()
+                   if bmrev == hexremoterev]
+
     elif not rev:
         ctx = repo[None]
         parents = ctx.parents()
@@ -2325,6 +2335,9 @@ def identify(ui, repo, source=None, rev=None,
         if num:
             output.append(str(ctx.rev()))
 
+    if repo.local():
+        bms = ctx.bookmarks()
+
     if repo.local() and default and not ui.quiet:
         b = ctx.branch()
         if b != 'default':
@@ -2335,8 +2348,9 @@ def identify(ui, repo, source=None, rev=None,
         if t:
             output.append(t)
 
+    if default and not ui.quiet:
         # multiple bookmarks for a single parent separated by '/'
-        bm = '/'.join(ctx.bookmarks())
+        bm = '/'.join(bms)
         if bm:
             output.append(bm)
 
@@ -2347,7 +2361,7 @@ def identify(ui, repo, source=None, rev=None,
         output.extend(ctx.tags())
 
     if bookmarks:
-        output.extend(ctx.bookmarks())
+        output.extend(bms)
 
     ui.write("%s\n" % ' '.join(output))
 
