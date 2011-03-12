@@ -8,11 +8,9 @@
 import cgi, re, os, time, urllib
 import encoding, node, util
 
-def stringify(thing):
-    '''turn nested template iterator into string.'''
-    if hasattr(thing, '__iter__') and not isinstance(thing, str):
-        return "".join([stringify(t) for t in thing if t is not None])
-    return str(thing)
+def addbreaks(text):
+    '''replace raw newlines with xhtml line breaks.'''
+    return text.replace('\n', '<br/>\n')
 
 agescales = [("year", 3600 * 24 * 365),
              ("month", 3600 * 24 * 30),
@@ -45,6 +43,17 @@ def age(date):
         n = delta // s
         if n >= 2 or s == 1:
             return '%s ago' % fmt(t, n)
+
+def domain(author):
+    '''get domain of author, or empty string if none.'''
+    f = author.find('@')
+    if f == -1:
+        return ''
+    author = author[f + 1:]
+    f = author.find('>')
+    if f >= 0:
+        author = author[:f]
+    return author
 
 para_re = None
 space_re = None
@@ -81,34 +90,6 @@ def firstline(text):
     except IndexError:
         return ''
 
-def addbreaks(text):
-    '''replace raw newlines with xhtml line breaks.'''
-    return text.replace('\n', '<br/>\n')
-
-def obfuscate(text):
-    text = unicode(text, encoding.encoding, 'replace')
-    return ''.join(['&#%d;' % ord(c) for c in text])
-
-def domain(author):
-    '''get domain of author, or empty string if none.'''
-    f = author.find('@')
-    if f == -1:
-        return ''
-    author = author[f + 1:]
-    f = author.find('>')
-    if f >= 0:
-        author = author[:f]
-    return author
-
-def person(author):
-    '''get name of author, or else username.'''
-    if not '@' in author:
-        return author
-    f = author.find('<')
-    if f == -1:
-        return util.shortuser(author)
-    return author[:f].rstrip()
-
 def indent(text, prefix):
     '''indent each non-empty line of text after first with prefix.'''
     lines = text.splitlines()
@@ -123,38 +104,6 @@ def indent(text, prefix):
             if i < num_lines - 1 or endswithnewline:
                 yield '\n'
     return "".join(indenter())
-
-def permissions(flags):
-    if "l" in flags:
-        return "lrwxrwxrwx"
-    if "x" in flags:
-        return "-rwxr-xr-x"
-    return "-rw-r--r--"
-
-def xmlescape(text):
-    text = (text
-            .replace('&', '&amp;')
-            .replace('<', '&lt;')
-            .replace('>', '&gt;')
-            .replace('"', '&quot;')
-            .replace("'", '&#39;')) # &apos; invalid in HTML
-    return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
-
-def uescape(c):
-    if ord(c) < 0x80:
-        return c
-    else:
-        return '\\u%04x' % ord(c)
-
-_escapes = [
-    ('\\', '\\\\'), ('"', '\\"'), ('\t', '\\t'), ('\n', '\\n'),
-    ('\r', '\\r'), ('\f', '\\f'), ('\b', '\\b'),
-]
-
-def jsonescape(s):
-    for k, v in _escapes:
-        s = s.replace(k, v)
-    return ''.join(uescape(c) for c in s)
 
 def json(obj):
     if obj is None or obj is False or obj is True:
@@ -180,6 +129,51 @@ def json(obj):
     else:
         raise TypeError('cannot encode type %s' % obj.__class__.__name__)
 
+def uescape(c):
+    if ord(c) < 0x80:
+        return c
+    else:
+        return '\\u%04x' % ord(c)
+
+_escapes = [
+    ('\\', '\\\\'), ('"', '\\"'), ('\t', '\\t'), ('\n', '\\n'),
+    ('\r', '\\r'), ('\f', '\\f'), ('\b', '\\b'),
+]
+
+def jsonescape(s):
+    for k, v in _escapes:
+        s = s.replace(k, v)
+    return ''.join(uescape(c) for c in s)
+
+def nonempty(str):
+    return str or "(none)"
+
+def obfuscate(text):
+    text = unicode(text, encoding.encoding, 'replace')
+    return ''.join(['&#%d;' % ord(c) for c in text])
+
+def permissions(flags):
+    if "l" in flags:
+        return "lrwxrwxrwx"
+    if "x" in flags:
+        return "-rwxr-xr-x"
+    return "-rw-r--r--"
+
+def person(author):
+    '''get name of author, or else username.'''
+    if not '@' in author:
+        return author
+    f = author.find('<')
+    if f == -1:
+        return util.shortuser(author)
+    return author[:f].rstrip()
+
+def stringify(thing):
+    '''turn nested template iterator into string.'''
+    if hasattr(thing, '__iter__') and not isinstance(thing, str):
+        return "".join([stringify(t) for t in thing if t is not None])
+    return str(thing)
+
 def stripdir(text):
     '''Treat the text as path and strip a directory level, if possible.'''
     dir = os.path.dirname(text)
@@ -188,8 +182,14 @@ def stripdir(text):
     else:
         return dir
 
-def nonempty(str):
-    return str or "(none)"
+def xmlescape(text):
+    text = (text
+            .replace('&', '&amp;')
+            .replace('<', '&lt;')
+            .replace('>', '&gt;')
+            .replace('"', '&quot;')
+            .replace("'", '&#39;')) # &apos; invalid in HTML
+    return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
 
 filters = {
     "addbreaks": addbreaks,
