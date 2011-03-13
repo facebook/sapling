@@ -98,24 +98,8 @@ def hasfunction(cc, funcname):
 try:
     import py2exe
     py2exeloaded = True
-
-    # Help py2exe to find win32com.shell
-    try:
-        import modulefinder
-        import win32com
-        for p in win32com.__path__[1:]: # Take the path to win32comext
-            modulefinder.AddPackagePath("win32com", p)
-        pn = "win32com.shell"
-        __import__(pn)
-        m = sys.modules[pn]
-        for p in m.__path__[1:]:
-            modulefinder.AddPackagePath(pn, p)
-    except ImportError:
-        pass
-
 except ImportError:
     py2exeloaded = False
-    pass
 
 def runcmd(cmd, env):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
