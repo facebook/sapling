@@ -473,9 +473,9 @@ def transplant(ui, repo, *revs, **opts):
     transplanted, otherwise you will be prompted to select the
     changesets you want.
 
-    :hg:`transplant --branch REVISION --all` will rebase the selected
-    branch (up to the named revision) onto your current working
-    directory.
+    :hg:`transplant --branch REVISION --all` will transplant the
+    selected branch (up to the named revision) onto your current
+    working directory.
 
     You can optionally mark selected transplanted changesets as merge
     changesets. You will not be prompted to transplant any ancestors
