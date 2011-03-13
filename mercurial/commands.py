@@ -487,9 +487,9 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         if mark is None:
             raise util.Abort(_("new bookmark name required"))
         marks[mark] = marks[rename]
-        del marks[rename]
         if repo._bookmarkcurrent == rename:
             bookmarks.setcurrent(repo, mark)
+        del marks[rename]
         bookmarks.write(repo)
         return
 
