@@ -21,8 +21,8 @@ from mercurial.i18n import _
 
 __all__ = [
    'log', 'rawfile', 'file', 'changelog', 'shortlog', 'changeset', 'rev',
-   'manifest', 'tags', 'branches', 'summary', 'filediff', 'diff', 'annotate',
-   'filelog', 'archive', 'static', 'graph', 'help',
+   'manifest', 'tags', 'bookmarks', 'branches', 'summary', 'filediff', 'diff',
+   'annotate', 'filelog', 'archive', 'static', 'graph', 'help',
 ]
 
 def log(web, req, tmpl):
@@ -205,6 +205,7 @@ def changelog(web, req, tmpl, shortlog=False):
                          "rev": i,
                          "node": hex(n),
                          "tags": webutil.nodetagsdict(web.repo, n),
+                         "bookmarks": webutil.nodebookmarksdict(web.repo, n),
                          "inbranch": webutil.nodeinbranch(web.repo, ctx),
                          "branches": webutil.nodebranchdict(web.repo, ctx)
                         })
@@ -247,6 +248,8 @@ def shortlog(web, req, tmpl):
 def changeset(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
     showtags = webutil.showtag(web.repo, tmpl, 'changesettag', ctx.node())
+    showbookmarks = webutil.showbookmark(web.repo, tmpl, 'changesetbookmark',
+                                         ctx.node())
     showbranch = webutil.nodebranchnodefault(ctx)
 
     files = []
@@ -270,6 +273,7 @@ def changeset(web, req, tmpl):
                 parent=webutil.parents(ctx),
                 child=webutil.children(ctx),
                 changesettag=showtags,
+                changesetbookmark=showbookmarks,
                 changesetbranch=showbranch,
                 author=ctx.user(),
                 desc=ctx.description(),
@@ -277,6 +281,7 @@ def changeset(web, req, tmpl):
                 files=files,
                 archives=web.archivelist(ctx.hex()),
                 tags=webutil.nodetagsdict(web.repo, ctx.node()),
+                bookmarks=webutil.nodebookmarksdict(web.repo, ctx.node()),
                 branch=webutil.nodebranchnodefault(ctx),
                 inbranch=webutil.nodeinbranch(web.repo, ctx),
                 branches=webutil.nodebranchdict(web.repo, ctx))
@@ -379,6 +384,30 @@ def tags(web, req, tmpl):
                    "node": hex(n)}
 
     return tmpl("tags",
+                node=hex(web.repo.changelog.tip()),
+                entries=lambda **x: entries(False, 0, **x),
+                entriesnotip=lambda **x: entries(True, 0, **x),
+                latestentry=lambda **x: entries(True, 1, **x))
+
+def bookmarks(web, req, tmpl):
+    i = web.repo._bookmarks.items()
+    i.reverse()
+    parity = paritygen(web.stripecount)
+
+    def entries(notip=False, limit=0, **map):
+        count = 0
+        for k, n in i:
+            if notip and k == "tip":
+                continue
+            if limit > 0 and count >= limit:
+                continue
+            count = count + 1
+            yield {"parity": parity.next(),
+                   "bookmark": k,
+                   "date": web.repo[n].date(),
+                   "node": hex(n)}
+
+    return tmpl("bookmarks",
                 node=hex(web.repo.changelog.tip()),
                 entries=lambda **x: entries(False, 0, **x),
                 entriesnotip=lambda **x: entries(True, 0, **x),
@@ -721,7 +750,8 @@ def graph(web, req, tmpl):
         user = cgi.escape(templatefilters.person(ctx.user()))
         branch = ctx.branch()
         branch = branch, web.repo.branchtags().get(branch) == ctx.node()
-        data.append((node, vtx, edges, desc, user, age, branch, ctx.tags()))
+        data.append((node, vtx, edges, desc, user, age, branch, ctx.tags(),
+                     ctx.bookmarks()))
 
     return tmpl('graph', rev=rev, revcount=revcount, uprev=uprev,
                 lessvars=lessvars, morevars=morevars, downrev=downrev,

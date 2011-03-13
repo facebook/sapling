@@ -43,6 +43,7 @@ revision
    <li><a href="/shortlog/0cd96de13884">log</a></li>
    <li><a href="/graph/0cd96de13884">graph</a></li>
    <li><a href="/tags">tags</a></li>
+   <li><a href="/bookmarks">bookmarks</a></li>
    <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -61,7 +62,7 @@ revision
   <div class="main">
   
   <h2><a href="/">test</a></h2>
-  <h3>changeset 0:0cd96de13884  </h3>
+  <h3>changeset 0:0cd96de13884   </h3>
   
   <form class="search" action="/log">
   
@@ -167,6 +168,7 @@ diff removed file
   <li><a href="/shortlog/78e4ebad7cdf">log</a></li>
   <li><a href="/graph/78e4ebad7cdf">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -268,6 +270,7 @@ revision
    <li><a href="/shortlog/0cd96de13884">log</a></li>
    <li><a href="/graph/0cd96de13884">graph</a></li>
    <li><a href="/tags">tags</a></li>
+   <li><a href="/bookmarks">bookmarks</a></li>
    <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -286,7 +289,7 @@ revision
   <div class="main">
   
   <h2><a href="/">test</a></h2>
-  <h3>changeset 0:0cd96de13884  </h3>
+  <h3>changeset 0:0cd96de13884   </h3>
   
   <form class="search" action="/log">
   
@@ -396,6 +399,7 @@ diff removed file
   <li><a href="/shortlog/78e4ebad7cdf">log</a></li>
   <li><a href="/graph/78e4ebad7cdf">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>

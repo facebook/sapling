@@ -51,6 +51,7 @@ manifest with descending
   <li><a href="/shortlog/9087c84a0f5d">log</a></li>
   <li><a href="/graph/9087c84a0f5d">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>

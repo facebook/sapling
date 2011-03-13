@@ -18,6 +18,7 @@
 <li><a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">log</a></li>
 <li class="active">graph</li>
 <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+<li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
 <li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
 <ul>
@@ -108,6 +109,12 @@ graph.vertex = function(x, y, color, parity, cur) \{
 			for (var t in cur[7]) \{
 				var tag = cur[7][t];
 				tagspan += '<span class="tag">' + tag + '</span> ';
+			}
+		}
+		if (cur[8].length) \{
+			for (var b in cur[8]) \{
+				var bookmark = cur[8][b];
+				tagspan += '<span class="tag">' + bookmark + '</span> ';
 			}
 		}
 		tagspan += '</span>';

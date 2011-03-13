@@ -12,6 +12,7 @@
  <li><a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">log</a></li>
  <li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
  <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+ <li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
  <li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
 <ul>
@@ -30,7 +31,7 @@
 <div class="main">
 
 <h2><a href="{url}{sessionvars%urlparameter}">{repo|escape}</a></h2>
-<h3>changeset {rev}:{node|short} {changesetbranch%changelogbranchname} {changesettag}</h3>
+<h3>changeset {rev}:{node|short} {changesetbranch%changelogbranchname} {changesettag} {changesetbookmark}</h3>
 
 <form class="search" action="{url}log">
 {sessionvars%hiddenformentry}

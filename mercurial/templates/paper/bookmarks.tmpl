@@ -1,9 +1,9 @@
 {header}
-<title>{repo|escape}: branches</title>
+<title>{repo|escape}: bookmarks</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-tags" title="Atom feed for {repo|escape}: branches" />
+   href="{url}atom-bookmarks" title="Atom feed for {repo|escape}: bookmarks" />
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-tags" title="RSS feed for {repo|escape}: branches" />
+   href="{url}rss-bookmarks" title="RSS feed for {repo|escape}: bookmarks" />
 </head>
 <body>
 
@@ -17,17 +17,17 @@
 <li><a href="{url}shortlog{sessionvars%urlparameter}">log</a></li>
 <li><a href="{url}graph{sessionvars%urlparameter}">graph</a></li>
 <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
-<li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
-<li class="active">branches</li>
+<li class="active">bookmarks</li>
+<li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
 <ul>
- <li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
+<li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
 </ul>
 </div>
 
 <div class="main">
 <h2><a href="{url}{sessionvars%urlparameter}">{repo|escape}</a></h2>
-<h3>branches</h3>
+<h3>bookmarks</h3>
 
 <form class="search" action="{url}log">
 {sessionvars%hiddenformentry}
@@ -38,21 +38,10 @@ files, or words in the commit message</div>
 
 <table class="bigtable">
 <tr>
- <th>branch</th>
+ <th>bookmark</th>
  <th>node</th>
 </tr>
-{entries %
-' <tr class="tagEntry parity{parity}">
-    <td>
-      <a href="{url}shortlog/{node|short}{sessionvars%urlparameter}" class="{status}">
-        {branch|escape}
-      </a>
-    </td>
-    <td class="node">
-      {node|short}
-    </td>
-  </tr>'
-}
+{entries%bookmarkentry}
 </table>
 </div>
 </div>

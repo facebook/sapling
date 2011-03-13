@@ -32,6 +32,7 @@ Some tests for hgweb in an empty repository
   <li class="active">log</li>
   <li><a href="/graph/000000000000">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -114,6 +115,7 @@ Some tests for hgweb in an empty repository
   <li class="active">log</li>
   <li><a href="/graph/000000000000">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -197,6 +199,7 @@ Some tests for hgweb in an empty repository
   <li><a href="/shortlog/000000000000">log</a></li>
   <li class="active">graph</li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -289,6 +292,12 @@ Some tests for hgweb in an empty repository
   				tagspan += '<span class="tag">' + tag + '</span> ';
   			}
   		}
+  		if (cur[8].length) {
+  			for (var b in cur[8]) {
+  				var bookmark = cur[8][b];
+  				tagspan += '<span class="tag">' + bookmark + '</span> ';
+  			}
+  		}
   		tagspan += '</span>';
   	}
   	
@@ -340,6 +349,7 @@ Some tests for hgweb in an empty repository
   <li><a href="/shortlog/000000000000">log</a></li>
   <li><a href="/graph/000000000000">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>

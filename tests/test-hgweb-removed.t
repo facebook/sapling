@@ -38,6 +38,7 @@ revision
    <li><a href="/shortlog/c78f6c5cbea9">log</a></li>
    <li><a href="/graph/c78f6c5cbea9">graph</a></li>
    <li><a href="/tags">tags</a></li>
+   <li><a href="/bookmarks">bookmarks</a></li>
    <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
@@ -56,7 +57,7 @@ revision
   <div class="main">
   
   <h2><a href="/">test</a></h2>
-  <h3>changeset 1:c78f6c5cbea9  <span class="tag">tip</span> </h3>
+  <h3>changeset 1:c78f6c5cbea9  <span class="tag">tip</span>  </h3>
   
   <form class="search" action="/log">
   
@@ -133,6 +134,7 @@ diff removed file
   <li><a href="/shortlog/c78f6c5cbea9">log</a></li>
   <li><a href="/graph/c78f6c5cbea9">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>

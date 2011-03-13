@@ -453,8 +453,13 @@ def transplant(ui, repo, *revs, **opts):
     '''transplant changesets from another branch
 
     Selected changesets will be applied on top of the current working
-    directory with the log of the original changeset. If --log is
-    specified, log messages will have a comment appended of the form::
+    directory with the log of the original changeset. The changesets
+    are copied and will thus appear twice in the history. Use the
+    rebase extension instead if you want to move a whole branch of
+    unpublished changesets.
+
+    If --log is specified, log messages will have a comment appended
+    of the form::
 
       (transplanted from CHANGESETHASH)
 
@@ -469,9 +474,9 @@ def transplant(ui, repo, *revs, **opts):
     transplanted, otherwise you will be prompted to select the
     changesets you want.
 
-    :hg:`transplant --branch REVISION --all` will rebase the selected
-    branch (up to the named revision) onto your current working
-    directory.
+    :hg:`transplant --branch REVISION --all` will transplant the
+    selected branch (up to the named revision) onto your current
+    working directory.
 
     You can optionally mark selected transplanted changesets as merge
     changesets. You will not be prompted to transplant any ancestors
