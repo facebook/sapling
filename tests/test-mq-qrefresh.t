@@ -487,3 +487,38 @@ Issue1441 with git patches:
 
   $ cd ..
 
+Refresh with bad usernames. Mercurial used to abort on bad usernames,
+but only after writing the bad name into the patch.
+
+  $ hg init bad-usernames
+  $ cd bad-usernames
+  $ touch a
+  $ hg add a
+  $ hg qnew a
+  $ hg qrefresh -u 'foo
+  > bar'
+  transaction abort!
+  rollback completed
+  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  abort: username 'foo\nbar' contains a newline!
+  [255]
+  $ cat .hg/patches/a
+  # HG changeset patch
+  # Parent 0000000000000000000000000000000000000000
+  diff --git a/a b/a
+  new file mode 100644
+  $ hg qpush
+  applying a
+  now at: a
+  $ hg qrefresh -u ' '
+  transaction abort!
+  rollback completed
+  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  abort: empty username!
+  [255]
+  $ cat .hg/patches/a
+  # HG changeset patch
+  # Parent 0000000000000000000000000000000000000000
+  diff --git a/a b/a
+  new file mode 100644
+  $ cd ..
