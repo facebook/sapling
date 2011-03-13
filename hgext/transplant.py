@@ -452,8 +452,13 @@ def transplant(ui, repo, *revs, **opts):
     '''transplant changesets from another branch
 
     Selected changesets will be applied on top of the current working
-    directory with the log of the original changeset. If --log is
-    specified, log messages will have a comment appended of the form::
+    directory with the log of the original changeset. The changesets
+    are copied and will thus appear twice in the history. Use the
+    rebase extension instead if you want to move a whole branch of
+    unpublished changesets.
+
+    If --log is specified, log messages will have a comment appended
+    of the form::
 
       (transplanted from CHANGESETHASH)
 
