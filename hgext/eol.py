@@ -127,6 +127,56 @@ filters = {
     'cleverdecode:': tocrlf
 }
 
+class eolfile(object):
+    def __init__(self, ui, root, data):
+        self._decode = {'LF': 'to-lf', 'CRLF': 'to-crlf', 'BIN': 'is-binary'}
+        self._encode = {'LF': 'to-lf', 'CRLF': 'to-crlf', 'BIN': 'is-binary'}
+
+        self.cfg = config.config()
+        # Our files should not be touched. The pattern must be
+        # inserted first override a '** = native' pattern.
+        self.cfg.set('patterns', '.hg*', 'BIN')
+        # We can then parse the user's patterns.
+        self.cfg.parse('.hgeol', data)
+
+        isrepolf = self.cfg.get('repository', 'native') != 'CRLF'
+        self._encode['NATIVE'] = isrepolf and 'to-lf' or 'to-crlf'
+        iswdlf = ui.config('eol', 'native', os.linesep) in ('LF', '\n')
+        self._decode['NATIVE'] = iswdlf and 'to-lf' or 'to-crlf'
+
+        include = []
+        exclude = []
+        for pattern, style in self.cfg.items('patterns'):
+            key = style.upper()
+            if key == 'BIN':
+                exclude.append(pattern)
+            else:
+                include.append(pattern)
+        # This will match the files for which we need to care
+        # about inconsistent newlines.
+        self.match = match.match(root, '', [], include, exclude)
+
+    def setfilters(self, ui):
+        for pattern, style in self.cfg.items('patterns'):
+            key = style.upper()
+            try:
+                ui.setconfig('decode', pattern, self._decode[key])
+                ui.setconfig('encode', pattern, self._encode[key])
+            except KeyError:
+                ui.warn(_("ignoring unknown EOL style '%s' from %s\n")
+                        % (style, self.cfg.source('patterns', pattern)))
+
+def parseeol(ui, repo, node=None):
+    try:
+        if node is None:
+            # Cannot use workingctx.data() since it would load
+            # and cache the filters before we configure them.
+            data = repo.wfile('.hgeol').read()
+        else:
+            data = repo[node]['.hgeol'].data()
+        return eolfile(ui, repo.root, data)
+    except (IOError, LookupError):
+        return None
 
 def hook(ui, repo, node, hooktype, **kwargs):
     """verify that files have expected EOLs"""
@@ -153,7 +203,7 @@ def hook(ui, repo, node, hooktype, **kwargs):
 def preupdate(ui, repo, hooktype, parent1, parent2):
     #print "preupdate for %s: %s -> %s" % (repo.root, parent1, parent2)
     try:
-        repo.readhgeol(parent1)
+        repo.loadeol(parent1)
     except error.ParseError, inst:
         ui.warn(_("warning: ignoring .hgeol file due to parse error "
                   "at %s: %s\n") % (inst.args[1], inst.args[0]))
@@ -184,62 +234,16 @@ def reposetup(ui, repo):
 
     class eolrepo(repo.__class__):
 
-        _decode = {'LF': 'to-lf', 'CRLF': 'to-crlf', 'BIN': 'is-binary'}
-        _encode = {'LF': 'to-lf', 'CRLF': 'to-crlf', 'BIN': 'is-binary'}
-
-        def readhgeol(self, node=None):
-            try:
-                if node is None:
-                    # Cannot use workingctx.data() since it would load
-                    # and cache the filters before we configure them.
-                    data = self.wfile('.hgeol').read()
-                else:
-                    data = self[node]['.hgeol'].data()
-            except (IOError, LookupError):
+        def loadeol(self, node=None):
+            eol = parseeol(self.ui, self, node)
+            if eol is None:
                 return None
-
-            if self.ui.config('eol', 'native', os.linesep) in ('LF', '\n'):
-                self._decode['NATIVE'] = 'to-lf'
-            else:
-                self._decode['NATIVE'] = 'to-crlf'
-
-            eol = config.config()
-            # Our files should not be touched. The pattern must be
-            # inserted first override a '** = native' pattern.
-            eol.set('patterns', '.hg*', 'BIN')
-            # We can then parse the user's patterns.
-            eol.parse('.hgeol', data)
-
-            if eol.get('repository', 'native') == 'CRLF':
-                self._encode['NATIVE'] = 'to-crlf'
-            else:
-                self._encode['NATIVE'] = 'to-lf'
-
-            for pattern, style in eol.items('patterns'):
-                key = style.upper()
-                try:
-                    self.ui.setconfig('decode', pattern, self._decode[key])
-                    self.ui.setconfig('encode', pattern, self._encode[key])
-                except KeyError:
-                    self.ui.warn(_("ignoring unknown EOL style '%s' from %s\n")
-                                 % (style, eol.source('patterns', pattern)))
-
-            include = []
-            exclude = []
-            for pattern, style in eol.items('patterns'):
-                key = style.upper()
-                if key == 'BIN':
-                    exclude.append(pattern)
-                else:
-                    include.append(pattern)
-
-            # This will match the files for which we need to care
-            # about inconsistent newlines.
-            return match.match(self.root, '', [], include, exclude)
+            eol.setfilters(self.ui)
+            return eol.match
 
         def _hgcleardirstate(self):
             try:
-                self._eolfile = self.readhgeol() or self.readhgeol('tip')
+                self._eolfile = (self.loadeol() or self.loadeol('tip'))
             except error.ParseError, inst:
                 ui.warn(_("warning: ignoring .hgeol file due to parse error "
                           "at %s: %s\n") % (inst.args[1], inst.args[0]))
