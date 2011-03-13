@@ -232,7 +232,7 @@ Some tests for hgweb in an empty repository
   
   <div id="wrapper">
   <ul id="nodebgs"></ul>
-  <canvas id="graph" width="224" height="12"></canvas>
+  <canvas id="graph" width="480" height="12"></canvas>
   <ul id="graphnodes"></ul>
   </div>
   
