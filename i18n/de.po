@@ -5570,7 +5570,7 @@ msgid ""
 msgstr ""
 "The --pager=... Option kann auch dazu benutzt werden, den Einsatz des\n"
 "Pagers zu kontrollieren. Benutzen Sie Werte wie yes, no, on, off, oder auto\n"
-"für normales Verhalten.
+"für normales Verhalten.\n"
 
 #, fuzzy
 msgid "when to paginate (boolean, always, auto, or never)"
@@ -6314,6 +6314,8 @@ msgid ""
 "    Returns 0 on success, 1 if nothing to rebase.\n"
 "    "
 msgstr ""
+"    Gibt 0 bei Erfolg zurück, oder 1, wenn es nichts zu verschieben gibt.\n"
+"    "
 
 msgid "cannot use both abort and continue"
 msgstr "abort und continue können nicht gleichzeitig genutzt werden"
@@ -6415,6 +6417,8 @@ msgid ""
 "rebase from the base of the specified changeset (up to greatest common "
 "ancestor of base and dest)"
 msgstr ""
+"verschiebt von der Basis des spezifizierten Changesets (bis zum größten "
+"gemeinsamen Vorgänger von base und dest)"
 
 #, fuzzy
 msgid "rebase onto the specified changeset"
@@ -6430,7 +6434,7 @@ msgid "keep original branch names"
 msgstr "Erhält die ursprünglichen Zweignamen"
 
 msgid "force detaching of source from its original branch"
-msgstr ""
+msgstr "erzwingt ein Abkoppeln der Quelle von ihrem ursprünglichen Zweig"
 
 msgid "continue an interrupted rebase"
 msgstr "Führt einen unterbrochenen Rebase fort"
@@ -6444,7 +6448,7 @@ msgid ""
 msgstr ""
 
 msgid "commands to interactively select changes for commit/qrefresh"
-msgstr ""
+msgstr "Befehle um interaktiv Änderungen für commit/qrefresh zu wählen"
 
 msgid "this modifies a binary file (all or nothing)\n"
 msgstr "Dies modifiziert eine Binärdatei (alles oder nicht)\n"
@@ -6466,10 +6470,10 @@ msgid "&No, skip this change"
 msgstr "&No, überspringt diese Änderung"
 
 msgid "&Skip remaining changes to this file"
-msgstr ""
+msgstr "&Überspringe die restlichen Änderungen an dieser Datei"
 
 msgid "Record remaining changes to this &file"
-msgstr ""
+msgstr "Zeichne die restlichen Änderungen an dieser &Datei auf"
 
 msgid "&Done, skip remaining changes and files"
 msgstr ""
