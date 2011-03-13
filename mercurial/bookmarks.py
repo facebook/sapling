@@ -163,6 +163,28 @@ def pushbookmark(repo, key, old, new):
     finally:
         w.release()
 
+def updatefromremote(ui, repo, remote):
+    ui.debug("checking for updated bookmarks\n")
+    rb = remote.listkeys('bookmarks')
+    changed = False
+    for k in rb.keys():
+        if k in repo._bookmarks:
+            nr, nl = rb[k], repo._bookmarks[k]
+            if nr in repo:
+                cr = repo[nr]
+                cl = repo[nl]
+                if cl.rev() >= cr.rev():
+                    continue
+                if cr in cl.descendants():
+                    repo._bookmarks[k] = cr.node()
+                    changed = True
+                    ui.status(_("updating bookmark %s\n") % k)
+                else:
+                    ui.warn(_("not updating divergent"
+                                   " bookmark %s\n") % k)
+    if changed:
+        write(repo)
+
 def diff(ui, repo, remote):
     ui.status(_("searching for changed bookmarks\n"))
 

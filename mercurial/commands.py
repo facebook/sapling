@@ -2977,6 +2977,7 @@ def pull(ui, repo, source="default", **opts):
             raise util.Abort(err)
 
     modheads = repo.pull(other, heads=revs, force=opts.get('force'))
+    bookmarks.updatefromremote(ui, repo, other)
     if checkout:
         checkout = str(repo.changelog.rev(other.lookup(checkout)))
     repo._subtoppath = source

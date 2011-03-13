@@ -1346,27 +1346,6 @@ class localrepository(repo.repository):
         finally:
             lock.release()
 
-        self.ui.debug("checking for updated bookmarks\n")
-        rb = remote.listkeys('bookmarks')
-        changed = False
-        for k in rb.keys():
-            if k in self._bookmarks:
-                nr, nl = rb[k], self._bookmarks[k]
-                if nr in self:
-                    cr = self[nr]
-                    cl = self[nl]
-                    if cl.rev() >= cr.rev():
-                        continue
-                    if cr in cl.descendants():
-                        self._bookmarks[k] = cr.node()
-                        changed = True
-                        self.ui.status(_("updating bookmark %s\n") % k)
-                    else:
-                        self.ui.warn(_("not updating divergent"
-                                       " bookmark %s\n") % k)
-        if changed:
-            bookmarks.write(self)
-
         return result
 
     def checkpush(self, force, revs):

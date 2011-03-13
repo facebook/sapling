@@ -8,7 +8,7 @@
 import errno, os, re, xml.dom.minidom, shutil, urlparse, posixpath
 import stat, subprocess, tarfile
 from i18n import _
-import config, util, node, error, cmdutil
+import config, util, node, error, cmdutil, bookmarks
 hg = None
 
 nullstate = ('', '', 'empty')
@@ -441,6 +441,7 @@ class hgsubrepo(abstractsubrepo):
                                  % (subrelpath(self), srcurl))
             other = hg.repository(self._repo.ui, srcurl)
             self._repo.pull(other)
+            bookmarks.updatefromremote(self._repo.ui, self._repo, other)
 
     def get(self, state, overwrite=False):
         self._get(state)
