@@ -166,17 +166,23 @@ class eolfile(object):
                 ui.warn(_("ignoring unknown EOL style '%s' from %s\n")
                         % (style, self.cfg.source('patterns', pattern)))
 
-def parseeol(ui, repo, node=None):
+def parseeol(ui, repo, nodes):
     try:
-        if node is None:
-            # Cannot use workingctx.data() since it would load
-            # and cache the filters before we configure them.
-            data = repo.wfile('.hgeol').read()
-        else:
-            data = repo[node]['.hgeol'].data()
-        return eolfile(ui, repo.root, data)
-    except (IOError, LookupError):
-        return None
+        for node in nodes:
+            try:
+                if node is None:
+                    # Cannot use workingctx.data() since it would load
+                    # and cache the filters before we configure them.
+                    data = repo.wfile('.hgeol').read()
+                else:
+                    data = repo[node]['.hgeol'].data()
+                return eolfile(ui, repo.root, data)
+            except (IOError, LookupError):
+                pass
+    except error.ParseError, inst:
+        ui.warn(_("warning: ignoring .hgeol file due to parse error "
+                  "at %s: %s\n") % (inst.args[1], inst.args[0]))
+    return None
 
 def hook(ui, repo, node, hooktype, **kwargs):
     """verify that files have expected EOLs"""
@@ -202,11 +208,7 @@ def hook(ui, repo, node, hooktype, **kwargs):
 
 def preupdate(ui, repo, hooktype, parent1, parent2):
     #print "preupdate for %s: %s -> %s" % (repo.root, parent1, parent2)
-    try:
-        repo.loadeol(parent1)
-    except error.ParseError, inst:
-        ui.warn(_("warning: ignoring .hgeol file due to parse error "
-                  "at %s: %s\n") % (inst.args[1], inst.args[0]))
+    repo.loadeol([parent1])
     return False
 
 def uisetup(ui):
@@ -234,21 +236,15 @@ def reposetup(ui, repo):
 
     class eolrepo(repo.__class__):
 
-        def loadeol(self, node=None):
-            eol = parseeol(self.ui, self, node)
+        def loadeol(self, nodes):
+            eol = parseeol(self.ui, self, nodes)
             if eol is None:
                 return None
             eol.setfilters(self.ui)
             return eol.match
 
         def _hgcleardirstate(self):
-            try:
-                self._eolfile = (self.loadeol() or self.loadeol('tip'))
-            except error.ParseError, inst:
-                ui.warn(_("warning: ignoring .hgeol file due to parse error "
-                          "at %s: %s\n") % (inst.args[1], inst.args[0]))
-                self._eolfile = None
-
+            self._eolfile = self.loadeol([None, 'tip'])
             if not self._eolfile:
                 self._eolfile = util.never
                 return
