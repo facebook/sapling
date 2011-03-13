@@ -187,17 +187,16 @@ def reposetup(ui, repo):
         _decode = {'LF': 'to-lf', 'CRLF': 'to-crlf', 'BIN': 'is-binary'}
         _encode = {'LF': 'to-lf', 'CRLF': 'to-crlf', 'BIN': 'is-binary'}
 
-        def readhgeol(self, node=None, data=None):
-            if data is None:
-                try:
-                    if node is None:
-                        # Cannot use workingctx.data() since it would load
-                        # and cache the filters before we configure them.
-                        data = self.wfile('.hgeol').read()
-                    else:
-                        data = self[node]['.hgeol'].data()
-                except (IOError, LookupError):
-                    return None
+        def readhgeol(self, node=None):
+            try:
+                if node is None:
+                    # Cannot use workingctx.data() since it would load
+                    # and cache the filters before we configure them.
+                    data = self.wfile('.hgeol').read()
+                else:
+                    data = self[node]['.hgeol'].data()
+            except (IOError, LookupError):
+                return None
 
             if self.ui.config('eol', 'native', os.linesep) in ('LF', '\n'):
                 self._decode['NATIVE'] = 'to-lf'
