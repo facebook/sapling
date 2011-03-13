@@ -686,6 +686,11 @@ Unused arguments:
   show revision history alongside an ASCII revision graph
   [255]
 
+Only one file is allowed:
+  $ hg log -G foo bar
+  abort: --graph option allows at most one file
+  [255]
+
 Empty revision range - display nothing:
   $ hg glog -r 1..0
 
