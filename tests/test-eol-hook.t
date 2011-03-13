@@ -81,3 +81,38 @@ Create repo
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+
+  $ printf "first\r\nsecond" > b.txt
+  $ hg add b.txt
+  $ hg commit -m 'CRLF b.txt'
+  $ hg push ../main
+  pushing to ../main
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  error: pretxnchangegroup hook failed: b.txt should not have CRLF line endings
+  transaction abort!
+  rollback completed
+  abort: b.txt should not have CRLF line endings
+  [255]
+
+  $ hg up -r -2
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ printf "some\nother\nfile" > c.txt
+  $ hg add c.txt
+  $ hg commit -m "LF c.txt, b.txt doesn't exist here"
+  created new head
+  $ hg push -f ../main
+  pushing to ../main
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  error: pretxnchangegroup hook failed: b.txt should not have CRLF line endings
+  transaction abort!
+  rollback completed
+  abort: b.txt should not have CRLF line endings
+  [255]

@@ -202,13 +202,20 @@ def parseeol(ui, repo, nodes):
 
 def hook(ui, repo, node, hooktype, **kwargs):
     """verify that files have expected EOLs"""
+    # Extract heads and get touched files set at the same time
     files = set()
+    heads = set()
     for rev in xrange(repo[node].rev(), len(repo)):
-        files.update(repo[rev].files())
-    tip = repo['tip']
-    eol = parseeol(ui, repo, [tip.node()])
-    if eol:
-        eol.checkrev(repo, tip, files)
+        ctx = repo[rev]
+        files.update(ctx.files())
+        heads.add(rev)
+        for pctx in ctx.parents():
+            heads.discard(pctx.rev())
+    for rev in heads:
+        ctx = repo[rev]
+        eol = parseeol(ui, repo, [ctx.node()])
+        if eol:
+            eol.checkrev(repo, ctx, files)
 
 def preupdate(ui, repo, hooktype, parent1, parent2):
     #print "preupdate for %s: %s -> %s" % (repo.root, parent1, parent2)
