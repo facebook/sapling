@@ -249,8 +249,6 @@ def graphlog(ui, repo, path=None, **opts):
     if start == nullrev:
         return
 
-    if path:
-        path = scmutil.canonpath(repo.root, os.getcwd(), path)
     if path: # could be reset in canonpath
         revdag = graphmod.filerevs(repo, path, start, stop, limit)
     else:

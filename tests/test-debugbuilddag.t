@@ -317,5 +317,5 @@ glog
 glog X
   $ hg glog --template '{rev}: {desc} [{branches}]\n' X
   o  2: r2 []
-  
+  |
   $ cd ..
