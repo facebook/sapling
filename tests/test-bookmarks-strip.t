@@ -84,19 +84,33 @@ are you there?
   $ hg bookmarks
   no bookmarks set
 
+can we commit? (issue2692)
+
+  $ echo c > c
+  $ hg ci -Am rockon
+  adding c
+
 can you be added again?
 
   $ hg bookmarks markb
   $ hg bookmarks
-   * markb                     0:07f494440405
+   * markb                     1:fdb34407462c
 
 rollback dry run with rollback information
 
   $ hg rollback -n
+  repository tip rolled back to revision 0 (undo commit)
+  $ hg bookmarks
+   * markb                     1:fdb34407462c
+
+rollback dry run with rollback information and no commit undo
+
+  $ rm .hg/store/undo
+  $ hg rollback -n
   no rollback information available
   [1]
   $ hg bookmarks
-   * markb                     0:07f494440405
+   * markb                     1:fdb34407462c
 
   $ cd ..
 
