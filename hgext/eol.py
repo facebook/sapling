@@ -76,8 +76,6 @@ The ``win32text.forbid*`` hooks provided by the win32text extension
 have been unified into a single hook named ``eol.hook``. The hook will
 lookup the expected line endings from the ``.hgeol`` file, which means
 you must migrate to a ``.hgeol`` file first before using the hook.
-Remember to enable the eol extension in the repository where you
-install the hook.
 
 See :hg:`help patterns` for more information about the glob patterns
 used.
@@ -166,6 +164,24 @@ class eolfile(object):
                 ui.warn(_("ignoring unknown EOL style '%s' from %s\n")
                         % (style, self.cfg.source('patterns', pattern)))
 
+    def checkrev(self, repo, ctx, files):
+        for f in files:
+            if f not in ctx:
+                continue
+            for pattern, style in self.cfg.items('patterns'):
+                if not match.match(repo.root, '', [pattern])(f):
+                    continue
+                target = self._encode[style.upper()]
+                data = ctx[f].data()
+                if target == "to-lf" and "\r\n" in data:
+                    raise util.Abort(_("%s should not have CRLF line endings")
+                                     % f)
+                elif target == "to-crlf" and singlelf.search(data):
+                    raise util.Abort(_("%s should not have LF line endings")
+                                     % f)
+                # Ignore other rules for this file
+                break
+
 def parseeol(ui, repo, nodes):
     try:
         for node in nodes:
@@ -190,21 +206,9 @@ def hook(ui, repo, node, hooktype, **kwargs):
     for rev in xrange(repo[node].rev(), len(repo)):
         files.update(repo[rev].files())
     tip = repo['tip']
-    for f in files:
-        if f not in tip:
-            continue
-        for pattern, target in ui.configitems('encode'):
-            if match.match(repo.root, '', [pattern])(f):
-                data = tip[f].data()
-                if target == "to-lf" and "\r\n" in data:
-                    raise util.Abort(_("%s should not have CRLF line endings")
-                                     % f)
-                elif target == "to-crlf" and singlelf.search(data):
-                    raise util.Abort(_("%s should not have LF line endings")
-                                     % f)
-                # Ignore other rules for this file
-                break
-
+    eol = parseeol(ui, repo, [tip.node()])
+    if eol:
+        eol.checkrev(repo, tip, files)
 
 def preupdate(ui, repo, hooktype, parent1, parent2):
     #print "preupdate for %s: %s -> %s" % (repo.root, parent1, parent2)

@@ -2,9 +2,6 @@ Test the EOL hook
 
   $ hg init main
   $ cat > main/.hg/hgrc <<EOF
-  > [extensions]
-  > eol =
-  > 
   > [hooks]
   > pretxnchangegroup = python:hgext.eol.hook
   > EOF
