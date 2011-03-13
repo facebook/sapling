@@ -191,6 +191,8 @@ def reposetup(ui, repo):
             if data is None:
                 try:
                     if node is None:
+                        # Cannot use workingctx.data() since it would load
+                        # and cache the filters before we configure them.
                         data = self.wfile('.hgeol').read()
                     else:
                         data = self[node]['.hgeol'].data()
