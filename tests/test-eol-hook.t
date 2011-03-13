@@ -116,3 +116,69 @@ Create repo
   rollback completed
   abort: b.txt should not have CRLF line endings
   [255]
+
+Test checkheadshook alias
+
+  $ cat > ../main/.hg/hgrc <<EOF
+  > [hooks]
+  > pretxnchangegroup = python:hgext.eol.checkheadshook
+  > EOF
+  $ hg push -f ../main
+  pushing to ../main
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  error: pretxnchangegroup hook failed: b.txt should not have CRLF line endings
+  transaction abort!
+  rollback completed
+  abort: b.txt should not have CRLF line endings
+  [255]
+
+We can fix the head and push again
+
+  $ hg up 6
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ printf "first\nsecond" > b.txt
+  $ hg ci -m "remove CRLF from b.txt"
+  $ hg push -f ../main
+  pushing to ../main
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 2 files (+1 heads)
+  $ hg -R ../main rollback
+  repository tip rolled back to revision 5 (undo push)
+  working directory now based on revision -1
+
+Test it still fails with checkallhook
+
+  $ cat > ../main/.hg/hgrc <<EOF
+  > [hooks]
+  > pretxnchangegroup = python:hgext.eol.checkallhook
+  > EOF
+  $ hg push -f ../main
+  pushing to ../main
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 2 files (+1 heads)
+  error: pretxnchangegroup hook failed: b.txt should not have CRLF line endings
+  transaction abort!
+  rollback completed
+  abort: b.txt should not have CRLF line endings
+  [255]
+
+But we can push the clean head
+
+  $ hg push -r7 -f ../main
+  pushing to ../main
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+

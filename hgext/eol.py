@@ -73,9 +73,13 @@ disable win32text and enable eol and your filters will still work. You
 only need to these filters until you have prepared a ``.hgeol`` file.
 
 The ``win32text.forbid*`` hooks provided by the win32text extension
-have been unified into a single hook named ``eol.hook``. The hook will
-lookup the expected line endings from the ``.hgeol`` file, which means
-you must migrate to a ``.hgeol`` file first before using the hook.
+have been unified into a single hook named ``eol.checkheadshook``. The
+hook will lookup the expected line endings from the ``.hgeol`` file,
+which means you must migrate to a ``.hgeol`` file first before using
+the hook. ``eol.checkheadshook`` only checks heads, intermediate
+invalid revisions will be pushed. To forbid them completely, use the
+``eol.checkallhook`` hook. These hooks are best used as
+``pretxnchangegroup`` hooks.
 
 See :hg:`help patterns` for more information about the glob patterns
 used.
@@ -200,22 +204,33 @@ def parseeol(ui, repo, nodes):
                   "at %s: %s\n") % (inst.args[1], inst.args[0]))
     return None
 
-def hook(ui, repo, node, hooktype, **kwargs):
-    """verify that files have expected EOLs"""
-    # Extract heads and get touched files set at the same time
+def _checkhook(ui, repo, node, headsonly):
+    # Get revisions to check and touched files at the same time
     files = set()
-    heads = set()
+    revs = set()
     for rev in xrange(repo[node].rev(), len(repo)):
         ctx = repo[rev]
         files.update(ctx.files())
-        heads.add(rev)
-        for pctx in ctx.parents():
-            heads.discard(pctx.rev())
-    for rev in heads:
+        revs.add(rev)
+        if headsonly:
+            for pctx in ctx.parents():
+                revs.discard(pctx.rev())
+    for rev in revs:
         ctx = repo[rev]
         eol = parseeol(ui, repo, [ctx.node()])
         if eol:
             eol.checkrev(repo, ctx, files)
+
+def checkallhook(ui, repo, node, hooktype, **kwargs):
+    """verify that files have expected EOLs"""
+    _checkhook(ui, repo, node, False)
+
+def checkheadshook(ui, repo, node, hooktype, **kwargs):
+    """verify that files have expected EOLs"""
+    _checkhook(ui, repo, node, True)
+
+# "checkheadshook" used to be called "hook"
+hook = checkheadshook
 
 def preupdate(ui, repo, hooktype, parent1, parent2):
     #print "preupdate for %s: %s -> %s" % (repo.root, parent1, parent2)
