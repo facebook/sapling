@@ -244,3 +244,47 @@ test id
 
   $ hg id
   db815d6d32e6 tip Y/Z/x  y
+
+test clone
+
+  $ hg bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+   * Z                         2:db815d6d32e6
+     x  y                      2:db815d6d32e6
+  $ hg clone . cloned-bookmarks
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R cloned-bookmarks bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         2:db815d6d32e6
+     x  y                      2:db815d6d32e6
+
+test clone with pull protocol
+
+  $ hg clone --pull . cloned-bookmarks-pull
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 3 files (+1 heads)
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R cloned-bookmarks-pull bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         2:db815d6d32e6
+     x  y                      2:db815d6d32e6
+
+test clone with a specific revision
+
+  $ hg clone -r 925d80 . cloned-bookmarks-rev
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R cloned-bookmarks-rev bookmarks
+     X2                        1:925d80f479bb

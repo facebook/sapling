@@ -199,3 +199,17 @@ verify that clone also expand urls
   store
   fncache
   dotencode
+
+clone bookmarks
+
+  $ hg -R local bookmark test
+  $ hg -R local bookmarks
+   * test                      0:08b9e9f63b32
+  $ hg clone -e "python ./dummyssh" local ssh://user@dummy/remote-bookmarks
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  $ hg -R remote-bookmarks bookmarks
+     test                      0:08b9e9f63b32

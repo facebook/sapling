@@ -9,7 +9,7 @@
 from i18n import _
 from lock import release
 from node import hex, nullid, nullrev, short
-import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo
+import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo, bookmarks
 import lock, util, extensions, error, encoding, node
 import cmdutil, discovery, url
 import merge as mergemod
@@ -365,6 +365,21 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 bn = dest_repo[uprev].branch()
                 dest_repo.ui.status(_("updating to branch %s\n") % bn)
                 _update(dest_repo, uprev)
+
+        # clone all bookmarks
+        if dest_repo.local() and src_repo.capable("pushkey"):
+            rb = src_repo.listkeys('bookmarks')
+            for k, n in rb.iteritems():
+                try:
+                    m = dest_repo.lookup(n)
+                    dest_repo._bookmarks[k] = m
+                except:
+                    pass
+            if rb:
+                bookmarks.write(dest_repo)
+        elif src_repo.local() and dest_repo.capable("pushkey"):
+            for k, n in src_repo._bookmarks.iteritems():
+                dest_repo.pushkey('bookmarks', k, '', hex(n))
 
         return src_repo, dest_repo
     finally:
