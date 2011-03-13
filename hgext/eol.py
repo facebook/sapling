@@ -243,8 +243,8 @@ def uisetup(ui):
 def extsetup(ui):
     try:
         extensions.find('win32text')
-        raise util.Abort(_("the eol extension is incompatible with the "
-                           "win32text extension"))
+        ui.warn(_("the eol extension is incompatible with the "
+                  "win32text extension\n"))
     except KeyError:
         pass
 
