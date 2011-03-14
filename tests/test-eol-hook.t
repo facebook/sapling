@@ -40,10 +40,12 @@ Create repo
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  error: pretxnchangegroup hook failed: a.txt should not have CRLF line endings
+  error: pretxnchangegroup hook failed: end-of-line check failed:
+    a.txt in a8ee6548cd86 should not have CRLF line endings
   transaction abort!
   rollback completed
-  abort: a.txt should not have CRLF line endings
+  abort: end-of-line check failed:
+    a.txt in a8ee6548cd86 should not have CRLF line endings
   [255]
 
   $ printf "first\nsecond\nthird\n" > a.txt
@@ -66,10 +68,12 @@ Create repo
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  error: pretxnchangegroup hook failed: crlf.txt should not have LF line endings
+  error: pretxnchangegroup hook failed: end-of-line check failed:
+    crlf.txt in 004ba2132725 should not have LF line endings
   transaction abort!
   rollback completed
-  abort: crlf.txt should not have LF line endings
+  abort: end-of-line check failed:
+    crlf.txt in 004ba2132725 should not have LF line endings
   [255]
 
   $ printf "first\r\nsecond\r\nthird\r\n" > crlf.txt
@@ -92,10 +96,12 @@ Create repo
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  error: pretxnchangegroup hook failed: b.txt should not have CRLF line endings
+  error: pretxnchangegroup hook failed: end-of-line check failed:
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
   transaction abort!
   rollback completed
-  abort: b.txt should not have CRLF line endings
+  abort: end-of-line check failed:
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
   [255]
 
   $ hg up -r -2
@@ -111,10 +117,12 @@ Create repo
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  error: pretxnchangegroup hook failed: b.txt should not have CRLF line endings
+  error: pretxnchangegroup hook failed: end-of-line check failed:
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
   transaction abort!
   rollback completed
-  abort: b.txt should not have CRLF line endings
+  abort: end-of-line check failed:
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
   [255]
 
 Test checkheadshook alias
@@ -130,10 +138,12 @@ Test checkheadshook alias
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  error: pretxnchangegroup hook failed: b.txt should not have CRLF line endings
+  error: pretxnchangegroup hook failed: end-of-line check failed:
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
   transaction abort!
   rollback completed
-  abort: b.txt should not have CRLF line endings
+  abort: end-of-line check failed:
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
   [255]
 
 We can fix the head and push again
@@ -166,10 +176,12 @@ Test it still fails with checkallhook
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files (+1 heads)
-  error: pretxnchangegroup hook failed: b.txt should not have CRLF line endings
+  error: pretxnchangegroup hook failed: end-of-line check failed:
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
   transaction abort!
   rollback completed
-  abort: b.txt should not have CRLF line endings
+  abort: end-of-line check failed:
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
   [255]
 
 But we can push the clean head
@@ -182,3 +194,24 @@ But we can push the clean head
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
+Test multiple files/revisions output
+
+  $ printf "another\r\nbad\r\none" > d.txt
+  $ hg add d.txt
+  $ hg ci -m "add d.txt"
+  $ hg push -f ../main
+  pushing to ../main
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 2 files (+1 heads)
+  error: pretxnchangegroup hook failed: end-of-line check failed:
+    d.txt in a7040e68714f should not have CRLF line endings
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
+  transaction abort!
+  rollback completed
+  abort: end-of-line check failed:
+    d.txt in a7040e68714f should not have CRLF line endings
+    b.txt in fbcf9b1025f5 should not have CRLF line endings
+  [255]
