@@ -1024,10 +1024,7 @@ class localrepository(repo.repository):
                 raise
 
             # update bookmarks, dirstate and mergestate
-            parents = (p1, p2)
-            if p2 == nullid:
-                parents = (p1,)
-            bookmarks.update(self, parents, ret)
+            bookmarks.update(self, p1, ret)
             for f in changes[0] + changes[1]:
                 self.dirstate.normal(f)
             for f in changes[2]:
