@@ -1618,7 +1618,7 @@ def diff(ui, repo, *pats, **opts):
         msg = _('cannot specify --rev and --change at the same time')
         raise util.Abort(msg)
     elif change:
-        node2 = repo.lookup(change)
+        node2 = cmdutil.revsingle(repo, change, None).node()
         node1 = repo[node2].parents()[0].node()
     else:
         node1, node2 = cmdutil.revpair(repo, revs)
