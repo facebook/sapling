@@ -59,14 +59,17 @@ from mercurial.i18n import _
 
 def _runpager(p):
     if not hasattr(os, 'fork'):
-        sys.stderr = sys.stdout = util.popen(p, 'wb')
+        sys.stdout = util.popen(p, 'wb')
+        if sys.stderr.isatty():
+            sys.stderr = sys.stdout
         return
     fdin, fdout = os.pipe()
     pid = os.fork()
     if pid == 0:
         os.close(fdin)
         os.dup2(fdout, sys.stdout.fileno())
-        os.dup2(fdout, sys.stderr.fileno())
+        if sys.stderr.isatty():
+            os.dup2(fdout, sys.stderr.fileno())
         os.close(fdout)
         return
     os.dup2(fdin, sys.stdin.fileno())
