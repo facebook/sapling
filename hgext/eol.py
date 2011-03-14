@@ -170,7 +170,7 @@ class eolfile(object):
 
     def checkrev(self, repo, ctx, files):
         failed = []
-        for f in files:
+        for f in (files or ctx.files()):
             if f not in ctx:
                 continue
             for pattern, style in self.cfg.items('patterns'):
@@ -207,10 +207,10 @@ def _checkhook(ui, repo, node, headsonly):
     files = set()
     revs = set()
     for rev in xrange(repo[node].rev(), len(repo)):
-        ctx = repo[rev]
-        files.update(ctx.files())
         revs.add(rev)
         if headsonly:
+            ctx = repo[rev]
+            files.update(ctx.files())
             for pctx in ctx.parents():
                 revs.discard(pctx.rev())
     failed = []
