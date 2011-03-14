@@ -73,7 +73,7 @@ class ErrorResponse(Exception):
     def __init__(self, code, message=None, headers=[]):
         if message is None:
             message = _statusmessage(code)
-        super(Exception, self).__init__()
+        Exception.__init__(self)
         self.code = code
         self.message = message
         self.headers = headers
