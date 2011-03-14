@@ -105,6 +105,10 @@ def runcmd(cmd, env):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, env=env)
     out, err = p.communicate()
+    return out, err
+
+def runhg(cmd, env):
+    out, err = runcmd(cmd, env)
     # If root is executing setup.py, but the repository is owned by
     # another user (as in "sudo python setup.py install") we will get
     # trust warnings since the .hg/hgrc file is untrusted. That is
@@ -135,7 +139,7 @@ if os.path.isdir('.hg'):
         # error 0xc0150004. See: http://bugs.python.org/issue3440
         env['SystemRoot'] = os.environ['SystemRoot']
     cmd = [sys.executable, 'hg', 'id', '-i', '-t']
-    l = runcmd(cmd, env).split()
+    l = runhg(cmd, env).split()
     while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
         l.pop()
     if len(l) > 1: # tag found
@@ -145,7 +149,7 @@ if os.path.isdir('.hg'):
     elif len(l) == 1: # no tag found
         cmd = [sys.executable, 'hg', 'parents', '--template',
                '{latesttag}+{latesttagdistance}-']
-        version = runcmd(cmd, env) + l[0]
+        version = runhg(cmd, env) + l[0]
     if version.endswith('+'):
         version += time.strftime('%Y%m%d')
 elif os.path.exists('.hg_archival.txt'):
@@ -361,7 +365,7 @@ if os.name == 'nt':
 if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
     # XCode 4.0 dropped support for ppc architecture, which is hardcoded in
     # distutils.sysconfig
-    version = runcmd(['/usr/bin/xcodebuild', '-version'], {}).splitlines()[0]
+    version = runcmd(['/usr/bin/xcodebuild', '-version'], {})[0].splitlines()[0]
     # Also parse only first digit, because 3.2.1 can't be parsed nicely
     if (version.startswith('Xcode') and
         StrictVersion(version.split()[1]) >= StrictVersion('4.0')):

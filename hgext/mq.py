@@ -1455,9 +1455,10 @@ class queue(object):
 
             try:
                 # might be nice to attempt to roll back strip after this
-                patchf.rename()
                 n = repo.commit(message, user, ph.date, match=match,
                                 force=True)
+                # only write patch after a successful commit
+                patchf.rename()
                 self.applied.append(statusentry(n, patchfn))
             except:
                 ctx = repo[cparents[0]]
