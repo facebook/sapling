@@ -1894,10 +1894,6 @@ class localrepository(repo.repository):
                 self.hook("incoming", node=hex(cl.node(i)),
                           source=srctype, url=url)
 
-        # FIXME - why does this care about tip?
-        if newheads == oldheads:
-            bookmarks.update(self, self.dirstate.parents(), self['tip'].node())
-
         # never return 0 here:
         if newheads < oldheads:
             return newheads - oldheads - 1

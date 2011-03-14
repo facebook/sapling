@@ -26,6 +26,7 @@ import bookmark by name
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  updating bookmark Y
   (run 'hg update' to get a working copy)
   $ hg bookmarks
      Y                         0:4e3505fd9583
