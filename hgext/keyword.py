@@ -126,6 +126,10 @@ def svnutcdate(text):
     '''
     return util.datestr((text[0], 0), '%Y-%m-%d %H:%M:%SZ')
 
+templatefilters.filters.update({'utcdate': utcdate,
+                                'svnisodate': svnisodate,
+                                'svnutcdate': svnutcdate})
+
 # make keyword tools accessible
 kwtools = {'templater': None, 'hgcmd': ''}
 
@@ -187,9 +191,6 @@ class kwtemplater(object):
                                   for k, v in kwmaps)
         else:
             self.templates = _defaultkwmaps(self.ui)
-        templatefilters.filters.update({'utcdate': utcdate,
-                                        'svnisodate': svnisodate,
-                                        'svnutcdate': svnutcdate})
 
     @util.propertycache
     def escape(self):
