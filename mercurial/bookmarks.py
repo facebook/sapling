@@ -101,13 +101,7 @@ def setcurrent(repo, mark):
     if current == mark:
         return
 
-    refs = repo._bookmarks
-
-    # do not update if we do update to a rev equal to the current bookmark
-    if (mark and mark not in refs and
-        current and refs[current] == repo.changectx('.').node()):
-        return
-    if mark not in refs:
+    if mark not in repo._bookmarks:
         mark = ''
     if not valid(mark):
         raise util.Abort(_("bookmark '%s' contains illegal "
