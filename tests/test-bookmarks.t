@@ -288,3 +288,36 @@ test clone with a specific revision
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-rev bookmarks
      X2                        1:925d80f479bb
+
+create bundle with two heads
+
+  $ hg clone . tobundle
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo x > tobundle/x
+  $ hg -R tobundle add tobundle/x
+  $ hg -R tobundle commit -m'x'
+  $ hg -R tobundle update -r -2
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo y > tobundle/y
+  $ hg -R tobundle branch test
+  marked working directory as branch test
+  $ hg -R tobundle add tobundle/y
+  $ hg -R tobundle commit -m'y'
+  $ hg -R tobundle bundle tobundle.hg
+  searching for changes
+  2 changesets found
+  $ hg unbundle tobundle.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg update
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+   * Z                         3:125c9a1d6df6
+     x  y                      2:db815d6d32e6
+

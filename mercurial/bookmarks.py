@@ -116,6 +116,15 @@ def setcurrent(repo, mark):
         wlock.release()
     repo._bookmarkcurrent = mark
 
+def updatecurrentbookmark(repo, oldnode, curbranch):
+    try:
+        update(repo, oldnode, repo.branchtags()[curbranch])
+    except KeyError:
+        if curbranch == "default": # no default branch!
+            update(repo, oldnode, repo.lookup("tip"))
+        else:
+            raise util.Abort(_("branch %s not found") % curbranch)
+
 def update(repo, parents, node):
     marks = repo._bookmarks
     update = False
