@@ -45,7 +45,7 @@ def readcurrent(repo):
         file = repo.opener('bookmarks.current')
         # No readline() in posixfile_nt, reading everything is cheap
         mark = encoding.tolocal((file.readlines() or [''])[0])
-        if mark == '':
+        if mark == '' or mark not in repo._bookmarks:
             mark = None
         file.close()
     return mark
