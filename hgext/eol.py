@@ -169,6 +169,7 @@ class eolfile(object):
                         % (style, self.cfg.source('patterns', pattern)))
 
     def checkrev(self, repo, ctx, files):
+        failed = []
         for f in files:
             if f not in ctx:
                 continue
@@ -177,14 +178,11 @@ class eolfile(object):
                     continue
                 target = self._encode[style.upper()]
                 data = ctx[f].data()
-                if target == "to-lf" and "\r\n" in data:
-                    raise util.Abort(_("%s should not have CRLF line endings")
-                                     % f)
-                elif target == "to-crlf" and singlelf.search(data):
-                    raise util.Abort(_("%s should not have LF line endings")
-                                     % f)
-                # Ignore other rules for this file
+                if (target == "to-lf" and "\r\n" in data
+                    or target == "to-crlf" and singlelf.search(data)):
+                    failed.append((str(ctx), target, f))
                 break
+        return failed
 
 def parseeol(ui, repo, nodes):
     try:
@@ -215,11 +213,20 @@ def _checkhook(ui, repo, node, headsonly):
         if headsonly:
             for pctx in ctx.parents():
                 revs.discard(pctx.rev())
+    failed = []
     for rev in revs:
         ctx = repo[rev]
         eol = parseeol(ui, repo, [ctx.node()])
         if eol:
-            eol.checkrev(repo, ctx, files)
+            failed.extend(eol.checkrev(repo, ctx, files))
+
+    if failed:
+        eols = {'to-lf': 'CRLF', 'to-crlf': 'LF'}
+        msgs = []
+        for node, target, f in failed:
+            msgs.append(_("  %s in %s should not have %s line endings") %
+                        (f, node, eols[target]))
+        raise util.Abort(_("end-of-line check failed:\n") + "\n".join(msgs))
 
 def checkallhook(ui, repo, node, hooktype, **kwargs):
     """verify that files have expected EOLs"""
