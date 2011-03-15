@@ -168,3 +168,12 @@ Test extdiff with --option:
   diffing this a.8a5febb7f867/a a.34eed99112ab/a
   [1]
 
+Test with revsets:
+
+  $ hg extdif -p echo -c "rev(1)"
+  a.8a5febb7f867/a a.34eed99112ab/a
+  [1]
+
+  $ hg extdif -p echo -r "0::1"
+  a.8a5febb7f867/a a.34eed99112ab/a
+  [1]
