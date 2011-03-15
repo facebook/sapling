@@ -37,7 +37,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-02-24 11:45+0100\n"
+"POT-Creation-Date: 2011-03-15 10:18+0100\n"
 "PO-Revision-Date: 2010-12-24 15:09+0100\n"
 "Last-Translator: Martin Roppelt <m.p.roppelt@web.de>\n"
 "Language-Team: German (http://transifex.net/projects/p/mercurial/team/de/) "
@@ -67,8 +67,8 @@ msgid ""
 "Mercurial. Help for other extensions is available in the help system."
 msgstr ""
 "Dieser Abschnitt enthält Hilfe für Erweiterungen, die zusammen mit Mercurial "
-"ausgeliefert werden. Hilfe für andere Erweiterungen sind über das Hilfe-System "
-"erreichbar."
+"ausgeliefert werden. Hilfe für andere Erweiterungen sind über das Hilfe-"
+"System erreichbar."
 
 #, fuzzy
 msgid "Options:"
@@ -959,11 +959,11 @@ msgstr ""
 "Kommandos anhand der Änderung (hinzugefügte oder entfernte Zeilen, \n"
 "Dateistatus und abschließender Leeraum) ein."
 
+#, fuzzy
 msgid ""
 "Other effects in addition to color, like bold and underlined text, are\n"
 "also available. Effects are rendered with the ECMA-48 SGR control\n"
-"function (aka ANSI escape codes). This module also provides the\n"
-"render_text function, which can be used to add effects to any text."
+"function (aka ANSI escape codes)."
 msgstr ""
 "Neben Farbänderungen sind auch andere Effekte wie Fettschreibung oder\n"
 "Unterstreichung möglich. Die Effekte werden durch die ECMA-48 SGR\n"
@@ -1074,8 +1074,9 @@ msgstr ""
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
 msgstr "Ignoriere unbekannte Farbe/Effekt %r (gesetzt in color.%s)\n"
 
-msgid "win32console not found, please install pywin32\n"
-msgstr "win32console nicht gefunden, bitte installiere pywin32\n"
+#, python-format
+msgid "warning: failed to set color mode to %s\n"
+msgstr ""
 
 #. i18n: 'always', 'auto', and 'never' are keywords and should
 #. not be translated
@@ -1367,8 +1368,9 @@ msgstr ""
 "        zu reparieren, während Sie von oder nach Mercurial konvertieren.\n"
 "        Default ist False."
 
+#, fuzzy
 msgid ""
-"    :convert.hg.saverev: store original. revision ID in changeset\n"
+"    :convert.hg.saverev: store original revision ID in changeset\n"
 "        (forces target IDs to change). It takes and boolean argument\n"
 "        and defaults to False."
 msgstr ""
@@ -1534,9 +1536,10 @@ msgstr ""
 msgid "    The following options can be set with ``--config``:"
 msgstr "    Die folgenden Optionen können mit ``--config`` gesetzt werden:"
 
+#, fuzzy
 msgid ""
 "    :convert.svn.branches: specify the directory containing branches.\n"
-"        The defaults is ``branches``."
+"        The default is ``branches``."
 msgstr ""
 "    :convert.svn.branches: Spezifiziere das Verzeichnis, das die Branches\n"
 "        enthält. Der Default ist ``branches``."
@@ -1548,9 +1551,10 @@ msgstr ""
 "    :convert.svn.tags: Spezifiziere das Verzeichnis, das die Tags enthält.\n"
 "        Der Default ist ``tags``."
 
+#, fuzzy
 msgid ""
-"    :convert.svn.trunk: specify the name of the trunk branch The\n"
-"        defauls is ``trunk``."
+"    :convert.svn.trunk: specify the name of the trunk branch. The\n"
+"        default is ``trunk``."
 msgstr ""
 "    :convert.svn.trunk: Spezifiziere den Namen des trunk Branches. Der\n"
 "        Default ist ``trunk``."
@@ -1604,8 +1608,9 @@ msgstr ""
 "    Es ist möglich die zu konvertierte Quellhistorie durch Angabe einer\n"
 "    Startrevision zu begrenzen."
 
+#, fuzzy
 msgid ""
-"    :convert.p4.startrev: specify initial Perforce revision, a\n"
+"    :convert.p4.startrev: specify initial Perforce revision (a\n"
 "        Perforce changelist number)."
 msgstr ""
 "    :convert.p4.startrev: Spezifiziere die Perforce Start-Revision (eine\n"
@@ -1636,9 +1641,10 @@ msgstr ""
 "    :convert.hg.tagsbranch: Branch Name für Tag Revisionen. Der Default\n"
 "        ist ``default``."
 
+#, fuzzy
 msgid ""
 "    :convert.hg.usebranchnames: preserve branch names. The default is\n"
-"        True\n"
+"        True.\n"
 "    "
 msgstr ""
 "    :convert.hg.usebranchnames: Erhalte Branch Names. Der Default ist\n"
@@ -1798,6 +1804,10 @@ msgstr "%s: Ungültiger Zielarchiv-Typ"
 #, python-format
 msgid "convert: %s\n"
 msgstr "convert: %s\n"
+
+#, python-format
+msgid "%s\n"
+msgstr ""
 
 #, python-format
 msgid "%s: unknown repository type"
@@ -2119,8 +2129,8 @@ msgstr ""
 msgid "%s does not look like a Subversion repository"
 msgstr "%s scheint kein Subversion-Archiv zu sein"
 
-msgid "Subversion python bindings could not be loaded"
-msgstr "Pythons Subversion-Unterstützung konnte nicht geladen werden"
+msgid "Could not load Subversion python bindings"
+msgstr ""
 
 #, python-format
 msgid "Subversion python bindings %d.%d found, 1.4 or later required"
@@ -2217,9 +2227,10 @@ msgstr ""
 "Auf diese Weise kann unter Windows CRLF und unter Unix/Mac LF verwendet\n"
 "werden, womit jeder die nativen Zeilenumbrüche seines System nutzen kann."
 
+#, fuzzy
 msgid ""
 "The extension reads its configuration from a versioned ``.hgeol``\n"
-"configuration file every time you run an ``hg`` command. The\n"
+"configuration file found in the root of the working copy. The\n"
 "``.hgeol`` file use the same syntax as all other Mercurial\n"
 "configuration files. It uses two sections, ``[patterns]`` and\n"
 "``[repository]``."
@@ -2367,11 +2378,14 @@ msgstr ""
 "weiterhin funktionieren. Sie müssen diese Filter nur solange verwenden, bis\n"
 "Sie eine ``.hgeol`` Datei angelegt haben."
 
+#, fuzzy
 msgid ""
 "The ``win32text.forbid*`` hooks provided by the win32text extension\n"
 "have been unified into a single hook named ``eol.hook``. The hook will\n"
 "lookup the expected line endings from the ``.hgeol`` file, which means\n"
-"you must migrate to a ``.hgeol`` file first before using the hook."
+"you must migrate to a ``.hgeol`` file first before using the hook.\n"
+"Remember to enable the eol extension in the repository where you\n"
+"install the hook."
 msgstr ""
 "The ``win32.text.forbid*`` Hooks, die von der win32text Extension zur\n"
 "Verfügung gestellt werden, sind in einem einzelnen Hook zusammengeführt\n"
@@ -2394,7 +2408,12 @@ msgstr "%s sollte keine CRLF-Zeilenumbrüche haben"
 msgid "%s should not have LF line endings"
 msgstr "%s sollte keine LF-Zeilenumbrüche haben"
 
-msgid "the eol extension is incompatible with the win32text extension"
+#, python-format
+msgid "warning: ignoring .hgeol file due to parse error at %s: %s\n"
+msgstr ""
+
+#, fuzzy
+msgid "the eol extension is incompatible with the win32text extension\n"
 msgstr "Die eol-Erweiterung ist inkompatibel mit der win32text-Erweiterung."
 
 #, python-format
@@ -2864,6 +2883,9 @@ msgid ""
 msgstr ""
 "    Das @-Zeichen kennzeichnet die Vorgänger des Arbeitsverzeichnisses.\n"
 "    "
+
+msgid "--graph option allows at most one file"
+msgstr ""
 
 msgid "show the revision DAG"
 msgstr "Zeigt den Revisions-DAG"
@@ -3770,6 +3792,10 @@ msgstr ""
 "Sie werden standardmäßig einen Patch-Reihe namens \"patches\" verwalten. "
 "Sie\n"
 "können andere, unabhängige Warteschlangen mit :hg:`qqueue` erzeugen.\n"
+
+#, fuzzy, python-format
+msgid "malformated mq status line: %s\n"
+msgstr "Fehlerhafter Patch %s %s"
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
@@ -6844,8 +6870,15 @@ msgstr ""
 
 msgid ""
 "    Selected changesets will be applied on top of the current working\n"
-"    directory with the log of the original changeset. If --log is\n"
-"    specified, log messages will have a comment appended of the form::"
+"    directory with the log of the original changeset. The changesets\n"
+"    are copied and will thus appear twice in the history. Use the\n"
+"    rebase extension instead if you want to move a whole branch of\n"
+"    unpublished changesets."
+msgstr ""
+
+msgid ""
+"    If --log is specified, log messages will have a comment appended\n"
+"    of the form::"
 msgstr ""
 
 msgid "      (transplanted from CHANGESETHASH)"
@@ -6867,9 +6900,9 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    :hg:`transplant --branch REVISION --all` will rebase the selected\n"
-"    branch (up to the named revision) onto your current working\n"
-"    directory."
+"    :hg:`transplant --branch REVISION --all` will transplant the\n"
+"    selected branch (up to the named revision) onto your current\n"
+"    working directory."
 msgstr ""
 
 msgid ""
@@ -7181,9 +7214,13 @@ msgstr "Integritätsprüfung fehlgeschlagen bei %s:%d"
 msgid "cannot create new bundle repository"
 msgstr "Neues Bündelarchiv kann nicht erzeugt werden"
 
-#, python-format
-msgid "premature EOF reading chunk (got %d bytes, expected %d)"
+#, fuzzy, python-format
+msgid "stream ended unexpectedly (got %d bytes, expected %d)"
 msgstr "vorzeitiges Dateiende beim Lesen (%d Byte erhalten, %d erwartet)"
+
+#, fuzzy, python-format
+msgid "invalid chunk length %d"
+msgstr "grep: Ungültiges Suchmuster: %s\n"
 
 #, fuzzy, python-format
 msgid "%s: not a Mercurial bundle"
@@ -7640,7 +7677,7 @@ msgid ""
 msgstr "Setzt die Vorgängerversionen des Arbeitsverzeichnisses manuell"
 
 msgid ""
-"    If REV is the parent of the working directory, then this changeset\n"
+"    If REV is the parent of the working directory, then this new changeset\n"
 "    is committed automatically. Otherwise, hg needs to merge the\n"
 "    changes and the merged result is left uncommitted."
 msgstr ""
@@ -7649,11 +7686,11 @@ msgid ""
 "    By default, the pending changeset will have one parent,\n"
 "    maintaining a linear history. With --merge, the pending changeset\n"
 "    will instead have two parents: the old parent of the working\n"
-"    directory and a child of REV that simply undoes REV."
+"    directory and a new child of REV that simply undoes REV."
 msgstr ""
 
 msgid ""
-"    Before version 1.7, the default behavior was equivalent to\n"
+"    Before version 1.7, the behavior without --merge was equivalent to\n"
 "    specifying --merge followed by :hg:`update --clean .` to cancel\n"
 "    the merge and leave the child of REV as a head to be merged\n"
 "    separately."
@@ -7819,7 +7856,8 @@ msgid ""
 "    "
 msgstr ""
 "    Lesezeichen können zwischen Mercurial Archiven ausgetauscht werden.\n"
-"    (siehe :hg:`help push` bzw. :hg:`help pull`). Beide Archive müssen dafür\n"
+"    (siehe :hg:`help push` bzw. :hg:`help pull`). Beide Archive müssen "
+"dafür\n"
 "    Lesezeichen unterstützen. Bis Mercurial version 1.8 muss hierfür die\n"
 "    Lesezeichenerweiterung (bookmarks extension) angeschaltet werden.\n"
 "    "
@@ -8531,6 +8569,10 @@ msgstr "Keine [keyword]-Muster konfiguriert"
 
 msgid "dump the contents of an index file"
 msgstr ""
+
+#, fuzzy, python-format
+msgid "unknown format %d"
+msgstr "Index %s hat unbekanntes Format %d"
 
 msgid "dump an index DAG as a graphviz dot file"
 msgstr ""
@@ -9793,6 +9835,9 @@ msgstr ""
 "    falls nicht der 'default'-Zweig vorliegt.\n"
 "    "
 
+msgid "can't query remote revision number, branch, tags, or bookmarks"
+msgstr ""
+
 msgid "import an ordered set of patches"
 msgstr "Importiert eine Liste von Patches"
 
@@ -9924,6 +9969,10 @@ msgstr ""
 #, fuzzy
 msgid "cannot combine --bundle and --subrepos"
 msgstr "Neues Bündelarchiv kann nicht erzeugt werden"
+
+#, fuzzy
+msgid "remote doesn't support bookmarks\n"
+msgstr "Quellarchiv unterstützt die Option --filemap nicht"
 
 msgid "create a new repository in the given directory"
 msgstr "Erzeugt ein neues Projektarchiv im angegebenen Verzeichnis"
@@ -11369,6 +11418,14 @@ msgstr ""
 msgid "%d outgoing"
 msgstr ""
 
+#, fuzzy, python-format
+msgid "%d incoming bookmarks"
+msgstr "Importierte Lesezeichen %s\n"
+
+#, fuzzy, python-format
+msgid "%d outgoing bookmarks"
+msgstr "Aktualisiere Lesezeichen %s\n"
+
 #, python-format
 msgid "remote: %s\n"
 msgstr "Entfernt: %s\n"
@@ -11650,7 +11707,7 @@ msgstr ""
 
 #, fuzzy
 msgid ""
-"Copyright (C) 2005-2010 Matt Mackall and others\n"
+"Copyright (C) 2005-2011 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
@@ -12167,7 +12224,12 @@ msgstr "Zeigt gegebenen Branch"
 msgid "show tags"
 msgstr "Zeigt Tags"
 
-msgid "[-nibt] [-r REV] [SOURCE]"
+#, fuzzy
+msgid "show bookmarks"
+msgstr "Keine Lesezeichen gesetzt\n"
+
+#, fuzzy
+msgid "[-nibtB] [-r REV] [SOURCE]"
 msgstr "[-nibt] [-r REV] [QUELLE]"
 
 msgid ""
@@ -12805,7 +12867,7 @@ msgstr ""
 
 #, python-format
 msgid ""
-"No argument found for substitutionof %i variable in alias '%s' definition."
+"No argument found for substitution of %i variable in alias '%s' definition."
 msgstr ""
 
 #, python-format
@@ -14975,6 +15037,14 @@ msgstr ":author: Zeichenkette. Der unveränderte Autor eines Änderungssatzes."
 
 #, fuzzy
 msgid ""
+":branch: String. The name of the branch on which the changeset was\n"
+"    committed."
+msgstr ""
+":branches: Zeichenkette. Der Name des Zweiges, in dem der Änderungssatz\n"
+"    versioniert wurde. Ist leer, wenn der Zweig-Name default ist."
+
+#, fuzzy
+msgid ""
 ":branches: List of strings. The name of the branch on which the\n"
 "    changeset was committed. Will be empty if the branch name was\n"
 "    default."
@@ -15665,12 +15735,12 @@ msgstr "Setze unterbrochene Transaktion zurück\n"
 msgid "no interrupted transaction available\n"
 msgstr "Keine unterbrochene Transaktion vorhanden\n"
 
-#, python-format
-msgid "rolling back to revision %s (undo %s: %s)\n"
+#, fuzzy, python-format
+msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
 msgstr "Setze auf Revision %s zurück (%s zurücknehmen: %s)\n"
 
-#, python-format
-msgid "rolling back to revision %s (undo %s)\n"
+#, fuzzy, python-format
+msgid "repository tip rolled back to revision %s (undo %s)\n"
 msgstr "Setze auf Revision %s zurück (%s zurücknehmen)\n"
 
 msgid "rolling back unknown transaction\n"
@@ -15681,6 +15751,14 @@ msgid "Named branch could not be reset, current branch still is: %s\n"
 msgstr ""
 "Benannter Zweig konnte nicht zurückgesetzt werden, aktueller Zweig ist "
 "weiterhin: %s\n"
+
+#, fuzzy, python-format
+msgid "working directory now based on revisions %d and %d\n"
+msgstr "Revision des Arbeitsverzeichnisses ist nicht qtip"
+
+#, fuzzy, python-format
+msgid "working directory now based on revision %d\n"
+msgstr "Führt das Arbeitsverzeichnis mit einer anderen Revision zusammen"
 
 msgid "no rollback information available\n"
 msgstr "Keine rollback-Information verfügbar\n"
@@ -15722,7 +15800,8 @@ msgstr "Kein Treffer unterhalb des Verzeichnisses!"
 msgid "file not tracked!"
 msgstr "Datei wird nicht versioniert!"
 
-msgid "unresolved merge conflicts (see hg resolve)"
+#, fuzzy
+msgid "unresolved merge conflicts (see hg help resolve)"
 msgstr "Ungelöster Konflikt beim Zusammenführen (siehe hg resolve)"
 
 #, python-format
@@ -15980,6 +16059,10 @@ msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
 msgstr ""
 "Ausstehende nicht versionierte Änderungen (nutze 'hg status' zur Auflistung "
 "der Änderungen)"
+
+#, fuzzy, python-format
+msgid "outstanding uncommitted changes in subrepository '%s'"
+msgstr "Speichere Unterarchiv %s\n"
 
 #, fuzzy
 msgid "crosses branches (merge branches or use --clean to discard changes)"
@@ -16697,6 +16780,10 @@ msgstr "Warnung: Konflikte beim Zusammenführen.\n"
 msgid "couldn't parse location %s"
 msgstr "Konnte Adresse %s nicht verarbeiten"
 
+#, fuzzy
+msgid "password in URL not supported"
+msgstr "Hardlinks nicht unterstützt"
+
 msgid "could not create remote repo"
 msgstr "Konnte entferntes Projektarchiv nicht erstellen"
 
@@ -16838,6 +16925,10 @@ msgstr ""
 
 msgid "check out a git branch if you intend to make changes\n"
 msgstr ""
+
+#, fuzzy, python-format
+msgid "subrepo %s is missing"
+msgstr "%s:%d: Pfad zu %s fehlt\n"
 
 #, python-format
 msgid "unrelated git branch checked out in subrepo %s\n"
@@ -17008,6 +17099,10 @@ msgstr ""
 
 msgid "no commonName or subjectAltName found in certificate"
 msgstr ""
+
+#, fuzzy, python-format
+msgid "could not find web.cacerts: %s"
+msgstr "Konnte Abbildungsdatei %r nicht öffnen: %s"
 
 #, python-format
 msgid "%s certificate error: %s (use --insecure to connect insecurely)"
@@ -17306,6 +17401,12 @@ msgstr "entfernte Änderungen abrufen"
 
 msgid "push failed:"
 msgstr "Übertragen fehlgeschlagen: %s"
+
+#~ msgid "win32console not found, please install pywin32\n"
+#~ msgstr "win32console nicht gefunden, bitte installiere pywin32\n"
+
+#~ msgid "Subversion python bindings could not be loaded"
+#~ msgstr "Pythons Subversion-Unterstützung konnte nicht geladen werden"
 
 #~ msgid "    options:"
 #~ msgstr "    Optionen:"
@@ -17686,9 +17787,6 @@ msgstr "Übertragen fehlgeschlagen: %s"
 
 #~ msgid "server identity verification succeeded\n"
 #~ msgstr "Identität des Servers wurde erfolgreich verifiziert\n"
-
-#~ msgid "Hardlinks not supported"
-#~ msgstr "Hardlinks nicht unterstützt"
 
 #~ msgid "user name not available - set USERNAME environment variable"
 #~ msgstr ""
