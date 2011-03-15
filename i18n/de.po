@@ -58,9 +58,8 @@ msgstr "Optionen"
 msgid "Commands"
 msgstr "Befehle"
 
-#, fuzzy
 msgid "Extensions"
-msgstr "%s Erweiterung - %s"
+msgstr "Erweiterungen"
 
 msgid ""
 "This section contains help for extensions that are distributed together with "
@@ -70,7 +69,6 @@ msgstr ""
 "ausgeliefert werden. Hilfe für andere Erweiterungen sind über das Hilfe-"
 "System erreichbar."
 
-#, fuzzy
 msgid "Options:"
 msgstr "Optionen:"
 
@@ -208,11 +206,11 @@ msgstr ""
 "läuft, wird die Liste der Benutzer vom Betriebssystem abgerufen.\n"
 "Andernfalls wird eine Ausnahme ausgelöst."
 
-#, fuzzy
 msgid ""
 "Example Configuration\n"
 "....................."
-msgstr "Beispielkonfiguration:"
+msgstr "Beispielkonfiguration:\n"
+"....................."
 
 msgid "::"
 msgstr "::"
@@ -959,7 +957,6 @@ msgstr ""
 "Kommandos anhand der Änderung (hinzugefügte oder entfernte Zeilen, \n"
 "Dateistatus und abschließender Leeraum) ein."
 
-#, fuzzy
 msgid ""
 "Other effects in addition to color, like bold and underlined text, are\n"
 "also available. Effects are rendered with the ECMA-48 SGR control\n"
@@ -967,9 +964,7 @@ msgid ""
 msgstr ""
 "Neben Farbänderungen sind auch andere Effekte wie Fettschreibung oder\n"
 "Unterstreichung möglich. Die Effekte werden durch die ECMA-48 SGR\n"
-"Funktionen (ANSI Escape Codes) realisiert. Die in diesem Module zu\n"
-"findende Funktion 'render_text' kann auch von anderen Modulen verwendet\n"
-"werden, um Texteffekte zu erzeugen."
+"Funktionen (ANSI Escape Codes) realisiert."
 
 msgid "Default effects may be overridden from your configuration file::"
 msgstr "Standardeffekte können durch die .hgrc-Datei verändert werden::"
@@ -1182,7 +1177,6 @@ msgstr ""
 "    --sourcesort  Versucht die Reihenfolge der Quellrevisionen zu erhalten.\n"
 "                  Dies wird nur bei Mercurial als Quelle unterstützt."
 
-#, fuzzy
 msgid ""
 "    If ``REVMAP`` isn't given, it will be put in a default location\n"
 "    (``<dest>/.hg/shamap`` by default). The ``REVMAP`` is a simple\n"
@@ -1343,7 +1337,6 @@ msgstr ""
 "    Quellcode aus einem Archiv aus dem default-Zweig in einen benannten\n"
 "    Zweig zu verschieben."
 
-#, fuzzy
 msgid ""
 "    Mercurial Source\n"
 "    ''''''''''''''''"
@@ -1368,7 +1361,6 @@ msgstr ""
 "        zu reparieren, während Sie von oder nach Mercurial konvertieren.\n"
 "        Default ist False."
 
-#, fuzzy
 msgid ""
 "    :convert.hg.saverev: store original revision ID in changeset\n"
 "        (forces target IDs to change). It takes and boolean argument\n"
@@ -1385,7 +1377,6 @@ msgstr ""
 "    :convert.hg.startrev: Konvertiere Start Revision und ihre Decendants.\n"
 "        Nimmt einen hg Revision ID, der Default ist 0."
 
-#, fuzzy
 msgid ""
 "    CVS Source\n"
 "    ''''''''''"
@@ -1393,7 +1384,6 @@ msgstr ""
 "    CVS als Quelle\n"
 "    --------------"
 
-#, fuzzy
 msgid ""
 "    CVS source will use a sandbox (i.e. a checked-out copy) from CVS\n"
 "    to indicate the starting point of what will be converted. Direct\n"
@@ -1500,7 +1490,6 @@ msgstr ""
 "    cvsps 2.1 ähnlich. Für weitere Details siehe die Hilfe zu diesem\n"
 "    Befehl."
 
-#, fuzzy
 msgid ""
 "    Subversion Source\n"
 "    '''''''''''''''''"
@@ -1508,7 +1497,6 @@ msgstr ""
 "    Subversion als Quelle\n"
 "    ---------------------"
 
-#, fuzzy
 msgid ""
 "    Subversion source detects classical trunk/branches/tags layouts.\n"
 "    By default, the supplied ``svn://repo/path/`` source URL is\n"
@@ -1536,7 +1524,6 @@ msgstr ""
 msgid "    The following options can be set with ``--config``:"
 msgstr "    Die folgenden Optionen können mit ``--config`` gesetzt werden:"
 
-#, fuzzy
 msgid ""
 "    :convert.svn.branches: specify the directory containing branches.\n"
 "        The default is ``branches``."
@@ -1551,7 +1538,6 @@ msgstr ""
 "    :convert.svn.tags: Spezifiziere das Verzeichnis, das die Tags enthält.\n"
 "        Der Default ist ``tags``."
 
-#, fuzzy
 msgid ""
 "    :convert.svn.trunk: specify the name of the trunk branch. The\n"
 "        default is ``trunk``."
@@ -1568,7 +1554,6 @@ msgstr ""
 "    Quellhistorie kann vollständig oder ab einer gegebenen Startrevision\n"
 "    erfasst werden:"
 
-#, fuzzy
 msgid ""
 "    :convert.svn.startrev: specify start Subversion revision number.\n"
 "        The default is 0."
@@ -1576,7 +1561,6 @@ msgstr ""
 "    --config convert.svn.startrev=0              (SVN-Revisionsnummer)\n"
 "        Spezifiziert die Startrevision"
 
-#, fuzzy
 msgid ""
 "    Perforce Source\n"
 "    '''''''''''''''"
@@ -1584,7 +1568,6 @@ msgstr ""
 "    Perforce als Quelle\n"
 "    -------------------"
 
-#, fuzzy
 msgid ""
 "    The Perforce (P4) importer can be given a p4 depot path or a\n"
 "    client specification as source. It will convert all files in the\n"
@@ -1600,7 +1583,6 @@ msgstr ""
 "    ein Zielpfad genannt werden, da dieser sonst als ...-hg ausfallen\n"
 "    kann."
 
-#, fuzzy
 msgid ""
 "    It is possible to limit the amount of source history to be\n"
 "    converted by specifying an initial Perforce revision:"
@@ -1608,7 +1590,6 @@ msgstr ""
 "    Es ist möglich die zu konvertierte Quellhistorie durch Angabe einer\n"
 "    Startrevision zu begrenzen."
 
-#, fuzzy
 msgid ""
 "    :convert.p4.startrev: specify initial Perforce revision (a\n"
 "        Perforce changelist number)."
@@ -1623,9 +1604,8 @@ msgstr ""
 "    Mercurial Ziel\n"
 "    ''''''''''''''"
 
-#, fuzzy
 msgid "    The following options are supported:"
-msgstr "Die folgenden Prädikate werden unterstützt:"
+msgstr "    Die folgenden Optionen werden unterstützt:"
 
 msgid ""
 "    :convert.hg.clonebranches: dispatch source branches in separate\n"
@@ -1641,7 +1621,6 @@ msgstr ""
 "    :convert.hg.tagsbranch: Branch Name für Tag Revisionen. Der Default\n"
 "        ist ``default``."
 
-#, fuzzy
 msgid ""
 "    :convert.hg.usebranchnames: preserve branch names. The default is\n"
 "        True.\n"
@@ -1995,9 +1974,8 @@ msgstr "Python-Modul ElementTree ist nicht verfügbar"
 msgid "%s repository format is unsupported, please upgrade"
 msgstr "%s Repository Format wird nicht unterstützt, bitte upgraden"
 
-#, fuzzy
 msgid "failed to detect repository format!"
-msgstr "Archiv für Patch-Reihen kann nicht geladen werden\n"
+msgstr "Repository Format kann nicht festgestellt werden!"
 
 msgid "internal calling inconsistency"
 msgstr "Inkonsistenz bei internem Aufruf"
@@ -2227,7 +2205,6 @@ msgstr ""
 "Auf diese Weise kann unter Windows CRLF und unter Unix/Mac LF verwendet\n"
 "werden, womit jeder die nativen Zeilenumbrüche seines System nutzen kann."
 
-#, fuzzy
 msgid ""
 "The extension reads its configuration from a versioned ``.hgeol``\n"
 "configuration file found in the root of the working copy. The\n"
@@ -2240,7 +2217,6 @@ msgstr ""
 "Datei benutzt die gleiche Syntax wie alle anderen Konfigurationsdateien.\n"
 "Sie verwendet zwei Bereiche, ``[patterns]`` und ``[repository]``."
 
-#, fuzzy
 msgid ""
 "The ``[patterns]`` section specifies how line endings should be\n"
 "converted between the working copy and the repository. The format is\n"
@@ -2254,7 +2230,6 @@ msgstr ""
 "schere Muster oben notieren. Die verfügbaren Zeilenenden sind ``LF``,\n"
 "``CRLF`` und ``BIN``."
 
-#, fuzzy
 msgid ""
 "Files with the declared format of ``CRLF`` or ``LF`` are always\n"
 "checked out and stored in the repository in that format and files\n"
@@ -2339,7 +2314,6 @@ msgstr ""
 "Konfigurationsdatei (nicht die ``.hgeol``-Datei), um das systemweite\n"
 "Verhalten zu definieren. Es gibt zwei Einstellungen:"
 
-#, fuzzy
 msgid ""
 "- ``eol.native`` (default ``os.linesep``) can be set to ``LF`` or\n"
 "  ``CRLF`` to override the default interpretation of ``native`` for\n"
@@ -2378,7 +2352,6 @@ msgstr ""
 "weiterhin funktionieren. Sie müssen diese Filter nur solange verwenden, bis\n"
 "Sie eine ``.hgeol`` Datei angelegt haben."
 
-#, fuzzy
 msgid ""
 "The ``win32text.forbid*`` hooks provided by the win32text extension\n"
 "have been unified into a single hook named ``eol.hook``. The hook will\n"
@@ -2387,7 +2360,7 @@ msgid ""
 "Remember to enable the eol extension in the repository where you\n"
 "install the hook."
 msgstr ""
-"The ``win32.text.forbid*`` Hooks, die von der win32text Extension zur\n"
+"The ``win32text.forbid*`` Hooks, die von der win32text Extension zur\n"
 "Verfügung gestellt werden, sind in einem einzelnen Hook zusammengeführt\n"
 "worden, ``eol.hook``. Der Hook wird die erwarteten Zeilenendungen aus der\n"
 "``.hgeol`` Datei auslesen, was bedeutet, daß Sie zuerst eine ``.hgeol``\n"
@@ -2412,9 +2385,8 @@ msgstr "%s sollte keine LF-Zeilenumbrüche haben"
 msgid "warning: ignoring .hgeol file due to parse error at %s: %s\n"
 msgstr ""
 
-#, fuzzy
 msgid "the eol extension is incompatible with the win32text extension\n"
-msgstr "Die eol-Erweiterung ist inkompatibel mit der win32text-Erweiterung."
+msgstr "Die eol-Erweiterung ist inkompatibel mit der win32text-Erweiterung.\n"
 
 #, python-format
 msgid "ignoring unknown EOL style '%s' from %s\n"
@@ -2669,7 +2641,6 @@ msgstr ""
 "    Um die Reihenfolge der Zusammenführung zu ändern kann --switch-parent\n"
 "    genutzt werden."
 
-#, fuzzy
 msgid "    See :hg:`help dates` for a list of formats valid for -d/--date."
 msgstr ""
 "    Siehe 'hg help dates' für eine Liste gültiger Formate für -d/--date."
@@ -3391,7 +3362,6 @@ msgstr ""
 "für den aktuellen Benutzer oder eine Archiv-Distribution (hg archive) \n"
 "angesehen werden."
 
-#, fuzzy
 msgid ""
 "Keywords expand to the changeset data pertaining to the latest change\n"
 "relative to the working directory parent of each file."
@@ -3430,14 +3400,14 @@ msgstr ""
 "    # bevorzugt SVN- oder CVS-artige Standard-Platzhalterzuweisungen\n"
 "    svn = True"
 
-#, fuzzy
 msgid ""
 ".. note::\n"
 "   The more specific you are in your filename patterns the less you\n"
 "   lose speed in huge repositories."
 msgstr ""
-"HINWEIS: Je genauer die Muster für Dateinamen sind, desto weniger\n"
-"Geschwindigkeit geht in großen Projektarchiven verloren."
+".. HINWEIS::\n"
+"   Je genauer die Muster für Dateinamen sind, desto weniger\n"
+"   Geschwindigkeit geht in großen Projektarchiven verloren."
 
 msgid ""
 "For [keywordmaps] template mapping and expansion demonstration and\n"
@@ -3461,7 +3431,6 @@ msgstr ""
 "    svnutcdate   \"2006-09-18 15:13:13Z\"\n"
 "    svnisodate   \"2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)\""
 
-#, fuzzy
 msgid ""
 "The default template mappings (view with :hg:`kwdemo -d`) can be\n"
 "replaced with customized keywords and templates. Again, run\n"
@@ -3472,7 +3441,6 @@ msgstr ""
 "sollte :hg:`kwdemo` ausgeführt werden, um die Ergebnisse der eigenen\n"
 "Konfiguration zu testen."
 
-#, fuzzy
 msgid ""
 "Before changing/disabling active keywords, you must run :hg:`kwshrink`\n"
 "to avoid storing expanded keywords in the change history."
@@ -3556,29 +3524,26 @@ msgstr ""
 msgid "\textending current template maps\n"
 msgstr "\tErweitert die aktuellen Vorlagen-Zuweisungen\n"
 
-#, fuzzy
 msgid "\toverriding default svn keywordset\n"
-msgstr "\tÜberschreibt die aktuellen Vorlagen-Zuweisungen\n"
+msgstr "\tÜberschreibt das stndard svn keywordset\n"
 
-#, fuzzy
 msgid "\toverriding default cvs keywordset\n"
-msgstr "\tÜberschreibt die aktuellen Vorlagen-Zuweisungen\n"
+msgstr "\tÜberschreibt das standard CVS keywordset\n"
 
-#, fuzzy
 msgid ""
 "\n"
 "\tconfiguration using default svn keywordset\n"
 msgstr ""
 "\n"
-"\tKonfiguration mittels der Standard-Platzhalter-Zuweisungen\n"
+"\tKonfiguration mittels der standard svn keywordset\n"
 
-#, fuzzy
 msgid ""
 "\n"
 "\tconfiguration using default cvs keywordset\n"
 msgstr ""
 "\n"
-"\tKonfiguration mittels der Standard-Platzhalter-Zuweisungen\n"
+"\tKonfiguration mittels der standard csv keywordset\n"
+
 
 msgid "\tdisabling current template maps\n"
 msgstr "\tdeaktiviert die aktuellen Vorlagen-Zuweisungen\n"
@@ -3793,9 +3758,9 @@ msgstr ""
 "Sie\n"
 "können andere, unabhängige Warteschlangen mit :hg:`qqueue` erzeugen.\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "malformated mq status line: %s\n"
-msgstr "Fehlerhafter Patch %s %s"
+msgstr "fehlerhafte mq Statuszeile: %s\n"
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
@@ -3929,9 +3894,9 @@ msgstr "Keine Patches angewendet"
 msgid "working directory revision is not qtip"
 msgstr "Revision des Arbeitsverzeichnisses ist nicht qtip"
 
-#, fuzzy, python-format
+#, python-format
 msgid "uncommitted changes in subrepository %s"
-msgstr "Speichere Unterarchiv %s\n"
+msgstr "nicht eingetragene  Änderungen in Subrepository %s"
 
 msgid "local changes found, refresh first"
 msgstr "Lokale Änderungen gefunden. Führe zuerst \"qrefresh\" aus!"
@@ -3943,9 +3908,9 @@ msgstr "Lokale Änderungen gefunden"
 msgid "\"%s\" cannot be used as the name of a patch"
 msgstr "\"%s\" kann nicht als Patchname verwendet werden"
 
-#, fuzzy, python-format
+#, python-format
 msgid "\"%s\" already exists as a directory"
-msgstr "%s existiert bereits"
+msgstr "\"%s\" existiert bereits"
 
 #, python-format
 msgid "patch \"%s\" already exists"
@@ -3954,9 +3919,9 @@ msgstr "Patch \"%s\" existiert bereits"
 msgid "cannot manage merge changesets"
 msgstr "Zusammenführungen können nicht mit Patches verwaltet werden"
 
-#, fuzzy, python-format
+#, python-format
 msgid "cannot write patch \"%s\": %s"
-msgstr "Fehlerhafter Patch %s %s"
+msgstr "Patch \"%s\" kann nicht geschrieben werden: %s"
 
 #, python-format
 msgid "error unlinking %s\n"
@@ -4001,17 +3966,15 @@ msgstr "Alle bekannten Patches sind zur Zeit angewendet\n"
 msgid "patch series already fully applied\n"
 msgstr "Patchserie bereits vollständig angewendet\n"
 
-#, fuzzy
 msgid "cannot use --exact and --move together"
-msgstr "Kann mit --parent nur Zusammenführung rückgängig machen"
+msgstr "--exact und --move können nicht gleichzeitig verwendet werden"
 
-#, fuzzy
 msgid "cannot push --exact with applied patches"
-msgstr "kann bereits angewendeten Patch %s nicht löschen"
+msgstr "kann nicht --exact übertragen, wenn Patches angewendet sind"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not have a parent recorded"
-msgstr "%s ist kein Vorgänger von %s"
+msgstr "%s hat keinen Vorgänger"
 
 msgid "please specify the patch to move"
 msgstr "Bitte geben Sie den zu verschiebenden Patch an"
@@ -4325,7 +4288,6 @@ msgstr ""
 "    Das Quell-Patcharchiv wird standardmäßig in <quelle>/.hg/patches\n"
 "    gesucht. Verwenden Sie -p <url>, um dies zu ändern."
 
-#, fuzzy
 msgid ""
 "    The patch directory must be a nested Mercurial repository, as\n"
 "    would be created by :hg:`init --mq`."
@@ -4478,7 +4440,6 @@ msgstr ""
 "    fehlschlägt, wird eine Sicherungskopie in ``.hg/last-message.txt`` "
 "abgelegt."
 
-#, fuzzy
 msgid ""
 "    hg add/remove/copy/rename work as usual, though you might want to\n"
 "    use git-style patches (-g/--git or [diff] git=1) to track copies\n"
@@ -4510,7 +4471,6 @@ msgstr ""
 "damit,\n"
 "    wie der aktuelle Patch nach einem Aufruf von qrefresh aussehen würde)."
 
-#, fuzzy
 msgid ""
 "    Use :hg:`diff` if you only want to see the changes made since the\n"
 "    last qrefresh, or :hg:`export qtip` if you want to see changes\n"
@@ -4547,7 +4507,6 @@ msgstr ""
 "Anschluss\n"
 "    nicht entfernt."
 
-#, fuzzy
 msgid ""
 "    The header for each folded patch will be concatenated with the\n"
 "    current patch header, separated by a line of ``* * *``."
@@ -4595,7 +4554,6 @@ msgstr ""
 "wenn er\n"
 "    entsprechend aktiviert wurde."
 
-#, fuzzy
 msgid ""
 "    With no arguments, print the currently active guards.\n"
 "    With arguments, set guards for the named patch."
@@ -4613,7 +4571,6 @@ msgstr ""
 msgid "    To set guards on another patch::"
 msgstr "    Um die Wächter eines anderen Patches zu setzen::"
 
-#, fuzzy
 msgid "      hg qguard other.patch -- +2.6.17 -stable"
 msgstr ""
 "      hg qguard anderer.patch -- +2.6.17 -stable\n"
@@ -4635,7 +4592,6 @@ msgstr "Gibt den Kopf des obersten oder angegebenen Patches aus"
 msgid "push the next patch onto the stack"
 msgstr "Schiebt den nächsten Patch auf den Stapel"
 
-#, fuzzy
 msgid ""
 "    When -f/--force is applied, all local changes in patched files\n"
 "    will be lost."
@@ -4661,7 +4617,6 @@ msgstr "Führe mit Reihe bei %s zusammen\n"
 msgid "pop the current patch off the stack"
 msgstr "Holt den aktuellen Patch vom Stapel herunter"
 
-#, fuzzy
 msgid ""
 "    By default, pops off the top of the patch stack. If given a patch\n"
 "    name, keeps popping off patches until the named patch is at the\n"
@@ -4755,7 +4710,6 @@ msgstr ""
 "    lokalen Versionsnummern sich für gewöhnlich nach dem Wiederherstellen\n"
 "    ändern werden."
 
-#, fuzzy
 msgid ""
 "    Use the --no-backup option to discard the backup bundle once the\n"
 "    operation completes."
@@ -4764,9 +4718,8 @@ msgstr ""
 "    wenn die Operation abgeschlossen ist.\n"
 "    "
 
-#, fuzzy
 msgid "empty revision set"
-msgstr "Revisionen ausgeben"
+msgstr "Revisionsmenge ist leer"
 
 msgid "set or print guarded patches to push"
 msgstr "Setzt die zu übertragenen bewachten Patches oder gibt sie aus"
@@ -4906,7 +4859,6 @@ msgstr ""
 "    Kontrolle von mq entfernt. Ansonsten müssen die angegebenen Revisionen\n"
 "    an der Basis des Stapels der angewandten Patches liegen."
 
-#, fuzzy
 msgid ""
 "    This can be especially useful if your changes have been applied to\n"
 "    an upstream repository, or if you are about to push your changes\n"
@@ -4957,7 +4909,6 @@ msgstr ""
 "die\n"
 "    neue Reihe nur erzeugt und das Wechseln wird fehlschlagen."
 
-#, fuzzy
 msgid ""
 "    To delete an existing queue, use --delete. You cannot delete the "
 "currently\n"
@@ -5077,9 +5028,8 @@ msgstr "Behält die Patchdatei bei"
 msgid "stop managing a revision (DEPRECATED)"
 msgstr "Hört auf, eine Revision zu verwalten (VERALTET)"
 
-#, fuzzy
 msgid "hg qdelete [-k] [PATCH]..."
-msgstr "hg qdelete [-k] [-r REV]... [PATCH]..."
+msgstr ""
 
 msgid "edit patch header"
 msgstr "Bearbeitet den Kopf eines Patches"
@@ -5174,9 +5124,8 @@ msgstr "Name der zu entnehmenden Reihe (VERALTET)"
 msgid "forget any local changes to patched files"
 msgstr "Vergisst alle lokalen Änderungen an gepatchten Dateien"
 
-#, fuzzy
 msgid "hg qpop [-a] [-f] [PATCH | INDEX]"
-msgstr "hg qpop [-a] [-n NAME] [-f] [PATCH | INDEX]"
+msgstr ""
 
 #, fuzzy
 msgid "apply on top of local changes"
@@ -5201,9 +5150,8 @@ msgstr "Name der Reihe zum Zusammenführen (VERALTET)"
 msgid "reorder patch series and apply only the patch"
 msgstr "Sortiert die Patch-Serie neu und wendet nur den Patch an"
 
-#, fuzzy
 msgid "hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]"
-msgstr "hg qpush [-f] [-l] [-a] [-m] [-n NAME] [--move] [PATCH | INDEX]"
+msgstr ""
 
 msgid "refresh only files already in the patch and specified files"
 msgstr "Aktualisiert nur angegebene und bereits in Patches enthaltene Dateien"
@@ -5297,9 +5245,8 @@ msgstr "Keine Sicherungskopien (VERALTET)"
 msgid "do not modify working copy during strip"
 msgstr "ändern Sie nicht die Working Copy während des strip Vorgangs"
 
-#, fuzzy
 msgid "hg strip [-k] [-f] [-n] REV..."
-msgstr "hg strip [-f] [-n] REV..."
+msgstr ""
 
 msgid "hg qtop [-s]"
 msgstr "hg qtop [-s]"
@@ -5512,13 +5459,12 @@ msgid "To set the pager that should be used, set the application variable::"
 msgstr ""
 "Um den zu verwendenden Pager zu setzen, setzen Sie die folgende Variable::"
 
-#, fuzzy
 msgid ""
 "  [pager]\n"
 "  pager = less -FRSX"
 msgstr ""
 "  [pager]\n"
-"  pager = LESS='FSRX' less"
+"  pager = less -FRSX"
 
 msgid ""
 "If no pager is set, the pager extensions uses the environment variable\n"
@@ -5581,13 +5527,12 @@ msgstr ""
 msgid "If pager.attend is present, pager.ignore will be ignored."
 msgstr "Wenn pager.attend vorhanden ist, wird pager.ignore ignoriert."
 
-#, fuzzy
 msgid ""
 "To ignore global commands like :hg:`version` or :hg:`help`, you have\n"
 "to specify them in your user configuration file."
 msgstr ""
 "Um globale Befehle wie :hg:`version` oder :hg:`help` zu ignorieren,\n"
-"müssen Sie diese in Ihrer Konfigurationsdatei angeben.\n"
+"müssen Sie diese in Ihrer Konfigurationsdatei angeben."
 
 msgid ""
 "The --pager=... option can also be used to control when the pager is\n"
@@ -5769,7 +5714,6 @@ msgid "    Finally, the patch itself, as generated by :hg:`export`."
 msgstr ""
 "    Zum Schluss der Patch selbst, wie er von :hg:`export` generiert wird."
 
-#, fuzzy
 msgid ""
 "    With the -d/--diffstat or -c/--confirm options, you will be presented\n"
 "    with a final summary of all messages and asked for confirmation before\n"
@@ -5806,7 +5750,6 @@ msgstr ""
 "    Durch -b/--bundle werden Änderungssätze wie durch --outgoing gewählt,\n"
 "    aber in einer einzelnen Email als Binärbündel (als Anhang) gesendet."
 
-#, fuzzy
 msgid ""
 "    With -m/--mbox, instead of previewing each patchbomb message in a\n"
 "    pager or sending the messages directly, it will create a UNIX\n"
@@ -5818,7 +5761,6 @@ msgstr ""
 "geschrieben, die von jedem Emailprogramm, welches das UNIX-mbox-Format\n"
 "unterstützt, geprüft werden, zum Beispiel mit mutt::"
 
-#, fuzzy
 msgid ""
 "    With -n/--test, all steps will run, but mail will not be sent.\n"
 "    You will be prompted for an email recipient address, a subject and\n"
@@ -6084,7 +6026,6 @@ msgstr ""
 "  assume-tty = False # Mit True wird IMMER ein Fortschrittsbalken gezeigt,\n"
 "                     # es sei denn disable ist auf True gesetzt"
 
-#, fuzzy
 msgid ""
 "Valid entries for the format field are topic, bar, number, unit,\n"
 "estimate, and item. item defaults to the last 20 characters of the\n"
@@ -7193,13 +7134,11 @@ msgstr ""
 msgid "bookmark '%s' contains illegal character"
 msgstr "Lesezeichen '%s' enthält illegale Zeichen"
 
-#, fuzzy
 msgid "searching for changed bookmarks\n"
-msgstr "Suche nach Änderungen\n"
+msgstr "Suche nach geänderten Lesezeichen\n"
 
-#, fuzzy
 msgid "no changed bookmarks found\n"
-msgstr "Keine Änderungen gefunden\n"
+msgstr "Keine geänderten Lesezeichen gefunden\n"
 
 msgid "invalid changegroup"
 msgstr ""
@@ -9970,9 +9909,8 @@ msgstr ""
 msgid "cannot combine --bundle and --subrepos"
 msgstr "Neues Bündelarchiv kann nicht erzeugt werden"
 
-#, fuzzy
 msgid "remote doesn't support bookmarks\n"
-msgstr "Quellarchiv unterstützt die Option --filemap nicht"
+msgstr "Quellarchiv unterstützt keine Lesezeichen\n"
 
 msgid "create a new repository in the given directory"
 msgstr "Erzeugt ein neues Projektarchiv im angegebenen Verzeichnis"
@@ -11418,13 +11356,13 @@ msgstr ""
 msgid "%d outgoing"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d incoming bookmarks"
-msgstr "Importierte Lesezeichen %s\n"
+msgstr "%d eingehende Lesezeichen"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d outgoing bookmarks"
-msgstr "Aktualisiere Lesezeichen %s\n"
+msgstr "%d ausgehende Lesezeichen"
 
 #, python-format
 msgid "remote: %s\n"
@@ -12276,7 +12214,6 @@ msgstr "Dateiname zum Speichern der Bündel"
 msgid "a remote changeset intended to be added"
 msgstr "zeigt den aktuellen Änderungssatz in Vorgänger-Branches"
 
-#, fuzzy
 msgid "compare bookmarks"
 msgstr "Vergleiche Lesezeichen"
 
@@ -12389,7 +12326,6 @@ msgstr "Auch ausführen wenn das entfernte Projektarchiv keinen Bezug hat"
 msgid "BOOKMARK"
 msgstr "LESEZEICHEN"
 
-#, fuzzy
 msgid "bookmark to pull"
 msgstr "Zu importierendes Lesezeichen"
 
@@ -12399,9 +12335,8 @@ msgstr "[-u] [-f] [-r REV]... [-e BEFEHL] [--remotecmd BEFEHL] [QUELLE]"
 msgid "force push"
 msgstr "Erzwingt Push"
 
-#, fuzzy
 msgid "bookmark to push"
-msgstr "Zu importierendes Lesezeichen"
+msgstr "Zu exportierendes Lesezeichen"
 
 msgid "allow pushing a new branch"
 msgstr ""
@@ -13052,9 +12987,8 @@ msgstr "URL-Pfade"
 msgid "Using additional features"
 msgstr "Benutzung erweiterter Funktionen"
 
-#, fuzzy
 msgid "Subrepositories"
-msgstr "Projektarchiv %s"
+msgstr ""
 
 msgid "Configuring hgweb"
 msgstr "hgweb-Konfiguration"
@@ -16743,9 +16677,8 @@ msgid ""
 msgstr ""
 
 #. i18n: "bookmark" is a keyword
-#, fuzzy
 msgid "bookmark takes one or no arguments"
-msgstr "sort verlangt ein oder zwei Argumente"
+msgstr "bookmark verlangt ein oder zwei Argumente"
 
 #. i18n: "bookmark" is a keyword
 msgid "the argument to bookmark must be a string"
