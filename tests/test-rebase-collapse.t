@@ -137,6 +137,40 @@ Rebasing G onto H:
 
   $ cd ..
 
+Rebasing G onto H with custom message:
+
+  $ hg clone -q -u . a a3
+  $ cd a3
+
+  $ hg rebase --base 6 -m 'custom message'
+  abort: message can only be specified with collapse
+  [255]
+
+  $ hg rebase --base 6 --collapse -m 'custom message'
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg tglog
+  @  6: 'custom message'
+  |
+  o  5: 'H'
+  |
+  o  4: 'F'
+  |
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  
+  $ hg manifest
+  A
+  E
+  F
+  H
+
+  $ cd ..
 
 Create repo b:
 
