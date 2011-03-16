@@ -324,6 +324,7 @@ def _wrapcmd(ui, cmd, table, wrapfn):
             except TypeError, e:
                 if len(args) > wrapfn.func_code.co_argcount:
                     raise util.Abort(_('--graph option allows at most one file'))
+                raise
         return orig(*args, **kwargs)
     entry = extensions.wrapcommand(table, cmd, graph)
     entry[1].append(('G', 'graph', None, _("show the revision DAG")))
