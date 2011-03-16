@@ -9,7 +9,7 @@ from i18n import _
 from node import hex
 import cmdutil
 import util, encoding
-import cStringIO, os, stat, tarfile, time, zipfile
+import cStringIO, os, tarfile, time, zipfile
 import zlib, gzip
 
 def tidyprefix(dest, kind, prefix):
@@ -172,10 +172,10 @@ class zipit(object):
         # unzip will not honor unix file modes unless file creator is
         # set to unix (id 3).
         i.create_system = 3
-        ftype = stat.S_IFREG
+        ftype = 0x8000 # UNX_IFREG in unzip source code
         if islink:
             mode = 0777
-            ftype = stat.S_IFLNK
+            ftype = 0xa000 # UNX_IFLNK in unzip source code
         i.external_attr = (mode | ftype) << 16L
         self.z.writestr(i, data)
 
