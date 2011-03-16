@@ -77,7 +77,10 @@ class hgwebdir(object):
             if not os.path.exists(self.conf):
                 raise util.Abort(_('config file %s not found!') % self.conf)
             u.readconfig(self.conf, remap=map, trust=True)
-            paths = u.configitems('hgweb-paths')
+            paths = []
+            for name, ignored in u.configitems('hgweb-paths'):
+                for path in u.configlist('hgweb-paths', name):
+                    paths.append((name, path))
         elif isinstance(self.conf, (list, tuple)):
             paths = self.conf
         elif isinstance(self.conf, dict):
