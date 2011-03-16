@@ -168,8 +168,8 @@ def do_relink(src, dst, files, ui):
 
     ui.progress(_('relinking'), None)
 
-    ui.status(_('relinked %d files (%d bytes reclaimed)\n') %
-              (relinked, savedbytes))
+    ui.status(_('relinked %d files (%s reclaimed)\n') %
+              (relinked, util.bytecount(savedbytes)))
 
 cmdtable = {
     'relink': (

@@ -25,9 +25,16 @@ create source repository
   $ hg ci -Am addfile
   adding a
   adding b
-  $ echo a >> a
-  $ echo a >> b
+  $ cat $TESTDIR/binfile.bin >> a
+  $ cat $TESTDIR/binfile.bin >> b
   $ hg ci -Am changefiles
+
+make another commit to create files larger than 1 KB to test
+formatting of final byte count
+
+  $ cat $TESTDIR/binfile.bin >> a
+  $ cat $TESTDIR/binfile.bin >> b
+  $ hg ci -m anotherchange
 
 Test files are read in binary mode
 
@@ -71,7 +78,7 @@ relink
   pruned down to 2 probably relinkable files
   relinking: data/a.i 1/2 files (50.00%)
   not linkable: data/dummy.i
-  relinked 1 files (136 bytes reclaimed)
+  relinked 1 files (1.37 KB reclaimed)
   $ cd ..
 
 
