@@ -42,8 +42,12 @@ def relink(ui, repo, origin=None, **opts):
         hg.remoteui(repo, opts),
         ui.expandpath(origin or 'default-relink', origin or 'default'))
     if not src.local():
-        raise util.Abort('must specify local origin repository')
+        raise util.Abort(_('must specify local origin repository'))
     ui.status(_('relinking %s to %s\n') % (src.store.path, repo.store.path))
+    if repo.root == src.root:
+        ui.status(_('there is nothing to relink\n'))
+        return
+
     locallock = repo.lock()
     try:
         remotelock = src.lock()

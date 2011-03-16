@@ -36,6 +36,13 @@ formatting of final byte count
   $ cat $TESTDIR/binfile.bin >> b
   $ hg ci -m anotherchange
 
+don't sit forever trying to double-lock the source repo
+
+  $ hg relink .
+  relinking $TESTTMP/repo/.hg/store to $TESTTMP/repo/.hg/store
+  there is nothing to relink
+
+
 Test files are read in binary mode
 
   $ python -c "file('.hg/store/data/dummy.i', 'wb').write('a\r\nb\n')"
