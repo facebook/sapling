@@ -394,7 +394,7 @@ def grep(repo, subset, x):
         for e in c.files() + [c.user(), c.description()]:
             if gr.search(e):
                 l.append(r)
-                continue
+                break
     return l
 
 def author(repo, subset, x):
@@ -423,7 +423,7 @@ def hasfile(repo, subset, x):
         for f in repo[r].files():
             if m(f):
                 s.append(r)
-                continue
+                break
     return s
 
 def contains(repo, subset, x):
@@ -438,13 +438,12 @@ def contains(repo, subset, x):
         for r in subset:
             if pat in repo[r]:
                 s.append(r)
-                continue
     else:
         for r in subset:
             for f in repo[r].manifest():
                 if m(f):
                     s.append(r)
-                    continue
+                    break
     return s
 
 def checkstatus(repo, subset, pat, field):
@@ -466,12 +465,11 @@ def checkstatus(repo, subset, pat, field):
         if fast:
             if pat in files:
                 s.append(r)
-                continue
         else:
             for f in files:
                 if m(f):
                     s.append(r)
-                    continue
+                    break
     return s
 
 def modifies(repo, subset, x):
