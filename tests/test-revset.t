@@ -356,3 +356,10 @@ issue2437
   9
   $ log 'ancestors(8) and (heads(branch("-a-b-c-")) or heads(branch(é)))'
   4
+
+issue2654: report a parse error if the revset was not completely parsed
+
+  $ log '1 OR 2'
+  hg: parse error at 2: invalid token
+  [255]
+

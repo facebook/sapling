@@ -810,7 +810,9 @@ parse = parser.parser(tokenize, elements).parse
 def match(spec):
     if not spec:
         raise error.ParseError(_("empty query"))
-    tree = parse(spec)
+    tree, pos = parse(spec)
+    if (pos != len(spec)):
+        raise error.ParseError("invalid token", pos)
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset):
         return getset(repo, subset, tree)

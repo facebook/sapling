@@ -1214,7 +1214,7 @@ def debugpushkey(ui, repopath, namespace, *keyinfo):
 def debugrevspec(ui, repo, expr):
     '''parse and apply a revision specification'''
     if ui.verbose:
-        tree = revset.parse(expr)
+        tree = revset.parse(expr)[0]
         ui.note(tree, "\n")
     func = revset.match(expr)
     for c in func(repo, range(len(repo))):

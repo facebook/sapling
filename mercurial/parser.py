@@ -78,7 +78,9 @@ class parser(object):
         'generate a parse tree from a message'
         self._iter = self._tokenizer(message)
         self._advance()
-        return self._parse()
+        res = self._parse()
+        token, value, pos = self.current
+        return res, pos
     def eval(self, tree):
         'recursively evaluate a parse tree using node methods'
         if not isinstance(tree, tuple):
