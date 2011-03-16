@@ -866,7 +866,9 @@ class svn_source(converter_source):
         pool = Pool()
         rpath = '/'.join([self.baseurl, urllib.quote(path)]).strip('/')
         entries = svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool)
-        return ((path + '/' + p) for p, e in entries.iteritems()
+        if path:
+            path += '/'
+        return ((path + p) for p, e in entries.iteritems()
                 if e.kind == svn.core.svn_node_file)
 
     def getrelpath(self, path, module=None):

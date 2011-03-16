@@ -31,6 +31,12 @@ create source repository
   $ echo a >> b
   $ hg ci -Am changefiles
 
+don't sit forever trying to double-lock the source repo
+
+  $ hg relink .
+  relinking $TESTTMP/repo/.hg/store to $TESTTMP/repo/.hg/store
+  there is nothing to relink
+
 Test files are read in binary mode
 
   $ python -c "file('.hg/store/data/dummy.i', 'wb').write('a\r\nb\n')"
