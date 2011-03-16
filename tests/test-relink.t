@@ -20,8 +20,6 @@ create source repository
 
   $ hg init repo
   $ cd repo
-  $ echo '[ui]' > .hg/hgrc
-  $ echo 'username= A. Foo <a.foo@bar.com>' >> .hg/hgrc
   $ echo a > a
   $ echo b > b
   $ hg ci -Am addfile
@@ -47,8 +45,6 @@ clone and pull to break links
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd clone
-  $ echo '[ui]' >> .hg/hgrc
-  $ echo 'username= A. Baz <a.baz@bar.com>' >> .hg/hgrc
   $ hg pull -q
   $ echo b >> b
   $ hg ci -m changeb
