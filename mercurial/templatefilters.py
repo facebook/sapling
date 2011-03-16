@@ -36,16 +36,22 @@ def age(date):
 
     now = time.time()
     then = date[0]
+    future = False
     if then > now:
-        return 'in the future'
-
-    delta = max(1, int(now - then))
-    if delta > agescales[0][1] * 2:
-        return util.shortdate(date)
+        future = True
+        delta = max(1, int(then - now))
+        if delta > agescales[0][1] * 30:
+            return 'in the distant future'
+    else:
+        delta = max(1, int(now - then))
+        if delta > agescales[0][1] * 2:
+            return util.shortdate(date)
 
     for t, s in agescales:
         n = delta // s
         if n >= 2 or s == 1:
+            if future:
+                return '%s from now' % fmt(t, n)
             return '%s ago' % fmt(t, n)
 
 def basename(path):
