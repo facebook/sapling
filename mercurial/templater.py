@@ -69,7 +69,6 @@ def tokenizer(data):
         else:
             raise error.ParseError(_("syntax error"), pos)
         pos += 1
-    data[2] = pos
     yield ('end', None, pos)
 
 def compiletemplate(tmpl, context):
@@ -91,8 +90,8 @@ def compiletemplate(tmpl, context):
             parsed.append(("string", tmpl[pos:n]))
 
         pd = [tmpl, n + 1, stop]
-        parsed.append(p.parse(pd))
-        pos = pd[2]
+        parseres, pos = p.parse(pd)
+        parsed.append(parseres)
 
     return [compileexp(e, context) for e in parsed]
 
