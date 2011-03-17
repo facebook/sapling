@@ -10,7 +10,7 @@
 import convcmd
 import cvsps
 import subversion
-from mercurial import commands
+from mercurial import commands, templatekw
 from mercurial.i18n import _
 
 # Commands definition was moved elsewhere to ease demandload job.
@@ -334,3 +334,31 @@ cmdtable = {
          ],
          _('hg debugcvsps [OPTION]... [PATH]...')),
 }
+
+def kwconverted(ctx, name):
+    rev = ctx.extra().get('convert_revision', '')
+    if rev.startswith('svn:'):
+        if name == 'svnrev':
+            return str(subversion.revsplit(rev)[2])
+        elif name == 'svnpath':
+            return subversion.revsplit(rev)[1]
+        elif name == 'svnuuid':
+            return subversion.revsplit(rev)[0]
+    return rev
+
+def kwsvnrev(repo, ctx, **args):
+    """:svnrev: String. Converted subversion revision number."""
+    return kwconverted(ctx, 'svnrev')
+
+def kwsvnpath(repo, ctx, **args):
+    """:svnpath: String. Converted subversion revision project path."""
+    return kwconverted(ctx, 'svnpath')
+
+def kwsvnuuid(repo, ctx, **args):
+    """:svnuuid: String. Converted subversion revision repository identifier."""
+    return kwconverted(ctx, 'svnuuid')
+
+def extsetup(ui):
+    templatekw.keywords['svnrev'] = kwsvnrev
+    templatekw.keywords['svnpath'] = kwsvnpath
+    templatekw.keywords['svnuuid'] = kwsvnuuid

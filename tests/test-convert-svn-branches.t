@@ -32,6 +32,21 @@ Convert trunk and branches
   1 move back to old
   0 last change to a
 
+Test template keywords
+
+  $ hg -R A-hg log --template '{rev} {svnuuid}{svnpath}@{svnrev}\n'
+  10 644ede6c-2b81-4367-9dc8-d786514f2cde/trunk@10
+  9 644ede6c-2b81-4367-9dc8-d786514f2cde/branches/old@9
+  8 644ede6c-2b81-4367-9dc8-d786514f2cde/branches/old2@8
+  7 644ede6c-2b81-4367-9dc8-d786514f2cde/branches/old@7
+  6 644ede6c-2b81-4367-9dc8-d786514f2cde/trunk@6
+  5 644ede6c-2b81-4367-9dc8-d786514f2cde/branches/old@6
+  4 644ede6c-2b81-4367-9dc8-d786514f2cde/branches/old@5
+  3 644ede6c-2b81-4367-9dc8-d786514f2cde/trunk@4
+  2 644ede6c-2b81-4367-9dc8-d786514f2cde/branches/old@3
+  1 644ede6c-2b81-4367-9dc8-d786514f2cde/trunk@2
+  0 644ede6c-2b81-4367-9dc8-d786514f2cde/trunk@1
+
 Convert again
 
   $ hg convert --branchmap=branchmap --datesort svn-repo A-hg
