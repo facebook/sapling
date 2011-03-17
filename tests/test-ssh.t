@@ -282,6 +282,7 @@ clone bookmarks
 passwords in ssh urls are not supported
 
   $ hg push ssh://user:erroneouspwd@dummy/remote
+  pushing to ssh://user:***@dummy/remote
   abort: password in URL not supported!
   [255]
 
