@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-02-23 15:32+0100\n"
-"PO-Revision-Date: 2011-02-24 12:04+0100\n"
+"POT-Creation-Date: 2011-03-16 17:41+0100\n"
+"PO-Revision-Date: 2011-03-16 17:42+0100\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "Language: Danish\n"
@@ -753,14 +753,11 @@ msgstr ""
 msgid ""
 "Other effects in addition to color, like bold and underlined text, are\n"
 "also available. Effects are rendered with the ECMA-48 SGR control\n"
-"function (aka ANSI escape codes). This module also provides the\n"
-"render_text function, which can be used to add effects to any text."
+"function (aka ANSI escape codes)."
 msgstr ""
 "Ud over farver er der også andre effekter tilgængelig, såsom fed og\n"
 "understreget tekst. Effekterne bliver renderet med ECMA-48 SGR\n"
-"kontrolfunktionen (aka ANSI escape codes). Dette modul indeholder også\n"
-"render_text funktionen som kan bruges til at tilføje effekter til\n"
-"vilkårlig tekst."
+"kontrolfunktionen (aka ANSI escape codes)."
 
 msgid "Default effects may be overridden from your configuration file::"
 msgstr "Standardeffekterne som kan overskrives i din konfigurationsfil::"
@@ -861,8 +858,9 @@ msgstr ""
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
 msgstr "ignorerer ukendt farve/effekt %r (konfigureret i color.%s)\n"
 
-msgid "win32console not found, please install pywin32\n"
-msgstr "win32console blev ikke fundet, installer venligst pywin32\n"
+#, python-format
+msgid "warning: failed to set color mode to %s\n"
+msgstr ""
 
 #. i18n: 'always', 'auto', and 'never' are keywords and should
 #. not be translated
@@ -1177,7 +1175,7 @@ msgstr ""
 
 msgid ""
 "    :convert.svn.branches: specify the directory containing branches.\n"
-"        The defaults is ``branches``."
+"        The default is ``branches``."
 msgstr ""
 
 msgid ""
@@ -1186,8 +1184,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    :convert.svn.trunk: specify the name of the trunk branch The\n"
-"        defauls is ``trunk``."
+"    :convert.svn.trunk: specify the name of the trunk branch. The\n"
+"        default is ``trunk``."
 msgstr ""
 
 msgid ""
@@ -1704,8 +1702,8 @@ msgstr ""
 msgid "%s does not look like a Subversion repository"
 msgstr "%s ser ikke ud som et Subversion depot"
 
-msgid "Subversion python bindings could not be loaded"
-msgstr "Subversion python bindingerne kunne ikke indlæses"
+msgid "Could not load Subversion python bindings"
+msgstr ""
 
 #, python-format
 msgid "Subversion python bindings %d.%d found, 1.4 or later required"
@@ -1801,16 +1799,15 @@ msgstr ""
 
 msgid ""
 "The extension reads its configuration from a versioned ``.hgeol``\n"
-"configuration file every time you run an ``hg`` command. The\n"
+"configuration file found in the root of the working copy. The\n"
 "``.hgeol`` file use the same syntax as all other Mercurial\n"
 "configuration files. It uses two sections, ``[patterns]`` and\n"
 "``[repository]``."
 msgstr ""
 "Udvidelsen læser sin konfiguration fra en versioneret ``.hgeol``\n"
-"konfigurationsfil hver gang du udfører en ``hg`` kommando. Denne\n"
-"``.hgeol`` fil bruger samme syntaks som alle andre Mercurial\n"
-"konfigurationsfiler. Den bruger to sektioner: ``[patterns]`` og\n"
-"``[repository]``."
+"konfigurationsfil fra roden af arbejdskataloget. Denne ``.hgeol`` fil\n"
+"bruger samme syntaks som alle andre Mercurial konfigurationsfiler. Den\n"
+"bruger to sektioner: ``[patterns]`` og ``[repository]``."
 
 msgid ""
 "The ``[patterns]`` section specifies how line endings should be\n"
@@ -1940,7 +1937,9 @@ msgid ""
 "The ``win32text.forbid*`` hooks provided by the win32text extension\n"
 "have been unified into a single hook named ``eol.hook``. The hook will\n"
 "lookup the expected line endings from the ``.hgeol`` file, which means\n"
-"you must migrate to a ``.hgeol`` file first before using the hook."
+"you must migrate to a ``.hgeol`` file first before using the hook.\n"
+"Remember to enable the eol extension in the repository where you\n"
+"install the hook."
 msgstr ""
 
 msgid ""
@@ -1958,8 +1957,12 @@ msgstr "%s skulle ikke have CRLF linieskift"
 msgid "%s should not have LF line endings"
 msgstr "%s skulle ikke have LF linieskift"
 
-msgid "the eol extension is incompatible with the win32text extension"
-msgstr "eol-udvidelsen er inkompatibel med win32text-udvidelsen"
+#, python-format
+msgid "warning: ignoring .hgeol file due to parse error at %s: %s\n"
+msgstr ""
+
+msgid "the eol extension is incompatible with the win32text extension\n"
+msgstr "eol-udvidelsen er inkompatibel med win32text-udvidelsen\n"
 
 #, python-format
 msgid "ignoring unknown EOL style '%s' from %s\n"
@@ -2030,7 +2033,9 @@ msgstr ""
 "  vimdiff = gvim -f '+next' '+execute \"DirDiff\" argv(0) argv(1)'"
 
 msgid "Tool arguments can include variables that are expanded at runtime::"
-msgstr "Argumenterne til værktøjerne kan indeholde variabler som bliver erstattet på runtime::"
+msgstr ""
+"Argumenterne til værktøjerne kan indeholde variabler som bliver erstattet på "
+"runtime::"
 
 msgid ""
 "  $parent1, $plabel1 - filename, descriptive label of first parent\n"
@@ -2377,6 +2382,9 @@ msgid ""
 msgstr ""
 "    Knuder udskrevet med et @-tegn er forældre til arbejdskataloget.\n"
 "    "
+
+msgid "--graph option allows at most one file"
+msgstr ""
 
 msgid "show the revision DAG"
 msgstr "vis revisionsgrafen"
@@ -3163,6 +3171,10 @@ msgid ""
 "You will by default be managing a patch queue named \"patches\". You can\n"
 "create other, independent patch queues with the :hg:`qqueue` command.\n"
 msgstr ""
+
+#, python-format
+msgid "malformated mq status line: %s\n"
+msgstr "misdannet mq statuslinie: %s\n"
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
@@ -5587,9 +5599,15 @@ msgstr ""
 msgid "hardlinks are not supported on this system"
 msgstr "Hårde lænker er ikke supporteret på dette system"
 
+msgid "must specify local origin repository"
+msgstr ""
+
 #, python-format
 msgid "relinking %s to %s\n"
 msgstr "kæder %s og %s sammen igen\n"
+
+msgid "there is nothing to relink\n"
+msgstr "der er ikke noget at sammenlænke\n"
 
 #, python-format
 msgid "tip has %d files, estimated total number of files: %s\n"
@@ -5803,8 +5821,15 @@ msgstr ""
 
 msgid ""
 "    Selected changesets will be applied on top of the current working\n"
-"    directory with the log of the original changeset. If --log is\n"
-"    specified, log messages will have a comment appended of the form::"
+"    directory with the log of the original changeset. The changesets\n"
+"    are copied and will thus appear twice in the history. Use the\n"
+"    rebase extension instead if you want to move a whole branch of\n"
+"    unpublished changesets."
+msgstr ""
+
+msgid ""
+"    If --log is specified, log messages will have a comment appended\n"
+"    of the form::"
 msgstr ""
 
 msgid "      (transplanted from CHANGESETHASH)"
@@ -5826,9 +5851,9 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    :hg:`transplant --branch REVISION --all` will rebase the selected\n"
-"    branch (up to the named revision) onto your current working\n"
-"    directory."
+"    :hg:`transplant --branch REVISION --all` will transplant the\n"
+"    selected branch (up to the named revision) onto your current\n"
+"    working directory."
 msgstr ""
 
 msgid ""
@@ -6589,7 +6614,7 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    If REV is the parent of the working directory, then this changeset\n"
+"    If REV is the parent of the working directory, then this new changeset\n"
 "    is committed automatically. Otherwise, hg needs to merge the\n"
 "    changes and the merged result is left uncommitted."
 msgstr ""
@@ -6598,11 +6623,11 @@ msgid ""
 "    By default, the pending changeset will have one parent,\n"
 "    maintaining a linear history. With --merge, the pending changeset\n"
 "    will instead have two parents: the old parent of the working\n"
-"    directory and a child of REV that simply undoes REV."
+"    directory and a new child of REV that simply undoes REV."
 msgstr ""
 
 msgid ""
-"    Before version 1.7, the default behavior was equivalent to\n"
+"    Before version 1.7, the behavior without --merge was equivalent to\n"
 "    specifying --merge followed by :hg:`update --clean .` to cancel\n"
 "    the merge and leave the child of REV as a head to be merged\n"
 "    separately."
@@ -7354,6 +7379,10 @@ msgstr "fandt ingen ignore mønstre"
 msgid "dump the contents of an index file"
 msgstr "dump indholdet af en indeksfil"
 
+#, python-format
+msgid "unknown format %d"
+msgstr "ukendt format %d"
+
 msgid "dump an index DAG as a graphviz dot file"
 msgstr "dump en indeks-DAG som en graphviz dot-fil"
 
@@ -7825,6 +7854,9 @@ msgid ""
 "    parent hash identifiers, followed by a \"+\" if there are\n"
 "    uncommitted changes in the working directory, a list of tags for\n"
 "    this revision and a branch name for non-default branches."
+msgstr ""
+
+msgid "can't query remote revision number, branch, tags, or bookmarks"
 msgstr ""
 
 msgid "import an ordered set of patches"
@@ -9097,11 +9129,11 @@ msgid "(see http://mercurial.selenic.com for more information)"
 msgstr "(se http://mercurial.selenic.com for mere information)"
 
 msgid ""
-"Copyright (C) 2005-2010 Matt Mackall and others\n"
+"Copyright (C) 2005-2011 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"Copyright (C) 2005-2010 Matt Mackall og andre\n"
+"Copyright (C) 2005-2011 Matt Mackall og andre\n"
 "Dette er frit programmel; se kildekoden for kopieringsbetingelser. Der\n"
 "gives INGEN GARANTI; ikke engang for SALGBARHED eller EGNETHED FOR\n"
 "NOGET BESTEMT FORMÅL.\n"
@@ -9580,8 +9612,11 @@ msgstr "vis gren"
 msgid "show tags"
 msgstr "vis mærkater"
 
-msgid "[-nibt] [-r REV] [SOURCE]"
-msgstr "[-nibt] [-r REV] [KILDE]"
+msgid "show bookmarks"
+msgstr "vis bogmærker"
+
+msgid "[-nibtB] [-r REV] [SOURCE]"
+msgstr "[-nibtB] [-r REV] [KILDE]"
 
 msgid ""
 "directory strip option for patch. This has the same meaning as the "
@@ -12103,6 +12138,11 @@ msgid ":author: String. The unmodified author of the changeset."
 msgstr ""
 
 msgid ""
+":branch: String. The name of the branch on which the changeset was\n"
+"    committed."
+msgstr ""
+
+msgid ""
 ":branches: List of strings. The name of the branch on which the\n"
 "    changeset was committed. Will be empty if the branch name was\n"
 "    default."
@@ -12688,7 +12728,9 @@ msgstr ""
 
 #, python-format
 msgid "working directory now based on revisions %d and %d\n"
-msgstr "arbejdsbiblioteket er nu baseret på revisionerne %d og %d\n\n"
+msgstr ""
+"arbejdsbiblioteket er nu baseret på revisionerne %d og %d\n"
+"\n"
 
 #, python-format
 msgid "working directory now based on revision %d\n"
@@ -12734,8 +12776,8 @@ msgstr "ingen træffer under kataloget!"
 msgid "file not tracked!"
 msgstr "filen følges ikke!"
 
-msgid "unresolved merge conflicts (see hg resolve)"
-msgstr "uløste sammenføjningskonflikter (se hg resolve)"
+msgid "unresolved merge conflicts (see hg help resolve)"
+msgstr "uløste sammenføjningskonflikter (se hg help resolve)"
 
 #, python-format
 msgid "committing subrepository %s\n"
@@ -13557,6 +13599,9 @@ msgstr "advarsel: konflikter ved sammenføjning.\n"
 msgid "couldn't parse location %s"
 msgstr ""
 
+msgid "password in URL not supported"
+msgstr "kodeord i URL'er understøttes ikke"
+
 msgid "could not create remote repo"
 msgstr "kunne ikke oprette fjerndepot"
 
@@ -13688,6 +13733,10 @@ msgstr ""
 
 msgid "check out a git branch if you intend to make changes\n"
 msgstr ""
+
+#, python-format
+msgid "subrepo %s is missing"
+msgstr "underdepot %s mangler"
 
 #, python-format
 msgid "unrelated git branch checked out in subrepo %s\n"
@@ -13855,6 +13904,10 @@ msgstr "IDN er ikke supporteret i certifikatet"
 
 msgid "no commonName or subjectAltName found in certificate"
 msgstr "fandt ikke noget commonName eller subjectAltName i certifikatet"
+
+#, python-format
+msgid "could not find web.cacerts: %s"
+msgstr "kunne ikke finde web.cacerts: %s"
 
 #, python-format
 msgid "%s certificate error: %s (use --insecure to connect insecurely)"
