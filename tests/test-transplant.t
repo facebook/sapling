@@ -68,6 +68,18 @@ test transplanted revset
   $ hg help revsets | grep transplanted
       "transplanted(set)"
 
+test tranplanted keyword
+
+  $ hg log --template '{rev} {transplanted}\n'
+  7 a53251cdf717679d1907b289f991534be05c997a
+  6 722f4667af767100cb15b6a79324bf8abbfe1ef4
+  5 37a1297eb21b3ef5c5d2ffac22121a0988ed9f21
+  4 
+  3 
+  2 
+  1 
+  0 
+
   $ hg clone ../t ../prune
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -17,7 +17,7 @@ from mercurial.i18n import _
 import os, tempfile
 from mercurial import bundlerepo, cmdutil, hg, merge, match
 from mercurial import patch, revlog, util, error
-from mercurial import revset
+from mercurial import revset, templatekw
 
 class transplantentry(object):
     def __init__(self, lnode, rnode):
@@ -608,8 +608,15 @@ def revsettransplanted(repo, subset, x):
         cs.add(r)
     return [r for r in s if r in cs]
 
+def kwtransplanted(repo, ctx, **args):
+    """:transplanted: String. The node identifier of the transplanted
+    changeset if any."""
+    n = ctx.extra().get('transplant_source')
+    return n and revlog.hex(n) or ''
+
 def extsetup(ui):
     revset.symbols['transplanted'] = revsettransplanted
+    templatekw.keywords['transplanted'] = kwtransplanted
 
 cmdtable = {
     "transplant":
