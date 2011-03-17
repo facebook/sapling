@@ -757,6 +757,11 @@ class gitsubrepo(abstractsubrepo):
         return tracking
 
     def _abssource(self, source):
+        if '://' not in source:
+            # recognize the scp syntax as an absolute source
+            colon = source.find(':')
+            if colon != -1 and '/' not in source[:colon]:
+                return source
         self._subsource = source
         return _abssource(self)
 
