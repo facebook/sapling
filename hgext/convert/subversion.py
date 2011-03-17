@@ -41,6 +41,15 @@ except ImportError:
 class SvnPathNotFound(Exception):
     pass
 
+def revsplit(rev):
+    """Parse a revision string and return (uuid, path, revnum)."""
+    url, revnum = rev.rsplit('@', 1)
+    parts = url.split('/', 1)
+    mod = ''
+    if len(parts) > 1:
+        mod = '/' + parts[1]
+    return parts[0][4:], mod, int(revnum)
+
 def geturl(path):
     try:
         return svn.client.url_from_path(svn.core.svn_path_canonicalize(path))
@@ -286,7 +295,7 @@ class svn_source(converter_source):
     def setrevmap(self, revmap):
         lastrevs = {}
         for revid in revmap.iterkeys():
-            uuid, module, revnum = self.revsplit(revid)
+            uuid, module, revnum = revsplit(revid)
             lastrevnum = lastrevs.setdefault(module, revnum)
             if revnum > lastrevnum:
                 lastrevs[module] = revnum
@@ -381,7 +390,7 @@ class svn_source(converter_source):
             files, self.removed, copies = self.expandpaths(rev, paths, parents)
         else:
             # Perform a full checkout on roots
-            uuid, module, revnum = self.revsplit(rev)
+            uuid, module, revnum = revsplit(rev)
             entries = svn.client.ls(self.baseurl + urllib.quote(module),
                                     optrev(revnum), True, self.ctx)
             files = [n for n, e in entries.iteritems()
@@ -403,7 +412,7 @@ class svn_source(converter_source):
 
     def getcommit(self, rev):
         if rev not in self.commits:
-            uuid, module, revnum = self.revsplit(rev)
+            uuid, module, revnum = revsplit(rev)
             self.module = module
             self.reparent(module)
             # We assume that:
@@ -530,16 +539,6 @@ class svn_source(converter_source):
     def revnum(self, rev):
         return int(rev.split('@')[-1])
 
-    def revsplit(self, rev):
-        url, revnum = rev.rsplit('@', 1)
-        revnum = int(revnum)
-        parts = url.split('/', 1)
-        uuid = parts.pop(0)[4:]
-        mod = ''
-        if parts:
-            mod = '/' + parts[0]
-        return uuid, mod, revnum
-
     def latest(self, path, stop=0):
         """Find the latest revid affecting path, up to stop. It may return
         a revision in a different module, since a branch may be moved without
@@ -606,7 +605,7 @@ class svn_source(converter_source):
         changed, removed = set(), set()
         copies = {}
 
-        new_module, revnum = self.revsplit(rev)[1:]
+        new_module, revnum = revsplit(rev)[1:]
         if new_module != self.module:
             self.module = new_module
             self.reparent(self.module)
@@ -623,7 +622,7 @@ class svn_source(converter_source):
                     continue
                 # Copy sources not in parent revisions cannot be
                 # represented, ignore their origin for now
-                pmodule, prevnum = self.revsplit(parents[0])[1:]
+                pmodule, prevnum = revsplit(parents[0])[1:]
                 if ent.copyfrom_rev < prevnum:
                     continue
                 copyfrom_path = self.getrelpath(ent.copyfrom_path, pmodule)
@@ -634,7 +633,7 @@ class svn_source(converter_source):
                 copies[self.recode(entrypath)] = self.recode(copyfrom_path)
             elif kind == 0: # gone, but had better be a deleted *file*
                 self.ui.debug("gone from %s\n" % ent.copyfrom_rev)
-                pmodule, prevnum = self.revsplit(parents[0])[1:]
+                pmodule, prevnum = revsplit(parents[0])[1:]
                 parentpath = pmodule + "/" + entrypath
                 fromkind = self._checkpath(entrypath, prevnum, pmodule)
 
@@ -660,7 +659,7 @@ class svn_source(converter_source):
                 if ent.action == 'R' and parents:
                     # If a directory is replacing a file, mark the previous
                     # file as deleted
-                    pmodule, prevnum = self.revsplit(parents[0])[1:]
+                    pmodule, prevnum = revsplit(parents[0])[1:]
                     pkind = self._checkpath(entrypath, prevnum, pmodule)
                     if pkind == svn.core.svn_node_file:
                         removed.add(self.recode(entrypath))
@@ -682,7 +681,7 @@ class svn_source(converter_source):
                     continue
                 # Copy sources not in parent revisions cannot be
                 # represented, ignore their origin for now
-                pmodule, prevnum = self.revsplit(parents[0])[1:]
+                pmodule, prevnum = revsplit(parents[0])[1:]
                 if ent.copyfrom_rev < prevnum:
                     continue
                 copyfrompath = self.getrelpath(ent.copyfrom_path, pmodule)
@@ -737,7 +736,7 @@ class svn_source(converter_source):
                     # ent.copyfrom_rev may not be the actual last revision
                     previd = self.latest(newpath, ent.copyfrom_rev)
                     if previd is not None:
-                        prevmodule, prevnum = self.revsplit(previd)[1:]
+                        prevmodule, prevnum = revsplit(previd)[1:]
                         if prevnum >= self.startrev:
                             parents = [previd]
                             self.ui.note(
@@ -834,7 +833,7 @@ class svn_source(converter_source):
             raise IOError()
         mode = ''
         try:
-            new_module, revnum = self.revsplit(rev)[1:]
+            new_module, revnum = revsplit(rev)[1:]
             if self.module != new_module:
                 self.module = new_module
                 self.reparent(self.module)
