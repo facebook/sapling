@@ -472,12 +472,12 @@ def incoming(ui, repo, source, opts):
 def _outgoing(ui, repo, dest, opts):
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = parseurl(dest, opts.get('branch'))
+    ui.status(_('comparing with %s\n') % url.hidepassword(dest))
     revs, checkout = addbranchrevs(repo, repo, branches, opts.get('rev'))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
     other = repository(remoteui(repo, opts), dest)
-    ui.status(_('comparing with %s\n') % url.hidepassword(dest))
     o = discovery.findoutgoing(repo, other, force=opts.get('force'))
     if not o:
         ui.status(_("no changes found\n"))

@@ -2999,9 +2999,9 @@ def push(ui, repo, dest=None, **opts):
 
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest, opts.get('branch'))
+    ui.status(_('pushing to %s\n') % url.hidepassword(dest))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     other = hg.repository(hg.remoteui(repo, opts), dest)
-    ui.status(_('pushing to %s\n') % url.hidepassword(dest))
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
