@@ -112,6 +112,7 @@
         <Directory Id="templates.paperdir" Name="paper">
           <Component Id="templates.paper" Guid="$(var.templates.paper.guid)" Win64='$(var.IsX64)'>
             <File Id="paper.branches.tmpl"      Name="branches.tmpl" KeyPath="yes" />
+            <File Id="paper.bookmarks.tmpl"     Name="bookmarks.tmpl" />
             <File Id="paper.changeset.tmpl"     Name="changeset.tmpl" />
             <File Id="paper.error.tmpl"         Name="error.tmpl" />
             <File Id="paper.fileannotate.tmpl"  Name="fileannotate.tmpl" />
