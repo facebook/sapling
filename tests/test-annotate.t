@@ -228,3 +228,8 @@ annotate after ABA with follow
   $ hg annotate --follow foo
   foo: foo
 
+missing file
+
+  $ hg ann nosuchfile
+  abort: nosuchfile: no such file in rev c8abddb41a00
+  [255]

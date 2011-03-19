@@ -126,8 +126,12 @@ def annotate(ui, repo, *pats, **opts):
         lastfunc = funcmap[-1]
         funcmap[-1] = lambda x: "%s:%s" % (lastfunc(x), x[1])
 
+    def bad(x, y):
+        raise util.Abort("%s: %s" % (x, y))
+
     ctx = cmdutil.revsingle(repo, opts.get('rev'))
     m = cmdutil.match(repo, pats, opts)
+    m.bad = bad
     follow = not opts.get('no_follow')
     for abs in ctx.walk(m):
         fctx = ctx[abs]
