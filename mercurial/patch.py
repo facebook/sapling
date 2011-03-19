@@ -680,6 +680,7 @@ class hunk(object):
             del self.b[-1]
             self.lena -= 1
             self.lenb -= 1
+        self._fixnewline(lr)
 
     def read_context_hunk(self, lr):
         self.desc = lr.readline()
@@ -782,9 +783,14 @@ class hunk(object):
         self.desc = "@@ -%d,%d +%d,%d @@\n" % (self.starta, self.lena,
                                              self.startb, self.lenb)
         self.hunk[0] = self.desc
+        self._fixnewline(lr)
 
-    def fix_newline(self):
-        diffhelpers.fix_newline(self.hunk, self.a, self.b)
+    def _fixnewline(self, lr):
+        l = lr.readline()
+        if l.startswith('\ '):
+            diffhelpers.fix_newline(self.hunk, self.a, self.b)
+        else:
+            lr.push(l)
 
     def complete(self):
         return len(self.a) == self.lena and len(self.b) == self.lenb
@@ -993,7 +999,6 @@ def iterhunks(ui, fp):
     maps filenames to gitpatch records. Unique event.
     """
     changed = {}
-    current_hunk = None
     afile = ""
     bfile = ""
     state = None
@@ -1011,11 +1016,6 @@ def iterhunks(ui, fp):
         x = lr.readline()
         if not x:
             break
-        if current_hunk:
-            if x.startswith('\ '):
-                current_hunk.fix_newline()
-            yield 'hunk', current_hunk
-            current_hunk = None
         if (state == BFILE and ((not context and x[0] == '@') or
             ((context is not False) and x.startswith('***************')))):
             if context is None and x.startswith('***************'):
@@ -1023,18 +1023,20 @@ def iterhunks(ui, fp):
             gpatch = changed.get(bfile)
             create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
             remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
-            current_hunk = hunk(x, hunknum + 1, lr, context, create, remove)
+            h = hunk(x, hunknum + 1, lr, context, create, remove)
             hunknum += 1
             if emitfile:
                 emitfile = False
-                yield 'file', (afile, bfile, current_hunk)
+                yield 'file', (afile, bfile, h)
+            yield 'hunk', h
         elif state == BFILE and x.startswith('GIT binary patch'):
-            current_hunk = binhunk(changed[bfile])
+            h = binhunk(changed[bfile])
             hunknum += 1
             if emitfile:
                 emitfile = False
-                yield 'file', ('a/' + afile, 'b/' + bfile, current_hunk)
-            current_hunk.extract(lr)
+                yield 'file', ('a/' + afile, 'b/' + bfile, h)
+            h.extract(lr)
+            yield 'hunk', h
         elif x.startswith('diff --git'):
             # check for git diff, scanning the whole patch file if needed
             m = gitre.match(x)
@@ -1083,12 +1085,6 @@ def iterhunks(ui, fp):
             emitfile = True
             state = BFILE
             hunknum = 0
-    if current_hunk:
-        if current_hunk.complete():
-            yield 'hunk', current_hunk
-        else:
-            raise PatchError(_("malformed patch %s %s") % (afile,
-                             current_hunk.desc))
 
 def applydiff(ui, fp, changed, strip=1, eolmode='strict'):
     """Reads a patch from fp and tries to apply it.
