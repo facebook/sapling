@@ -488,11 +488,6 @@ class patchfile(object):
             cand.sort(key=lambda x: abs(x - linenum))
         return cand
 
-    def hashlines(self):
-        self.hash = {}
-        for x, s in enumerate(self.lines):
-            self.hash.setdefault(s, []).append(x)
-
     def makerejlines(self, fname):
         base = os.path.basename(fname)
         yield "--- %s\n+++ %s\n" % (base, base)
@@ -574,8 +569,10 @@ class patchfile(object):
                 self.dirty = 1
             return 0
 
-        # ok, we couldn't match the hunk.  Lets look for offsets and fuzz it
-        self.hashlines()
+        # ok, we couldn't match the hunk. Lets look for offsets and fuzz it
+        self.hash = {}
+        for x, s in enumerate(self.lines):
+            self.hash.setdefault(s, []).append(x)
         if h.hunk[-1][0] != ' ':
             # if the hunk tried to put something at the bottom of the file
             # override the start line and use eof here
