@@ -610,6 +610,12 @@ class patchfile(object):
         self.rej.append(horig)
         return -1
 
+    def close(self):
+        if self.dirty:
+            self.writelines(self.fname, self.lines)
+        self.write_rej()
+        return len(self.rej)
+
 class hunk(object):
     def __init__(self, desc, num, lr, context, create=False, remove=False):
         self.number = num
@@ -1107,14 +1113,6 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
     cwd = os.getcwd()
     opener = util.opener(cwd)
 
-    def closefile():
-        if not current_file:
-            return 0
-        if current_file.dirty:
-            current_file.writelines(current_file.fname, current_file.lines)
-        current_file.write_rej()
-        return len(current_file.rej)
-
     for state, values in iterhunks(ui, fp):
         if state == 'hunk':
             if not current_file:
@@ -1125,7 +1123,8 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
                 if ret > 0:
                     err = 1
         elif state == 'file':
-            rejects += closefile()
+            if current_file:
+                rejects += current_file.close()
             afile, bfile, first_hunk = values
             try:
                 current_file, missing = selectfile(afile, bfile,
@@ -1150,7 +1149,8 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
 
-    rejects += closefile()
+    if current_file:
+        rejects += current_file.close()
 
     if rejects:
         return -1
