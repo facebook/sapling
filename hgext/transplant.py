@@ -640,4 +640,4 @@ cmdtable = {
 }
 
 # tell hggettext to extract docstrings from these functions:
-i18nfunctions = [revsettransplanted]
+i18nfunctions = [revsettransplanted, kwtransplanted]

@@ -362,3 +362,6 @@ def extsetup(ui):
     templatekw.keywords['svnrev'] = kwsvnrev
     templatekw.keywords['svnpath'] = kwsvnpath
     templatekw.keywords['svnuuid'] = kwsvnuuid
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = [kwsvnrev, kwsvnpath, kwsvnuuid]
