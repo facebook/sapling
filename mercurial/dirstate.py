@@ -49,6 +49,7 @@ class dirstate(object):
         self._rootdir = os.path.join(root, '')
         self._dirty = False
         self._dirtypl = False
+        self._lastnormal = set()        # files believed to be normal
         self._ui = ui
 
     @propertycache
@@ -285,6 +286,12 @@ class dirstate(object):
         if f in self._copymap:
             del self._copymap[f]
 
+        # Right now, this file is clean: but if some code in this
+        # process modifies it without changing its size before the clock
+        # ticks over to the next second, then it won't be clean anymore.
+        # So make sure that status() will look harder at it.
+        self._lastnormal.add(f)
+
     def normallookup(self, f):
         '''Mark a file normal, but possibly dirty.'''
         if self._pl[1] != nullid and f in self._map:
@@ -308,6 +315,7 @@ class dirstate(object):
         self._map[f] = ('n', 0, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
+        self._lastnormal.discard(f)
 
     def otherparent(self, f):
         '''Mark as coming from the other parent, always dirty.'''
@@ -319,6 +327,7 @@ class dirstate(object):
         self._map[f] = ('n', 0, -2, -1)
         if f in self._copymap:
             del self._copymap[f]
+        self._lastnormal.discard(f)
 
     def add(self, f):
         '''Mark a file added.'''
@@ -327,6 +336,7 @@ class dirstate(object):
         self._map[f] = ('a', 0, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
+        self._lastnormal.discard(f)
 
     def remove(self, f):
         '''Mark a file removed.'''
@@ -343,6 +353,7 @@ class dirstate(object):
         self._map[f] = ('r', 0, size, 0)
         if size == 0 and f in self._copymap:
             del self._copymap[f]
+        self._lastnormal.discard(f)
 
     def merge(self, f):
         '''Mark a file merged.'''
@@ -352,6 +363,7 @@ class dirstate(object):
         self._map[f] = ('m', s.st_mode, s.st_size, int(s.st_mtime))
         if f in self._copymap:
             del self._copymap[f]
+        self._lastnormal.discard(f)
 
     def forget(self, f):
         '''Forget a file.'''
@@ -361,6 +373,7 @@ class dirstate(object):
             del self._map[f]
         except KeyError:
             self._ui.warn(_("not in dirstate: %s\n") % f)
+        self._lastnormal.discard(f)
 
     def _normalize(self, path, knownpath):
         norm_path = os.path.normcase(path)
@@ -640,6 +653,7 @@ class dirstate(object):
         radd = removed.append
         dadd = deleted.append
         cadd = clean.append
+        lastnormal = self._lastnormal.__contains__
 
         lnkkind = stat.S_IFLNK
 
@@ -671,6 +685,18 @@ class dirstate(object):
                     madd(fn)
                 elif (time != int(st.st_mtime)
                       and (mode & lnkkind != lnkkind or self._checklink)):
+                    ladd(fn)
+                elif lastnormal(fn):
+                    # If previously in this process we recorded that
+                    # this file is clean, think twice: intervening code
+                    # may have modified the file in the same second
+                    # without changing its size. So force caller to
+                    # check file contents. Because we're not updating
+                    # self._map, this only affects the current process.
+                    # That should be OK because this mainly affects
+                    # multiple commits in the same process, and each
+                    # commit by definition makes the committed files
+                    # clean.
                     ladd(fn)
                 elif listclean:
                     cadd(fn)
