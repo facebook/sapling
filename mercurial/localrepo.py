@@ -1425,7 +1425,7 @@ class localrepository(repo.repository):
             for node in nodes:
                 self.ui.debug("%s\n" % hex(node))
 
-    def changegroupsubset(self, bases, heads, source, extranodes=None):
+    def changegroupsubset(self, bases, heads, source):
         """Compute a changegroup consisting of all the nodes that are
         descendents of any of the bases and ancestors of any of the heads.
         Return a chunkbuffer object whose read() method will return
@@ -1437,13 +1437,6 @@ class localrepository(repo.repository):
 
         Another wrinkle is doing the reverse, figuring out which changeset in
         the changegroup a particular filenode or manifestnode belongs to.
-
-        The caller can specify some nodes that must be included in the
-        changegroup using the extranodes argument.  It should be a dict
-        where the keys are the filenames (or 1 for the manifest), and the
-        values are lists of (node, linknode) tuples, where node is a wanted
-        node and linknode is the changelog node that should be transmitted as
-        the linkrev.
         """
 
         # Set up some initial variables
@@ -1457,13 +1450,12 @@ class localrepository(repo.repository):
             bases = [nullid]
         msng_cl_lst, bases, heads = cl.nodesbetween(bases, heads)
 
-        if extranodes is None:
-            # can we go through the fast path ?
-            heads.sort()
-            allheads = self.heads()
-            allheads.sort()
-            if heads == allheads:
-                return self._changegroup(msng_cl_lst, source)
+        # can we go through the fast path ?
+        heads.sort()
+        allheads = self.heads()
+        allheads.sort()
+        if heads == allheads:
+            return self._changegroup(msng_cl_lst, source)
 
         # slow path
         self.hook('preoutgoing', throw=True, source=source)
@@ -1546,15 +1538,6 @@ class localrepository(repo.repository):
             for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
                 missingnodes.pop(revlog.node(r), None)
 
-        # Add the nodes that were explicitly requested.
-        def add_extra_nodes(name, nodes):
-            if not extranodes or name not in extranodes:
-                return
-
-            for node, linknode in extranodes[name]:
-                if node not in nodes:
-                    nodes[node] = linknode
-
         # Now that we have all theses utility functions to help out and
         # logically divide up the task, generate the group.
         def gengroup():
@@ -1576,7 +1559,6 @@ class localrepository(repo.repository):
             self.ui.progress(_('bundling'), None)
 
             prune(mnfst, msng_mnfst_set)
-            add_extra_nodes(1, msng_mnfst_set)
             msng_mnfst_lst = msng_mnfst_set.keys()
             # Sort the manifestnodes by revision number.
             msng_mnfst_lst.sort(key=mnfst.rev)
@@ -1602,12 +1584,6 @@ class localrepository(repo.repository):
             msng_mnfst_lst = None
             msng_mnfst_set.clear()
 
-            if extranodes:
-                for fname in extranodes:
-                    if isinstance(fname, int):
-                        continue
-                    msng_filenode_set.setdefault(fname, {})
-                    changedfiles.add(fname)
             # Go through all our files in order sorted by name.
             for idx, fname in enumerate(sorted(changedfiles)):
                 filerevlog = self.file(fname)
@@ -1617,7 +1593,6 @@ class localrepository(repo.repository):
                 # missing.
                 missingfnodes = msng_filenode_set.pop(fname, {})
                 prune(filerevlog, missingfnodes)
-                add_extra_nodes(fname, missingfnodes)
                 # If any filenodes are left, generate the group for them,
                 # otherwise don't bother.
                 if missingfnodes:
