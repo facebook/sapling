@@ -1620,8 +1620,6 @@ class localrepository(repo.repository):
             nodeiter = gennodelst(mnfst)
             for cnt, chnk in enumerate(mnfst.group(nodeiter,
                                                    lookuplinkrev_func(mnfst))):
-                if cnt % 3 == 1:
-                    mnode = chnk[:20]
                 # see above comment for why we divide by 3
                 self.ui.progress(_('bundling'), cnt / 3,
                                  unit=_('manifests'), total=changecount)
