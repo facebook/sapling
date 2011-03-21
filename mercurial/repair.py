@@ -37,7 +37,7 @@ def _collectbrokencsets(repo, files, striprev):
     """return the changesets which will be broken by the truncation"""
     s = set()
     def collectone(revlog):
-        links = (revlog.linkrev(i) for i in xrange(len(revlog)))
+        links = (revlog.linkrev(i) for i in revlog)
         # find the truncation point of the revlog
         for lrev in links:
             if lrev >= striprev:
