@@ -1511,6 +1511,7 @@ class localrepository(repo.repository):
                 self.ui.progress(_('bundling'), count / 3,
                                  unit=_('changesets'))
             changecount = count / 3
+            efiles = len(changedfiles)
             self.ui.progress(_('bundling'), None)
 
             prune(mf, mfs)
@@ -1519,17 +1520,12 @@ class localrepository(repo.repository):
             group = mf.group(sorted(mfs, key=mf.rev),
                              lambda mnode: mfs[mnode],
                              filenode_collector(changedfiles))
-            efiles = {}
             for count, chunk in enumerate(group):
-                if count % 3 == 1:
-                    mnode = chunk[:20]
-                    efiles.update(mf.readdelta(mnode))
                 yield chunk
                 # see above comment for why we divide by 3
                 self.ui.progress(_('bundling'), count / 3,
                                  unit=_('manifests'), total=changecount)
             self.ui.progress(_('bundling'), None)
-            efiles = len(efiles)
 
             mfs.clear()
 
@@ -1616,22 +1612,20 @@ class localrepository(repo.repository):
                 # nodes have been processed.
                 self.ui.progress(_('bundling'), cnt / 3, unit=_('changesets'))
                 yield chnk
+            efiles = len(changedfiles)
             changecount = cnt / 3
             self.ui.progress(_('bundling'), None)
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
-            efiles = {}
             for cnt, chnk in enumerate(mnfst.group(nodeiter,
                                                    lookuplinkrev_func(mnfst))):
                 if cnt % 3 == 1:
                     mnode = chnk[:20]
-                    efiles.update(mnfst.readdelta(mnode))
                 # see above comment for why we divide by 3
                 self.ui.progress(_('bundling'), cnt / 3,
                                  unit=_('manifests'), total=changecount)
                 yield chnk
-            efiles = len(efiles)
             self.ui.progress(_('bundling'), None)
 
             for idx, fname in enumerate(sorted(changedfiles)):
