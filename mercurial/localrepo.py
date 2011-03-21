@@ -1472,6 +1472,7 @@ class localrepository(repo.repository):
             # the first manifest that references it belongs to.
             def collect(mnode):
                 r = mf.rev(mnode)
+                clnode = mfs[mnode]
                 if mf.deltaparent(r) in mf.parentrevs(r):
                     # If the previous rev is one of the parents,
                     # we only need to see a diff.
@@ -1481,26 +1482,16 @@ class localrepository(repo.repository):
                         # And if the file is in the list of files we care
                         # about.
                         if f in changedfiles:
-                            # Get the changenode this manifest belongs to
-                            clnode = mfs[mnode]
                             # Create the set of filenodes for the file if
                             # there isn't one already.
-                            ndset = fnodes.setdefault(f, {})
-                            # And set the filenode's changelog node to the
-                            # manifest's if it hasn't been set already.
-                            ndset.setdefault(fnode, clnode)
+                            fnodes.setdefault(f, {}).setdefault(fnode, clnode)
                 else:
                     # Otherwise we need a full manifest.
                     m = mf.read(mnode)
                     # For every file in we care about.
                     for f in changedfiles:
-                        fnode = m.get(f, None)
-                        # If it's in the manifest
-                        if fnode is not None:
-                            # See comments above.
-                            clnode = mfs[mnode]
-                            ndset = fnodes.setdefault(f, {})
-                            ndset.setdefault(fnode, clnode)
+                        if f in m:
+                            fnodes.setdefault(f, {}).setdefault(m[f], clnode)
             return collect
 
         # If we determine that a particular file or manifest node must be a
