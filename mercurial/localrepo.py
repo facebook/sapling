@@ -1526,14 +1526,14 @@ class localrepository(repo.repository):
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
             group = cl.group(csets, lambda x: x, collect)
-            for cnt, chnk in enumerate(group):
-                yield chnk
+            for count, chunk in enumerate(group):
+                yield chunk
                 # revlog.group yields three entries per node, so
                 # dividing by 3 gives an approximation of how many
                 # nodes have been processed.
-                self.ui.progress(_('bundling'), cnt / 3,
+                self.ui.progress(_('bundling'), count / 3,
                                  unit=_('changesets'))
-            changecount = cnt / 3
+            changecount = count / 3
             self.ui.progress(_('bundling'), None)
 
             prune(mf, mfs)
@@ -1543,13 +1543,13 @@ class localrepository(repo.repository):
                              lambda mnode: mfs[mnode],
                              filenode_collector(changedfiles))
             efiles = {}
-            for cnt, chnk in enumerate(group):
-                if cnt % 3 == 1:
-                    mnode = chnk[:20]
+            for count, chunk in enumerate(group):
+                if count % 3 == 1:
+                    mnode = chunk[:20]
                     efiles.update(mf.readdelta(mnode))
-                yield chnk
+                yield chunk
                 # see above comment for why we divide by 3
-                self.ui.progress(_('bundling'), cnt / 3,
+                self.ui.progress(_('bundling'), count / 3,
                                  unit=_('manifests'), total=changecount)
             self.ui.progress(_('bundling'), None)
             efiles = len(efiles)
@@ -1576,14 +1576,14 @@ class localrepository(repo.repository):
                     group = filerevlog.group(
                         sorted(missingfnodes, key=filerevlog.rev),
                         lambda fnode: missingfnodes[fnode])
-                    for chnk in group:
+                    for chunk in group:
                         # even though we print the same progress on
                         # most loop iterations, put the progress call
                         # here so that time estimates (if any) can be updated
                         self.ui.progress(
                             _('bundling'), idx, item=fname,
                             unit=_('files'), total=efiles)
-                        yield chnk
+                        yield chunk
             # Signal that no more groups are left.
             yield changegroup.closechunk()
             self.ui.progress(_('bundling'), None)
