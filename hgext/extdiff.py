@@ -187,14 +187,14 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         # Handle bogus modifies correctly by checking if the files exist
         if len(common) == 1:
             common_file = util.localpath(common.pop())
-            dir1a = os.path.join(dir1a, common_file)
+            dir1a = os.path.join(tmproot, dir1a, common_file)
             label1a = common_file + rev1a
-            if not os.path.isfile(os.path.join(tmproot, dir1a)):
+            if not os.path.isfile(dir1a):
                 dir1a = os.devnull
             if do3way:
-                dir1b = os.path.join(dir1b, common_file)
+                dir1b = os.path.join(tmproot, dir1b, common_file)
                 label1b = common_file + rev1b
-                if not os.path.isfile(os.path.join(tmproot, dir1b)):
+                if not os.path.isfile(dir1b):
                     dir1b = os.devnull
             dir2 = os.path.join(dir2root, dir2, common_file)
             label2 = common_file + rev2
