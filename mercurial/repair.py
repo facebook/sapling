@@ -35,28 +35,24 @@ def _collectfiles(repo, striprev):
 
 def _collectbrokencsets(repo, files, striprev):
     """return the changesets which will be broken by the truncation"""
+    s = set()
     def collectone(revlog):
-        startrev = count = len(revlog)
+        links = (revlog.linkrev(i) for i in xrange(len(revlog)))
         # find the truncation point of the revlog
-        for i in xrange(count):
-            lrev = revlog.linkrev(i)
+        for lrev in links:
             if lrev >= striprev:
-                startrev = i + 1
                 break
-
-        # see if any revision after that point has a linkrev less than striprev
-        # (those will be broken by strip)
-        for i in xrange(startrev, count):
-            lrev = revlog.linkrev(i)
+        # see if any revision after this point has a linkrev
+        # less than striprev (those will be broken by strip)
+        for lrev in links:
             if lrev < striprev:
-                yield lrev
+                        s.add(lrev)
 
-    for rev in collectone(repo.manifest):
-        yield rev
+    collectone(repo.manifest)
     for fname in files:
-        f = repo.file(fname)
-        for rev in collectone(f):
-            yield rev
+        collectone(repo.file(fname))
+
+    return s
 
 def strip(ui, repo, node, backup="all"):
     cl = repo.changelog
@@ -76,7 +72,7 @@ def strip(ui, repo, node, backup="all"):
     tostrip.add(striprev)
 
     files = _collectfiles(repo, striprev)
-    saverevs = set(_collectbrokencsets(repo, files, striprev))
+    saverevs = _collectbrokencsets(repo, files, striprev)
 
     # compute heads
     saveheads = set(saverevs)
