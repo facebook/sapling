@@ -1444,19 +1444,13 @@ class localrepository(repo.repository):
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
 
-        # Compute the list of changesets in this changegroup.
-        # Some bases may turn out to be superfluous, and some heads may be
-        # too.  nodesbetween will return the minimal set of bases and heads
-        # necessary to re-create the changegroup.
         if not bases:
             bases = [nullid]
         csets, bases, heads = cl.nodesbetween(bases, heads)
 
         # can we go through the fast path ?
         heads.sort()
-        allheads = self.heads()
-        allheads.sort()
-        if heads == allheads:
+        if heads == sorted(self.heads()):
             return self._changegroup(csets, source)
 
         # slow path
@@ -1465,11 +1459,6 @@ class localrepository(repo.repository):
 
         # We assume that all ancestors of bases are known
         commonrevs = set(cl.ancestors(*[cl.rev(n) for n in bases]))
-
-        # A changeset always belongs to itself, so the changenode lookup
-        # function for a changenode is identity.
-        def identity(x):
-            return x
 
         # A function generating function that sets up the initial environment
         # the inner function.
@@ -1481,19 +1470,19 @@ class localrepository(repo.repository):
             # It also remembers which changenode each filenode belongs to.  It
             # does this by assuming the a filenode belongs to the changenode
             # the first manifest that references it belongs to.
-            def collect(mannode):
-                r = mf.rev(mannode)
+            def collect(mnode):
+                r = mf.rev(mnode)
                 if mf.deltaparent(r) in mf.parentrevs(r):
                     # If the previous rev is one of the parents,
                     # we only need to see a diff.
-                    deltamf = mf.readdelta(mannode)
+                    deltamf = mf.readdelta(mnode)
                     # For each line in the delta
                     for f, fnode in deltamf.iteritems():
                         # And if the file is in the list of files we care
                         # about.
                         if f in changedfiles:
                             # Get the changenode this manifest belongs to
-                            clnode = mfs[mannode]
+                            clnode = mfs[mnode]
                             # Create the set of filenodes for the file if
                             # there isn't one already.
                             ndset = fnodes.setdefault(f, {})
@@ -1502,14 +1491,14 @@ class localrepository(repo.repository):
                             ndset.setdefault(fnode, clnode)
                 else:
                     # Otherwise we need a full manifest.
-                    m = mf.read(mannode)
+                    m = mf.read(mnode)
                     # For every file in we care about.
                     for f in changedfiles:
                         fnode = m.get(f, None)
                         # If it's in the manifest
                         if fnode is not None:
                             # See comments above.
-                            clnode = mfs[mannode]
+                            clnode = mfs[mnode]
                             ndset = fnodes.setdefault(f, {})
                             ndset.setdefault(fnode, clnode)
             return collect
@@ -1541,7 +1530,7 @@ class localrepository(repo.repository):
 
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
-            group = cl.group(csets, identity, collect)
+            group = cl.group(csets, lambda x: x, collect)
             for cnt, chnk in enumerate(group):
                 yield chnk
                 # revlog.group yields three entries per node, so
@@ -1586,14 +1575,12 @@ class localrepository(repo.repository):
                 if missingfnodes:
                     yield changegroup.chunkheader(len(fname))
                     yield fname
-                    # Sort the filenodes by their revision # (topological order)
-                    nodeiter = list(missingfnodes)
-                    nodeiter.sort(key=filerevlog.rev)
                     # Create a group generator and only pass in a changenode
                     # lookup function as we need to collect no information
                     # from filenodes.
-                    group = filerevlog.group(nodeiter,
-                                             lambda fnode: missingfnodes[fnode])
+                    group = filerevlog.group(
+                        sorted(missingfnodes, key=filerevlog.rev),
+                        lambda fnode: missingfnodes[fnode])
                     for chnk in group:
                         # even though we print the same progress on
                         # most loop iterations, put the progress call
