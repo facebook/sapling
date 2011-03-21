@@ -1586,9 +1586,6 @@ class localrepository(repo.repository):
         revset = set([cl.rev(n) for n in nodes])
         self.changegroupinfo(nodes, source)
 
-        def identity(x):
-            return x
-
         def gennodelst(log):
             for r in log:
                 if log.linkrev(r) in revset:
@@ -1606,24 +1603,24 @@ class localrepository(repo.repository):
             mmfs = {}
             collect = changegroup.collector(cl, mmfs, changedfiles)
 
-            for cnt, chnk in enumerate(cl.group(nodes, identity, collect)):
+            for count, chunk in enumerate(cl.group(nodes, lambda x: x, collect)):
                 # revlog.group yields three entries per node, so
                 # dividing by 3 gives an approximation of how many
                 # nodes have been processed.
-                self.ui.progress(_('bundling'), cnt / 3, unit=_('changesets'))
-                yield chnk
+                self.ui.progress(_('bundling'), count / 3, unit=_('changesets'))
+                yield chunk
             efiles = len(changedfiles)
-            changecount = cnt / 3
+            changecount = count / 3
             self.ui.progress(_('bundling'), None)
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
-            for cnt, chnk in enumerate(mnfst.group(nodeiter,
+            for count, chunk in enumerate(mnfst.group(nodeiter,
                                                    lookuplinkrev_func(mnfst))):
                 # see above comment for why we divide by 3
-                self.ui.progress(_('bundling'), cnt / 3,
+                self.ui.progress(_('bundling'), count / 3,
                                  unit=_('manifests'), total=changecount)
-                yield chnk
+                yield chunk
             self.ui.progress(_('bundling'), None)
 
             for idx, fname in enumerate(sorted(changedfiles)):
@@ -1636,11 +1633,11 @@ class localrepository(repo.repository):
                     yield changegroup.chunkheader(len(fname))
                     yield fname
                     lookup = lookuplinkrev_func(filerevlog)
-                    for chnk in filerevlog.group(nodeiter, lookup):
+                    for chunk in filerevlog.group(nodeiter, lookup):
                         self.ui.progress(
                             _('bundling'), idx, item=fname,
                             total=efiles, unit=_('files'))
-                        yield chnk
+                        yield chunk
             self.ui.progress(_('bundling'), None)
 
             yield changegroup.closechunk()
