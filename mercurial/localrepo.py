@@ -1439,38 +1439,32 @@ class localrepository(repo.repository):
         the changegroup a particular filenode or manifestnode belongs to.
         """
 
-        # Set up some initial variables
-        # Make it easy to refer to self.changelog
         cl = self.changelog
+        mf = self.manifest
+        mfs = {} # needed manifests
+        fnodes = {} # needed file nodes
+
         # Compute the list of changesets in this changegroup.
         # Some bases may turn out to be superfluous, and some heads may be
         # too.  nodesbetween will return the minimal set of bases and heads
         # necessary to re-create the changegroup.
         if not bases:
             bases = [nullid]
-        msng_cl_lst, bases, heads = cl.nodesbetween(bases, heads)
+        csets, bases, heads = cl.nodesbetween(bases, heads)
 
         # can we go through the fast path ?
         heads.sort()
         allheads = self.heads()
         allheads.sort()
         if heads == allheads:
-            return self._changegroup(msng_cl_lst, source)
+            return self._changegroup(csets, source)
 
         # slow path
         self.hook('preoutgoing', throw=True, source=source)
-
-        self.changegroupinfo(msng_cl_lst, source)
+        self.changegroupinfo(csets, source)
 
         # We assume that all ancestors of bases are known
         commonrevs = set(cl.ancestors(*[cl.rev(n) for n in bases]))
-
-        # Make it easy to refer to self.manifest
-        mnfst = self.manifest
-        # We don't know which manifests are missing yet
-        msng_mnfst_set = {}
-        # Nor do we know which filenodes are missing.
-        msng_filenode_set = {}
 
         # A changeset always belongs to itself, so the changenode lookup
         # function for a changenode is identity.
@@ -1487,38 +1481,38 @@ class localrepository(repo.repository):
             # It also remembers which changenode each filenode belongs to.  It
             # does this by assuming the a filenode belongs to the changenode
             # the first manifest that references it belongs to.
-            def collect_msng_filenodes(mnfstnode):
-                r = mnfst.rev(mnfstnode)
-                if mnfst.deltaparent(r) in mnfst.parentrevs(r):
+            def collect(mannode):
+                r = mf.rev(mannode)
+                if mf.deltaparent(r) in mf.parentrevs(r):
                     # If the previous rev is one of the parents,
                     # we only need to see a diff.
-                    deltamf = mnfst.readdelta(mnfstnode)
+                    deltamf = mf.readdelta(mannode)
                     # For each line in the delta
                     for f, fnode in deltamf.iteritems():
                         # And if the file is in the list of files we care
                         # about.
                         if f in changedfiles:
                             # Get the changenode this manifest belongs to
-                            clnode = msng_mnfst_set[mnfstnode]
+                            clnode = mfs[mannode]
                             # Create the set of filenodes for the file if
                             # there isn't one already.
-                            ndset = msng_filenode_set.setdefault(f, {})
+                            ndset = fnodes.setdefault(f, {})
                             # And set the filenode's changelog node to the
                             # manifest's if it hasn't been set already.
                             ndset.setdefault(fnode, clnode)
                 else:
                     # Otherwise we need a full manifest.
-                    m = mnfst.read(mnfstnode)
+                    m = mf.read(mannode)
                     # For every file in we care about.
                     for f in changedfiles:
                         fnode = m.get(f, None)
                         # If it's in the manifest
                         if fnode is not None:
                             # See comments above.
-                            clnode = msng_mnfst_set[mnfstnode]
-                            ndset = msng_filenode_set.setdefault(f, {})
+                            clnode = mfs[mannode]
+                            ndset = fnodes.setdefault(f, {})
                             ndset.setdefault(fnode, clnode)
-            return collect_msng_filenodes
+            return collect
 
         # If we determine that a particular file or manifest node must be a
         # node that the recipient of the changegroup will already have, we can
@@ -1543,11 +1537,11 @@ class localrepository(repo.repository):
         def gengroup():
             # The set of changed files starts empty.
             changedfiles = set()
-            collect = changegroup.collector(cl, msng_mnfst_set, changedfiles)
+            collect = changegroup.collector(cl, mfs, changedfiles)
 
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
-            group = cl.group(msng_cl_lst, identity, collect)
+            group = cl.group(csets, identity, collect)
             for cnt, chnk in enumerate(group):
                 yield chnk
                 # revlog.group yields three entries per node, so
@@ -1558,20 +1552,17 @@ class localrepository(repo.repository):
             changecount = cnt / 3
             self.ui.progress(_('bundling'), None)
 
-            prune(mnfst, msng_mnfst_set)
-            msng_mnfst_lst = msng_mnfst_set.keys()
-            # Sort the manifestnodes by revision number.
-            msng_mnfst_lst.sort(key=mnfst.rev)
+            prune(mf, mfs)
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
-            group = mnfst.group(msng_mnfst_lst,
-                                lambda mnode: msng_mnfst_set[mnode],
-                                filenode_collector(changedfiles))
+            group = mf.group(sorted(mfs, key=mf.rev),
+                             lambda mnode: mfs[mnode],
+                             filenode_collector(changedfiles))
             efiles = {}
             for cnt, chnk in enumerate(group):
                 if cnt % 3 == 1:
                     mnode = chnk[:20]
-                    efiles.update(mnfst.readdelta(mnode))
+                    efiles.update(mf.readdelta(mnode))
                 yield chnk
                 # see above comment for why we divide by 3
                 self.ui.progress(_('bundling'), cnt / 3,
@@ -1579,10 +1570,7 @@ class localrepository(repo.repository):
             self.ui.progress(_('bundling'), None)
             efiles = len(efiles)
 
-            # These are no longer needed, dereference and toss the memory for
-            # them.
-            msng_mnfst_lst = None
-            msng_mnfst_set.clear()
+            mfs.clear()
 
             # Go through all our files in order sorted by name.
             for idx, fname in enumerate(sorted(changedfiles)):
@@ -1591,7 +1579,7 @@ class localrepository(repo.repository):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 # Toss out the filenodes that the recipient isn't really
                 # missing.
-                missingfnodes = msng_filenode_set.pop(fname, {})
+                missingfnodes = fnodes.pop(fname, {})
                 prune(filerevlog, missingfnodes)
                 # If any filenodes are left, generate the group for them,
                 # otherwise don't bother.
@@ -1618,8 +1606,8 @@ class localrepository(repo.repository):
             yield changegroup.closechunk()
             self.ui.progress(_('bundling'), None)
 
-            if msng_cl_lst:
-                self.hook('outgoing', node=hex(msng_cl_lst[0]), source=source)
+            if csets:
+                self.hook('outgoing', node=hex(csets[0]), source=source)
 
         return changegroup.unbundle10(util.chunkbuffer(gengroup()), 'UN')
 
