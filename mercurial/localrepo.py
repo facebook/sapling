@@ -1473,25 +1473,11 @@ class localrepository(repo.repository):
             def collect(mnode):
                 r = mf.rev(mnode)
                 clnode = mfs[mnode]
-                if mf.deltaparent(r) in mf.parentrevs(r):
-                    # If the previous rev is one of the parents,
-                    # we only need to see a diff.
-                    deltamf = mf.readdelta(mnode)
-                    # For each line in the delta
-                    for f, fnode in deltamf.iteritems():
-                        # And if the file is in the list of files we care
-                        # about.
-                        if f in changedfiles:
-                            # Create the set of filenodes for the file if
-                            # there isn't one already.
-                            fnodes.setdefault(f, {}).setdefault(fnode, clnode)
-                else:
-                    # Otherwise we need a full manifest.
-                    m = mf.read(mnode)
-                    # For every file in we care about.
-                    for f in changedfiles:
-                        if f in m:
-                            fnodes.setdefault(f, {}).setdefault(m[f], clnode)
+                mdata = mf.readfast(mnode)
+                for f in changedfiles:
+                    if f in mdata:
+                        fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
+
             return collect
 
         # If we determine that a particular file or manifest node must be a
