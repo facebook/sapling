@@ -38,6 +38,13 @@ class manifest(revlog.revlog):
         r = self.rev(node)
         return self.parse(mdiff.patchtext(self.revdiff(self.deltaparent(r), r)))
 
+    def readfast(self, node):
+        '''use the faster of readdelta or read'''
+        r = self.rev(node)
+        if self.deltaparent(r) in self.parentrevs(r):
+            return self.readdelta(node)
+        return self.read(node)
+
     def read(self, node):
         if node == revlog.nullid:
             return manifestdict() # don't upset local cache
