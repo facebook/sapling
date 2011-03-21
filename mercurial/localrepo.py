@@ -1508,18 +1508,13 @@ class localrepository(repo.repository):
         # also assume the recipient will have all the parents.  This function
         # prunes them from the set of missing nodes.
         def prune(revlog, missingnodes):
-            hasset = set()
-            # If a 'missing' filenode thinks it belongs to a changenode we
-            # assume the recipient must have, then the recipient must have
-            # that filenode.
+            # drop any nodes that claim to be part of a cset in commonrevs
+            drop = set()
             for n in missingnodes:
-                clrev = revlog.linkrev(revlog.rev(n))
-                if clrev in commonrevs:
-                    hasset.add(n)
-            for n in hasset:
+                if revlog.linkrev(revlog.rev(n)) in commonrevs:
+                    drop.add(n)
+            for n in drop:
                 missingnodes.pop(n, None)
-            for r in revlog.ancestors(*[revlog.rev(n) for n in hasset]):
-                missingnodes.pop(revlog.node(r), None)
 
         # Now that we have all theses utility functions to help out and
         # logically divide up the task, generate the group.
