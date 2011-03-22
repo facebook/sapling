@@ -15,7 +15,9 @@ import pushkey as pushkeymod
 # list of nodes encoding / decoding
 
 def decodelist(l, sep=' '):
-    return map(bin, l.split(sep))
+    if l:
+        return map(bin, l.split(sep))
+    return []
 
 def encodelist(l, sep=' '):
     return sep.join(map(hex, l))
