@@ -20,7 +20,8 @@ import weakref, errno, os, time, inspect
 propertycache = util.propertycache
 
 class localrepository(repo.repository):
-    capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey'))
+    capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey',
+                        'known'))
     supportedformats = set(('revlogv1', 'parentdelta'))
     supported = supportedformats | set(('store', 'fncache', 'shared',
                                         'dotencode'))
@@ -557,6 +558,10 @@ class localrepository(repo.repository):
 
         repo = (remote and remote.local()) and remote or self
         return repo[key].branch()
+
+    def known(self, nodes):
+        nm = self.changelog.nodemap
+        return [(n in nm) for n in nodes]
 
     def local(self):
         return True

@@ -40,6 +40,14 @@ class wirerepository(repo.repository):
         except:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
+    def known(self, nodes):
+        n = encodelist(nodes)
+        d = self._call("known", nodes=n)
+        try:
+            return [bool(int(f)) for f in d]
+        except:
+            self._abort(error.ResponseError(_("unexpected response:"), d))
+
     def branchmap(self):
         d = self._call("branchmap")
         try:
@@ -198,7 +206,7 @@ def branches(repo, proto, nodes):
     return "".join(r)
 
 def capabilities(repo, proto):
-    caps = 'lookup changegroupsubset branchmap pushkey'.split()
+    caps = 'lookup changegroupsubset branchmap pushkey known'.split()
     if _allowstream(repo.ui):
         requiredformats = repo.requirements & repo.supportedformats
         # if our local revlogs are just revlogv1, add 'stream' cap
@@ -254,6 +262,9 @@ def lookup(repo, proto, key):
         r = str(inst)
         success = 0
     return "%s %s\n" % (success, r)
+
+def known(repo, proto, nodes):
+    return ''.join(b and "1" or "0" for b in repo.known(decodelist(nodes)))
 
 def pushkey(repo, proto, namespace, key, old, new):
     # compatibility with pre-1.8 clients which were accidentally
@@ -373,6 +384,7 @@ commands = {
     'debugwireargs': (debugwireargs, 'one two *'),
     'heads': (heads, ''),
     'hello': (hello, ''),
+    'known': (known, 'nodes'),
     'listkeys': (listkeys, 'namespace'),
     'lookup': (lookup, 'key'),
     'pushkey': (pushkey, 'namespace key old new'),

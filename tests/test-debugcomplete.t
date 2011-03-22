@@ -79,6 +79,7 @@ Show debug commands if there are no other candidates
   debugindex
   debugindexdot
   debuginstall
+  debugknown
   debugpushkey
   debugrebuildstate
   debugrename
@@ -220,6 +221,7 @@ Show all commands + options
   debugindex: format
   debugindexdot: 
   debuginstall: 
+  debugknown: 
   debugpushkey: 
   debugrebuildstate: rev
   debugrename: rev

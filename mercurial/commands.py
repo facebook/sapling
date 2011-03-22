@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import hex, nullid, nullrev, short
+from node import hex, bin, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
 import os, re, sys, difflib, time, tempfile
@@ -1217,6 +1217,18 @@ def showconfig(ui, repo, *values, **opts):
             ui.debug('%s: ' %
                      ui.configsource(section, name, untrusted))
             ui.write('%s=%s\n' % (sectname, value))
+
+def debugknown(ui, repopath, *ids, **opts):
+    """test whether node ids are known to a repo
+
+    Every ID must be a full-length hex node id string. Returns a list of 0s and 1s
+    indicating unknown/known.
+    """
+    repo = hg.repository(ui, repopath)
+    if not repo.capable('known'):
+        raise util.Abort("known() not supported by target repository")
+    flags = repo.known([bin(s) for s in ids])
+    ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
 
 def debugpushkey(ui, repopath, namespace, *keyinfo):
     '''access the pushkey key/value protocol
@@ -4446,6 +4458,7 @@ table = {
                    _('FILE')),
     "debugindexdot": (debugindexdot, [], _('FILE')),
     "debuginstall": (debuginstall, [], ''),
+    "debugknown": (debugknown, [], _('REPO ID...')),
     "debugpushkey": (debugpushkey, [], _('REPO NAMESPACE [KEY OLD NEW]')),
     "debugrebuildstate":
         (debugrebuildstate,
@@ -4810,6 +4823,7 @@ table = {
 }
 
 norepo = ("clone init version help debugcommands debugcomplete"
-          " debugdate debuginstall debugfsinfo debugpushkey debugwireargs")
+          " debugdate debuginstall debugfsinfo debugpushkey debugwireargs"
+          " debugknown")
 optionalrepo = ("identify paths serve showconfig debugancestor debugdag"
                 " debugdata debugindex debugindexdot")
