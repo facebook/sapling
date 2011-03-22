@@ -87,6 +87,7 @@ Show debug commands if there are no other candidates
   debugstate
   debugsub
   debugwalk
+  debugwireargs
 
 Do not show the alias of a debug command if there are other candidates
 (this should hide rawcommit)
@@ -227,6 +228,7 @@ Show all commands + options
   debugstate: nodates
   debugsub: rev
   debugwalk: include, exclude
+  debugwireargs: three, four, ssh, remotecmd, insecure
   grep: print0, all, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
   heads: rev, topo, active, closed, style, template
   help: 

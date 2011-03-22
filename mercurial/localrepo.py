@@ -1905,6 +1905,10 @@ class localrepository(repo.repository):
     def listkeys(self, namespace):
         return pushkey.list(self, namespace)
 
+    def debugwireargs(self, one, two, three=None, four=None):
+        '''used to test argument passing over the wire'''
+        return "%s %s %s %s" % (one, two, three, four)
+
 # used to avoid circular references so destructors work
 def aftertrans(files):
     renamefiles = [tuple(t) for t in files]

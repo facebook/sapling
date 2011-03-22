@@ -1582,6 +1582,21 @@ def debugwalk(ui, repo, *pats, **opts):
         line = fmt % (abs, m.rel(abs), m.exact(abs) and 'exact' or '')
         ui.write("%s\n" % line.rstrip())
 
+def debugwireargs(ui, repopath, *vals, **opts):
+    repo = hg.repository(hg.remoteui(ui, opts), repopath)
+    for opt in remoteopts:
+        del opts[opt[1]]
+    args = {}
+    for k, v in opts.iteritems():
+        if v:
+            args[k] = v
+    # run twice to check that we don't mess up the stream for the next command
+    res1 = repo.debugwireargs(*vals, **args)
+    res2 = repo.debugwireargs(*vals, **args)
+    ui.write("%s\n" % res1)
+    if res1 != res2:
+        ui.warn("%s\n" % res2)
+
 def diff(ui, repo, *pats, **opts):
     """diff repository (or selected files)
 
@@ -4456,6 +4471,12 @@ table = {
            _('revision to check'), _('REV'))],
          _('[-r REV] [REV]')),
     "debugwalk": (debugwalk, walkopts, _('[OPTION]... [FILE]...')),
+    "debugwireargs":
+        (debugwireargs,
+         [('', 'three', '', 'three'),
+          ('', 'four', '', 'four'),
+          ] + remoteopts,
+         _('REPO [OPTIONS]... [ONE [TWO]]')),
     "^diff":
         (diff,
          [('r', 'rev', [],
@@ -4789,6 +4810,6 @@ table = {
 }
 
 norepo = ("clone init version help debugcommands debugcomplete"
-          " debugdate debuginstall debugfsinfo debugpushkey")
+          " debugdate debuginstall debugfsinfo debugpushkey debugwireargs")
 optionalrepo = ("identify paths serve showconfig debugancestor debugdag"
                 " debugdata debugindex debugindexdot")

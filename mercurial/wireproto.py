@@ -133,6 +133,15 @@ class wirerepository(repo.repository):
             self.ui.status(_('remote: '), l)
         return ret
 
+    def debugwireargs(self, one, two, three=None, four=None):
+        # don't pass optional arguments left at their default value
+        opts = {}
+        if three is not None:
+            opts['three'] = three
+        if four is not None:
+            opts['four'] = four
+        return self._call('debugwireargs', one=one, two=two, **opts)
+
 # server side
 
 class streamres(object):
@@ -198,6 +207,9 @@ def changegroupsubset(repo, proto, bases, heads):
     heads = decodelist(heads)
     cg = repo.changegroupsubset(bases, heads, 'serve')
     return streamres(proto.groupchunks(cg))
+
+def debugwireargs(repo, proto, one, two):
+    return repo.debugwireargs(one, two)
 
 def heads(repo, proto):
     h = repo.heads()
@@ -343,6 +355,7 @@ commands = {
     'capabilities': (capabilities, ''),
     'changegroup': (changegroup, 'roots'),
     'changegroupsubset': (changegroupsubset, 'bases heads'),
+    'debugwireargs': (debugwireargs, 'one two'),
     'heads': (heads, ''),
     'hello': (hello, ''),
     'listkeys': (listkeys, 'namespace'),
