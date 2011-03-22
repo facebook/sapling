@@ -574,8 +574,10 @@ class GitHandler(object):
                 labels = lambda c: ctx.tags() + ctx.bookmarks()
             else:
                 labels = lambda c: ctx.tags()
-            heads = [t for t in labels(ctx) if t in self.local_heads()]
-            tags = [t for t in labels(ctx) if t in self.tags]
+            prep = lambda itr: [i.replace(' ', '_') for i in itr]
+
+            heads = [t for t in prep(labels(ctx)) if t in self.local_heads()]
+            tags = [t for t in prep(labels(ctx)) if t in self.tags]
 
             if not (heads or tags):
                 raise hgutil.Abort("revision %s cannot be pushed since"
@@ -676,6 +678,7 @@ class GitHandler(object):
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
             if self.repo.tagtype(tag) in ('global', 'git'):
+                tag = tag.replace(' ', '_')
                 self.git.refs['refs/tags/' + tag] = self.map_git_get(hex(sha))
                 self.tags[tag] = hex(sha)
 
