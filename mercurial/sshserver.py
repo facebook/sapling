@@ -27,7 +27,6 @@ class sshserver(object):
     def getargs(self, args):
         data = {}
         keys = args.split()
-        count = len(keys)
         for n in xrange(len(keys)):
             argline = self.fin.readline()[:-1]
             arg, l = argline.split()
