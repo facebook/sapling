@@ -67,6 +67,7 @@ Show debug commands if there are no other candidates
   $ hg debugcomplete debug
   debugancestor
   debugbuilddag
+  debugbundle
   debugcheckstate
   debugcommands
   debugcomplete
@@ -210,6 +211,7 @@ Show all commands + options
   copy: after, force, include, exclude, dry-run
   debugancestor: 
   debugbuilddag: mergeable-file, appended-file, overwritten-file, new-file
+  debugbundle: all
   debugcheckstate: 
   debugcommands: 
   debugcomplete: options
