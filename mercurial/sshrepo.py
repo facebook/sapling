@@ -119,9 +119,24 @@ class sshrepository(wireproto.wirerepository):
     def _callstream(self, cmd, **args):
         self.ui.debug("sending %s command\n" % cmd)
         self.pipeo.write("%s\n" % cmd)
-        for k, v in sorted(args.iteritems()):
+        _func, names = wireproto.commands[cmd]
+        keys = names.split()
+        wireargs = {}
+        for k in keys:
+            if k == '*':
+                wireargs['*'] = args
+                break
+            else:
+                wireargs[k] = args[k]
+                del args[k]
+        for k, v in sorted(wireargs.iteritems()):
             self.pipeo.write("%s %d\n" % (k, len(v)))
-            self.pipeo.write(v)
+            if isinstance(v, dict):
+                for dk, dv in v.iteritems():
+                    self.pipeo.write("%s %d\n" % (dk, len(dv)))
+                    self.pipeo.write(dv)
+            else:
+                self.pipeo.write(v)
         self.pipeo.flush()
 
         return self.pipei

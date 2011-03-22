@@ -161,6 +161,17 @@ def dispatch(repo, proto, command):
     args = proto.getargs(spec)
     return func(repo, proto, *args)
 
+def options(cmd, keys, others):
+    opts = {}
+    for k in keys:
+        if k in others:
+            opts[k] = others[k]
+            del others[k]
+    if others:
+        sys.stderr.write("abort: %s got unexpected arguments %s\n"
+                         % (cmd, ",".join(others)))
+    return opts
+
 def between(repo, proto, pairs):
     pairs = [decodelist(p, '-') for p in pairs.split(" ")]
     r = []
@@ -208,8 +219,10 @@ def changegroupsubset(repo, proto, bases, heads):
     cg = repo.changegroupsubset(bases, heads, 'serve')
     return streamres(proto.groupchunks(cg))
 
-def debugwireargs(repo, proto, one, two):
-    return repo.debugwireargs(one, two)
+def debugwireargs(repo, proto, one, two, others):
+    # only accept optional args from the known set
+    opts = options('debugwireargs', ['three', 'four'], others)
+    return repo.debugwireargs(one, two, **opts)
 
 def heads(repo, proto):
     h = repo.heads()
@@ -355,7 +368,7 @@ commands = {
     'capabilities': (capabilities, ''),
     'changegroup': (changegroup, 'roots'),
     'changegroupsubset': (changegroupsubset, 'bases heads'),
-    'debugwireargs': (debugwireargs, 'one two'),
+    'debugwireargs': (debugwireargs, 'one two *'),
     'heads': (heads, ''),
     'hello': (hello, ''),
     'listkeys': (listkeys, 'namespace'),

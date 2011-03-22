@@ -22,7 +22,7 @@ class webproto(object):
             if k == '*':
                 star = {}
                 for key in self.req.form.keys():
-                    if key not in keys:
+                    if key != 'cmd' and key not in keys:
                         star[key] = self.req.form[key][0]
                 data['*'] = star
             else:

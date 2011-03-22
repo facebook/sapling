@@ -7,6 +7,10 @@ Setup repo:
 
 Local:
 
+  $ hg debugwireargs repo eins zwei --three drei --four vier
+  eins zwei drei vier
+  $ hg debugwireargs repo eins zwei --four vier
+  eins zwei None vier
   $ hg debugwireargs repo eins zwei
   eins zwei None None
 
@@ -15,9 +19,19 @@ HTTP:
   $ hg serve -R repo -p $HGPORT -d --pid-file=hg1.pid -E error.log -A access.log
   $ cat hg1.pid >> $DAEMON_PIDS
 
+  $ hg debugwireargs http://localhost:$HGPORT/ un deux trois quatre
+  un deux trois quatre
+  $ hg debugwireargs http://localhost:$HGPORT/ eins zwei --four vier
+  eins zwei None vier
   $ hg debugwireargs http://localhost:$HGPORT/ eins zwei
   eins zwei None None
   $ cat access.log
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "GET /?cmd=debugwireargs&four=quatre&one=un&three=trois&two=deux HTTP/1.1" 200 - (glob)
+  * - - [*] "GET /?cmd=debugwireargs&four=quatre&one=un&three=trois&two=deux HTTP/1.1" 200 - (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "GET /?cmd=debugwireargs&four=vier&one=eins&two=zwei HTTP/1.1" 200 - (glob)
+  * - - [*] "GET /?cmd=debugwireargs&four=vier&one=eins&two=zwei HTTP/1.1" 200 - (glob)
   * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
   * - - [*] "GET /?cmd=debugwireargs&one=eins&two=zwei HTTP/1.1" 200 - (glob)
   * - - [*] "GET /?cmd=debugwireargs&one=eins&two=zwei HTTP/1.1" 200 - (glob)
@@ -37,6 +51,10 @@ SSH (try to exercise the ssh functionality with a dummy script):
   > sys.exit(bool(r))
   > EOF
 
+  $ hg debugwireargs --ssh "python ./dummyssh" ssh://user@dummy/repo uno due tre quattro
+  uno due tre quattro
+  $ hg debugwireargs --ssh "python ./dummyssh" ssh://user@dummy/repo eins zwei --four vier
+  eins zwei None vier
   $ hg debugwireargs --ssh "python ./dummyssh" ssh://user@dummy/repo eins zwei
   eins zwei None None
 
