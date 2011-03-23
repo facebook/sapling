@@ -84,7 +84,7 @@ static int splitlines(const char *a, int len, struct line **lr)
 	h = 0;
 	for (p = a; p < a + len; p++) {
 		/* Leonid Yuriev's hash */
-		h = (h * 1664525) + *p + 1013904223;
+		h = (h * 1664525) + (unsigned char)*p + 1013904223;
 
 		if (*p == '\n' || p == plast) {
 			l->h = h;
