@@ -10,6 +10,7 @@ from dulwich import client
 try:
     from mercurial import bookmarks
     bookmarks.update
+    from mercurial import commands
 except ImportError:
     from hgext import bookmarks
 from mercurial.i18n import _
@@ -564,7 +565,10 @@ class GitHandler(object):
             del new_refs['capabilities^{}']
             if not self.local_heads():
                 tip = hex(self.repo.lookup('tip'))
-                bookmarks.bookmark(self.ui, self.repo, 'master', tip, force=True)
+		try:
+			commands.bookmark(self.ui, self.repo, 'master', tip, force=True)
+		except NameError:
+	                bookmarks.bookmark(self.ui, self.repo, 'master', tip, force=True)
                 bookmarks.setcurrent(self.repo, 'master')
                 new_refs['refs/heads/master'] = self.map_git_get(tip)
 
