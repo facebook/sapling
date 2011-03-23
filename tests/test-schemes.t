@@ -29,6 +29,7 @@ check that {1} syntax works
   comparing with parts://localhost
   sending heads command
   searching for changes
+  sending known command
   no changes found
   [1]
 

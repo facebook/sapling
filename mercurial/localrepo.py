@@ -1325,20 +1325,24 @@ class localrepository(repo.repository):
     def pull(self, remote, heads=None, force=False):
         lock = self.lock()
         try:
+            usecommon = remote.capable('getbundle')
             tmp = discovery.findcommonincoming(self, remote, heads=heads,
-                                               force=force)
+                                               force=force, commononly=usecommon)
             common, fetch, rheads = tmp
             if not fetch:
                 self.ui.status(_("no changes found\n"))
                 result = 0
             else:
-                if heads is None and fetch == [nullid]:
+                if heads is None and list(common) == [nullid]:
                     self.ui.status(_("requesting all changes\n"))
                 elif heads is None and remote.capable('changegroupsubset'):
                     # issue1320, avoid a race if remote changed after discovery
                     heads = rheads
 
-                if heads is None:
+                if usecommon:
+                    cg = remote.getbundle('pull', common=common,
+                                          heads=heads or rheads)
+                elif heads is None:
                     cg = remote.changegroup(fetch, 'pull')
                 elif not remote.capable('changegroupsubset'):
                     raise util.Abort(_("partial pull cannot be done because "

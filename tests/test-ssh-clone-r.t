@@ -232,7 +232,7 @@ clone remote via stream
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg verify
   checking changesets
@@ -256,7 +256,7 @@ clone remote via stream
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 1 files (+1 heads)
+  added 2 changesets with 0 changes to 0 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg verify
   checking changesets

@@ -9,9 +9,10 @@ from node import nullid, short
 from i18n import _
 import util, error
 
-def findcommonincoming(repo, remote, heads=None, force=False):
-    """Return a tuple (common, missing roots, heads) used to identify
-    missing nodes from remote.
+def findcommonincoming(repo, remote, heads=None, force=False, commononly=False):
+    """Return a tuple (common, missing, heads) used to identify missing nodes
+    from remote. "missing" is either a boolean indicating if any nodes are missing
+    (when commononly=True), or else a list of the root nodes of the missing set.
 
     If a list of heads is specified, return only nodes which are heads
     or ancestors of these heads.
@@ -35,6 +36,13 @@ def findcommonincoming(repo, remote, heads=None, force=False):
     # assume we're closer to the tip than the root
     # and start by examining the heads
     repo.ui.status(_("searching for changes\n"))
+
+    if commononly:
+        myheads = repo.heads()
+        known = remote.known(myheads)
+        if util.all(known):
+            hasincoming = set(heads).difference(set(myheads)) and True
+            return myheads, hasincoming, heads
 
     unknown = []
     for h in heads:

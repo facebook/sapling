@@ -436,14 +436,19 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source,
 
     if revs:
         revs = [other.lookup(rev) for rev in revs]
-    other, incoming, bundle = bundlerepo.getremotechanges(ui, repo, other, revs,
-                                opts["bundle"], opts["force"])
-    if incoming is None:
+    usecommon = other.capable('getbundle')
+    other, common, incoming, bundle = bundlerepo.getremotechanges(ui, repo, other,
+                                       revs, opts["bundle"], opts["force"],
+                                       usecommon=usecommon)
+    if not incoming:
         ui.status(_("no changes found\n"))
         return subreporecurse()
 
     try:
-        chlist = other.changelog.nodesbetween(incoming, revs)[0]
+        if usecommon:
+            chlist = other.changelog.findmissing(common, revs)
+        else:
+            chlist = other.changelog.nodesbetween(incoming, revs)[0]
         displayer = cmdutil.show_changeset(ui, other, opts, buffered)
 
         # XXX once graphlog extension makes it into core,

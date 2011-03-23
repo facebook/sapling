@@ -548,8 +548,8 @@ def transplant(ui, repo, *revs, **opts):
     if source:
         sourcerepo = ui.expandpath(source)
         source = hg.repository(ui, sourcerepo)
-        source, incoming, bundle = bundlerepo.getremotechanges(ui, repo, source,
-                                    force=True)
+        source, common, incoming, bundle = bundlerepo.getremotechanges(ui, repo,
+                                            source, force=True)
     else:
         source = repo
 

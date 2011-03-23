@@ -28,6 +28,7 @@
   pulling from ../b
   searching for changes
   warning: repository is unrelated
+  requesting all changes
   adding changesets
   adding manifests
   adding file changes
