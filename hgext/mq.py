@@ -2383,7 +2383,7 @@ def push(ui, repo, patch=None, **opts):
     When -f/--force is applied, all local changes in patched files
     will be lost.
 
-    Return 0 on succces.
+    Return 0 on success.
     """
     q = repo.mq
     mergeq = None
