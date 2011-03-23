@@ -314,11 +314,17 @@ extmodules = [
     Extension('mercurial.parsers', ['mercurial/parsers.c']),
     ]
 
+osutil_ldflags = []
+
+if sys.platform == 'darwin':
+    osutil_ldflags += ['-framework', 'ApplicationServices']
+
 # disable osutil.c under windows + python 2.4 (issue1364)
 if sys.platform == 'win32' and sys.version_info < (2, 5, 0, 'final'):
     pymodules.append('mercurial.pure.osutil')
 else:
-    extmodules.append(Extension('mercurial.osutil', ['mercurial/osutil.c']))
+    extmodules.append(Extension('mercurial.osutil', ['mercurial/osutil.c'],
+                                extra_link_args=osutil_ldflags))
 
 if sys.platform == 'linux2' and os.uname()[2] > '2.6':
     # The inotify extension is only usable with Linux 2.6 kernels.

@@ -769,7 +769,18 @@ def splitpath(path):
 
 def gui():
     '''Are we running in a GUI?'''
-    return os.name == "nt" or os.name == "mac" or os.environ.get("DISPLAY")
+    if sys.platform == 'darwin':
+        if 'SSH_CONNECTION' in os.environ:
+            # handle SSH access to a box where the user is logged in
+            return False
+        elif getattr(osutil, 'isgui', None):
+            # check if a CoreGraphics session is available
+            return osutil.isgui()
+        else:
+            # pure build; use a safe default
+            return True
+    else:
+        return os.name == "nt" or os.environ.get("DISPLAY")
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name

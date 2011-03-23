@@ -514,6 +514,22 @@ bail:
 }
 #endif
 
+#ifdef __APPLE__
+#import <ApplicationServices/ApplicationServices.h>
+
+static PyObject *isgui(PyObject *self)
+{
+    CFDictionaryRef dict = CGSessionCopyCurrentDictionary();
+
+    if (dict != NULL) {
+        CFRelease(dict);
+        return Py_True;
+    } else {
+        return Py_False;
+    }
+}
+#endif
+
 static char osutil_doc[] = "Native operating system services.";
 
 static PyMethodDef methods[] = {
@@ -523,6 +539,12 @@ static PyMethodDef methods[] = {
 	{"posixfile", (PyCFunction)posixfile, METH_VARARGS | METH_KEYWORDS,
 	 "Open a file with POSIX-like semantics.\n"
 "On error, this function may raise either a WindowsError or an IOError."},
+#endif
+#ifdef __APPLE__
+    {
+        "isgui", (PyCFunction)isgui, METH_NOARGS,
+        "Is a CoreGraphics session available?"
+    },
 #endif
 	{NULL, NULL}
 };
