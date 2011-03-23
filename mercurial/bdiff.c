@@ -63,7 +63,7 @@ struct hunk {
 	struct hunk *next;
 };
 
-int splitlines(const char *a, int len, struct line **lr)
+static int splitlines(const char *a, int len, struct line **lr)
 {
 	int h, i;
 	const char *p, *b = a;
@@ -103,7 +103,7 @@ int splitlines(const char *a, int len, struct line **lr)
 	return i - 1;
 }
 
-int inline cmp(struct line *a, struct line *b)
+static inline int cmp(struct line *a, struct line *b)
 {
 	return a->h != b->h || a->len != b->len || memcmp(a->l, b->l, a->len);
 }
