@@ -76,6 +76,7 @@ Show debug commands if there are no other candidates
   debugdata
   debugdate
   debugfsinfo
+  debuggetbundle
   debugignore
   debugindex
   debugindexdot
@@ -219,6 +220,7 @@ Show all commands + options
   debugdata: 
   debugdate: extended
   debugfsinfo: 
+  debuggetbundle: head, common, type
   debugignore: 
   debugindex: format
   debugindexdot: 

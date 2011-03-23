@@ -17,6 +17,7 @@ import webcommands, protocol, webutil
 perms = {
     'changegroup': 'pull',
     'changegroupsubset': 'pull',
+    'getbundle': 'pull',
     'stream_out': 'pull',
     'listkeys': 'pull',
     'unbundle': 'push',

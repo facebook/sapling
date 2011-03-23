@@ -123,6 +123,16 @@ class wirerepository(repo.repository):
                              bases=bases, heads=heads)
         return changegroupmod.unbundle10(self._decompress(f), 'UN')
 
+    def getbundle(self, source, heads=None, common=None):
+        self.requirecap('getbundle', _('look up remote changes'))
+        opts = {}
+        if heads is not None:
+            opts['heads'] = encodelist(heads)
+        if common is not None:
+            opts['common'] = encodelist(common)
+        f = self._callstream("getbundle", **opts)
+        return changegroupmod.unbundle10(self._decompress(f), 'UN')
+
     def unbundle(self, cg, heads, source):
         '''Send cg (a readable file-like object representing the
         changegroup to push, typically a chunkbuffer object) to the
@@ -206,7 +216,7 @@ def branches(repo, proto, nodes):
     return "".join(r)
 
 def capabilities(repo, proto):
-    caps = 'lookup changegroupsubset branchmap pushkey known'.split()
+    caps = 'lookup changegroupsubset branchmap pushkey known getbundle'.split()
     if _allowstream(repo.ui):
         requiredformats = repo.requirements & repo.supportedformats
         # if our local revlogs are just revlogv1, add 'stream' cap
@@ -233,6 +243,13 @@ def debugwireargs(repo, proto, one, two, others):
     # only accept optional args from the known set
     opts = options('debugwireargs', ['three', 'four'], others)
     return repo.debugwireargs(one, two, **opts)
+
+def getbundle(repo, proto, others):
+    opts = options('getbundle', ['heads', 'common'], others)
+    for k, v in opts.iteritems():
+        opts[k] = decodelist(v)
+    cg = repo.getbundle('serve', **opts)
+    return streamres(proto.groupchunks(cg))
 
 def heads(repo, proto):
     h = repo.heads()
@@ -382,6 +399,7 @@ commands = {
     'changegroup': (changegroup, 'roots'),
     'changegroupsubset': (changegroupsubset, 'bases heads'),
     'debugwireargs': (debugwireargs, 'one two *'),
+    'getbundle': (getbundle, '*'),
     'heads': (heads, ''),
     'hello': (hello, ''),
     'known': (known, 'nodes'),

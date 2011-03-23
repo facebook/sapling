@@ -1270,6 +1270,29 @@ def debugbundle(ui, bundlepath, all=None, **opts):
     finally:
         f.close()
 
+def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
+    """retrieves a bundle from a repo
+
+    Every ID must be a full-length hex node id string. Saves the bundle to the
+    given file.
+    """
+    repo = hg.repository(ui, repopath)
+    if not repo.capable('getbundle'):
+        raise util.Abort("getbundle() not supported by target repository")
+    args = {}
+    if common:
+        args['common'] = [bin(s) for s in common]
+    if head:
+        args['heads'] = [bin(s) for s in head]
+    bundle = repo.getbundle('debug', **args)
+
+    bundletype = opts.get('type', 'bzip2').lower()
+    btypes = {'none': 'HG10UN', 'bzip2': 'HG10BZ', 'gzip': 'HG10GZ'}
+    bundletype = btypes.get(bundletype)
+    if bundletype not in changegroup.bundletypes:
+        raise util.Abort(_('unknown bundle type specified with --type'))
+    changegroup.writebundle(bundle, bundlepath, bundletype)
+
 def debugpushkey(ui, repopath, namespace, *keyinfo):
     '''access the pushkey key/value protocol
 
@@ -4497,6 +4520,13 @@ table = {
          _('[-e] DATE [RANGE]')),
     "debugdata": (debugdata, [], _('FILE REV')),
     "debugfsinfo": (debugfsinfo, [], _('[PATH]')),
+    "debuggetbundle":
+        (debuggetbundle,
+         [('H', 'head', [], _('id of head node'), _('ID')),
+          ('C', 'common', [], _('id of common node'), _('ID')),
+          ('t', 'type', 'bzip2', _('bundle compression type to use'), _('TYPE')),
+         ],
+         _('REPO FILE [-H|-C ID]...')),
     "debugignore": (debugignore, [], ''),
     "debugindex": (debugindex,
                    [('f', 'format', 0, _('revlog format'), _('FORMAT'))],
@@ -4869,6 +4899,6 @@ table = {
 
 norepo = ("clone init version help debugcommands debugcomplete"
           " debugdate debuginstall debugfsinfo debugpushkey debugwireargs"
-          " debugknown debugbundle")
+          " debugknown debuggetbundle debugbundle")
 optionalrepo = ("identify paths serve showconfig debugancestor debugdag"
                 " debugdata debugindex debugindexdot")

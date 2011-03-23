@@ -21,7 +21,7 @@ propertycache = util.propertycache
 
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey',
-                        'known'))
+                        'known', 'getbundle'))
     supportedformats = set(('revlogv1', 'parentdelta'))
     supported = supportedformats | set(('store', 'fncache', 'shared',
                                         'dotencode'))
@@ -1443,15 +1443,40 @@ class localrepository(repo.repository):
         Another wrinkle is doing the reverse, figuring out which changeset in
         the changegroup a particular filenode or manifestnode belongs to.
         """
+        cl = self.changelog
+        if not bases:
+            bases = [nullid]
+        csets, bases, heads = cl.nodesbetween(bases, heads)
+        # We assume that all ancestors of bases are known
+        common = set(cl.ancestors(*[cl.rev(n) for n in bases]))
+        return self._changegroupsubset(common, csets, heads, source)
+
+    def getbundle(self, source, heads=None, common=None):
+        """Like changegroupsubset, but returns the set difference between the
+        ancestors of heads and the ancestors common.
+
+        If heads is None, use the local heads. If common is None, use [nullid].
+
+        The nodes in common might not all be known locally due to the way the
+        current discovery protocol works.
+        """
+        cl = self.changelog
+        if common:
+            nm = cl.nodemap
+            common = [n for n in common if n in nm]
+        else:
+            common = [nullid]
+        if not heads:
+            heads = cl.heads()
+        common, missing = cl.findcommonmissing(common, heads)
+        return self._changegroupsubset(common, missing, heads, source)
+
+    def _changegroupsubset(self, commonrevs, csets, heads, source):
 
         cl = self.changelog
         mf = self.manifest
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
-
-        if not bases:
-            bases = [nullid]
-        csets, bases, heads = cl.nodesbetween(bases, heads)
 
         # can we go through the fast path ?
         heads.sort()
@@ -1461,9 +1486,6 @@ class localrepository(repo.repository):
         # slow path
         self.hook('preoutgoing', throw=True, source=source)
         self.changegroupinfo(csets, source)
-
-        # We assume that all ancestors of bases are known
-        commonrevs = set(cl.ancestors(*[cl.rev(n) for n in bases]))
 
         # A function generating function that sets up the initial environment
         # the inner function.

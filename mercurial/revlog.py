@@ -399,11 +399,12 @@ class revlog(object):
                     yield i
                     break
 
-    def findmissing(self, common=None, heads=None):
-        """Return the ancestors of heads that are not ancestors of common.
+    def findcommonmissing(self, common=None, heads=None):
+        """Return a tuple of the ancestors of common and the ancestors of heads
+        that are not ancestors of common.
 
-        More specifically, return a list of nodes N such that every N
-        satisfies the following constraints:
+        More specifically, the second element is a list of nodes N such that
+        every N satisfies the following constraints:
 
           1. N is an ancestor of some node in 'heads'
           2. N is not an ancestor of any node in 'common'
@@ -441,7 +442,25 @@ class revlog(object):
                         visit.append(p)
         missing = list(missing)
         missing.sort()
-        return [self.node(r) for r in missing]
+        return has, [self.node(r) for r in missing]
+
+    def findmissing(self, common=None, heads=None):
+        """Return the ancestors of heads that are not ancestors of common.
+
+        More specifically, return a list of nodes N such that every N
+        satisfies the following constraints:
+
+          1. N is an ancestor of some node in 'heads'
+          2. N is not an ancestor of any node in 'common'
+
+        The list is sorted by revision number, meaning it is
+        topologically sorted.
+
+        'heads' and 'common' are both lists of node IDs.  If heads is
+        not supplied, uses all of the revlog's heads.  If common is not
+        supplied, uses nullid."""
+        _common, missing = self.findcommonmissing(common, heads)
+        return missing
 
     def nodesbetween(self, roots=None, heads=None):
         """Return a topological path from 'roots' to 'heads'.
