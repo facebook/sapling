@@ -1249,7 +1249,9 @@ def debugbundle(ui, bundlepath, all=None, **opts):
                         p2 = chunkdata['p2']
                         cs = chunkdata['cs']
                         delta = chunkdata['data']
-                        ui.write("%s %s %s %s %s\n" % (hex(node), hex(p1), hex(p2), hex(cs), len(delta)))
+                        ui.write("%s %s %s %s %s\n" %
+                                 (hex(node), hex(p1), hex(p2),
+                                  hex(cs), len(delta)))
 
                 showchunks("changelog")
                 showchunks("manifest")
