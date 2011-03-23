@@ -565,10 +565,10 @@ class GitHandler(object):
             del new_refs['capabilities^{}']
             if not self.local_heads():
                 tip = hex(self.repo.lookup('tip'))
-		try:
-			commands.bookmark(self.ui, self.repo, 'master', tip, force=True)
-		except NameError:
-	                bookmarks.bookmark(self.ui, self.repo, 'master', tip, force=True)
+                try:
+                    commands.bookmark(self.ui, self.repo, 'master', tip, force=True)
+                except NameError:
+                    bookmarks.bookmark(self.ui, self.repo, 'master', tip, force=True)
                 bookmarks.setcurrent(self.repo, 'master')
                 new_refs['refs/heads/master'] = self.map_git_get(tip)
 
