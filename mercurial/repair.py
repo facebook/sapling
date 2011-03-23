@@ -46,7 +46,7 @@ def _collectbrokencsets(repo, files, striprev):
         # less than striprev (those will be broken by strip)
         for lrev in links:
             if lrev < striprev:
-                        s.add(lrev)
+                s.add(lrev)
 
     collectone(repo.manifest)
     for fname in files:

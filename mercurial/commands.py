@@ -1234,39 +1234,39 @@ def debugbundle(ui, bundlepath, all=None, **opts):
     """lists the contents of a bundle"""
     f = url.open(ui, bundlepath)
     try:
-            gen = changegroup.readbundle(f, bundlepath)
-            if all:
-                ui.write("format: id, p1, p2, cset, len(delta)\n")
+        gen = changegroup.readbundle(f, bundlepath)
+        if all:
+            ui.write("format: id, p1, p2, cset, len(delta)\n")
 
-                def showchunks(named):
-                    ui.write("\n%s\n" % named)
-                    while 1:
-                        chunkdata = gen.parsechunk()
-                        if not chunkdata:
-                            break
-                        node = chunkdata['node']
-                        p1 = chunkdata['p1']
-                        p2 = chunkdata['p2']
-                        cs = chunkdata['cs']
-                        delta = chunkdata['data']
-                        ui.write("%s %s %s %s %s\n" %
-                                 (hex(node), hex(p1), hex(p2),
-                                  hex(cs), len(delta)))
-
-                showchunks("changelog")
-                showchunks("manifest")
-                while 1:
-                    fname = gen.chunk()
-                    if not fname:
-                        break
-                    showchunks(fname)
-            else:
+            def showchunks(named):
+                ui.write("\n%s\n" % named)
                 while 1:
                     chunkdata = gen.parsechunk()
                     if not chunkdata:
                         break
                     node = chunkdata['node']
-                    ui.write("%s\n" % hex(node))
+                    p1 = chunkdata['p1']
+                    p2 = chunkdata['p2']
+                    cs = chunkdata['cs']
+                    delta = chunkdata['data']
+                    ui.write("%s %s %s %s %s\n" %
+                             (hex(node), hex(p1), hex(p2),
+                              hex(cs), len(delta)))
+
+            showchunks("changelog")
+            showchunks("manifest")
+            while 1:
+                fname = gen.chunk()
+                if not fname:
+                    break
+                showchunks(fname)
+        else:
+            while 1:
+                chunkdata = gen.parsechunk()
+                if not chunkdata:
+                    break
+                node = chunkdata['node']
+                ui.write("%s\n" % hex(node))
     finally:
         f.close()
 
