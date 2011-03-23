@@ -81,33 +81,43 @@ transplant bug fixes onto release branch
 now test that we fixed the bug for all scripts/extensions
   $ cat > $TESTTMP/committwice.py <<__EOF__
   > from mercurial import ui, hg, match, node
+  > from time import sleep
   > 
   > def replacebyte(fn, b):
-  >     f = open("file1", "rb+")
+  >     f = open(fn, "rb+")
   >     f.seek(0, 0)
   >     f.write(b)
   >     f.close()
   > 
+  > def printfiles(repo, rev):
+  >     print "revision %s files: %s" % (rev, repo[rev].files())
+  > 
   > repo = hg.repository(ui.ui(), '.')
   > assert len(repo) == 6, \
-  >        "initial: len(repo) == %d, expected 6" % len(repo)
+  >        "initial: len(repo): %d, expected: 6" % len(repo)
+  > 
+  > replacebyte("bugfix", "u")
+  > sleep(2)
   > try:
+  >     print "PRE: len(repo): %d" % len(repo)
   >     wlock = repo.wlock()
   >     lock = repo.lock()
-  >     m = match.exact(repo.root, '', ['file1'])
   >     replacebyte("file1", "x")
-  >     n = repo.commit(text="x", user="test", date=(0, 0), match=m)
-  >     print "commit 1: len(repo) == %d" % len(repo)
+  >     repo.commit(text="x", user="test", date=(0, 0))
   >     replacebyte("file1", "y")
-  >     n = repo.commit(text="y", user="test", date=(0, 0), match=m)
-  >     print "commit 2: len(repo) == %d" % len(repo)
+  >     repo.commit(text="y", user="test", date=(0, 0))
+  >     print "POST: len(repo): %d" % len(repo)
   > finally:
   >     lock.release()
   >     wlock.release()
+  > printfiles(repo, 6)
+  > printfiles(repo, 7)
   > __EOF__
   $ $PYTHON $TESTTMP/committwice.py
-  commit 1: len(repo) == 7
-  commit 2: len(repo) == 8
+  PRE: len(repo): 6
+  POST: len(repo): 8
+  revision 6 files: ['bugfix', 'file1']
+  revision 7 files: ['file1']
 
 Do a size-preserving modification outside of that process
   $ echo abcd > bugfix
@@ -115,5 +125,5 @@ Do a size-preserving modification outside of that process
   M bugfix
   $ hg log --template "{rev}  {desc}  {files}\n" -r5:
   5  fix 2  bugfix file1
-  6  x  file1
+  6  x  bugfix file1
   7  y  file1
