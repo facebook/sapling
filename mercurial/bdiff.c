@@ -65,7 +65,8 @@ struct hunk {
 
 static int splitlines(const char *a, int len, struct line **lr)
 {
-	int h, i;
+	unsigned h;
+	int i;
 	const char *p, *b = a;
 	const char * const plast = a + len - 1;
 	struct line *l;
@@ -98,7 +99,8 @@ static int splitlines(const char *a, int len, struct line **lr)
 	}
 
 	/* set up a sentinel */
-	l->h = l->len = 0;
+	l->h = 0;
+	l->len = 0;
 	l->l = a + len;
 	return i - 1;
 }
