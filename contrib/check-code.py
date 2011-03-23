@@ -180,6 +180,7 @@ cpats = [
     (r'^[^#]\w[+/*]\w', "missing whitespace in expression"),
     (r'^#\s+\w', "use #foo, not # foo"),
     (r'[^\n]\Z', "no trailing newline"),
+    (r'^\s*#import\b', "use only #include in standard C code"),
 ]
 
 cfilters = [

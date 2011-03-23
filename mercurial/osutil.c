@@ -515,7 +515,7 @@ bail:
 #endif
 
 #ifdef __APPLE__
-#import <ApplicationServices/ApplicationServices.h>
+#include <ApplicationServices/ApplicationServices.h>
 
 static PyObject *isgui(PyObject *self)
 {
