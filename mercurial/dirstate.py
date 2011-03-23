@@ -238,6 +238,8 @@ class dirstate(object):
                 "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
+        self._lastnormal = set()
+        self._lastnormaltime = None
         self._dirty = False
 
     def copy(self, source, dest):
@@ -414,6 +416,8 @@ class dirstate(object):
             delattr(self, "_dirs")
         self._copymap = {}
         self._pl = [nullid, nullid]
+        self._lastnormal = set()
+        self._lastnormaltime = None
         self._dirty = True
 
     def rebuild(self, parent, files):
@@ -461,6 +465,8 @@ class dirstate(object):
             write(f)
         st.write(cs.getvalue())
         st.rename()
+        self._lastnormal = set()
+        self._lastnormaltime = None
         self._dirty = self._dirtypl = False
 
     def _dirignore(self, f):
