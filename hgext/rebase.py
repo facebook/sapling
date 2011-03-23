@@ -482,9 +482,10 @@ def buildstate(repo, dest, src, base, detach):
 
     if src:
         commonbase = repo[src].ancestor(repo[dest])
+        samebranch = repo[src].branch() == repo[dest].branch()
         if commonbase == repo[src]:
             raise util.Abort(_('source is ancestor of destination'))
-        if commonbase == repo[dest]:
+        if samebranch and commonbase == repo[dest]:
             raise util.Abort(_('source is descendant of destination'))
         source = repo[src].rev()
         if detach:
