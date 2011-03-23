@@ -49,7 +49,7 @@ static uint32_t htonl(uint32_t x)
 #include "util.h"
 
 struct line {
-	int h, len, n, e;
+	int hash, len, n, e;
 	const char *l;
 };
 
@@ -65,7 +65,7 @@ struct hunk {
 
 static int splitlines(const char *a, int len, struct line **lr)
 {
-	unsigned h;
+	unsigned hash;
 	int i;
 	const char *p, *b = a;
 	const char * const plast = a + len - 1;
@@ -82,14 +82,14 @@ static int splitlines(const char *a, int len, struct line **lr)
 		return -1;
 
 	/* build the line array and calculate hashes */
-	h = 0;
+	hash = 0;
 	for (p = a; p < a + len; p++) {
 		/* Leonid Yuriev's hash */
-		h = (h * 1664525) + (unsigned char)*p + 1013904223;
+		hash = (hash * 1664525) + (unsigned char)*p + 1013904223;
 
 		if (*p == '\n' || p == plast) {
-			l->h = h;
-			h = 0;
+			l->hash = hash;
+			hash = 0;
 			l->len = p - b + 1;
 			l->l = b;
 			l->n = INT_MAX;
@@ -99,7 +99,7 @@ static int splitlines(const char *a, int len, struct line **lr)
 	}
 
 	/* set up a sentinel */
-	l->h = 0;
+	l->hash = 0;
 	l->len = 0;
 	l->l = a + len;
 	return i - 1;
@@ -107,7 +107,7 @@ static int splitlines(const char *a, int len, struct line **lr)
 
 static inline int cmp(struct line *a, struct line *b)
 {
-	return a->h != b->h || a->len != b->len || memcmp(a->l, b->l, a->len);
+	return a->hash != b->hash || a->len != b->len || memcmp(a->l, b->l, a->len);
 }
 
 static int equatelines(struct line *a, int an, struct line *b, int bn)
@@ -140,7 +140,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 	/* add lines to the hash table chains */
 	for (i = bn - 1; i >= 0; i--) {
 		/* find the equivalence class */
-		for (j = b[i].h & buckets; h[j].pos != INT_MAX;
+		for (j = b[i].hash & buckets; h[j].pos != INT_MAX;
 		     j = (j + 1) & buckets)
 			if (!cmp(b + i, b + h[j].pos))
 				break;
@@ -158,7 +158,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 	/* match items in a to their equivalence class in b */
 	for (i = 0; i < an; i++) {
 		/* find the equivalence class */
-		for (j = a[i].h & buckets; h[j].pos != INT_MAX;
+		for (j = a[i].hash & buckets; h[j].pos != INT_MAX;
 		     j = (j + 1) & buckets)
 			if (!cmp(a + i, b + h[j].pos))
 				break;
