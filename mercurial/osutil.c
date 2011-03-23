@@ -519,14 +519,14 @@ bail:
 
 static PyObject *isgui(PyObject *self)
 {
-    CFDictionaryRef dict = CGSessionCopyCurrentDictionary();
+	CFDictionaryRef dict = CGSessionCopyCurrentDictionary();
 
-    if (dict != NULL) {
-        CFRelease(dict);
-        return Py_True;
-    } else {
-        return Py_False;
-    }
+	if (dict != NULL) {
+		CFRelease(dict);
+		return Py_True;
+	} else {
+		return Py_False;
+	}
 }
 #endif
 
@@ -541,10 +541,10 @@ static PyMethodDef methods[] = {
 "On error, this function may raise either a WindowsError or an IOError."},
 #endif
 #ifdef __APPLE__
-    {
-        "isgui", (PyCFunction)isgui, METH_NOARGS,
-        "Is a CoreGraphics session available?"
-    },
+	{
+		"isgui", (PyCFunction)isgui, METH_NOARGS,
+		"Is a CoreGraphics session available?"
+	},
 #endif
 	{NULL, NULL}
 };
