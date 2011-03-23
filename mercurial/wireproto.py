@@ -37,7 +37,7 @@ class wirerepository(repo.repository):
         d = self._call("heads")
         try:
             return decodelist(d[:-1])
-        except:
+        except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
     def known(self, nodes):
@@ -45,7 +45,7 @@ class wirerepository(repo.repository):
         d = self._call("known", nodes=n)
         try:
             return [bool(int(f)) for f in d]
-        except:
+        except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
     def branchmap(self):
@@ -67,7 +67,7 @@ class wirerepository(repo.repository):
         try:
             br = [tuple(decodelist(b)) for b in d.splitlines()]
             return br
-        except:
+        except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
     def between(self, pairs):
@@ -78,7 +78,7 @@ class wirerepository(repo.repository):
             d = self._call("between", pairs=n)
             try:
                 r.extend(l and decodelist(l) or [] for l in d.splitlines())
-            except:
+            except ValueError:
                 self._abort(error.ResponseError(_("unexpected response:"), d))
         return r
 
