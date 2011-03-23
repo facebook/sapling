@@ -50,6 +50,7 @@ class dirstate(object):
         self._dirty = False
         self._dirtypl = False
         self._lastnormal = set()        # files believed to be normal
+        self._lastnormaltime = None
         self._ui = ui
 
     @propertycache
@@ -290,6 +291,9 @@ class dirstate(object):
         # process modifies it without changing its size before the clock
         # ticks over to the next second, then it won't be clean anymore.
         # So make sure that status() will look harder at it.
+        if self._lastnormaltime < s.st_mtime:
+            self._lastnormaltime = s.st_mtime
+            self._lastnormal = set()
         self._lastnormal.add(f)
 
     def normallookup(self, f):
