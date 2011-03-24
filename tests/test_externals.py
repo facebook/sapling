@@ -80,7 +80,7 @@ class TestFetchExternals(test_util.TestBase):
         ref0 = """[.]
  ^/externals/project1 deps/project1
 """
-        self.assertEqual(ref0, repo[0]['.hgsvnexternals'].data())
+        self.assertMultiLineEqual(ref0, repo[0]['.hgsvnexternals'].data())
         ref1 = """\
 [.]
  # A comment, then an empty line, then a blank line
@@ -89,7 +89,7 @@ class TestFetchExternals(test_util.TestBase):
      
  -r2 ^/externals/project2@2 deps/project2
 """
-        self.assertEqual(ref1, repo[1]['.hgsvnexternals'].data())
+        self.assertMultiLineEqual(ref1, repo[1]['.hgsvnexternals'].data())
 
         ref2 = """[.]
  -r2 ^/externals/project2@2 deps/project2
@@ -153,6 +153,8 @@ class TestFetchExternals(test_util.TestBase):
         checkdeps(['subdir/deps/project1'], ['deps/project2'], repo, 4)
 
     def test_hgsub(self, stupid=False):
+        if subrepo is None:
+            return
         repo = self._load_fixture_and_fetch('externals.svndump',
                                             externals='subrepos',
                                             stupid=stupid)
@@ -183,7 +185,7 @@ HEAD subdir/deps/project1
 HEAD subdir2/deps/project1
 """, repo[2]['.hgsubstate'].data())
 
-        self.assertEqual("""\
+        self.assertMultiLineEqual("""\
 deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
 subdir/deps/project1 = [hgsubversion] subdir:^/externals/project1 deps/project1
 """, repo[3]['.hgsub'].data())
@@ -259,6 +261,8 @@ deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
         commands.update(ui, repo, node='4', clean=True)
 
     def test_mergeexternals(self, stupid=False):
+        if subrepo is None:
+            return
         repo = self._load_fixture_and_fetch('mergeexternals.svndump',
                                             externals='subrepos',
                                             stupid=stupid)
