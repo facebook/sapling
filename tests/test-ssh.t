@@ -280,9 +280,11 @@ clone bookmarks
      test                      2:6c0482d977a3
 
 passwords in ssh urls are not supported
+(we use a glob here because different Python versions give different
+results here)
 
   $ hg push ssh://user:erroneouspwd@dummy/remote
-  pushing to ssh://user:erroneouspwd@dummy/remote
+  pushing to ssh://user:*@dummy/remote (glob)
   abort: password in URL not supported!
   [255]
 
