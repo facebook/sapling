@@ -285,18 +285,28 @@ class dirstate(object):
         self._dirty = True
         self._addpath(f)
         s = os.lstat(self._join(f))
-        self._map[f] = ('n', s.st_mode, s.st_size, int(s.st_mtime))
+        mtime = int(s.st_mtime)
+        self._map[f] = ('n', s.st_mode, s.st_size, mtime)
         if f in self._copymap:
             del self._copymap[f]
 
-        # Right now, this file is clean: but if some code in this
-        # process modifies it without changing its size before the clock
-        # ticks over to the next second, then it won't be clean anymore.
-        # So make sure that status() will look harder at it.
-        if self._lastnormaltime < s.st_mtime:
-            self._lastnormaltime = s.st_mtime
-            self._lastnormal = set()
-        self._lastnormal.add(f)
+        if mtime < self._lastnormaltime:
+            # We have already seen files with modification times from newer
+            # filesystem timeslots, so this timeslot is old and harmless.
+            # Comparing file times will work just fine for detecting modified
+            # files in status(). No special treatment is needed for f.
+            pass
+        else:
+            # f was modified most recently.
+            if mtime > self._lastnormaltime:
+                # A new timeslot, which we've never seen before.
+                # We can drop the filenames of an older timeslot.
+                self._lastnormaltime = mtime
+                self._lastnormal = set()
+            # Remember f in _lastnormal for closer inspection on status(),
+            # to make sure we won't miss future size-preserving file content
+            # modifications that happen within the same timeslot.
+            self._lastnormal.add(f)
 
     def normallookup(self, f):
         '''Mark a file normal, but possibly dirty.'''
