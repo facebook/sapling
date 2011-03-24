@@ -1559,45 +1559,6 @@ def debuginstall(ui):
         ui.write(_(" (templates seem to have been installed incorrectly)\n"))
         problems += 1
 
-    # patch
-    ui.status(_("Checking patch...\n"))
-    patchproblems = 0
-    a = "1\n2\n3\n4\n"
-    b = "1\n2\n3\ninsert\n4\n"
-    fa = writetemp(a)
-    d = mdiff.unidiff(a, None, b, None, os.path.basename(fa),
-        os.path.basename(fa))
-    fd = writetemp(d)
-
-    files = {}
-    try:
-        patch.patch(fd, ui, cwd=os.path.dirname(fa), files=files)
-    except util.Abort, e:
-        ui.write(_(" patch call failed:\n"))
-        ui.write(" " + str(e) + "\n")
-        patchproblems += 1
-    else:
-        if list(files) != [os.path.basename(fa)]:
-            ui.write(_(" unexpected patch output!\n"))
-            patchproblems += 1
-        a = open(fa).read()
-        if a != b:
-            ui.write(_(" patch test failed!\n"))
-            patchproblems += 1
-
-    if patchproblems:
-        if ui.config('ui', 'patch'):
-            ui.write(_(" (Current patch tool may be incompatible with patch,"
-                       " or misconfigured. Please check your configuration"
-                       " file)\n"))
-        else:
-            ui.write(_(" Internal patcher failure, please report this error"
-                       " to http://mercurial.selenic.com/wiki/BugTracker\n"))
-    problems += patchproblems
-
-    os.unlink(fa)
-    os.unlink(fd)
-
     # editor
     ui.status(_("Checking commit editor...\n"))
     editor = ui.geteditor()

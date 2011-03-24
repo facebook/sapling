@@ -1156,7 +1156,7 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
         return -1
     return err
 
-def externalpatch(patcher, patchname, ui, strip, cwd, files):
+def _externalpatch(patcher, patchname, ui, strip, cwd, files):
     """use <patcher> to apply <patchname> to the working directory.
     returns whether patch was applied with fuzz factor."""
 
@@ -1240,7 +1240,7 @@ def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
         files = {}
     try:
         if patcher:
-            return externalpatch(patcher, patchname, ui, strip, cwd, files)
+            return _externalpatch(patcher, patchname, ui, strip, cwd, files)
         return internalpatch(patchname, ui, strip, cwd, files, eolmode)
     except PatchError, err:
         raise util.Abort(str(err))

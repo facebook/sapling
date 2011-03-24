@@ -911,9 +911,6 @@ User interface controls.
     The conflict resolution program to use during a manual merge.
     For more information on merge tools see :hg:`help merge-tools`.
     For configuring merge tools see the merge-tools_ section.
-``patch``
-    command to use to apply patches. Look for ``gpatch`` or ``patch`` in
-    PATH if unset.
 ``quiet``
     Reduce the amount of output printed. True or False. Default is False.
 ``remotecmd``
