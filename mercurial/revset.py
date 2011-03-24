@@ -298,9 +298,18 @@ def children(repo, subset, x):
     return [r for r in subset if r in cs]
 
 def branch(repo, subset, x):
-    """``branch(set)``
-    All changesets belonging to the branches of changesets in set.
+    """``branch(string or set)``
+    All changesets belonging to the given branch or the branches of the given
+    changesets.
     """
+    try:
+        b = getstring(x, '')
+        if b in repo.branchmap():
+            return [r for r in subset if repo[r].branch() == b]
+    except error.ParseError:
+        # not a string, but another revspec, e.g. tip()
+        pass
+
     s = getset(repo, range(len(repo)), x)
     b = set()
     for r in s:
