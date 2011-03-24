@@ -432,9 +432,7 @@ class hgsubrepo(abstractsubrepo):
 
     def _get(self, state):
         source, revision, kind = state
-        try:
-            self._repo.lookup(revision)
-        except error.RepoError:
+        if revision not in self._repo:
             self._repo._subsource = source
             srcurl = _abssource(self._repo)
             self._repo.ui.status(_('pulling subrepo %s from %s\n')
