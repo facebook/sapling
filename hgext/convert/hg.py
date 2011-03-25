@@ -384,3 +384,6 @@ class mercurial_source(converter_source):
             return hex(self.repo.lookup(rev))
         except error.RepoError:
             return None
+
+    def getbookmarks(self):
+        return bookmarks.listbookmarks(self.repo)
