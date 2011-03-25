@@ -4,7 +4,6 @@
   $ echo "convert=" >> $HGRCPATH
   $ echo 'graphlog =' >> $HGRCPATH
   $ DARCS_EMAIL='test@example.org'; export DARCS_EMAIL
-  $ HOME=`pwd`/do_not_use_HOME_darcs; export HOME
 
 skip if we can't import elementtree
 

@@ -8,7 +8,6 @@ on Windows. Having a variable here ease test patching.
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
   $ echo 'graphlog =' >> $HGRCPATH
-  $ HOME=`pwd`/do_not_use_HOME_mtn; export HOME
 
 Windows version of monotone home
 

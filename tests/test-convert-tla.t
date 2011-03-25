@@ -1,9 +1,5 @@
 
   $ "$TESTDIR/hghave" tla || exit 80
-  $ mkdir do_not_use_HOME_tla
-  $ cd do_not_use_HOME_tla
-  $ HOME=`pwd`; export HOME
-  $ cd ..
   $ tla my-id "mercurial <mercurial@selenic.com>"
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH

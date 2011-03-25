@@ -2,10 +2,6 @@
 
 "$TESTDIR/hghave" baz || exit 80
 
-mkdir do_not_use_HOME_baz
-cd do_not_use_HOME_baz
-HOME=`pwd`; export HOME
-cd ..
 baz my-id "mercurial <mercurial@selenic.com>"
 
 echo "[extensions]" >> $HGRCPATH
