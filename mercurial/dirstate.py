@@ -49,7 +49,6 @@ class dirstate(object):
         self._rootdir = os.path.join(root, '')
         self._dirty = False
         self._dirtypl = False
-        self._lastnormal = set()        # files believed to be normal
         self._lastnormaltime = None
         self._ui = ui
 
@@ -238,7 +237,6 @@ class dirstate(object):
                 "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
-        self._lastnormal = set()
         self._lastnormaltime = None
         self._dirty = False
 
@@ -289,24 +287,11 @@ class dirstate(object):
         self._map[f] = ('n', s.st_mode, s.st_size, mtime)
         if f in self._copymap:
             del self._copymap[f]
-
-        if mtime < self._lastnormaltime:
-            # We have already seen files with modification times from newer
-            # filesystem timeslots, so this timeslot is old and harmless.
-            # Comparing file times will work just fine for detecting modified
-            # files in status(). No special treatment is needed for f.
-            pass
-        else:
-            # f was modified most recently.
-            if mtime > self._lastnormaltime:
-                # A new timeslot, which we've never seen before.
-                # We can drop the filenames of an older timeslot.
-                self._lastnormaltime = mtime
-                self._lastnormal = set()
-            # Remember f in _lastnormal for closer inspection on status(),
+        if mtime > self._lastnormaltime:
+            # Remember the most recent modification timeslot for status(),
             # to make sure we won't miss future size-preserving file content
             # modifications that happen within the same timeslot.
-            self._lastnormal.add(f)
+            self._lastnormaltime = mtime
 
     def normallookup(self, f):
         '''Mark a file normal, but possibly dirty.'''
@@ -331,7 +316,6 @@ class dirstate(object):
         self._map[f] = ('n', 0, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
-        self._lastnormal.discard(f)
 
     def otherparent(self, f):
         '''Mark as coming from the other parent, always dirty.'''
@@ -343,7 +327,6 @@ class dirstate(object):
         self._map[f] = ('n', 0, -2, -1)
         if f in self._copymap:
             del self._copymap[f]
-        self._lastnormal.discard(f)
 
     def add(self, f):
         '''Mark a file added.'''
@@ -352,7 +335,6 @@ class dirstate(object):
         self._map[f] = ('a', 0, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
-        self._lastnormal.discard(f)
 
     def remove(self, f):
         '''Mark a file removed.'''
@@ -369,7 +351,6 @@ class dirstate(object):
         self._map[f] = ('r', 0, size, 0)
         if size == 0 and f in self._copymap:
             del self._copymap[f]
-        self._lastnormal.discard(f)
 
     def merge(self, f):
         '''Mark a file merged.'''
@@ -379,7 +360,6 @@ class dirstate(object):
         self._map[f] = ('m', s.st_mode, s.st_size, int(s.st_mtime))
         if f in self._copymap:
             del self._copymap[f]
-        self._lastnormal.discard(f)
 
     def forget(self, f):
         '''Forget a file.'''
@@ -389,7 +369,6 @@ class dirstate(object):
             del self._map[f]
         except KeyError:
             self._ui.warn(_("not in dirstate: %s\n") % f)
-        self._lastnormal.discard(f)
 
     def _normalize(self, path, isknown):
         normed = os.path.normcase(path)
@@ -426,7 +405,6 @@ class dirstate(object):
             delattr(self, "_dirs")
         self._copymap = {}
         self._pl = [nullid, nullid]
-        self._lastnormal = set()
         self._lastnormaltime = None
         self._dirty = True
 
@@ -475,7 +453,6 @@ class dirstate(object):
             write(f)
         st.write(cs.getvalue())
         st.rename()
-        self._lastnormal = set()
         self._lastnormaltime = None
         self._dirty = self._dirtypl = False
 
@@ -691,7 +668,6 @@ class dirstate(object):
         radd = removed.append
         dadd = deleted.append
         cadd = clean.append
-        lastnormal = self._lastnormal.__contains__
 
         lnkkind = stat.S_IFLNK
 
@@ -714,6 +690,7 @@ class dirstate(object):
                 # lines are an expansion of "islink => checklink"
                 # where islink means "is this a link?" and checklink
                 # means "can we check links?".
+                mtime = int(st.st_mtime)
                 if (size >= 0 and
                     (size != st.st_size
                      or ((mode ^ st.st_mode) & 0100 and self._checkexec))
@@ -721,20 +698,14 @@ class dirstate(object):
                     or size == -2 # other parent
                     or fn in self._copymap):
                     madd(fn)
-                elif (time != int(st.st_mtime)
+                elif (mtime != time
                       and (mode & lnkkind != lnkkind or self._checklink)):
                     ladd(fn)
-                elif lastnormal(fn):
-                    # If previously in this process we recorded that
-                    # this file is clean, think twice: intervening code
-                    # may have modified the file in the same second
-                    # without changing its size. So force caller to
-                    # check file contents. Because we're not updating
-                    # self._map, this only affects the current process.
-                    # That should be OK because this mainly affects
-                    # multiple commits in the same process, and each
-                    # commit by definition makes the committed files
-                    # clean.
+                elif mtime == self._lastnormaltime:
+                    # fn may have been changed in the same timeslot without
+                    # changing its size. This can happen if we quickly do
+                    # multiple commits in a single transaction.
+                    # Force lookup, so we don't miss such a racy file change.
                     ladd(fn)
                 elif listclean:
                     cadd(fn)
