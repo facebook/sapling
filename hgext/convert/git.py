@@ -17,19 +17,27 @@ class convert_git(converter_source):
     # cannot remove environment variable. Just assume none have
     # both issues.
     if hasattr(os, 'unsetenv'):
-        def gitopen(self, s):
+        def gitopen(self, s, noerr=False):
             prevgitdir = os.environ.get('GIT_DIR')
             os.environ['GIT_DIR'] = self.path
             try:
-                return util.popen(s, 'rb')
+                if noerr:
+                    (stdin, stdout, stderr) = util.popen3(s)
+                    return stdout
+                else:
+                    return util.popen(s, 'rb')
             finally:
                 if prevgitdir is None:
                     del os.environ['GIT_DIR']
                 else:
                     os.environ['GIT_DIR'] = prevgitdir
     else:
-        def gitopen(self, s):
-            return util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
+        def gitopen(self, s, noerr=False):
+            if noerr:
+                (sin, so, se) = util.popen3('GIT_DIR=%s %s' % (self.path, s))
+                return stdout
+            else:
+                util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
 
     def gitread(self, s):
         fh = self.gitopen(s)
@@ -168,3 +176,30 @@ class convert_git(converter_source):
             raise util.Abort(_('cannot read changes in %s') % version)
 
         return changes
+
+    def getbookmarks(self):
+        bookmarks = {}
+
+        # Interesting references in git are prefixed
+        prefix = 'refs/heads/'
+        prefixlen = len(prefix)
+
+        # factor two commands
+        gitcmd = { 'remote/': 'git ls-remote --heads origin',
+                          '': 'git show-ref'}
+
+        # Origin heads
+        for reftype in gitcmd:
+            try:
+                fh = self.gitopen(gitcmd[reftype], noerr=True)
+                for line in fh:
+                    line = line.strip()
+                    rev, name = line.split(None, 1)
+                    if not name.startswith(prefix):
+                        continue
+                    name = '%s%s' % (reftype, name[prefixlen:])
+                    bookmarks[name] = rev
+            except:
+                pass
+
+        return bookmarks

@@ -57,9 +57,11 @@ Remove the directory, then try to replace it with a file
   2 t4.1
   1 t4.2
   0 Merge branch other
+  updating bookmarks
   $ hg up -q -R git-repo-hg
   $ hg -R git-repo-hg tip -v
   changeset:   5:c78094926be2
+  bookmark:    master
   tag:         tip
   parent:      3:f5f5cb45432b
   parent:      4:4e174f80c67c
@@ -217,6 +219,7 @@ convert binary file
   sorting...
   converting...
   0 addbinary
+  updating bookmarks
   $ cd git-repo3-hg
   $ hg up -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -248,8 +251,10 @@ convert author committer
   converting...
   1 addfoo
   0 addfoo2
+  updating bookmarks
   $ hg -R git-repo4-hg log -v
   changeset:   1:d63e967f93da
+  bookmark:    master
   tag:         tip
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
