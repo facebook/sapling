@@ -20,6 +20,7 @@ class monotone_source(converter_source, commandline):
         self.ui = ui
         self.path = path
         self.automatestdio = False
+        self.rev = rev
 
         norepo = NoRepo(_("%s does not look like a monotone repository")
                         % path)
@@ -64,14 +65,6 @@ class monotone_source(converter_source, commandline):
         self.dirs  = None
 
         checktool('mtn', abort=False)
-
-        # test if there are any revisions
-        self.rev = None
-        try:
-            self.getheads()
-        except:
-            raise norepo
-        self.rev = rev
 
     def mtnrun(self, *args, **kwargs):
         if self.automatestdio:
