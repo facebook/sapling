@@ -694,7 +694,9 @@ def runone(options, test, skips, fails):
         runner = shtest
 
     # Make a tmp subdirectory to work in
-    testtmp = os.environ["TESTTMP"] = os.path.join(HGTMP, test)
+    testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
+        os.path.join(HGTMP, test)
+
     os.mkdir(testtmp)
     os.chdir(testtmp)
 
