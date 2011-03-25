@@ -207,6 +207,10 @@ test diverging directory moves
   $ mtn ci -m divergentdirmove2
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 4a736634505795f17786fffdf2c9cbf5b11df6f6
+
+test suspending (closing a branch)
+
+  $ mtn suspend 4a736634505795f17786fffdf2c9cbf5b11df6f6 2> /dev/null
   $ cd ..
 
 convert incrementally
@@ -355,3 +359,10 @@ check divergent directory moves
   dir8-2/a
   dir9-2/b
   e
+
+check branch closing
+
+  $ hg branches -a
+  $ hg branches -c
+  com.selenic.test              13:* (closed) (glob)
+

@@ -291,14 +291,18 @@ class monotone_source(converter_source, commandline):
         return data, attr
 
     def getcommit(self, rev):
-        certs   = self.mtngetcerts(rev)
+        extra = {}
+        certs = self.mtngetcerts(rev)
+        if certs.get('suspend') == certs["branch"]:
+            extra['close'] = '1'
         return commit(
             author=certs["author"],
             date=util.datestr(util.strdate(certs["date"], "%Y-%m-%dT%H:%M:%S")),
             desc=certs["changelog"],
             rev=rev,
             parents=self.mtnrun("parents", rev).splitlines(),
-            branch=certs["branch"])
+            branch=certs["branch"],
+            extra=extra)
 
     def gettags(self):
         tags = {}
