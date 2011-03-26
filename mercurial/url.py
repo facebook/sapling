@@ -12,17 +12,6 @@ import __builtin__
 from i18n import _
 import keepalive, util
 
-def _urlunparse(scheme, netloc, path, params, query, fragment, url):
-    '''Handle cases where urlunparse(urlparse(x://)) doesn't preserve the "//"'''
-    result = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
-    if (scheme and
-        result.startswith(scheme + ':') and
-        not result.startswith(scheme + '://') and
-        url.startswith(scheme + '://')
-       ):
-        result = scheme + '://' + result[len(scheme + ':'):]
-    return result
-
 class url(object):
     """Reliable URL parser.
 
@@ -215,17 +204,18 @@ class url(object):
 def has_scheme(path):
     return bool(url(path).scheme)
 
-def hidepassword(url):
+def hidepassword(u):
     '''hide user credential in a url string'''
-    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-    netloc = re.sub('([^:]*):([^@]*)@(.*)', r'\1:***@\3', netloc)
-    return _urlunparse(scheme, netloc, path, params, query, fragment, url)
+    u = url(u)
+    if u.passwd:
+        u.passwd = '***'
+    return str(u)
 
-def removeauth(url):
+def removeauth(u):
     '''remove all authentication information from a url string'''
-    scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-    netloc = netloc[netloc.find('@')+1:]
-    return _urlunparse(scheme, netloc, path, params, query, fragment, url)
+    u = url(u)
+    u.user = u.passwd = None
+    return str(u)
 
 def netlocsplit(netloc):
     '''split [user[:passwd]@]host[:port] into 4-tuple.'''
