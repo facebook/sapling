@@ -235,3 +235,73 @@ Rebase the applied mq patches:
   -mq1
   +mq2
 
+
+Rebase with guards
+
+  $ hg init foo
+  $ cd foo
+  $ echo a > a
+  $ hg ci -Am a
+  adding a
+
+Create mq repo with guarded patches foo and bar:
+
+  $ hg qinit
+  $ hg qnew foo
+  $ hg qguard foo +baz
+  $ echo foo > foo
+  $ hg qref
+  $ hg qpop
+  popping foo
+  patch queue now empty
+
+  $ hg qnew bar
+  $ hg qguard bar +baz
+  $ echo bar > bar
+  $ hg qref
+
+  $ hg qguard -l
+  bar: +baz
+  foo: +baz
+
+  $ hg tglog
+  @  1:* '[mq]: bar' tags: bar qbase qtip tip (glob)
+  |
+  o  0:* 'a' tags: qparent (glob)
+  
+Create new head to rebase bar onto:
+
+  $ hg up -C 0
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo b > b
+  $ hg add b
+  $ hg ci -m b
+  created new head
+  $ hg up -C 1
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo a >> a
+  $ hg qref
+
+  $ hg tglog
+  @  2:* '[mq]: bar' tags: bar qbase qtip tip (glob)
+  |
+  | o  1:* 'b' tags: (glob)
+  |/
+  o  0:* 'a' tags: qparent (glob)
+  
+
+Rebase bar:
+
+  $ hg -q rebase -d 1
+
+  $ hg qguard -l
+  foo: +baz
+  bar: +baz
+
+  $ hg tglog
+  @  2:* '[mq]: bar' tags: bar qbase qtip tip (glob)
+  |
+  o  1:* 'b' tags: qparent (glob)
+  |
+  o  0:* 'a' tags: (glob)
+  
