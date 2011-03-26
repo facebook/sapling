@@ -23,6 +23,198 @@ def _urlunparse(scheme, netloc, path, params, query, fragment, url):
         result = scheme + '://' + result[len(scheme + ':'):]
     return result
 
+class url(object):
+    """Reliable URL parser.
+
+    This parses URLs and provides attributes for the following
+    components:
+
+    <scheme>://<user>:<passwd>@<host>:<port>/<path>?<query>#<fragment>
+
+    Missing components are set to None. The only exception is
+    fragment, which is set to '' if present but empty.
+
+    If parse_fragment is False, fragment is included in query. If
+    parse_query is False, query is included in path. If both are
+    False, both fragment and query are included in path.
+
+    See http://www.ietf.org/rfc/rfc2396.txt for more information.
+
+    Examples:
+
+    >>> url('http://www.ietf.org/rfc/rfc2396.txt')
+    <url scheme: 'http', host: 'www.ietf.org', path: 'rfc/rfc2396.txt'>
+    >>> url('ssh://[::1]:2200//home/joe/repo')
+    <url scheme: 'ssh', host: '[::1]', port: '2200', path: '/home/joe/repo'>
+    >>> url('file:///home/joe/repo')
+    <url scheme: 'file', path: '/home/joe/repo'>
+    >>> url('bundle:foo')
+    <url scheme: 'bundle', path: 'foo'>
+
+    Authentication credentials:
+
+    >>> url('ssh://joe:xyz@x/repo')
+    <url scheme: 'ssh', user: 'joe', passwd: 'xyz', host: 'x', path: 'repo'>
+    >>> url('ssh://joe@x/repo')
+    <url scheme: 'ssh', user: 'joe', host: 'x', path: 'repo'>
+
+    Query strings and fragments:
+
+    >>> url('http://host/a?b#c')
+    <url scheme: 'http', host: 'host', path: 'a', query: 'b', fragment: 'c'>
+    >>> url('http://host/a?b#c', parse_query=False, parse_fragment=False)
+    <url scheme: 'http', host: 'host', path: 'a?b#c'>
+    """
+
+    _safechars = "!~*'()+"
+    _safepchars = "/!~*'()+"
+
+    def __init__(self, path, parse_query=True, parse_fragment=True):
+        # We slowly chomp away at path until we have only the path left
+        self.scheme = self.user = self.passwd = self.host = None
+        self.port = self.path = self.query = self.fragment = None
+        self._localpath = True
+
+        if not path.startswith('/') and ':' in path:
+            parts = path.split(':', 1)
+            if parts[0]:
+                self.scheme, path = parts
+                self._localpath = False
+
+        if not path:
+            path = None
+            if self._localpath:
+                self.path = ''
+                return
+        else:
+            if parse_fragment and '#' in path:
+                path, self.fragment = path.split('#', 1)
+                if not path:
+                    path = None
+            if self._localpath:
+                self.path = path
+                return
+
+            if parse_query and '?' in path:
+                path, self.query = path.split('?', 1)
+                if not path:
+                    path = None
+                if not self.query:
+                    self.query = None
+
+            # // is required to specify a host/authority
+            if path and path.startswith('//'):
+                parts = path[2:].split('/', 1)
+                if len(parts) > 1:
+                    self.host, path = parts
+                    path = path
+                else:
+                    self.host = parts[0]
+                    path = None
+                if not self.host:
+                    self.host = None
+                    if path:
+                        path = '/' + path
+
+            if self.host and '@' in self.host:
+                self.user, self.host = self.host.rsplit('@', 1)
+                if ':' in self.user:
+                    self.user, self.passwd = self.user.split(':', 1)
+                if not self.host:
+                    self.host = None
+
+            # Don't split on colons in IPv6 addresses without ports
+            if (self.host and ':' in self.host and
+                not (self.host.startswith('[') and self.host.endswith(']'))):
+                self.host, self.port = self.host.rsplit(':', 1)
+                if not self.host:
+                    self.host = None
+        self.path = path
+
+        for a in ('user', 'passwd', 'host', 'port',
+                  'path', 'query', 'fragment'):
+            v = getattr(self, a)
+            if v is not None:
+                setattr(self, a, urllib.unquote(v))
+
+    def __repr__(self):
+        attrs = []
+        for a in ('scheme', 'user', 'passwd', 'host', 'port', 'path',
+                  'query', 'fragment'):
+            v = getattr(self, a)
+            if v is not None:
+                attrs.append('%s: %r' % (a, v))
+        return '<url %s>' % ', '.join(attrs)
+
+    def __str__(self):
+        """Join the URL's components back into a URL string.
+
+        Examples:
+
+        >>> str(url('http://user:pw@host:80/?foo#bar'))
+        'http://user:pw@host:80/?foo#bar'
+        >>> str(url('ssh://user:pw@[::1]:2200//home/joe#'))
+        'ssh://user:pw@[::1]:2200//home/joe#'
+        >>> str(url('http://localhost:80//'))
+        'http://localhost:80//'
+        >>> str(url('http://localhost:80/'))
+        'http://localhost:80/'
+        >>> str(url('http://localhost:80'))
+        'http://localhost:80'
+        >>> str(url('bundle:foo'))
+        'bundle:foo'
+        >>> str(url('path'))
+        'path'
+        """
+        if self._localpath:
+            s = self.path
+            if self.fragment:
+                s += '#' + self.fragment
+            return s
+
+        s = self.scheme + ':'
+        if (self.user or self.passwd or self.host or
+            self.scheme and not self.path):
+            s += '//'
+        if self.user:
+            s += urllib.quote(self.user, safe=self._safechars)
+        if self.passwd:
+            s += ':' + urllib.quote(self.passwd, safe=self._safechars)
+        if self.user or self.passwd:
+            s += '@'
+        if self.host:
+            if not (self.host.startswith('[') and self.host.endswith(']')):
+                s += urllib.quote(self.host)
+            else:
+                s += self.host
+        if self.port:
+            s += ':' + urllib.quote(self.port)
+        if ((self.host and self.path is not None) or
+            (self.host and self.query or self.fragment)):
+            s += '/'
+        if self.path:
+            s += urllib.quote(self.path, safe=self._safepchars)
+        if self.query:
+            s += '?' + urllib.quote(self.query, safe=self._safepchars)
+        if self.fragment is not None:
+            s += '#' + urllib.quote(self.fragment, safe=self._safepchars)
+        return s
+
+    def authinfo(self):
+        user, passwd = self.user, self.passwd
+        try:
+            self.user, self.passwd = None, None
+            s = str(self)
+        finally:
+            self.user, self.passwd = user, passwd
+        if not self.user:
+            return (s, None)
+        return (s, (None, (str(self), self.host),
+                    self.user, self.passwd or ''))
+
+def has_scheme(path):
+    return bool(url(path).scheme)
+
 def hidepassword(url):
     '''hide user credential in a url string'''
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
