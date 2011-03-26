@@ -231,7 +231,7 @@ Show all commands + options
   debugrename: rev
   debugrevspec: 
   debugsetparents: 
-  debugstate: nodates
+  debugstate: nodates, datesort
   debugsub: rev
   debugwalk: include, exclude
   debugwireargs: three, four, ssh, remotecmd, insecure

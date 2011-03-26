@@ -1340,11 +1340,15 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     finally:
         wlock.release()
 
-def debugstate(ui, repo, nodates=None):
+def debugstate(ui, repo, nodates=None, datesort=None):
     """show the contents of the current dirstate"""
     timestr = ""
     showdate = not nodates
-    for file_, ent in sorted(repo.dirstate._map.iteritems()):
+    if datesort:
+        keyfunc = lambda x: (x[1][3], x[0]) # sort by mtime, then by filename
+    else:
+        keyfunc = None # sort by filename
+    for file_, ent in sorted(repo.dirstate._map.iteritems(), key=keyfunc):
         if showdate:
             if ent[3] == -1:
                 # Pad or slice to locale representation
@@ -4512,7 +4516,8 @@ table = {
         (debugsetparents, [], _('REV1 [REV2]')),
     "debugstate":
         (debugstate,
-         [('', 'nodates', None, _('do not display the saved mtime'))],
+         [('', 'nodates', None, _('do not display the saved mtime')),
+          ('', 'datesort', None, _('sort by saved mtime'))],
          _('[OPTION]...')),
     "debugsub":
         (debugsub,
