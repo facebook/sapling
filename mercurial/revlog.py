@@ -1087,8 +1087,8 @@ class revlog(object):
             fullrev = True
 
         # build deltas
-        for d in xrange(len(revs) - 1):
-            a, b = revs[d], revs[d + 1]
+        for r in xrange(len(revs) - 1):
+            a, b = revs[r], revs[r + 1]
             nb = self.node(b)
 
             if infocollect is not None:
