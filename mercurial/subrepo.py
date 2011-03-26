@@ -5,10 +5,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, re, xml.dom.minidom, shutil, urlparse, posixpath
+import errno, os, re, xml.dom.minidom, shutil, posixpath
 import stat, subprocess, tarfile
 from i18n import _
-import config, util, node, error, cmdutil, bookmarks
+import config, util, node, error, cmdutil, url, bookmarks
 hg = None
 
 nullstate = ('', '', 'empty')
@@ -193,21 +193,16 @@ def _abssource(repo, push=False, abort=True):
     """return pull/push path of repo - either based on parent repo .hgsub info
     or on the top repo config. Abort or return None if no source found."""
     if hasattr(repo, '_subparent'):
-        source = repo._subsource
-        if source.startswith('/') or '://' in source:
-            return source
+        source = url.url(repo._subsource)
+        source.path = posixpath.normpath(source.path)
+        if posixpath.isabs(source.path) or source.scheme:
+            return str(source)
         parent = _abssource(repo._subparent, push, abort=False)
         if parent:
-            if '://' in parent:
-                if parent[-1] == '/':
-                    parent = parent[:-1]
-                r = urlparse.urlparse(parent + '/' + source)
-                r = urlparse.urlunparse((r[0], r[1],
-                                         posixpath.normpath(r[2]),
-                                         r[3], r[4], r[5]))
-                return r
-            else: # plain file system path
-                return posixpath.normpath(os.path.join(parent, repo._subsource))
+            parent = url.url(parent)
+            parent.path = posixpath.join(parent.path, source.path)
+            parent.path = posixpath.normpath(parent.path)
+            return str(parent)
     else: # recursion reached top repo
         if hasattr(repo, '_subtoppath'):
             return repo._subtoppath
