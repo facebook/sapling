@@ -56,6 +56,9 @@ _FILE_SHARE_DELETE = 0x00000004
 
 _OPEN_EXISTING = 3
 
+# SetFileAttributes
+_FILE_ATTRIBUTE_NORMAL = 0x80
+
 # Process Security and Access Rights
 _PROCESS_QUERY_INFORMATION = 0x0400
 
@@ -350,9 +353,15 @@ def unlink(f):
 
     try:
         os.unlink(temp)
-    except:
-        # Some very rude AV-scanners on Windows may cause this unlink to fail.
-        # Not aborting here just leaks the temp file, whereas aborting at this
-        # point may leave serious inconsistencies. Ideally, we would notify
-        # the user in this case here.
-        pass
+    except OSError:
+        # The unlink might have failed because the READONLY attribute may heave
+        # been set on the original file. Rename works fine with READONLY set,
+        # but not os.unlink. Reset all attributes and try again.
+        _kernel32.SetFileAttributesA(temp, _FILE_ATTRIBUTE_NORMAL)
+        try:
+            os.unlink(temp)
+        except OSError:
+            # The unlink might have failed due to some very rude AV-Scanners.
+            # Leaking a tempfile is the lesser evil than aborting here and
+            # leaving some potentially serious inconsistencies.
+            pass
