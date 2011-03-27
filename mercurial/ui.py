@@ -483,7 +483,7 @@ class ui(object):
             self.write(msg, ' ', default, "\n")
             return default
         try:
-            r = self._readline(msg + ' ')
+            r = self._readline(self.label(msg, 'ui.prompt') + ' ')
             if not r:
                 return default
             return r
