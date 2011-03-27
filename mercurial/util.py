@@ -1215,7 +1215,10 @@ def matchdate(date):
         return parsedate(date, extendeddateformats, d)[0]
 
     date = date.strip()
-    if date[0] == "<":
+
+    if not date:
+        raise Abort(_("dates cannot consist entirely of whitespace"))
+    elif date[0] == "<":
         when = upper(date[1:])
         return lambda x: x <= when
     elif date[0] == ">":

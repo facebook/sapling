@@ -512,7 +512,11 @@ log -k r1
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     r1
   
+log -d " " (whitespaces only)
 
+  $ hg log -d " "
+  abort: dates cannot consist entirely of whitespace
+  [255]
 
 log -d -1
 
