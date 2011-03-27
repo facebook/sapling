@@ -324,10 +324,12 @@ def filterpatch(ui, headers):
         for i, chunk in enumerate(h.hunks):
             if skipfile is None and skipall is None:
                 chunk.pretty(ui)
-            msg = (total == 1
-                   and (_('record this change to %r?') % chunk.filename())
-                   or (_('record change %d/%d to %r?') %
-                       (pos - len(h.hunks) + i, total, chunk.filename())))
+            if total == 1:
+                msg = _('record this change to %r?') % chunk.filename()
+            else:
+                idx = pos - len(h.hunks) + i
+                msg = _('record change %d/%d to %r?') % (idx, total,
+                                                         chunk.filename())
             r, skipfile, skipall = prompt(skipfile, skipall, msg)
             if r:
                 if fixoffset:
