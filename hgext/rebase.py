@@ -277,7 +277,7 @@ def updatedirstate(repo, rev, p1, p2):
         if k in m1:
             if v in m1 or v in m2:
                 repo.dirstate.copy(v, k)
-                if v in m2 and v not in m1:
+                if v in m2 and v not in m1 and k in m2:
                     repo.dirstate.remove(v)
 
 def concludenode(repo, rev, p1, p2, commitmsg=None, extrafn=None):

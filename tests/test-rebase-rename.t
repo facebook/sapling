@@ -119,3 +119,52 @@ Copy is not lost:
   copy from a
   copy to a-copied
   
+  $ cd ..
+
+
+Test rebase across repeating renames:
+
+  $ hg init repo
+
+  $ cd repo
+
+  $ echo testing > file1.txt
+  $ hg add file1.txt
+  $ hg ci -m "Adding file1"
+
+  $ hg rename file1.txt file2.txt
+  $ hg ci -m "Rename file1 to file2"
+
+  $ echo Unrelated change > unrelated.txt
+  $ hg add unrelated.txt
+  $ hg ci -m "Unrelated change"
+
+  $ hg rename file2.txt file1.txt
+  $ hg ci -m "Rename file2 back to file1"
+
+  $ hg update -r -2
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+  $ echo Another unrelated change >> unrelated.txt
+  $ hg ci -m "Another unrelated change"
+  created new head
+
+  $ hg tglog
+  @  4: 'Another unrelated change'
+  |
+  | o  3: 'Rename file2 back to file1'
+  |/
+  o  2: 'Unrelated change'
+  |
+  o  1: 'Rename file1 to file2'
+  |
+  o  0: 'Adding file1'
+  
+
+  $ hg rebase -s 4 -d 3
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg diff --stat -c .
+   unrelated.txt |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
