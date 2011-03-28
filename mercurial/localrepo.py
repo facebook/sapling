@@ -1531,21 +1531,18 @@ class localrepository(repo.repository):
             changedfiles = set()
 
             collect = changegroup.collector(cl, mfs, changedfiles)
+            count = [0]
             def clookup(x):
                 collect(x)
+                count[0] += 1
+                self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
                 return x
 
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
-            group = cl.group(csets, clookup)
-            for count, chunk in enumerate(group):
+            for chunk in cl.group(csets, clookup):
                 yield chunk
-                # revlog.group yields three entries per node, so
-                # dividing by 3 gives an approximation of how many
-                # nodes have been processed.
-                self.ui.progress(_('bundling'), count / 3,
-                                 unit=_('changesets'))
-            changecount = count / 3
+            changecount = count[0]
             efiles = len(changedfiles)
             self.ui.progress(_('bundling'), None)
 
@@ -1553,16 +1550,16 @@ class localrepository(repo.repository):
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
             fcollect = filenode_collector(changedfiles)
+            count = [0]
             def mlookup(x):
                 fcollect(x)
+                count[0] += 1
+                self.ui.progress(_('bundling'), count[0],
+                                 unit=_('manifests'), total=changecount)
                 return mfs[x]
 
-            group = mf.group(sorted(mfs, key=mf.rev), mlookup)
-            for count, chunk in enumerate(group):
+            for chunk in mf.group(sorted(mfs, key=mf.rev), mlookup):
                 yield chunk
-                # see above comment for why we divide by 3
-                self.ui.progress(_('bundling'), count / 3,
-                                 unit=_('manifests'), total=changecount)
             self.ui.progress(_('bundling'), None)
 
             mfs.clear()
@@ -1585,18 +1582,16 @@ class localrepository(repo.repository):
                     # lookup function as we need to collect no information
                     # from filenodes.
                     def flookup(x):
-                        return missingfnodes[x]
-
-                    group = filerevlog.group(
-                        sorted(missingfnodes, key=filerevlog.rev),
-                        flookup)
-                    for chunk in group:
                         # even though we print the same progress on
                         # most loop iterations, put the progress call
                         # here so that time estimates (if any) can be updated
                         self.ui.progress(
                             _('bundling'), idx, item=fname,
                             unit=_('files'), total=efiles)
+                        return missingfnodes[x]
+
+                    for chunk in filerevlog.group(
+                        sorted(missingfnodes, key=filerevlog.rev), flookup):
                         yield chunk
             # Signal that no more groups are left.
             yield changegroup.closechunk()
@@ -1644,30 +1639,30 @@ class localrepository(repo.repository):
             mmfs = {}
 
             collect = changegroup.collector(cl, mmfs, changedfiles)
+            count = [0]
             def clookup(x):
+                count[0] += 1
+                self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
                 collect(x)
                 return x
 
-            for count, chunk in enumerate(cl.group(nodes, clookup)):
-                # revlog.group yields three entries per node, so
-                # dividing by 3 gives an approximation of how many
-                # nodes have been processed.
-                self.ui.progress(_('bundling'), count / 3, unit=_('changesets'))
+            for chunk in cl.group(nodes, clookup):
                 yield chunk
             efiles = len(changedfiles)
-            changecount = count / 3
+            changecount = count[0]
             self.ui.progress(_('bundling'), None)
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
             mfunc = lookuplinkrev_func(mnfst)
+            count = [0]
             def mlookup(x):
+                count[0] += 1
+                self.ui.progress(_('bundling'), count[0],
+                                 unit=_('manifests'), total=changecount)
                 return mfunc(x)
 
-            for count, chunk in enumerate(mnfst.group(nodeiter, mlookup)):
-                # see above comment for why we divide by 3
-                self.ui.progress(_('bundling'), count / 3,
-                                 unit=_('manifests'), total=changecount)
+            for chunk in mnfst.group(nodeiter, mlookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1682,12 +1677,12 @@ class localrepository(repo.repository):
                     yield fname
                     ffunc = lookuplinkrev_func(filerevlog)
                     def flookup(x):
-                        return ffunc(x)
-
-                    for chunk in filerevlog.group(nodeiter, flookup):
                         self.ui.progress(
                             _('bundling'), idx, item=fname,
                             total=efiles, unit=_('files'))
+                        return ffunc(x)
+
+                    for chunk in filerevlog.group(nodeiter, flookup):
                         yield chunk
             self.ui.progress(_('bundling'), None)
 
