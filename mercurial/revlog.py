@@ -1087,7 +1087,7 @@ class revlog(object):
             nb = self.node(b)
 
             p = self.parents(nb)
-            meta = nb + p[0] + p[1] + lookup(nb)
+            meta = nb + p[0] + p[1] + lookup(self, nb)
             if a == nullrev:
                 d = self.revision(nb)
                 meta += mdiff.trivialdiffheader(len(d))

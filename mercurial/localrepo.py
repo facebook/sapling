@@ -1532,7 +1532,7 @@ class localrepository(repo.repository):
 
             collect = changegroup.collector(cl, mfs, changedfiles)
             count = [0]
-            def clookup(x):
+            def clookup(revlog, x):
                 collect(x)
                 count[0] += 1
                 self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
@@ -1551,7 +1551,7 @@ class localrepository(repo.repository):
             # and data collection functions back.
             fcollect = filenode_collector(changedfiles)
             count = [0]
-            def mlookup(x):
+            def mlookup(revlog, x):
                 fcollect(x)
                 count[0] += 1
                 self.ui.progress(_('bundling'), count[0],
@@ -1581,7 +1581,7 @@ class localrepository(repo.repository):
                     # Create a group generator and only pass in a changenode
                     # lookup function as we need to collect no information
                     # from filenodes.
-                    def flookup(x):
+                    def flookup(revlog, x):
                         # even though we print the same progress on
                         # most loop iterations, put the progress call
                         # here so that time estimates (if any) can be updated
@@ -1639,7 +1639,7 @@ class localrepository(repo.repository):
 
             collect = changegroup.collector(cl, mmfs, changedfiles)
             count = [0]
-            def clookup(x):
+            def clookup(revlog, x):
                 count[0] += 1
                 self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
                 collect(x)
@@ -1655,7 +1655,7 @@ class localrepository(repo.repository):
             nodeiter = gennodelst(mnfst)
             mfunc = lookuplinkrev_func(mnfst)
             count = [0]
-            def mlookup(x):
+            def mlookup(revlog, x):
                 count[0] += 1
                 self.ui.progress(_('bundling'), count[0],
                                  unit=_('manifests'), total=changecount)
@@ -1675,7 +1675,7 @@ class localrepository(repo.repository):
                     yield changegroup.chunkheader(len(fname))
                     yield fname
                     ffunc = lookuplinkrev_func(filerevlog)
-                    def flookup(x):
+                    def flookup(revlog, x):
                         self.ui.progress(
                             _('bundling'), idx, item=fname,
                             total=efiles, unit=_('files'))
