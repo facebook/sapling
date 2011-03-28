@@ -438,6 +438,9 @@ def checksignature(func):
 
     return check
 
+def makedir(path, notindexed):
+    os.mkdir(path)
+
 def unlinkpath(f):
     """unlink and remove the directory if it is empty"""
     os.unlink(f)

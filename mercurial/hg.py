@@ -143,7 +143,7 @@ def share(ui, source, dest=None, update=True):
 
     if not os.path.isdir(root):
         os.mkdir(root)
-    os.mkdir(roothg)
+    util.makedir(roothg, notindexed=True)
 
     requirements = ''
     try:
@@ -281,7 +281,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 dir_cleanup.dir_ = hgdir
             try:
                 dest_path = hgdir
-                os.mkdir(dest_path)
+                util.makedir(dest_path, notindexed=True)
             except OSError, inst:
                 if inst.errno == errno.EEXIST:
                     dir_cleanup.close()

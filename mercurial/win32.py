@@ -58,6 +58,7 @@ _OPEN_EXISTING = 3
 
 # SetFileAttributes
 _FILE_ATTRIBUTE_NORMAL = 0x80
+_FILE_ATTRIBUTE_NOT_CONTENT_INDEXED = 0x2000
 
 # Process Security and Access Rights
 _PROCESS_QUERY_INFORMATION = 0x0400
@@ -365,3 +366,8 @@ def unlink(f):
             # Leaking a tempfile is the lesser evil than aborting here and
             # leaving some potentially serious inconsistencies.
             pass
+
+def makedir(path, notindexed):
+    os.mkdir(path)
+    if notindexed:
+        _kernel32.SetFileAttributesA(path, _FILE_ATTRIBUTE_NOT_CONTENT_INDEXED)
