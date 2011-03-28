@@ -1070,7 +1070,7 @@ class revlog(object):
         changegroup starts with a full revision.
         """
 
-        revs = [self.rev(n) for n in nodelist]
+        revs = sorted([self.rev(n) for n in nodelist])
 
         # if we don't have any revisions touched by these changesets, bail
         if not revs:

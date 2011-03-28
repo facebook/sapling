@@ -1558,7 +1558,7 @@ class localrepository(repo.repository):
                                  unit=_('manifests'), total=changecount)
                 return mfs[x]
 
-            for chunk in mf.group(sorted(mfs, key=mf.rev), mlookup):
+            for chunk in mf.group(mfs, mlookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1590,8 +1590,7 @@ class localrepository(repo.repository):
                             unit=_('files'), total=efiles)
                         return missingfnodes[x]
 
-                    for chunk in filerevlog.group(
-                        sorted(missingfnodes, key=filerevlog.rev), flookup):
+                    for chunk in filerevlog.group(missingfnodes, flookup):
                         yield chunk
             # Signal that no more groups are left.
             yield changegroup.closechunk()
