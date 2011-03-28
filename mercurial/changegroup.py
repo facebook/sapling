@@ -49,15 +49,6 @@ bundletypes = {
     "HG10GZ": ("HG10GZ", lambda: zlib.compressobj()),
 }
 
-def collector(cl, mmfs, files):
-    # Gather information about changeset nodes going out in a bundle.
-    # We want to gather manifests needed and filelogs affected.
-    def collect(node):
-        c = cl.read(node)
-        files.update(c[3])
-        mmfs.setdefault(c[0], node)
-    return collect
-
 # hgweb uses this list to communicate its preferred type
 bundlepriority = ['HG10GZ', 'HG10BZ', 'HG10UN']
 

@@ -1530,10 +1530,11 @@ class localrepository(repo.repository):
             # The set of changed files starts empty.
             changedfiles = set()
 
-            collect = changegroup.collector(cl, mfs, changedfiles)
             count = [0]
             def clookup(revlog, x):
-                collect(x)
+                c = cl.read(x)
+                changedfiles.update(c[3])
+                mfs.setdefault(c[0], x)
                 count[0] += 1
                 self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
                 return x
@@ -1637,12 +1638,13 @@ class localrepository(repo.repository):
             changedfiles = set()
             mmfs = {}
 
-            collect = changegroup.collector(cl, mmfs, changedfiles)
             count = [0]
             def clookup(revlog, x):
+                c = cl.read(x)
+                changedfiles.update(c[3])
+                mmfs.setdefault(c[0], x)
                 count[0] += 1
                 self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
-                collect(x)
                 return x
 
             for chunk in cl.group(nodes, clookup):
