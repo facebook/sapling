@@ -363,6 +363,19 @@ test environment passed to filter
   Transplant from rev 17ab29e464c6ca53e329470efe2a9918ac617a6f
   $ cd ..
 
+test transplant with filter handles invalid changelog
+
+  $ hg init filter-invalid-log
+  $ cd filter-invalid-log
+  $ cat <<'EOF' >test-filter-invalid-log
+  > #!/bin/sh
+  > echo "" > $1
+  > EOF
+  $ chmod +x test-filter-invalid-log
+  $ hg transplant -s ../t --filter ./test-filter-invalid-log 0
+  filtering * (glob)
+  abort: filter failed
+  [255]
 
 test with a win32ext like setup (differing EOLs)
 

@@ -346,6 +346,8 @@ class transplanter(object):
         message = []
         node = revlog.nullid
         inmsg = False
+        user = None
+        date = None
         for line in fp.read().splitlines():
             if inmsg:
                 message.append(line)
@@ -360,6 +362,8 @@ class transplanter(object):
             elif not line.startswith('# '):
                 inmsg = True
                 message.append(line)
+        if None in (user, date):
+            raise util.Abort(_("filter produced garbled log file"))
         return (node, user, date, '\n'.join(message), parents)
 
     def log(self, user, date, message, p1, p2, merge=False):
