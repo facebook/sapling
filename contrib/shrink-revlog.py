@@ -110,7 +110,10 @@ def writerevs(ui, r1, r2, order, tr):
     order = [r1.node(r) for r in order]
 
     # this is a bit ugly, but it works
-    lookup = lambda x: "%020d" % r1.linkrev(r1.rev(x))
+    def lookup(x):
+        progress(x)
+        return "%020d" % r1.linkrev(r1.rev(x))
+
     unlookup = lambda x: int(x, 10)
 
     try:

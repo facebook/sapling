@@ -1529,11 +1529,15 @@ class localrepository(repo.repository):
         def gengroup():
             # The set of changed files starts empty.
             changedfiles = set()
+
             collect = changegroup.collector(cl, mfs, changedfiles)
+            def clookup(x):
+                collect(x)
+                return x
 
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
-            group = cl.group(csets, lambda x: x, collect)
+            group = cl.group(csets, clookup)
             for count, chunk in enumerate(group):
                 yield chunk
                 # revlog.group yields three entries per node, so
@@ -1548,9 +1552,12 @@ class localrepository(repo.repository):
             prune(mf, mfs)
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
-            group = mf.group(sorted(mfs, key=mf.rev),
-                             lambda mnode: mfs[mnode],
-                             filenode_collector(changedfiles))
+            fcollect = filenode_collector(changedfiles)
+            def mlookup(x):
+                fcollect(x)
+                return mfs[x]
+
+            group = mf.group(sorted(mfs, key=mf.rev), mlookup)
             for count, chunk in enumerate(group):
                 yield chunk
                 # see above comment for why we divide by 3
@@ -1577,9 +1584,12 @@ class localrepository(repo.repository):
                     # Create a group generator and only pass in a changenode
                     # lookup function as we need to collect no information
                     # from filenodes.
+                    def flookup(x):
+                        return missingfnodes[x]
+
                     group = filerevlog.group(
                         sorted(missingfnodes, key=filerevlog.rev),
-                        lambda fnode: missingfnodes[fnode])
+                        flookup)
                     for chunk in group:
                         # even though we print the same progress on
                         # most loop iterations, put the progress call
@@ -1632,9 +1642,13 @@ class localrepository(repo.repository):
             # construct a list of all changed files
             changedfiles = set()
             mmfs = {}
-            collect = changegroup.collector(cl, mmfs, changedfiles)
 
-            for count, chunk in enumerate(cl.group(nodes, lambda x: x, collect)):
+            collect = changegroup.collector(cl, mmfs, changedfiles)
+            def clookup(x):
+                collect(x)
+                return x
+
+            for count, chunk in enumerate(cl.group(nodes, clookup)):
                 # revlog.group yields three entries per node, so
                 # dividing by 3 gives an approximation of how many
                 # nodes have been processed.
@@ -1646,8 +1660,11 @@ class localrepository(repo.repository):
 
             mnfst = self.manifest
             nodeiter = gennodelst(mnfst)
-            for count, chunk in enumerate(mnfst.group(nodeiter,
-                                                   lookuplinkrev_func(mnfst))):
+            mfunc = lookuplinkrev_func(mnfst)
+            def mlookup(x):
+                return mfunc(x)
+
+            for count, chunk in enumerate(mnfst.group(nodeiter, mlookup)):
                 # see above comment for why we divide by 3
                 self.ui.progress(_('bundling'), count / 3,
                                  unit=_('manifests'), total=changecount)
@@ -1663,8 +1680,11 @@ class localrepository(repo.repository):
                 if nodeiter:
                     yield changegroup.chunkheader(len(fname))
                     yield fname
-                    lookup = lookuplinkrev_func(filerevlog)
-                    for chunk in filerevlog.group(nodeiter, lookup):
+                    ffunc = lookuplinkrev_func(filerevlog)
+                    def flookup(x):
+                        return ffunc(x)
+
+                    for chunk in filerevlog.group(nodeiter, flookup):
                         self.ui.progress(
                             _('bundling'), idx, item=fname,
                             total=efiles, unit=_('files'))

@@ -1058,7 +1058,7 @@ class revlog(object):
             self._cache = (node, curr, text)
         return node
 
-    def group(self, nodelist, lookup, infocollect=None):
+    def group(self, nodelist, lookup):
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
 
@@ -1085,9 +1085,6 @@ class revlog(object):
         for r in xrange(len(revs) - 1):
             a, b = revs[r], revs[r + 1]
             nb = self.node(b)
-
-            if infocollect is not None:
-                infocollect(nb)
 
             p = self.parents(nb)
             meta = nb + p[0] + p[1] + lookup(nb)
