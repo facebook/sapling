@@ -1491,26 +1491,6 @@ class localrepository(repo.repository):
         self.hook('preoutgoing', throw=True, source=source)
         self.changegroupinfo(csets, source)
 
-        # A function generating function that sets up the initial environment
-        # the inner function.
-        def filenode_collector(changedfiles):
-            # This gathers information from each manifestnode included in the
-            # changegroup about which filenodes the manifest node references
-            # so we can include those in the changegroup too.
-            #
-            # It also remembers which changenode each filenode belongs to.  It
-            # does this by assuming the a filenode belongs to the changenode
-            # the first manifest that references it belongs to.
-            def collect(mnode):
-                r = mf.rev(mnode)
-                clnode = mfs[mnode]
-                mdata = mf.readfast(mnode)
-                for f in changedfiles:
-                    if f in mdata:
-                        fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
-
-            return collect
-
         # If we determine that a particular file or manifest node must be a
         # node that the recipient of the changegroup will already have, we can
         # also assume the recipient will have all the parents.  This function
@@ -1550,10 +1530,13 @@ class localrepository(repo.repository):
             prune(mf, mfs)
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
-            fcollect = filenode_collector(changedfiles)
             count = [0]
             def mlookup(revlog, x):
-                fcollect(x)
+                clnode = mfs[x]
+                mdata = mf.readfast(x)
+                for f in changedfiles:
+                    if f in mdata:
+                        fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
                 count[0] += 1
                 self.ui.progress(_('bundling'), count[0],
                                  unit=_('manifests'), total=changecount)
