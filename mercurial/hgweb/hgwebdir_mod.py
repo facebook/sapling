@@ -251,6 +251,9 @@ class hgwebdir(object):
                 # update time with local timezone
                 try:
                     r = hg.repository(self.ui, path)
+                except IOError:
+                    u.warn(_('error accessing repository at %s\n') % path)
+                    continue
                 except error.RepoError:
                     u.warn(_('error accessing repository at %s\n') % path)
                     continue
