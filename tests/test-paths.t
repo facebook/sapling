@@ -25,3 +25,23 @@
   $ SOMETHING=/foo hg paths
   dupe = $TESTTMP/b
   expand = /foo/bar
+  $ cd ..
+
+'file:' disables [paths] entries for clone destination
+
+  $ cat >> $HGRCPATH <<EOF
+  > [paths]
+  > gpath1 = http://hg.example.com
+  > EOF
+
+  $ hg clone a gpath1
+  abort: cannot create new http repository
+  [255]
+
+  $ hg clone a file:gpath1
+  updating to branch default
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd gpath1
+  $ hg -q id
+  000000000000
+
