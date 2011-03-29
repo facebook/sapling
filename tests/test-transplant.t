@@ -374,7 +374,7 @@ test transplant with filter handles invalid changelog
   $ chmod +x test-filter-invalid-log
   $ hg transplant -s ../t --filter ./test-filter-invalid-log 0
   filtering * (glob)
-  abort: filter failed
+  abort: filter corrupted changeset (no user or date)
   [255]
 
 test with a win32ext like setup (differing EOLs)

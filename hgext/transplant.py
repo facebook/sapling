@@ -363,7 +363,7 @@ class transplanter(object):
                 inmsg = True
                 message.append(line)
         if None in (user, date):
-            raise util.Abort(_("filter produced garbled log file"))
+            raise util.Abort(_("filter corrupted changeset (no user or date)"))
         return (node, user, date, '\n'.join(message), parents)
 
     def log(self, user, date, message, p1, p2, merge=False):
