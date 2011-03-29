@@ -139,7 +139,7 @@ Make changes on new branch on tt
   $ hg branch branchC
   marked working directory as branch branchC
   $ echo b1 > bar 
-  $ hg ci -Am "commit on branchC"
+  $ hg ci -Am "commit on branchC on tt"
   adding bar
 
 Make changes on default branch on t
@@ -148,7 +148,7 @@ Make changes on default branch on t
   $ hg up -C default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo a1 > bar 
-  $ hg ci -Am "commit on default"
+  $ hg ci -Am "commit on default on t"
   adding bar
 
 Pull branchC from tt
@@ -161,3 +161,50 @@ Pull branchC from tt
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads)
+
+Make changes on default and branchC on tt
+
+  $ cd ../tt
+  $ hg pull ../t
+  pulling from ../t
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads)
+  $ hg up -C default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo a1 > bar1
+  $ hg ci -Am "commit on default on tt"
+  adding bar1
+  $ hg up branchC
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo a1 > bar2
+  $ hg ci -Am "commit on branchC on tt"
+  adding bar2
+
+Make changes on default and branchC on t
+
+  $ cd ../t
+  $ hg up default
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo a1 > bar3
+  $ hg ci -Am "commit on default on t"
+  adding bar3
+  $ hg up branchC
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo a1 > bar4
+  $ hg ci -Am "commit on branchC on tt"
+  adding bar4
+
+Pull from tt
+
+  $ hg pull ../tt
+  pulling from ../tt
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+2 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
