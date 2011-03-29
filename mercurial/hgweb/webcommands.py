@@ -159,6 +159,7 @@ def _search(web, req, tmpl):
                        rev=ctx.rev(),
                        node=hex(n),
                        tags=webutil.nodetagsdict(web.repo, n),
+                       bookmarks=webutil.nodebookmarksdict(web.repo, n),
                        inbranch=webutil.nodeinbranch(web.repo, ctx),
                        branches=webutil.nodebranchdict(web.repo, ctx))
 
@@ -362,6 +363,7 @@ def manifest(web, req, tmpl):
                 dentries=dirlist,
                 archives=web.archivelist(hex(node)),
                 tags=webutil.nodetagsdict(web.repo, node),
+                bookmarks=webutil.nodebookmarksdict(web.repo, node),
                 inbranch=webutil.nodeinbranch(web.repo, ctx),
                 branches=webutil.nodebranchdict(web.repo, ctx))
 
@@ -490,6 +492,7 @@ def summary(web, req, tmpl):
                 rev=i,
                 node=hn,
                 tags=webutil.nodetagsdict(web.repo, n),
+                bookmarks=webutil.nodebookmarksdict(web.repo, n),
                 inbranch=webutil.nodeinbranch(web.repo, ctx),
                 branches=webutil.nodebranchdict(web.repo, ctx)))
 
@@ -651,6 +654,8 @@ def filelog(web, req, tmpl):
                          "child": webutil.children(iterfctx),
                          "desc": iterfctx.description(),
                          "tags": webutil.nodetagsdict(repo, iterfctx.node()),
+                         "bookmarks": webutil.nodebookmarksdict(
+                             repo, iterfctx.node()),
                          "branch": webutil.nodebranchnodefault(iterfctx),
                          "inbranch": webutil.nodeinbranch(repo, iterfctx),
                          "branches": webutil.nodebranchdict(repo, iterfctx)})

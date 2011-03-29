@@ -82,7 +82,7 @@
         item = item.replace(/_DATE/, cur[5]);
 
         var tagspan = '';
-        if (cur[7].length || (cur[6][0] != 'default' || cur[6][1])) \{
+        if (cur[7].length || cur[8].length || (cur[6][0] != 'default' || cur[6][1])) \{
             tagspan = '<span class="logtags">';
             if (cur[6][1]) \{
                 tagspan += '<span class="branchtag" title="' + cur[6][0] + '">';
@@ -95,6 +95,12 @@
                 for (var t in cur[7]) \{
                     var tag = cur[7][t];
                     tagspan += '<span class="tagtag">' + tag + '</span> ';
+                }
+            }
+            if (cur[8].length) \{
+                for (var t in cur[8]) \{
+                    var bookmark = cur[8][t];
+                    tagspan += '<span class="bookmarktag">' + bookmark + '</span> ';
                 }
             }
             tagspan += '</span>';
