@@ -138,7 +138,7 @@ class monotone_source(converter_source, commandline):
         return (commandnbr, stream, length, read)
 
     def mtnstdioreadcommandoutput(self, command):
-        retval = ''
+        retval = []
         while True:
             commandnbr, stream, length, output = self.mtnstdioreadpacket()
             self.ui.debug('mtn: read packet %s:%s:%s\n' %
@@ -159,9 +159,9 @@ class monotone_source(converter_source, commandline):
                 self.ui.debug('mtn: ' + output)
             elif stream == 'm':
                 # Main stream - command output
-                retval = output
+                retval.append(output)
 
-        return retval
+        return ''.join(retval)
 
     def mtnloadmanifest(self, rev):
         if self.manifest_rev == rev:

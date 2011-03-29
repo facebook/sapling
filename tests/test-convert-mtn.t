@@ -208,9 +208,20 @@ test diverging directory moves
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 4a736634505795f17786fffdf2c9cbf5b11df6f6
 
+test large file support (> 32kB)
+
+  $ python -c 'for x in range(10000): print x' > large-file
+  $ $TESTDIR/md5sum.py large-file
+  5d6de8a95c3b6bf9e0ffb808ba5299c1  large-file
+  $ mtn add large-file
+  mtn: adding large-file to workspace manifest
+  $ mtn ci -m largefile
+  mtn: beginning commit on branch 'com.selenic.test'
+  mtn: committed revision f0a20fecd10dc4392d18fe69a03f1f4919d3387b
+
 test suspending (closing a branch)
 
-  $ mtn suspend 4a736634505795f17786fffdf2c9cbf5b11df6f6 2> /dev/null
+  $ mtn suspend f0a20fecd10dc4392d18fe69a03f1f4919d3387b 2> /dev/null
   $ cd ..
 
 convert incrementally
@@ -220,27 +231,30 @@ convert incrementally
   scanning source...
   sorting...
   converting...
-  11 update2 "with" quotes
-  10 createdir1
-  9 movedir1
-  8 movedir
-  7 emptydir
-  6 dropdirectory
-  5 dirfilemove
-  4 dirfilemove2
-  3 dirdirmove
-  2 dirdirmove2
-  1 divergentdirmove
-  0 divergentdirmove2
+  12 update2 "with" quotes
+  11 createdir1
+  10 movedir1
+  9 movedir
+  8 emptydir
+  7 dropdirectory
+  6 dirfilemove
+  5 dirfilemove2
+  4 dirdirmove
+  3 dirdirmove2
+  2 divergentdirmove
+  1 divergentdirmove2
+  0 largefile
   $ glog()
   > {
   >     hg glog --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
   > }
   $ cd repo.mtn-hg
   $ hg up -C
-  11 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  12 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ glog
-  @  13 "divergentdirmove2" files: dir7-2/c dir7/c dir7/dir9/b dir7/dir9/dir8/a dir8-2/a dir9-2/b
+  @  14 "largefile" files: large-file
+  |
+  o  13 "divergentdirmove2" files: dir7-2/c dir7/c dir7/dir9/b dir7/dir9/dir8/a dir8-2/a dir9-2/b
   |
   o  12 "divergentdirmove" files: dir7/c dir7/dir9/b dir7/dir9/dir8/a
   |
@@ -283,6 +297,7 @@ manifest
   dir8-2/a
   dir9-2/b
   e
+  large-file
 
 contents
 
@@ -360,9 +375,14 @@ check divergent directory moves
   dir9-2/b
   e
 
+test large file support (> 32kB)
+
+  $ $TESTDIR/md5sum.py large-file
+  5d6de8a95c3b6bf9e0ffb808ba5299c1  large-file
+
 check branch closing
 
   $ hg branches -a
   $ hg branches -c
-  com.selenic.test              13:* (closed) (glob)
+  com.selenic.test              14:* (closed) (glob)
 
