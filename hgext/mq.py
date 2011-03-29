@@ -2623,8 +2623,8 @@ def select(ui, repo, *args, **opts):
     selected guard, but will not be pushed if any negative guards
     match the current guard. For example::
 
-        qguard foo.patch -stable    (negative guard)
-        qguard bar.patch +stable    (positive guard)
+        qguard foo.patch -- -stable    (negative guard)
+        qguard bar.patch    +stable    (positive guard)
         qselect stable
 
     This activates the "stable" guard. mq will skip foo.patch (because
