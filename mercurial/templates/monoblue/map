@@ -180,6 +180,7 @@ shortlog = shortlog.tmpl
 tagtag = '<span class="tagtag" title="{name}">{name}</span> '
 branchtag = '<span class="branchtag" title="{name}">{name}</span> '
 inbranchtag = '<span class="inbranchtag" title="{name}">{name}</span> '
+bookmarktag = '<span class="bookmarktag" title="{name}">{name}</span> '
 shortlogentry = '
   <tr class="parity{parity}">
     <td class="nowrap">{date|age}</td>
@@ -187,7 +188,7 @@ shortlogentry = '
     <td>
       <a href="{url}rev/{node|short}{sessionvars%urlparameter}">
         {desc|strip|firstline|escape|nonempty}
-        <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}</span>
+        <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>
       </a>
     </td>
     <td class="nowrap">
