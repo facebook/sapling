@@ -39,6 +39,8 @@ class url(object):
     <url scheme: 'file', path: '/home/joe/repo'>
     >>> url('bundle:foo')
     <url scheme: 'bundle', path: 'foo'>
+    >>> url('c:\\\\foo\\\\bar')
+    <url path: 'c:\\\\foo\\\\bar'>
 
     Authentication credentials:
 
@@ -63,6 +65,11 @@ class url(object):
         self.scheme = self.user = self.passwd = self.host = None
         self.port = self.path = self.query = self.fragment = None
         self._localpath = True
+
+        # special case for Windows drive letters
+        if path[1:2] == ':' and path[0:1].isalpha():
+            self.path = path
+            return
 
         if not path.startswith('/') and ':' in path:
             parts = path.split(':', 1)
