@@ -1488,18 +1488,11 @@ class localrepository(repo.repository):
         self.hook('preoutgoing', throw=True, source=source)
         self.changegroupinfo(csets, source)
 
-        # If we determine that a particular file or manifest node must be a
-        # node that the recipient of the changegroup will already have, we can
-        # also assume the recipient will have all the parents.  This function
-        # prunes them from the set of missing nodes.
-        def prune(revlog, missingnodes):
-            # drop any nodes that claim to be part of a cset in commonrevs
-            drop = set()
-            for n in missingnodes:
-                if revlog.linkrev(revlog.rev(n)) in commonrevs:
-                    drop.add(n)
-            for n in drop:
-                missingnodes.pop(n, None)
+        # filter any nodes that claim to be part of the known set
+        def prune(revlog, missing):
+            for n in missing:
+                if revlog.linkrev(revlog.rev(n)) not in commonrevs:
+                    yield n
 
         # Now that we have all theses utility functions to help out and
         # logically divide up the task, generate the group.
@@ -1524,7 +1517,6 @@ class localrepository(repo.repository):
             efiles = len(changedfiles)
             self.ui.progress(_('bundling'), None)
 
-            prune(mf, mfs)
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
             count = [0]
@@ -1539,7 +1531,7 @@ class localrepository(repo.repository):
                                  unit=_('manifests'), total=changecount)
                 return mfs[x]
 
-            for chunk in mf.group(mfs, mlookup):
+            for chunk in mf.group(prune(mf, mfs), mlookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1553,7 +1545,6 @@ class localrepository(repo.repository):
                 # Toss out the filenodes that the recipient isn't really
                 # missing.
                 missingfnodes = fnodes.pop(fname, {})
-                prune(filerevlog, missingfnodes)
                 first = True
 
                 def flookup(revlog, x):
@@ -1565,7 +1556,8 @@ class localrepository(repo.repository):
                         unit=_('files'), total=efiles)
                     return missingfnodes[x]
 
-                for chunk in filerevlog.group(missingfnodes, flookup):
+                for chunk in filerevlog.group(prune(filerevlog, missingfnodes),
+                                              flookup):
                     if first:
                         if chunk == changegroup.closechunk():
                             break
