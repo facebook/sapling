@@ -14,9 +14,12 @@ the Mercurial template mechanism.
 
 The hook does not change bug status.
 
-Two basic modes of access to Bugzilla are provided:
+Three basic modes of access to Bugzilla are provided:
 
-1. Access via the Bugzilla XMLRPC interface (requires Bugzilla 3.4 or later).
+1. Access via the Bugzilla XMLRPC interface. Requires Bugzilla 3.4 or later.
+
+2. Check data via the Bugzilla XMLRPC interface and submit bug change
+   via email to Bugzilla email interface. Requires Bugzilla 3.4 or later.
 
 2. Writing directly to the Bugzilla database. Only Bugzilla installations
    using MySQL are supported. Requires Python MySQLdb.
@@ -37,15 +40,24 @@ configuration must be readable by all Mercurial users, it is recommended
 that the rights of that user are restricted in Bugzilla to the minimum
 necessary to add comments.
 
-Configuration items common to both access modes:
+Access via XMLRPC/email behaves uses XMLRPC to query Bugzilla, but sends
+email to the Bugzilla email interface to submit comments to bugs.
+The From: address in the email is set to the email address of the Mercurial
+user, so the comment appears to come from the Mercurial user. In the event
+that the Mercurial user email is not recognised by Bugzilla as a Bugzilla
+user, the Bugzilla username and password used to log into Bugzilla are
+used instead as the source of the comment.
+
+Configuration items common to all access modes:
 
 [bugzilla]
 version
   This access type to use. Values recognised are:
-  xmlrpc  Bugzilla XMLRPC interface.
-  3.0     MySQL access, Bugzilla 3.0 and later.
-  2.18    MySQL access, Bugzilla 2.18 and up to but not including 3.0.
-  2.16    MySQL access, Bugzilla 2.16 and up to but not including 2.18.
+  xmlrpc       Bugzilla XMLRPC interface.
+  xmlrpc+email Bugzilla XMLRPC and email interfaces.
+  3.0          MySQL access, Bugzilla 3.0 and later.
+  2.18         MySQL access, Bugzilla 2.18 and up to but not including 3.0.
+  2.16         MySQL access, Bugzilla 2.16 and up to but not including 2.18.
 
 regexp
   Regular expression to match bug IDs in changeset commit message.
@@ -80,6 +92,18 @@ baseurl
   Base URL for browsing Mercurial repositories. Referenced from
   templates as {hgweb}.
 
+Configuration items common to XMLRPC+email and MySQL access modes:
+
+usermap
+  Path of file containing Mercurial committer email to Bugzilla user email
+  mappings. If specified, the file should contain one mapping per
+  line, "committer"="Bugzilla user". See also the [usermap] section.
+
+[usermap]
+The [usermap] section is used to specify mappings of Mercurial
+committer email to Bugzilla user email. See also [bugzilla].usermap.
+Contains entries of the form "committer"="Bugzilla user".
+
 XMLRPC access mode configuration:
 
 [bugzilla]
@@ -92,6 +116,16 @@ user
 
 password
   The password for Bugzilla login.
+
+XMLRPC+email access mode uses the XMLRPC access mode configuration items,
+and also:
+
+[bugzilla]
+bzemail
+  The Bugzilla email address.
+
+In addition, the Mercurial email settings must be configured. See the
+documentation for 'hgrc', sections '[email]' and '[smtp]'.
 
 MySQL access mode configuration:
 
@@ -127,16 +161,6 @@ notify
   from 2.18 it is "cd %(bzdir)s && perl -T contrib/sendbugmail.pl
   %(id)s %(user)s".
 
-usermap
-  Path of file containing Mercurial committer ID to Bugzilla user ID
-  mappings. If specified, the file should contain one mapping per
-  line, "committer"="Bugzilla user". See also the [usermap] section.
-
-[usermap]
-The [usermap] section is used to specify mappings of Mercurial
-committer email to Bugzilla user email. See also [bugzilla].usermap.
-Contains entries of the form "committer"="Bugzilla user".
-
 Activating the extension::
 
     [extensions]
@@ -162,6 +186,22 @@ repositories in '/var/local/hg/repos/'. ::
     [web]
     baseurl=http://my-project.org/hg
 
+XMLRPC+email example configuration. This uses the Bugzilla at
+'http://my-project.org/bugzilla', logging in as user 'bugmail@my-project.org'
+wityh password 'plugh'. It is used with a collection of Mercurial
+repositories in '/var/local/hg/repos/'. Bug comments are sent to the
+Bugzilla email address 'buzilla@my-project.org'. ::
+
+    [bugzilla]
+    user=bugmail@my-project.org
+    password=plugh
+    version=xmlrpc
+    bzemail=bugzilla@my-project.org
+
+    [web]
+    baseurl=https://dev.laicatc.com/hg
+    bugzillaurl=https://dev.laicatc.com/bugzilla
+
 MySQL example configuration. This is for a collection of Mercurial
 repositories in '/var/local/hg/repos/' used with a local Bugzilla 3.2
 installation in /opt/bugzilla-3.2. The MySQL database is on 'localhost',
@@ -185,7 +225,7 @@ username 'bugs' password 'XYZZY'. ::
     [usermap]
     user@emaildomain.com=user.name@bugzilladomain.com
 
-Both the above add a comment to the Bugzilla bug record of the form::
+All the above add a comment to the Bugzilla bug record of the form::
 
     Changeset 3b16791d6642 in repository-name.
     http://dev.domain.com/hg/repository-name/rev/3b16791d6642
@@ -195,7 +235,7 @@ Both the above add a comment to the Bugzilla bug record of the form::
 
 from mercurial.i18n import _
 from mercurial.node import short
-from mercurial import cmdutil, templater, util
+from mercurial import cmdutil, mail, templater, util
 import re, time, xmlrpclib
 
 class bzaccess(object):
@@ -520,6 +560,59 @@ class bzxmlrpc(bzaccess):
     def add_comment(self, bugid, text, committer):
         self.bzproxy.Bug.add_comment(dict(id=bugid, comment=text))
 
+class bzxmlrpcemail(bzxmlrpc):
+    """Read data from Bugzilla via XMLRPC, send updates via email.
+
+    Advantages of sending updates via email:
+      1. Comments can be added as any user, not just logged in user.
+      2. Bug statuses and other fields not accessible via XMLRPC can
+        be updated. This is not currently used.
+    """
+
+    def __init__(self, ui):
+        bzxmlrpc.__init__(self, ui)
+
+        self.bzemail = self.ui.config('bugzilla', 'bzemail')
+        if not self.bzemail:
+            raise util.Abort(_("configuration 'bzemail' missing"))
+        mail.validateconfig(self.ui)
+
+    def send_bug_modify_email(self, bugid, commands, comment, committer):
+        '''send modification message to Bugzilla bug via email.
+
+        The message format is documented in the Bugzilla email_in.pl
+        specification. commands is a list of command lines, comment is the
+        comment text.
+
+        To stop users from crafting commit comments with
+        Bugzilla commands, specify the bug ID via the message body, rather
+        than the subject line, and leave a blank line after it.
+        '''
+        user = self.map_committer(committer)
+        matches = self.bzproxy.User.get(dict(match=[user]))
+        if not matches['users']:
+            user = self.ui.config('bugzilla', 'user', 'bugs')
+            matches = self.bzproxy.User.get(dict(match=[user]))
+            if not matches['users']:
+                raise util.Abort(_("default bugzilla user %s email not found") %
+                                 user)
+        user = matches['users'][0]['email']
+
+        text = "\n".join(commands) + "\n@bug_id = %d\n\n" % bugid + comment
+
+        _charsets = mail._charsets(self.ui)
+        user = mail.addressencode(self.ui, user, _charsets)
+        bzemail = mail.addressencode(self.ui, self.bzemail, _charsets)
+        msg = mail.mimeencode(self.ui, text, _charsets)
+        msg['From'] = user
+        msg['To'] = bzemail
+        msg['Subject'] = mail.headencode(self.ui, "Bug modification", _charsets)
+        sendmail = mail.connect(self.ui)
+        sendmail(user, bzemail, msg.as_string())
+
+    def add_comment(self, bugid, text, committer):
+        self.send_bug_modify_email(bugid, [], text, committer)
+
 class bugzilla(object):
     # supported versions of bugzilla. different versions have
     # different schemas.
@@ -527,7 +620,8 @@ class bugzilla(object):
         '2.16': bzmysql,
         '2.18': bzmysql_2_18,
         '3.0':  bzmysql_3_0,
-        'xmlrpc': bzxmlrpc
+        'xmlrpc': bzxmlrpc,
+        'xmlrpc+email': bzxmlrpcemail
         }
 
     _default_bug_re = (r'bugs?\s*,?\s*(?:#|nos?\.?|num(?:ber)?s?)?\s*'
