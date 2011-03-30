@@ -190,22 +190,21 @@ class bugzilla_2_16(object):
         return ids[0][0]
 
     def filter_real_bug_ids(self, ids):
-        '''filter not-existing bug ids from list.'''
+        '''filter not-existing bug ids from set.'''
         self.run('select bug_id from bugs where bug_id in %s' % buglist(ids))
-        return sorted([c[0] for c in self.cursor.fetchall()])
+        return set([c[0] for c in self.cursor.fetchall()])
 
     def filter_cset_known_bug_ids(self, node, ids):
-        '''filter bug ids from list that already refer to this changeset.'''
+        '''filter bug ids that already refer to this changeset from set.'''
 
         self.run('''select bug_id from longdescs where
                     bug_id in %s and thetext like "%%%s%%"''' %
                  (buglist(ids), short(node)))
-        unknown = set(ids)
         for (id,) in self.cursor.fetchall():
             self.ui.status(_('bug %d already knows about changeset %s\n') %
                            (id, short(node)))
-            unknown.discard(id)
-        return sorted(unknown)
+            ids.discard(id)
+        return ids
 
     def notify(self, ids, committer):
         '''tell bugzilla to send mail.'''
@@ -353,10 +352,12 @@ class bugzilla(object):
     _split_re = None
 
     def find_bug_ids(self, ctx):
-        '''find valid bug ids that are referred to in changeset
-        comments and that do not already have references to this
-        changeset.'''
+        '''return set of integer bug IDs from commit comment.
 
+        Extract bug IDs from changeset comments. Filter out any that are
+        not known to Bugzilla, and any that already have a reference to
+        the given changeset in their comments.
+        '''
         if bugzilla._bug_re is None:
             bugzilla._bug_re = re.compile(
                 self.ui.config('bugzilla', 'regexp', bugzilla._default_bug_re),
