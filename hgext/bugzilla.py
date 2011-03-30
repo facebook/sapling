@@ -194,7 +194,7 @@ class bugzilla_2_16(object):
         self.run('select bug_id from bugs where bug_id in %s' % buglist(ids))
         return sorted([c[0] for c in self.cursor.fetchall()])
 
-    def filter_unknown_bug_ids(self, node, ids):
+    def filter_cset_known_bug_ids(self, node, ids):
         '''filter bug ids from list that already refer to this changeset.'''
 
         self.run('''select bug_id from longdescs where
@@ -376,7 +376,7 @@ class bugzilla(object):
         if ids:
             ids = self.filter_real_bug_ids(ids)
         if ids:
-            ids = self.filter_unknown_bug_ids(ctx.node(), ids)
+            ids = self.filter_cset_known_bug_ids(ctx.node(), ids)
         return ids
 
     def update(self, bugid, ctx):
