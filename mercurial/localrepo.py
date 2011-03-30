@@ -1554,25 +1554,25 @@ class localrepository(repo.repository):
                 # missing.
                 missingfnodes = fnodes.pop(fname, {})
                 prune(filerevlog, missingfnodes)
-                # If any filenodes are left, generate the group for them,
-                # otherwise don't bother.
-                if missingfnodes:
-                    yield changegroup.chunkheader(len(fname))
-                    yield fname
-                    # Create a group generator and only pass in a changenode
-                    # lookup function as we need to collect no information
-                    # from filenodes.
-                    def flookup(revlog, x):
-                        # even though we print the same progress on
-                        # most loop iterations, put the progress call
-                        # here so that time estimates (if any) can be updated
-                        self.ui.progress(
-                            _('bundling'), idx, item=fname,
-                            unit=_('files'), total=efiles)
-                        return missingfnodes[x]
+                first = True
 
-                    for chunk in filerevlog.group(missingfnodes, flookup):
-                        yield chunk
+                def flookup(revlog, x):
+                    # even though we print the same progress on
+                    # most loop iterations, put the progress call
+                    # here so that time estimates (if any) can be updated
+                    self.ui.progress(
+                        _('bundling'), idx, item=fname,
+                        unit=_('files'), total=efiles)
+                    return missingfnodes[x]
+
+                for chunk in filerevlog.group(missingfnodes, flookup):
+                    if first:
+                        if chunk == changegroup.closechunk():
+                            break
+                        yield changegroup.chunkheader(len(fname))
+                        yield fname
+                        first = False
+                    yield chunk
             # Signal that no more groups are left.
             yield changegroup.closechunk()
             self.ui.progress(_('bundling'), None)
@@ -1645,19 +1645,22 @@ class localrepository(repo.repository):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
+                first = True
                 nodeiter = gennodelst(filerevlog)
-                nodeiter = list(nodeiter)
-                if nodeiter:
-                    yield changegroup.chunkheader(len(fname))
-                    yield fname
-                    def flookup(revlog, x):
-                        self.ui.progress(
-                            _('bundling'), idx, item=fname,
-                            total=efiles, unit=_('files'))
-                        return cl.node(revlog.linkrev(revlog.rev(x)))
+                def flookup(revlog, x):
+                    self.ui.progress(
+                        _('bundling'), idx, item=fname,
+                        total=efiles, unit=_('files'))
+                    return cl.node(revlog.linkrev(revlog.rev(x)))
 
-                    for chunk in filerevlog.group(nodeiter, flookup):
-                        yield chunk
+                for chunk in filerevlog.group(nodeiter, flookup):
+                    if first:
+                        if chunk == changegroup.closechunk():
+                            break
+                        yield changegroup.chunkheader(len(fname))
+                        yield fname
+                        first = False
+                    yield chunk
             self.ui.progress(_('bundling'), None)
 
             yield changegroup.closechunk()
