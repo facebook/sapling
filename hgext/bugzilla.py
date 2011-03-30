@@ -145,28 +145,77 @@ from mercurial.node import short
 from mercurial import cmdutil, templater, util
 import re, time
 
-MySQLdb = None
-
-def buglist(ids):
-    return '(' + ','.join(map(str, ids)) + ')'
-
-class bugzilla_2_16(object):
-    '''support for bugzilla version 2.16.'''
+class bzaccess(object):
+    '''Base class for access to Bugzilla.'''
 
     def __init__(self, ui):
         self.ui = ui
+        usermap = self.ui.config('bugzilla', 'usermap')
+        if usermap:
+            self.ui.readconfig(usermap, sections=['usermap'])
+
+    def map_committer(self, user):
+        '''map name of committer to Bugzilla user name.'''
+        for committer, bzuser in self.ui.configitems('usermap'):
+            if committer.lower() == user.lower():
+                return bzuser
+        return user
+
+    # Methods to be implemented by access classes.
+    def filter_real_bug_ids(self, ids):
+        '''remove bug IDs that do not exist in Bugzilla from set.'''
+        pass
+
+    def filter_cset_known_bug_ids(self, node, ids):
+        '''remove bug IDs where node occurs in comment text from set.'''
+        pass
+
+    def add_comment(self, bugid, text, committer):
+        '''add comment to bug.
+
+        If possible add the comment as being from the committer of
+        the changeset. Otherwise use the default Bugzilla user.
+        '''
+        pass
+
+    def notify(self, ids, committer):
+        '''Force sending of Bugzilla notification emails.'''
+        pass
+
+# Bugzilla via direct access to MySQL database.
+class bzmysql(bzaccess):
+    '''Support for direct MySQL access to Bugzilla.
+
+    The earliest Bugzilla version this is tested with is version 2.16.
+    '''
+
+    @staticmethod
+    def sql_buglist(ids):
+        '''return SQL-friendly list of bug ids'''
+        return '(' + ','.join(map(str, ids)) + ')'
+
+    _MySQLdb = None
+
+    def __init__(self, ui):
+        try:
+            import MySQLdb as mysql
+            bzmysql._MySQLdb = mysql
+        except ImportError, err:
+            raise util.Abort(_('python mysql support not available: %s') % err)
+
+        bzaccess.__init__(self, ui)
+
         host = self.ui.config('bugzilla', 'host', 'localhost')
         user = self.ui.config('bugzilla', 'user', 'bugs')
         passwd = self.ui.config('bugzilla', 'password')
         db = self.ui.config('bugzilla', 'db', 'bugs')
         timeout = int(self.ui.config('bugzilla', 'timeout', 5))
-        usermap = self.ui.config('bugzilla', 'usermap')
-        if usermap:
-            self.ui.readconfig(usermap, sections=['usermap'])
         self.ui.note(_('connecting to %s:%s as %s, password %s\n') %
                      (host, db, user, '*' * len(passwd)))
-        self.conn = MySQLdb.connect(host=host, user=user, passwd=passwd,
-                                    db=db, connect_timeout=timeout)
+        self.conn = bzmysql._MySQLdb.connect(host=host,
+                                                   user=user, passwd=passwd,
+                                                   db=db,
+                                                   connect_timeout=timeout)
         self.cursor = self.conn.cursor()
         self.longdesc_id = self.get_longdesc_id()
         self.user_ids = {}
@@ -177,7 +226,7 @@ class bugzilla_2_16(object):
         self.ui.note(_('query: %s %s\n') % (args, kwargs))
         try:
             self.cursor.execute(*args, **kwargs)
-        except MySQLdb.MySQLError:
+        except bzmysql._MySQLdb.MySQLError:
             self.ui.note(_('failed query: %s %s\n') % (args, kwargs))
             raise
 
@@ -191,7 +240,8 @@ class bugzilla_2_16(object):
 
     def filter_real_bug_ids(self, ids):
         '''filter not-existing bug ids from set.'''
-        self.run('select bug_id from bugs where bug_id in %s' % buglist(ids))
+        self.run('select bug_id from bugs where bug_id in %s' %
+                 bzmysql.sql_buglist(ids))
         return set([c[0] for c in self.cursor.fetchall()])
 
     def filter_cset_known_bug_ids(self, node, ids):
@@ -199,7 +249,7 @@ class bugzilla_2_16(object):
 
         self.run('''select bug_id from longdescs where
                     bug_id in %s and thetext like "%%%s%%"''' %
-                 (buglist(ids), short(node)))
+                 (bzmysql.sql_buglist(ids), short(node)))
         for (id,) in self.cursor.fetchall():
             self.ui.status(_('bug %d already knows about changeset %s\n') %
                            (id, short(node)))
@@ -250,13 +300,6 @@ class bugzilla_2_16(object):
             self.user_ids[user] = userid
             return userid
 
-    def map_committer(self, user):
-        '''map name of committer to bugzilla user name.'''
-        for committer, bzuser in self.ui.configitems('usermap'):
-            if committer.lower() == user.lower():
-                return bzuser
-        return user
-
     def get_bugzilla_user(self, committer):
         '''see if committer is a registered bugzilla user. Return
         bugzilla username and userid if so. If not, return default
@@ -291,19 +334,19 @@ class bugzilla_2_16(object):
                  (bugid, userid, now, self.longdesc_id))
         self.conn.commit()
 
-class bugzilla_2_18(bugzilla_2_16):
+class bzmysql_2_18(bzmysql):
     '''support for bugzilla 2.18 series.'''
 
     def __init__(self, ui):
-        bugzilla_2_16.__init__(self, ui)
+        bzmysql.__init__(self, ui)
         self.default_notify = \
             "cd %(bzdir)s && perl -T contrib/sendbugmail.pl %(id)s %(user)s"
 
-class bugzilla_3_0(bugzilla_2_18):
+class bzmysql_3_0(bzmysql_2_18):
     '''support for bugzilla 3.0 series.'''
 
     def __init__(self, ui):
-        bugzilla_2_18.__init__(self, ui)
+        bzmysql_2_18.__init__(self, ui)
 
     def get_longdesc_id(self):
         '''get identity of longdesc field'''
@@ -317,9 +360,9 @@ class bugzilla(object):
     # supported versions of bugzilla. different versions have
     # different schemas.
     _versions = {
-        '2.16': bugzilla_2_16,
-        '2.18': bugzilla_2_18,
-        '3.0':  bugzilla_3_0
+        '2.16': bzmysql,
+        '2.18': bzmysql_2_18,
+        '3.0':  bzmysql_3_0
         }
 
     _default_bug_re = (r'bugs?\s*,?\s*(?:#|nos?\.?|num(?:ber)?s?)?\s*'
@@ -419,13 +462,6 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
     '''add comment to bugzilla for each changeset that refers to a
     bugzilla bug id. only add a comment once per bug, so same change
     seen multiple times does not fill bug with duplicate data.'''
-    try:
-        import MySQLdb as mysql
-        global MySQLdb
-        MySQLdb = mysql
-    except ImportError, err:
-        raise util.Abort(_('python mysql support not available: %s') % err)
-
     if node is None:
         raise util.Abort(_('hook type %s does not pass a changeset id') %
                          hooktype)
@@ -437,6 +473,6 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
             for id in ids:
                 bz.update(id, ctx)
             bz.notify(ids, util.email(ctx.user()))
-    except MySQLdb.MySQLError, err:
-        raise util.Abort(_('database error: %s') % err.args[1])
+    except Exception, e:
+        raise util.Abort(_('Bugzilla error: %s') % e)
 
