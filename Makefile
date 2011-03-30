@@ -2,15 +2,27 @@ PYTHON=python
 
 help:
 	@echo 'Commonly used make targets:'
-	@echo '  tests        - run all tests in the automatic test suite'
+	@echo '  tests              - run all tests in the automatic test suite'
+	@echo '  all-version-tests - run all tests against many hg versions'
+	@echo '  tests-%s           - run all tests in the specified hg version'
 
-all: tests
+all: help
+
+.PHONY: tests
 
 tests:
-	cd tests && $(PYTHON) run-tests.py --with-hg=`which hg` $(TESTFLAGS)
+	@echo "Path to crew repo is $(CREW) - set this with CREW= if needed."
+	cd tests && $(PYTHON) $(CREW)/tests/run-tests.py $(TESTFLAGS)
 
 test-%:
-	cd tests && $(PYTHON) run-tests.py --with-hg=`which hg` $(TESTFLAGS) $@
-.PHONY: help all local build doc clean install install-bin install-doc \
-	install-home install-home-bin install-home-doc dist dist-notests tests \
-	update-pot
+	@echo "Path to crew repo is $(CREW) - set this with CREW= if needed."
+	cd tests && $(PYTHON) $(CREW)/tests/run-tests.py $(TESTFLAGS) $@
+
+tests-%:
+	@echo "Path to crew repo is $(CREW) - set this with CREW= if needed."
+	hg -R $(CREW) checkout $$(echo $@ | sed s/tests-//) && \
+	(cd $(CREW) ; $(MAKE) clean ) && \
+	cd tests && $(PYTHON) $(CREW)/tests/run-tests.py $(TESTFLAGS)
+
+# requires at least 1.7 because of use of unified tests
+all-version-tests: tests-1.4.3 tests-1.5.4 tests-1.6.4 tests-1.7.5 tests-1.8.1 tests-tip
