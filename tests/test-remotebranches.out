@@ -1,7 +1,6 @@
 marked working directory as branch stable
 updating to branch default
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-created new head
 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
@@ -21,7 +20,6 @@ added 2 changesets with 1 changes to 1 files
 (run 'hg update' to get a working copy)
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 marked working directory as branch default
-created new head
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 (branch merge, don't forget to commit)
 
