@@ -109,7 +109,9 @@ def test_url():
     >>> url('mailto:John.Doe@example.com')
     <url scheme: 'mailto', path: 'John.Doe@example.com'>
     >>> url('a:b:c:d')
-    <url scheme: 'a', path: 'b:c:d'>
+    <url path: 'a:b:c:d'>
+    >>> url('aa:bb:cc:dd')
+    <url scheme: 'aa', path: 'bb:cc:dd'>
 
     SSH examples:
 
