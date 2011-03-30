@@ -118,7 +118,7 @@ graph shows tags for the branch heads of each path
   
 
 make sure bogus revisions in .hg/remotebranches do not break hg
-  $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default > \
+  $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default >> \
   > .hg/remotebranches
   $ hg parents
   changeset:   6:ce61ec32ee23
@@ -129,3 +129,71 @@ make sure bogus revisions in .hg/remotebranches do not break hg
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merging stable
   
+Verify that the revsets operate as expected:
+  $ hg log --graph -r 'not pushed()'
+  @    changeset:   6:ce61ec32ee23
+  |\   tag:         tip
+  | |  parent:      5:6d6442577283
+  | |  parent:      4:8948da77173b
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merging stable
+  | |
+  | o  changeset:   5:6d6442577283
+  | |  parent:      3:78f83396d79e
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     add e
+  | |
+
+Upstream without configuration is synonymous with pushed():
+  $ hg log --graph -r 'not upstream()'
+  @    changeset:   6:ce61ec32ee23
+  |\   tag:         tip
+  | |  parent:      5:6d6442577283
+  | |  parent:      4:8948da77173b
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merging stable
+  | |
+  | o  changeset:   5:6d6442577283
+  | |  parent:      3:78f83396d79e
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     add e
+  | |
+
+but configured, it'll do the expected thing:
+  $ echo '[remotebranches]' >> .hg/hgrc
+  $ echo 'upstream=alpha' >> .hg/hgrc
+  $ hg log --graph -r 'not upstream()'
+  @    changeset:   6:ce61ec32ee23
+  |\   tag:         tip
+  | |  parent:      5:6d6442577283
+  | |  parent:      4:8948da77173b
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merging stable
+  | |
+  | o  changeset:   5:6d6442577283
+  | |  parent:      3:78f83396d79e
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     add e
+  | |
+  o |  changeset:   4:8948da77173b
+  |\|  branch:      stable
+  | |  tag:         beta/stable
+  | |  parent:      2:95cb4ab9fe1d
+  | |  parent:      3:78f83396d79e
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merged
+  | |
+  | o  changeset:   3:78f83396d79e
+  | |  tag:         beta/default
+  | |  parent:      1:7c3bad9141dc
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     add d
+  | |

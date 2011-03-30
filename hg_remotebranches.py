@@ -8,6 +8,13 @@ from mercurial import ui
 from mercurial import url
 from mercurial import util
 
+try:
+    from mercurial import revset
+    # force demandimport to load revset
+    revset.methods
+except ImportError:
+   revset = None
+
 from hgext import schemes
 
 def reposetup(ui, repo):
@@ -148,3 +155,37 @@ def reposetup(ui, repo):
             f.close()
 
     repo.__class__ = remotebranchesrepo
+
+def upstream_revs(filt, repo, subset, x):
+    nodes = [node.hex(n) for name, n in
+             repo._remotebranches.iteritems() if filt(name)]
+    if not nodes: []
+    upstream = reduce(lambda x, y: x.update(y) or x,
+                      map(lambda x: set(revset.ancestors(repo, subset, x)),
+                          [('string', n) for n in nodes]),
+                      set())
+    return [r for r in subset if r in upstream]
+
+def upstream(repo, subset, x):
+    '''``upstream()``
+    Select changesets in an upstream repository according to remotebranches.
+    '''
+    args = revset.getargs(x, 0, 0, "upstream takes no arguments")
+    upstream_names = [s + '/' for s in
+                      repo.ui.configlist('remotebranches', 'upstream')]
+    if not upstream_names:
+        filt = lambda x: True
+    else:
+        filt = lambda name: any(map(name.startswith, upstream_names))
+    return upstream_revs(filt, repo, subset, x)
+
+def pushed(repo, subset, x):
+    '''``pushed()``
+    Select changesets in any remote repository according to remotebranches.
+    '''
+    args = revset.getargs(x, 0, 0, "pushed takes no arguments")
+    return upstream_revs(lambda x: True, repo, subset, x)
+
+if revset is not None:
+    revset.symbols.update({'upstream': upstream,
+                           'pushed': pushed})
