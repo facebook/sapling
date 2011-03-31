@@ -1497,44 +1497,43 @@ class localrepository(repo.repository):
                 if revlog.linkrev(revlog.rev(n)) not in commonrevs:
                     yield n
 
-        def clookup(revlog, x):
-            c = cl.read(x)
-            changedfiles.update(c[3])
-            mfs.setdefault(c[0], x)
-            count[0] += 1
-            self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
-            return x
-
-        def mlookup(revlog, x):
-            clnode = mfs[x]
-            mdata = mf.readfast(x)
-            for f in changedfiles:
-                if f in mdata:
-                    fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
-            count[0] += 1
-            self.ui.progress(_('bundling'), count[0],
-                             unit=_('manifests'), total=len(mfs))
-            return mfs[x]
-
-        def flookup(revlog, x):
-            self.ui.progress(
-                _('bundling'), count[0], item=fstate[0],
-                unit=_('files'), total=len(changedfiles))
-            return fstate[1][x]
+        def lookup(revlog, x):
+            if revlog == cl:
+                c = cl.read(x)
+                changedfiles.update(c[3])
+                mfs.setdefault(c[0], x)
+                count[0] += 1
+                self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
+                return x
+            elif revlog == mf:
+                clnode = mfs[x]
+                mdata = mf.readfast(x)
+                for f in changedfiles:
+                    if f in mdata:
+                        fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
+                count[0] += 1
+                self.ui.progress(_('bundling'), count[0],
+                                 unit=_('manifests'), total=len(mfs))
+                return mfs[x]
+            else:
+                self.ui.progress(
+                    _('bundling'), count[0], item=fstate[0],
+                    unit=_('files'), total=len(changedfiles))
+                return fstate[1][x]
 
         # Now that we have all theses utility functions to help out and
         # logically divide up the task, generate the group.
         def gengroup():
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
-            for chunk in cl.group(csets, clookup):
+            for chunk in cl.group(csets, lookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
             count[0] = 0
-            for chunk in mf.group(prune(mf, mfs), mlookup):
+            for chunk in mf.group(prune(mf, mfs), lookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1551,7 +1550,7 @@ class localrepository(repo.repository):
                 first = True
 
                 for chunk in filerevlog.group(prune(filerevlog, fstate[1]),
-                                              flookup):
+                                              lookup):
                     if first:
                         if chunk == changegroup.closechunk():
                             break
@@ -1600,36 +1599,35 @@ class localrepository(repo.repository):
                 if log.linkrev(r) in revset:
                     yield log.node(r)
 
-        def clookup(revlog, x):
-            c = cl.read(x)
-            changedfiles.update(c[3])
-            mfs.setdefault(c[0], x)
-            count[0] += 1
-            self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
-            return x
-
-        def mlookup(revlog, x):
-            count[0] += 1
-            self.ui.progress(_('bundling'), count[0],
-                             unit=_('manifests'), total=len(mfs))
-            return cl.node(revlog.linkrev(revlog.rev(x)))
-
-        def flookup(revlog, x):
-            self.ui.progress(
-                _('bundling'), count[0], item=fstate[0],
-                total=len(changedfiles), unit=_('files'))
-            return cl.node(revlog.linkrev(revlog.rev(x)))
+        def lookup(revlog, x):
+            if revlog == cl:
+                c = cl.read(x)
+                changedfiles.update(c[3])
+                mfs.setdefault(c[0], x)
+                count[0] += 1
+                self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
+                return x
+            elif revlog == mf:
+                count[0] += 1
+                self.ui.progress(_('bundling'), count[0],
+                                 unit=_('manifests'), total=len(mfs))
+                return cl.node(revlog.linkrev(revlog.rev(x)))
+            else:
+                self.ui.progress(
+                    _('bundling'), count[0], item=fstate[0],
+                    total=len(changedfiles), unit=_('files'))
+                return cl.node(revlog.linkrev(revlog.rev(x)))
 
         def gengroup():
             '''yield a sequence of changegroup chunks (strings)'''
             # construct a list of all changed files
 
-            for chunk in cl.group(nodes, clookup):
+            for chunk in cl.group(nodes, lookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
             count[0] = 0
-            for chunk in mf.group(gennodelst(mf), mlookup):
+            for chunk in mf.group(gennodelst(mf), lookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1640,7 +1638,7 @@ class localrepository(repo.repository):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 fstate[0] = fname
                 first = True
-                for chunk in filerevlog.group(gennodelst(filerevlog), flookup):
+                for chunk in filerevlog.group(gennodelst(filerevlog), lookup):
                     if first:
                         if chunk == changegroup.closechunk():
                             break
