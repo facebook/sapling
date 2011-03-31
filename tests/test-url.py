@@ -158,6 +158,13 @@ def test_url():
     >>> url('/x///z/y/')
     <url path: '/x///z/y/'>
 
+    Non-localhost file URL:
+
+    >>> u = url('file://mercurial.selenic.com/foo')
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in ?
+    Abort: file:// URLs can only refer to localhost
+
     Empty URL:
 
     >>> u = url('')

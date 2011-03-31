@@ -140,6 +140,11 @@ class url(object):
                 self.host, self.port = self.host.rsplit(':', 1)
                 if not self.host:
                     self.host = None
+
+            if (self.host and self.scheme == 'file' and
+                self.host not in ('localhost', '127.0.0.1', '[::1]')):
+                raise util.Abort(_('file:// URLs can only refer to localhost'))
+
         self.path = path
 
         for a in ('user', 'passwd', 'host', 'port',
