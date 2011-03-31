@@ -23,7 +23,7 @@ class sshrepository(wireproto.wirerepository):
         self._url = path
         self.ui = ui
 
-        u = url.url(path, parse_query=False, parse_fragment=False)
+        u = url.url(path, parsequery=False, parsefragment=False)
         if u.scheme != 'ssh' or not u.host or u.path is None:
             self._abort(error.RepoError(_("couldn't parse location %s") % path))
 

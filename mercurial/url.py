@@ -23,8 +23,8 @@ class url(object):
     Missing components are set to None. The only exception is
     fragment, which is set to '' if present but empty.
 
-    If parse_fragment is False, fragment is included in query. If
-    parse_query is False, query is included in path. If both are
+    If parsefragment is False, fragment is included in query. If
+    parsequery is False, query is included in path. If both are
     False, both fragment and query are included in path.
 
     See http://www.ietf.org/rfc/rfc2396.txt for more information.
@@ -58,14 +58,14 @@ class url(object):
 
     >>> url('http://host/a?b#c')
     <url scheme: 'http', host: 'host', path: 'a', query: 'b', fragment: 'c'>
-    >>> url('http://host/a?b#c', parse_query=False, parse_fragment=False)
+    >>> url('http://host/a?b#c', parsequery=False, parsefragment=False)
     <url scheme: 'http', host: 'host', path: 'a?b#c'>
     """
 
     _safechars = "!~*'()+"
     _safepchars = "/!~*'()+"
 
-    def __init__(self, path, parse_query=True, parse_fragment=True):
+    def __init__(self, path, parsequery=True, parsefragment=True):
         # We slowly chomp away at path until we have only the path left
         self.scheme = self.user = self.passwd = self.host = None
         self.port = self.path = self.query = self.fragment = None
@@ -74,7 +74,7 @@ class url(object):
         self._origpath = path
 
         # special case for Windows drive letters
-        if has_drive_letter(path):
+        if hasdriveletter(path):
             self.path = path
             return
 
@@ -100,7 +100,7 @@ class url(object):
                 self.path = ''
                 return
         else:
-            if parse_fragment and '#' in path:
+            if parsefragment and '#' in path:
                 path, self.fragment = path.split('#', 1)
                 if not path:
                     path = None
@@ -108,7 +108,7 @@ class url(object):
                 self.path = path
                 return
 
-            if parse_query and '?' in path:
+            if parsequery and '?' in path:
                 path, self.query = path.split('?', 1)
                 if not path:
                     path = None
@@ -239,26 +239,26 @@ class url(object):
             path = self.path or '/'
             # For Windows, we need to promote hosts containing drive
             # letters to paths with drive letters.
-            if has_drive_letter(self._hostport):
+            if hasdriveletter(self._hostport):
                 path = self._hostport + '/' + self.path
             elif self.host is not None and self.path:
                 path = '/' + path
             # We also need to handle the case of file:///C:/, which
             # should return C:/, not /C:/.
-            elif has_drive_letter(path):
+            elif hasdriveletter(path):
                 # Strip leading slash from paths with drive names
                 return path[1:]
             return path
         return self._origpath
 
-def has_scheme(path):
+def hasscheme(path):
     return bool(url(path).scheme)
 
-def has_drive_letter(path):
+def hasdriveletter(path):
     return path[1:2] == ':' and path[0:1].isalpha()
 
 def localpath(path):
-    return url(path, parse_query=False, parse_fragment=False).localpath()
+    return url(path, parsequery=False, parsefragment=False).localpath()
 
 def hidepassword(u):
     '''hide user credential in a url string'''

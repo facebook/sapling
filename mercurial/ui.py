@@ -111,7 +111,7 @@ class ui(object):
                                   % (n, p, self.configsource('paths', n)))
                         p = p.replace('%%', '%')
                     p = util.expandpath(p)
-                    if not url.has_scheme(p) and not os.path.isabs(p):
+                    if not url.hasscheme(p) and not os.path.isabs(p):
                         p = os.path.normpath(os.path.join(root, p))
                     c.set("paths", n, p)
 
@@ -325,7 +325,7 @@ class ui(object):
 
     def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
-        if url.has_scheme(loc) or os.path.isdir(os.path.join(loc, '.hg')):
+        if url.hasscheme(loc) or os.path.isdir(os.path.join(loc, '.hg')):
             return loc
 
         path = self.config('paths', loc)

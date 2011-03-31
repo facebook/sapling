@@ -71,11 +71,11 @@ def test_url():
     <url scheme: 'http', host: 'host', path: 'a', fragment: 'b?c'>
     >>> url('http://host/?a#b')
     <url scheme: 'http', host: 'host', path: '', query: 'a', fragment: 'b'>
-    >>> url('http://host/?a#b', parse_query=False)
+    >>> url('http://host/?a#b', parsequery=False)
     <url scheme: 'http', host: 'host', path: '?a', fragment: 'b'>
-    >>> url('http://host/?a#b', parse_fragment=False)
+    >>> url('http://host/?a#b', parsefragment=False)
     <url scheme: 'http', host: 'host', path: '', query: 'a#b'>
-    >>> url('http://host/?a#b', parse_query=False, parse_fragment=False)
+    >>> url('http://host/?a#b', parsequery=False, parsefragment=False)
     <url scheme: 'http', host: 'host', path: '?a#b'>
 
     IPv6 addresses:

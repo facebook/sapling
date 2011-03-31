@@ -71,7 +71,7 @@ class ShortRepository(object):
         url = ''.join(self.templater.process(self.url, context)) + tail
         return hg._lookup(url).instance(ui, url, create)
 
-def has_drive_letter(orig, path):
+def hasdriveletter(orig, path):
     for scheme in schemes:
         if path.startswith(scheme + ':'):
             return False
@@ -95,4 +95,4 @@ def extsetup(ui):
                                'letter %s:\\\n') % (scheme, scheme.upper()))
         hg.schemes[scheme] = ShortRepository(url, scheme, t)
 
-    extensions.wrapfunction(urlmod, 'has_drive_letter', has_drive_letter)
+    extensions.wrapfunction(urlmod, 'hasdriveletter', hasdriveletter)
