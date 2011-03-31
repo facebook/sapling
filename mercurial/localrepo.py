@@ -1621,7 +1621,6 @@ class localrepository(repo.repository):
             self.ui.progress(_('bundling'), None)
 
             mnfst = self.manifest
-            nodeiter = gennodelst(mnfst)
             count = [0]
             def mlookup(revlog, x):
                 count[0] += 1
@@ -1629,7 +1628,7 @@ class localrepository(repo.repository):
                                  unit=_('manifests'), total=changecount)
                 return cl.node(revlog.linkrev(revlog.rev(x)))
 
-            for chunk in mnfst.group(nodeiter, mlookup):
+            for chunk in mnfst.group(gennodelst(mnfst), mlookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1638,14 +1637,13 @@ class localrepository(repo.repository):
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 first = True
-                nodeiter = gennodelst(filerevlog)
                 def flookup(revlog, x):
                     self.ui.progress(
                         _('bundling'), idx, item=fname,
                         total=efiles, unit=_('files'))
                     return cl.node(revlog.linkrev(revlog.rev(x)))
 
-                for chunk in filerevlog.group(nodeiter, flookup):
+                for chunk in filerevlog.group(gennodelst(filerevlog), flookup):
                     if first:
                         if chunk == changegroup.closechunk():
                             break
