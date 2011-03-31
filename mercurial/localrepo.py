@@ -1478,6 +1478,7 @@ class localrepository(repo.repository):
         mf = self.manifest
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
+        changedfiles = set()
 
         # can we go through the fast path ?
         heads.sort()
@@ -1498,7 +1499,6 @@ class localrepository(repo.repository):
         # logically divide up the task, generate the group.
         def gengroup():
             # The set of changed files starts empty.
-            changedfiles = set()
 
             count = [0]
             def clookup(revlog, x):
@@ -1588,11 +1588,15 @@ class localrepository(repo.repository):
 
         nodes is the set of nodes to send"""
 
-        self.hook('preoutgoing', throw=True, source=source)
-
         cl = self.changelog
-        revset = set([cl.rev(n) for n in nodes])
+        mf = self.manifest
+        mfs = {}
+        changedfiles = set()
+
+        self.hook('preoutgoing', throw=True, source=source)
         self.changegroupinfo(nodes, source)
+
+        revset = set([cl.rev(n) for n in nodes])
 
         def gennodelst(log):
             for r in log:
@@ -1602,14 +1606,12 @@ class localrepository(repo.repository):
         def gengroup():
             '''yield a sequence of changegroup chunks (strings)'''
             # construct a list of all changed files
-            changedfiles = set()
-            mmfs = {}
 
             count = [0]
             def clookup(revlog, x):
                 c = cl.read(x)
                 changedfiles.update(c[3])
-                mmfs.setdefault(c[0], x)
+                mfs.setdefault(c[0], x)
                 count[0] += 1
                 self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
                 return x
@@ -1620,7 +1622,6 @@ class localrepository(repo.repository):
             changecount = count[0]
             self.ui.progress(_('bundling'), None)
 
-            mnfst = self.manifest
             count = [0]
             def mlookup(revlog, x):
                 count[0] += 1
@@ -1628,7 +1629,7 @@ class localrepository(repo.repository):
                                  unit=_('manifests'), total=changecount)
                 return cl.node(revlog.linkrev(revlog.rev(x)))
 
-            for chunk in mnfst.group(gennodelst(mnfst), mlookup):
+            for chunk in mf.group(gennodelst(mf), mlookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1651,9 +1652,8 @@ class localrepository(repo.repository):
                         yield fname
                         first = False
                     yield chunk
-            self.ui.progress(_('bundling'), None)
-
             yield changegroup.closechunk()
+            self.ui.progress(_('bundling'), None)
 
             if nodes:
                 self.hook('outgoing', node=hex(nodes[0]), source=source)
