@@ -906,31 +906,6 @@ class httpbasicauthhandler(urllib2.HTTPBasicAuthHandler):
         return urllib2.HTTPBasicAuthHandler.http_error_auth_reqed(
                         self, auth_header, host, req, headers)
 
-def getauthinfo(path):
-    scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
-    if not urlpath:
-        urlpath = '/'
-    if scheme != 'file':
-        # XXX: why are we quoting the path again with some smart
-        # heuristic here? Anyway, it cannot be done with file://
-        # urls since path encoding is os/fs dependent (see
-        # urllib.pathname2url() for details).
-        urlpath = quotepath(urlpath)
-    host, port, user, passwd = netlocsplit(netloc)
-
-    # urllib cannot handle URLs with embedded user or passwd
-    url = urlparse.urlunsplit((scheme, netlocunsplit(host, port),
-                              urlpath, query, frag))
-    if user:
-        netloc = host
-        if port:
-            netloc += ':' + port
-        # Python < 2.4.3 uses only the netloc to search for a password
-        authinfo = (None, (url, netloc), user, passwd or '')
-    else:
-        authinfo = None
-    return url, authinfo
-
 handlerfuncs = []
 
 def opener(ui, authinfo=None):

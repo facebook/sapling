@@ -85,7 +85,8 @@ class statichttprepository(localrepo.localrepository):
         self.ui = ui
 
         self.root = path
-        self.path, authinfo = url.getauthinfo(path.rstrip('/') + "/.hg")
+        u = url.url(path.rstrip('/') + "/.hg")
+        self.path, authinfo = u.authinfo()
 
         opener = build_opener(ui, authinfo)
         self.opener = opener(self.path)

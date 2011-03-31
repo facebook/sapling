@@ -9,7 +9,7 @@
 from node import nullid
 from i18n import _
 import changegroup, statichttprepo, error, url, util, wireproto
-import os, urllib, urllib2, urlparse, zlib, httplib
+import os, urllib, urllib2, zlib, httplib
 import errno, socket
 
 def zgenerator(f):
@@ -28,13 +28,13 @@ class httprepository(wireproto.wirerepository):
         self.path = path
         self.caps = None
         self.handler = None
-        scheme, netloc, urlpath, query, frag = urlparse.urlsplit(path)
-        if query or frag:
+        u = url.url(path)
+        if u.query or u.fragment:
             raise util.Abort(_('unsupported URL component: "%s"') %
-                             (query or frag))
+                             (u.query or u.fragment))
 
         # urllib cannot handle URLs with embedded user or passwd
-        self._url, authinfo = url.getauthinfo(path)
+        self._url, authinfo = u.authinfo()
 
         self.ui = ui
         self.ui.debug('using %s\n' % self._url)
