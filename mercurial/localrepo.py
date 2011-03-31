@@ -1479,6 +1479,7 @@ class localrepository(repo.repository):
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
         changedfiles = set()
+        count = [0]
 
         # can we go through the fast path ?
         heads.sort()
@@ -1495,42 +1496,38 @@ class localrepository(repo.repository):
                 if revlog.linkrev(revlog.rev(n)) not in commonrevs:
                     yield n
 
+        def clookup(revlog, x):
+            c = cl.read(x)
+            changedfiles.update(c[3])
+            mfs.setdefault(c[0], x)
+            count[0] += 1
+            self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
+            return x
+
+        def mlookup(revlog, x):
+            clnode = mfs[x]
+            mdata = mf.readfast(x)
+            for f in changedfiles:
+                if f in mdata:
+                    fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
+            count[0] += 1
+            self.ui.progress(_('bundling'), count[0],
+                             unit=_('manifests'), total=len(mfs))
+            return mfs[x]
+
         # Now that we have all theses utility functions to help out and
         # logically divide up the task, generate the group.
         def gengroup():
-            # The set of changed files starts empty.
-
-            count = [0]
-            def clookup(revlog, x):
-                c = cl.read(x)
-                changedfiles.update(c[3])
-                mfs.setdefault(c[0], x)
-                count[0] += 1
-                self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
-                return x
-
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
             for chunk in cl.group(csets, clookup):
                 yield chunk
-            changecount = count[0]
             efiles = len(changedfiles)
             self.ui.progress(_('bundling'), None)
 
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
-            count = [0]
-            def mlookup(revlog, x):
-                clnode = mfs[x]
-                mdata = mf.readfast(x)
-                for f in changedfiles:
-                    if f in mdata:
-                        fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
-                count[0] += 1
-                self.ui.progress(_('bundling'), count[0],
-                                 unit=_('manifests'), total=changecount)
-                return mfs[x]
-
+            count[0] = 0
             for chunk in mf.group(prune(mf, mfs), mlookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
