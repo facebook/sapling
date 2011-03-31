@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import urllib, urllib2, urlparse, httplib, os, socket, cStringIO
+import urllib, urllib2, httplib, os, socket, cStringIO
 import __builtin__
 from i18n import _
 import keepalive, util
@@ -407,14 +407,10 @@ class proxyhandler(urllib2.ProxyHandler):
             if not (proxyurl.startswith('http:') or
                     proxyurl.startswith('https:')):
                 proxyurl = 'http://' + proxyurl + '/'
-            snpqf = urlparse.urlsplit(proxyurl)
-            proxyscheme, proxynetloc, proxypath, proxyquery, proxyfrag = snpqf
-            hpup = netlocsplit(proxynetloc)
-
-            proxyhost, proxyport, proxyuser, proxypasswd = hpup
-            if not proxyuser:
-                proxyuser = ui.config("http_proxy", "user")
-                proxypasswd = ui.config("http_proxy", "passwd")
+            proxy = url(proxyurl)
+            if not proxy.user:
+                proxy.user = ui.config("http_proxy", "user")
+                proxy.passwd = ui.config("http_proxy", "passwd")
 
             # see if we should use a proxy for this url
             no_list = ["localhost", "127.0.0.1"]
@@ -429,13 +425,10 @@ class proxyhandler(urllib2.ProxyHandler):
             else:
                 self.no_list = no_list
 
-            proxyurl = urlparse.urlunsplit((
-                proxyscheme, netlocunsplit(proxyhost, proxyport,
-                                                proxyuser, proxypasswd or ''),
-                proxypath, proxyquery, proxyfrag))
+            proxyurl = str(proxy)
             proxies = {'http': proxyurl, 'https': proxyurl}
             ui.debug('proxying through http://%s:%s\n' %
-                      (proxyhost, proxyport))
+                      (proxy.host, proxy.port))
         else:
             proxies = {}
 
@@ -602,13 +595,9 @@ def _generic_start_transaction(handler, h, req):
         new_tunnel = False
 
     if new_tunnel or tunnel_host == req.get_full_url(): # has proxy
-        urlparts = urlparse.urlparse(tunnel_host)
-        if new_tunnel or urlparts[0] == 'https': # only use CONNECT for HTTPS
-            realhostport = urlparts[1]
-            if realhostport[-1] == ']' or ':' not in realhostport:
-                realhostport += ':443'
-
-            h.realhostport = realhostport
+        u = url(tunnel_host)
+        if new_tunnel or u.scheme == 'https': # only use CONNECT for HTTPS
+            h.realhostport = ':'.join([u.host, (u.port or '443')])
             h.headers = req.headers.copy()
             h.headers.update(handler.parent.addheaders)
             return
