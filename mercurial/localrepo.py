@@ -1521,19 +1521,19 @@ class localrepository(repo.repository):
                     unit=_('files'), total=len(changedfiles))
                 return fstate[1][x]
 
-        # Now that we have all theses utility functions to help out and
-        # logically divide up the task, generate the group.
+        bundler = changegroup.bundle10(lookup)
+
         def gengroup():
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
-            for chunk in cl.group(csets, lookup):
+            for chunk in cl.group(csets, bundler):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
             count[0] = 0
-            for chunk in mf.group(prune(mf, mfs), lookup):
+            for chunk in mf.group(prune(mf, mfs), bundler):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1550,17 +1550,16 @@ class localrepository(repo.repository):
                 first = True
 
                 for chunk in filerevlog.group(prune(filerevlog, fstate[1]),
-                                              lookup):
+                                              bundler):
                     if first:
-                        if chunk == changegroup.closechunk():
+                        if chunk == bundler.close():
                             break
                         count[0] += 1
-                        yield changegroup.chunkheader(len(fname))
-                        yield fname
+                        yield bundler.fileheader(fname)
                         first = False
                     yield chunk
             # Signal that no more groups are left.
-            yield changegroup.closechunk()
+            yield bundler.close()
             self.ui.progress(_('bundling'), None)
 
             if csets:
@@ -1618,16 +1617,18 @@ class localrepository(repo.repository):
                     total=len(changedfiles), unit=_('files'))
                 return cl.node(revlog.linkrev(revlog.rev(x)))
 
+        bundler = changegroup.bundle10(lookup)
+
         def gengroup():
             '''yield a sequence of changegroup chunks (strings)'''
             # construct a list of all changed files
 
-            for chunk in cl.group(nodes, lookup):
+            for chunk in cl.group(nodes, bundler):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
             count[0] = 0
-            for chunk in mf.group(gennodelst(mf), lookup):
+            for chunk in mf.group(gennodelst(mf), bundler):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1638,16 +1639,15 @@ class localrepository(repo.repository):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 fstate[0] = fname
                 first = True
-                for chunk in filerevlog.group(gennodelst(filerevlog), lookup):
+                for chunk in filerevlog.group(gennodelst(filerevlog), bundler):
                     if first:
-                        if chunk == changegroup.closechunk():
+                        if chunk == bundler.close():
                             break
                         count[0] += 1
-                        yield changegroup.chunkheader(len(fname))
-                        yield fname
+                        yield bundler.fileheader(fname)
                         first = False
                     yield chunk
-            yield changegroup.closechunk()
+            yield bundler.close()
             self.ui.progress(_('bundling'), None)
 
             if nodes:

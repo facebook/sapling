@@ -194,3 +194,18 @@ def readbundle(fh, fname):
     if version != '10':
         raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
     return unbundle10(fh, alg)
+
+class bundle10(object):
+    def __init__(self, lookup):
+        self._lookup = lookup
+    def close(self):
+        return closechunk()
+    def fileheader(self, fname):
+        return chunkheader(len(fname)) + fname
+    def revchunk(self, revlog, node='', p1='', p2='', prefix='', data=''):
+        linknode = self._lookup(revlog, node)
+        meta = node + p1 + p2 + linknode + prefix
+        l = len(meta) + len(data)
+        yield chunkheader(l)
+        yield meta
+        yield data

@@ -1058,7 +1058,7 @@ class revlog(object):
             self._cache = (node, curr, text)
         return node
 
-    def group(self, nodelist, lookup):
+    def group(self, nodelist, bundler):
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
 
@@ -1074,7 +1074,7 @@ class revlog(object):
 
         # if we don't have any revisions touched by these changesets, bail
         if not revs:
-            yield changegroup.closechunk()
+            yield bundler.close()
             return
 
         # add the parent of the first rev
@@ -1085,19 +1085,18 @@ class revlog(object):
         for r in xrange(len(revs) - 1):
             a, b = revs[r], revs[r + 1]
             nb = self.node(b)
+            p1, p2 = self.parents(nb)
+            prefix = ''
 
-            p = self.parents(nb)
-            meta = nb + p[0] + p[1] + lookup(self, nb)
             if a == nullrev:
                 d = self.revision(nb)
-                meta += mdiff.trivialdiffheader(len(d))
+                prefix = mdiff.trivialdiffheader(len(d))
             else:
                 d = self.revdiff(a, b)
-            yield changegroup.chunkheader(len(meta) + len(d))
-            yield meta
-            yield d
+            for c in bundler.revchunk(self, nb, p1, p2, prefix, d):
+                yield c
 
-        yield changegroup.closechunk()
+        yield bundler.close()
 
     def addgroup(self, bundle, linkmapper, transaction):
         """
