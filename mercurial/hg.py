@@ -69,11 +69,8 @@ schemes = {
 }
 
 def _lookup(path):
-    scheme = 'file'
-    if path:
-        c = path.find(':')
-        if c > 0:
-            scheme = path[:c]
+    u = url.url(path)
+    scheme = u.scheme or 'file'
     thing = schemes.get(scheme) or schemes['file']
     try:
         return thing(path)
