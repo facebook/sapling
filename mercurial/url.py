@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import urllib, urllib2, urlparse, httplib, os, re, socket, cStringIO
+import urllib, urllib2, urlparse, httplib, os, socket, cStringIO
 import __builtin__
 from i18n import _
 import keepalive, util
@@ -961,17 +961,13 @@ def opener(ui, authinfo=None):
     opener.addheaders.append(('Accept', 'application/mercurial-0.1'))
     return opener
 
-scheme_re = re.compile(r'^([a-zA-Z0-9+-.]+)://')
-
-def open(ui, url, data=None):
-    scheme = None
-    m = scheme_re.search(url)
-    if m:
-        scheme = m.group(1).lower()
-    if not scheme:
-        path = util.normpath(os.path.abspath(url))
-        url = 'file://' + urllib.pathname2url(path)
-        authinfo = None
+def open(ui, url_, data=None):
+    u = url(url_)
+    if u.scheme:
+        u.scheme = u.scheme.lower()
+        url_, authinfo = u.authinfo()
     else:
-        url, authinfo = getauthinfo(url)
-    return opener(ui, authinfo).open(url, data)
+        path = util.normpath(os.path.abspath(url_))
+        url_ = 'file://' + urllib.pathname2url(path)
+        authinfo = None
+    return opener(ui, authinfo).open(url_, data)

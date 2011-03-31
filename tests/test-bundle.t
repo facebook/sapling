@@ -206,7 +206,7 @@ doesn't work (yet ?)
 hg -R bundle://../full.hg verify
 
   $ hg pull bundle://../full.hg
-  pulling from bundle://../full.hg
+  pulling from bundle:../full.hg
   requesting all changes
   adding changesets
   adding manifests
@@ -310,7 +310,7 @@ Log -R full.hg in partial
 Incoming full.hg in partial
 
   $ hg incoming bundle://../full.hg
-  comparing with bundle://../full.hg
+  comparing with bundle:../full.hg
   searching for changes
   changeset:   4:095197eb4973
   parent:      0:f9ee2f85a263
