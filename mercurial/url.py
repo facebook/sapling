@@ -156,7 +156,7 @@ class url(object):
         >>> str(url('http://localhost:80/'))
         'http://localhost:80/'
         >>> str(url('http://localhost:80'))
-        'http://localhost:80'
+        'http://localhost:80/'
         >>> str(url('bundle:foo'))
         'bundle:foo'
         >>> str(url('path'))
@@ -185,8 +185,7 @@ class url(object):
                 s += self.host
         if self.port:
             s += ':' + urllib.quote(self.port)
-        if ((self.host and self.path is not None) or
-            (self.host and self.query or self.fragment)):
+        if self.host:
             s += '/'
         if self.path:
             s += urllib.quote(self.path, safe=self._safepchars)
