@@ -470,6 +470,22 @@ test for 540d1059c802
   
   $ cd ..
 
+test bundle with # in the filename (issue2154):
+
+  $ cp bundle.hg 'test#bundle.hg'
+  $ cd orig
+  $ hg incoming '../test#bundle.hg'
+  comparing with ../test
+  abort: unknown revision 'bundle.hg'!
+  [255]
+
+note that percent encoding is not handled:
+
+  $ hg incoming ../test%23bundle.hg
+  abort: repository ../test%23bundle.hg not found!
+  [255]
+  $ cd ..
+
 test for http://mercurial.selenic.com/bts/issue1144
 
 test that verify bundle does not traceback

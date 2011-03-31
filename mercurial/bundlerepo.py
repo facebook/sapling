@@ -15,7 +15,7 @@ from node import nullid
 from i18n import _
 import os, struct, tempfile, shutil
 import changegroup, util, mdiff, discovery
-import localrepo, changelog, manifest, filelog, revlog, error
+import localrepo, changelog, manifest, filelog, revlog, error, url
 
 class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, bundle,
@@ -274,9 +274,9 @@ def instance(ui, path, create):
             cwd = os.path.join(cwd,'')
             if parentpath.startswith(cwd):
                 parentpath = parentpath[len(cwd):]
-    path = util.drop_scheme('file', path)
-    if path.startswith('bundle:'):
-        path = util.drop_scheme('bundle', path)
+    u = url.url(path)
+    path = u.localpath()
+    if u.scheme == 'bundle':
         s = path.split("+", 1)
         if len(s) == 1:
             repopath, bundlename = parentpath, s[0]

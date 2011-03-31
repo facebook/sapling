@@ -70,6 +70,8 @@ class url(object):
         self.scheme = self.user = self.passwd = self.host = None
         self.port = self.path = self.query = self.fragment = None
         self._localpath = True
+        self._hostport = ''
+        self._origpath = path
 
         # special case for Windows drive letters
         if has_drive_letter(path):
@@ -137,6 +139,7 @@ class url(object):
             # Don't split on colons in IPv6 addresses without ports
             if (self.host and ':' in self.host and
                 not (self.host.startswith('[') and self.host.endswith(']'))):
+                self._hostport = self.host
                 self.host, self.port = self.host.rsplit(':', 1)
                 if not self.host:
                     self.host = None
@@ -231,11 +234,31 @@ class url(object):
         return (s, (None, (str(self), self.host),
                     self.user, self.passwd or ''))
 
+    def localpath(self):
+        if self.scheme == 'file' or self.scheme == 'bundle':
+            path = self.path or '/'
+            # For Windows, we need to promote hosts containing drive
+            # letters to paths with drive letters.
+            if has_drive_letter(self._hostport):
+                path = self._hostport + '/' + self.path
+            elif self.host is not None and self.path:
+                path = '/' + path
+            # We also need to handle the case of file:///C:/, which
+            # should return C:/, not /C:/.
+            elif has_drive_letter(path):
+                # Strip leading slash from paths with drive names
+                return path[1:]
+            return path
+        return self._origpath
+
 def has_scheme(path):
     return bool(url(path).scheme)
 
 def has_drive_letter(path):
     return path[1:2] == ':' and path[0:1].isalpha()
+
+def localpath(path):
+    return url(path, parse_query=False, parse_fragment=False).localpath()
 
 def hidepassword(u):
     '''hide user credential in a url string'''

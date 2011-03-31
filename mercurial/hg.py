@@ -17,7 +17,7 @@ import verify as verifymod
 import errno, os, shutil
 
 def _local(path):
-    path = util.expandpath(util.drop_scheme('file', path))
+    path = util.expandpath(url.localpath(path))
     return (os.path.isfile(path) and bundlerepo or localrepo)
 
 def addbranchrevs(lrepo, repo, branches, revs):
@@ -101,15 +101,6 @@ def repository(ui, path='', create=False):
 def defaultdest(source):
     '''return default destination of clone if none is given'''
     return os.path.basename(os.path.normpath(source))
-
-def localpath(path):
-    if path.startswith('file://localhost/'):
-        return path[16:]
-    if path.startswith('file://'):
-        return path[7:]
-    if path.startswith('file:'):
-        return path[5:]
-    return path
 
 def share(ui, source, dest=None, update=True):
     '''create a shared repository'''
@@ -230,8 +221,8 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     else:
         dest = ui.expandpath(dest)
 
-    dest = localpath(dest)
-    source = localpath(source)
+    dest = url.localpath(dest)
+    source = url.localpath(source)
 
     if os.path.exists(dest):
         if not os.path.isdir(dest):
@@ -257,7 +248,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
         abspath = origsource
         copy = False
         if src_repo.cancopy() and islocal(dest):
-            abspath = os.path.abspath(util.drop_scheme('file', origsource))
+            abspath = os.path.abspath(url.localpath(origsource))
             copy = not pull and not rev
 
         if copy:

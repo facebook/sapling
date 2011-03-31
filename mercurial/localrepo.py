@@ -1928,7 +1928,7 @@ def aftertrans(files):
     return a
 
 def instance(ui, path, create):
-    return localrepository(ui, util.drop_scheme('file', path), create)
+    return localrepository(ui, urlmod.localpath(path), create)
 
 def islocal(path):
     return True
