@@ -51,13 +51,15 @@ def addbranchrevs(lrepo, repo, branches, revs):
             revs.append(hashbranch)
     return revs, revs[0]
 
-def parseurl(url, branches=None):
+def parseurl(path, branches=None):
     '''parse url#branch, returning (url, (branch, branches))'''
 
-    if '#' not in url:
-        return url, (None, branches or [])
-    url, branch = url.split('#', 1)
-    return url, (branch, branches or [])
+    u = url.url(path)
+    if not u.fragment:
+        return path, (None, branches or [])
+    branch = u.fragment
+    u.fragment = None
+    return str(u), (branch, branches or [])
 
 schemes = {
     'bundle': bundlerepo,
