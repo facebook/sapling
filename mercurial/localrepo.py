@@ -1479,6 +1479,7 @@ class localrepository(repo.repository):
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
         changedfiles = set()
+        fstate = ['', {}]
         count = [0]
 
         # can we go through the fast path ?
@@ -1515,6 +1516,12 @@ class localrepository(repo.repository):
                              unit=_('manifests'), total=len(mfs))
             return mfs[x]
 
+        def flookup(revlog, x):
+            self.ui.progress(
+                _('bundling'), count[0], item=fstate[0],
+                unit=_('files'), total=len(changedfiles))
+            return fstate[1][x]
+
         # Now that we have all theses utility functions to help out and
         # logically divide up the task, generate the group.
         def gengroup():
@@ -1522,7 +1529,6 @@ class localrepository(repo.repository):
             # back to lookup the owning changenode and collect information.
             for chunk in cl.group(csets, clookup):
                 yield chunk
-            efiles = len(changedfiles)
             self.ui.progress(_('bundling'), None)
 
             # Create a generator for the manifestnodes that calls our lookup
@@ -1535,29 +1541,21 @@ class localrepository(repo.repository):
             mfs.clear()
 
             # Go through all our files in order sorted by name.
-            for idx, fname in enumerate(sorted(changedfiles)):
+            count[0] = 0
+            for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
-                # Toss out the filenodes that the recipient isn't really
-                # missing.
-                missingfnodes = fnodes.pop(fname, {})
+                fstate[0] = fname
+                fstate[1] = fnodes.pop(fname, {})
                 first = True
 
-                def flookup(revlog, x):
-                    # even though we print the same progress on
-                    # most loop iterations, put the progress call
-                    # here so that time estimates (if any) can be updated
-                    self.ui.progress(
-                        _('bundling'), idx, item=fname,
-                        unit=_('files'), total=efiles)
-                    return missingfnodes[x]
-
-                for chunk in filerevlog.group(prune(filerevlog, missingfnodes),
+                for chunk in filerevlog.group(prune(filerevlog, fstate[1]),
                                               flookup):
                     if first:
                         if chunk == changegroup.closechunk():
                             break
+                        count[0] += 1
                         yield changegroup.chunkheader(len(fname))
                         yield fname
                         first = False
@@ -1589,6 +1587,8 @@ class localrepository(repo.repository):
         mf = self.manifest
         mfs = {}
         changedfiles = set()
+        fstate = ['']
+        count = [0]
 
         self.hook('preoutgoing', throw=True, source=source)
         self.changegroupinfo(nodes, source)
@@ -1600,51 +1600,51 @@ class localrepository(repo.repository):
                 if log.linkrev(r) in revset:
                     yield log.node(r)
 
+        def clookup(revlog, x):
+            c = cl.read(x)
+            changedfiles.update(c[3])
+            mfs.setdefault(c[0], x)
+            count[0] += 1
+            self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
+            return x
+
+        def mlookup(revlog, x):
+            count[0] += 1
+            self.ui.progress(_('bundling'), count[0],
+                             unit=_('manifests'), total=len(mfs))
+            return cl.node(revlog.linkrev(revlog.rev(x)))
+
+        def flookup(revlog, x):
+            self.ui.progress(
+                _('bundling'), count[0], item=fstate[0],
+                total=len(changedfiles), unit=_('files'))
+            return cl.node(revlog.linkrev(revlog.rev(x)))
+
         def gengroup():
             '''yield a sequence of changegroup chunks (strings)'''
             # construct a list of all changed files
 
-            count = [0]
-            def clookup(revlog, x):
-                c = cl.read(x)
-                changedfiles.update(c[3])
-                mfs.setdefault(c[0], x)
-                count[0] += 1
-                self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
-                return x
-
             for chunk in cl.group(nodes, clookup):
                 yield chunk
-            efiles = len(changedfiles)
-            changecount = count[0]
             self.ui.progress(_('bundling'), None)
 
-            count = [0]
-            def mlookup(revlog, x):
-                count[0] += 1
-                self.ui.progress(_('bundling'), count[0],
-                                 unit=_('manifests'), total=changecount)
-                return cl.node(revlog.linkrev(revlog.rev(x)))
-
+            count[0] = 0
             for chunk in mf.group(gennodelst(mf), mlookup):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
-            for idx, fname in enumerate(sorted(changedfiles)):
+            count[0] = 0
+            for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
+                fstate[0] = fname
                 first = True
-                def flookup(revlog, x):
-                    self.ui.progress(
-                        _('bundling'), idx, item=fname,
-                        total=efiles, unit=_('files'))
-                    return cl.node(revlog.linkrev(revlog.rev(x)))
-
                 for chunk in filerevlog.group(gennodelst(filerevlog), flookup):
                     if first:
                         if chunk == changegroup.closechunk():
                             break
+                        count[0] += 1
                         yield changegroup.chunkheader(len(fname))
                         yield fname
                         first = False
