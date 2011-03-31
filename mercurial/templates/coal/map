@@ -94,14 +94,12 @@ filerevchild = '<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%url
 
 filerename = '{file|escape}@'
 filelogrename = '
-  <tr>
-    <th>base:</th>
-    <td>
-      <a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">
-        {file|escape}@{node|short}
-      </a>
-    </td>
-  </tr>'
+  <span class="base">
+    base
+    <a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">
+      {file|escape}@{node|short}
+    </a>
+  </span>'
 fileannotateparent = '
   <tr>
     <td class="metatag">parent:</td>
