@@ -29,6 +29,9 @@ class url(object):
 
     See http://www.ietf.org/rfc/rfc2396.txt for more information.
 
+    Note that for backward compatibility reasons, bundle URLs do not
+    take host names. That means 'bundle://../' has a path of '../'.
+
     Examples:
 
     >>> url('http://www.ietf.org/rfc/rfc2396.txt')
@@ -39,6 +42,8 @@ class url(object):
     <url scheme: 'file', path: '/home/joe/repo'>
     >>> url('bundle:foo')
     <url scheme: 'bundle', path: 'foo'>
+    >>> url('bundle://../foo')
+    <url scheme: 'bundle', path: '../foo'>
     >>> url('c:\\\\foo\\\\bar')
     <url path: 'c:\\\\foo\\\\bar'>
 
@@ -68,6 +73,16 @@ class url(object):
 
         # special case for Windows drive letters
         if has_drive_letter(path):
+            self.path = path
+            return
+
+        # For compatibility reasons, we can't handle bundle paths as
+        # normal URLS
+        if path.startswith('bundle:'):
+            self.scheme = 'bundle'
+            path = path[7:]
+            if path.startswith('//'):
+                path = path[2:]
             self.path = path
             return
 
@@ -159,11 +174,15 @@ class url(object):
         'http://localhost:80/'
         >>> str(url('bundle:foo'))
         'bundle:foo'
+        >>> str(url('bundle://../foo'))
+        'bundle:../foo'
         >>> str(url('path'))
         'path'
         """
         if self._localpath:
             s = self.path
+            if self.scheme == 'bundle':
+                s = 'bundle:' + s
             if self.fragment:
                 s += '#' + self.fragment
             return s
