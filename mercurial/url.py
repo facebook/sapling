@@ -67,7 +67,7 @@ class url(object):
         self._localpath = True
 
         # special case for Windows drive letters
-        if path[1:2] == ':' and path[0:1].isalpha():
+        if has_drive_letter(path):
             self.path = path
             return
 
@@ -210,6 +210,9 @@ class url(object):
 
 def has_scheme(path):
     return bool(url(path).scheme)
+
+def has_drive_letter(path):
+    return path[1:2] == ':' and path[0:1].isalpha()
 
 def hidepassword(u):
     '''hide user credential in a url string'''
