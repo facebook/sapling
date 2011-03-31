@@ -417,9 +417,10 @@ class SubversionRepo(object):
 
         try:
             self.remote.replay(revision, oldestrev, AbstractEditor(editor))
-        except SubversionException, e: #pragma: no cover
+        except (SubversionException, NotImplementedError), e: #pragma: no cover
             # can I depend on this number being constant?
-            if (e.args[1] == subvertpy.ERR_RA_NOT_IMPLEMENTED or
+            if (isinstance(e, NotImplementedError) or
+                e.args[1] == subvertpy.ERR_RA_NOT_IMPLEMENTED or
                 e.args[1] == subvertpy.ERR_UNSUPPORTED_FEATURE):
                 msg = ('This Subversion server is older than 1.4.0, and '
                        'cannot satisfy replay requests.')
