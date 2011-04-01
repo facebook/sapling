@@ -95,11 +95,15 @@ Configuration items common to XMLRPC+email and MySQL access modes:
 bugzilla.usermap
   Path of file containing Mercurial committer email to Bugzilla user email
   mappings. If specified, the file should contain one mapping per
-  line, "committer"="Bugzilla user". See also the [usermap] section.
+  line::
+
+    committer = Bugzilla user
+
+  See also the [usermap] section.
 
 The [usermap] section is used to specify mappings of Mercurial
 committer email to Bugzilla user email. See also ``bugzilla.usermap``.
-Contains entries of the form "committer"="Bugzilla user".
+Contains entries of the form ``committer = Bugzilla user``.
 
 XMLRPC access mode configuration:
 
