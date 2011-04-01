@@ -78,8 +78,8 @@ bugzilla.template
     {webroot}   Stripped pathname of the Mercurial repository.
     {hgweb}     Base URL for browsing Mercurial repositories.
 
-  Default 'changeset {node|short} in repo {root} refers '
-          'to bug {bug}.\\ndetails:\\n\\t{desc|tabindent}'
+  Default ``changeset {node|short} in repo {root} refers to bug
+  {bug}.\\ndetails:\\n\\t{desc|tabindent}``
 
 bugzilla.strip
   The number of path separator characters to strip from the front of
