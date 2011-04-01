@@ -124,7 +124,7 @@ bugzilla.bzemail
   The Bugzilla email address.
 
 In addition, the Mercurial email settings must be configured. See the
-documentation for 'hgrc', sections ``[email]`` and ``[smtp]``.
+documentation in hgrc(5), sections ``[email]`` and ``[smtp]``.
 
 MySQL access mode configuration:
 
