@@ -98,7 +98,7 @@ bugzilla.usermap
   line, "committer"="Bugzilla user". See also the [usermap] section.
 
 The [usermap] section is used to specify mappings of Mercurial
-committer email to Bugzilla user email. See also [bugzilla].usermap.
+committer email to Bugzilla user email. See also ``bugzilla.usermap``.
 Contains entries of the form "committer"="Bugzilla user".
 
 XMLRPC access mode configuration:
