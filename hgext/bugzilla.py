@@ -192,7 +192,7 @@ XMLRPC+email example configuration. This uses the Bugzilla at
 ``bugmail@my-project.org`` wityh password ``plugh``. It is used with a
 collection of Mercurial repositories in ``/var/local/hg/repos/``. Bug
 comments are sent to the Bugzilla email address
-``buzilla@my-project.org``. ::
+``bugzilla@my-project.org``. ::
 
     [bugzilla]
     user=bugmail@my-project.org
