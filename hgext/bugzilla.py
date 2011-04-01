@@ -51,6 +51,7 @@ used instead as the source of the comment.
 Configuration items common to all access modes:
 
 [bugzilla]
+
 version
   This access type to use. Values recognised are:
   xmlrpc       Bugzilla XMLRPC interface.
@@ -88,6 +89,7 @@ strip
   strip of 2 gives a value for '{webroot}' of 'my-project'. Default 0.
 
 [web]
+
 baseurl
   Base URL for browsing Mercurial repositories. Referenced from
   templates as {hgweb}.
@@ -107,6 +109,7 @@ Contains entries of the form "committer"="Bugzilla user".
 XMLRPC access mode configuration:
 
 [bugzilla]
+
 bzurl
   The base URL for the Bugzilla installation.
   Default 'http://localhost/bugzilla'.
@@ -121,6 +124,7 @@ XMLRPC+email access mode uses the XMLRPC access mode configuration items,
 and also:
 
 [bugzilla]
+
 bzemail
   The Bugzilla email address.
 
@@ -130,6 +134,7 @@ documentation for 'hgrc', sections '[email]' and '[smtp]'.
 MySQL access mode configuration:
 
 [bugzilla]
+
 host
   Hostname of the MySQL server holding the Bugzilla database.
   Default 'localhost'.
