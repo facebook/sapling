@@ -22,8 +22,8 @@ Each message refers to the first in the series using the In-Reply-To
 and References headers, so they will show up as a sequence in threaded
 mail and news readers, and in mail archives.
 
-To configure other defaults, add a section like this to your hgrc
-file::
+To configure other defaults, add a section like this to your
+configuration file::
 
   [email]
   from = My Name <my@email>

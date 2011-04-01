@@ -3,8 +3,8 @@ repository, or a collection of them. In the latter case, a special
 configuration file can be used to specify the repository paths to use
 and global web configuration options.
 
-This file uses the same syntax as hgrc configuration files, but only
-the following sections are recognized:
+This file uses the same syntax as other Mercurial configuration files,
+but only the following sections are recognized:
 
   - web
   - paths
