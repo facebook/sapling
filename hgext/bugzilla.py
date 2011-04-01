@@ -60,9 +60,10 @@ bugzilla.version
 
 bugzilla.regexp
   Regular expression to match bug IDs in changeset commit message.
-  Must contain one "()" group. The default expression matches 'Bug
-  1234', 'Bug no. 1234', 'Bug number 1234', 'Bugs 1234,5678', 'Bug
-  1234 and 5678' and variations thereof. Matching is case insensitive.
+  Must contain one "()" group. The default expression matches ``Bug
+  1234``, ``Bug no. 1234``, ``Bug number 1234``, ``Bugs 1234,5678``,
+  ``Bug 1234 and 5678`` and variations thereof. Matching is case
+  insensitive.
 
 bugzilla.style
   The style file to use when formatting comments.
@@ -81,10 +82,11 @@ bugzilla.template
           'to bug {bug}.\\ndetails:\\n\\t{desc|tabindent}'
 
 bugzilla.strip
-  The number of path separator characters to strip from the front of the
-  Mercurial repository path ('{root}' in templates) to produce '{webroot}'.
-  For example, a repository with '{root}' '/var/local/my-project' with a
-  strip of 2 gives a value for '{webroot}' of 'my-project'. Default 0.
+  The number of path separator characters to strip from the front of
+  the Mercurial repository path (``{root}`` in templates) to produce
+  ``{webroot}``. For example, a repository with ``{root}``
+  ``/var/local/my-project`` with a strip of 2 gives a value for
+  ``{webroot}`` of ``my-project``. Default 0.
 
 web.baseurl
   Base URL for browsing Mercurial repositories. Referenced from
@@ -109,10 +111,11 @@ XMLRPC access mode configuration:
 
 bugzilla.bzurl
   The base URL for the Bugzilla installation.
-  Default 'http://localhost/bugzilla'.
+  Default ``http://localhost/bugzilla``.
 
 bugzilla.user
-  The username to use to log into Bugzilla via XMLRPC. Default 'bugs'.
+  The username to use to log into Bugzilla via XMLRPC. Default
+  ``bugs``.
 
 bugzilla.password
   The password for Bugzilla login.
@@ -130,13 +133,13 @@ MySQL access mode configuration:
 
 bugzilla.host
   Hostname of the MySQL server holding the Bugzilla database.
-  Default 'localhost'.
+  Default ``localhost``.
 
 bugzilla.db
-  Name of the Bugzilla database in MySQL. Default 'bugs'.
+  Name of the Bugzilla database in MySQL. Default ``bugs``.
 
 bugzilla.user
-  Username to use to access MySQL server. Default 'bugs'.
+  Username to use to access MySQL server. Default ``bugs``.
 
 bugzilla.password
   Password to use to access MySQL server.
@@ -150,14 +153,14 @@ bugzilla.bzuser
 
 bugzilla.bzdir
    Bugzilla install directory. Used by default notify. Default
-   '/var/www/html/bugzilla'.
+   ``/var/www/html/bugzilla``.
 
 bugzilla.notify
   The command to run to get Bugzilla to send bug change notification
-  emails. Substitutes from a map with 3 keys, 'bzdir', 'id' (bug id)
-  and 'user' (committer bugzilla email). Default depends on version;
-  from 2.18 it is "cd %(bzdir)s && perl -T contrib/sendbugmail.pl
-  %(id)s %(user)s".
+  emails. Substitutes from a map with 3 keys, ``bzdir``, ``id`` (bug
+  id) and ``user`` (committer bugzilla email). Default depends on
+  version; from 2.18 it is "cd %(bzdir)s && perl -T
+  contrib/sendbugmail.pl %(id)s %(user)s".
 
 Activating the extension::
 
@@ -171,9 +174,9 @@ Activating the extension::
 Example configurations:
 
 XMLRPC example configuration. This uses the Bugzilla at
-'http://my-project.org/bugzilla', logging in as user 'bugmail@my-project.org'
-wityh password 'plugh'. It is used with a collection of Mercurial
-repositories in '/var/local/hg/repos/'. ::
+``http://my-project.org/bugzilla``, logging in as user
+``bugmail@my-project.org`` with password ``plugh``. It is used with a
+collection of Mercurial repositories in ``/var/local/hg/repos/``. ::
 
     [bugzilla]
     bzurl=http://my-project.org/bugzilla
@@ -185,10 +188,11 @@ repositories in '/var/local/hg/repos/'. ::
     baseurl=http://my-project.org/hg
 
 XMLRPC+email example configuration. This uses the Bugzilla at
-'http://my-project.org/bugzilla', logging in as user 'bugmail@my-project.org'
-wityh password 'plugh'. It is used with a collection of Mercurial
-repositories in '/var/local/hg/repos/'. Bug comments are sent to the
-Bugzilla email address 'buzilla@my-project.org'. ::
+``http://my-project.org/bugzilla``, logging in as user
+``bugmail@my-project.org`` wityh password ``plugh``. It is used with a
+collection of Mercurial repositories in ``/var/local/hg/repos/``. Bug
+comments are sent to the Bugzilla email address
+``buzilla@my-project.org``. ::
 
     [bugzilla]
     user=bugmail@my-project.org
@@ -201,10 +205,10 @@ Bugzilla email address 'buzilla@my-project.org'. ::
     bugzillaurl=https://dev.laicatc.com/bugzilla
 
 MySQL example configuration. This is for a collection of Mercurial
-repositories in '/var/local/hg/repos/' used with a local Bugzilla 3.2
-installation in /opt/bugzilla-3.2. The MySQL database is on 'localhost',
-the Bugzilla database name is 'bugs' and MySQL is accessed with MySQL
-username 'bugs' password 'XYZZY'. ::
+repositories in ``/var/local/hg/repos/`` used with a local Bugzilla
+3.2 installation in /opt/bugzilla-3.2. The MySQL database is on
+``localhost``, the Bugzilla database name is ``bugs`` and MySQL is
+accessed with MySQL username ``bugs`` password ``XYZZY``. ::
 
     [bugzilla]
     host=localhost
