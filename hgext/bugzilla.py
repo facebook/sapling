@@ -101,7 +101,7 @@ bugzilla.usermap
 
   See also the [usermap] section.
 
-The [usermap] section is used to specify mappings of Mercurial
+The ``[usermap]`` section is used to specify mappings of Mercurial
 committer email to Bugzilla user email. See also ``bugzilla.usermap``.
 Contains entries of the form ``committer = Bugzilla user``.
 
@@ -124,7 +124,7 @@ bugzilla.bzemail
   The Bugzilla email address.
 
 In addition, the Mercurial email settings must be configured. See the
-documentation for 'hgrc', sections '[email]' and '[smtp]'.
+documentation for 'hgrc', sections ``[email]`` and ``[smtp]``.
 
 MySQL access mode configuration:
 
