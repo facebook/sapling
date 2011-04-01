@@ -50,9 +50,7 @@ used instead as the source of the comment.
 
 Configuration items common to all access modes:
 
-[bugzilla]
-
-version
+bugzilla.version
   This access type to use. Values recognised are:
   xmlrpc       Bugzilla XMLRPC interface.
   xmlrpc+email Bugzilla XMLRPC and email interfaces.
@@ -60,16 +58,16 @@ version
   2.18         MySQL access, Bugzilla 2.18 and up to but not including 3.0.
   2.16         MySQL access, Bugzilla 2.16 and up to but not including 2.18.
 
-regexp
+bugzilla.regexp
   Regular expression to match bug IDs in changeset commit message.
   Must contain one "()" group. The default expression matches 'Bug
   1234', 'Bug no. 1234', 'Bug number 1234', 'Bugs 1234,5678', 'Bug
   1234 and 5678' and variations thereof. Matching is case insensitive.
 
-style
+bugzilla.style
   The style file to use when formatting comments.
 
-template
+bugzilla.template
   Template to use when formatting comments. Overrides style if
   specified. In addition to the usual Mercurial keywords, the
   extension specifies::
@@ -82,50 +80,43 @@ template
   Default 'changeset {node|short} in repo {root} refers '
           'to bug {bug}.\\ndetails:\\n\\t{desc|tabindent}'
 
-strip
+bugzilla.strip
   The number of path separator characters to strip from the front of the
   Mercurial repository path ('{root}' in templates) to produce '{webroot}'.
   For example, a repository with '{root}' '/var/local/my-project' with a
   strip of 2 gives a value for '{webroot}' of 'my-project'. Default 0.
 
-[web]
-
-baseurl
+web.baseurl
   Base URL for browsing Mercurial repositories. Referenced from
   templates as {hgweb}.
 
 Configuration items common to XMLRPC+email and MySQL access modes:
 
-usermap
+bugzilla.usermap
   Path of file containing Mercurial committer email to Bugzilla user email
   mappings. If specified, the file should contain one mapping per
   line, "committer"="Bugzilla user". See also the [usermap] section.
 
-[usermap]
 The [usermap] section is used to specify mappings of Mercurial
 committer email to Bugzilla user email. See also [bugzilla].usermap.
 Contains entries of the form "committer"="Bugzilla user".
 
 XMLRPC access mode configuration:
 
-[bugzilla]
-
-bzurl
+bugzilla.bzurl
   The base URL for the Bugzilla installation.
   Default 'http://localhost/bugzilla'.
 
-user
+bugzilla.user
   The username to use to log into Bugzilla via XMLRPC. Default 'bugs'.
 
-password
+bugzilla.password
   The password for Bugzilla login.
 
 XMLRPC+email access mode uses the XMLRPC access mode configuration items,
 and also:
 
-[bugzilla]
-
-bzemail
+bugzilla.bzemail
   The Bugzilla email address.
 
 In addition, the Mercurial email settings must be configured. See the
@@ -133,33 +124,31 @@ documentation for 'hgrc', sections '[email]' and '[smtp]'.
 
 MySQL access mode configuration:
 
-[bugzilla]
-
-host
+bugzilla.host
   Hostname of the MySQL server holding the Bugzilla database.
   Default 'localhost'.
 
-db
+bugzilla.db
   Name of the Bugzilla database in MySQL. Default 'bugs'.
 
-user
+bugzilla.user
   Username to use to access MySQL server. Default 'bugs'.
 
-password
+bugzilla.password
   Password to use to access MySQL server.
 
-timeout
+bugzilla.timeout
   Database connection timeout (seconds). Default 5.
 
-bzuser
+bugzilla.bzuser
   Fallback Bugzilla user name to record comments with, if changeset
   committer cannot be found as a Bugzilla user.
 
-bzdir
+bugzilla.bzdir
    Bugzilla install directory. Used by default notify. Default
    '/var/www/html/bugzilla'.
 
-notify
+bugzilla.notify
   The command to run to get Bugzilla to send bug change notification
   emails. Substitutes from a map with 3 keys, 'bzdir', 'id' (bug id)
   and 'user' (committer bugzilla email). Default depends on version;
