@@ -3,15 +3,16 @@ repository, or a collection of them. In the latter case, a special
 configuration file can be used to specify the repository paths to use
 and global web configuration options.
 
-This file uses the same syntax as hgrc configuration files, but only
-the following sections are recognized:
+This file uses the same syntax as other Mercurial configuration files,
+but only the following sections are recognized:
 
   - web
   - paths
   - collections
 
 The ``web`` section can specify all the settings described in the web
-section of the hgrc documentation.
+section of the hgrc(5) documentation. See :hg:`help config` for
+information on where to find the manual page.
 
 The ``paths`` section provides mappings of physical repository
 paths to virtual ones. For instance::
