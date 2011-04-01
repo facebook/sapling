@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import urllib, urllib2, httplib, os, socket, cStringIO
+import urllib, urllib2, httplib, os, socket, cStringIO, re
 import __builtin__
 from i18n import _
 import keepalive, util
@@ -64,6 +64,7 @@ class url(object):
 
     _safechars = "!~*'()+"
     _safepchars = "/!~*'()+"
+    _matchscheme = re.compile(r'^[a-zA-Z0-9+.\-]+:').match
 
     def __init__(self, path, parsequery=True, parsefragment=True):
         # We slowly chomp away at path until we have only the path left
@@ -88,7 +89,7 @@ class url(object):
             self.path = path
             return
 
-        if not path.startswith('/') and ':' in path:
+        if self._matchscheme(path):
             parts = path.split(':', 1)
             if parts[0]:
                 self.scheme, path = parts

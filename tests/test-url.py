@@ -157,6 +157,12 @@ def test_url():
     <url path: 'a/b/c/d.g.f'>
     >>> url('/x///z/y/')
     <url path: '/x///z/y/'>
+    >>> url('/foo:bar')
+    <url path: '/foo:bar'>
+    >>> url('\\\\foo:bar')
+    <url path: '\\\\foo:bar'>
+    >>> url('./foo:bar')
+    <url path: './foo:bar'>
 
     Non-localhost file URL:
 
