@@ -114,6 +114,8 @@ def rebase(ui, repo, **opts):
             if srcf or basef or destf:
                 raise util.Abort(
                     _('abort and continue do not allow specifying revisions'))
+            if opts.get('tool', False):
+                ui.warn(_('tool option will be ignored\n'))
 
             (originalwd, target, state, skipped, collapsef, keepf,
                                 keepbranchesf, external) = restorestatus(repo)
@@ -167,10 +169,14 @@ def rebase(ui, repo, **opts):
                 if len(repo.parents()) == 2:
                     repo.ui.debug('resuming interrupted rebase\n')
                 else:
-                    stats = rebasenode(repo, rev, p1, p2, state)
-                    if stats and stats[3] > 0:
-                        raise util.Abort(_('unresolved conflicts (see hg '
-                                    'resolve, then hg rebase --continue)'))
+                    try:
+                        ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                        stats = rebasenode(repo, rev, p1, p2, state)
+                        if stats and stats[3] > 0:
+                            raise util.Abort(_('unresolved conflicts (see hg '
+                                        'resolve, then hg rebase --continue)'))
+                    finally:
+                        ui.setconfig('ui', 'forcemerge', '')
                 updatedirstate(repo, rev, target, p2)
                 if not collapsef:
                     newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn)
@@ -592,6 +598,7 @@ cmdtable = {
         ('', 'keepbranches', False, _('keep original branch names')),
         ('', 'detach', False, _('force detaching of source from its original '
                                 'branch')),
+        ('t', 'tool', '', _('specify merge tool')),
         ('c', 'continue', False, _('continue an interrupted rebase')),
         ('a', 'abort', False, _('abort an interrupted rebase'))] +
          templateopts,

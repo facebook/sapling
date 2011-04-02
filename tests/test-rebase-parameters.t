@@ -330,3 +330,63 @@ Specify base and dest (from 3 onto 6):
   
   $ cd ..
 
+Test --tool parameter:
+
+  $ hg init b
+  $ cd b
+
+  $ echo c1 > c1
+  $ hg ci -Am c1
+  adding c1
+
+  $ echo c2 > c2
+  $ hg ci -Am c2
+  adding c2
+
+  $ hg up -q 0
+  $ echo c2b > c2
+  $ hg ci -Am c2b
+  adding c2
+  created new head
+
+  $ cd ..
+
+  $ hg clone -q -u . b b1
+  $ cd b1
+
+  $ hg rebase -s 2 -d 1 --tool internal:local
+  saved backup bundle to $TESTTMP/b1/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg cat c2
+  c2
+
+  $ cd ..
+
+
+  $ hg clone -q -u . b b2
+  $ cd b2
+
+  $ hg rebase -s 2 -d 1 --tool internal:other
+  saved backup bundle to $TESTTMP/b2/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg cat c2
+  c2b
+
+  $ cd ..
+
+
+  $ hg clone -q -u . b b3
+  $ cd b3
+
+  $ hg rebase -s 2 -d 1 --tool internal:fail
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [255]
+
+  $ hg resolve -l
+  U c2
+
+  $ hg resolve -m c2
+  $ hg rebase -c --tool internal:fail
+  tool option will be ignored
+  saved backup bundle to $TESTTMP/b3/.hg/strip-backup/*-backup.hg (glob)
+
