@@ -144,7 +144,7 @@ def submerge(repo, wctx, mctx, actx, overwrite):
                 debug(s, "prompt remove")
                 wctx.sub(s).remove()
 
-    for s, r in s2.items():
+    for s, r in sorted(s2.items()):
         if s in s1:
             continue
         elif s not in sa:
