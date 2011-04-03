@@ -522,6 +522,18 @@ log -d -1
 
   $ hg log -d -1
 
+log -d ">"
+
+  $ hg log -d ">"
+  abort: invalid day spec. use '>{datetime}'
+  [255]
+
+log -d "<"
+
+  $ hg log -d "<"
+  abort: invalid day spec. use '<{datetime}'
+  [255]
+
 
 log -p -l2 --color=always
 
