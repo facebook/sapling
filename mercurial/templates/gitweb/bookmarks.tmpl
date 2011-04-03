@@ -1,14 +1,14 @@
 {header}
-<title>{repo|escape}: Branches</title>
+<title>{repo|escape}: Bookmarks</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-tags" title="Atom feed for {repo|escape}"/>
+   href="{url}atom-bookmarks" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-tags" title="RSS feed for {repo|escape}"/>
+   href="{url}rss-bookmarks" title="RSS feed for {repo|escape}"/>
 </head>
 <body>
 
 <div class="page_header">
-<a href="http://mercurial.selenic.com/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / branches
+<a href="http://mercurial.selenic.com/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / bookmarks
 </div>
 
 <div class="page_nav">
@@ -17,8 +17,8 @@
 <a href="{url}log{sessionvars%urlparameter}">changelog</a> |
 <a href="{url}graph{sessionvars%urlparameter}">graph</a> |
 <a href="{url}tags{sessionvars%urlparameter}">tags</a> |
-<a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
-branches |
+bookmarks |
+<a href="{url}branches{sessionvars%urlparameter}">branches</a> |
 <a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a> |
 <a href="{url}help{sessionvars%urlparameter}">help</a>
 <br/>
@@ -26,7 +26,7 @@ branches |
 
 <div class="title">&nbsp;</div>
 <table cellspacing="0">
-{entries%branchentry}
+{entries%bookmarkentry}
 </table>
 
 {footer}

@@ -640,6 +640,7 @@ Overviews
   <a href="/log?style=gitweb">changelog</a> |
   <a href="/graph?style=gitweb">graph</a> |
   <a href="/tags?style=gitweb">tags</a> |
+  <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
   <a href="/file/1d22e65f027e?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
@@ -792,6 +793,7 @@ Overviews
   <a href="/log/2?style=gitweb">changelog</a> |
   graph |
   <a href="/tags?style=gitweb">tags</a> |
+  <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
   <a href="/file/1d22e65f027e?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>

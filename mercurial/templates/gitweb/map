@@ -170,6 +170,17 @@ tagentry = '
       <a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>
     </td>
   </tr>'
+bookmarks = bookmarks.tmpl
+bookmarkentry = '
+  <tr class="parity{parity}">
+    <td class="age"><i>{date|age}</i></td>
+    <td><a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}"><b>{bookmark|escape}</b></a></td>
+    <td class="link">
+      <a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
+      <a href="{url}log/{node|short}{sessionvars%urlparameter}">changelog</a> |
+      <a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>
+    </td>
+  </tr>'
 branches = branches.tmpl
 branchentry = '
   <tr class="parity{parity}">
