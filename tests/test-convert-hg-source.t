@@ -17,6 +17,7 @@
   $ hg copy foo baz
   $ hg ci -m 'make bar and baz copies of foo' -d '2 0'
   created new head
+  $ hg bookmark premerge1
   $ hg merge
   merging baz and foo to baz
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -24,6 +25,7 @@
   $ hg ci -m 'merge local copy' -d '3 0'
   $ hg up -C 1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg bookmark premerge2
   $ hg merge 2
   merging foo and baz to baz
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -50,12 +52,16 @@
   2 mark baz executable
   1 branch foo
   0 close
+  updating bookmarks
   $ cd new
   $ hg out ../orig
   comparing with ../orig
   searching for changes
   no changes found
   [1]
+  $ hg bookmarks
+     premerge1                 3:973ef48a98a4
+     premerge2                 7:0d18d1112f1d
   $ cd ..
 
 check shamap LF and CRLF handling
@@ -82,6 +88,7 @@ check shamap LF and CRLF handling
   converting...
   1 change foo again again
   0 change foo again
+  updating bookmarks
 
 init broken repository
 
