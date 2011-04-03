@@ -383,6 +383,10 @@ static file
   	background-color: #d5dde6;
   	border-color: #e3ecf4 #9398f4 #9398f4 #e3ecf4;
   }
+  span.logtags span.bookmarktag {
+  	background-color: #afdffa;
+  	border-color: #ccecff #46ace6 #46ace6 #ccecff;
+  }
   
   /* Graph */
   div#wrapper {
