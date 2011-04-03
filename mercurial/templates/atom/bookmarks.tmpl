@@ -1,0 +1,11 @@
+{header}
+ <id>{urlbase}{url}</id>
+ <link rel="self" href="{urlbase}{url}atom-bookmarks"/>
+ <link rel="alternate" href="{urlbase}{url}bookmarks"/>
+ <title>{repo|escape}: bookmarks</title>
+ <summary>{repo|escape} bookmark history</summary>
+ <author><name>Mercurial SCM</name></author>
+ {latestentry%feedupdated}
+
+{entries%bookmarkentry}
+</feed>
