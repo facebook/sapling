@@ -402,6 +402,15 @@ class filectx(object):
         return [filectx(self._repo, p, fileid=n, filelog=l)
                 for p, n, l in pl if n != nullid]
 
+    def p1(self):
+        return self.parents()[0]
+
+    def p2(self):
+        p = self.parents()
+        if len(p) == 2:
+            return p[1]
+        return filectx(self._repo, self._path, fileid=-1, filelog=self._filelog)
+
     def children(self):
         # hard for renames
         c = self._filelog.children(self._filenode)
