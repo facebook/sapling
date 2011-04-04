@@ -808,7 +808,7 @@ def optimize(x, small):
     elif op == 'func':
         f = getstring(x[1], _("not a symbol"))
         wa, ta = optimize(x[2], small)
-        if f in "grep date user author keyword branch file outgoing":
+        if f in "grep date user author keyword branch file outgoing closed":
             w = 10 # slow
         elif f in "modifies adds removes":
             w = 30 # slower
