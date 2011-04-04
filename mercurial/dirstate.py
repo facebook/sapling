@@ -203,6 +203,12 @@ class dirstate(object):
     def parents(self):
         return [self._validate(p) for p in self._pl]
 
+    def p1(self):
+        return self._validate(self._pl[0])
+
+    def p2(self):
+        return self._validate(self._pl[1])
+
     def branch(self):
         return encoding.tolocal(self._branch)
 
