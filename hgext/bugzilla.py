@@ -176,13 +176,18 @@ Example configurations:
 XMLRPC example configuration. This uses the Bugzilla at
 ``http://my-project.org/bugzilla``, logging in as user
 ``bugmail@my-project.org`` with password ``plugh``. It is used with a
-collection of Mercurial repositories in ``/var/local/hg/repos/``. ::
+collection of Mercurial repositories in ``/var/local/hg/repos/``,
+with a web interface at ``http://my-project.org/hg``. ::
 
     [bugzilla]
     bzurl=http://my-project.org/bugzilla
     user=bugmail@my-project.org
     password=plugh
     version=xmlrpc
+    template=Changeset {node|short} in {root|basename}.
+             {hgweb}/{webroot}/rev/{node|short}\\n
+             {desc}\\n
+    strip=5
 
     [web]
     baseurl=http://my-project.org/hg
@@ -190,25 +195,34 @@ collection of Mercurial repositories in ``/var/local/hg/repos/``. ::
 XMLRPC+email example configuration. This uses the Bugzilla at
 ``http://my-project.org/bugzilla``, logging in as user
 ``bugmail@my-project.org`` wityh password ``plugh``. It is used with a
-collection of Mercurial repositories in ``/var/local/hg/repos/``. Bug
-comments are sent to the Bugzilla email address
+collection of Mercurial repositories in ``/var/local/hg/repos/``,
+with a web interface at ``http://my-project.org/hg``. Bug comments
+are sent to the Bugzilla email address
 ``bugzilla@my-project.org``. ::
 
     [bugzilla]
+    bzurl=http://my-project.org/bugzilla
     user=bugmail@my-project.org
     password=plugh
     version=xmlrpc
     bzemail=bugzilla@my-project.org
+    template=Changeset {node|short} in {root|basename}.
+             {hgweb}/{webroot}/rev/{node|short}\\n
+             {desc}\\n
+    strip=5
 
     [web]
-    baseurl=https://dev.laicatc.com/hg
-    bugzillaurl=https://dev.laicatc.com/bugzilla
+    baseurl=http://my-project.org/hg
 
-MySQL example configuration. This is for a collection of Mercurial
-repositories in ``/var/local/hg/repos/`` used with a local Bugzilla
-3.2 installation in /opt/bugzilla-3.2. The MySQL database is on
-``localhost``, the Bugzilla database name is ``bugs`` and MySQL is
-accessed with MySQL username ``bugs`` password ``XYZZY``. ::
+    [usermap]
+    user@emaildomain.com=user.name@bugzilladomain.com
+
+MySQL example configuration. This has a local Bugzilla 3.2 installation
+in ``/opt/bugzilla-3.2``. The MySQL database is on ``localhost``,
+the Bugzilla database name is ``bugs`` and MySQL is
+accessed with MySQL username ``bugs`` password ``XYZZY``. It is used
+with a collection of Mercurial repositories in ``/var/local/hg/repos/``,
+with a web interface at ``http://my-project.org/hg``. ::
 
     [bugzilla]
     host=localhost
@@ -222,7 +236,7 @@ accessed with MySQL username ``bugs`` password ``XYZZY``. ::
     strip=5
 
     [web]
-    baseurl=http://dev.domain.com/hg
+    baseurl=http://my-project.org/hg
 
     [usermap]
     user@emaildomain.com=user.name@bugzilladomain.com
@@ -230,7 +244,7 @@ accessed with MySQL username ``bugs`` password ``XYZZY``. ::
 All the above add a comment to the Bugzilla bug record of the form::
 
     Changeset 3b16791d6642 in repository-name.
-    http://dev.domain.com/hg/repository-name/rev/3b16791d6642
+    http://my-project.org/hg/repository-name/rev/3b16791d6642
 
     Changeset commit comment. Bug 1234.
 '''
