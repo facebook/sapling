@@ -132,6 +132,9 @@ def sshargs(sshcmd, host, user, port):
 def set_flags(f, l, x):
     pass
 
+def checkexec(path):
+    return False
+
 def set_binary(fd):
     # When run without console, pipes may expose invalid
     # fileno(), usually set to -1.

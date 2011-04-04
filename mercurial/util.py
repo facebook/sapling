@@ -683,33 +683,6 @@ def fspath(name, root):
 
     return ''.join(result)
 
-def checkexec(path):
-    """
-    Check whether the given path is on a filesystem with UNIX-like exec flags
-
-    Requires a directory (like /foo/.hg)
-    """
-
-    # VFAT on some Linux versions can flip mode but it doesn't persist
-    # a FS remount. Frequently we can detect it if files are created
-    # with exec bit on.
-
-    try:
-        EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-        fh, fn = tempfile.mkstemp(dir=path, prefix='hg-checkexec-')
-        try:
-            os.close(fh)
-            m = os.stat(fn).st_mode & 0777
-            new_file_has_exec = m & EXECFLAGS
-            os.chmod(fn, m ^ EXECFLAGS)
-            exec_flags_cannot_flip = ((os.stat(fn).st_mode & 0777) == m)
-        finally:
-            os.unlink(fn)
-    except (IOError, OSError):
-        # we don't care, the user probably won't be able to commit anyway
-        return False
-    return not (new_file_has_exec or exec_flags_cannot_flip)
-
 def checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
     # mktemp is not racy because symlink creation will fail if the
