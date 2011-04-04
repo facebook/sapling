@@ -96,52 +96,32 @@ Test 12-hours times
 Test date formats with '>' or '<' accompanied by space characters
 
   $ hg log -d '>' --template '{date|date}\n'
-  Sun Jan 15 13:30:00 2006 +0500
-  Sun Jan 15 13:30:00 2006 -0800
-  Sat Jul 15 13:30:00 2006 +0500
-  Sat Jul 15 13:30:00 2006 -0700
-  Sun Jun 11 00:26:40 2006 -0400
-  Sat Apr 15 13:30:00 2006 +0200
-  Sat Apr 15 13:30:00 2006 +0000
-  Wed Feb 01 13:00:30 2006 -0500
-  Wed Feb 01 13:00:30 2006 +0000
+  abort: invalid day spec. use '>{datetime}' 
+  [255]
   $ hg log -d '<' hg log -d '>' --template '{date|date}\n'
+  abort: invalid day spec. use '>{datetime}' 
+  [255]
 
   $ hg log -d ' >' --template '{date|date}\n'
-  Sun Jan 15 13:30:00 2006 +0500
-  Sun Jan 15 13:30:00 2006 -0800
-  Sat Jul 15 13:30:00 2006 +0500
-  Sat Jul 15 13:30:00 2006 -0700
-  Sun Jun 11 00:26:40 2006 -0400
-  Sat Apr 15 13:30:00 2006 +0200
-  Sat Apr 15 13:30:00 2006 +0000
-  Wed Feb 01 13:00:30 2006 -0500
-  Wed Feb 01 13:00:30 2006 +0000
+  abort: invalid day spec. use '>{datetime}' 
+  [255]
   $ hg log -d ' <' --template '{date|date}\n'
+  abort: invalid day spec. use '<{datetime}' 
+  [255]
 
   $ hg log -d '> ' --template '{date|date}\n'
-  Sun Jan 15 13:30:00 2006 +0500
-  Sun Jan 15 13:30:00 2006 -0800
-  Sat Jul 15 13:30:00 2006 +0500
-  Sat Jul 15 13:30:00 2006 -0700
-  Sun Jun 11 00:26:40 2006 -0400
-  Sat Apr 15 13:30:00 2006 +0200
-  Sat Apr 15 13:30:00 2006 +0000
-  Wed Feb 01 13:00:30 2006 -0500
-  Wed Feb 01 13:00:30 2006 +0000
+  abort: invalid day spec. use '>{datetime}' 
+  [255]
   $ hg log -d '< ' --template '{date|date}\n'
+  abort: invalid day spec. use '<{datetime}' 
+  [255]
 
   $ hg log -d ' > ' --template '{date|date}\n'
-  Sun Jan 15 13:30:00 2006 +0500
-  Sun Jan 15 13:30:00 2006 -0800
-  Sat Jul 15 13:30:00 2006 +0500
-  Sat Jul 15 13:30:00 2006 -0700
-  Sun Jun 11 00:26:40 2006 -0400
-  Sat Apr 15 13:30:00 2006 +0200
-  Sat Apr 15 13:30:00 2006 +0000
-  Wed Feb 01 13:00:30 2006 -0500
-  Wed Feb 01 13:00:30 2006 +0000
+  abort: invalid day spec. use '>{datetime}' 
+  [255]
   $ hg log -d ' < ' --template '{date|date}\n'
+  abort: invalid day spec. use '<{datetime}' 
+  [255]
 
   $ hg log -d '>02/01' --template '{date|date}\n'
   $ hg log -d '<02/01' --template '{date|date}\n'
