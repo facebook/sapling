@@ -387,7 +387,7 @@ class localrepository(repo.repository):
         for t, n in self.tags().iteritems():
             try:
                 r = self.changelog.rev(n)
-            except:
+            except error.LookupError:
                 r = -2 # sort to the beginning of the list if unknown
             l.append((r, t, n))
         return [(t, n) for r, t, n in sorted(l)]
