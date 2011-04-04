@@ -4061,19 +4061,16 @@ def tags(ui, repo):
             ui.write("%s\n" % t)
             continue
 
-        try:
-            hn = hexfunc(n)
-            r = "%5d:%s" % (repo.changelog.rev(n), hn)
-        except error.LookupError:
-            r = "    ?:%s" % hn
-        else:
-            spaces = " " * (30 - encoding.colwidth(t))
-            if ui.verbose:
-                if repo.tagtype(t) == 'local':
-                    tagtype = " local"
-                else:
-                    tagtype = ""
-            ui.write("%s%s %s%s\n" % (t, spaces, r, tagtype))
+        hn = hexfunc(n)
+        r = "%5d:%s" % (repo.changelog.rev(n), hn)
+        spaces = " " * (30 - encoding.colwidth(t))
+
+        if ui.verbose:
+            if repo.tagtype(t) == 'local':
+                tagtype = " local"
+            else:
+                tagtype = ""
+        ui.write("%s%s %s%s\n" % (t, spaces, r, tagtype))
 
 def tip(ui, repo, **opts):
     """show the tip revision
