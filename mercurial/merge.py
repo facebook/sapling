@@ -439,7 +439,7 @@ def recordupdates(repo, action, branchmerge):
                 if f:
                     repo.dirstate.forget(f)
 
-def update(repo, node, branchmerge, force, partial):
+def update(repo, node, branchmerge, force, partial, ancestor=None):
     """
     Perform a merge between the working directory and the given node
 
@@ -492,7 +492,11 @@ def update(repo, node, branchmerge, force, partial):
         overwrite = force and not branchmerge
         pl = wc.parents()
         p1, p2 = pl[0], repo[node]
-        pa = p1.ancestor(p2)
+        if ancestor:
+            pa = repo[ancestor]
+        else:
+            pa = p1.ancestor(p2)
+
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
         ### check phase
