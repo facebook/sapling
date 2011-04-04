@@ -361,7 +361,12 @@ class localrepository(repo.repository):
         tags = {}
         for (name, (node, hist)) in alltags.iteritems():
             if node != nullid:
-                tags[encoding.tolocal(name)] = node
+                try:
+                    # ignore tags to unknown nodes
+                    self.changelog.lookup(node)
+                    tags[encoding.tolocal(name)] = node
+                except error.LookupError:
+                    pass
         tags['tip'] = self.changelog.tip()
         tagtypes = dict([(encoding.tolocal(name), value)
                          for (name, value) in tagtypes.iteritems()])
