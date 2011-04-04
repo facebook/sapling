@@ -234,25 +234,6 @@ def rebase(ui, repo, **opts):
     finally:
         release(lock, wlock)
 
-def rebasemerge(repo, rev, first=False):
-    'return the correct ancestor'
-    oldancestor = ancestor.ancestor
-
-    def newancestor(a, b, pfunc):
-        if b == rev:
-            return repo[rev].parents()[0].rev()
-        return oldancestor(a, b, pfunc)
-
-    if not first:
-        ancestor.ancestor = newancestor
-    else:
-        repo.ui.debug("first revision, do not change ancestor\n")
-    try:
-        stats = merge.update(repo, rev, True, True, False)
-        return stats
-    finally:
-        ancestor.ancestor = oldancestor
-
 def checkexternal(repo, state, targetancestors):
     """Check whether one or more external revisions need to be taken in
     consideration. In the latter case, abort.
@@ -317,9 +298,10 @@ def rebasenode(repo, rev, p1, p2, state):
         repo.ui.debug(" already in target\n")
     repo.dirstate.write()
     repo.ui.debug(" merge against %d:%s\n" % (repo[rev].rev(), repo[rev]))
-    first = repo[rev].rev() == repo[min(state)].rev()
-    stats = rebasemerge(repo, rev, first)
-    return stats
+    base = None
+    if repo[rev].rev() != repo[min(state)].rev():
+        base = repo[rev].parents()[0].node()
+    return merge.update(repo, rev, True, True, False, base)
 
 def defineparents(repo, rev, target, state, targetancestors):
     'Return the new parent relationship of the revision that will be rebased'
