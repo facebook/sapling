@@ -300,7 +300,7 @@ def rebasenode(repo, rev, p1, p2, state):
     repo.ui.debug(" merge against %d:%s\n" % (repo[rev].rev(), repo[rev]))
     base = None
     if repo[rev].rev() != repo[min(state)].rev():
-        base = repo[rev].parents()[0].node()
+        base = repo[rev].p1().node()
     return merge.update(repo, rev, True, True, False, base)
 
 def defineparents(repo, rev, target, state, targetancestors):

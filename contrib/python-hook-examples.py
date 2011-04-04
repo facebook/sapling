@@ -13,7 +13,7 @@ def diffstat(ui, repo, **kwargs):
     if kwargs.get('parent2'):
         return
     node = kwargs['node']
-    first = repo[node].parents()[0].node()
+    first = repo[node].p1().node()
     if 'url' in kwargs:
         last = repo['tip'].node()
     else:

@@ -207,7 +207,7 @@ def p1(repo, subset, x):
     First parent of changesets in set, or the working directory.
     """
     if x is None:
-        p = repo[x].parents()[0].rev()
+        p = repo[x].p1().rev()
         return [r for r in subset if r == p]
 
     ps = set()

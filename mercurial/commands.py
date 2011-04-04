@@ -596,7 +596,7 @@ def branch(ui, repo, label=None, **opts):
     """
 
     if opts.get('clean'):
-        label = repo[None].parents()[0].branch()
+        label = repo[None].p1().branch()
         repo.dirstate.setbranch(label)
         ui.status(_('reset working directory to branch %s\n') % label)
     elif label:
@@ -1678,7 +1678,7 @@ def diff(ui, repo, *pats, **opts):
         raise util.Abort(msg)
     elif change:
         node2 = cmdutil.revsingle(repo, change, None).node()
-        node1 = repo[node2].parents()[0].node()
+        node1 = repo[node2].p1().node()
     else:
         node1, node2 = cmdutil.revpair(repo, revs)
 
@@ -1905,7 +1905,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     def prep(ctx, fns):
         rev = ctx.rev()
-        pctx = ctx.parents()[0]
+        pctx = ctx.p1()
         parent = pctx.rev()
         matches.setdefault(rev, {})
         matches.setdefault(parent, {})
@@ -1940,7 +1940,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
         rev = ctx.rev()
-        parent = ctx.parents()[0].rev()
+        parent = ctx.p1().rev()
         for fn in sorted(revfiles.get(rev, [])):
             states = matches[rev][fn]
             copy = copies.get(rev, {}).get(fn)
@@ -2840,7 +2840,7 @@ def merge(ui, repo, node=None, **opts):
                 '(run \'hg heads .\' to see heads)')
                 % (branch, len(bheads)))
 
-        parent = repo.dirstate.parents()[0]
+        parent = repo.dirstate.p1()
         if len(bheads) == 1:
             if len(repo.heads()) > 1:
                 raise util.Abort(_(
@@ -3751,7 +3751,7 @@ def status(ui, repo, *pats, **opts):
         raise util.Abort(msg)
     elif change:
         node2 = repo.lookup(change)
-        node1 = repo[node2].parents()[0].node()
+        node1 = repo[node2].p1().node()
     else:
         node1, node2 = cmdutil.revpair(repo, revs)
 

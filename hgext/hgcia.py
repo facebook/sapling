@@ -75,7 +75,7 @@ class ciamsg(object):
 
     def fileelems(self):
         n = self.ctx.node()
-        f = self.cia.repo.status(self.ctx.parents()[0].node(), n)
+        f = self.cia.repo.status(self.ctx.p1().node(), n)
         url = self.url or ''
         elems = []
         for path in f[0]:

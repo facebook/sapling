@@ -126,7 +126,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     else:
         node1a, node2 = cmdutil.revpair(repo, revs)
         if not revs:
-            node1b = repo.dirstate.parents()[1]
+            node1b = repo.dirstate.p2()
         else:
             node1b = nullid
 

@@ -268,7 +268,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
 
     updated, merged, removed, unresolved = 0, 0, 0, 0
     ms = mergestate(repo)
-    ms.reset(wctx.parents()[0].node())
+    ms.reset(wctx.p1().node())
     moves = []
     action.sort(key=actionkey)
     substate = wctx.substate # prime
@@ -286,7 +286,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             fco = mctx[f2]
             if mctx == actx: # backwards, use working dir parent as ancestor
                 if fcl.parents():
-                    fca = fcl.parents()[0]
+                    fca = fcl.p1()
                 else:
                     fca = repo.filectx(f, fileid=nullrev)
             else:

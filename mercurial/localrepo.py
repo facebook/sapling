@@ -522,7 +522,7 @@ class localrepository(repo.repository):
         if isinstance(key, int):
             return self.changelog.node(key)
         elif key == '.':
-            return self.dirstate.parents()[0]
+            return self.dirstate.p1()
         elif key == 'null':
             return nullid
         elif key == 'tip':

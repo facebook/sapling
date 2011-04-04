@@ -469,7 +469,7 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
 
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
-                hg.revert(repo, repo.dirstate.parents()[0],
+                hg.revert(repo, repo.dirstate.p1(),
                           lambda key: key in backups)
 
             # 3b. (apply)

@@ -249,7 +249,7 @@ class notifier(object):
     def diff(self, ctx, ref=None):
 
         maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
-        prev = ctx.parents()[0].node()
+        prev = ctx.p1().node()
         ref = ref and ref.node() or ctx.node()
         chunks = patch.diff(self.repo, prev, ref, opts=patch.diffopts(self.ui))
         difflines = ''.join(chunks).splitlines()
