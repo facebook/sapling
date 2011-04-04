@@ -140,6 +140,18 @@ tagentry = '
       {node|short}
     </td>
   </tr>'
+bookmarks = ../paper/bookmarks.tmpl
+bookmarkentry = '
+  <tr class="tagEntry parity{parity}">
+    <td>
+      <a href="{url}rev/{node|short}{sessionvars%urlparameter}">
+        {bookmark|escape}
+      </a>
+    </td>
+    <td class="node">
+      {node|short}
+    </td>
+  </tr>'
 branches = ../paper/branches.tmpl
 branchentry = '
   <tr class="tagEntry parity{parity}">
@@ -154,6 +166,7 @@ branchentry = '
   </tr>'
 changelogtag = '<span class="tag">{name|escape}</span> '
 changesettag = '<span class="tag">{tag|escape}</span> '
+changesetbookmark = '<span class="tag">{bookmark|escape}</span> '
 changelogbranchhead = '<span class="branchhead">{name|escape}</span> '
 changelogbranchname = '<span class="branchname">{name|escape}</span> '
 

@@ -640,6 +640,7 @@ Overviews
   <a href="/log?style=gitweb">changelog</a> |
   <a href="/graph?style=gitweb">graph</a> |
   <a href="/tags?style=gitweb">tags</a> |
+  <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
   <a href="/file/1d22e65f027e?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
@@ -662,7 +663,7 @@ Overviews
   <td>
   <a class="list" href="/rev/1d22e65f027e?style=gitweb">
   <b>branch</b>
-  <span class="logtags"><span class="branchtag" title="stable">stable</span> <span class="tagtag" title="tip">tip</span> </span>
+  <span class="logtags"><span class="branchtag" title="stable">stable</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="something">something</span> </span>
   </a>
   </td>
   <td class="link" nowrap>
@@ -792,6 +793,7 @@ Overviews
   <a href="/log/2?style=gitweb">changelog</a> |
   graph |
   <a href="/tags?style=gitweb">tags</a> |
+  <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
   <a href="/file/1d22e65f027e?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
@@ -853,7 +855,7 @@ Overviews
   	item = item.replace(/_DATE/, cur[5]);
   	
   	var tagspan = '';
-  	if (cur[7].length || (cur[6][0] != 'default' || cur[6][1])) {
+  	if (cur[7].length || cur[8].length || (cur[6][0] != 'default' || cur[6][1])) {
   		tagspan = '<span class="logtags">';
   		if (cur[6][1]) {
   			tagspan += '<span class="branchtag" title="' + cur[6][0] + '">';
@@ -866,6 +868,12 @@ Overviews
   			for (var t in cur[7]) {
   				var tag = cur[7][t];
   				tagspan += '<span class="tagtag">' + tag + '</span> ';
+  			}
+  		}
+  		if (cur[8].length) {
+  			for (var t in cur[8]) {
+  				var bookmark = cur[8][t];
+  				tagspan += '<span class="bookmarktag">' + bookmark + '</span> ';
   			}
   		}
   		tagspan += '</span>';

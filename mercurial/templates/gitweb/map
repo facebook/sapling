@@ -170,6 +170,17 @@ tagentry = '
       <a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>
     </td>
   </tr>'
+bookmarks = bookmarks.tmpl
+bookmarkentry = '
+  <tr class="parity{parity}">
+    <td class="age"><i>{date|age}</i></td>
+    <td><a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}"><b>{bookmark|escape}</b></a></td>
+    <td class="link">
+      <a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
+      <a href="{url}log/{node|short}{sessionvars%urlparameter}">changelog</a> |
+      <a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>
+    </td>
+  </tr>'
 branches = branches.tmpl
 branchentry = '
   <tr class="parity{parity}">
@@ -214,6 +225,7 @@ graph = graph.tmpl
 tagtag = '<span class="tagtag" title="{name}">{name}</span> '
 branchtag = '<span class="branchtag" title="{name}">{name}</span> '
 inbranchtag = '<span class="inbranchtag" title="{name}">{name}</span> '
+bookmarktag = '<span class="bookmarktag" title="{name}">{name}</span> '
 shortlogentry = '
   <tr class="parity{parity}">
     <td class="age"><i>{date|age}</i></td>
@@ -221,7 +233,7 @@ shortlogentry = '
     <td>
       <a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}">
         <b>{desc|strip|firstline|escape|nonempty}</b>
-        <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}</span>
+        <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>
       </a>
     </td>
     <td class="link" nowrap>
