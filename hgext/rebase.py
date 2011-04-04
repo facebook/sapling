@@ -171,7 +171,7 @@ def rebase(ui, repo, **opts):
                 else:
                     try:
                         ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-                        stats = rebasenode(repo, rev, p1, p2, state)
+                        stats = rebasenode(repo, rev, p1, state)
                         if stats and stats[3] > 0:
                             raise util.Abort(_('unresolved conflicts (see hg '
                                         'resolve, then hg rebase --continue)'))
@@ -287,7 +287,7 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, extrafn=None):
         repo.dirstate.invalidate()
         raise
 
-def rebasenode(repo, rev, p1, p2, state):
+def rebasenode(repo, rev, p1, state):
     'Rebase a single revision'
     # Merge phase
     # Update to target and merge it with local
