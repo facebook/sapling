@@ -534,6 +534,11 @@ log -d "<"
   abort: invalid day spec, use '<DATE'
   [255]
 
+Negative ranges
+  $ hg log -d "--2"
+  abort: -2 must be nonnegative (see 'hg help dates')
+  [255]
+
 
 log -p -l2 --color=always
 
