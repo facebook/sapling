@@ -86,7 +86,7 @@ def loaddoc(topic):
 
     return loader
 
-helptable = [
+helptable = sorted([
     (["config", "hgrc"], _("Configuration Files"), loaddoc('config')),
     (["dates"], _("Date Formats"), loaddoc('dates')),
     (["patterns"], _("File Name Patterns"), loaddoc('patterns')),
@@ -106,7 +106,7 @@ helptable = [
     (["subrepo", "subrepos"], _("Subrepositories"), loaddoc('subrepos')),
     (["hgweb"], _("Configuring hgweb"), loaddoc('hgweb')),
     (["glossary"], _("Glossary"), loaddoc('glossary')),
-]
+])
 
 # Map topics to lists of callable taking the current topic help and
 # returning the updated version
