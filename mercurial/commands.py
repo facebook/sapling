@@ -2809,7 +2809,7 @@ def merge(ui, repo, node=None, **opts):
 
     ``--tool`` can be used to specify the merge tool used for file
     merges. It overrides the HGMERGE environment variable and your
-    configuration files.
+    configuration files. See :hg:`help merge-tools` for options.
 
     If no revision is specified, the working directory's parent is a
     head revision, and the current branch contains exactly one other
