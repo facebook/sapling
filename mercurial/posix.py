@@ -135,6 +135,18 @@ def checkexec(path):
         return False
     return not (new_file_has_exec or exec_flags_cannot_flip)
 
+def checklink(path):
+    """check whether the given path is on a symlink-capable filesystem"""
+    # mktemp is not racy because symlink creation will fail if the
+    # file already exists
+    name = tempfile.mktemp(dir=path, prefix='hg-checklink-')
+    try:
+        os.symlink(".", name)
+        os.unlink(name)
+        return True
+    except (OSError, AttributeError):
+        return False
+
 def set_binary(fd):
     pass
 

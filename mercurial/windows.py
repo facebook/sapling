@@ -135,6 +135,9 @@ def set_flags(f, l, x):
 def checkexec(path):
     return False
 
+def checklink(path):
+    return False
+
 def set_binary(fd):
     # When run without console, pipes may expose invalid
     # fileno(), usually set to -1.
