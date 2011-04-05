@@ -74,12 +74,12 @@ bugzilla.style
 bugzilla.template
   Template to use when formatting comments. Overrides style if
   specified. In addition to the usual Mercurial keywords, the
-  extension specifies::
+  extension specifies:
 
-    {bug}       The Bugzilla bug ID.
-    {root}      The full pathname of the Mercurial repository.
-    {webroot}   Stripped pathname of the Mercurial repository.
-    {hgweb}     Base URL for browsing Mercurial repositories.
+  :``{bug}``:     The Bugzilla bug ID.
+  :``{root}``:    The full pathname of the Mercurial repository.
+  :``{webroot}``: Stripped pathname of the Mercurial repository.
+  :``{hgweb}``:   Base URL for browsing Mercurial repositories.
 
   Default ``changeset {node|short} in repo {root} refers to bug
   {bug}.\\ndetails:\\n\\t{desc|tabindent}``
