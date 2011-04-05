@@ -51,13 +51,15 @@ Bugzilla is used instead as the source of the comment.
 Configuration items common to all access modes:
 
 bugzilla.version
-  This access type to use. Values recognised are::
+  This access type to use. Values recognised are:
 
-  xmlrpc       Bugzilla XMLRPC interface.
-  xmlrpc+email Bugzilla XMLRPC and email interfaces.
-  3.0          MySQL access, Bugzilla 3.0 and later.
-  2.18         MySQL access, Bugzilla 2.18 and up to but not including 3.0.
-  2.16         MySQL access, Bugzilla 2.16 and up to but not including 2.18.
+  :``xmlrpc``:       Bugzilla XMLRPC interface.
+  :``xmlrpc+email``: Bugzilla XMLRPC and email interfaces.
+  :``3.0``:          MySQL access, Bugzilla 3.0 and later.
+  :``2.18``:         MySQL access, Bugzilla 2.18 and up to but not
+                     including 3.0.
+  :``2.16``:         MySQL access, Bugzilla 2.16 and up to but not
+                     including 2.18.
 
 bugzilla.regexp
   Regular expression to match bug IDs in changeset commit message.
