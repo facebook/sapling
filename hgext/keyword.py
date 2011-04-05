@@ -60,11 +60,11 @@ For [keywordmaps] template mapping and expansion demonstration and
 control run :hg:`kwdemo`. See :hg:`help templates` for a list of
 available templates and filters.
 
-Three additional date template filters are provided::
+Three additional date template filters are provided:
 
-    utcdate      "2006/09/18 15:13:13"
-    svnutcdate   "2006-09-18 15:13:13Z"
-    svnisodate   "2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)"
+:``utcdate``:    "2006/09/18 15:13:13"
+:``svnutcdate``: "2006-09-18 15:13:13Z"
+:``svnisodate``: "2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)"
 
 The default template mappings (view with :hg:`kwdemo -d`) can be
 replaced with customized keywords and templates. Again, run
