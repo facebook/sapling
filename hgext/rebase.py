@@ -15,7 +15,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import hg, util, repair, merge, cmdutil, commands
-from mercurial import extensions, ancestor, copies, patch
+from mercurial import extensions, copies, patch
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
