@@ -24,6 +24,7 @@ from mercurial import extensions
 from mercurial import hg
 from mercurial import localrepo
 from mercurial import util as hgutil
+from mercurial import url
 from mercurial.i18n import _
 
 demandimport.ignore.extend([
@@ -42,7 +43,10 @@ hg.schemes['git+ssh'] = gitrepo
 _oldlocal = hg.schemes['file']
 
 def _local(path):
-    p = hgutil.drop_scheme('file', path)
+    try:
+        p = hgutil.drop_scheme('file', path)
+    except AttributeError:
+        p = url.url(path).localpath()
     if (os.path.exists(os.path.join(p, '.git')) and
         not os.path.exists(os.path.join(p, '.hg'))):
         return gitrepo
