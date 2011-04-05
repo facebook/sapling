@@ -1196,12 +1196,12 @@ def matchdate(date):
         raise Abort(_("dates cannot consist entirely of whitespace"))
     elif date[0] == "<":
         if not date[1:]:
-            raise Abort(_("invalid day spec. use '<{datetime}' "))
+            raise Abort(_("invalid day spec, use '<DATE'"))
         when = upper(date[1:])
         return lambda x: x <= when
     elif date[0] == ">":
         if not date[1:]:
-            raise Abort(_("invalid day spec. use '>{datetime}' "))
+            raise Abort(_("invalid day spec, use '>DATE'"))
         when = lower(date[1:])
         return lambda x: x >= when
     elif date[0] == "-":

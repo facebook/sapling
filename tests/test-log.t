@@ -525,13 +525,13 @@ log -d -1
 log -d ">"
 
   $ hg log -d ">"
-  abort: invalid day spec. use '>{datetime}' 
+  abort: invalid day spec, use '>DATE'
   [255]
 
 log -d "<"
 
   $ hg log -d "<"
-  abort: invalid day spec. use '<{datetime}' 
+  abort: invalid day spec, use '<DATE'
   [255]
 
 

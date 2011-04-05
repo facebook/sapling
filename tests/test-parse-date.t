@@ -96,31 +96,31 @@ Test 12-hours times
 Test date formats with '>' or '<' accompanied by space characters
 
   $ hg log -d '>' --template '{date|date}\n'
-  abort: invalid day spec. use '>{datetime}' 
+  abort: invalid day spec, use '>DATE'
   [255]
   $ hg log -d '<' hg log -d '>' --template '{date|date}\n'
-  abort: invalid day spec. use '>{datetime}' 
+  abort: invalid day spec, use '>DATE'
   [255]
 
   $ hg log -d ' >' --template '{date|date}\n'
-  abort: invalid day spec. use '>{datetime}' 
+  abort: invalid day spec, use '>DATE'
   [255]
   $ hg log -d ' <' --template '{date|date}\n'
-  abort: invalid day spec. use '<{datetime}' 
+  abort: invalid day spec, use '<DATE'
   [255]
 
   $ hg log -d '> ' --template '{date|date}\n'
-  abort: invalid day spec. use '>{datetime}' 
+  abort: invalid day spec, use '>DATE'
   [255]
   $ hg log -d '< ' --template '{date|date}\n'
-  abort: invalid day spec. use '<{datetime}' 
+  abort: invalid day spec, use '<DATE'
   [255]
 
   $ hg log -d ' > ' --template '{date|date}\n'
-  abort: invalid day spec. use '>{datetime}' 
+  abort: invalid day spec, use '>DATE'
   [255]
   $ hg log -d ' < ' --template '{date|date}\n'
-  abort: invalid day spec. use '<{datetime}' 
+  abort: invalid day spec, use '<DATE'
   [255]
 
   $ hg log -d '>02/01' --template '{date|date}\n'

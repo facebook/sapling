@@ -30,7 +30,7 @@ the timezone is east of UTC).
 
 The log command also accepts date ranges:
 
-- ``<{datetime}`` - at or before a given date/time
-- ``>{datetime}`` - on or after a given date/time
-- ``{datetime} to {datetime}`` - a date range, inclusive
-- ``-{days}`` - within a given number of days of today
+- ``<DATE`` - at or before a given date/time
+- ``>DATE`` - on or after a given date/time
+- ``DATE to DATE`` - a date range, inclusive
+- ``-DAYS`` - within a given number of days of today
