@@ -25,6 +25,9 @@ def _urlunparse(scheme, netloc, path, params, query, fragment, url):
 
 def hidepassword(url):
     '''hide user credential in a url string'''
+    if url.startswith("ssh://"):
+        # urllib doesn't know about ssh urls
+        return re.sub(r'(ssh://[^/]+):[^/]+(@.*)', r'\1:***\2', url)
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
     netloc = re.sub('([^:]*):([^@]*)@(.*)', r'\1:***@\3', netloc)
     return _urlunparse(scheme, netloc, path, params, query, fragment, url)
