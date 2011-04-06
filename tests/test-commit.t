@@ -32,7 +32,7 @@ commit added file that has been deleted
   $ hg add bar
   $ rm bar
   $ hg commit -m commit-8
-  nothing changed
+  nothing changed (1 missing files, see 'hg status')
   [1]
   $ hg commit -m commit-8-2 bar
   abort: bar: file not found!

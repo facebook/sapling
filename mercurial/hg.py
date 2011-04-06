@@ -55,10 +55,10 @@ def parseurl(path, branches=None):
     '''parse url#branch, returning (url, (branch, branches))'''
 
     u = url.url(path)
-    if not u.fragment:
-        return path, (None, branches or [])
-    branch = u.fragment
-    u.fragment = None
+    branch = None
+    if u.fragment:
+        branch = u.fragment
+        u.fragment = None
     return str(u), (branch, branches or [])
 
 schemes = {
