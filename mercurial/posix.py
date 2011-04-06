@@ -147,6 +147,11 @@ def checklink(path):
     except (OSError, AttributeError):
         return False
 
+def checkosfilename(path):
+    '''Check that the base-relative path is a valid filename on this platform.
+    Returns None if the path is ok, or a UI string describing the problem.'''
+    pass # on posix platforms, every path is ok
+
 def set_binary(fd):
     pass
 

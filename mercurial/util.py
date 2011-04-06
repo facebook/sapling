@@ -493,6 +493,48 @@ def copyfiles(src, dst, hardlink=None):
 
     return hardlink, num
 
+_windows_reserved_filenames = '''con prn aux nul
+    com1 com2 com3 com4 com5 com6 com7 com8 com9
+    lpt1 lpt2 lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9'''.split()
+_windows_reserved_chars = ':*?"<>|'
+def checkwinfilename(path):
+    '''Check that the base-relative path is a valid filename on Windows.
+    Returns None if the path is ok, or a UI string describing the problem.
+
+    >>> checkwinfilename("just/a/normal/path")
+    >>> checkwinfilename("foo/bar/con.xml")
+    "filename contains 'con', which is reserved on Windows"
+    >>> checkwinfilename("foo/con.xml/bar")
+    "filename contains 'con', which is reserved on Windows"
+    >>> checkwinfilename("foo/bar/xml.con")
+    >>> checkwinfilename("foo/bar/AUX/bla.txt")
+    "filename contains 'AUX', which is reserved on Windows"
+    >>> checkwinfilename("foo/bar/bla:.txt")
+    "filename contains ':', which is reserved on Windows"
+    >>> checkwinfilename("foo/bar/b\07la.txt")
+    "filename contains '\\x07', which is invalid on Windows"
+    >>> checkwinfilename("foo/bar/bla ")
+    "filename ends with ' ', which is not allowed on Windows"
+    '''
+    for n in path.replace('\\', '/').split('/'):
+        if not n:
+            continue
+        for c in n:
+            if c in _windows_reserved_chars:
+                return _("filename contains '%s', which is reserved "
+                         "on Windows") % c
+            if ord(c) <= 31:
+                return _("filename contains '%s', which is invalid "
+                         "on Windows") % c
+        base = n.split('.')[0]
+        if base and base.lower() in _windows_reserved_filenames:
+            return _("filename contains '%s', which is reserved "
+                     "on Windows") % base
+        t = n[-1]
+        if t in '. ':
+            return _("filename ends with '%s', which is not allowed "
+                     "on Windows") % t
+
 class path_auditor(object):
     '''ensure that a filesystem path contains no banned components.
     the following properties of a path are checked:
@@ -560,6 +602,9 @@ class path_auditor(object):
             prefixes.append(prefix)
             parts.pop()
 
+        r = checkosfilename(path)
+        if r:
+            raise Abort("%s: %s" % (r, path))
         self.audited.add(path)
         # only add prefixes to the cache after checking everything: we don't
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
@@ -577,6 +622,7 @@ def hidewindow():
     pass
 
 if os.name == 'nt':
+    checkosfilename = checkwinfilename
     from windows import *
 else:
     from posix import *
