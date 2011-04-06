@@ -21,7 +21,7 @@ Three basic modes of access to Bugzilla are provided:
 2. Check data via the Bugzilla XMLRPC interface and submit bug change
    via email to Bugzilla email interface. Requires Bugzilla 3.4 or later.
 
-2. Writing directly to the Bugzilla database. Only Bugzilla installations
+3. Writing directly to the Bugzilla database. Only Bugzilla installations
    using MySQL are supported. Requires Python MySQLdb.
 
 Writing directly to the database is susceptible to schema changes, and
@@ -93,7 +93,7 @@ bugzilla.strip
 
 web.baseurl
   Base URL for browsing Mercurial repositories. Referenced from
-  templates as {hgweb}.
+  templates as ``{hgweb}``.
 
 Configuration items common to XMLRPC+email and MySQL access modes:
 
@@ -104,7 +104,7 @@ bugzilla.usermap
 
     committer = Bugzilla user
 
-  See also the [usermap] section.
+  See also the ``[usermap]`` section.
 
 The ``[usermap]`` section is used to specify mappings of Mercurial
 committer email to Bugzilla user email. See also ``bugzilla.usermap``.
