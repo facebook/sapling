@@ -894,7 +894,12 @@ def commit(ui, repo, *pats, **opts):
 
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
-        ui.status(_("nothing changed\n"))
+        stat = repo.status(match=cmdutil.match(repo, pats, opts))
+        if stat[3]:
+            ui.status(_("nothing changed (%d missing files, see 'hg status')\n")
+                      % len(stat[3]))
+        else:
+            ui.status(_("nothing changed\n"))
         return 1
 
     ctx = repo[node]
