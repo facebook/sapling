@@ -740,8 +740,12 @@ def graph(web, req, tmpl):
     downrev = max(0, rev - revcount)
     count = len(web.repo)
     changenav = webutil.revnavgen(rev, revcount, count, web.repo.changectx)
+    startrev = rev
+    # if starting revision is less than 60 set it to uprev
+    if rev < web.maxshortchanges:
+        startrev = uprev
 
-    dag = graphmod.revisions(web.repo, rev, downrev)
+    dag = graphmod.revisions(web.repo, startrev, downrev)
     tree = list(graphmod.colored(dag))
     canvasheight = (len(tree) + 1) * bg_height - 27
     data = []
