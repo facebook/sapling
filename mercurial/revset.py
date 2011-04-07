@@ -664,6 +664,8 @@ def tag(repo, subset, x):
         tn = getstring(args[0],
                        # i18n: "tag" is a keyword
                        _('the argument to tag must be a string'))
+        if not repo.tags().get(tn, None):
+            raise util.Abort(_("tag '%s' does not exist") % tn)
         s = set([cl.rev(n) for t, n in repo.tagslist() if t == tn])
     else:
         s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
@@ -683,8 +685,9 @@ def bookmark(repo, subset, x):
                        # i18n: "bookmark" is a keyword
                        _('the argument to bookmark must be a string'))
         bmrev = bookmarksmod.listbookmarks(repo).get(bm, None)
-        if bmrev:
-            bmrev = repo[bmrev].rev()
+        if not bmrev:
+            raise util.Abort(_("bookmark '%s' does not exist") % bm)
+        bmrev = repo[bmrev].rev()
         return [r for r in subset if r == bmrev]
     bms = set([repo[r].rev()
                for r in bookmarksmod.listbookmarks(repo).values()])
