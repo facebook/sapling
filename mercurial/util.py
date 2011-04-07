@@ -530,7 +530,8 @@ class path_auditor(object):
                 if p in lparts[1:]:
                     pos = lparts.index(p)
                     base = os.path.join(*parts[:pos])
-                    raise Abort(_('path %r is inside repo %r') % (path, base))
+                    raise Abort(_('path %r is inside nested repo %r')
+                                % (path, base))
         def check(prefix):
             curpath = os.path.join(self.root, prefix)
             try:
@@ -547,7 +548,7 @@ class path_auditor(object):
                 elif (stat.S_ISDIR(st.st_mode) and
                       os.path.isdir(os.path.join(curpath, '.hg'))):
                     if not self.callback or not self.callback(curpath):
-                        raise Abort(_('path %r is inside repo %r') %
+                        raise Abort(_('path %r is inside nested repo %r') %
                                     (path, prefix))
         parts.pop()
         prefixes = []
