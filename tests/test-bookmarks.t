@@ -116,13 +116,13 @@ bookmarks X moved to rev 2, Y at rev -1, Z at rev 0
 rename nonexistent bookmark
 
   $ hg bookmark -m A B
-  abort: a bookmark of this name does not exist
+  abort: bookmark 'A' does not exist
   [255]
 
 rename to existent bookmark
 
   $ hg bookmark -m X Y
-  abort: a bookmark of the same name already exists
+  abort: bookmark 'Y' already exists (use -f to force)
   [255]
 
 force rename to existent bookmark
@@ -151,7 +151,7 @@ delete without name
 delete nonexistent bookmark
 
   $ hg bookmark -d A
-  abort: a bookmark of this name does not exist
+  abort: bookmark 'A' does not exist
   [255]
 
 bookmark name with spaces should be stripped
@@ -189,7 +189,7 @@ reject bookmark name with newline
 bookmark with existing name
 
   $ hg bookmark Z
-  abort: a bookmark of the same name already exists
+  abort: bookmark 'Z' already exists (use -f to force)
   [255]
 
 force bookmark with existing name

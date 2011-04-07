@@ -507,9 +507,10 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
 
     if rename:
         if rename not in marks:
-            raise util.Abort(_("a bookmark of this name does not exist"))
+            raise util.Abort(_("bookmark '%s' does not exist") % rename)
         if mark in marks and not force:
-            raise util.Abort(_("a bookmark of the same name already exists"))
+            raise util.Abort(_("bookmark '%s' already exists "
+                               "(use -f to force)") % mark)
         if mark is None:
             raise util.Abort(_("new bookmark name required"))
         marks[mark] = marks[rename]
@@ -523,7 +524,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
         if mark is None:
             raise util.Abort(_("bookmark name required"))
         if mark not in marks:
-            raise util.Abort(_("a bookmark of this name does not exist"))
+            raise util.Abort(_("bookmark '%s' does not exist") % mark)
         if mark == repo._bookmarkcurrent:
             bookmarks.setcurrent(repo, None)
         del marks[mark]
@@ -538,7 +539,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False, rename=No
             raise util.Abort(_("bookmark names cannot consist entirely of "
                                "whitespace"))
         if mark in marks and not force:
-            raise util.Abort(_("a bookmark of the same name already exists"))
+            raise util.Abort(_("bookmark '%s' already exists "
+                               "(use -f to force)") % mark)
         if ((mark in repo.branchtags() or mark == repo.dirstate.branch())
             and not force):
             raise util.Abort(
