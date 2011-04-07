@@ -412,15 +412,14 @@ the path to the ``.py`` file (including the file name extension) that
 defines the extension.
 
 To explicitly disable an extension that is enabled in an hgrc of
-broader scope, prepend its path with ``!``, as in
-``hgext.foo = !/ext/path`` or ``hgext.foo = !``  when path is not
-supplied.
+broader scope, prepend its path with ``!``, as in ``foo = !/ext/path``
+or ``foo = !`` when path is not supplied.
 
 Example for ``~/.hgrc``::
 
   [extensions]
   # (the mq extension will get loaded from Mercurial's path)
-  hgext.mq =
+  mq =
   # (this extension will get loaded from the file specified)
   myfeature = ~/.hgext/myfeature.py
 
