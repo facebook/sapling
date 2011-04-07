@@ -202,8 +202,12 @@ def _abssource(repo, push=False, abort=True):
                 if parent[-1] == '/':
                     parent = parent[:-1]
                 r = urlparse.urlparse(parent + '/' + source)
-                r = urlparse.urlunparse((r[0], r[1],
-                                         posixpath.normpath(r[2]),
+                if parent.startswith('ssh://'):
+                    host, path = r[2][2:].split('/', 1)
+                    r2 = '//%s/%s' % (host, posixpath.normpath(path))
+                else:
+                    r2 = posixpath.normpath(r[2])
+                r = urlparse.urlunparse((r[0], r[1], r2,
                                          r[3], r[4], r[5]))
                 return r
             else: # plain file system path
