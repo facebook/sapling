@@ -698,11 +698,7 @@ def bisected(repo, subset, x):
     if state not in ('good', 'bad', 'skip', 'unknown'):
         raise ParseError(_('invalid bisect state'))
     marked = set(repo.changelog.rev(n) for n in hbisect.load_state(repo)[state])
-    l = []
-    for r in subset:
-        if r in marked:
-            l.append(r)
-    return l
+    return [r for r in subset if r in marked]
 
 symbols = {
     "adds": adds,
