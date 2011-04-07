@@ -225,14 +225,6 @@ clone
   $ cd ..
   $ hg clone t tc | fix_path
   updating to branch default
-  A    tc/subdir/s/alpha
-   U   tc/subdir/s
-  
-  Fetching external item into 'tc/subdir/s/externals'
-  A    tc/subdir/s/externals/other
-  Checked out external at revision 1.
-  
-  Checked out revision 2.
   A    tc/s/alpha
    U   tc/s
   
@@ -241,6 +233,14 @@ clone
   Checked out external at revision 1.
   
   Checked out revision 3.
+  A    tc/subdir/s/alpha
+   U   tc/subdir/s
+  
+  Fetching external item into 'tc/subdir/s/externals'
+  A    tc/subdir/s/externals/other
+  Checked out external at revision 1.
+  
+  Checked out revision 2.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd tc
 
