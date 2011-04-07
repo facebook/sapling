@@ -390,10 +390,7 @@ class localrepository(repo.repository):
         '''return a list of tags ordered by revision'''
         l = []
         for t, n in self.tags().iteritems():
-            try:
-                r = self.changelog.rev(n)
-            except error.LookupError:
-                r = -2 # sort to the beginning of the list if unknown
+            r = self.changelog.rev(n)
             l.append((r, t, n))
         return [(t, n) for r, t, n in sorted(l)]
 
