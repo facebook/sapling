@@ -42,7 +42,7 @@ cat > .hg/hgrc <<EOF
 [paths]
 default = ../alpha
 alpha = ../alpha
-beta = dotdot://beta
+beta = dotdot://beta/
 EOF
 hg pull | $FILTERPWD
 hg pull beta | $FILTERPWD

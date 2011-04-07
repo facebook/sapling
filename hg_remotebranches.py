@@ -122,11 +122,14 @@ def reposetup(ui, repo):
                     uri = self.ui.expandpath(uri)
                     if remote.local():
                         uri = os.path.realpath(uri)
-                        rpath = remote.root
+                        rpath = getattr(remote, 'root', None)
                     else:
                         rpath = remote._url
                         if uri.startswith('http'):
-                            uri = url.getauthinfo(uri)[0]
+                            try:
+                                uri = url.url(uri).authinfo()[0]
+                            except AttributeError:
+                                uri = url.getauthinfo(uri)[0]
                     uri = uri.rstrip('/')
                     rpath = rpath.rstrip('/')
                     if uri == rpath:
