@@ -1871,6 +1871,10 @@ def grep(ui, repo, pattern, *pats, **opts):
         datefunc = ui.quiet and util.shortdate or util.datestr
         found = False
         filerevmatches = {}
+        def binary():
+            flog = getfile(fn)
+            return util.binary(flog.read(ctx.filenode(fn)))
+
         if opts.get('all'):
             iter = difflinestates(pstates, states)
         else:
@@ -1897,9 +1901,12 @@ def grep(ui, repo, pattern, *pats, **opts):
                 after = l.line[l.colend:]
             ui.write(sep.join(cols))
             if before is not None:
-                ui.write(sep + before)
-                ui.write(match, label='grep.match')
-                ui.write(after)
+                if not opts.get('text') and binary():
+                    ui.write(sep + " Binary file matches")
+                else:
+                    ui.write(sep + before)
+                    ui.write(match, label='grep.match')
+                    ui.write(after)
             ui.write(eol)
             found = True
         return found
@@ -4567,6 +4574,7 @@ table = {
         (grep,
          [('0', 'print0', None, _('end fields with NUL')),
           ('', 'all', None, _('print all revisions that match')),
+          ('a', 'text', None, _('treat all files as text')),
           ('f', 'follow', None,
            _('follow changeset history,'
              ' or file history across copies and renames')),
