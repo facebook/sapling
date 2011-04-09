@@ -349,13 +349,15 @@ else:
 
         # Look for ANSI-like codes embedded in text
         m = re.match(ansire, text)
-        while m:
-            for sattr in m.group(1).split(';'):
-                if sattr:
-                    attr = mapcolor(int(sattr), attr)
-            _kernel32.SetConsoleTextAttribute(stdout, attr)
-            orig(m.group(2), **opts)
-            m = re.match(ansire, m.group(3))
 
-        # Explicity reset original attributes
-        _kernel32.SetConsoleTextAttribute(stdout, origattr)
+        try:
+            while m:
+                for sattr in m.group(1).split(';'):
+                    if sattr:
+                        attr = mapcolor(int(sattr), attr)
+                _kernel32.SetConsoleTextAttribute(stdout, attr)
+                orig(m.group(2), **opts)
+                m = re.match(ansire, m.group(3))
+        finally:
+            # Explicity reset original attributes
+            _kernel32.SetConsoleTextAttribute(stdout, origattr)
