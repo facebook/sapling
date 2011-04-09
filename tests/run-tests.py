@@ -620,7 +620,8 @@ def run(cmd, options, replacements):
                 ret = os.WEXITSTATUS(ret)
         except Timeout:
             vlog('# Process %d timed out - killing it' % proc.pid)
-            ret = cleanup()
+            cleanup()
+            ret = 'timeout'
             output += ("\n### Abort: timeout after %d seconds.\n"
                        % options.timeout)
         except KeyboardInterrupt:
@@ -752,11 +753,13 @@ def runone(options, test, skips, fails):
             skip(missing[-1])
     elif out != refout:
         mark = '!'
-        if ret:
+        if ret == 'timeout':
+            fail("timed out")
+        elif ret:
             fail("output changed and returned error code %d" % ret)
         else:
             fail("output changed")
-        if not options.nodiff:
+        if ret != 'timeout' and not options.nodiff:
             if options.view:
                 os.system("%s %s %s" % (options.view, ref, err))
             else:
