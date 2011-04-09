@@ -603,6 +603,10 @@ Overviews
   
   stable	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe	open
   default	a4f92ed23982be056b9852de5dfe873eaac7f0de	inactive
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/raw-bookmarks'
+  200 Script output follows
+  
+  something	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/summary/?style=gitweb'
   200 Script output follows
   

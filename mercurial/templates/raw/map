@@ -24,5 +24,7 @@ error = error.tmpl
 indexentry = '{url}\n'
 tags = '{entries%tagentry}'
 tagentry = '{tag}	{node}\n'
+bookmarks = '{entries%bookmarkentry}'
+bookmarkentry = '{bookmark}	{node}\n'
 branches = '{entries%branchentry}'
 branchentry = '{branch}	{node}	{status}\n'
