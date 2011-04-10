@@ -395,11 +395,9 @@ def bookmarks(web, req, tmpl):
     i = web.repo._bookmarks.items()
     parity = paritygen(web.stripecount)
 
-    def entries(notip=False, limit=0, **map):
+    def entries(limit=0, **map):
         count = 0
         for k, n in sorted(i):
-            if notip and k == "tip":
-                continue
             if limit > 0 and count >= limit:
                 continue
             count = count + 1
@@ -410,9 +408,8 @@ def bookmarks(web, req, tmpl):
 
     return tmpl("bookmarks",
                 node=hex(web.repo.changelog.tip()),
-                entries=lambda **x: entries(False, 0, **x),
-                entriesnotip=lambda **x: entries(True, 0, **x),
-                latestentry=lambda **x: entries(True, 1, **x))
+                entries=lambda **x: entries(0, **x),
+                latestentry=lambda **x: entries(1, **x))
 
 def branches(web, req, tmpl):
     tips = (web.repo[n] for t, n in web.repo.branchtags().iteritems())
