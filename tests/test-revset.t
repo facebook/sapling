@@ -297,6 +297,12 @@ quoting needed
   6
   $ log 'tag(tip)'
   9
+  $ log 'tag(unknown)'
+  abort: tag 'unknown' does not exist
+  [255]
+  $ log 'branch(unknown)'
+  abort: unknown revision 'unknown'!
+  [255]
   $ log 'user(bob)'
   2
 

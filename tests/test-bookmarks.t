@@ -84,6 +84,10 @@ bookmarks revset
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
+  $ hg log -r 'bookmark(unknown)'
+  abort: bookmark 'unknown' does not exist
+  [255]
+
   $ hg help revsets | grep 'bookmark('
       "bookmark([name])"
 
