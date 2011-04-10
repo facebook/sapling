@@ -58,6 +58,14 @@
         </tr>
     </table>
 
+    <h2><a href="{url}bookmarks{sessionvars%urlparameter}">Bookmarks</a></h2>
+    <table>
+    {bookmarks%bookmarkentry}
+        <tr class="light">
+            <td colspan="3"><a class="list" href="{url}bookmarks{sessionvars%urlparameter}">...</a></td>
+        </tr>
+    </table>
+
     <h2 class="no-link">Branches</h2>
     <table>
     {branches%branchentry}

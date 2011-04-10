@@ -460,6 +460,15 @@ def summary(web, req, tmpl):
                        node=hex(n),
                        date=web.repo[n].date())
 
+    def bookmarks(**map):
+        parity = paritygen(web.stripecount)
+        b = web.repo._bookmarks.items()
+        for k, n in sorted(b)[:10]:  # limit to 10 bookmarks
+            yield {'parity': parity.next(),
+                   'bookmark': k,
+                   'date': web.repo[n].date(),
+                   'node': hex(n)}
+
     def branches(**map):
         parity = paritygen(web.stripecount)
 
@@ -504,6 +513,7 @@ def summary(web, req, tmpl):
                 owner=get_contact(web.config) or "unknown",
                 lastchange=tip.date(),
                 tags=tagentries,
+                bookmarks=bookmarks,
                 branches=branches,
                 shortlog=changelist,
                 node=tip.hex(),

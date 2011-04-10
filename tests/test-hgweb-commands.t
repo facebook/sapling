@@ -723,6 +723,30 @@ Overviews
   <tr class="light"><td colspan="3"><a class="list" href="/tags?style=gitweb">...</a></td></tr>
   </table>
   
+  <div><a class="title" href="/bookmarks?style=gitweb">bookmarks</a></div>
+  <table cellspacing="0">
+  
+  <tr class="parity0">
+  <td class="age"><i>1970-01-01</i></td>
+  <td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>anotherthing</b></a></td>
+  <td class="link">
+  <a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
+  <a href="/log/2ef0ac749a14?style=gitweb">changelog</a> |
+  <a href="/file/2ef0ac749a14?style=gitweb">files</a>
+  </td>
+  </tr>
+  <tr class="parity1">
+  <td class="age"><i>1970-01-01</i></td>
+  <td><a class="list" href="/rev/1d22e65f027e?style=gitweb"><b>something</b></a></td>
+  <td class="link">
+  <a href="/rev/1d22e65f027e?style=gitweb">changeset</a> |
+  <a href="/log/1d22e65f027e?style=gitweb">changelog</a> |
+  <a href="/file/1d22e65f027e?style=gitweb">files</a>
+  </td>
+  </tr>
+  <tr class="light"><td colspan="3"><a class="list" href="/bookmarks?style=gitweb">...</a></td></tr>
+  </table>
+  
   <div><a class="title" href="#">branches</a></div>
   <table cellspacing="0">
   
