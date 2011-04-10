@@ -393,12 +393,11 @@ def tags(web, req, tmpl):
 
 def bookmarks(web, req, tmpl):
     i = web.repo._bookmarks.items()
-    i.reverse()
     parity = paritygen(web.stripecount)
 
     def entries(notip=False, limit=0, **map):
         count = 0
-        for k, n in i:
+        for k, n in sorted(i):
             if notip and k == "tip":
                 continue
             if limit > 0 and count >= limit:
