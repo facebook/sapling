@@ -602,9 +602,6 @@ class path_auditor(object):
             prefixes.append(prefix)
             parts.pop()
 
-        r = checkosfilename(path)
-        if r:
-            raise Abort("%s: %s" % (r, path))
         self.audited.add(path)
         # only add prefixes to the cache after checking everything: we don't
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
@@ -916,6 +913,9 @@ class opener(object):
         os.chmod(name, self.createmode & 0666)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False):
+        r = checkosfilename(path)
+        if r:
+            raise Abort("%s: %s" % (r, path))
         self.auditor(path)
         f = os.path.join(self.base, path)
 
