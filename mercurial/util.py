@@ -555,6 +555,9 @@ class path_auditor(object):
         self.callback = callback
 
     def __call__(self, path):
+        '''Check the relative path.
+        path may contain a pattern (e.g. foodir/**.txt)'''
+
         if path in self.audited:
             return
         # AIX ignores "/" at end of path, others raise EISDIR.
@@ -574,7 +577,13 @@ class path_auditor(object):
                     base = os.path.join(*parts[:pos])
                     raise Abort(_('path %r is inside nested repo %r')
                                 % (path, base))
-        def check(prefix):
+
+        parts.pop()
+        prefixes = []
+        while parts:
+            prefix = os.sep.join(parts)
+            if prefix in self.auditeddir:
+                break
             curpath = os.path.join(self.root, prefix)
             try:
                 st = os.lstat(curpath)
@@ -592,13 +601,6 @@ class path_auditor(object):
                     if not self.callback or not self.callback(curpath):
                         raise Abort(_('path %r is inside nested repo %r') %
                                     (path, prefix))
-        parts.pop()
-        prefixes = []
-        while parts:
-            prefix = os.sep.join(parts)
-            if prefix in self.auditeddir:
-                break
-            check(prefix)
             prefixes.append(prefix)
             parts.pop()
 
