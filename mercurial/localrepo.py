@@ -1233,14 +1233,15 @@ class localrepository(repo.repository):
             modified, added, clean = [], [], []
             for fn in mf2:
                 if fn in mf1:
-                    if (mf1.flags(fn) != mf2.flags(fn) or
-                        (mf1[fn] != mf2[fn] and
-                         (mf2[fn] or ctx1[fn].cmp(ctx2[fn])))):
+                    if (fn not in deleted and
+                        (mf1.flags(fn) != mf2.flags(fn) or
+                         (mf1[fn] != mf2[fn] and
+                          (mf2[fn] or ctx1[fn].cmp(ctx2[fn]))))):
                         modified.append(fn)
                     elif listclean:
                         clean.append(fn)
                     del mf1[fn]
-                else:
+                elif fn not in deleted:
                     added.append(fn)
             removed = mf1.keys()
 

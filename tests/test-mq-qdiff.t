@@ -163,4 +163,13 @@ qdiff preserve existing git flag:
   $ hg qdiff --stat
    lines |  7 +++++--
    1 files changed, 5 insertions(+), 2 deletions(-)
+  $ hg qrefresh
 
+qdiff when file deleted (but not removed) in working dir:
+
+  $ hg qnew deleted-file
+  $ echo a > newfile
+  $ hg add newfile
+  $ hg qrefresh
+  $ rm newfile
+  $ hg qdiff
