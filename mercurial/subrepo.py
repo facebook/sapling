@@ -802,7 +802,7 @@ class gitsubrepo(abstractsubrepo):
                 return
         elif self._gitstate() == revision:
             if overwrite:
-                # first reset the index to unmark new files for commit, because 
+                # first reset the index to unmark new files for commit, because
                 # reset --hard will otherwise throw away files added for commit,
                 # not just unmark them.
                 self._gitcommand(['reset', 'HEAD'])
