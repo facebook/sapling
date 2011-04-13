@@ -369,3 +369,8 @@ issue2654: report a parse error if the revset was not completely parsed
   hg: parse error at 2: invalid token
   [255]
 
+or operator should preserve ordering:
+  $ log 'reverse(2::4) or tip'
+  4
+  2
+  9

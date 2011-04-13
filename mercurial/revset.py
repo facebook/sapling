@@ -156,9 +156,10 @@ def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
 
 def orset(repo, subset, x, y):
-    s = set(getset(repo, subset, x))
-    s |= set(getset(repo, [r for r in subset if r not in s], y))
-    return [r for r in subset if r in s]
+    xl = getset(repo, subset, x)
+    s = set(xl)
+    yl = getset(repo, [r for r in subset if r not in s], y)
+    return xl + yl
 
 def notset(repo, subset, x):
     s = set(getset(repo, subset, x))
