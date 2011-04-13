@@ -108,10 +108,11 @@ def _search(web, req, tmpl):
     revcount = web.maxchanges
     if 'revcount' in req.form:
         revcount = int(req.form.get('revcount', [revcount])[0])
+        revcount = max(revcount, 1)
         tmpl.defaults['sessionvars']['revcount'] = revcount
 
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
-    lessvars['revcount'] = revcount / 2
+    lessvars['revcount'] = max(revcount / 2, 1)
     lessvars['rev'] = query
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
@@ -220,10 +221,11 @@ def changelog(web, req, tmpl, shortlog=False):
     revcount = shortlog and web.maxshortchanges or web.maxchanges
     if 'revcount' in req.form:
         revcount = int(req.form.get('revcount', [revcount])[0])
+        revcount = max(revcount, 1)
         tmpl.defaults['sessionvars']['revcount'] = revcount
 
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
-    lessvars['revcount'] = revcount / 2
+    lessvars['revcount'] = max(revcount / 2, 1)
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
 
@@ -630,10 +632,11 @@ def filelog(web, req, tmpl):
     revcount = web.maxshortchanges
     if 'revcount' in req.form:
         revcount = int(req.form.get('revcount', [revcount])[0])
+        revcount = max(revcount, 1)
         tmpl.defaults['sessionvars']['revcount'] = revcount
 
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
-    lessvars['revcount'] = revcount / 2
+    lessvars['revcount'] = max(revcount / 2, 1)
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
 
@@ -731,10 +734,11 @@ def graph(web, req, tmpl):
     revcount = web.maxshortchanges
     if 'revcount' in req.form:
         revcount = int(req.form.get('revcount', [revcount])[0])
+        revcount = max(revcount, 1)
         tmpl.defaults['sessionvars']['revcount'] = revcount
 
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
-    lessvars['revcount'] = revcount / 2
+    lessvars['revcount'] = max(revcount / 2, 1)
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
 
