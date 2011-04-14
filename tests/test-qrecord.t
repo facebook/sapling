@@ -2,8 +2,63 @@ Create configuration
 
   $ echo "[ui]" >> $HGRCPATH
   $ echo "interactive=true" >> $HGRCPATH
+
+help record (no record)
+
+  $ hg help record
+  record extension - commands to interactively select changes for commit/qrefresh
+  
+  use "hg help extensions" for information on enabling extensions
+
   $ echo "[extensions]"     >> $HGRCPATH
   $ echo "record="          >> $HGRCPATH
+
+help record (record)
+
+  $ hg help record
+  hg record [OPTION]... [FILE]...
+  
+  interactively select changes to commit
+  
+      If a list of files is omitted, all changes reported by "hg status" will be
+      candidates for recording.
+  
+      See "hg help dates" for a list of formats valid for -d/--date.
+  
+      You will be prompted for whether to record changes to each modified file,
+      and for files with multiple changes, for each change to use. For each
+      query, the following responses are possible:
+  
+        y - record this change
+        n - skip this change
+  
+        s - skip remaining changes to this file
+        f - record remaining changes to this file
+  
+        d - done, skip remaining changes and files
+        a - record all changes to all remaining files
+        q - quit, recording no changes
+  
+        ? - display help
+  
+      This command is not available when committing a merge.
+  
+  options:
+  
+   -A --addremove            mark new/missing files as added/removed before
+                             committing
+      --close-branch         mark a branch as closed, hiding it from the branch
+                             list
+   -I --include PATTERN [+]  include names matching the given patterns
+   -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -m --message TEXT         use text as commit message
+   -l --logfile FILE         read commit message from file
+   -d --date DATE            record datecode as commit date
+   -u --user USER            record the specified user as committer
+  
+  [+] marked option can be specified multiple times
+  
+  use "hg -v help record" to show global options
 
 help (no mq, so no qrecord)
 
