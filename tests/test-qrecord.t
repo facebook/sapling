@@ -10,6 +10,15 @@ help record (no record)
   
   use "hg help extensions" for information on enabling extensions
 
+help qrecord (no record)
+
+  $ hg help qrecord
+  'qrecord' is provided by the following extension:
+  
+      record  commands to interactively select changes for commit/qrefresh
+  
+  use "hg help extensions" for information on enabling extensions
+
   $ echo "[extensions]"     >> $HGRCPATH
   $ echo "record="          >> $HGRCPATH
 
@@ -63,30 +72,33 @@ help record (record)
 help (no mq, so no qrecord)
 
   $ hg help qrecord
-  hg: unknown command 'qrecord'
-  Mercurial Distributed SCM
+  hg qrecord [OPTION]... PATCH [FILE]...
   
-  basic commands:
+  interactively record a new patch
   
-   add        add the specified files on the next commit
-   annotate   show changeset information by line for each file
-   clone      make a copy of an existing repository
-   commit     commit the specified files or all outstanding changes
-   diff       diff repository (or selected files)
-   export     dump the header and diffs for one or more changesets
-   forget     forget the specified files on the next commit
-   init       create a new repository in the given directory
-   log        show revision history of entire repository or files
-   merge      merge working directory with another revision
-   pull       pull changes from the specified source
-   push       push changes to the specified destination
-   remove     remove the specified files on the next commit
-   serve      start stand-alone webserver
-   status     show changed files in the working directory
-   summary    summarize working directory state
-   update     update working directory (or switch revisions)
+      See "hg help qnew" & "hg help record" for more information and usage.
   
-  use "hg help" for the full list of commands or "hg -v" for details
+  use "hg -v help qrecord" to show global options
+
+  $ hg init a
+
+qrecord (mq not present)
+
+  $ hg -R a qrecord
+  hg qrecord: invalid arguments
+  hg qrecord [OPTION]... PATCH [FILE]...
+  
+  interactively record a new patch
+  
+      See "hg help qnew" & "hg help record" for more information and usage.
+  
+  use "hg -v help qrecord" to show global options
+  [255]
+
+qrecord patch (mq not present)
+
+  $ hg -R a qrecord patch
+  abort: 'mq' extension not loaded
   [255]
 
 help (mq present)
@@ -116,7 +128,6 @@ help (mq present)
   
   use "hg -v help qrecord" to show global options
 
-  $ hg init a
   $ cd a
 
 Base commit

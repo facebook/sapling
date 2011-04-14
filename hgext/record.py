@@ -535,6 +535,9 @@ cmdtable = {
     "record":
         (record, commands.table['^commit|ci'][1], # same options as commit
          _('hg record [OPTION]... [FILE]...')),
+    "qrecord":
+        (qrecord, {}, # placeholder until mq is available
+         _('hg qrecord [OPTION]... PATCH [FILE]...')),
 }
 
 
