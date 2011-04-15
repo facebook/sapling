@@ -917,7 +917,7 @@ class opener(object):
     def __call__(self, path, mode="r", text=False, atomictemp=False):
         r = checkosfilename(path)
         if r:
-            raise Abort("%s: %s" % (r, path))
+            raise Abort("%s: %r" % (r, path))
         self.auditor(path)
         f = os.path.join(self.base, path)
 
