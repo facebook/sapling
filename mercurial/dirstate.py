@@ -269,9 +269,7 @@ class dirstate(object):
     def _addpath(self, f, check=False):
         oldstate = self[f]
         if check or oldstate == "r":
-            if '\r' in f or '\n' in f:
-                raise util.Abort(
-                    _("'\\n' and '\\r' disallowed in filenames: %r") % f)
+            util.checkfilename(f)
             if f in self._dirs:
                 raise util.Abort(_('directory %r already in dirstate') % f)
             # shadows
