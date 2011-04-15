@@ -123,7 +123,7 @@ def stringset(repo, subset, x):
     x = repo[x].rev()
     if x == -1 and len(subset) == len(repo):
         return [-1]
-    if x in subset:
+    if len(subset) == len(repo) or x in subset:
         return [x]
     return []
 
