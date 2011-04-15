@@ -435,6 +435,8 @@ def copy(ui, repo, pats, opts, rename=False):
         src = repo.wjoin(abssrc)
         state = repo.dirstate[abstarget]
 
+        util.checkfilename(abstarget)
+
         # check for collisions
         prevsrc = targets.get(abstarget)
         if prevsrc is not None:
