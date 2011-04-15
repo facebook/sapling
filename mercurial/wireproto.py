@@ -139,7 +139,13 @@ class wirerepository(repo.repository):
         remote server as a bundle. Return an integer indicating the
         result of the push (see localrepository.addchangegroup()).'''
 
-        ret, output = self._callpush("unbundle", cg, heads=encodelist(heads))
+        if self.capable('unbundlehash'):
+            heads = encodelist(['hashed',
+                                util.sha1(''.join(sorted(heads))).digest()])
+        else:
+            heads = encodelist(heads)
+
+        ret, output = self._callpush("unbundle", cg, heads=heads)
         if ret == "":
             raise error.ResponseError(
                 _('push failed:'), output)
@@ -216,7 +222,8 @@ def branches(repo, proto, nodes):
     return "".join(r)
 
 def capabilities(repo, proto):
-    caps = 'lookup changegroupsubset branchmap pushkey known getbundle'.split()
+    caps = ('lookup changegroupsubset branchmap pushkey known getbundle '
+            'unbundlehash').split()
     if _allowstream(repo.ui):
         requiredformats = repo.requirements & repo.supportedformats
         # if our local revlogs are just revlogv1, add 'stream' cap
@@ -353,7 +360,9 @@ def unbundle(repo, proto, heads):
 
     def check_heads():
         heads = repo.heads()
-        return their_heads == ['force'] or their_heads == heads
+        heads_hash = util.sha1(''.join(sorted(heads))).digest()
+        return (their_heads == ['force'] or their_heads == heads or
+                their_heads == ['hashed', heads_hash])
 
     proto.redirect()
 
