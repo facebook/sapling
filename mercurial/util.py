@@ -517,7 +517,7 @@ def checkwinfilename(path):
     >>> checkwinfilename("foo/bar/bla:.txt")
     "filename contains ':', which is reserved on Windows"
     >>> checkwinfilename("foo/bar/b\07la.txt")
-    "filename contains '\\x07', which is invalid on Windows"
+    "filename contains '\\\\x07', which is invalid on Windows"
     >>> checkwinfilename("foo/bar/bla ")
     "filename ends with ' ', which is not allowed on Windows"
     '''
@@ -529,7 +529,7 @@ def checkwinfilename(path):
                 return _("filename contains '%s', which is reserved "
                          "on Windows") % c
             if ord(c) <= 31:
-                return _("filename contains '%s', which is invalid "
+                return _("filename contains %r, which is invalid "
                          "on Windows") % c
         base = n.split('.')[0]
         if base and base.lower() in _windows_reserved_filenames:
