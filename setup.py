@@ -18,7 +18,8 @@ except ImportError:
     from distutils.core import setup
 
 def runcmd(cmd, env):
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+    shell = os.name == 'nt'
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=shell,
                          stderr=subprocess.PIPE, env=env)
     out, err = p.communicate()
     # If root is executing setup.py, but the repository is owned by
