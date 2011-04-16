@@ -95,11 +95,15 @@ def tolocal(s):
     for e in ('UTF-8', fallbackencoding):
         try:
             u = s.decode(e) # attempt strict decoding
-            if e == 'UTF-8':
-                return localstr(s, u.encode(encoding, "replace"))
+            r = u.encode(encoding, "replace")
+            if u == r.decode(encoding):
+                # r is a safe, non-lossy encoding of s
+                return r
+            elif e == 'UTF-8':
+                return localstr(s, r)
             else:
-                return localstr(u.encode('UTF-8'),
-                                u.encode(encoding, "replace"))
+                return localstr(u.encode('UTF-8'), r)
+
         except LookupError, k:
             raise error.Abort("%s, please check your locale settings" % k)
         except UnicodeDecodeError:
