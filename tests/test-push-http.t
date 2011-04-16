@@ -66,6 +66,32 @@ expect success
   repository tip rolled back to revision 0 (undo serve)
   working directory now based on revision 0
 
+expect success, server lacks the unbundlehash capability
+
+  $ cat > unbundlehash-off.py << EOF
+  > from mercurial import extensions, repo
+  > def extsetup():
+  >     extensions.wrapfunction(repo.repository, 'capable', wrapper)
+  > def wrapper(orig, self, name, *args, **kwargs):
+  >     if name == 'unbundlehash':
+  >         return False
+  >     return orig(self, name, *args, **kwargs)
+  > EOF
+  $ echo '[extensions]' >> .hg/hgrc
+  $ echo "unbundlehash-off = `pwd`/unbundlehash-off.py" >> .hg/hgrc
+  $ req
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: changegroup hook: HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_URL=remote:http:*:  (glob)
+  % serve errors
+  $ hg rollback
+  repository tip rolled back to revision 0 (undo serve)
+  working directory now based on revision 0
+
 expect authorization error: all users denied
 
   $ echo '[web]' > .hg/hgrc

@@ -59,11 +59,25 @@ successful force push
   adding file changes
   added 0 changesets with 0 changes to 1 files
 
-successful push
+successful push, list of heads
 
   $ QUERY_STRING="cmd=unbundle&heads=f7b1eb17ad24730a1651fccd46c43826d1bbc2ac"; export QUERY_STRING
   $ python hgweb.cgi <bundle.hg >page3 2>&1
   $ cat page3
+  Status: 200 Script output follows\r (esc)
+  Content-Type: application/mercurial-0.1\r (esc)
+  \r (esc)
+  1
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 1 files
+
+successful push, SHA1 hash of heads (unbundlehash capability)
+
+  $ QUERY_STRING="cmd=unbundle&heads=686173686564 5a785a5f9e0d433b88ed862b206b011b0c3a9d13"; export QUERY_STRING
+  $ python hgweb.cgi <bundle.hg >page4 2>&1
+  $ cat page4
   Status: 200 Script output follows\r (esc)
   Content-Type: application/mercurial-0.1\r (esc)
   \r (esc)
