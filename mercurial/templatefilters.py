@@ -245,9 +245,10 @@ def person(author):
     if not '@' in author:
         return author
     f = author.find('<')
-    if f == -1:
-        return util.shortuser(author)
-    return author[:f].rstrip()
+    if f != -1:
+        return author[:f].rstrip()
+    f = author.find('@')
+    return author[:f].replace('.', ' ')
 
 def rfc3339date(text):
     """:rfc3339date: Date. Returns a date using the Internet date format
