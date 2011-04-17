@@ -2047,7 +2047,7 @@ def heads(ui, repo, *branchrevs, **opts):
         displayer.show(ctx)
     displayer.close()
 
-def help_(ui, name=None, with_version=False, unknowncmd=False):
+def help_(ui, name=None, with_version=False, unknowncmd=False, full=True):
     """show help for a given topic or a help overview
 
     With no arguments, print a list of commands with short help messages.
@@ -2070,6 +2070,8 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
             if name == 'shortlist':
                 msg = _('use "hg help" for the full list of commands '
                         'or "hg -v" for details')
+            elif name and not full:
+                msg = _('use "hg help %s" to show the full help text' % name)
             elif aliases:
                 msg = _('use "hg -v help%s" to show builtin aliases and '
                         'global options') % (name and " " + name or "")
@@ -2108,7 +2110,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
             ui.write('hg %s\n' % aliases[0])
 
         # aliases
-        if not ui.quiet and len(aliases) > 1:
+        if full and not ui.quiet and len(aliases) > 1:
             ui.write(_("\naliases: %s\n") % ', '.join(aliases[1:]))
 
         # description
@@ -2120,7 +2122,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False):
                 doc = _('shell alias for::\n\n    %s') % entry[0].definition[1:]
             else:
                 doc = _('alias for: hg %s\n\n%s') % (entry[0].definition, doc)
-        if ui.quiet:
+        if ui.quiet or not full:
             doc = doc.splitlines()[0]
         keep = ui.verbose and ['verbose'] or []
         formatted, pruned = minirst.format(doc, textwidth, keep=keep)

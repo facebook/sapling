@@ -304,13 +304,7 @@ invalid arguments
   
   alias for: hg root
   
-  print the root (top) of the current working directory
-  
-      Print the root directory of the current repository.
-  
-      Returns 0 on success.
-  
-  use "hg -v help rt" to show global options
+  use "hg help rt" to show the full help text
   [255]
 
 invalid global arguments for normal commands, aliases, and shell aliases

@@ -90,7 +90,7 @@ def _runcatch(ui, args):
     except error.CommandError, inst:
         if inst.args[0]:
             ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
-            commands.help_(ui, inst.args[0])
+            commands.help_(ui, inst.args[0], full=False)
         else:
             ui.warn(_("hg: %s\n") % inst.args[1])
             commands.help_(ui, 'shortlist')

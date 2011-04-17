@@ -387,17 +387,6 @@ Test help option with version option
   
   add the specified files on the next commit
   
-      Schedule files to be version controlled and added to the repository.
-  
-      The files will be added to the repository at the next commit. To undo an
-      add before that, see "hg forget".
-  
-      If no names are given, add all files to the repository.
-  
-      Returns 0 if all files are successfully added.
-  
-  use "hg -v help add" to show verbose help
-  
   options:
   
    -I --include PATTERN [+]  include names matching the given patterns
@@ -407,7 +396,7 @@ Test help option with version option
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help add" to show global options
+  use "hg help add" to show the full help text
   [255]
 
 Test ambiguous command help
