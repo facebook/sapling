@@ -109,6 +109,7 @@ Short help:
    environment  Environment Variables
    extensions   Using additional features
    glossary     Glossary
+   hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb
    merge-tools  Merge Tools
    multirevs    Specifying Multiple Revisions
@@ -182,6 +183,7 @@ Short help:
    environment  Environment Variables
    extensions   Using additional features
    glossary     Glossary
+   hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb
    merge-tools  Merge Tools
    multirevs    Specifying Multiple Revisions
@@ -698,6 +700,7 @@ Test that default list of commands omits extension commands
    environment  Environment Variables
    extensions   Using additional features
    glossary     Glossary
+   hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb
    merge-tools  Merge Tools
    multirevs    Specifying Multiple Revisions

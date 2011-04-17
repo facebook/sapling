@@ -339,6 +339,7 @@ Testing -h/--help:
    environment  Environment Variables
    extensions   Using additional features
    glossary     Glossary
+   hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb
    merge-tools  Merge Tools
    multirevs    Specifying Multiple Revisions
@@ -418,6 +419,7 @@ Testing -h/--help:
    environment  Environment Variables
    extensions   Using additional features
    glossary     Glossary
+   hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb
    merge-tools  Merge Tools
    multirevs    Specifying Multiple Revisions
