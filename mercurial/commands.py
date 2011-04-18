@@ -2244,16 +2244,16 @@ def identify(ui, repo, source=None, rev=None,
              num=None, id=None, branch=None, tags=None, bookmarks=None):
     """identify the working copy or specified revision
 
-    With no revision, print a summary of the current state of the
+    Print a summary identifiying the repository state at REV
+    using one or two parent hash identifiers, followed by a
+    "+" if there are uncommitted changes in the working directory,
+    the branch name (omitted if default) and a list of tags, bookmarks.
+
+    When REV is not given, print a summary of the current state of the
     repository.
 
     Specifying a path to a repository root or Mercurial bundle will
     cause lookup to operate on that repository/bundle.
-
-    This summary identifies the repository state using one or two
-    parent hash identifiers, followed by a "+" if there are
-    uncommitted changes in the working directory, a list of tags for
-    this revision and a branch name for non-default branches.
 
     Returns 0 if successful.
     """
