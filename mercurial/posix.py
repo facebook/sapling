@@ -316,7 +316,9 @@ def termwidth():
                 if not os.isatty(fd):
                     continue
                 arri = fcntl.ioctl(fd, termios.TIOCGWINSZ, '\0' * 8)
-                return array.array('h', arri)[1]
+                width = array.array('h', arri)[1]
+                if width > 0:
+                    return width
             except ValueError:
                 pass
             except IOError, e:
