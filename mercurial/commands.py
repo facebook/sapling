@@ -2365,78 +2365,86 @@ def identify(ui, repo, source=None, rev=None,
     hexfunc = ui.debugflag and hex or short
     default = not (num or id or branch or tags or bookmarks)
     output = []
-
     revs = []
-    bms = []
+
     if source:
         source, branches = hg.parseurl(ui.expandpath(source))
         repo = hg.repository(ui, source)
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
 
     if not repo.local():
+        if num or branch or tags:
+            raise util.Abort(
+                _("can't query remote revision number, branch, or tags"))
         if not rev and revs:
             rev = revs[0]
         if not rev:
             rev = "tip"
-        if num or branch or tags:
-            raise util.Abort(
-                _("can't query remote revision number, branch, or tags"))
 
         remoterev = repo.lookup(rev)
         if default or id:
             output = [hexfunc(remoterev)]
 
-        if 'bookmarks' in repo.listkeys('namespaces'):
-            hexremoterev = hex(remoterev)
-            bms = [bm for bm, bmrev in repo.listkeys('bookmarks').iteritems()
-                   if bmrev == hexremoterev]
+        def getbms():
+            bms = []
 
-    elif not rev:
-        ctx = repo[None]
-        parents = ctx.parents()
-        changed = False
-        if default or id or num:
-            changed = util.any(repo.status())
-        if default or id:
-            output = ["%s%s" % ('+'.join([hexfunc(p.node()) for p in parents]),
-                                (changed) and "+" or "")]
-        if num:
-            output.append("%s%s" % ('+'.join([str(p.rev()) for p in parents]),
-                                    (changed) and "+" or ""))
+            if 'bookmarks' in repo.listkeys('namespaces'):
+                hexremoterev = hex(remoterev)
+                bms = [bm for bm, bmr in repo.listkeys('bookmarks').iteritems()
+                       if bmr == hexremoterev]
+
+            return bms
+
+        if bookmarks:
+            output.extend(getbms())
+        elif default and not ui.quiet:
+            # multiple bookmarks for a single parent separated by '/'
+            bm = '/'.join(getbms())
+            if bm:
+                output.append(bm)
     else:
-        ctx = cmdutil.revsingle(repo, rev)
-        if default or id:
-            output = [hexfunc(ctx.node())]
-        if num:
-            output.append(str(ctx.rev()))
+        if not rev:
+            ctx = repo[None]
+            parents = ctx.parents()
+            changed = ""
+            if default or id or num:
+                changed = util.any(repo.status()) and "+" or ""
+            if default or id:
+                output = ["%s%s" %
+                  ('+'.join([hexfunc(p.node()) for p in parents]), changed)]
+            if num:
+                output.append("%s%s" %
+                  ('+'.join([str(p.rev()) for p in parents]), changed))
+        else:
+            ctx = cmdutil.revsingle(repo, rev)
+            if default or id:
+                output = [hexfunc(ctx.node())]
+            if num:
+                output.append(str(ctx.rev()))
 
-    if repo.local():
-        bms = ctx.bookmarks()
+        if default and not ui.quiet:
+            b = ctx.branch()
+            if b != 'default':
+                output.append("(%s)" % b)
 
-    if repo.local() and default and not ui.quiet:
-        b = ctx.branch()
-        if b != 'default':
-            output.append("(%s)" % b)
+            # multiple tags for a single parent separated by '/'
+            t = '/'.join(ctx.tags())
+            if t:
+                output.append(t)
 
-        # multiple tags for a single parent separated by '/'
-        t = "/".join(ctx.tags())
-        if t:
-            output.append(t)
+            # multiple bookmarks for a single parent separated by '/'
+            bm = '/'.join(ctx.bookmarks())
+            if bm:
+                output.append(bm)
+        else:
+            if branch:
+                output.append(ctx.branch())
 
-    if default and not ui.quiet:
-        # multiple bookmarks for a single parent separated by '/'
-        bm = '/'.join(bms)
-        if bm:
-            output.append(bm)
+            if tags:
+                output.extend(ctx.tags())
 
-    if branch:
-        output.append(ctx.branch())
-
-    if tags:
-        output.extend(ctx.tags())
-
-    if bookmarks:
-        output.extend(bms)
+            if bookmarks:
+                output.extend(ctx.bookmarks())
 
     ui.write("%s\n" % ' '.join(output))
 
