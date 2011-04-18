@@ -33,9 +33,6 @@ def runcmd(cmd, env):
 
 
 version = ''
-HG_COMMAND = 'hg'
-if os.name == 'nt':
-	HG_COMMAND = 'hg.bat'
 
 if os.path.isdir('.hg'):
     # Execute hg out of this directory with a custom environment which
@@ -51,7 +48,7 @@ if os.path.isdir('.hg'):
         # under Windows. Otherwise, the subprocess will fail with
         # error 0xc0150004. See: http://bugs.python.org/issue3440
         env['SystemRoot'] = os.environ['SystemRoot']
-    cmd = [HG_COMMAND, 'id', '-i', '-t']
+    cmd = ['hg', 'id', '-i', '-t']
     l = runcmd(cmd, env).split()
     while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
         l.pop()
@@ -60,11 +57,11 @@ if os.path.isdir('.hg'):
         if l[0].endswith('+'): # propagate the dirty status to the tag
             version += '+'
     elif len(l) == 1: # no tag found
-        cmd = [HG_COMMAND, 'parents', '--template',
+        cmd = ['hg', 'parents', '--template',
                '{latesttag}+{latesttagdistance}-']
         version = runcmd(cmd, env) + l[0]
     if not version:
-        version = runcmd([HG_COMMAND, 'parents', '--template' '{node|short}\n'],
+        version = runcmd(['hg', 'parents', '--template' '{node|short}\n'],
                          env)
         if version:
             version = version.split()[0]
