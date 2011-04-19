@@ -22,6 +22,12 @@ On Unix, these files are read:
 - ``<install-root>/etc/mercurial/hgrc``
 - ``<install-root>/etc/mercurial/hgrc.d/*.rc``
 
+These files do not exist by default and you will have to create the
+appropriate configuration files yourself: global configuration like
+the username setting is typically put into
+``%USERPROFILE%\mercurial.ini`` or ``$HOME/.hgrc`` and local
+configuration is put into the per-repository ``<repo>/.hg/hgrc`` file.
+
 If there is a per-repository configuration file which is not owned by
 the active user, Mercurial will warn you that the file is skipped::
 

@@ -8,7 +8,7 @@
 
 import os
 from mercurial import ui, hg, hook, error, encoding, templater
-from common import get_mtime, ErrorResponse, permhooks, caching
+from common import get_stat, ErrorResponse, permhooks, caching
 from common import HTTP_OK, HTTP_NOT_MODIFIED, HTTP_BAD_REQUEST
 from common import HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
@@ -39,6 +39,7 @@ class hgweb(object):
         self.repo.ui.setconfig('ui', 'interactive', 'off')
         hook.redirect(True)
         self.mtime = -1
+        self.size = -1
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
         self.stripecount = 1
@@ -63,9 +64,12 @@ class hgweb(object):
     def refresh(self, request=None):
         if request:
             self.repo.ui.environ = request.env
-        mtime = get_mtime(self.repo.spath)
-        if mtime != self.mtime:
-            self.mtime = mtime
+        st = get_stat(self.repo.spath)
+        # compare changelog size in addition to mtime to catch
+        # rollbacks made less than a second ago
+        if st.st_mtime != self.mtime or st.st_size != self.size:
+            self.mtime = st.st_mtime
+            self.size = st.st_size
             self.repo = hg.repository(self.repo.ui, self.repo.root)
             self.maxchanges = int(self.config("web", "maxchanges", 10))
             self.stripecount = int(self.config("web", "stripes", 1))

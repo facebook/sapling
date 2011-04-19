@@ -105,12 +105,16 @@ def _statusmessage(code):
 def statusmessage(code, message=None):
     return '%d %s' % (code, message or _statusmessage(code))
 
-def get_mtime(spath):
+def get_stat(spath):
+    """stat changelog if it exists, spath otherwise"""
     cl_path = os.path.join(spath, "00changelog.i")
     if os.path.exists(cl_path):
-        return os.stat(cl_path).st_mtime
+        return os.stat(cl_path)
     else:
-        return os.stat(spath).st_mtime
+        return os.stat(spath)
+
+def get_mtime(spath):
+    return get_stat(spath).st_mtime
 
 def staticfile(directory, fname, req):
     """return a file inside directory with guessed Content-Type header
