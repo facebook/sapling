@@ -49,3 +49,8 @@
   $ hg manifest --debug
   6f4310b00b9a147241b071a60c28a650827fb03d 644   foo
 
+update to rev 0 with a date
+
+  $ hg upd -d foo 0
+  abort: you can't specify a revision and a date
+  [255]
