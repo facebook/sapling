@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, glob, tempfile
-import util, templater, patch, error, encoding, templatekw
+import util, scmutil, templater, patch, error, encoding, templatekw
 import match as matchmod
 import similar, revset, subrepo
 
@@ -435,7 +435,7 @@ def copy(ui, repo, pats, opts, rename=False):
         src = repo.wjoin(abssrc)
         state = repo.dirstate[abstarget]
 
-        util.checkfilename(abstarget)
+        scmutil.checkportable(ui, abstarget)
 
         # check for collisions
         prevsrc = targets.get(abstarget)

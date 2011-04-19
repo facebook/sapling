@@ -4,6 +4,9 @@
   $ hg commit -m "1"
   $ hg status
   $ hg copy a b
+  $ hg --config ui.portablefilenames=abort copy a con.xml
+  abort: filename contains 'con', which is reserved on Windows: 'con.xml'
+  [255]
   $ hg status
   A b
   $ hg sum

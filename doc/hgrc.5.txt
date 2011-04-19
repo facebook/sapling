@@ -910,6 +910,16 @@ User interface controls.
     The conflict resolution program to use during a manual merge.
     For more information on merge tools see :hg:`help merge-tools`.
     For configuring merge tools see the merge-tools_ section.
+``portablefilenames``
+    Check for portable filenames. Can be ``warn``, ``ignore`` or ``abort``.
+    Default is ``warn``.
+    If set to ``warn`` (or ``true``), a warning message is printed on POSIX
+    platforms, if a file with a non-portable filename is added (e.g. a file
+    with a name that can't be created on Windows because it contains reserved
+    parts like ``AUX`` or reserved characters like ``:``).
+    If set to ``ignore`` (or ``false``), no warning is printed.
+    If set to ``abort``, the command is aborted.
+    On Windows, this configuration option is ignored and the command aborted.
 ``quiet``
     Reduce the amount of output printed. True or False. Default is False.
 ``remotecmd``

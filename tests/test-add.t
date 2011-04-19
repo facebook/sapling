@@ -33,6 +33,41 @@ should fail
   A a
   A b
 
+  $ echo foo > con.xml
+  $ hg --config ui.portablefilenames=jump add con.xml
+  abort: ui.portablefilenames value is invalid ('jump')
+  [255]
+  $ hg --config ui.portablefilenames=abort add con.xml
+  abort: filename contains 'con', which is reserved on Windows: 'con.xml'
+  [255]
+  $ hg st
+  A a
+  A b
+  ? con.xml
+  $ hg add con.xml
+  warning: filename contains 'con', which is reserved on Windows: 'con.xml'
+  $ hg st
+  A a
+  A b
+  A con.xml
+  $ echo bla > 'hello:world'
+  $ hg --config ui.portablefilenames=abort add
+  adding hello:world
+  abort: filename contains ':', which is reserved on Windows: 'hello:world'
+  [255]
+  $ hg st
+  A a
+  A b
+  A con.xml
+  ? hello:world
+  $ hg --config ui.portablefilenames=ignore add
+  adding hello:world
+  $ hg st
+  A a
+  A b
+  A con.xml
+  A hello:world
+
   $ hg ci -m 0 --traceback
 
 should fail

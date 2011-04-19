@@ -28,6 +28,7 @@
   adding mammals/Procyonidae/coatimundi
   adding mammals/Procyonidae/raccoon
   adding mammals/skunk
+  warning: filename contains ':', which is reserved on Windows: 'glob:glob'
   $ hg commit -m "commit #0"
 
   $ hg debugwalk

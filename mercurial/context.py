@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, short, hex
 from i18n import _
-import ancestor, bdiff, error, util, subrepo, patch, encoding
+import ancestor, bdiff, error, util, scmutil, subrepo, patch, encoding
 import os, errno, stat
 
 propertycache = util.propertycache
@@ -801,6 +801,7 @@ class workingctx(changectx):
         try:
             rejected = []
             for f in list:
+                scmutil.checkportable(ui, join(f))
                 p = self._repo.wjoin(f)
                 try:
                     st = os.lstat(p)

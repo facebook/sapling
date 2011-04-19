@@ -10,14 +10,17 @@
   foo
   committed changeset 0:6f7f953567a2
   $ cd dir/
-  $ touch ../foo_2 bar_2
+  $ touch ../foo_2 bar_2 con.xml
   $ hg -v addremove
   adding dir/bar_2
+  adding dir/con.xml
   adding foo_2
+  warning: filename contains 'con', which is reserved on Windows: 'dir/con.xml'
   $ hg -v commit -m "add 2"
   dir/bar_2
+  dir/con.xml
   foo_2
-  committed changeset 1:e65414bf35c5
+  committed changeset 1:6bb597da00f1
 
   $ cd ..
   $ hg init sim

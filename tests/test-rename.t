@@ -11,6 +11,9 @@
 rename a single file
 
   $ hg rename d1/d11/a1 d2/c
+  $ hg --config ui.portablefilenames=abort rename d1/a d1/con.xml
+  abort: filename contains 'con', which is reserved on Windows: 'd1/con.xml'
+  [255]
   $ hg sum
   parent: 0:9b4b6e7b2c26 tip
    1

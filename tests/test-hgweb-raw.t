@@ -10,6 +10,7 @@ Test raw style of hgweb
   > care about things like that.
   > ENDSOME
   $ hg add 'sub/some "text".txt'
+  warning: filename contains '"', which is reserved on Windows: 'sub/some "text".txt'
   $ hg commit -d "1 0" -m "Just some text"
 
   $ hg serve -p $HGPORT -A access.log -E error.log -d --pid-file=hg.pid
