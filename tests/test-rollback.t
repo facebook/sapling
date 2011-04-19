@@ -57,7 +57,7 @@ Test rollback of hg before issue 902 was fixed
   $ rm .hg/undo.branch
   $ hg rollback
   repository tip rolled back to revision -1 (undo commit)
-  Named branch could not be reset, current branch still is: test
+  named branch could not be reset, current branch is still: test
   working directory now based on revision -1
   $ hg branch
   test

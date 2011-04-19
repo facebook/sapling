@@ -736,8 +736,8 @@ class localrepository(repo.repository):
                     branch = self.opener("undo.branch").read()
                     self.dirstate.setbranch(branch)
                 except IOError:
-                    self.ui.warn(_("Named branch could not be reset, "
-                                   "current branch still is: %s\n")
+                    self.ui.warn(_("named branch could not be reset, "
+                                   "current branch is still: %s\n")
                                  % self.dirstate.branch())
                 self.invalidate()
                 self.dirstate.invalidate()
