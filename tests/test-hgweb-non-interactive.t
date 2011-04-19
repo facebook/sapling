@@ -1,9 +1,8 @@
 Tests if hgweb can run without touching sys.stdin, as is required
 by the WSGI standard and strictly implemented by mod_wsgi.
 
-  $ mkdir repo
+  $ hg init repo
   $ cd repo
-  $ hg init
   $ echo foo > bar
   $ hg add bar
   $ hg commit -m "test"

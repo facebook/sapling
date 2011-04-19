@@ -1,8 +1,7 @@
 Create a repository:
 
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
 
 Make a changeset:
 

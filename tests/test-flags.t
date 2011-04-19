@@ -1,8 +1,7 @@
   $ umask 027
-  $ mkdir test1
-  $ cd test1
 
-  $ hg init
+  $ hg init test1
+  $ cd test1
   $ touch a b
   $ hg add a b
   $ hg ci -m "added a b"
@@ -11,10 +10,9 @@
   $ hg clone test1 test3
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ mkdir test2
-  $ cd test2
 
-  $ hg init
+  $ hg init test2
+  $ cd test2
   $ hg pull ../test1
   pulling from ../test1
   requesting all changes

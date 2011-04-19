@@ -1,8 +1,7 @@
 Prepare repo a:
 
-  $ mkdir a
+  $ hg init a
   $ cd a
-  $ hg init
   $ echo a > a
   $ hg add a
   $ hg commit -m test

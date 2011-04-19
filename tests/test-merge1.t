@@ -12,9 +12,8 @@
   > EOF
   $ HGMERGE="python ../merge"; export HGMERGE
 
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"
@@ -49,9 +48,8 @@ no merges expected
   M b
   $ cd ..; rm -r t
 
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"
@@ -86,9 +84,8 @@ merge of b expected
   M b
   $ cd ..; rm -r t
 
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"
@@ -129,9 +126,8 @@ merge fails
   M b
   $ cd ..; rm -r t
 
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"

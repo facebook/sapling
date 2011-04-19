@@ -1,6 +1,5 @@
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
 
   $ mkdir a
   $ echo foo > a/a
@@ -118,9 +117,8 @@
 Second scenario with two repos:
 
   $ cd ..
-  $ mkdir r1
+  $ hg init r1
   $ cd r1
-  $ hg init
   $ mkdir a
   $ echo foo > a/f
   $ hg add a

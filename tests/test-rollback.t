@@ -1,7 +1,6 @@
 
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
   $ echo a > a
   $ hg add a
   $ hg commit -m "test"

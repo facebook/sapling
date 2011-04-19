@@ -1,6 +1,5 @@
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
   $ echo import > port
   $ hg add port
   $ hg commit -m 0 -u spam -d '0 0'

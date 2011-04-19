@@ -2,9 +2,8 @@ This tests if hgweb and hgwebdir still work if the REQUEST_URI variable is
 no longer passed with the request. Instead, SCRIPT_NAME and PATH_INFO
 should be used from d74fc8dec2b4 onward to route the request.
 
-  $ mkdir repo
+  $ hg init repo
   $ cd repo
-  $ hg init
   $ echo foo > bar
   $ hg add bar
   $ hg commit -m "test"

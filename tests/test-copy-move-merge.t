@@ -1,6 +1,5 @@
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
 
   $ echo 1 > a
   $ hg ci -qAm "first"

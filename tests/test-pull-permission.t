@@ -1,6 +1,5 @@
-  $ mkdir a
+  $ hg init a
   $ cd a
-  $ hg init
   $ echo foo > b
   $ hg add b
   $ hg ci -m "b"

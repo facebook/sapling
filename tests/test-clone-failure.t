@@ -21,9 +21,8 @@ Inaccessible source
 
 Inaccessible destination
 
-  $ mkdir b
+  $ hg init b
   $ cd b
-  $ hg init
   $ hg clone . ../a
   abort: Permission denied: ../a
   [255]
@@ -44,10 +43,7 @@ Source of wrong type
 
 Default destination, same directory
 
-  $ mkdir q
-  $ cd q
-  $ hg init
-  $ cd ..
+  $ hg init q
   $ hg clone q
   destination directory: q
   abort: destination 'q' is not empty

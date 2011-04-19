@@ -1,8 +1,7 @@
   $ HGMERGE=true; export HGMERGE
 
-  $ mkdir r1
+  $ hg init r1
   $ cd r1
-  $ hg init
   $ echo a > a
   $ hg addremove
   adding a

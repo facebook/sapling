@@ -1,8 +1,7 @@
-  $ mkdir test
+  $ hg init test
   $ cd test
 
   $ echo foo>foo
-  $ hg init
   $ hg addremove
   adding foo
   $ hg commit -m 1

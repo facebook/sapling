@@ -1,6 +1,5 @@
-  $ mkdir test
+  $ hg init test
   $ cd test
-  $ hg init
   $ echo foo>foo
   $ hg commit -Am 1 -d '1 0'
   adding foo

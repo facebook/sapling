@@ -17,9 +17,8 @@ $4 = expected result
 
   $ tm()
   > {
-  >     mkdir t
+  >     hg init t
   >     cd t
-  >     hg init
   >     echo "[merge]" >> .hg/hgrc
   >     echo "followcopies = 1" >> .hg/hgrc
   > 

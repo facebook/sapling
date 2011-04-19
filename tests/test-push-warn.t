@@ -1,9 +1,8 @@
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "graphlog=" >> $HGRCPATH
 
-  $ mkdir a
+  $ hg init a
   $ cd a
-  $ hg init
   $ echo foo > t1
   $ hg add t1
   $ hg commit -m "1"

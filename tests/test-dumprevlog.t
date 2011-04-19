@@ -4,9 +4,8 @@ Set vars:
 
 Prepare repo-a:
 
-  $ mkdir repo-a
+  $ hg init repo-a
   $ cd repo-a
-  $ hg init
 
   $ echo this is file a > a
   $ hg add a
@@ -64,9 +63,8 @@ Dump all revlogs to file repo.dump:
 
 Undumping into repo-b:
 
-  $ mkdir repo-b
+  $ hg init repo-b
   $ cd repo-b
-  $ hg init
   $ python $CONTRIBDIR/undumprevlog < ../repo.dump
   .hg/store/00changelog.i
   .hg/store/00manifest.i

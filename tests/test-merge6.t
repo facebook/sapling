@@ -4,9 +4,8 @@
   > EOF
   $ HGMERGE="python ../merge"; export HGMERGE
 
-  $ mkdir A1
+  $ hg init A1
   $ cd A1
-  $ hg init
   $ echo This is file foo1 > foo
   $ echo This is file bar1 > bar
   $ hg add foo bar

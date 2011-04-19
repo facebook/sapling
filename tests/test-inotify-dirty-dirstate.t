@@ -7,8 +7,7 @@ issues when status queries are issued when dirstate is dirty
 
 issue1810: inotify and fetch
 
-  $ mkdir test; cd test
-  $ hg init
+  $ hg init test; cd test
   $ hg inserve -d --pid-file=../hg.pid
   $ cat ../hg.pid >> "$DAEMON_PIDS"
   $ echo foo > foo

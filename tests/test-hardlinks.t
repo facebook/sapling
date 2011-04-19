@@ -25,9 +25,8 @@ Some implementations of cp can't create hardlinks (replaces 'cp -al' on Linux):
 
 Prepare repo r1:
 
-  $ mkdir r1
+  $ hg init r1
   $ cd r1
-  $ hg init
 
   $ echo c1 > f1
   $ hg add f1

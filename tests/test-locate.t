@@ -1,6 +1,5 @@
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
   $ echo 0 > a
   $ echo 0 > b
   $ echo 0 > t.h

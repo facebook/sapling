@@ -1,6 +1,5 @@
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"
@@ -34,9 +33,8 @@
   created new head
   $ cd ..; rm -r t
 
-  $ mkdir t
+  $ hg init t
   $ cd t
-  $ hg init
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"

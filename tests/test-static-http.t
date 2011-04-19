@@ -22,9 +22,8 @@ one pull
   > EOF
   $ python dumb.py 2>/dev/null &
   $ echo $! >> $DAEMON_PIDS
-  $ mkdir remote
+  $ hg init remote
   $ cd remote
-  $ hg init
   $ echo foo > bar
   $ echo c2 > '.dotfile with spaces'
   $ hg add
