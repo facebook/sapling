@@ -211,6 +211,7 @@ div.description {
   margin: 1em 0 1em 0;
   padding: .3em;
   white-space: pre;
+  font-family: monospace;
 }
 
 /* Graph */
