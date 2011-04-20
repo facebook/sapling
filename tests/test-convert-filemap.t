@@ -282,3 +282,83 @@ filemap errors
   errors.fmap:5: path to exclude is missing
   abort: errors in filemap
   [255]
+
+test branch closing revision pruning if branch is pruned
+
+  $ hg init branchpruning
+  $ cd branchpruning
+  $ hg branch foo
+  marked working directory as branch foo
+  $ echo a > a
+  $ hg ci -Am adda
+  adding a
+  $ hg ci --close-branch -m closefoo
+  $ hg up 0
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch empty
+  marked working directory as branch empty
+  $ hg ci -m emptybranch
+  $ hg ci --close-branch -m closeempty
+  $ hg up 0
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch default
+  marked working directory as branch default
+  $ echo b > b
+  $ hg ci -Am addb
+  adding b
+  $ hg ci --close-branch -m closedefault
+  $ cat > filemap <<EOF
+  > include b
+  > EOF
+  $ cd ..
+  $ hg convert branchpruning branchpruning-hg1
+  initializing destination branchpruning-hg1 repository
+  scanning source...
+  sorting...
+  converting...
+  5 adda
+  4 closefoo
+  3 emptybranch
+  2 closeempty
+  1 addb
+  0 closedefault
+  $ glog -R branchpruning-hg1
+  o  5 "closedefault" files:
+  |
+  o  4 "addb" files: b
+  |
+  | o  3 "closeempty" files:
+  | |
+  | o  2 "emptybranch" files:
+  |/
+  | o  1 "closefoo" files:
+  |/
+  o  0 "adda" files: a
+  
+
+exercise incremental conversion at the same time
+
+  $ hg convert -r0 --filemap branchpruning/filemap branchpruning branchpruning-hg2
+  initializing destination branchpruning-hg2 repository
+  scanning source...
+  sorting...
+  converting...
+  0 adda
+  $ hg convert -r4 --filemap branchpruning/filemap branchpruning branchpruning-hg2
+  scanning source...
+  sorting...
+  converting...
+  0 addb
+  $ hg convert --filemap branchpruning/filemap branchpruning branchpruning-hg2
+  scanning source...
+  sorting...
+  converting...
+  3 closefoo
+  2 emptybranch
+  1 closeempty
+  0 closedefault
+  $ glog -R branchpruning-hg2
+  o  1 "closedefault" files:
+  |
+  o  0 "addb" files: b
+  
