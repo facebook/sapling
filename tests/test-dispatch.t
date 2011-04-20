@@ -47,6 +47,6 @@ No repo:
 
   $ cd $dir
   $ hg cat
-  abort: There is no Mercurial repository here (.hg not found)!
+  abort: no repository found in '$TESTTMP' (.hg not found)!
   [255]
 

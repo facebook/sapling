@@ -586,8 +586,8 @@ def _dispatch(ui, args):
                     if guess and repos.count(guess) == len(repos):
                         return _dispatch(ui, ['--repository', guess] + fullargs)
                 if not path:
-                    raise error.RepoError(_("There is no Mercurial repository"
-                                      " here (.hg not found)"))
+                    raise error.RepoError(_("no repository found in %r"
+                                            " (.hg not found)") % os.getcwd())
                 raise
         args.insert(0, repo)
     elif rpath:

@@ -84,13 +84,13 @@ Implicit -R:
   $ hg ann a/a a/a
   0: a
   $ hg ann a/a b/b
-  abort: There is no Mercurial repository here (.hg not found)!
+  abort: no repository found in '$TESTTMP' (.hg not found)!
   [255]
   $ hg -R b ann a/a
   abort: a/a not under root
   [255]
   $ hg log
-  abort: There is no Mercurial repository here (.hg not found)!
+  abort: no repository found in '$TESTTMP' (.hg not found)!
   [255]
 
 Abbreviation of long option:
