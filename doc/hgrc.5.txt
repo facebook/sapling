@@ -1052,6 +1052,8 @@ The full set of options is:
 
     To disable SSL verification temporarily, specify ``--insecure`` from
     command line.
+``cache``
+    Whether to support caching in hgweb. Defaults to True.
 ``contact``
     Name or email address of the person in charge of the repository.
     Defaults to ui.username or ``$EMAIL`` or "unknown" if unset or empty.
