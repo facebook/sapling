@@ -209,6 +209,11 @@ class filemap_source(converter_source):
             self.children[p] = self.children.get(p, 0) + 1
         return c
 
+    def _cachedcommit(self, rev):
+        if rev in self.commits:
+            return self.commits[rev]
+        return self.base.getcommit(rev)
+
     def _discard(self, *revs):
         for r in revs:
             if r is None:
@@ -308,7 +313,14 @@ class filemap_source(converter_source):
 
         self.origparents[rev] = parents
 
-        closed = 'close' in self.commits[rev].extra
+        closed = False
+        if 'close' in self.commits[rev].extra:
+            # A branch closing revision is only useful if one of its
+            # parents belong to the branch being closed
+            branch = self.commits[rev].branch
+            pbranches = [self._cachedcommit(p).branch for p in mparents]
+            if branch in pbranches:
+                closed = True
 
         if len(mparents) < 2 and not closed and not self.wanted(rev, wp):
             # We don't want this revision.
