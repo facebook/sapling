@@ -26,7 +26,7 @@ We approximate that by reducing the read buffer to 1 byte.
   summary:     change foo
   
   $ cat >> test.py << EOF
-  > from mercurial import changelog, util
+  > from mercurial import changelog, scmutil
   > from mercurial.node import *
   > 
   > class singlebyteread(object):
@@ -42,7 +42,7 @@ We approximate that by reducing the read buffer to 1 byte.
   >         return getattr(self.real, key)
   > 
   > def opener(*args):
-  >     o = util.opener(*args)
+  >     o = scmutil.opener(*args)
   >     def wrapper(*a):
   >         f = o(*a)
   >         return singlebyteread(f)

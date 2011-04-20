@@ -11,7 +11,7 @@ import tempfile, zlib
 
 from i18n import _
 from node import hex, nullid, short
-import base85, mdiff, util, diffhelpers, copies, encoding
+import base85, mdiff, scmutil, util, diffhelpers, copies, encoding
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 
@@ -1111,7 +1111,7 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
     err = 0
     current_file = None
     cwd = os.getcwd()
-    opener = util.opener(cwd)
+    opener = scmutil.opener(cwd)
 
     for state, values in iterhunks(ui, fp):
         if state == 'hunk':

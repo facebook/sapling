@@ -7,7 +7,7 @@
 
 from i18n import _
 import util, error
-import os
+import os, errno
 
 def checkportable(ui, f):
     '''Check if filename f is portable and warn or abort depending on config'''
@@ -25,3 +25,98 @@ def checkportable(ui, f):
     elif bval is None and lval != 'ignore':
         raise error.ConfigError(
             _("ui.portablefilenames value is invalid ('%s')") % val)
+
+class opener(object):
+    '''Open files relative to a base directory
+
+    This class is used to hide the details of COW semantics and
+    remote file access from higher level code.
+    '''
+    def __init__(self, base, audit=True):
+        self.base = base
+        if audit:
+            self.auditor = util.path_auditor(base)
+        else:
+            self.auditor = util.always
+        self.createmode = None
+        self._trustnlink = None
+
+    @util.propertycache
+    def _can_symlink(self):
+        return util.checklink(self.base)
+
+    def _fixfilemode(self, name):
+        if self.createmode is None:
+            return
+        os.chmod(name, self.createmode & 0666)
+
+    def __call__(self, path, mode="r", text=False, atomictemp=False):
+        r = util.checkosfilename(path)
+        if r:
+            raise Abort("%s: %r" % (r, path))
+        self.auditor(path)
+        f = os.path.join(self.base, path)
+
+        if not text and "b" not in mode:
+            mode += "b" # for that other OS
+
+        nlink = -1
+        dirname, basename = os.path.split(f)
+        # If basename is empty, then the path is malformed because it points
+        # to a directory. Let the posixfile() call below raise IOError.
+        if basename and mode not in ('r', 'rb'):
+            if atomictemp:
+                if not os.path.isdir(dirname):
+                    util.makedirs(dirname, self.createmode)
+                return util.atomictempfile(f, mode, self.createmode)
+            try:
+                if 'w' in mode:
+                    util.unlink(f)
+                    nlink = 0
+                else:
+                    # nlinks() may behave differently for files on Windows
+                    # shares if the file is open.
+                    fd = util.posixfile(f)
+                    nlink = util.nlinks(f)
+                    if nlink < 1:
+                        nlink = 2 # force mktempcopy (issue1922)
+                    fd.close()
+            except (OSError, IOError), e:
+                if e.errno != errno.ENOENT:
+                    raise
+                nlink = 0
+                if not os.path.isdir(dirname):
+                    util.makedirs(dirname, self.createmode)
+            if nlink > 0:
+                if self._trustnlink is None:
+                    self._trustnlink = nlink > 1 or util.checknlink(f)
+                if nlink > 1 or not self._trustnlink:
+                    util.rename(util.mktempcopy(f), f)
+        fp = util.posixfile(f, mode)
+        if nlink == 0:
+            self._fixfilemode(f)
+        return fp
+
+    def symlink(self, src, dst):
+        self.auditor(dst)
+        linkname = os.path.join(self.base, dst)
+        try:
+            os.unlink(linkname)
+        except OSError:
+            pass
+
+        dirname = os.path.dirname(linkname)
+        if not os.path.exists(dirname):
+            util.makedirs(dirname, self.createmode)
+
+        if self._can_symlink:
+            try:
+                os.symlink(src, linkname)
+            except OSError, err:
+                raise OSError(err.errno, _('could not symlink to %r: %s') %
+                              (src, err.strerror), linkname)
+        else:
+            f = self(dst, "w")
+            f.write(src)
+            f.close()
+            self._fixfilemode(dst)

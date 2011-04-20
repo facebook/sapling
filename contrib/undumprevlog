@@ -4,12 +4,12 @@
 # $ undumprevlog < repo.dump
 
 import sys
-from mercurial import revlog, node, util, transaction
+from mercurial import revlog, node, scmutil, util, transaction
 
 for fp in (sys.stdin, sys.stdout, sys.stderr):
     util.set_binary(fp)
 
-opener = util.opener('.', False)
+opener = scmutil.opener('.', False)
 tr = transaction.transaction(sys.stderr.write, opener, "undump.journal")
 while 1:
     l = sys.stdin.readline()

@@ -16,7 +16,7 @@ map from a changeset hash to its hash in the source repository.
 from mercurial.i18n import _
 import os, tempfile
 from mercurial import bundlerepo, cmdutil, hg, merge, match
-from mercurial import patch, revlog, util, error
+from mercurial import patch, revlog, scmutil, util, error
 from mercurial import revset, templatekw
 
 class transplantentry(object):
@@ -31,7 +31,7 @@ class transplants(object):
         self.opener = opener
 
         if not opener:
-            self.opener = util.opener(self.path)
+            self.opener = scmutil.opener(self.path)
         self.transplants = {}
         self.dirty = False
         self.read()
@@ -74,7 +74,7 @@ class transplanter(object):
     def __init__(self, ui, repo):
         self.ui = ui
         self.path = repo.join('transplant')
-        self.opener = util.opener(self.path)
+        self.opener = scmutil.opener(self.path)
         self.transplants = transplants(self.path, 'transplants',
                                        opener=self.opener)
 

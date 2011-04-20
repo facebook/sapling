@@ -45,7 +45,7 @@ create other, independent patch queues with the :hg:`qqueue` command.
 from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
-from mercurial import commands, cmdutil, hg, patch, util
+from mercurial import commands, cmdutil, hg, patch, scmutil, util
 from mercurial import repair, extensions, url, error
 import os, sys, re, errno, shutil
 
@@ -259,7 +259,7 @@ class queue(object):
         except IOError:
             curpath = os.path.join(path, 'patches')
         self.path = patchdir or curpath
-        self.opener = util.opener(self.path)
+        self.opener = scmutil.opener(self.path)
         self.ui = ui
         self.applied_dirty = 0
         self.series_dirty = 0

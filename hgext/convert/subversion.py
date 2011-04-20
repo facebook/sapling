@@ -10,7 +10,7 @@ import tempfile
 import urllib
 import urllib2
 
-from mercurial import strutil, util, encoding
+from mercurial import strutil, scmutil, util, encoding
 from mercurial.i18n import _
 
 # Subversion stuff. Works best with very recent Python SVN bindings
@@ -998,8 +998,8 @@ class svn_sink(converter_sink, commandline):
             self.run0('checkout', path, wcpath)
 
             self.wc = wcpath
-        self.opener = util.opener(self.wc)
-        self.wopener = util.opener(self.wc)
+        self.opener = scmutil.opener(self.wc)
+        self.wopener = scmutil.opener(self.wc)
         self.childmap = mapfile(ui, self.join('hg-childmap'))
         self.is_exec = util.checkexec(self.wc) and util.is_exec or None
 

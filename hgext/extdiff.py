@@ -61,7 +61,7 @@ pretty fast (at least faster than having to compare the entire tree).
 
 from mercurial.i18n import _
 from mercurial.node import short, nullid
-from mercurial import cmdutil, util, commands, encoding
+from mercurial import cmdutil, scmutil, util, commands, encoding
 import os, shlex, shutil, tempfile, re
 
 def snapshot(ui, repo, files, node, tmproot):
@@ -81,7 +81,7 @@ def snapshot(ui, repo, files, node, tmproot):
     else:
         ui.note(_('making snapshot of %d files from working directory\n') %
             (len(files)))
-    wopener = util.opener(base)
+    wopener = scmutil.opener(base)
     fns_and_mtime = []
     ctx = repo[node]
     for fn in files:

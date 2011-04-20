@@ -10,7 +10,7 @@ from i18n import _
 import repo, changegroup, subrepo, discovery, pushkey
 import changelog, dirstate, filelog, manifest, context, bookmarks
 import lock, transaction, store, encoding
-import util, extensions, hook, error
+import scmutil, util, extensions, hook, error
 import match as matchmod
 import merge as mergemod
 import tags as tagsmod
@@ -32,8 +32,8 @@ class localrepository(repo.repository):
         self.path = os.path.join(self.root, ".hg")
         self.origroot = path
         self.auditor = util.path_auditor(self.root, self._checknested)
-        self.opener = util.opener(self.path)
-        self.wopener = util.opener(self.root)
+        self.opener = scmutil.opener(self.path)
+        self.wopener = scmutil.opener(self.root)
         self.baseui = baseui
         self.ui = baseui.copy()
 
@@ -90,7 +90,7 @@ class localrepository(repo.repository):
             if inst.errno != errno.ENOENT:
                 raise
 
-        self.store = store.store(requirements, self.sharedpath, util.opener)
+        self.store = store.store(requirements, self.sharedpath, scmutil.opener)
         self.spath = self.store.path
         self.sopener = self.store.opener
         self.sjoin = self.store.join

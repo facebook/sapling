@@ -18,7 +18,7 @@
 # s: "i hate that."
 
 from i18n import _
-import util, mdiff
+import scmutil, util, mdiff
 import sys, os
 
 class CantReprocessAndShowBase(Exception):
@@ -429,7 +429,7 @@ def simplemerge(ui, local, base, other, **opts):
 
     local = os.path.realpath(local)
     if not opts.get('print'):
-        opener = util.opener(os.path.dirname(local))
+        opener = scmutil.opener(os.path.dirname(local))
         out = opener(os.path.basename(local), "w", atomictemp=True)
     else:
         out = sys.stdout

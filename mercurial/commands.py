@@ -9,7 +9,7 @@ from node import hex, bin, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
 import os, re, sys, difflib, time, tempfile
-import hg, util, revlog, extensions, copies, error, bookmarks
+import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
 import patch, help, mdiff, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
@@ -975,7 +975,7 @@ def debugancestor(ui, repo, *args):
     """find the ancestor revision of two revisions in a given index"""
     if len(args) == 3:
         index, rev1, rev2 = args
-        r = revlog.revlog(util.opener(os.getcwd(), audit=False), index)
+        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), index)
         lookup = r.lookup
     elif len(args) == 2:
         if not repo:
@@ -1393,7 +1393,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
     spaces = opts.get('spaces')
     dots = opts.get('dots')
     if file_:
-        rlog = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
+        rlog = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
         revs = set((int(r) for r in revs))
         def events():
             for r in rlog:
@@ -1443,7 +1443,8 @@ def debugdata(ui, repo, file_, rev):
         if len(filelog):
             r = filelog
     if not r:
-        r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_[:-2] + ".i")
+        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False),
+                          file_[:-2] + ".i")
     try:
         ui.write(r.revision(r.lookup(rev)))
     except KeyError:
@@ -1482,7 +1483,7 @@ def debugindex(ui, repo, file_, **opts):
         raise util.Abort(_("unknown format %d") % format)
 
     if not r:
-        r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
+        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
 
     if format == 0:
         ui.write("   rev    offset  length   base linkrev"
@@ -1515,7 +1516,7 @@ def debugindexdot(ui, repo, file_):
         if len(filelog):
             r = filelog
     if not r:
-        r = revlog.revlog(util.opener(os.getcwd(), audit=False), file_)
+        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
     ui.write("digraph G {\n")
     for i in r:
         node = r.node(i)

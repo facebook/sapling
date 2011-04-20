@@ -8,7 +8,7 @@
 from i18n import _
 from node import hex
 import cmdutil
-import util, encoding
+import scmutil, util, encoding
 import cStringIO, os, tarfile, time, zipfile
 import zlib, gzip
 
@@ -187,7 +187,7 @@ class fileit(object):
 
     def __init__(self, name, mtime):
         self.basedir = name
-        self.opener = util.opener(self.basedir)
+        self.opener = scmutil.opener(self.basedir)
 
     def addfile(self, name, mode, islink, data):
         if islink:
