@@ -286,7 +286,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         similarity = float(opts.get('similarity') or 0)
     # we'd use status here, except handling of symlinks and ignore is tricky
     added, unknown, deleted, removed = [], [], [], []
-    audit_path = util.path_auditor(repo.root)
+    audit_path = scmutil.path_auditor(repo.root)
     m = match(repo, pats, opts)
     for abs in repo.walk(m):
         target = repo.wjoin(abs)

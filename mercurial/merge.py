@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, hex, bin
 from i18n import _
-import util, filemerge, copies, subrepo
+import scmutil, util, filemerge, copies, subrepo
 import errno, os, shutil
 
 class mergestate(object):
@@ -303,7 +303,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             repo.ui.debug("removing %s\n" % f)
             os.unlink(repo.wjoin(f))
 
-    audit_path = util.path_auditor(repo.root)
+    audit_path = scmutil.path_auditor(repo.root)
 
     numupdates = len(action)
     for i, a in enumerate(action):

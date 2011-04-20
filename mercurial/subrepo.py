@@ -8,7 +8,7 @@
 import errno, os, re, xml.dom.minidom, shutil, posixpath
 import stat, subprocess, tarfile
 from i18n import _
-import config, util, node, error, cmdutil, url, bookmarks
+import config, scmutil, util, node, error, cmdutil, url, bookmarks
 hg = None
 
 nullstate = ('', '', 'empty')
@@ -234,7 +234,7 @@ def subrepo(ctx, path):
     import hg as h
     hg = h
 
-    util.path_auditor(ctx._repo.root)(path)
+    scmutil.path_auditor(ctx._repo.root)(path)
     state = ctx.substate.get(path, nullstate)
     if state[2] not in types:
         raise util.Abort(_('unknown subrepo type %s') % state[2])

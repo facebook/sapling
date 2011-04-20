@@ -31,7 +31,7 @@ class localrepository(repo.repository):
         self.root = os.path.realpath(util.expandpath(path))
         self.path = os.path.join(self.root, ".hg")
         self.origroot = path
-        self.auditor = util.path_auditor(self.root, self._checknested)
+        self.auditor = scmutil.path_auditor(self.root, self._checknested)
         self.opener = scmutil.opener(self.path)
         self.wopener = scmutil.opener(self.root)
         self.baseui = baseui
