@@ -1092,6 +1092,9 @@ The full set of options is:
     Default is False.
 ``ipv6``
     Whether to use IPv6. Default is False.
+``logourl``
+    Base URL to use for logos. If unset, ``http://mercurial.selenic.com/``
+    will be used.
 ``name``
     Repository name to use in the web interface. Default is current
     working directory.

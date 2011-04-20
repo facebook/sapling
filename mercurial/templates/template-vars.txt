@@ -29,6 +29,7 @@ annotate      an annotated file
 entries       the entries relevant to the page
 
 url           base url of hgweb interface
+logourl       base url of logo
 staticurl     base url for static resources
 
 
