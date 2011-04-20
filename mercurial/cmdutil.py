@@ -429,7 +429,7 @@ def copy(ui, repo, pats, opts, rename=False):
     # relsrc: ossep
     # otarget: ossep
     def copyfile(abssrc, relsrc, otarget, exact):
-        abstarget = util.canonpath(repo.root, cwd, otarget)
+        abstarget = scmutil.canonpath(repo.root, cwd, otarget)
         reltarget = repo.pathto(abstarget, cwd)
         target = repo.wjoin(abstarget)
         src = repo.wjoin(abssrc)
@@ -497,7 +497,7 @@ def copy(ui, repo, pats, opts, rename=False):
     # return: function that takes hgsep and returns ossep
     def targetpathfn(pat, dest, srcs):
         if os.path.isdir(pat):
-            abspfx = util.canonpath(repo.root, cwd, pat)
+            abspfx = scmutil.canonpath(repo.root, cwd, pat)
             abspfx = util.localpath(abspfx)
             if destdirexists:
                 striplen = len(os.path.split(abspfx)[0])
@@ -523,7 +523,7 @@ def copy(ui, repo, pats, opts, rename=False):
             res = lambda p: os.path.join(dest,
                                          os.path.basename(util.localpath(p)))
         else:
-            abspfx = util.canonpath(repo.root, cwd, pat)
+            abspfx = scmutil.canonpath(repo.root, cwd, pat)
             if len(abspfx) < len(srcs[0][0]):
                 # A directory. Either the target path contains the last
                 # component of the source path or it does not.

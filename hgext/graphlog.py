@@ -18,7 +18,7 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import cmdutil, commands, extensions
-from mercurial import hg, util, graphmod
+from mercurial import hg, scmutil, util, graphmod
 
 ASCIIDATA = 'ASC'
 
@@ -250,7 +250,7 @@ def graphlog(ui, repo, path=None, **opts):
         return
 
     if path:
-        path = util.canonpath(repo.root, os.getcwd(), path)
+        path = scmutil.canonpath(repo.root, os.getcwd(), path)
     if path: # could be reset in canonpath
         revdag = graphmod.filerevs(repo, path, start, stop, limit)
     else:

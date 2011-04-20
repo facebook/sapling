@@ -21,7 +21,8 @@ class PatchError(Exception):
 # helper functions
 
 def copyfile(src, dst, basedir):
-    abssrc, absdst = [util.canonpath(basedir, basedir, x) for x in [src, dst]]
+    abssrc, absdst = [scmutil.canonpath(basedir, basedir, x)
+                        for x in [src, dst]]
     if os.path.lexists(absdst):
         raise util.Abort(_("cannot create %s: destination already exists") %
                          dst)

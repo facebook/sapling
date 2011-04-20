@@ -120,3 +120,51 @@ class opener(object):
             f.write(src)
             f.close()
             self._fixfilemode(dst)
+
+def canonpath(root, cwd, myname, auditor=None):
+    '''return the canonical path of myname, given cwd and root'''
+    if util.endswithsep(root):
+        rootsep = root
+    else:
+        rootsep = root + os.sep
+    name = myname
+    if not os.path.isabs(name):
+        name = os.path.join(root, cwd, name)
+    name = os.path.normpath(name)
+    if auditor is None:
+        auditor = util.path_auditor(root)
+    if name != rootsep and name.startswith(rootsep):
+        name = name[len(rootsep):]
+        auditor(name)
+        return util.pconvert(name)
+    elif name == root:
+        return ''
+    else:
+        # Determine whether `name' is in the hierarchy at or beneath `root',
+        # by iterating name=dirname(name) until that causes no change (can't
+        # check name == '/', because that doesn't work on windows).  For each
+        # `name', compare dev/inode numbers.  If they match, the list `rel'
+        # holds the reversed list of components making up the relative file
+        # name we want.
+        root_st = os.stat(root)
+        rel = []
+        while True:
+            try:
+                name_st = os.stat(name)
+            except OSError:
+                break
+            if util.samestat(name_st, root_st):
+                if not rel:
+                    # name was actually the same as root (maybe a symlink)
+                    return ''
+                rel.reverse()
+                name = os.path.join(*rel)
+                auditor(name)
+                return util.pconvert(name)
+            dirname, basename = os.path.split(name)
+            rel.append(basename)
+            if dirname == name:
+                break
+            name = dirname
+
+        raise util.Abort('%s not under root' % myname)

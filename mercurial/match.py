@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import util
+import scmutil, util
 from i18n import _
 
 class match(object):
@@ -269,7 +269,7 @@ def _normalize(names, default, root, cwd, auditor):
     pats = []
     for kind, name in [_patsplit(p, default) for p in names]:
         if kind in ('glob', 'relpath'):
-            name = util.canonpath(root, cwd, name, auditor)
+            name = scmutil.canonpath(root, cwd, name, auditor)
         elif kind in ('relglob', 'path'):
             name = util.normpath(name)
         elif kind in ('listfile', 'listfile0'):
