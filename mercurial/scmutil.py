@@ -9,9 +9,14 @@ from i18n import _
 import util, error
 import os, errno, stat
 
+def checkfilename(f):
+    '''Check that the filename f is an acceptable filename for a tracked file'''
+    if '\r' in f or '\n' in f:
+        raise util.Abort(_("'\\n' and '\\r' disallowed in filenames: %r") % f)
+
 def checkportable(ui, f):
     '''Check if filename f is portable and warn or abort depending on config'''
-    util.checkfilename(f)
+    checkfilename(f)
     val = ui.config('ui', 'portablefilenames', 'warn')
     lval = val.lower()
     abort = os.name == 'nt' or lval == 'abort'

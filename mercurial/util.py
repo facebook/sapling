@@ -445,11 +445,6 @@ def copyfiles(src, dst, hardlink=None):
 
     return hardlink, num
 
-def checkfilename(f):
-    '''Check that the filename f is an acceptable filename for a tracked file'''
-    if '\r' in f or '\n' in f:
-        raise Abort(_("'\\n' and '\\r' disallowed in filenames: %r") % f)
-
 _windows_reserved_filenames = '''con prn aux nul
     com1 com2 com3 com4 com5 com6 com7 com8 com9
     lpt1 lpt2 lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9'''.split()

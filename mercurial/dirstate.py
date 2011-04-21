@@ -7,7 +7,7 @@
 
 from node import nullid
 from i18n import _
-import util, ignore, osutil, parsers, encoding
+import scmutil, util, ignore, osutil, parsers, encoding
 import struct, os, stat, errno
 import cStringIO
 
@@ -269,7 +269,7 @@ class dirstate(object):
     def _addpath(self, f, check=False):
         oldstate = self[f]
         if check or oldstate == "r":
-            util.checkfilename(f)
+            scmutil.checkfilename(f)
             if f in self._dirs:
                 raise util.Abort(_('directory %r already in dirstate') % f)
             # shadows
