@@ -141,7 +141,10 @@ def _getfileinfo(name):
         _kernel32.CloseHandle(fh)
 
 def os_link(src, dst):
-    if not _kernel32.CreateHardLinkA(dst, src, None):
+    try:
+        if not _kernel32.CreateHardLinkA(dst, src, None):
+            _raiseoserror(src)
+    except AttributeError: # Wine doesn't support this function
         _raiseoserror(src)
 
 def nlinks(name):
