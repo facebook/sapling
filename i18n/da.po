@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-03-16 17:41+0100\n"
-"PO-Revision-Date: 2011-03-16 17:42+0100\n"
+"POT-Creation-Date: 2011-04-19 09:32+0200\n"
+"PO-Revision-Date: 2011-04-19 09:45+0200\n"
 "Last-Translator: <mg@lazybytes.net>\n"
 "Language-Team: Danish\n"
 "Language: Danish\n"
@@ -294,140 +294,231 @@ msgstr ""
 
 msgid ""
 "This hook extension adds comments on bugs in Bugzilla when changesets\n"
-"that refer to bugs by Bugzilla ID are seen. The hook does not change\n"
-"bug status."
+"that refer to bugs by Bugzilla ID are seen. The comment is formatted using\n"
+"the Mercurial template mechanism."
+msgstr ""
+
+msgid "The hook does not change bug status."
+msgstr ""
+
+msgid "Three basic modes of access to Bugzilla are provided:"
 msgstr ""
 
 msgid ""
-"The hook updates the Bugzilla database directly. Only Bugzilla\n"
-"installations using MySQL are supported."
+"1. Access via the Bugzilla XMLRPC interface. Requires Bugzilla 3.4 or later."
 msgstr ""
 
 msgid ""
-"The hook relies on a Bugzilla script to send bug change notification\n"
-"emails. That script changes between Bugzilla versions; the\n"
-"'processmail' script used prior to 2.18 is replaced in 2.18 and\n"
-"subsequent versions by 'config/sendbugmail.pl'. Note that these will\n"
-"be run by Mercurial as the user pushing the change; you will need to\n"
-"ensure the Bugzilla install file permissions are set appropriately."
+"2. Check data via the Bugzilla XMLRPC interface and submit bug change\n"
+"   via email to Bugzilla email interface. Requires Bugzilla 3.4 or later."
 msgstr ""
 
 msgid ""
-"The extension is configured through three different configuration\n"
-"sections. These keys are recognized in the [bugzilla] section:"
+"3. Writing directly to the Bugzilla database. Only Bugzilla installations\n"
+"   using MySQL are supported. Requires Python MySQLdb."
 msgstr ""
 
 msgid ""
-"host\n"
-"  Hostname of the MySQL server holding the Bugzilla database."
+"Writing directly to the database is susceptible to schema changes, and\n"
+"relies on a Bugzilla contrib script to send out bug change\n"
+"notification emails. This script runs as the user running Mercurial,\n"
+"must be run on the host with the Bugzilla install, and requires\n"
+"permission to read Bugzilla configuration details and the necessary\n"
+"MySQL user and password to have full access rights to the Bugzilla\n"
+"database. For these reasons this access mode is now considered\n"
+"deprecated, and will not be updated for new Bugzilla versions going\n"
+"forward."
 msgstr ""
 
 msgid ""
-"db\n"
-"  Name of the Bugzilla database in MySQL. Default 'bugs'."
+"Access via XMLRPC needs a Bugzilla username and password to be specified\n"
+"in the configuration. Comments are added under that username. Since the\n"
+"configuration must be readable by all Mercurial users, it is recommended\n"
+"that the rights of that user are restricted in Bugzilla to the minimum\n"
+"necessary to add comments."
 msgstr ""
 
 msgid ""
-"user\n"
-"  Username to use to access MySQL server. Default 'bugs'."
+"Access via XMLRPC/email uses XMLRPC to query Bugzilla, but sends\n"
+"email to the Bugzilla email interface to submit comments to bugs.\n"
+"The From: address in the email is set to the email address of the Mercurial\n"
+"user, so the comment appears to come from the Mercurial user. In the event\n"
+"that the Mercurial user email is not recognised by Bugzilla as a Bugzilla\n"
+"user, the email associated with the Bugzilla username used to log into\n"
+"Bugzilla is used instead as the source of the comment."
+msgstr ""
+
+msgid "Configuration items common to all access modes:"
 msgstr ""
 
 msgid ""
-"password\n"
+"bugzilla.version\n"
+"  This access type to use. Values recognised are:"
+msgstr ""
+
+msgid ""
+"  :``xmlrpc``:       Bugzilla XMLRPC interface.\n"
+"  :``xmlrpc+email``: Bugzilla XMLRPC and email interfaces.\n"
+"  :``3.0``:          MySQL access, Bugzilla 3.0 and later.\n"
+"  :``2.18``:         MySQL access, Bugzilla 2.18 and up to but not\n"
+"                     including 3.0.\n"
+"  :``2.16``:         MySQL access, Bugzilla 2.16 and up to but not\n"
+"                     including 2.18."
+msgstr ""
+
+msgid ""
+"bugzilla.regexp\n"
+"  Regular expression to match bug IDs in changeset commit message.\n"
+"  Must contain one \"()\" group. The default expression matches ``Bug\n"
+"  1234``, ``Bug no. 1234``, ``Bug number 1234``, ``Bugs 1234,5678``,\n"
+"  ``Bug 1234 and 5678`` and variations thereof. Matching is case\n"
+"  insensitive."
+msgstr ""
+
+msgid ""
+"bugzilla.style\n"
+"  The style file to use when formatting comments."
+msgstr ""
+
+msgid ""
+"bugzilla.template\n"
+"  Template to use when formatting comments. Overrides style if\n"
+"  specified. In addition to the usual Mercurial keywords, the\n"
+"  extension specifies:"
+msgstr ""
+
+msgid ""
+"  :``{bug}``:     The Bugzilla bug ID.\n"
+"  :``{root}``:    The full pathname of the Mercurial repository.\n"
+"  :``{webroot}``: Stripped pathname of the Mercurial repository.\n"
+"  :``{hgweb}``:   Base URL for browsing Mercurial repositories."
+msgstr ""
+
+msgid ""
+"  Default ``changeset {node|short} in repo {root} refers to bug\n"
+"  {bug}.\\ndetails:\\n\\t{desc|tabindent}``"
+msgstr ""
+
+msgid ""
+"bugzilla.strip\n"
+"  The number of path separator characters to strip from the front of\n"
+"  the Mercurial repository path (``{root}`` in templates) to produce\n"
+"  ``{webroot}``. For example, a repository with ``{root}``\n"
+"  ``/var/local/my-project`` with a strip of 2 gives a value for\n"
+"  ``{webroot}`` of ``my-project``. Default 0."
+msgstr ""
+
+msgid ""
+"web.baseurl\n"
+"  Base URL for browsing Mercurial repositories. Referenced from\n"
+"  templates as ``{hgweb}``."
+msgstr ""
+
+msgid "Configuration items common to XMLRPC+email and MySQL access modes:"
+msgstr ""
+
+msgid ""
+"bugzilla.usermap\n"
+"  Path of file containing Mercurial committer email to Bugzilla user email\n"
+"  mappings. If specified, the file should contain one mapping per\n"
+"  line::"
+msgstr ""
+
+msgid "    committer = Bugzilla user"
+msgstr ""
+
+msgid "  See also the ``[usermap]`` section."
+msgstr ""
+
+msgid ""
+"The ``[usermap]`` section is used to specify mappings of Mercurial\n"
+"committer email to Bugzilla user email. See also ``bugzilla.usermap``.\n"
+"Contains entries of the form ``committer = Bugzilla user``."
+msgstr ""
+
+msgid "XMLRPC access mode configuration:"
+msgstr ""
+
+msgid ""
+"bugzilla.bzurl\n"
+"  The base URL for the Bugzilla installation.\n"
+"  Default ``http://localhost/bugzilla``."
+msgstr ""
+
+msgid ""
+"bugzilla.user\n"
+"  The username to use to log into Bugzilla via XMLRPC. Default\n"
+"  ``bugs``."
+msgstr ""
+
+msgid ""
+"bugzilla.password\n"
+"  The password for Bugzilla login."
+msgstr ""
+
+msgid ""
+"XMLRPC+email access mode uses the XMLRPC access mode configuration items,\n"
+"and also:"
+msgstr ""
+
+msgid ""
+"bugzilla.bzemail\n"
+"  The Bugzilla email address."
+msgstr ""
+
+msgid ""
+"In addition, the Mercurial email settings must be configured. See the\n"
+"documentation in hgrc(5), sections ``[email]`` and ``[smtp]``."
+msgstr ""
+
+msgid "MySQL access mode configuration:"
+msgstr ""
+
+msgid ""
+"bugzilla.host\n"
+"  Hostname of the MySQL server holding the Bugzilla database.\n"
+"  Default ``localhost``."
+msgstr ""
+
+msgid ""
+"bugzilla.db\n"
+"  Name of the Bugzilla database in MySQL. Default ``bugs``."
+msgstr ""
+
+msgid ""
+"bugzilla.user\n"
+"  Username to use to access MySQL server. Default ``bugs``."
+msgstr ""
+
+msgid ""
+"bugzilla.password\n"
 "  Password to use to access MySQL server."
 msgstr ""
 
 msgid ""
-"timeout\n"
+"bugzilla.timeout\n"
 "  Database connection timeout (seconds). Default 5."
 msgstr ""
 
 msgid ""
-"version\n"
-"  Bugzilla version. Specify '3.0' for Bugzilla versions 3.0 and later,\n"
-"  '2.18' for Bugzilla versions from 2.18 and '2.16' for versions prior\n"
-"  to 2.18."
-msgstr ""
-
-msgid ""
-"bzuser\n"
+"bugzilla.bzuser\n"
 "  Fallback Bugzilla user name to record comments with, if changeset\n"
 "  committer cannot be found as a Bugzilla user."
 msgstr ""
 
 msgid ""
-"bzdir\n"
+"bugzilla.bzdir\n"
 "   Bugzilla install directory. Used by default notify. Default\n"
-"   '/var/www/html/bugzilla'."
+"   ``/var/www/html/bugzilla``."
 msgstr ""
 
 msgid ""
-"notify\n"
+"bugzilla.notify\n"
 "  The command to run to get Bugzilla to send bug change notification\n"
-"  emails. Substitutes from a map with 3 keys, 'bzdir', 'id' (bug id)\n"
-"  and 'user' (committer bugzilla email). Default depends on version;\n"
-"  from 2.18 it is \"cd %(bzdir)s && perl -T contrib/sendbugmail.pl\n"
-"  %(id)s %(user)s\"."
-msgstr ""
-
-msgid ""
-"regexp\n"
-"  Regular expression to match bug IDs in changeset commit message.\n"
-"  Must contain one \"()\" group. The default expression matches 'Bug\n"
-"  1234', 'Bug no. 1234', 'Bug number 1234', 'Bugs 1234,5678', 'Bug\n"
-"  1234 and 5678' and variations thereof. Matching is case insensitive."
-msgstr ""
-
-msgid ""
-"style\n"
-"  The style file to use when formatting comments."
-msgstr ""
-
-msgid ""
-"template\n"
-"  Template to use when formatting comments. Overrides style if\n"
-"  specified. In addition to the usual Mercurial keywords, the\n"
-"  extension specifies::"
-msgstr ""
-
-msgid ""
-"    {bug}       The Bugzilla bug ID.\n"
-"    {root}      The full pathname of the Mercurial repository.\n"
-"    {webroot}   Stripped pathname of the Mercurial repository.\n"
-"    {hgweb}     Base URL for browsing Mercurial repositories."
-msgstr ""
-
-msgid ""
-"  Default 'changeset {node|short} in repo {root} refers '\n"
-"          'to bug {bug}.\\ndetails:\\n\\t{desc|tabindent}'"
-msgstr ""
-
-msgid ""
-"strip\n"
-"  The number of slashes to strip from the front of {root} to produce\n"
-"  {webroot}. Default 0."
-msgstr ""
-
-msgid ""
-"usermap\n"
-"  Path of file containing Mercurial committer ID to Bugzilla user ID\n"
-"  mappings. If specified, the file should contain one mapping per\n"
-"  line, \"committer\"=\"Bugzilla user\". See also the [usermap] section."
-msgstr ""
-
-msgid ""
-"The [usermap] section is used to specify mappings of Mercurial\n"
-"committer ID to Bugzilla user ID. See also [bugzilla].usermap.\n"
-"\"committer\"=\"Bugzilla user\""
-msgstr ""
-
-msgid "Finally, the [web] section supports one entry:"
-msgstr ""
-
-msgid ""
-"baseurl\n"
-"  Base URL for browsing Mercurial repositories. Reference from\n"
-"  templates as {hgweb}."
+"  emails. Substitutes from a map with 3 keys, ``bzdir``, ``id`` (bug\n"
+"  id) and ``user`` (committer bugzilla email). Default depends on\n"
+"  version; from 2.18 it is \"cd %(bzdir)s && perl -T\n"
+"  contrib/sendbugmail.pl %(id)s %(user)s\"."
 msgstr ""
 
 msgid "Activating the extension::"
@@ -446,13 +537,92 @@ msgid ""
 "    incoming.bugzilla = python:hgext.bugzilla.hook"
 msgstr ""
 
-msgid "Example configuration:"
+msgid "Example configurations:"
+msgstr "Eksempelkonfigurationer:"
+
+msgid ""
+"XMLRPC example configuration. This uses the Bugzilla at\n"
+"``http://my-project.org/bugzilla``, logging in as user\n"
+"``bugmail@my-project.org`` with password ``plugh``. It is used with a\n"
+"collection of Mercurial repositories in ``/var/local/hg/repos/``,\n"
+"with a web interface at ``http://my-project.org/hg``. ::"
 msgstr ""
 
 msgid ""
-"This example configuration is for a collection of Mercurial\n"
-"repositories in /var/local/hg/repos/ used with a local Bugzilla 3.2\n"
-"installation in /opt/bugzilla-3.2. ::"
+"    [bugzilla]\n"
+"    bzurl=http://my-project.org/bugzilla\n"
+"    user=bugmail@my-project.org\n"
+"    password=plugh\n"
+"    version=xmlrpc\n"
+"    template=Changeset {node|short} in {root|basename}.\n"
+"             {hgweb}/{webroot}/rev/{node|short}\\n\n"
+"             {desc}\\n\n"
+"    strip=5"
+msgstr ""
+"    [bugzilla]\n"
+"    bzurl=http://my-project.org/bugzilla\n"
+"    user=bugmail@my-project.org\n"
+"    password=plugh\n"
+"    version=xmlrpc\n"
+"    template=Changeset {node|short} in {root|basename}.\n"
+"             {hgweb}/{webroot}/rev/{node|short}\\n\n"
+"             {desc}\\n\n"
+"    strip=5"
+
+msgid ""
+"    [web]\n"
+"    baseurl=http://my-project.org/hg"
+msgstr ""
+"    [web]\n"
+"    baseurl=http://my-project.org/hg"
+
+msgid ""
+"XMLRPC+email example configuration. This uses the Bugzilla at\n"
+"``http://my-project.org/bugzilla``, logging in as user\n"
+"``bugmail@my-project.org`` wityh password ``plugh``. It is used with a\n"
+"collection of Mercurial repositories in ``/var/local/hg/repos/``,\n"
+"with a web interface at ``http://my-project.org/hg``. Bug comments\n"
+"are sent to the Bugzilla email address\n"
+"``bugzilla@my-project.org``. ::"
+msgstr ""
+
+msgid ""
+"    [bugzilla]\n"
+"    bzurl=http://my-project.org/bugzilla\n"
+"    user=bugmail@my-project.org\n"
+"    password=plugh\n"
+"    version=xmlrpc\n"
+"    bzemail=bugzilla@my-project.org\n"
+"    template=Changeset {node|short} in {root|basename}.\n"
+"             {hgweb}/{webroot}/rev/{node|short}\\n\n"
+"             {desc}\\n\n"
+"    strip=5"
+msgstr ""
+"    [bugzilla]\n"
+"    bzurl=http://my-project.org/bugzilla\n"
+"    user=bugmail@my-project.org\n"
+"    password=plugh\n"
+"    version=xmlrpc\n"
+"    bzemail=bugzilla@my-project.org\n"
+"    template=Changeset {node|short} in {root|basename}.\n"
+"             {hgweb}/{webroot}/rev/{node|short}\\n\n"
+"             {desc}\\n\n"
+"    strip=5"
+
+msgid ""
+"    [usermap]\n"
+"    user@emaildomain.com=user.name@bugzilladomain.com"
+msgstr ""
+"    [usermap]\n"
+"    user@emaildomain.com=user.name@bugzilladomain.com"
+
+msgid ""
+"MySQL example configuration. This has a local Bugzilla 3.2 installation\n"
+"in ``/opt/bugzilla-3.2``. The MySQL database is on ``localhost``,\n"
+"the Bugzilla database name is ``bugs`` and MySQL is\n"
+"accessed with MySQL username ``bugs`` password ``XYZZY``. It is used\n"
+"with a collection of Mercurial repositories in ``/var/local/hg/repos/``,\n"
+"with a web interface at ``http://my-project.org/hg``. ::"
 msgstr ""
 
 msgid ""
@@ -478,30 +648,20 @@ msgstr ""
 "             {desc}\\n\n"
 "    strip=5"
 
-msgid ""
-"    [web]\n"
-"    baseurl=http://dev.domain.com/hg"
-msgstr ""
-"    [web]\n"
-"    baseurl=http://dev.domain.com/hg"
-
-msgid ""
-"    [usermap]\n"
-"    user@emaildomain.com=user.name@bugzilladomain.com"
-msgstr ""
-"    [usermap]\n"
-"    user@emaildomain.com=user.name@bugzilladomain.com"
-
-msgid "Commits add a comment to the Bugzilla bug record of the form::"
+msgid "All the above add a comment to the Bugzilla bug record of the form::"
 msgstr ""
 
 msgid ""
 "    Changeset 3b16791d6642 in repository-name.\n"
-"    http://dev.domain.com/hg/repository-name/rev/3b16791d6642"
+"    http://my-project.org/hg/repository-name/rev/3b16791d6642"
 msgstr ""
 
 msgid "    Changeset commit comment. Bug 1234.\n"
 msgstr ""
+
+#, python-format
+msgid "python mysql support not available: %s"
+msgstr "python mysql-understøttelse ikke tilgængelig: %s"
 
 #, python-format
 msgid "connecting to %s:%s as %s, password %s\n"
@@ -552,6 +712,13 @@ msgstr "kan ikke finde bugzilla bruger-id for %s"
 msgid "cannot find bugzilla user id for %s or %s"
 msgstr "kan ikke finde bugzilla bruger-id for %s eller %s"
 
+msgid "configuration 'bzemail' missing"
+msgstr "konfigurationen af 'bzemail' mangler"
+
+#, python-format
+msgid "default bugzilla user %s email not found"
+msgstr ""
+
 #, python-format
 msgid "bugzilla version %s not supported"
 msgstr "bugzilla version %s ikke understøttet"
@@ -563,16 +730,12 @@ msgid ""
 msgstr ""
 
 #, python-format
-msgid "python mysql support not available: %s"
-msgstr "python mysql-understøttelse ikke tilgængelig: %s"
-
-#, python-format
 msgid "hook type %s does not pass a changeset id"
 msgstr ""
 
 #, python-format
-msgid "database error: %s"
-msgstr "databasefejl: %s"
+msgid "Bugzilla error: %s"
+msgstr "Bugzilla fejl: %s"
 
 msgid "command to display child changesets"
 msgstr "kommando til at vise børne-ændringer"
@@ -736,12 +899,11 @@ msgid "colorize output from some commands"
 msgstr "farvelæg output for nogle kommandoer"
 
 msgid ""
-"This extension modifies the status and resolve commands to add color to "
-"their\n"
-"output to reflect file status, the qseries command to add color to reflect\n"
-"patch status (applied, unapplied, missing), and to diff-related\n"
-"commands to highlight additions, removals, diff headers, and trailing\n"
-"whitespace."
+"This extension modifies the status and resolve commands to add color\n"
+"to their output to reflect file status, the qseries command to add\n"
+"color to reflect patch status (applied, unapplied, missing), and to\n"
+"diff-related commands to highlight additions, removals, diff headers,\n"
+"and trailing whitespace."
 msgstr ""
 "Denne udvidelse ændrer status- og resolve-kommandoerne så de tilføjer\n"
 "farve til deres output for at afspejle filstatus, qseries-kommandoen\n"
@@ -1332,6 +1494,15 @@ msgstr "ignoreret af kompatibilitetsgrunde"
 msgid "hg debugcvsps [OPTION]... [PATH]..."
 msgstr "hg debugcvsps [TILVALG]... [STI]..."
 
+msgid ":svnrev: String. Converted subversion revision number."
+msgstr ""
+
+msgid ":svnpath: String. Converted subversion revision project path."
+msgstr ""
+
+msgid ":svnuuid: String. Converted subversion revision repository identifier."
+msgstr ""
+
 #, python-format
 msgid "%s does not look like a Bazaar repository"
 msgstr "%s ser ikke ud som et Bazaar depot"
@@ -1664,6 +1835,9 @@ msgstr "bortfiltrerer tom revision\n"
 msgid "updating tags\n"
 msgstr "opdaterer mærkater\n"
 
+msgid "updating bookmarks\n"
+msgstr "opdaterer bogmærker\n"
+
 #, python-format
 msgid "%s is not a valid start revision"
 msgstr "%s er ikke en gyldig startrevision"
@@ -1676,9 +1850,44 @@ msgstr "ignorerer: %s\n"
 msgid "%s does not look like a monotone repository"
 msgstr "%s ser ikke ud som et monotone depot"
 
+msgid "bad mtn packet - no end of commandnbr"
+msgstr ""
+
+#, python-format
+msgid "bad mtn packet - bad stream type %s"
+msgstr ""
+
+msgid "bad mtn packet - no divider before size"
+msgstr ""
+
+msgid "bad mtn packet - no end of packet size"
+msgstr ""
+
+#, python-format
+msgid "bad mtn packet - bad packet size %s"
+msgstr ""
+
+#, python-format
+msgid "bad mtn packet - unable to read full packet read %s of %s"
+msgstr ""
+
+#, python-format
+msgid "mtn command '%s' returned %s"
+msgstr "mtn kommando '%s' returnerede %s"
+
 #, python-format
 msgid "copying file in renamed directory from '%s' to '%s'"
 msgstr "kopierer fil i omdøbt katalog fra '%s' til '%s'"
+
+msgid "unable to determine mtn automate interface version"
+msgstr ""
+
+#, python-format
+msgid "mtn automate stdio header unexpected: %s"
+msgstr ""
+
+msgid "failed to reach end of mtn automate stdio headers"
+msgstr ""
 
 #, python-format
 msgid "%s does not look like a P4 repository"
@@ -1935,11 +2144,13 @@ msgstr ""
 
 msgid ""
 "The ``win32text.forbid*`` hooks provided by the win32text extension\n"
-"have been unified into a single hook named ``eol.hook``. The hook will\n"
-"lookup the expected line endings from the ``.hgeol`` file, which means\n"
-"you must migrate to a ``.hgeol`` file first before using the hook.\n"
-"Remember to enable the eol extension in the repository where you\n"
-"install the hook."
+"have been unified into a single hook named ``eol.checkheadshook``. The\n"
+"hook will lookup the expected line endings from the ``.hgeol`` file,\n"
+"which means you must migrate to a ``.hgeol`` file first before using\n"
+"the hook. ``eol.checkheadshook`` only checks heads, intermediate\n"
+"invalid revisions will be pushed. To forbid them completely, use the\n"
+"``eol.checkallhook`` hook. These hooks are best used as\n"
+"``pretxnchangegroup`` hooks."
 msgstr ""
 
 msgid ""
@@ -1950,23 +2161,22 @@ msgstr ""
 "glob-mønstre.\n"
 
 #, python-format
-msgid "%s should not have CRLF line endings"
-msgstr "%s skulle ikke have CRLF linieskift"
-
-#, python-format
-msgid "%s should not have LF line endings"
-msgstr "%s skulle ikke have LF linieskift"
+msgid "ignoring unknown EOL style '%s' from %s\n"
+msgstr "ignorerer ukendt linieskifttype '%s' fra %s\n"
 
 #, python-format
 msgid "warning: ignoring .hgeol file due to parse error at %s: %s\n"
 msgstr ""
 
+#, python-format
+msgid "  %s in %s should not have %s line endings"
+msgstr "  %s i %s skulle ikke have %s linieskift"
+
+msgid "end-of-line check failed:\n"
+msgstr ""
+
 msgid "the eol extension is incompatible with the win32text extension\n"
 msgstr "eol-udvidelsen er inkompatibel med win32text-udvidelsen\n"
-
-#, python-format
-msgid "ignoring unknown EOL style '%s' from %s\n"
-msgstr "ignorerer ukendt linieskifttype '%s' fra %s\n"
 
 #, python-format
 msgid "inconsistent newline style in %s\n"
@@ -2873,17 +3083,17 @@ msgid ""
 "available templates and filters."
 msgstr ""
 
-msgid "Three additional date template filters are provided::"
+msgid "Three additional date template filters are provided:"
 msgstr ""
 
 msgid ""
-"    utcdate      \"2006/09/18 15:13:13\"\n"
-"    svnutcdate   \"2006-09-18 15:13:13Z\"\n"
-"    svnisodate   \"2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)\""
+":``utcdate``:    \"2006/09/18 15:13:13\"\n"
+":``svnutcdate``: \"2006-09-18 15:13:13Z\"\n"
+":``svnisodate``: \"2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)\""
 msgstr ""
-"    utcdate      \"2006/09/18 15:13:13\"\n"
-"    svnutcdate   \"2006-09-18 15:13:13Z\"\n"
-"    svnisodate   \"2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)\""
+":``utcdate``:    \"2006/09/18 15:13:13\"\n"
+":``svnutcdate``: \"2006-09-18 15:13:13Z\"\n"
+":``svnisodate``: \"2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)\""
 
 msgid ""
 "The default template mappings (view with :hg:`kwdemo -d`) can be\n"
@@ -3609,14 +3819,15 @@ msgid ""
 "    With -g/--git, patches imported with --rev will use the git diff\n"
 "    format. See the diffs help topic for information on why this is\n"
 "    important for preserving rename/copy information and permission\n"
-"    changes."
+"    changes. Use :hg:`qfinish` to remove changesets from mq control."
 msgstr ""
-"    En eksisterende ændrin kan blive sat under mq kontrol med -r/--rev\n"
+"    En eksisterende ændring kan blive sat under mq kontrol med -r/--rev\n"
 "    (e.g. qimport --rev tip -n patch vil sætte tip under mq kontrol).\n"
 "    Med -g/--git vil patches importeret med --rev bruge git diff\n"
 "    formatet. Se 'hg help diffs' for mere information om hvorfor dette\n"
 "    er vigtigt for at bevare omdøbnings/kopierings-information og\n"
-"    ændriner i rettigheder."
+"    ændriner i rettigheder. Brug :hg:`qfinish` for at fjerne ændringer\n"
+"    fra mq."
 
 msgid ""
 "    To import a patch from standard input, pass - as the patch file.\n"
@@ -3929,13 +4140,6 @@ msgstr ""
 "    Når -f/--force er angivet, så vil alle lokale ændringer i de\n"
 "    rettede filer gå tabt."
 
-msgid ""
-"    Return 0 on succces.\n"
-"    "
-msgstr ""
-"    Returnerer 0 ved succes.\n"
-"    "
-
 msgid "no saved queues found, please use -n\n"
 msgstr "fandt ingen gemte køer, brug venligst -r\n"
 
@@ -4053,12 +4257,12 @@ msgstr ""
 "    eksempel::"
 
 msgid ""
-"        qguard foo.patch -stable    (negative guard)\n"
-"        qguard bar.patch +stable    (positive guard)\n"
+"        qguard foo.patch -- -stable    (negative guard)\n"
+"        qguard bar.patch    +stable    (positive guard)\n"
 "        qselect stable"
 msgstr ""
-"        qguard foo.patch -stable    (negativt filter)\n"
-"        qguard bar.patch +stable    (positivt filter)\n"
+"        qguard foo.patch -- -stable    (negativt filter)\n"
+"        qguard bar.patch    +stable    (positivt filter)\n"
 "        qselect stable"
 
 msgid ""
@@ -4805,8 +5009,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"To configure other defaults, add a section like this to your hgrc\n"
-"file::"
+"To configure other defaults, add a section like this to your\n"
+"configuration file::"
 msgstr ""
 
 msgid ""
@@ -5311,6 +5515,9 @@ msgid ""
 "    "
 msgstr ""
 
+msgid "message can only be specified with collapse"
+msgstr ""
+
 msgid "cannot use both abort and continue"
 msgstr "abort og continue kan ikke angives samtidig"
 
@@ -5323,6 +5530,9 @@ msgstr "continue eller abort kan ikke angives samtidig med detach"
 msgid "abort and continue do not allow specifying revisions"
 msgstr "abort og continue tillader ikke at der angives revisioner"
 
+msgid "tool option will be ignored\n"
+msgstr ""
+
 msgid "cannot specify both a revision and a base"
 msgstr "man kan ikke angive både en revision og en basis"
 
@@ -5334,9 +5544,6 @@ msgstr "kan ikke angive --rev og --change på samme tid"
 
 msgid "nothing to rebase\n"
 msgstr ""
-
-msgid "cannot use both keepbranches and extrafn"
-msgstr "man kan ikke bruge både keepbranches og extrafn"
 
 msgid "rebasing"
 msgstr ""
@@ -5407,6 +5614,12 @@ msgstr ""
 msgid "collapse the rebased changesets"
 msgstr ""
 
+msgid "use text as collapse commit message"
+msgstr "brug tekst som deponeringsbesked"
+
+msgid "read collapse commit message from file"
+msgstr "læs deponeringsbeskeden fra fil"
+
 msgid "keep original changesets"
 msgstr "behold de originale ændringer"
 
@@ -5415,6 +5628,9 @@ msgstr "behold originale grennavne"
 
 msgid "force detaching of source from its original branch"
 msgstr ""
+
+msgid "specify merge tool"
+msgstr "angiv sammenføjningsværktøj"
 
 msgid "continue an interrupted rebase"
 msgstr ""
@@ -5536,6 +5752,17 @@ msgstr "      ? - vis hjælp"
 msgid "    This command is not available when committing a merge."
 msgstr ""
 
+msgid "interactively record a new patch"
+msgstr "vælg ændringer interaktivt til deponering"
+
+msgid ""
+"    See :hg:`help qnew` & :hg:`help record` for more information and\n"
+"    usage.\n"
+"    "
+msgstr ""
+"    Se :hg:`help qnew` & :hg:`help record` for mere information.\n"
+"    "
+
 msgid "'mq' extension not loaded"
 msgstr "'mq' udvidelsen er ikke indlæst"
 
@@ -5641,7 +5868,7 @@ msgid "relinking"
 msgstr "sammenkæder"
 
 #, python-format
-msgid "relinked %d files (%d bytes reclaimed)\n"
+msgid "relinked %d files (%s reclaimed)\n"
 msgstr ""
 
 msgid "[ORIGIN]"
@@ -5709,6 +5936,10 @@ msgstr ""
 msgid ""
 "You can override a predefined scheme by defining a new scheme with the\n"
 "same name.\n"
+msgstr ""
+
+#, python-format
+msgid "custom scheme %s:// conflicts with drive letter %s:\\\n"
 msgstr ""
 
 msgid "share a common history between several working directories"
@@ -5799,6 +6030,9 @@ msgstr ""
 
 msgid "commit failed"
 msgstr "deponering fejlede"
+
+msgid "filter corrupted changeset (no user or date)"
+msgstr "filtrer ødelagte ændringer (ingen bruger eller dato)"
 
 msgid ""
 "y: transplant this changeset\n"
@@ -5899,6 +6133,11 @@ msgstr "udestående lokale ændringer"
 msgid ""
 "``transplanted(set)``\n"
 "    Transplanted changesets in set."
+msgstr ""
+
+msgid ""
+":transplanted: String. The node identifier of the transplanted\n"
+"    changeset if any."
 msgstr ""
 
 msgid "pull patches from REPO"
@@ -6160,6 +6399,18 @@ msgstr "arkiverer"
 #, python-format
 msgid "bookmark '%s' contains illegal character"
 msgstr ""
+
+#, python-format
+msgid "branch %s not found"
+msgstr "gren %s blev ikke fundet"
+
+#, python-format
+msgid "updating bookmark %s\n"
+msgstr "opdaterer bogmærke %s\n"
+
+#, python-format
+msgid "not updating divergent bookmark %s\n"
+msgstr "opdaterer ikke divergerende bogmærke %s\n"
 
 msgid "searching for changed bookmarks\n"
 msgstr "leder efter ændrede bogmærker\n"
@@ -6699,7 +6950,8 @@ msgstr "Den første dårlige revision er:\n"
 #, python-format
 msgid ""
 "Not all ancestors of this changeset have been checked.\n"
-"To check the other ancestors, start from the common ancestor, %s.\n"
+"Use bisect --extend to continue the bisection from\n"
+"the common ancestor, %s.\n"
 msgstr ""
 
 msgid "Due to skipped revisions, the first good revision could be any of:\n"
@@ -6735,6 +6987,13 @@ msgstr "%s dræbt"
 #, python-format
 msgid "Changeset %d:%s: %s\n"
 msgstr "Ændring %d:%s: %s\n"
+
+#, python-format
+msgid "Extending search to changeset %d:%s\n"
+msgstr "Udvider søgning til ændring %d:%s\n"
+
+msgid "nothing to extend"
+msgstr "kan ikke udvidde"
 
 #, python-format
 msgid "Testing changeset %d:%s (%d changesets remaining, ~%d tests)\n"
@@ -6781,11 +7040,13 @@ msgstr ""
 "    bookmark-udviddelsen skal være slået til.\n"
 "    "
 
-msgid "a bookmark of this name does not exist"
-msgstr "et bogmærke med dette navn findes ikke"
+#, python-format
+msgid "bookmark '%s' does not exist"
+msgstr "mærkaten '%s' eksisterer ikke"
 
-msgid "a bookmark of the same name already exists"
-msgstr "et bogmærke med samme navn findes allerede"
+#, python-format
+msgid "bookmark '%s' already exists (use -f to force)"
+msgstr "mærkaten '%s' eksisterer allerede (brug -f for at gennemtvinge)"
 
 msgid "new bookmark name required"
 msgstr "nyt bogmærkenavn påkrævet"
@@ -7144,6 +7405,10 @@ msgstr ""
 msgid "can only close branch heads"
 msgstr "kan kun lukke grenhoveder"
 
+#, python-format
+msgid "nothing changed (%d missing files, see 'hg status')\n"
+msgstr ""
+
 msgid "nothing changed\n"
 msgstr "ingen ændringer\n"
 
@@ -7314,6 +7579,29 @@ msgstr ""
 msgid "only one config item permitted"
 msgstr ""
 
+msgid "test whether node ids are known to a repo"
+msgstr ""
+
+msgid ""
+"    Every ID must be a full-length hex node id string. Returns a list of 0s "
+"and 1s\n"
+"    indicating unknown/known.\n"
+"    "
+msgstr ""
+
+msgid "lists the contents of a bundle"
+msgstr "vis indholdet af et bundt"
+
+msgid "retrieves a bundle from a repo"
+msgstr ""
+
+msgid ""
+"    Every ID must be a full-length hex node id string. Saves the bundle to "
+"the\n"
+"    given file.\n"
+"    "
+msgstr ""
+
 msgid "access the pushkey key/value protocol"
 msgstr ""
 
@@ -7410,28 +7698,6 @@ msgid "Checking templates...\n"
 msgstr ""
 
 msgid " (templates seem to have been installed incorrectly)\n"
-msgstr ""
-
-msgid "Checking patch...\n"
-msgstr ""
-
-msgid " patch call failed:\n"
-msgstr ""
-
-msgid " unexpected patch output!\n"
-msgstr ""
-
-msgid " patch test failed!\n"
-msgstr ""
-
-msgid ""
-" (Current patch tool may be incompatible with patch, or misconfigured. "
-"Please check your configuration file)\n"
-msgstr ""
-
-msgid ""
-" Internal patcher failure, please report this error to http://mercurial."
-"selenic.com/wiki/BugTracker\n"
 msgstr ""
 
 msgid "Checking commit editor...\n"
@@ -7742,6 +8008,10 @@ msgstr ""
 "detaljer"
 
 #, python-format
+msgid "use \"hg help %s\" to show the full help text"
+msgstr "brug \"hg help %s\" for at se udførlig hjælp"
+
+#, python-format
 msgid "use \"hg -v help%s\" to show builtin aliases and global options"
 msgstr ""
 "brug \"hg -v help%s\" for at vise indbyggede aliaser og globale "
@@ -7840,7 +8110,14 @@ msgid "identify the working copy or specified revision"
 msgstr ""
 
 msgid ""
-"    With no revision, print a summary of the current state of the\n"
+"    Print a summary identifiying the repository state at REV\n"
+"    using one or two parent hash identifiers, followed by a\n"
+"    \"+\" if there are uncommitted changes in the working directory,\n"
+"    the branch name (omitted if default) and a list of tags, bookmarks."
+msgstr ""
+
+msgid ""
+"    When REV is not given, print a summary of the current state of the\n"
 "    repository."
 msgstr ""
 
@@ -7849,14 +8126,7 @@ msgid ""
 "    cause lookup to operate on that repository/bundle."
 msgstr ""
 
-msgid ""
-"    This summary identifies the repository state using one or two\n"
-"    parent hash identifiers, followed by a \"+\" if there are\n"
-"    uncommitted changes in the working directory, a list of tags for\n"
-"    this revision and a branch name for non-default branches."
-msgstr ""
-
-msgid "can't query remote revision number, branch, tags, or bookmarks"
+msgid "can't query remote revision number, branch, or tags"
 msgstr ""
 
 msgid "import an ordered set of patches"
@@ -8099,7 +8369,7 @@ msgstr ""
 msgid ""
 "    ``--tool`` can be used to specify the merge tool used for file\n"
 "    merges. It overrides the HGMERGE environment variable and your\n"
-"    configuration files."
+"    configuration files. See :hg:`help merge-tools` for options."
 msgstr ""
 
 msgid ""
@@ -8238,6 +8508,12 @@ msgstr "opdaterer ikke idet nye hoveder er tilføjet\n"
 
 msgid "(run 'hg heads' to see heads, 'hg merge' to merge)\n"
 msgstr "(kør 'hg heads' for at se hoveder, 'hg merge' for at sammenføje)\n"
+
+msgid "(run 'hg heads .' to see heads, 'hg merge' to merge)\n"
+msgstr "(kør 'hg heads .' for at se hoveder, 'hg merge' for at sammenføje)\n"
+
+msgid "(run 'hg heads' to see heads)\n"
+msgstr "(kør 'hg heads' for at se hoveder)\n"
 
 msgid "(run 'hg update' to get a working copy)\n"
 msgstr "(kør 'hg update' for at få en arbejdskopi)\n"
@@ -8582,8 +8858,9 @@ msgid ""
 msgstr ""
 
 msgid ""
-"    If a file has been deleted, it is restored. If the executable mode\n"
-"    of a file was changed, it is reset."
+"    If a file has been deleted, it is restored. Files scheduled for\n"
+"    addition are just unscheduled and left as they are. If the\n"
+"    executable mode of a file was changed, it is reset."
 msgstr ""
 
 msgid ""
@@ -9333,9 +9610,6 @@ msgstr ""
 msgid "parent to choose when backing out merge"
 msgstr ""
 
-msgid "specify merge tool"
-msgstr "angiv sammenføjningsværktøj"
-
 msgid "revision to backout"
 msgstr "revision som skal bakkes ud"
 
@@ -9353,6 +9627,9 @@ msgstr "marker ændring som dårlig"
 
 msgid "skip testing changeset"
 msgstr "spring testen af denne ændring over"
+
+msgid "extend the bisect range"
+msgstr "udvid halveringsområdet"
 
 msgid "use command to check changeset state"
 msgstr "brug kommando for at kontrollere tilstanden af ændringen"
@@ -9474,6 +9751,9 @@ msgstr ""
 msgid "[OPTION]... TEXT"
 msgstr "[TILVALG]... TEKST"
 
+msgid "show all details"
+msgstr "vis alle detaljer"
+
 msgid "[COMMAND]"
 msgstr "[KOMMANDO]"
 
@@ -9510,7 +9790,19 @@ msgstr "FIL REV"
 msgid "[PATH]"
 msgstr "[STI]"
 
+msgid "id of head node"
+msgstr ""
+
+msgid "id of common node"
+msgstr "id på fælles knude"
+
+msgid "REPO FILE [-H|-C ID]..."
+msgstr ""
+
 msgid "revlog format"
+msgstr ""
+
+msgid "REPO ID..."
 msgstr ""
 
 msgid "REPO NAMESPACE [KEY OLD NEW]"
@@ -9534,11 +9826,17 @@ msgstr "REV1 [REV2]"
 msgid "do not display the saved mtime"
 msgstr "vis ikke den gemte mtime"
 
+msgid "sort by saved mtime"
+msgstr "sorter efter den gemte mtime"
+
 msgid "[OPTION]..."
 msgstr "[TILVALG]..."
 
 msgid "revision to check"
 msgstr "revision som skal undersøges"
+
+msgid "REPO [OPTIONS]... [ONE [TWO]]"
+msgstr "DEPOT [TILVALG]... [EN [TO]]"
 
 msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
 msgstr "[TILVALG]... ([-c REV] | [-r REV1 [-r REV2]]) [FIL]..."
@@ -10012,10 +10310,6 @@ msgstr ""
 
 msgid "working directory state appears damaged!"
 msgstr "arbejdskatalogtilstand virker beskadiget!"
-
-#, python-format
-msgid "'\\n' and '\\r' disallowed in filenames: %r"
-msgstr "'\\n' og '\\r' må ikke forekomme i filnavne: %r"
 
 #, python-format
 msgid "directory %r already in dirstate"
@@ -10566,29 +10860,29 @@ msgid "- ``1165432709 0`` (Wed Dec 6 13:18:29 2006 UTC)"
 msgstr "- ``1165432709 0`` (Ons 6. dec. 13:18:29 2006 UTC)"
 
 msgid ""
-"This is the internal representation format for dates. unixtime is the\n"
-"number of seconds since the epoch (1970-01-01 00:00 UTC). offset is\n"
-"the offset of the local timezone, in seconds west of UTC (negative if\n"
-"the timezone is east of UTC)."
+"This is the internal representation format for dates. The first number\n"
+"is the number of seconds since the epoch (1970-01-01 00:00 UTC). The\n"
+"second is the offset of the local timezone, in seconds west of UTC\n"
+"(negative if the timezone is east of UTC)."
 msgstr ""
-"Dette er den interne repræsentation af datoer. unixtime er\n"
+"Dette er den interne repræsentation af datoer. Det første tal er\n"
 "antallet af sekunder siden begyndelsen af epoken (1970-01-01 00:00\n"
-"UTC). offset er den lokale tidszone, angivet i antal sekunder vest\n"
-"for UTC (negativ hvis tidszonen er øst for UTC)."
+"UTC). Det andet tal er den lokale tidszone, angivet i antal sekunder\n"
+"vest for UTC (negativ hvis tidszonen er øst for UTC)."
 
 msgid "The log command also accepts date ranges:"
 msgstr "Kommandoen log accepterer også datointervaller:"
 
 msgid ""
-"- ``<{datetime}`` - at or before a given date/time\n"
-"- ``>{datetime}`` - on or after a given date/time\n"
-"- ``{datetime} to {datetime}`` - a date range, inclusive\n"
-"- ``-{days}`` - within a given number of days of today\n"
+"- ``<DATE`` - at or before a given date/time\n"
+"- ``>DATE`` - on or after a given date/time\n"
+"- ``DATE to DATE`` - a date range, inclusive\n"
+"- ``-DAYS`` - within a given number of days of today\n"
 msgstr ""
-"- ``<{date}`` - på eller før den angivne dato/tidspunkt\n"
-"- ``>{date}`` - på eller efter den angivne dato/tidspunkt\n"
-"- ``{date} to {date}`` - et datointerval, inklusiv endepunkterne\n"
-"- ``-{days}`` - indenfor et angivet antal dage, fra dags dato\n"
+"- ``<DATO`` - på eller før den angivne dato/tidspunkt\n"
+"- ``>DATO`` - på eller efter den angivne dato/tidspunkt\n"
+"- ``DATO to DATO`` - et datointerval, inklusiv endepunkterne\n"
+"- ``-DAGE`` - indenfor et angivet antal dage, fra dags dato\n"
 
 msgid ""
 "Mercurial's default format for showing changes between two versions of\n"
@@ -10711,6 +11005,18 @@ msgstr ""
 msgid ""
 "    Equivalent options set via command line flags or environment\n"
 "    variables are not overridden."
+msgstr ""
+
+msgid ""
+"HGPLAINEXCEPT\n"
+"    This is a comma-separated list of features to preserve when\n"
+"    HGPLAIN is enabled. Currently the only value supported is \"i18n\",\n"
+"    which preserves internationalization in plain mode."
+msgstr ""
+
+msgid ""
+"    Setting HGPLAINEXCEPT to anything (even an empty string) will\n"
+"    enable plain mode."
 msgstr ""
 
 msgid ""
@@ -11367,8 +11673,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"This file uses the same syntax as hgrc configuration files, but only\n"
-"the following sections are recognized:"
+"This file uses the same syntax as other Mercurial configuration files,\n"
+"but only the following sections are recognized:"
 msgstr ""
 
 msgid ""
@@ -11382,7 +11688,8 @@ msgstr ""
 
 msgid ""
 "The ``web`` section can specify all the settings described in the web\n"
-"section of the hgrc documentation."
+"section of the hgrc(5) documentation. See :hg:`help config` for\n"
+"information on where to find the manual page."
 msgstr ""
 
 msgid ""
@@ -11889,7 +12196,7 @@ msgstr ""
 msgid "    hg log -r \"1.3::1.5 and keyword(bug) and file('hgext/*')\""
 msgstr "    hg log -r \"1.3::1.5 and keyword(bug) and file(\"hgext/*\")\""
 
-msgid "- Changesets in committed May 2008, sorted by user::"
+msgid "- Changesets committed in May 2008, sorted by user::"
 msgstr ""
 
 msgid "    hg log -r \"sort(date('May 2008'), user)\""
@@ -12134,78 +12441,7 @@ msgid ""
 "keywords are usually available for templating a log-like command:"
 msgstr ""
 
-msgid ":author: String. The unmodified author of the changeset."
-msgstr ""
-
-msgid ""
-":branch: String. The name of the branch on which the changeset was\n"
-"    committed."
-msgstr ""
-
-msgid ""
-":branches: List of strings. The name of the branch on which the\n"
-"    changeset was committed. Will be empty if the branch name was\n"
-"    default."
-msgstr ""
-
-msgid ":children: List of strings. The children of the changeset."
-msgstr ""
-
-msgid ":date: Date information. The date when the changeset was committed."
-msgstr ""
-
-msgid ":desc: String. The text of the changeset description."
-msgstr ""
-
-msgid ""
-":diffstat: String. Statistics of changes with the following format:\n"
-"    \"modified files: +added/-removed lines\""
-msgstr ""
-
-msgid ""
-":files: List of strings. All files modified, added, or removed by this\n"
-"    changeset."
-msgstr ""
-
-msgid ":file_adds: List of strings. Files added by this changeset."
-msgstr ""
-
-msgid ""
-":file_copies: List of strings. Files copied in this changeset with\n"
-"    their sources."
-msgstr ""
-
-msgid ""
-":file_copies_switch: List of strings. Like \"file_copies\" but displayed\n"
-"    only if the --copied switch is set."
-msgstr ""
-
-msgid ":file_mods: List of strings. Files modified by this changeset."
-msgstr ""
-
-msgid ":file_dels: List of strings. Files removed by this changeset."
-msgstr ""
-
-msgid ""
-":node: String. The changeset identification hash, as a 40 hexadecimal\n"
-"    digit string."
-msgstr ""
-
-msgid ":parents: List of strings. The parents of the changeset."
-msgstr ""
-
-msgid ":rev: Integer. The repository-local changeset revision number."
-msgstr ""
-
-msgid ":tags: List of strings. Any tags associated with the changeset."
-msgstr ""
-
-msgid ""
-":latesttag: String. Most recent global tag in the ancestors of this\n"
-"    changeset."
-msgstr ""
-
-msgid ":latesttagdistance: Integer. Longest path to the latest tag."
+msgid ".. keywordsmarker"
 msgstr ""
 
 msgid ""
@@ -12227,131 +12463,7 @@ msgstr ""
 msgid "List of filters:"
 msgstr ""
 
-msgid ""
-":addbreaks: Any text. Add an XHTML \"<br />\" tag before the end of\n"
-"    every line except the last."
-msgstr ""
-
-msgid ""
-":age: Date. Returns a human-readable date/time difference between the\n"
-"    given date/time and the current date/time."
-msgstr ""
-
-msgid ""
-":basename: Any text. Treats the text as a path, and returns the last\n"
-"    component of the path after splitting by the path separator\n"
-"    (ignoring trailing separators). For example, \"foo/bar/baz\" becomes\n"
-"    \"baz\" and \"foo/bar//\" becomes \"bar\"."
-msgstr ""
-
-msgid ""
-":stripdir: Treat the text as path and strip a directory level, if\n"
-"    possible. For example, \"foo\" and \"foo/bar\" becomes \"foo\"."
-msgstr ""
-
-msgid ""
-":date: Date. Returns a date in a Unix date format, including the\n"
-"    timezone: \"Mon Sep 04 15:13:13 2006 0700\"."
-msgstr ""
-
-msgid ""
-":domain: Any text. Finds the first string that looks like an email\n"
-"    address, and extracts just the domain component. Example: ``User\n"
-"    <user@example.com>`` becomes ``example.com``."
-msgstr ""
-
-msgid ""
-":email: Any text. Extracts the first string that looks like an email\n"
-"    address. Example: ``User <user@example.com>`` becomes\n"
-"    ``user@example.com``."
-msgstr ""
-
-msgid ""
-":escape: Any text. Replaces the special XML/XHTML characters \"&\", \"<\"\n"
-"    and \">\" with XML entities."
-msgstr ""
-
-msgid ""
-":hex: Any text. Convert a binary Mercurial node identifier into\n"
-"    its long hexadecimal representation."
-msgstr ""
-
-msgid ":fill68: Any text. Wraps the text to fit in 68 columns."
-msgstr ""
-
-msgid ":fill76: Any text. Wraps the text to fit in 76 columns."
-msgstr ""
-
-msgid ":firstline: Any text. Returns the first line of text."
-msgstr ""
-
-msgid ":nonempty: Any text. Returns '(none)' if the string is empty."
-msgstr ""
-
-msgid ""
-":hgdate: Date. Returns the date as a pair of numbers: \"1157407993\n"
-"    25200\" (Unix timestamp, timezone offset)."
-msgstr ""
-
-msgid ""
-":isodate: Date. Returns the date in ISO 8601 format: \"2009-08-18 13:00\n"
-"    +0200\"."
-msgstr ""
-
-msgid ""
-":isodatesec: Date. Returns the date in ISO 8601 format, including\n"
-"    seconds: \"2009-08-18 13:00:13 +0200\". See also the rfc3339date\n"
-"    filter."
-msgstr ""
-
-msgid ":localdate: Date. Converts a date to local date."
-msgstr ""
-
-msgid ""
-":obfuscate: Any text. Returns the input text rendered as a sequence of\n"
-"    XML entities."
-msgstr ""
-
-msgid ":person: Any text. Returns the text before an email address."
-msgstr ""
-
-msgid ""
-":rfc822date: Date. Returns a date using the same format used in email\n"
-"    headers: \"Tue, 18 Aug 2009 13:00:13 +0200\"."
-msgstr ""
-
-msgid ""
-":rfc3339date: Date. Returns a date using the Internet date format\n"
-"    specified in RFC 3339: \"2009-08-18T13:00:13+02:00\"."
-msgstr ""
-
-msgid ""
-":short: Changeset hash. Returns the short form of a changeset hash,\n"
-"    i.e. a 12 hexadecimal digit string."
-msgstr ""
-
-msgid ":shortdate: Date. Returns a date like \"2006-09-18\"."
-msgstr ""
-
-msgid ""
-":stringify: Any type. Turns the value into text by converting values into\n"
-"    text and concatenating them."
-msgstr ""
-
-msgid ":strip: Any text. Strips all leading and trailing whitespace."
-msgstr ""
-
-msgid ""
-":tabindent: Any text. Returns the text, with every line except the\n"
-"     first starting with a tab character."
-msgstr ""
-
-msgid ""
-":urlescape: Any text. Escapes all \"special\" characters. For example,\n"
-"    \"foo bar\" becomes \"foo%20bar\"."
-msgstr ""
-
-msgid ":user: Any text. Returns the user portion of an email address.\n"
+msgid ".. filtersmarker\n"
 msgstr ""
 
 msgid "Valid URLs are of the form::"
@@ -12800,14 +12912,6 @@ msgid ""
 msgstr ""
 
 #, python-format
-msgid "updating bookmark %s\n"
-msgstr "opdaterer bogmærke %s\n"
-
-#, python-format
-msgid "not updating divergent bookmark %s\n"
-msgstr "opdaterer ikke divergerende bogmærke %s\n"
-
-#, python-format
 msgid "%d changesets found\n"
 msgstr "fandt %d ændringer\n"
 
@@ -12918,6 +13022,10 @@ msgid "invalid local address: %s"
 msgstr "ugyldig lokal adresse: %s"
 
 #, python-format
+msgid "'\\n' and '\\r' disallowed in filenames: %r"
+msgstr "'\\n' og '\\r' må ikke forekomme i filnavne: %r"
+
+#, python-format
 msgid "failed to remove %s from manifest"
 msgstr "kunne ikke fjerne %s fra manifest"
 
@@ -13003,10 +13111,6 @@ msgstr "henter %s til %s\n"
 #, python-format
 msgid "note: possible conflict - %s was renamed multiple times to:\n"
 msgstr ""
-
-#, python-format
-msgid "branch %s not found"
-msgstr "gren %s blev ikke fundet"
 
 msgid "merging with a working directory ancestor has no effect"
 msgstr "sammenføjning med en forfader til arbejdskataloget har ingen effekt"
@@ -13122,10 +13226,6 @@ msgid "undefined source and destination files"
 msgstr ""
 
 #, python-format
-msgid "malformed patch %s %s"
-msgstr ""
-
-#, python-format
 msgid "unsupported parser state: %s"
 msgstr ""
 
@@ -13238,86 +13338,12 @@ msgid "not a function: %s"
 msgstr "ikke en funktion: %s"
 
 msgid ""
-"``id(string)``\n"
-"    Revision non-ambiguously specified by the given hex string prefix."
+"``adds(pattern)``\n"
+"    Changesets that add a file matching pattern."
 msgstr ""
 
-#. i18n: "id" is a keyword
-msgid "id requires one argument"
-msgstr "id kræver et argument"
-
-#. i18n: "id" is a keyword
-msgid "id requires a string"
-msgstr "id kræver en streng"
-
-msgid ""
-"``rev(number)``\n"
-"    Revision with the given numeric identifier."
-msgstr ""
-
-#. i18n: "rev" is a keyword
-msgid "rev requires one argument"
-msgstr "rev kræver et argument"
-
-#. i18n: "rev" is a keyword
-msgid "rev requires a number"
-msgstr "rev kræver et tal"
-
-#. i18n: "rev" is a keyword
-msgid "rev expects a number"
-msgstr "rev forventer et revisionsnummer"
-
-msgid ""
-"``p1([set])``\n"
-"    First parent of changesets in set, or the working directory."
-msgstr ""
-
-msgid ""
-"``p2([set])``\n"
-"    Second parent of changesets in set, or the working directory."
-msgstr ""
-
-msgid ""
-"``parents([set])``\n"
-"    The set of all parents for all changesets in set, or the working "
-"directory."
-msgstr ""
-
-msgid ""
-"``max(set)``\n"
-"    Changeset with highest revision number in set."
-msgstr ""
-
-msgid ""
-"``min(set)``\n"
-"    Changeset with lowest revision number in set."
-msgstr ""
-
-msgid ""
-"``limit(set, n)``\n"
-"    First n members of set."
-msgstr ""
-
-#. i18n: "limit" is a keyword
-msgid "limit requires two arguments"
-msgstr "limit kræver to argumenter"
-
-#. i18n: "limit" is a keyword
-msgid "limit requires a number"
-msgstr "limit kræver et tal"
-
-#. i18n: "limit" is a keyword
-msgid "limit expects a number"
-msgstr ""
-
-msgid ""
-"``children(set)``\n"
-"    Child changesets of changesets in set."
-msgstr ""
-
-msgid ""
-"``branch(set)``\n"
-"    All changesets belonging to the branches of changesets in set."
+#. i18n: "adds" is a keyword
+msgid "adds requires a pattern"
 msgstr ""
 
 msgid ""
@@ -13339,6 +13365,80 @@ msgid ""
 msgstr ""
 
 msgid ""
+"``author(string)``\n"
+"    Alias for ``user(string)``."
+msgstr ""
+
+#. i18n: "author" is a keyword
+msgid "author requires a string"
+msgstr ""
+
+msgid ""
+"``bisected(string)``\n"
+"    Changesets marked in the specified bisect state (good, bad, skip)."
+msgstr ""
+
+msgid "bisect requires a string"
+msgstr "bisect kræver en streng"
+
+msgid "invalid bisect state"
+msgstr "ugyldig tilstand for halvering"
+
+msgid ""
+"``bookmark([name])``\n"
+"    The named bookmark or all bookmarks."
+msgstr ""
+"``bookmark([name])``\n"
+"    Det navngivne bogmærke eller alle bogmærker."
+
+#. i18n: "bookmark" is a keyword
+msgid "bookmark takes one or no arguments"
+msgstr "bookmark tager et eller to argumenter"
+
+#. i18n: "bookmark" is a keyword
+msgid "the argument to bookmark must be a string"
+msgstr "argumentet til bookmark skal være en streng"
+
+msgid ""
+"``branch(string or set)``\n"
+"    All changesets belonging to the given branch or the branches of the "
+"given\n"
+"    changesets."
+msgstr ""
+
+msgid ""
+"``children(set)``\n"
+"    Child changesets of changesets in set."
+msgstr ""
+
+msgid ""
+"``closed()``\n"
+"    Changeset is closed."
+msgstr ""
+
+#. i18n: "closed" is a keyword
+msgid "closed takes no arguments"
+msgstr ""
+
+msgid ""
+"``contains(pattern)``\n"
+"    Revision contains pattern."
+msgstr ""
+
+#. i18n: "contains" is a keyword
+msgid "contains requires a pattern"
+msgstr ""
+
+msgid ""
+"``date(interval)``\n"
+"    Changesets within the interval, see :hg:`help dates`."
+msgstr ""
+
+#. i18n: "date" is a keyword
+msgid "date requires a string"
+msgstr ""
+
+msgid ""
 "``descendants(set)``\n"
 "    Changesets which are descendants of changesets in set."
 msgstr ""
@@ -13353,22 +13453,12 @@ msgid "follow takes no arguments"
 msgstr ""
 
 msgid ""
-"``date(interval)``\n"
-"    Changesets within the interval, see :hg:`help dates`."
+"``all()``\n"
+"    All changesets, the same as ``0:tip``."
 msgstr ""
 
-#. i18n: "date" is a keyword
-msgid "date requires a string"
-msgstr ""
-
-msgid ""
-"``keyword(string)``\n"
-"    Search commit message, user name, and names of changed files for\n"
-"    string."
-msgstr ""
-
-#. i18n: "keyword" is a keyword
-msgid "keyword requires a string"
+#. i18n: "all" is a keyword
+msgid "all takes no arguments"
 msgstr ""
 
 msgid ""
@@ -13386,80 +13476,12 @@ msgid "invalid match pattern: %s"
 msgstr "ugyldigt søgemønster: %s"
 
 msgid ""
-"``author(string)``\n"
-"    Alias for ``user(string)``."
-msgstr ""
-
-#. i18n: "author" is a keyword
-msgid "author requires a string"
-msgstr ""
-
-msgid ""
-"``user(string)``\n"
-"    User name is string."
-msgstr ""
-
-msgid ""
 "``file(pattern)``\n"
 "    Changesets affecting files matched by pattern."
 msgstr ""
 
 #. i18n: "file" is a keyword
 msgid "file requires a pattern"
-msgstr ""
-
-msgid ""
-"``contains(pattern)``\n"
-"    Revision contains pattern."
-msgstr ""
-
-#. i18n: "contains" is a keyword
-msgid "contains requires a pattern"
-msgstr ""
-
-msgid ""
-"``modifies(pattern)``\n"
-"    Changesets modifying files matched by pattern."
-msgstr ""
-
-#. i18n: "modifies" is a keyword
-msgid "modifies requires a pattern"
-msgstr ""
-
-msgid ""
-"``adds(pattern)``\n"
-"    Changesets that add a file matching pattern."
-msgstr ""
-
-#. i18n: "adds" is a keyword
-msgid "adds requires a pattern"
-msgstr ""
-
-msgid ""
-"``removes(pattern)``\n"
-"    Changesets which remove files matching pattern."
-msgstr ""
-
-#. i18n: "removes" is a keyword
-msgid "removes requires a pattern"
-msgstr ""
-
-msgid ""
-"``merge()``\n"
-"    Changeset is a merge changeset."
-msgstr ""
-
-#. i18n: "merge" is a keyword
-msgid "merge takes no arguments"
-msgstr ""
-
-msgid ""
-"``closed()``\n"
-"    Changeset is closed."
-msgstr ""
-
-#. i18n: "closed" is a keyword
-msgid "closed takes no arguments"
 msgstr ""
 
 msgid ""
@@ -13472,14 +13494,144 @@ msgid "head takes no arguments"
 msgstr ""
 
 msgid ""
-"``reverse(set)``\n"
-"    Reverse order of set."
+"``heads(set)``\n"
+"    Members of set with no children in set."
+msgstr ""
+
+msgid ""
+"``keyword(string)``\n"
+"    Search commit message, user name, and names of changed files for\n"
+"    string."
+msgstr ""
+
+#. i18n: "keyword" is a keyword
+msgid "keyword requires a string"
+msgstr ""
+
+msgid ""
+"``limit(set, n)``\n"
+"    First n members of set."
+msgstr ""
+
+#. i18n: "limit" is a keyword
+msgid "limit requires two arguments"
+msgstr "limit kræver to argumenter"
+
+#. i18n: "limit" is a keyword
+msgid "limit requires a number"
+msgstr "limit kræver et tal"
+
+#. i18n: "limit" is a keyword
+msgid "limit expects a number"
+msgstr ""
+
+msgid ""
+"``max(set)``\n"
+"    Changeset with highest revision number in set."
+msgstr ""
+
+msgid ""
+"``merge()``\n"
+"    Changeset is a merge changeset."
+msgstr ""
+
+#. i18n: "merge" is a keyword
+msgid "merge takes no arguments"
+msgstr ""
+
+msgid ""
+"``min(set)``\n"
+"    Changeset with lowest revision number in set."
+msgstr ""
+
+msgid ""
+"``modifies(pattern)``\n"
+"    Changesets modifying files matched by pattern."
+msgstr ""
+
+#. i18n: "modifies" is a keyword
+msgid "modifies requires a pattern"
+msgstr ""
+
+msgid ""
+"``id(string)``\n"
+"    Revision non-ambiguously specified by the given hex string prefix."
+msgstr ""
+
+#. i18n: "id" is a keyword
+msgid "id requires one argument"
+msgstr "id kræver et argument"
+
+#. i18n: "id" is a keyword
+msgid "id requires a string"
+msgstr "id kræver en streng"
+
+msgid ""
+"``outgoing([path])``\n"
+"    Changesets not found in the specified destination repository, or the\n"
+"    default push location."
+msgstr ""
+
+#. i18n: "outgoing" is a keyword
+msgid "outgoing requires a repository path"
+msgstr ""
+
+msgid ""
+"``p1([set])``\n"
+"    First parent of changesets in set, or the working directory."
+msgstr ""
+
+msgid ""
+"``p2([set])``\n"
+"    Second parent of changesets in set, or the working directory."
+msgstr ""
+
+msgid ""
+"``parents([set])``\n"
+"    The set of all parents for all changesets in set, or the working "
+"directory."
 msgstr ""
 
 msgid ""
 "``present(set)``\n"
 "    An empty set, if any revision in set isn't found; otherwise,\n"
 "    all revisions in set."
+msgstr ""
+
+msgid ""
+"``removes(pattern)``\n"
+"    Changesets which remove files matching pattern."
+msgstr ""
+
+#. i18n: "removes" is a keyword
+msgid "removes requires a pattern"
+msgstr ""
+
+msgid ""
+"``rev(number)``\n"
+"    Revision with the given numeric identifier."
+msgstr ""
+
+#. i18n: "rev" is a keyword
+msgid "rev requires one argument"
+msgstr "rev kræver et argument"
+
+#. i18n: "rev" is a keyword
+msgid "rev requires a number"
+msgstr "rev kræver et tal"
+
+#. i18n: "rev" is a keyword
+msgid "rev expects a number"
+msgstr "rev forventer et revisionsnummer"
+
+msgid ""
+"``reverse(set)``\n"
+"    Reverse order of set."
+msgstr ""
+
+msgid ""
+"``roots(set)``\n"
+"    Changesets with no parent changeset in set."
 msgstr ""
 
 msgid ""
@@ -13511,35 +13663,6 @@ msgid "unknown sort key %r"
 msgstr "ukendt sorteringsnøgle %r"
 
 msgid ""
-"``all()``\n"
-"    All changesets, the same as ``0:tip``."
-msgstr ""
-
-#. i18n: "all" is a keyword
-msgid "all takes no arguments"
-msgstr ""
-
-msgid ""
-"``heads(set)``\n"
-"    Members of set with no children in set."
-msgstr ""
-
-msgid ""
-"``roots(set)``\n"
-"    Changesets with no parent changeset in set."
-msgstr ""
-
-msgid ""
-"``outgoing([path])``\n"
-"    Changesets not found in the specified destination repository, or the\n"
-"    default push location."
-msgstr ""
-
-#. i18n: "outgoing" is a keyword
-msgid "outgoing requires a repository path"
-msgstr ""
-
-msgid ""
 "``tag(name)``\n"
 "    The specified tag by name, or all tagged revisions if no name is given."
 msgstr ""
@@ -13556,19 +13679,9 @@ msgid "the argument to tag must be a string"
 msgstr "argumentet til tag skal være en streng"
 
 msgid ""
-"``bookmark([name])``\n"
-"    The named bookmark or all bookmarks."
+"``user(string)``\n"
+"    User name is string."
 msgstr ""
-"``bookmark([name])``\n"
-"    Det navngivne bogmærke eller alle bogmærker."
-
-#. i18n: "bookmark" is a keyword
-msgid "bookmark takes one or no arguments"
-msgstr "bookmark tager et eller to argumenter"
-
-#. i18n: "bookmark" is a keyword
-msgid "the argument to bookmark must be a string"
-msgstr "argumentet til bookmark skal være en streng"
 
 msgid "can't negate that"
 msgstr ""
@@ -13716,12 +13829,8 @@ msgid "not removing repo %s because it has changes.\n"
 msgstr "fjerner ikke depotet %s fordi det er ændret.\n"
 
 #, python-format
-msgid "cloning subrepo %s\n"
-msgstr "kloner underdepot %s\n"
-
-#, python-format
-msgid "pulling subrepo %s\n"
-msgstr "hiver underdepot %s\n"
+msgid "cloning subrepo %s from %s\n"
+msgstr "kloner underdepot %s fra %s\n"
 
 #, python-format
 msgid "revision %s does not exist in subrepo %s\n"
@@ -13861,6 +13970,9 @@ msgstr "kodeord: "
 msgid "edit failed"
 msgstr "redigering fejlede"
 
+msgid "file:// URLs can only refer to localhost"
+msgstr ""
+
 #, python-format
 msgid "ignoring invalid [auth] key '%s'\n"
 msgstr "ignorerer ugyldig [auth] nøgle '%s'\n"
@@ -13937,6 +14049,18 @@ msgid "command '%s' failed: %s"
 msgstr "kommandoen '%s' fejlede: %s"
 
 #, python-format
+msgid "filename contains '%s', which is reserved on Windows"
+msgstr ""
+
+#, python-format
+msgid "filename contains %r, which is invalid on Windows"
+msgstr ""
+
+#, python-format
+msgid "filename ends with '%s', which is not allowed on Windows"
+msgstr ""
+
+#, python-format
 msgid "path ends in directory separator: %s"
 msgstr ""
 
@@ -13945,8 +14069,8 @@ msgid "path contains illegal component: %s"
 msgstr "stien indeholder ugyldig komponent: %s"
 
 #, python-format
-msgid "path %r is inside repo %r"
-msgstr "stien %r er inde i repo %r"
+msgid "path %r is inside nested repo %r"
+msgstr "stien %r er inden i depotet %r"
 
 #, python-format
 msgid "path %r traverses symbolic link %r"
@@ -13979,9 +14103,22 @@ msgstr ""
 msgid "impossible time zone offset: %d"
 msgstr "umuligt tidszone: %d"
 
+msgid "dates cannot consist entirely of whitespace"
+msgstr "datoer kan ikke bestå udelukkende af tomrum"
+
+msgid "invalid day spec, use '<DATE'"
+msgstr "ugyldig datospecifikation, brug '<DATO'"
+
+msgid "invalid day spec, use '>DATE'"
+msgstr "ugyldig datospecifikation, brug '>DATO'"
+
 #, python-format
 msgid "invalid day spec: %s"
 msgstr "ugyldig datospecifikation: %s"
+
+#, python-format
+msgid "%s must be nonnegative (see 'hg help dates')"
+msgstr ""
 
 #, python-format
 msgid "%.0f GB"

@@ -4531,8 +4531,8 @@ msgstr "Fehler beim Zusammenlegen des Patches %s"
 
 msgid "push or pop patches until named patch is at top of stack"
 msgstr ""
-"Verschiebt (push/pop) die Patches bis der genannte Patch ist oben auf dem "
-"Stapel"
+"Verschiebt (push/pop) die Patches bis der genannte Patch oben auf dem "
+"Stapel ist"
 
 msgid "set or print guards for a patch"
 msgstr "Setzt einen Wächter oder gibt die Wächter eines Patches aus"
