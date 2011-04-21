@@ -8,7 +8,7 @@
 
 import os, re, time
 from mercurial.i18n import _
-from mercurial import ui, hg, util, templater
+from mercurial import ui, hg, scmutil, util, templater
 from mercurial import error, encoding, url
 from common import ErrorResponse, get_mtime, staticfile, paritygen, \
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
@@ -33,7 +33,7 @@ def findrepos(paths):
             repos.append((prefix, root))
             continue
         roothead = os.path.normpath(os.path.abspath(roothead))
-        paths = util.walkrepos(roothead, followsym=True, recurse=recurse)
+        paths = scmutil.walkrepos(roothead, followsym=True, recurse=recurse)
         repos.extend(urlrepos(prefix, roothead, paths))
     return repos
 
@@ -89,7 +89,7 @@ class hgwebdir(object):
         repos = findrepos(paths)
         for prefix, root in u.configitems('collections'):
             prefix = util.pconvert(prefix)
-            for path in util.walkrepos(root, followsym=True):
+            for path in scmutil.walkrepos(root, followsym=True):
                 repo = os.path.normpath(path)
                 name = util.pconvert(repo)
                 if name.startswith(prefix):

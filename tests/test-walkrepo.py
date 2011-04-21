@@ -1,6 +1,6 @@
 import os
 from mercurial import hg, ui
-from mercurial.util import walkrepos
+from mercurial.scmutil import walkrepos
 from os import mkdir, chdir
 from os.path import join as pjoin
 
