@@ -163,6 +163,19 @@ hg status -A:
   \x1b[0;0mC .hgignore\x1b[0m (esc)
   \x1b[0;0mC modified\x1b[0m (esc)
 
+hg status -A (with terminfo color):
+
+  $ TERM=xterm hg status --config color.mode=terminfo --color=always -A
+  \x1b(B\x1b[m\x1b[32m\x1b[1mA added\x1b(B\x1b[m (esc)
+  \x1b(B\x1b[m\x1b[32m\x1b[1mA copied\x1b(B\x1b[m (esc)
+  \x1b(B\x1b[m\x1b(B\x1b[m  modified\x1b(B\x1b[m (esc)
+  \x1b(B\x1b[m\x1b[31m\x1b[1mR removed\x1b(B\x1b[m (esc)
+  \x1b(B\x1b[m\x1b[36m\x1b[1m\x1b[4m! deleted\x1b(B\x1b[m (esc)
+  \x1b(B\x1b[m\x1b[35m\x1b[1m\x1b[4m? unknown\x1b(B\x1b[m (esc)
+  \x1b(B\x1b[m\x1b[30m\x1b[1mI ignored\x1b(B\x1b[m (esc)
+  \x1b(B\x1b[m\x1b(B\x1b[mC .hgignore\x1b(B\x1b[m (esc)
+  \x1b(B\x1b[m\x1b(B\x1b[mC modified\x1b(B\x1b[m (esc)
+
 
   $ echo "^ignoreddir$" > .hgignore
   $ mkdir ignoreddir

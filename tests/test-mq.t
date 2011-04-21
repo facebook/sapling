@@ -177,7 +177,7 @@ add an untracked file
 
 status --mq with color (issue2096)
 
-  $ hg status --mq --config extensions.color= --color=always
+  $ hg status --mq --config extensions.color= --config color.mode=ansi --color=always
   \x1b[0;32;1mA .hgignore\x1b[0m (esc)
   \x1b[0;32;1mA A\x1b[0m (esc)
   \x1b[0;32;1mA B\x1b[0m (esc)

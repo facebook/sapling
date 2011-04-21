@@ -1,5 +1,7 @@
 Setup
 
+  $ echo "[color]" >> $HGRCPATH
+  $ echo "mode = ansi" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "color=" >> $HGRCPATH
   $ hg init repo

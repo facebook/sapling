@@ -57,6 +57,8 @@ test issue2039
   $ cd bar
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "color=" >> $HGRCPATH
+  $ echo "[color]" >> $HGRCPATH
+  $ echo "mode = ansi" >> $HGRCPATH
   $ A=`printf 'foo\nbar'`
   $ B=`printf 'foo\nbar.baz'`
   $ touch "$A"

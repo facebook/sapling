@@ -350,6 +350,8 @@ default branch colors:
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "color =" >> $HGRCPATH
+  $ echo "[color]" >> $HGRCPATH
+  $ echo "mode = ansi" >> $HGRCPATH
 
   $ hg up -C c
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
