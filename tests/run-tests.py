@@ -639,6 +639,8 @@ def runone(options, test, skips, fails):
     True -> passed
     False -> failed'''
 
+    testpath = os.path.join(TESTDIR, test)
+
     def skip(msg):
         if not options.verbose:
             skips.append((test, msg))
@@ -660,6 +662,15 @@ def runone(options, test, skips, fails):
                 return
         fails.append((test, msg))
 
+    if (test.startswith("test-") and '~' not in test and
+        ('.' not in test or test.endswith('.py') or
+         test.endswith('.bat') or test.endswith('.t'))):
+        if not os.path.exists(test):
+            skip("doesn't exist")
+            return None
+    else:
+        return None # not a supported test, don't record
+
     vlog("# Test", test)
 
     # create a fresh hgrc
@@ -678,7 +689,6 @@ def runone(options, test, skips, fails):
         hgrc.write('appendpid=True\n')
     hgrc.close()
 
-    testpath = os.path.join(TESTDIR, test)
     ref = os.path.join(TESTDIR, test+".out")
     err = os.path.join(TESTDIR, test+".err")
     if os.path.exists(err):
@@ -944,7 +954,10 @@ def runtests(options, tests):
                 continue
 
             if options.keywords:
-                fp = open(test)
+                try:
+                    fp = open(test)
+                except IOError:
+                    continue
                 t = fp.read().lower() + test.lower()
                 fp.close()
                 for k in options.keywords.lower().split():
@@ -1001,22 +1014,7 @@ def main():
         args = os.listdir(".")
     args.sort()
 
-    tests = []
-    skipped = []
-    for test in args:
-        if (test.startswith("test-") and '~' not in test and
-            ('.' not in test or test.endswith('.py') or
-             test.endswith('.bat') or test.endswith('.t'))):
-            if not os.path.exists(test):
-                skipped.append(test)
-            else:
-                tests.append(test)
-    if not tests:
-        for test in skipped:
-            print 'Skipped %s: does not exist' % test
-        print "# Ran 0 tests, %d skipped, 0 failed." % len(skipped)
-        return
-    tests = tests + skipped
+    tests = args
 
     # Reset some environment variables to well-known values so that
     # the tests produce repeatable output.
