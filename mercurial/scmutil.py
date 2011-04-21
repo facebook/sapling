@@ -7,7 +7,7 @@
 
 from i18n import _
 import util, error, osutil
-import os, errno, stat
+import os, errno, stat, sys
 
 def checkfilename(f):
     '''Check that the filename f is an acceptable filename for a tracked file'''
@@ -298,8 +298,8 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
 
 def os_rcpath():
     '''return default os-specific hgrc search path'''
-    path = util.system_rcpath()
-    path.extend(util.user_rcpath())
+    path = system_rcpath()
+    path.extend(user_rcpath())
     path = [os.path.normpath(f) for f in path]
     return path
 
@@ -328,3 +328,74 @@ def rcpath():
         else:
             _rcpath = os_rcpath()
     return _rcpath
+
+if os.name != 'nt':
+
+    def rcfiles(path):
+        rcs = [os.path.join(path, 'hgrc')]
+        rcdir = os.path.join(path, 'hgrc.d')
+        try:
+            rcs.extend([os.path.join(rcdir, f)
+                        for f, kind in osutil.listdir(rcdir)
+                        if f.endswith(".rc")])
+        except OSError:
+            pass
+        return rcs
+
+    def system_rcpath():
+        path = []
+        # old mod_python does not set sys.argv
+        if len(getattr(sys, 'argv', [])) > 0:
+            path.extend(rcfiles(os.path.dirname(sys.argv[0]) +
+                                  '/../etc/mercurial'))
+        path.extend(rcfiles('/etc/mercurial'))
+        return path
+
+    def user_rcpath():
+        return [os.path.expanduser('~/.hgrc')]
+
+else:
+
+    _HKEY_LOCAL_MACHINE = 0x80000002L
+
+    def system_rcpath():
+        '''return default os-specific hgrc search path'''
+        rcpath = []
+        filename = util.executable_path()
+        # Use mercurial.ini found in directory with hg.exe
+        progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
+        if os.path.isfile(progrc):
+            rcpath.append(progrc)
+            return rcpath
+        # Use hgrc.d found in directory with hg.exe
+        progrcd = os.path.join(os.path.dirname(filename), 'hgrc.d')
+        if os.path.isdir(progrcd):
+            for f, kind in osutil.listdir(progrcd):
+                if f.endswith('.rc'):
+                    rcpath.append(os.path.join(progrcd, f))
+            return rcpath
+        # else look for a system rcpath in the registry
+        value = util.lookup_reg('SOFTWARE\\Mercurial', None,
+                                _HKEY_LOCAL_MACHINE)
+        if not isinstance(value, str) or not value:
+            return rcpath
+        value = value.replace('/', os.sep)
+        for p in value.split(os.pathsep):
+            if p.lower().endswith('mercurial.ini'):
+                rcpath.append(p)
+            elif os.path.isdir(p):
+                for f, kind in osutil.listdir(p):
+                    if f.endswith('.rc'):
+                        rcpath.append(os.path.join(p, f))
+        return rcpath
+
+    def user_rcpath():
+        '''return os-specific hgrc search path to the user dir'''
+        home = os.path.expanduser('~')
+        path = [os.path.join(home, 'mercurial.ini'),
+                os.path.join(home, '.hgrc')]
+        userprofile = os.environ.get('USERPROFILE')
+        if userprofile:
+            path.append(os.path.join(userprofile, 'mercurial.ini'))
+            path.append(os.path.join(userprofile, '.hgrc'))
+        return path

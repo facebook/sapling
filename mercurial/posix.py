@@ -6,7 +6,6 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import osutil
 import os, sys, errno, stat, getpass, pwd, grp, tempfile
 
 posixfile = open
@@ -28,29 +27,6 @@ def openhardlinks():
 def nlinks(name):
     '''return number of hardlinks for the given file'''
     return os.lstat(name).st_nlink
-
-def rcfiles(path):
-    rcs = [os.path.join(path, 'hgrc')]
-    rcdir = os.path.join(path, 'hgrc.d')
-    try:
-        rcs.extend([os.path.join(rcdir, f)
-                    for f, kind in osutil.listdir(rcdir)
-                    if f.endswith(".rc")])
-    except OSError:
-        pass
-    return rcs
-
-def system_rcpath():
-    path = []
-    # old mod_python does not set sys.argv
-    if len(getattr(sys, 'argv', [])) > 0:
-        path.extend(rcfiles(os.path.dirname(sys.argv[0]) +
-                              '/../etc/mercurial'))
-    path.extend(rcfiles('/etc/mercurial'))
-    return path
-
-def user_rcpath():
-    return [os.path.expanduser('~/.hgrc')]
 
 def parse_patch_output(output_line):
     """parses the output produced by patch and returns the filename"""
