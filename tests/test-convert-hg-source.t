@@ -32,24 +32,18 @@
   created new head
   $ chmod +x baz
   $ hg ci -m 'mark baz executable' -d '5 0'
-  $ hg branch foo
-  marked working directory as branch foo
-  $ hg ci -m 'branch foo' -d '6 0'
-  $ hg ci --close-branch -m 'close' -d '7 0'
   $ cd ..
   $ hg convert --datesort orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
   initializing destination new repository
   scanning source...
   sorting...
   converting...
-  7 add foo bar
-  6 change foo
-  5 make bar and baz copies of foo
-  4 merge local copy
-  3 merge remote copy
-  2 mark baz executable
-  1 branch foo
-  0 close
+  5 add foo bar
+  4 change foo
+  3 make bar and baz copies of foo
+  2 merge local copy
+  1 merge remote copy
+  0 mark baz executable
   $ cd new
   $ hg out ../orig
   comparing with ../orig

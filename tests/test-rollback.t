@@ -57,7 +57,7 @@ Test rollback of hg before issue 902 was fixed
   $ rm .hg/undo.branch
   $ hg rollback
   repository tip rolled back to revision -1 (undo commit)
-  Named branch could not be reset, current branch still is: test
+  named branch could not be reset, current branch is still: test
   working directory now based on revision -1
   $ hg branch
   test
@@ -92,3 +92,29 @@ same thing, but run $EDITOR
   $ cat .hg/last-message.txt
   another precious commit message
 
+test rollback on served repository
+
+  $ hg commit -m "precious commit message"
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ cd ..
+  $ hg clone http://localhost:$HGPORT u
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch test
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd u
+  $ hg id default
+  1df294f7b1a2
+
+now rollback and observe that 'hg serve' reloads the repository and
+presents the correct tip changeset:
+
+  $ hg -R ../t rollback
+  repository tip rolled back to revision -1 (undo commit)
+  working directory now based on revision -1
+  $ hg id default
+  000000000000
