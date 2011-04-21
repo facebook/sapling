@@ -646,11 +646,19 @@ def runone(options, test, skips, fails):
             print "\nSkipping %s: %s" % (testpath, msg)
         return None
 
-    def fail(msg):
-        fails.append((test, msg))
+    def fail(msg, ret):
         if not options.nodiff:
             print "\nERROR: %s %s" % (testpath, msg)
-        return None
+        if not ret and options.interactive:
+            print "Accept this change? [n] ",
+            answer = sys.stdin.readline().strip()
+            if answer.lower() in "y yes".split():
+                if test.endswith(".t"):
+                    rename(test + ".err", test)
+                else:
+                    rename(test + ".err", test + ".out")
+                return
+        fails.append((test, msg))
 
     vlog("# Test", test)
 
@@ -747,18 +755,18 @@ def runone(options, test, skips, fails):
         if not missing:
             missing = ['irrelevant']
         if failed:
-            fail("hghave failed checking for %s" % failed[-1])
+            fail("hghave failed checking for %s" % failed[-1], ret)
             skipped = False
         else:
             skip(missing[-1])
     elif out != refout:
         mark = '!'
         if ret == 'timeout':
-            fail("timed out")
+            fail("timed out", ret)
         elif ret:
-            fail("output changed and returned error code %d" % ret)
+            fail("output changed and returned error code %d" % ret, ret)
         else:
-            fail("output changed")
+            fail("output changed", ret)
         if ret != 'timeout' and not options.nodiff:
             if options.view:
                 os.system("%s %s %s" % (options.view, ref, err))
@@ -767,7 +775,7 @@ def runone(options, test, skips, fails):
         ret = 1
     elif ret:
         mark = '!'
-        fail("returned error code %d" % ret)
+        fail("returned error code %d" % ret, ret)
 
     if not options.verbose:
         sys.stdout.write(mark)
@@ -950,17 +958,6 @@ def runtests(options, tests):
             if ret is None:
                 skipped += 1
             elif not ret:
-                if options.interactive:
-                    print "Accept this change? [n] ",
-                    answer = sys.stdin.readline().strip()
-                    if answer.lower() in "y yes".split():
-                        if test.endswith(".t"):
-                            rename(test + ".err", test)
-                        else:
-                            rename(test + ".err", test + ".out")
-                        tested += 1
-                        fails.pop()
-                        continue
                 failed += 1
                 if options.first:
                     break
