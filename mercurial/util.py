@@ -1083,13 +1083,6 @@ def ellipsis(text, maxlength=400):
     except (UnicodeDecodeError, UnicodeEncodeError):
         return _ellipsis(text, maxlength)[0]
 
-def os_rcpath():
-    '''return default os-specific hgrc search path'''
-    path = system_rcpath()
-    path.extend(user_rcpath())
-    path = [os.path.normpath(f) for f in path]
-    return path
-
 def bytecount(nbytes):
     '''return byte count formatted as readable string, with units'''
 

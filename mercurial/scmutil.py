@@ -296,6 +296,13 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
                         newdirs.append(d)
             dirs[:] = newdirs
 
+def os_rcpath():
+    '''return default os-specific hgrc search path'''
+    path = util.system_rcpath()
+    path.extend(util.user_rcpath())
+    path = [os.path.normpath(f) for f in path]
+    return path
+
 _rcpath = None
 
 def rcpath():
@@ -319,5 +326,5 @@ def rcpath():
                 else:
                     _rcpath.append(p)
         else:
-            _rcpath = util.os_rcpath()
+            _rcpath = os_rcpath()
     return _rcpath
