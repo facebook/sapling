@@ -7,7 +7,7 @@
 
 from i18n import _
 import errno, getpass, os, socket, sys, tempfile, traceback
-import config, util, error, url
+import config, scmutil, util, error, url
 
 class ui(object):
     def __init__(self, src=None):
@@ -32,7 +32,7 @@ class ui(object):
             # shared read-only environment
             self.environ = os.environ
             # we always trust global config files
-            for f in util.rcpath():
+            for f in scmutil.rcpath():
                 self.readconfig(f, trust=True)
 
     def copy(self):

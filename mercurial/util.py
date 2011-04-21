@@ -1083,38 +1083,12 @@ def ellipsis(text, maxlength=400):
     except (UnicodeDecodeError, UnicodeEncodeError):
         return _ellipsis(text, maxlength)[0]
 
-_rcpath = None
-
 def os_rcpath():
     '''return default os-specific hgrc search path'''
     path = system_rcpath()
     path.extend(user_rcpath())
     path = [os.path.normpath(f) for f in path]
     return path
-
-def rcpath():
-    '''return hgrc search path. if env var HGRCPATH is set, use it.
-    for each item in path, if directory, use files ending in .rc,
-    else use item.
-    make HGRCPATH empty to only look in .hg/hgrc of current repo.
-    if no HGRCPATH, use default os-specific path.'''
-    global _rcpath
-    if _rcpath is None:
-        if 'HGRCPATH' in os.environ:
-            _rcpath = []
-            for p in os.environ['HGRCPATH'].split(os.pathsep):
-                if not p:
-                    continue
-                p = expandpath(p)
-                if os.path.isdir(p):
-                    for f, kind in osutil.listdir(p):
-                        if f.endswith('.rc'):
-                            _rcpath.append(os.path.join(p, f))
-                else:
-                    _rcpath.append(p)
-        else:
-            _rcpath = os_rcpath()
-    return _rcpath
 
 def bytecount(nbytes):
     '''return byte count formatted as readable string, with units'''

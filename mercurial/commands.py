@@ -1199,7 +1199,7 @@ def showconfig(ui, repo, *values, **opts):
     Returns 0 on success.
     """
 
-    for f in util.rcpath():
+    for f in scmutil.rcpath():
         ui.debug(_('read config from: %s\n') % f)
     untrusted = bool(opts.get('untrusted'))
     if values:

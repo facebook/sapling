@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import util, error
+import util, error, osutil
 import os, errno, stat
 
 def checkfilename(f):
@@ -295,3 +295,29 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
                     else:
                         newdirs.append(d)
             dirs[:] = newdirs
+
+_rcpath = None
+
+def rcpath():
+    '''return hgrc search path. if env var HGRCPATH is set, use it.
+    for each item in path, if directory, use files ending in .rc,
+    else use item.
+    make HGRCPATH empty to only look in .hg/hgrc of current repo.
+    if no HGRCPATH, use default os-specific path.'''
+    global _rcpath
+    if _rcpath is None:
+        if 'HGRCPATH' in os.environ:
+            _rcpath = []
+            for p in os.environ['HGRCPATH'].split(os.pathsep):
+                if not p:
+                    continue
+                p = util.expandpath(p)
+                if os.path.isdir(p):
+                    for f, kind in osutil.listdir(p):
+                        if f.endswith('.rc'):
+                            _rcpath.append(os.path.join(p, f))
+                else:
+                    _rcpath.append(p)
+        else:
+            _rcpath = util.os_rcpath()
+    return _rcpath
