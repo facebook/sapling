@@ -671,6 +671,16 @@ def runone(options, test, skips, passes, fails, ignores):
     else:
         return None # not a supported test, don't record
 
+    if options.blacklist:
+        filename = options.blacklist.get(test)
+        if filename is not None:
+            skipped.append((test, "blacklisted (%s)" % filename))
+            return None
+
+    if options.retest and not os.path.exists(test + ".err"):
+        ignores.append((test, "not retesting"))
+        return None
+
     if options.keywords:
         fp = open(test)
         t = fp.read().lower() + test.lower()
@@ -953,16 +963,6 @@ def runtests(options, tests):
         ignores = []
 
         for test in tests:
-            if options.blacklist:
-                filename = options.blacklist.get(test)
-                if filename is not None:
-                    skipped.append((test, "blacklisted (%s)" % filename))
-                    continue
-
-            if options.retest and not os.path.exists(test + ".err"):
-                ignores.append((test, "not retesting"))
-                continue
-
             ret = runone(options, test, skips, passes, fails, ignores)
             if options.first and ret is not None and not ret:
                 break
