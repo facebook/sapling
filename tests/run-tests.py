@@ -633,7 +633,7 @@ def run(cmd, options, replacements):
         output = re.sub(s, r, output)
     return ret, splitnewlines(output)
 
-def runone(options, test, skips, fails, ignores):
+def runone(options, test, skips, passes, fails, ignores):
     '''tristate output:
     None -> skipped
     True -> passed
@@ -745,6 +745,8 @@ def runone(options, test, skips, fails, ignores):
         signal.alarm(0)
 
     mark = '.'
+    if ret == 0:
+        passes.append(test)
 
     skipped = (ret == SKIPPED_STATUS)
 
@@ -935,10 +937,6 @@ def runtests(options, tests):
                 print 'WARNING: cannot run tests with timeouts'
                 options.timeout = 0
 
-        tested = 0
-        failed = 0
-        skipped = 0
-
         if options.restart:
             orig = list(tests)
             while tests:
@@ -949,6 +947,7 @@ def runtests(options, tests):
                 print "running all tests"
                 tests = orig
 
+        passes = []
         skips = []
         fails = []
         ignores = []
@@ -958,21 +957,15 @@ def runtests(options, tests):
                 filename = options.blacklist.get(test)
                 if filename is not None:
                     skipped.append((test, "blacklisted (%s)" % filename))
-                    skipped += 1
                     continue
 
             if options.retest and not os.path.exists(test + ".err"):
                 ignores.append((test, "not retesting"))
                 continue
 
-            ret = runone(options, test, skips, fails, ignores)
-            if ret is None:
-                skipped += 1
-            elif not ret:
-                failed += 1
-                if options.first:
-                    break
-            tested += 1
+            ret = runone(options, test, skips, passes, fails, ignores)
+            if options.first and ret is not None and not ret:
+                break
 
         if options.child:
             fp = os.fdopen(options.child, 'w')
@@ -990,7 +983,7 @@ def runtests(options, tests):
                 print "Failed %s: %s" % s
             _checkhglib("Tested")
             print "# Ran %d tests, %d skipped, %d failed." % (
-                tested, len(skips) + len(ignores), failed)
+                len(passes) + len(fails), len(skips) + len(ignores), len(fails))
 
         if options.anycoverage:
             outputcoverage(options)
@@ -998,7 +991,7 @@ def runtests(options, tests):
         failed = True
         print "\ninterrupted!"
 
-    if failed:
+    if fails:
         sys.exit(1)
 
 def main():
