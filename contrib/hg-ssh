@@ -16,7 +16,7 @@ command="hg-ssh path/to/repo1 /path/to/repo2 ~/repo3 ~user/repo4" ssh-dss ...
 (probably together with these other useful options:
  no-port-forwarding,no-X11-forwarding,no-agent-forwarding)
 
-This allows pull/push over ssh to to the repositories given as arguments.
+This allows pull/push over ssh from/to the repositories given as arguments.
 
 If all your repositories are subdirectories of a common directory, you can
 allow shorter paths with:
