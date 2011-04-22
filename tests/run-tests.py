@@ -633,7 +633,7 @@ def run(cmd, options, replacements):
         output = re.sub(s, r, output)
     return ret, splitnewlines(output)
 
-def runone(options, test, skips, fails):
+def runone(options, test, skips, fails, ignores):
     '''tristate output:
     None -> skipped
     True -> passed
@@ -940,17 +940,18 @@ def runtests(options, tests):
 
         skips = []
         fails = []
+        ignores = []
 
         for test in tests:
             if options.blacklist:
                 filename = options.blacklist.get(test)
                 if filename is not None:
-                    skips.append((test, "blacklisted (%s)" % filename))
+                    skipped.append((test, "blacklisted (%s)" % filename))
                     skipped += 1
                     continue
 
             if options.retest and not os.path.exists(test + ".err"):
-                skipped += 1
+                ignores.append((test, "not retesting"))
                 continue
 
             if options.keywords:
@@ -964,10 +965,10 @@ def runtests(options, tests):
                     if k in t:
                         break
                 else:
-                    skipped += 1
+                    ignores.append((test, "doesn't match keyword"))
                     continue
 
-            ret = runone(options, test, skips, fails)
+            ret = runone(options, test, skips, fails, ignores)
             if ret is None:
                 skipped += 1
             elif not ret:
@@ -992,7 +993,7 @@ def runtests(options, tests):
                 print "Failed %s: %s" % s
             _checkhglib("Tested")
             print "# Ran %d tests, %d skipped, %d failed." % (
-                tested, skipped, failed)
+                tested, len(skips) + len(ignores), failed)
 
         if options.anycoverage:
             outputcoverage(options)
