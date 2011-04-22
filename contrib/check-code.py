@@ -150,6 +150,7 @@ pypats = [
     (r'[^+=*!<>&| -](\s=|=\s)[^= ]',
      "wrong whitespace around ="),
     (r'raise Exception', "don't raise generic exceptions"),
+    (r'^\s*except:$', "warning: naked except clause"),
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "warning: unwrapped ui message"),
     (r' is\s+(not\s+)?["\'0-9-]', "object comparison with literal"),
