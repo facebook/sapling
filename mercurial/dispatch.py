@@ -133,7 +133,7 @@ def _runcatch(ui, args):
         elif hasattr(inst, "reason"):
             try: # usually it is in the form (errno, strerror)
                 reason = inst.reason.args[1]
-            except: # it might be anything, for example a string
+            except AttributeError: # it might be anything, for example a string
                 reason = inst.reason
             ui.warn(_("abort: error: %s\n") % reason)
         elif hasattr(inst, "args") and inst.args[0] == errno.EPIPE:

@@ -549,7 +549,7 @@ class localrepository(repo.repository):
         try:
             if len(key) == 20:
                 key = hex(key)
-        except:
+        except TypeError:
             pass
         raise error.RepoLookupError(_("unknown revision '%s'") % key)
 

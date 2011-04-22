@@ -167,7 +167,7 @@ class sshrepository(wireproto.wirerepository):
         self.readerr()
         try:
             l = int(l)
-        except:
+        except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), l))
         return self.pipei.read(l)
 
@@ -208,7 +208,7 @@ class sshrepository(wireproto.wirerepository):
             return 1
         try:
             return int(r)
-        except:
+        except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), r))
 
 instance = sshrepository

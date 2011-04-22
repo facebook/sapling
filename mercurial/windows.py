@@ -32,7 +32,8 @@ class winstdout(object):
     def close(self):
         try:
             self.fp.close()
-        except: pass
+        except IOError:
+            pass
 
     def write(self, s):
         try:
@@ -243,7 +244,7 @@ def _removedirs(name):
             if osutil.listdir(head):
                 return
             os.rmdir(head)
-        except:
+        except (ValueError, OSError):
             break
         head, tail = os.path.split(head)
 

@@ -293,7 +293,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         good = True
         try:
             audit_path(abs)
-        except:
+        except (OSError, util.Abort):
             good = False
         rel = m.rel(abs)
         exact = m.exact(abs)

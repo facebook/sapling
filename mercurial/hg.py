@@ -363,7 +363,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 try:
                     m = dest_repo.lookup(n)
                     dest_repo._bookmarks[k] = m
-                except:
+                except error.RepoLookupError:
                     pass
             if rb:
                 bookmarks.write(dest_repo)

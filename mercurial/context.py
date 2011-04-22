@@ -805,7 +805,7 @@ class workingctx(changectx):
                 p = self._repo.wjoin(f)
                 try:
                     st = os.lstat(p)
-                except:
+                except OSError:
                     ui.warn(_("%s does not exist!\n") % join(f))
                     rejected.append(f)
                     continue

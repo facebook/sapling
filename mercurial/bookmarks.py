@@ -29,7 +29,7 @@ def read(repo):
             sha, refspec = line.strip().split(' ', 1)
             refspec = encoding.tolocal(refspec)
             bookmarks[refspec] = repo.changelog.lookup(sha)
-    except:
+    except IOError:
         pass
     return bookmarks
 

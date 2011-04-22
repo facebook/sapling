@@ -294,7 +294,7 @@ def getremotechanges(ui, repo, other, revs=None, bundlename=None,
     if not incoming:
         try:
             os.unlink(bundlename)
-        except:
+        except OSError:
             pass
         return other, None, None, None
 

@@ -206,12 +206,12 @@ def tempfilter(s, cmd):
         try:
             if inname:
                 os.unlink(inname)
-        except:
+        except OSError:
             pass
         try:
             if outname:
                 os.unlink(outname)
-        except:
+        except OSError:
             pass
 
 filtertable = {
@@ -407,7 +407,7 @@ def copyfile(src, dest):
     if os.path.islink(src):
         try:
             os.unlink(dest)
-        except:
+        except OSError:
             pass
         os.symlink(os.readlink(src), dest)
     else:
@@ -556,7 +556,7 @@ def checkcase(path):
         if s2 == s1:
             return False
         return True
-    except:
+    except OSError:
         return True
 
 _fspathcache = {}

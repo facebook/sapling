@@ -59,7 +59,7 @@ def set_flags(f, l, x):
             os.unlink(f)
             try:
                 os.symlink(data, f)
-            except:
+            except OSError:
                 # failed to make a link, rewrite file
                 fp = open(f, "w")
                 fp.write(data)

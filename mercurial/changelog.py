@@ -185,7 +185,7 @@ class changelog(revlog.revlog):
             try:
                 # various tools did silly things with the time zone field.
                 timezone = int(extra_data[0])
-            except:
+            except ValueError:
                 timezone = 0
             extra = {}
         else:
