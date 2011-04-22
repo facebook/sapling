@@ -934,6 +934,12 @@ def runchildren(options, tests):
         outputcoverage(options)
     sys.exit(failures != 0)
 
+def runqueue(options, tests, results):
+    for test in tests:
+        ret = runone(options, test, results)
+        if options.first and ret is not None and not ret:
+            break
+
 def runtests(options, tests):
     global DAEMON_PIDS, HGRCPATH
     DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
@@ -965,10 +971,7 @@ def runtests(options, tests):
                 print "running all tests"
                 tests = orig
 
-        for test in tests:
-            ret = runone(options, test, results)
-            if options.first and ret is not None and not ret:
-                break
+        runqueue(options, tests, results)
 
         failed = len(results['f'])
         tested = len(results['p']) + failed
