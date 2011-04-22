@@ -633,7 +633,7 @@ def run(cmd, options, replacements):
         output = re.sub(s, r, output)
     return ret, splitnewlines(output)
 
-def runone(options, test, skips, passes, fails, ignores):
+def runone(options, test, results):
     '''tristate output:
     None -> skipped
     True -> passed
@@ -643,7 +643,7 @@ def runone(options, test, skips, passes, fails, ignores):
 
     def skip(msg):
         if not options.verbose:
-            skips.append((test, msg))
+            results['s'].append((test, msg))
         else:
             print "\nSkipping %s: %s" % (testpath, msg)
         return None
@@ -660,7 +660,13 @@ def runone(options, test, skips, passes, fails, ignores):
                 else:
                     rename(test + ".err", test + ".out")
                 return
-        fails.append((test, msg))
+        results['f'].append((test, msg))
+
+    def success():
+        results['p'].append(test)
+
+    def ignore(msg):
+        results['i'].append((test, msg))
 
     if (test.startswith("test-") and '~' not in test and
         ('.' not in test or test.endswith('.py') or
@@ -678,7 +684,7 @@ def runone(options, test, skips, passes, fails, ignores):
             return None
 
     if options.retest and not os.path.exists(test + ".err"):
-        ignores.append((test, "not retesting"))
+        ignore("not retesting")
         return None
 
     if options.keywords:
@@ -689,7 +695,7 @@ def runone(options, test, skips, passes, fails, ignores):
             if k in t:
                 break
             else:
-                ignores.append((test, "doesn't match keyword"))
+                ignore("doesn't match keyword")
                 return None
 
     vlog("# Test", test)
@@ -756,7 +762,7 @@ def runone(options, test, skips, passes, fails, ignores):
 
     mark = '.'
     if ret == 0:
-        passes.append(test)
+        success()
 
     skipped = (ret == SKIPPED_STATUS)
 
@@ -933,6 +939,8 @@ def runtests(options, tests):
     DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
     HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
 
+    results = dict(p=[], f=[], s=[], i=[])
+
     try:
         if INST:
             installhg(options)
@@ -957,33 +965,33 @@ def runtests(options, tests):
                 print "running all tests"
                 tests = orig
 
-        passes = []
-        skips = []
-        fails = []
-        ignores = []
-
         for test in tests:
-            ret = runone(options, test, skips, passes, fails, ignores)
+            ret = runone(options, test, results)
             if options.first and ret is not None and not ret:
                 break
+
+        failed = len(results['f'])
+        tested = len(results['p']) + failed
+        skipped = len(results['s'])
+        ignored = len(results['i'])
 
         if options.child:
             fp = os.fdopen(options.child, 'w')
             fp.write('%d\n%d\n%d\n' % (tested, skipped, failed))
-            for s in skips:
+            for s in results['s']:
                 fp.write("%s %s\n" % s)
-            for s in fails:
+            for s in results['f']:
                 fp.write("%s %s\n" % s)
             fp.close()
         else:
             print
-            for s in skips:
+            for s in results['s']:
                 print "Skipped %s: %s" % s
-            for s in fails:
+            for s in results['f']:
                 print "Failed %s: %s" % s
             _checkhglib("Tested")
             print "# Ran %d tests, %d skipped, %d failed." % (
-                len(passes) + len(fails), len(skips) + len(ignores), len(fails))
+                tested, skipped + ignored, failed)
 
         if options.anycoverage:
             outputcoverage(options)
@@ -991,7 +999,7 @@ def runtests(options, tests):
         failed = True
         print "\ninterrupted!"
 
-    if fails:
+    if failed:
         sys.exit(1)
 
 def main():
