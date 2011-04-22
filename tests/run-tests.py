@@ -671,6 +671,17 @@ def runone(options, test, skips, fails, ignores):
     else:
         return None # not a supported test, don't record
 
+    if options.keywords:
+        fp = open(test)
+        t = fp.read().lower() + test.lower()
+        fp.close()
+        for k in options.keywords.lower().split():
+            if k in t:
+                break
+            else:
+                ignores.append((test, "doesn't match keyword"))
+                return None
+
     vlog("# Test", test)
 
     # create a fresh hgrc
@@ -953,20 +964,6 @@ def runtests(options, tests):
             if options.retest and not os.path.exists(test + ".err"):
                 ignores.append((test, "not retesting"))
                 continue
-
-            if options.keywords:
-                try:
-                    fp = open(test)
-                except IOError:
-                    continue
-                t = fp.read().lower() + test.lower()
-                fp.close()
-                for k in options.keywords.lower().split():
-                    if k in t:
-                        break
-                else:
-                    ignores.append((test, "doesn't match keyword"))
-                    continue
 
             ret = runone(options, test, skips, fails, ignores)
             if ret is None:
