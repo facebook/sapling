@@ -12,7 +12,6 @@ commands. When this options is given, an ASCII representation of the
 revision graph is also shown.
 '''
 
-import os
 from mercurial.cmdutil import revrange, show_changeset
 from mercurial.commands import templateopts
 from mercurial.i18n import _
@@ -216,12 +215,45 @@ def get_revs(repo, rev_opt):
         return (len(repo) - 1, 0)
 
 def check_unsupported_flags(opts):
-    for op in ["follow", "follow_first", "date", "copies", "keyword", "remove",
-               "only_merges", "user", "branch", "only_branch", "prune",
-               "newest_first", "no_merges", "include", "exclude"]:
+    for op in ["follow_first", "copies", "newest_first"]:
         if op in opts and opts[op]:
-            raise util.Abort(_("--graph option is incompatible with --%s")
+            raise util.Abort(_("-G/--graph option is incompatible with --%s")
                              % op.replace("_", "-"))
+
+def revset(pats, opts):
+    """Return revset str built of revisions, log options and file patterns.
+    """
+    opt2revset = dict(only_merges='merge',
+                      only_branch='branch',
+                      no_merges='not merge',
+                      include='file',
+                      exclude='not file',
+                      prune='not follow')
+    revset = []
+    for op, val in opts.iteritems():
+        if not val:
+            continue
+        revop = opt2revset.get(op, op)
+        if op in ('follow', 'only_merges', 'no_merges'):
+            revset.append('%s()' % revop)
+        elif op in ("date", "keyword", "remove", "user", "branch",
+                    "only_branch", "prune"):
+            revset.append('%s(%s)' % (op, val))
+        elif op in ('include', 'exclude'):
+            for f in val:
+                revset.append('%s(%r)' % (op, f))
+        elif op == 'rev':
+            revset.extend(val)
+
+    for path in pats:
+        revset.append('file(%r)' % path)
+
+    revset = ' and '.join(revset) or 'all()'
+    # we want reverted revset to build graph
+    revset = 'reverse(%s)' % revset
+    if opts['limit']:
+        revset = 'limit(%s, %s)' % (revset, opts['limit'])
+    return revset
 
 def generate(ui, dag, displayer, showparents, edgefn):
     seen, state = [], asciistate()
@@ -233,7 +265,7 @@ def generate(ui, dag, displayer, showparents, edgefn):
         ascii(ui, state, type, char, lines, edgefn(seen, rev, parents))
     displayer.close()
 
-def graphlog(ui, repo, path=None, **opts):
+def graphlog(ui, repo, *pats, **opts):
     """show revision history alongside an ASCII revision graph
 
     Print a revision history alongside a revision graph drawn with
@@ -244,17 +276,9 @@ def graphlog(ui, repo, path=None, **opts):
     """
 
     check_unsupported_flags(opts)
-    limit = cmdutil.loglimit(opts)
-    start, stop = get_revs(repo, opts["rev"])
-    if start == nullrev:
-        return
 
-    if path: # could be reset in canonpath
-        revdag = graphmod.filerevs(repo, path, start, stop, limit)
-    else:
-        if limit is not None:
-            stop = max(stop, start - limit + 1)
-        revdag = graphmod.revisions(repo, start, stop)
+    revs = revrange(repo, [revset(pats, opts)])
+    revdag = graphmod.dagwalker(repo, revs)
 
     displayer = show_changeset(ui, repo, opts, buffered=True)
     showparents = [ctx.node() for ctx in repo[None].parents()]
@@ -317,12 +341,7 @@ def _wrapcmd(ui, cmd, table, wrapfn):
     '''wrap the command'''
     def graph(orig, *args, **kwargs):
         if kwargs['graph']:
-            try:
-                return wrapfn(*args, **kwargs)
-            except TypeError, e:
-                if len(args) > wrapfn.func_code.co_argcount:
-                    raise util.Abort(_('--graph option allows at most one file'))
-                raise
+            return wrapfn(*args, **kwargs)
         return orig(*args, **kwargs)
     entry = extensions.wrapcommand(table, cmd, graph)
     entry[1].append(('G', 'graph', None, _("show the revision DAG")))

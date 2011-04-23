@@ -755,7 +755,7 @@ def graph(web, req, tmpl):
     if rev < web.maxshortchanges:
         startrev = uprev
 
-    dag = graphmod.revisions(web.repo, startrev, downrev)
+    dag = graphmod.dagwalker(web.repo, range(startrev, downrev - 1, -1))
     tree = list(graphmod.colored(dag))
     canvasheight = (len(tree) + 1) * bg_height - 27
     data = []

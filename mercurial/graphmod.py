@@ -22,20 +22,6 @@ from mercurial.cmdutil import revrange
 
 CHANGESET = 'C'
 
-def revisions(repo, start, end):
-    """DAG generator for revisions between start and end
-    """
-    revset = '%s:%s' % (start, end)
-    return dagwalker(repo, revrange(repo, [revset]))
-
-def filerevs(repo, path, start, stop, limit=None):
-    """DAG generator, which is limited by file passed
-    """
-    revset = '%s:%s and file("%s")' % (start, stop, path)
-    if limit:
-        revset = 'limit(%s, %s)' % (revset, limit)
-    return dagwalker(repo, revrange(repo, [revset]))
-
 def dagwalker(repo, revs):
     """cset DAG generator yielding (id, CHANGESET, ctx, [parentids]) tuples
 
