@@ -126,11 +126,9 @@ def _terminfosetup(ui):
     if mode not in ('auto', 'terminfo'):
         return
 
-    _terminfo_params.update(dict((
-        (key[6:], (False, int(val)))
+    _terminfo_params.update((key[6:], (False, int(val)))
         for key, val in ui.configitems('color')
-        if key.startswith('color.')
-    )))
+        if key.startswith('color.'))
 
     try:
         curses.setupterm()
@@ -324,7 +322,7 @@ def uisetup(ui):
         _terminfo_params = {}
     elif mode == 'terminfo':
         _terminfosetup(ui)
-    elif mode not in ('ansi', 'terminfo'):
+    else:
         return
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
         coloropt = opts['color']
