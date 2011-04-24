@@ -667,16 +667,22 @@ def runone(options, test):
         if not options.verbose:
             result('s', (test, msg))
         else:
+            iolock.acquire()
             print "\nSkipping %s: %s" % (testpath, msg)
+            iolock.release()
         return None
 
     def fail(msg, ret):
         if not options.nodiff:
+            iolock.acquire()
             print "\nERROR: %s %s" % (testpath, msg)
+            iolock.release()
         if (not ret and options.interactive
             and os.path.exists(testpath + ".err")):
+            iolock.acquire()
             print "Accept this change? [n] ",
             answer = sys.stdin.readline().strip()
+            iolock.release()
             if answer.lower() in "y yes".split():
                 if test.endswith(".t"):
                     rename(testpath + ".err", testpath)
