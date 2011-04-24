@@ -719,12 +719,15 @@ def mktempcopy(name, emptyok=False, createmode=None):
     return temp
 
 class atomictempfile(object):
-    """file-like object that atomically updates a file
+    '''writeable file object that atomically updates a file
 
-    All writes will be redirected to a temporary copy of the original
-    file.  When rename is called, the copy is renamed to the original
-    name, making the changes visible.
-    """
+    All writes will go to a temporary copy of the original file. Call
+    rename() when you are done writing, and atomictempfile will rename
+    the temporary copy to the original name, making the changes visible.
+
+    Unlike other file-like objects, close() discards your writes by
+    simply deleting the temporary file.
+    '''
     def __init__(self, name, mode='w+b', createmode=None):
         self.__name = name      # permanent name
         self._tempname = mktempcopy(name, emptyok=('w' in mode),
