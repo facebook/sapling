@@ -53,6 +53,7 @@ import sys
 import tempfile
 import time
 import re
+import threading
 
 closefds = os.name == 'posix'
 def Popen4(cmd, bufsize=-1):
@@ -633,17 +634,24 @@ def run(cmd, options, replacements):
         output = re.sub(s, r, output)
     return ret, splitnewlines(output)
 
-def runone(options, test, results):
+def runone(options, test):
     '''tristate output:
     None -> skipped
     True -> passed
     False -> failed'''
 
+    global results, resultslock
+
     testpath = os.path.join(TESTDIR, test)
+
+    def result(l, e):
+        resultslock.acquire()
+        results[l].append(e)
+        resultslock.release()
 
     def skip(msg):
         if not options.verbose:
-            results['s'].append((test, msg))
+            result('s', (test, msg))
         else:
             print "\nSkipping %s: %s" % (testpath, msg)
         return None
@@ -661,13 +669,13 @@ def runone(options, test, results):
                 else:
                     rename(testpath + ".err", testpath + ".out")
                 return
-        results['f'].append((test, msg))
+        result('f', (test, msg))
 
     def success():
-        results['p'].append(test)
+        result('p', test)
 
     def ignore(msg):
-        results['i'].append((test, msg))
+        result('i', (test, msg))
 
     if (test.startswith("test-") and '~' not in test and
         ('.' not in test or test.endswith('.py') or
@@ -681,7 +689,7 @@ def runone(options, test, results):
     if options.blacklist:
         filename = options.blacklist.get(test)
         if filename is not None:
-            skipped.append((test, "blacklisted (%s)" % filename))
+            skip("blacklisted")
             return None
 
     if options.retest and not os.path.exists(test + ".err"):
@@ -935,9 +943,12 @@ def runchildren(options, tests):
         outputcoverage(options)
     sys.exit(failures != 0)
 
+results = dict(p=[], f=[], s=[], i=[])
+resultslock = threading.Lock()
+
 def runqueue(options, tests, results):
     for test in tests:
-        ret = runone(options, test, results)
+        ret = runone(options, test)
         if options.first and ret is not None and not ret:
             break
 
@@ -945,8 +956,6 @@ def runtests(options, tests):
     global DAEMON_PIDS, HGRCPATH
     DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
     HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
-
-    results = dict(p=[], f=[], s=[], i=[])
 
     try:
         if INST:
