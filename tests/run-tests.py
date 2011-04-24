@@ -56,14 +56,29 @@ import re
 import threading
 
 closefds = os.name == 'posix'
-def Popen4(cmd, bufsize=-1):
-    p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+def Popen4(cmd, timeout):
+    p = subprocess.Popen(cmd, shell=True, bufsize=-1,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
     p.fromchild = p.stdout
     p.tochild = p.stdin
     p.childerr = p.stderr
+
+    if timeout:
+        p.timeout = False
+        def t():
+            start = time.time()
+            while time.time() - start < timeout and p.returncode is None:
+                time.sleep(1)
+            p.timeout = True
+            if p.returncode is None:
+                try:
+                    p.terminate()
+                except OSError:
+                    pass
+        threading.Thread(target=t).start()
+
     return p
 
 # reserved exit code to skip test (used by hghave)
@@ -440,12 +455,6 @@ def outputcoverage(options):
             os.mkdir(adir)
         covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
-class Timeout(Exception):
-    pass
-
-def alarmed(signum, frame):
-    raise Timeout
-
 def pytest(test, options, replacements):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
@@ -603,32 +612,37 @@ def run(cmd, options, replacements):
         if ret is None:
             ret = 0
     else:
-        proc = Popen4(cmd)
+        proc = Popen4(cmd, options.timeout)
         def cleanup():
-            os.kill(proc.pid, signal.SIGTERM)
+            try:
+                proc.terminate()
+            except OSError:
+                pass
             ret = proc.wait()
             if ret == 0:
                 ret = signal.SIGTERM << 8
             killdaemons()
             return ret
 
+        output = ''
+        proc.tochild.close()
+
         try:
-            output = ''
-            proc.tochild.close()
             output = proc.fromchild.read()
-            ret = proc.wait()
-            if wifexited(ret):
-                ret = os.WEXITSTATUS(ret)
-        except Timeout:
-            vlog('# Process %d timed out - killing it' % proc.pid)
-            cleanup()
-            ret = 'timeout'
-            output += ("\n### Abort: timeout after %d seconds.\n"
-                       % options.timeout)
         except KeyboardInterrupt:
             vlog('# Handling keyboard interrupt')
             cleanup()
             raise
+
+        ret = proc.wait()
+        if wifexited(ret):
+            ret = os.WEXITSTATUS(ret)
+
+        if proc.timeout:
+            ret = 'timeout'
+
+        if ret:
+            killdaemons()
 
     for s, r in replacements:
         output = re.sub(s, r, output)
@@ -755,9 +769,6 @@ def runone(options, test):
     os.mkdir(testtmp)
     os.chdir(testtmp)
 
-    if options.timeout > 0:
-        signal.alarm(options.timeout)
-
     ret, out = runner(testpath, options, [
         (re.escape(testtmp), '$TESTTMP'),
         (r':%s\b' % options.port, ':$HGPORT'),
@@ -765,9 +776,6 @@ def runone(options, test):
         (r':%s\b' % (options.port + 2), ':$HGPORT2'),
         ])
     vlog("# Ret was:", ret)
-
-    if options.timeout > 0:
-        signal.alarm(0)
 
     mark = '.'
     if ret == 0:
@@ -807,11 +815,12 @@ def runone(options, test):
             skipped = False
         else:
             skip(missing[-1])
+    elif ret == 'timeout':
+        mark = 't'
+        fail("timed out", ret)
     elif out != refout:
         mark = '!'
-        if ret == 'timeout':
-            fail("timed out", ret)
-        elif ret:
+        if ret:
             fail("output changed and returned error code %d" % ret, ret)
         else:
             fail("output changed", ret)
@@ -961,15 +970,6 @@ def runtests(options, tests):
         if INST:
             installhg(options)
             _checkhglib("Testing")
-
-        if options.timeout > 0:
-            try:
-                signal.signal(signal.SIGALRM, alarmed)
-                vlog('# Running each test with %d second timeout' %
-                     options.timeout)
-            except AttributeError:
-                print 'WARNING: cannot run tests with timeouts'
-                options.timeout = 0
 
         if options.restart:
             orig = list(tests)
