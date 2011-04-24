@@ -651,14 +651,15 @@ def runone(options, test, results):
     def fail(msg, ret):
         if not options.nodiff:
             print "\nERROR: %s %s" % (testpath, msg)
-        if not ret and options.interactive:
+        if (not ret and options.interactive
+            and os.path.exists(testpath + ".err")):
             print "Accept this change? [n] ",
             answer = sys.stdin.readline().strip()
             if answer.lower() in "y yes".split():
                 if test.endswith(".t"):
-                    rename(test + ".err", test)
+                    rename(testpath + ".err", testpath)
                 else:
-                    rename(test + ".err", test + ".out")
+                    rename(testpath + ".err", testpath + ".out")
                 return
         results['f'].append((test, msg))
 
