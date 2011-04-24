@@ -27,6 +27,36 @@
   summary:     add foo
   
   $ cd ..
+
+don't show "(+1 heads)" message when pulling closed head
+
+  $ hg clone -q repo repo2
+  $ hg clone -q repo2 repo3
+  $ cd repo2
+  $ hg up -q 0
+  $ echo hello >> foo
+  $ hg ci -mx1
+  created new head
+  $ hg ci -mx2 --close-branch
+  $ cd ../repo3
+  $ hg heads -q --closed
+  2:effea6de0384
+  1:ed1b79f46b9a
+  $ hg pull
+  pulling from $TESTTMP/repo2
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hg heads -q --closed
+  4:996201fa1abf
+  2:effea6de0384
+  1:ed1b79f46b9a
+
+  $ cd ..
+
   $ hg init copy
   $ cd copy
 

@@ -1690,7 +1690,7 @@ class localrepository(repo.repository):
         # inconsistent view
         cl = self.changelog
         cl.delayupdate()
-        oldheads = len(cl.heads())
+        oldheads = cl.heads()
 
         tr = self.transaction("\n".join([srctype, urlmod.hidepassword(url)]))
         try:
@@ -1781,14 +1781,20 @@ class localrepository(repo.repository):
                             _('missing file data for %s:%s - run hg verify') %
                             (f, hex(n)))
 
-            newheads = len(cl.heads())
-            heads = ""
-            if oldheads and newheads != oldheads:
-                heads = _(" (%+d heads)") % (newheads - oldheads)
+            dh = 0
+            if oldheads:
+                heads = cl.heads()
+                dh = len(heads) - len(oldheads)
+                for h in heads:
+                    if h not in oldheads and 'close' in self[h].extra():
+                        dh -= 1
+            htext = ""
+            if dh:
+                htext = _(" (%+d heads)") % dh
 
             self.ui.status(_("added %d changesets"
                              " with %d changes to %d files%s\n")
-                             % (changesets, revisions, files, heads))
+                             % (changesets, revisions, files, htext))
 
             if changesets > 0:
                 p = lambda: cl.writepending() and self.root or ""
@@ -1817,11 +1823,10 @@ class localrepository(repo.repository):
                           source=srctype, url=url)
 
         # never return 0 here:
-        if newheads < oldheads:
-            return newheads - oldheads - 1
+        if dh < 0:
+            return dh - 1
         else:
-            return newheads - oldheads + 1
-
+            return dh + 1
 
     def stream_in(self, remote, requirements):
         lock = self.lock()
