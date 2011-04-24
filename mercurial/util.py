@@ -726,31 +726,31 @@ class atomictempfile(object):
     name, making the changes visible.
     """
     def __init__(self, name, mode='w+b', createmode=None):
-        self.__name = name
-        self._fp = None
-        self.temp = mktempcopy(name, emptyok=('w' in mode),
-                               createmode=createmode)
-        self._fp = posixfile(self.temp, mode)
+        self.__name = name      # permanent name
+        self._tempname = mktempcopy(name, emptyok=('w' in mode),
+                                    createmode=createmode)
+        self._fp = posixfile(self._tempname, mode)
 
-    def __getattr__(self, name):
-        return getattr(self._fp, name)
+        # delegated methods
+        self.write = self._fp.write
+        self.fileno = self._fp.fileno
 
     def rename(self):
         if not self._fp.closed:
             self._fp.close()
-            rename(self.temp, localpath(self.__name))
+            rename(self._tempname, localpath(self.__name))
 
     def close(self):
-        if not self._fp:
-            return
         if not self._fp.closed:
             try:
-                os.unlink(self.temp)
-            except: pass
+                os.unlink(self._tempname)
+            except OSError:
+                pass
             self._fp.close()
 
     def __del__(self):
-        self.close()
+        if hasattr(self, '_fp'): # constructor actually did something
+            self.close()
 
 def makedirs(name, mode=None):
     """recursive directory creation with parent mode inheritance"""
