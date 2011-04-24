@@ -654,7 +654,7 @@ def runone(options, test):
     True -> passed
     False -> failed'''
 
-    global results, resultslock
+    global results, resultslock, iolock
 
     testpath = os.path.join(TESTDIR, test)
 
@@ -825,18 +825,22 @@ def runone(options, test):
         else:
             fail("output changed", ret)
         if ret != 'timeout' and not options.nodiff:
+            iolock.acquire()
             if options.view:
                 os.system("%s %s %s" % (options.view, ref, err))
             else:
                 showdiff(refout, out, ref, err)
+            iolock.release()
         ret = 1
     elif ret:
         mark = '!'
         fail("returned error code %d" % ret, ret)
 
     if not options.verbose:
+        iolock.acquire()
         sys.stdout.write(mark)
         sys.stdout.flush()
+        iolock.release()
 
     killdaemons()
 
@@ -954,6 +958,7 @@ def runchildren(options, tests):
 
 results = dict(p=[], f=[], s=[], i=[])
 resultslock = threading.Lock()
+iolock = threading.Lock()
 
 def runqueue(options, tests, results):
     for test in tests:
