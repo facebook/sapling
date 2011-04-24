@@ -2,6 +2,8 @@
   $ echo "color=" >> $HGRCPATH
   $ echo "[color]" >> $HGRCPATH
   $ echo "mode=ansi" >> $HGRCPATH
+Terminfo codes compatibility fix
+  $ echo "color.none=0" >> $HGRCPATH
 
   $ hg init repo1
   $ cd repo1
@@ -166,15 +168,15 @@ hg status -A:
 hg status -A (with terminfo color):
 
   $ TERM=xterm hg status --config color.mode=terminfo --color=always -A
-  \x1b(B\x1b[m\x1b[32m\x1b[1mA added\x1b(B\x1b[m (esc)
-  \x1b(B\x1b[m\x1b[32m\x1b[1mA copied\x1b(B\x1b[m (esc)
-  \x1b(B\x1b[m\x1b(B\x1b[m  modified\x1b(B\x1b[m (esc)
-  \x1b(B\x1b[m\x1b[31m\x1b[1mR removed\x1b(B\x1b[m (esc)
-  \x1b(B\x1b[m\x1b[36m\x1b[1m\x1b[4m! deleted\x1b(B\x1b[m (esc)
-  \x1b(B\x1b[m\x1b[35m\x1b[1m\x1b[4m? unknown\x1b(B\x1b[m (esc)
-  \x1b(B\x1b[m\x1b[30m\x1b[1mI ignored\x1b(B\x1b[m (esc)
-  \x1b(B\x1b[m\x1b(B\x1b[mC .hgignore\x1b(B\x1b[m (esc)
-  \x1b(B\x1b[m\x1b(B\x1b[mC modified\x1b(B\x1b[m (esc)
+  \x1b[30m\x1b[32m\x1b[1mA added\x1b[30m (esc)
+  \x1b[30m\x1b[32m\x1b[1mA copied\x1b[30m (esc)
+  \x1b[30m\x1b[30m  modified\x1b[30m (esc)
+  \x1b[30m\x1b[31m\x1b[1mR removed\x1b[30m (esc)
+  \x1b[30m\x1b[36m\x1b[1m\x1b[4m! deleted\x1b[30m (esc)
+  \x1b[30m\x1b[35m\x1b[1m\x1b[4m? unknown\x1b[30m (esc)
+  \x1b[30m\x1b[30m\x1b[1mI ignored\x1b[30m (esc)
+  \x1b[30m\x1b[30mC .hgignore\x1b[30m (esc)
+  \x1b[30m\x1b[30mC modified\x1b[30m (esc)
 
 
   $ echo "^ignoreddir$" > .hgignore
