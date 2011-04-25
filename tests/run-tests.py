@@ -203,12 +203,14 @@ def parseargs():
         else:
             pid = None
         def vlog(*msg):
+            iolock.acquire()
             if pid:
                 print pid,
             for m in msg:
                 print m,
             print
             sys.stdout.flush()
+            iolock.release()
     else:
         vlog = lambda *msg: None
 
