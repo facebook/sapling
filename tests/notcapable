@@ -1,0 +1,19 @@
+# Disable the $CAP wire protocol capability.
+
+if test -z "$CAP"
+then
+    echo "CAP environment variable not set."
+fi
+
+cat > notcapable-$CAP.py << EOF
+from mercurial import extensions, repo
+def extsetup():
+    extensions.wrapfunction(repo.repository, 'capable', wrapper)
+def wrapper(orig, self, name, *args, **kwargs):
+    if name == '$CAP':
+        return False
+    return orig(self, name, *args, **kwargs)
+EOF
+
+echo '[extensions]' >> $HGRCPATH
+echo "notcapable-$CAP = `pwd`/notcapable-$CAP.py" >> $HGRCPATH

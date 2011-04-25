@@ -68,17 +68,8 @@ expect success
 
 expect success, server lacks the unbundlehash capability
 
-  $ cat > unbundlehash-off.py << EOF
-  > from mercurial import extensions, repo
-  > def extsetup():
-  >     extensions.wrapfunction(repo.repository, 'capable', wrapper)
-  > def wrapper(orig, self, name, *args, **kwargs):
-  >     if name == 'unbundlehash':
-  >         return False
-  >     return orig(self, name, *args, **kwargs)
-  > EOF
-  $ echo '[extensions]' >> .hg/hgrc
-  $ echo "unbundlehash-off = `pwd`/unbundlehash-off.py" >> .hg/hgrc
+  $ CAP=unbundlehash
+  $ . "$TESTDIR/notcapable"
   $ req
   pushing to http://localhost:$HGPORT/
   searching for changes
