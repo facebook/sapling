@@ -826,17 +826,17 @@ def runone(options, test):
         fail("timed out", ret)
     elif out != refout:
         mark = '!'
-        if ret:
-            fail("output changed and returned error code %d" % ret, ret)
-        else:
-            fail("output changed", ret)
-        if ret != 'timeout' and not options.nodiff:
+        if not options.nodiff:
             iolock.acquire()
             if options.view:
                 os.system("%s %s %s" % (options.view, ref, err))
             else:
                 showdiff(refout, out, ref, err)
             iolock.release()
+        if ret:
+            fail("output changed and returned error code %d" % ret, ret)
+        else:
+            fail("output changed", ret)
         ret = 1
     elif ret:
         mark = '!'
