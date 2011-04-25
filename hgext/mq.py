@@ -737,11 +737,29 @@ class queue(object):
                     os.unlink(self.join(p))
 
         if numrevs:
+            qfinished = self.applied[:numrevs]
             del self.applied[:numrevs]
             self.applied_dirty = 1
 
-        for i in sorted([self.find_series(p) for p in patches], reverse=True):
-            del self.full_series[i]
+        unknown = []
+
+        for (i, p) in sorted([(self.find_series(p), p) for p in patches],
+                             reverse=True):
+            if i is not None:
+                del self.full_series[i]
+            else:
+                unknown.append(p)
+
+        if unknown:
+            if numrevs:
+                rev  = dict((entry.name, entry.node) for entry in qfinished)
+                for p in unknown:
+                    msg = _('revision %s refers to unknown patches: %s\n')
+                    self.ui.warn(msg % (short(rev[p]), p))
+            else:
+                msg = _('unknown patches: %s\n')
+                raise util.Abort(''.join(msg % p for p in unknown))
+
         self.parse_series()
         self.series_dirty = 1
 

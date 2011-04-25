@@ -162,3 +162,33 @@ qdel -k X && hg qimp -e X used to trigger spurious output with versioned queues
   adding 3.diff to series file
   $ hg qfinish -a
   no patches applied
+
+
+resilience to inconsistency: qfinish -a with applied patches not in series
+
+  $ hg qser
+  3.diff
+  $ hg qapplied
+  $ hg qpush
+  applying 3.diff
+  patch 3.diff is empty
+  now at: 3.diff
+  $ echo next >>  base
+  $ hg qrefresh -d '1 0'
+  $ echo > .hg/patches/series # remove 3.diff from series to confuse mq
+  $ hg qfinish -a
+  revision c4dd2b624061 refers to unknown patches: 3.diff
+
+more complex state 'both known and unknown patches
+
+  $ echo hip >>  base
+  $ hg qnew -f -d '1 0' -m 4 4.diff
+  $ echo hop >>  base
+  $ hg qnew -f -d '1 0' -m 5 5.diff
+  $ echo > .hg/patches/series # remove 4.diff and 5.diff from series to confuse mq
+  $ echo hup >>  base
+  $ hg qnew -f -d '1 0' -m 6 6.diff
+  $ hg qfinish -a
+  revision 6fdec4b20ec3 refers to unknown patches: 5.diff
+  revision 2ba51db7ba24 refers to unknown patches: 4.diff
+
