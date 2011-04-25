@@ -42,6 +42,7 @@ def rephere(m):
 
 
 testpats = [
+  [
     (r'(pushd|popd)', "don't use 'pushd' or 'popd', use 'cd'"),
     (r'\W\$?\(\([^\)]*\)\)', "don't use (()) or $(()), use 'expr'"),
     (r'^function', "don't use 'function', use old style"),
@@ -67,6 +68,9 @@ testpats = [
     (r'touch -d', "don't use 'touch -d', use 'touch -t' instead"),
     (r'ls\s+[^|-]+\s+-', "options to 'ls' must come before filenames"),
     (r'[^>]>\s*\$HGRCPATH', "don't overwrite $HGRCPATH, append to it"),
+  ],
+  # warnings
+  []
 ]
 
 testfilters = [
@@ -77,6 +81,7 @@ testfilters = [
 uprefix = r"^  \$ "
 uprefixc = r"^  > "
 utestpats = [
+  [
     (r'^(\S|  $ ).*(\S\s+|^\s+)\n', "trailing whitespace on non-output"),
     (uprefix + r'.*\|\s*sed', "use regex test output patterns instead of sed"),
     (uprefix + r'(true|exit 0)', "explicit zero exit unnecessary"),
@@ -85,9 +90,12 @@ utestpats = [
      "explicit exit code checks unnecessary"),
     (uprefix + r'set -e', "don't use set -e"),
     (uprefixc + r'( *)\t', "don't use tabs to indent"),
+  ],
+  # warnings
+  []
 ]
 
-for p, m in testpats:
+for p, m in testpats[0] + testpats[1]:
     if p.startswith('^'):
         p = uprefix + p[1:]
     else:
@@ -99,6 +107,7 @@ utestfilters = [
 ]
 
 pypats = [
+  [
     (r'^\s*def\s*\w+\s*\(.*,\s*\(',
      "tuple parameter unpacking not available in Python 3+"),
     (r'lambda\s*\(.*,.*\)',
@@ -112,7 +121,6 @@ pypats = [
     (r'\w[+/*\-<>]\w', "missing whitespace in expression"),
     (r'^\s+\w+=\w+[^,)]$', "missing whitespace in assignment"),
     (r'.{85}', "line too long"),
-    (r'.{81}', "warning: line over 80 characters"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'(\S\s+|^\s+)\n', "trailing whitespace"),
 #    (r'^\s+[^_ ][^_. ]+_[^_]+\s*=', "don't use underbars in identifiers"),
@@ -150,12 +158,17 @@ pypats = [
     (r'[^+=*!<>&| -](\s=|=\s)[^= ]',
      "wrong whitespace around ="),
     (r'raise Exception', "don't raise generic exceptions"),
-    (r'^\s*except:$', "warning: naked except clause"),
-    (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
-     "warning: unwrapped ui message"),
     (r' is\s+(not\s+)?["\'0-9-]', "object comparison with literal"),
     (r' [=!]=\s+(True|False|None)',
      "comparison with singleton, use 'is' or 'is not' instead"),
+  ],
+  # warnings
+  [
+    (r'.{81}', "warning: line over 80 characters"),
+    (r'^\s*except:$', "warning: naked except clause"),
+    (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
+     "warning: unwrapped ui message"),
+  ]
 ]
 
 pyfilters = [
@@ -166,6 +179,7 @@ pyfilters = [
 ]
 
 cpats = [
+  [
     (r'//', "don't use //-style comments"),
     (r'^  ', "don't use spaces to indent"),
     (r'\S\t', "don't use tabs except for indent"),
@@ -182,6 +196,9 @@ cpats = [
     (r'^#\s+\w', "use #foo, not # foo"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'^\s*#import\b', "use only #include in standard C code"),
+  ],
+  # warnings
+  []
 ]
 
 cfilters = [
@@ -258,14 +275,16 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
             break
         for p, r in filters:
             post = re.sub(p, r, post)
+        if warnings:
+            pats = pats[0] + pats[1]
+        else:
+            pats = pats[0]
         # print post # uncomment to show filtered version
         z = enumerate(zip(pre.splitlines(), post.splitlines(True)))
         for n, l in z:
             if "check-code" + "-ignore" in l[0]:
                 continue
             for p, msg in pats:
-                if not warnings and msg.startswith("warning"):
-                    continue
                 if re.search(p, l[1]):
                     bd = ""
                     if blame:
