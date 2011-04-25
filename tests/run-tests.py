@@ -55,12 +55,20 @@ import time
 import re
 import threading
 
+processlock = threading.Lock()
+
 closefds = os.name == 'posix'
-def Popen4(cmd, timeout):
+def Popen4(cmd, wd, timeout):
+    processlock.acquire()
+    orig = os.getcwd()
+    os.chdir(wd)
     p = subprocess.Popen(cmd, shell=True, bufsize=-1,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
+    os.chdir(orig)
+    processlock.release()
+
     p.fromchild = p.stdout
     p.tochild = p.stdin
     p.childerr = p.stderr
@@ -457,16 +465,16 @@ def outputcoverage(options):
             os.mkdir(adir)
         covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
-def pytest(test, options, replacements):
+def pytest(test, wd, options, replacements):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
     vlog("# Running", cmd)
-    return run(cmd, options, replacements)
+    return run(cmd, wd, options, replacements)
 
-def shtest(test, options, replacements):
+def shtest(test, wd, options, replacements):
     cmd = '"%s"' % test
     vlog("# Running", cmd)
-    return run(cmd, options, replacements)
+    return run(cmd, wd, options, replacements)
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 escapesub = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
@@ -477,7 +485,7 @@ def escapef(m):
 def stringescape(s):
     return escapesub(escapef, s)
 
-def tsttest(test, options, replacements):
+def tsttest(test, wd, options, replacements):
     t = open(test)
     out = []
     script = []
@@ -518,7 +526,7 @@ def tsttest(test, options, replacements):
 
         cmd = '/bin/sh "%s"' % name
         vlog("# Running", cmd)
-        exitcode, output = run(cmd, options, replacements)
+        exitcode, output = run(cmd, wd, options, replacements)
         # do not merge output if skipped, return hghave message instead
         # similarly, with --debug, output is None
         if exitcode == SKIPPED_STATUS or output is None:
@@ -597,7 +605,7 @@ def tsttest(test, options, replacements):
     return exitcode, postout
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
-def run(cmd, options, replacements):
+def run(cmd, wd, options, replacements):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
@@ -614,7 +622,7 @@ def run(cmd, options, replacements):
         if ret is None:
             ret = 0
     else:
-        proc = Popen4(cmd, options.timeout)
+        proc = Popen4(cmd, wd, options.timeout)
         def cleanup():
             try:
                 proc.terminate()
@@ -775,9 +783,7 @@ def runone(options, test):
         os.path.join(HGTMP, test)
 
     os.mkdir(testtmp)
-    os.chdir(testtmp)
-
-    ret, out = runner(testpath, options, [
+    ret, out = runner(testpath, testtmp, options, [
         (re.escape(testtmp), '$TESTTMP'),
         (r':%s\b' % options.port, ':$HGPORT'),
         (r':%s\b' % (options.port + 1), ':$HGPORT1'),
@@ -852,7 +858,6 @@ def runone(options, test):
 
     killdaemons()
 
-    os.chdir(TESTDIR)
     if not options.keep_tmpdir:
         shutil.rmtree(testtmp, True)
     if skipped:
