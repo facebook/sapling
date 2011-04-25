@@ -397,12 +397,13 @@ test with a win32ext like setup (differing EOLs)
   $ echo '[patch]' >> .hg/hgrc
   $ echo 'eol = crlf' >> .hg/hgrc
   $ python -c "file('b', 'wb').write('b\r\nb\r\n')"
-  $ hg ci -m addb
-  nothing changed
-  [1]
+  $ hg ci -Am addb
+  adding b
   $ hg transplant -s ../twin1 tip
+  searching for changes
+  warning: repository is unrelated
   applying 2e849d776c17
-  2e849d776c17 transplanted to 589cea8ba85b
+  2e849d776c17 transplanted to 8e65bebc063e
   $ cat b
   a\r (esc)
   b\r (esc)
