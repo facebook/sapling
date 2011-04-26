@@ -62,7 +62,7 @@ help record (record)
    -X --exclude PATTERN [+]  exclude names matching the given patterns
    -m --message TEXT         use text as commit message
    -l --logfile FILE         read commit message from file
-   -d --date DATE            record datecode as commit date
+   -d --date DATE            record the specified date as commit date
    -u --user USER            record the specified user as committer
   
   [+] marked option can be specified multiple times
