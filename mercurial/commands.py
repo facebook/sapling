@@ -4166,7 +4166,7 @@ commitopts = [
 
 commitopts2 = [
     ('d', 'date', '',
-     _('record datecode as commit date'), _('DATE')),
+     _('record the specified date as commit date'), _('DATE')),
     ('u', 'user', '',
      _('record the specified user as committer'), _('USER')),
 ]
