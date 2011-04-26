@@ -185,7 +185,7 @@ def _readtagcache(ui, repo):
                 if len(line) == 3:
                     fnode = bin(line[2])
                     cachefnode[headnode] = fnode
-        except (ValueError, TypeError):
+        except Exception:
             # corruption of the tags cache, just recompute it
             ui.warn(_('.hg/cache/tags is corrupt, rebuilding it\n'))
             cacheheads = []
