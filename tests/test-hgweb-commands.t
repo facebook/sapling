@@ -187,6 +187,7 @@ Logs and changes
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: log</title>
   <link rel="alternate" type="application/atom+xml"
@@ -245,17 +246,17 @@ Logs and changes
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/1d22e65f027e">branch</a><span class="branchhead">stable</span> <span class="tag">tip</span> <span class="tag">something</span> </td>
    </tr>
    <tr class="parity1">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> </td>
    </tr>
    <tr class="parity0">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> <span class="tag">anotherthing</span> </td>
    </tr>
@@ -271,6 +272,7 @@ Logs and changes
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -285,6 +287,7 @@ Logs and changes
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: 2ef0ac749a14</title>
   </head>
@@ -336,7 +339,7 @@ Logs and changes
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date">Thu Jan 01 00:00:00 1970 +0000 (1970-01-01)</td></tr>
+   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td></tr>
   <tr>
    <th class="author">parents</th>
    <td class="author"></td>
@@ -367,6 +370,7 @@ Logs and changes
   
   </div>
   </div>
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -398,6 +402,7 @@ Logs and changes
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: searching for base</title>
   </head>
@@ -442,7 +447,7 @@ Logs and changes
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> <span class="tag">anotherthing</span> </td>
    </tr>
@@ -457,6 +462,7 @@ Logs and changes
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -496,6 +502,7 @@ File-related
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: a4f92ed23982 foo</title>
   </head>
@@ -550,7 +557,7 @@ File-related
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date">Thu Jan 01 00:00:00 1970 +0000 (1970-01-01)</td>
+   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td>
   </tr>
   <tr>
    <th class="author">parents</th>
@@ -573,6 +580,7 @@ File-related
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -619,7 +627,7 @@ Overviews
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow"/>
   <link rel="stylesheet" href="/static/style-gitweb.css" type="text/css" />
-  
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: Summary</title>
   <link rel="alternate" type="application/atom+xml"
@@ -664,7 +672,7 @@ Overviews
   <table cellspacing="0">
   
   <tr class="parity0">
-  <td class="age"><i>1970-01-01</i></td>
+  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
   <td><i>test</i></td>
   <td>
   <a class="list" href="/rev/1d22e65f027e?style=gitweb">
@@ -678,7 +686,7 @@ Overviews
   </td>
   </tr>
   <tr class="parity1">
-  <td class="age"><i>1970-01-01</i></td>
+  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
   <td><i>test</i></td>
   <td>
   <a class="list" href="/rev/a4f92ed23982?style=gitweb">
@@ -692,7 +700,7 @@ Overviews
   </td>
   </tr>
   <tr class="parity0">
-  <td class="age"><i>1970-01-01</i></td>
+  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
   <td><i>test</i></td>
   <td>
   <a class="list" href="/rev/2ef0ac749a14?style=gitweb">
@@ -712,7 +720,7 @@ Overviews
   <table cellspacing="0">
   
   <tr class="parity0">
-  <td class="age"><i>1970-01-01</i></td>
+  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
   <td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>1.0</b></a></td>
   <td class="link">
   <a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
@@ -727,7 +735,7 @@ Overviews
   <table cellspacing="0">
   
   <tr class="parity0">
-  <td class="age"><i>1970-01-01</i></td>
+  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
   <td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>anotherthing</b></a></td>
   <td class="link">
   <a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
@@ -736,7 +744,7 @@ Overviews
   </td>
   </tr>
   <tr class="parity1">
-  <td class="age"><i>1970-01-01</i></td>
+  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
   <td><a class="list" href="/rev/1d22e65f027e?style=gitweb"><b>something</b></a></td>
   <td class="link">
   <a href="/rev/1d22e65f027e?style=gitweb">changeset</a> |
@@ -751,7 +759,7 @@ Overviews
   <table cellspacing="0">
   
   <tr class="parity0">
-  <td class="age"><i>1970-01-01</i></td>
+  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
   <td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td>
   <td class="">stable</td>
   <td class="link">
@@ -761,7 +769,7 @@ Overviews
   </td>
   </tr>
   <tr class="parity1">
-  <td class="age"><i>1970-01-01</i></td>
+  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
   <td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
   <td class="">default</td>
   <td class="link">
@@ -774,6 +782,7 @@ Overviews
     <td colspan="4"><a class="list"  href="#">...</a></td>
   </tr>
   </table>
+  <script type="text/javascript">process_dates()</script>
   <div class="page_footer">
   <div class="page_footer_text">test</div>
   <div class="rss_logo">
@@ -796,7 +805,7 @@ Overviews
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow"/>
   <link rel="stylesheet" href="/static/style-gitweb.css" type="text/css" />
-  
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: Graph</title>
   <link rel="alternate" type="application/atom+xml"
@@ -843,7 +852,6 @@ Overviews
   <ul id="graphnodes"></ul>
   </div>
   
-  <script type="text/javascript" src="/static/graph.js"></script>
   <script>
   <!-- hide script content
   
@@ -925,6 +933,7 @@ Overviews
   | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-2</a> <a href="/graph/tip?style=gitweb">tip</a> 
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   <div class="page_footer">
   <div class="page_footer_text">test</div>
   <div class="rss_logo">

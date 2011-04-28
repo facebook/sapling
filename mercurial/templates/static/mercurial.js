@@ -1,4 +1,7 @@
-// branch_renderer.js - Rendering of branch DAGs on the client side
+// mercurial.js - JavaScript utility functions
+//
+// Rendering of branch DAGs on the client side
+// Display of elapsed time
 //
 // Copyright 2008 Dirkjan Ochtman <dirkjan AT ochtman DOT nl>
 // Copyright 2006 Alexander Schremmer <alex AT alexanderweb DOT de>
@@ -135,3 +138,83 @@ function Graph() {
 	}
 
 }
+
+
+process_dates = (function(document, RegExp, Math, isNaN, Date, _false, _true){
+
+	// derived from code from mercurial/templatefilter.py
+
+	var scales = {
+		'year':  365 * 24 * 60 * 60,
+		'month':  30 * 24 * 60 * 60,
+		'week':    7 * 24 * 60 * 60,
+		'day':    24 * 60 * 60,
+		'hour':   60 * 60,
+		'minute': 60,
+		'second': 1
+	};
+
+	function format(count, string){
+		var ret = count + ' ' + string;
+		if (count > 1){
+			ret = ret + 's';
+		}
+		return ret;
+	}
+
+	function age(datestr){
+		var now = new Date();
+		var once = new Date(datestr);
+
+		if (isNaN(once.getTime())){
+			// parsing error
+			return datestr;
+		}
+
+		var delta = Math.floor((now.getTime() - once.getTime()) / 1000);
+
+		var future = _false;
+		if (delta < 0){
+			future = _true;
+			delta = -delta;
+			if (delta > (30 * scales.year)){
+				return "in the distant future";
+			}
+		}
+
+		if (delta > (2 * scales.year)){
+			return once.getFullYear() + '-' + once.getMonth() + '-' + once.getDate();
+		}
+
+		for (unit in scales){
+			var s = scales[unit];
+			var n = Math.floor(delta / s);
+			if ((n >= 2) || (s == 1)){
+				if (future){
+					return format(n, unit) + ' from now';
+				} else {
+					return format(n, unit) + ' ago';
+				}
+			}
+		}
+	}
+
+	return function(){
+		var nodes = document.getElementsByTagName('*');
+		var ageclass = new RegExp('\\bage\\b');
+		var dateclass = new RegExp('\\bdate\\b');
+		for (var i=0; i<nodes.length; ++i){
+			var node = nodes[i];
+			var classes = node.className;
+			if (ageclass.test(classes)){
+				var agevalue = age(node.textContent);
+				if (dateclass.test(classes)){
+					// We want both: date + (age)
+					node.textContent += ' ('+agevalue+')';
+				} else {
+					node.textContent = agevalue;
+				}
+			}
+		}
+	}
+})(document, RegExp, Math, isNaN, Date, false, true)

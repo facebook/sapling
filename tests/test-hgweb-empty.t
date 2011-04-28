@@ -13,6 +13,7 @@ Some tests for hgweb in an empty repository
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: log</title>
   <link rel="alternate" type="application/atom+xml"
@@ -82,6 +83,7 @@ Some tests for hgweb in an empty repository
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -96,6 +98,7 @@ Some tests for hgweb in an empty repository
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: log</title>
   <link rel="alternate" type="application/atom+xml"
@@ -165,6 +168,7 @@ Some tests for hgweb in an empty repository
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -179,6 +183,7 @@ Some tests for hgweb in an empty repository
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: revision graph</title>
   <link rel="alternate" type="application/atom+xml"
@@ -236,7 +241,6 @@ Some tests for hgweb in an empty repository
   <ul id="graphnodes"></ul>
   </div>
   
-  <script type="text/javascript" src="/static/graph.js"></script>
   <script type="text/javascript">
   <!-- hide script content
   
@@ -320,6 +324,7 @@ Some tests for hgweb in an empty repository
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -334,6 +339,7 @@ Some tests for hgweb in an empty repository
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: 000000000000 /</title>
   </head>
@@ -391,6 +397,7 @@ Some tests for hgweb in an empty repository
   </table>
   </div>
   </div>
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>

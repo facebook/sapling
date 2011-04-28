@@ -143,6 +143,7 @@ should succeed, slashy names
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>Mercurial repositories index</title>
   </head>
@@ -169,7 +170,7 @@ should succeed, slashy names
   <td><a href="/t/a/?style=paper">t/a</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -177,7 +178,7 @@ should succeed, slashy names
   <td><a href="/b/?style=paper">b</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -185,7 +186,7 @@ should succeed, slashy names
   <td><a href="/coll/a/?style=paper">coll/a</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -193,7 +194,7 @@ should succeed, slashy names
   <td><a href="/coll/a/.hg/patches/?style=paper">coll/a/.hg/patches</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -201,7 +202,7 @@ should succeed, slashy names
   <td><a href="/coll/b/?style=paper">coll/b</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -209,7 +210,7 @@ should succeed, slashy names
   <td><a href="/coll/c/?style=paper">coll/c</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -217,7 +218,7 @@ should succeed, slashy names
   <td><a href="/rcoll/a/?style=paper">rcoll/a</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -225,7 +226,7 @@ should succeed, slashy names
   <td><a href="/rcoll/a/.hg/patches/?style=paper">rcoll/a/.hg/patches</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -233,7 +234,7 @@ should succeed, slashy names
   <td><a href="/rcoll/b/?style=paper">rcoll/b</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -241,7 +242,7 @@ should succeed, slashy names
   <td><a href="/rcoll/b/d/?style=paper">rcoll/b/d</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -249,7 +250,7 @@ should succeed, slashy names
   <td><a href="/rcoll/c/?style=paper">rcoll/c</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -257,7 +258,7 @@ should succeed, slashy names
   <td><a href="/star/webdir/a/?style=paper">star/webdir/a</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -265,7 +266,7 @@ should succeed, slashy names
   <td><a href="/star/webdir/a/.hg/patches/?style=paper">star/webdir/a/.hg/patches</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -273,7 +274,7 @@ should succeed, slashy names
   <td><a href="/star/webdir/b/?style=paper">star/webdir/b</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -281,7 +282,7 @@ should succeed, slashy names
   <td><a href="/star/webdir/c/?style=paper">star/webdir/c</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -289,7 +290,7 @@ should succeed, slashy names
   <td><a href="/starstar/webdir/a/?style=paper">starstar/webdir/a</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -297,7 +298,7 @@ should succeed, slashy names
   <td><a href="/starstar/webdir/a/.hg/patches/?style=paper">starstar/webdir/a/.hg/patches</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -305,7 +306,7 @@ should succeed, slashy names
   <td><a href="/starstar/webdir/b/?style=paper">starstar/webdir/b</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -313,7 +314,7 @@ should succeed, slashy names
   <td><a href="/starstar/webdir/b/d/?style=paper">starstar/webdir/b/d</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -321,7 +322,7 @@ should succeed, slashy names
   <td><a href="/starstar/webdir/c/?style=paper">starstar/webdir/c</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -329,7 +330,7 @@ should succeed, slashy names
   <td><a href="/astar/?style=paper">astar</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
@@ -337,13 +338,14 @@ should succeed, slashy names
   <td><a href="/astar/.hg/patches/?style=paper">astar/.hg/patches</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
   </table>
   </div>
   </div>
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -370,6 +372,7 @@ should succeed, slashy names
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>Mercurial repositories index</title>
   </head>
@@ -396,13 +399,14 @@ should succeed, slashy names
   <td><a href="/t/a/?style=paper">a</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
-  <td class="age">* ago</td> (glob)
+  <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
   </tr>
   
   </table>
   </div>
   </div>
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -560,6 +564,7 @@ test inexistent and inaccessible repo should be ignored silently
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>Mercurial repositories index</title>
   </head>
@@ -585,6 +590,7 @@ test inexistent and inaccessible repo should be ignored silently
   </table>
   </div>
   </div>
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>

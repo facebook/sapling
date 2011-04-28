@@ -47,6 +47,7 @@ should give a 404 - static file that does not exist
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: error</title>
   </head>
@@ -91,6 +92,7 @@ should give a 404 - static file that does not exist
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -133,6 +135,7 @@ should give a 404 - file does not exist
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: error</title>
   </head>
@@ -177,6 +180,7 @@ should give a 404 - file does not exist
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -201,6 +205,7 @@ try bad style
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: 2ef0ac749a14 /</title>
   </head>
@@ -279,6 +284,7 @@ try bad style
   </table>
   </div>
   </div>
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>

@@ -117,6 +117,7 @@ tip - two revisions
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: a history</title>
   <link rel="alternate" type="application/atom+xml"
@@ -178,12 +179,12 @@ tip - two revisions
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/01de2d66a28d">second a</a></td>
    </tr>
    <tr class="parity1">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
@@ -199,6 +200,7 @@ tip - two revisions
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -216,6 +218,7 @@ second version - two revisions
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: a history</title>
   <link rel="alternate" type="application/atom+xml"
@@ -277,12 +280,12 @@ second version - two revisions
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/01de2d66a28d">second a</a></td>
    </tr>
    <tr class="parity1">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
@@ -298,6 +301,7 @@ second version - two revisions
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -315,6 +319,7 @@ first deleted - one revision
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: a history</title>
   <link rel="alternate" type="application/atom+xml"
@@ -376,7 +381,7 @@ first deleted - one revision
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
@@ -392,6 +397,7 @@ first deleted - one revision
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -409,6 +415,7 @@ first version - one revision
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: a history</title>
   <link rel="alternate" type="application/atom+xml"
@@ -470,7 +477,7 @@ first version - one revision
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">1970-01-01</td>
+    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
@@ -486,6 +493,7 @@ first version - one revision
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -503,6 +511,7 @@ before addition - error
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: error</title>
   </head>
@@ -547,6 +556,7 @@ before addition - error
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -565,6 +575,7 @@ should show base link, use spartan because it shows it
   <link rel="icon" href="/static/hgicon.png" type="image/png">
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: c history</title>
   <link rel="alternate" type="application/atom+xml"
@@ -593,7 +604,7 @@ should show base link, use spartan because it shows it
   
   <table class="logEntry parity0">
    <tr>
-    <th class="age">1970-01-01:</th>
+    <th><span class="age">Thu Jan 01 00:00:00 1970 +0000</span>:</th>
     <th class="firstline"><a href="/rev/b7682196df1c?style=spartan">change c</a></th>
    </tr>
    <tr>
@@ -618,7 +629,7 @@ should show base link, use spartan because it shows it
   
   <table class="logEntry parity1">
    <tr>
-    <th class="age">1970-01-01:</th>
+    <th><span class="age">Thu Jan 01 00:00:00 1970 +0000</span>:</th>
     <th class="firstline"><a href="/rev/1a6696706df2?style=spartan">mv b</a></th>
    </tr>
    <tr>
@@ -651,6 +662,7 @@ should show base link, use spartan because it shows it
   
   
   
+  <script type="text/javascript">process_dates()</script>
   
   <div class="logo">
   <a href="http://mercurial.selenic.com/">

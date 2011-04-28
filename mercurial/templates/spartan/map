@@ -168,7 +168,7 @@ indexentry = '
     <td><a href="{url}{sessionvars%urlparameter}">{name|escape}</a></td>
     <td>{description}</td>
     <td>{contact|obfuscate}</td>
-    <td class="age">{lastchange|age}</td>
+    <td class="age">{lastchange|date}</td>
     <td class="indexlinks">
       <a href="{url}rss-log">RSS</a>
       <a href="{url}atom-log">Atom</a>

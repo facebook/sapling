@@ -162,7 +162,7 @@ fileannotatechild = '
 tags = tags.tmpl
 tagentry = '
   <tr class="parity{parity}">
-    <td class="age"><i>{date|age}</i></td>
+    <td class="age"><i class="age">{date|date}</i></td>
     <td><a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}"><b>{tag|escape}</b></a></td>
     <td class="link">
       <a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
@@ -173,7 +173,7 @@ tagentry = '
 bookmarks = bookmarks.tmpl
 bookmarkentry = '
   <tr class="parity{parity}">
-    <td class="age"><i>{date|age}</i></td>
+    <td class="age"><i class="age">{date|date}</i></td>
     <td><a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}"><b>{bookmark|escape}</b></a></td>
     <td class="link">
       <a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
@@ -184,7 +184,7 @@ bookmarkentry = '
 branches = branches.tmpl
 branchentry = '
   <tr class="parity{parity}">
-    <td class="age"><i>{date|age}</i></td>
+    <td class="age"><i class="age">{date|date}</i></td>
     <td><a class="list" href="{url}shortlog/{node|short}{sessionvars%urlparameter}"><b>{node|short}</b></a></td>
     <td class="{status}">{branch|escape}</td>
     <td class="link">
@@ -228,7 +228,7 @@ inbranchtag = '<span class="inbranchtag" title="{name}">{name}</span> '
 bookmarktag = '<span class="bookmarktag" title="{name}">{name}</span> '
 shortlogentry = '
   <tr class="parity{parity}">
-    <td class="age"><i>{date|age}</i></td>
+    <td class="age"><i class="age">{date|date}</i></td>
     <td><i>{author|person}</i></td>
     <td>
       <a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}">
@@ -243,7 +243,7 @@ shortlogentry = '
   </tr>'
 filelogentry = '
   <tr class="parity{parity}">
-    <td class="age"><i>{date|age}</i></td>
+    <td class="age"><i class="age">{date|date}</i></td>
     <td>
       <a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}">
         <b>{desc|strip|firstline|escape|nonempty}</b>
@@ -262,7 +262,7 @@ indexentry = '
     </td>
     <td>{description}</td>
     <td>{contact|obfuscate}</td>
-    <td class="age">{lastchange|age}</td>
+    <td class="age">{lastchange|date}</td>
     <td class="indexlinks">{archives%indexarchiveentry}</td>
     <td><div class="rss_logo"><a href="{url}rss-log">RSS</a> <a href="{url}atom-log">Atom</a></div></td>
   </tr>\n'

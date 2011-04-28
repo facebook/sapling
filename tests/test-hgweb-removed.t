@@ -24,6 +24,7 @@ revision
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: c78f6c5cbea9</title>
   </head>
@@ -75,7 +76,7 @@ revision
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date">Thu Jan 01 00:00:00 1970 +0000 (1970-01-01)</td></tr>
+   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td></tr>
   <tr>
    <th class="author">parents</th>
    <td class="author"><a href="/rev/cb9a9f314b8b">cb9a9f314b8b</a> </td>
@@ -102,6 +103,7 @@ revision
   
   </div>
   </div>
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -119,6 +121,7 @@ diff removed file
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: a diff</title>
   </head>
@@ -174,7 +177,7 @@ diff removed file
   </tr>
   <tr>
    <th>date</th>
-   <td>Thu Jan 01 00:00:00 1970 +0000 (1970-01-01)</td>
+   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td>
   </tr>
   <tr>
    <th>parents</th>
@@ -199,6 +202,7 @@ diff removed file
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>

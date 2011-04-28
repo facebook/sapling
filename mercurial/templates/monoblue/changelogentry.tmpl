@@ -1,6 +1,6 @@
 <h3 class="changelog"><a class="title" href="{url}rev/{node|short}{sessionvars%urlparameter}">{desc|strip|firstline|escape|nonempty}<span class="logtags"> {inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span></a></h3>
 <ul class="changelog-entry">
-    <li class="age">{date|age}</li>
+    <li class="age">{date|date}</li>
     <li>by <span class="name">{author|obfuscate}</span> <span class="revdate">[{date|rfc822date}] rev {rev}</span></li>
     <li class="description">{desc|strip|escape|addbreaks|nonempty}</li>
 </ul>

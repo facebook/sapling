@@ -36,6 +36,7 @@ manifest with descending
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: 9087c84a0f5d /</title>
   </head>
@@ -129,6 +130,7 @@ manifest with descending
   </table>
   </div>
   </div>
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
