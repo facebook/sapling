@@ -40,6 +40,7 @@ Tool arguments can include variables that are expanded at runtime::
   $parent1, $plabel1 - filename, descriptive label of first parent
   $child,   $clabel  - filename, descriptive label of child revision
   $parent2, $plabel2 - filename, descriptive label of second parent
+  $root              - repository root
   $parent is an alias for $parent1.
 
 The extdiff extension will look in your [diff-tools] and [merge-tools]
@@ -205,7 +206,8 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         # returned for parent2
         replace = dict(parent=dir1a, parent1=dir1a, parent2=dir1b,
                        plabel1=label1a, plabel2=label1b,
-                       clabel=label2, child=dir2)
+                       clabel=label2, child=dir2,
+                       root=repo.root)
         def quote(match):
             key = match.group()[1:]
             if not do3way and key == 'parent2':
@@ -213,7 +215,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
             return util.shellquote(replace[key])
 
         # Match parent2 first, so 'parent1?' will match both parent1 and parent
-        regex = '\$(parent2|parent1?|child|plabel1|plabel2|clabel)'
+        regex = '\$(parent2|parent1?|child|plabel1|plabel2|clabel|root)'
         if not do3way and not re.search(regex, args):
             args += ' $parent1 $child'
         args = re.sub(regex, quote, args)
