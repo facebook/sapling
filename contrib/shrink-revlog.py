@@ -17,7 +17,7 @@ This is *not* safe to run on a changelog.
 # (maybe: export before, shrink, export after, diff).
 
 import os, tempfile, errno
-from mercurial import revlog, transaction, node, util
+from mercurial import revlog, transaction, node, util, scmutil
 from mercurial import changegroup
 from mercurial.i18n import _
 
@@ -190,8 +190,8 @@ def shrink(ui, repo, **opts):
     prefix = os.path.basename(indexfn)[:-1]
     tmpindexfn = util.mktempcopy(indexfn, emptyok=True)
 
-    r1 = revlog.revlog(util.opener(os.getcwd(), audit=False), indexfn)
-    r2 = revlog.revlog(util.opener(os.getcwd(), audit=False), tmpindexfn)
+    r1 = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), indexfn)
+    r2 = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), tmpindexfn)
 
     datafn, tmpdatafn = r1.datafile, r2.datafile
 
