@@ -10551,8 +10551,8 @@ msgstr "usa o texto como mensagem de consolidação"
 msgid "read commit message from file"
 msgstr "lê de um arquivo a mensagem de consolidação"
 
-msgid "record datecode as commit date"
-msgstr "grava código de data como data de consolidação"
+msgid "record the specified date as commit date"
+msgstr "grava a data especificada como data da consolidação"
 
 msgid "record the specified user as committer"
 msgstr "grava o usuário pedido como autor da consolidação"
