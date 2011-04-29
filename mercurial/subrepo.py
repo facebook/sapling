@@ -522,7 +522,16 @@ class svnsubrepo(abstractsubrepo):
 
     def _svncommand(self, commands, filename=''):
         path = os.path.join(self._ctx._repo.origroot, self._path, filename)
-        cmd = ['svn'] + commands + [path]
+        cmd = ['svn']
+        # Starting in svn 1.5 --non-interactive is a global flag
+        # instead of being per-command, but we need to support 1.4 so
+        # we have to be intelligent about what commands take
+        # --non-interactive.
+        if (not self._ui.interactive() and
+            commands[0] in ('update', 'checkout', 'commit')):
+            cmd.append('--non-interactive')
+        cmd.extend(commands)
+        cmd.append(path)
         env = dict(os.environ)
         # Avoid localized output, preserve current locale for everything else.
         env['LC_MESSAGES'] = 'C'
