@@ -104,6 +104,29 @@ Compare repos:
   [1]
 
 
+Test shrink-revlog:
+  $ cd repo-a
+  $ hg --config extensions.shrink=$CONTRIBDIR/shrink-revlog.py shrink
+  shrinking $TESTTMP/repo-a/.hg/store/00manifest.i
+  reading revs
+  sorting revs
+  writing revs
+  old file size:          324 bytes (   0.0 MiB)
+  new file size:          324 bytes (   0.0 MiB)
+  shrinkage: 0.0% (1.0x)
+  note: old revlog saved in:
+    $TESTTMP/repo-a/.hg/store/00manifest.i.old
+    $TESTTMP/repo-a/.hg/store/00manifest.d.old
+  (You can delete those files when you are satisfied that your
+  repository is still sane.  Running 'hg verify' is strongly recommended.)
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 3 changesets, 3 total revisions
+  $ cd ..
+
 Test simplemerge command:
 
   $ cp "$CONTRIBDIR/simplemerge" .
