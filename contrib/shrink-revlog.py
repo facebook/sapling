@@ -30,7 +30,10 @@ def postorder(start, edges):
     while visit:
         cur = visit[-1]
         for p in edges[cur]:
-            if p not in finished:
+            # defend against node.nullrev because it's occasionally
+            # possible for a node to have parents (null, something)
+            # rather than (something, null)
+            if p not in finished and p != node.nullrev:
                 visit.append(p)
                 break
         else:
