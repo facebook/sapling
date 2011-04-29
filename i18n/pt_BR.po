@@ -9221,7 +9221,7 @@ msgid ""
 msgstr ""
 "    Com a opção -v, imprime permissões de arquivo, links simbólicos\n"
 "    e bits de execução. Com a opção --debug, imprime os hashes de\n"
-"   revisão de arquivo."
+"    revisão de arquivo."
 
 msgid "merge working directory with another revision"
 msgstr "mescla o diretório de trabalho com outra revisão"
