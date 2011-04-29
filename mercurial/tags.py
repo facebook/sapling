@@ -12,9 +12,9 @@
 
 from node import nullid, bin, hex, short
 from i18n import _
-import os.path
 import encoding
 import error
+import errno
 
 def findglobaltags(ui, repo, alltags, tagtypes):
     '''Find global tags in repo by reading .hgtags from every head that
@@ -60,15 +60,18 @@ def findglobaltags(ui, repo, alltags, tagtypes):
 def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo.  Update alltags and tagtypes.'''
     try:
-        # localtags is in the local encoding; re-encode to UTF-8 on
-        # input for consistency with the rest of this module.
         data = repo.opener("localtags").read()
-        filetags = _readtags(
-            ui, repo, data.splitlines(), "localtags",
-            recode=encoding.fromlocal)
-        _updatetags(filetags, "local", alltags, tagtypes)
-    except IOError:
-        pass
+    except IOError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+        return
+
+    # localtags is in the local encoding; re-encode to UTF-8 on
+    # input for consistency with the rest of this module.
+    filetags = _readtags(
+        ui, repo, data.splitlines(), "localtags",
+        recode=encoding.fromlocal)
+    _updatetags(filetags, "local", alltags, tagtypes)
 
 def _readtags(ui, repo, lines, fn, recode=None):
     '''Read tag definitions from a file (or any source of lines).
