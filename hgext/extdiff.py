@@ -100,7 +100,8 @@ def snapshot(ui, repo, files, node, tmproot):
             if 'x' in fctx.flags():
                 util.set_flags(dest, False, True)
         if node is None:
-            fns_and_mtime.append((dest, repo.wjoin(fn), os.path.getmtime(dest)))
+            fns_and_mtime.append((dest, repo.wjoin(fn),
+                                  os.lstat(dest).st_mtime))
     return dirname, fns_and_mtime
 
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
@@ -222,7 +223,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         util.system(cmdline, cwd=tmproot)
 
         for copy_fn, working_fn, mtime in fns_and_mtime:
-            if os.path.getmtime(copy_fn) != mtime:
+            if os.lstat(copy_fn).st_mtime != mtime:
                 ui.debug('file changed while diffing. '
                          'Overwriting: %s (src: %s)\n' % (working_fn, copy_fn))
                 util.copyfile(copy_fn, working_fn)

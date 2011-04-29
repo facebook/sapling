@@ -17,7 +17,7 @@ url for proxy, stream
   $ http_proxy=http://localhost:$HGPORT1/ hg --config http_proxy.always=True clone --uncompressed http://localhost:$HGPORT/ b
   streaming all changes
   3 files to transfer, 303 bytes of data
-  transferred * bytes in * seconds (*B/sec) (glob)
+  transferred * bytes in * seconds (*/sec) (glob)
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd b
