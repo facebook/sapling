@@ -7,8 +7,8 @@
 
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex, short
-from mercurial import encoding, util
-import os
+from mercurial import encoding, error, util
+import errno, os
 
 def valid(mark):
     for c in (':', '\0', '\n', '\r'):
@@ -23,14 +23,18 @@ def read(repo):
     in the .hg/bookmarks file.
     Read the file and return a (name=>nodeid) dictionary
     '''
+    bookmarks = {}
     try:
-        bookmarks = {}
         for line in repo.opener('bookmarks'):
             sha, refspec = line.strip().split(' ', 1)
             refspec = encoding.tolocal(refspec)
-            bookmarks[refspec] = repo.changelog.lookup(sha)
-    except IOError:
-        pass
+            try:
+                bookmarks[refspec] = repo.changelog.lookup(sha)
+            except error.RepoLookupError:
+                pass
+    except IOError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
     return bookmarks
 
 def readcurrent(repo):
@@ -41,12 +45,18 @@ def readcurrent(repo):
     is stored in .hg/bookmarks.current
     '''
     mark = None
-    if os.path.exists(repo.join('bookmarks.current')):
+    try:
         file = repo.opener('bookmarks.current')
+    except IOError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+        return None
+    try:
         # No readline() in posixfile_nt, reading everything is cheap
         mark = encoding.tolocal((file.readlines() or [''])[0])
         if mark == '' or mark not in repo._bookmarks:
             mark = None
+    finally:
         file.close()
     return mark
 

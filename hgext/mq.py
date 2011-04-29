@@ -2555,8 +2555,9 @@ def strip(ui, repo, *revs, **opts):
     """strip changesets and all their descendants from the repository
 
     The strip command removes the specified changesets and all their
-    descendants. If the working directory has uncommitted changes,
-    the operation is aborted unless the --force flag is supplied.
+    descendants. If the working directory has uncommitted changes, the
+    operation is aborted unless the --force flag is supplied, in which
+    case changes will be discarded.
 
     If a parent of the working directory is stripped, then the working
     directory will automatically be updated to the most recent
@@ -3252,8 +3253,8 @@ cmdtable = {
           _('hg qseries [-ms]')),
      "strip":
          (strip,
-         [('f', 'force', None, _('force removal of changesets even if the '
-                                 'working directory has uncommitted changes')),
+         [('f', 'force', None, _('force removal of changesets, discard '
+                                 'uncommitted changes (no backup)')),
           ('b', 'backup', None, _('bundle only changesets with local revision'
                                   ' number greater than REV which are not'
                                   ' descendants of REV (DEPRECATED)')),
