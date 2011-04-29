@@ -792,8 +792,6 @@ def runone(options, test):
     vlog("# Ret was:", ret)
 
     mark = '.'
-    if ret == 0:
-        success()
 
     skipped = (ret == SKIPPED_STATUS)
 
@@ -849,6 +847,8 @@ def runone(options, test):
     elif ret:
         mark = '!'
         fail("returned error code %d" % ret, ret)
+    else:
+        success()
 
     if not options.verbose:
         iolock.acquire()
