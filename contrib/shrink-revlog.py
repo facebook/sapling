@@ -1,5 +1,4 @@
-"""\
-reorder a revlog (the manifest by default) to save space
+"""reorder a revlog (the manifest by default) to save space
 
 Specifically, this topologically sorts the revisions in the revlog so that
 revisions on the same branch are adjacent as much as possible. This is a
