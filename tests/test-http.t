@@ -27,7 +27,7 @@ clone via stream
   $ hg clone --uncompressed http://localhost:$HGPORT/ copy 2>&1
   streaming all changes
   6 files to transfer, 606 bytes of data
-  transferred * bytes in * seconds (*B/sec) (glob)
+  transferred * bytes in * seconds (*/sec) (glob)
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg verify -R copy
