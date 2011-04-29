@@ -73,7 +73,9 @@ def write(repo):
 
     try:
         bms = repo.opener('bookmarks').read()
-    except IOError:
+    except IOError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
         bms = ''
     repo.opener('undo.bookmarks', 'w').write(bms)
 
