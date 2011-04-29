@@ -60,9 +60,8 @@ def countrate(ui, repo, amap, *pats, **opts):
         if df and not df(ctx.date()[0]): # doesn't match date format
             return
 
-        key = getkey(ctx)
+        key = getkey(ctx).strip()
         key = amap.get(key, key) # alias remap
-        key = key.strip() # ignore leading and trailing spaces
         if opts.get('changesets'):
             rate[key] = (rate.get(key, (0,))[0] + 1, 0)
         else:
