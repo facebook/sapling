@@ -106,15 +106,16 @@ def writerevs(ui, r1, r2, order, tr):
 
     # this is a bit ugly, but it works
     count = [0]
-    def lookup(x):
+    def lookup(revl, x):
         count[0] += 1
         ui.progress(_('writing'), count[0], total=len(order))
-        return "%020d" % r1.linkrev(r1.rev(x))
+        return "%020d" % revl.linkrev(revl.rev(x))
 
     unlookup = lambda x: int(x, 10)
 
     try:
-        group = util.chunkbuffer(r1.group(order, lookup, progress))
+        bundler = changegroup.bundle10(lookup)
+        group = util.chunkbuffer(r1.group(order, bundler))
         group = changegroup.unbundle10(group, "UN")
         r2.addgroup(group, unlookup, tr)
     finally:
