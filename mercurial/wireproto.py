@@ -159,7 +159,7 @@ class wirerepository(repo.repository):
             self.ui.status(_('remote: '), l)
         return ret
 
-    def debugwireargs(self, one, two, three=None, four=None):
+    def debugwireargs(self, one, two, three=None, four=None, five=None):
         # don't pass optional arguments left at their default value
         opts = {}
         if three is not None:

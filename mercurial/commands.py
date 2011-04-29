@@ -4558,6 +4558,7 @@ table = {
         (debugwireargs,
          [('', 'three', '', 'three'),
           ('', 'four', '', 'four'),
+          ('', 'five', '', 'five'),
           ] + remoteopts,
          _('REPO [OPTIONS]... [ONE [TWO]]')),
     "^diff":
