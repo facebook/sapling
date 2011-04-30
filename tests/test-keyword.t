@@ -78,7 +78,7 @@ A bundle to test this was made with:
  hg ci -m addsym -u mercurial
  hg bundle --base null ../test-keyword.hg
 
-  $ hg pull -u "$TESTDIR"/test-keyword.hg
+  $ hg pull -u "$TESTDIR"/bundles/test-keyword.hg
   pulling from *test-keyword.hg (glob)
   requesting all changes
   adding changesets

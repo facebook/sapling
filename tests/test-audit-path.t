@@ -33,7 +33,7 @@ unbundle tampered bundle
 
   $ hg init target
   $ cd target
-  $ hg unbundle $TESTDIR/tampered.hg
+  $ hg unbundle $TESTDIR/bundles/tampered.hg
   adding changesets
   adding manifests
   adding file changes

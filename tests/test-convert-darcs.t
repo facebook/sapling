@@ -16,7 +16,7 @@ skip if we can't import elementtree
 
 try converting darcs1 repository
 
-  $ hg clone -q "$TESTDIR/darcs1.hg" darcs
+  $ hg clone -q "$TESTDIR/bundles/darcs1.hg" darcs
   $ hg convert -s darcs darcs/darcs1 2>&1 | grep darcs-1.0
   darcs-1.0 repository format is unsupported, please upgrade
 

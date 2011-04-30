@@ -30,7 +30,7 @@ a file, once as a link. Bundle was generated with:
 
   $ hg init t
   $ cd t
-  $ hg -q pull "$TESTDIR/test-merge-symlinks.hg"
+  $ hg -q pull "$TESTDIR/bundles/test-merge-symlinks.hg"
   $ hg up -C 3
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
