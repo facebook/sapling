@@ -822,6 +822,9 @@ class revlog(object):
     def _chunk(self, rev):
         return decompress(self._chunkraw(rev, rev))
 
+    def _chunkbase(self, rev):
+        return self._chunk(rev)
+
     def _chunkclear(self):
         self._chunkcache = (0, '')
 
@@ -884,7 +887,7 @@ class revlog(object):
 
         self._chunkraw(base, rev)
         if text is None:
-            text = self._chunk(base)
+            text = self._chunkbase(base)
 
         bins = [self._chunk(r) for r in chain]
         text = mdiff.patches(text, bins)
