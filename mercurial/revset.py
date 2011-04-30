@@ -452,6 +452,20 @@ def limit(repo, subset, x):
         raise error.ParseError(_("limit expects a number"))
     return getset(repo, subset, l[0])[:lim]
 
+def last(repo, subset, x):
+    """``last(set, n)``
+    Last n members of set.
+    """
+    # i18n: "last" is a keyword
+    l = getargs(x, 2, 2, _("last requires two arguments"))
+    try:
+        # i18n: "last" is a keyword
+        lim = int(getstring(l[1], _("last requires a number")))
+    except ValueError:
+        # i18n: "last" is a keyword
+        raise error.ParseError(_("last expects a number"))
+    return getset(repo, subset, l[0])[-lim:]
+
 def maxrev(repo, subset, x):
     """``max(set)``
     Changeset with highest revision number in set.
@@ -724,6 +738,7 @@ symbols = {
     "head": head,
     "heads": heads,
     "keyword": keyword,
+    "last": last,
     "limit": limit,
     "max": maxrev,
     "min": minrev,
