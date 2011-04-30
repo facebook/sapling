@@ -13,6 +13,8 @@ from i18n import _
 
 elements = {
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
+    "~": (18, None, ("ancestor", 18)),
+    "^": (18, None, ("parent", 18), ("parentpost", 18)),
     "-": (5, ("negate", 19), ("minus", 5)),
     "::": (17, ("dagrangepre", 17), ("dagrange", 17),
            ("dagrangepost", 17)),
@@ -47,7 +49,7 @@ def tokenize(program):
         elif c == '.' and program[pos:pos + 2] == '..': # look ahead carefully
             yield ('..', None, pos)
             pos += 1 # skip ahead
-        elif c in "():,-|&+!": # handle simple operators
+        elif c in "():,-|&+!~^": # handle simple operators
             yield (c, None, pos)
         elif (c in '"\'' or c == 'r' and
               program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
@@ -208,6 +210,22 @@ def ancestors(repo, subset, x):
         return []
     s = set(repo.changelog.ancestors(*args)) | set(args)
     return [r for r in subset if r in s]
+
+def ancestorspec(repo, subset, x, n):
+    """``set~n``
+    Changesets that are the Nth ancestor (first parents only) of a changeset in set.
+    """
+    try:
+        n = int(n[1])
+    except ValueError:
+        raise error.ParseError(_("~ expects a number"))
+    ps = set()
+    cl = repo.changelog
+    for r in getset(repo, subset, x):
+        for i in range(n):
+            r = cl.parentrevs(r)[0]
+        ps.add(r)
+    return [r for r in subset if r in ps]
 
 def author(repo, subset, x):
     """``author(string)``
@@ -588,6 +606,31 @@ def parents(repo, subset, x):
         ps.update(cl.parentrevs(r))
     return [r for r in subset if r in ps]
 
+def parentspec(repo, subset, x, n):
+    """``set^0``
+    The set.
+    ``set^1`` (or ``set^``), ``set^2``
+    First or second parent, respectively, of all changesets in set.
+    """
+    try:
+        n = int(n[1])
+        if n not in (0,1,2):
+            raise ValueError
+    except ValueError:
+        raise error.ParseError(_("^ expects a number 0, 1, or 2"))
+    ps = set()
+    cl = repo.changelog
+    for r in getset(repo, subset, x):
+        if n == 0:
+            ps.add(r)
+        elif n == 1:
+            ps.add(cl.parentrevs(r)[0])
+        elif n == 2:
+            parents = cl.parentrevs(r)
+            if len(parents) > 1:
+                ps.add(parents[1])
+    return [r for r in subset if r in ps]
+
 def present(repo, subset, x):
     """``present(set)``
     An empty set, if any revision in set isn't found; otherwise,
@@ -769,6 +812,9 @@ methods = {
     "not": notset,
     "list": listset,
     "func": func,
+    "ancestor": ancestorspec,
+    "parent": parentspec,
+    "parentpost": p1,
 }
 
 def optimize(x, small):
@@ -814,9 +860,12 @@ def optimize(x, small):
     elif op == 'not':
         o = optimize(x[1], not small)
         return o[0], (op, o[1])
+    elif op == 'parentpost':
+        o = optimize(x[1], small)
+        return o[0], (op, o[1])
     elif op == 'group':
         return optimize(x[1], small)
-    elif op in 'range list':
+    elif op in 'range list parent ancestorspec':
         wa, ta = optimize(x[1], small)
         wb, tb = optimize(x[2], small)
         return wa + wb, (op, ta, tb)

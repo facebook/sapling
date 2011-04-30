@@ -374,3 +374,32 @@ or operator should preserve ordering:
   4
   2
   9
+
+parentrevspec
+
+  $ log 'merge()^0'
+  6
+  $ log 'merge()^'
+  5
+  $ log 'merge()^1'
+  5
+  $ log 'merge()^2'
+  4
+
+  $ log 'merge()~0'
+  6
+  $ log 'merge()~1'
+  5
+  $ log 'merge()~2'
+  3
+  $ log 'merge()~3'
+  1
+
+  $ log '(-3:tip)^'
+  4
+  6
+  8
+
+  $ log 'tip^foo'
+  hg: parse error: ^ expects a number 0, 1, or 2
+  [255]
