@@ -56,9 +56,9 @@ def patches(a, bins):
 
     def pull(dst, src, l): # pull l bytes from src
         while l:
-            f = src.pop(0)
+            f = src.pop()
             if f[0] > l: # do we need to split?
-                src.insert(0, (f[0] - l, f[1] + l))
+                src.append((f[0] - l, f[1] + l))
                 dst.append((l, f[1]))
                 return
             dst.append(f)
@@ -66,7 +66,7 @@ def patches(a, bins):
 
     def collect(buf, list):
         start = buf
-        for l, p in list:
+        for l, p in reversed(list):
             move(buf, p, l)
             buf += l
         return (buf - start, start)
@@ -88,7 +88,7 @@ def patches(a, bins):
             new.append((l, pos + 12))        # what got added
             pos += l + 12
             last = p2
-        frags = new + frags                    # what was left at the end
+        frags.extend(reversed(new))                    # what was left at the end
 
     t = collect(b2, frags)
 
