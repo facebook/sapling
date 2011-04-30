@@ -438,3 +438,54 @@ Test subrepo already at intended revision:
   $ svnversion
   2
   $ cd ..
+
+Test case where subversion would fail to update the subrepo because there
+are unknown directories being replaced by tracked ones (happens with rebase).
+
+  $ cd $WCROOT/src
+  $ mkdir dir
+  $ echo epsilon.py > dir/epsilon.py
+  $ svn add dir
+  A         dir
+  A         dir/epsilon.py
+  $ svn ci -m 'Add dir/epsilon.py'
+  Adding         src/dir
+  Adding         src/dir/epsilon.py
+  Transmitting file data .
+  Committed revision 6.
+  $ cd ../..
+  $ hg init rebaserepo
+  $ cd rebaserepo
+  $ svn co -r5 --quiet "$SVNREPO"/src s
+  $ echo "s =        [svn]       $SVNREPO/src" >> .hgsub
+  $ hg add .hgsub
+  $ hg ci -m addsub
+  committing subrepository s
+  $ echo a > a
+  $ hg ci -Am adda
+  adding a
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ svn up -r6 s
+  A    s/dir
+  A    s/dir/epsilon.py
+  
+  Fetching external item into 's/externals'
+  Updated external to revision 1.
+  
+  Updated to revision 6.
+  $ hg ci -m updatesub
+  committing subrepository s
+  created new head
+  $ echo pyc > s/dir/epsilon.pyc
+  $ hg up 1
+  D    $TESTTMP/rebaserepo/s/dir
+  
+  Fetching external item into '$TESTTMP/rebaserepo/s/externals'
+  Checked out external at revision 1.
+  
+  Checked out revision 5.
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ if "$TESTDIR/hghave" -q svn15; then
+  > hg up 2 >/dev/null 2>&1 || echo update failed
+  > fi

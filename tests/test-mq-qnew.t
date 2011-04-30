@@ -15,6 +15,8 @@
   >     hg qnew series
   >     hg qnew status
   >     hg qnew guards
+  >     hg qnew .
+  >     hg qnew ..
   >     hg qnew .hgignore
   >     hg qnew .mqfoo
   >     hg qnew 'foo#bar'
@@ -102,6 +104,8 @@ plain headers
   abort: "series" cannot be used as the name of a patch
   abort: "status" cannot be used as the name of a patch
   abort: "guards" cannot be used as the name of a patch
+  abort: "." cannot be used as the name of a patch
+  abort: ".." cannot be used as the name of a patch
   abort: ".hgignore" cannot be used as the name of a patch
   abort: ".mqfoo" cannot be used as the name of a patch
   abort: "foo#bar" cannot be used as the name of a patch
@@ -167,6 +171,8 @@ hg headers
   abort: "series" cannot be used as the name of a patch
   abort: "status" cannot be used as the name of a patch
   abort: "guards" cannot be used as the name of a patch
+  abort: "." cannot be used as the name of a patch
+  abort: ".." cannot be used as the name of a patch
   abort: ".hgignore" cannot be used as the name of a patch
   abort: ".mqfoo" cannot be used as the name of a patch
   abort: "foo#bar" cannot be used as the name of a patch

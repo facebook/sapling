@@ -852,7 +852,7 @@ class queue(object):
                 raise util.Abort(_("local changes found"))
         return m, a, r, d
 
-    _reserved = ('series', 'status', 'guards')
+    _reserved = ('series', 'status', 'guards', '.', '..')
     def check_reserved_name(self, name):
         if (name in self._reserved or name.startswith('.hg')
             or name.startswith('.mq') or '#' in name or ':' in name):
