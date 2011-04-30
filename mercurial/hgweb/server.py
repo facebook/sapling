@@ -59,6 +59,12 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         self._log_any(self.server.accesslog, format, *args)
 
+    def log_request(self, code='-', size='-'):
+        xheaders = [h for h in self.headers.items() if h[0].startswith('x-')]
+        self.log_message('"%s" %s %s%s',
+                         self.requestline, str(code), str(size),
+                         ''.join([' %s:%s' % h for h in sorted(xheaders)]))
+
     def do_write(self):
         try:
             self.do_hgweb()

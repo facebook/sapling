@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import cStringIO, zlib, sys, urllib
+import cgi, cStringIO, itertools, zlib, sys, urllib
 from mercurial import util, wireproto
 from common import HTTP_OK
 
@@ -16,18 +16,29 @@ class webproto(object):
         self.req = req
         self.response = ''
     def getargs(self, args):
+        knownargs = self._args()
         data = {}
         keys = args.split()
         for k in keys:
             if k == '*':
                 star = {}
-                for key in self.req.form.keys():
+                for key in knownargs.keys():
                     if key != 'cmd' and key not in keys:
-                        star[key] = self.req.form[key][0]
+                        star[key] = knownargs[key][0]
                 data['*'] = star
             else:
-                data[k] = self.req.form[k][0]
+                data[k] = knownargs[k][0]
         return [data[k] for k in keys]
+    def _args(self):
+        args = self.req.form.copy()
+        chunks = []
+        for i in itertools.count(1):
+            h = self.req.env.get('HTTP_X_ARG_' + str(i))
+            if h is None:
+                break
+            chunks += [h]
+        args.update(cgi.parse_qs(''.join(chunks), keep_blank_values=True))
+        return args
     def getfile(self, fp):
         length = int(self.req.env['CONTENT_LENGTH'])
         for s in util.filechunkiter(self.req, limit=length):

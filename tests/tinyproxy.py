@@ -30,6 +30,12 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         else:
             self.__base_handle()
 
+    def log_request(self, code='-', size='-'):
+        xheaders = [h for h in self.headers.items() if h[0].startswith('x-')]
+        self.log_message('"%s" %s %s%s',
+                         self.requestline, str(code), str(size),
+                         ''.join([' %s:%s' % h for h in sorted(xheaders)]))
+
     def _connect_to(self, netloc, soc):
         i = netloc.find(':')
         if i >= 0:

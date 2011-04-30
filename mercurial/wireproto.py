@@ -233,6 +233,7 @@ def capabilities(repo, proto):
         else:
             caps.append('streamreqs=%s' % ','.join(requiredformats))
     caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
+    caps.append('httpheader=1024')
     return ' '.join(caps)
 
 def changegroup(repo, proto, roots):
