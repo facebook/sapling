@@ -385,6 +385,12 @@ parentrevspec
   5
   $ log 'merge()^2'
   4
+  $ log 'merge()^^'
+  3
+  $ log 'merge()^1^'
+  3
+  $ log 'merge()^^^'
+  1
 
   $ log 'merge()~0'
   6
@@ -392,6 +398,8 @@ parentrevspec
   5
   $ log 'merge()~2'
   3
+  $ log 'merge()~2^1'
+  1
   $ log 'merge()~3'
   1
 
