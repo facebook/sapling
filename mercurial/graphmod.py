@@ -30,39 +30,27 @@ def dagwalker(repo, revs):
     returned.
     """
     if not revs:
-        return []
-
-    ns = [repo[r].node() for r in revs]
-    revdag = list(nodes(repo, ns))
+        return
 
     cl = repo.changelog
     lowestrev = min(revs)
     gpcache = {}
-    leafs = {}
 
-    for i, (id, c, ctx, parents) in enumerate(revdag):
+    for rev in revs:
+        ctx = repo[rev]
+        parents = sorted(set([p.rev() for p in ctx.parents() if p.rev() in revs]))
         mpars = [p.rev() for p in ctx.parents() if
                  p.rev() != nullrev and p.rev() not in parents]
-        grandparents = []
 
         for mpar in mpars:
             gp = gpcache.get(mpar) or grandparent(cl, lowestrev, revs, mpar)
             gpcache[mpar] = gp
             if gp is None:
-                leafs.setdefault(mpar, []).append((i, ctx))
-            else:
-                grandparents.append(gp)
+                parents.append(mpar)
+            elif gp not in parents:
+                parents.append(gp)
 
-        if grandparents:
-            for gp in grandparents:
-                if gp not in revdag[i][3]:
-                    revdag[i][3].append(gp)
-
-    for parent, leafs in leafs.iteritems():
-        for i, ctx in leafs:
-            revdag[i][3].append(parent)
-
-    return revdag
+        yield (ctx.rev(), CHANGESET, ctx, parents)
 
 def nodes(repo, nodes):
     """cset DAG generator yielding (id, CHANGESET, ctx, [parentids]) tuples
