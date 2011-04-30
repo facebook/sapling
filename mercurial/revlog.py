@@ -14,7 +14,7 @@ and O(changes) merge between branches.
 # import stuff from node for others to import from revlog
 from node import bin, hex, nullid, nullrev, short #@UnusedImport
 from i18n import _
-import changegroup, ancestor, mdiff, parsers, error, util
+import ancestor, mdiff, parsers, error, util
 import struct, zlib, errno
 
 _pack = struct.pack
@@ -288,7 +288,7 @@ class revlog(object):
 
     @util.propertycache
     def nodemap(self):
-        n = self.rev(self.node(0))
+        self.rev(self.node(0))
         return self._nodecache
 
     def rev(self, node):

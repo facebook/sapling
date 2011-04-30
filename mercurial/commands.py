@@ -10,7 +10,7 @@ from lock import release
 from i18n import _, gettext
 import os, re, sys, difflib, time, tempfile
 import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
-import patch, help, mdiff, url, encoding, templatekw, discovery
+import patch, help, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
 import minirst, revset, templatefilters

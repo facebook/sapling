@@ -933,7 +933,6 @@ def parsedate(date, formats=None, bias={}):
         # fill out defaults
         now = makedate()
         defaults = {}
-        nowmap = {}
         for part in ("d", "mb", "yY", "HI", "M", "S"):
             # this piece is for rounding the specific end of unknowns
             b = bias.get(part)

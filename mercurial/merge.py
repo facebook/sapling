@@ -271,7 +271,6 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
     ms.reset(wctx.p1().node())
     moves = []
     action.sort(key=actionkey)
-    substate = wctx.substate # prime
 
     # prescan for merges
     u = repo.ui

@@ -781,7 +781,7 @@ if has_https:
 
             host = self.host
             if self.realhostport: # use CONNECT proxy
-                something = _generic_proxytunnel(self)
+                _generic_proxytunnel(self)
                 host = self.realhostport.rsplit(':', 1)[0]
 
             cacerts = self.ui.config('web', 'cacerts')

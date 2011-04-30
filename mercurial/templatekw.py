@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from node import hex
-import encoding, patch, util, error, help
+import patch, util, error, help
 
 def showlist(name, values, plural=None, **args):
     '''expand set of values.

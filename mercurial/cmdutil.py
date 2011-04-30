@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, glob, tempfile
-import util, scmutil, templater, patch, error, encoding, templatekw
+import util, scmutil, templater, patch, error, templatekw
 import match as matchmod
 import similar, revset, subrepo
 

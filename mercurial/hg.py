@@ -8,9 +8,9 @@
 
 from i18n import _
 from lock import release
-from node import hex, nullid, nullrev, short
+from node import hex, nullid
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo, bookmarks
-import lock, util, extensions, error, encoding, node
+import lock, util, extensions, error, node
 import cmdutil, discovery, url
 import merge as mergemod
 import verify as verifymod

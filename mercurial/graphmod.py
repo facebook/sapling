@@ -18,7 +18,6 @@ Data depends on type.
 """
 
 from mercurial.node import nullrev
-from mercurial.cmdutil import revrange
 
 CHANGESET = 'C'
 

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial.node import bin, nullid, nullrev
+from mercurial.node import bin, nullid
 from mercurial import util
 import struct, zlib
 

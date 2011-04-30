@@ -296,7 +296,7 @@ def pushkey(repo, proto, namespace, key, old, new):
     if len(new) == 20 and new.encode('string-escape') != new:
         # looks like it could be a binary node
         try:
-            u = new.decode('utf-8')
+            new.decode('utf-8')
             new = encoding.tolocal(new) # but cleanly decodes as UTF-8
         except UnicodeDecodeError:
             pass # binary, leave unmodified

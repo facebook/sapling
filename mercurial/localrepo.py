@@ -190,7 +190,7 @@ class localrepository(repo.repository):
         warned = [0]
         def validate(node):
             try:
-                r = self.changelog.rev(node)
+                self.changelog.rev(node)
                 return node
             except error.LookupError:
                 if not warned[0]:

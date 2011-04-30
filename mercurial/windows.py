@@ -6,8 +6,8 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import osutil, error
-import errno, msvcrt, os, re, sys, subprocess
+import osutil
+import errno, msvcrt, os, re, sys
 
 nulldev = 'NUL:'
 umask = 002

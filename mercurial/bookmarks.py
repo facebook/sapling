@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial.node import nullid, nullrev, bin, hex, short
+from mercurial.node import hex
 from mercurial import encoding, error, util
 import errno, os
 
