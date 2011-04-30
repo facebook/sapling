@@ -17,12 +17,6 @@ HTTP_NOT_FOUND = 404
 HTTP_METHOD_NOT_ALLOWED = 405
 HTTP_SERVER_ERROR = 500
 
-# Hooks for hgweb permission checks; extensions can add hooks here. Each hook
-# is invoked like this: hook(hgweb, request, operation), where operation is
-# either read, pull or push. Hooks should either raise an ErrorResponse
-# exception, or just return.
-# It is possible to do both authentication and authorization through this.
-permhooks = []
 
 def checkauthz(hgweb, req, op):
     '''Check permission for operation based on request data (including
@@ -65,8 +59,14 @@ def checkauthz(hgweb, req, op):
     if not result:
         raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
 
-# Add the default permhook, which provides simple authorization.
-permhooks.append(checkauthz)
+# Hooks for hgweb permission checks; extensions can add hooks here.
+# Each hook is invoked like this: hook(hgweb, request, operation),
+# where operation is either read, pull or push. Hooks should either
+# raise an ErrorResponse exception, or just return.
+#
+# It is possible to do both authentication and authorization through
+# this.
+permhooks = [checkauthz]
 
 
 class ErrorResponse(Exception):
