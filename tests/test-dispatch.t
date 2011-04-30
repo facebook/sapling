@@ -6,6 +6,11 @@ test command parsing and dispatch
 
   $ hg init a
   $ cd a
+
+Redundant options used to crash (issue436):
+  $ hg -v log -v
+  $ hg -v log -v x
+
   $ echo a > a
   $ hg ci -Ama
   adding a
