@@ -236,12 +236,12 @@ def revset(pats, opts):
         revop = opt2revset.get(op, op)
         if op in ('follow', 'only_merges', 'no_merges'):
             revset.append('%s()' % revop)
-        elif op in ("date", "keyword", "remove", "user", "branch",
-                    "only_branch", "prune"):
-            revset.append('%s(%s)' % (op, val))
-        elif op in ('include', 'exclude'):
+        elif op in ('date', 'remove'):
+            revset.append('%s(%s)' % (revop, val))
+        elif op in ('include', 'exclude', 'user', 'branch', 'keyword',
+                    'prune', 'only_branch'):
             for f in val:
-                revset.append('%s(%r)' % (op, f))
+                revset.append('%s(%r)' % (revop, f))
         elif op == 'rev':
             revset.extend(val)
 

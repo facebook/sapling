@@ -1393,3 +1393,16 @@ Do not crash or produce strange graphs if history is buggy
   | | |  date:        Thu Jan 01 00:00:32 1970 +0000
   | | |  summary:     (32) expand
   | | |
+
+Test log -G options
+
+  $ hg log -G -u 'something nice'
+  $ hg log -G -b 'something nice'
+  abort: unknown revision 'something nice'!
+  [255]
+  $ hg log -G -k 'something nice'
+  $ hg log -G --only-branch 'something nice'
+  abort: unknown revision 'something nice'!
+  [255]
+  $ hg log -G --include 'some file' --exclude 'another file'
+
