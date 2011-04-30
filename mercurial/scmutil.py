@@ -129,7 +129,14 @@ class path_auditor(object):
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
 
-class opener(object):
+class abstractopener(object):
+    """Abstract base class; cannot be instantiated"""
+
+    def __init__(self, *args, **kwargs):
+        '''Prevent instantiation; don't call this from subclasses.'''
+        raise NotImplementedError('attempted instantiating ' + str(type(self)))
+
+class opener(abstractopener):
     '''Open files relative to a base directory
 
     This class is used to hide the details of COW semantics and
