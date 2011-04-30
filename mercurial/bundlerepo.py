@@ -34,7 +34,7 @@ class bundlerevlog(revlog.revlog):
         n = len(self)
         chain = None
         while 1:
-            chunkdata = bundle.parsechunk(chain)
+            chunkdata = bundle.deltachunk(chain)
             if not chunkdata:
                 break
             node = chunkdata['node']
@@ -197,6 +197,8 @@ class bundlerepository(localrepo.localrepository):
 
     @util.propertycache
     def changelog(self):
+        # consume the header if it exists
+        self.bundle.changelogheader()
         c = bundlechangelog(self.sopener, self.bundle)
         self.manstart = self.bundle.tell()
         return c
@@ -204,6 +206,8 @@ class bundlerepository(localrepo.localrepository):
     @util.propertycache
     def manifest(self):
         self.bundle.seek(self.manstart)
+        # consume the header if it exists
+        self.bundle.manifestheader()
         m = bundlemanifest(self.sopener, self.bundle, self.changelog.rev)
         self.filestart = self.bundle.tell()
         return m
@@ -225,12 +229,13 @@ class bundlerepository(localrepo.localrepository):
         if not self.bundlefilespos:
             self.bundle.seek(self.filestart)
             while 1:
-                chunk = self.bundle.chunk()
-                if not chunk:
+                chunkdata = self.bundle.filelogheader()
+                if not chunkdata:
                     break
-                self.bundlefilespos[chunk] = self.bundle.tell()
+                fname = chunkdata['filename']
+                self.bundlefilespos[fname] = self.bundle.tell()
                 while 1:
-                    c = self.bundle.chunk()
+                    c = self.bundle.deltachunk(None)
                     if not c:
                         break
 

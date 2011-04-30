@@ -1220,7 +1220,7 @@ def debugbundle(ui, bundlepath, all=None, **opts):
                 ui.write("\n%s\n" % named)
                 chain = None
                 while 1:
-                    chunkdata = gen.parsechunk(chain)
+                    chunkdata = gen.deltachunk(chain)
                     if not chunkdata:
                         break
                     node = chunkdata['node']
@@ -1234,17 +1234,21 @@ def debugbundle(ui, bundlepath, all=None, **opts):
                               hex(cs), hex(deltabase), len(delta)))
                     chain = node
 
+            chunkdata = gen.changelogheader()
             showchunks("changelog")
+            chunkdata = gen.manifestheader()
             showchunks("manifest")
             while 1:
-                fname = gen.chunk()
-                if not fname:
+                chunkdata = gen.filelogheader()
+                if not chunkdata:
                     break
+                fname = chunkdata['filename']
                 showchunks(fname)
         else:
+            chunkdata = gen.changelogheader()
             chain = None
             while 1:
-                chunkdata = gen.parsechunk(chain)
+                chunkdata = gen.deltachunk(chain)
                 if not chunkdata:
                     break
                 node = chunkdata['node']

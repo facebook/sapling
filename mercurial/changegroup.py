@@ -159,10 +159,21 @@ class unbundle10(object):
             self.callback()
         return l - 4
 
-    def chunk(self):
-        """return the next chunk from changegroup 'source' as a string"""
+    def changelogheader(self):
+        """v10 does not have a changelog header chunk"""
+        return {}
+
+    def manifestheader(self):
+        """v10 does not have a manifest header chunk"""
+        return {}
+
+    def filelogheader(self):
+        """return the header of the filelogs chunk, v10 only has the filename"""
         l = self.chunklength()
-        return readexactly(self._stream, l)
+        if not l:
+            return {}
+        fname = readexactly(self._stream, l)
+        return dict(filename=fname)
 
     def _deltaheader(self, headertuple, prevnode):
         node, p1, p2, cs = headertuple
@@ -172,7 +183,7 @@ class unbundle10(object):
             deltabase = prevnode
         return node, p1, p2, deltabase, cs
 
-    def parsechunk(self, prevnode):
+    def deltachunk(self, prevnode):
         l = self.chunklength()
         if not l:
             return {}
