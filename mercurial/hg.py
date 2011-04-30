@@ -426,19 +426,14 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source,
 
     if revs:
         revs = [other.lookup(rev) for rev in revs]
-    usecommon = other.capable('getbundle')
-    other, common, incoming, bundle = bundlerepo.getremotechanges(ui, repo, other,
-                                       revs, opts["bundle"], opts["force"],
-                                       usecommon=usecommon)
-    if not incoming:
+    other, common, anyinc, bundle = bundlerepo.getremotechanges(ui, repo, other,
+                                     revs, opts["bundle"], opts["force"])
+    if not anyinc:
         ui.status(_("no changes found\n"))
         return subreporecurse()
 
     try:
-        if usecommon:
-            chlist = other.changelog.findmissing(common, revs)
-        else:
-            chlist = other.changelog.nodesbetween(incoming, revs)[0]
+        chlist = other.changelog.findmissing(common, revs)
         displayer = cmdutil.show_changeset(ui, other, opts, buffered)
 
         # XXX once graphlog extension makes it into core,
@@ -488,12 +483,13 @@ def _outgoing(ui, repo, dest, opts):
         revs = [repo.lookup(rev) for rev in revs]
 
     other = repository(remoteui(repo, opts), dest)
-    o = discovery.findoutgoing(repo, other, force=opts.get('force'))
+    inc = discovery.findcommonincoming(repo, other, force=opts.get('force'))
+    common, _anyinc, _heads = inc
+    o = repo.changelog.findmissing(common, revs)
     if not o:
         ui.status(_("no changes found\n"))
         return None
-
-    return repo.changelog.nodesbetween(o, revs)[0]
+    return o
 
 def outgoing(ui, repo, dest, opts):
     def recurse():

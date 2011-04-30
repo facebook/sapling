@@ -1327,9 +1327,8 @@ class localrepository(repo.repository):
     def pull(self, remote, heads=None, force=False):
         lock = self.lock()
         try:
-            usecommon = remote.capable('getbundle')
             tmp = discovery.findcommonincoming(self, remote, heads=heads,
-                                               force=force, commononly=usecommon)
+                                               force=force)
             common, fetch, rheads = tmp
             if not fetch:
                 self.ui.status(_("no changes found\n"))
@@ -1341,7 +1340,7 @@ class localrepository(repo.repository):
                     # issue1320, avoid a race if remote changed after discovery
                     heads = rheads
 
-                if usecommon:
+                if remote.capable('getbundle'):
                     cg = remote.getbundle('pull', common=common,
                                           heads=heads or rheads)
                 elif heads is None:
@@ -1475,6 +1474,8 @@ class localrepository(repo.repository):
         if not heads:
             heads = cl.heads()
         common, missing = cl.findcommonmissing(common, heads)
+        if not missing:
+            return None
         return self._changegroupsubset(common, missing, heads, source)
 
     def _changegroupsubset(self, commonrevs, csets, heads, source):

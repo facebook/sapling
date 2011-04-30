@@ -554,10 +554,10 @@ def outgoing(repo, subset, x):
         revs = [repo.lookup(rev) for rev in revs]
     other = hg.repository(hg.remoteui(repo, {}), dest)
     repo.ui.pushbuffer()
-    o = discovery.findoutgoing(repo, other)
+    common, _anyinc, _heads = discovery.findcommonincoming(repo, other)
     repo.ui.popbuffer()
     cl = repo.changelog
-    o = set([cl.rev(r) for r in repo.changelog.nodesbetween(o, revs)[0]])
+    o = set([cl.rev(r) for r in repo.changelog.findmissing(common, revs)])
     return [r for r in subset if r in o]
 
 def p1(repo, subset, x):

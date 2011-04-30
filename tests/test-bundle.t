@@ -562,7 +562,6 @@ bundle single branch
 
   $ hg bundle bundle.hg part --debug
   searching for changes
-  common changesets up to c0025332f9ed
   2 changesets found
   list of changesets:
   d2ae7f538514cd87c17547b0de4cea71fe1af9fb

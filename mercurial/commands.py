@@ -696,48 +696,20 @@ def bundle(ui, repo, fname, dest=None, **opts):
         if dest:
             raise util.Abort(_("--base is incompatible with specifying "
                                "a destination"))
-        base = [repo.lookup(rev) for rev in base]
-        # create the right base
-        # XXX: nodesbetween / changegroup* should be "fixed" instead
-        o = []
-        has = set((nullid,))
-        for n in base:
-            has.update(repo.changelog.reachable(n))
-        if revs:
-            revs = [repo.lookup(rev) for rev in revs]
-            visit = revs[:]
-            has.difference_update(visit)
-        else:
-            visit = repo.changelog.heads()
-        seen = {}
-        while visit:
-            n = visit.pop(0)
-            parents = [p for p in repo.changelog.parents(n) if p not in has]
-            if len(parents) == 0:
-                if n not in has:
-                    o.append(n)
-            else:
-                for p in parents:
-                    if p not in seen:
-                        seen[p] = 1
-                        visit.append(p)
+        common = [repo.lookup(rev) for rev in base]
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), dest)
         revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
-        if revs:
-            revs = [repo.lookup(rev) for rev in revs]
-        o = discovery.findoutgoing(repo, other, force=opts.get('force'))
+        inc = discovery.findcommonincoming(repo, other, force=opts.get('force'))
+        common, _anyinc, _heads = inc
 
-    if not o:
+    nodes = revs and map(repo.lookup, revs) or revs
+    cg = repo.getbundle('bundle', common=common, heads=nodes)
+    if not cg:
         ui.status(_("no changes found\n"))
         return 1
-
-    if revs:
-        cg = repo.changegroupsubset(o, revs, 'bundle')
-    else:
-        cg = repo.changegroup(o, 'bundle')
 
     bundletype = opts.get('type', 'bzip2').lower()
     btypes = {'none': 'HG10UN', 'bzip2': 'HG10BZ', 'gzip': 'HG10GZ'}
@@ -3959,9 +3931,9 @@ def summary(ui, repo, **opts):
         other = hg.repository(hg.remoteui(repo, {}), dest)
         ui.debug('comparing with %s\n' % url.hidepassword(dest))
         repo.ui.pushbuffer()
-        o = discovery.findoutgoing(repo, other)
+        common, _anyinc, _heads = discovery.findcommonincoming(repo, other)
         repo.ui.popbuffer()
-        o = repo.changelog.nodesbetween(o, None)[0]
+        o = repo.changelog.findmissing(common=common)
         if o:
             t.append(_('%d outgoing') % len(o))
         if 'bookmarks' in other.listkeys('namespaces'):

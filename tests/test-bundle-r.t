@@ -231,7 +231,8 @@ empty bundle
 issue76 msg2163
 
   $ hg -R test bundle --base 3 -r 3 -r 3 test-bundle-cset-3.hg
-  1 changesets found
+  no changes found
+  [1]
 
 Issue1910: 'hg bundle --base $head' does not exclude $head from
 result

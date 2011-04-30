@@ -83,7 +83,6 @@ Extension disabled for lack of a hook
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -137,7 +136,6 @@ Extension disabled for lack of acl.sources
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -195,7 +193,6 @@ No [acl.allow]/[acl.deny]
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -262,7 +259,6 @@ Empty [acl.allow]
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -327,7 +323,6 @@ fred is allowed inside foo/
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -396,7 +391,6 @@ Empty [acl.deny]
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -462,7 +456,6 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -533,7 +526,6 @@ fred is allowed inside foo/, but not foo/Bar/
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -601,7 +593,6 @@ fred is allowed inside foo/, but not foo/Bar/
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -671,7 +662,6 @@ barney is allowed everywhere
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -744,7 +734,6 @@ wilma can change files with a .txt extension
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -822,7 +811,6 @@ file specified by acl.config does not exist
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -893,7 +881,6 @@ betty is allowed inside foo/ by a acl.config file
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -976,7 +963,6 @@ acl.config can set only [acl.allow]/[acl.deny]
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1050,7 +1036,6 @@ fred is always allowed
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -1121,7 +1106,6 @@ no one is allowed inside foo/Bar/
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -1195,7 +1179,6 @@ OS-level groups
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1266,7 +1249,6 @@ OS-level groups
   """
   pushing to ../b
   searching for changes
-  common changesets up to 6675d58eff77
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -1378,7 +1360,6 @@ No branch acls specified
   """
   pushing to ../b
   searching for changes
-  common changesets up to 07e028174695
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1456,7 +1437,6 @@ Branch acl deny test
   """
   pushing to ../b
   searching for changes
-  common changesets up to 07e028174695
   invalidating branch cache (tip differs)
   4 changesets found
   list of changesets:
@@ -1533,7 +1513,6 @@ Branch acl empty allow test
   """
   pushing to ../b
   searching for changes
-  common changesets up to 07e028174695
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1605,7 +1584,6 @@ Branch acl allow other
   """
   pushing to ../b
   searching for changes
-  common changesets up to 07e028174695
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1671,7 +1649,6 @@ Branch acl allow other
   """
   pushing to ../b
   searching for changes
-  common changesets up to 07e028174695
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1754,7 +1731,6 @@ push foobar into the remote
   """
   pushing to ../b
   searching for changes
-  common changesets up to 07e028174695
   invalidating branch cache (tip differs)
   4 changesets found
   list of changesets:
@@ -1837,7 +1813,6 @@ Branch acl conflicting deny
   """
   pushing to ../b
   searching for changes
-  common changesets up to 07e028174695
   invalidating branch cache (tip differs)
   4 changesets found
   list of changesets:

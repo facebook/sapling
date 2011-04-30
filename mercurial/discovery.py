@@ -9,14 +9,19 @@ from node import nullid, short
 from i18n import _
 import util, error
 
-def findcommonincoming(repo, remote, heads=None, force=False, commononly=False):
-    """Return a tuple (common, missing, heads) used to identify missing nodes
-    from remote. "missing" is either a boolean indicating if any nodes are missing
-    (when commononly=True), or else a list of the root nodes of the missing set.
+def findcommonincoming(repo, remote, heads=None, force=False):
+    """Return a tuple (common, anyincoming, heads) used to identify the common
+    subset of nodes between repo and remote.
 
-    If a list of heads is specified, return only nodes which are heads
-    or ancestors of these heads.
+    "common" is a list of (at least) the heads of the common subset.
+    "anyincoming" is testable as a boolean indicating if any nodes are missing
+      locally. If remote does not support getbundle, this actually is a list of
+      roots of the nodes that would be incoming, to be supplied to
+      changegroupsubset. No code except for pull should be relying on this fact
+      any longer.
+    "heads" is either the supplied heads, or else the remote's heads.
     """
+
     m = repo.changelog.nodemap
     search = []
     fetch = set()
@@ -37,7 +42,7 @@ def findcommonincoming(repo, remote, heads=None, force=False, commononly=False):
     # and start by examining the heads
     repo.ui.status(_("searching for changes\n"))
 
-    if commononly:
+    if remote.capable('getbundle'):
         myheads = repo.heads()
         known = remote.known(myheads)
         if util.all(known):
@@ -155,45 +160,6 @@ def findcommonincoming(repo, remote, heads=None, force=False, commononly=False):
 
     return base, list(fetch), heads
 
-def findoutgoing(repo, remote, base=None, remoteheads=None, force=False):
-    """Return list of nodes that are roots of subsets not in remote
-
-    If base dict is specified, assume that these nodes and their parents
-    exist on the remote side.
-    If remotehead is specified, assume it is the list of the heads from
-    the remote repository.
-    """
-    if base is None:
-        base = findcommonincoming(repo, remote, heads=remoteheads,
-                                  force=force)[0]
-    else:
-        base = list(base)
-
-    repo.ui.debug("common changesets up to "
-                  + " ".join(map(short, base)) + "\n")
-
-    remain = set(repo.changelog.nodemap)
-
-    # prune everything remote has from the tree
-    remain.remove(nullid)
-    remove = base
-    while remove:
-        n = remove.pop(0)
-        if n in remain:
-            remain.remove(n)
-            for p in repo.changelog.parents(n):
-                remove.append(p)
-
-    # find every node whose parents have been pruned
-    subset = []
-    # find every remote head that will get new children
-    for n in remain:
-        p1, p2 = repo.changelog.parents(n)
-        if p1 not in remain and p2 not in remain:
-            subset.append(n)
-
-    return subset
-
 def prepush(repo, remote, force, revs, newbranch):
     '''Analyze the local and remote repositories and determine which
     changesets need to be pushed to the remote. Return value depends
@@ -209,14 +175,13 @@ def prepush(repo, remote, force, revs, newbranch):
     successive changegroup chunks ready to be sent over the wire and
     remoteheads is the list of remote heads.'''
     remoteheads = remote.heads()
-    common, inc, rheads = findcommonincoming(repo, remote, heads=remoteheads,
-                                             force=force)
+    common, inc, _rheads = findcommonincoming(repo, remote, heads=remoteheads,
+                                              force=force)
 
     cl = repo.changelog
-    update = findoutgoing(repo, remote, common, remoteheads)
-    outg, bases, heads = cl.nodesbetween(update, revs)
+    outg = cl.findmissing(common, revs)
 
-    if not bases:
+    if not outg:
         repo.ui.status(_("no changes found\n"))
         return None, 1
 
@@ -317,8 +282,7 @@ def prepush(repo, remote, force, revs, newbranch):
 
     if revs is None:
         # use the fast path, no race possible on push
-        nodes = repo.changelog.findmissing(common)
-        cg = repo._changegroup(nodes, 'push')
+        cg = repo._changegroup(outg, 'push')
     else:
-        cg = repo.changegroupsubset(update, revs, 'push')
+        cg = repo.getbundle('push', heads=revs, common=common)
     return cg, remoteheads

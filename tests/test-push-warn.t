@@ -39,7 +39,6 @@
   found new branch changeset 1c9246a22a0a
   found new changesets starting at 1c9246a22a0a
   1 total queries
-  common changesets up to d8d565842d04
   new remote heads on branch 'default'
   new remote head 1e108cc5548c
   abort: push creates new remote heads on branch 'default'!

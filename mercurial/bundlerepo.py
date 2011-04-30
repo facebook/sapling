@@ -287,9 +287,8 @@ def instance(ui, path, create):
     return bundlerepository(ui, repopath, bundlename)
 
 def getremotechanges(ui, repo, other, revs=None, bundlename=None,
-                     force=False, usecommon=False):
-    tmp = discovery.findcommonincoming(repo, other, heads=revs, force=force,
-                                       commononly=usecommon)
+                     force=False):
+    tmp = discovery.findcommonincoming(repo, other, heads=revs, force=force)
     common, incoming, rheads = tmp
     if not incoming:
         try:
@@ -305,7 +304,7 @@ def getremotechanges(ui, repo, other, revs=None, bundlename=None,
         if revs is None and other.capable('changegroupsubset'):
             revs = rheads
 
-        if usecommon:
+        if other.capable('getbundle'):
             cg = other.getbundle('incoming', common=common, heads=revs)
         elif revs is None:
             cg = other.changegroup(incoming, "incoming")

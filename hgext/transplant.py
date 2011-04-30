@@ -494,10 +494,10 @@ def transplant(ui, repo, *revs, **opts):
     and then resume where you left off by calling :hg:`transplant
     --continue/-c`.
     '''
-    def incwalk(repo, incoming, branches, match=util.always):
+    def incwalk(repo, commmon, branches, match=util.always):
         if not branches:
             branches = None
-        for node in repo.changelog.nodesbetween(incoming, branches)[0]:
+        for node in repo.changelog.findmissing(common, branches):
             if match(node):
                 yield node
 
@@ -552,8 +552,8 @@ def transplant(ui, repo, *revs, **opts):
     if source:
         sourcerepo = ui.expandpath(source)
         source = hg.repository(ui, sourcerepo)
-        source, common, incoming, bundle = bundlerepo.getremotechanges(ui, repo,
-                                            source, force=True)
+        source, common, anyinc, bundle = bundlerepo.getremotechanges(ui, repo,
+                                          source, force=True)
     else:
         source = repo
 
@@ -577,7 +577,7 @@ def transplant(ui, repo, *revs, **opts):
                 revmap[int(r)] = source.lookup(r)
         elif opts.get('all') or not merges:
             if source != repo:
-                alltransplants = incwalk(source, incoming, branches,
+                alltransplants = incwalk(source, common, branches,
                                          match=matchfn)
             else:
                 alltransplants = transplantwalk(source, p1, branches,
