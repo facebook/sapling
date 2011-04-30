@@ -136,6 +136,20 @@ class abstractopener(object):
         '''Prevent instantiation; don't call this from subclasses.'''
         raise NotImplementedError('attempted instantiating ' + str(type(self)))
 
+    def read(self, *args, **kwargs):
+        fp = self(*args, **kwargs)
+        try:
+            return fp.read()
+        finally:
+            fp.close()
+
+    def write(self, data, *args, **kwargs):
+        fp = self(*args, **kwargs)
+        try:
+            return fp.write(data)
+        finally:
+            fp.close()
+
 class opener(abstractopener):
     '''Open files relative to a base directory
 
