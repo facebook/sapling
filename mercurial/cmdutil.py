@@ -1314,9 +1314,16 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix):
     match.bad = lambda x, y: bad.append(x) or oldbad(x, y)
     names = []
     wctx = repo[None]
+    wctx.status(clean=True)
+    existing = None
+    if scmutil.showportabilityalert(ui):
+        existing = dict([(fn.lower(), fn) for fn in
+                         wctx.added() + wctx.clean() + wctx.modified()])
     for f in repo.walk(match):
         exact = match.exact(f)
         if exact or f not in repo.dirstate:
+            if existing:
+                scmutil.checkcasecollision(ui, f, existing)
             names.append(f)
             if ui.verbose or not exact:
                 ui.status(_('adding %s\n') % match.rel(join(f)))

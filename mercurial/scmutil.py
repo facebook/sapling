@@ -22,6 +22,11 @@ def checkportable(ui, f):
         if msg:
             portabilityalert(ui, "%s: %r" % (msg, f))
 
+def checkcasecollision(ui, f, files):
+    if f.lower() in files and files[f.lower()] != f:
+        portabilityalert(ui, _('possible case-folding collision for %s') % f)
+    files[f.lower()] = f
+
 def checkportabilityalert(ui):
     '''check if the user's config requests nothing, a warning, or abort for
     non-portable filenames'''
