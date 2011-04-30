@@ -351,13 +351,12 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             else:
                 ui.write(_("The first bad revision is:\n"))
             displayer.show(repo[nodes[0]])
-            parents = repo[nodes[0]].parents()
             extendnode = extendbisectrange(nodes, good)
             if extendnode is not None:
                 ui.write(_('Not all ancestors of this changeset have been'
                            ' checked.\nUse bisect --extend to continue the '
                            'bisection from\nthe common ancestor, %s.\n')
-                         % short(extendnode.node()))
+                         % extendnode)
         else:
             # multiple possible revisions
             if good:
@@ -459,7 +458,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             extendnode = extendbisectrange(nodes, good)
             if extendnode is not None:
                 ui.write(_("Extending search to changeset %d:%s\n"
-                         % (extendnode.rev(), short(extendnode.node()))))
+                         % (extendnode.rev(), extendnode)))
                 if noupdate:
                     return
                 cmdutil.bail_if_changed(repo)
