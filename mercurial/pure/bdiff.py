@@ -19,6 +19,7 @@ def splitnewlines(text):
 
 def _normalizeblocks(a, b, blocks):
     prev = None
+    r = []
     for curr in blocks:
         if prev is None:
             prev = curr
@@ -40,9 +41,10 @@ def _normalizeblocks(a, b, blocks):
             while (b1end + shift < b2end and
                    a[a1end + shift] == b[b1end + shift]):
                 shift += 1
-        yield a1, b1, l1 + shift
+        r.append((a1, b1, l1 + shift))
         prev = a2 + shift, b2 + shift, l2 - shift
-    yield prev
+    r.append(prev)
+    return r
 
 def bdiff(a, b):
     a = str(a).splitlines(True)
