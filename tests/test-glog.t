@@ -1405,4 +1405,12 @@ Test log -G options
   abort: unknown revision 'something nice'!
   [255]
   $ hg log -G --include 'some file' --exclude 'another file'
+  $ hg log -G --follow  --template 'nodetag {rev}\n' | grep nodetag | wc -l
+  \s*36 (re)
+  $ hg log -G --removed --template 'nodetag {rev}\n' | grep nodetag | wc -l
+  \s*0 (re)
+  $ hg log -G --only-merges --template 'nodetag {rev}\n' | grep nodetag | wc -l
+  \s*28 (re)
+  $ hg log -G --no-merges --template 'nodetag {rev}\n' | grep nodetag | wc -l
+  \s*9 (re)
 

@@ -223,20 +223,22 @@ def check_unsupported_flags(opts):
 def revset(pats, opts):
     """Return revset str built of revisions, log options and file patterns.
     """
-    opt2revset = dict(only_merges='merge',
+    opt2revset = dict(only_merges='merge()',
                       only_branch='branch',
-                      no_merges='not merge',
+                      no_merges='not merge()',
                       include='file',
                       exclude='not file',
-                      prune='not follow')
+                      prune='not follow',
+                      follow='follow()',
+                      removed='removes("*")')
     revset = []
     for op, val in opts.iteritems():
         if not val:
             continue
         revop = opt2revset.get(op, op)
-        if op in ('follow', 'only_merges', 'no_merges'):
-            revset.append('%s()' % revop)
-        elif op in ('date', 'remove'):
+        if op in ('follow', 'only_merges', 'no_merges', 'removed'):
+            revset.append('%s' % revop)
+        elif op in ('date',):
             revset.append('%s(%s)' % (revop, val))
         elif op in ('include', 'exclude', 'user', 'branch', 'keyword',
                     'prune', 'only_branch'):
