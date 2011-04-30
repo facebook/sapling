@@ -509,15 +509,17 @@ class localrepository(repo.repository):
             bheads.extend(newnodes)
             if len(bheads) <= 1:
                 continue
+            bheads = sorted(bheads, key=lambda x: self[x].rev())
             # starting from tip means fewer passes over reachable
             while newnodes:
                 latest = newnodes.pop()
                 if latest not in bheads:
                     continue
-                minbhrev = self[min([self[bh].rev() for bh in bheads])].node()
+                minbhrev = self[bheads[0]].node()
                 reachable = self.changelog.reachable(latest, minbhrev)
                 reachable.remove(latest)
-                bheads = [b for b in bheads if b not in reachable]
+                if reachable:
+                    bheads = [b for b in bheads if b not in reachable]
             partial[branch] = bheads
 
     def lookup(self, key):
