@@ -7,45 +7,16 @@
   > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
   > EOF
 
-
   $ hg init a
   $ cd a
-
-  $ echo A > A
-  $ hg ci -Am A
-  adding A
-
-  $ echo B > B
-  $ hg ci -Am B
-  adding B
-
-  $ hg up -q -C 0
-
-  $ echo C > C
-  $ hg ci -Am C
-  adding C
-  created new head
-
-  $ hg up -q -C 0
-
-  $ echo D > D
-  $ hg ci -Am D
-  adding D
-  created new head
-
-  $ hg merge -r 2
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-
-  $ hg ci -m E
-
-  $ hg up -q -C 3
-
-  $ echo F > F
-  $ hg ci -Am F
-  adding F
-  created new head
-
+  $ hg unbundle $TESTDIR/bundles/rebase.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 5 changes to 5 files (+2 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg up tip
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 
 
