@@ -1,4 +1,5 @@
-http://mercurial.selenic.com/bts/issue660
+http://mercurial.selenic.com/bts/issue660 and:
+http://mercurial.selenic.com/bts/issue322
 
   $ hg init
   $ echo a > a
