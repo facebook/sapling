@@ -195,7 +195,7 @@
             <File Id="static.coal.file.png"      Name="coal-file.png" />
             <File Id="static.coal.folder.png"    Name="coal-folder.png" />
             <File Id="static.excanvas.js"        Name="excanvas.js" />
-            <File Id="static.graph.js"           Name="graph.js" />
+            <File Id="static.mercurial.js"       Name="mercurial.js" />
             <File Id="static.hgicon.png"         Name="hgicon.png" />
             <File Id="static.hglogo.png"         Name="hglogo.png" />
             <File Id="static.style.coal.css"     Name="style-coal.css" />

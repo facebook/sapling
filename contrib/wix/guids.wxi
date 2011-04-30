@@ -33,7 +33,7 @@
   <?define templates.raw.guid = {04DE03A2-FBFD-4c5f-8DEA-5436DDF4689D} ?>
   <?define templates.rss.guid = {A7D608DE-0CF6-44f4-AF1E-EE30CC237FDA} ?>
   <?define templates.spartan.guid = {80222625-FA8F-44b1-86CE-1781EF375D09} ?>
-  <?define templates.static.guid = {68C9F843-DE7E-480f-9DA2-D220B19D02C3} ?>
+  <?define templates.static.guid = {B27D7311-050A-4A96-9971-B674A0EA21D0} ?>
 
   <!-- mercurial.wxs -->
   <?define ProductUpgradeCode = {A1CC6134-E945-4399-BE36-EB0017FDF7CF} ?>
