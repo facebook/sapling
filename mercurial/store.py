@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import osutil, util
+import osutil, scmutil, util
 import os, stat
 
 _sha = util.sha1
@@ -241,7 +241,7 @@ class basicstore(object):
         self.createmode = _calcmode(path)
         op = opener(self.path)
         op.createmode = self.createmode
-        self.opener = lambda f, *args, **kw: op(encodedir(f), *args, **kw)
+        self.opener = scmutil.filteropener(op, encodedir)
 
     def join(self, f):
         return self.path + '/' + encodedir(f)
@@ -290,7 +290,7 @@ class encodedstore(basicstore):
         self.createmode = _calcmode(self.path)
         op = opener(self.path)
         op.createmode = self.createmode
-        self.opener = lambda f, *args, **kw: op(encodefilename(f), *args, **kw)
+        self.opener = scmutil.filteropener(op, encodefilename)
 
     def datafiles(self):
         for a, b, size in self._walk('data', True):

@@ -231,6 +231,16 @@ class opener(abstractopener):
             f.close()
             self._fixfilemode(dst)
 
+class filteropener(abstractopener):
+    '''Wrapper opener for filtering filenames with a function.'''
+
+    def __init__(self, opener, filter):
+        self._filter = filter
+        self._orig = opener
+
+    def __call__(self, path, *args, **kwargs):
+        return self._orig(self._filter(path), *args, **kwargs)
+
 def canonpath(root, cwd, myname, auditor=None):
     '''return the canonical path of myname, given cwd and root'''
     if util.endswithsep(root):
