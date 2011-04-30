@@ -11,6 +11,12 @@
   $ hg --cwd a ci -u someone -d '1 0' -m'second change'
 
 
+generate patches for the test
+
+  $ hg --cwd a export tip > exported-tip.patch
+  $ hg --cwd a diff -r0:1 > diffed-tip.patch
+
+
 import exported patch
 
   $ hg clone -r0 a b
@@ -20,19 +26,18 @@ import exported patch
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a export tip > tip.patch
-  $ hg --cwd b import ../tip.patch
-  applying ../tip.patch
+  $ hg --cwd b import ../exported-tip.patch
+  applying ../exported-tip.patch
 
-message should be same
+message and committer should be same
 
-  $ hg --cwd b tip | grep 'second change'
-  summary:     second change
-
-committer should be same
-
-  $ hg --cwd b tip | grep someone
+  $ hg --cwd b tip
+  changeset:   1:1d4bd90af0e4
+  tag:         tip
   user:        someone
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     second change
+  
   $ rm -r b
 
 
@@ -50,9 +55,8 @@ import exported patch with external patcher
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a export tip > tip.patch
-  $ hg --config ui.patch='python ../dummypatch.py' --cwd b import ../tip.patch
-  applying ../tip.patch
+  $ hg --config ui.patch='python ../dummypatch.py' --cwd b import ../exported-tip.patch
+  applying ../exported-tip.patch
   $ cat b/a
   line2
   $ rm -r b
@@ -67,9 +71,8 @@ import of plain diff should fail without message
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a diff -r0:1 > tip.patch
-  $ hg --cwd b import ../tip.patch
-  applying ../tip.patch
+  $ hg --cwd b import ../diffed-tip.patch
+  applying ../diffed-tip.patch
   abort: empty commit message
   [255]
   $ rm -r b
@@ -84,9 +87,8 @@ import of plain diff should be ok with message
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a diff -r0:1 > tip.patch
-  $ hg --cwd b import -mpatch ../tip.patch
-  applying ../tip.patch
+  $ hg --cwd b import -mpatch ../diffed-tip.patch
+  applying ../diffed-tip.patch
   $ rm -r b
 
 
@@ -99,9 +101,8 @@ import of plain diff with specific date and user
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a diff -r0:1 > tip.patch
-  $ hg --cwd b import -mpatch -d '1 0' -u 'user@nowhere.net' ../tip.patch
-  applying ../tip.patch
+  $ hg --cwd b import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch
+  applying ../diffed-tip.patch
   $ hg -R b tip -pv
   changeset:   1:ca68f19f3a40
   tag:         tip
@@ -131,9 +132,8 @@ import of plain diff should be ok with --no-commit
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a diff -r0:1 > tip.patch
-  $ hg --cwd b import --no-commit ../tip.patch
-  applying ../tip.patch
+  $ hg --cwd b import --no-commit ../diffed-tip.patch
+  applying ../diffed-tip.patch
   $ hg --cwd b diff --nodates
   diff -r 80971e65b431 a
   --- a/a
@@ -153,8 +153,7 @@ import of malformed plain diff should fail
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a diff -r0:1 > tip.patch
-  $ sed 's/1,1/foo/' < tip.patch > broken.patch
+  $ sed 's/1,1/foo/' < diffed-tip.patch > broken.patch
   $ hg --cwd b import -mpatch ../broken.patch
   applying ../broken.patch
   abort: bad hunk #1
@@ -174,10 +173,9 @@ used to hide a bug.
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a export tip > dir/tip.patch
   $ cd dir
-  $ hg -R b import tip.patch
-  applying tip.patch
+  $ hg -R b import ../exported-tip.patch
+  applying ../exported-tip.patch
   $ cd ..
   $ rm -r dir
 
@@ -191,7 +189,7 @@ import from stdin
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a export tip | hg --cwd b import -
+  $ hg --cwd b import - < exported-tip.patch
   applying patch from stdin
   $ rm -r b
 
@@ -218,7 +216,7 @@ override commit message
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a export tip | hg --cwd b import -m 'override' -
+  $ hg --cwd b import -m 'override' - < exported-tip.patch
   applying patch from stdin
   $ hg --cwd b tip | grep override
   summary:     override
@@ -227,7 +225,8 @@ override commit message
   $ cat > mkmsg.py <<EOF
   > import email.Message, sys
   > msg = email.Message.Message()
-  > msg.set_payload('email commit message\n' + open('tip.patch', 'rb').read())
+  > patch = open(sys.argv[1], 'rb').read()
+  > msg.set_payload('email commit message\n' + patch)
   > msg['Subject'] = 'email patch'
   > msg['From'] = 'email patcher'
   > sys.stdout.write(msg.as_string())
@@ -243,8 +242,7 @@ plain diff in email, subject, message body
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a diff -r0:1 > tip.patch
-  $ python mkmsg.py > msg.patch
+  $ python mkmsg.py diffed-tip.patch > msg.patch
   $ hg --cwd b import ../msg.patch
   applying ../msg.patch
   $ hg --cwd b tip | grep email
@@ -306,8 +304,7 @@ hg export in email, should use patch header
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a export tip > tip.patch
-  $ python mkmsg.py | hg --cwd b import -
+  $ python mkmsg.py exported-tip.patch | hg --cwd b import -
   applying patch from stdin
   $ hg --cwd b tip | grep second
   summary:     second change
@@ -320,7 +317,8 @@ The '---' tests the gitsendmail handling without proper mail headers
   $ cat > mkmsg2.py <<EOF
   > import email.Message, sys
   > msg = email.Message.Message()
-  > msg.set_payload('email patch\n\nnext line\n---\n' + open('tip.patch').read())
+  > patch = open(sys.argv[1], 'rb').read()
+  > msg.set_payload('email patch\n\nnext line\n---\n' + patch)
   > msg['Subject'] = '[PATCH] email patch'
   > msg['From'] = 'email patcher'
   > sys.stdout.write(msg.as_string())
@@ -336,8 +334,7 @@ plain diff in email, [PATCH] subject, message body with subject
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd a diff -r0:1 > tip.patch
-  $ python mkmsg2.py | hg --cwd b import -
+  $ python mkmsg2.py diffed-tip.patch | hg --cwd b import -
   applying patch from stdin
   $ hg --cwd b tip --template '{desc}\n'
   email patch
@@ -386,22 +383,23 @@ hg import in a subdirectory
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd a export tip > tmp
-  $ sed -e 's/d1\/d2\///' < tmp > tip.patch
+  $ sed -e 's/d1\/d2\///' < tmp > subdir-tip.patch
   $ dir=`pwd`
   $ cd b/d1/d2 2>&1 > /dev/null
-  $ hg import  ../../../tip.patch
-  applying ../../../tip.patch
+  $ hg import  ../../../subdir-tip.patch
+  applying ../../../subdir-tip.patch
   $ cd "$dir"
 
 message should be 'subdir change'
-
-  $ hg --cwd b tip | grep 'subdir change'
-  summary:     subdir change
-
 committer should be 'someoneelse'
 
-  $ hg --cwd b tip | grep someoneelse
+  $ hg --cwd b tip
+  changeset:   1:3577f5aea227
+  tag:         tip
   user:        someoneelse
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     subdir change
+  
 
 should be empty
 
@@ -422,7 +420,7 @@ Test fuzziness (ambiguous patch location, fuzz=2)
   $ echo line0 >> a
   $ echo line3 >> a
   $ hg ci -m change a
-  $ hg export tip > tip.patch
+  $ hg export tip > fuzzy-tip.patch
   $ hg up -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo line1 > a
@@ -431,8 +429,8 @@ Test fuzziness (ambiguous patch location, fuzz=2)
   $ echo line0 >> a
   $ hg ci -m brancha
   created new head
-  $ hg import --no-commit -v tip.patch
-  applying tip.patch
+  $ hg import --no-commit -v fuzzy-tip.patch
+  applying fuzzy-tip.patch
   patching file a
   Hunk #1 succeeded at 1 with fuzz 2 (offset -2 lines).
   $ hg revert -a
@@ -447,8 +445,8 @@ import with --no-commit should have written .hg/last-message.txt
 
 test fuzziness with eol=auto
 
-  $ hg --config patch.eol=auto import --no-commit -v tip.patch
-  applying tip.patch
+  $ hg --config patch.eol=auto import --no-commit -v fuzzy-tip.patch
+  applying fuzzy-tip.patch
   patching file a
   Hunk #1 succeeded at 1 with fuzz 2 (offset -2 lines).
   $ cd ..
