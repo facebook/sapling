@@ -1,62 +1,15 @@
   $ hg init test
   $ cd test
-  $ echo "0" >> afile
-  $ hg add afile
-  $ hg commit -m "0.0"
-  $ echo "1" >> afile
-  $ hg commit -m "0.1"
-  $ echo "2" >> afile
-  $ hg commit -m "0.2"
-  $ echo "3" >> afile
-  $ hg commit -m "0.3"
-  $ hg update -C 0
+  $ hg unbundle $TESTDIR/bundles/remote.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 9 changesets with 7 changes to 4 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo "1" >> afile
-  $ hg commit -m "1.1"
-  created new head
-  $ echo "2" >> afile
-  $ hg commit -m "1.2"
-  $ echo "a line" > fred
-  $ echo "3" >> afile
-  $ hg add fred
-  $ hg commit -m "1.3"
-  $ hg mv afile adifferentfile
-  $ hg commit -m "1.3m"
-  $ hg update -C 3
-  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg mv afile anotherfile
-  $ hg commit -m "0.3m"
-  $ hg debugindex .hg/store/data/afile.i
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       3      0       0 362fef284ce2 000000000000 000000000000
-       1         3       5      1       1 125144f7e028 362fef284ce2 000000000000
-       2         8       7      2       2 4c982badb186 125144f7e028 000000000000
-       3        15       9      3       3 19b1fc555737 4c982badb186 000000000000
-  $ hg debugindex .hg/store/data/adifferentfile.i
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      75      0       7 2565f3199a74 000000000000 000000000000
-  $ hg debugindex .hg/store/data/anotherfile.i
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      75      0       8 2565f3199a74 000000000000 000000000000
-  $ hg debugindex .hg/store/data/fred.i
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       8      0       6 12ab3bcc5ea4 000000000000 000000000000
-  $ hg debugindex .hg/store/00manifest.i
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      48      0       0 43eadb1d2d06 000000000000 000000000000
-       1        48      48      1       1 8b89697eba2c 43eadb1d2d06 000000000000
-       2        96      48      2       2 626a32663c2f 8b89697eba2c 000000000000
-       3       144      48      3       3 f54c32f13478 626a32663c2f 000000000000
-       4       192      58      3       6 de68e904d169 626a32663c2f 000000000000
-       5       250      68      3       7 09bb521d218d de68e904d169 000000000000
-       6       318      54      6       8 1fde233dfb0f f54c32f13478 000000000000
-  $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
   $ cd ..
+
   $ for i in 0 1 2 3 4 5 6 7 8; do
   >    mkdir test-"$i"
   >    hg --cwd test-"$i" init
@@ -79,7 +32,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 1 changesets, 1 total revisions
-  0:f9ee2f85a263
+  0:bfaf4b5cbf01
   searching for changes
   2 changesets found
   adding changesets
@@ -92,7 +45,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  1:34c2bf6b0626
+  1:21f32785131f
   searching for changes
   3 changesets found
   adding changesets
@@ -105,7 +58,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  2:e38ba6f5b7e0
+  2:4ce51a113780
   searching for changes
   4 changesets found
   adding changesets
@@ -118,7 +71,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 4 changesets, 4 total revisions
-  3:eebf5a27f8ca
+  3:93ee6ab32777
   searching for changes
   2 changesets found
   adding changesets
@@ -131,7 +84,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  1:095197eb4973
+  1:c70afb1ee985
   searching for changes
   3 changesets found
   adding changesets
@@ -144,7 +97,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  2:1bb50a9436a7
+  2:f03ae5a9b979
   searching for changes
   4 changesets found
   adding changesets
@@ -157,7 +110,7 @@
   crosschecking files in changesets and manifests
   checking files
   2 files, 4 changesets, 5 total revisions
-  3:7373c1169842
+  3:095cb14b1b4d
   searching for changes
   5 changesets found
   adding changesets
@@ -170,7 +123,7 @@
   crosschecking files in changesets and manifests
   checking files
   3 files, 5 changesets, 6 total revisions
-  4:a6a34bfa0076
+  4:faa2e4234c7a
   searching for changes
   5 changesets found
   adding changesets
@@ -183,7 +136,7 @@
   crosschecking files in changesets and manifests
   checking files
   2 files, 5 changesets, 5 total revisions
-  4:aa35859c02ea
+  4:916f1afdef90
   $ cd test-8
   $ hg pull ../test-7
   pulling from ../test-7
@@ -247,18 +200,18 @@ result
 revision 2
 
   $ hg tip -q
-  2:e38ba6f5b7e0
+  2:4ce51a113780
   $ hg unbundle ../test-bundle-should-fail.hg
   adding changesets
   transaction abort!
   rollback completed
-  abort: 00changelog.i@eebf5a27f8ca: unknown parent!
+  abort: 00changelog.i@93ee6ab32777: unknown parent!
   [255]
 
 revision 2
 
   $ hg tip -q
-  2:e38ba6f5b7e0
+  2:4ce51a113780
   $ hg unbundle ../test-bundle-all.hg
   adding changesets
   adding manifests
@@ -269,7 +222,7 @@ revision 2
 revision 8
 
   $ hg tip -q
-  8:aa35859c02ea
+  8:916f1afdef90
   $ hg verify
   checking changesets
   checking manifests
@@ -283,7 +236,7 @@ revision 8
 revision 2
 
   $ hg tip -q
-  2:e38ba6f5b7e0
+  2:4ce51a113780
   $ hg unbundle ../test-bundle-branch1.hg
   adding changesets
   adding manifests
@@ -294,7 +247,7 @@ revision 2
 revision 4
 
   $ hg tip -q
-  4:aa35859c02ea
+  4:916f1afdef90
   $ hg verify
   checking changesets
   checking manifests
@@ -314,7 +267,7 @@ revision 4
 revision 6
 
   $ hg tip -q
-  6:a6a34bfa0076
+  6:faa2e4234c7a
   $ hg verify
   checking changesets
   checking manifests
@@ -334,7 +287,7 @@ revision 6
 revision 4
 
   $ hg tip -q
-  4:aa35859c02ea
+  4:916f1afdef90
   $ hg verify
   checking changesets
   checking manifests
@@ -367,7 +320,7 @@ revision 4
 revision 9
 
   $ hg tip -q
-  9:905597b0d5d4
+  9:03fc0b0e347c
   $ hg verify
   checking changesets
   checking manifests
