@@ -1416,3 +1416,12 @@ Test log -G options
   $ hg log -G -d 'brace ) in a date'
   abort: invalid date: 'brace ) in a date'
   [255]
+  $ hg log -G -P 32 --template '{rev}\n'
+  @  36
+  |
+  o  35
+  |
+  o  34
+  |
+  | o  33
+  | |

@@ -224,13 +224,18 @@ def revset(pats, opts):
     """Return revset str built of revisions, log options and file patterns.
     """
     opt2revset = dict(only_merges='merge()',
-                      only_branch='branch',
+                      only_branch='branch($)',
                       no_merges='not merge()',
-                      include='file',
-                      exclude='not file',
-                      prune='not follow',
+                      include='file($)',
+                      exclude='not file($)',
+                      prune='not ($ or ancestors($))',
+                      user='user($)',
+                      branch='branch($)',
+                      keyword='keyword($)',
                       follow='follow()',
                       removed='removes("*")')
+    opt2revset = dict((k, v.replace('$', '%(val)r'))
+                      for k,v in opt2revset.iteritems())
     revset = []
     for op, val in opts.iteritems():
         if not val:
@@ -243,7 +248,7 @@ def revset(pats, opts):
         elif op in ('include', 'exclude', 'user', 'branch', 'keyword',
                     'prune', 'only_branch'):
             for f in val:
-                revset.append('%s(%r)' % (revop, f))
+                revset.append(revop % {'val': f})
         elif op == 'rev':
             revset.extend(val)
 
