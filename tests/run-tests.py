@@ -303,6 +303,7 @@ def parsehghaveoutput(lines):
     return missing, failed
 
 def showdiff(expected, output, ref, err):
+    print
     for line in difflib.unified_diff(expected, output, ref, err):
         sys.stdout.write(line)
 
