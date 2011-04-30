@@ -36,9 +36,11 @@ def dagwalker(repo, revs):
     lowestrev = min(revs)
     gpcache = {}
 
+    knownrevs = set(revs)
     for rev in revs:
         ctx = repo[rev]
-        parents = sorted(set([p.rev() for p in ctx.parents() if p.rev() in revs]))
+        parents = sorted(set([p.rev() for p in ctx.parents()
+                              if p.rev() in knownrevs]))
         mpars = [p.rev() for p in ctx.parents() if
                  p.rev() != nullrev and p.rev() not in parents]
 
