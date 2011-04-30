@@ -1284,6 +1284,26 @@ def parsebool(s):
     """
     return _booleans.get(s.lower(), None)
 
+_hexdig = '0123456789ABCDEFabcdef'
+_hextochr = dict((a + b, chr(int(a + b, 16)))
+                 for a in _hexdig for b in _hexdig)
+
+def _urlunquote(s):
+    """unquote('abc%20def') -> 'abc def'."""
+    res = s.split('%')
+    # fastpath
+    if len(res) == 1:
+        return s
+    s = res[0]
+    for item in res[1:]:
+        try:
+            s += _hextochr[item[:2]] + item[2:]
+        except KeyError:
+            s += '%' + item
+        except UnicodeDecodeError:
+            s += unichr(int(item[:2], 16)) + item[2:]
+    return s
+
 class url(object):
     """Reliable URL parser.
 
@@ -1427,7 +1447,7 @@ class url(object):
                   'path', 'query', 'fragment'):
             v = getattr(self, a)
             if v is not None:
-                setattr(self, a, urllib.unquote(v))
+                setattr(self, a, _urlunquote(v))
 
     def __repr__(self):
         attrs = []
