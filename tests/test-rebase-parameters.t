@@ -50,6 +50,10 @@ These fail:
   $ hg clone -q -u . a a1
   $ cd a1
 
+  $ hg rebase -s 8 -d 7
+  abort: source is descendant of destination
+  [255]
+
   $ hg rebase --continue --abort
   abort: cannot use both abort and continue
   [255]
