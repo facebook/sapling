@@ -7,7 +7,7 @@
 
 from i18n import _
 import errno, getpass, os, socket, sys, tempfile, traceback
-import config, scmutil, util, error, url
+import config, scmutil, util, error
 
 class ui(object):
     def __init__(self, src=None):
@@ -111,7 +111,7 @@ class ui(object):
                                   % (n, p, self.configsource('paths', n)))
                         p = p.replace('%%', '%')
                     p = util.expandpath(p)
-                    if not url.hasscheme(p) and not os.path.isabs(p):
+                    if not util.hasscheme(p) and not os.path.isabs(p):
                         p = os.path.normpath(os.path.join(root, p))
                     c.set("paths", n, p)
 
@@ -332,7 +332,7 @@ class ui(object):
 
     def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
-        if url.hasscheme(loc) or os.path.isdir(os.path.join(loc, '.hg')):
+        if util.hasscheme(loc) or os.path.isdir(os.path.join(loc, '.hg')):
             return loc
 
         path = self.config('paths', loc)

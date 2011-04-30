@@ -48,7 +48,7 @@ hgrc(5) for details.
 import os, errno, socket, tempfile, cStringIO, time
 import email.MIMEMultipart, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
-from mercurial import cmdutil, commands, hg, mail, patch, util, discovery, url
+from mercurial import cmdutil, commands, hg, mail, patch, util, discovery
 from mercurial.i18n import _
 from mercurial.node import bin
 
@@ -239,7 +239,7 @@ def patchbomb(ui, repo, *revs, **opts):
         dest, branches = hg.parseurl(dest)
         revs, checkout = hg.addbranchrevs(repo, repo, branches, revs)
         other = hg.repository(hg.remoteui(repo, opts), dest)
-        ui.status(_('comparing with %s\n') % url.hidepassword(dest))
+        ui.status(_('comparing with %s\n') % util.hidepassword(dest))
         common, _anyinc, _heads = discovery.findcommonincoming(repo, other)
         nodes = revs and map(repo.lookup, revs) or revs
         o = repo.changelog.findmissing(common, heads=nodes)

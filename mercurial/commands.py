@@ -2607,7 +2607,7 @@ def incoming(ui, repo, source="default", **opts):
         if 'bookmarks' not in other.listkeys('namespaces'):
             ui.warn(_("remote doesn't support bookmarks\n"))
             return 0
-        ui.status(_('comparing with %s\n') % url.hidepassword(source))
+        ui.status(_('comparing with %s\n') % util.hidepassword(source))
         return bookmarks.diff(ui, repo, other)
 
     ret = hg.incoming(ui, repo, source, opts)
@@ -2894,7 +2894,7 @@ def outgoing(ui, repo, dest=None, **opts):
         if 'bookmarks' not in other.listkeys('namespaces'):
             ui.warn(_("remote doesn't support bookmarks\n"))
             return 0
-        ui.status(_('comparing with %s\n') % url.hidepassword(dest))
+        ui.status(_('comparing with %s\n') % util.hidepassword(dest))
         return bookmarks.diff(ui, other, repo)
 
     ret = hg.outgoing(ui, repo, dest, opts)
@@ -2968,13 +2968,13 @@ def paths(ui, repo, search=None):
     if search:
         for name, path in ui.configitems("paths"):
             if name == search:
-                ui.write("%s\n" % url.hidepassword(path))
+                ui.write("%s\n" % util.hidepassword(path))
                 return
         ui.warn(_("not found!\n"))
         return 1
     else:
         for name, path in ui.configitems("paths"):
-            ui.write("%s = %s\n" % (name, url.hidepassword(path)))
+            ui.write("%s = %s\n" % (name, util.hidepassword(path)))
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
@@ -3017,7 +3017,7 @@ def pull(ui, repo, source="default", **opts):
     """
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     other = hg.repository(hg.remoteui(repo, opts), source)
-    ui.status(_('pulling from %s\n') % url.hidepassword(source))
+    ui.status(_('pulling from %s\n') % util.hidepassword(source))
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
 
     if opts.get('bookmark'):
@@ -3100,7 +3100,7 @@ def push(ui, repo, dest=None, **opts):
 
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest, opts.get('branch'))
-    ui.status(_('pushing to %s\n') % url.hidepassword(dest))
+    ui.status(_('pushing to %s\n') % util.hidepassword(dest))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     other = hg.repository(hg.remoteui(repo, opts), dest)
     if revs:
@@ -3919,7 +3919,7 @@ def summary(ui, repo, **opts):
         source, branches = hg.parseurl(ui.expandpath('default'))
         other = hg.repository(hg.remoteui(repo, {}), source)
         revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
-        ui.debug('comparing with %s\n' % url.hidepassword(source))
+        ui.debug('comparing with %s\n' % util.hidepassword(source))
         repo.ui.pushbuffer()
         common, incoming, rheads = discovery.findcommonincoming(repo, other)
         repo.ui.popbuffer()
@@ -3929,7 +3929,7 @@ def summary(ui, repo, **opts):
         dest, branches = hg.parseurl(ui.expandpath('default-push', 'default'))
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
         other = hg.repository(hg.remoteui(repo, {}), dest)
-        ui.debug('comparing with %s\n' % url.hidepassword(dest))
+        ui.debug('comparing with %s\n' % util.hidepassword(dest))
         repo.ui.pushbuffer()
         common, _anyinc, _heads = discovery.findcommonincoming(repo, other)
         repo.ui.popbuffer()

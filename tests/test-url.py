@@ -53,7 +53,7 @@ import doctest
 
 def test_url():
     """
-    >>> from mercurial.url import url
+    >>> from mercurial.util import url
 
     This tests for edge cases in url.URL's parsing algorithm. Most of
     these aren't useful for documentation purposes, so they aren't

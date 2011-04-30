@@ -28,7 +28,7 @@ class httprepository(wireproto.wirerepository):
         self.path = path
         self.caps = None
         self.handler = None
-        u = url.url(path)
+        u = util.url(path)
         if u.query or u.fragment:
             raise util.Abort(_('unsupported URL component: "%s"') %
                              (u.query or u.fragment))
@@ -111,12 +111,12 @@ class httprepository(wireproto.wirerepository):
         except AttributeError:
             proto = resp.headers['content-type']
 
-        safeurl = url.hidepassword(self._url)
+        safeurl = util.hidepassword(self._url)
         # accept old "text/plain" and "application/hg-changegroup" for now
         if not (proto.startswith('application/mercurial-') or
                 proto.startswith('text/plain') or
                 proto.startswith('application/hg-changegroup')):
-            self.ui.debug("requested URL: '%s'\n" % url.hidepassword(cu))
+            self.ui.debug("requested URL: '%s'\n" % util.hidepassword(cu))
             raise error.RepoError(
                 _("'%s' does not appear to be an hg repository:\n"
                   "---%%<--- (%s)\n%s\n---%%<---\n")

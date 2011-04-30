@@ -14,7 +14,6 @@ import scmutil, util, extensions, hook, error
 import match as matchmod
 import merge as mergemod
 import tags as tagsmod
-import url as urlmod
 from lock import release
 import weakref, errno, os, time, inspect
 propertycache = util.propertycache
@@ -1695,7 +1694,7 @@ class localrepository(repo.repository):
         cl.delayupdate()
         oldheads = cl.heads()
 
-        tr = self.transaction("\n".join([srctype, urlmod.hidepassword(url)]))
+        tr = self.transaction("\n".join([srctype, util.hidepassword(url)]))
         try:
             trp = weakref.proxy(tr)
             # pull off the changeset group
@@ -1937,7 +1936,7 @@ def aftertrans(files):
     return a
 
 def instance(ui, path, create):
-    return localrepository(ui, urlmod.localpath(path), create)
+    return localrepository(ui, util.localpath(path), create)
 
 def islocal(path):
     return True

@@ -8,7 +8,7 @@
 import errno, os, re, xml.dom.minidom, shutil, posixpath
 import stat, subprocess, tarfile
 from i18n import _
-import config, scmutil, util, node, error, cmdutil, url, bookmarks
+import config, scmutil, util, node, error, cmdutil, bookmarks
 hg = None
 propertycache = util.propertycache
 
@@ -194,13 +194,13 @@ def _abssource(repo, push=False, abort=True):
     """return pull/push path of repo - either based on parent repo .hgsub info
     or on the top repo config. Abort or return None if no source found."""
     if hasattr(repo, '_subparent'):
-        source = url.url(repo._subsource)
+        source = util.url(repo._subsource)
         source.path = posixpath.normpath(source.path)
         if posixpath.isabs(source.path) or source.scheme:
             return str(source)
         parent = _abssource(repo._subparent, push, abort=False)
         if parent:
-            parent = url.url(parent)
+            parent = util.url(parent)
             parent.path = posixpath.join(parent.path, source.path)
             parent.path = posixpath.normpath(parent.path)
             return str(parent)

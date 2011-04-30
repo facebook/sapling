@@ -9,7 +9,7 @@
 import os, re, time
 from mercurial.i18n import _
 from mercurial import ui, hg, scmutil, util, templater
-from mercurial import error, encoding, url
+from mercurial import error, encoding
 from common import ErrorResponse, get_mtime, staticfile, paritygen, \
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb
@@ -364,7 +364,7 @@ class hgwebdir(object):
 
     def updatereqenv(self, env):
         if self._baseurl is not None:
-            u = url.url(self._baseurl)
+            u = util.url(self._baseurl)
             env['SERVER_NAME'] = u.host
             if u.port:
                 env['SERVER_PORT'] = u.port

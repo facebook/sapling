@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import util, error, wireproto, url
+import util, error, wireproto
 
 class remotelock(object):
     def __init__(self, repo):
@@ -23,7 +23,7 @@ class sshrepository(wireproto.wirerepository):
         self._url = path
         self.ui = ui
 
-        u = url.url(path, parsequery=False, parsefragment=False)
+        u = util.url(path, parsequery=False, parsefragment=False)
         if u.scheme != 'ssh' or not u.host or u.path is None:
             self._abort(error.RepoError(_("couldn't parse location %s") % path))
 

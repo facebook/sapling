@@ -41,7 +41,7 @@ same name.
 """
 
 import os, re
-from mercurial import extensions, hg, templater, url as urlmod, util
+from mercurial import extensions, hg, templater, util
 from mercurial.i18n import _
 
 
@@ -95,4 +95,4 @@ def extsetup(ui):
                                'letter %s:\\\n') % (scheme, scheme.upper()))
         hg.schemes[scheme] = ShortRepository(url, scheme, t)
 
-    extensions.wrapfunction(urlmod, 'hasdriveletter', hasdriveletter)
+    extensions.wrapfunction(util, 'hasdriveletter', hasdriveletter)
