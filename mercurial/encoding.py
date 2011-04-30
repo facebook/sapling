@@ -148,3 +148,17 @@ def colwidth(s):
         return sum([w(c) in wide and 2 or 1 for c in d])
     return len(d)
 
+def lower(s):
+    "best-effort encoding-aware case-folding of local string s"
+    try:
+        if isinstance(s, localstr):
+            u = s._utf8.decode("utf-8")
+        else:
+            u = s.decode(encoding, encodingmode)
+
+        lu = u.lower()
+        if u == lu:
+            return s # preserve localstring
+        return lu.encode(encoding)
+    except UnicodeError:
+        return s.lower() # we don't know how to fold this except in ASCII
