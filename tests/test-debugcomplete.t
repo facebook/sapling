@@ -234,7 +234,7 @@ Show all commands + options
   debugstate: nodates, datesort
   debugsub: rev
   debugwalk: include, exclude
-  debugwireargs: three, four, ssh, remotecmd, insecure
+  debugwireargs: three, four, five, ssh, remotecmd, insecure
   grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
   heads: rev, topo, active, closed, style, template
   help: 

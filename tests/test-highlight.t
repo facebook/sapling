@@ -65,6 +65,7 @@ hgweb filerevision, html
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <link rel="stylesheet" href="/highlightcss" type="text/css" />
   <title>test: 853dcd4de2a6 primes.py</title>
@@ -120,7 +121,7 @@ hgweb filerevision, html
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date">Thu Jan 01 00:00:00 1970 +0000 (1970-01-01)</td>
+   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td>
   </tr>
   <tr>
    <th class="author">parents</th>
@@ -173,6 +174,7 @@ hgweb filerevision, html
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
@@ -191,6 +193,7 @@ hgweb fileannotate, html
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <link rel="stylesheet" href="/highlightcss" type="text/css" />
   <title>test: primes.py annotate</title>
@@ -248,7 +251,7 @@ hgweb fileannotate, html
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date">Thu Jan 01 00:00:00 1970 +0000 (1970-01-01)</td>
+   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td>
   </tr>
   <tr>
    <th class="author">parents</th>
@@ -497,6 +500,7 @@ hgweb fileannotate, html
   </div>
   </div>
   
+  <script type="text/javascript">process_dates()</script>
   
   
   </body>
