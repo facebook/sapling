@@ -1425,3 +1425,6 @@ Test log -G options
   |
   | o  33
   | |
+  $ hg log -G --follow a
+  abort: -G/--graph option is incompatible with --follow with file argument
+  [255]

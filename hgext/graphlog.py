@@ -214,11 +214,14 @@ def get_revs(repo, rev_opt):
     else:
         return (len(repo) - 1, 0)
 
-def check_unsupported_flags(opts):
+def check_unsupported_flags(pats, opts):
     for op in ["follow_first", "copies", "newest_first"]:
         if op in opts and opts[op]:
             raise util.Abort(_("-G/--graph option is incompatible with --%s")
                              % op.replace("_", "-"))
+    if pats and opts.get('follow'):
+        raise util.Abort(_("-G/--graph option is incompatible with --follow "
+                           "with file argument"))
 
 def revset(pats, opts):
     """Return revset str built of revisions, log options and file patterns.
@@ -286,7 +289,7 @@ def graphlog(ui, repo, *pats, **opts):
     directory.
     """
 
-    check_unsupported_flags(opts)
+    check_unsupported_flags(pats, opts)
 
     revs = revrange(repo, [revset(pats, opts)])
     revdag = graphmod.dagwalker(repo, revs)
@@ -312,7 +315,7 @@ def goutgoing(ui, repo, dest=None, **opts):
     directory.
     """
 
-    check_unsupported_flags(opts)
+    check_unsupported_flags([], opts)
     o = hg._outgoing(ui, repo, dest, opts)
     if o is None:
         return
@@ -334,7 +337,7 @@ def gincoming(ui, repo, source="default", **opts):
     def subreporecurse():
         return 1
 
-    check_unsupported_flags(opts)
+    check_unsupported_flags([], opts)
     def display(other, chlist, displayer):
         revdag = graphrevs(other, chlist, opts)
         showparents = [ctx.node() for ctx in repo[None].parents()]
