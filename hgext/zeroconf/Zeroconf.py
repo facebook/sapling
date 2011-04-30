@@ -808,7 +808,7 @@ class DNSCache(object):
 		try:
 			list = self.cache[entry.key]
 			return list[list.index(entry)]
-		except KeyError:
+		except (KeyError, ValueError):
 			return None
 
 	def getByDetails(self, name, type, clazz):
