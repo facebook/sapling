@@ -223,34 +223,38 @@ def check_unsupported_flags(opts):
 def revset(pats, opts):
     """Return revset str built of revisions, log options and file patterns.
     """
-    opt2revset = dict(only_merges='merge()',
-                      only_branch='branch($)',
-                      no_merges='not merge()',
-                      include='file($)',
-                      exclude='not file($)',
-                      prune='not ($ or ancestors($))',
-                      user='user($)',
-                      branch='branch($)',
-                      keyword='keyword($)',
-                      follow='follow()',
-                      removed='removes("*")')
-    opt2revset = dict((k, v.replace('$', '%(val)r'))
-                      for k,v in opt2revset.iteritems())
+    opt2revset = {
+        'follow': (0, 'follow()'),
+        'no_merges': (0, 'not merge()'),
+        'only_merges': (0, 'merge()'),
+        'removed': (0, 'removes("*")'),
+        'date': (1, 'date($)'),
+        'branch': (2, 'branch($)'),
+        'exclude': (2, 'not file($)'),
+        'include': (2, 'file($)'),
+        'keyword': (2, 'keyword($)'),
+        'only_branch': (2, 'branch($)'),
+        'prune': (2, 'not ($ or ancestors($))'),
+        'user': (2, 'user($)'),
+        }
     revset = []
     for op, val in opts.iteritems():
         if not val:
             continue
-        revop = opt2revset.get(op, op)
-        if op in ('follow', 'only_merges', 'no_merges', 'removed'):
-            revset.append('%s' % revop)
-        elif op in ('date',):
-            revset.append('%s(%r)' % (revop, val))
-        elif op in ('include', 'exclude', 'user', 'branch', 'keyword',
-                    'prune', 'only_branch'):
+        if op == 'rev':
+            # Already a revset
+            revset.extend(val)
+        if op not in opt2revset:
+            continue
+        arity, revop = opt2revset[op]
+        revop = revop.replace('$', '%(val)r')
+        if arity == 0:
+            revset.append(revop)
+        elif arity == 1:
+            revset.append(revop % {'val': val})
+        else:
             for f in val:
                 revset.append(revop % {'val': f})
-        elif op == 'rev':
-            revset.extend(val)
 
     for path in pats:
         revset.append('file(%r)' % path)
