@@ -6,7 +6,8 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import util
+from node import nullrev
+import mdiff, util
 import struct, os, bz2, zlib, tempfile
 
 _BUNDLE10_DELTA_HEADER = "20s20s20s20s"
@@ -212,16 +213,33 @@ def readbundle(fh, fname):
     return unbundle10(fh, alg)
 
 class bundle10(object):
+    deltaheader = _BUNDLE10_DELTA_HEADER
     def __init__(self, lookup):
         self._lookup = lookup
     def close(self):
         return closechunk()
     def fileheader(self, fname):
         return chunkheader(len(fname)) + fname
-    def revchunk(self, revlog, node='', p1='', p2='', prefix='', data=''):
+    def revchunk(self, revlog, rev, prev):
+        node = revlog.node(rev)
+        p1, p2 = revlog.parentrevs(rev)
+        base = prev
+
+        prefix = ''
+        if base == nullrev:
+            delta = revlog.revision(node)
+            prefix = mdiff.trivialdiffheader(len(delta))
+        else:
+            delta = revlog.revdiff(base, rev)
         linknode = self._lookup(revlog, node)
-        meta = node + p1 + p2 + linknode + prefix
-        l = len(meta) + len(data)
+        p1n, p2n = revlog.parents(node)
+        basenode = revlog.node(base)
+        meta = self.builddeltaheader(node, p1n, p2n, basenode, linknode)
+        meta += prefix
+        l = len(meta) + len(delta)
         yield chunkheader(l)
         yield meta
-        yield data
+        yield delta
+    def builddeltaheader(self, node, p1n, p2n, basenode, linknode):
+        # do nothing with basenode, it is implicitly the previous one in HG10
+        return struct.pack(self.deltaheader, node, p1n, p2n, linknode)

@@ -1086,17 +1086,8 @@ class revlog(object):
 
         # build deltas
         for r in xrange(len(revs) - 1):
-            a, b = revs[r], revs[r + 1]
-            nb = self.node(b)
-            p1, p2 = self.parents(nb)
-            prefix = ''
-
-            if a == nullrev:
-                d = self.revision(nb)
-                prefix = mdiff.trivialdiffheader(len(d))
-            else:
-                d = self.revdiff(a, b)
-            for c in bundler.revchunk(self, nb, p1, p2, prefix, d):
+            prev, curr = revs[r], revs[r + 1]
+            for c in bundler.revchunk(self, curr, prev):
                 yield c
 
         yield bundler.close()
