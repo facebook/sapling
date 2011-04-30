@@ -17,15 +17,14 @@ def checkfilename(f):
 def checkportable(ui, f):
     '''Check if filename f is portable and warn or abort depending on config'''
     checkfilename(f)
-    if showportabilityalert(ui):
+    abort, warn = checkportabilityalert(ui)
+    if abort or warn:
         msg = util.checkwinfilename(f)
         if msg:
-            portabilityalert(ui, "%s: %r" % (msg, f))
-
-def checkcasecollision(ui, f, files):
-    if f.lower() in files and files[f.lower()] != f:
-        portabilityalert(ui, _('possible case-folding collision for %s') % f)
-    files[f.lower()] = f
+            msg = "%s: %r" % (msg, f)
+            if abort:
+                raise util.Abort(msg)
+            ui.warn(_("warning: %s\n") % msg)
 
 def checkportabilityalert(ui):
     '''check if the user's config requests nothing, a warning, or abort for
@@ -40,19 +39,23 @@ def checkportabilityalert(ui):
             _("ui.portablefilenames value is invalid ('%s')") % val)
     return abort, warn
 
-def showportabilityalert(ui):
-    '''check if the user wants any notification of portability problems'''
-    abort, warn = checkportabilityalert(ui)
-    return abort or warn
+class casecollisionauditor(object):
+    def __init__(self, ui, abort, existingiter):
+        self._ui = ui
+        self._abort = abort
+        self._map = {}
+        for f in existingiter:
+            self._map[f.lower()] = f
 
-def portabilityalert(ui, msg):
-    if not msg:
-        return
-    abort, warn = checkportabilityalert(ui)
-    if abort:
-        raise util.Abort("%s" % msg)
-    elif warn:
-        ui.warn(_("warning: %s\n") % msg)
+    def __call__(self, f):
+        fl = f.lower()
+        map = self._map
+        if fl in map and map[fl] != f:
+            msg = _('possible case-folding collision for %s') % f
+            if self._abort:
+                raise util.Abort(msg)
+            self._ui.warn(_("warning: %s\n") % msg)
+        map[fl] = f
 
 class path_auditor(object):
     '''ensure that a filesystem path contains no banned components.
