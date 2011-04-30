@@ -1214,22 +1214,25 @@ def debugbundle(ui, bundlepath, all=None, **opts):
     try:
         gen = changegroup.readbundle(f, bundlepath)
         if all:
-            ui.write("format: id, p1, p2, cset, len(delta)\n")
+            ui.write("format: id, p1, p2, cset, delta base, len(delta)\n")
 
             def showchunks(named):
                 ui.write("\n%s\n" % named)
+                chain = None
                 while 1:
-                    chunkdata = gen.parsechunk()
+                    chunkdata = gen.parsechunk(chain)
                     if not chunkdata:
                         break
                     node = chunkdata['node']
                     p1 = chunkdata['p1']
                     p2 = chunkdata['p2']
                     cs = chunkdata['cs']
-                    delta = chunkdata['data']
-                    ui.write("%s %s %s %s %s\n" %
+                    deltabase = chunkdata['deltabase']
+                    delta = chunkdata['delta']
+                    ui.write("%s %s %s %s %s %s\n" %
                              (hex(node), hex(p1), hex(p2),
-                              hex(cs), len(delta)))
+                              hex(cs), hex(deltabase), len(delta)))
+                    chain = node
 
             showchunks("changelog")
             showchunks("manifest")
@@ -1239,12 +1242,14 @@ def debugbundle(ui, bundlepath, all=None, **opts):
                     break
                 showchunks(fname)
         else:
+            chain = None
             while 1:
-                chunkdata = gen.parsechunk()
+                chunkdata = gen.parsechunk(chain)
                 if not chunkdata:
                     break
                 node = chunkdata['node']
                 ui.write("%s\n" % hex(node))
+                chain = node
     finally:
         f.close()
 

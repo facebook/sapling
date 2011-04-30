@@ -9,6 +9,8 @@ from i18n import _
 import util
 import struct, os, bz2, zlib, tempfile
 
+_BUNDLE10_DELTA_HEADER = "20s20s20s20s"
+
 def readexactly(stream, n):
     '''read n bytes from stream.read and abort if less was available'''
     s = stream.read(n)
@@ -128,6 +130,8 @@ def decompressor(fh, alg):
     return util.chunkbuffer(generator(fh))
 
 class unbundle10(object):
+    deltaheader = _BUNDLE10_DELTA_HEADER
+    deltaheadersize = struct.calcsize(deltaheader)
     def __init__(self, fh, alg):
         self._stream = decompressor(fh, alg)
         self._type = alg
@@ -159,14 +163,24 @@ class unbundle10(object):
         l = self.chunklength()
         return readexactly(self._stream, l)
 
-    def parsechunk(self):
+    def _deltaheader(self, headertuple, prevnode):
+        node, p1, p2, cs = headertuple
+        if prevnode is None:
+            deltabase = p1
+        else:
+            deltabase = prevnode
+        return node, p1, p2, deltabase, cs
+
+    def parsechunk(self, prevnode):
         l = self.chunklength()
         if not l:
             return {}
-        h = readexactly(self._stream, 80)
-        node, p1, p2, cs = struct.unpack("20s20s20s20s", h)
-        data = readexactly(self._stream, l - 80)
-        return dict(node=node, p1=p1, p2=p2, cs=cs, data=data)
+        headerdata = readexactly(self._stream, self.deltaheadersize)
+        header = struct.unpack(self.deltaheader, headerdata)
+        delta = readexactly(self._stream, l - self.deltaheadersize)
+        node, p1, p2, deltabase, cs = self._deltaheader(header, prevnode)
+        return dict(node=node, p1=p1, p2=p2, cs=cs,
+                    deltabase=deltabase, delta=delta)
 
 class headerlessfixup(object):
     def __init__(self, fh, h):
