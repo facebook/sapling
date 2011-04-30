@@ -43,7 +43,9 @@ class nocompress(object):
         return ""
 
 bundletypes = {
-    "": ("", nocompress),
+    "": ("", nocompress), # only when using unbundle on ssh and old http servers
+                          # since the unification ssh accepts a header but there
+                          # is no capability signaling it.
     "HG10UN": ("HG10UN", nocompress),
     "HG10BZ": ("HG10", lambda: bz2.BZ2Compressor()),
     "HG10GZ": ("HG10GZ", lambda: zlib.compressobj()),

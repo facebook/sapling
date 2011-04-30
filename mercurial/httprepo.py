@@ -147,19 +147,18 @@ class httprepository(wireproto.wirerepository):
         # have to stream bundle to a temp file because we do not have
         # http 1.1 chunked transfer.
 
-        type = ""
         types = self.capable('unbundle')
-        # servers older than d1b16a746db6 will send 'unbundle' as a
-        # boolean capability
         try:
             types = types.split(',')
         except AttributeError:
+            # servers older than d1b16a746db6 will send 'unbundle' as a
+            # boolean capability. They only support headerless/uncompressed
+            # bundles.
             types = [""]
-        if types:
-            for x in types:
-                if x in changegroup.bundletypes:
-                    type = x
-                    break
+        for x in types:
+            if x in changegroup.bundletypes:
+                type = x
+                break
 
         tempname = changegroup.writebundle(cg, None, type)
         fp = url.httpsendfile(self.ui, tempname, "rb")
