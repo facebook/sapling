@@ -1413,4 +1413,6 @@ Test log -G options
   \s*28 (re)
   $ hg log -G --no-merges --template 'nodetag {rev}\n' | grep nodetag | wc -l
   \s*9 (re)
-
+  $ hg log -G -d 'brace ) in a date'
+  abort: invalid date: 'brace ) in a date'
+  [255]
