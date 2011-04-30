@@ -274,42 +274,6 @@ def removeauth(u):
     u.user = u.passwd = None
     return str(u)
 
-def netlocsplit(netloc):
-    '''split [user[:passwd]@]host[:port] into 4-tuple.'''
-
-    a = netloc.find('@')
-    if a == -1:
-        user, passwd = None, None
-    else:
-        userpass, netloc = netloc[:a], netloc[a + 1:]
-        c = userpass.find(':')
-        if c == -1:
-            user, passwd = urllib.unquote(userpass), None
-        else:
-            user = urllib.unquote(userpass[:c])
-            passwd = urllib.unquote(userpass[c + 1:])
-    c = netloc.find(':')
-    if c == -1:
-        host, port = netloc, None
-    else:
-        host, port = netloc[:c], netloc[c + 1:]
-    return host, port, user, passwd
-
-def netlocunsplit(host, port, user=None, passwd=None):
-    '''turn host, port, user, passwd into [user[:passwd]@]host[:port].'''
-    if port:
-        hostport = host + ':' + port
-    else:
-        hostport = host
-    if user:
-        quote = lambda s: urllib.quote(s, safe='')
-        if passwd:
-            userpass = quote(user) + ':' + quote(passwd)
-        else:
-            userpass = quote(user)
-        return userpass + '@' + hostport
-    return hostport
-
 def readauthforuri(ui, uri):
     # Read configuration
     config = dict()
@@ -341,44 +305,6 @@ def readauthforuri(ui, uri):
             bestlen = len(prefix)
             bestauth = group, auth
     return bestauth
-
-_safe = ('abcdefghijklmnopqrstuvwxyz'
-         'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-         '0123456789' '_.-/')
-_safeset = None
-_hex = None
-def quotepath(path):
-    '''quote the path part of a URL
-
-    This is similar to urllib.quote, but it also tries to avoid
-    quoting things twice (inspired by wget):
-
-    >>> quotepath('abc def')
-    'abc%20def'
-    >>> quotepath('abc%20def')
-    'abc%20def'
-    >>> quotepath('abc%20 def')
-    'abc%20%20def'
-    >>> quotepath('abc def%20')
-    'abc%20def%20'
-    >>> quotepath('abc def%2')
-    'abc%20def%252'
-    >>> quotepath('abc def%')
-    'abc%20def%25'
-    '''
-    global _safeset, _hex
-    if _safeset is None:
-        _safeset = set(_safe)
-        _hex = set('abcdefABCDEF0123456789')
-    l = list(path)
-    for i in xrange(len(l)):
-        c = l[i]
-        if (c == '%' and i + 2 < len(l) and
-            l[i + 1] in _hex and l[i + 2] in _hex):
-            pass
-        elif c not in _safeset:
-            l[i] = '%%%02X' % ord(c)
-    return ''.join(l)
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
