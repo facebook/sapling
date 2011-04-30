@@ -236,10 +236,10 @@ _data = 'data 00manifest.d 00manifest.i 00changelog.d 00changelog.i'
 
 class basicstore(object):
     '''base class for local repository stores'''
-    def __init__(self, path, opener):
+    def __init__(self, path, openertype):
         self.path = path
         self.createmode = _calcmode(path)
-        op = opener(self.path)
+        op = openertype(self.path)
         op.createmode = self.createmode
         self.opener = scmutil.filteropener(op, encodedir)
 
@@ -285,10 +285,10 @@ class basicstore(object):
         pass
 
 class encodedstore(basicstore):
-    def __init__(self, path, opener):
+    def __init__(self, path, openertype):
         self.path = path + '/store'
         self.createmode = _calcmode(self.path)
-        op = opener(self.path)
+        op = openertype(self.path)
         op.createmode = self.createmode
         self.opener = scmutil.filteropener(op, encodefilename)
 
@@ -366,11 +366,11 @@ class fncache(object):
         return iter(self.entries)
 
 class fncachestore(basicstore):
-    def __init__(self, path, opener, encode):
+    def __init__(self, path, openertype, encode):
         self.encode = encode
         self.path = path + '/store'
         self.createmode = _calcmode(self.path)
-        op = opener(self.path)
+        op = openertype(self.path)
         op.createmode = self.createmode
         fnc = fncache(op)
         self.fncache = fnc
@@ -411,11 +411,11 @@ class fncachestore(basicstore):
     def write(self):
         self.fncache.write()
 
-def store(requirements, path, opener):
+def store(requirements, path, openertype):
     if 'store' in requirements:
         if 'fncache' in requirements:
             auxencode = lambda f: _auxencode(f, 'dotencode' in requirements)
             encode = lambda f: _hybridencode(f, auxencode)
-            return fncachestore(path, opener, encode)
-        return encodedstore(path, opener)
-    return basicstore(path, opener)
+            return fncachestore(path, openertype, encode)
+        return encodedstore(path, openertype)
+    return basicstore(path, openertype)
