@@ -66,7 +66,7 @@ def _siblings(siblings=[], hiderev=None):
     if len(siblings) == 1 and siblings[0].rev() == hiderev:
         return
     for s in siblings:
-        d = {'node': hex(s.node()), 'rev': s.rev()}
+        d = {'node': s.hex(), 'rev': s.rev()}
         d['user'] = s.user()
         d['date'] = s.date()
         d['description'] = s.description()

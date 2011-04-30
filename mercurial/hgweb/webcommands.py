@@ -80,7 +80,7 @@ def _filerevision(web, tmpl, fctx):
                 path=webutil.up(f),
                 text=lines(),
                 rev=fctx.rev(),
-                node=hex(fctx.node()),
+                node=fctx.hex(),
                 author=fctx.user(),
                 date=fctx.date(),
                 desc=fctx.description(),
@@ -239,7 +239,7 @@ def changelog(web, req, tmpl, shortlog=False):
     changenav = webutil.revnavgen(pos, revcount, count, web.repo.changectx)
 
     return tmpl(shortlog and 'shortlog' or 'changelog', changenav=changenav,
-                node=hex(ctx.node()), rev=pos, changesets=count,
+                node=ctx.hex(), rev=pos, changesets=count,
                 entries=lambda **x: changelist(limit=0,**x),
                 latestentry=lambda **x: changelist(limit=1,**x),
                 archives=web.archivelist("tip"), revcount=revcount,
@@ -582,7 +582,7 @@ def annotate(web, req, tmpl):
                 last = fnode
 
             yield {"parity": parity.next(),
-                   "node": hex(f.node()),
+                   "node": f.hex(),
                    "rev": f.rev(),
                    "author": f.user(),
                    "desc": f.description(),
@@ -598,7 +598,7 @@ def annotate(web, req, tmpl):
                 annotate=annotate,
                 path=webutil.up(f),
                 rev=fctx.rev(),
-                node=hex(fctx.node()),
+                node=fctx.hex(),
                 author=fctx.user(),
                 date=fctx.date(),
                 desc=fctx.description(),
@@ -655,7 +655,7 @@ def filelog(web, req, tmpl):
             l.insert(0, {"parity": parity.next(),
                          "filerev": i,
                          "file": f,
-                         "node": hex(iterfctx.node()),
+                         "node": iterfctx.hex(),
                          "author": iterfctx.user(),
                          "date": iterfctx.date(),
                          "rename": webutil.renamelink(iterfctx),
@@ -677,7 +677,7 @@ def filelog(web, req, tmpl):
 
     nodefunc = lambda x: fctx.filectx(fileid=x)
     nav = webutil.revnavgen(end - 1, revcount, count, nodefunc)
-    return tmpl("filelog", file=f, node=hex(fctx.node()), nav=nav,
+    return tmpl("filelog", file=f, node=fctx.hex(), nav=nav,
                 entries=lambda **x: entries(limit=0, **x),
                 latestentry=lambda **x: entries(limit=1, **x),
                 revcount=revcount, morevars=morevars, lessvars=lessvars)
@@ -762,7 +762,7 @@ def graph(web, req, tmpl):
     for (id, type, ctx, vtx, edges) in tree:
         if type != graphmod.CHANGESET:
             continue
-        node = short(ctx.node())
+        node = str(ctx)
         age = templatefilters.age(ctx.date())
         desc = templatefilters.firstline(ctx.description())
         desc = cgi.escape(templatefilters.nonempty(desc))
@@ -790,8 +790,6 @@ def help(web, req, tmpl):
 
     topicname = req.form.get('node', [None])[0]
     if not topicname:
-        topic = []
-
         def topics(**map):
             for entries, summary, _ in helpmod.helptable:
                 entries = sorted(entries, key=len)
