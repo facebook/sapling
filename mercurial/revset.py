@@ -223,7 +223,7 @@ def bisected(repo, subset, x):
     """
     state = getstring(x, _("bisect requires a string")).lower()
     if state not in ('good', 'bad', 'skip', 'unknown'):
-        raise ParseError(_('invalid bisect state'))
+        raise error.ParseError(_('invalid bisect state'))
     marked = set(repo.changelog.rev(n) for n in hbisect.load_state(repo)[state])
     return [r for r in subset if r in marked]
 
