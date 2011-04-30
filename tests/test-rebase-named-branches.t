@@ -54,6 +54,12 @@ Rebasing descendant onto ancestor across different named branches
   |/
   o  0: 'A'
   
+
+
+  $ hg rebase -s 7 -d 8
+  abort: source is ancestor of destination
+  [255]
+
   $ hg rebase -s 8 -d 7
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
@@ -114,44 +120,3 @@ Rebasing descendant onto ancestor across the same named branches
 
   $ cd ..
  
-Rebasing ancestor onto descendant across different named branches
-
-  $ hg clone -q -u . a a3
-
-  $ cd a3
-
-  $ hg branch dev
-  marked working directory as branch dev
-
-  $ echo x > x
-
-  $ hg add x
-
-  $ hg ci -m 'extra named branch'
-
-  $ hg tglog
-  @  8: 'extra named branch' dev
-  |
-  o  7: 'H'
-  |
-  | o  6: 'G'
-  |/|
-  o |  5: 'F'
-  | |
-  | o  4: 'E'
-  |/
-  | o  3: 'D'
-  | |
-  | o  2: 'C'
-  | |
-  | o  1: 'B'
-  |/
-  o  0: 'A'
-  
-  $ hg rebase -s 7 -d 8
-  abort: source is ancestor of destination
-  [255]
-
-  $ cd ..
- 
-
