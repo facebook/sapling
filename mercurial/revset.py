@@ -614,7 +614,7 @@ def parentspec(repo, subset, x, n):
     """
     try:
         n = int(n[1])
-        if n not in (0,1,2):
+        if n not in (0, 1, 2):
             raise ValueError
     except ValueError:
         raise error.ParseError(_("^ expects a number 0, 1, or 2"))
