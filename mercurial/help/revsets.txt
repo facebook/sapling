@@ -61,6 +61,26 @@ The following predicates are supported:
 
 .. predicatesmarker
 
+New predicates (known as "aliases") can be defined, using any combination of
+existing predicates or other aliases. An alias definition looks like::
+
+  <alias> = <definition>
+
+in the ``revsetalias`` section of ``.hgrc``. Arguments of the form `$1`, `$2`,
+etc. are substituted from the alias into the definition.
+
+For example,
+
+::
+
+  [revsetalias]
+  h = heads()
+  d($1) = sort($1, date)
+  rs($1, $2) = reverse(sort($1, $2))
+
+defines three aliases, ``h``, ``d``, and ``rs``. ``rs(0:tip, author)`` is
+exactly equivalent to ``reverse(sort(0:tip, author))``.
+
 Command line equivalents for :hg:`log`::
 
   -f    ->  ::.

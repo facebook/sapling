@@ -174,7 +174,7 @@ def revrange(repo, revs):
             pass
 
         # fall through to new-style queries if old-style fails
-        m = revset.match(spec)
+        m = revset.match(repo.ui, spec)
         for r in m(repo, range(len(repo))):
             if r not in seen:
                 l.append(r)
