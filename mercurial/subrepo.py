@@ -630,15 +630,7 @@ class svnsubrepo(abstractsubrepo):
             self._svncommand(['revert', '--recursive'])
         status = self._svncommand(['checkout', state[0], '--revision', state[1]])
         if not re.search('Checked out revision [0-9]+.', status):
-            # catch the case where the checkout operation is
-            # obstructed but the working copy is clean
-            if ('already a working copy for a different' in status and
-                not self.dirty()):
-                self.remove()
-                self.get(state, overwrite)
-                return
-            else:
-                raise util.Abort(status.splitlines()[-1])
+            raise util.Abort(status.splitlines()[-1])
         self._ui.status(status)
 
     def merge(self, state):
