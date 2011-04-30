@@ -10,60 +10,37 @@
 
   $ hg init a
   $ cd a
+  $ hg unbundle $TESTDIR/bundles/rebase.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 8 changesets with 7 changes to 7 files (+2 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg up tip
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ echo c1 > c1
-  $ hg ci -Am c1
-  adding c1
-
-  $ echo c2 > c2
-  $ hg ci -Am c2
-  adding c2
-
-  $ echo c3 > c3
-  $ hg ci -Am c3
-  adding c3
-
-  $ hg up -q -C 1
-
-  $ echo l1 > l1
-  $ hg ci -Am l1
-  adding l1
-  created new head
-
-  $ echo l2 > l2
-  $ hg ci -Am l2
-  adding l2
-
-  $ echo l3 > l3
-  $ hg ci -Am l3
-  adding l3
-
-  $ hg up -q -C 2
-
-  $ echo r1 > r1
-  $ hg ci -Am r1
-  adding r1
-
-  $ echo r2 > r2
-  $ hg ci -Am r2
-  adding r2
+  $ echo I > I
+  $ hg ci -AmI
+  adding I
 
   $ hg tglog
-  @  7: 'r2'
+  @  8: 'I'
   |
-  o  6: 'r1'
+  o  7: 'H'
   |
-  | o  5: 'l3'
+  | o  6: 'G'
+  |/|
+  o |  5: 'F'
   | |
-  | o  4: 'l2'
-  | |
-  | o  3: 'l1'
-  | |
-  o |  2: 'c3'
+  | o  4: 'E'
   |/
-  o  1: 'c2'
-  |
-  o  0: 'c1'
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
+  | o  1: 'B'
+  |/
+  o  0: 'A'
   
   $ cd ..
 
@@ -93,7 +70,7 @@ These fail:
   nothing to rebase
   [1]
 
-  $ hg up -q 6
+  $ hg up -q 7
 
   $ hg rebase
   nothing to rebase
@@ -102,29 +79,31 @@ These fail:
 
 These work:
 
-Rebase with no arguments (from 3 onto 7):
+Rebase with no arguments (from 3 onto 8):
 
-  $ hg up -q -C 5
+  $ hg up -q -C 3
 
   $ hg rebase
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'l3'
+  @  8: 'D'
   |
-  o  6: 'l2'
+  o  7: 'C'
   |
-  o  5: 'l1'
+  o  6: 'B'
   |
-  o  4: 'r2'
+  o  5: 'I'
   |
-  o  3: 'r1'
+  o  4: 'H'
   |
-  o  2: 'c3'
-  |
-  o  1: 'c2'
-  |
-  o  0: 'c1'
+  | o  3: 'G'
+  |/|
+  o |  2: 'F'
+  | |
+  | o  1: 'E'
+  |/
+  o  0: 'A'
   
 Try to rollback after a rebase (fail):
 
@@ -135,198 +114,212 @@ Try to rollback after a rebase (fail):
   $ cd ..
 
 
-Rebase with base == '.' => same as no arguments (from 3 onto 7):
+Rebase with base == '.' => same as no arguments (from 3 onto 8):
 
-  $ hg clone -q -u 5 a a2
+  $ hg clone -q -u 3 a a2
   $ cd a2
 
   $ hg rebase --base .
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'l3'
+  @  8: 'D'
   |
-  o  6: 'l2'
+  o  7: 'C'
   |
-  o  5: 'l1'
+  o  6: 'B'
   |
-  o  4: 'r2'
+  o  5: 'I'
   |
-  o  3: 'r1'
+  o  4: 'H'
   |
-  o  2: 'c3'
-  |
-  o  1: 'c2'
-  |
-  o  0: 'c1'
+  | o  3: 'G'
+  |/|
+  o |  2: 'F'
+  | |
+  | o  1: 'E'
+  |/
+  o  0: 'A'
   
   $ cd ..
 
 
-Rebase with dest == `hg branch` => same as no arguments (from 3 onto 7):
+Rebase with dest == `hg branch` => same as no arguments (from 3 onto 8):
 
-  $ hg clone -q -u 5 a a3
+  $ hg clone -q -u 3 a a3
   $ cd a3
 
   $ hg rebase --dest `hg branch`
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'l3'
+  @  8: 'D'
   |
-  o  6: 'l2'
+  o  7: 'C'
   |
-  o  5: 'l1'
+  o  6: 'B'
   |
-  o  4: 'r2'
+  o  5: 'I'
   |
-  o  3: 'r1'
+  o  4: 'H'
   |
-  o  2: 'c3'
-  |
-  o  1: 'c2'
-  |
-  o  0: 'c1'
+  | o  3: 'G'
+  |/|
+  o |  2: 'F'
+  | |
+  | o  1: 'E'
+  |/
+  o  0: 'A'
   
   $ cd ..
 
 
-Specify only source (from 4 onto 7):
+Specify only source (from 2 onto 8):
 
   $ hg clone -q -u . a a4
   $ cd a4
 
-  $ hg rebase --source 4
+  $ hg rebase --source 2
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'l3'
+  @  8: 'D'
   |
-  o    6: 'l2'
+  o    7: 'C'
   |\
-  | o  5: 'r2'
+  | o  6: 'I'
   | |
-  | o  4: 'r1'
+  | o  5: 'H'
   | |
-  o |  3: 'l1'
-  | |
-  | o  2: 'c3'
+  | | o  4: 'G'
+  | |/|
+  | o |  3: 'F'
+  | | |
+  | | o  2: 'E'
+  | |/
+  o |  1: 'B'
   |/
-  o  1: 'c2'
-  |
-  o  0: 'c1'
+  o  0: 'A'
   
   $ cd ..
 
 
 Specify only dest (from 3 onto 6):
 
-  $ hg clone -q -u 5 a a5
+  $ hg clone -q -u 3 a a5
   $ cd a5
 
   $ hg rebase --dest 6
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'l3'
+  @  8: 'D'
   |
-  o  6: 'l2'
+  o  7: 'C'
   |
-  o  5: 'l1'
+  o  6: 'B'
   |
-  | o  4: 'r2'
+  | o  5: 'I'
+  | |
+  | o  4: 'H'
+  | |
+  o |  3: 'G'
+  |\|
+  | o  2: 'F'
+  | |
+  o |  1: 'E'
   |/
-  o  3: 'r1'
-  |
-  o  2: 'c3'
-  |
-  o  1: 'c2'
-  |
-  o  0: 'c1'
+  o  0: 'A'
   
   $ cd ..
 
 
-Specify only base (from 3 onto 7):
+Specify only base (from 1 onto 8):
 
   $ hg clone -q -u . a a6
   $ cd a6
 
-  $ hg rebase --base 5
+  $ hg rebase --base 3
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'l3'
+  @  8: 'D'
   |
-  o  6: 'l2'
+  o  7: 'C'
   |
-  o  5: 'l1'
+  o  6: 'B'
   |
-  o  4: 'r2'
+  o  5: 'I'
   |
-  o  3: 'r1'
+  o  4: 'H'
   |
-  o  2: 'c3'
-  |
-  o  1: 'c2'
-  |
-  o  0: 'c1'
+  | o  3: 'G'
+  |/|
+  o |  2: 'F'
+  | |
+  | o  1: 'E'
+  |/
+  o  0: 'A'
   
   $ cd ..
 
 
-Specify source and dest (from 4 onto 6):
+Specify source and dest (from 2 onto 7):
 
   $ hg clone -q -u . a a7
   $ cd a7
 
-  $ hg rebase --source 4 --dest 6
+  $ hg rebase --detach --source 2 --dest 7
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'l3'
+  @  8: 'D'
   |
-  o    6: 'l2'
-  |\
-  | | o  5: 'r2'
-  | |/
-  | o  4: 'r1'
-  | |
-  o |  3: 'l1'
-  | |
-  | o  2: 'c3'
+  o  7: 'C'
+  |
+  | o  6: 'I'
   |/
-  o  1: 'c2'
+  o  5: 'H'
   |
-  o  0: 'c1'
+  | o  4: 'G'
+  |/|
+  o |  3: 'F'
+  | |
+  | o  2: 'E'
+  |/
+  | o  1: 'B'
+  |/
+  o  0: 'A'
   
   $ cd ..
 
 
-Specify base and dest (from 3 onto 6):
+Specify base and dest (from 1 onto 7):
 
   $ hg clone -q -u . a a8
   $ cd a8
 
-  $ hg rebase --base 4 --dest 6
+  $ hg rebase --base 3 --dest 7
   saved backup bundle to $TESTTMP/a8/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'l3'
+  @  8: 'D'
   |
-  o  6: 'l2'
+  o  7: 'C'
   |
-  o  5: 'l1'
+  o  6: 'B'
   |
-  | o  4: 'r2'
+  | o  5: 'I'
   |/
-  o  3: 'r1'
+  o  4: 'H'
   |
-  o  2: 'c3'
-  |
-  o  1: 'c2'
-  |
-  o  0: 'c1'
+  | o  3: 'G'
+  |/|
+  o |  2: 'F'
+  | |
+  | o  1: 'E'
+  |/
+  o  0: 'A'
   
   $ cd ..
 
