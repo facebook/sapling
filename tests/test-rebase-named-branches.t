@@ -13,7 +13,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 6 changesets with 5 changes to 5 files (+2 heads)
+  added 8 changesets with 7 changes to 7 files (+2 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -36,34 +36,42 @@ Rebasing descendant onto ancestor across different named branches
   $ hg ci -m 'extra named branch'
 
   $ hg tglog
-  @  6: 'extra named branch' dev
+  @  8: 'extra named branch' dev
   |
-  o  5: 'F'
+  o  7: 'H'
   |
-  | o  4: 'E'
+  | o  6: 'G'
   |/|
-  o |  3: 'D'
+  o |  5: 'F'
+  | |
+  | o  4: 'E'
+  |/
+  | o  3: 'D'
   | |
   | o  2: 'C'
-  |/
+  | |
   | o  1: 'B'
   |/
   o  0: 'A'
   
-  $ hg rebase -s 6 -d 5
+  $ hg rebase -s 8 -d 7
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  6: 'extra named branch'
+  @  8: 'extra named branch'
   |
-  o  5: 'F'
+  o  7: 'H'
   |
-  | o  4: 'E'
+  | o  6: 'G'
   |/|
-  o |  3: 'D'
+  o |  5: 'F'
+  | |
+  | o  4: 'E'
+  |/
+  | o  3: 'D'
   | |
   | o  2: 'C'
-  |/
+  | |
   | o  1: 'B'
   |/
   o  0: 'A'
@@ -76,28 +84,31 @@ Rebasing descendant onto ancestor across the same named branches
 
   $ cd a2
 
-  $ echo x > x
+  $ echo I > I
 
-  $ hg add x
-
-  $ hg ci -m 'G'
+  $ hg ci -AmI
+  adding I
 
   $ hg tglog
-  @  6: 'G'
+  @  8: 'I'
   |
-  o  5: 'F'
+  o  7: 'H'
   |
-  | o  4: 'E'
+  | o  6: 'G'
   |/|
-  o |  3: 'D'
+  o |  5: 'F'
+  | |
+  | o  4: 'E'
+  |/
+  | o  3: 'D'
   | |
   | o  2: 'C'
-  |/
+  | |
   | o  1: 'B'
   |/
   o  0: 'A'
   
-  $ hg rebase -s 6 -d 5
+  $ hg rebase -s 8 -d 7
   abort: source is descendant of destination
   [255]
 
@@ -119,21 +130,25 @@ Rebasing ancestor onto descendant across different named branches
   $ hg ci -m 'extra named branch'
 
   $ hg tglog
-  @  6: 'extra named branch' dev
+  @  8: 'extra named branch' dev
   |
-  o  5: 'F'
+  o  7: 'H'
   |
-  | o  4: 'E'
+  | o  6: 'G'
   |/|
-  o |  3: 'D'
+  o |  5: 'F'
+  | |
+  | o  4: 'E'
+  |/
+  | o  3: 'D'
   | |
   | o  2: 'C'
-  |/
+  | |
   | o  1: 'B'
   |/
   o  0: 'A'
   
-  $ hg rebase -s 5 -d 6
+  $ hg rebase -s 7 -d 8
   abort: source is ancestor of destination
   [255]
 
