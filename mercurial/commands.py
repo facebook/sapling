@@ -339,7 +339,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             side = good and state['bad'] or state['good']
             num = len(set(i.node() for i in parents) & set(side))
             if num == 1:
-                 return parents[0].ancestor(parents[1])
+                return parents[0].ancestor(parents[1])
         return None
 
     def print_result(nodes, good):
