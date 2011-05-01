@@ -661,6 +661,12 @@ class workingctx(changectx):
 
         return man
 
+    def __iter__(self):
+        d = self._repo.dirstate
+        for f in d:
+            if d[f] != 'r':
+                yield f
+
     @propertycache
     def _status(self):
         return self._repo.status()[:4]
