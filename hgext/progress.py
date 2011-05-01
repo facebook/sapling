@@ -238,7 +238,7 @@ class progbar(object):
             self.topicstates[topic] = pos, item, unit, total
             if now - self.lastprint >= self.refresh and self.topics:
                 self.lastprint = now
-                current = self.topics[-1]
+                self.topics[-1]
                 self.show(now, topic, *self.topicstates[topic])
 
 def uisetup(ui):

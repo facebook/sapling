@@ -2987,7 +2987,7 @@ def reposetup(ui, repo):
             mqtags = [(patch.node, patch.name) for patch in q.applied]
 
             try:
-                r = self.changelog.rev(mqtags[-1][0])
+                self.changelog.rev(mqtags[-1][0])
             except error.RepoLookupError:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(mqtags[-1][0]))
