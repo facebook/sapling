@@ -85,7 +85,7 @@ class httprepository(wireproto.wirerepository):
         if headersize > 0:
             # The headers can typically carry more data than the URL.
             encargs = urllib.urlencode(sorted(args.items()))
-            headerfmt = 'X-Arg-%s'
+            headerfmt = 'X-HgArg-%s'
             contentlen = headersize - len(headerfmt % '000' + ': \r\n')
             headernum = 0
             for i in xrange(0, len(encargs), contentlen):

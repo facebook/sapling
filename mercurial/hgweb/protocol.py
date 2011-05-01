@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import cgi, cStringIO, itertools, zlib, sys, urllib
+import cgi, cStringIO, zlib, sys, urllib
 from mercurial import util, wireproto
 from common import HTTP_OK
 
@@ -32,11 +32,13 @@ class webproto(object):
     def _args(self):
         args = self.req.form.copy()
         chunks = []
-        for i in itertools.count(1):
-            h = self.req.env.get('HTTP_X_ARG_' + str(i))
+        i = 1
+        while 1:
+            h = self.req.env.get('HTTP_X_HGARG_' + str(i))
             if h is None:
                 break
             chunks += [h]
+            i += 1
         args.update(cgi.parse_qs(''.join(chunks), keep_blank_values=True))
         return args
     def getfile(self, fp):

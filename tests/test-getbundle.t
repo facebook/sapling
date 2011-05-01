@@ -247,7 +247,7 @@ Verify we hit the HTTP server:
   * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
   * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - (glob)
   * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
-  * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - x-arg-1:common=c1818a9f5977dd4139a48f93f5425c67d44a9368+ea919464b16e003894c48b6cb68df3cd9411b544&heads=6b57ee934bb2996050540f84cdfc8dcad1e7267d+2114148793524fd045998f71a45b0aaf139f752b (glob)
+  * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:common=c1818a9f5977dd4139a48f93f5425c67d44a9368+ea919464b16e003894c48b6cb68df3cd9411b544&heads=6b57ee934bb2996050540f84cdfc8dcad1e7267d+2114148793524fd045998f71a45b0aaf139f752b (glob)
 
   $ cat error.log
 
