@@ -18,7 +18,11 @@ def makekey(message):
 lines = []
 for line in sys.stdin:
     # We whitelist tests
-    if not re.search("imported but unused", line):
+    pats = [
+            r"imported but unused",
+            r"local variable '.*' is assigned to but never used",
+           ]
+    if not re.search('|'.join(pats), line):
         continue
     lines.append(line)
 
