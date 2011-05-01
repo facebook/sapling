@@ -278,7 +278,10 @@ class svn_source(converter_source):
             raise util.Abort(_('svn: start revision %s is not an integer')
                              % self.startrev)
 
-        self.head = self.latest(self.module, latest)
+        try:
+            self.head = self.latest(self.module, latest)
+        except SvnPathNotFound:
+            self.head = None
         if not self.head:
             raise util.Abort(_('no revision found in module %s')
                              % self.module)
