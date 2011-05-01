@@ -634,6 +634,10 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   Run before starting a local commit. Exit status 0 allows the
   commit to proceed. Non-zero status will cause the commit to fail.
   Parent changeset IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
+``prelistkeys``
+  Run before listing pushkeys (like bookmarks) in the
+  repository. Non-zero status will cause failure. The key namespace is
+  in ``$HG_NAMESPACE``.
 ``preoutgoing``
   Run before collecting changes to send from the local repository to
   another. Non-zero status will cause failure. This lets you prevent
@@ -643,6 +647,12 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   ``$HG_SOURCE``. If "serve", operation is happening on behalf of remote
   SSH or HTTP repository. If "push", "pull" or "bundle", operation
   is happening on behalf of repository on same system.
+``prepushkey``
+  Run before a pushkey (like a bookmark) is added to the
+  repository. Non-zero status will cause the key to be rejected. The
+  key namespace is in ``$HG_NAMESPACE``, the key is in ``$HG_KEY``,
+  the old value (if any) is in ``$HG_OLD``, and the new value is in
+  ``$HG_NEW``.
 ``pretag``
   Run before creating a tag. Exit status 0 allows the tag to be
   created. Non-zero status will cause the tag to fail. ID of
@@ -669,6 +679,15 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   the update to proceed. Non-zero status will prevent the update.
   Changeset ID of first new parent is in ``$HG_PARENT1``. If merge, ID
   of second new parent is in ``$HG_PARENT2``.
+``listkeys``
+  Run after listing pushkeys (like bookmarks) in the repository. The
+  key namespace is in ``$HG_NAMESPACE``. ``$HG_VALUES`` is a
+  dictionary containing the keys and values.
+``pushkey``
+  Run after a pushkey (like a bookmark) is added to the
+  repository. The key namespace is in ``$HG_NAMESPACE``, the key is in
+  ``$HG_KEY``, the old value (if any) is in ``$HG_OLD``, and the new
+  value is in ``$HG_NEW``.
 ``tag``
   Run after a tag is created. ID of tagged changeset is in ``$HG_NODE``.
   Name of tag is in ``$HG_TAG``. Tag is local if ``$HG_LOCAL=1``, in

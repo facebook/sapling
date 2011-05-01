@@ -1918,10 +1918,18 @@ class localrepository(repo.repository):
         return self.pull(remote, heads)
 
     def pushkey(self, namespace, key, old, new):
-        return pushkey.push(self, namespace, key, old, new)
+        self.hook('prepushkey', throw=True, namespace=namespace, key=key,
+                  old=old, new=new)
+        ret = pushkey.push(self, namespace, key, old, new)
+        self.hook('pushkey', namespace=namespace, key=key, old=old, new=new,
+                  ret=ret)
+        return ret
 
     def listkeys(self, namespace):
-        return pushkey.list(self, namespace)
+        self.hook('prelistkeys', throw=True, namespace=namespace)
+        values = pushkey.list(self, namespace)
+        self.hook('listkeys', namespace=namespace, values=values)
+        return values
 
     def debugwireargs(self, one, two, three=None, four=None, five=None):
         '''used to test argument passing over the wire'''
