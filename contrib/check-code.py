@@ -251,7 +251,7 @@ def getblame(f):
     return lines
 
 def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
-              blame=False):
+              blame=False, debug=False):
     """checks style and portability of a given file
 
     :f: filepath
@@ -265,13 +265,21 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
     blamecache = None
     result = True
     for name, match, filters, pats in checks:
+        if debug:
+            print name, f
         fc = 0
         if not re.match(match, f):
+            if debug:
+                print "Skipping %s for %s it doesn't match %s" % (
+                       name, match, f)
             continue
         fp = open(f)
         pre = post = fp.read()
         fp.close()
         if "no-" + "check-code" in pre:
+            if debug:
+                print "Skipping %s for %s it has no- and check-code" % (
+                       name, f)
             break
         for p, r in filters:
             post = re.sub(p, r, post)
@@ -281,8 +289,13 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
             pats = pats[0]
         # print post # uncomment to show filtered version
         z = enumerate(zip(pre.splitlines(), post.splitlines(True)))
+        if debug:
+            print "Checking %s for %s" % (name, f)
         for n, l in z:
             if "check-code" + "-ignore" in l[0]:
+                if debug:
+                    print "Skipping %s for %s:%s (check-code -ignore)" % (
+                           name, f, n)
                 continue
             for p, msg in pats:
                 if re.search(p, l[1]):
@@ -312,8 +325,10 @@ if __name__ == "__main__":
                       help="max warnings per file")
     parser.add_option("-b", "--blame", action="store_true",
                       help="use annotate to generate blame info")
+    parser.add_option("", "--debug", action="store_true",
+                      help="show debug information")
 
-    parser.set_defaults(per_file=15, warnings=False, blame=False)
+    parser.set_defaults(per_file=15, warnings=False, blame=False, debug=False)
     (options, args) = parser.parse_args()
 
     if len(args) == 0:
@@ -324,6 +339,6 @@ if __name__ == "__main__":
     for f in check:
         ret = 0
         if not checkfile(f, maxerr=options.per_file, warnings=options.warnings,
-                         blame=options.blame):
+                         blame=options.blame, debug=options.debug):
             ret = 1
     sys.exit(ret)
