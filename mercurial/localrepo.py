@@ -669,6 +669,17 @@ class localrepository(repo.repository):
             raise error.RepoError(
                 _("abandoned transaction found - run hg recover"))
 
+        journalfiles = self._writejournal(desc)
+        renames = [(x, undoname(x)) for x in journalfiles]
+
+        tr = transaction.transaction(self.ui.warn, self.sopener,
+                                     self.sjoin("journal"),
+                                     aftertrans(renames),
+                                     self.store.createmode)
+        self._transref = weakref.ref(tr)
+        return tr
+
+    def _writejournal(self, desc):
         # save dirstate for rollback
         try:
             ds = self.opener("dirstate").read()
@@ -679,16 +690,15 @@ class localrepository(repo.repository):
             encoding.fromlocal(self.dirstate.branch()))
         self.opener("journal.desc", "w").write("%d\n%s\n" % (len(self), desc))
 
-        renames = [(self.sjoin("journal"), self.sjoin("undo")),
-                   (self.join("journal.dirstate"), self.join("undo.dirstate")),
-                   (self.join("journal.branch"), self.join("undo.branch")),
-                   (self.join("journal.desc"), self.join("undo.desc"))]
-        tr = transaction.transaction(self.ui.warn, self.sopener,
-                                     self.sjoin("journal"),
-                                     aftertrans(renames),
-                                     self.store.createmode)
-        self._transref = weakref.ref(tr)
-        return tr
+        bkname = self.join('bookmarks')
+        if os.path.exists(bkname):
+            util.copyfile(bkname, self.join('journal.bookmarks'))
+        else:
+            self.opener('journal.bookmarks', 'w').write('')
+
+        return (self.sjoin('journal'), self.join('journal.dirstate'),
+                self.join('journal.branch'), self.join('journal.desc'),
+                self.join('journal.bookmarks'))
 
     def recover(self):
         lock = self.lock()
@@ -2026,6 +2036,11 @@ def aftertrans(files):
         for src, dest in renamefiles:
             util.rename(src, dest)
     return a
+
+def undoname(fn):
+    base, name = os.path.split(fn)
+    assert name.startswith('journal')
+    return os.path.join(base, name.replace('journal', 'undo', 1))
 
 def instance(ui, path, create):
     return localrepository(ui, util.drop_scheme('file', path), create)

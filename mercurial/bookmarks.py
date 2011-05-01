@@ -61,12 +61,6 @@ def write(repo):
     '''
     refs = repo._bookmarks
 
-    try:
-        bms = repo.opener('bookmarks').read()
-    except IOError:
-        bms = ''
-    repo.opener('undo.bookmarks', 'w').write(bms)
-
     if repo._bookmarkcurrent not in refs:
         setcurrent(repo, None)
     for mark in refs.keys():
