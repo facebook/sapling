@@ -182,10 +182,21 @@ def _runcatch(ui, args):
 
     return -1
 
-def aliasargs(fn):
-    if hasattr(fn, 'args'):
-        return fn.args
-    return []
+def aliasargs(fn, givenargs):
+    args = getattr(fn, 'args', [])
+    if args and givenargs:
+        cmd = ' '.join(map(util.shellquote, args))
+
+        nums = []
+        def replacer(m):
+            num = int(m.group(1)) - 1
+            nums.append(num)
+            return givenargs[num]
+        cmd = re.sub(r'\$(\d+|\$)', replacer, cmd)
+        givenargs = [x for i, x in enumerate(givenargs)
+                     if i not in nums]
+        args = shlex.split(cmd)
+    return args + givenargs
 
 class cmdalias(object):
     def __init__(self, name, definition, cmdtable):
@@ -263,7 +274,7 @@ class cmdalias(object):
             else:
                 self.fn, self.opts = tableentry
 
-            self.args = aliasargs(self.fn) + args
+            self.args = aliasargs(self.fn, args)
             if cmd not in commands.norepo.split(' '):
                 self.norepo = False
             if self.help.startswith("hg " + cmd):
@@ -330,7 +341,7 @@ def _parse(ui, args):
         aliases, entry = cmdutil.findcmd(cmd, commands.table,
                                      ui.config("ui", "strict"))
         cmd = aliases[0]
-        args = aliasargs(entry[0]) + args
+        args = aliasargs(entry[0], args)
         defaults = ui.config("defaults", cmd)
         if defaults:
             args = map(util.expandpath, shlex.split(defaults)) + args

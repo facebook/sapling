@@ -17,6 +17,7 @@
   > mylog = log
   > lognull = log -r null
   > shortlog = log --template '{rev} {node|short} | {date|isodate}\n'
+  > positional = log --template '{\$2} {\$1} | {date|isodate}\n'
   > dln = lognull --debug
   > nousage = rollback
   > put = export -r 0 -o "\$FOO/%R.diff"
@@ -127,6 +128,10 @@ with opts and whitespace
   $ hg shortlog
   0 e63c23eaa88a | 1970-01-01 00:00 +0000
 
+positional arguments
+
+  $ hg positional 'node|short' rev
+  0 e63c23eaa88a | 1970-01-01 00:00 +0000
 
 interaction with defaults
 
