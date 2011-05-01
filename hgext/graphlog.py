@@ -21,7 +21,7 @@ from mercurial import hg, scmutil, util, graphmod
 
 ASCIIDATA = 'ASC'
 
-def asciiedges(seen, rev, parents):
+def asciiedges(type, char, lines, seen, rev, parents):
     """adds edge info to changelog DAG walk suitable for ascii()"""
     if rev not in seen:
         seen.append(rev)
@@ -36,16 +36,33 @@ def asciiedges(seen, rev, parents):
             newparents.append(parent)
 
     ncols = len(seen)
-    seen[nodeidx:nodeidx + 1] = newparents
-    edges = [(nodeidx, seen.index(p)) for p in knownparents]
+    nextseen = seen[:]
+    nextseen[nodeidx:nodeidx + 1] = newparents
+    edges = [(nodeidx, nextseen.index(p)) for p in knownparents]
+
+    while len(newparents) > 2:
+        # ascii() only knows how to add or remove a single column between two
+        # calls. Nodes with more than two parents break this constraint so we
+        # introduce intermediate expansion lines to grow the active node list
+        # slowly.
+        edges.append((nodeidx, nodeidx))
+        edges.append((nodeidx, nodeidx + 1))
+        nmorecols = 1
+        yield (type, char, lines, (nodeidx, edges, ncols, nmorecols))
+        char = '\\'
+        lines = []
+        nodeidx += 1
+        ncols += 1
+        edges = []
+        del newparents[0]
 
     if len(newparents) > 0:
         edges.append((nodeidx, nodeidx))
     if len(newparents) > 1:
         edges.append((nodeidx, nodeidx + 1))
-
-    nmorecols = len(seen) - ncols
-    return nodeidx, edges, ncols, nmorecols
+    nmorecols = len(nextseen) - ncols
+    seen[:] = nextseen
+    yield (type, char, lines, (nodeidx, edges, ncols, nmorecols))
 
 def fix_long_right_edges(edges):
     for (i, (start, end)) in enumerate(edges):
@@ -276,7 +293,9 @@ def generate(ui, dag, displayer, showparents, edgefn):
         displayer.show(ctx)
         lines = displayer.hunk.pop(rev).split('\n')[:-1]
         displayer.flush(rev)
-        ascii(ui, state, type, char, lines, edgefn(seen, rev, parents))
+        edges = edgefn(type, char, lines, seen, rev, parents)
+        for type, char, lines, coldata in edges:
+            ascii(ui, state, type, char, lines, coldata)
     displayer.close()
 
 def graphlog(ui, repo, *pats, **opts):
