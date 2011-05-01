@@ -435,3 +435,11 @@ aliases:
   ('func', ('symbol', 'reverse'), ('func', ('symbol', 'sort'), ('list', ('or', ('symbol', '2'), ('symbol', '3')), ('symbol', 'date'))))
   3
   2
+
+issue2549 - correct optimizations
+
+  $ log 'limit(1 or 2 or 3, 2) and not 2'
+  1
+  $ log 'max(1 or 2) and not 2'
+  $ log 'min(1 or 2) and not 1'
+  $ log 'last(1 or 2, 1) and not 2'

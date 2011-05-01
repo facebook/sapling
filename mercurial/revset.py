@@ -468,7 +468,9 @@ def limit(repo, subset, x):
     except ValueError:
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
-    return getset(repo, subset, l[0])[:lim]
+    ss = set(subset)
+    os = getset(repo, range(len(repo)), l[0])[:lim]
+    return [r for r in os if r in ss]
 
 def last(repo, subset, x):
     """``last(set, n)``
@@ -482,15 +484,17 @@ def last(repo, subset, x):
     except ValueError:
         # i18n: "last" is a keyword
         raise error.ParseError(_("last expects a number"))
-    return getset(repo, subset, l[0])[-lim:]
+    ss = set(subset)
+    os = getset(repo, range(len(repo)), l[0])[-lim:]
+    return [r for r in os if r in ss]
 
 def maxrev(repo, subset, x):
     """``max(set)``
     Changeset with highest revision number in set.
     """
-    s = getset(repo, subset, x)
-    if s:
-        m = max(s)
+    os = getset(repo, range(len(repo)), x)
+    if os:
+        m = max(os)
         if m in subset:
             return [m]
     return []
@@ -508,9 +512,9 @@ def minrev(repo, subset, x):
     """``min(set)``
     Changeset with lowest revision number in set.
     """
-    s = getset(repo, subset, x)
-    if s:
-        m = min(s)
+    os = getset(repo, range(len(repo)), x)
+    if os:
+        m = min(os)
         if m in subset:
             return [m]
     return []
