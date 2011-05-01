@@ -774,7 +774,7 @@ def makedirs(name, mode=None):
 def readfile(path):
     fp = open(path)
     try:
-        return fp.read(size)
+        return fp.read()
     finally:
         fp.close()
 
