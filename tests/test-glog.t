@@ -1411,8 +1411,33 @@ Test log -G options
   \s*0 (re)
   $ hg log -G --only-merges --template 'nodetag {rev}\n' | grep nodetag | wc -l
   \s*28 (re)
-  $ hg log -G --no-merges --template 'nodetag {rev}\n' | grep nodetag | wc -l
-  \s*9 (re)
+  $ hg log -G --no-merges --template 'nodetag {rev}\n'
+  o  nodetag 35
+  |
+  o    nodetag 34
+  |\
+  | \
+  | |\
+  | | \
+  | | |\
+  | | | \
+  | | | |\
+  | | | | \
+  | | | | |\
+  +-+-+-+-----o  nodetag 33
+  | | | | | |
+  +---------o  nodetag 29
+  | | | | |
+  +-+-+---o  nodetag 27
+  | | | |/
+  | | | o  nodetag 3
+  | | |/
+  | | o  nodetag 2
+  | |/
+  | o  nodetag 1
+  |/
+  o  nodetag 0
+  
   $ hg log -G -d 'brace ) in a date'
   abort: invalid date: 'brace ) in a date'
   [255]
