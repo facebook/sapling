@@ -314,7 +314,6 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
             if maxerr is not None and fc >= maxerr:
                 print " (too many errors, giving up)"
                 break
-        break
     return result
 
 if __name__ == "__main__":
