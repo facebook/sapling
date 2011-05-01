@@ -6,8 +6,11 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import util
+from node import nullrev
+import mdiff, util
 import struct, os, bz2, zlib, tempfile
+
+_BUNDLE10_DELTA_HEADER = "20s20s20s20s"
 
 def readexactly(stream, n):
     '''read n bytes from stream.read and abort if less was available'''
@@ -128,6 +131,8 @@ def decompressor(fh, alg):
     return util.chunkbuffer(generator(fh))
 
 class unbundle10(object):
+    deltaheader = _BUNDLE10_DELTA_HEADER
+    deltaheadersize = struct.calcsize(deltaheader)
     def __init__(self, fh, alg):
         self._stream = decompressor(fh, alg)
         self._type = alg
@@ -154,19 +159,40 @@ class unbundle10(object):
             self.callback()
         return l - 4
 
-    def chunk(self):
-        """return the next chunk from changegroup 'source' as a string"""
-        l = self.chunklength()
-        return readexactly(self._stream, l)
+    def changelogheader(self):
+        """v10 does not have a changelog header chunk"""
+        return {}
 
-    def parsechunk(self):
+    def manifestheader(self):
+        """v10 does not have a manifest header chunk"""
+        return {}
+
+    def filelogheader(self):
+        """return the header of the filelogs chunk, v10 only has the filename"""
         l = self.chunklength()
         if not l:
             return {}
-        h = readexactly(self._stream, 80)
-        node, p1, p2, cs = struct.unpack("20s20s20s20s", h)
-        data = readexactly(self._stream, l - 80)
-        return dict(node=node, p1=p1, p2=p2, cs=cs, data=data)
+        fname = readexactly(self._stream, l)
+        return dict(filename=fname)
+
+    def _deltaheader(self, headertuple, prevnode):
+        node, p1, p2, cs = headertuple
+        if prevnode is None:
+            deltabase = p1
+        else:
+            deltabase = prevnode
+        return node, p1, p2, deltabase, cs
+
+    def deltachunk(self, prevnode):
+        l = self.chunklength()
+        if not l:
+            return {}
+        headerdata = readexactly(self._stream, self.deltaheadersize)
+        header = struct.unpack(self.deltaheader, headerdata)
+        delta = readexactly(self._stream, l - self.deltaheadersize)
+        node, p1, p2, deltabase, cs = self._deltaheader(header, prevnode)
+        return dict(node=node, p1=p1, p2=p2, cs=cs,
+                    deltabase=deltabase, delta=delta)
 
 class headerlessfixup(object):
     def __init__(self, fh, h):
@@ -198,16 +224,33 @@ def readbundle(fh, fname):
     return unbundle10(fh, alg)
 
 class bundle10(object):
+    deltaheader = _BUNDLE10_DELTA_HEADER
     def __init__(self, lookup):
         self._lookup = lookup
     def close(self):
         return closechunk()
     def fileheader(self, fname):
         return chunkheader(len(fname)) + fname
-    def revchunk(self, revlog, node='', p1='', p2='', prefix='', data=''):
+    def revchunk(self, revlog, rev, prev):
+        node = revlog.node(rev)
+        p1, p2 = revlog.parentrevs(rev)
+        base = prev
+
+        prefix = ''
+        if base == nullrev:
+            delta = revlog.revision(node)
+            prefix = mdiff.trivialdiffheader(len(delta))
+        else:
+            delta = revlog.revdiff(base, rev)
         linknode = self._lookup(revlog, node)
-        meta = node + p1 + p2 + linknode + prefix
-        l = len(meta) + len(data)
+        p1n, p2n = revlog.parents(node)
+        basenode = revlog.node(base)
+        meta = self.builddeltaheader(node, p1n, p2n, basenode, linknode)
+        meta += prefix
+        l = len(meta) + len(delta)
         yield chunkheader(l)
         yield meta
-        yield data
+        yield delta
+    def builddeltaheader(self, node, p1n, p2n, basenode, linknode):
+        # do nothing with basenode, it is implicitly the previous one in HG10
+        return struct.pack(self.deltaheader, node, p1n, p2n, linknode)

@@ -17,7 +17,7 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import cmdutil, commands, extensions
-from mercurial import hg, scmutil, util, graphmod
+from mercurial import hg, util, graphmod
 
 ASCIIDATA = 'ASC'
 

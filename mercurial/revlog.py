@@ -1086,17 +1086,8 @@ class revlog(object):
 
         # build deltas
         for r in xrange(len(revs) - 1):
-            a, b = revs[r], revs[r + 1]
-            nb = self.node(b)
-            p1, p2 = self.parents(nb)
-            prefix = ''
-
-            if a == nullrev:
-                d = self.revision(nb)
-                prefix = mdiff.trivialdiffheader(len(d))
-            else:
-                d = self.revdiff(a, b)
-            for c in bundler.revchunk(self, nb, p1, p2, prefix, d):
+            prev, curr = revs[r], revs[r + 1]
+            for c in bundler.revchunk(self, curr, prev):
                 yield c
 
         yield bundler.close()
@@ -1131,14 +1122,15 @@ class revlog(object):
             # loop through our set of deltas
             chain = None
             while 1:
-                chunkdata = bundle.parsechunk()
+                chunkdata = bundle.deltachunk(chain)
                 if not chunkdata:
                     break
                 node = chunkdata['node']
                 p1 = chunkdata['p1']
                 p2 = chunkdata['p2']
                 cs = chunkdata['cs']
-                delta = chunkdata['data']
+                deltabase = chunkdata['deltabase']
+                delta = chunkdata['delta']
 
                 link = linkmapper(cs)
                 if (node in self.nodemap and
@@ -1168,15 +1160,13 @@ class revlog(object):
                             raise LookupError(p, self.indexfile,
                                               _('unknown parent'))
 
-                if not chain:
-                    # retrieve the parent revision of the delta chain
-                    chain = p1
-                    if not chain in self.nodemap:
-                        raise LookupError(chain, self.indexfile, _('unknown base'))
+                if deltabase not in self.nodemap:
+                    raise LookupError(deltabase, self.indexfile,
+                                      _('unknown delta base'))
 
-                chainrev = self.rev(chain)
+                baserev = self.rev(deltabase)
                 chain = self._addrevision(node, None, transaction, link,
-                                          p1, p2, (chainrev, delta), ifh, dfh)
+                                          p1, p2, (baserev, delta), ifh, dfh)
                 if not dfh and not self._inline:
                     # addrevision switched from inline to conventional
                     # reopen the index

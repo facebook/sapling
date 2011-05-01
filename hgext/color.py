@@ -100,7 +100,7 @@ disable color.
 
 '''
 
-import os, sys
+import os
 
 from mercurial import commands, dispatch, extensions, ui as uimod, util
 from mercurial.i18n import _
@@ -290,7 +290,7 @@ class colorui(uimod.ui):
             s = _styles.get(l, '')
             if s:
                 effects.append(s)
-        effects = ''.join(effects)
+        effects = ' '.join(effects)
         if effects:
             return '\n'.join([render_effects(s, effects)
                               for s in msg.split('\n')])

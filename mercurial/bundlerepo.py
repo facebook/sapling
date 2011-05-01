@@ -18,8 +18,7 @@ import changegroup, util, mdiff, discovery
 import localrepo, changelog, manifest, filelog, revlog, error
 
 class bundlerevlog(revlog.revlog):
-    def __init__(self, opener, indexfile, bundle,
-                 linkmapper=None):
+    def __init__(self, opener, indexfile, bundle, linkmapper):
         # How it works:
         # to retrieve a revision, we need to know the offset of
         # the revision in the bundle (an unbundle object).
@@ -32,43 +31,39 @@ class bundlerevlog(revlog.revlog):
         revlog.revlog.__init__(self, opener, indexfile)
         self.bundle = bundle
         self.basemap = {}
-        def chunkpositer():
-            while 1:
-                chunk = bundle.chunk()
-                if not chunk:
-                    break
-                pos = bundle.tell()
-                yield chunk, pos - len(chunk)
         n = len(self)
-        prev = None
-        for chunk, start in chunkpositer():
-            size = len(chunk)
-            if size < 80:
-                raise util.Abort(_("invalid changegroup"))
-            start += 80
-            size -= 80
-            node, p1, p2, cs = struct.unpack("20s20s20s20s", chunk[:80])
+        chain = None
+        while 1:
+            chunkdata = bundle.deltachunk(chain)
+            if not chunkdata:
+                break
+            node = chunkdata['node']
+            p1 = chunkdata['p1']
+            p2 = chunkdata['p2']
+            cs = chunkdata['cs']
+            deltabase = chunkdata['deltabase']
+            delta = chunkdata['delta']
+
+            size = len(delta)
+            start = bundle.tell() - size
+
+            link = linkmapper(cs)
             if node in self.nodemap:
-                prev = node
+                # this can happen if two branches make the same change
+                chain = node
                 continue
+
             for p in (p1, p2):
                 if not p in self.nodemap:
                     raise error.LookupError(p, self.indexfile,
                                             _("unknown parent"))
-            if linkmapper is None:
-                link = n
-            else:
-                link = linkmapper(cs)
-
-            if not prev:
-                prev = p1
             # start, size, full unc. size, base (unused), link, p1, p2, node
             e = (revlog.offset_type(start, 0), size, -1, -1, link,
                  self.rev(p1), self.rev(p2), node)
-            self.basemap[n] = prev
+            self.basemap[n] = deltabase
             self.index.insert(-1, e)
             self.nodemap[node] = n
-            prev = node
+            chain = node
             n += 1
 
     def inbundle(self, rev):
@@ -144,7 +139,9 @@ class bundlerevlog(revlog.revlog):
 class bundlechangelog(bundlerevlog, changelog.changelog):
     def __init__(self, opener, bundle):
         changelog.changelog.__init__(self, opener)
-        bundlerevlog.__init__(self, opener, self.indexfile, bundle)
+        linkmapper = lambda x: x
+        bundlerevlog.__init__(self, opener, self.indexfile, bundle,
+                              linkmapper)
 
 class bundlemanifest(bundlerevlog, manifest.manifest):
     def __init__(self, opener, bundle, linkmapper):
@@ -200,6 +197,8 @@ class bundlerepository(localrepo.localrepository):
 
     @util.propertycache
     def changelog(self):
+        # consume the header if it exists
+        self.bundle.changelogheader()
         c = bundlechangelog(self.sopener, self.bundle)
         self.manstart = self.bundle.tell()
         return c
@@ -207,6 +206,8 @@ class bundlerepository(localrepo.localrepository):
     @util.propertycache
     def manifest(self):
         self.bundle.seek(self.manstart)
+        # consume the header if it exists
+        self.bundle.manifestheader()
         m = bundlemanifest(self.sopener, self.bundle, self.changelog.rev)
         self.filestart = self.bundle.tell()
         return m
@@ -228,12 +229,13 @@ class bundlerepository(localrepo.localrepository):
         if not self.bundlefilespos:
             self.bundle.seek(self.filestart)
             while 1:
-                chunk = self.bundle.chunk()
-                if not chunk:
+                chunkdata = self.bundle.filelogheader()
+                if not chunkdata:
                     break
-                self.bundlefilespos[chunk] = self.bundle.tell()
+                fname = chunkdata['filename']
+                self.bundlefilespos[fname] = self.bundle.tell()
                 while 1:
-                    c = self.bundle.chunk()
+                    c = self.bundle.deltachunk(None)
                     if not c:
                         break
 
