@@ -165,6 +165,8 @@ def parseargs():
              "temporary installation")
     parser.add_option("-3", "--py3k-warnings", action="store_true",
         help="enable Py3k warnings on Python 2.6+")
+    parser.add_option('--extra-config-opt', action="append",
+                      help='set the given config opt in the test hgrc')
 
     for option, default in defaults.items():
         defaults[option] = int(os.environ.get(*default))
@@ -754,6 +756,12 @@ def runone(options, test):
         hgrc.write('[inotify]\n')
         hgrc.write('pidfile=%s\n' % DAEMON_PIDS)
         hgrc.write('appendpid=True\n')
+    if options.extra_config_opt:
+        for opt in options.extra_config_opt:
+            section, key = opt.split('.', 1)
+            assert '=' in key, ('extra config opt %s must '
+                                'have an = for assignment' % opt)
+            hgrc.write('[%s]\n%s\n' % (section, key))
     hgrc.close()
 
     ref = os.path.join(TESTDIR, test+".out")
