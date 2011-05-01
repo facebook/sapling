@@ -208,11 +208,31 @@ cfilters = [
     (r'(\()([^)]+\))', repcallspaces),
 ]
 
+inutilpats = [
+  [
+    (r'\bui\.', "don't use ui in util"),
+  ],
+  # warnings
+  []
+]
+
+inrevlogpats = [
+  [
+    (r'\brepo\.', "don't use repo in revlog"),
+  ],
+  # warnings
+  []
+]
+
 checks = [
     ('python', r'.*\.(py|cgi)$', pyfilters, pypats),
     ('test script', r'(.*/)?test-[^.~]*$', testfilters, testpats),
     ('c', r'.*\.c$', cfilters, cpats),
     ('unified test', r'.*\.t$', utestfilters, utestpats),
+    ('layering violation repo in revlog', r'mercurial/revlog\.py', pyfilters,
+     inrevlogpats),
+    ('layering violation ui in util', r'mercurial/util\.py', pyfilters,
+     inutilpats),
 ]
 
 class norepeatlogger(object):
