@@ -257,6 +257,7 @@ def revset(pats, opts):
         'prune': (2, 'not ($ or ancestors($))'),
         'user': (2, 'user($)'),
         }
+    optrevset = []
     revset = []
     for op, val in opts.iteritems():
         if not val:
@@ -269,17 +270,24 @@ def revset(pats, opts):
         arity, revop = opt2revset[op]
         revop = revop.replace('$', '%(val)r')
         if arity == 0:
-            revset.append(revop)
+            optrevset.append(revop)
         elif arity == 1:
-            revset.append(revop % {'val': val})
+            optrevset.append(revop % {'val': val})
         else:
             for f in val:
-                revset.append(revop % {'val': f})
+                optrevset.append(revop % {'val': f})
 
     for path in pats:
-        revset.append('file(%r)' % path)
+        optrevset.append('file(%r)' % path)
 
-    revset = ' and '.join(revset) or 'all()'
+    if revset or optrevset:
+        if revset:
+            revset = ['(' + ' or '.join(revset) + ')']
+        if optrevset:
+            revset.append('(' + ' and '.join(optrevset) + ')')
+        revset = ' and '.join(revset)
+    else:
+        revset = 'all()'
     # we want reverted revset to build graph
     revset = 'reverse(%s)' % revset
     if opts['limit']:
