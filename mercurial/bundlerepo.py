@@ -13,7 +13,7 @@ were part of the actual repository.
 
 from node import nullid
 from i18n import _
-import os, struct, tempfile, shutil
+import os, tempfile, shutil
 import changegroup, util, mdiff, discovery
 import localrepo, changelog, manifest, filelog, revlog, error
 
