@@ -288,10 +288,6 @@ def revset(pats, opts):
         revset = ' and '.join(revset)
     else:
         revset = 'all()'
-    # we want reverted revset to build graph
-    revset = 'reverse(%s)' % revset
-    if opts['limit']:
-        revset = 'limit(%s, %s)' % (revset, opts['limit'])
     return revset
 
 def generate(ui, dag, displayer, showparents, edgefn):
@@ -318,7 +314,10 @@ def graphlog(ui, repo, *pats, **opts):
 
     check_unsupported_flags(pats, opts)
 
-    revs = revrange(repo, [revset(pats, opts)])
+    revs = sorted(revrange(repo, [revset(pats, opts)]), reverse=1)
+    limit = cmdutil.loglimit(opts)
+    if limit is not None:
+        revs = revs[:limit]
     revdag = graphmod.dagwalker(repo, revs)
 
     displayer = show_changeset(ui, repo, opts, buffered=True)

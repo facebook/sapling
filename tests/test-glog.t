@@ -1319,13 +1319,12 @@ File + limit + -ra:b, b < tip:
 file(File) + limit + -ra:b, b < tip:
 
   $ hg glog -l1 -r32:34 -r 'file("a")'
-  o    changeset:   31:621d83e11f67
-  |\   parent:      21:d42a756af44d
-  | |  parent:      30:6e11cd4b648f
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:31 1970 +0000
-  | |  summary:     (31) expand
-  | |
+  o  changeset:   34:fea3ac5810e0
+  |  parent:      32:d06dffa21a31
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:34 1970 +0000
+  |  summary:     (34) head
+  |
 
 limit(file(File) and a::b), b < tip:
 
@@ -1457,8 +1456,16 @@ Test log -G options
 
 Test multiple revision specifications are correctly handled
 
-  $ hg log -G -r 27 -r 25 --branch default --template '{rev}\n'
-  o    25
+  $ hg log -G -r 27 -r 25 -r 21 -r 34 -r 32 -r 31 --template '{rev}\n'
+  o  34
+  |
+  o    32
   |\
-  +---o  27
-  | |
+  | o    31
+  | |\
+  o | |  27
+  |/ /
+  | o  25
+  |/
+  o    21
+  |\
