@@ -27,7 +27,7 @@ You can discover Zeroconf-enabled repositories by running
 import socket, time, os
 
 import Zeroconf
-from mercurial import ui, hg, encoding, util
+from mercurial import ui, hg, encoding, util, dispatch
 from mercurial import extensions
 from mercurial.hgweb import hgweb_mod
 from mercurial.hgweb import hgwebdir_mod
@@ -165,6 +165,18 @@ def defaultdest(orig, source):
         if path == source:
             return name.encode(encoding.encoding)
     return orig(source)
+
+def cleanupafterdispatch(orig, ui, options, cmd, cmdfunc):
+    try:
+        return orig(ui, options, cmd, cmdfunc)
+    finally:
+        # we need to call close() on the server to notify() the various
+        # threading Conditions and allow the background threads to exit
+        global server
+        if server:
+            server.close()
+
+extensions.wrapfunction(dispatch, '_runcommand', cleanupafterdispatch)
 
 extensions.wrapfunction(ui.ui, 'config', config)
 extensions.wrapfunction(ui.ui, 'configitems', configitems)

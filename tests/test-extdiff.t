@@ -167,4 +167,18 @@ Test extdiff with --option:
   $ hg falabala -o this -c 1
   diffing this a.8a5febb7f867/a a.34eed99112ab/a
   [1]
+  $ cd ..
+
+  $ hg init testsymlinks
+  $ cd testsymlinks
+  $ echo a > a
+  $ hg ci -Am adda
+  adding a
+  $ echo a >> a
+  $ ln -s missing linka
+  $ hg add linka
+  $ hg falabala -r 0 --traceback
+  diffing testsymlinks.07f494440405 testsymlinks
+  [1]
+  $ cd ..
 
