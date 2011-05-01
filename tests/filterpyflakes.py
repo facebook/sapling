@@ -21,6 +21,7 @@ for line in sys.stdin:
     pats = [
             r"imported but unused",
             r"local variable '.*' is assigned to but never used",
+            r"unable to detect undefined names",
            ]
     if not re.search('|'.join(pats), line):
         continue
