@@ -129,7 +129,10 @@ def reposetup(ui, repo):
                             try:
                                 uri = url.url(uri).authinfo()[0]
                             except AttributeError:
-                                uri = url.getauthinfo(uri)[0]
+                                try:
+                                    uri = util.url(uri).authinfo()[0]
+                                except AttributeError:
+                                    uri = url.getauthinfo(uri)[0]
                     uri = uri.rstrip('/')
                     rpath = rpath.rstrip('/')
                     if uri == rpath:
