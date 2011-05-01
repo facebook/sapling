@@ -771,6 +771,20 @@ def makedirs(name, mode=None):
     makedirs(parent, mode)
     makedirs(name, mode)
 
+def readfile(path):
+    fp = open(path)
+    try:
+        return fp.read(size)
+    finally:
+        fp.close()
+
+def writefile(path, mode, text):
+    fp = open(path, mode)
+    try:
+        fp.write(text)
+    finally:
+        fp.close()
+
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
     iterator over chunks of arbitrary size."""
