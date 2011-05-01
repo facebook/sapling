@@ -10,122 +10,111 @@
 
   $ hg init a
   $ cd a
-
-  $ echo A > A
-  $ hg ci -Am A
-  adding A
-
-  $ echo B > B
-  $ hg ci -Am B
-  adding B
-
-  $ hg up -q -C 0
-
-  $ echo C > C
-  $ hg ci -Am C
-  adding C
-  created new head
-
-  $ hg up -q -C 0
-
-  $ echo D > D
-  $ hg ci -Am D
-  adding D
-  created new head
-
-  $ hg merge -r 2
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-
-  $ hg ci -m E
-
-  $ hg up -q -C 3
-
-  $ echo F > F
-  $ hg ci -Am F
-  adding F
-  created new head
-
+  $ hg unbundle $TESTDIR/bundles/rebase.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 8 changesets with 7 changes to 7 files (+2 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg up tip
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 
 
 Rebasing
-B onto F - simple rebase:
+D onto H - simple rebase:
 
   $ hg clone -q -u . a a1
   $ cd a1
 
   $ hg tglog
-  @  5: 'F'
+  @  7: 'H'
   |
-  | o  4: 'E'
+  | o  6: 'G'
   |/|
-  o |  3: 'D'
+  o |  5: 'F'
+  | |
+  | o  4: 'E'
+  |/
+  | o  3: 'D'
   | |
   | o  2: 'C'
-  |/
+  | |
   | o  1: 'B'
   |/
   o  0: 'A'
   
-  $ hg rebase -s 1 -d 5
+
+  $ hg rebase -s 3 -d 7
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  5: 'B'
-  |
-  o  4: 'F'
-  |
-  | o  3: 'E'
-  |/|
-  o |  2: 'D'
+  @    7: 'D'
+  |\
+  | o  6: 'H'
   | |
-  | o  1: 'C'
+  | | o  5: 'G'
+  | |/|
+  | o |  4: 'F'
+  | | |
+  | | o  3: 'E'
+  | |/
+  o |  2: 'C'
+  | |
+  o |  1: 'B'
   |/
   o  0: 'A'
   
   $ cd ..
 
 
-B onto D - intermediate point:
+D onto F - intermediate point:
 
   $ hg clone -q -u . a a2
   $ cd a2
 
-  $ hg rebase -s 1 -d 3
+  $ hg rebase -s 3 -d 5
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  5: 'B'
-  |
-  | o  4: 'F'
-  |/
-  | o  3: 'E'
-  |/|
-  o |  2: 'D'
+  @    7: 'D'
+  |\
+  | | o  6: 'H'
+  | |/
+  | | o  5: 'G'
+  | |/|
+  | o |  4: 'F'
+  | | |
+  | | o  3: 'E'
+  | |/
+  o |  2: 'C'
   | |
-  | o  1: 'C'
+  o |  1: 'B'
   |/
   o  0: 'A'
   
   $ cd ..
 
 
-C onto F - skip of E:
+E onto H - skip of G:
 
   $ hg clone -q -u . a a3
   $ cd a3
 
-  $ hg rebase -s 2 -d 5
+  $ hg rebase -s 4 -d 7
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  4: 'C'
+  @  6: 'E'
   |
-  o  3: 'F'
+  o  5: 'H'
   |
-  o  2: 'D'
+  o  4: 'F'
   |
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
   | o  1: 'B'
   |/
   o  0: 'A'
@@ -133,21 +122,25 @@ C onto F - skip of E:
   $ cd ..
 
 
-D onto C - rebase of a branching point (skip E):
+F onto E - rebase of a branching point (skip G):
 
   $ hg clone -q -u . a a4
   $ cd a4
 
-  $ hg rebase -s 3 -d 2
+  $ hg rebase -s 5 -d 4
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  4: 'F'
+  @  6: 'H'
   |
-  o  3: 'D'
+  o  5: 'F'
   |
-  o  2: 'C'
+  o  4: 'E'
   |
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
   | o  1: 'B'
   |/
   o  0: 'A'
@@ -155,23 +148,27 @@ D onto C - rebase of a branching point (skip E):
   $ cd ..
 
 
-E onto F - merged revision having a parent in ancestors of target:
+G onto H - merged revision having a parent in ancestors of target:
 
   $ hg clone -q -u . a a5
   $ cd a5
 
-  $ hg rebase -s 4 -d 5
+  $ hg rebase -s 6 -d 7
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @    5: 'E'
+  @    7: 'G'
   |\
-  | o  4: 'F'
+  | o  6: 'H'
   | |
+  | o  5: 'F'
+  | |
+  o |  4: 'E'
+  |/
   | o  3: 'D'
   | |
-  o |  2: 'C'
-  |/
+  | o  2: 'C'
+  | |
   | o  1: 'B'
   |/
   o  0: 'A'
@@ -179,22 +176,26 @@ E onto F - merged revision having a parent in ancestors of target:
   $ cd ..
 
 
-D onto B - E maintains C as parent:
+F onto B - G maintains E as parent:
 
   $ hg clone -q -u . a a6
   $ cd a6
 
-  $ hg rebase -s 3 -d 1
+  $ hg rebase -s 5 -d 1
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  5: 'F'
+  @  7: 'H'
   |
-  | o  4: 'E'
+  | o  6: 'G'
   |/|
-  o |  3: 'D'
+  o |  5: 'F'
   | |
-  | o  2: 'C'
+  | o  4: 'E'
+  | |
+  | | o  3: 'D'
+  | | |
+  +---o  2: 'C'
   | |
   o |  1: 'B'
   |/
@@ -205,45 +206,45 @@ D onto B - E maintains C as parent:
 
 These will fail (using --source):
 
-E onto D - rebase onto an ancestor:
+G onto F - rebase onto an ancestor:
 
   $ hg clone -q -u . a a7
   $ cd a7
 
-  $ hg rebase -s 4 -d 3
+  $ hg rebase -s 6 -d 5
   abort: source is descendant of destination
   [255]
 
-D onto E - rebase onto a descendant:
+F onto G - rebase onto a descendant:
 
-  $ hg rebase -s 3 -d 4
+  $ hg rebase -s 5 -d 6
   abort: source is ancestor of destination
   [255]
 
-E onto B - merge revision with both parents not in ancestors of target:
+G onto B - merge revision with both parents not in ancestors of target:
 
-  $ hg rebase -s 4 -d 1
-  abort: cannot use revision 4 as base, result would have 3 parents
+  $ hg rebase -s 6 -d 1
+  abort: cannot use revision 6 as base, result would have 3 parents
   [255]
 
 
 These will abort gracefully (using --base):
 
-E onto E - rebase onto same changeset:
+G onto G - rebase onto same changeset:
 
-  $ hg rebase -b 4 -d 4
+  $ hg rebase -b 6 -d 6
   nothing to rebase
   [1]
 
-E onto D - rebase onto an ancestor:
+G onto F - rebase onto an ancestor:
 
-  $ hg rebase -b 4 -d 3
+  $ hg rebase -b 6 -d 5
   nothing to rebase
   [1]
 
-D onto E - rebase onto a descendant:
+F onto G - rebase onto a descendant:
 
-  $ hg rebase -b 3 -d 4
+  $ hg rebase -b 5 -d 6
   nothing to rebase
   [1]
 

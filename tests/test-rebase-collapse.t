@@ -11,45 +11,14 @@ Create repo a:
 
   $ hg init a
   $ cd a
-
-  $ echo A > A
-  $ hg ci -Am A
-  adding A
-  $ echo B > B
-  $ hg ci -Am B
-  adding B
-  $ echo C > C
-  $ hg ci -Am C
-  adding C
-  $ echo D > D
-  $ hg ci -Am D
-  adding D
-
-  $ hg up -q -C 0
-
-  $ echo E > E
-  $ hg ci -Am E
-  adding E
-  created new head
-
-  $ hg up -q -C 0
-
-  $ echo F > F
-  $ hg ci -Am F
-  adding F
-  created new head
-
-  $ hg merge -r 4
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-  $ hg ci -m G
-
-  $ hg up -q -C 5
-
-  $ echo H > H
-  $ hg ci -Am H
-  adding H
-  created new head
+  $ hg unbundle $TESTDIR/bundles/rebase.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 8 changesets with 7 changes to 7 files (+2 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg up tip
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg tglog
   @  7: 'H'

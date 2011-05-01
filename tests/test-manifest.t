@@ -10,7 +10,7 @@ Source bundle was generated with the following script:
 # hg ci -Amb -d'1 0'
 
   $ hg init
-  $ hg -q pull "$TESTDIR/test-manifest.hg"
+  $ hg -q pull "$TESTDIR/bundles/test-manifest.hg"
 
 The next call is expected to return nothing:
 
