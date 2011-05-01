@@ -14,11 +14,13 @@
   $ mkdir -p dir/subdir
   $ echo dir/file >> dir/file
   $ echo dir/file2 >> dir/file2
+  $ echo dir/file3 >> dir/file3 # to be corrupted in rev 0
   $ echo dir/subdir/file3 >> dir/subdir/file3
   $ echo dir/subdir/file4 >> dir/subdir/file4
   $ hg ci -d '0 0' -qAm '0: add foo baz dir/'
   $ echo bar > bar
   $ echo quux > quux
+  $ echo dir/file4 >> dir/file4 # to be corrupted in rev 1
   $ hg copy foo copied
   $ hg ci -d '1 0' -qAm '1: add bar quux; copy foo to copied'
   $ echo >> foo
@@ -63,9 +65,9 @@
   | |
   o |  2 "2: change foo" files: foo
   |/
-  o  1 "1: add bar quux; copy foo to copied" files: bar copied quux
+  o  1 "1: add bar quux; copy foo to copied" files: bar copied dir/file4 quux
   |
-  o  0 "0: add foo baz dir/" files: baz dir/file dir/file2 dir/subdir/file3 dir/subdir/file4 foo
+  o  0 "0: add foo baz dir/" files: baz dir/file dir/file2 dir/file3 dir/subdir/file3 dir/subdir/file4 foo
   
 
 final file versions in this repo:
@@ -76,6 +78,8 @@ final file versions in this repo:
   7711d36246cc83e61fb29cd6d4ef394c63f1ceaf 644   copied
   3e20847584beff41d7cd16136b7331ab3d754be0 644   dir/file
   75e6d3f8328f5f6ace6bf10b98df793416a09dca 644   dir/file2
+  e96dce0bc6a217656a3a410e5e6bec2c4f42bf7c 644   dir/file3
+  6edd55f559cdce67132b12ca09e09cee08b60442 644   dir/file4
   5fe139720576e18e34bcc9f79174db8897c8afe9 644   dir/subdir/file3
   57a1c1511590f3de52874adfa04effe8a77d64af 644   dir/subdir/file4
   9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo
@@ -234,7 +238,14 @@ final file versions in this repo:
   > exclude dir/subdir
   > include dir/subdir/file3
   > EOF
-  $ hg -q convert --filemap renames.fmap --datesort source renames.repo
+  $ rm source/.hg/store/data/dir/file3.i
+  $ rm source/.hg/store/data/dir/file4.i
+  $ hg -q convert --filemap renames.fmap --datesort source dummydest
+  abort: data/dir/file3.i@e96dce0bc6a2: no match found!
+  [255]
+  $ hg -q convert --filemap renames.fmap --datesort --config convert.hg.ignoreerrors=1 source renames.repo
+  ignoring: data/dir/file3.i@e96dce0bc6a2: no match found
+  ignoring: data/dir/file4.i@6edd55f559cd: no match found
   $ hg up -q -R renames.repo
   $ glog -R renames.repo
   @  4 "8: change foo" files: foo2
