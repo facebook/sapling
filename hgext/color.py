@@ -100,7 +100,7 @@ disable color.
 
 '''
 
-import os, sys
+import os
 
 from mercurial import commands, dispatch, extensions, ui as uimod, util
 from mercurial.i18n import _

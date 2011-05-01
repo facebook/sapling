@@ -7,7 +7,7 @@
 
 from common import NoRepo, checktool, commandline, commit, converter_source
 from mercurial.i18n import _
-from mercurial import encoding, util
+from mercurial import util
 import os, shutil, tempfile, re
 
 # The naming drift of ElementTree is fun!
