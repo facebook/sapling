@@ -272,30 +272,3 @@ hg status -A --change 1:
     modified
   R removed
   C deleted
-
-hg status between revisions:
-
-  $ echo c1 > f1
-  $ hg ci -Amm f1
-  $ echo c2 > f1
-  $ echo c1 > f2
-  $ hg ci -Amm f1 f2
-  $ echo c1 > f1
-  $ hg st --rev -1:.
-  M f1
-  $ hg st --rev -2:.
-  M f1
-  A f2
-  $ hg ci -Amm f1
-  $ hg st --rev -1:-3
-  M f1
-  R f2
-  $ hg st --rev -3:-1
-  M f1
-  A f2
-  $ hg diff --rev -3:-1
-  diff -r c861ab34bf5f -r 168d05852219 f2
-  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/f2	Thu Jan 01 00:00:00 1970 +0000
-  @@ -0,0 +1,1 @@
-  +c1
