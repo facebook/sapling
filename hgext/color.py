@@ -290,7 +290,7 @@ class colorui(uimod.ui):
             s = _styles.get(l, '')
             if s:
                 effects.append(s)
-        effects = ''.join(effects)
+        effects = ' '.join(effects)
         if effects:
             return '\n'.join([render_effects(s, effects)
                               for s in msg.split('\n')])
