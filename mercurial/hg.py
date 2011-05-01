@@ -146,13 +146,14 @@ def share(ui, source, dest=None, update=True):
     file(os.path.join(roothg, 'requires'), 'w').write(requirements)
     file(os.path.join(roothg, 'sharedpath'), 'w').write(sharedpath)
 
+    r = repository(ui, root)
+
     default = srcrepo.ui.config('paths', 'default')
     if default:
-        f = file(os.path.join(roothg, 'hgrc'), 'w')
-        f.write('[paths]\ndefault = %s\n' % default)
-        f.close()
-
-    r = repository(ui, root)
+        fp = r.opener("hgrc", "w", text=True)
+        fp.write("[paths]\n")
+        fp.write("default = %s\n" % default)
+        fp.close()
 
     if update:
         r.ui.status(_("updating working directory\n"))
