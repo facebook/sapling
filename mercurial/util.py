@@ -1319,7 +1319,7 @@ def _urlunquote(s):
     return s
 
 class url(object):
-    """Reliable URL parser.
+    r"""Reliable URL parser.
 
     This parses URLs and provides attributes for the following
     components:
@@ -1350,8 +1350,8 @@ class url(object):
     <url scheme: 'bundle', path: 'foo'>
     >>> url('bundle://../foo')
     <url scheme: 'bundle', path: '../foo'>
-    >>> url('c:\\\\foo\\\\bar')
-    <url path: 'c:\\\\foo\\\\bar'>
+    >>> url(r'c:\foo\bar')
+    <url path: 'c:\\foo\\bar'>
 
     Authentication credentials:
 
