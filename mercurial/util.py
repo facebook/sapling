@@ -1473,7 +1473,7 @@ class url(object):
         return '<url %s>' % ', '.join(attrs)
 
     def __str__(self):
-        """Join the URL's components back into a URL string.
+        r"""Join the URL's components back into a URL string.
 
         Examples:
 
@@ -1493,6 +1493,8 @@ class url(object):
         'bundle:../foo'
         >>> str(url('path'))
         'path'
+        >>> print url(r'bundle:foo\bar')
+        bundle:foo\bar
         """
         if self._localpath:
             s = self.path
