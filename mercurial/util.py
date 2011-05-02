@@ -778,8 +778,15 @@ def readfile(path):
     finally:
         fp.close()
 
-def writefile(path, mode, text):
-    fp = open(path, mode)
+def writefile(path, text):
+    fp = open(path, 'wb')
+    try:
+        fp.write(text)
+    finally:
+        fp.close()
+
+def appendfile(path, text):
+    fp = open(path, 'ab')
     try:
         fp.write(text)
     finally:

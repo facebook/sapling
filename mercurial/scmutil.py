@@ -139,15 +139,22 @@ class abstractopener(object):
         '''Prevent instantiation; don't call this from subclasses.'''
         raise NotImplementedError('attempted instantiating ' + str(type(self)))
 
-    def read(self, *args, **kwargs):
-        fp = self(*args, **kwargs)
+    def read(self, path):
+        fp = self(path, 'rb')
         try:
             return fp.read()
         finally:
             fp.close()
 
-    def write(self, data, *args, **kwargs):
-        fp = self(*args, **kwargs)
+    def write(self, path, data):
+        fp = self(path, 'wb')
+        try:
+            return fp.write(data)
+        finally:
+            fp.close()
+
+    def append(self, path, data):
+        fp = self(path, 'ab')
         try:
             return fp.write(data)
         finally:
