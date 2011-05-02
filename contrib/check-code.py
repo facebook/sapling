@@ -161,6 +161,18 @@ pypats = [
     (r' is\s+(not\s+)?["\'0-9-]', "object comparison with literal"),
     (r' [=!]=\s+(True|False|None)',
      "comparison with singleton, use 'is' or 'is not' instead"),
+    (r'opener\([^)]*\).read\(',
+     "use opener.read() instead"),
+    (r'opener\([^)]*\).write\(',
+     "use opener.write() instead"),
+    (r'[\s\(](open|file)\([^)]*\)\.read\(',
+     "use util.readfile() instead"),
+    (r'[\s\(](open|file)\([^)]*\)\.write\(',
+     "use util.readfile() instead"),
+    (r'^[\s\(]*(open(er)?|file)\([^)]*\)',
+     "always assign an opened file to a variable, and close it afterwards"),
+    (r'[\s\(](open|file)\([^)]*\)\.',
+     "always assign an opened file to a variable, and close it afterwards"),
   ],
   # warnings
   [
