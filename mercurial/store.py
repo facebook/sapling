@@ -370,16 +370,21 @@ class fncachestore(basicstore):
         self.encode = encode
         self.path = path + '/store'
         self.createmode = _calcmode(self.path)
-        op = openertype(self.path)
+
+        storeself = self
+
+        class fncacheopener(openertype):
+            def __call__(self, path, mode='r', *args, **kw):
+                if mode not in ('r', 'rb') and path.startswith('data/'):
+                    fnc.add(path)
+                return openertype.__call__(self, storeself.encode(path), mode,
+                                           *args, **kw)
+
+        op = fncacheopener(self.path)
         op.createmode = self.createmode
         fnc = fncache(op)
         self.fncache = fnc
-
-        def fncacheopener(path, mode='r', *args, **kw):
-            if mode not in ('r', 'rb') and path.startswith('data/'):
-                fnc.add(path)
-            return op(self.encode(path), mode, *args, **kw)
-        self.opener = fncacheopener
+        self.opener = op
 
     def join(self, f):
         return self.path + '/' + self.encode(f)
