@@ -27,9 +27,10 @@ check that {1} syntax works
   using http://localhost:$HGPORT/
   sending capabilities command
   comparing with parts://localhost/
+  query 1; heads
   sending heads command
   searching for changes
-  sending known command
+  all remote heads known locally
   no changes found
   [1]
 

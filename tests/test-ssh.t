@@ -219,7 +219,6 @@ test pushkeys and bookmarks
   $ hg book -f -r 0 foo
   $ hg pull -B foo
   pulling from ssh://user@dummy/remote
-  searching for changes
   no changes found
   updating bookmark foo
   importing bookmark foo

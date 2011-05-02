@@ -39,7 +39,6 @@ import bookmark by name
   Z	4e3505fd95835d721066b76e75dbb8cc554d7f77
   $ hg pull -B X ../a
   pulling from ../a
-  searching for changes
   no changes found
   importing bookmark X
   $ hg bookmark
@@ -173,7 +172,6 @@ hgweb
      foobar                    000000000000
   $ hg pull -B Z http://localhost:$HGPORT/
   pulling from http://localhost:$HGPORT/
-  searching for changes
   no changes found
   not updating divergent bookmark X
   importing bookmark Z

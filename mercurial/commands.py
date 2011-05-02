@@ -15,6 +15,7 @@ import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
 import minirst, revset, templatefilters
 import dagparser, context, simplemerge
+import random, setdiscovery, treediscovery, dagutil
 
 # Commands start here, listed alphabetically
 
@@ -1470,6 +1471,65 @@ def debugignore(ui, repo, *values, **opts):
         ui.write("%s\n" % ignore.includepat)
     else:
         raise util.Abort(_("no ignore patterns found"))
+
+def debugdiscovery(ui, repo, remoteurl="default", **opts):
+    """runs the changeset discovery protocol in isolation"""
+    remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl), opts.get('branch'))
+    remote = hg.repository(hg.remoteui(repo, opts), remoteurl)
+    ui.status(_('comparing with %s\n') % util.hidepassword(remoteurl))
+
+    # make sure tests are repeatable
+    random.seed(12323)
+
+    def doit(localheads, remoteheads):
+        if opts.get('old'):
+            if localheads:
+                raise util.Abort('cannot use localheads with old style discovery')
+            common, _in, hds = treediscovery.findcommonincoming(repo, remote,
+                                                                force=True)
+            common = set(common)
+            if not opts.get('nonheads'):
+                ui.write("unpruned common: %s\n" % " ".join([short(n)
+                                                            for n in common]))
+                dag = dagutil.revlogdag(repo.changelog)
+                all = dag.ancestorset(dag.internalizeall(common))
+                common = dag.externalizeall(dag.headsetofconnecteds(all))
+        else:
+            common, any, hds = setdiscovery.findcommonheads(ui, repo, remote)
+        common = set(common)
+        rheads = set(hds)
+        lheads = set(repo.heads())
+        ui.write("common heads: %s\n" % " ".join([short(n) for n in common]))
+        if lheads <= common:
+            ui.write("local is subset\n")
+        elif rheads <= common:
+            ui.write("remote is subset\n")
+
+    serverlogs = opts.get('serverlog')
+    if serverlogs:
+        for filename in serverlogs:
+            logfile = open(filename, 'r')
+            try:
+                line = logfile.readline()
+                while line:
+                    parts = line.strip().split(';')
+                    op = parts[1]
+                    if op == 'cg':
+                        pass
+                    elif op == 'cgss':
+                        doit(parts[2].split(' '), parts[3].split(' '))
+                    elif op == 'unb':
+                        doit(parts[3].split(' '), parts[2].split(' '))
+                    line = logfile.readline()
+            finally:
+                logfile.close()
+
+    else:
+        remoterevs, _checkout = hg.addbranchrevs(repo, remote, branches,
+                                                 opts.get('remote_head'))
+        localrevs = opts.get('local_head')
+        doit(localrevs, remoterevs)
+
 
 def debugindex(ui, repo, file_, **opts):
     """dump the contents of an index file"""
@@ -4513,6 +4573,14 @@ table = {
          [('e', 'extended', None, _('try extended date formats'))],
          _('[-e] DATE [RANGE]')),
     "debugdata": (debugdata, [], _('FILE REV')),
+    "debugdiscovery": (debugdiscovery,
+         [('', 'old', None,
+           _('use old-style discovery')),
+          ('', 'nonheads', None,
+           _('use old-style discovery with non-heads included')),
+         ] + remoteopts,
+         _('[-l REV] [-r REV] [-b BRANCH]...'
+           ' [OTHER]')),
     "debugfsinfo": (debugfsinfo, [], _('[PATH]')),
     "debuggetbundle":
         (debuggetbundle,

@@ -189,7 +189,7 @@ listkeys hook
   $ hg pull -B bar ../a
   pulling from ../a
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'} 
-  searching for changes
+  no changes found
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'} 
   importing bookmark bar
   $ cd ../a

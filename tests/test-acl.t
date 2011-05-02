@@ -82,7 +82,9 @@ Extension disabled for lack of a hook
   hgrc = """
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -135,7 +137,9 @@ Extension disabled for lack of acl.sources
   pretxnchangegroup.acl = python:hgext.acl.hook
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -192,7 +196,9 @@ No [acl.allow]/[acl.deny]
   sources = push
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -258,7 +264,9 @@ Empty [acl.allow]
   [acl.allow]
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -322,7 +330,9 @@ fred is allowed inside foo/
   foo/** = fred
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -390,7 +400,9 @@ Empty [acl.deny]
   [acl.deny]
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -455,7 +467,9 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   foo/bar/** = fred
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -525,7 +539,9 @@ fred is allowed inside foo/, but not foo/Bar/
   foo/Bar/** = fred
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -592,7 +608,9 @@ fred is allowed inside foo/, but not foo/Bar/
   foo/Bar/** = fred
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -661,7 +679,9 @@ barney is allowed everywhere
   ** = barney
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -733,7 +753,9 @@ wilma can change files with a .txt extension
   **/*.txt = wilma
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -810,7 +832,9 @@ file specified by acl.config does not exist
   config = ../acl.config
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -880,7 +904,9 @@ betty is allowed inside foo/ by a acl.config file
   foo/** = betty
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -962,7 +988,9 @@ acl.config can set only [acl.allow]/[acl.deny]
   changegroup.acl = false
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1035,7 +1063,9 @@ fred is always allowed
   ** = fred
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -1105,7 +1135,9 @@ no one is allowed inside foo/Bar/
   foo/Bar/** = *
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -1178,7 +1210,9 @@ OS-level groups
   ** = @group1
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1248,7 +1282,9 @@ OS-level groups
   foo/Bar/** = @group1
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   3 changesets found
   list of changesets:
@@ -1359,7 +1395,9 @@ No branch acls specified
   [extensions]
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1436,7 +1474,9 @@ Branch acl deny test
   foobar = *
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   4 changesets found
   list of changesets:
@@ -1512,7 +1552,9 @@ Branch acl empty allow test
   [acl.allow.branches]
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1583,7 +1625,9 @@ Branch acl allow other
   * = george
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1648,7 +1692,9 @@ Branch acl allow other
   * = george
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1730,7 +1776,9 @@ push foobar into the remote
   * = george
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   4 changesets found
   list of changesets:
@@ -1812,7 +1860,9 @@ Branch acl conflicting deny
   * = george
   """
   pushing to ../b
+  query 1; heads
   searching for changes
+  all remote heads known locally
   invalidating branch cache (tip differs)
   4 changesets found
   list of changesets:

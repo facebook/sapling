@@ -617,6 +617,17 @@ class revlog(object):
         assert heads
         return (orderedout, roots, heads)
 
+    def headrevs(self):
+        count = len(self)
+        if not count:
+            return [nullrev]
+        ishead = [1] * (count + 1)
+        index = self.index
+        for r in xrange(count):
+            e = index[r]
+            ishead[e[5]] = ishead[e[6]] = 0
+        return [r for r in xrange(count) if ishead[r]]
+
     def heads(self, start=None, stop=None):
         """return the list of all nodes that have no children
 
@@ -626,15 +637,9 @@ class revlog(object):
         as if they had no children
         """
         if start is None and stop is None:
-            count = len(self)
-            if not count:
+            if not len(self):
                 return [nullid]
-            ishead = [1] * (count + 1)
-            index = self.index
-            for r in xrange(count):
-                e = index[r]
-                ishead[e[5]] = ishead[e[6]] = 0
-            return [self.node(r) for r in xrange(count) if ishead[r]]
+            return [self.node(r) for r in self.headrevs()]
 
         if start is None:
             start = nullid

@@ -561,7 +561,9 @@ bundle single branch
 == bundling
 
   $ hg bundle bundle.hg part --debug
+  query 1; heads
   searching for changes
+  all remote heads known locally
   2 changesets found
   list of changesets:
   d2ae7f538514cd87c17547b0de4cea71fe1af9fb
