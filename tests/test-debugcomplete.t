@@ -211,7 +211,7 @@ Show all commands + options
   cat: output, rev, decode, include, exclude
   copy: after, force, include, exclude, dry-run
   debugancestor: 
-  debugbuilddag: mergeable-file, appended-file, overwritten-file, new-file
+  debugbuilddag: mergeable-file, overwritten-file, new-file
   debugbundle: all
   debugcheckstate: 
   debugcommands: 

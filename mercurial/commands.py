@@ -14,7 +14,7 @@ import patch, help, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
 import minirst, revset, templatefilters
-import dagparser
+import dagparser, context, simplemerge
 
 # Commands start here, listed alphabetically
 
@@ -962,7 +962,6 @@ def debugancestor(ui, repo, *args):
 
 def debugbuilddag(ui, repo, text,
                   mergeable_file=False,
-                  appended_file=False,
                   overwritten_file=False,
                   new_file=False):
     """builds a repo with a given dag from scratch in the current empty repo
@@ -979,8 +978,6 @@ def debugbuilddag(ui, repo, text,
      - "/p2" is a merge of the preceding node and p2
      - ":tag" defines a local tag for the preceding node
      - "@branch" sets the named branch for subsequent nodes
-     - "!command" runs the command using your shell
-     - "!!my command\\n" is like "!", but to the end of the line
      - "#...\\n" is a comment up to the end of the line
 
     Whitespace between the above elements is ignored.
@@ -994,27 +991,11 @@ def debugbuilddag(ui, repo, text,
 
     All string valued-elements are either strictly alphanumeric, or must
     be enclosed in double quotes ("..."), with "\\" as escape character.
-
-    Note that the --overwritten-file and --appended-file options imply the
-    use of "HGMERGE=internal:local" during DAG buildup.
     """
 
-    if not (mergeable_file or appended_file or overwritten_file or new_file):
-        raise util.Abort(_('need at least one of -m, -a, -o, -n'))
-
-    if len(repo.changelog) > 0:
+    cl = repo.changelog
+    if len(cl) > 0:
         raise util.Abort(_('repository is not empty'))
-
-    if overwritten_file or appended_file:
-        # we don't want to fail in merges during buildup
-        os.environ['HGMERGE'] = 'internal:local'
-
-    def writefile(fname, text, fmode="wb"):
-        f = open(fname, fmode)
-        try:
-            f.write(text)
-        finally:
-            f.close()
 
     if mergeable_file:
         linesperrev = 2
@@ -1024,58 +1005,95 @@ def debugbuilddag(ui, repo, text,
             if type == 'n':
                 n += 1
         # make a file with k lines per rev
-        writefile("mf", "\n".join(str(i) for i in xrange(0, n * linesperrev))
-                  + "\n")
+        initialmergedlines = [str(i) for i in xrange(0, n * linesperrev)]
+        initialmergedlines.append("")
 
-    at = -1
-    atbranch = 'default'
-    for type, data in dagparser.parsedag(text):
-        if type == 'n':
-            ui.status('node %s\n' % str(data))
-            id, ps = data
-            p1 = ps[0]
-            if p1 != at:
-                update(ui, repo, node=str(p1), clean=True)
-                at = p1
-            if repo.dirstate.branch() != atbranch:
-                branch(ui, repo, atbranch, force=True)
-            if len(ps) > 1:
-                p2 = ps[1]
-                merge(ui, repo, node=p2)
+    tags = []
 
-            if mergeable_file:
-                f = open("mf", "rb+")
-                try:
-                    lines = f.read().split("\n")
-                    lines[id * linesperrev] += " r%i" % id
-                    f.seek(0)
-                    f.write("\n".join(lines))
-                finally:
-                    f.close()
+    tr = repo.transaction("builddag")
+    try:
 
-            if appended_file:
-                writefile("af", "r%i\n" % id, "ab")
+        at = -1
+        atbranch = 'default'
+        nodeids = []
+        for type, data in dagparser.parsedag(text):
+            if type == 'n':
+                ui.note('node %s\n' % str(data))
+                id, ps = data
 
-            if overwritten_file:
-                writefile("of", "r%i\n" % id)
+                files = []
+                fctxs = {}
 
-            if new_file:
-                writefile("nf%i" % id, "r%i\n" % id)
+                p2 = None
+                if mergeable_file:
+                    fn = "mf"
+                    p1 = repo[ps[0]]
+                    if len(ps) > 1:
+                        p2 = repo[ps[1]]
+                        pa = p1.ancestor(p2)
+                        base, local, other = [x[fn].data() for x in pa, p1, p2]
+                        m3 = simplemerge.Merge3Text(base, local, other)
+                        ml = [l.strip() for l in m3.merge_lines()]
+                        ml.append("")
+                    elif at > 0:
+                        ml = p1[fn].data().split("\n")
+                    else:
+                        ml = initialmergedlines
+                    ml[id * linesperrev] += " r%i" % id
+                    mergedtext = "\n".join(ml)
+                    files.append(fn)
+                    fctxs[fn] = context.memfilectx(fn, mergedtext)
 
-            commit(ui, repo, addremove=True, message="r%i" % id, date=(id, 0))
-            at = id
-        elif type == 'l':
-            id, name = data
-            ui.status('tag %s\n' % name)
-            tag(ui, repo, name, local=True)
-        elif type == 'a':
-            ui.status('branch %s\n' % data)
-            atbranch = data
-        elif type in 'cC':
-            r = util.system(data, cwd=repo.root)
-            if r:
-                desc, r = util.explain_exit(r)
-                raise util.Abort(_('%s command %s') % (data, desc))
+                if overwritten_file:
+                    fn = "of"
+                    files.append(fn)
+                    fctxs[fn] = context.memfilectx(fn, "r%i\n" % id)
+
+                if new_file:
+                    fn = "nf%i" % id
+                    files.append(fn)
+                    fctxs[fn] = context.memfilectx(fn, "r%i\n" % id)
+                    if len(ps) > 1:
+                        if not p2:
+                            p2 = repo[ps[1]]
+                        for fn in p2:
+                            if fn.startswith("nf"):
+                                files.append(fn)
+                                fctxs[fn] = p2[fn]
+
+                def fctxfn(repo, cx, path):
+                    return fctxs.get(path)
+
+                if len(ps) == 0 or ps[0] < 0:
+                    pars = [None, None]
+                elif len(ps) == 1:
+                    pars = [nodeids[ps[0]], None]
+                else:
+                    pars = [nodeids[p] for p in ps]
+                cx = context.memctx(repo, pars, "r%i" % id, files, fctxfn,
+                                    date=(id, 0),
+                                    user="debugbuilddag",
+                                    extra={'branch': atbranch})
+                nodeid = repo.commitctx(cx)
+                nodeids.append(nodeid)
+                at = id
+            elif type == 'l':
+                id, name = data
+                ui.note('tag %s\n' % name)
+                tags.append("%s %s\n" % (hex(repo.changelog.node(id)), name))
+            elif type == 'a':
+                ui.note('branch %s\n' % data)
+                atbranch = data
+        tr.close()
+    finally:
+        tr.release()
+
+    if tags:
+        tagsf = repo.opener("localtags", "w")
+        try:
+            tagsf.write("".join(tags))
+        finally:
+            tagsf.close()
 
 def debugcommands(ui, cmd='', *args):
     """list all available commands and options"""
@@ -4467,7 +4485,6 @@ table = {
     "debugbuilddag":
         (debugbuilddag,
          [('m', 'mergeable-file', None, _('add single file mergeable changes')),
-          ('a', 'appended-file', None, _('add single file all revs append to')),
           ('o', 'overwritten-file', None, _('add single file all revs overwrite')),
           ('n', 'new-file', None, _('add new file at each rev')),
          ],
