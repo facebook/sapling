@@ -982,7 +982,7 @@ resolve to local
   $ HGMERGE=internal:local hg resolve -a
   $ hg commit -m localresolve
   $ cat m
-  $Id: m 41efa6d38e9b Thu, 01 Jan 1970 00:00:00 +0000 test $
+  $Id: m 800511b3a22d Thu, 01 Jan 1970 00:00:00 +0000 test $
   bar
 
 Test restricted mode with transplant -b
@@ -1000,19 +1000,19 @@ Test restricted mode with transplant -b
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -y transplant -b foo tip
   applying 4aa30d025d50
-  4aa30d025d50 transplanted to 5a4da427c162
+  4aa30d025d50 transplanted to e00abbf63521
 
 Expansion in changeset but not in file
 
   $ hg tip -p
-  changeset:   11:5a4da427c162
+  changeset:   11:e00abbf63521
   tag:         tip
-  parent:      9:41efa6d38e9b
+  parent:      9:800511b3a22d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     9foobranch
   
-  diff -r 41efa6d38e9b -r 5a4da427c162 a
+  diff -r 800511b3a22d -r e00abbf63521 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,3 +1,4 @@
@@ -1023,7 +1023,7 @@ Expansion in changeset but not in file
   
   $ head -n 2 a
   foobranch
-  expand $Id: a 5a4da427c162 Thu, 01 Jan 1970 00:00:00 +0000 test $
+  expand $Id: a e00abbf63521 Thu, 01 Jan 1970 00:00:00 +0000 test $
 
 Turn off expansion
 

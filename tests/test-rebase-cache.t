@@ -85,9 +85,9 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   o  0: 'A'
   
   $ hg branches
-  branch3                        8:05b64c4ca2d8
-  branch2                        6:b410fbec727a
-  branch1                        2:9d931918fcf7 (inactive)
+  branch3                        8:4666b71e8e32
+  branch2                        6:5097051d331d
+  branch1                        2:0a03079c47fd (inactive)
   default                        0:1994f17a630e (inactive)
 
   $ hg theads
@@ -101,9 +101,9 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg branches
-  branch3                        8:c1d4b9719987
-  branch2                        4:1be2b203ae5e
-  branch1                        2:9d931918fcf7
+  branch3                        8:466cdfb14b62
+  branch2                        4:e4fdb121d036
+  branch1                        2:0a03079c47fd
   default                        0:1994f17a630e (inactive)
 
   $ hg theads
@@ -162,9 +162,9 @@ Rebase head of branch3 (8) onto branch2 (6):
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg branches
-  branch2                        8:e1e80ed73210
-  branch3                        7:75fd7b643dce
-  branch1                        2:9d931918fcf7 (inactive)
+  branch2                        8:6b4bdc1b5ac0
+  branch3                        7:653b9feb4616
+  branch1                        2:0a03079c47fd (inactive)
   default                        0:1994f17a630e (inactive)
 
   $ hg theads
@@ -226,8 +226,8 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg branches
-  branch2                        7:e1e80ed73210
-  branch1                        2:9d931918fcf7 (inactive)
+  branch2                        7:6b4bdc1b5ac0
+  branch1                        2:0a03079c47fd (inactive)
   default                        0:1994f17a630e (inactive)
 
   $ hg theads

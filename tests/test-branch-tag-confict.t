@@ -19,7 +19,7 @@ Create a branch with the same name as the tag.
 This is what we have:
 
   $ hg log
-  changeset:   2:02b1af9b58c2
+  changeset:   2:10519b3f489a
   branch:      branchortag
   tag:         tip
   user:        test
@@ -53,7 +53,7 @@ Updating to the branch:
   $ hg up 'branch(branchortag)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg parents
-  changeset:   2:02b1af9b58c2
+  changeset:   2:10519b3f489a
   branch:      branchortag
   tag:         tip
   user:        test

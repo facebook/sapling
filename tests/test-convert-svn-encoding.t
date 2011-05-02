@@ -129,7 +129,7 @@ Convert while testing all possible outputs
 Check tags are in UTF-8
 
   $ cat .hgtags
-  221c3fdaf24df5f14c0a64c597581e2eacfb47bb branch\xc3\xa9e (esc)
-  7a40952c2db29cf00d9e31df3749e98d8a4bdcbf branch\xc3\xa9 (esc)
+  e94e4422020e715add80525e8f0f46c9968689f1 branch\xc3\xa9e (esc)
+  f7e66f98380ed1e53a797c5c7a7a2616a7ab377d branch\xc3\xa9 (esc)
 
   $ cd ..

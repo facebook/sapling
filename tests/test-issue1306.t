@@ -18,14 +18,14 @@ Initialize remote repo with branches:
   adding c
 
   $ hg log
-  changeset:   2:1630aed6ed2b
+  changeset:   2:ae3d9c30ec50
   branch:      br
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
   
-  changeset:   1:234f53e6c5ff
+  changeset:   1:3f7f930ca414
   branch:      br
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -50,7 +50,7 @@ Try cloning -r branch:
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R local1 parents
-  changeset:   2:1630aed6ed2b
+  changeset:   2:ae3d9c30ec50
   branch:      br
   tag:         tip
   user:        test
@@ -86,7 +86,7 @@ Try cloning -r1 clone#branch:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R local3 parents
-  changeset:   1:234f53e6c5ff
+  changeset:   1:3f7f930ca414
   branch:      br
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

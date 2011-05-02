@@ -48,7 +48,7 @@ these should work
 hg log (ascii)
 
   $ hg --encoding ascii log
-  changeset:   5:093c6077d1c8
+  changeset:   5:a52c0692f24a
   branch:      ?
   tag:         tip
   user:        test
@@ -85,7 +85,7 @@ hg log (ascii)
 hg log (latin-1)
 
   $ hg --encoding latin-1 log
-  changeset:   5:093c6077d1c8
+  changeset:   5:a52c0692f24a
   branch:      \xe9 (esc)
   tag:         tip
   user:        test
@@ -122,7 +122,7 @@ hg log (latin-1)
 hg log (utf-8)
 
   $ hg --encoding utf-8 log
-  changeset:   5:093c6077d1c8
+  changeset:   5:a52c0692f24a
   branch:      \xc3\xa9 (esc)
   tag:         tip
   user:        test
@@ -159,37 +159,37 @@ hg log (utf-8)
 hg tags (ascii)
 
   $ HGENCODING=ascii hg tags
-  tip                                5:093c6077d1c8
+  tip                                5:a52c0692f24a
   ?                                  3:ca661e7520de
 
 hg tags (latin-1)
 
   $ HGENCODING=latin-1 hg tags
-  tip                                5:093c6077d1c8
+  tip                                5:a52c0692f24a
   \xe9                                  3:ca661e7520de (esc)
 
 hg tags (utf-8)
 
   $ HGENCODING=utf-8 hg tags
-  tip                                5:093c6077d1c8
+  tip                                5:a52c0692f24a
   \xc3\xa9                                  3:ca661e7520de (esc)
 
 hg branches (ascii)
 
   $ HGENCODING=ascii hg branches
-  ?                              5:093c6077d1c8
+  ?                              5:a52c0692f24a
   default                        4:94db611b4196 (inactive)
 
 hg branches (latin-1)
 
   $ HGENCODING=latin-1 hg branches
-  \xe9                              5:093c6077d1c8 (esc)
+  \xe9                              5:a52c0692f24a (esc)
   default                        4:94db611b4196 (inactive)
 
 hg branches (utf-8)
 
   $ HGENCODING=utf-8 hg branches
-  \xc3\xa9                              5:093c6077d1c8 (esc)
+  \xc3\xa9                              5:a52c0692f24a (esc)
   default                        4:94db611b4196 (inactive)
   $ echo '[ui]' >> .hg/hgrc
   $ echo 'fallbackencoding = koi8-r' >> .hg/hgrc
@@ -197,7 +197,7 @@ hg branches (utf-8)
 hg log (utf-8)
 
   $ HGENCODING=utf-8 hg log
-  changeset:   5:093c6077d1c8
+  changeset:   5:a52c0692f24a
   branch:      \xc3\xa9 (esc)
   tag:         tip
   user:        test

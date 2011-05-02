@@ -1043,8 +1043,6 @@ class localrepository(repo.repository):
         tr = lock = None
         removed = list(ctx.removed())
         p1, p2 = ctx.p1(), ctx.p2()
-        m1 = p1.manifest().copy()
-        m2 = p2.manifest()
         user = ctx.user()
 
         lock = self.lock()
@@ -1052,40 +1050,48 @@ class localrepository(repo.repository):
             tr = self.transaction("commit")
             trp = weakref.proxy(tr)
 
-            # check in files
-            new = {}
-            changed = []
-            linkrev = len(self)
-            for f in sorted(ctx.modified() + ctx.added()):
-                self.ui.note(f + "\n")
-                try:
-                    fctx = ctx[f]
-                    new[f] = self._filecommit(fctx, m1, m2, linkrev, trp,
-                                              changed)
-                    m1.set(f, fctx.flags())
-                except OSError, inst:
-                    self.ui.warn(_("trouble committing %s!\n") % f)
-                    raise
-                except IOError, inst:
-                    errcode = getattr(inst, 'errno', errno.ENOENT)
-                    if error or errcode and errcode != errno.ENOENT:
+            if ctx.files():
+                m1 = p1.manifest().copy()
+                m2 = p2.manifest()
+
+                # check in files
+                new = {}
+                changed = []
+                linkrev = len(self)
+                for f in sorted(ctx.modified() + ctx.added()):
+                    self.ui.note(f + "\n")
+                    try:
+                        fctx = ctx[f]
+                        new[f] = self._filecommit(fctx, m1, m2, linkrev, trp,
+                                                  changed)
+                        m1.set(f, fctx.flags())
+                    except OSError, inst:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
-                    else:
-                        removed.append(f)
+                    except IOError, inst:
+                        errcode = getattr(inst, 'errno', errno.ENOENT)
+                        if error or errcode and errcode != errno.ENOENT:
+                            self.ui.warn(_("trouble committing %s!\n") % f)
+                            raise
+                        else:
+                            removed.append(f)
 
-            # update manifest
-            m1.update(new)
-            removed = [f for f in sorted(removed) if f in m1 or f in m2]
-            drop = [f for f in removed if f in m1]
-            for f in drop:
-                del m1[f]
-            mn = self.manifest.add(m1, trp, linkrev, p1.manifestnode(),
-                                   p2.manifestnode(), (new, drop))
+                # update manifest
+                m1.update(new)
+                removed = [f for f in sorted(removed) if f in m1 or f in m2]
+                drop = [f for f in removed if f in m1]
+                for f in drop:
+                    del m1[f]
+                mn = self.manifest.add(m1, trp, linkrev, p1.manifestnode(),
+                                       p2.manifestnode(), (new, drop))
+                files = changed + removed
+            else:
+                mn = p1.manifestnode()
+                files = []
 
             # update changelog
             self.changelog.delayupdate()
-            n = self.changelog.add(mn, changed + removed, ctx.description(),
+            n = self.changelog.add(mn, files, ctx.description(),
                                    trp, p1.node(), p2.node(),
                                    user, ctx.date(), ctx.extra().copy())
             p = lambda: self.changelog.writepending() and self.root or ""

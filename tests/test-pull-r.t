@@ -51,7 +51,7 @@ don't show "(+1 heads)" message when pulling closed head
   added 2 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
   $ hg heads -q --closed
-  4:996201fa1abf
+  4:00cfe9073916
   2:effea6de0384
   1:ed1b79f46b9a
 

@@ -298,11 +298,11 @@ test merge
   Date: * (glob)
   Subject: merge
   From: test@test.com
-  X-Hg-Notification: changeset 22c88b85aa27
+  X-Hg-Notification: changeset 6a0cf76b2701
   Message-Id: <*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset 22c88b85aa27 in b
+  changeset 6a0cf76b2701 in b
   description: merge
   (run 'hg update' to get a working copy)
 
@@ -330,11 +330,11 @@ truncate multi-byte subject
   Date: * (glob)
   Subject: \xc3\xa0... (esc)
   From: test@test.com
-  X-Hg-Notification: changeset 4a47f01c1356
+  X-Hg-Notification: changeset 7ea05ad269dc
   Message-Id: <*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset 4a47f01c1356 in b
+  changeset 7ea05ad269dc in b
   description: \xc3\xa0\xc3\xa1\xc3\xa2\xc3\xa3\xc3\xa4 (esc)
   diffstat:
   
@@ -343,7 +343,7 @@ truncate multi-byte subject
   
   diffs (7 lines):
   
-  diff -r 22c88b85aa27 -r 4a47f01c1356 a
+  diff -r 6a0cf76b2701 -r 7ea05ad269dc a
   --- a/a	Thu Jan 01 00:00:03 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,2 +1,3 @@

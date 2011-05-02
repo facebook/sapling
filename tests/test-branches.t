@@ -230,7 +230,7 @@
   default                        0:19709c5a4e75 (inactive)
   $ hg branches -c
   a branch name much longer than the default justification used by branches 7:10ff5895aa57
-  b                             12:2da6583810df (closed)
+  b                             12:e3d49c0575d8 (closed)
   c                              6:589736a22561 (inactive)
   a                              5:d8cbc61dbaa6 (inactive)
   default                        0:19709c5a4e75 (inactive)
@@ -240,7 +240,7 @@
   no open branch heads found on branches b
   [1]
   $ hg heads --closed b
-  changeset:   12:2da6583810df
+  changeset:   12:e3d49c0575d8
   branch:      b
   tag:         tip
   parent:      8:eebb944467c9
@@ -248,7 +248,7 @@
   date:        Thu Jan 01 00:00:09 1970 +0000
   summary:     close this part branch too
   
-  changeset:   11:c84627f3c15d
+  changeset:   11:d3f163457ebf
   branch:      b
   user:        test
   date:        Thu Jan 01 00:00:09 1970 +0000
@@ -261,13 +261,13 @@
 --- branch b is back in action
 
   $ hg branches -a
-  b                             13:6ac12926b8c3
+  b                             13:e23b5505d1ad
   a branch name much longer than the default justification used by branches 7:10ff5895aa57
 
 ---- test heads listings
 
   $ hg heads
-  changeset:   13:6ac12926b8c3
+  changeset:   13:e23b5505d1ad
   branch:      b
   tag:         tip
   user:        test
@@ -325,7 +325,7 @@ branch a
 branch b
 
   $ hg heads b
-  changeset:   13:6ac12926b8c3
+  changeset:   13:e23b5505d1ad
   branch:      b
   tag:         tip
   user:        test
@@ -333,14 +333,14 @@ branch b
   summary:     reopen branch with a change
   
   $ hg heads --closed b
-  changeset:   13:6ac12926b8c3
+  changeset:   13:e23b5505d1ad
   branch:      b
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:09 1970 +0000
   summary:     reopen branch with a change
   
-  changeset:   11:c84627f3c15d
+  changeset:   11:d3f163457ebf
   branch:      b
   user:        test
   date:        Thu Jan 01 00:00:09 1970 +0000
@@ -359,7 +359,7 @@ default branch colors:
   $ hg up -C b
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ hg branches --color=always
-  \x1b[0;32mb\x1b[0m \x1b[0;33m                            13:6ac12926b8c3\x1b[0m (esc)
+  \x1b[0;32mb\x1b[0m \x1b[0;33m                            13:e23b5505d1ad\x1b[0m (esc)
   \x1b[0;0ma branch name much longer than the default justification used by branches\x1b[0m \x1b[0;33m7:10ff5895aa57\x1b[0m (esc)
   \x1b[0;0ma\x1b[0m \x1b[0;33m                             5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;0mdefault\x1b[0m \x1b[0;33m                       0:19709c5a4e75\x1b[0m (inactive) (esc)
@@ -367,9 +367,9 @@ default branch colors:
 default closed branch color:
 
   $ hg branches --color=always --closed
-  \x1b[0;32mb\x1b[0m \x1b[0;33m                            13:6ac12926b8c3\x1b[0m (esc)
+  \x1b[0;32mb\x1b[0m \x1b[0;33m                            13:e23b5505d1ad\x1b[0m (esc)
   \x1b[0;0ma branch name much longer than the default justification used by branches\x1b[0m \x1b[0;33m7:10ff5895aa57\x1b[0m (esc)
-  \x1b[0;30;1mc\x1b[0m \x1b[0;33m                            14:717d2e6fabe1\x1b[0m (closed) (esc)
+  \x1b[0;30;1mc\x1b[0m \x1b[0;33m                            14:f894c25619d3\x1b[0m (closed) (esc)
   \x1b[0;0ma\x1b[0m \x1b[0;33m                             5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;0mdefault\x1b[0m \x1b[0;33m                       0:19709c5a4e75\x1b[0m (inactive) (esc)
 
@@ -385,7 +385,7 @@ default closed branch color:
 custom branch colors:
 
   $ hg branches --color=always
-  \x1b[0;31mb\x1b[0m \x1b[0;36m                            13:6ac12926b8c3\x1b[0m (esc)
+  \x1b[0;31mb\x1b[0m \x1b[0;36m                            13:e23b5505d1ad\x1b[0m (esc)
   \x1b[0;32ma branch name much longer than the default justification used by branches\x1b[0m \x1b[0;36m7:10ff5895aa57\x1b[0m (esc)
   \x1b[0;35ma\x1b[0m \x1b[0;36m                             5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;35mdefault\x1b[0m \x1b[0;36m                       0:19709c5a4e75\x1b[0m (inactive) (esc)
@@ -393,8 +393,8 @@ custom branch colors:
 custom closed branch color:
 
   $ hg branches --color=always --closed
-  \x1b[0;31mb\x1b[0m \x1b[0;36m                            13:6ac12926b8c3\x1b[0m (esc)
+  \x1b[0;31mb\x1b[0m \x1b[0;36m                            13:e23b5505d1ad\x1b[0m (esc)
   \x1b[0;32ma branch name much longer than the default justification used by branches\x1b[0m \x1b[0;36m7:10ff5895aa57\x1b[0m (esc)
-  \x1b[0;34mc\x1b[0m \x1b[0;36m                            14:717d2e6fabe1\x1b[0m (closed) (esc)
+  \x1b[0;34mc\x1b[0m \x1b[0;36m                            14:f894c25619d3\x1b[0m (closed) (esc)
   \x1b[0;35ma\x1b[0m \x1b[0;36m                             5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;35mdefault\x1b[0m \x1b[0;36m                       0:19709c5a4e75\x1b[0m (inactive) (esc)

@@ -8,77 +8,77 @@
   $ hg ci -Ambase -d '1 0'
   adding base
 
-  $ hg qnew -d '1 0' a
-  $ hg qnew -d '1 0' b
-  $ hg qnew -d '1 0' c
+  $ hg qnew -d '1 0' pa
+  $ hg qnew -d '1 0' pb
+  $ hg qnew -d '1 0' pc
 
   $ hg qdel
   abort: qdelete requires at least one revision or patch name
   [255]
 
-  $ hg qdel c
-  abort: cannot delete applied patch c
+  $ hg qdel pc
+  abort: cannot delete applied patch pc
   [255]
 
   $ hg qpop
-  popping c
-  now at: b
+  popping pc
+  now at: pb
 
 Delete the same patch twice in one command (issue2427)
 
-  $ hg qdel c c
+  $ hg qdel pc pc
 
   $ hg qseries
-  a
-  b
+  pa
+  pb
 
   $ ls .hg/patches
-  a
-  b
+  pa
+  pb
   series
   status
 
   $ hg qpop
-  popping b
-  now at: a
+  popping pb
+  now at: pa
 
   $ hg qdel -k 1
 
   $ ls .hg/patches
-  a
-  b
+  pa
+  pb
   series
   status
 
-  $ hg qdel -r a
-  patch a finalized without changeset message
+  $ hg qdel -r pa
+  patch pa finalized without changeset message
 
   $ hg qapplied
 
   $ hg log --template '{rev} {desc}\n'
-  1 [mq]: a
+  1 [mq]: pa
   0 base
 
-  $ hg qnew d
-  $ hg qnew e
-  $ hg qnew f
+  $ hg qnew pd
+  $ hg qnew pe
+  $ hg qnew pf
 
-  $ hg qdel -r e
+  $ hg qdel -r pe
   abort: cannot delete revision 3 above applied patches
   [255]
 
-  $ hg qdel -r qbase:e
-  patch d finalized without changeset message
-  patch e finalized without changeset message
+  $ hg qdel -r qbase:pe
+  patch pd finalized without changeset message
+  patch pe finalized without changeset message
 
   $ hg qapplied
-  f
+  pf
 
   $ hg log --template '{rev} {desc}\n'
-  4 [mq]: f
-  3 [mq]: e
-  2 [mq]: d
-  1 [mq]: a
+  4 [mq]: pf
+  3 [mq]: pe
+  2 [mq]: pd
+  1 [mq]: pa
   0 base
 
   $ cd ..
@@ -97,53 +97,53 @@ Delete the same patch twice in one command (issue2427)
   $ hg qfinish -a
   no patches applied
 
-  $ hg qnew -d '1 0' a
-  $ hg qnew -d '1 0' b
-  $ hg qnew c # XXX fails to apply by /usr/bin/patch if we put a date
+  $ hg qnew -d '1 0' pa
+  $ hg qnew -d '1 0' pb
+  $ hg qnew pc # XXX fails to apply by /usr/bin/patch if we put a date
 
   $ hg qfinish 0
   abort: revision 0 is not managed
   [255]
 
-  $ hg qfinish b
+  $ hg qfinish pb
   abort: cannot delete revision 2 above applied patches
   [255]
 
   $ hg qpop
-  popping c
-  now at: b
+  popping pc
+  now at: pb
 
-  $ hg qfinish -a c
-  abort: unknown revision 'c'!
+  $ hg qfinish -a pc
+  abort: unknown revision 'pc'!
   [255]
 
   $ hg qpush
-  applying c
-  patch c is empty
-  now at: c
+  applying pc
+  patch pc is empty
+  now at: pc
 
-  $ hg qfinish qbase:b
-  patch a finalized without changeset message
-  patch b finalized without changeset message
+  $ hg qfinish qbase:pb
+  patch pa finalized without changeset message
+  patch pb finalized without changeset message
 
   $ hg qapplied
-  c
+  pc
 
   $ hg log --template '{rev} {desc}\n'
-  3 imported patch c
-  2 [mq]: b
-  1 [mq]: a
+  3 imported patch pc
+  2 [mq]: pb
+  1 [mq]: pa
   0 base
 
-  $ hg qfinish -a c
-  patch c finalized without changeset message
+  $ hg qfinish -a pc
+  patch pc finalized without changeset message
 
   $ hg qapplied
 
   $ hg log --template '{rev} {desc}\n'
-  3 imported patch c
-  2 [mq]: b
-  1 [mq]: a
+  3 imported patch pc
+  2 [mq]: pb
+  1 [mq]: pa
   0 base
 
   $ ls .hg/patches
@@ -177,7 +177,7 @@ resilience to inconsistency: qfinish -a with applied patches not in series
   $ hg qrefresh -d '1 0'
   $ echo > .hg/patches/series # remove 3.diff from series to confuse mq
   $ hg qfinish -a
-  revision c4dd2b624061 refers to unknown patches: 3.diff
+  revision 47dfa8501675 refers to unknown patches: 3.diff
 
 more complex state 'both known and unknown patches
 
@@ -189,6 +189,6 @@ more complex state 'both known and unknown patches
   $ echo hup >>  base
   $ hg qnew -f -d '1 0' -m 6 6.diff
   $ hg qfinish -a
-  revision 6fdec4b20ec3 refers to unknown patches: 5.diff
-  revision 2ba51db7ba24 refers to unknown patches: 4.diff
+  revision 2b1c98802260 refers to unknown patches: 5.diff
+  revision 33a6861311c0 refers to unknown patches: 4.diff
 

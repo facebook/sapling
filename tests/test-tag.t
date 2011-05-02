@@ -292,7 +292,7 @@ tagging on an uncommitted merge (issue2542)
   [255]
   $ hg tag --rev 1 --local t3
   $ hg tags -v
-  tip                                2:8a8f787d0d5c
+  tip                                2:2a156e8887cc
   t3                                 1:c3adabd1a5f4 local
 
   $ cd ..

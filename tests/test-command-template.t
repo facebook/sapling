@@ -77,13 +77,13 @@ Compact style works:
   7:-1   29114dbae42b   1970-01-12 13:46 +0000   user
     second
   
-  6:5,4   c7b487c6c50e   1970-01-18 08:40 +0000   person
+  6:5,4   d41e714fe50d   1970-01-18 08:40 +0000   person
     merge
   
   5:3   13207e5a10d9   1970-01-18 08:40 +0000   person
     new head
   
-  4   32a18f097fcc   1970-01-17 04:53 +0000   person
+  4   bbe44766e73d   1970-01-17 04:53 +0000   person
     new branch
   
   3   10e46f2dcbf4   1970-01-16 01:06 +0000   person
@@ -106,13 +106,13 @@ Compact style works:
   7:-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
     second
   
-  6:5,4   c7b487c6c50e   1970-01-18 08:40 +0000   person
+  6:5,4   d41e714fe50d   1970-01-18 08:40 +0000   person
     merge
   
   5:3   13207e5a10d9   1970-01-18 08:40 +0000   person
     new head
   
-  4   32a18f097fcc   1970-01-17 04:53 +0000   person
+  4   bbe44766e73d   1970-01-17 04:53 +0000   person
     new branch
   
   3   10e46f2dcbf4   1970-01-16 01:06 +0000   person
@@ -139,13 +139,13 @@ Compact style works:
   7:-1,-1   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
     second
   
-  6:5,4   c7b487c6c50e   1970-01-18 08:40 +0000   person
+  6:5,4   d41e714fe50d   1970-01-18 08:40 +0000   person
     merge
   
   5:3,-1   13207e5a10d9   1970-01-18 08:40 +0000   person
     new head
   
-  4:3,-1   32a18f097fcc   1970-01-17 04:53 +0000   person
+  4:3,-1   bbe44766e73d   1970-01-17 04:53 +0000   person
     new branch
   
   3:2,-1   10e46f2dcbf4   1970-01-16 01:06 +0000   person
@@ -182,9 +182,9 @@ Test xml styles:
   <date>1970-01-12T13:46:40+00:00</date>
   <msg xml:space="preserve">second</msg>
   </logentry>
-  <logentry revision="6" node="c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f">
+  <logentry revision="6" node="d41e714fe50d9e4a5f11b4d595d543481b5f980b">
   <parent revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f" />
-  <parent revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4" />
+  <parent revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74" />
   <author email="person">person</author>
   <date>1970-01-18T08:40:01+00:00</date>
   <msg xml:space="preserve">merge</msg>
@@ -195,7 +195,7 @@ Test xml styles:
   <date>1970-01-18T08:40:00+00:00</date>
   <msg xml:space="preserve">new head</msg>
   </logentry>
-  <logentry revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4">
+  <logentry revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74">
   <branch>foo</branch>
   <author email="person">person</author>
   <date>1970-01-17T04:53:20+00:00</date>
@@ -253,9 +253,9 @@ Test xml styles:
   <path action="A">second</path>
   </paths>
   </logentry>
-  <logentry revision="6" node="c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f">
+  <logentry revision="6" node="d41e714fe50d9e4a5f11b4d595d543481b5f980b">
   <parent revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f" />
-  <parent revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4" />
+  <parent revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74" />
   <author email="person">person</author>
   <date>1970-01-18T08:40:01+00:00</date>
   <msg xml:space="preserve">merge</msg>
@@ -271,7 +271,7 @@ Test xml styles:
   <path action="A">d</path>
   </paths>
   </logentry>
-  <logentry revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4">
+  <logentry revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74">
   <branch>foo</branch>
   <author email="person">person</author>
   <date>1970-01-17T04:53:20+00:00</date>
@@ -348,9 +348,9 @@ Test xml styles:
   </paths>
   <extra key="branch">default</extra>
   </logentry>
-  <logentry revision="6" node="c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f">
+  <logentry revision="6" node="d41e714fe50d9e4a5f11b4d595d543481b5f980b">
   <parent revision="5" node="13207e5a10d9fd28ec424934298e176197f2c67f" />
-  <parent revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4" />
+  <parent revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74" />
   <author email="person">person</author>
   <date>1970-01-18T08:40:01+00:00</date>
   <msg xml:space="preserve">merge</msg>
@@ -369,7 +369,7 @@ Test xml styles:
   </paths>
   <extra key="branch">default</extra>
   </logentry>
-  <logentry revision="4" node="32a18f097fcccf76ef282f62f8a85b3adf8d13c4">
+  <logentry revision="4" node="bbe44766e73d5f11ed2177f1838de10c53ef3e74">
   <branch>foo</branch>
   <parent revision="3" node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
   <parent revision="-1" node="0000000000000000000000000000000000000000" />
@@ -510,7 +510,7 @@ Issue338:
   1970-01-18  person  <person>
   
   	* merge
-  	[c7b487c6c50e]
+  	[d41e714fe50d]
   
   	* d:
   	new head
@@ -519,7 +519,7 @@ Issue338:
   1970-01-17  person  <person>
   
   	* new branch
-  	[32a18f097fcc] <foo>
+  	[bbe44766e73d] <foo>
   
   1970-01-16  person  <person>
   
@@ -560,12 +560,12 @@ Issue2130: xml output for 'hg heads' is malformed
   1970-01-18  person  <person>
   
   	* merge
-  	[c7b487c6c50e]
+  	[d41e714fe50d]
   
   1970-01-17  person  <person>
   
   	* new branch
-  	[32a18f097fcc] <foo>
+  	[bbe44766e73d] <foo>
   
 
 Keys work:
@@ -886,63 +886,63 @@ Keys work:
   files--debug: c
   files--debug: b
   files--debug: a
-  manifest: 8:94961b75a2da
-  manifest: 7:f2dbc354b94e
-  manifest: 6:91015e9dbdd7
-  manifest: 5:4dc3def4f9b4
-  manifest: 4:90ae8dda64e1
+  manifest: 6:94961b75a2da
+  manifest: 5:f2dbc354b94e
+  manifest: 4:4dc3def4f9b4
+  manifest: 4:4dc3def4f9b4
+  manifest: 3:cb5a1327723b
   manifest: 3:cb5a1327723b
   manifest: 2:6e0e82995c35
   manifest: 1:4e8d705b1e53
   manifest: 0:a0c8bcbbb45c
-  manifest--verbose: 8:94961b75a2da
-  manifest--verbose: 7:f2dbc354b94e
-  manifest--verbose: 6:91015e9dbdd7
-  manifest--verbose: 5:4dc3def4f9b4
-  manifest--verbose: 4:90ae8dda64e1
+  manifest--verbose: 6:94961b75a2da
+  manifest--verbose: 5:f2dbc354b94e
+  manifest--verbose: 4:4dc3def4f9b4
+  manifest--verbose: 4:4dc3def4f9b4
+  manifest--verbose: 3:cb5a1327723b
   manifest--verbose: 3:cb5a1327723b
   manifest--verbose: 2:6e0e82995c35
   manifest--verbose: 1:4e8d705b1e53
   manifest--verbose: 0:a0c8bcbbb45c
-  manifest--debug: 8:94961b75a2da554b4df6fb599e5bfc7d48de0c64
-  manifest--debug: 7:f2dbc354b94e5ec0b4f10680ee0cee816101d0bf
-  manifest--debug: 6:91015e9dbdd76a6791085d12b0a0ec7fcd22ffbf
-  manifest--debug: 5:4dc3def4f9b4c6e8de820f6ee74737f91e96a216
-  manifest--debug: 4:90ae8dda64e1a876c792bccb9af66284f6018363
+  manifest--debug: 6:94961b75a2da554b4df6fb599e5bfc7d48de0c64
+  manifest--debug: 5:f2dbc354b94e5ec0b4f10680ee0cee816101d0bf
+  manifest--debug: 4:4dc3def4f9b4c6e8de820f6ee74737f91e96a216
+  manifest--debug: 4:4dc3def4f9b4c6e8de820f6ee74737f91e96a216
+  manifest--debug: 3:cb5a1327723bada42f117e4c55a303246eaf9ccc
   manifest--debug: 3:cb5a1327723bada42f117e4c55a303246eaf9ccc
   manifest--debug: 2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1
   manifest--debug: 1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
   manifest--debug: 0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   node: 95c24699272ef57d062b8bccc32c878bf841784a
   node: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
-  node: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
+  node: d41e714fe50d9e4a5f11b4d595d543481b5f980b
   node: 13207e5a10d9fd28ec424934298e176197f2c67f
-  node: 32a18f097fcccf76ef282f62f8a85b3adf8d13c4
+  node: bbe44766e73d5f11ed2177f1838de10c53ef3e74
   node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
   node: 97054abb4ab824450e9164180baf491ae0078465
   node: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
   node: 1e4e1b8f71e05681d422154f5421e385fec3454f
   node--verbose: 95c24699272ef57d062b8bccc32c878bf841784a
   node--verbose: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
-  node--verbose: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
+  node--verbose: d41e714fe50d9e4a5f11b4d595d543481b5f980b
   node--verbose: 13207e5a10d9fd28ec424934298e176197f2c67f
-  node--verbose: 32a18f097fcccf76ef282f62f8a85b3adf8d13c4
+  node--verbose: bbe44766e73d5f11ed2177f1838de10c53ef3e74
   node--verbose: 10e46f2dcbf4823578cf180f33ecf0b957964c47
   node--verbose: 97054abb4ab824450e9164180baf491ae0078465
   node--verbose: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
   node--verbose: 1e4e1b8f71e05681d422154f5421e385fec3454f
   node--debug: 95c24699272ef57d062b8bccc32c878bf841784a
   node--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
-  node--debug: c7b487c6c50ef1cf464cafdc4f4f5e615fc5999f
+  node--debug: d41e714fe50d9e4a5f11b4d595d543481b5f980b
   node--debug: 13207e5a10d9fd28ec424934298e176197f2c67f
-  node--debug: 32a18f097fcccf76ef282f62f8a85b3adf8d13c4
+  node--debug: bbe44766e73d5f11ed2177f1838de10c53ef3e74
   node--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
   node--debug: 97054abb4ab824450e9164180baf491ae0078465
   node--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
   node--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
   parents: 
   parents: -1:000000000000 
-  parents: 5:13207e5a10d9 4:32a18f097fcc 
+  parents: 5:13207e5a10d9 4:bbe44766e73d 
   parents: 3:10e46f2dcbf4 
   parents: 
   parents: 
@@ -951,7 +951,7 @@ Keys work:
   parents: 
   parents--verbose: 
   parents--verbose: -1:000000000000 
-  parents--verbose: 5:13207e5a10d9 4:32a18f097fcc 
+  parents--verbose: 5:13207e5a10d9 4:bbe44766e73d 
   parents--verbose: 3:10e46f2dcbf4 
   parents--verbose: 
   parents--verbose: 
@@ -960,7 +960,7 @@ Keys work:
   parents--verbose: 
   parents--debug: 7:29114dbae42b9f078cf2714dbe3a86bba8ec7453 -1:0000000000000000000000000000000000000000 
   parents--debug: -1:0000000000000000000000000000000000000000 -1:0000000000000000000000000000000000000000 
-  parents--debug: 5:13207e5a10d9fd28ec424934298e176197f2c67f 4:32a18f097fcccf76ef282f62f8a85b3adf8d13c4 
+  parents--debug: 5:13207e5a10d9fd28ec424934298e176197f2c67f 4:bbe44766e73d5f11ed2177f1838de10c53ef3e74 
   parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000 
   parents--debug: 3:10e46f2dcbf4823578cf180f33ecf0b957964c47 -1:0000000000000000000000000000000000000000 
   parents--debug: 2:97054abb4ab824450e9164180baf491ae0078465 -1:0000000000000000000000000000000000000000 
@@ -1174,9 +1174,9 @@ Filters work:
   $ hg log --template '{node|short}\n'
   95c24699272e
   29114dbae42b
-  c7b487c6c50e
+  d41e714fe50d
   13207e5a10d9
-  32a18f097fcc
+  bbe44766e73d
   10e46f2dcbf4
   97054abb4ab8
   b608e9d1a3f0
@@ -1197,9 +1197,9 @@ Filters work:
   8: 
   7: 8:95c24699272e
   6: 
-  5: 6:c7b487c6c50e
-  4: 6:c7b487c6c50e
-  3: 4:32a18f097fcc 5:13207e5a10d9
+  5: 6:d41e714fe50d
+  4: 6:d41e714fe50d
+  3: 4:bbe44766e73d 5:13207e5a10d9
   2: 3:10e46f2dcbf4
   1: 2:97054abb4ab8
   0: 1:b608e9d1a3f0
