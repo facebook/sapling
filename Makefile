@@ -78,6 +78,8 @@ dist:	tests dist-notests
 dist-notests:	doc MANIFEST
 	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py -q sdist
 
+check: tests
+
 tests:
 	cd tests && $(PYTHON) run-tests.py $(TESTFLAGS)
 
