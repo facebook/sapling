@@ -427,14 +427,13 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source,
 
     if revs:
         revs = [other.lookup(rev) for rev in revs]
-    other, common, anyinc, bundle = bundlerepo.getremotechanges(ui, repo, other,
-                                     revs, opts["bundle"], opts["force"])
-    if not anyinc:
-        ui.status(_("no changes found\n"))
-        return subreporecurse()
-
+    other, chlist, cleanupfn = bundlerepo.getremotechanges(ui, repo, other,
+                                revs, opts["bundle"], opts["force"])
     try:
-        chlist = other.changelog.findmissing(common, revs)
+        if not chlist:
+            ui.status(_("no changes found\n"))
+            return subreporecurse()
+
         displayer = cmdutil.show_changeset(ui, other, opts, buffered)
 
         # XXX once graphlog extension makes it into core,
@@ -443,10 +442,7 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source,
 
         displayer.close()
     finally:
-        if hasattr(other, 'close'):
-            other.close()
-        if bundle:
-            os.unlink(bundle)
+        cleanupfn()
     subreporecurse()
     return 0 # exit code is zero since we found incoming changes
 

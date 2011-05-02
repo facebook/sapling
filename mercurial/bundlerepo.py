@@ -288,30 +288,48 @@ def instance(ui, path, create):
         repopath, bundlename = parentpath, path
     return bundlerepository(ui, repopath, bundlename)
 
-def getremotechanges(ui, repo, other, revs=None, bundlename=None,
+def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
                      force=False):
-    tmp = discovery.findcommonincoming(repo, other, heads=revs, force=force)
+    '''obtains a bundle of changes incoming from other
+
+    "onlyheads" restricts the returned changes to those reachable from the
+      specified heads.
+    "bundlename", if given, stores the bundle to this file path permanently;
+      the returned "bundle" will be None.
+    "force" indicates whether to proceed on unrelated repos.
+
+    Returns a tuple (local, csets, cleanupfn):
+
+    "local" is a local repo from which to obtain the actual incoming changesets; it
+      is a bundlerepo for the obtained bundle when the original "other" is remote.
+    "csets" lists the incoming changeset node ids.
+    "cleanupfn" must be called without arguments when you're done processing the
+      changes; it closes both the original "other" and the one returned here.
+    '''
+    tmp = discovery.findcommonincoming(repo, other, heads=onlyheads, force=force)
     common, incoming, rheads = tmp
     if not incoming:
         try:
             os.unlink(bundlename)
         except OSError:
             pass
-        return other, None, None, None
+        return other, [], other.close
 
     bundle = None
+    bundlerepo = None
+    localrepo = other
     if bundlename or not other.local():
         # create a bundle (uncompressed if other repo is not local)
 
-        if revs is None and other.capable('changegroupsubset'):
-            revs = rheads
+        if onlyheads is None and other.capable('changegroupsubset'):
+            onlyheads = rheads
 
         if other.capable('getbundle'):
-            cg = other.getbundle('incoming', common=common, heads=revs)
-        elif revs is None:
+            cg = other.getbundle('incoming', common=common, heads=onlyheads)
+        elif onlyheads is None:
             cg = other.changegroup(incoming, "incoming")
         else:
-            cg = other.changegroupsubset(incoming, revs, 'incoming')
+            cg = other.changegroupsubset(incoming, onlyheads, 'incoming')
         bundletype = other.local() and "HG10BZ" or "HG10UN"
         fname = bundle = changegroup.writebundle(cg, bundlename, bundletype)
         # keep written bundle?
@@ -319,6 +337,18 @@ def getremotechanges(ui, repo, other, revs=None, bundlename=None,
             bundle = None
         if not other.local():
             # use the created uncompressed bundlerepo
-            other = bundlerepository(ui, repo.root, fname)
-    return (other, common, incoming, bundle)
+            localrepo = bundlerepo = bundlerepository(ui, repo.root, fname)
+            # this repo contains local and other now, so filter out local again
+            common = repo.heads()
+
+    csets = localrepo.changelog.findmissing(common, onlyheads)
+
+    def cleanup():
+        if bundlerepo:
+            bundlerepo.close()
+        if bundle:
+            os.unlink(bundle)
+        localrepo.close()
+
+    return (localrepo, csets, cleanup)
 

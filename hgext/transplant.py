@@ -494,10 +494,8 @@ def transplant(ui, repo, *revs, **opts):
     and then resume where you left off by calling :hg:`transplant
     --continue/-c`.
     '''
-    def incwalk(repo, commmon, branches, match=util.always):
-        if not branches:
-            branches = None
-        for node in repo.changelog.findmissing(common, branches):
+    def incwalk(repo, csets, match=util.always):
+        for node in csets:
             if match(node):
                 yield node
 
@@ -547,15 +545,16 @@ def transplant(ui, repo, *revs, **opts):
         if m or a or r or d:
             raise util.Abort(_('outstanding local changes'))
 
-    bundle = None
-    source = opts.get('source')
-    if source:
-        sourcerepo = ui.expandpath(source)
-        source = hg.repository(ui, sourcerepo)
-        source, common, anyinc, bundle = bundlerepo.getremotechanges(ui, repo,
-                                          source, force=True)
+    sourcerepo = opts.get('source')
+    if sourcerepo:
+        source = hg.repository(ui, ui.expandpath(sourcerepo))
+        branches = map(source.lookup, opts.get('branch', ()))
+        source, csets, cleanupfn = bundlerepo.getremotechanges(ui, repo, source,
+                                    onlyheads=branches, force=True)
     else:
         source = repo
+        branches = map(source.lookup, opts.get('branch', ()))
+        cleanupfn = None
 
     try:
         if opts.get('continue'):
@@ -569,7 +568,6 @@ def transplant(ui, repo, *revs, **opts):
             matchfn = lambda x: tf(x) and x not in prune
         else:
             matchfn = tf
-        branches = map(source.lookup, opts.get('branch', ()))
         merges = map(source.lookup, opts.get('merge', ()))
         revmap = {}
         if revs:
@@ -577,8 +575,7 @@ def transplant(ui, repo, *revs, **opts):
                 revmap[int(r)] = source.lookup(r)
         elif opts.get('all') or not merges:
             if source != repo:
-                alltransplants = incwalk(source, common, branches,
-                                         match=matchfn)
+                alltransplants = incwalk(source, csets, match=matchfn)
             else:
                 alltransplants = transplantwalk(source, p1, branches,
                                                 match=matchfn)
@@ -594,9 +591,8 @@ def transplant(ui, repo, *revs, **opts):
 
         tp.apply(repo, source, revmap, merges, opts)
     finally:
-        if bundle:
-            source.close()
-            os.unlink(bundle)
+        if cleanupfn:
+            cleanupfn()
 
 def revsettransplanted(repo, subset, x):
     """``transplanted(set)``

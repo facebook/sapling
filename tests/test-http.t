@@ -70,6 +70,24 @@ clone via pull
   adding bar
   $ cd ..
 
+incoming via HTTP
+
+  $ hg clone http://localhost:$HGPORT1/ --rev 0 partial
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 4 changes to 4 files
+  updating to branch default
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd partial
+  $ touch LOCAL
+  $ hg ci -qAm LOCAL
+  $ hg incoming http://localhost:$HGPORT1/ --template '{desc}\n'
+  comparing with http://localhost:$HGPORT1/
+  searching for changes
+  2
+  $ cd ..
+
 pull
 
   $ cd copy-pull
