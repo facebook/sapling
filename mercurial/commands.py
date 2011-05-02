@@ -1129,7 +1129,7 @@ def debugcomplete(ui, cmd='', **opts):
 
 def debugfsinfo(ui, path = "."):
     """show information detected about current filesystem"""
-    open('.debugfsinfo', 'w').write('')
+    util.writefile('.debugfsinfo', '')
     ui.write('exec: %s\n' % (util.checkexec(path) and 'yes' or 'no'))
     ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
     ui.write('case-sensitive: %s\n' % (util.checkcase('.debugfsinfo')
@@ -2669,7 +2669,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 raise util.Abort(_('no diffs found'))
 
         if msgs:
-            repo.opener('last-message.txt', 'wb').write('\n* * *\n'.join(msgs))
+            repo.opener.write('last-message.txt', '\n* * *\n'.join(msgs))
     finally:
         release(lock, wlock)
 

@@ -39,7 +39,7 @@ class transplants(object):
     def read(self):
         abspath = os.path.join(self.path, self.transplantfile)
         if self.transplantfile and os.path.exists(abspath):
-            for line in self.opener(self.transplantfile).read().splitlines():
+            for line in self.opener.read(self.transplantfile).splitlines():
                 lnode, rnode = map(revlog.bin, line.split(':'))
                 list = self.transplants.setdefault(rnode, [])
                 list.append(transplantentry(lnode, rnode))
@@ -318,7 +318,7 @@ class transplanter(object):
         nodes = []
         merges = []
         cur = nodes
-        for line in self.opener('series').read().splitlines():
+        for line in self.opener.read('series').splitlines():
             if line.startswith('# Merges'):
                 cur = merges
                 continue

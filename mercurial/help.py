@@ -8,6 +8,7 @@
 from i18n import gettext, _
 import sys, os
 import extensions
+import util
 
 
 def moduledoc(file):
@@ -79,7 +80,7 @@ def loaddoc(topic):
                 break
 
         path = os.path.join(docdir, topic + ".txt")
-        doc = gettext(open(path).read())
+        doc = gettext(util.readfile(path))
         for rewriter in helphooks.get(topic, []):
             doc = rewriter(topic, doc)
         return doc

@@ -91,7 +91,7 @@ def logmessage(opts):
             if logfile == '-':
                 message = sys.stdin.read()
             else:
-                message = open(logfile).read()
+                message = util.readfile(logfile)
         except IOError, inst:
             raise util.Abort(_("can't read commit message '%s': %s") %
                              (logfile, inst.strerror))

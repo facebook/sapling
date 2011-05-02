@@ -60,7 +60,7 @@ def findglobaltags(ui, repo, alltags, tagtypes):
 def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo.  Update alltags and tagtypes.'''
     try:
-        data = repo.opener("localtags").read()
+        data = repo.opener.read("localtags")
     except IOError, inst:
         if inst.errno != errno.ENOENT:
             raise

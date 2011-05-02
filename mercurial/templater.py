@@ -311,7 +311,7 @@ class templater(object):
         '''Get the template for the given template name. Use a local cache.'''
         if not t in self.cache:
             try:
-                self.cache[t] = open(self.map[t][1]).read()
+                self.cache[t] = util.readfile(self.map[t][1])
             except KeyError, inst:
                 raise util.Abort(_('"%s" not in template map') % inst.args[0])
             except IOError, inst:

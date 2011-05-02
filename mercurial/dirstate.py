@@ -74,7 +74,7 @@ class dirstate(object):
     @propertycache
     def _branch(self):
         try:
-            return self._opener("branch").read().strip() or "default"
+            return self._opener.read("branch").strip() or "default"
         except IOError:
             return "default"
 
@@ -220,13 +220,13 @@ class dirstate(object):
         if branch in ['tip', '.', 'null']:
             raise util.Abort(_('the name \'%s\' is reserved') % branch)
         self._branch = encoding.fromlocal(branch)
-        self._opener("branch", "w").write(self._branch + '\n')
+        self._opener.write("branch", self._branch + '\n')
 
     def _read(self):
         self._map = {}
         self._copymap = {}
         try:
-            st = self._opener("dirstate").read()
+            st = self._opener.read("dirstate")
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise

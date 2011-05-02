@@ -113,14 +113,14 @@ def _eoltype(data):
 
 def _matcheol(file, origfile):
     "Convert EOL markers in a file to match origfile"
-    tostyle = _eoltype(open(origfile, "rb").read())
+    tostyle = _eoltype(util.readfile(origfile))
     if tostyle:
-        data = open(file, "rb").read()
+        data = util.readfile(file)
         style = _eoltype(data)
         if style:
             newdata = data.replace(style, tostyle)
             if newdata != data:
-                open(file, "wb").write(newdata)
+                util.writefile(file, newdata)
 
 def filemerge(repo, mynode, orig, fcd, fco, fca):
     """perform a 3-way merge in the working directory

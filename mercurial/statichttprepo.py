@@ -93,7 +93,7 @@ class statichttprepository(localrepo.localrepository):
 
         # find requirements
         try:
-            requirements = self.opener("requires").read().splitlines()
+            requirements = self.opener.read("requires").splitlines()
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise

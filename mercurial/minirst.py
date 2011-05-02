@@ -467,7 +467,7 @@ if __name__ == "__main__":
         print
         return blocks
 
-    text = open(sys.argv[1]).read()
+    text = util.readfile(sys.argv[1])
     blocks = debug(findblocks, text)
     blocks = debug(findliteralblocks, blocks)
     blocks, pruned = debug(prunecontainers, blocks, sys.argv[2:])

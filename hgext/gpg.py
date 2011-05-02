@@ -234,7 +234,7 @@ def sign(ui, repo, *revs, **opts):
 
     # write it
     if opts['local']:
-        repo.opener("localsigs", "ab").write(sigmessage)
+        repo.opener.append("localsigs", sigmessage)
         return
 
     msigs = match.exact(repo.root, '', ['.hgsigs'])

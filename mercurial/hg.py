@@ -137,14 +137,14 @@ def share(ui, source, dest=None, update=True):
 
     requirements = ''
     try:
-        requirements = srcrepo.opener('requires').read()
+        requirements = srcrepo.opener.read('requires')
     except IOError, inst:
         if inst.errno != errno.ENOENT:
             raise
 
     requirements += 'shared\n'
-    file(os.path.join(roothg, 'requires'), 'w').write(requirements)
-    file(os.path.join(roothg, 'sharedpath'), 'w').write(sharedpath)
+    util.writefile(os.path.join(roothg, 'requires'), requirements)
+    util.writefile(os.path.join(roothg, 'sharedpath'), sharedpath)
 
     r = repository(ui, root)
 

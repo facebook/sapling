@@ -1,5 +1,5 @@
 import os, sys, time
-from mercurial import hg, ui, commands
+from mercurial import hg, ui, commands, util
 
 TESTDIR = os.environ["TESTDIR"]
 BUNDLEPATH = os.path.join(TESTDIR, 'bundles', 'test-no-symlinks.hg')
@@ -29,7 +29,7 @@ os.symlink = symlink_failure
 for f in 'test0/a.lnk', 'test0/d/b.lnk':
     os.unlink(f)
     fp = open(f, 'wb')
-    fp.write(open(f[:-4]).read())
+    fp.write(util.readfile(f[:-4]))
     fp.close()
 
 # reload repository

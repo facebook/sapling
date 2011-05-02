@@ -47,7 +47,7 @@ class mergestate(object):
             self._dirty = False
     def add(self, fcl, fco, fca, fd, flags):
         hash = util.sha1(fcl.path()).hexdigest()
-        self._repo.opener("merge/" + hash, "w").write(fcl.data())
+        self._repo.opener.write("merge/" + hash, fcl.data())
         self._state[fd] = ['u', hash, fcl.path(), fca.path(),
                            hex(fca.filenode()), fco.path(), flags]
         self._dirty = True

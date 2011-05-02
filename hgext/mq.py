@@ -291,14 +291,14 @@ class queue(object):
                     elif l.strip():
                         self.ui.warn(_('malformated mq status line: %s\n') % entry)
                     # else we ignore empty lines
-            lines = self.opener(self.status_path).read().splitlines()
+            lines = self.opener.read(self.status_path).splitlines()
             return list(parselines(lines))
         return []
 
     @util.propertycache
     def full_series(self):
         if os.path.exists(self.join(self.series_path)):
-            return self.opener(self.series_path).read().splitlines()
+            return self.opener.read(self.series_path).splitlines()
         return []
 
     @util.propertycache
@@ -412,7 +412,7 @@ class queue(object):
         if self.active_guards is None:
             self.active_guards = []
             try:
-                guards = self.opener(self.guards_path).read().split()
+                guards = self.opener.read(self.guards_path).split()
             except IOError, err:
                 if err.errno != errno.ENOENT:
                     raise

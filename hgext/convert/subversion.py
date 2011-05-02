@@ -1028,7 +1028,7 @@ class svn_sink(converter_sink, commandline):
                     os.unlink(filename)
             except OSError:
                 pass
-            self.wopener(filename, 'w').write(data)
+            self.wopener.write(filename, data)
 
             if self.is_exec:
                 was_exec = self.is_exec(self.wjoin(filename))

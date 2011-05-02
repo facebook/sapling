@@ -97,7 +97,7 @@ def snapshot(ui, repo, files, node, tmproot):
         if 'l' in fctx.flags():
             wopener.symlink(data, wfn)
         else:
-            wopener(wfn, 'w').write(data)
+            wopener.write(wfn, data)
             if 'x' in fctx.flags():
                 util.set_flags(dest, False, True)
         if node is None:

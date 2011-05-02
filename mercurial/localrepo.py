@@ -56,7 +56,8 @@ class localrepository(repo.repository):
                         if self.ui.configbool('format', 'dotencode', True):
                             requirements.append('dotencode')
                     # create an invalid changelog
-                    self.opener("00changelog.i", "a").write(
+                    self.opener.append(
+                        "00changelog.i",
                         '\0\0\0\2' # represents revlogv2
                         ' dummy changelog to prevent using the old repo layout'
                     )
@@ -70,7 +71,7 @@ class localrepository(repo.repository):
             # find requirements
             requirements = set()
             try:
-                requirements = set(self.opener("requires").read().splitlines())
+                requirements = set(self.opener.read("requires").splitlines())
             except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
@@ -80,7 +81,7 @@ class localrepository(repo.repository):
 
         self.sharedpath = self.path
         try:
-            s = os.path.realpath(self.opener("sharedpath").read())
+            s = os.path.realpath(self.opener.read("sharedpath"))
             if not os.path.exists(s):
                 raise error.RepoError(
                     _('.hg/sharedpath points to nonexistent directory %s') % s)
@@ -652,7 +653,7 @@ class localrepository(repo.repository):
         if self._link(filename):
             data = os.readlink(self.wjoin(filename))
         else:
-            data = self.wopener(filename, 'r').read()
+            data = self.wopener.read(filename)
         return self._filter(self._encodefilterpats, filename, data)
 
     def wwrite(self, filename, data, flags):
@@ -660,7 +661,7 @@ class localrepository(repo.repository):
         if 'l' in flags:
             self.wopener.symlink(data, filename)
         else:
-            self.wopener(filename, 'w').write(data)
+            fp = self.wopener.write(filename, data)
             if 'x' in flags:
                 util.set_flags(self.wjoin(filename), False, True)
 
@@ -679,13 +680,14 @@ class localrepository(repo.repository):
 
         # save dirstate for rollback
         try:
-            ds = self.opener("dirstate").read()
+            ds = self.opener.read("dirstate")
         except IOError:
             ds = ""
-        self.opener("journal.dirstate", "w").write(ds)
-        self.opener("journal.branch", "w").write(
-            encoding.fromlocal(self.dirstate.branch()))
-        self.opener("journal.desc", "w").write("%d\n%s\n" % (len(self), desc))
+        self.opener.write("journal.dirstate", ds)
+        self.opener.write("journal.branch",
+                          encoding.fromlocal(self.dirstate.branch()))
+        self.opener.write("journal.desc",
+                          "%d\n%s\n" % (len(self), desc))
 
         renames = [(self.sjoin("journal"), self.sjoin("undo")),
                    (self.join("journal.dirstate"), self.join("undo.dirstate")),
@@ -720,7 +722,7 @@ class localrepository(repo.repository):
             lock = self.lock()
             if os.path.exists(self.sjoin("undo")):
                 try:
-                    args = self.opener("undo.desc", "r").read().splitlines()
+                    args = self.opener.read("undo.desc").splitlines()
                     if len(args) >= 3 and self.ui.verbose:
                         desc = _("repository tip rolled back to revision %s"
                                  " (undo %s: %s)\n") % (
@@ -741,7 +743,7 @@ class localrepository(repo.repository):
                     util.rename(self.join('undo.bookmarks'),
                                 self.join('bookmarks'))
                 try:
-                    branch = self.opener("undo.branch").read()
+                    branch = self.opener.read("undo.branch")
                     self.dirstate.setbranch(branch)
                 except IOError:
                     self.ui.warn(_("named branch could not be reset, "
