@@ -5,6 +5,10 @@ parsed = dispatch._parseconfig(testui, [
     'values.string=string value',
     'values.bool1=true',
     'values.bool2=false',
+    'values.boolinvalid=foo',
+    'values.int1=42',
+    'values.int2=-42',
+    'values.intinvalid=foo',
     'lists.list1=foo',
     'lists.list2=foo bar baz',
     'lists.list3=alice, bob',
@@ -23,7 +27,7 @@ parsed = dispatch._parseconfig(testui, [
     'lists.list16="longer quotation" with "no ending quotation',
     'lists.list17=this is \\" "not a quotation mark"',
     'lists.list18=\n \n\nding\ndong',
-])
+    ])
 
 print repr(testui.configitems('values'))
 print repr(testui.configitems('lists'))
@@ -42,6 +46,9 @@ print repr(testui.configbool('values', 'bool2'))
 print repr(testui.configbool('values', 'bool2', True))
 print repr(testui.configbool('values', 'unknown'))
 print repr(testui.configbool('values', 'unknown', True))
+print "---"
+print repr(testui.configint('values', 'int1'))
+print repr(testui.configint('values', 'int2'))
 print "---"
 print repr(testui.configlist('lists', 'list1'))
 print repr(testui.configlist('lists', 'list2'))
@@ -79,3 +86,13 @@ def function():
 # values that aren't strings should work
 testui.setconfig('hook', 'commit', function)
 print function == testui.config('hook', 'commit')
+
+# invalid values
+try:
+    testui.configbool('values', 'boolinvalid')
+except error.ConfigError:
+    print 'boolinvalid'
+try:
+    testui.configint('values', 'intinvalid')
+except error.ConfigError:
+    print 'intinvalid'

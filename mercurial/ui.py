@@ -164,6 +164,26 @@ class ui(object):
         return v
 
     def configbool(self, section, name, default=False, untrusted=False):
+        """parse a configuration element as a boolean
+
+        >>> u = ui(); s = 'foo'
+        >>> u.setconfig(s, 'true', 'yes')
+        >>> u.configbool(s, 'true')
+        True
+        >>> u.setconfig(s, 'false', 'no')
+        >>> u.configbool(s, 'false')
+        False
+        >>> u.configbool(s, 'unknown')
+        False
+        >>> u.configbool(s, 'unknown', True)
+        True
+        >>> u.setconfig(s, 'invalid', 'somevalue')
+        >>> u.configbool(s, 'invalid')
+        Traceback (most recent call last):
+            ...
+        ConfigError: foo.invalid is not a boolean ('somevalue')
+        """
+
         v = self.config(section, name, None, untrusted)
         if v is None:
             return default
@@ -171,12 +191,47 @@ class ui(object):
             return v
         b = util.parsebool(v)
         if b is None:
-            raise error.ConfigError(_("%s.%s not a boolean ('%s')")
+            raise error.ConfigError(_("%s.%s is not a boolean ('%s')")
                                     % (section, name, v))
         return b
 
+    def configint(self, section, name, default=None, untrusted=False):
+        """parse a configuration element as an integer
+
+        >>> u = ui(); s = 'foo'
+        >>> u.setconfig(s, 'int1', '42')
+        >>> u.configint(s, 'int1')
+        42
+        >>> u.setconfig(s, 'int2', '-42')
+        >>> u.configint(s, 'int2')
+        -42
+        >>> u.configint(s, 'unknown', 7)
+        7
+        >>> u.setconfig(s, 'invalid', 'somevalue')
+        >>> u.configint(s, 'invalid')
+        Traceback (most recent call last):
+            ...
+        ConfigError: foo.invalid is not an integer ('somevalue')
+        """
+
+        v = self.config(section, name, None, untrusted)
+        if v is None:
+            return default
+        try:
+            return int(v)
+        except ValueError:
+            raise error.ConfigError(_("%s.%s is not an integer ('%s')")
+                                    % (section, name, v))
+
     def configlist(self, section, name, default=None, untrusted=False):
-        """Return a list of comma/space separated strings"""
+        """parse a configuration element as a list of comma/space separated
+        strings
+
+        >>> u = ui(); s = 'foo'
+        >>> u.setconfig(s, 'list1', 'this,is "a small" ,test')
+        >>> u.configlist(s, 'list1')
+        ['this', 'is', 'a small', 'test']
+        """
 
         def _parse_plain(parts, s, offset):
             whitespace = False
