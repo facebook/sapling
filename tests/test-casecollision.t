@@ -31,4 +31,10 @@ test file addition with colliding case
   $ hg st
   A A
   A a
+
+case changing rename must not warn or abort
+
+  $ echo c > c
+  $ hg ci -qAmx
+  $ hg mv c C
   $ cd ..
