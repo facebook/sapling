@@ -104,7 +104,7 @@ pull and merge from test-a again
   >>>>>>> other
   three
 
-  $ hg debugindex .hg/store/data/test.txt.i
+  $ hg debugindex test.txt
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       7      0       0 01365c4cca56 000000000000 000000000000
        1         7       9      1       1 7b013192566a 01365c4cca56 000000000000

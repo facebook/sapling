@@ -52,7 +52,7 @@ we should see one log entry for a
 
 this should show a revision linked to changeset 0
 
-  $ hg debugindex .hg/store/data/a.i
+  $ hg debugindex a
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       0 b789fdd96dc2 000000000000 000000000000
 
@@ -68,13 +68,13 @@ we should see one log entry for b
 
 this should show a revision linked to changeset 1
 
-  $ hg debugindex .hg/store/data/b.i
+  $ hg debugindex b
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0      65      0       1 37d9b5d994ea 000000000000 000000000000
 
 this should show the rename information in the metadata
 
-  $ hg debugdata .hg/store/data/b.d 0 | head -3 | tail -2
+  $ hg debugdata b 0 | head -3 | tail -2
   copy: a
   copyrev: b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 

@@ -48,6 +48,6 @@ this should not mention bar:
   
   
 
-  $ hg debugindex .hg/store/data/bar.i
+  $ hg debugindex bar
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       5      0       1 b004912a8510 000000000000 000000000000

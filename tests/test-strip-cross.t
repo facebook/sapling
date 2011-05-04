@@ -32,60 +32,62 @@ test stripping of filelogs where the linkrev doesn't always increase
   $ commit '012' 'manifest-file'
   $ cd ..
   $ hg clone -q -U -r -1 -r -2 -r -3 -r -4 -r -6 orig crossed
-  $ for i in crossed/.hg/store/00manifest.i crossed/.hg/store/data/*.i; do
-  >     echo $i
-  >     hg debugindex $i
-  >     echo
-  > done
-  crossed/.hg/store/00manifest.i
+  $ cd crossed
+  $ hg debugindex .hg/store/00manifest.i
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0     112      0       0 6f105cbb914d 000000000000 000000000000
        1       112      56      1       3 1b55917b3699 000000000000 000000000000
        2       168     123      1       1 8f3d04e263e5 000000000000 000000000000
        3       291     122      1       2 f0ef8726ac4f 000000000000 000000000000
        4       413      87      4       4 0b76e38b4070 000000000000 000000000000
-  
-  crossed/.hg/store/data/012.i
+
+  $ for i in 012 021 102 120 201 210 manifest-file; do
+  >     echo $i
+  >     hg debugindex $i
+  >     echo
+  > done
+  012
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       0 b8e02f643373 000000000000 000000000000
        1         3       3      1       1 5d9299349fc0 000000000000 000000000000
        2         6       3      2       2 2661d26c6496 000000000000 000000000000
   
-  crossed/.hg/store/data/021.i
+  021
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       0 b8e02f643373 000000000000 000000000000
        1         3       3      1       2 5d9299349fc0 000000000000 000000000000
        2         6       3      2       1 2661d26c6496 000000000000 000000000000
   
-  crossed/.hg/store/data/102.i
+  102
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       1 b8e02f643373 000000000000 000000000000
        1         3       3      1       0 5d9299349fc0 000000000000 000000000000
        2         6       3      2       2 2661d26c6496 000000000000 000000000000
   
-  crossed/.hg/store/data/120.i
+  120
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       1 b8e02f643373 000000000000 000000000000
        1         3       3      1       2 5d9299349fc0 000000000000 000000000000
        2         6       3      2       0 2661d26c6496 000000000000 000000000000
   
-  crossed/.hg/store/data/201.i
+  201
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       2 b8e02f643373 000000000000 000000000000
        1         3       3      1       0 5d9299349fc0 000000000000 000000000000
        2         6       3      2       1 2661d26c6496 000000000000 000000000000
   
-  crossed/.hg/store/data/210.i
+  210
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       2 b8e02f643373 000000000000 000000000000
        1         3       3      1       1 5d9299349fc0 000000000000 000000000000
        2         6       3      2       0 2661d26c6496 000000000000 000000000000
   
-  crossed/.hg/store/data/manifest-file.i
+  manifest-file
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       3 b8e02f643373 000000000000 000000000000
        1         3       3      1       4 5d9299349fc0 000000000000 000000000000
   
+  $ cd ..
   $ for i in 0 1 2 3 4; do
   >     hg clone -q -U --pull crossed $i
   >     echo "% Trying to strip revision $i"
