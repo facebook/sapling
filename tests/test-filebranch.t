@@ -99,7 +99,7 @@ log should show foo and quux changed:
 
 foo: we should have a merge here:
 
-  $ hg debugindex .hg/store/data/foo.i
+  $ hg debugindex foo
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       0 b8e02f643373 000000000000 000000000000
        1         3       4      1       1 2ffeddde1b65 b8e02f643373 000000000000
@@ -108,21 +108,21 @@ foo: we should have a merge here:
 
 bar: we should not have a merge here:
 
-  $ hg debugindex .hg/store/data/bar.i
+  $ hg debugindex bar
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       0 b8e02f643373 000000000000 000000000000
        1         3       4      1       2 33d1fb69067a b8e02f643373 000000000000
 
 baz: we should not have a merge here:
 
-  $ hg debugindex .hg/store/data/baz.i
+  $ hg debugindex baz
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       0 b8e02f643373 000000000000 000000000000
        1         3       4      1       1 2ffeddde1b65 b8e02f643373 000000000000
 
 quux: we should not have a merge here:
 
-  $ hg debugindex .hg/store/data/quux.i
+  $ hg debugindex quux
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       3      0       0 b8e02f643373 000000000000 000000000000
        1         3       5      1       3 6128c0f33108 b8e02f643373 000000000000

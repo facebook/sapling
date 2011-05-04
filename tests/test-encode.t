@@ -25,9 +25,9 @@ no changes
 
 check contents in repo are encoded
 
-  $ hg debugdata .hg/store/data/a.gz.d 0
+  $ hg debugdata a.gz 0
   this is a test
-  $ hg debugdata .hg/store/data/not.gz.d 0
+  $ hg debugdata not.gz 0
   THIS IS A TEST
 
 check committed content was decoded

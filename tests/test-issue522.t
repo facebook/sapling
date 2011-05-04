@@ -48,7 +48,7 @@ revision.
   $ hg manifest --debug | grep foo
   c6fc755d7e68f49f880599da29f15add41f42f5a 644   foo
 
-  $ hg debugindex .hg/store/data/foo.i
+  $ hg debugindex foo
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       5      0       0 2ed2a3912a0b 000000000000 000000000000
        1         5       9      1       1 6f4310b00b9a 2ed2a3912a0b 000000000000

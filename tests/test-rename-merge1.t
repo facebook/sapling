@@ -67,7 +67,7 @@
 
   $ hg ci -m "merge"
 
-  $ hg debugindex .hg/store/data/b.i
+  $ hg debugindex b
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0      67      0       1 57eacc201a7f 000000000000 000000000000
        1        67      72      1       3 4727ba907962 000000000000 57eacc201a7f
