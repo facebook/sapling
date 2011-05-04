@@ -44,7 +44,7 @@ def walkrepodirs(dirstate, absroot):
 def _explain_watch_limit(ui, dirstate, rootabs):
     path = '/proc/sys/fs/inotify/max_user_watches'
     try:
-        limit = int(file(path).read())
+        limit = int(util.readfile(path))
     except IOError, err:
         if err.errno != errno.ENOENT:
             raise

@@ -27,7 +27,9 @@ class monotone_source(converter_source, commandline):
         if not os.path.exists(os.path.join(path, '_MTN')):
             # Could be a monotone repository (SQLite db file)
             try:
-                header = file(path, 'rb').read(16)
+                f = file(path, 'rb')
+                header = f.read(16)
+                f.close()
             except:
                 header = ''
             if header != 'SQLite format 3\x00':
