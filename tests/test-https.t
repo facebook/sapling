@@ -8,7 +8,7 @@ Certificates created with:
 Can be dumped with:
  openssl x509 -in pub.pem -text
 
-  $ cat << EOT > priv.pem 
+  $ cat << EOT > priv.pem
   > -----BEGIN PRIVATE KEY-----
   > MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEApjCWeYGrIa/Vo7LH
   > aRF8ou0tbgHKE33Use/whCnKEUm34rDaXQd4lxxX6aDWg06n9tiVStAKTgQAHJY8
@@ -21,7 +21,7 @@ Can be dumped with:
   > -----END PRIVATE KEY-----
   > EOT
 
-  $ cat << EOT > pub.pem 
+  $ cat << EOT > pub.pem
   > -----BEGIN CERTIFICATE-----
   > MIIBqzCCAVWgAwIBAgIJANAXFFyWjGnRMA0GCSqGSIb3DQEBBQUAMDExEjAQBgNV
   > BAMMCWxvY2FsaG9zdDEbMBkGCSqGSIb3DQEJARYMaGdAbG9jYWxob3N0MB4XDTEw
@@ -37,7 +37,7 @@ Can be dumped with:
   $ cat priv.pem pub.pem >> server.pem
   $ PRIV=`pwd`/server.pem
 
-  $ cat << EOT > pub-other.pem 
+  $ cat << EOT > pub-other.pem
   > -----BEGIN CERTIFICATE-----
   > MIIBqzCCAVWgAwIBAgIJALwZS731c/ORMA0GCSqGSIb3DQEBBQUAMDExEjAQBgNV
   > BAMMCWxvY2FsaG9zdDEbMBkGCSqGSIb3DQEJARYMaGdAbG9jYWxob3N0MB4XDTEw
@@ -53,7 +53,7 @@ Can be dumped with:
 
 pub.pem patched with other notBefore / notAfter:
 
-  $ cat << EOT > pub-not-yet.pem 
+  $ cat << EOT > pub-not-yet.pem
   > -----BEGIN CERTIFICATE-----
   > MIIBqzCCAVWgAwIBAgIJANAXFFyWjGnRMA0GCSqGSIb3DQEBBQUAMDExEjAQBgNVBAMMCWxvY2Fs
   > aG9zdDEbMBkGCSqGSIb3DQEJARYMaGdAbG9jYWxob3N0MB4XDTM1MDYwNTIwMzAxNFoXDTM1MDYw
@@ -67,7 +67,7 @@ pub.pem patched with other notBefore / notAfter:
   > EOT
   $ cat priv.pem pub-not-yet.pem > server-not-yet.pem
 
-  $ cat << EOT > pub-expired.pem 
+  $ cat << EOT > pub-expired.pem
   > -----BEGIN CERTIFICATE-----
   > MIIBqzCCAVWgAwIBAgIJANAXFFyWjGnRMA0GCSqGSIb3DQEBBQUAMDExEjAQBgNVBAMMCWxvY2Fs
   > aG9zdDEbMBkGCSqGSIb3DQEJARYMaGdAbG9jYWxob3N0MB4XDTEwMTAxNDIwMzAxNFoXDTEwMTAx
@@ -198,7 +198,7 @@ cacert mismatch
 
 Test server cert which isn't valid yet
 
-  $ hg -R test serve -p $HGPORT1 -d --pid-file=hg1.pid --certificate=server-not-yet.pem  
+  $ hg -R test serve -p $HGPORT1 -d --pid-file=hg1.pid --certificate=server-not-yet.pem
   $ cat hg1.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts=pub-not-yet.pem https://localhost:$HGPORT1/
   abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
@@ -206,7 +206,7 @@ Test server cert which isn't valid yet
 
 Test server cert which no longer is valid
 
-  $ hg -R test serve -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem  
+  $ hg -R test serve -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem
   $ cat hg2.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts=pub-expired.pem https://localhost:$HGPORT2/
   abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
