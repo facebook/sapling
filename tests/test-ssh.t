@@ -2,33 +2,6 @@
 
 This test tries to exercise the ssh functionality with a dummy script
 
-  $ cat <<EOF > dummyssh
-  > import sys
-  > import os
-  > 
-  > os.chdir(os.path.dirname(sys.argv[0]))
-  > if sys.argv[1] != "user@dummy":
-  >     sys.exit(-1)
-  > 
-  > if not os.path.exists("dummyssh"):
-  >     sys.exit(-1)
-  > 
-  > os.environ["SSH_CLIENT"] = "127.0.0.1 1 2"
-  > 
-  > log = open("dummylog", "ab")
-  > log.write("Got arguments")
-  > for i, arg in enumerate(sys.argv[1:]):
-  >     log.write(" %d:%s" % (i+1, arg))
-  > log.write("\n")
-  > log.close()
-  > r = os.system(sys.argv[2])
-  > sys.exit(bool(r))
-  > EOF
-  $ cat <<EOF > badhook
-  > import sys
-  > sys.stdout.write("KABOOM\n")
-  > EOF
-
 creating 'remote' repo
 
   $ hg init remote
@@ -47,21 +20,21 @@ creating 'remote' repo
 
 repo not found error
 
-  $ hg clone -e "python ./dummyssh" ssh://user@dummy/nonexistent local
+  $ hg clone -e "python $TESTDIR/dummyssh" ssh://user@dummy/nonexistent local
   remote: abort: There is no Mercurial repository here (.hg not found)!
   abort: no suitable response from remote hg!
   [255]
 
 non-existent absolute path
 
-  $ hg clone -e "python ./dummyssh" ssh://user@dummy//`pwd`/nonexistent local
+  $ hg clone -e "python $TESTDIR/dummyssh" ssh://user@dummy//`pwd`/nonexistent local
   remote: abort: There is no Mercurial repository here (.hg not found)!
   abort: no suitable response from remote hg!
   [255]
 
 clone remote via stream
 
-  $ hg clone -e "python ./dummyssh" --uncompressed ssh://user@dummy/remote local-stream
+  $ hg clone -e "python $TESTDIR/dummyssh" --uncompressed ssh://user@dummy/remote local-stream
   streaming all changes
   4 files to transfer, 392 bytes of data
   transferred 392 bytes in * seconds (*/sec) (glob)
@@ -78,7 +51,7 @@ clone remote via stream
 
 clone remote via pull
 
-  $ hg clone -e "python ./dummyssh" ssh://user@dummy/remote local
+  $ hg clone -e "python $TESTDIR/dummyssh" ssh://user@dummy/remote local
   requesting all changes
   adding changesets
   adding manifests
@@ -103,7 +76,7 @@ empty default pull
 
   $ hg paths
   default = ssh://user@dummy/remote
-  $ hg pull -e "python ../dummyssh"
+  $ hg pull -e "python $TESTDIR/dummyssh"
   pulling from ssh://user@dummy/remote
   searching for changes
   no changes found
@@ -117,7 +90,7 @@ updating rc
 
   $ echo "default-push = ssh://user@dummy/remote" >> .hg/hgrc
   $ echo "[ui]" >> .hg/hgrc
-  $ echo "ssh = python ../dummyssh" >> .hg/hgrc
+  $ echo "ssh = python $TESTDIR/dummyssh" >> .hg/hgrc
 
 find outgoing
 
@@ -133,7 +106,7 @@ find outgoing
 
 find incoming on the remote side
 
-  $ hg incoming -R ../remote -e "python ../dummyssh" ssh://user@dummy/local
+  $ hg incoming -R ../remote -e "python $TESTDIR/dummyssh" ssh://user@dummy/local
   comparing with ssh://user@dummy/local
   searching for changes
   changeset:   1:a28a9d1a809c
@@ -145,7 +118,7 @@ find incoming on the remote side
 
 find incoming on the remote side (using absolute path)
 
-  $ hg incoming -R ../remote -e "python ../dummyssh" "ssh://user@dummy/`pwd`"
+  $ hg incoming -R ../remote -e "python $TESTDIR/dummyssh" "ssh://user@dummy/`pwd`"
   comparing with ssh://user@dummy/$TESTTMP/local
   searching for changes
   changeset:   1:a28a9d1a809c
@@ -190,7 +163,7 @@ check remote tip
 test pushkeys and bookmarks
 
   $ cd ../local
-  $ hg debugpushkey --config ui.ssh="python ../dummyssh" ssh://user@dummy/remote namespaces
+  $ hg debugpushkey --config ui.ssh="python $TESTDIR/dummyssh" ssh://user@dummy/remote namespaces
   bookmarks	
   namespaces	
   $ hg book foo -r 0
@@ -203,7 +176,7 @@ test pushkeys and bookmarks
   searching for changes
   no changes found
   exporting bookmark foo
-  $ hg debugpushkey --config ui.ssh="python ../dummyssh" ssh://user@dummy/remote bookmarks
+  $ hg debugpushkey --config ui.ssh="python $TESTDIR/dummyssh" ssh://user@dummy/remote bookmarks
   foo	1160648e36cec0054048a7edc4110c6f84fde594
   $ hg book -f foo
   $ hg push --traceback
@@ -231,8 +204,13 @@ test pushkeys and bookmarks
 
 a bad, evil hook that prints to stdout
 
+  $ cat <<EOF > $TESTTMP/badhook
+  > import sys
+  > sys.stdout.write("KABOOM\n")
+  > EOF
+
   $ echo '[hooks]' >> ../remote/.hg/hgrc
-  $ echo 'changegroup.stdout = python ../badhook' >> ../remote/.hg/hgrc
+  $ echo "changegroup.stdout = python $TESTTMP/badhook" >> ../remote/.hg/hgrc
   $ echo r > r
   $ hg ci -A -m z r
 
@@ -267,7 +245,7 @@ clone bookmarks
   $ hg -R ../remote bookmark test
   $ hg -R ../remote bookmarks
    * test                      2:6c0482d977a3
-  $ hg clone -e "python ../dummyssh" ssh://user@dummy/remote local-bookmarks
+  $ hg clone -e "python $TESTDIR/dummyssh" ssh://user@dummy/remote local-bookmarks
   requesting all changes
   adding changesets
   adding manifests

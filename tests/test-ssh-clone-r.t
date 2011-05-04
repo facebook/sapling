@@ -1,29 +1,6 @@
 This test tries to exercise the ssh functionality with a dummy script
 
-  $ cat <<EOF > dummyssh
-  > import sys
-  > import os
-  > 
-  > os.chdir(os.path.dirname(sys.argv[0]))
-  > if sys.argv[1] != "user@dummy":
-  >     sys.exit(-1)
-  > 
-  > if not os.path.exists("dummyssh"):
-  >     sys.exit(-1)
-  > 
-  > os.environ["SSH_CLIENT"] = "127.0.0.1 1 2"
-  > 
-  > log = open("dummylog", "ab")
-  > log.write("Got arguments")
-  > for i, arg in enumerate(sys.argv[1:]):
-  >     log.write(" %d:%s" % (i+1, arg))
-  > log.write("\n")
-  > log.close()
-  > r = os.system(sys.argv[2])
-  > sys.exit(bool(r))
-  > EOF
-
-creating 'remote
+creating 'remote' repo
 
   $ hg init remote
   $ cd remote
@@ -40,7 +17,7 @@ creating 'remote
 clone remote via stream
 
   $ for i in 0 1 2 3 4 5 6 7 8; do
-  >    hg clone -e "python ./dummyssh" --uncompressed -r "$i" ssh://user@dummy/remote test-"$i"
+  >    hg clone -e "python $TESTDIR/dummyssh" --uncompressed -r "$i" ssh://user@dummy/remote test-"$i"
   >    if cd test-"$i"; then
   >       hg verify
   >       cd ..
@@ -162,7 +139,7 @@ clone remote via stream
   4 files, 9 changesets, 7 total revisions
   $ cd ..
   $ cd test-1
-  $ hg pull -e "python ../dummyssh" -r 4 ssh://user@dummy/remote
+  $ hg pull -e "python $TESTDIR/dummyssh" -r 4 ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
   adding changesets
@@ -176,7 +153,7 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 2 total revisions
-  $ hg pull -e "python ../dummyssh" ssh://user@dummy/remote
+  $ hg pull -e "python $TESTDIR/dummyssh" ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
   adding changesets
@@ -186,7 +163,7 @@ clone remote via stream
   (run 'hg update' to get a working copy)
   $ cd ..
   $ cd test-2
-  $ hg pull -e "python ../dummyssh" -r 5 ssh://user@dummy/remote
+  $ hg pull -e "python $TESTDIR/dummyssh" -r 5 ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
   adding changesets
@@ -200,7 +177,7 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 5 changesets, 3 total revisions
-  $ hg pull -e "python ../dummyssh" ssh://user@dummy/remote
+  $ hg pull -e "python $TESTDIR/dummyssh" ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
   adding changesets
