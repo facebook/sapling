@@ -205,7 +205,7 @@ Show all commands + options
   archive: no-decode, prefix, rev, type, subrepos, include, exclude
   backout: merge, parent, tool, rev, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate
-  bookmarks: force, rev, delete, rename
+  bookmarks: force, rev, delete, rename, inactive
   branch: force, clean
   branches: active, closed
   bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure

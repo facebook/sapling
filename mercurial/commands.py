@@ -539,6 +539,9 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if not mark:
             raise util.Abort(_("bookmark names cannot consist entirely of "
                                "whitespace"))
+        if inactive and mark == repo._bookmarkcurrent:
+            bookmarks.setcurrent(repo, None)
+            return
         if mark in marks and not force:
             raise util.Abort(_("bookmark '%s' already exists "
                                "(use -f to force)") % mark)
