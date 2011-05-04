@@ -917,6 +917,9 @@ def runchildren(options, tests):
         name = '--' + opt.replace('_', '-')
         if value is True:
             opts.append(name)
+        elif isinstance(value, list):
+            for v in value:
+                opts.append(name + '=' + str(v))
         elif value is not None:
             opts.append(name + '=' + str(value))
 
