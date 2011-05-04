@@ -365,26 +365,27 @@ class fncache(object):
             self._load()
         return iter(self.entries)
 
+class _fncacheopener(scmutil.abstractopener):
+    def __init__(self, op, fnc, encode):
+        self.opener = op
+        self.fncache = fnc
+        self.encode = encode
+
+    def __call__(self, path, mode='r', *args, **kw):
+        if mode not in ('r', 'rb') and path.startswith('data/'):
+            self.fncache.add(path)
+        return self.opener(self.encode(path), mode, *args, **kw)
+
 class fncachestore(basicstore):
     def __init__(self, path, openertype, encode):
         self.encode = encode
         self.path = path + '/store'
         self.createmode = _calcmode(self.path)
-
-        storeself = self
-
-        class fncacheopener(openertype):
-            def __call__(self, path, mode='r', *args, **kw):
-                if mode not in ('r', 'rb') and path.startswith('data/'):
-                    fnc.add(path)
-                return openertype.__call__(self, storeself.encode(path), mode,
-                                           *args, **kw)
-
-        op = fncacheopener(self.path)
+        op = openertype(self.path)
         op.createmode = self.createmode
         fnc = fncache(op)
         self.fncache = fnc
-        self.opener = op
+        self.opener = _fncacheopener(op, fnc, encode)
 
     def join(self, f):
         return self.path + '/' + self.encode(f)
