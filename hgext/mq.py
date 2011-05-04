@@ -1127,7 +1127,7 @@ class queue(object):
                 self.ui.warn(_('patch series already fully applied\n'))
                 return 1
             if not force:
-                self.check_localchanges(repo)
+                self.check_localchanges(repo, refresh=self.applied)
 
             if exact:
                 if move:

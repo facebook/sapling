@@ -1271,7 +1271,7 @@ test qpush with --force, issue1087
 qpush should fail, local changes
 
   $ hg qpush
-  abort: local changes found, refresh first
+  abort: local changes found
   [255]
 
 
@@ -1317,7 +1317,7 @@ apply force, should not discard changes with empty patch
 qpush should fail, local changes
 
   $ hg qpush
-  abort: local changes found, refresh first
+  abort: local changes found
   [255]
 
 

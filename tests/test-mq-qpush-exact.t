@@ -163,7 +163,7 @@ qpush --exact --force with changes to an unpatched file
   $ hg update 1 -q
   $ echo c0 >> f0
   $ hg qpush -e
-  abort: local changes found, refresh first
+  abort: local changes found
   [255]
   $ hg qpush -ef
   applying p0
@@ -178,7 +178,7 @@ qpush --exact --force with changes to an unpatched file
   $ hg update 1 -q
   $ echo c0 >> f0
   $ hg qpush -e p1
-  abort: local changes found, refresh first
+  abort: local changes found
   [255]
   $ hg qpush -e p1 -f
   applying p0
@@ -197,7 +197,7 @@ qpush --exact --force with changes to a patched file
   $ echo cp0-bad >> fp0
   $ hg add fp0
   $ hg qpush -e
-  abort: local changes found, refresh first
+  abort: local changes found
   [255]
   $ hg qpush -ef
   applying p0
@@ -223,7 +223,7 @@ qpush --exact --force with changes to a patched file
   $ echo cp1-bad >> fp1
   $ hg add fp1
   $ hg qpush -e p1
-  abort: local changes found, refresh first
+  abort: local changes found
   [255]
   $ hg qpush -e p1 -f
   applying p0
