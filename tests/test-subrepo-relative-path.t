@@ -67,3 +67,37 @@ subrepo debug for 'main' clone
    revision 863c1745b441bd97a8c4a096e87793073f4fb215
 
   $ "$TESTDIR/killdaemons.py"
+
+subrepo paths with ssh urls
+
+  $ cp $TESTDIR/dummyssh $BINDIR/ssh
+
+  $ hg clone ssh://user@dummy/cloned sshclone
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 3 changes to 3 files
+  updating to branch default
+  pulling subrepo sub from ssh://user@dummy/sub
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg -R sshclone push ssh://user@dummy/$TESTTMP/cloned
+  pushing to ssh://user@dummy/$TESTTMP/cloned
+  pushing subrepo sub to ssh://user@dummy/$TESTTMP/sub
+  searching for changes
+  no changes found
+  searching for changes
+  no changes found
+
+  $ cat dummylog
+  Got arguments 1:user@dummy 2:hg -R cloned serve --stdio
+  Got arguments 1:user@dummy 2:hg -R sub serve --stdio
+  Got arguments 1:user@dummy 2:hg -R $TESTTMP/cloned serve --stdio
+  Got arguments 1:user@dummy 2:hg -R $TESTTMP/sub serve --stdio
+  $ rm $BINDIR/ssh
