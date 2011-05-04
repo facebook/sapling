@@ -661,7 +661,7 @@ class localrepository(repo.repository):
         if 'l' in flags:
             self.wopener.symlink(data, filename)
         else:
-            fp = self.wopener.write(filename, data)
+            self.wopener.write(filename, data)
             if 'x' in flags:
                 util.set_flags(self.wjoin(filename), False, True)
 

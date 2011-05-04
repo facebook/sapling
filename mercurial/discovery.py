@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import util, error, setdiscovery, treediscovery
+import util, setdiscovery, treediscovery
 
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, anyincoming, heads) used to identify the common
