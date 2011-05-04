@@ -1,4 +1,4 @@
-[('string', 'string value'), ('bool1', 'true'), ('bool2', 'false')]
+[('string', 'string value'), ('bool1', 'true'), ('bool2', 'false'), ('boolinvalid', 'foo'), ('int1', '42'), ('int2', '-42'), ('intinvalid', 'foo')]
 [('list1', 'foo'), ('list2', 'foo bar baz'), ('list3', 'alice, bob'), ('list4', 'foo bar baz alice, bob'), ('list5', 'abc d"ef"g "hij def"'), ('list6', '"hello world", "how are you?"'), ('list7', 'Do"Not"Separate'), ('list8', '"Do"Separate'), ('list9', '"Do\\"NotSeparate"'), ('list10', 'string "with extraneous" quotation mark"'), ('list11', 'x, y'), ('list12', '"x", "y"'), ('list13', '""" key = "x", "y" """'), ('list14', ',,,,     '), ('list15', '" just with starting quotation'), ('list16', '"longer quotation" with "no ending quotation'), ('list17', 'this is \\" "not a quotation mark"'), ('list18', '\n \n\nding\ndong')]
 ---
 'string value'
@@ -6,12 +6,15 @@
 'false'
 None
 ---
-values.string not a boolean ('string value')
+values.string is not a boolean ('string value')
 True
 False
 False
 False
 True
+---
+42
+-42
 ---
 ['foo']
 ['foo', 'bar', 'baz']
@@ -42,3 +45,5 @@ True
 ['foo', 'bar']
 None
 True
+boolinvalid
+intinvalid

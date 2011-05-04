@@ -16,6 +16,9 @@ doctest.testmod(mercurial.match)
 import mercurial.store
 doctest.testmod(mercurial.store)
 
+import mercurial.ui
+doctest.testmod(mercurial.ui)
+
 import mercurial.url
 doctest.testmod(mercurial.url)
 
