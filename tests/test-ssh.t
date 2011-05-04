@@ -29,14 +29,14 @@ This test tries to exercise the ssh functionality with a dummy script
   > sys.stdout.write("KABOOM\n")
   > EOF
 
-creating 'remote
+creating 'remote' repo
 
   $ hg init remote
   $ cd remote
   $ echo this > foo
   $ echo this > fooO
   $ hg ci -A -m "init" foo fooO
-  $ echo <<EOF > .hg/hgrc
+  $ cat <<EOF > .hg/hgrc
   > [server]
   > uncompressed = True
   > 
@@ -298,6 +298,7 @@ results here)
   Got arguments 1:user@dummy 2:hg -R local serve --stdio
   Got arguments 1:user@dummy 2:hg -R $TESTTMP/local serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  changegroup-in-remote hook: HG_NODE=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
@@ -307,4 +308,5 @@ results here)
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  changegroup-in-remote hook: HG_NODE=1383141674ec756a6056f6a9097618482fe0f4a6 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
