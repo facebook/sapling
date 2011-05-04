@@ -295,7 +295,8 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
     "onlyheads" restricts the returned changes to those reachable from the
       specified heads.
     "bundlename", if given, stores the bundle to this file path permanently;
-      the returned "bundle" will be None.
+      otherwise it's stored to a temp file and gets deleted again when you call
+      the returned "cleanupfn".
     "force" indicates whether to proceed on unrelated repos.
 
     Returns a tuple (local, csets, cleanupfn):
@@ -348,7 +349,7 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
             bundlerepo.close()
         if bundle:
             os.unlink(bundle)
-        localrepo.close()
+        other.close()
 
     return (localrepo, csets, cleanup)
 
