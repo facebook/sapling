@@ -107,7 +107,7 @@ class patchheader(object):
                 elif line.startswith("# Date "):
                     date = line[7:]
                 elif line.startswith("# Parent "):
-                    parent = line[9:]
+                    parent = line[9:].lstrip()
                 elif line.startswith("# Branch "):
                     branch = line[9:]
                 elif line.startswith("# Node ID "):
