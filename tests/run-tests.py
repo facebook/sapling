@@ -104,6 +104,7 @@ defaults = {
     'jobs': ('HGTEST_JOBS', 1),
     'timeout': ('HGTEST_TIMEOUT', 180),
     'port': ('HGTEST_PORT', 20059),
+    'shell': ('HGTEST_SHELL', '/bin/sh'),
 }
 
 def parseargs():
@@ -149,6 +150,8 @@ def parseargs():
         help="retest failed tests")
     parser.add_option("-S", "--noskips", action="store_true",
         help="don't report skip tests verbosely")
+    parser.add_option("--shell", type="string",
+        help="shell to use (default: $%s or %s)" % defaults['shell'])
     parser.add_option("-t", "--timeout", type="int",
         help="kill errant tests after TIMEOUT seconds"
              " (default: $%s or %d)" % defaults['timeout'])
@@ -176,6 +179,10 @@ def parseargs():
     # jython is always pure
     if 'java' in sys.platform or '__pypy__' in sys.modules:
         options.pure = True
+
+    if not (os.path.isfile(options.shell) and
+            os.access(options.shell, os.X_OK)):
+        parser.error('--shell must be executable')
 
     if options.with_hg:
         if not (os.path.isfile(options.with_hg) and
@@ -527,7 +534,7 @@ def tsttest(test, wd, options, replacements):
             os.write(fd, l)
         os.close(fd)
 
-        cmd = '/bin/sh "%s"' % name
+        cmd = '"%s" "%s"' % (options.shell, name)
         vlog("# Running", cmd)
         exitcode, output = run(cmd, wd, options, replacements)
         # do not merge output if skipped, return hghave message instead
