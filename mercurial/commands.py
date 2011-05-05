@@ -608,8 +608,8 @@ def branch(ui, repo, label=None, **opts):
     elif label:
         if not opts.get('force') and label in repo.branchtags():
             if label not in [p.branch() for p in repo.parents()]:
-                raise util.Abort(_('a branch of the same name already exists'
-                                   " (use 'hg update' to switch to it)"))
+                raise util.Abort(_('a branch of the same name already exists'),
+                                 hint=_("use 'hg update' to switch to it"))
         repo.dirstate.setbranch(label)
         ui.status(_('marked working directory as branch %s\n') % label)
     else:
@@ -2924,28 +2924,27 @@ def merge(ui, repo, node=None, **opts):
         branch = repo[None].branch()
         bheads = repo.branchheads(branch)
         if len(bheads) > 2:
-            raise util.Abort(_(
-                "branch '%s' has %d heads - "
-                "please merge with an explicit rev\n"
-                "(run 'hg heads .' to see heads)")
-                % (branch, len(bheads)))
+            raise util.Abort(_("branch '%s' has %d heads - "
+                               "please merge with an explicit rev")
+                             % (branch, len(bheads)),
+                             hint=_("run 'hg heads .' to see heads"))
 
         parent = repo.dirstate.p1()
         if len(bheads) == 1:
             if len(repo.heads()) > 1:
-                raise util.Abort(_(
-                    "branch '%s' has one head - "
-                    "please merge with an explicit rev\n"
-                    "(run 'hg heads' to see all heads)")
-                    % branch)
+                raise util.Abort(_("branch '%s' has one head - "
+                                   "please merge with an explicit rev")
+                                 % branch,
+                                 hint=_("run 'hg heads' to see all heads"))
             msg = _('there is nothing to merge')
             if parent != repo.lookup(repo[None].branch()):
                 msg = _('%s - use "hg update" instead') % msg
             raise util.Abort(msg)
 
         if parent not in bheads:
-            raise util.Abort(_('working dir not at a head rev - '
-                               'use "hg update" or merge with an explicit rev'))
+            raise util.Abort(_('working directory not at a head revision'),
+                             hint=_("use 'hg update' or merge with an "
+                                    "explicit revision"))
         node = parent == bheads[0] and bheads[-1] or bheads[0]
     else:
         node = cmdutil.revsingle(repo, node).node()

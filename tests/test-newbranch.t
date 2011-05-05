@@ -19,7 +19,8 @@
 Branch shadowing:
 
   $ hg branch default
-  abort: a branch of the same name already exists (use 'hg update' to switch to it)
+  abort: a branch of the same name already exists
+  (use 'hg update' to switch to it)
   [255]
 
   $ hg branch -f default
