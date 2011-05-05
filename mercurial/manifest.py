@@ -41,7 +41,8 @@ class manifest(revlog.revlog):
     def readfast(self, node):
         '''use the faster of readdelta or read'''
         r = self.rev(node)
-        if self.deltaparent(r) in self.parentrevs(r):
+        deltaparent = self.deltaparent(r)
+        if deltaparent != revlog.nullrev and deltaparent in self.parentrevs(r):
             return self.readdelta(node)
         return self.read(node)
 

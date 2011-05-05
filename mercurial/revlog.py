@@ -830,11 +830,14 @@ class revlog(object):
 
     def deltaparent(self, rev):
         """return deltaparent of the given revision"""
-        return rev - 1
+        if self.index[rev][3] == rev:
+            return nullrev
+        else:
+            return rev - 1
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
-        if self.base(rev2) != rev2 and self.deltaparent(rev2) == rev1:
+        if rev1 != nullrev and self.deltaparent(rev2) == rev1:
             return self._chunk(rev2)
 
         return mdiff.textdiff(self.revision(self.node(rev1)),
