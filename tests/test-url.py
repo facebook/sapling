@@ -7,7 +7,7 @@ def check(a, b):
 def cert(cn):
     return dict(subject=((('commonName', cn),),))
 
-from mercurial.url import _verifycert
+from mercurial.sslutil import _verifycert
 
 # Test non-wildcard certificates
 check(_verifycert(cert('example.com'), 'example.com'),
