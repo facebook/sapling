@@ -168,8 +168,8 @@ def parseargs():
     parser.add_option('--extra-config-opt', action="append",
                       help='set the given config opt in the test hgrc')
 
-    for option, default in defaults.items():
-        defaults[option] = int(os.environ.get(*default))
+    for option, (envvar, default) in defaults.items():
+        defaults[option] = type(default)(os.environ.get(envvar, default))
     parser.set_defaults(**defaults)
     (options, args) = parser.parse_args()
 
