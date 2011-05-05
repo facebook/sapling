@@ -95,12 +95,13 @@ utestpats = [
   []
 ]
 
-for p, m in testpats[0] + testpats[1]:
-    if p.startswith('^'):
-        p = uprefix + p[1:]
-    else:
-        p = uprefix + p
-    utestpats.append((p, m))
+for i in [0, 1]:
+    for p, m in testpats[i]:
+        if p.startswith('^'):
+            p = uprefix + p[1:]
+        else:
+            p = uprefix + p
+        utestpats[i].append((p, m))
 
 utestfilters = [
     (r"( *)(#([^\n]*\S)?)", repcomment),

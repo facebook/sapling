@@ -11,7 +11,8 @@ Tests discovery against servers without getbundle support:
 
 Setup HTTP server control:
 
-  $ export remote=http://localhost:$HGPORT/
+  $ remote=http://localhost:$HGPORT/
+  $ export remote
   $ start() {
   >   echo '[web]' > $1/.hg/hgrc
   >   echo 'push_ssl = false' >> $1/.hg/hgrc
