@@ -203,7 +203,8 @@ def _abssource(repo, push=False, abort=True):
                 if parent[-1] == '/':
                     parent = parent[:-1]
                 r = urlparse.urlparse(parent + '/' + source)
-                if parent.startswith('ssh://'):
+                if parent.startswith('ssh://') and not r[1]:
+                    # Python before 2.6 parses ssh:// URLs wrong
                     host, path = r[2][2:].split('/', 1)
                     r2 = '//%s/%s' % (host, posixpath.normpath(path))
                 else:
