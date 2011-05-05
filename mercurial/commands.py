@@ -2925,18 +2925,18 @@ def merge(ui, repo, node=None, **opts):
         bheads = repo.branchheads(branch)
         if len(bheads) > 2:
             raise util.Abort(_(
-                'branch \'%s\' has %d heads - '
-                'please merge with an explicit rev\n'
-                '(run \'hg heads .\' to see heads)')
+                "branch '%s' has %d heads - "
+                "please merge with an explicit rev\n"
+                "(run 'hg heads .' to see heads)")
                 % (branch, len(bheads)))
 
         parent = repo.dirstate.p1()
         if len(bheads) == 1:
             if len(repo.heads()) > 1:
                 raise util.Abort(_(
-                    'branch \'%s\' has one head - '
-                    'please merge with an explicit rev\n'
-                    '(run \'hg heads\' to see all heads)')
+                    "branch '%s' has one head - "
+                    "please merge with an explicit rev\n"
+                    "(run 'hg heads' to see all heads)")
                     % branch)
             msg = _('there is nothing to merge')
             if parent != repo.lookup(repo[None].branch()):
@@ -4084,7 +4084,7 @@ def tag(ui, repo, name1, *names, **opts):
         raise util.Abort(_('tag names must be unique'))
     for n in names:
         if n in ['tip', '.', 'null']:
-            raise util.Abort(_('the name \'%s\' is reserved') % n)
+            raise util.Abort(_("the name '%s' is reserved") % n)
         if not n:
             raise util.Abort(_('tag names cannot consist entirely of whitespace'))
     if opts.get('rev') and opts.get('remove'):
@@ -4096,12 +4096,12 @@ def tag(ui, repo, name1, *names, **opts):
         expectedtype = opts.get('local') and 'local' or 'global'
         for n in names:
             if not repo.tagtype(n):
-                raise util.Abort(_('tag \'%s\' does not exist') % n)
+                raise util.Abort(_("tag '%s' does not exist") % n)
             if repo.tagtype(n) != expectedtype:
                 if expectedtype == 'global':
-                    raise util.Abort(_('tag \'%s\' is not a global tag') % n)
+                    raise util.Abort(_("tag '%s' is not a global tag") % n)
                 else:
-                    raise util.Abort(_('tag \'%s\' is not a local tag') % n)
+                    raise util.Abort(_("tag '%s' is not a local tag") % n)
         rev_ = nullid
         if not message:
             # we don't translate commit messages
@@ -4109,8 +4109,8 @@ def tag(ui, repo, name1, *names, **opts):
     elif not opts.get('force'):
         for n in names:
             if n in repo.tags():
-                raise util.Abort(_('tag \'%s\' already exists '
-                                   '(use -f to force)') % n)
+                raise util.Abort(_("tag '%s' already exists "
+                                   "(use -f to force)") % n)
     if not opts.get('local'):
         p1, p2 = repo.dirstate.parents()
         if p2 != nullid:
