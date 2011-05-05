@@ -2,10 +2,12 @@ Tests discovery against servers without getbundle support:
 
   $ CAP=getbundle
   $ . "$TESTDIR/notcapable"
-  $ echo '[ui]' >>$HGRCPATH
-  $ echo 'logtemplate="{rev} {node|short}: {desc} {branches}\\n"' >>$HGRCPATH
-  $ echo '[extensions]' >>$HGRCPATH
-  $ echo 'graphlog=' >>$HGRCPATH
+  $ cat >> $HGRCPATH <<EOF
+  > [ui]
+  > logtemplate="{rev} {node|short}: {desc} {branches}\n"
+  > [extensions]
+  > graphlog=
+  > EOF
 
 Setup HTTP server control:
 
