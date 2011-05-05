@@ -40,18 +40,24 @@ class basedag(object):
         raise NotImplementedError()
 
     def ancestorset(self, starts, stops=None):
-        '''set of all ancestors of starts (incl), but stop walk at stops (excl)'''
+        '''
+        set of all ancestors of starts (incl), but stop walk at stops (excl)
+        '''
         raise NotImplementedError()
 
     def descendantset(self, starts, stops=None):
-        '''set of all descendants of starts (incl), but stop walk at stops (excl)'''
+        '''
+        set of all descendants of starts (incl), but stop walk at stops (excl)
+        '''
         return self.inverse().ancestorset(starts, stops)
 
     def headsetofconnecteds(self, ixs):
-        '''subset of connected list of ixs so that no node has a descendant in it
+        '''
+        subset of connected list of ixs so that no node has a descendant in it
 
         By "connected list" we mean that if an ancestor and a descendant are in
-        the list, then so is at least one path connecting them.'''
+        the list, then so is at least one path connecting them.
+        '''
         raise NotImplementedError()
 
     def externalize(self, ix):

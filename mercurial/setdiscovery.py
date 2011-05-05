@@ -82,8 +82,8 @@ def findcommonheads(ui, local, remote,
                     initialsamplesize=100,
                     fullsamplesize=200,
                     abortwhenunrelated=True):
-    '''Return a tuple (common, anyincoming, remoteheads) used to identify missing
-    nodes from or in remote.
+    '''Return a tuple (common, anyincoming, remoteheads) used to identify
+    missing nodes from or in remote.
 
     shortcutlocal determines whether we try use direct access to localrepo if
     remote is actually local.
@@ -106,8 +106,8 @@ def findcommonheads(ui, local, remote,
             return [nullid], True, srvheadhashes
         return [nullid], False, []
 
-    # start actual discovery (we note this before the next "if" for compatibility
-    # reasons)
+    # start actual discovery (we note this before the next "if" for
+    # compatibility reasons)
     ui.status(_("searching for changes\n"))
 
     srvheads = dag.internalizeall(srvheadhashes, filterunknown=True)
