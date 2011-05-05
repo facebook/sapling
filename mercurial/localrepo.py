@@ -21,7 +21,7 @@ propertycache = util.propertycache
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey',
                         'known', 'getbundle'))
-    supportedformats = set(('revlogv1', 'parentdelta'))
+    supportedformats = set(('revlogv1',))
     supported = supportedformats | set(('store', 'fncache', 'shared',
                                         'dotencode'))
 
@@ -61,8 +61,6 @@ class localrepository(repo.repository):
                         '\0\0\0\2' # represents revlogv2
                         ' dummy changelog to prevent using the old repo layout'
                     )
-                if self.ui.configbool('format', 'parentdelta', False):
-                    requirements.append("parentdelta")
             else:
                 raise error.RepoError(_("repository %s not found") % path)
         elif create:
@@ -117,8 +115,6 @@ class localrepository(repo.repository):
     def _applyrequirements(self, requirements):
         self.requirements = requirements
         self.sopener.options = {}
-        if 'parentdelta' in requirements:
-            self.sopener.options['parentdelta'] = 1
 
     def _writerequirements(self):
         reqfile = self.opener("requires", "w")

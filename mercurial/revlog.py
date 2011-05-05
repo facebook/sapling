@@ -34,9 +34,8 @@ REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 REVLOGNG_FLAGS = REVLOGNGINLINEDATA | REVLOGSHALLOW
 
 # revlog index flags
-REVIDX_PARENTDELTA  = 1
 REVIDX_PUNCHED_FLAG = 2
-REVIDX_KNOWN_FLAGS = REVIDX_PUNCHED_FLAG | REVIDX_PARENTDELTA
+REVIDX_KNOWN_FLAGS = REVIDX_PUNCHED_FLAG
 
 # max size of revlog with inline data
 _maxinline = 131072
@@ -223,7 +222,6 @@ class revlog(object):
         self._chunkcache = (0, '')
         self.index = []
         self._shallowroot = shallowroot
-        self._parentdelta = 0
         self._pcache = {}
         self._nodecache = {nullid: nullrev}
         self._nodepos = None
@@ -233,8 +231,6 @@ class revlog(object):
             v = opener.options['defversion']
             if v & REVLOGNG:
                 v |= REVLOGNGINLINEDATA
-            if v & REVLOGNG and 'parentdelta' in opener.options:
-                self._parentdelta = 1
 
         if shallowroot:
             v |= REVLOGSHALLOW
@@ -834,11 +830,8 @@ class revlog(object):
         self._chunkcache = (0, '')
 
     def deltaparent(self, rev):
-        """return previous revision or parentrev according to flags"""
-        if self.flags(rev) & REVIDX_PARENTDELTA:
-            return self.parentrevs(rev)[0]
-        else:
-            return rev - 1
+        """return deltaparent of the given revision"""
+        return rev - 1
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
@@ -870,16 +863,10 @@ class revlog(object):
 
         # build delta chain
         chain = []
-        index = self.index # for performance
         iterrev = rev
-        e = index[iterrev]
         while iterrev != base and iterrev != cachedrev:
             chain.append(iterrev)
-            if e[0] & REVIDX_PARENTDELTA:
-                iterrev = e[5]
-            else:
-                iterrev -= 1
-            e = index[iterrev]
+            iterrev -= 1
         chain.reverse()
         base = iterrev
 
@@ -1018,11 +1005,6 @@ class revlog(object):
         # should we try to build a delta?
         if prev != nullrev:
             d = builddelta(prev)
-            if self._parentdelta and prev != p1r:
-                d2 = builddelta(p1r)
-                if d2 < d:
-                    d = d2
-                    flags = REVIDX_PARENTDELTA
             dist, l, data, base = d
 
         # full versions are inserted when the needed deltas
