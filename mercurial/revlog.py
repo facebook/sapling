@@ -34,8 +34,7 @@ REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 REVLOGNG_FLAGS = REVLOGNGINLINEDATA | REVLOGSHALLOW
 
 # revlog index flags
-REVIDX_PUNCHED_FLAG = 2
-REVIDX_KNOWN_FLAGS = REVIDX_PUNCHED_FLAG
+REVIDX_KNOWN_FLAGS = 0
 
 # max size of revlog with inline data
 _maxinline = 131072
@@ -891,8 +890,7 @@ class revlog(object):
 
     def _checkhash(self, text, node, rev):
         p1, p2 = self.parents(node)
-        if (node != hash(text, p1, p2) and
-            not (self.flags(rev) & REVIDX_PUNCHED_FLAG)):
+        if node != hash(text, p1, p2):
             raise RevlogError(_("integrity check failed on %s:%d")
                               % (self.indexfile, rev))
         return text
@@ -946,8 +944,7 @@ class revlog(object):
         cachedelta - an optional precomputed delta
         """
         node = hash(text, p1, p2)
-        if (node in self.nodemap and
-            (not self.flags(self.rev(node)) & REVIDX_PUNCHED_FLAG)):
+        if node in self.nodemap:
             return node
 
         dfh = None
@@ -1009,14 +1006,12 @@ class revlog(object):
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
-        # or the base revision is punched
         if text is None:
             textlen = mdiff.patchedsize(self.rawsize(cachedelta[0]),
                                         cachedelta[1])
         else:
             textlen = len(text)
-        if (d is None or dist > textlen * 2 or
-            (self.flags(base) & REVIDX_PUNCHED_FLAG)):
+        if d is None or dist > textlen * 2:
             text = buildtext()
             data = compress(text)
             l = len(data[1]) + len(data[0])
@@ -1120,32 +1115,15 @@ class revlog(object):
                 delta = chunkdata['delta']
 
                 link = linkmapper(cs)
-                if (node in self.nodemap and
-                    (not self.flags(self.rev(node)) & REVIDX_PUNCHED_FLAG)):
+                if node in self.nodemap:
                     # this can happen if two branches make the same change
                     chain = node
                     continue
 
                 for p in (p1, p2):
                     if not p in self.nodemap:
-                        if self._shallow:
-                            # add null entries for missing parents
-                            # XXX FIXME
-                            #if base == nullrev:
-                            #    base = len(self)
-                            #e = (offset_type(end, REVIDX_PUNCHED_FLAG),
-                            #     0, 0, base, nullrev, nullrev, nullrev, p)
-                            #self.index.insert(-1, e)
-                            #self.nodemap[p] = r
-                            #entry = self._io.packentry(e, self.node,
-                            #                           self.version, r)
-                            #ifh.write(entry)
-                            #t, r = r, r + 1
-                            raise LookupError(p, self.indexfile,
-                                              _('unknown parent'))
-                        else:
-                            raise LookupError(p, self.indexfile,
-                                              _('unknown parent'))
+                        raise LookupError(p, self.indexfile,
+                                          _('unknown parent'))
 
                 if deltabase not in self.nodemap:
                     raise LookupError(deltabase, self.indexfile,
