@@ -57,7 +57,7 @@ class casecollisionauditor(object):
             self._ui.warn(_("warning: %s\n") % msg)
         map[fl] = f
 
-class path_auditor(object):
+class pathauditor(object):
     '''ensure that a filesystem path contains no banned components.
     the following properties of a path are checked:
 
@@ -169,7 +169,7 @@ class opener(abstractopener):
     def __init__(self, base, audit=True):
         self.base = base
         if audit:
-            self.auditor = path_auditor(base)
+            self.auditor = pathauditor(base)
         else:
             self.auditor = util.always
         self.createmode = None
@@ -276,7 +276,7 @@ def canonpath(root, cwd, myname, auditor=None):
         name = os.path.join(root, cwd, name)
     name = os.path.normpath(name)
     if auditor is None:
-        auditor = path_auditor(root)
+        auditor = pathauditor(root)
     if name != rootsep and name.startswith(rootsep):
         name = name[len(rootsep):]
         auditor(name)

@@ -235,7 +235,7 @@ def subrepo(ctx, path):
     import hg as h
     hg = h
 
-    scmutil.path_auditor(ctx._repo.root)(path)
+    scmutil.pathauditor(ctx._repo.root)(path)
     state = ctx.substate.get(path, nullstate)
     if state[2] not in types:
         raise util.Abort(_('unknown subrepo type %s') % state[2])

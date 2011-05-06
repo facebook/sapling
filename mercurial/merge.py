@@ -302,7 +302,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             repo.ui.debug("removing %s\n" % f)
             os.unlink(repo.wjoin(f))
 
-    audit_path = scmutil.path_auditor(repo.root)
+    audit_path = scmutil.pathauditor(repo.root)
 
     numupdates = len(action)
     for i, a in enumerate(action):

@@ -3618,7 +3618,7 @@ def revert(ui, repo, *pats, **opts):
                 fc = ctx[f]
                 repo.wwrite(f, fc.data(), fc.flags())
 
-            audit_path = scmutil.path_auditor(repo.root)
+            audit_path = scmutil.pathauditor(repo.root)
             for f in remove[0]:
                 if repo.dirstate[f] == 'a':
                     repo.dirstate.forget(f)
