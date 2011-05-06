@@ -1132,8 +1132,8 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
                                                    first_hunk, strip)
                 current_file = patcher(ui, current_file, opener,
                                        missing=missing, eolmode=eolmode)
-            except PatchError, err:
-                ui.warn(str(err) + '\n')
+            except PatchError, inst:
+                ui.warn(str(inst) + '\n')
                 current_file = None
                 rejects += 1
                 continue
