@@ -2,7 +2,7 @@
 
 # Filter output by pyflakes to control which warnings we check
 
-import sys, re
+import sys, re, os
 
 def makekey(message):
     # "path/file:line: message"
@@ -24,6 +24,12 @@ for line in sys.stdin:
             r"unable to detect undefined names",
            ]
     if not re.search('|'.join(pats), line):
+        continue
+    fn = line.split(':', 1)[0]
+    f = open(os.path.join(os.path.dirname(os.path.dirname(__file__)), fn))
+    data = f.read()
+    f.close()
+    if 'no-check-code' in data:
         continue
     lines.append(line)
 
