@@ -362,7 +362,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
 
 def osrcpath():
     '''return default os-specific hgrc search path'''
-    path = system_rcpath()
+    path = systemrcpath()
     path.extend(user_rcpath())
     path = [os.path.normpath(f) for f in path]
     return path
@@ -406,7 +406,7 @@ if os.name != 'nt':
             pass
         return rcs
 
-    def system_rcpath():
+    def systemrcpath():
         path = []
         # old mod_python does not set sys.argv
         if len(getattr(sys, 'argv', [])) > 0:
@@ -422,7 +422,7 @@ else:
 
     _HKEY_LOCAL_MACHINE = 0x80000002L
 
-    def system_rcpath():
+    def systemrcpath():
         '''return default os-specific hgrc search path'''
         rcpath = []
         filename = util.executable_path()
