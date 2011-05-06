@@ -23,6 +23,9 @@ def findcommonincoming(repo, remote, heads=None, force=False):
 
     If you pass heads and they are all known locally, the reponse lists justs
     these heads in "common" and in "heads".
+
+    Please use findcommonoutgoing to compute the set of outgoing nodes to give
+    extensions a good hook into outgoing.
     """
 
     if not remote.capable('getbundle'):
@@ -43,6 +46,21 @@ def findcommonincoming(repo, remote, heads=None, force=False):
     common, anyinc, srvheads = res
     return (list(common), anyinc, heads or list(srvheads))
 
+def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None):
+    '''Return a tuple (common, anyoutgoing, heads) used to identify the set
+    of nodes present in repo but not in other.
+
+    If onlyheads is given, only nodes ancestral to nodes in onlyheads (inclusive)
+    are included. If you already know the local repo's heads, passing them in
+    onlyheads is faster than letting them be recomputed here.
+
+    If commoninc is given, it must the the result of a prior call to
+    findcommonincoming(repo, other, force) to avoid recomputing it here.
+
+    The returned tuple is meant to be passed to changelog.findmissing.'''
+    common, _any, _hds = commoninc or findcommonincoming(repo, other, force=force)
+    return (common, onlyheads or repo.heads())
+
 def prepush(repo, remote, force, revs, newbranch):
     '''Analyze the local and remote repositories and determine which
     changesets need to be pushed to the remote. Return value depends
@@ -57,7 +75,10 @@ def prepush(repo, remote, force, revs, newbranch):
     changegroup is a readable file-like object whose read() returns
     successive changegroup chunks ready to be sent over the wire and
     remoteheads is the list of remote heads.'''
-    common, inc, remoteheads = findcommonincoming(repo, remote, force=force)
+    commoninc = findcommonincoming(repo, remote, force=force)
+    common, revs = findcommonoutgoing(repo, remote, onlyheads=revs,
+                                      commoninc=commoninc, force=force)
+    _common, inc, remoteheads = commoninc
 
     cl = repo.changelog
     outg = cl.findmissing(common, revs)

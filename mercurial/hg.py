@@ -480,9 +480,9 @@ def _outgoing(ui, repo, dest, opts):
         revs = [repo.lookup(rev) for rev in revs]
 
     other = repository(remoteui(repo, opts), dest)
-    inc = discovery.findcommonincoming(repo, other, force=opts.get('force'))
-    common, _anyinc, _heads = inc
-    o = repo.changelog.findmissing(common, revs)
+    common, outheads = discovery.findcommonoutgoing(repo, other, revs,
+                                                    force=opts.get('force'))
+    o = repo.changelog.findmissing(common, outheads)
     if not o:
         ui.status(_("no changes found\n"))
         return None

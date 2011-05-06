@@ -702,16 +702,18 @@ def bundle(ui, repo, fname, dest=None, **opts):
             raise util.Abort(_("--base is incompatible with specifying "
                                "a destination"))
         common = [repo.lookup(rev) for rev in base]
+        heads = revs and map(repo.lookup, revs) or revs
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.repository(hg.remoteui(repo, opts), dest)
         revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
-        inc = discovery.findcommonincoming(repo, other, force=opts.get('force'))
-        common, _anyinc, _heads = inc
+        heads = revs and map(repo.lookup, revs) or revs
+        common, outheads = discovery.findcommonoutgoing(repo, other,
+                                                        onlyheads=heads,
+                                                        force=opts.get('force'))
 
-    nodes = revs and map(repo.lookup, revs) or revs
-    cg = repo.getbundle('bundle', common=common, heads=nodes)
+    cg = repo.getbundle('bundle', common=common, heads=heads)
     if not cg:
         ui.status(_("no changes found\n"))
         return 1
@@ -4024,9 +4026,9 @@ def summary(ui, repo, **opts):
         other = hg.repository(hg.remoteui(repo, {}), dest)
         ui.debug('comparing with %s\n' % util.hidepassword(dest))
         repo.ui.pushbuffer()
-        common, _anyinc, _heads = discovery.findcommonincoming(repo, other)
+        common, outheads = discovery.findcommonoutgoing(repo, other)
         repo.ui.popbuffer()
-        o = repo.changelog.findmissing(common=common)
+        o = repo.changelog.findmissing(common=common, heads=outheads)
         if o:
             t.append(_('%d outgoing') % len(o))
         if 'bookmarks' in other.listkeys('namespaces'):
