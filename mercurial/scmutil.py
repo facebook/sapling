@@ -319,7 +319,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
         if err.filename == path:
             raise err
     if followsym and hasattr(os.path, 'samestat'):
-        def _add_dir_if_not_there(dirlst, dirname):
+        def adddir(dirlst, dirname):
             match = False
             samestat = os.path.samestat
             dirstat = os.stat(dirname)
@@ -335,7 +335,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
 
     if (seen_dirs is None) and followsym:
         seen_dirs = []
-        _add_dir_if_not_there(seen_dirs, path)
+        adddir(seen_dirs, path)
     for root, dirs, files in os.walk(path, topdown=True, onerror=errhandler):
         dirs.sort()
         if '.hg' in dirs:
@@ -352,7 +352,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
             newdirs = []
             for d in dirs:
                 fname = os.path.join(root, d)
-                if _add_dir_if_not_there(seen_dirs, fname):
+                if adddir(seen_dirs, fname):
                     if os.path.islink(fname):
                         for hgname in walkrepos(fname, True, seen_dirs):
                             yield hgname
