@@ -315,15 +315,15 @@ def hgexecutable():
     if _hgexecutable is None:
         hg = os.environ.get('HG')
         if hg:
-            set_hgexecutable(hg)
+            _sethgexecutable(hg)
         elif mainfrozen():
-            set_hgexecutable(sys.executable)
+            _sethgexecutable(sys.executable)
         else:
             exe = find_exe('hg') or os.path.basename(sys.argv[0])
-            set_hgexecutable(exe)
+            _sethgexecutable(exe)
     return _hgexecutable
 
-def set_hgexecutable(path):
+def _sethgexecutable(path):
     """set location of the 'hg' executable"""
     global _hgexecutable
     _hgexecutable = path
