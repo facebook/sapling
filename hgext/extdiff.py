@@ -99,7 +99,7 @@ def snapshot(ui, repo, files, node, tmproot):
         else:
             wopener.write(wfn, data)
             if 'x' in fctx.flags():
-                util.set_flags(dest, False, True)
+                util.setflags(dest, False, True)
         if node is None:
             fns_and_mtime.append((dest, repo.wjoin(fn),
                                   os.lstat(dest).st_mtime))

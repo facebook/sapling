@@ -197,7 +197,7 @@ def tempfilter(s, cmd):
             code = 0
         if code:
             raise Abort(_("command '%s' failed: %s") %
-                        (cmd, explain_exit(code)))
+                        (cmd, explainexit(code)))
         fp = open(outname, 'rb')
         r = fp.read()
         fp.close()
@@ -297,7 +297,7 @@ def pathto(root, n1, n2):
 
 _hgexecutable = None
 
-def main_is_frozen():
+def mainfrozen():
     """return True if we are a frozen executable.
 
     The code supports py2exe (most common, Windows only) and tools/freeze
@@ -315,15 +315,15 @@ def hgexecutable():
     if _hgexecutable is None:
         hg = os.environ.get('HG')
         if hg:
-            set_hgexecutable(hg)
-        elif main_is_frozen():
-            set_hgexecutable(sys.executable)
+            _sethgexecutable(hg)
+        elif mainfrozen():
+            _sethgexecutable(sys.executable)
         else:
             exe = find_exe('hg') or os.path.basename(sys.argv[0])
-            set_hgexecutable(exe)
+            _sethgexecutable(exe)
     return _hgexecutable
 
-def set_hgexecutable(path):
+def _sethgexecutable(path):
     """set location of the 'hg' executable"""
     global _hgexecutable
     _hgexecutable = path
@@ -369,7 +369,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
         rc = 0
     if rc and onerr:
         errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
-                            explain_exit(rc)[0])
+                            explainexit(rc)[0])
         if errprefix:
             errmsg = '%s: %s' % (errprefix, errmsg)
         try:
@@ -435,7 +435,7 @@ def copyfiles(src, dst, hardlink=None):
     else:
         if hardlink:
             try:
-                os_link(src, dst)
+                oslink(src, dst)
             except (IOError, OSError):
                 hardlink = False
                 shutil.copy(src, dst)
@@ -487,7 +487,7 @@ def checkwinfilename(path):
             return _("filename ends with '%s', which is not allowed "
                      "on Windows") % t
 
-def lookup_reg(key, name=None, scope=None):
+def lookupreg(key, name=None, scope=None):
     return None
 
 def hidewindow():
@@ -624,7 +624,7 @@ def checknlink(testfile):
     fd = None
     try:
         try:
-            os_link(f1, f2)
+            oslink(f1, f2)
         except OSError:
             return False
 
@@ -1199,7 +1199,7 @@ def hgcmd():
     to avoid things opening new shell windows like batch files, so we
     get either the python call or current executable.
     """
-    if main_is_frozen():
+    if mainfrozen():
         return [sys.executable]
     return gethgcmd()
 

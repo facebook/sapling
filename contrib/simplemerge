@@ -43,7 +43,7 @@ def showhelp():
 
 try:
     for fp in (sys.stdin, sys.stdout, sys.stderr):
-        util.set_binary(fp)
+        util.setbinary(fp)
     
     opts = {}
     try:

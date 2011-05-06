@@ -13,8 +13,8 @@ from mercurial import util
 from mercurial.hgweb import common
 
 def launch(application):
-    util.set_binary(sys.stdin)
-    util.set_binary(sys.stdout)
+    util.setbinary(sys.stdin)
+    util.setbinary(sys.stdout)
 
     environ = dict(os.environ.iteritems())
     environ.setdefault('PATH_INFO', '')

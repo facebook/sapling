@@ -33,6 +33,6 @@ import mercurial.util
 import mercurial.dispatch
 
 for fp in (sys.stdin, sys.stdout, sys.stderr):
-    mercurial.util.set_binary(fp)
+    mercurial.util.setbinary(fp)
 
 mercurial.dispatch.run()

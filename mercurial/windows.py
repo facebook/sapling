@@ -74,7 +74,7 @@ def _is_win_9x():
 def openhardlinks():
     return not _is_win_9x()
 
-def parse_patch_output(output_line):
+def parsepatchoutput(output_line):
     """parses the output produced by patch and returns the filename"""
     pf = output_line[14:]
     if pf[0] == '`':
@@ -87,7 +87,7 @@ def sshargs(sshcmd, host, user, port):
     args = user and ("%s@%s" % (user, host)) or host
     return port and ("%s %s %s" % (args, pflag, port)) or args
 
-def set_flags(f, l, x):
+def setflags(f, l, x):
     pass
 
 def checkexec(path):
@@ -96,7 +96,7 @@ def checkexec(path):
 def checklink(path):
     return False
 
-def set_binary(fd):
+def setbinary(fd):
     # When run without console, pipes may expose invalid
     # fileno(), usually set to -1.
     if hasattr(fd, 'fileno') and fd.fileno() >= 0:
@@ -155,7 +155,7 @@ def popen(command, mode='r'):
     command += " 2> %s" % nulldev
     return os.popen(quotecommand(command), mode)
 
-def explain_exit(code):
+def explainexit(code):
     return _("exited with status %d") % code, code
 
 # if you change this stub into a real check, please try to implement the

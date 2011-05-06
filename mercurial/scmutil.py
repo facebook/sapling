@@ -319,7 +319,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
         if err.filename == path:
             raise err
     if followsym and hasattr(os.path, 'samestat'):
-        def _add_dir_if_not_there(dirlst, dirname):
+        def adddir(dirlst, dirname):
             match = False
             samestat = os.path.samestat
             dirstat = os.stat(dirname)
@@ -335,7 +335,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
 
     if (seen_dirs is None) and followsym:
         seen_dirs = []
-        _add_dir_if_not_there(seen_dirs, path)
+        adddir(seen_dirs, path)
     for root, dirs, files in os.walk(path, topdown=True, onerror=errhandler):
         dirs.sort()
         if '.hg' in dirs:
@@ -352,7 +352,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
             newdirs = []
             for d in dirs:
                 fname = os.path.join(root, d)
-                if _add_dir_if_not_there(seen_dirs, fname):
+                if adddir(seen_dirs, fname):
                     if os.path.islink(fname):
                         for hgname in walkrepos(fname, True, seen_dirs):
                             yield hgname
@@ -360,10 +360,10 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
                         newdirs.append(d)
             dirs[:] = newdirs
 
-def os_rcpath():
+def osrcpath():
     '''return default os-specific hgrc search path'''
-    path = system_rcpath()
-    path.extend(user_rcpath())
+    path = systemrcpath()
+    path.extend(userrcpath())
     path = [os.path.normpath(f) for f in path]
     return path
 
@@ -390,7 +390,7 @@ def rcpath():
                 else:
                     _rcpath.append(p)
         else:
-            _rcpath = os_rcpath()
+            _rcpath = osrcpath()
     return _rcpath
 
 if os.name != 'nt':
@@ -406,7 +406,7 @@ if os.name != 'nt':
             pass
         return rcs
 
-    def system_rcpath():
+    def systemrcpath():
         path = []
         # old mod_python does not set sys.argv
         if len(getattr(sys, 'argv', [])) > 0:
@@ -415,17 +415,17 @@ if os.name != 'nt':
         path.extend(rcfiles('/etc/mercurial'))
         return path
 
-    def user_rcpath():
+    def userrcpath():
         return [os.path.expanduser('~/.hgrc')]
 
 else:
 
     _HKEY_LOCAL_MACHINE = 0x80000002L
 
-    def system_rcpath():
+    def systemrcpath():
         '''return default os-specific hgrc search path'''
         rcpath = []
-        filename = util.executable_path()
+        filename = util.executablepath()
         # Use mercurial.ini found in directory with hg.exe
         progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
         if os.path.isfile(progrc):
@@ -439,8 +439,8 @@ else:
                     rcpath.append(os.path.join(progrcd, f))
             return rcpath
         # else look for a system rcpath in the registry
-        value = util.lookup_reg('SOFTWARE\\Mercurial', None,
-                                _HKEY_LOCAL_MACHINE)
+        value = util.lookupreg('SOFTWARE\\Mercurial', None,
+                               _HKEY_LOCAL_MACHINE)
         if not isinstance(value, str) or not value:
             return rcpath
         value = value.replace('/', os.sep)
@@ -453,7 +453,7 @@ else:
                         rcpath.append(os.path.join(p, f))
         return rcpath
 
-    def user_rcpath():
+    def userrcpath():
         '''return os-specific hgrc search path to the user dir'''
         home = os.path.expanduser('~')
         path = [os.path.join(home, 'mercurial.ini'),

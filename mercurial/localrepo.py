@@ -659,7 +659,7 @@ class localrepository(repo.repository):
         else:
             self.wopener.write(filename, data)
             if 'x' in flags:
-                util.set_flags(self.wjoin(filename), False, True)
+                util.setflags(self.wjoin(filename), False, True)
 
     def wwritedata(self, filename, data):
         return self._filter(self._decodefilterpats, filename, data)

@@ -29,7 +29,7 @@ def _findtool(ui, tool):
         k = _toolstr(ui, tool, kn)
         if not k:
             continue
-        p = util.lookup_reg(k, _toolstr(ui, tool, "regname"))
+        p = util.lookupreg(k, _toolstr(ui, tool, "regname"))
         if p:
             p = util.find_exe(p + _toolstr(ui, tool, "regappend"))
             if p:

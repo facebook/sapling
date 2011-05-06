@@ -140,7 +140,7 @@ def _getfileinfo(name):
     finally:
         _kernel32.CloseHandle(fh)
 
-def os_link(src, dst):
+def oslink(src, dst):
     try:
         if not _kernel32.CreateHardLinkA(dst, src, None):
             _raiseoserror(src)
@@ -180,7 +180,7 @@ def testpid(pid):
             _kernel32.CloseHandle(h)
     return _kernel32.GetLastError() != _ERROR_INVALID_PARAMETER
 
-def lookup_reg(key, valname=None, scope=None):
+def lookupreg(key, valname=None, scope=None):
     ''' Look up a key/value name in the Windows registry.
 
     valname: value name. If unspecified, the default value for the key
@@ -218,7 +218,7 @@ def lookup_reg(key, valname=None, scope=None):
         finally:
             adv.RegCloseKey(kh.value)
 
-def executable_path():
+def executablepath():
     '''return full path of hg.exe'''
     size = 600
     buf = ctypes.create_string_buffer(size + 1)
@@ -239,9 +239,9 @@ def getuser():
     return buf.value
 
 _SIGNAL_HANDLER = ctypes.WINFUNCTYPE(_BOOL, _DWORD)
-_signal_handler = []
+_signalhandler = []
 
-def set_signal_handler():
+def setsignalhandler():
     '''Register a termination handler for console events including
     CTRL+C. python signal handlers do not work well with socket
     operations.
@@ -249,10 +249,10 @@ def set_signal_handler():
     def handler(event):
         _kernel32.ExitProcess(1)
 
-    if _signal_handler:
+    if _signalhandler:
         return # already registered
     h = _SIGNAL_HANDLER(handler)
-    _signal_handler.append(h) # needed to prevent garbage collection
+    _signalhandler.append(h) # needed to prevent garbage collection
     if not _kernel32.SetConsoleCtrlHandler(h, True):
         raise ctypes.WinError()
 

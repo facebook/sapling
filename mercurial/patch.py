@@ -1172,7 +1172,7 @@ def _externalpatch(patcher, patchname, ui, strip, cwd, files):
         line = line.rstrip()
         ui.note(line + '\n')
         if line.startswith('patching file '):
-            pf = util.parse_patch_output(line)
+            pf = util.parsepatchoutput(line)
             printed_file = False
             files.setdefault(pf, None)
         elif line.find('with fuzz') >= 0:
@@ -1191,7 +1191,7 @@ def _externalpatch(patcher, patchname, ui, strip, cwd, files):
     code = fp.close()
     if code:
         raise PatchError(_("patch command failed: %s") %
-                         util.explain_exit(code)[0])
+                         util.explainexit(code)[0])
     return fuzz
 
 def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):

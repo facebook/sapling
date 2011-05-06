@@ -12,7 +12,7 @@ posixfile = open
 nulldev = '/dev/null'
 normpath = os.path.normpath
 samestat = os.path.samestat
-os_link = os.link
+oslink = os.link
 unlink = os.unlink
 rename = os.rename
 expandglobs = False
@@ -28,7 +28,7 @@ def nlinks(name):
     '''return number of hardlinks for the given file'''
     return os.lstat(name).st_nlink
 
-def parse_patch_output(output_line):
+def parsepatchoutput(output_line):
     """parses the output produced by patch and returns the filename"""
     pf = output_line[14:]
     if os.sys.platform == 'OpenVMS':
@@ -48,7 +48,7 @@ def is_exec(f):
     """check whether a file is executable"""
     return (os.lstat(f).st_mode & 0100 != 0)
 
-def set_flags(f, l, x):
+def setflags(f, l, x):
     s = os.lstat(f).st_mode
     if l:
         if not stat.S_ISLNK(s):
@@ -128,7 +128,7 @@ def checkosfilename(path):
     Returns None if the path is ok, or a UI string describing the problem.'''
     pass # on posix platforms, every path is ok
 
-def set_binary(fd):
+def setbinary(fd):
     pass
 
 def pconvert(path):
@@ -210,7 +210,7 @@ def testpid(pid):
     except OSError, inst:
         return inst.errno != errno.ESRCH
 
-def explain_exit(code):
+def explainexit(code):
     """return a 2-tuple (desc, code) describing a subprocess status
     (codes from kill are negative - not os.system/wait encoding)"""
     if code >= 0:
@@ -244,7 +244,7 @@ def find_exe(command):
             return executable
     return None
 
-def set_signal_handler():
+def setsignalhandler():
     pass
 
 def statfiles(files):

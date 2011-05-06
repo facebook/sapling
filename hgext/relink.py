@@ -132,7 +132,7 @@ def do_relink(src, dst, files, ui):
         bak = dst + '.bak'
         os.rename(dst, bak)
         try:
-            util.os_link(src, dst)
+            util.oslink(src, dst)
         except OSError:
             os.rename(bak, dst)
             raise

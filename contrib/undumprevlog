@@ -7,7 +7,7 @@ import sys
 from mercurial import revlog, node, scmutil, util, transaction
 
 for fp in (sys.stdin, sys.stdout, sys.stderr):
-    util.set_binary(fp)
+    util.setbinary(fp)
 
 opener = scmutil.opener('.', False)
 tr = transaction.transaction(sys.stderr.write, opener, "undump.journal")
