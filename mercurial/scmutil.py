@@ -360,7 +360,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
                         newdirs.append(d)
             dirs[:] = newdirs
 
-def os_rcpath():
+def osrcpath():
     '''return default os-specific hgrc search path'''
     path = system_rcpath()
     path.extend(user_rcpath())
@@ -390,7 +390,7 @@ def rcpath():
                 else:
                     _rcpath.append(p)
         else:
-            _rcpath = os_rcpath()
+            _rcpath = osrcpath()
     return _rcpath
 
 if os.name != 'nt':
