@@ -48,7 +48,7 @@ def is_exec(f):
     """check whether a file is executable"""
     return (os.lstat(f).st_mode & 0100 != 0)
 
-def set_flags(f, l, x):
+def setflags(f, l, x):
     s = os.lstat(f).st_mode
     if l:
         if not stat.S_ISLNK(s):

@@ -87,7 +87,7 @@ def sshargs(sshcmd, host, user, port):
     args = user and ("%s@%s" % (user, host)) or host
     return port and ("%s %s %s" % (args, pflag, port)) or args
 
-def set_flags(f, l, x):
+def setflags(f, l, x):
     pass
 
 def checkexec(path):

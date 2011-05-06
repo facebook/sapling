@@ -369,7 +369,7 @@ def updatedir(ui, repo, patches, similarity=0):
             if gp.op == 'ADD' and not os.path.lexists(dst):
                 flags = (isexec and 'x' or '') + (islink and 'l' or '')
                 repo.wwrite(gp.path, '', flags)
-            util.set_flags(dst, islink, isexec)
+            util.setflags(dst, islink, isexec)
     addremove(repo, cfiles, similarity=similarity)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])

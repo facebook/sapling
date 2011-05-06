@@ -336,7 +336,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
                     updated += 1
                 else:
                     merged += 1
-            util.set_flags(repo.wjoin(fd), 'l' in flags, 'x' in flags)
+            util.setflags(repo.wjoin(fd), 'l' in flags, 'x' in flags)
             if (move and repo.dirstate.normalize(fd) != f
                 and os.path.lexists(repo.wjoin(f))):
                 repo.ui.debug("removing %s\n" % f)
@@ -370,7 +370,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
                 repo.ui.warn(" %s\n" % nf)
         elif m == "e": # exec
             flags = a[2]
-            util.set_flags(repo.wjoin(f), 'l' in flags, 'x' in flags)
+            util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
     ms.commit()
     u.progress(_('updating'), None, total=numupdates, unit=_('files'))
 
