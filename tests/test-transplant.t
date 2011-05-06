@@ -66,7 +66,8 @@ test transplanted revset
   6  b2
   7  b3
   $ hg help revsets | grep transplanted
-      "transplanted(set)"
+      "transplanted([set])"
+        Transplanted changesets in set, or all transplanted changesets.
 
   $ hg clone ../t ../prune
   updating to branch default

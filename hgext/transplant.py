@@ -594,8 +594,8 @@ def transplant(ui, repo, *revs, **opts):
             os.unlink(bundle)
 
 def revsettransplanted(repo, subset, x):
-    """``transplanted(set)``
-    Transplanted changesets in set.
+    """``transplanted([set])``
+    Transplanted changesets in set, or all transplanted changesets.
     """
     if x:
       s = revset.getset(repo, subset, x)
