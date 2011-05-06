@@ -251,8 +251,8 @@ def shrink(ui, repo, **opts):
         if not opts.get('dry_run'):
             # racy, both files cannot be renamed atomically
             # copy files
-            util.os_link(indexfn, oldindexfn)
-            ignoremissing(util.os_link)(datafn, olddatafn)
+            util.oslink(indexfn, oldindexfn)
+            ignoremissing(util.oslink)(datafn, olddatafn)
 
             # rename
             util.rename(tmpindexfn, indexfn)

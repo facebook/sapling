@@ -435,7 +435,7 @@ def copyfiles(src, dst, hardlink=None):
     else:
         if hardlink:
             try:
-                os_link(src, dst)
+                oslink(src, dst)
             except (IOError, OSError):
                 hardlink = False
                 shutil.copy(src, dst)
@@ -624,7 +624,7 @@ def checknlink(testfile):
     fd = None
     try:
         try:
-            os_link(f1, f2)
+            oslink(f1, f2)
         except OSError:
             return False
 

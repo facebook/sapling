@@ -140,7 +140,7 @@ def _getfileinfo(name):
     finally:
         _kernel32.CloseHandle(fh)
 
-def os_link(src, dst):
+def oslink(src, dst):
     try:
         if not _kernel32.CreateHardLinkA(dst, src, None):
             _raiseoserror(src)
