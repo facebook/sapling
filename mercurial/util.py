@@ -297,7 +297,7 @@ def pathto(root, n1, n2):
 
 _hgexecutable = None
 
-def main_is_frozen():
+def mainfrozen():
     """return True if we are a frozen executable.
 
     The code supports py2exe (most common, Windows only) and tools/freeze
@@ -316,7 +316,7 @@ def hgexecutable():
         hg = os.environ.get('HG')
         if hg:
             set_hgexecutable(hg)
-        elif main_is_frozen():
+        elif mainfrozen():
             set_hgexecutable(sys.executable)
         else:
             exe = find_exe('hg') or os.path.basename(sys.argv[0])
@@ -1199,7 +1199,7 @@ def hgcmd():
     to avoid things opening new shell windows like batch files, so we
     get either the python call or current executable.
     """
-    if main_is_frozen():
+    if mainfrozen():
         return [sys.executable]
     return gethgcmd()
 
