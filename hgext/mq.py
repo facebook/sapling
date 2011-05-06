@@ -45,8 +45,9 @@ create other, independent patch queues with the :hg:`qqueue` command.
 from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
-from mercurial import commands, cmdutil, hg, patch, scmutil, util, revset
+from mercurial import commands, cmdutil, hg, scmutil, util, revset
 from mercurial import repair, extensions, url, error
+from mercurial import patch as patchmod
 import os, sys, re, errno, shutil
 
 commands.norepo += " qclone"
@@ -321,7 +322,7 @@ class queue(object):
         self.active_guards = None
 
     def diffopts(self, opts={}, patchfn=None):
-        diffopts = patch.diffopts(self.ui, opts)
+        diffopts = patchmod.diffopts(self.ui, opts)
         if self.gitmode == 'auto':
             diffopts.upgrade = True
         elif self.gitmode == 'keep':
@@ -613,7 +614,7 @@ class queue(object):
         patchfile: name of patch file'''
         files = {}
         try:
-            fuzz = patch.patch(patchfile, self.ui, strip=1, cwd=repo.root,
+            fuzz = patchmod.patch(patchfile, self.ui, strip=1, cwd=repo.root,
                                files=files, eolmode=None)
         except Exception, inst:
             self.ui.note(str(inst) + '\n')
@@ -947,7 +948,7 @@ class queue(object):
                         p.write(msg)
                     if commitfiles:
                         parent = self.qparents(repo, n)
-                        chunks = patch.diff(repo, node1=parent, node2=n,
+                        chunks = patchmod.diff(repo, node1=parent, node2=n,
                                             match=match, opts=diffopts)
                         for chunk in chunks:
                             p.write(chunk)
@@ -1407,7 +1408,7 @@ class queue(object):
             a = list(aa)
             c = [filter(matchfn, l) for l in (m, a, r)]
             match = cmdutil.matchfiles(repo, set(c[0] + c[1] + c[2] + inclsubs))
-            chunks = patch.diff(repo, patchparent, match=match,
+            chunks = patchmod.diff(repo, patchparent, match=match,
                                 changes=c, opts=diffopts)
             for chunk in chunks:
                 patchf.write(chunk)
