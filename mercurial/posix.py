@@ -244,7 +244,7 @@ def find_exe(command):
             return executable
     return None
 
-def set_signal_handler():
+def setsignalhandler():
     pass
 
 def statfiles(files):

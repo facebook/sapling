@@ -3756,7 +3756,7 @@ def serve(ui, repo, **opts):
 
     class service(object):
         def init(self):
-            util.set_signal_handler()
+            util.setsignalhandler()
             self.httpd = hgweb.server.create_server(ui, app)
 
             if opts['port'] and not ui.verbose:

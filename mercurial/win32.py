@@ -239,9 +239,9 @@ def getuser():
     return buf.value
 
 _SIGNAL_HANDLER = ctypes.WINFUNCTYPE(_BOOL, _DWORD)
-_signal_handler = []
+_signalhandler = []
 
-def set_signal_handler():
+def setsignalhandler():
     '''Register a termination handler for console events including
     CTRL+C. python signal handlers do not work well with socket
     operations.
@@ -249,10 +249,10 @@ def set_signal_handler():
     def handler(event):
         _kernel32.ExitProcess(1)
 
-    if _signal_handler:
+    if _signalhandler:
         return # already registered
     h = _SIGNAL_HANDLER(handler)
-    _signal_handler.append(h) # needed to prevent garbage collection
+    _signalhandler.append(h) # needed to prevent garbage collection
     if not _kernel32.SetConsoleCtrlHandler(h, True):
         raise ctypes.WinError()
 
