@@ -843,6 +843,14 @@ mq tags
   1 foo qbase
   2 bar qtip tip
 
+mq revset
+
+  $ hg log -r 'mq()' --template '{rev}\n'
+  1
+  2
+  $ hg help revsets | grep -i mq
+      "mq()"
+        Changesets managed by MQ.
 
 bad node in status
 

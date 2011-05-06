@@ -45,7 +45,7 @@ create other, independent patch queues with the :hg:`qqueue` command.
 from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
-from mercurial import commands, cmdutil, hg, patch, scmutil, util
+from mercurial import commands, cmdutil, hg, patch, scmutil, util, revset
 from mercurial import repair, extensions, url, error
 import os, sys, re, errno, shutil
 
@@ -3095,6 +3095,20 @@ def summary(orig, ui, repo, *args, **kwargs):
     else:
         ui.note(_("mq:     (empty queue)\n"))
     return r
+
+def revsetmq(repo, subset, x):
+    """``mq()``
+    Changesets managed by MQ.
+    """
+    revset.getargs(x, 0, 0, _("mq takes no arguments"))
+    applied = set([repo[r.node].rev() for r in repo.mq.applied])
+    return [r for r in subset if r in applied]
+
+def extsetup(ui):
+    revset.symbols['mq'] = revsetmq
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = [revsetmq]
 
 def uisetup(ui):
     mqopt = [('', 'mq', None, _("operate on patch repository"))]
