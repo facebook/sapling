@@ -8,7 +8,7 @@
 
 from node import nullid
 from i18n import _
-import changegroup, statichttprepo, error, url, util, wireproto
+import changegroup, statichttprepo, error, httpconnection, url, util, wireproto
 import os, urllib, urllib2, zlib, httplib
 import errno, socket
 
@@ -180,7 +180,7 @@ class httprepository(wireproto.wirerepository):
                 break
 
         tempname = changegroup.writebundle(cg, None, type)
-        fp = url.httpsendfile(self.ui, tempname, "rb")
+        fp = httpconnection.httpsendfile(self.ui, tempname, "rb")
         headers = {'Content-Type': 'application/mercurial-0.1'}
 
         try:

@@ -8,41 +8,9 @@
 # GNU General Public License version 2 or any later version.
 
 import urllib, urllib2, httplib, os, socket, cStringIO
-import __builtin__
 from i18n import _
 import keepalive, util, sslutil
-
-def readauthforuri(ui, uri):
-    # Read configuration
-    config = dict()
-    for key, val in ui.configitems('auth'):
-        if '.' not in key:
-            ui.warn(_("ignoring invalid [auth] key '%s'\n") % key)
-            continue
-        group, setting = key.rsplit('.', 1)
-        gdict = config.setdefault(group, dict())
-        if setting in ('username', 'cert', 'key'):
-            val = util.expandpath(val)
-        gdict[setting] = val
-
-    # Find the best match
-    scheme, hostpath = uri.split('://', 1)
-    bestlen = 0
-    bestauth = None
-    for group, auth in config.iteritems():
-        prefix = auth.get('prefix')
-        if not prefix:
-            continue
-        p = prefix.split('://', 1)
-        if len(p) > 1:
-            schemes, prefix = [p[0]], p[1]
-        else:
-            schemes = (auth.get('schemes') or 'https').split()
-        if (prefix == '*' or hostpath.startswith(prefix)) and \
-            len(prefix) > bestlen and scheme in schemes:
-            bestlen = len(prefix)
-            bestauth = group, auth
-    return bestauth
+import httpconnection as httpconnectionmod
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
@@ -58,7 +26,7 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
             return (user, passwd)
 
         if not user:
-            res = readauthforuri(self.ui, authuri)
+            res = httpconnectionmod.readauthforuri(self.ui, authuri)
             if res:
                 group, auth = res
                 user, passwd = auth.get('username'), auth.get('password')
@@ -149,48 +117,10 @@ class proxyhandler(urllib2.ProxyHandler):
 
         return urllib2.ProxyHandler.proxy_open(self, req, proxy, type_)
 
-class httpsendfile(object):
-    """This is a wrapper around the objects returned by python's "open".
-
-    Its purpose is to send file-like objects via HTTP and, to do so, it
-    defines a __len__ attribute to feed the Content-Length header.
-    """
-
-    def __init__(self, ui, *args, **kwargs):
-        # We can't just "self._data = open(*args, **kwargs)" here because there
-        # is an "open" function defined in this module that shadows the global
-        # one
-        self.ui = ui
-        self._data = __builtin__.open(*args, **kwargs)
-        self.seek = self._data.seek
-        self.close = self._data.close
-        self.write = self._data.write
-        self._len = os.fstat(self._data.fileno()).st_size
-        self._pos = 0
-        self._total = len(self) / 1024 * 2
-
-    def read(self, *args, **kwargs):
-        try:
-            ret = self._data.read(*args, **kwargs)
-        except EOFError:
-            self.ui.progress(_('sending'), None)
-        self._pos += len(ret)
-        # We pass double the max for total because we currently have
-        # to send the bundle twice in the case of a server that
-        # requires authentication. Since we can't know until we try
-        # once whether authentication will be required, just lie to
-        # the user and maybe the push succeeds suddenly at 50%.
-        self.ui.progress(_('sending'), self._pos / 1024,
-                         unit=_('kb'), total=self._total)
-        return ret
-
-    def __len__(self):
-        return self._len
-
 def _gen_sendfile(orgsend):
     def _sendfile(self, data):
         # send a file
-        if isinstance(data, httpsendfile):
+        if isinstance(data, httpconnectionmod.httpsendfile):
             # if auth required, some data sent twice, so rewind here
             data.seek(0)
             for chunk in util.filechunkiter(data):
@@ -412,7 +342,7 @@ if has_https:
             return keepalive.KeepAliveHandler._start_transaction(self, h, req)
 
         def https_open(self, req):
-            res = readauthforuri(self.ui, req.get_full_url())
+            res = httpconnectionmod.readauthforuri(self.ui, req.get_full_url())
             if res:
                 group, auth = res
                 self.auth = auth
@@ -495,9 +425,12 @@ def opener(ui, authinfo=None):
     construct an opener suitable for urllib2
     authinfo will be added to the password manager
     '''
-    handlers = [httphandler()]
-    if has_https:
-        handlers.append(httpshandler(ui))
+    if ui.configbool('ui', 'usehttp2', False):
+        handlers = [httpconnectionmod.http2handler(ui, passwordmgr(ui))]
+    else:
+        handlers = [httphandler()]
+        if has_https:
+            handlers.append(httpshandler(ui))
 
     handlers.append(proxyhandler(ui))
 
