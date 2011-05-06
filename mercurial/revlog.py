@@ -506,7 +506,7 @@ class revlog(object):
             # Turn heads into a dictionary so we can remove 'fake' heads.
             # Also, later we will be using it to filter out the heads we can't
             # find from roots.
-            heads = dict.fromkeys(heads, 0)
+            heads = dict.fromkeys(heads, False)
             # Start at the top and keep marking parents until we're done.
             nodestotag = set(heads)
             # Remember where the top was so we can use it as a limit later.
@@ -596,16 +596,16 @@ class revlog(object):
                     # We're trying to figure out which heads are reachable
                     # from roots.
                     # Mark this head as having been reached
-                    heads[n] = 1
+                    heads[n] = True
                 elif ancestors is None:
                     # Otherwise, we're trying to discover the heads.
                     # Assume this is a head because if it isn't, the next step
                     # will eventually remove it.
-                    heads[n] = 1
+                    heads[n] = True
                     # But, obviously its parents aren't.
                     for p in self.parents(n):
                         heads.pop(p, None)
-        heads = [n for n in heads.iterkeys() if heads[n] != 0]
+        heads = [n for n, flag in heads.iteritems() if flag]
         roots = list(roots)
         assert orderedout
         assert roots

@@ -99,7 +99,7 @@ def annotate(ui, repo, *pats, **opts):
     if opts.get('follow'):
         # --follow is deprecated and now just an alias for -f/--file
         # to mimic the behavior of Mercurial before version 1.5
-        opts['file'] = 1
+        opts['file'] = True
 
     datefunc = ui.quiet and util.shortdate or util.datestr
     getdate = util.cachefunc(lambda x: datefunc(x[0].date()))
@@ -116,7 +116,7 @@ def annotate(ui, repo, *pats, **opts):
 
     if (not opts.get('user') and not opts.get('changeset')
         and not opts.get('date') and not opts.get('file')):
-        opts['number'] = 1
+        opts['number'] = True
 
     linenumber = opts.get('line_number') is not None
     if linenumber and (not opts.get('changeset')) and (not opts.get('number')):
@@ -3620,7 +3620,7 @@ def revert(ui, repo, *pats, **opts):
                 fc = ctx[f]
                 repo.wwrite(f, fc.data(), fc.flags())
 
-            audit_path = scmutil.path_auditor(repo.root)
+            audit_path = scmutil.pathauditor(repo.root)
             for f in remove[0]:
                 if repo.dirstate[f] == 'a':
                     repo.dirstate.forget(f)

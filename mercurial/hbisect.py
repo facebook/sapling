@@ -54,10 +54,10 @@ def bisect(changelog, state):
             return badrev, None
         return badrev, ancestors
 
-    good = 0
+    good = False
     badrev, ancestors = buildancestors(state['bad'], state['good'])
     if not ancestors: # looking for bad to good transition?
-        good = 1
+        good = True
         badrev, ancestors = buildancestors(state['good'], state['bad'])
     bad = changelog.node(badrev)
     if not ancestors: # now we're confused
