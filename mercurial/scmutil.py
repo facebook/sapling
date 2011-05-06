@@ -425,7 +425,7 @@ else:
     def systemrcpath():
         '''return default os-specific hgrc search path'''
         rcpath = []
-        filename = util.executable_path()
+        filename = util.executablepath()
         # Use mercurial.ini found in directory with hg.exe
         progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
         if os.path.isfile(progrc):

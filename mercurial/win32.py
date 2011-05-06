@@ -218,7 +218,7 @@ def lookupreg(key, valname=None, scope=None):
         finally:
             adv.RegCloseKey(kh.value)
 
-def executable_path():
+def executablepath():
     '''return full path of hg.exe'''
     size = 600
     buf = ctypes.create_string_buffer(size + 1)
