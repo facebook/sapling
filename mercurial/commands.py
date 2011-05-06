@@ -4016,17 +4016,21 @@ def summary(ui, repo, **opts):
         revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
         ui.debug('comparing with %s\n' % util.hidepassword(source))
         repo.ui.pushbuffer()
-        common, incoming, rheads = discovery.findcommonincoming(repo, other)
+        commoninc = discovery.findcommonincoming(repo, other)
+        _common, incoming, _rheads = commoninc
         repo.ui.popbuffer()
         if incoming:
             t.append(_('1 or more incoming'))
 
         dest, branches = hg.parseurl(ui.expandpath('default-push', 'default'))
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
-        other = hg.repository(hg.remoteui(repo, {}), dest)
-        ui.debug('comparing with %s\n' % util.hidepassword(dest))
+        if source != dest:
+            other = hg.repository(hg.remoteui(repo, {}), dest)
+            commoninc = None
+            ui.debug('comparing with %s\n' % util.hidepassword(dest))
         repo.ui.pushbuffer()
-        common, outheads = discovery.findcommonoutgoing(repo, other)
+        common, outheads = discovery.findcommonoutgoing(repo, other,
+                                                        commoninc=commoninc)
         repo.ui.popbuffer()
         o = repo.changelog.findmissing(common=common, heads=outheads)
         if o:
