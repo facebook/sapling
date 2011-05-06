@@ -363,7 +363,7 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
 def osrcpath():
     '''return default os-specific hgrc search path'''
     path = systemrcpath()
-    path.extend(user_rcpath())
+    path.extend(userrcpath())
     path = [os.path.normpath(f) for f in path]
     return path
 
@@ -415,7 +415,7 @@ if os.name != 'nt':
         path.extend(rcfiles('/etc/mercurial'))
         return path
 
-    def user_rcpath():
+    def userrcpath():
         return [os.path.expanduser('~/.hgrc')]
 
 else:
@@ -453,7 +453,7 @@ else:
                         rcpath.append(os.path.join(p, f))
         return rcpath
 
-    def user_rcpath():
+    def userrcpath():
         '''return os-specific hgrc search path to the user dir'''
         home = os.path.expanduser('~')
         path = [os.path.join(home, 'mercurial.ini'),
