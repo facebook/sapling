@@ -1191,7 +1191,7 @@ def _externalpatch(patcher, patchname, ui, strip, cwd, files):
     code = fp.close()
     if code:
         raise PatchError(_("patch command failed: %s") %
-                         util.explain_exit(code)[0])
+                         util.explainexit(code)[0])
     return fuzz
 
 def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):

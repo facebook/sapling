@@ -155,7 +155,7 @@ def popen(command, mode='r'):
     command += " 2> %s" % nulldev
     return os.popen(quotecommand(command), mode)
 
-def explain_exit(code):
+def explainexit(code):
     return _("exited with status %d") % code, code
 
 # if you change this stub into a real check, please try to implement the

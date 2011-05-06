@@ -210,7 +210,7 @@ def testpid(pid):
     except OSError, inst:
         return inst.errno != errno.ESRCH
 
-def explain_exit(code):
+def explainexit(code):
     """return a 2-tuple (desc, code) describing a subprocess status
     (codes from kill are negative - not os.system/wait encoding)"""
     if code >= 0:

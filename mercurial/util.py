@@ -197,7 +197,7 @@ def tempfilter(s, cmd):
             code = 0
         if code:
             raise Abort(_("command '%s' failed: %s") %
-                        (cmd, explain_exit(code)))
+                        (cmd, explainexit(code)))
         fp = open(outname, 'rb')
         r = fp.read()
         fp.close()
@@ -369,7 +369,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
         rc = 0
     if rc and onerr:
         errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
-                            explain_exit(rc)[0])
+                            explainexit(rc)[0])
         if errprefix:
             errmsg = '%s: %s' % (errprefix, errmsg)
         try:

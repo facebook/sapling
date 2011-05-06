@@ -109,7 +109,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
     else:
         r = util.system(cmd, environ=env, cwd=cwd)
     if r:
-        desc, r = util.explain_exit(r)
+        desc, r = util.explainexit(r)
         if throw:
             raise util.Abort(_('%s hook %s') % (name, desc))
         ui.warn(_('warning: %s hook %s\n') % (name, desc))

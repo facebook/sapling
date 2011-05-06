@@ -91,7 +91,7 @@ def _sendmail(ui, sender, recipients, msg):
     if ret:
         raise util.Abort('%s %s' % (
             os.path.basename(program.split(None, 1)[0]),
-            util.explain_exit(ret)[0]))
+            util.explainexit(ret)[0]))
 
 def connect(ui):
     '''make a mail connection. return a function to send mail.
