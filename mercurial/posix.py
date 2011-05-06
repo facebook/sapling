@@ -28,7 +28,7 @@ def nlinks(name):
     '''return number of hardlinks for the given file'''
     return os.lstat(name).st_nlink
 
-def parse_patch_output(output_line):
+def parsepatchoutput(output_line):
     """parses the output produced by patch and returns the filename"""
     pf = output_line[14:]
     if os.sys.platform == 'OpenVMS':

@@ -1172,7 +1172,7 @@ def _externalpatch(patcher, patchname, ui, strip, cwd, files):
         line = line.rstrip()
         ui.note(line + '\n')
         if line.startswith('patching file '):
-            pf = util.parse_patch_output(line)
+            pf = util.parsepatchoutput(line)
             printed_file = False
             files.setdefault(pf, None)
         elif line.find('with fuzz') >= 0:
