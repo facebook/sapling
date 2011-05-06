@@ -666,7 +666,7 @@ class queue(object):
 
             try:
                 ph = patchheader(self.join(patchname), self.plainmode)
-            except:
+            except IOError:
                 self.ui.warn(_("unable to read %s\n") % patchname)
                 err = 1
                 break
