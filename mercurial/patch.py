@@ -1246,6 +1246,28 @@ def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
     except PatchError, err:
         raise util.Abort(str(err))
 
+def changedfiles(patchpath, strip=1):
+    fp = open(patchpath, 'rb')
+    try:
+        changed = set()
+        for state, values in iterhunks(fp):
+            if state == 'hunk':
+                continue
+            elif state == 'file':
+                afile, bfile, first_hunk = values
+                current_file, missing = selectfile(afile, bfile,
+                                                   first_hunk, strip)
+                changed.add(current_file)
+            elif state == 'git':
+                for gp in values:
+                    gp.path = pathstrip(gp.path, strip - 1)[1]
+                    changed.add(gp.path)
+            else:
+                raise util.Abort(_('unsupported parser state: %s') % state)
+        return changed
+    finally:
+        fp.close()
+
 def b85diff(to, tn):
     '''print base85-encoded binary diff'''
     def gitindex(text):
