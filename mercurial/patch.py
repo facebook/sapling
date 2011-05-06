@@ -994,7 +994,7 @@ def scangitpatch(lr, firstline):
     fp.seek(pos)
     return gitpatches
 
-def iterhunks(ui, fp):
+def iterhunks(fp):
     """Read a patch and yield the following events:
     - ("file", afile, bfile, firsthunk): select a new target file.
     - ("hunk", hunk): a new hunk is ready to be applied, follows a
@@ -1114,7 +1114,7 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
     cwd = os.getcwd()
     opener = scmutil.opener(cwd)
 
-    for state, values in iterhunks(ui, fp):
+    for state, values in iterhunks(fp):
         if state == 'hunk':
             if not current_file:
                 continue
