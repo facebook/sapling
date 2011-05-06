@@ -406,7 +406,7 @@ class patchfile(object):
             self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
 
         self.hash = {}
-        self.dirty = 0
+        self.dirty = False
         self.offset = 0
         self.skew = 0
         self.rej = []
@@ -539,7 +539,7 @@ class patchfile(object):
             else:
                 self.lines[:] = h.new()
                 self.offset += len(h.new())
-                self.dirty = 1
+                self.dirty = True
             return 0
 
         horig = h
@@ -567,7 +567,7 @@ class patchfile(object):
             else:
                 self.lines[start : start + h.lena] = h.new()
                 self.offset += h.lenb - h.lena
-                self.dirty = 1
+                self.dirty = True
             return 0
 
         # ok, we couldn't match the hunk. Lets look for offsets and fuzz it
@@ -592,7 +592,7 @@ class patchfile(object):
                         self.lines[l : l + len(old)] = newlines
                         self.offset += len(newlines) - len(old)
                         self.skew = l - orig_start
-                        self.dirty = 1
+                        self.dirty = True
                         offset = l - orig_start - fuzzlen
                         if fuzzlen:
                             msg = _("Hunk #%d succeeded at %d "
