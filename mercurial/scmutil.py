@@ -439,8 +439,8 @@ else:
                     rcpath.append(os.path.join(progrcd, f))
             return rcpath
         # else look for a system rcpath in the registry
-        value = util.lookup_reg('SOFTWARE\\Mercurial', None,
-                                _HKEY_LOCAL_MACHINE)
+        value = util.lookupreg('SOFTWARE\\Mercurial', None,
+                               _HKEY_LOCAL_MACHINE)
         if not isinstance(value, str) or not value:
             return rcpath
         value = value.replace('/', os.sep)

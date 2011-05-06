@@ -487,7 +487,7 @@ def checkwinfilename(path):
             return _("filename ends with '%s', which is not allowed "
                      "on Windows") % t
 
-def lookup_reg(key, name=None, scope=None):
+def lookupreg(key, name=None, scope=None):
     return None
 
 def hidewindow():

@@ -180,7 +180,7 @@ def testpid(pid):
             _kernel32.CloseHandle(h)
     return _kernel32.GetLastError() != _ERROR_INVALID_PARAMETER
 
-def lookup_reg(key, valname=None, scope=None):
+def lookupreg(key, valname=None, scope=None):
     ''' Look up a key/value name in the Windows registry.
 
     valname: value name. If unspecified, the default value for the key
