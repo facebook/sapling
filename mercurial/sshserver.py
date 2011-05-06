@@ -21,8 +21,8 @@ class sshserver(object):
         sys.stdout = sys.stderr
 
         # Prevent insertion/deletion of CRs
-        util.set_binary(self.fin)
-        util.set_binary(self.fout)
+        util.setbinary(self.fin)
+        util.setbinary(self.fout)
 
     def getargs(self, args):
         data = {}

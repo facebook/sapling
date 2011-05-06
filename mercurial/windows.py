@@ -96,7 +96,7 @@ def checkexec(path):
 def checklink(path):
     return False
 
-def set_binary(fd):
+def setbinary(fd):
     # When run without console, pipes may expose invalid
     # fileno(), usually set to -1.
     if hasattr(fd, 'fileno') and fd.fileno() >= 0:

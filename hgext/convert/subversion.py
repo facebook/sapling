@@ -112,8 +112,8 @@ def debugsvnlog(ui, **opts):
     """Fetch SVN log in a subprocess and channel them back to parent to
     avoid memory collection issues.
     """
-    util.set_binary(sys.stdin)
-    util.set_binary(sys.stdout)
+    util.setbinary(sys.stdin)
+    util.setbinary(sys.stdout)
     args = decodeargs(sys.stdin.read())
     get_log_child(sys.stdout, *args)
 

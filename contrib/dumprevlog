@@ -6,7 +6,7 @@ import sys
 from mercurial import revlog, node, util
 
 for fp in (sys.stdin, sys.stdout, sys.stderr):
-    util.set_binary(fp)
+    util.setbinary(fp)
 
 for f in sys.argv[1:]:
     binopen = lambda fn: open(fn, 'rb')

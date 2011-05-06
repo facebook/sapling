@@ -128,7 +128,7 @@ def checkosfilename(path):
     Returns None if the path is ok, or a UI string describing the problem.'''
     pass # on posix platforms, every path is ok
 
-def set_binary(fd):
+def setbinary(fd):
     pass
 
 def pconvert(path):
