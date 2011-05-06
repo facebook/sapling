@@ -844,13 +844,16 @@ class queue(object):
                 inclsubs.append(s)
         return inclsubs
 
+    def localchangesfound(self, refresh=True):
+        if refresh:
+            raise util.Abort(_("local changes found, refresh first"))
+        else:
+            raise util.Abort(_("local changes found"))
+
     def check_localchanges(self, repo, force=False, refresh=True):
         m, a, r, d = repo.status()[:4]
         if (m or a or r or d) and not force:
-            if refresh:
-                raise util.Abort(_("local changes found, refresh first"))
-            else:
-                raise util.Abort(_("local changes found"))
+            self.localchangesfound(refresh)
         return m, a, r, d
 
     _reserved = ('series', 'status', 'guards', '.', '..')
@@ -1127,8 +1130,6 @@ class queue(object):
             if start == len(self.series):
                 self.ui.warn(_('patch series already fully applied\n'))
                 return 1
-            if not force:
-                self.check_localchanges(repo, refresh=self.applied)
 
             if exact:
                 if move:
@@ -1167,6 +1168,19 @@ class queue(object):
                 end = self.series.index(patch, start) + 1
 
             s = self.series[start:end]
+
+            if not force:
+                mm, aa, rr, dd = repo.status()[:4]
+                wcfiles = set(mm + aa + rr + dd)
+                if wcfiles:
+                    for patchname in s:
+                        pf = os.path.join(self.path, patchname)
+                        patchfiles = patchmod.changedfiles(pf, strip=1)
+                        if not wcfiles.isdisjoint(patchfiles):
+                            self.localchangesfound(self.applied)
+            elif mergeq:
+                self.check_localchanges(refresh=self.applied)
+
             all_files = set()
             try:
                 if mergeq:
@@ -1247,9 +1261,6 @@ class queue(object):
                         break
                 update = needupdate
 
-            if not force and update:
-                self.check_localchanges(repo)
-
             self.applied_dirty = 1
             end = len(self.applied)
             rev = self.applied[start].node
@@ -1272,6 +1283,12 @@ class queue(object):
                 qp = self.qparents(repo, rev)
                 ctx = repo[qp]
                 m, a, r, d = repo.status(qp, top)[:4]
+                parentfiles = set(m + a + r + d)
+                if not force and parentfiles:
+                    mm, aa, rr, dd = repo.status()[:4]
+                    wcfiles = set(mm + aa + rr + dd)
+                    if not wcfiles.isdisjoint(parentfiles):
+                        self.localchangesfound()
                 if d:
                     raise util.Abort(_("deletions found between repo revs"))
                 for f in a:
