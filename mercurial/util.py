@@ -445,10 +445,10 @@ def copyfiles(src, dst, hardlink=None):
 
     return hardlink, num
 
-_windows_reserved_filenames = '''con prn aux nul
+_winreservednames = '''con prn aux nul
     com1 com2 com3 com4 com5 com6 com7 com8 com9
     lpt1 lpt2 lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9'''.split()
-_windows_reserved_chars = ':*?"<>|'
+_winreservedchars = ':*?"<>|'
 def checkwinfilename(path):
     '''Check that the base-relative path is a valid filename on Windows.
     Returns None if the path is ok, or a UI string describing the problem.
@@ -472,14 +472,14 @@ def checkwinfilename(path):
         if not n:
             continue
         for c in n:
-            if c in _windows_reserved_chars:
+            if c in _winreservedchars:
                 return _("filename contains '%s', which is reserved "
                          "on Windows") % c
             if ord(c) <= 31:
                 return _("filename contains %r, which is invalid "
                          "on Windows") % c
         base = n.split('.')[0]
-        if base and base.lower() in _windows_reserved_filenames:
+        if base and base.lower() in _winreservednames:
             return _("filename contains '%s', which is reserved "
                      "on Windows") % base
         t = n[-1]
