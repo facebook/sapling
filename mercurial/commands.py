@@ -1097,11 +1097,7 @@ def debugbuilddag(ui, repo, text,
         tr.release()
 
     if tags:
-        tagsf = repo.opener("localtags", "w")
-        try:
-            tagsf.write("".join(tags))
-        finally:
-            tagsf.close()
+        repo.opener.write("localtags", "".join(tags))
 
 def debugcommands(ui, cmd='', *args):
     """list all available commands and options"""
