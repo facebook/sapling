@@ -772,7 +772,7 @@ def makedirs(name, mode=None):
     makedirs(name, mode)
 
 def readfile(path):
-    fp = open(path)
+    fp = open(path, 'rb')
     try:
         return fp.read()
     finally:
