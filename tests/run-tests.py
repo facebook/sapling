@@ -902,7 +902,7 @@ def _checkhglib(verb):
     the one we expect it to be.  If not, print a warning to stderr."""
     expecthg = os.path.join(PYTHONDIR, 'mercurial')
     actualhg = _gethgpath()
-    if actualhg != expecthg:
+    if os.path.abspath(actualhg) != os.path.abspath(expecthg):
         sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
                          '         (expected %s)\n'
                          % (verb, actualhg, expecthg))
