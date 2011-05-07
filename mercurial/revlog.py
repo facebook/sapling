@@ -27,11 +27,10 @@ _sha = util.sha1
 REVLOGV0 = 0
 REVLOGNG = 1
 REVLOGNGINLINEDATA = (1 << 16)
-REVLOGSHALLOW = (1 << 17)
 REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
-REVLOGNG_FLAGS = REVLOGNGINLINEDATA | REVLOGSHALLOW
+REVLOGNG_FLAGS = REVLOGNGINLINEDATA
 
 # revlog index flags
 REVIDX_KNOWN_FLAGS = 0
@@ -207,7 +206,7 @@ class revlog(object):
     remove data, and can use some simple techniques to avoid the need
     for locking while reading.
     """
-    def __init__(self, opener, indexfile, shallowroot=None):
+    def __init__(self, opener, indexfile):
         """
         create a revlog object
 
@@ -220,7 +219,6 @@ class revlog(object):
         self._cache = None
         self._chunkcache = (0, '')
         self.index = []
-        self._shallowroot = shallowroot
         self._pcache = {}
         self._nodecache = {nullid: nullrev}
         self._nodepos = None
@@ -230,9 +228,6 @@ class revlog(object):
             v = opener.options['defversion']
             if v & REVLOGNG:
                 v |= REVLOGNGINLINEDATA
-
-        if shallowroot:
-            v |= REVLOGSHALLOW
 
         i = ''
         try:
@@ -247,7 +242,6 @@ class revlog(object):
 
         self.version = v
         self._inline = v & REVLOGNGINLINEDATA
-        self._shallow = v & REVLOGSHALLOW
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
         if fmt == REVLOGV0 and flags:
