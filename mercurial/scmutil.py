@@ -176,7 +176,7 @@ class opener(abstractopener):
         self._trustnlink = None
 
     @util.propertycache
-    def _can_symlink(self):
+    def _cansymlink(self):
         return util.checklink(self.base)
 
     def _fixfilemode(self, name):
@@ -243,7 +243,7 @@ class opener(abstractopener):
         if not os.path.exists(dirname):
             util.makedirs(dirname, self.createmode)
 
-        if self._can_symlink:
+        if self._cansymlink:
             try:
                 os.symlink(src, linkname)
             except OSError, err:
