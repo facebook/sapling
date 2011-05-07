@@ -1549,28 +1549,38 @@ def debugindex(ui, repo, file_, **opts):
     if not r:
         r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
 
+    generaldelta = r.version & revlog.REVLOGGENERALDELTA
+    if generaldelta:
+        basehdr = ' delta'
+    else:
+        basehdr = '  base'
+
     if format == 0:
-        ui.write("   rev    offset  length   base linkrev"
+        ui.write("   rev    offset  length " + basehdr + " linkrev"
                  " nodeid       p1           p2\n")
     elif format == 1:
         ui.write("   rev flag   offset   length"
-                 "     size   base   link     p1     p2       nodeid\n")
+                 "     size " + basehdr + "   link     p1     p2       nodeid\n")
 
     for i in r:
         node = r.node(i)
+        if generaldelta:
+            base = r.deltaparent(i)
+        else:
+            base = r.chainbase(i)
         if format == 0:
             try:
                 pp = r.parents(node)
             except:
                 pp = [nullid, nullid]
             ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
-                    i, r.start(i), r.length(i), r.chainbase(i), r.linkrev(i),
+                    i, r.start(i), r.length(i), base, r.linkrev(i),
                     short(node), short(pp[0]), short(pp[1])))
         elif format == 1:
             pr = r.parentrevs(i)
             ui.write("% 6d %04x % 8d % 8d % 8d % 6d % 6d % 6d % 6d %s\n" % (
                     i, r.flags(i), r.start(i), r.length(i), r.rawsize(i),
-                    r.chainbase(i), r.linkrev(i), pr[0], pr[1], short(node)))
+                    base, r.linkrev(i), pr[0], pr[1], short(node)))
 
 def debugindexdot(ui, repo, file_):
     """dump an index DAG as a graphviz dot file"""
