@@ -27,10 +27,11 @@ _sha = util.sha1
 REVLOGV0 = 0
 REVLOGNG = 1
 REVLOGNGINLINEDATA = (1 << 16)
+REVLOGGENERALDELTA = (1 << 17)
 REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
 REVLOG_DEFAULT_FORMAT = REVLOGNG
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
-REVLOGNG_FLAGS = REVLOGNGINLINEDATA
+REVLOGNG_FLAGS = REVLOGNGINLINEDATA | REVLOGGENERALDELTA
 
 # revlog index flags
 REVIDX_KNOWN_FLAGS = 0
@@ -243,6 +244,7 @@ class revlog(object):
 
         self.version = v
         self._inline = v & REVLOGNGINLINEDATA
+        self._generaldelta = v & REVLOGGENERALDELTA
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
         if fmt == REVLOGV0 and flags:
@@ -830,8 +832,11 @@ class revlog(object):
 
     def deltaparent(self, rev):
         """return deltaparent of the given revision"""
-        if self.index[rev][3] == rev:
+        base = self.index[rev][3]
+        if base == rev:
             return nullrev
+        elif self._generaldelta:
+            return base
         else:
             return rev - 1
 
@@ -865,11 +870,15 @@ class revlog(object):
         # build delta chain
         chain = []
         index = self.index # for performance
+        generaldelta = self._generaldelta
         iterrev = rev
         e = index[iterrev]
         while iterrev != e[3] and iterrev != cachedrev:
             chain.append(iterrev)
-            iterrev -= 1
+            if generaldelta:
+                iterrev = e[3]
+            else:
+                iterrev -= 1
             e = index[iterrev]
         chain.reverse()
         base = iterrev
