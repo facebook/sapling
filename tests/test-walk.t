@@ -295,6 +295,18 @@ Test patterns:
   $ hg debugwalk ignored/file
   f  ignored/file  ignored/file  exact
 
+Test listfile and listfile0
+
+  $ python -c "file('../listfile0', 'wb').write('fenugreek\0new\0')"
+  $ hg debugwalk -I 'listfile0:../listfile0'
+  f  fenugreek  fenugreek
+  f  new        new
+  $ python -c "file('../listfile', 'wb').write('fenugreek\nnew\r\nmammals/skunk\n')"
+  $ hg debugwalk -I 'listfile:../listfile'
+  f  fenugreek      fenugreek
+  f  mammals/skunk  mammals/skunk
+  f  new            new
+
   $ cd ..
   $ hg debugwalk -R t t/mammals/skunk
   f  mammals/skunk  t/mammals/skunk  exact

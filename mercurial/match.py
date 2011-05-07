@@ -273,9 +273,12 @@ def _normalize(names, default, root, cwd, auditor):
         elif kind in ('relglob', 'path'):
             name = util.normpath(name)
         elif kind in ('listfile', 'listfile0'):
-            delimiter = kind == 'listfile0' and '\0' or '\n'
             try:
-                files = util.readfile(name).split(delimiter)
+                files = util.readfile(name)
+                if kind == 'listfile0':
+                    files = files.split('\0')
+                else:
+                    files = files.splitlines()
                 files = [f for f in files if f]
             except EnvironmentError:
                 raise util.Abort(_("unable to read file list (%s)") % name)
