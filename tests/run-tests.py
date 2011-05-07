@@ -717,7 +717,7 @@ def runone(options, test):
     def ignore(msg):
         result('i', (test, msg))
 
-    if (test.startswith("test-") and '~' not in test and
+    if (os.path.basename(test).startswith("test-") and '~' not in test and
         ('.' not in test or test.endswith('.py') or
          test.endswith('.bat') or test.endswith('.t'))):
         if not os.path.exists(test):
@@ -796,7 +796,7 @@ def runone(options, test):
 
     # Make a tmp subdirectory to work in
     testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
-        os.path.join(HGTMP, test)
+        os.path.join(HGTMP, os.path.basename(test))
 
     os.mkdir(testtmp)
     ret, out = runner(testpath, testtmp, options, [
