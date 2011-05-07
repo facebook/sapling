@@ -1564,13 +1564,13 @@ def debugindex(ui, repo, file_, **opts):
             except:
                 pp = [nullid, nullid]
             ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
-                    i, r.start(i), r.length(i), r.base(i), r.linkrev(i),
+                    i, r.start(i), r.length(i), r.chainbase(i), r.linkrev(i),
                     short(node), short(pp[0]), short(pp[1])))
         elif format == 1:
             pr = r.parentrevs(i)
             ui.write("% 6d %04x % 8d % 8d % 8d % 6d % 6d % 6d % 6d %s\n" % (
                     i, r.flags(i), r.start(i), r.length(i), r.rawsize(i),
-                    r.base(i), r.linkrev(i), pr[0], pr[1], short(node)))
+                    r.chainbase(i), r.linkrev(i), pr[0], pr[1], short(node)))
 
 def debugindexdot(ui, repo, file_):
     """dump an index DAG as a graphviz dot file"""

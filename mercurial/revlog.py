@@ -217,6 +217,7 @@ class revlog(object):
         self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
         self._cache = None
+        self._basecache = None
         self._chunkcache = (0, '')
         self.index = []
         self._pcache = {}
@@ -313,8 +314,13 @@ class revlog(object):
         return self.start(rev) + self.length(rev)
     def length(self, rev):
         return self.index[rev][1]
-    def base(self, rev):
-        return self.index[rev][3]
+    def chainbase(self, rev):
+        index = self.index
+        base = index[rev][3]
+        while base != rev:
+            rev = base
+            base = index[rev][3]
+        return base
     def flags(self, rev):
         return self.index[rev][0] & 0xFFFF
     def rawsize(self, rev):
@@ -850,7 +856,6 @@ class revlog(object):
         # look up what we need to read
         text = None
         rev = self.rev(node)
-        base = self.base(rev)
 
         # check rev flags
         if self.flags(rev) & ~REVIDX_KNOWN_FLAGS:
@@ -859,10 +864,13 @@ class revlog(object):
 
         # build delta chain
         chain = []
+        index = self.index # for performance
         iterrev = rev
-        while iterrev != base and iterrev != cachedrev:
+        e = index[iterrev]
+        while iterrev != e[3] and iterrev != cachedrev:
             chain.append(iterrev)
             iterrev -= 1
+            e = index[iterrev]
         chain.reverse()
         base = iterrev
 
@@ -984,7 +992,11 @@ class revlog(object):
                 delta = mdiff.textdiff(ptext, t)
             data = compress(delta)
             l = len(data[1]) + len(data[0])
-            base = self.base(rev)
+            basecache = self._basecache
+            if basecache and basecache[0] == rev:
+                base = basecache[1]
+            else:
+                base = self.chainbase(rev)
             dist = l + offset - self.start(base)
             return dist, l, data, base
 
@@ -1038,6 +1050,7 @@ class revlog(object):
 
         if type(text) == str: # only accept immutable objects
             self._cache = (node, curr, text)
+        self._basecache = (curr, base)
         return node
 
     def group(self, nodelist, bundler):
