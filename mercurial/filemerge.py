@@ -31,10 +31,10 @@ def _findtool(ui, tool):
             continue
         p = util.lookupreg(k, _toolstr(ui, tool, "regname"))
         if p:
-            p = util.find_exe(p + _toolstr(ui, tool, "regappend"))
+            p = util.findexe(p + _toolstr(ui, tool, "regappend"))
             if p:
                 return p
-    return util.find_exe(_toolstr(ui, tool, "executable", tool))
+    return util.findexe(_toolstr(ui, tool, "executable", tool))
 
 def _picktool(repo, ui, path, binary, symlink):
     def check(tool, pat, symlink, binary):

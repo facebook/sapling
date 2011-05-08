@@ -319,7 +319,7 @@ def hgexecutable():
         elif mainfrozen():
             _sethgexecutable(sys.executable)
         else:
-            exe = find_exe('hg') or os.path.basename(sys.argv[0])
+            exe = findexe('hg') or os.path.basename(sys.argv[0])
             _sethgexecutable(exe)
     return _hgexecutable
 

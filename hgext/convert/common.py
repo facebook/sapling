@@ -29,7 +29,7 @@ class MissingTool(Exception):
 
 def checktool(exe, name=None, abort=True):
     name = name or exe
-    if not util.find_exe(exe):
+    if not util.findexe(exe):
         exc = abort and util.Abort or MissingTool
         raise exc(_('cannot find required "%s" tool') % name)
 

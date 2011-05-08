@@ -1648,7 +1648,7 @@ def debuginstall(ui):
     # editor
     ui.status(_("Checking commit editor...\n"))
     editor = ui.geteditor()
-    cmdpath = util.find_exe(editor) or util.find_exe(editor.split()[0])
+    cmdpath = util.findexe(editor) or util.findexe(editor.split()[0])
     if not cmdpath:
         if editor == 'vi':
             ui.write(_(" No commit editor set and can't find vi in PATH\n"))

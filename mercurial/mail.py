@@ -112,7 +112,7 @@ def validateconfig(ui):
             raise util.Abort(_('smtp specified as email transport, '
                                'but no smtp host configured'))
     else:
-        if not util.find_exe(method):
+        if not util.findexe(method):
             raise util.Abort(_('%r specified as email transport, '
                                'but not in PATH') % method)
 

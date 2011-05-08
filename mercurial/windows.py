@@ -163,7 +163,7 @@ def explainexit(code):
 def isowner(st):
     return True
 
-def find_exe(command):
+def findexe(command):
     '''Find executable for command searching like cmd.exe does.
     If command is a basename then PATH is searched for command.
     PATH isn't searched if command is an absolute or relative path.

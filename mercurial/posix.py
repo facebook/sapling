@@ -221,7 +221,7 @@ def isowner(st):
     """Return True if the stat object st is from the current user."""
     return st.st_uid == os.getuid()
 
-def find_exe(command):
+def findexe(command):
     '''Find executable for command searching like which does.
     If command is a basename then PATH is searched for command.
     PATH isn't searched if command is an absolute or relative path.
