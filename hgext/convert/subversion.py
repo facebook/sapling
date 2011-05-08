@@ -1004,7 +1004,7 @@ class svn_sink(converter_sink, commandline):
         self.opener = scmutil.opener(self.wc)
         self.wopener = scmutil.opener(self.wc)
         self.childmap = mapfile(ui, self.join('hg-childmap'))
-        self.is_exec = util.checkexec(self.wc) and util.is_exec or None
+        self.is_exec = util.checkexec(self.wc) and util.isexec or None
 
         if created:
             hook = os.path.join(created, 'hooks', 'pre-revprop-change')

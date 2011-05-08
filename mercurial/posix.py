@@ -44,7 +44,7 @@ def sshargs(sshcmd, host, user, port):
     args = user and ("%s@%s" % (user, host)) or host
     return port and ("%s -p %s" % (args, port)) or args
 
-def is_exec(f):
+def isexec(f):
     """check whether a file is executable"""
     return (os.lstat(f).st_mode & 0100 != 0)
 

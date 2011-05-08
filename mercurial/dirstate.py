@@ -138,7 +138,7 @@ class dirstate(object):
                     p = self._join(x)
                     if os.path.islink(p):
                         return 'l'
-                    if util.is_exec(p):
+                    if util.isexec(p):
                         return 'x'
                     return ''
                 return f
@@ -153,7 +153,7 @@ class dirstate(object):
             def f(x):
                 if 'l' in fallback(x):
                     return 'l'
-                if util.is_exec(self._join(x)):
+                if util.isexec(self._join(x)):
                     return 'x'
                 return ''
             return f
