@@ -477,12 +477,8 @@ def dorecord(ui, repo, commitfunc, *pats, **opts):
                 try:
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
-                    pfiles = {}
-                    try:
-                        patch.internalpatch(fp, ui, 1, repo.root, files=pfiles,
-                                            eolmode=None)
-                    finally:
-                        patch.updatedir(ui, repo, pfiles)
+                    patch.internalpatch(ui, repo, fp, 1, repo.root,
+                                        eolmode=None)
                 except patch.PatchError, err:
                     raise util.Abort(str(err))
             del fp

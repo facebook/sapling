@@ -614,17 +614,14 @@ class queue(object):
         patchfile: name of patch file'''
         files = {}
         try:
-            try:
-                fuzz = patchmod.patch(patchfile, self.ui, strip=1,
-                                      cwd=repo.root, files=files, eolmode=None)
-            finally:
-                files = patchmod.updatedir(self.ui, repo, files)
-            return (True, files, fuzz)
+            fuzz = patchmod.patch(self.ui, repo, patchfile, strip=1,
+                                  cwd=repo.root, files=files, eolmode=None)
+            return (True, list(files), fuzz)
         except Exception, inst:
             self.ui.note(str(inst) + '\n')
             if not self.ui.verbose:
                 self.ui.warn(_("patch failed, unable to continue (try -v)\n"))
-            return (False, files, False)
+            return (False, list(files), False)
 
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, all_files=None):

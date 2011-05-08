@@ -224,15 +224,12 @@ class transplanter(object):
         if patchfile:
             try:
                 files = {}
-                try:
-                    patch.patch(patchfile, self.ui, cwd=repo.root,
-                                files=files, eolmode=None)
-                    if not files:
-                        self.ui.warn(_('%s: empty changeset')
-                                     % revlog.hex(node))
-                        return None
-                finally:
-                    files = patch.updatedir(self.ui, repo, files)
+                patch.patch(self.ui, repo, patchfile, cwd=repo.root,
+                            files=files, eolmode=None)
+                files = list(files)
+                if not files:
+                    self.ui.warn(_('%s: empty changeset') % revlog.hex(node))
+                    return None
             except Exception, inst:
                 seriespath = os.path.join(self.path, 'series')
                 if os.path.exists(seriespath):

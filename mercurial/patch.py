@@ -428,7 +428,7 @@ class patchfile(object):
 
     def writelines(self, fname, lines):
         # Ensure supplied data ends in fname, being a regular file or
-        # a symlink. cmdutil.updatedir will -too magically- take care
+        # a symlink. _updatedir will -too magically- take care
         # of setting it to the proper type afterwards.
         st_mode = None
         islink = os.path.islink(fname)
@@ -1101,7 +1101,7 @@ def applydiff(ui, fp, changed, strip=1, eolmode='strict'):
     read in binary mode. Otherwise, line endings are ignored when
     patching then normalized according to 'eolmode'.
 
-    Callers probably want to call 'cmdutil.updatedir' after this to
+    Callers probably want to call '_updatedir' after this to
     apply certain categories of changes not done by this function.
     """
     return _applydiff(ui, fp, patchfile, copyfile, changed, strip=strip,
@@ -1157,7 +1157,7 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
         return -1
     return err
 
-def updatedir(ui, repo, patches, similarity=0):
+def _updatedir(ui, repo, patches, similarity=0):
     '''Update dirstate after patch application according to metadata'''
     if not patches:
         return []
@@ -1237,7 +1237,8 @@ def _externalpatch(patcher, patchname, ui, strip, cwd, files):
                          util.explainexit(code)[0])
     return fuzz
 
-def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):
+def internalpatch(ui, repo, patchobj, strip, cwd, files=None, eolmode='strict',
+                  similarity=0):
     """use builtin patch to apply <patchobj> to the working directory.
     returns whether patch was applied with fuzz factor."""
 
@@ -1263,11 +1264,14 @@ def internalpatch(patchobj, ui, strip, cwd, files=None, eolmode='strict'):
             os.chdir(curdir)
         if fp != patchobj:
             fp.close()
+        touched = _updatedir(ui, repo, files, similarity)
+        files.update(dict.fromkeys(touched))
     if ret < 0:
         raise PatchError(_('patch failed to apply'))
     return ret > 0
 
-def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
+def patch(ui, repo, patchname, strip=1, cwd=None, files=None, eolmode='strict',
+          similarity=0):
     """Apply <patchname> to the working directory.
 
     'eolmode' specifies how end of lines should be handled. It can be:
@@ -1284,8 +1288,14 @@ def patch(patchname, ui, strip=1, cwd=None, files=None, eolmode='strict'):
         files = {}
     try:
         if patcher:
-            return _externalpatch(patcher, patchname, ui, strip, cwd, files)
-        return internalpatch(patchname, ui, strip, cwd, files, eolmode)
+            try:
+                return _externalpatch(patcher, patchname, ui, strip, cwd,
+                                      files)
+            finally:
+                touched = _updatedir(ui, repo, files, similarity)
+                files.update(dict.fromkeys(touched))
+        return internalpatch(ui, repo, patchname, strip, cwd, files, eolmode,
+                             similarity)
     except PatchError, err:
         raise util.Abort(str(err))
 
