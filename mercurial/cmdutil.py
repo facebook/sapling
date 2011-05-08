@@ -335,7 +335,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
 def updatedir(ui, repo, patches, similarity=0):
     '''Update dirstate after patch application according to metadata'''
     if not patches:
-        return
+        return []
     copies = []
     removes = set()
     cfiles = patches.keys()

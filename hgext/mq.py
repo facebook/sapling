@@ -614,15 +614,17 @@ class queue(object):
         patchfile: name of patch file'''
         files = {}
         try:
-            fuzz = patchmod.patch(patchfile, self.ui, strip=1, cwd=repo.root,
-                               files=files, eolmode=None)
+            try:
+                fuzz = patchmod.patch(patchfile, self.ui, strip=1,
+                                      cwd=repo.root, files=files, eolmode=None)
+            finally:
+                files = cmdutil.updatedir(self.ui, repo, files)
+            return (True, files, fuzz)
         except Exception, inst:
             self.ui.note(str(inst) + '\n')
             if not self.ui.verbose:
                 self.ui.warn(_("patch failed, unable to continue (try -v)\n"))
             return (False, files, False)
-
-        return (True, files, fuzz)
 
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, all_files=None):
@@ -707,7 +709,6 @@ class queue(object):
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
 
-            files = cmdutil.updatedir(self.ui, repo, files)
             match = cmdutil.matchfiles(repo, files or [])
             n = repo.commit(message, ph.user, ph.date, match=match, force=True)
 
@@ -2280,7 +2281,6 @@ def fold(ui, repo, *files, **opts):
         (patchsuccess, files, fuzz) = q.patch(repo, pf)
         if not patchsuccess:
             raise util.Abort(_('error folding patch %s') % p)
-        cmdutil.updatedir(ui, repo, files)
 
     if not message:
         ph = patchheader(q.join(parent), q.plainmode)
