@@ -235,6 +235,7 @@ the bookmark extension should be ignored now that it is part of core
      Y                         2:db815d6d32e6
    * Z                         2:db815d6d32e6
      x  y                      2:db815d6d32e6
+
 test summary
 
   $ hg summary
@@ -248,6 +249,22 @@ test id
 
   $ hg id
   db815d6d32e6 tip Y/Z/x  y
+
+test rollback
+
+  $ echo foo > f1
+  $ hg ci -Amr
+  adding f1
+  $ hg bookmark -f Y -r 1
+  $ hg bookmark -f Z -r 1
+  $ hg rollback
+  repository tip rolled back to revision 2 (undo commit)
+  working directory now based on revision 2
+  $ hg bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+   * Z                         2:db815d6d32e6
+     x  y                      2:db815d6d32e6
 
 test clone
 

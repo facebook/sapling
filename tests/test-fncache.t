@@ -76,6 +76,7 @@ Non store repo:
   .hg/last-message.txt
   .hg/requires
   .hg/undo
+  .hg/undo.bookmarks
   .hg/undo.branch
   .hg/undo.desc
   .hg/undo.dirstate
@@ -102,6 +103,7 @@ Non fncache repo:
   .hg/store/data/tst.d.hg
   .hg/store/data/tst.d.hg/_foo.i
   .hg/store/undo
+  .hg/undo.bookmarks
   .hg/undo.branch
   .hg/undo.desc
   .hg/undo.dirstate
