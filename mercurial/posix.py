@@ -263,10 +263,6 @@ def getuser():
     '''return name of current user'''
     return getpass.getuser()
 
-def expand_glob(pats):
-    '''On Windows, expand the implicit globs in a list of patterns'''
-    return list(pats)
-
 def username(uid=None):
     """Return the name of the user with the given uid.
 
