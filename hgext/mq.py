@@ -1174,7 +1174,7 @@ class queue(object):
                     for patchname in s:
                         pf = os.path.join(self.path, patchname)
                         patchfiles = patchmod.changedfiles(pf, strip=1)
-                        if not wcfiles.isdisjoint(patchfiles):
+                        if wcfiles.intersection(patchfiles):
                             self.localchangesfound(self.applied)
             elif mergeq:
                 self.check_localchanges(refresh=self.applied)
@@ -1285,7 +1285,7 @@ class queue(object):
                 if not force and parentfiles:
                     mm, aa, rr, dd = repo.status()[:4]
                     wcfiles = set(mm + aa + rr + dd)
-                    if not wcfiles.isdisjoint(parentfiles):
+                    if wcfiles.intersection(parentfiles):
                         self.localchangesfound()
                 if d:
                     raise util.Abort(_("deletions found between repo revs"))

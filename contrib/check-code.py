@@ -139,6 +139,7 @@ pypats = [
     (r'[\x80-\xff]', "non-ASCII character literal"),
     (r'("\')\.format\(', "str.format() not available in Python 2.4"),
     (r'^\s*with\s+', "with not available in Python 2.4"),
+    (r'\.isdisjoint\(', "set.isdisjoint not available in Python 2.4"),
     (r'^\s*except.* as .*:', "except as not available in Python 2.4"),
     (r'^\s*os\.path\.relpath', "relpath not available in Python 2.4"),
     (r'(?<!def)\s+(any|all|format)\(',
