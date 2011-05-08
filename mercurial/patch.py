@@ -11,7 +11,7 @@ import tempfile, zlib
 
 from i18n import _
 from node import hex, nullid, short
-import base85, mdiff, scmutil, util, diffhelpers, copies, encoding
+import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, wdutil
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 
@@ -1156,6 +1156,49 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
     if rejects:
         return -1
     return err
+
+def updatedir(ui, repo, patches, similarity=0):
+    '''Update dirstate after patch application according to metadata'''
+    if not patches:
+        return []
+    copies = []
+    removes = set()
+    cfiles = patches.keys()
+    cwd = repo.getcwd()
+    if cwd:
+        cfiles = [util.pathto(repo.root, cwd, f) for f in patches.keys()]
+    for f in patches:
+        gp = patches[f]
+        if not gp:
+            continue
+        if gp.op == 'RENAME':
+            copies.append((gp.oldpath, gp.path))
+            removes.add(gp.oldpath)
+        elif gp.op == 'COPY':
+            copies.append((gp.oldpath, gp.path))
+        elif gp.op == 'DELETE':
+            removes.add(gp.path)
+
+    wctx = repo[None]
+    for src, dst in copies:
+        wdutil.dirstatecopy(ui, repo, wctx, src, dst, cwd=cwd)
+    if (not similarity) and removes:
+        wctx.remove(sorted(removes), True)
+
+    for f in patches:
+        gp = patches[f]
+        if gp and gp.mode:
+            islink, isexec = gp.mode
+            dst = repo.wjoin(gp.path)
+            # patch won't create empty files
+            if gp.op == 'ADD' and not os.path.lexists(dst):
+                flags = (isexec and 'x' or '') + (islink and 'l' or '')
+                repo.wwrite(gp.path, '', flags)
+            util.setflags(dst, islink, isexec)
+    wdutil.addremove(repo, cfiles, similarity=similarity)
+    files = patches.keys()
+    files.extend([r for r in removes if r not in files])
+    return sorted(files)
 
 def _externalpatch(patcher, patchname, ui, strip, cwd, files):
     """use <patcher> to apply <patchname> to the working directory.

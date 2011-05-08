@@ -232,7 +232,7 @@ class transplanter(object):
                                      % revlog.hex(node))
                         return None
                 finally:
-                    files = cmdutil.updatedir(self.ui, repo, files)
+                    files = patch.updatedir(self.ui, repo, files)
             except Exception, inst:
                 seriespath = os.path.join(self.path, 'series')
                 if os.path.exists(seriespath):

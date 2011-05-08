@@ -2627,8 +2627,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                 patch.patch(tmpname, ui, strip=strip, cwd=repo.root,
                             files=files, eolmode=None)
             finally:
-                files = cmdutil.updatedir(ui, repo, files,
-                                          similarity=sim / 100.0)
+                files = patch.updatedir(ui, repo, files,
+                                        similarity=sim / 100.0)
             if opts.get('no_commit'):
                 if message:
                     msgs.append(message)

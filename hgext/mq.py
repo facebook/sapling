@@ -618,7 +618,7 @@ class queue(object):
                 fuzz = patchmod.patch(patchfile, self.ui, strip=1,
                                       cwd=repo.root, files=files, eolmode=None)
             finally:
-                files = cmdutil.updatedir(self.ui, repo, files)
+                files = patchmod.updatedir(self.ui, repo, files)
             return (True, files, fuzz)
         except Exception, inst:
             self.ui.note(str(inst) + '\n')
