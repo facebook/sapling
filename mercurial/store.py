@@ -70,9 +70,9 @@ def _buildencodefun():
     'the\\x07quick\\xadshot'
     '''
     e = '_'
-    win_reserved = [ord(x) for x in '\\:*?"<>|']
+    winreserved = [ord(x) for x in '\\:*?"<>|']
     cmap = dict([(chr(x), chr(x)) for x in xrange(127)])
-    for x in (range(32) + range(126, 256) + win_reserved):
+    for x in (range(32) + range(126, 256) + winreserved):
         cmap[chr(x)] = "~%02x" % x
     for x in range(ord("A"), ord("Z")+1) + [ord(e)]:
         cmap[chr(x)] = e + chr(x).lower()
@@ -96,9 +96,9 @@ def _buildencodefun():
 
 encodefilename, decodefilename = _buildencodefun()
 
-def _build_lower_encodefun():
+def _buildlowerencodefun():
     '''
-    >>> f = _build_lower_encodefun()
+    >>> f = _buildlowerencodefun()
     >>> f('nothing/special.txt')
     'nothing/special.txt'
     >>> f('HELLO')
@@ -108,17 +108,17 @@ def _build_lower_encodefun():
     >>> f('the\x07quick\xADshot')
     'the~07quick~adshot'
     '''
-    win_reserved = [ord(x) for x in '\\:*?"<>|']
+    winreserved = [ord(x) for x in '\\:*?"<>|']
     cmap = dict([(chr(x), chr(x)) for x in xrange(127)])
-    for x in (range(32) + range(126, 256) + win_reserved):
+    for x in (range(32) + range(126, 256) + winreserved):
         cmap[chr(x)] = "~%02x" % x
     for x in range(ord("A"), ord("Z")+1):
         cmap[chr(x)] = chr(x).lower()
     return lambda s: "".join([cmap[c] for c in s])
 
-lowerencode = _build_lower_encodefun()
+lowerencode = _buildlowerencodefun()
 
-_windows_reserved_filenames = '''con prn aux nul
+_winreservednames = '''con prn aux nul
     com1 com2 com3 com4 com5 com6 com7 com8 com9
     lpt1 lpt2 lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9'''.split()
 def _auxencode(path, dotencode):
@@ -143,7 +143,7 @@ def _auxencode(path, dotencode):
     for n in path.split('/'):
         if n:
             base = n.split('.')[0]
-            if base and (base in _windows_reserved_filenames):
+            if base and (base in _winreservednames):
                 # encode third letter ('aux' -> 'au~78')
                 ec = "~%02x" % ord(n[2])
                 n = n[0:2] + ec + n[3:]
@@ -155,9 +155,9 @@ def _auxencode(path, dotencode):
         res.append(n)
     return '/'.join(res)
 
-MAX_PATH_LEN_IN_HGSTORE = 120
-DIR_PREFIX_LEN = 8
-_MAX_SHORTENED_DIRS_LEN = 8 * (DIR_PREFIX_LEN + 1) - 4
+_maxstorepathlen = 120
+_dirprefixlen = 8
+_maxshortdirslen = 8 * (_dirprefixlen + 1) - 4
 def _hybridencode(path, auxencode):
     '''encodes path with a length limit
 
@@ -173,17 +173,17 @@ def _hybridencode(path, auxencode):
 
     Hashed encoding (not reversible):
 
-    If the default-encoded path is longer than MAX_PATH_LEN_IN_HGSTORE, a
+    If the default-encoded path is longer than _maxstorepathlen, a
     non-reversible hybrid hashing of the path is done instead.
-    This encoding uses up to DIR_PREFIX_LEN characters of all directory
+    This encoding uses up to _dirprefixlen characters of all directory
     levels of the lowerencoded path, but not more levels than can fit into
-    _MAX_SHORTENED_DIRS_LEN.
+    _maxshortdirslen.
     Then follows the filler followed by the sha digest of the full path.
     The filler is the beginning of the basename of the lowerencoded path
     (the basename is everything after the last path separator). The filler
     is as long as possible, filling in characters from the basename until
-    the encoded path has MAX_PATH_LEN_IN_HGSTORE characters (or all chars
-    of the basename have been taken).
+    the encoded path has _maxstorepathlen characters (or all chars of the
+    basename have been taken).
     The extension (e.g. '.i' or '.d') is preserved.
 
     The string 'data/' at the beginning is replaced with 'dh/', if the hashed
@@ -195,7 +195,7 @@ def _hybridencode(path, auxencode):
     path = encodedir(path)
     ndpath = path[len('data/'):]
     res = 'data/' + auxencode(encodefilename(ndpath))
-    if len(res) > MAX_PATH_LEN_IN_HGSTORE:
+    if len(res) > _maxstorepathlen:
         digest = _sha(path).hexdigest()
         aep = auxencode(lowerencode(ndpath))
         _root, ext = os.path.splitext(aep)
@@ -203,21 +203,21 @@ def _hybridencode(path, auxencode):
         basename = parts[-1]
         sdirs = []
         for p in parts[:-1]:
-            d = p[:DIR_PREFIX_LEN]
+            d = p[:_dirprefixlen]
             if d[-1] in '. ':
                 # Windows can't access dirs ending in period or space
                 d = d[:-1] + '_'
             t = '/'.join(sdirs) + '/' + d
-            if len(t) > _MAX_SHORTENED_DIRS_LEN:
+            if len(t) > _maxshortdirslen:
                 break
             sdirs.append(d)
         dirs = '/'.join(sdirs)
         if len(dirs) > 0:
             dirs += '/'
         res = 'dh/' + dirs + digest + ext
-        space_left = MAX_PATH_LEN_IN_HGSTORE - len(res)
-        if space_left > 0:
-            filler = basename[:space_left]
+        spaceleft = _maxstorepathlen - len(res)
+        if spaceleft > 0:
+            filler = basename[:spaceleft]
             res = 'dh/' + dirs + filler + digest + ext
     return res
 
