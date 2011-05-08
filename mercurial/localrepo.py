@@ -21,7 +21,7 @@ propertycache = util.propertycache
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey',
                         'known', 'getbundle'))
-    supportedformats = set(('revlogv1',))
+    supportedformats = set(('revlogv1', 'generaldelta'))
     supported = supportedformats | set(('store', 'fncache', 'shared',
                                         'dotencode'))
 
@@ -61,6 +61,8 @@ class localrepository(repo.repository):
                         '\0\0\0\2' # represents revlogv2
                         ' dummy changelog to prevent using the old repo layout'
                     )
+                if self.ui.configbool('format', 'generaldelta', False):
+                    requirements.append("generaldelta")
             else:
                 raise error.RepoError(_("repository %s not found") % path)
         elif create:
@@ -115,6 +117,8 @@ class localrepository(repo.repository):
     def _applyrequirements(self, requirements):
         self.requirements = requirements
         self.sopener.options = {}
+        if 'generaldelta' in requirements:
+            self.sopener.options['generaldelta'] = 1
 
     def _writerequirements(self):
         reqfile = self.opener("requires", "w")
@@ -700,7 +704,7 @@ class localrepository(repo.repository):
         if os.path.exists(bkname):
             util.copyfile(bkname, self.join('journal.bookmarks'))
         else:
-            self.opener('journal.bookmarks', 'w').write('')
+            self.opener.write('journal.bookmarks', '')
 
         return (self.sjoin('journal'), self.join('journal.dirstate'),
                 self.join('journal.branch'), self.join('journal.desc'),

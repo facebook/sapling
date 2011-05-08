@@ -226,10 +226,13 @@ class revlog(object):
         self._nodepos = None
 
         v = REVLOG_DEFAULT_VERSION
-        if hasattr(opener, 'options') and 'defversion' in opener.options:
-            v = opener.options['defversion']
-            if v & REVLOGNG:
-                v |= REVLOGNGINLINEDATA
+        if hasattr(opener, 'options'):
+            if 'defversion' in opener.options:
+                v = opener.options['defversion']
+                if v & REVLOGNG:
+                    v |= REVLOGNGINLINEDATA
+            if v & REVLOGNG and 'generaldelta' in opener.options:
+                v |= REVLOGGENERALDELTA
 
         i = ''
         try:
@@ -1003,10 +1006,14 @@ class revlog(object):
             l = len(data[1]) + len(data[0])
             basecache = self._basecache
             if basecache and basecache[0] == rev:
-                base = basecache[1]
+                chainbase = basecache[1]
             else:
-                base = self.chainbase(rev)
-            dist = l + offset - self.start(base)
+                chainbase = self.chainbase(rev)
+            dist = l + offset - self.start(chainbase)
+            if self._generaldelta:
+                base = rev
+            else:
+                base = chainbase
             return dist, l, data, base
 
         curr = len(self)
@@ -1019,7 +1026,10 @@ class revlog(object):
 
         # should we try to build a delta?
         if prev != nullrev:
-            d = builddelta(prev)
+            if self._generaldelta:
+                d = builddelta(p1r)
+            else:
+                d = builddelta(prev)
             dist, l, data, base = d
 
         # full versions are inserted when the needed deltas

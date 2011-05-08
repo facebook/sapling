@@ -7,10 +7,10 @@
 
 from node import hex, nullid, nullrev, short
 from i18n import _
-import os, sys, errno, re, glob, tempfile
+import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, wdutil
 import match as matchmod
-import similar, revset, subrepo
+import revset, subrepo
 
 expandpats = wdutil.expandpats
 match = wdutil.match
