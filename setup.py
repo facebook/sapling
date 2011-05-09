@@ -4,7 +4,7 @@
 # 'python setup.py install', or
 # 'python setup.py --help' for more options
 
-import sys
+import sys, platform
 if not hasattr(sys, 'version_info') or sys.version_info < (2, 4, 0, 'final'):
     raise SystemExit("Mercurial requires Python 2.4 or later.")
 
@@ -36,11 +36,21 @@ except:
     raise SystemExit(
         "Couldn't import standard zlib (incomplete Python install).")
 
+# The base IronPython distribution (as of 2.7.1) doesn't support bz2
+isironpython = False
 try:
-    import bz2
+    isironpython = platform.python_implementation().lower().find("ironpython") != -1
 except:
-    raise SystemExit(
-        "Couldn't import standard bz2 (incomplete Python install).")
+    pass
+
+if isironpython:
+    print "warning: IronPython detected (no bz2 support)"
+else:
+    try:
+        import bz2
+    except:
+        raise SystemExit(
+            "Couldn't import standard bz2 (incomplete Python install).")
 
 import os, subprocess, time
 import shutil
