@@ -3,9 +3,7 @@
 
 plain
 
-  $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ hg init
   $ hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2'
 tags
   $ cat .hg/localtags
@@ -49,9 +47,8 @@ glog
 
 overwritten files
 
-  $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ rm -r .hg
+  $ hg init
   $ hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' -q -o
 tags
   $ cat .hg/localtags
@@ -126,14 +123,12 @@ tags
 cat of
   $ hg cat of --rev tip
   r11
-  $ cd ..
 
 
 new and mergeable files
 
-  $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ rm -r .hg
+  $ hg init
   $ hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' -q -mn
 dag
   $ hg debugdag -t -b
@@ -307,7 +302,6 @@ cat mf
   21
   22 r11
   23
-  $ cd ..
 
 
 
