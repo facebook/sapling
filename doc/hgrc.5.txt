@@ -181,7 +181,11 @@ and their possible values.
 """""""""
 Defines command aliases.
 Aliases allow you to define your own commands in terms of other
-commands (or aliases), optionally including arguments.
+commands (or aliases), optionally including arguments. Positional
+arguments in the form of ``$1``, ``$2``, etc in the alias definition
+are expanded by Mercurial before execution. Positional arguments not
+already used by ``$N`` in the definition are put at the end of the
+command to be executed.
 
 Alias definitions consist of lines of the form::
 
