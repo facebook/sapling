@@ -180,10 +180,6 @@ def parseargs():
     if 'java' in sys.platform or '__pypy__' in sys.modules:
         options.pure = True
 
-    if not (os.path.isfile(options.shell) and
-            os.access(options.shell, os.X_OK)):
-        parser.error('--shell must be executable')
-
     if options.with_hg:
         if not (os.path.isfile(options.with_hg) and
                 os.access(options.with_hg, os.X_OK)):
