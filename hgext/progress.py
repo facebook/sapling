@@ -37,9 +37,9 @@ The following settings are available::
                      # disable is given
 
 Valid entries for the format field are topic, bar, number, unit,
-estimate, and item. item defaults to the last 20 characters of the
-item, but this can be changed by adding either ``-<num>`` which would
-take the last num characters, or ``+<num>`` for the first num
+estimate, speed, and item. item defaults to the last 20 characters of
+the item, but this can be changed by adding either ``-<num>`` which
+would take the last num characters, or ``+<num>`` for the first num
 characters.
 """
 
@@ -151,6 +151,8 @@ class progbar(object):
                 add = unit
             elif indicator == 'estimate':
                 add = self.estimate(topic, pos, total, now)
+            elif indicator == 'speed':
+                add = self.speed(topic, pos, unit, now)
             if not needprogress:
                 head = spacejoin(head, add)
             else:
@@ -214,6 +216,15 @@ class progbar(object):
                 self.ui.config('progress', 'estimate', default=2)):
                 seconds = (elapsed * (target - delta)) // delta + 1
                 return fmtremaining(seconds)
+        return ''
+
+    def speed(self, topic, pos, unit, now):
+        initialpos = self.startvals[topic]
+        delta = pos - initialpos
+        elapsed = now - self.starttimes[topic]
+        if elapsed > float(
+            self.ui.config('progress', 'estimate', default=2)):
+            return _('%d %s/sec') % (delta / elapsed, unit)
         return ''
 
     def progress(self, topic, pos, item='', unit='', total=None):
