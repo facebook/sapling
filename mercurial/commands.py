@@ -1005,15 +1005,16 @@ def debugbuilddag(ui, repo, text,
     if len(cl) > 0:
         raise util.Abort(_('repository is not empty'))
 
+    # determine number of revs in DAG
+    total = 0
+    for type, data in dagparser.parsedag(text):
+        if type == 'n':
+            total += 1
+
     if mergeable_file:
         linesperrev = 2
-        # determine number of revs in DAG
-        n = 0
-        for type, data in dagparser.parsedag(text):
-            if type == 'n':
-                n += 1
         # make a file with k lines per rev
-        initialmergedlines = [str(i) for i in xrange(0, n * linesperrev)]
+        initialmergedlines = [str(i) for i in xrange(0, total * linesperrev)]
         initialmergedlines.append("")
 
     tags = []
@@ -1024,6 +1025,7 @@ def debugbuilddag(ui, repo, text,
         at = -1
         atbranch = 'default'
         nodeids = []
+        ui.progress(_('building'), 0, unit=_('revisions'), total=total)
         for type, data in dagparser.parsedag(text):
             if type == 'n':
                 ui.note('node %s\n' % str(data))
@@ -1092,8 +1094,10 @@ def debugbuilddag(ui, repo, text,
             elif type == 'a':
                 ui.note('branch %s\n' % data)
                 atbranch = data
+            ui.progress(_('building'), id, unit=_('revisions'), total=total)
         tr.close()
     finally:
+        ui.progress(_('building'), None)
         tr.release()
 
     if tags:

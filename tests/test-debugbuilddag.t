@@ -4,7 +4,48 @@
 plain
 
   $ hg init
-  $ hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2'
+  $ hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' \
+  > --config extensions.progress= --config progress.assume-tty=1 \
+  > --config progress.delay=0 --config progress.refresh=0 \
+  > --config progress.width=60 2>&1 | \
+  > python $TESTDIR/filtercr.py
+  
+  building [                                          ]  0/12
+  building [                                          ]  0/12
+  building [                                          ]  0/12
+  building [                                          ]  0/12
+  building [==>                                       ]  1/12
+  building [==>                                       ]  1/12
+  building [==>                                       ]  1/12
+  building [==>                                       ]  1/12
+  building [======>                                   ]  2/12
+  building [======>                                   ]  2/12
+  building [=========>                                ]  3/12
+  building [=========>                                ]  3/12
+  building [=============>                            ]  4/12
+  building [=============>                            ]  4/12
+  building [=============>                            ]  4/12
+  building [=============>                            ]  4/12
+  building [=============>                            ]  4/12
+  building [=============>                            ]  4/12
+  building [================>                         ]  5/12
+  building [================>                         ]  5/12
+  building [====================>                     ]  6/12
+  building [====================>                     ]  6/12
+  building [=======================>                  ]  7/12
+  building [=======================>                  ]  7/12
+  building [===========================>              ]  8/12
+  building [===========================>              ]  8/12
+  building [===========================>              ]  8/12
+  building [===========================>              ]  8/12
+  building [==============================>           ]  9/12
+  building [==============================>           ]  9/12
+  building [==================================>       ] 10/12
+  building [==================================>       ] 10/12
+  building [=====================================>    ] 11/12
+  building [=====================================>    ] 11/12
+                                                              \r (esc)
+
 tags
   $ cat .hg/localtags
   66f7d451a68b85ed82ff5fcc254daf50c74144bd f
