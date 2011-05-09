@@ -968,11 +968,14 @@ def debugancestor(ui, repo, *args):
     a = r.ancestor(lookup(rev1), lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
-def debugbuilddag(ui, repo, text,
+def debugbuilddag(ui, repo, text=None,
                   mergeable_file=False,
                   overwritten_file=False,
                   new_file=False):
-    """builds a repo with a given dag from scratch in the current empty repo
+    """builds a repo with a given DAG from scratch in the current empty repo
+
+    The description of the DAG is read from stdin if not given on the
+    command line.
 
     Elements:
 
@@ -1000,6 +1003,10 @@ def debugbuilddag(ui, repo, text,
     All string valued-elements are either strictly alphanumeric, or must
     be enclosed in double quotes ("..."), with "\\" as escape character.
     """
+
+    if text is None:
+        ui.status(_("reading DAG from stdin\n"))
+        text = sys.stdin.read()
 
     cl = repo.changelog
     if len(cl) > 0:
@@ -4566,7 +4573,7 @@ table = {
           ('o', 'overwritten-file', None, _('add single file all revs overwrite')),
           ('n', 'new-file', None, _('add new file at each rev')),
          ],
-         _('[OPTION]... TEXT')),
+         _('[OPTION]... [TEXT]')),
     "debugbundle":
         (debugbundle,
          [('a', 'all', None, _('show all details')),
