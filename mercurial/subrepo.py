@@ -342,8 +342,11 @@ class hgsubrepo(abstractsubrepo):
             create = True
             util.makedirs(root)
         self._repo = hg.repository(r.ui, root, create=create)
-        self._repo._subparent = r
-        self._repo._subsource = state[0]
+        self._initrepo(r, state[0], create)
+
+    def _initrepo(self, parentrepo, source, create):
+        self._repo._subparent = parentrepo
+        self._repo._subsource = source
 
         if create:
             fp = self._repo.opener("hgrc", "w", text=True)
@@ -431,10 +434,19 @@ class hgsubrepo(abstractsubrepo):
         if revision not in self._repo:
             self._repo._subsource = source
             srcurl = _abssource(self._repo)
-            self._repo.ui.status(_('pulling subrepo %s from %s\n')
-                                 % (subrelpath(self), srcurl))
             other = hg.repository(self._repo.ui, srcurl)
-            self._repo.pull(other)
+            if len(self._repo) == 0:
+                self._repo.ui.status(_('cloning subrepo %s from %s\n')
+                                     % (subrelpath(self), srcurl))
+                parentrepo = self._repo._subparent
+                shutil.rmtree(self._repo.root)
+                other, self._repo = hg.clone(self._repo._subparent.ui, other,
+                                             self._repo.root, update=False)
+                self._initrepo(parentrepo, source, create=True)
+            else:
+                self._repo.ui.status(_('pulling subrepo %s from %s\n')
+                                     % (subrelpath(self), srcurl))
+                self._repo.pull(other)
             bookmarks.updatefromremote(self._repo.ui, self._repo, other)
 
     def get(self, state, overwrite=False):

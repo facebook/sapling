@@ -117,7 +117,7 @@ test with "/" URI (issue 747) and subrepo
   adding file changes
   added 1 changesets with 3 changes to 3 files
   updating to branch default
-  pulling subrepo sub from static-http://localhost:$HGPORT/sub
+  cloning subrepo sub from static-http://localhost:$HGPORT/sub
   requesting all changes
   adding changesets
   adding manifests

@@ -239,24 +239,9 @@ clone
   $ cd ..
   $ hg clone t tc
   updating to branch default
-  pulling subrepo s from $TESTTMP/sub/t/s
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 4 changesets with 5 changes to 3 files
-  pulling subrepo s/ss from $TESTTMP/sub/t/s/ss
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  pulling subrepo t from $TESTTMP/sub/t/t
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 4 changesets with 4 changes to 1 files (+1 heads)
+  cloning subrepo s from $TESTTMP/sub/t/s
+  cloning subrepo s/ss from $TESTTMP/sub/t/s/ss
+  cloning subrepo t from $TESTTMP/sub/t/t
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd tc
   $ hg debugsub
@@ -563,12 +548,7 @@ Issue1977: multirepo push should fail if subrepo push fails
   committing subrepository s
   $ hg clone repo repo2
   updating to branch default
-  pulling subrepo s from $TESTTMP/sub/repo/s
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
+  cloning subrepo s from $TESTTMP/sub/repo/s
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -q -R repo2 pull -u
   $ echo 1 > repo2/s/a
@@ -639,12 +619,7 @@ Try the same, but with pull -u
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
-  pulling subrepo sub/repo from issue1852a/sub/repo
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 1 files
+  cloning subrepo sub/repo from issue1852a/sub/repo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Try to push from the other side

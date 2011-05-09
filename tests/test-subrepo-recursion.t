@@ -313,18 +313,8 @@ Clone and test outgoing:
   $ cd ..
   $ hg clone repo repo2
   updating to branch default
-  pulling subrepo foo from $TESTTMP/repo/foo
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 4 changesets with 7 changes to 3 files
-  pulling subrepo foo/bar from $TESTTMP/repo/foo/bar
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 3 changes to 1 files
+  cloning subrepo foo from $TESTTMP/repo/foo
+  cloning subrepo foo/bar from $TESTTMP/repo/foo/bar
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo2
   $ hg outgoing -S
