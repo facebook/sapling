@@ -748,7 +748,8 @@ def cat(ui, repo, file1, *pats, **opts):
     err = 1
     m = cmdutil.match(repo, (file1,) + pats, opts)
     for abs in ctx.walk(m):
-        fp = cmdutil.make_file(repo, opts.get('output'), ctx.node(), pathname=abs)
+        fp = cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
+                                 pathname=abs)
         data = ctx[abs].data()
         if opts.get('decode'):
             data = repo.wwritedata(abs, data)

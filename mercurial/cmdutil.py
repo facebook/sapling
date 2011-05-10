@@ -234,8 +234,8 @@ def makefilename(repo, pat, node,
         raise util.Abort(_("invalid format spec '%%%s' in output filename") %
                          inst.args[0])
 
-def make_file(repo, pat, node=None,
-              total=None, seqno=None, revwidth=None, mode='wb', pathname=None):
+def makefileobj(repo, pat, node=None, total=None,
+                seqno=None, revwidth=None, mode='wb', pathname=None):
 
     writable = mode not in ('r', 'rb')
 
@@ -541,8 +541,8 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
         shouldclose = False
         if not fp:
-            fp = make_file(repo, template, node, total=total, seqno=seqno,
-                           revwidth=revwidth, mode='ab')
+            fp = makefileobj(repo, template, node, total=total, seqno=seqno,
+                             revwidth=revwidth, mode='ab')
             if fp != template:
                 shouldclose = True
         if fp != sys.stdout and hasattr(fp, 'name'):
