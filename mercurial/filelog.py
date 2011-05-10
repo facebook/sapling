@@ -87,3 +87,6 @@ class filelog(revlog.revlog):
             return t2 != text
 
         return True
+
+    def _file(self, f):
+        return filelog(self.opener, f)

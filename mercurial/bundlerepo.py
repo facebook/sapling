@@ -150,10 +150,14 @@ class bundlemanifest(bundlerevlog, manifest.manifest):
                               linkmapper)
 
 class bundlefilelog(bundlerevlog, filelog.filelog):
-    def __init__(self, opener, path, bundle, linkmapper):
+    def __init__(self, opener, path, bundle, linkmapper, repo):
         filelog.filelog.__init__(self, opener, path)
         bundlerevlog.__init__(self, opener, self.indexfile, bundle,
                               linkmapper)
+        self._repo = repo
+
+    def _file(self, f):
+        self._repo.file(f)
 
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
@@ -244,7 +248,7 @@ class bundlerepository(localrepo.localrepository):
         if f in self.bundlefilespos:
             self.bundle.seek(self.bundlefilespos[f])
             return bundlefilelog(self.sopener, f, self.bundle,
-                                 self.changelog.rev)
+                                 self.changelog.rev, self)
         else:
             return filelog.filelog(self.sopener, f)
 
