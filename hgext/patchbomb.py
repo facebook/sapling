@@ -119,10 +119,10 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total,
             if patchtags:
                 patchname = patchtags[0]
             elif total > 1:
-                patchname = cmdutil.make_filename(repo, '%b-%n.patch',
+                patchname = cmdutil.makefilename(repo, '%b-%n.patch',
                                                   binnode, seqno=idx, total=total)
             else:
-                patchname = cmdutil.make_filename(repo, '%b.patch', binnode)
+                patchname = cmdutil.makefilename(repo, '%b.patch', binnode)
         disposition = 'inline'
         if opts.get('attach'):
             disposition = 'attachment'

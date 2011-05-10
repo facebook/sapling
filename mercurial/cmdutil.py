@@ -189,7 +189,7 @@ def revrange(repo, revs):
 
     return l
 
-def make_filename(repo, pat, node,
+def makefilename(repo, pat, node,
                   total=None, seqno=None, revwidth=None, pathname=None):
     node_expander = {
         'H': lambda: hex(node),
@@ -246,7 +246,7 @@ def make_file(repo, pat, node=None,
         return pat
     if hasattr(pat, 'read') and 'r' in mode:
         return pat
-    return open(make_filename(repo, pat, node, total, seqno, revwidth,
+    return open(makefilename(repo, pat, node, total, seqno, revwidth,
                               pathname),
                 mode)
 
