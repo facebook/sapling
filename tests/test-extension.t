@@ -329,6 +329,59 @@ Extension module help vs command help:
 
   $ echo 'extdiff = !' >> $HGRCPATH
 
+Test help topic with same name as extension
+
+  $ cat > multirevs.py <<EOF
+  > from mercurial import commands
+  > """multirevs extension
+  > Big multi-line module docstring."""
+  > def multirevs(ui, repo, arg, *args, **opts):
+  >     """multirevs command"""
+  >     pass
+  > cmdtable = {
+  >    "multirevs": (multirevs, [], 'ARG')
+  > }
+  > commands.norepo += ' multirevs'
+  > EOF
+  $ echo "multirevs = multirevs.py" >> $HGRCPATH
+
+  $ hg help multirevs
+  Specifying Multiple Revisions
+  
+      When Mercurial accepts more than one revision, they may be specified
+      individually, or provided as a topologically continuous range, separated
+      by the ":" character.
+  
+      The syntax of range notation is [BEGIN]:[END], where BEGIN and END are
+      revision identifiers. Both BEGIN and END are optional. If BEGIN is not
+      specified, it defaults to revision number 0. If END is not specified, it
+      defaults to the tip. The range ":" thus means "all revisions".
+  
+      If BEGIN is greater than END, revisions are treated in reverse order.
+  
+      A range acts as a closed interval. This means that a range of 3:5 gives 3,
+      4 and 5. Similarly, a range of 9:6 gives 9, 8, 7, and 6.
+  
+  use "hg help -c multirevs" to see help for the multirevs command
+
+  $ hg help -c multirevs
+  hg multirevs ARG
+  
+  multirevs command
+  
+  use "hg -v help multirevs" to show global options
+
+  $ hg multirevs
+  hg multirevs: invalid arguments
+  hg multirevs ARG
+  
+  multirevs command
+  
+  use "hg help multirevs" to show the full help text
+  [255]
+
+  $ echo "multirevs = !" >> $HGRCPATH
+
 Issue811: Problem loading extensions twice (by site and by user)
 
   $ debugpath=`pwd`/debugissue811.py

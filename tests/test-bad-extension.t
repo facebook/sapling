@@ -10,6 +10,6 @@
   $ hg -q help help
   *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
   *** failed to import extension badext2: No module named badext2
-  hg help [-e] [TOPIC]
+  hg help [-ec] [TOPIC]
   
   show help for a given topic or a help overview

@@ -2293,6 +2293,12 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
 
         ui.write("%s\n\n" % header)
         ui.write("%s\n" % minirst.format(doc, textwidth, indent=4))
+        try:
+            cmdutil.findcmd(name, table)
+            ui.write(_('\nuse "hg help -c %s" to see help for '
+                       'the %s command\n') % (name, name))
+        except error.UnknownCommand:
+            pass
 
     def helpext(name):
         try:
@@ -2346,6 +2352,8 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
             queries = (helpextcmd,)
         elif opts.get('extension'):
             queries = (helpext,)
+        elif opts.get('command'):
+            queries = (helpcmd,)
         else:
             queries = (helptopic, helpcmd, helpext, helpextcmd)
         for f in queries:
@@ -4720,8 +4728,9 @@ table = {
          ] + templateopts,
          _('[-ac] [-r STARTREV] [REV]...')),
     "help": (help_,
-        [('e', 'extension', None, _('show only help for extensions'))],
-        _('[-e] [TOPIC]')),
+        [('e', 'extension', None, _('show only help for extensions')),
+         ('c', 'command', None, _('show only help for commands'))],
+        _('[-ec] [TOPIC]')),
     "identify|id":
         (identify,
          [('r', 'rev', '',
