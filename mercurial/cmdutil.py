@@ -78,7 +78,7 @@ def findrepo(p):
 
     return p
 
-def bail_if_changed(repo):
+def bailifchanged(repo):
     if repo.dirstate.p2() != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
     modified, added, removed, deleted = repo.status()[:4]

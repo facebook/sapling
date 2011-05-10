@@ -132,7 +132,7 @@ def rebase(ui, repo, **opts):
                 if basef:
                     raise util.Abort(_('cannot specify a base with detach'))
 
-            cmdutil.bail_if_changed(repo)
+            cmdutil.bailifchanged(repo)
             result = buildstate(repo, destf, srcf, basef, detachf)
             if not result:
                 # Empty state built, nothing to rebase
@@ -531,7 +531,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
             ui.debug('--update and --rebase are not compatible, ignoring '
                      'the update flag\n')
 
-        cmdutil.bail_if_changed(repo)
+        cmdutil.bailifchanged(repo)
         revsprepull = len(repo)
         origpostincoming = commands.postincoming
         def _dummy(*args, **kwargs):

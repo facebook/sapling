@@ -243,7 +243,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     if date:
         opts['date'] = util.parsedate(date)
 
-    cmdutil.bail_if_changed(repo)
+    cmdutil.bailifchanged(repo)
     node = cmdutil.revsingle(repo, rev).node()
 
     op1, op2 = repo.dirstate.parents()
@@ -426,7 +426,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 # bisect
                 nodes, changesets, good = hbisect.bisect(repo.changelog, state)
                 # update to next check
-                cmdutil.bail_if_changed(repo)
+                cmdutil.bailifchanged(repo)
                 hg.clean(repo, nodes[0], show_stats=False)
         finally:
             hbisect.save_state(repo, state)
@@ -462,7 +462,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                          % (extendnode.rev(), extendnode)))
                 if noupdate:
                     return
-                cmdutil.bail_if_changed(repo)
+                cmdutil.bailifchanged(repo)
                 return hg.clean(repo, extendnode.node())
         raise util.Abort(_("nothing to extend"))
 
@@ -480,7 +480,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                    "(%d changesets remaining, ~%d tests)\n")
                  % (rev, short(node), changesets, tests))
         if not noupdate:
-            cmdutil.bail_if_changed(repo)
+            cmdutil.bailifchanged(repo)
             return hg.clean(repo, node)
 
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
@@ -2606,7 +2606,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         raise util.Abort(_('similarity must be between 0 and 100'))
 
     if opts.get('exact') or not opts.get('force'):
-        cmdutil.bail_if_changed(repo)
+        cmdutil.bailifchanged(repo)
 
     d = opts["base"]
     strip = opts["strip"]
