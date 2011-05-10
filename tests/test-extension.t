@@ -254,6 +254,8 @@ Extension module help vs command help:
       compared to the working directory, and, when no revisions are specified,
       the working directory files are compared to its parent.
   
+  use "hg help -e extdiff" to show help for the extdiff extension
+  
   options:
   
    -p --program CMD          comparison program to run

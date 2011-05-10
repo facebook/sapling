@@ -2223,6 +2223,18 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
 
             addglobalopts(False)
 
+        # check if this command shadows a non-trivial (multi-line)
+        # extension help text
+        try:
+            mod = extensions.find(name)
+            doc = gettext(mod.__doc__) or ''
+            if '\n' in doc.strip():
+                msg = _('use "hg help -e %s" to show help for '
+                        'the %s extension') % (name, name)
+                ui.write('\n%s\n' % msg)
+        except KeyError:
+            pass
+
     def helplist(header, select=None):
         h = {}
         cmds = {}
