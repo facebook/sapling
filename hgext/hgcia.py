@@ -18,7 +18,7 @@ configure it, set the following options in your hgrc::
   # Append a diffstat to the log message (optional)
   #diffstat = False
   # Template to use for log messages (optional)
-  #template = {desc}\\n{baseurl}/rev/{node}-- {diffstat}
+  #template = {desc}\\n{baseurl}{webroot}/rev/{node}-- {diffstat}
   # Style to use (optional)
   #style = foo
   # The URL of the CIA notification service (optional)
@@ -28,6 +28,8 @@ configure it, set the following options in your hgrc::
   #url = http://cia.vc/
   # print message instead of sending it (optional)
   #test = False
+  # number of slashes to strip for url paths
+  #strip = 0
 
   [hooks]
   # one of these:
@@ -66,6 +68,8 @@ class ciamsg(object):
         self.cia = cia
         self.ctx = ctx
         self.url = self.cia.url
+        if self.url:
+            self.url += self.cia.root
 
     def fileelem(self, path, uri, action):
         if uri:
@@ -120,7 +124,9 @@ class ciamsg(object):
         diffstat = self.cia.diffstat and self.diffstat() or ''
         self.cia.ui.pushbuffer()
         self.cia.templater.show(self.ctx, changes=self.ctx.changeset(),
-                                url=self.cia.url, diffstat=diffstat)
+                                baseurl=self.cia.ui.config('web', 'baseurl'),
+                                url=self.url, diffstat=diffstat,
+                                webroot=self.cia.root)
         return self.cia.ui.popbuffer()
 
     def xml(self):
@@ -184,6 +190,8 @@ class hgcia(object):
         self.emailfrom = self.ui.config('email', 'from')
         self.dryrun = self.ui.configbool('cia', 'test')
         self.url = self.ui.config('web', 'baseurl')
+        self.stripcount = int(self.ui.config('cia', 'strip', 0))
+        self.root = self.strip(self.repo.root)
 
         style = self.ui.config('cia', 'style')
         template = self.ui.config('cia', 'template')
@@ -194,6 +202,19 @@ class hgcia(object):
                                         style, False)
         t.use_template(template)
         self.templater = t
+
+    def strip(self, path):
+        '''strip leading slashes from local path, turn into web-safe path.'''
+
+        path = util.pconvert(path)
+        count = self.stripcount
+        while count > 0:
+            c = path.find('/')
+            if c == -1:
+                break
+            path = path[c + 1:]
+            count -= 1
+        return path
 
     def sendrpc(self, msg):
         srv = xmlrpclib.Server(self.ciaurl)

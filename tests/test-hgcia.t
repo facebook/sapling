@@ -7,6 +7,9 @@ Test the CIA extension
   > [hooks]
   > changegroup.cia = python:hgext.hgcia.hook
   > 
+  > [web]
+  > baseurl = http://hgserver/
+  > 
   > [cia]
   > user = testuser
   > project = testproject
@@ -43,8 +46,8 @@ Test the CIA extension
         <author>test</author>
         <version>0:e63c23eaa88a</version>
         <log>foo</log>
-        
-        <files><file action="add">foo</file></files>
+        <url>http://hgserver/$TESTTMP/cia/rev/e63c23eaa88a</url>
+        <files><file uri="http://hgserver/$TESTTMP/cia/file/e63c23eaa88a/foo" action="add">foo</file></files>
       </commit>
     </body>
     <timestamp>0</timestamp>
