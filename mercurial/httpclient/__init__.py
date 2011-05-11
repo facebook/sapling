@@ -629,8 +629,10 @@ class HTTPConnection(object):
         r = self._current_response
         while r.headers is None:
             r._select()
-        if r.complete() or r.will_close:
+        if r.will_close:
             self.sock = None
+            self._current_response = None
+        elif r.complete():
             self._current_response = None
         else:
             self._current_response_taken = True

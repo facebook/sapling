@@ -116,6 +116,9 @@ dotencode
         self.assertEqual('1234567890', resp.read())
         self.assertEqual(['Value\n Rest of value'],
                          resp.headers.getheaders('multiline'))
+        # Socket should not be closed
+        self.assertEqual(resp.sock.closed, False)
+        self.assertEqual(con.sock.closed, False)
 
     def testSimpleRequest(self):
         con = http.HTTPConnection('1.2.3.4:80')
