@@ -120,7 +120,7 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
         loglevel = ui.config('ui', 'http2debuglevel', default=None)
         if loglevel and not _configuredlogging:
             _configuredlogging = True
-            logger = logging.getLogger('mercurial.http')
+            logger = logging.getLogger('mercurial.httpclient')
             logger.setLevel(getattr(logging, loglevel.upper()))
             logger.addHandler(logging.StreamHandler())
 
