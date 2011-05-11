@@ -978,7 +978,13 @@ class revlog(object):
 
     def _addrevision(self, node, text, transaction, link, p1, p2,
                      cachedelta, ifh, dfh):
+        """internal function to add revisions to the log
 
+        see addrevision for argument descriptions.
+        invariants:
+        - text is optional (can be None); if not set, cachedelta must be set.
+          if both are set, they must correspond to eachother.
+        """
         btext = [text]
         def buildtext():
             if btext[0] is not None:
