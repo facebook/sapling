@@ -408,7 +408,7 @@ class hgsubrepo(abstractsubrepo):
         if r == '' and not ignoreupdate: # no state recorded
             return True
         w = self._repo[None]
-        if w.p1() != self._repo[r] and not ignoreupdate:
+        if r != w.p1().node() and not ignoreupdate:
             # different version checked out
             return True
         return w.dirty() # working directory changed
