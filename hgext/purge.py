@@ -29,6 +29,17 @@ from mercurial import util, commands, cmdutil
 from mercurial.i18n import _
 import os, stat
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
+@command('purge|clean',
+    [('a', 'abort-on-err', None, _('abort if an error occurs')),
+    ('',  'all', None, _('purge ignored files too')),
+    ('p', 'print', None, _('print filenames instead of deleting them')),
+    ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
+                            ' (implies -p/--print)')),
+    ] + commands.walkopts,
+    _('hg purge [OPTION]... [DIR]...'))
 def purge(ui, repo, *dirs, **opts):
     '''removes files not tracked by Mercurial
 
@@ -97,15 +108,3 @@ def purge(ui, repo, *dirs, **opts):
         if match(f) and not os.listdir(repo.wjoin(f)):
             ui.note(_('Removing directory %s\n') % f)
             remove(os.rmdir, f)
-
-cmdtable = {
-    'purge|clean':
-        (purge,
-         [('a', 'abort-on-err', None, _('abort if an error occurs')),
-          ('',  'all', None, _('purge ignored files too')),
-          ('p', 'print', None, _('print filenames instead of deleting them')),
-          ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
-                                  ' (implies -p/--print)')),
-         ] + commands.walkopts,
-         _('hg purge [OPTION]... [DIR]...'))
-}
