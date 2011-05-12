@@ -31,8 +31,10 @@ filenodelink = '
   </tr>'
 filenolink = '
   <tr class="parity{parity}">
+    <td><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a></td>
+    <td></td>
     <td>
-      <a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a></td><td></td><td>file |
+      file |
       annotate |
       <a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a> |
       <a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a>
