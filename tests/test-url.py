@@ -191,11 +191,23 @@ def test_url():
     >>> str(u)
     'http://foo/bar'
 
+    >>> u = url('file:/foo/bar/baz')
+    >>> u
+    <url scheme: 'file', path: '/foo/bar/baz'>
+    >>> str(u)
+    'file:///foo/bar/baz'
+
     >>> u = url('file:///foo/bar/baz')
     >>> u
     <url scheme: 'file', path: '/foo/bar/baz'>
     >>> str(u)
-    'file:/foo/bar/baz'
+    'file:///foo/bar/baz'
+
+    >>> u = url('file:foo/bar/baz')
+    >>> u
+    <url scheme: 'file', path: 'foo/bar/baz'>
+    >>> str(u)
+    'file:foo/bar/baz'
     """
 
 doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)

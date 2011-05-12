@@ -1500,6 +1500,8 @@ class url(object):
         'bundle:../foo'
         >>> str(url('path'))
         'path'
+        >>> str(url('file:///tmp/foo/bar'))
+        'file:///tmp/foo/bar'
         >>> print url(r'bundle:foo\bar')
         bundle:foo\bar
         """
@@ -1512,8 +1514,9 @@ class url(object):
             return s
 
         s = self.scheme + ':'
-        if (self.user or self.passwd or self.host or
-            self.scheme and not self.path):
+        if self.user or self.passwd or self.host:
+            s += '//'
+        elif self.scheme and (not self.path or self.path.startswith('/')):
             s += '//'
         if self.user:
             s += urllib.quote(self.user, safe=self._safechars)
