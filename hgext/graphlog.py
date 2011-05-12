@@ -19,6 +19,9 @@ from mercurial.node import nullrev
 from mercurial import cmdutil, commands, extensions
 from mercurial import hg, util, graphmod
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
 ASCIIDATA = 'ASC'
 
 def asciiedges(type, char, lines, seen, rev, parents):
@@ -302,6 +305,13 @@ def generate(ui, dag, displayer, showparents, edgefn):
             ascii(ui, state, type, char, lines, coldata)
     displayer.close()
 
+@command('glog',
+    [('l', 'limit', '',
+     _('limit number of changes displayed'), _('NUM')),
+    ('p', 'patch', False, _('show patch')),
+    ('r', 'rev', [], _('show the specified revision or range'), _('REV')),
+    ] + templateopts,
+    _('hg glog [OPTION]... [FILE]'))
 def graphlog(ui, repo, *pats, **opts):
     """show revision history alongside an ASCII revision graph
 
@@ -385,15 +395,3 @@ def _wrapcmd(ui, cmd, table, wrapfn):
         return orig(*args, **kwargs)
     entry = extensions.wrapcommand(table, cmd, graph)
     entry[1].append(('G', 'graph', None, _("show the revision DAG")))
-
-cmdtable = {
-    "glog":
-        (graphlog,
-         [('l', 'limit', '',
-           _('limit number of changes displayed'), _('NUM')),
-          ('p', 'patch', False, _('show patch')),
-          ('r', 'rev', [],
-           _('show the specified revision or range'), _('REV')),
-         ] + templateopts,
-         _('hg glog [OPTION]... [FILE]')),
-}
