@@ -86,6 +86,7 @@ Show debug commands if there are no other candidates
   debugpushkey
   debugrebuildstate
   debugrename
+  debugrevlog
   debugrevspec
   debugsetparents
   debugstate
@@ -231,6 +232,7 @@ Show all commands + options
   debugpushkey: 
   debugrebuildstate: rev
   debugrename: rev
+  debugrevlog: 
   debugrevspec: 
   debugsetparents: 
   debugstate: nodates, datesort

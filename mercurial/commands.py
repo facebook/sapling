@@ -1855,6 +1855,103 @@ def debugrename(ui, repo, file1, *pats, **opts):
         else:
             ui.write(_("%s not renamed\n") % rel)
 
+@command('debugrevlog', [], _('FILE'))
+def debugrevlog(ui, repo, file_):
+    """show data and statistics about a revlog"""
+    r = None
+    if repo:
+        filelog = repo.file(file_)
+        if len(filelog):
+            r = filelog
+    if not r:
+        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
+
+    v = r.version
+    format = v & 0xFFFF
+    flags = []
+    gdelta = False
+    if v & revlog.REVLOGNGINLINEDATA:
+        flags.append('inline')
+    if v & revlog.REVLOGGENERALDELTA:
+        gdelta = True
+        flags.append('generaldelta')
+
+    nummerges = 0
+    numchains = 0
+    numprev = 0
+    nump1 = 0
+    nump2 = 0
+    numother = 0
+    nump1prev = 0
+    nump2prev = 0
+
+    datasize = [None, 0, 0L]
+    snapshotsize = [None, 0, 0L]
+    deltasize = [None, 0, 0L]
+
+    def addsize(size, l):
+        if l[0] is None or size < l[0]:
+            l[0] = size
+        if size > l[1]:
+            l[1] = size
+        l[2] += size
+
+    numrevs = len(r)
+    for rev in xrange(numrevs):
+        p1, p2 = r.parentrevs(rev)
+        delta = r.deltaparent(rev)
+        if format > 0:
+            addsize(r.rawsize(rev), datasize)
+        if p2 != nullrev:
+            nummerges += 1
+        size = r.length(rev)
+        if delta == nullrev:
+            numchains += 1
+            addsize(size, snapshotsize)
+        else:
+            addsize(size, deltasize)
+            if gdelta:
+                if delta == rev - 1:
+                    numprev += 1
+                    if delta == p1:
+                        nump1prev += 1
+                    elif delta == p2:
+                        nump2prev += 1
+                elif delta == p1:
+                    nump1 += 1
+                elif delta == p2:
+                    nump2 += 1
+                elif delta != nullrev:
+                    numother += 1
+
+    numotherprev = numprev - nump1prev - nump2prev
+    datasize[2] /= numrevs
+    snapshotsize[2] /= numchains
+    deltasize[2] /= numrevs - numchains
+
+    ui.write('format    : %d\n' % format)
+    ui.write('flags     : %s\n' % ', '.join(flags))
+    ui.write('revisions : %d\n' % numrevs)
+    ui.write('merges    : %d\n' % nummerges)
+    ui.write('chains    : %d\n' % numchains)
+
+    if format > 0:
+        ui.write('\ndata size (min/max/avg)                : %d / %d / %d\n'
+                 % tuple(datasize))
+    ui.write('compressed snapshot size (min/max/avg) : %d / %d / %d\n'
+             % tuple(snapshotsize))
+    ui.write('compressed delta size (min/max/avg)    : %d / %d / %d\n'
+             % tuple(deltasize))
+
+    if gdelta:
+        ui.write('\ndeltas against prev  : %d\n' % numprev)
+        ui.write('  ..where prev = p1  : %d\n' % nump1prev)
+        ui.write('  ..where prev = p2  : %d\n' % nump2prev)
+        ui.write('  ..other            : %d\n' % numotherprev)
+        ui.write('deltas against p1    : %d\n' % nump1)
+        ui.write('deltas against p2    : %d\n' % nump2)
+        ui.write('deltas against other : %d\n' % numother)
+
 @command('debugrevspec', [], ('REVSPEC'))
 def debugrevspec(ui, repo, expr):
     '''parse and apply a revision specification'''
