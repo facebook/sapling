@@ -109,12 +109,29 @@ def mockselect(r, w, x, timeout=0):
     return readable, w[:], []
 
 
+class MockSSLSocket(object):
+    def __init__(self, sock):
+        self._sock = sock
+        self._fail_recv = True
+
+    def __getattr__(self, key):
+        return getattr(self._sock, key)
+
+    def recv(self, amt=-1):
+        try:
+            if self._fail_recv:
+                raise socket.sslerror(socket.SSL_ERROR_WANT_READ)
+            return self._sock.recv(amt=amt)
+        finally:
+            self._fail_recv = not self._fail_recv
+
+
 def mocksslwrap(sock, keyfile=None, certfile=None,
                 server_side=False, cert_reqs=http.socketutil.CERT_NONE,
                 ssl_version=http.socketutil.PROTOCOL_SSLv23, ca_certs=None,
                 do_handshake_on_connect=True,
                 suppress_ragged_eofs=True):
-    return sock
+    return MockSSLSocket(sock)
 
 
 def mockgetaddrinfo(host, port, unused, streamtype):
@@ -157,4 +174,17 @@ class HttpTestBase(object):
                 add_nl(l.splitlines()), add_nl(r.splitlines()),
                 fromfile='expected', tofile='got'))
             raise
+
+    def doPost(self, con, expect_body, body_to_send='This is some POST data'):
+        con.request('POST', '/', body=body_to_send,
+                    expect_continue=True)
+        expected_req = ('POST / HTTP/1.1\r\n'
+                        'Host: 1.2.3.4\r\n'
+                        'content-length: %d\r\n'
+                        'Expect: 100-Continue\r\n'
+                        'accept-encoding: identity\r\n\r\n' %
+                        len(body_to_send))
+        if expect_body:
+            expected_req += body_to_send
+        return expected_req
 # no-check-code

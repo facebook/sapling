@@ -97,12 +97,12 @@ class ProxyHttpTest(util.HttpTestBase, unittest.TestCase):
              '\r\n'
              '1234567890'])
         con._connect()
-        con.sock.data = ['HTTP/1.1 200 OK\r\n',
-                         'Server: BogusServer 1.0\r\n',
-                         'Content-Length: 10\r\n',
-                         '\r\n'
-                         '1234567890'
-                         ]
+        con.sock.data.extend(['HTTP/1.1 200 OK\r\n',
+                              'Server: BogusServer 1.0\r\n',
+                              'Content-Length: 10\r\n',
+                              '\r\n'
+                              '1234567890'
+                              ])
         con.request('GET', '/')
 
         expected_req = ('CONNECT 1.2.3.4:443 HTTP/1.0\r\n'

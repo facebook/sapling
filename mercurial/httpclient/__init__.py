@@ -165,7 +165,13 @@ class HTTPResponse(object):
                 logger.info('timed out with timeout of %s', self._timeout)
                 raise HTTPTimeoutException('timeout reading data')
             logger.info('cl: %r body: %r', self._content_len, self._body)
-        data = self.sock.recv(INCOMING_BUFFER_SIZE)
+        try:
+            data = self.sock.recv(INCOMING_BUFFER_SIZE)
+        except socket.sslerror, e:
+            if e.args[0] != socket.SSL_ERROR_WANT_READ:
+                raise
+            logger.debug('SSL_WANT_READ in _select, should retry later')
+            return True
         logger.debug('response read %d data during _select', len(data))
         if not data:
             if not self.headers:
@@ -545,7 +551,14 @@ class HTTPConnection(object):
             # incoming data
             if r:
                 try:
-                    data = r[0].recv(INCOMING_BUFFER_SIZE)
+                    try:
+                        data = r[0].recv(INCOMING_BUFFER_SIZE)
+                    except socket.sslerror, e:
+                        if e.args[0] != socket.SSL_ERROR_WANT_READ:
+                            raise
+                        logger.debug(
+                            'SSL_WANT_READ while sending data, retrying...')
+                        continue
                     if not data:
                         logger.info('socket appears closed in read')
                         outgoing_headers = body = None
