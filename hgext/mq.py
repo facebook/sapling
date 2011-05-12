@@ -52,6 +52,11 @@ import os, sys, re, errno, shutil
 
 commands.norepo += " qclone"
 
+seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
 # Patch names looks like unix-file names.
 # They must be joinable with queue directory and result in the patch path.
 normname = util.normpath
@@ -1856,6 +1861,11 @@ class queue(object):
 
         self.removeundo(repo)
 
+@command("qdelete|qremove|qrm",
+         [('k', 'keep', None, _('keep patch file')),
+          ('r', 'rev', [],
+           _('stop managing a revision (DEPRECATED)'), _('REV'))],
+         _('hg qdelete [-k] [PATCH]...'))
 def delete(ui, repo, *patches, **opts):
     """remove patches from queue
 
@@ -1869,6 +1879,10 @@ def delete(ui, repo, *patches, **opts):
     q.save_dirty()
     return 0
 
+@command("qapplied",
+         [('1', 'last', None, _('show only the last patch'))
+          ] + seriesopts,
+         _('hg qapplied [-1] [-s] [PATCH]'))
 def applied(ui, repo, patch=None, **opts):
     """print the patches already applied
 
@@ -1899,6 +1913,9 @@ def applied(ui, repo, patch=None, **opts):
               summary=opts.get('summary'))
 
 
+@command("qunapplied",
+         [('1', 'first', None, _('show only the first patch'))] + seriesopts,
+         _('hg qunapplied [-1] [-s] [PATCH]'))
 def unapplied(ui, repo, patch=None, **opts):
     """print the patches not yet applied
 
@@ -1920,6 +1937,16 @@ def unapplied(ui, repo, patch=None, **opts):
     q.qseries(repo, start=start, length=length, status='U',
               summary=opts.get('summary'))
 
+@command("qimport",
+         [('e', 'existing', None, _('import file in patch directory')),
+          ('n', 'name', '',
+           _('name of patch file'), _('NAME')),
+          ('f', 'force', None, _('overwrite existing files')),
+          ('r', 'rev', [],
+           _('place existing revisions under mq control'), _('REV')),
+          ('g', 'git', None, _('use git extended diff format')),
+          ('P', 'push', None, _('qpush after importing'))],
+         _('hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE...'))
 def qimport(ui, repo, *filename, **opts):
     """import a patch
 
@@ -1991,6 +2018,9 @@ def qinit(ui, repo, create):
         commands.add(ui, r)
     return 0
 
+@command("^qinit",
+         [('c', 'create-repo', None, _('create queue repository'))],
+         _('hg qinit [-c]'))
 def init(ui, repo, **opts):
     """init a new queue repository (DEPRECATED)
 
@@ -2004,6 +2034,15 @@ def init(ui, repo, **opts):
     commands. With -c, use :hg:`init --mq` instead."""
     return qinit(ui, repo, create=opts.get('create_repo'))
 
+@command("qclone",
+         [('', 'pull', None, _('use pull protocol to copy metadata')),
+          ('U', 'noupdate', None, _('do not update the new working directories')),
+          ('', 'uncompressed', None,
+           _('use uncompressed transfer (fast over LAN)')),
+          ('p', 'patches', '',
+           _('location of source patch repository'), _('REPO')),
+         ] + commands.remoteopts,
+         _('hg qclone [OPTION]... SOURCE [DEST]'))
 def clone(ui, source, dest=None, **opts):
     '''clone main and patch repository at same time
 
@@ -2070,6 +2109,9 @@ def clone(ui, source, dest=None, **opts):
             ui.note(_('updating destination repository\n'))
             hg.update(dr, dr.changelog.tip())
 
+@command("qcommit|qci",
+         commands.table["^commit|ci"][1],
+         _('hg qcommit [OPTION]... [FILE]...'))
 def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository (DEPRECATED)
 
@@ -2080,6 +2122,10 @@ def commit(ui, repo, *pats, **opts):
         raise util.Abort('no queue repository')
     commands.commit(r.ui, r, *pats, **opts)
 
+@command("qseries",
+         [('m', 'missing', None, _('print patches not in series')),
+         ] + seriesopts,
+          _('hg qseries [-ms]'))
 def series(ui, repo, **opts):
     """print the entire series file
 
@@ -2087,6 +2133,7 @@ def series(ui, repo, **opts):
     repo.mq.qseries(repo, missing=opts.get('missing'), summary=opts.get('summary'))
     return 0
 
+@command("qtop", [] + seriesopts, _('hg qtop [-s]'))
 def top(ui, repo, **opts):
     """print the name of the current patch
 
@@ -2100,6 +2147,7 @@ def top(ui, repo, **opts):
         ui.write(_("no patches applied\n"))
         return 1
 
+@command("qnext", [] + seriesopts, _('hg qnext [-s]'))
 def next(ui, repo, **opts):
     """print the name of the next patch
 
@@ -2111,6 +2159,7 @@ def next(ui, repo, **opts):
         return 1
     q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
 
+@command("qprev", [] + seriesopts, _('hg qprev [-s]'))
 def prev(ui, repo, **opts):
     """print the name of the previous patch
 
@@ -2132,6 +2181,18 @@ def setupheaderopts(ui, opts):
     if not opts.get('date') and opts.get('currentdate'):
         opts['date'] = "%d %d" % util.makedate()
 
+@command("^qnew",
+         [('e', 'edit', None, _('edit commit message')),
+          ('f', 'force', None, _('import uncommitted changes (DEPRECATED)')),
+          ('g', 'git', None, _('use git extended diff format')),
+          ('U', 'currentuser', None, _('add "From: <current user>" to patch')),
+          ('u', 'user', '',
+           _('add "From: <USER>" to patch'), _('USER')),
+          ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
+          ('d', 'date', '',
+           _('add "Date: <DATE>" to patch'), _('DATE'))
+          ] + commands.walkopts + commands.commitopts,
+         _('hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]...'))
 def new(ui, repo, patch, *args, **opts):
     """create a new patch
 
@@ -2171,6 +2232,21 @@ def new(ui, repo, patch, *args, **opts):
     q.save_dirty()
     return 0
 
+@command("^qrefresh",
+         [('e', 'edit', None, _('edit commit message')),
+          ('g', 'git', None, _('use git extended diff format')),
+          ('s', 'short', None,
+           _('refresh only files already in the patch and specified files')),
+          ('U', 'currentuser', None,
+           _('add/update author field in patch with current user')),
+          ('u', 'user', '',
+           _('add/update author field in patch with given user'), _('USER')),
+          ('D', 'currentdate', None,
+           _('add/update date field in patch with current date')),
+          ('d', 'date', '',
+           _('add/update date field in patch with given date'), _('DATE'))
+          ] + commands.walkopts + commands.commitopts,
+         _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...'))
 def refresh(ui, repo, *pats, **opts):
     """update the current patch
 
@@ -2212,6 +2288,9 @@ def refresh(ui, repo, *pats, **opts):
     q.save_dirty()
     return ret
 
+@command("^qdiff",
+         commands.diffopts + commands.diffopts2 + commands.walkopts,
+         _('hg qdiff [OPTION]... [FILE]...'))
 def diff(ui, repo, *pats, **opts):
     """diff of the current patch and subsequent modifications
 
@@ -2230,6 +2309,11 @@ def diff(ui, repo, *pats, **opts):
     repo.mq.diff(repo, pats, opts)
     return 0
 
+@command('qfold',
+         [('e', 'edit', None, _('edit patch header')),
+          ('k', 'keep', None, _('keep folded patch files')),
+         ] + commands.commitopts,
+         _('hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH...'))
 def fold(ui, repo, *files, **opts):
     """fold the named patches into the current patch
 
@@ -2295,6 +2379,9 @@ def fold(ui, repo, *files, **opts):
     q.delete(repo, patches, opts)
     q.save_dirty()
 
+@command("qgoto",
+         [('f', 'force', None, _('overwrite any local changes'))],
+         _('hg qgoto [OPTION]... PATCH'))
 def goto(ui, repo, patch, **opts):
     '''push or pop patches until named patch is at top of stack
 
@@ -2308,6 +2395,10 @@ def goto(ui, repo, patch, **opts):
     q.save_dirty()
     return ret
 
+@command("qguard",
+         [('l', 'list', None, _('list all patches and guards')),
+          ('n', 'none', None, _('drop all guards'))],
+         _('hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]'))
 def guard(ui, repo, *args, **opts):
     '''set or print guards for a patch
 
@@ -2377,6 +2468,7 @@ def guard(ui, repo, *args, **opts):
     else:
         status(q.series.index(q.lookup(patch)))
 
+@command("qheader", [], _('hg qheader [PATCH]'))
 def header(ui, repo, patch=None):
     """print the header of the topmost or specified patch
 
@@ -2418,6 +2510,16 @@ def savename(path):
     newpath = path + ".%d" % (index + 1)
     return newpath
 
+@command("^qpush",
+         [('f', 'force', None, _('apply on top of local changes')),
+          ('e', 'exact', None, _('apply the target patch to its recorded parent')),
+          ('l', 'list', None, _('list patch name in commit text')),
+          ('a', 'all', None, _('apply all patches')),
+          ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
+          ('n', 'name', '',
+           _('merge queue name (DEPRECATED)'), _('NAME')),
+          ('', 'move', None, _('reorder patch series and apply only the patch'))],
+         _('hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]'))
 def push(ui, repo, patch=None, **opts):
     """push the next patch onto the stack
 
@@ -2444,6 +2546,12 @@ def push(ui, repo, patch=None, **opts):
                  exact=opts.get('exact'))
     return ret
 
+@command("^qpop",
+         [('a', 'all', None, _('pop all patches')),
+          ('n', 'name', '',
+           _('queue name to pop (DEPRECATED)'), _('NAME')),
+          ('f', 'force', None, _('forget any local changes to patched files'))],
+         _('hg qpop [-a] [-f] [PATCH | INDEX]'))
 def pop(ui, repo, patch=None, **opts):
     """pop the current patch off the stack
 
@@ -2465,6 +2573,7 @@ def pop(ui, repo, patch=None, **opts):
     q.save_dirty()
     return ret
 
+@command("qrename|qmv", [], _('hg qrename PATCH1 [PATCH2]'))
 def rename(ui, repo, patch, name=None, **opts):
     """rename a patch
 
@@ -2531,6 +2640,10 @@ def rename(ui, repo, patch, name=None, **opts):
 
     q.save_dirty()
 
+@command("qrestore",
+         [('d', 'delete', None, _('delete save entry')),
+          ('u', 'update', None, _('update queue working directory'))],
+         _('hg qrestore [-d] [-u] REV'))
 def restore(ui, repo, rev, **opts):
     """restore the queue state saved by a revision (DEPRECATED)
 
@@ -2542,6 +2655,13 @@ def restore(ui, repo, rev, **opts):
     q.save_dirty()
     return 0
 
+@command("qsave",
+         [('c', 'copy', None, _('copy patch directory')),
+          ('n', 'name', '',
+           _('copy directory name'), _('NAME')),
+          ('e', 'empty', None, _('clear queue status file')),
+          ('f', 'force', None, _('force copy'))] + commands.commitopts,
+         _('hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]'))
 def save(ui, repo, **opts):
     """save current queue state (DEPRECATED)
 
@@ -2574,6 +2694,16 @@ def save(ui, repo, **opts):
             pass
     return 0
 
+@command("strip",
+         [('f', 'force', None, _('force removal of changesets, discard '
+                                 'uncommitted changes (no backup)')),
+          ('b', 'backup', None, _('bundle only changesets with local revision'
+                                  ' number greater than REV which are not'
+                                  ' descendants of REV (DEPRECATED)')),
+          ('n', 'no-backup', None, _('no backups')),
+          ('', 'nobackup', None, _('no backups (DEPRECATED)')),
+          ('k', 'keep', None, _("do not modify working copy during strip"))],
+          _('hg strip [-k] [-f] [-n] REV...'))
 def strip(ui, repo, *revs, **opts):
     """strip changesets and all their descendants from the repository
 
@@ -2656,6 +2786,12 @@ def strip(ui, repo, *revs, **opts):
                   force=opts.get('force'))
     return 0
 
+@command("qselect",
+         [('n', 'none', None, _('disable all guards')),
+          ('s', 'series', None, _('list all guards in series file')),
+          ('', 'pop', None, _('pop to before first guarded applied patch')),
+          ('', 'reapply', None, _('pop, then reapply patches'))],
+         _('hg qselect [OPTION]... [GUARD]...'))
 def select(ui, repo, *args, **opts):
     '''set or print guarded patches to push
 
@@ -2761,6 +2897,9 @@ def select(ui, repo, *args, **opts):
         finally:
             q.save_dirty()
 
+@command("qfinish",
+         [('a', 'applied', None, _('finish all applied changesets'))],
+         _('hg qfinish [-a] [REV]...'))
 def finish(ui, repo, *revrange, **opts):
     """move applied patches into repository history
 
@@ -2794,6 +2933,14 @@ def finish(ui, repo, *revrange, **opts):
     q.save_dirty()
     return 0
 
+@command("qqueue",
+         [('l', 'list', False, _('list all available queues')),
+          ('c', 'create', False, _('create new queue')),
+          ('', 'rename', False, _('rename active queue')),
+          ('', 'delete', False, _('delete reference to queue')),
+          ('', 'purge', False, _('delete queue, and remove patch dir')),
+         ],
+         _('[OPTION] [QUEUE]'))
 def qqueue(ui, repo, name=None, **opts):
     '''manage multiple patch queues
 
@@ -3150,175 +3297,6 @@ def uisetup(ui):
         if extmodule.__file__ != __file__:
             dotable(getattr(extmodule, 'cmdtable', {}))
 
-seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
-
-cmdtable = {
-    "qapplied":
-        (applied,
-         [('1', 'last', None, _('show only the last patch'))] + seriesopts,
-         _('hg qapplied [-1] [-s] [PATCH]')),
-    "qclone":
-        (clone,
-         [('', 'pull', None, _('use pull protocol to copy metadata')),
-          ('U', 'noupdate', None, _('do not update the new working directories')),
-          ('', 'uncompressed', None,
-           _('use uncompressed transfer (fast over LAN)')),
-          ('p', 'patches', '',
-           _('location of source patch repository'), _('REPO')),
-         ] + commands.remoteopts,
-         _('hg qclone [OPTION]... SOURCE [DEST]')),
-    "qcommit|qci":
-        (commit,
-         commands.table["^commit|ci"][1],
-         _('hg qcommit [OPTION]... [FILE]...')),
-    "^qdiff":
-        (diff,
-         commands.diffopts + commands.diffopts2 + commands.walkopts,
-         _('hg qdiff [OPTION]... [FILE]...')),
-    "qdelete|qremove|qrm":
-        (delete,
-         [('k', 'keep', None, _('keep patch file')),
-          ('r', 'rev', [],
-           _('stop managing a revision (DEPRECATED)'), _('REV'))],
-         _('hg qdelete [-k] [PATCH]...')),
-    'qfold':
-        (fold,
-         [('e', 'edit', None, _('edit patch header')),
-          ('k', 'keep', None, _('keep folded patch files')),
-         ] + commands.commitopts,
-         _('hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH...')),
-    'qgoto':
-        (goto,
-         [('f', 'force', None, _('overwrite any local changes'))],
-         _('hg qgoto [OPTION]... PATCH')),
-    'qguard':
-        (guard,
-         [('l', 'list', None, _('list all patches and guards')),
-          ('n', 'none', None, _('drop all guards'))],
-         _('hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]')),
-    'qheader': (header, [], _('hg qheader [PATCH]')),
-    "qimport":
-        (qimport,
-         [('e', 'existing', None, _('import file in patch directory')),
-          ('n', 'name', '',
-           _('name of patch file'), _('NAME')),
-          ('f', 'force', None, _('overwrite existing files')),
-          ('r', 'rev', [],
-           _('place existing revisions under mq control'), _('REV')),
-          ('g', 'git', None, _('use git extended diff format')),
-          ('P', 'push', None, _('qpush after importing'))],
-         _('hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE...')),
-    "^qinit":
-        (init,
-         [('c', 'create-repo', None, _('create queue repository'))],
-         _('hg qinit [-c]')),
-    "^qnew":
-        (new,
-         [('e', 'edit', None, _('edit commit message')),
-          ('f', 'force', None, _('import uncommitted changes (DEPRECATED)')),
-          ('g', 'git', None, _('use git extended diff format')),
-          ('U', 'currentuser', None, _('add "From: <current user>" to patch')),
-          ('u', 'user', '',
-           _('add "From: <USER>" to patch'), _('USER')),
-          ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
-          ('d', 'date', '',
-           _('add "Date: <DATE>" to patch'), _('DATE'))
-          ] + commands.walkopts + commands.commitopts,
-         _('hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]...')),
-    "qnext": (next, [] + seriesopts, _('hg qnext [-s]')),
-    "qprev": (prev, [] + seriesopts, _('hg qprev [-s]')),
-    "^qpop":
-        (pop,
-         [('a', 'all', None, _('pop all patches')),
-          ('n', 'name', '',
-           _('queue name to pop (DEPRECATED)'), _('NAME')),
-          ('f', 'force', None, _('forget any local changes to patched files'))],
-         _('hg qpop [-a] [-f] [PATCH | INDEX]')),
-    "^qpush":
-        (push,
-         [('f', 'force', None, _('apply on top of local changes')),
-          ('e', 'exact', None, _('apply the target patch to its recorded parent')),
-          ('l', 'list', None, _('list patch name in commit text')),
-          ('a', 'all', None, _('apply all patches')),
-          ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
-          ('n', 'name', '',
-           _('merge queue name (DEPRECATED)'), _('NAME')),
-          ('', 'move', None, _('reorder patch series and apply only the patch'))],
-         _('hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]')),
-    "^qrefresh":
-        (refresh,
-         [('e', 'edit', None, _('edit commit message')),
-          ('g', 'git', None, _('use git extended diff format')),
-          ('s', 'short', None,
-           _('refresh only files already in the patch and specified files')),
-          ('U', 'currentuser', None,
-           _('add/update author field in patch with current user')),
-          ('u', 'user', '',
-           _('add/update author field in patch with given user'), _('USER')),
-          ('D', 'currentdate', None,
-           _('add/update date field in patch with current date')),
-          ('d', 'date', '',
-           _('add/update date field in patch with given date'), _('DATE'))
-          ] + commands.walkopts + commands.commitopts,
-         _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...')),
-    'qrename|qmv':
-        (rename, [], _('hg qrename PATCH1 [PATCH2]')),
-    "qrestore":
-        (restore,
-         [('d', 'delete', None, _('delete save entry')),
-          ('u', 'update', None, _('update queue working directory'))],
-         _('hg qrestore [-d] [-u] REV')),
-    "qsave":
-        (save,
-         [('c', 'copy', None, _('copy patch directory')),
-          ('n', 'name', '',
-           _('copy directory name'), _('NAME')),
-          ('e', 'empty', None, _('clear queue status file')),
-          ('f', 'force', None, _('force copy'))] + commands.commitopts,
-         _('hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]')),
-    "qselect":
-        (select,
-         [('n', 'none', None, _('disable all guards')),
-          ('s', 'series', None, _('list all guards in series file')),
-          ('', 'pop', None, _('pop to before first guarded applied patch')),
-          ('', 'reapply', None, _('pop, then reapply patches'))],
-         _('hg qselect [OPTION]... [GUARD]...')),
-    "qseries":
-        (series,
-         [('m', 'missing', None, _('print patches not in series')),
-         ] + seriesopts,
-          _('hg qseries [-ms]')),
-     "strip":
-         (strip,
-         [('f', 'force', None, _('force removal of changesets, discard '
-                                 'uncommitted changes (no backup)')),
-          ('b', 'backup', None, _('bundle only changesets with local revision'
-                                  ' number greater than REV which are not'
-                                  ' descendants of REV (DEPRECATED)')),
-          ('n', 'no-backup', None, _('no backups')),
-          ('', 'nobackup', None, _('no backups (DEPRECATED)')),
-          ('k', 'keep', None, _("do not modify working copy during strip"))],
-          _('hg strip [-k] [-f] [-n] REV...')),
-     "qtop": (top, [] + seriesopts, _('hg qtop [-s]')),
-    "qunapplied":
-        (unapplied,
-         [('1', 'first', None, _('show only the first patch'))] + seriesopts,
-         _('hg qunapplied [-1] [-s] [PATCH]')),
-    "qfinish":
-        (finish,
-         [('a', 'applied', None, _('finish all applied changesets'))],
-         _('hg qfinish [-a] [REV]...')),
-    'qqueue':
-        (qqueue,
-         [
-             ('l', 'list', False, _('list all available queues')),
-             ('c', 'create', False, _('create new queue')),
-             ('', 'rename', False, _('rename active queue')),
-             ('', 'delete', False, _('delete reference to queue')),
-             ('', 'purge', False, _('delete queue, and remove patch dir')),
-         ],
-         _('[OPTION] [QUEUE]')),
-}
 
 colortable = {'qguard.negative': 'red',
               'qguard.positive': 'yellow',
