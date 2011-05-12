@@ -1330,150 +1330,6 @@ def debugbuilddag(ui, repo, text=None,
     if tags:
         repo.opener.write("localtags", "".join(tags))
 
-@command('debugcommands', [], _('[COMMAND]'))
-def debugcommands(ui, cmd='', *args):
-    """list all available commands and options"""
-    for cmd, vals in sorted(table.iteritems()):
-        cmd = cmd.split('|')[0].strip('^')
-        opts = ', '.join([i[1] for i in vals[1]])
-        ui.write('%s: %s\n' % (cmd, opts))
-
-@command('debugcomplete',
-    [('o', 'options', None, _('show the command options'))],
-    _('[-o] CMD'))
-def debugcomplete(ui, cmd='', **opts):
-    """returns the completion list associated with the given command"""
-
-    if opts.get('options'):
-        options = []
-        otables = [globalopts]
-        if cmd:
-            aliases, entry = cmdutil.findcmd(cmd, table, False)
-            otables.append(entry[1])
-        for t in otables:
-            for o in t:
-                if "(DEPRECATED)" in o[3]:
-                    continue
-                if o[0]:
-                    options.append('-%s' % o[0])
-                options.append('--%s' % o[1])
-        ui.write("%s\n" % "\n".join(options))
-        return
-
-    cmdlist = cmdutil.findpossible(cmd, table)
-    if ui.verbose:
-        cmdlist = [' '.join(c[0]) for c in cmdlist.values()]
-    ui.write("%s\n" % "\n".join(sorted(cmdlist)))
-
-@command('debugfsinfo', [], _('[PATH]'))
-def debugfsinfo(ui, path = "."):
-    """show information detected about current filesystem"""
-    util.writefile('.debugfsinfo', '')
-    ui.write('exec: %s\n' % (util.checkexec(path) and 'yes' or 'no'))
-    ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
-    ui.write('case-sensitive: %s\n' % (util.checkcase('.debugfsinfo')
-                                and 'yes' or 'no'))
-    os.unlink('.debugfsinfo')
-
-@command('debugrebuildstate',
-    [('r', 'rev', '', _('revision to rebuild to'), _('REV'))],
-    _('[-r REV] [REV]'))
-def debugrebuildstate(ui, repo, rev="tip"):
-    """rebuild the dirstate as it would look like for the given revision"""
-    ctx = cmdutil.revsingle(repo, rev)
-    wlock = repo.wlock()
-    try:
-        repo.dirstate.rebuild(ctx.node(), ctx.manifest())
-    finally:
-        wlock.release()
-
-@command('debugcheckstate', [], '')
-def debugcheckstate(ui, repo):
-    """validate the correctness of the current dirstate"""
-    parent1, parent2 = repo.dirstate.parents()
-    m1 = repo[parent1].manifest()
-    m2 = repo[parent2].manifest()
-    errors = 0
-    for f in repo.dirstate:
-        state = repo.dirstate[f]
-        if state in "nr" and f not in m1:
-            ui.warn(_("%s in state %s, but not in manifest1\n") % (f, state))
-            errors += 1
-        if state in "a" and f in m1:
-            ui.warn(_("%s in state %s, but also in manifest1\n") % (f, state))
-            errors += 1
-        if state in "m" and f not in m1 and f not in m2:
-            ui.warn(_("%s in state %s, but not in either manifest\n") %
-                    (f, state))
-            errors += 1
-    for f in m1:
-        state = repo.dirstate[f]
-        if state not in "nrm":
-            ui.warn(_("%s in manifest1, but listed as state %s") % (f, state))
-            errors += 1
-    if errors:
-        error = _(".hg/dirstate inconsistent with current parent's manifest")
-        raise util.Abort(error)
-
-@command('showconfig|debugconfig',
-    [('u', 'untrusted', None, _('show untrusted configuration options'))],
-    _('[-u] [NAME]...'))
-def showconfig(ui, repo, *values, **opts):
-    """show combined config settings from all hgrc files
-
-    With no arguments, print names and values of all config items.
-
-    With one argument of the form section.name, print just the value
-    of that config item.
-
-    With multiple arguments, print names and values of all config
-    items with matching section names.
-
-    With --debug, the source (filename and line number) is printed
-    for each config item.
-
-    Returns 0 on success.
-    """
-
-    for f in scmutil.rcpath():
-        ui.debug(_('read config from: %s\n') % f)
-    untrusted = bool(opts.get('untrusted'))
-    if values:
-        sections = [v for v in values if '.' not in v]
-        items = [v for v in values if '.' in v]
-        if len(items) > 1 or items and sections:
-            raise util.Abort(_('only one config item permitted'))
-    for section, name, value in ui.walkconfig(untrusted=untrusted):
-        value = str(value).replace('\n', '\\n')
-        sectname = section + '.' + name
-        if values:
-            for v in values:
-                if v == section:
-                    ui.debug('%s: ' %
-                             ui.configsource(section, name, untrusted))
-                    ui.write('%s=%s\n' % (sectname, value))
-                elif v == sectname:
-                    ui.debug('%s: ' %
-                             ui.configsource(section, name, untrusted))
-                    ui.write(value, '\n')
-        else:
-            ui.debug('%s: ' %
-                     ui.configsource(section, name, untrusted))
-            ui.write('%s=%s\n' % (sectname, value))
-
-@command('debugknown', [], _('REPO ID...'))
-def debugknown(ui, repopath, *ids, **opts):
-    """test whether node ids are known to a repo
-
-    Every ID must be a full-length hex node id string. Returns a list of 0s and 1s
-    indicating unknown/known.
-    """
-    repo = hg.repository(ui, repopath)
-    if not repo.capable('known'):
-        raise util.Abort("known() not supported by target repository")
-    flags = repo.known([bin(s) for s in ids])
-    ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
-
 @command('debugbundle', [('a', 'all', None, _('show all details'))], _('FILE'))
 def debugbundle(ui, bundlepath, all=None, **opts):
     """lists the contents of a bundle"""
@@ -1524,129 +1380,68 @@ def debugbundle(ui, bundlepath, all=None, **opts):
     finally:
         f.close()
 
-@command('debuggetbundle',
-    [('H', 'head', [], _('id of head node'), _('ID')),
-    ('C', 'common', [], _('id of common node'), _('ID')),
-    ('t', 'type', 'bzip2', _('bundle compression type to use'), _('TYPE'))],
-    _('REPO FILE [-H|-C ID]...'))
-def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
-    """retrieves a bundle from a repo
+@command('debugcheckstate', [], '')
+def debugcheckstate(ui, repo):
+    """validate the correctness of the current dirstate"""
+    parent1, parent2 = repo.dirstate.parents()
+    m1 = repo[parent1].manifest()
+    m2 = repo[parent2].manifest()
+    errors = 0
+    for f in repo.dirstate:
+        state = repo.dirstate[f]
+        if state in "nr" and f not in m1:
+            ui.warn(_("%s in state %s, but not in manifest1\n") % (f, state))
+            errors += 1
+        if state in "a" and f in m1:
+            ui.warn(_("%s in state %s, but also in manifest1\n") % (f, state))
+            errors += 1
+        if state in "m" and f not in m1 and f not in m2:
+            ui.warn(_("%s in state %s, but not in either manifest\n") %
+                    (f, state))
+            errors += 1
+    for f in m1:
+        state = repo.dirstate[f]
+        if state not in "nrm":
+            ui.warn(_("%s in manifest1, but listed as state %s") % (f, state))
+            errors += 1
+    if errors:
+        error = _(".hg/dirstate inconsistent with current parent's manifest")
+        raise util.Abort(error)
 
-    Every ID must be a full-length hex node id string. Saves the bundle to the
-    given file.
-    """
-    repo = hg.repository(ui, repopath)
-    if not repo.capable('getbundle'):
-        raise util.Abort("getbundle() not supported by target repository")
-    args = {}
-    if common:
-        args['common'] = [bin(s) for s in common]
-    if head:
-        args['heads'] = [bin(s) for s in head]
-    bundle = repo.getbundle('debug', **args)
+@command('debugcommands', [], _('[COMMAND]'))
+def debugcommands(ui, cmd='', *args):
+    """list all available commands and options"""
+    for cmd, vals in sorted(table.iteritems()):
+        cmd = cmd.split('|')[0].strip('^')
+        opts = ', '.join([i[1] for i in vals[1]])
+        ui.write('%s: %s\n' % (cmd, opts))
 
-    bundletype = opts.get('type', 'bzip2').lower()
-    btypes = {'none': 'HG10UN', 'bzip2': 'HG10BZ', 'gzip': 'HG10GZ'}
-    bundletype = btypes.get(bundletype)
-    if bundletype not in changegroup.bundletypes:
-        raise util.Abort(_('unknown bundle type specified with --type'))
-    changegroup.writebundle(bundle, bundlepath, bundletype)
+@command('debugcomplete',
+    [('o', 'options', None, _('show the command options'))],
+    _('[-o] CMD'))
+def debugcomplete(ui, cmd='', **opts):
+    """returns the completion list associated with the given command"""
 
-@command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'))
-def debugpushkey(ui, repopath, namespace, *keyinfo):
-    '''access the pushkey key/value protocol
+    if opts.get('options'):
+        options = []
+        otables = [globalopts]
+        if cmd:
+            aliases, entry = cmdutil.findcmd(cmd, table, False)
+            otables.append(entry[1])
+        for t in otables:
+            for o in t:
+                if "(DEPRECATED)" in o[3]:
+                    continue
+                if o[0]:
+                    options.append('-%s' % o[0])
+                options.append('--%s' % o[1])
+        ui.write("%s\n" % "\n".join(options))
+        return
 
-    With two args, list the keys in the given namespace.
-
-    With five args, set a key to new if it currently is set to old.
-    Reports success or failure.
-    '''
-
-    target = hg.repository(ui, repopath)
-    if keyinfo:
-        key, old, new = keyinfo
-        r = target.pushkey(namespace, key, old, new)
-        ui.status(str(r) + '\n')
-        return not r
-    else:
-        for k, v in target.listkeys(namespace).iteritems():
-            ui.write("%s\t%s\n" % (k.encode('string-escape'),
-                                   v.encode('string-escape')))
-
-@command('debugrevspec', [], ('REVSPEC'))
-def debugrevspec(ui, repo, expr):
-    '''parse and apply a revision specification'''
+    cmdlist = cmdutil.findpossible(cmd, table)
     if ui.verbose:
-        tree = revset.parse(expr)[0]
-        ui.note(tree, "\n")
-        newtree = revset.findaliases(ui, tree)
-        if newtree != tree:
-            ui.note(newtree, "\n")
-    func = revset.match(ui, expr)
-    for c in func(repo, range(len(repo))):
-        ui.write("%s\n" % c)
-
-@command('debugsetparents', [], _('REV1 [REV2]'))
-def debugsetparents(ui, repo, rev1, rev2=None):
-    """manually set the parents of the current working directory
-
-    This is useful for writing repository conversion tools, but should
-    be used with care.
-
-    Returns 0 on success.
-    """
-
-    r1 = cmdutil.revsingle(repo, rev1).node()
-    r2 = cmdutil.revsingle(repo, rev2, 'null').node()
-
-    wlock = repo.wlock()
-    try:
-        repo.dirstate.setparents(r1, r2)
-    finally:
-        wlock.release()
-
-@command('debugstate',
-    [('', 'nodates', None, _('do not display the saved mtime')),
-    ('', 'datesort', None, _('sort by saved mtime'))],
-    _('[OPTION]...'))
-def debugstate(ui, repo, nodates=None, datesort=None):
-    """show the contents of the current dirstate"""
-    timestr = ""
-    showdate = not nodates
-    if datesort:
-        keyfunc = lambda x: (x[1][3], x[0]) # sort by mtime, then by filename
-    else:
-        keyfunc = None # sort by filename
-    for file_, ent in sorted(repo.dirstate._map.iteritems(), key=keyfunc):
-        if showdate:
-            if ent[3] == -1:
-                # Pad or slice to locale representation
-                locale_len = len(time.strftime("%Y-%m-%d %H:%M:%S ",
-                                               time.localtime(0)))
-                timestr = 'unset'
-                timestr = (timestr[:locale_len] +
-                           ' ' * (locale_len - len(timestr)))
-            else:
-                timestr = time.strftime("%Y-%m-%d %H:%M:%S ",
-                                        time.localtime(ent[3]))
-        if ent[1] & 020000:
-            mode = 'lnk'
-        else:
-            mode = '%3o' % (ent[1] & 0777)
-        ui.write("%c %s %10d %s%s\n" % (ent[0], mode, ent[2], timestr, file_))
-    for f in repo.dirstate.copies():
-        ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
-
-@command('debugsub',
-    [('r', 'rev', '',
-     _('revision to check'), _('REV'))],
-    _('[-r REV] [REV]'))
-def debugsub(ui, repo, rev=None):
-    ctx = cmdutil.revsingle(repo, rev, None)
-    for k, v in sorted(ctx.substate.items()):
-        ui.write('path %s\n' % k)
-        ui.write(' source   %s\n' % v[0])
-        ui.write(' revision %s\n' % v[1])
+        cmdlist = [' '.join(c[0]) for c in cmdlist.values()]
+    ui.write("%s\n" % "\n".join(sorted(cmdlist)))
 
 @command('debugdag',
     [('t', 'tags', None, _('use tags as labels')),
@@ -1738,15 +1533,6 @@ def debugdate(ui, date, range=None, **opts):
         m = util.matchdate(range)
         ui.write("match: %s\n" % m(d[0]))
 
-@command('debugignore', [], '')
-def debugignore(ui, repo, *values, **opts):
-    """display the combined ignore pattern"""
-    ignore = repo.dirstate._ignore
-    if hasattr(ignore, 'includepat'):
-        ui.write("%s\n" % ignore.includepat)
-    else:
-        raise util.Abort(_("no ignore patterns found"))
-
 @command('debugdiscovery',
     [('', 'old', None, _('use old-style discovery')),
     ('', 'nonheads', None,
@@ -1810,6 +1596,53 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
                                                  opts.get('remote_head'))
         localrevs = opts.get('local_head')
         doit(localrevs, remoterevs)
+
+@command('debugfsinfo', [], _('[PATH]'))
+def debugfsinfo(ui, path = "."):
+    """show information detected about current filesystem"""
+    util.writefile('.debugfsinfo', '')
+    ui.write('exec: %s\n' % (util.checkexec(path) and 'yes' or 'no'))
+    ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
+    ui.write('case-sensitive: %s\n' % (util.checkcase('.debugfsinfo')
+                                and 'yes' or 'no'))
+    os.unlink('.debugfsinfo')
+
+@command('debuggetbundle',
+    [('H', 'head', [], _('id of head node'), _('ID')),
+    ('C', 'common', [], _('id of common node'), _('ID')),
+    ('t', 'type', 'bzip2', _('bundle compression type to use'), _('TYPE'))],
+    _('REPO FILE [-H|-C ID]...'))
+def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
+    """retrieves a bundle from a repo
+
+    Every ID must be a full-length hex node id string. Saves the bundle to the
+    given file.
+    """
+    repo = hg.repository(ui, repopath)
+    if not repo.capable('getbundle'):
+        raise util.Abort("getbundle() not supported by target repository")
+    args = {}
+    if common:
+        args['common'] = [bin(s) for s in common]
+    if head:
+        args['heads'] = [bin(s) for s in head]
+    bundle = repo.getbundle('debug', **args)
+
+    bundletype = opts.get('type', 'bzip2').lower()
+    btypes = {'none': 'HG10UN', 'bzip2': 'HG10BZ', 'gzip': 'HG10GZ'}
+    bundletype = btypes.get(bundletype)
+    if bundletype not in changegroup.bundletypes:
+        raise util.Abort(_('unknown bundle type specified with --type'))
+    changegroup.writebundle(bundle, bundlepath, bundletype)
+
+@command('debugignore', [], '')
+def debugignore(ui, repo, *values, **opts):
+    """display the combined ignore pattern"""
+    ignore = repo.dirstate._ignore
+    if hasattr(ignore, 'includepat'):
+        ui.write("%s\n" % ignore.includepat)
+    else:
+        raise util.Abort(_("no ignore patterns found"))
 
 @command('debugindex',
     [('f', 'format', 0, _('revlog format'), _('FORMAT'))],
@@ -1959,6 +1792,52 @@ def debuginstall(ui):
 
     return problems
 
+@command('debugknown', [], _('REPO ID...'))
+def debugknown(ui, repopath, *ids, **opts):
+    """test whether node ids are known to a repo
+
+    Every ID must be a full-length hex node id string. Returns a list of 0s and 1s
+    indicating unknown/known.
+    """
+    repo = hg.repository(ui, repopath)
+    if not repo.capable('known'):
+        raise util.Abort("known() not supported by target repository")
+    flags = repo.known([bin(s) for s in ids])
+    ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
+
+@command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'))
+def debugpushkey(ui, repopath, namespace, *keyinfo):
+    '''access the pushkey key/value protocol
+
+    With two args, list the keys in the given namespace.
+
+    With five args, set a key to new if it currently is set to old.
+    Reports success or failure.
+    '''
+
+    target = hg.repository(ui, repopath)
+    if keyinfo:
+        key, old, new = keyinfo
+        r = target.pushkey(namespace, key, old, new)
+        ui.status(str(r) + '\n')
+        return not r
+    else:
+        for k, v in target.listkeys(namespace).iteritems():
+            ui.write("%s\t%s\n" % (k.encode('string-escape'),
+                                   v.encode('string-escape')))
+
+@command('debugrebuildstate',
+    [('r', 'rev', '', _('revision to rebuild to'), _('REV'))],
+    _('[-r REV] [REV]'))
+def debugrebuildstate(ui, repo, rev="tip"):
+    """rebuild the dirstate as it would look like for the given revision"""
+    ctx = cmdutil.revsingle(repo, rev)
+    wlock = repo.wlock()
+    try:
+        repo.dirstate.rebuild(ctx.node(), ctx.manifest())
+    finally:
+        wlock.release()
+
 @command('debugrename',
     [('r', 'rev', '', _('revision to debug'), _('REV'))],
     _('[-r REV] FILE'))
@@ -1975,6 +1854,81 @@ def debugrename(ui, repo, file1, *pats, **opts):
             ui.write(_("%s renamed from %s:%s\n") % (rel, o[0], hex(o[1])))
         else:
             ui.write(_("%s not renamed\n") % rel)
+
+@command('debugrevspec', [], ('REVSPEC'))
+def debugrevspec(ui, repo, expr):
+    '''parse and apply a revision specification'''
+    if ui.verbose:
+        tree = revset.parse(expr)[0]
+        ui.note(tree, "\n")
+        newtree = revset.findaliases(ui, tree)
+        if newtree != tree:
+            ui.note(newtree, "\n")
+    func = revset.match(ui, expr)
+    for c in func(repo, range(len(repo))):
+        ui.write("%s\n" % c)
+
+@command('debugsetparents', [], _('REV1 [REV2]'))
+def debugsetparents(ui, repo, rev1, rev2=None):
+    """manually set the parents of the current working directory
+
+    This is useful for writing repository conversion tools, but should
+    be used with care.
+
+    Returns 0 on success.
+    """
+
+    r1 = cmdutil.revsingle(repo, rev1).node()
+    r2 = cmdutil.revsingle(repo, rev2, 'null').node()
+
+    wlock = repo.wlock()
+    try:
+        repo.dirstate.setparents(r1, r2)
+    finally:
+        wlock.release()
+
+@command('debugstate',
+    [('', 'nodates', None, _('do not display the saved mtime')),
+    ('', 'datesort', None, _('sort by saved mtime'))],
+    _('[OPTION]...'))
+def debugstate(ui, repo, nodates=None, datesort=None):
+    """show the contents of the current dirstate"""
+    timestr = ""
+    showdate = not nodates
+    if datesort:
+        keyfunc = lambda x: (x[1][3], x[0]) # sort by mtime, then by filename
+    else:
+        keyfunc = None # sort by filename
+    for file_, ent in sorted(repo.dirstate._map.iteritems(), key=keyfunc):
+        if showdate:
+            if ent[3] == -1:
+                # Pad or slice to locale representation
+                locale_len = len(time.strftime("%Y-%m-%d %H:%M:%S ",
+                                               time.localtime(0)))
+                timestr = 'unset'
+                timestr = (timestr[:locale_len] +
+                           ' ' * (locale_len - len(timestr)))
+            else:
+                timestr = time.strftime("%Y-%m-%d %H:%M:%S ",
+                                        time.localtime(ent[3]))
+        if ent[1] & 020000:
+            mode = 'lnk'
+        else:
+            mode = '%3o' % (ent[1] & 0777)
+        ui.write("%c %s %10d %s%s\n" % (ent[0], mode, ent[2], timestr, file_))
+    for f in repo.dirstate.copies():
+        ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))
+
+@command('debugsub',
+    [('r', 'rev', '',
+     _('revision to check'), _('REV'))],
+    _('[-r REV] [REV]'))
+def debugsub(ui, repo, rev=None):
+    ctx = cmdutil.revsingle(repo, rev, None)
+    for k, v in sorted(ctx.substate.items()):
+        ui.write('path %s\n' % k)
+        ui.write(' source   %s\n' % v[0])
+        ui.write(' revision %s\n' % v[1])
 
 @command('debugwalk', walkopts, _('[OPTION]... [FILE]...'))
 def debugwalk(ui, repo, *pats, **opts):
@@ -4320,6 +4274,52 @@ def serve(ui, repo, **opts):
     service = service()
 
     cmdutil.service(opts, initfn=service.init, runfn=service.run)
+
+@command('showconfig|debugconfig',
+    [('u', 'untrusted', None, _('show untrusted configuration options'))],
+    _('[-u] [NAME]...'))
+def showconfig(ui, repo, *values, **opts):
+    """show combined config settings from all hgrc files
+
+    With no arguments, print names and values of all config items.
+
+    With one argument of the form section.name, print just the value
+    of that config item.
+
+    With multiple arguments, print names and values of all config
+    items with matching section names.
+
+    With --debug, the source (filename and line number) is printed
+    for each config item.
+
+    Returns 0 on success.
+    """
+
+    for f in scmutil.rcpath():
+        ui.debug(_('read config from: %s\n') % f)
+    untrusted = bool(opts.get('untrusted'))
+    if values:
+        sections = [v for v in values if '.' not in v]
+        items = [v for v in values if '.' in v]
+        if len(items) > 1 or items and sections:
+            raise util.Abort(_('only one config item permitted'))
+    for section, name, value in ui.walkconfig(untrusted=untrusted):
+        value = str(value).replace('\n', '\\n')
+        sectname = section + '.' + name
+        if values:
+            for v in values:
+                if v == section:
+                    ui.debug('%s: ' %
+                             ui.configsource(section, name, untrusted))
+                    ui.write('%s=%s\n' % (sectname, value))
+                elif v == sectname:
+                    ui.debug('%s: ' %
+                             ui.configsource(section, name, untrusted))
+                    ui.write(value, '\n')
+        else:
+            ui.debug('%s: ' %
+                     ui.configsource(section, name, untrusted))
+            ui.write('%s=%s\n' % (sectname, value))
 
 @command('^status|st',
     [('A', 'all', None, _('show status of all files')),
