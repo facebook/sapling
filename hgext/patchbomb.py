@@ -52,6 +52,9 @@ from mercurial import cmdutil, commands, hg, mail, patch, util, discovery
 from mercurial.i18n import _
 from mercurial.node import bin
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
 def prompt(ui, prompt, default=None, rest=':'):
     if not ui.interactive() and default is None:
         raise util.Abort(_("%s Please enter a valid value" % (prompt + rest)))
@@ -146,6 +149,40 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total,
     msg['X-Mercurial-Node'] = node
     return msg, subj, ds
 
+emailopts = [
+    ('a', 'attach', None, _('send patches as attachments')),
+    ('i', 'inline', None, _('send patches as inline attachments')),
+    ('', 'bcc', [], _('email addresses of blind carbon copy recipients')),
+    ('c', 'cc', [], _('email addresses of copy recipients')),
+    ('', 'confirm', None, _('ask for confirmation before sending')),
+    ('d', 'diffstat', None, _('add diffstat output to messages')),
+    ('', 'date', '', _('use the given date as the sending date')),
+    ('', 'desc', '', _('use the given file as the series description')),
+    ('f', 'from', '', _('email address of sender')),
+    ('n', 'test', None, _('print messages that would be sent')),
+    ('m', 'mbox', '', _('write messages to mbox file instead of sending them')),
+    ('', 'reply-to', [], _('email addresses replies should be sent to')),
+    ('s', 'subject', '', _('subject of first message (intro or single patch)')),
+    ('', 'in-reply-to', '', _('message identifier to reply to')),
+    ('', 'flag', [], _('flags to add in subject prefixes')),
+    ('t', 'to', [], _('email addresses of recipients'))]
+
+@command('email',
+    [('g', 'git', None, _('use git extended diff format')),
+    ('', 'plain', None, _('omit hg patch header')),
+    ('o', 'outgoing', None,
+     _('send changes not found in the target repository')),
+    ('b', 'bundle', None, _('send changes not in target as a binary bundle')),
+    ('', 'bundlename', 'bundle',
+     _('name of the bundle attachment file'), _('NAME')),
+    ('r', 'rev', [], _('a revision to send'), _('REV')),
+    ('', 'force', None, _('run even when remote repository is unrelated '
+       '(with -b/--bundle)')),
+    ('', 'base', [], _('a base changeset to specify instead of a destination '
+       '(with -b/--bundle)'), _('REV')),
+    ('', 'intro', None, _('send an introduction email for a single patch')),
+    ] + emailopts + commands.remoteopts,
+    _('hg email [OPTION]... [DEST]...'))
 def patchbomb(ui, repo, *revs, **opts):
     '''send changesets by email
 
@@ -511,52 +548,3 @@ def patchbomb(ui, repo, *revs, **opts):
 
     ui.progress(_('writing'), None)
     ui.progress(_('sending'), None)
-
-emailopts = [
-          ('a', 'attach', None, _('send patches as attachments')),
-          ('i', 'inline', None, _('send patches as inline attachments')),
-          ('', 'bcc', [], _('email addresses of blind carbon copy recipients')),
-          ('c', 'cc', [], _('email addresses of copy recipients')),
-          ('', 'confirm', None, _('ask for confirmation before sending')),
-          ('d', 'diffstat', None, _('add diffstat output to messages')),
-          ('', 'date', '', _('use the given date as the sending date')),
-          ('', 'desc', '', _('use the given file as the series description')),
-          ('f', 'from', '', _('email address of sender')),
-          ('n', 'test', None, _('print messages that would be sent')),
-          ('m', 'mbox', '',
-           _('write messages to mbox file instead of sending them')),
-          ('', 'reply-to', [], _('email addresses replies should be sent to')),
-          ('s', 'subject', '',
-           _('subject of first message (intro or single patch)')),
-          ('', 'in-reply-to', '',
-           _('message identifier to reply to')),
-          ('', 'flag', [], _('flags to add in subject prefixes')),
-          ('t', 'to', [], _('email addresses of recipients')),
-         ]
-
-
-cmdtable = {
-    "email":
-        (patchbomb,
-         [('g', 'git', None, _('use git extended diff format')),
-          ('', 'plain', None, _('omit hg patch header')),
-          ('o', 'outgoing', None,
-           _('send changes not found in the target repository')),
-          ('b', 'bundle', None,
-           _('send changes not in target as a binary bundle')),
-          ('', 'bundlename', 'bundle',
-           _('name of the bundle attachment file'), _('NAME')),
-          ('r', 'rev', [],
-           _('a revision to send'), _('REV')),
-          ('', 'force', None,
-           _('run even when remote repository is unrelated '
-             '(with -b/--bundle)')),
-          ('', 'base', [],
-           _('a base changeset to specify instead of a destination '
-             '(with -b/--bundle)'),
-           _('REV')),
-          ('', 'intro', None,
-           _('send an introduction email for a single patch')),
-         ] + emailopts + commands.remoteopts,
-         _('hg email [OPTION]... [DEST]...'))
-}
