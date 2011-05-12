@@ -19,6 +19,9 @@ from mercurial import bundlerepo, cmdutil, hg, merge, match
 from mercurial import patch, revlog, scmutil, util, error
 from mercurial import revset, templatekw
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
 class transplantentry(object):
     def __init__(self, lnode, rnode):
         self.lnode = lnode
@@ -450,6 +453,20 @@ def browserevs(ui, repo, nodes, opts):
     displayer.close()
     return (transplants, merges)
 
+@command('transplant',
+    [('s', 'source', '', _('pull patches from REPO'), _('REPO')),
+    ('b', 'branch', [],
+     _('pull patches from branch BRANCH'), _('BRANCH')),
+    ('a', 'all', None, _('pull all changesets up to BRANCH')),
+    ('p', 'prune', [], _('skip over REV'), _('REV')),
+    ('m', 'merge', [], _('merge at REV'), _('REV')),
+    ('', 'log', None, _('append transplant info to log message')),
+    ('c', 'continue', None, _('continue last transplant session '
+                              'after repair')),
+    ('', 'filter', '',
+     _('filter changesets through command'), _('CMD'))],
+    _('hg transplant [-s REPO] [-b BRANCH [-a]] [-p REV] '
+      '[-m REV] [REV]...'))
 def transplant(ui, repo, *revs, **opts):
     '''transplant changesets from another branch
 
@@ -610,27 +627,6 @@ def kwtransplanted(repo, ctx, **args):
 def extsetup(ui):
     revset.symbols['transplanted'] = revsettransplanted
     templatekw.keywords['transplanted'] = kwtransplanted
-
-cmdtable = {
-    "transplant":
-        (transplant,
-         [('s', 'source', '',
-           _('pull patches from REPO'), _('REPO')),
-          ('b', 'branch', [],
-           _('pull patches from branch BRANCH'), _('BRANCH')),
-          ('a', 'all', None, _('pull all changesets up to BRANCH')),
-          ('p', 'prune', [],
-           _('skip over REV'), _('REV')),
-          ('m', 'merge', [],
-           _('merge at REV'), _('REV')),
-          ('', 'log', None, _('append transplant info to log message')),
-          ('c', 'continue', None, _('continue last transplant session '
-                                    'after repair')),
-          ('', 'filter', '',
-           _('filter changesets through command'), _('CMD'))],
-         _('hg transplant [-s REPO] [-b BRANCH [-a]] [-p REV] '
-           '[-m REV] [REV]...'))
-}
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = [revsettransplanted, kwtransplanted]
