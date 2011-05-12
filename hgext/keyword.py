@@ -90,6 +90,9 @@ import os, re, shutil, tempfile
 
 commands.optionalrepo += ' kwdemo'
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
 # hg commands that do not act on keywords
 nokwcommands = ('add addremove annotate bundle export grep incoming init log'
                 ' outgoing push tip verify convert email glog')
@@ -345,6 +348,11 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     finally:
         wlock.release()
 
+@command('kwdemo',
+         [('d', 'default', None, _('show default keyword template maps')),
+          ('f', 'rcfile', '',
+           _('read maps from rcfile'), _('FILE'))],
+         _('hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]...'))
 def demo(ui, repo, *args, **opts):
     '''print [keywordmaps] configuration and an expansion example
 
@@ -428,6 +436,7 @@ def demo(ui, repo, *args, **opts):
     ui.write(repo.wread(fn))
     shutil.rmtree(tmpdir, ignore_errors=True)
 
+@command('kwexpand', commands.walkopts, _('hg kwexpand [OPTION]... [FILE]...'))
 def expand(ui, repo, *pats, **opts):
     '''expand keywords in the working directory
 
@@ -438,6 +447,12 @@ def expand(ui, repo, *pats, **opts):
     # 3rd argument sets expansion to True
     _kwfwrite(ui, repo, True, *pats, **opts)
 
+@command('kwfiles',
+         [('A', 'all', None, _('show keyword status flags of all files')),
+          ('i', 'ignore', None, _('show files excluded from expansion')),
+          ('u', 'unknown', None, _('only show unknown (not tracked) files')),
+         ] + commands.walkopts,
+         _('hg kwfiles [OPTION]... [FILE]...'))
 def files(ui, repo, *pats, **opts):
     '''show files configured for keyword expansion
 
@@ -484,6 +499,7 @@ def files(ui, repo, *pats, **opts):
         for f in filenames:
             ui.write(fmt % repo.pathto(f, cwd), label='kwfiles.' + kwstate)
 
+@command('kwshrink', commands.walkopts, _('hg kwshrink [OPTION]... [FILE]...'))
 def shrink(ui, repo, *pats, **opts):
     '''revert expanded keywords in the working directory
 
@@ -673,23 +689,3 @@ def reposetup(ui, repo):
             pass
 
     repo.__class__ = kwrepo
-
-cmdtable = {
-    'kwdemo':
-        (demo,
-         [('d', 'default', None, _('show default keyword template maps')),
-          ('f', 'rcfile', '',
-           _('read maps from rcfile'), _('FILE'))],
-         _('hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]...')),
-    'kwexpand': (expand, commands.walkopts,
-                 _('hg kwexpand [OPTION]... [FILE]...')),
-    'kwfiles':
-        (files,
-         [('A', 'all', None, _('show keyword status flags of all files')),
-          ('i', 'ignore', None, _('show files excluded from expansion')),
-          ('u', 'unknown', None, _('only show unknown (not tracked) files')),
-         ] + commands.walkopts,
-         _('hg kwfiles [OPTION]... [FILE]...')),
-    'kwshrink': (shrink, commands.walkopts,
-                 _('hg kwshrink [OPTION]... [FILE]...')),
-}
