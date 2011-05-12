@@ -6,9 +6,12 @@
 '''commands to sign and verify changesets'''
 
 import os, tempfile, binascii
-from mercurial import util, commands, match
+from mercurial import util, commands, match, cmdutil
 from mercurial import node as hgnode
 from mercurial.i18n import _
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 
 class gpg(object):
     def __init__(self, path, key=None):
@@ -135,6 +138,7 @@ def getkeys(ui, repo, mygpg, sigdata, context):
         validkeys.append((key[1], key[2], key[3]))
     return validkeys
 
+@command("sigs", [], _('hg sigs'))
 def sigs(ui, repo):
     """list signed changesets"""
     mygpg = newgpg(ui)
@@ -159,6 +163,7 @@ def sigs(ui, repo):
             r = "%5d:%s" % (rev, hgnode.hex(repo.changelog.node(rev)))
             ui.write("%-30s %s\n" % (keystr(ui, k), r))
 
+@command("sigcheck", [], _('hg sigcheck REVISION'))
 def check(ui, repo, rev):
     """verify all the signatures there may be for a particular revision"""
     mygpg = newgpg(ui)
@@ -191,6 +196,16 @@ def keystr(ui, key):
     else:
         return user
 
+@command("sign",
+         [('l', 'local', None, _('make the signature local')),
+          ('f', 'force', None, _('sign even if the sigfile is modified')),
+          ('', 'no-commit', None, _('do not commit the sigfile after signing')),
+          ('k', 'key', '',
+           _('the key id to sign with'), _('ID')),
+          ('m', 'message', '',
+           _('commit message'), _('TEXT')),
+         ] + commands.commitopts2,
+         _('hg sign [OPTION]... [REVISION]...'))
 def sign(ui, repo, *revs, **opts):
     """add a signature for the current or given revision
 
@@ -271,20 +286,4 @@ def node2txt(repo, node, ver):
         return "%s\n" % hgnode.hex(node)
     else:
         raise util.Abort(_("unknown signature version"))
-
-cmdtable = {
-    "sign":
-        (sign,
-         [('l', 'local', None, _('make the signature local')),
-          ('f', 'force', None, _('sign even if the sigfile is modified')),
-          ('', 'no-commit', None, _('do not commit the sigfile after signing')),
-          ('k', 'key', '',
-           _('the key id to sign with'), _('ID')),
-          ('m', 'message', '',
-           _('commit message'), _('TEXT')),
-         ] + commands.commitopts2,
-         _('hg sign [OPTION]... [REVISION]...')),
-    "sigcheck": (check, [], _('hg sigcheck REVISION')),
-    "sigs": (sigs, [], _('hg sigs')),
-}
 
