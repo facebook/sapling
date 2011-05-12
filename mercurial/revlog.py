@@ -218,7 +218,7 @@ class revlog(object):
         self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
         self._cache = None
-        self._basecache = None
+        self._basecache = (0, 0)
         self._chunkcache = (0, '')
         self.index = []
         self._pcache = {}
@@ -1010,8 +1010,7 @@ class revlog(object):
                 delta = mdiff.textdiff(ptext, t)
             data = compress(delta)
             l = len(data[1]) + len(data[0])
-            basecache = self._basecache
-            if basecache and basecache[0] == rev:
+            if basecache[0] == rev:
                 chainbase = basecache[1]
             else:
                 chainbase = self.chainbase(rev)
@@ -1020,14 +1019,15 @@ class revlog(object):
                 base = rev
             else:
                 base = chainbase
-            return dist, l, data, base
+            return dist, l, data, base, chainbase
 
         curr = len(self)
         prev = curr - 1
-        base = curr
+        base = chainbase = curr
         offset = self.end(prev)
         flags = 0
         d = None
+        basecache = self._basecache
         p1r, p2r = self.rev(p1), self.rev(p2)
 
         # should we try to build a delta?
@@ -1036,7 +1036,7 @@ class revlog(object):
                 d = builddelta(p1r)
             else:
                 d = builddelta(prev)
-            dist, l, data, base = d
+            dist, l, data, base, chainbase = d
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
@@ -1049,7 +1049,7 @@ class revlog(object):
             text = buildtext()
             data = compress(text)
             l = len(data[1]) + len(data[0])
-            base = curr
+            base = chainbase = curr
 
         e = (offset_type(offset, flags), l, textlen,
              base, link, p1r, p2r, node)
@@ -1075,7 +1075,7 @@ class revlog(object):
 
         if type(text) == str: # only accept immutable objects
             self._cache = (node, curr, text)
-        self._basecache = (curr, base)
+        self._basecache = (curr, chainbase)
         return node
 
     def group(self, nodelist, bundler):
