@@ -1875,18 +1875,21 @@ def debugrevlog(ui, repo, file_):
     if v & revlog.REVLOGGENERALDELTA:
         gdelta = True
         flags.append('generaldelta')
+    if not flags:
+        flags = ['(none)']
 
     nummerges = 0
-    numchains = 0
+    numfull = 0
     numprev = 0
     nump1 = 0
     nump2 = 0
     numother = 0
     nump1prev = 0
     nump2prev = 0
+    chainlengths = []
 
     datasize = [None, 0, 0L]
-    snapshotsize = [None, 0, 0L]
+    fullsize = [None, 0, 0L]
     deltasize = [None, 0, 0L]
 
     def addsize(size, l):
@@ -1906,51 +1909,91 @@ def debugrevlog(ui, repo, file_):
             nummerges += 1
         size = r.length(rev)
         if delta == nullrev:
-            numchains += 1
-            addsize(size, snapshotsize)
+            chainlengths.append(0)
+            numfull += 1
+            addsize(size, fullsize)
         else:
+            chainlengths.append(chainlengths[delta] + 1)
             addsize(size, deltasize)
-            if gdelta:
-                if delta == rev - 1:
-                    numprev += 1
-                    if delta == p1:
-                        nump1prev += 1
-                    elif delta == p2:
-                        nump2prev += 1
-                elif delta == p1:
-                    nump1 += 1
+            if delta == rev - 1:
+                numprev += 1
+                if delta == p1:
+                    nump1prev += 1
                 elif delta == p2:
-                    nump2 += 1
-                elif delta != nullrev:
-                    numother += 1
+                    nump2prev += 1
+            elif delta == p1:
+                nump1 += 1
+            elif delta == p2:
+                nump2 += 1
+            elif delta != nullrev:
+                numother += 1
 
-    numotherprev = numprev - nump1prev - nump2prev
+    numdeltas = numrevs - numfull
+    numoprev = numprev - nump1prev - nump2prev
+    totalrawsize = datasize[2]
     datasize[2] /= numrevs
-    snapshotsize[2] /= numchains
-    deltasize[2] /= numrevs - numchains
+    fulltotal = fullsize[2]
+    fullsize[2] /= numfull
+    deltatotal = deltasize[2]
+    deltasize[2] /= numrevs - numfull
+    totalsize = fulltotal + deltatotal
+    avgchainlen = sum(chainlengths) / numrevs
+    compratio = totalrawsize / totalsize
 
-    ui.write('format    : %d\n' % format)
-    ui.write('flags     : %s\n' % ', '.join(flags))
-    ui.write('revisions : %d\n' % numrevs)
-    ui.write('merges    : %d\n' % nummerges)
-    ui.write('chains    : %d\n' % numchains)
+    basedfmtstr = '%%%dd\n'
+    basepcfmtstr = '%%%dd %s(%%5.2f%%%%)\n'
+
+    def dfmtstr(max):
+        return basedfmtstr % len(str(max))
+    def pcfmtstr(max, padding=0):
+        return basepcfmtstr % (len(str(max)), ' ' * padding)
+
+    def pcfmt(value, total):
+        return (value, 100 * float(value) / total)
+
+    ui.write('format : %d\n' % format)
+    ui.write('flags  : %s\n' % ', '.join(flags))
+
+    ui.write('\n')
+    fmt = pcfmtstr(totalsize)
+    fmt2 = dfmtstr(totalsize)
+    ui.write('revisions     : ' + fmt2 % numrevs)
+    ui.write('    merges    : ' + fmt % pcfmt(nummerges, numrevs))
+    ui.write('    normal    : ' + fmt % pcfmt(numrevs - nummerges, numrevs))
+    ui.write('revisions     : ' + fmt2 % numrevs)
+    ui.write('    full      : ' + fmt % pcfmt(numfull, numrevs))
+    ui.write('    deltas    : ' + fmt % pcfmt(numdeltas, numrevs))
+    ui.write('revision size : ' + fmt2 % totalsize)
+    ui.write('    full      : ' + fmt % pcfmt(fulltotal, totalsize))
+    ui.write('    deltas    : ' + fmt % pcfmt(deltatotal, totalsize))
+
+    ui.write('\n')
+    fmt = dfmtstr(max(avgchainlen, compratio))
+    ui.write('avg chain length  : ' + fmt % avgchainlen)
+    ui.write('compression ratio : ' + fmt % compratio)
 
     if format > 0:
-        ui.write('\ndata size (min/max/avg)                : %d / %d / %d\n'
+        ui.write('\n')
+        ui.write('uncompressed data size (min/max/avg) : %d / %d / %d\n'
                  % tuple(datasize))
-    ui.write('compressed snapshot size (min/max/avg) : %d / %d / %d\n'
-             % tuple(snapshotsize))
-    ui.write('compressed delta size (min/max/avg)    : %d / %d / %d\n'
+    ui.write('full revision size (min/max/avg)     : %d / %d / %d\n'
+             % tuple(fullsize))
+    ui.write('delta size (min/max/avg)             : %d / %d / %d\n'
              % tuple(deltasize))
 
-    if gdelta:
-        ui.write('\ndeltas against prev  : %d\n' % numprev)
-        ui.write('  ..where prev = p1  : %d\n' % nump1prev)
-        ui.write('  ..where prev = p2  : %d\n' % nump2prev)
-        ui.write('  ..other            : %d\n' % numotherprev)
-        ui.write('deltas against p1    : %d\n' % nump1)
-        ui.write('deltas against p2    : %d\n' % nump2)
-        ui.write('deltas against other : %d\n' % numother)
+    if numdeltas > 0:
+        ui.write('\n')
+        fmt = pcfmtstr(numdeltas)
+        fmt2 = pcfmtstr(numdeltas, 4)
+        ui.write('deltas against prev  : ' + fmt % pcfmt(numprev, numdeltas))
+        if numprev > 0:
+            ui.write('    where prev = p1  : ' + fmt2 % pcfmt(nump1prev, numprev))
+            ui.write('    where prev = p2  : ' + fmt2 % pcfmt(nump2prev, numprev))
+            ui.write('    other            : ' + fmt2 % pcfmt(numoprev, numprev))
+        if gdelta:
+            ui.write('deltas against p1    : ' + fmt % pcfmt(nump1, numdeltas))
+            ui.write('deltas against p2    : ' + fmt % pcfmt(nump2, numdeltas))
+            ui.write('deltas against other : ' + fmt % pcfmt(numother, numdeltas))
 
 @command('debugrevspec', [], ('REVSPEC'))
 def debugrevspec(ui, repo, expr):
