@@ -1033,7 +1033,12 @@ class revlog(object):
         # should we try to build a delta?
         if prev != nullrev:
             if self._generaldelta:
-                d = builddelta(p1r)
+                if p1r >= basecache[1]:
+                    d = builddelta(p1r)
+                elif p2r >= basecache[1]:
+                    d = builddelta(p2r)
+                else:
+                    d = builddelta(prev)
             else:
                 d = builddelta(prev)
             dist, l, data, base, chainbase = d
