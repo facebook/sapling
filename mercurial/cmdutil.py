@@ -1251,3 +1251,18 @@ def commitforceeditor(repo, ctx, subs):
         raise util.Abort(_("empty commit message"))
 
     return text
+
+def command(table):
+    '''returns a function object bound to table which can be used as
+    a decorator for populating table as a command table'''
+
+    def cmd(name, options, synopsis=None):
+        def decorator(func):
+            if synopsis:
+                table[name] = func, options, synopsis
+            else:
+                table[name] = func, options
+            return func
+        return decorator
+
+    return cmd
