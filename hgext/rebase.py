@@ -24,6 +24,33 @@ import os, errno
 
 nullmerge = -2
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
+@command('rebase',
+    [('s', 'source', '',
+     _('rebase from the specified changeset'), _('REV')),
+    ('b', 'base', '',
+     _('rebase from the base of the specified changeset '
+       '(up to greatest common ancestor of base and dest)'),
+     _('REV')),
+    ('d', 'dest', '',
+     _('rebase onto the specified changeset'), _('REV')),
+    ('', 'collapse', False, _('collapse the rebased changesets')),
+    ('m', 'message', '',
+     _('use text as collapse commit message'), _('TEXT')),
+    ('l', 'logfile', '',
+     _('read collapse commit message from file'), _('FILE')),
+    ('', 'keep', False, _('keep original changesets')),
+    ('', 'keepbranches', False, _('keep original branch names')),
+    ('', 'detach', False, _('force detaching of source from its original '
+                            'branch')),
+    ('t', 'tool', '', _('specify merge tool')),
+    ('c', 'continue', False, _('continue an interrupted rebase')),
+    ('a', 'abort', False, _('abort an interrupted rebase'))] +
+     templateopts,
+    _('hg rebase [-s REV | -b REV] [-d REV] [options]\n'
+      'hg rebase {-a|-c}'))
 def rebase(ui, repo, **opts):
     """move changeset (and descendants) to a different branch
 
@@ -558,32 +585,3 @@ def uisetup(ui):
     entry[1].append(('', 'rebase', None,
                      _("rebase working directory to branch head"))
 )
-
-cmdtable = {
-"rebase":
-        (rebase,
-        [
-        ('s', 'source', '',
-         _('rebase from the specified changeset'), _('REV')),
-        ('b', 'base', '',
-         _('rebase from the base of the specified changeset '
-           '(up to greatest common ancestor of base and dest)'),
-         _('REV')),
-        ('d', 'dest', '',
-         _('rebase onto the specified changeset'), _('REV')),
-        ('', 'collapse', False, _('collapse the rebased changesets')),
-        ('m', 'message', '',
-         _('use text as collapse commit message'), _('TEXT')),
-        ('l', 'logfile', '',
-         _('read collapse commit message from file'), _('FILE')),
-        ('', 'keep', False, _('keep original changesets')),
-        ('', 'keepbranches', False, _('keep original branch names')),
-        ('', 'detach', False, _('force detaching of source from its original '
-                                'branch')),
-        ('t', 'tool', '', _('specify merge tool')),
-        ('c', 'continue', False, _('continue an interrupted rebase')),
-        ('a', 'abort', False, _('abort an interrupted rebase'))] +
-         templateopts,
-        _('hg rebase [-s REV | -b REV] [-d REV] [options]\n'
-          'hg rebase {-a|-c}'))
-}
