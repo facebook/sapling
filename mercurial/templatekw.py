@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from node import hex
-import patch, util, error, help
+import patch, util, error
 
 def showlist(name, values, plural=None, **args):
     '''expand set of values.
@@ -312,9 +312,6 @@ keywords = {
     'rev': showrev,
     'tags': showtags,
 }
-
-def makedoc(topic, doc):
-    return help.makeitemsdoc(topic, doc, '.. keywordsmarker', keywords)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()

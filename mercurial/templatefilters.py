@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import cgi, re, os, time, urllib
-import encoding, node, util, help
+import encoding, node, util
 
 def addbreaks(text):
     """:addbreaks: Any text. Add an XHTML "<br />" tag before the end of
@@ -357,9 +357,6 @@ filters = {
     "user": userfilter,
     "xmlescape": xmlescape,
 }
-
-def makedoc(topic, doc):
-    return help.makeitemsdoc(topic, doc, '.. filtersmarker', filters)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = filters.values()

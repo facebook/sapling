@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import parser, util, error, discovery, help, hbisect
+import parser, util, error, discovery, hbisect
 import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _
@@ -980,9 +980,6 @@ def match(ui, spec):
     def mfunc(repo, subset):
         return getset(repo, subset, tree)
     return mfunc
-
-def makedoc(topic, doc):
-    return help.makeitemsdoc(topic, doc, '.. predicatesmarker', symbols)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()

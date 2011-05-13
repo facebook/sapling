@@ -248,7 +248,7 @@ def _disabledhelp(path):
     except IOError:
         return
     else:
-        doc = moduledoc(file)
+        doc = _moduledoc(file)
         file.close()
 
     if doc: # extracting localized synopsis

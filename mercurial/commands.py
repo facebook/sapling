@@ -13,7 +13,7 @@ import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
 import patch, help, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
-import minirst, revset, templatefilters
+import minirst, revset
 import dagparser, context, simplemerge
 import random, setdiscovery, treediscovery, dagutil
 
@@ -2757,10 +2757,6 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
         ui.write('\n\n')
         ui.write(_('use "hg help extensions" for information on enabling '
                    'extensions\n'))
-
-    help.addtopichook('revsets', revset.makedoc)
-    help.addtopichook('templates', templatekw.makedoc)
-    help.addtopichook('templates', templatefilters.makedoc)
 
     if name and name != 'shortlist':
         i = None

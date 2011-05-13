@@ -7,7 +7,7 @@
 
 from i18n import gettext, _
 import sys, os
-import extensions
+import extensions, revset, templatekw, templatefilters
 import util
 
 def listexts(header, exts, indent=1):
@@ -76,8 +76,7 @@ helptable = sorted([
 
 # Map topics to lists of callable taking the current topic help and
 # returning the updated version
-helphooks = {
-}
+helphooks = {}
 
 def addtopichook(topic, rewriter):
     helphooks.setdefault(topic, []).append(rewriter)
@@ -97,3 +96,12 @@ def makeitemsdoc(topic, doc, marker, items):
         entries.append('\n'.join(lines))
     entries = '\n\n'.join(entries)
     return doc.replace(marker, entries)
+
+def addtopicsymbols(topic, marker, symbols):
+    def add(topic, doc):
+        return makeitemsdoc(topic, doc, marker, symbols)
+    addtopichook(topic, add)
+
+addtopicsymbols('revsets', '.. predicatesmarker', revset.symbols)
+addtopicsymbols('templates', '.. keywordsmarker', templatekw.keywords)
+addtopicsymbols('templates', '.. filtersmarker', templatefilters.filters)
