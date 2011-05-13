@@ -33,7 +33,7 @@ test stripping of filelogs where the linkrev doesn't always increase
   $ cd ..
   $ hg clone -q -U -r -1 -r -2 -r -3 -r -4 -r -6 orig crossed
   $ cd crossed
-  $ hg debugindex .hg/store/00manifest.i
+  $ hg debugindex --manifest
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0     112      0       0 6f105cbb914d 000000000000 000000000000
        1       112      56      1       3 1b55917b3699 000000000000 000000000000

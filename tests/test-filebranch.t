@@ -75,7 +75,7 @@ We shouldn't have anything but foo in merge state here:
 
 main: we should have a merge here:
 
-  $ hg debugindex .hg/store/00changelog.i
+  $ hg debugindex --changelog
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0      73      0       0 cdca01651b96 000000000000 000000000000
        1        73      68      1       1 f6718a9cb7f3 cdca01651b96 000000000000

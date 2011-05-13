@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, tempfile
-import util, scmutil, templater, patch, error, templatekw
+import util, scmutil, templater, patch, error, templatekw, revlog
 import match as matchmod
 import subrepo
 
@@ -169,6 +169,41 @@ def makefileobj(repo, pat, node=None, total=None,
     return open(makefilename(repo, pat, node, total, seqno, revwidth,
                               pathname),
                 mode)
+
+def openrevlog(repo, cmd, file_, opts):
+    """opens the changelog, manifest, a filelog or a given revlog"""
+    cl = opts['changelog']
+    mf = opts['manifest']
+    msg = None
+    if cl and mf:
+        msg = _('cannot specify --changelog and --manifest at the same time')
+    elif cl or mf:
+        if file_:
+            msg = _('cannot specify filename with --changelog or --manifest')
+        elif not repo:
+            msg = _('cannot specify --changelog or --manifest '
+                    'without a repository')
+    if msg:
+        raise util.Abort(msg)
+
+    r = None
+    if repo:
+        if cl:
+            r = repo.changelog
+        elif mf:
+            r = repo.manifest
+        elif file_:
+            filelog = repo.file(file_)
+            if len(filelog):
+                r = filelog
+    if not r:
+        if not file_:
+            raise error.CommandError(cmd, _('invalid arguments'))
+        if not os.path.isfile(file_):
+            raise util.Abort(_("revlog '%s' not found") % file_)
+        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False),
+                          file_[:-2] + ".i")
+    return r
 
 def copy(ui, repo, pats, opts, rename=False):
     # called with the repo lock held

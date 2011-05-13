@@ -1502,17 +1502,17 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
         ui.write(line)
         ui.write("\n")
 
-@command('debugdata', [], _('FILE REV'))
-def debugdata(ui, repo, file_, rev):
+@command('debugdata',
+    [('c', 'changelog', False, _('open changelog')),
+     ('m', 'manifest', False, _('open manifest'))],
+    _('-c|-m|FILE REV'))
+def debugdata(ui, repo, file_, rev = None, **opts):
     """dump the contents of a data file revision"""
-    r = None
-    if repo:
-        filelog = repo.file(file_)
-        if len(filelog):
-            r = filelog
-    if not r:
-        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False),
-                          file_[:-2] + ".i")
+    if opts.get('changelog') or opts.get('manifest'):
+        file_, rev = None, file_
+    elif rev is None:
+        raise error.CommandError('debugdata', _('invalid arguments'))
+    r = cmdutil.openrevlog(repo, 'debugdata', file_, opts)
     try:
         ui.write(r.revision(r.lookup(rev)))
     except KeyError:
@@ -1645,22 +1645,16 @@ def debugignore(ui, repo, *values, **opts):
         raise util.Abort(_("no ignore patterns found"))
 
 @command('debugindex',
-    [('f', 'format', 0, _('revlog format'), _('FORMAT'))],
-    _('FILE'))
-def debugindex(ui, repo, file_, **opts):
+    [('c', 'changelog', False, _('open changelog')),
+     ('m', 'manifest', False, _('open manifest')),
+     ('f', 'format', 0, _('revlog format'), _('FORMAT'))],
+    _('[-f FORMAT] -c|-m|FILE'))
+def debugindex(ui, repo, file_ = None, **opts):
     """dump the contents of an index file"""
-    r = None
-    if repo:
-        filelog = repo.file(file_)
-        if len(filelog):
-            r = filelog
-
+    r = cmdutil.openrevlog(repo, 'debugindex', file_, opts)
     format = opts.get('format', 0)
     if format not in (0, 1):
         raise util.Abort(_("unknown format %d") % format)
-
-    if not r:
-        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
 
     generaldelta = r.version & revlog.REVLOGGENERALDELTA
     if generaldelta:
@@ -1855,17 +1849,13 @@ def debugrename(ui, repo, file1, *pats, **opts):
         else:
             ui.write(_("%s not renamed\n") % rel)
 
-@command('debugrevlog', [], _('FILE'))
-def debugrevlog(ui, repo, file_):
+@command('debugrevlog',
+    [('c', 'changelog', False, _('open changelog')),
+     ('m', 'manifest', False, _('open manifest'))],
+     _('-c|-m|FILE'))
+def debugrevlog(ui, repo, file_ = None, **opts):
     """show data and statistics about a revlog"""
-    r = None
-    if repo:
-        filelog = repo.file(file_)
-        if len(filelog):
-            r = filelog
-    if not r:
-        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
-
+    r = cmdutil.openrevlog(repo, 'debugrevlog', file_, opts)
     v = r.version
     format = v & 0xFFFF
     flags = []
@@ -5019,4 +5009,4 @@ norepo = ("clone init version help debugcommands debugcomplete"
           " debugdate debuginstall debugfsinfo debugpushkey debugwireargs"
           " debugknown debuggetbundle debugbundle")
 optionalrepo = ("identify paths serve showconfig debugancestor debugdag"
-                " debugdata debugindex debugindexdot")
+                " debugdata debugindex debugindexdot debugrevlog")

@@ -219,20 +219,20 @@ Show all commands + options
   debugcommands: 
   debugcomplete: options
   debugdag: tags, branches, dots, spaces
-  debugdata: 
+  debugdata: changelog, manifest
   debugdate: extended
   debugdiscovery: old, nonheads, ssh, remotecmd, insecure
   debugfsinfo: 
   debuggetbundle: head, common, type
   debugignore: 
-  debugindex: format
+  debugindex: changelog, manifest, format
   debugindexdot: 
   debuginstall: 
   debugknown: 
   debugpushkey: 
   debugrebuildstate: rev
   debugrename: rev
-  debugrevlog: 
+  debugrevlog: changelog, manifest
   debugrevspec: 
   debugsetparents: 
   debugstate: nodates, datesort

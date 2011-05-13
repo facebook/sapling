@@ -56,7 +56,7 @@
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       8      0       6 12ab3bcc5ea4 000000000000 000000000000
 
-  $ hg debugindex .hg/store/00manifest.i
+  $ hg debugindex --manifest
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0      48      0       0 43eadb1d2d06 000000000000 000000000000
        1        48      48      1       1 8b89697eba2c 43eadb1d2d06 000000000000
