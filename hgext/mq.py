@@ -46,7 +46,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
-from mercurial import repair, extensions, url, error, scmutil
+from mercurial import repair, extensions, url, error
 from mercurial import patch as patchmod
 import os, sys, re, errno, shutil
 
@@ -519,7 +519,7 @@ class queue(object):
     def printdiff(self, repo, diffopts, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
         stat = opts.get('stat')
-        m = cmdutil.match(repo, files, opts)
+        m = scmutil.match(repo, files, opts)
         cmdutil.diffordiffstat(self.ui, repo, diffopts, node1, node2,  m,
                                changes, stat, fp)
 
@@ -711,7 +711,7 @@ class queue(object):
                 p1, p2 = repo.dirstate.parents()
                 repo.dirstate.setparents(p1, merge)
 
-            match = cmdutil.matchfiles(repo, files or [])
+            match = scmutil.matchfiles(repo, files or [])
             n = repo.commit(message, ph.user, ph.date, match=match, force=True)
 
             if n is None:
@@ -898,7 +898,7 @@ class queue(object):
         if opts.get('include') or opts.get('exclude') or pats:
             if inclsubs:
                 pats = list(pats or []) + inclsubs
-            match = cmdutil.match(repo, pats, opts)
+            match = scmutil.match(repo, pats, opts)
             # detect missing files in pats
             def badfn(f, msg):
                 if f != '.hgsubstate': # .hgsubstate is auto-created
@@ -907,7 +907,7 @@ class queue(object):
             m, a, r, d = repo.status(match=match)[:4]
         else:
             m, a, r, d = self.check_localchanges(repo, force=True)
-            match = cmdutil.matchfiles(repo, m + a + r + inclsubs)
+            match = scmutil.matchfiles(repo, m + a + r + inclsubs)
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot manage merge changesets'))
         commitfiles = m + a + r
@@ -1379,17 +1379,17 @@ class queue(object):
             changes = repo.changelog.read(top)
             man = repo.manifest.read(changes[0])
             aaa = aa[:]
-            matchfn = cmdutil.match(repo, pats, opts)
+            matchfn = scmutil.match(repo, pats, opts)
             # in short mode, we only diff the files included in the
             # patch already plus specified files
             if opts.get('short'):
                 # if amending a patch, we start with existing
                 # files plus specified files - unfiltered
-                match = cmdutil.matchfiles(repo, mm + aa + dd + matchfn.files())
+                match = scmutil.matchfiles(repo, mm + aa + dd + matchfn.files())
                 # filter with inc/exl options
-                matchfn = cmdutil.match(repo, opts=opts)
+                matchfn = scmutil.match(repo, opts=opts)
             else:
-                match = cmdutil.matchall(repo)
+                match = scmutil.matchall(repo)
             m, a, r, d = repo.status(match=match)[:4]
             mm = set(mm)
             aa = set(aa)
@@ -1427,7 +1427,7 @@ class queue(object):
             r = list(dd)
             a = list(aa)
             c = [filter(matchfn, l) for l in (m, a, r)]
-            match = cmdutil.matchfiles(repo, set(c[0] + c[1] + c[2] + inclsubs))
+            match = scmutil.matchfiles(repo, set(c[0] + c[1] + c[2] + inclsubs))
             chunks = patchmod.diff(repo, patchparent, match=match,
                                 changes=c, opts=diffopts)
             for chunk in chunks:

@@ -1,7 +1,7 @@
 # Extension dedicated to test patch.diff() upgrade modes
 #
 #
-from mercurial import cmdutil, scmutil, patch, util
+from mercurial import scmutil, patch, util
 
 def autodiff(ui, repo, *pats, **opts):
     diffopts = patch.diffopts(ui, opts)
@@ -29,7 +29,7 @@ def autodiff(ui, repo, *pats, **opts):
         raise util.Abort('--git must be yes, no or auto')
 
     node1, node2 = scmutil.revpair(repo, [])
-    m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo, pats, opts)
     it = patch.diff(repo, node1, node2, match=m, opts=diffopts,
                     losedatafn=losedatafn)
     for chunk in it:

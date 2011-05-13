@@ -12,10 +12,6 @@ import util, scmutil, templater, patch, error, templatekw
 import match as matchmod
 import subrepo
 
-match = scmutil.match
-matchall = scmutil.matchall
-matchfiles = scmutil.matchfiles
-
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
 
@@ -188,7 +184,7 @@ def copy(ui, repo, pats, opts, rename=False):
     def walkpat(pat):
         srcs = []
         badstates = after and '?' or '?r'
-        m = match(repo, [pat], opts, globbed=True)
+        m = scmutil.match(repo, [pat], opts, globbed=True)
         for abs in repo.walk(m):
             state = repo.dirstate[abs]
             rel = m.rel(abs)
@@ -803,7 +799,7 @@ def show_changeset(ui, repo, opts, buffered=False):
     # options
     patch = False
     if opts.get('patch') or opts.get('stat'):
-        patch = matchall(repo)
+        patch = scmutil.matchall(repo)
 
     tmpl = opts.get('template')
     style = None
@@ -844,7 +840,7 @@ def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
 
     df = util.matchdate(date)
-    m = matchall(repo)
+    m = scmutil.matchall(repo)
     results = {}
 
     def prep(ctx, fns):
@@ -1135,7 +1131,7 @@ def commit(ui, repo, commitfunc, pats, opts):
     if opts.get('addremove'):
         scmutil.addremove(repo, pats, opts)
 
-    return commitfunc(ui, repo, message, match(repo, pats, opts), opts)
+    return commitfunc(ui, repo, message, scmutil.match(repo, pats, opts), opts)
 
 def commiteditor(repo, ctx, subs):
     if ctx.description():

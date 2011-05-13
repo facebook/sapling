@@ -9,7 +9,7 @@
 '''command to display statistics about repository history'''
 
 from mercurial.i18n import _
-from mercurial import patch, cmdutil, util, templater, commands
+from mercurial import patch, cmdutil, scmutil, util, templater, commands
 import os
 import time, datetime
 
@@ -24,7 +24,7 @@ def maketemplater(ui, repo, tmpl):
 
 def changedlines(ui, repo, ctx1, ctx2, fns):
     added, removed = 0, 0
-    fmatch = cmdutil.matchfiles(repo, fns)
+    fmatch = scmutil.matchfiles(repo, fns)
     diff = ''.join(patch.diff(repo, ctx1.node(), ctx2.node(), fmatch))
     for l in diff.split('\n'):
         if l.startswith("+") and not l.startswith("+++ "):
@@ -54,7 +54,7 @@ def countrate(ui, repo, amap, *pats, **opts):
     if opts.get('date'):
         df = util.matchdate(opts['date'])
 
-    m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo, pats, opts)
     def prep(ctx, fns):
         rev = ctx.rev()
         if df and not df(ctx.date()[0]): # doesn't match date format

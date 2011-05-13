@@ -25,7 +25,7 @@
 
 '''command to delete untracked files from the working directory'''
 
-from mercurial import util, commands, cmdutil
+from mercurial import util, commands, cmdutil, scmutil
 from mercurial.i18n import _
 import os, stat
 
@@ -96,7 +96,7 @@ def purge(ui, repo, *dirs, **opts):
             os.remove(path)
 
     directories = []
-    match = cmdutil.match(repo, dirs, opts)
+    match = scmutil.match(repo, dirs, opts)
     match.dir = directories.append
     status = repo.status(match=match, ignored=opts['all'], unknown=True)
 

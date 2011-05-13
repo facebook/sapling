@@ -161,7 +161,7 @@ def add(ui, repo, *pats, **opts):
     Returns 0 if all files are successfully added.
     """
 
-    m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo, pats, opts)
     rejected = cmdutil.add(ui, repo, m, opts.get('dry_run'),
                            opts.get('subrepos'), prefix="")
     return rejected and 1 or 0
@@ -262,7 +262,7 @@ def annotate(ui, repo, *pats, **opts):
         raise util.Abort("%s: %s" % (x, y))
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
-    m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo, pats, opts)
     m.bad = bad
     follow = not opts.get('no_follow')
     for abs in ctx.walk(m):
@@ -341,7 +341,7 @@ def archive(ui, repo, dest, **opts):
             prefix = os.path.basename(repo.root) + '-%h'
 
     prefix = cmdutil.makefilename(repo, prefix, node)
-    matchfn = cmdutil.match(repo, [], opts)
+    matchfn = scmutil.match(repo, [], opts)
     archival.archive(repo, dest, node, kind, not opts.get('no_decode'),
                      matchfn, prefix, subrepos=opts.get('subrepos'))
 
@@ -937,7 +937,7 @@ def cat(ui, repo, file1, *pats, **opts):
     """
     ctx = scmutil.revsingle(repo, opts.get('rev'))
     err = 1
-    m = cmdutil.match(repo, (file1,) + pats, opts)
+    m = scmutil.match(repo, (file1,) + pats, opts)
     for abs in ctx.walk(m):
         fp = cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
                                  pathname=abs)
@@ -1084,7 +1084,7 @@ def commit(ui, repo, *pats, **opts):
 
     node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
     if not node:
-        stat = repo.status(match=cmdutil.match(repo, pats, opts))
+        stat = repo.status(match=scmutil.match(repo, pats, opts))
         if stat[3]:
             ui.status(_("nothing changed (%d missing files, see 'hg status')\n")
                       % len(stat[3]))
@@ -1845,7 +1845,7 @@ def debugrename(ui, repo, file1, *pats, **opts):
     """dump rename information"""
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
-    m = cmdutil.match(repo, (file1,) + pats, opts)
+    m = scmutil.match(repo, (file1,) + pats, opts)
     for abs in ctx.walk(m):
         fctx = ctx[abs]
         o = fctx.filelog().renamed(fctx.filenode())
@@ -2073,7 +2073,7 @@ def debugsub(ui, repo, rev=None):
 @command('debugwalk', walkopts, _('[OPTION]... [FILE]...'))
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
-    m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo, pats, opts)
     items = list(repo.walk(m))
     if not items:
         return
@@ -2159,7 +2159,7 @@ def diff(ui, repo, *pats, **opts):
         node1, node2 = node2, node1
 
     diffopts = patch.diffopts(ui, opts)
-    m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo, pats, opts)
     cmdutil.diffordiffstat(ui, repo, diffopts, node1, node2, m, stat=stat,
                            listsubrepos=opts.get('subrepos'))
 
@@ -2239,7 +2239,7 @@ def forget(ui, repo, *pats, **opts):
     if not pats:
         raise util.Abort(_('no files specified'))
 
-    m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo, pats, opts)
     s = repo.status(match=m, clean=True)
     forget = sorted(s[0] + s[1] + s[3] + s[6])
     errs = 0
@@ -2404,7 +2404,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     skip = {}
     revfiles = {}
-    matchfn = cmdutil.match(repo, pats, opts)
+    matchfn = scmutil.match(repo, pats, opts)
     found = False
     follow = opts.get('follow')
 
@@ -3100,7 +3100,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 if opts.get('exact'):
                     m = None
                 else:
-                    m = cmdutil.matchfiles(repo, files or [])
+                    m = scmutil.matchfiles(repo, files or [])
                 n = repo.commit(message, opts.get('user') or user,
                                 opts.get('date') or date, match=m,
                                 editor=cmdutil.commiteditor)
@@ -3238,7 +3238,7 @@ def locate(ui, repo, *pats, **opts):
     rev = scmutil.revsingle(repo, opts.get('rev'), None).node()
 
     ret = 1
-    m = cmdutil.match(repo, pats, opts, default='relglob')
+    m = scmutil.match(repo, pats, opts, default='relglob')
     m.bad = lambda x, y: False
     for abs in repo[rev].walk(m):
         if not rev and abs not in repo.dirstate:
@@ -3306,7 +3306,7 @@ def log(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
 
-    matchfn = cmdutil.match(repo, pats, opts)
+    matchfn = scmutil.match(repo, pats, opts)
     limit = cmdutil.loglimit(opts)
     count = 0
 
@@ -3359,7 +3359,7 @@ def log(ui, repo, *pats, **opts):
         if opts.get('patch') or opts.get('stat'):
             if opts.get('follow') or opts.get('follow_first'):
                 # note: this might be wrong when following through merges
-                revmatchfn = cmdutil.match(repo, fns, default='path')
+                revmatchfn = scmutil.match(repo, fns, default='path')
             else:
                 revmatchfn = matchfn
 
@@ -3546,7 +3546,7 @@ def parents(ui, repo, file_=None, **opts):
     ctx = scmutil.revsingle(repo, opts.get('rev'), None)
 
     if file_:
-        m = cmdutil.match(repo, (file_,), opts)
+        m = scmutil.match(repo, (file_,), opts)
         if m.anypats() or len(m.files()) != 1:
             raise util.Abort(_('can only specify an explicit filename'))
         file_ = m.files()[0]
@@ -3853,7 +3853,7 @@ def remove(ui, repo, *pats, **opts):
     if not pats and not after:
         raise util.Abort(_('no files specified'))
 
-    m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo, pats, opts)
     s = repo.status(match=m, clean=True)
     modified, added, deleted, clean = s[0], s[1], s[3], s[6]
 
@@ -3973,7 +3973,7 @@ def resolve(ui, repo, *pats, **opts):
                            'use --all to remerge all files'))
 
     ms = mergemod.mergestate(repo)
-    m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo, pats, opts)
     ret = 0
 
     for f in ms:
@@ -4092,7 +4092,7 @@ def revert(ui, repo, *pats, **opts):
     try:
         # walk dirstate.
 
-        m = cmdutil.match(repo, pats, opts)
+        m = scmutil.match(repo, pats, opts)
         m.bad = lambda x, y: False
         for abs in repo.walk(m):
             names[abs] = m.rel(abs), m.exact(abs)
@@ -4108,13 +4108,13 @@ def revert(ui, repo, *pats, **opts):
                     return
             ui.warn("%s: %s\n" % (m.rel(path), msg))
 
-        m = cmdutil.match(repo, pats, opts)
+        m = scmutil.match(repo, pats, opts)
         m.bad = badfn
         for abs in repo[node].walk(m):
             if abs not in names:
                 names[abs] = m.rel(abs), m.exact(abs)
 
-        m = cmdutil.matchfiles(repo, names)
+        m = scmutil.matchfiles(repo, names)
         changes = repo.status(match=m)[:4]
         modified, added, removed, deleted = map(set, changes)
 
@@ -4531,7 +4531,7 @@ def status(ui, repo, *pats, **opts):
     if not show:
         show = ui.quiet and states[:4] or states[:5]
 
-    stat = repo.status(node1, node2, cmdutil.match(repo, pats, opts),
+    stat = repo.status(node1, node2, scmutil.match(repo, pats, opts),
                        'ignored' in show, 'clean' in show, 'unknown' in show,
                        opts.get('subrepos'))
     changestates = zip(states, 'MAR!?IC', stat)

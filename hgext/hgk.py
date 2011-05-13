@@ -35,7 +35,7 @@ vdiff on hovered and selected revisions.
 '''
 
 import os
-from mercurial import commands, util, patch, revlog, cmdutil
+from mercurial import commands, util, patch, revlog, scmutil
 from mercurial.node import nullid, nullrev, short
 from mercurial.i18n import _
 
@@ -45,7 +45,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         assert node2 is not None
         mmap = repo[node1].manifest()
         mmap2 = repo[node2].manifest()
-        m = cmdutil.match(repo, files)
+        m = scmutil.match(repo, files)
         modified, added, removed  = repo.status(node1, node2, m)[:3]
         empty = short(nullid)
 
@@ -81,7 +81,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         if opts['patch']:
             if opts['pretty']:
                 catcommit(ui, repo, node2, "")
-            m = cmdutil.match(repo, files)
+            m = scmutil.match(repo, files)
             chunks = patch.diff(repo, node1, node2, match=m,
                                 opts=patch.diffopts(ui, {'git': True}))
             for chunk in chunks:
