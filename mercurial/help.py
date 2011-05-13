@@ -43,10 +43,11 @@ def moduledoc(file):
 
     return ''.join(result)
 
-def listexts(header, exts, maxlength, indent=1):
+def listexts(header, exts, indent=1):
     '''return a text listing of the given extensions'''
     if not exts:
         return ''
+    maxlength = max(len(e) for e in exts)
     result = '\n%s\n\n' % header
     for name, desc in sorted(exts.iteritems()):
         result += '%s%-*s %s\n' % (' ' * indent, maxlength + 2,
@@ -55,13 +56,8 @@ def listexts(header, exts, maxlength, indent=1):
 
 def extshelp():
     doc = loaddoc('extensions')()
-
-    exts, maxlength = extensions.enabled()
-    doc += listexts(_('enabled extensions:'), exts, maxlength)
-
-    exts, maxlength = extensions.disabled()
-    doc += listexts(_('disabled extensions:'), exts, maxlength)
-
+    doc += listexts(_('enabled extensions:'), extensions.enabled())
+    doc += listexts(_('disabled extensions:'), extensions.disabled())
     return doc
 
 def loaddoc(topic):

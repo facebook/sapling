@@ -2752,8 +2752,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
         doc = gettext(mod.__doc__).splitlines()[0]
 
         msg = help.listexts(_("'%s' is provided by the following "
-                              "extension:") % cmd, {ext: doc}, len(ext),
-                            indent=4)
+                              "extension:") % cmd, {ext: doc}, indent=4)
         ui.write(minirst.format(msg, textwidth))
         ui.write('\n\n')
         ui.write(_('use "hg help extensions" for information on enabling '
@@ -2799,8 +2798,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
 
         helplist(header)
         if name != 'shortlist':
-            exts, maxlength = extensions.enabled()
-            text = help.listexts(_('enabled extensions:'), exts, maxlength)
+            text = help.listexts(_('enabled extensions:'), extensions.enabled())
             if text:
                 ui.write("\n%s\n" % minirst.format(text, textwidth))
 

@@ -230,20 +230,15 @@ def disabled():
 
     paths = _disabledpaths()
     if not paths:
-        return None, 0
+        return None
 
     exts = {}
-    maxlength = 0
     for name, path in paths.iteritems():
         doc = _disabledhelp(path)
-        if not doc:
-            continue
+        if doc:
+            exts[name] = doc
 
-        exts[name] = doc
-        if len(name) > maxlength:
-            maxlength = len(name)
-
-    return exts, maxlength
+    return exts
 
 def disabledext(name):
     '''find a specific disabled extension from hgext. returns desc'''
@@ -299,11 +294,9 @@ def disabledcmd(ui, cmd, strict=False):
 def enabled():
     '''return a dict of {name: desc} of extensions, and the max name length'''
     exts = {}
-    maxlength = 0
     for ename, ext in extensions():
         doc = (gettext(ext.__doc__) or _('(no help text available)'))
         ename = ename.split('.')[-1]
-        maxlength = max(len(ename), maxlength)
         exts[ename] = doc.splitlines()[0].strip()
 
-    return exts, maxlength
+    return exts

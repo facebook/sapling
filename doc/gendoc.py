@@ -157,16 +157,7 @@ def commandprinter(ui, cmdtable, sectionfunc):
 
 
 def allextensionnames():
-    extensionnames = []
-
-    extensionsdictionary = extensions.enabled()[0]
-    extensionnames.extend(extensionsdictionary.keys())
-
-    extensionsdictionary = extensions.disabled()[0]
-    extensionnames.extend(extensionsdictionary.keys())
-
-    return extensionnames
-
+    return extensions.enabled().keys() + extensions.disabled().keys()
 
 if __name__ == "__main__":
     show_doc(sys.stdout)
