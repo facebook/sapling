@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import util, error, osutil
+import util, error, osutil, revset
 import os, errno, stat, sys
 
 def checkfilename(f):
@@ -463,3 +463,76 @@ else:
             path.append(os.path.join(userprofile, 'mercurial.ini'))
             path.append(os.path.join(userprofile, '.hgrc'))
         return path
+
+def revsingle(repo, revspec, default='.'):
+    if not revspec:
+        return repo[default]
+
+    l = revrange(repo, [revspec])
+    if len(l) < 1:
+        raise util.Abort(_('empty revision set'))
+    return repo[l[-1]]
+
+def revpair(repo, revs):
+    if not revs:
+        return repo.dirstate.p1(), None
+
+    l = revrange(repo, revs)
+
+    if len(l) == 0:
+        return repo.dirstate.p1(), None
+
+    if len(l) == 1:
+        return repo.lookup(l[0]), None
+
+    return repo.lookup(l[0]), repo.lookup(l[-1])
+
+_revrangesep = ':'
+
+def revrange(repo, revs):
+    """Yield revision as strings from a list of revision specifications."""
+
+    def revfix(repo, val, defval):
+        if not val and val != 0 and defval is not None:
+            return defval
+        return repo.changelog.rev(repo.lookup(val))
+
+    seen, l = set(), []
+    for spec in revs:
+        # attempt to parse old-style ranges first to deal with
+        # things like old-tag which contain query metacharacters
+        try:
+            if isinstance(spec, int):
+                seen.add(spec)
+                l.append(spec)
+                continue
+
+            if _revrangesep in spec:
+                start, end = spec.split(_revrangesep, 1)
+                start = revfix(repo, start, 0)
+                end = revfix(repo, end, len(repo) - 1)
+                step = start > end and -1 or 1
+                for rev in xrange(start, end + step, step):
+                    if rev in seen:
+                        continue
+                    seen.add(rev)
+                    l.append(rev)
+                continue
+            elif spec and spec in repo: # single unquoted rev
+                rev = revfix(repo, spec, None)
+                if rev in seen:
+                    continue
+                seen.add(rev)
+                l.append(rev)
+                continue
+        except error.RepoLookupError:
+            pass
+
+        # fall through to new-style queries if old-style fails
+        m = revset.match(repo.ui, spec)
+        for r in m(repo, range(len(repo))):
+            if r not in seen:
+                l.append(r)
+        seen.update(l)
+
+    return l

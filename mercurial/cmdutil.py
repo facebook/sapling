@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, wdutil
 import match as matchmod
-import revset, subrepo
+import subrepo
 
 expandpats = wdutil.expandpats
 match = wdutil.match
@@ -18,8 +18,6 @@ matchall = wdutil.matchall
 matchfiles = wdutil.matchfiles
 addremove = wdutil.addremove
 dirstatecopy = wdutil.dirstatecopy
-
-revrangesep = ':'
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
@@ -117,77 +115,6 @@ def loglimit(opts):
     else:
         limit = None
     return limit
-
-def revsingle(repo, revspec, default='.'):
-    if not revspec:
-        return repo[default]
-
-    l = revrange(repo, [revspec])
-    if len(l) < 1:
-        raise util.Abort(_('empty revision set'))
-    return repo[l[-1]]
-
-def revpair(repo, revs):
-    if not revs:
-        return repo.dirstate.p1(), None
-
-    l = revrange(repo, revs)
-
-    if len(l) == 0:
-        return repo.dirstate.p1(), None
-
-    if len(l) == 1:
-        return repo.lookup(l[0]), None
-
-    return repo.lookup(l[0]), repo.lookup(l[-1])
-
-def revrange(repo, revs):
-    """Yield revision as strings from a list of revision specifications."""
-
-    def revfix(repo, val, defval):
-        if not val and val != 0 and defval is not None:
-            return defval
-        return repo.changelog.rev(repo.lookup(val))
-
-    seen, l = set(), []
-    for spec in revs:
-        # attempt to parse old-style ranges first to deal with
-        # things like old-tag which contain query metacharacters
-        try:
-            if isinstance(spec, int):
-                seen.add(spec)
-                l.append(spec)
-                continue
-
-            if revrangesep in spec:
-                start, end = spec.split(revrangesep, 1)
-                start = revfix(repo, start, 0)
-                end = revfix(repo, end, len(repo) - 1)
-                step = start > end and -1 or 1
-                for rev in xrange(start, end + step, step):
-                    if rev in seen:
-                        continue
-                    seen.add(rev)
-                    l.append(rev)
-                continue
-            elif spec and spec in repo: # single unquoted rev
-                rev = revfix(repo, spec, None)
-                if rev in seen:
-                    continue
-                seen.add(rev)
-                l.append(rev)
-                continue
-        except error.RepoLookupError:
-            pass
-
-        # fall through to new-style queries if old-style fails
-        m = revset.match(repo.ui, spec)
-        for r in m(repo, range(len(repo))):
-            if r not in seen:
-                l.append(r)
-        seen.update(l)
-
-    return l
 
 def makefilename(repo, pat, node,
                   total=None, seqno=None, revwidth=None, pathname=None):
@@ -974,7 +901,7 @@ def walkchangerevs(repo, match, opts, prepare):
         defrange = '%s:0' % repo['.'].rev()
     else:
         defrange = '-1:0'
-    revs = revrange(repo, opts['rev'] or [defrange])
+    revs = scmutil.revrange(repo, opts['rev'] or [defrange])
     if not revs:
         return []
     wanted = set()

@@ -46,7 +46,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
-from mercurial import repair, extensions, url, error
+from mercurial import repair, extensions, url, error, scmutil
 from mercurial import patch as patchmod
 import os, sys, re, errno, shutil
 
@@ -815,7 +815,7 @@ class queue(object):
         if opts.get('rev'):
             if not self.applied:
                 raise util.Abort(_('no patches applied'))
-            revs = cmdutil.revrange(repo, opts.get('rev'))
+            revs = scmutil.revrange(repo, opts.get('rev'))
             if len(revs) > 1 and revs[0] > revs[1]:
                 revs.reverse()
             revpatches = self._revpatches(repo, revs)
@@ -1748,7 +1748,7 @@ class queue(object):
             if files:
                 raise util.Abort(_('option "-r" not valid when importing '
                                    'files'))
-            rev = cmdutil.revrange(repo, rev)
+            rev = scmutil.revrange(repo, rev)
             rev.sort(reverse=True)
         if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
@@ -2736,7 +2736,7 @@ def strip(ui, repo, *revs, **opts):
         backup = 'none'
 
     cl = repo.changelog
-    revs = set(cmdutil.revrange(repo, revs))
+    revs = set(scmutil.revrange(repo, revs))
     if not revs:
         raise util.Abort(_('empty revision set'))
 
@@ -2928,7 +2928,7 @@ def finish(ui, repo, *revrange, **opts):
         ui.status(_('no patches applied\n'))
         return 0
 
-    revs = cmdutil.revrange(repo, revrange)
+    revs = scmutil.revrange(repo, revrange)
     q.finish(repo, revs)
     q.save_dirty()
     return 0

@@ -12,11 +12,11 @@ commands. When this options is given, an ASCII representation of the
 revision graph is also shown.
 '''
 
-from mercurial.cmdutil import revrange, show_changeset
+from mercurial.cmdutil import show_changeset
 from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
-from mercurial import cmdutil, commands, extensions
+from mercurial import cmdutil, commands, extensions, scmutil
 from mercurial import hg, util, graphmod
 
 cmdtable = {}
@@ -227,7 +227,7 @@ def ascii(ui, state, type, char, text, coldata):
 
 def get_revs(repo, rev_opt):
     if rev_opt:
-        revs = revrange(repo, rev_opt)
+        revs = scmutil.revrange(repo, rev_opt)
         if len(revs) == 0:
             return (nullrev, nullrev)
         return (max(revs), min(revs))
@@ -324,7 +324,7 @@ def graphlog(ui, repo, *pats, **opts):
 
     check_unsupported_flags(pats, opts)
 
-    revs = sorted(revrange(repo, [revset(pats, opts)]), reverse=1)
+    revs = sorted(scmutil.revrange(repo, [revset(pats, opts)]), reverse=1)
     limit = cmdutil.loglimit(opts)
     if limit is not None:
         revs = revs[:limit]

@@ -49,6 +49,7 @@ import os, errno, socket, tempfile, cStringIO, time
 import email.MIMEMultipart, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
 from mercurial import cmdutil, commands, hg, mail, patch, util, discovery
+from mercurial import scmutil
 from mercurial.i18n import _
 from mercurial.node import bin
 
@@ -286,7 +287,7 @@ def patchbomb(ui, repo, *revs, **opts):
         return [str(repo.changelog.rev(r)) for r in o]
 
     def getpatches(revs):
-        for r in cmdutil.revrange(repo, revs):
+        for r in scmutil.revrange(repo, revs):
             output = cStringIO.StringIO()
             cmdutil.export(repo, [r], fp=output,
                          opts=patch.diffopts(ui, opts))

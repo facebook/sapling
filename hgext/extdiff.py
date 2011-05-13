@@ -123,10 +123,10 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         msg = _('cannot specify --rev and --change at the same time')
         raise util.Abort(msg)
     elif change:
-        node2 = cmdutil.revsingle(repo, change, None).node()
+        node2 = scmutil.revsingle(repo, change, None).node()
         node1a, node1b = repo.changelog.parents(node2)
     else:
-        node1a, node2 = cmdutil.revpair(repo, revs)
+        node1a, node2 = scmutil.revpair(repo, revs)
         if not revs:
             node1b = repo.dirstate.p2()
         else:

@@ -261,7 +261,7 @@ def annotate(ui, repo, *pats, **opts):
     def bad(x, y):
         raise util.Abort("%s: %s" % (x, y))
 
-    ctx = cmdutil.revsingle(repo, opts.get('rev'))
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
     m = cmdutil.match(repo, pats, opts)
     m.bad = bad
     follow = not opts.get('no_follow')
@@ -322,7 +322,7 @@ def archive(ui, repo, dest, **opts):
     Returns 0 on success.
     '''
 
-    ctx = cmdutil.revsingle(repo, opts.get('rev'))
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
     if not ctx:
         raise util.Abort(_('no working directory: please specify a revision'))
     node = ctx.node()
@@ -390,7 +390,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
         opts['date'] = util.parsedate(date)
 
     cmdutil.bailifchanged(repo)
-    node = cmdutil.revsingle(repo, rev).node()
+    node = scmutil.revsingle(repo, rev).node()
 
     op1, op2 = repo.dirstate.parents()
     a = repo.changelog.ancestor(op1, node)
@@ -573,7 +573,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                     raise util.Abort(_("%s killed") % command)
                 else:
                     transition = "bad"
-                ctx = cmdutil.revsingle(repo, rev)
+                ctx = scmutil.revsingle(repo, rev)
                 rev = None # clear for future iterations
                 state[transition].append(ctx.node())
                 ui.status(_('Changeset %d:%s: %s\n') % (ctx, ctx, transition))
@@ -591,7 +591,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     # update state
 
     if rev:
-        nodes = [repo.lookup(i) for i in cmdutil.revrange(repo, [rev])]
+        nodes = [repo.lookup(i) for i in scmutil.revrange(repo, [rev])]
     else:
         nodes = [repo.lookup('.')]
 
@@ -876,12 +876,12 @@ def bundle(ui, repo, fname, dest=None, **opts):
     """
     revs = None
     if 'rev' in opts:
-        revs = cmdutil.revrange(repo, opts['rev'])
+        revs = scmutil.revrange(repo, opts['rev'])
 
     if opts.get('all'):
         base = ['null']
     else:
-        base = cmdutil.revrange(repo, opts.get('base'))
+        base = scmutil.revrange(repo, opts.get('base'))
     if base:
         if dest:
             raise util.Abort(_("--base is incompatible with specifying "
@@ -935,7 +935,7 @@ def cat(ui, repo, file1, *pats, **opts):
 
     Returns 0 on success.
     """
-    ctx = cmdutil.revsingle(repo, opts.get('rev'))
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
     err = 1
     m = cmdutil.match(repo, (file1,) + pats, opts)
     for abs in ctx.walk(m):
@@ -1831,7 +1831,7 @@ def debugpushkey(ui, repopath, namespace, *keyinfo):
     _('[-r REV] [REV]'))
 def debugrebuildstate(ui, repo, rev="tip"):
     """rebuild the dirstate as it would look like for the given revision"""
-    ctx = cmdutil.revsingle(repo, rev)
+    ctx = scmutil.revsingle(repo, rev)
     wlock = repo.wlock()
     try:
         repo.dirstate.rebuild(ctx.node(), ctx.manifest())
@@ -1844,7 +1844,7 @@ def debugrebuildstate(ui, repo, rev="tip"):
 def debugrename(ui, repo, file1, *pats, **opts):
     """dump rename information"""
 
-    ctx = cmdutil.revsingle(repo, opts.get('rev'))
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
     m = cmdutil.match(repo, (file1,) + pats, opts)
     for abs in ctx.walk(m):
         fctx = ctx[abs]
@@ -2018,8 +2018,8 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     Returns 0 on success.
     """
 
-    r1 = cmdutil.revsingle(repo, rev1).node()
-    r2 = cmdutil.revsingle(repo, rev2, 'null').node()
+    r1 = scmutil.revsingle(repo, rev1).node()
+    r2 = scmutil.revsingle(repo, rev2, 'null').node()
 
     wlock = repo.wlock()
     try:
@@ -2064,7 +2064,7 @@ def debugstate(ui, repo, nodates=None, datesort=None):
      _('revision to check'), _('REV'))],
     _('[-r REV] [REV]'))
 def debugsub(ui, repo, rev=None):
-    ctx = cmdutil.revsingle(repo, rev, None)
+    ctx = scmutil.revsingle(repo, rev, None)
     for k, v in sorted(ctx.substate.items()):
         ui.write('path %s\n' % k)
         ui.write(' source   %s\n' % v[0])
@@ -2150,10 +2150,10 @@ def diff(ui, repo, *pats, **opts):
         msg = _('cannot specify --rev and --change at the same time')
         raise util.Abort(msg)
     elif change:
-        node2 = cmdutil.revsingle(repo, change, None).node()
+        node2 = scmutil.revsingle(repo, change, None).node()
         node1 = repo[node2].p1().node()
     else:
-        node1, node2 = cmdutil.revpair(repo, revs)
+        node1, node2 = scmutil.revpair(repo, revs)
 
     if reverse:
         node1, node2 = node2, node1
@@ -2211,7 +2211,7 @@ def export(ui, repo, *changesets, **opts):
     changesets += tuple(opts.get('rev', []))
     if not changesets:
         raise util.Abort(_("export requires at least one changeset"))
-    revs = cmdutil.revrange(repo, changesets)
+    revs = scmutil.revrange(repo, changesets)
     if len(revs) > 1:
         ui.note(_('exporting patches:\n'))
     else:
@@ -2501,7 +2501,7 @@ def heads(ui, repo, *branchrevs, **opts):
 
     start = None
     if 'rev' in opts:
-        start = cmdutil.revsingle(repo, opts['rev'], None).node()
+        start = scmutil.revsingle(repo, opts['rev'], None).node()
 
     if opts.get('topo'):
         heads = [repo[h] for h in repo.heads(start)]
@@ -2944,7 +2944,7 @@ def identify(ui, repo, source=None, rev=None,
                 output.append("%s%s" %
                   ('+'.join([str(p.rev()) for p in parents]), changed))
         else:
-            ctx = cmdutil.revsingle(repo, rev)
+            ctx = scmutil.revsingle(repo, rev)
             if default or id:
                 output = [hexfunc(ctx.node())]
             if num:
@@ -3235,7 +3235,7 @@ def locate(ui, repo, *pats, **opts):
     Returns 0 if a match is found, 1 otherwise.
     """
     end = opts.get('print0') and '\0' or '\n'
-    rev = cmdutil.revsingle(repo, opts.get('rev'), None).node()
+    rev = scmutil.revsingle(repo, opts.get('rev'), None).node()
 
     ret = 1
     m = cmdutil.match(repo, pats, opts, default='relglob')
@@ -3312,7 +3312,7 @@ def log(ui, repo, *pats, **opts):
 
     endrev = None
     if opts.get('copies') and opts.get('rev'):
-        endrev = max(cmdutil.revrange(repo, opts.get('rev'))) + 1
+        endrev = max(scmutil.revrange(repo, opts.get('rev'))) + 1
 
     df = False
     if opts["date"]:
@@ -3395,7 +3395,7 @@ def manifest(ui, repo, node=None, rev=None):
         node = rev
 
     decor = {'l':'644 @ ', 'x':'755 * ', '':'644   '}
-    ctx = cmdutil.revsingle(repo, node)
+    ctx = scmutil.revsingle(repo, node)
     for f in ctx:
         if ui.debugflag:
             ui.write("%40s " % hex(ctx.manifest()[f]))
@@ -3471,7 +3471,7 @@ def merge(ui, repo, node=None, **opts):
                                     "explicit revision"))
         node = parent == bheads[0] and bheads[-1] or bheads[0]
     else:
-        node = cmdutil.revsingle(repo, node).node()
+        node = scmutil.revsingle(repo, node).node()
 
     if opts.get('preview'):
         # find nodes that are ancestors of p2 but not of p1
@@ -3543,7 +3543,7 @@ def parents(ui, repo, file_=None, **opts):
     Returns 0 on success.
     """
 
-    ctx = cmdutil.revsingle(repo, opts.get('rev'), None)
+    ctx = scmutil.revsingle(repo, opts.get('rev'), None)
 
     if file_:
         m = cmdutil.match(repo, (file_,), opts)
@@ -4074,7 +4074,7 @@ def revert(ui, repo, *pats, **opts):
         raise util.Abort(_('no files or directories specified; '
                            'use --all to revert the whole repo'))
 
-    ctx = cmdutil.revsingle(repo, opts.get('rev'))
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
     node = ctx.node()
     mf = ctx.manifest()
     if node == parent:
@@ -4519,7 +4519,7 @@ def status(ui, repo, *pats, **opts):
         node2 = repo.lookup(change)
         node1 = repo[node2].p1().node()
     else:
-        node1, node2 = cmdutil.revpair(repo, revs)
+        node1, node2 = scmutil.revpair(repo, revs)
 
     cwd = (pats and repo.getcwd()) or ''
     end = opts.get('print0') and '\0' or '\n'
@@ -4810,7 +4810,7 @@ def tag(ui, repo, name1, *names, **opts):
         bheads = repo.branchheads()
         if not opts.get('force') and bheads and p1 not in bheads:
             raise util.Abort(_('not at a branch head (use -f to force)'))
-    r = cmdutil.revsingle(repo, rev_).node()
+    r = scmutil.revsingle(repo, rev_).node()
 
     if not message:
         # we don't translate commit messages
@@ -4961,7 +4961,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
 
     # if we defined a bookmark, we have to remember the original bookmark name
     brev = rev
-    rev = cmdutil.revsingle(repo, rev, rev).rev()
+    rev = scmutil.revsingle(repo, rev, rev).rev()
 
     if check and clean:
         raise util.Abort(_("cannot specify both -c/--check and -C/--clean"))

@@ -15,8 +15,8 @@ map from a changeset hash to its hash in the source repository.
 
 from mercurial.i18n import _
 import os, tempfile
-from mercurial import bundlerepo, cmdutil, hg, merge, match
-from mercurial import patch, revlog, scmutil, util, error
+from mercurial import bundlerepo, hg, merge, match
+from mercurial import patch, revlog, scmutil, util, error, cmdutil
 from mercurial import revset, templatekw
 
 cmdtable = {}
@@ -578,14 +578,14 @@ def transplant(ui, repo, *revs, **opts):
         tf = tp.transplantfilter(repo, source, p1)
         if opts.get('prune'):
             prune = [source.lookup(r)
-                     for r in cmdutil.revrange(source, opts.get('prune'))]
+                     for r in scmutil.revrange(source, opts.get('prune'))]
             matchfn = lambda x: tf(x) and x not in prune
         else:
             matchfn = tf
         merges = map(source.lookup, opts.get('merge', ()))
         revmap = {}
         if revs:
-            for r in cmdutil.revrange(source, revs):
+            for r in scmutil.revrange(source, revs):
                 revmap[int(r)] = source.lookup(r)
         elif opts.get('all') or not merges:
             if source != repo:
