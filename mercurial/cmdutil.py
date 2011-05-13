@@ -8,16 +8,16 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, tempfile
-import util, scmutil, templater, patch, error, templatekw, wdutil
+import util, scmutil, templater, patch, error, templatekw
 import match as matchmod
 import subrepo
 
-expandpats = wdutil.expandpats
-match = wdutil.match
-matchall = wdutil.matchall
-matchfiles = wdutil.matchfiles
-addremove = wdutil.addremove
-dirstatecopy = wdutil.dirstatecopy
+expandpats = scmutil.expandpats
+match = scmutil.match
+matchall = scmutil.matchall
+matchfiles = scmutil.matchfiles
+addremove = scmutil.addremove
+dirstatecopy = scmutil.dirstatecopy
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
