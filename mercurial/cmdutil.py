@@ -12,12 +12,9 @@ import util, scmutil, templater, patch, error, templatekw
 import match as matchmod
 import subrepo
 
-expandpats = scmutil.expandpats
 match = scmutil.match
 matchall = scmutil.matchall
 matchfiles = scmutil.matchfiles
-addremove = scmutil.addremove
-dirstatecopy = scmutil.dirstatecopy
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
@@ -270,7 +267,8 @@ def copy(ui, repo, pats, opts, rename=False):
         targets[abstarget] = abssrc
 
         # fix up dirstate
-        dirstatecopy(ui, repo, wctx, abssrc, abstarget, dryrun=dryrun, cwd=cwd)
+        scmutil.dirstatecopy(ui, repo, wctx, abssrc, abstarget,
+                             dryrun=dryrun, cwd=cwd)
         if rename and not dryrun:
             wctx.remove([abssrc], not after)
 
@@ -341,7 +339,7 @@ def copy(ui, repo, pats, opts, rename=False):
         return res
 
 
-    pats = expandpats(pats)
+    pats = scmutil.expandpats(pats)
     if not pats:
         raise util.Abort(_('no source or destination specified'))
     if len(pats) == 1:
@@ -1135,7 +1133,7 @@ def commit(ui, repo, commitfunc, pats, opts):
     # extract addremove carefully -- this function can be called from a command
     # that doesn't support addremove
     if opts.get('addremove'):
-        addremove(repo, pats, opts)
+        scmutil.addremove(repo, pats, opts)
 
     return commitfunc(ui, repo, message, match(repo, pats, opts), opts)
 

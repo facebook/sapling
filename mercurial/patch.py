@@ -11,7 +11,7 @@ import tempfile, zlib
 
 from i18n import _
 from node import hex, nullid, short
-import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, wdutil
+import base85, mdiff, scmutil, util, diffhelpers, copies, encoding
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 
@@ -1181,7 +1181,7 @@ def _updatedir(ui, repo, patches, similarity=0):
 
     wctx = repo[None]
     for src, dst in copies:
-        wdutil.dirstatecopy(ui, repo, wctx, src, dst, cwd=cwd)
+        scmutil.dirstatecopy(ui, repo, wctx, src, dst, cwd=cwd)
     if (not similarity) and removes:
         wctx.remove(sorted(removes), True)
 
@@ -1195,7 +1195,7 @@ def _updatedir(ui, repo, patches, similarity=0):
                 flags = (isexec and 'x' or '') + (islink and 'l' or '')
                 repo.wwrite(gp.path, '', flags)
             util.setflags(dst, islink, isexec)
-    wdutil.addremove(repo, cfiles, similarity=similarity)
+    scmutil.addremove(repo, cfiles, similarity=similarity)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
     return sorted(files)
