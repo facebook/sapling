@@ -10,39 +10,6 @@ import sys, os
 import extensions
 import util
 
-
-def moduledoc(file):
-    '''return the top-level python documentation for the given file
-
-    Loosely inspired by pydoc.source_synopsis(), but rewritten to
-    handle triple quotes and to return the whole text instead of just
-    the synopsis'''
-    result = []
-
-    line = file.readline()
-    while line[:1] == '#' or not line.strip():
-        line = file.readline()
-        if not line:
-            break
-
-    start = line[:3]
-    if start == '"""' or start == "'''":
-        line = line[3:]
-        while line:
-            if line.rstrip().endswith(start):
-                line = line.split(start)[0]
-                if line:
-                    result.append(line)
-                break
-            elif not line:
-                return None # unmatched delimiter
-            result.append(line)
-            line = file.readline()
-    else:
-        return None
-
-    return ''.join(result)
-
 def listexts(header, exts, indent=1):
     '''return a text listing of the given extensions'''
     if not exts:

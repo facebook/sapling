@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import imp, os
-import util, cmdutil, help, error
+import util, cmdutil, error
 from i18n import _, gettext
 
 _extensions = {}
@@ -209,6 +209,38 @@ def _disabledpaths(strip_init=False):
         exts[name] = path
     return exts
 
+def _moduledoc(file):
+    '''return the top-level python documentation for the given file
+
+    Loosely inspired by pydoc.source_synopsis(), but rewritten to
+    handle triple quotes and to return the whole text instead of just
+    the synopsis'''
+    result = []
+
+    line = file.readline()
+    while line[:1] == '#' or not line.strip():
+        line = file.readline()
+        if not line:
+            break
+
+    start = line[:3]
+    if start == '"""' or start == "'''":
+        line = line[3:]
+        while line:
+            if line.rstrip().endswith(start):
+                line = line.split(start)[0]
+                if line:
+                    result.append(line)
+                break
+            elif not line:
+                return None # unmatched delimiter
+            result.append(line)
+            line = file.readline()
+    else:
+        return None
+
+    return ''.join(result)
+
 def _disabledhelp(path):
     '''retrieve help synopsis of a disabled extension (without importing)'''
     try:
@@ -216,7 +248,7 @@ def _disabledhelp(path):
     except IOError:
         return
     else:
-        doc = help.moduledoc(file)
+        doc = moduledoc(file)
         file.close()
 
     if doc: # extracting localized synopsis
