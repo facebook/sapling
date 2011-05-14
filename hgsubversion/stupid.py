@@ -79,17 +79,32 @@ def mempatchproxy(parentctx, files):
 
 def filteriterhunks(meta):
     iterhunks = patch.iterhunks
-    def filterhunks(ui, fp, sourcefile=None, textmode=False):
+    def filterhunks(*args, **kwargs):
+        # ui, fp, sourcefile=None, textmode=False
         applycurrent = False
         # Passing False instead of textmode because we should never
         # be ignoring EOL type.
-        if not iterhunks.func_defaults:
-            # Since 1.7 (cfedc529e4a1)
-            gen = iterhunks(ui, fp)
-        elif len(iterhunks.func_defaults) == 1:
-            gen = iterhunks(ui, fp, sourcefile)
+        if iterhunks.func_code.co_argcount == 1:
+            # Since 1.9 (28762bb767dc)
+            fp = args[0]
+            gen = iterhunks(fp)
         else:
-            gen = iterhunks(ui, fp, sourcefile, textmode)
+            ui, fp = args[:2]
+            if len(args) > 2:
+                sourcefile = args[2]
+            else:
+                sourcefile = kwargs.get('sourcefile', None)
+            if len(args) > 3:
+                textmode = args[3]
+            else:
+                textmode = kwargs.get('textmode', False)
+            if not iterhunks.func_defaults:
+                # Since 1.7 (cfedc529e4a1)
+                gen = iterhunks(ui, fp)
+            elif len(iterhunks.func_defaults) == 1:
+                gen = iterhunks(ui, fp, sourcefile)
+            else:
+                gen = iterhunks(ui, fp, sourcefile, textmode)
         for data in gen:
             if data[0] == 'file':
                 if data[1][1] in meta.filemap:
