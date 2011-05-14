@@ -122,7 +122,11 @@ def push(repo, dest, force, revs):
     """push revisions starting at a specified head back to Subversion.
     """
     assert not revs, 'designated revisions for push remains unimplemented.'
-    cmdutil.bail_if_changed(repo)
+    if hasattr(cmdutil, 'bail_if_changed'):
+        cmdutil.bail_if_changed(repo)
+    else:
+        # Since 1.9 (d68ddccf276b)
+        cmdutil.bailifchanged(repo)
     checkpush = getattr(repo, 'checkpush', None)
     if checkpush:
         checkpush(force, revs)
