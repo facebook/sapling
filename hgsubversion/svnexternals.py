@@ -12,6 +12,11 @@ try:
 except (ImportError, AttributeError), e:
     subrepo = None
 
+try:
+    from mercurial.scmutil import canonpath
+except (ImportError, AttributeError):
+    from hgutil import canonpath
+
 import util
 
 class externalsfile(dict):
@@ -151,7 +156,7 @@ def parsedefinitions(ui, repo, svnroot, exts):
             if source is None:
                 continue
             wpath = hgutil.pconvert(os.path.join(base, path))
-            wpath = hgutil.canonpath(repo.root, '', wpath)
+            wpath = canonpath(repo.root, '', wpath)
             defs.append((wpath, rev, source, pegrev, norevline, base))
     # Check target dirs are not nested
     defs.sort()
