@@ -149,6 +149,24 @@ def outgoing_revisions(repo, reverse_map, sourcerev):
     if sourcerev.node() != node.nullid:
         return outgoing_rev_hashes
 
+def outgoing_common_and_heads(repo, reverse_map, sourcerev):
+    """Given a repo and an hg_editor, determines outgoing revisions for the
+    current working copy state. Returns a tuple (common, heads) like
+    discovery.findcommonoutgoing does.
+    """
+    if sourcerev in reverse_map:
+        return ([sourcerev], [sourcerev]) # nothing outgoing
+    sourcecx = repo[sourcerev]
+    while (not sourcecx.node() in reverse_map
+           and sourcecx.node() != node.nullid):
+        ps = sourcecx.parents()
+        if len(ps) != 1:
+            raise hgutil.Abort("Sorry, can't find svn parent of a merge revision.")
+        sourcecx = ps[0]
+    if sourcecx.node() != node.nullid:
+        return ([sourcecx.node()], [sourcerev])
+    return ([sourcerev], [sourcerev]) # nothing outgoing
+
 def default_commit_msg(ui):
     return ui.config('hgsubversion', 'defaultmessage', '')
 

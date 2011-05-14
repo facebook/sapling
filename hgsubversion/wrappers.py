@@ -82,13 +82,22 @@ def incoming(orig, ui, repo, origsource='default', **opts):
             ui.status('%s%s\n' % (l1.ljust(13), val))
 
 
-def outgoing(repo, dest=None, heads=None, force=False):
+def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None):
+    assert other.capable('subversion')
+    # split off #rev; TODO implement --revision/#rev support
+    svn = other.svn
+    meta = repo.svnmeta(svn.uuid, svn.subdir)
+    parent = repo.parents()[0].node()
+    hashes = meta.revmap.hashes()
+    return util.outgoing_common_and_heads(repo, hashes, parent)
+
+
+def findoutgoing(repo, dest=None, heads=None, force=False):
     """show changesets not found in the Subversion repository
     """
     assert dest.capable('subversion')
-
     # split off #rev; TODO implement --revision/#rev support
-    svnurl, revs, checkout = util.parseurl(dest.svnurl, heads)
+    #svnurl, revs, checkout = util.parseurl(dest.svnurl, heads)
     svn = dest.svn
     meta = repo.svnmeta(svn.uuid, svn.subdir)
     parent = repo.parents()[0].node()
