@@ -15,6 +15,11 @@ import svnwrap
 import svnrepo
 import util
 
+try:
+    from mercurial.scmutil import revpair
+except ImportError:
+    from cmdutil import revpair
+
 pullfuns = {
     True: replay.convert_rev,
     False: stupidmod.convert_rev,
@@ -104,7 +109,7 @@ def diff(orig, ui, repo, *args, **opts):
         if o_r:
             parent = repo[o_r[-1]].parents()[0]
         opts['rev'] = ['%s:.' % node.hex(parent.node()), ]
-    node1, node2 = cmdutil.revpair(repo, opts['rev'])
+    node1, node2 = revpair(repo, opts['rev'])
     baserev, _junk = hashes.get(node1, (-1, 'junk'))
     newrev, _junk = hashes.get(node2, (-1, 'junk'))
     it = patch.diff(repo, node1, node2,
