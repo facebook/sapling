@@ -53,11 +53,16 @@ def parentrev(ui, repo, meta, hashes):
 
 
 def islocalrepo(url):
-    if not url.startswith('file:///'):
+    path = str(url) # convert once up front
+    if path.startswith('file:///'):
+        prefixlen = len('file://')
+    elif path.startswith('file:/'):
+        prefixlen = len('file:')
+    else:
         return False
-    if '#' in url.split('/')[-1]: # strip off #anchor
-        url = url[:url.rfind('#')]
-    path = url[len('file://'):]
+    if '#' in path.split('/')[-1]: # strip off #anchor
+        path = path[:path.rfind('#')]
+    path = url[prefixlen:]
     path = urllib.url2pathname(path).replace(os.sep, '/')
     while '/' in path:
         if reduce(lambda x,y: x and y,
