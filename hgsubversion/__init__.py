@@ -38,14 +38,14 @@ try:
     # force demandimport to load templatekw
     templatekw.keywords
 except ImportError:
-   templatekw = None
+    templatekw = None
 
 try:
     from mercurial import revset
     # force demandimport to load revset
     revset.methods
 except ImportError:
-   revset = None
+    revset = None
 
 try:
     from mercurial import subrepo
@@ -169,7 +169,7 @@ def extsetup():
 
 def reposetup(ui, repo):
     if repo.local():
-       svnrepo.generate_repo_class(ui, repo)
+        svnrepo.generate_repo_class(ui, repo)
 
 _old_local = hg.schemes['file']
 def _lookup(url):
