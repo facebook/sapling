@@ -1851,11 +1851,34 @@ def debugrename(ui, repo, file1, *pats, **opts):
 
 @command('debugrevlog',
     [('c', 'changelog', False, _('open changelog')),
-     ('m', 'manifest', False, _('open manifest'))],
+     ('m', 'manifest', False, _('open manifest')),
+     ('d', 'dump', False, _('dump index data'))],
      _('-c|-m|FILE'))
 def debugrevlog(ui, repo, file_ = None, **opts):
     """show data and statistics about a revlog"""
     r = cmdutil.openrevlog(repo, 'debugrevlog', file_, opts)
+
+    if opts.get("dump"):
+        numrevs = len(r)
+        ui.write("# rev p1rev p2rev start end deltastart base p1 p2"
+                 " rawsize totalsize compression heads\n")
+        ts = 0
+        heads = set()
+        for rev in xrange(numrevs):
+            dbase = r.base(rev)
+            cbase = r.chainbase(rev)
+            p1, p2 = r.parentrevs(rev)
+            rs = r.rawsize(rev)
+            ts = ts + rs
+            heads -= set(r.parentrevs(rev))
+            heads.add(rev)
+            ui.write("%d %d %d %d %d %d %d %d %d %d %d %d %d\n" %
+                     (rev, p1, p2, r.start(rev), r.end(rev),
+                      r.start(dbase), r.start(cbase),
+                      r.start(p1), r.start(p2),
+                      rs, ts, ts / r.end(rev), len(heads)))
+        return 0
+
     v = r.version
     format = v & 0xFFFF
     flags = []

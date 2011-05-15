@@ -232,7 +232,7 @@ Show all commands + options
   debugpushkey: 
   debugrebuildstate: rev
   debugrename: rev
-  debugrevlog: changelog, manifest
+  debugrevlog: changelog, manifest, dump
   debugrevspec: 
   debugsetparents: 
   debugstate: nodates, datesort
