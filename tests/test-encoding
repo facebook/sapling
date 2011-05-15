@@ -60,7 +60,7 @@ git daemon --base-path="$(pwd)"\
 hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 cd hgrepo
 
-HGENCODING=utf-8 hg log --graph --debug
+HGENCODING=utf-8 hg log --graph --debug | grep -v ': *master'
 
 hg gclear
 hg push git://localhost/gitrepo2

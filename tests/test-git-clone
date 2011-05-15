@@ -44,7 +44,7 @@ cd ..
 
 hg clone gitrepo hgrepo | grep -v '^updating'
 cd hgrepo
-hg log --graph
+hg log --graph  | grep -v ': *master'
 
 echo % we should have some bookmarks
 hg book

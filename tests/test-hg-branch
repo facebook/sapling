@@ -28,6 +28,7 @@ GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
 
 # TODO stop using this when we're 1.5 only
 filterhash="sed s/71414c4e3c6f/a31e374801c9/;s/698615204564/d93a72262a83/"
+filterhash="$filterhash;s/d93a72262a83/05aed681ccb3/"
 
 count=10
 commit()
@@ -74,11 +75,11 @@ hg branch gamma
 hgcommit -m 'started branch gamma'
 hg push
 
-hg log --graph | $filterhash
+hg log --graph | $filterhash | egrep -v ': *(not-master|master)'
 
 cd ..
 hg clone git://localhost/gitrepo hgrepo2 | grep -v '^updating'
 cd hgrepo2
-hg log --graph | $filterhash
+hg log --graph | $filterhash | egrep -v ': *(not-master|master)'
 
 cd ..

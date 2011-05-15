@@ -10,7 +10,6 @@ importing Git objects into Hg
 @  changeset:   0:3442585be8a6
    tag:         alpha
    tag:         default/master
-   tag:         master
    tag:         tip
    user:        test <test@example.org>
    date:        Mon Jan 01 00:00:10 2007 +0000
@@ -24,7 +23,6 @@ Total 6 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   1:7bcd915dc873
-|  tag:         beta
 |  tag:         default/beta
 |  tag:         tip
 |  user:        test <test@example.org>
@@ -34,7 +32,6 @@ importing Git objects into Hg
 o  changeset:   0:3442585be8a6
    tag:         alpha
    tag:         default/master
-   tag:         master
    user:        test <test@example.org>
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha
@@ -57,9 +54,7 @@ Total 6 (delta 0), reused 0 (delta 0)
 importing Git objects into Hg
 (run 'hg update' to get a working copy)
 o  changeset:   2:611948b1ec6a
-|  tag:         beta
 |  tag:         default/beta
-|  tag:         master
 |  tag:         tip
 |  user:        test <test@example.org>
 |  date:        Mon Jan 01 00:00:12 2007 +0000

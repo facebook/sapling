@@ -43,7 +43,7 @@ hg init
 echo alpha > alpha
 hg add alpha
 hgcommit -m "add alpha"
-hg glog --debug
+hg log --graph --debug
 
 cd ..
 
@@ -65,4 +65,5 @@ commit -m 'add beta'
 
 echo % get things back to hg
 hg gimport
-hg glog --debug
+hg log --graph --debug | grep -v ': *master'
+hg bookmarks

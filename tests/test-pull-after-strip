@@ -70,13 +70,13 @@ git daemon --base-path="$(pwd)"\
 echo % clone a tag
 hg clone -r alpha git://localhost/gitrepo hgrepo-a | grep -v '^updating'
 cd hgrepo-a
-hg log --graph
+hg log --graph | egrep -v ': *(beta|master)'
 
 cd ..
 echo % clone a branch
 hg clone -r beta git://localhost/gitrepo hgrepo-b | grep -v '^updating'
 cd hgrepo-b
-hg log --graph
+hg log --graph | egrep -v ': *(beta|master)'
 cd ..
 
 cd gitrepo
@@ -91,6 +91,6 @@ hg pull -r beta
 hg git-cleanup
 echo % pull works after \'hg git-cleanup\'
 hg pull -r beta
-hg log --graph
+hg log --graph | egrep -v ': *(beta|master)'
 
 cd ..

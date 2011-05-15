@@ -6,6 +6,9 @@
 # bail if the user does not have dulwich
 python -c 'import dulwich, dulwich.repo' || exit 80
 
+# bail if hgext.bookmarks does not exist, which means hg >= 1.8
+python -c 'import hgext.bookmarks' || exit 80
+
 # bail early if the user is already running git-daemon
 echo hi | nc localhost 9418 2>/dev/null && exit 80
 
@@ -49,6 +52,6 @@ git daemon --base-path="$(pwd)"\
 
 hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 cd hgrepo
-hg log --graph
+hg log --graph | grep -v ': *master'
 
 cd ..

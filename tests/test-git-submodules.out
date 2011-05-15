@@ -24,7 +24,6 @@ importing Git objects into Hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   2:954cdf1c8c82
 |  tag:         default/master
-|  tag:         master
 |  tag:         tip
 |  user:        test <test@example.org>
 |  date:        Mon Jan 01 00:00:11 2007 +0000

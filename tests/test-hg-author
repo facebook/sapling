@@ -74,11 +74,11 @@ echo gamma >> beta
 hgcommit -u "test <test@example.com> (comment)" -m 'modify beta'
 hg push
 
-hg log --graph
+hg log --graph | egrep -v ': *(not-master|master)'
 
 cd ..
 hg clone git://localhost/gitrepo hgrepo2 | grep -v '^updating'
 cd hgrepo2
-hg log --graph
+hg log --graph | egrep -v ': *(not-master|master)'
 
 cd ..

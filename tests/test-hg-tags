@@ -67,7 +67,7 @@ hg co master
 hgtag alpha
 hg push
 
-hg log --graph
+hg log --graph | egrep -v ': *(not-master|master)'
 
 cd ..
 cd gitrepo
@@ -77,7 +77,7 @@ git tag -l
 cd ..
 hg clone git://localhost/gitrepo hgrepo2 | grep -v '^updating'
 cd hgrepo2
-hg log --graph
+hg log --graph | egrep -v ': *(not-master|master)'
 
 echo % the tag should be in .hgtags
 cat .hgtags

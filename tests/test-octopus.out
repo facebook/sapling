@@ -19,48 +19,23 @@ Compressing objects:  11% (1/9)   Compressing objects:  22% (2/9)   Compressin
 Total 14 (delta 3), reused 0 (delta 0)
 importing Git objects into Hg
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@    changeset:   5:6523aa9f4775
-|\   tag:         default/master
-| |  tag:         master
-| |  tag:         tip
-| |  parent:      3:1436150b86c2
-| |  parent:      4:7f6c791a169f
-| |  user:        test <test@example.org>
-| |  date:        Mon Jan 01 00:00:13 2007 +0000
-| |  summary:     Merge branches 'branch1' and 'branch2'
+@    5:3,4   6523aa9f4775   2007-01-01 00:00 +0000   test
+|\     Merge branches 'branch1' and 'branch2'
 | |
-| o    changeset:   4:7f6c791a169f
-| |\   parent:      1:7bcd915dc873
-| | |  parent:      2:37c124f2d0a0
-| | |  user:        test <test@example.org>
-| | |  date:        Mon Jan 01 00:00:13 2007 +0000
-| | |  summary:     Merge branches 'branch1' and 'branch2'
+| o    4:1,2   7f6c791a169f   2007-01-01 00:00 +0000   test
+| |\     Merge branches 'branch1' and 'branch2'
 | | |
-o | |  changeset:   3:1436150b86c2
-| | |  parent:      0:3442585be8a6
-| | |  user:        test <test@example.org>
-| | |  date:        Mon Jan 01 00:00:13 2007 +0000
-| | |  summary:     add delta
+o | |  3:0   1436150b86c2   2007-01-01 00:00 +0000   test
+| | |    add delta
 | | |
-+---o  changeset:   2:37c124f2d0a0
-| |    tag:         branch2
-| |    tag:         default/branch2
-| |    parent:      0:3442585be8a6
-| |    user:        test <test@example.org>
-| |    date:        Mon Jan 01 00:00:12 2007 +0000
-| |    summary:     add gamma
++---o  2:0   37c124f2d0a0   2007-01-01 00:00 +0000   test
+| |      add gamma
 | |
-| o  changeset:   1:7bcd915dc873
-|/   tag:         branch1
-|    tag:         default/branch1
-|    user:        test <test@example.org>
-|    date:        Mon Jan 01 00:00:11 2007 +0000
-|    summary:     add beta
+| o  1   7bcd915dc873   2007-01-01 00:00 +0000   test
+|/     add beta
 |
-o  changeset:   0:3442585be8a6
-   user:        test <test@example.org>
-   date:        Mon Jan 01 00:00:10 2007 +0000
-   summary:     add alpha
+o  0   3442585be8a6   2007-01-01 00:00 +0000   test
+     add alpha
 
 clearing out the git cache data
 pushing to git://localhost/gitrepo2

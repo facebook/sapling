@@ -71,7 +71,7 @@ git daemon --base-path="$(pwd)"\
 
 hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 cd hgrepo
-hg log --graph
+hg log --graph --style compact | sed 's/\[.*\]//g'
 
 hg gclear
 hg push git://localhost/gitrepo2

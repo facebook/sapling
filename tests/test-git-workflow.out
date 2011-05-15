@@ -21,7 +21,6 @@ Already on "master"
 % get things back to hg
 importing Git objects into Hg
 o  changeset:   1:7108ae7bd184226a29b8203619a8253d314643bf
-|  tag:         master
 |  tag:         tip
 |  parent:      0:0221c246a56712c6aa64e5ee382244d8a471b1e2
 |  parent:      -1:0000000000000000000000000000000000000000
@@ -46,3 +45,4 @@ o  changeset:   0:0221c246a56712c6aa64e5ee382244d8a471b1e2
    add alpha
 
 
+   master                    1:7108ae7bd184

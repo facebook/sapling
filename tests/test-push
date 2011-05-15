@@ -97,7 +97,8 @@ hg pull
 # which should not implicitly also push the not-master ref.
 hg book not-master -r default/not-master --force
 echo % master and default/master should be diferent
-hg tags
+hg log -r master | grep -v ': *master'
+hg log -r default/master
 
 echo % this should also fail
 hg push -r master

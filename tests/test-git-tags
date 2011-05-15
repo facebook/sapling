@@ -63,7 +63,7 @@ git daemon --base-path="$(pwd)"\
 hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 
 cd hgrepo
-hg log --graph
+hg log --graph  | grep -v ': *master'
 echo beta-fix >> beta
 hg commit -m 'fix for beta'
 hg push

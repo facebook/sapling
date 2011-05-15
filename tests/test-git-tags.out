@@ -9,7 +9,6 @@ importing Git objects into Hg
 @  changeset:   1:99dcc15b7b07
 |  tag:         beta
 |  tag:         default/master
-|  tag:         master
 |  tag:         tip
 |  user:        test <test@example.org>
 |  date:        Mon Jan 01 00:00:12 2007 +0000
