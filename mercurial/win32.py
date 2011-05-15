@@ -120,7 +120,7 @@ class _CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
                 ('srWindow', _SMALL_RECT),
                 ('dwMaximumWindowSize', _COORD)]
 
-_STD_ERROR_HANDLE = 0xfffffff4L # (DWORD)-12
+_STD_ERROR_HANDLE = _DWORD(-12).value
 
 def _raiseoserror(name):
     err = ctypes.WinError()
