@@ -9,15 +9,19 @@ import encoding
 import ctypes, errno, os, struct, subprocess, random
 
 _kernel32 = ctypes.windll.kernel32
+_advapi32 = ctypes.windll.advapi32
+_user32 = ctypes.windll.user32
 
 _BOOL = ctypes.c_long
 _WORD = ctypes.c_ushort
 _DWORD = ctypes.c_ulong
+_UINT = ctypes.c_uint
+_LONG = ctypes.c_long
 _LPCSTR = _LPSTR = ctypes.c_char_p
 _HANDLE = ctypes.c_void_p
 _HWND = _HANDLE
 
-_INVALID_HANDLE_VALUE = -1
+_INVALID_HANDLE_VALUE = _HANDLE(-1).value
 
 # GetLastError
 _ERROR_SUCCESS = 0
@@ -122,6 +126,81 @@ class _CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
 
 _STD_ERROR_HANDLE = _DWORD(-12).value
 
+# types of parameters of C functions used (required by pypy)
+
+_kernel32.CreateFileA.argtypes = [_LPCSTR, _DWORD, _DWORD, ctypes.c_void_p,
+    _DWORD, _DWORD, _HANDLE]
+_kernel32.CreateFileA.restype = _HANDLE
+
+_kernel32.GetFileInformationByHandle.argtypes = [_HANDLE, ctypes.c_void_p]
+_kernel32.GetFileInformationByHandle.restype = _BOOL
+
+_kernel32.CloseHandle.argtypes = [_HANDLE]
+_kernel32.CloseHandle.restype = _BOOL
+
+_kernel32.CreateHardLinkA.argtypes = [_LPCSTR, _LPCSTR, ctypes.c_void_p]
+_kernel32.CreateHardLinkA.restype = _BOOL
+
+_kernel32.SetFileAttributesA.argtypes = [_LPCSTR, _DWORD]
+_kernel32.SetFileAttributesA.restype = _BOOL
+
+_kernel32.OpenProcess.argtypes = [_DWORD, _BOOL, _DWORD]
+_kernel32.OpenProcess.restype = _HANDLE
+
+_kernel32.GetExitCodeProcess.argtypes = [_HANDLE, ctypes.c_void_p]
+_kernel32.GetExitCodeProcess.restype = _BOOL
+
+_kernel32.GetLastError.argtypes = []
+_kernel32.GetLastError.restype = _DWORD
+
+_kernel32.GetModuleFileNameA.argtypes = [_HANDLE, ctypes.c_void_p, _DWORD]
+_kernel32.GetModuleFileNameA.restype = _DWORD
+
+_kernel32.CreateProcessA.argtypes = [_LPCSTR, _LPCSTR, ctypes.c_void_p,
+    ctypes.c_void_p, _BOOL, _DWORD, ctypes.c_void_p, _LPCSTR, ctypes.c_void_p,
+    ctypes.c_void_p]
+_kernel32.CreateProcessA.restype = _BOOL
+
+_kernel32.ExitProcess.argtypes = [_UINT]
+_kernel32.ExitProcess.restype = None
+
+_kernel32.GetCurrentProcessId.argtypes = []
+_kernel32.GetCurrentProcessId.restype = _DWORD
+
+_SIGNAL_HANDLER = ctypes.WINFUNCTYPE(_BOOL, _DWORD)
+_kernel32.SetConsoleCtrlHandler.argtypes = [_SIGNAL_HANDLER, _BOOL]
+_kernel32.SetConsoleCtrlHandler.restype = _BOOL
+
+_kernel32.GetStdHandle.argtypes = [_DWORD]
+_kernel32.GetStdHandle.restype = _HANDLE
+
+_kernel32.GetConsoleScreenBufferInfo.argtypes = [_HANDLE, ctypes.c_void_p]
+_kernel32.GetConsoleScreenBufferInfo.restype = _BOOL
+
+_advapi32.RegOpenKeyExA.argtypes = [_HANDLE, _LPCSTR, _DWORD, _DWORD,
+    ctypes.c_void_p]
+_advapi32.RegOpenKeyExA.restype = _LONG
+
+_advapi32.RegQueryValueExA.argtypes = [_HANDLE, _LPCSTR, ctypes.c_void_p,
+    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+_advapi32.RegQueryValueExA.restype = _LONG
+
+_advapi32.RegCloseKey.argtypes = [_HANDLE]
+_advapi32.RegCloseKey.restype = _LONG
+
+_advapi32.GetUserNameA.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+_advapi32.GetUserNameA.restype = _BOOL
+
+_user32.GetWindowThreadProcessId.argtypes = [_HANDLE, ctypes.c_void_p]
+_user32.GetWindowThreadProcessId.restype = _DWORD
+
+_user32.ShowWindow.argtypes = [_HANDLE, ctypes.c_int]
+_user32.ShowWindow.restype = _BOOL
+
+_WNDENUMPROC = ctypes.WINFUNCTYPE(_BOOL, _HWND, _LPARAM)
+_user32.EnumWindows.argtypes = [_WNDENUMPROC, _LPARAM]
+_user32.EnumWindows.restype = _BOOL
+
 def _raiseoserror(name):
     err = ctypes.WinError()
     raise OSError(err.errno, '%s: %s' % (name, err.strerror))
@@ -189,7 +268,6 @@ def lookupreg(key, valname=None, scope=None):
     a sequence of scopes to look up in order. Default (CURRENT_USER,
     LOCAL_MACHINE).
     '''
-    adv = ctypes.windll.advapi32
     byref = ctypes.byref
     if scope is None:
         scope = (_HKEY_CURRENT_USER, _HKEY_LOCAL_MACHINE)
@@ -197,14 +275,14 @@ def lookupreg(key, valname=None, scope=None):
         scope = (scope,)
     for s in scope:
         kh = _HANDLE()
-        res = adv.RegOpenKeyExA(s, key, 0, _KEY_READ, ctypes.byref(kh))
+        res = _advapi32.RegOpenKeyExA(s, key, 0, _KEY_READ, ctypes.byref(kh))
         if res != _ERROR_SUCCESS:
             continue
         try:
             size = _DWORD(600)
             type = _DWORD()
             buf = ctypes.create_string_buffer(size.value + 1)
-            res = adv.RegQueryValueExA(kh.value, valname, None,
+            res = _advapi32.RegQueryValueExA(kh.value, valname, None,
                                        byref(type), buf, byref(size))
             if res != _ERROR_SUCCESS:
                 continue
@@ -216,7 +294,7 @@ def lookupreg(key, valname=None, scope=None):
                 s = ctypes.string_at(byref(buf), struct.calcsize(fmt))
                 return struct.unpack(fmt, s)[0]
         finally:
-            adv.RegCloseKey(kh.value)
+            _advapi32.RegCloseKey(kh.value)
 
 def executablepath():
     '''return full path of hg.exe'''
@@ -231,14 +309,12 @@ def executablepath():
 
 def getuser():
     '''return name of current user'''
-    adv = ctypes.windll.advapi32
     size = _DWORD(300)
     buf = ctypes.create_string_buffer(size.value + 1)
-    if not adv.GetUserNameA(ctypes.byref(buf), ctypes.byref(size)):
+    if not _advapi32.GetUserNameA(ctypes.byref(buf), ctypes.byref(size)):
         raise ctypes.WinError()
     return buf.value
 
-_SIGNAL_HANDLER = ctypes.WINFUNCTYPE(_BOOL, _DWORD)
 _signalhandler = []
 
 def setsignalhandler():
@@ -256,21 +332,18 @@ def setsignalhandler():
     if not _kernel32.SetConsoleCtrlHandler(h, True):
         raise ctypes.WinError()
 
-_WNDENUMPROC = ctypes.WINFUNCTYPE(_BOOL, _HWND, _LPARAM)
-
 def hidewindow():
-    user32 = ctypes.windll.user32
 
     def callback(hwnd, pid):
         wpid = _DWORD()
-        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(wpid))
+        _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(wpid))
         if pid == wpid.value:
-            user32.ShowWindow(hwnd, _SW_HIDE)
+            _user32.ShowWindow(hwnd, _SW_HIDE)
             return False # stop enumerating windows
         return True
 
     pid = _kernel32.GetCurrentProcessId()
-    user32.EnumWindows(_WNDENUMPROC(callback), pid)
+    _user32.EnumWindows(_WNDENUMPROC(callback), pid)
 
 def termwidth():
     # cmd.exe does not handle CR like a unix console, the CR is
