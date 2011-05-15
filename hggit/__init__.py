@@ -42,11 +42,18 @@ hg.schemes['git+ssh'] = gitrepo
 # support for `hg clone localgitrepo`
 _oldlocal = hg.schemes['file']
 
+try:
+    urlcls = hgutil.url
+except AttributeError:
+    class urlcls(object):
+        def __init__(self, path):
+            self.p = hgutil.drop_scheme('file', path)
+
+        def localpath(self):
+            return self.p
+
 def _local(path):
-    try:
-        p = hgutil.drop_scheme('file', path)
-    except AttributeError:
-        p = url.url(path).localpath()
+    p = urlcls(path).localpath()
     if (os.path.exists(os.path.join(p, '.git')) and
         not os.path.exists(os.path.join(p, '.hg'))):
         return gitrepo
