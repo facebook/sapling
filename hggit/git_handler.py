@@ -110,9 +110,10 @@ class GitHandler(object):
             elif not self.paths:
                 # intial cloning
                 self.update_remote_branches('default', refs)
-                
+
                 # "Activate" a tipmost bookmark.
-                bms = self.repo['tip'].bookmarks()
+                bms = getattr(self.repo['tip'], 'bookmarks',
+                              lambda : None)()
                 if bms:
                     bookmarks.setcurrent(self.repo, bms[0])
         else:
