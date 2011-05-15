@@ -319,6 +319,8 @@ class revlog(object):
         return self.start(rev) + self.length(rev)
     def length(self, rev):
         return self.index[rev][1]
+    def base(self, rev):
+        return self.index[rev][3]
     def chainbase(self, rev):
         index = self.index
         base = index[rev][3]
