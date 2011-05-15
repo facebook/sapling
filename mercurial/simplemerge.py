@@ -407,10 +407,10 @@ def simplemerge(ui, local, base, other, **opts):
         f.close()
         if util.binary(text):
             msg = _("%s looks like a binary file.") % filename
+            if not opts.get('quiet'):
+                ui.warn(_('warning: %s\n') % msg)
             if not opts.get('text'):
                 raise util.Abort(msg)
-            elif not opts.get('quiet'):
-                ui.warn(_('warning: %s\n') % msg)
         return text
 
     name_a = local
@@ -423,9 +423,12 @@ def simplemerge(ui, local, base, other, **opts):
     if labels:
         raise util.Abort(_("can only specify two labels."))
 
-    localtext = readfile(local)
-    basetext = readfile(base)
-    othertext = readfile(other)
+    try:
+        localtext = readfile(local)
+        basetext = readfile(base)
+        othertext = readfile(other)
+    except util.Abort:
+        return 1
 
     local = os.path.realpath(local)
     if not opts.get('print'):
