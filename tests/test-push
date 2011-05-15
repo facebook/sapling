@@ -51,7 +51,7 @@ cd ..
 git daemon --base-path="$(pwd)"\
  --listen=localhost\
  --export-all\
- --pid-file=gitdaemon.pid \
+ --pid-file="$DAEMON_PIDS" \
  --detach --reuseaddr \
  --enable=receive-pack
 
@@ -106,4 +106,3 @@ echo % ... but succeed with -f
 hg push -fr master
 
 cd ..
-kill `cat gitdaemon.pid`

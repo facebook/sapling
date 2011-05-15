@@ -64,7 +64,7 @@ cd ..
 git daemon --base-path="$(pwd)"\
  --listen=localhost\
  --export-all\
- --pid-file=gitdaemon.pid \
+ --pid-file="$DAEMON_PIDS" \
  --detach --reuseaddr
 
 echo % clone a tag
@@ -94,4 +94,3 @@ hg pull -r beta
 hg log --graph
 
 cd ..
-kill `cat gitdaemon.pid`

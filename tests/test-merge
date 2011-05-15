@@ -60,7 +60,7 @@ cd ..
 git daemon --base-path="$(pwd)"\
  --listen=localhost\
  --export-all \
- --pid-file=gitdaemon.pid \
+ --pid-file="$DAEMON_PIDS" \
  --detach --reuseaddr \
  --enable=receive-pack
 
@@ -78,4 +78,3 @@ git log --pretty=medium master | sed 's/\.\.\.//g'
 git log --pretty=medium beta | sed 's/\.\.\.//g'
 
 cd ..
-kill `cat gitdaemon.pid`

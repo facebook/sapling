@@ -44,7 +44,7 @@ cd ..
 git daemon --base-path="$(pwd)"\
  --listen=localhost\
  --export-all\
-  --pid-file=gitdaemon.pid \
+  --pid-file="$DAEMON_PIDS" \
  --detach --reuseaddr
 
 hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
@@ -52,4 +52,3 @@ cd hgrepo
 hg log --graph
 
 cd ..
-kill `cat gitdaemon.pid`
