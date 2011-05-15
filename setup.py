@@ -386,7 +386,7 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
     # Also parse only first digit, because 3.2.1 can't be parsed nicely
     if (version.startswith('Xcode') and
         StrictVersion(version.split()[1]) >= StrictVersion('4.0')):
-        os.environ['ARCHFLAGS'] = '-arch i386 -arch x86_64'
+        os.environ['ARCHFLAGS'] = ''
 
 setup(name='mercurial',
       version=setupversion,
