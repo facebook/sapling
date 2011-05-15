@@ -125,6 +125,8 @@ try:
     kwname = 'heads'
     if hg.util.version() >= '1.7':
         kwname = 'remoteheads'
+    if getattr(discovery, 'findcommonoutgoing', None):
+        kwname = 'onlyheads'
     def findoutgoing(orig, local, remote, *args, **kwargs):
         kw = {}
         kw.update(kwargs)
@@ -141,8 +143,14 @@ try:
             if kwname == 'heads':
                 r = orig(local, remote, **kw)
                 return [x[0] for x in r]
+            if kwname == 'onlyheads':
+                del kw['base']
         return orig(local, remote, **kw)
-    extensions.wrapfunction(discovery, 'findoutgoing', findoutgoing)
+    if getattr(discovery, 'findoutgoing', None):
+        extensions.wrapfunction(discovery, 'findoutgoing', findoutgoing)
+    else:
+        extensions.wrapfunction(discovery, 'findcommonoutgoing',
+                                findoutgoing)
 except ImportError:
     pass
 
