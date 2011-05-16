@@ -642,45 +642,37 @@ def run(cmd, wd, options, replacements):
         ret = proc.wait()
         return (ret, None)
 
-    if os.name == 'nt' or sys.platform.startswith('java'):
-        tochild, fromchild = os.popen4(cmd)
-        tochild.close()
-        output = fromchild.read()
-        ret = fromchild.close()
-        if ret is None:
-            ret = 0
-    else:
-        proc = Popen4(cmd, wd, options.timeout)
-        def cleanup():
-            try:
-                proc.terminate()
-            except OSError:
-                pass
-            ret = proc.wait()
-            if ret == 0:
-                ret = signal.SIGTERM << 8
-            killdaemons()
-            return ret
-
-        output = ''
-        proc.tochild.close()
-
+    proc = Popen4(cmd, wd, options.timeout)
+    def cleanup():
         try:
-            output = proc.fromchild.read()
-        except KeyboardInterrupt:
-            vlog('# Handling keyboard interrupt')
-            cleanup()
-            raise
-
+            proc.terminate()
+        except OSError:
+            pass
         ret = proc.wait()
-        if wifexited(ret):
-            ret = os.WEXITSTATUS(ret)
+        if ret == 0:
+            ret = signal.SIGTERM << 8
+        killdaemons()
+        return ret
 
-        if proc.timeout:
-            ret = 'timeout'
+    output = ''
+    proc.tochild.close()
 
-        if ret:
-            killdaemons()
+    try:
+        output = proc.fromchild.read()
+    except KeyboardInterrupt:
+        vlog('# Handling keyboard interrupt')
+        cleanup()
+        raise
+
+    ret = proc.wait()
+    if wifexited(ret):
+        ret = os.WEXITSTATUS(ret)
+
+    if proc.timeout:
+        ret = 'timeout'
+
+    if ret:
+        killdaemons()
 
     for s, r in replacements:
         output = re.sub(s, r, output)
