@@ -394,6 +394,24 @@ def filelog(repo, subset, x):
     return [r for r in subset if r in s]
 
 def follow(repo, subset, x):
+    """``follow([file])``
+    An alias for ``::.`` (ancestors of the working copy's first parent).
+    If a filename is specified, the history of the given file is followed,
+    including copies.
+    """
+    # i18n: "follow" is a keyword
+    l = getargs(x, 0, 1, _("follow takes no arguments or a filename"))
+    p = repo['.'].rev()
+    if l:
+        x = getstring(l[0], "follow expected a filename")
+        s = set(ctx.rev() for ctx in repo['.'][x].ancestors())
+    else:
+        s = set(repo.changelog.ancestors(p))
+
+    s |= set([p])
+    return [r for r in subset if r in s]
+
+def followfile(repo, subset, f):
     """``follow()``
     An alias for ``::.`` (ancestors of the working copy's first parent).
     """
