@@ -440,6 +440,22 @@ def installhg(options):
             f.write(line + '\n')
         f.close()
 
+    hgbat = os.path.join(BINDIR, 'hg.bat')
+    if os.path.isfile(hgbat):
+        # hg.bat expects to be put in bin/scripts while run-tests.py
+        # installation layout put it in bin/ directly. Fix it
+        f = open(hgbat, 'rb')
+        data = f.read()
+        f.close()
+        if '"%~dp0..\python" "%~dp0hg" %*' in data:
+            data = data.replace('"%~dp0..\python" "%~dp0hg" %*',
+                                '"%~dp0python" "%~dp0hg" %*')
+            f = open(hgbat, 'wb')
+            f.write(data)
+            f.close()
+        else:
+            print 'WARNING: cannot fix hg.bat reference to python.exe'
+
     if options.anycoverage:
         custom = os.path.join(TESTDIR, 'sitecustomize.py')
         target = os.path.join(PYTHONDIR, 'sitecustomize.py')
