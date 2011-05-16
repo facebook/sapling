@@ -18,7 +18,7 @@ import util
 try:
     from mercurial.scmutil import revpair
 except ImportError:
-    from cmdutil import revpair
+    from mercurial.cmdutil import revpair
 
 pullfuns = {
     True: replay.convert_rev,

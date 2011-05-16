@@ -15,7 +15,7 @@ except (ImportError, AttributeError), e:
 try:
     from mercurial.scmutil import canonpath
 except (ImportError, AttributeError):
-    from hgutil import canonpath
+    from mercurial.util import canonpath
 
 import util
 
