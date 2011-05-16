@@ -82,10 +82,12 @@ class ui(object):
                       'traceback', 'verbose'):
                 if k in cfg['ui']:
                     del cfg['ui'][k]
-            for k, v in cfg.items('alias'):
-                del cfg['alias'][k]
             for k, v in cfg.items('defaults'):
                 del cfg['defaults'][k]
+        # Don't remove aliases from the configuration if in the exceptionlist
+        if self.plain('alias'):
+            for k, v in cfg.items('alias'):
+                del cfg['alias'][k]
 
         if trusted:
             self._tcfg.update(cfg)
