@@ -234,12 +234,14 @@ class revlog(object):
                 v = 0
 
         i = ''
+        self._initempty = True
         try:
             f = self.opener(self.indexfile)
             i = f.read()
             f.close()
             if len(i) > 0:
                 v = struct.unpack(versionformat, i[:4])[0]
+                self._initempty = False
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise

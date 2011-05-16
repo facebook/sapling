@@ -100,6 +100,10 @@ def delayopener(opener, target, divert, buf):
 class changelog(revlog.revlog):
     def __init__(self, opener):
         revlog.revlog.__init__(self, opener, "00changelog.i")
+        if self._initempty:
+            # changelogs don't benefit from generaldelta
+            self.version &= ~revlog.REVLOGGENERALDELTA
+            self._generaldelta = False
         self._realopener = opener
         self._delayed = False
         self._divert = False
