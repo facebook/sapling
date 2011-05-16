@@ -316,7 +316,7 @@ def findprogram(program):
     """Search PATH for a executable program"""
     for p in os.environ.get('PATH', os.defpath).split(os.pathsep):
         name = os.path.join(p, program)
-        if os.access(name, os.X_OK):
+        if os.name == 'nt' or os.access(name, os.X_OK):
             return name
     return None
 
@@ -366,12 +366,14 @@ def usecorrectpython():
     # some tests run python interpreter. they must use same
     # interpreter we use or bad things will happen.
     exedir, exename = os.path.split(sys.executable)
-    if exename == 'python':
-        path = findprogram('python')
+    if exename in ('python', 'python.exe'):
+        path = findprogram(exename)
         if os.path.dirname(path) == exedir:
             return
+    else:
+        exename = 'python'
     vlog('# Making python executable in test path use correct Python')
-    mypython = os.path.join(BINDIR, 'python')
+    mypython = os.path.join(BINDIR, exename)
     try:
         os.symlink(sys.executable, mypython)
     except AttributeError:
