@@ -330,7 +330,7 @@ class ui(object):
             for name, value in self.configitems(section, untrusted):
                 yield section, name, value
 
-    def plain(self):
+    def plain(self, feature=None):
         '''is plain mode active?
 
         Plain mode means that all configuration variables which affect
@@ -341,14 +341,16 @@ class ui(object):
         The only way to trigger plain mode is by setting either the
         `HGPLAIN' or `HGPLAINEXCEPT' environment variables.
 
-        The return value can either be False, True, or a list of
-        features that plain mode should not apply to (e.g., i18n,
-        progress, etc).
+        The return value can either be
+        - False if HGPLAIN is not set, or feature is in HGPLAINEXCEPT
+        - True otherwise
         '''
         if 'HGPLAIN' not in os.environ and 'HGPLAINEXCEPT' not in os.environ:
             return False
         exceptions = os.environ.get('HGPLAINEXCEPT', '').strip().split(',')
-        return exceptions or True
+        if feature and exceptions:
+            return feature not in exceptions
+        return True
 
     def username(self):
         """Return default username to be used in commits.
