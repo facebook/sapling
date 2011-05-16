@@ -370,6 +370,29 @@ def descendants(repo, subset, x):
     s = set(repo.changelog.descendants(*args)) | set(args)
     return [r for r in subset if r in s]
 
+def filelog(repo, subset, x):
+    """``filelog(pattern)``
+    Changesets connected to the specified filelog.
+    """
+
+    pat = getstring(x, _("filelog requires a pattern"))
+    m = matchmod.match(repo.root, repo.getcwd(), [pat], default='relpath')
+    s = set()
+
+    if not m.anypats():
+        for f in m.files():
+            fl = repo.file(f)
+            for fr in fl:
+                s.add(fl.linkrev(fr))
+    else:
+        for f in repo[None]:
+            if m(f):
+                fl = repo.file(f)
+                for fr in fl:
+                    s.add(fl.linkrev(fr))
+
+    return [r for r in subset if r in s]
+
 def follow(repo, subset, x):
     """``follow()``
     An alias for ``::.`` (ancestors of the working copy's first parent).
@@ -780,6 +803,7 @@ symbols = {
     "date": date,
     "descendants": descendants,
     "file": hasfile,
+    "filelog": filelog,
     "follow": follow,
     "grep": grep,
     "head": head,
