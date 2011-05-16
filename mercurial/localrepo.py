@@ -116,9 +116,9 @@ class localrepository(repo.repository):
 
     def _applyrequirements(self, requirements):
         self.requirements = requirements
-        self.sopener.options = {}
-        if 'generaldelta' in requirements:
-            self.sopener.options['generaldelta'] = 1
+        openerreqs = set(('revlogv1', 'generaldelta'))
+        self.sopener.options = dict((r, 1) for r in requirements
+                                           if r in openerreqs)
 
     def _writerequirements(self):
         reqfile = self.opener("requires", "w")
@@ -178,7 +178,6 @@ class localrepository(repo.repository):
             p = os.environ['HG_PENDING']
             if p.startswith(self.root):
                 c.readpending('00changelog.i.a')
-        self.sopener.options['defversion'] = c.version
         return c
 
     @propertycache

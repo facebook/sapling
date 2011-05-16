@@ -227,12 +227,11 @@ class revlog(object):
 
         v = REVLOG_DEFAULT_VERSION
         if hasattr(opener, 'options'):
-            if 'defversion' in opener.options:
-                v = opener.options['defversion']
-                if v & REVLOGNG:
-                    v |= REVLOGNGINLINEDATA
-            if v & REVLOGNG and 'generaldelta' in opener.options:
-                v |= REVLOGGENERALDELTA
+            if 'revlogv1' in opener.options:
+                if 'generaldelta' in opener.options:
+                    v |= REVLOGGENERALDELTA
+            else:
+                v = 0
 
         i = ''
         try:
