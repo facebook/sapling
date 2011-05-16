@@ -60,13 +60,10 @@ processlock = threading.Lock()
 closefds = os.name == 'posix'
 def Popen4(cmd, wd, timeout):
     processlock.acquire()
-    orig = os.getcwd()
-    os.chdir(wd)
-    p = subprocess.Popen(cmd, shell=True, bufsize=-1,
+    p = subprocess.Popen(cmd, shell=True, bufsize=-1, cwd=wd,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
-    os.chdir(orig)
     processlock.release()
 
     p.fromchild = p.stdout
