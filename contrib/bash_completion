@@ -62,7 +62,7 @@ _hg_cmd()
 _hg_commands()
 {
     local commands
-    commands="$(_hg_cmd debugcomplete "$cur")" || commands=""
+    commands="$(HGPLAINEXCEPT=alias _hg_cmd debugcomplete "$cur")" || commands=""
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$commands' -- "$cur"))
 }
 
