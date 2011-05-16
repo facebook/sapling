@@ -3591,6 +3591,9 @@ def paths(ui, repo, search=None):
     Show definition of symbolic path name NAME. If no name is given,
     show definition of all available names.
 
+    Option -q/--quiet suppresses all output when searching for NAME
+    and shows only the path names when listing all definitions.
+
     Path names are defined in the [paths] section of your
     configuration file and in ``/etc/mercurial/hgrc``. If run inside a
     repository, ``.hg/hgrc`` is used, too.
@@ -3613,13 +3616,17 @@ def paths(ui, repo, search=None):
     if search:
         for name, path in ui.configitems("paths"):
             if name == search:
-                ui.write("%s\n" % util.hidepassword(path))
+                ui.status("%s\n" % util.hidepassword(path))
                 return
-        ui.warn(_("not found!\n"))
+        if not ui.quiet:
+            ui.warn(_("not found!\n"))
         return 1
     else:
         for name, path in ui.configitems("paths"):
-            ui.write("%s = %s\n" % (name, util.hidepassword(path)))
+            if ui.quiet:
+                ui.write("%s\n" % name)
+            else:
+                ui.write("%s = %s\n" % (name, util.hidepassword(path)))
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:

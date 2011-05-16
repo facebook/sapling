@@ -25,6 +25,17 @@
   $ SOMETHING=/foo hg paths
   dupe = $TESTTMP/b
   expand = /foo/bar
+  $ hg paths -q
+  dupe
+  expand
+  $ hg paths dupe
+  $TESTTMP/b
+  $ hg paths -q dupe
+  $ hg paths unknown
+  not found!
+  [1]
+  $ hg paths -q unknown
+  [1]
   $ cd ..
 
 'file:' disables [paths] entries for clone destination
