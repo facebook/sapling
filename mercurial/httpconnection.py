@@ -132,7 +132,7 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
         self._connections = {}
 
     # shamelessly borrowed from urllib2.AbstractHTTPHandler
-    def do_open(self, http_class, req):
+    def do_open(self, http_class, req, use_ssl):
         """Return an addinfourl object for the request, using http_class.
 
         http_class must implement the HTTPConnection API from httplib.
@@ -173,7 +173,8 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
         if not host:
             raise urllib2.URLError('no host given')
 
-        allconns = self._connections.get((host, proxy), [])
+        connkey = use_ssl, host, proxy
+        allconns = self._connections.get(connkey, [])
         conns = [c for c in allconns if not c.busy()]
         if conns:
             h = conns[0]
@@ -185,7 +186,7 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
             if req.timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:
                 timeout = req.timeout
             h = http_class(host, timeout=timeout, proxy_hostport=proxy)
-            self._connections.setdefault((host, proxy), []).append(h)
+            self._connections.setdefault(connkey, []).append(h)
 
         headers = dict(req.headers)
         headers.update(req.unredirected_hdrs)
@@ -217,7 +218,7 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
     def http_open(self, req):
         if req.get_full_url().startswith('https'):
             return self.https_open(req)
-        return self.do_open(HTTPConnection, req)
+        return self.do_open(HTTPConnection, req, False)
 
     def https_open(self, req):
         res = readauthforuri(self.ui, req.get_full_url())
@@ -227,7 +228,7 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
             self.ui.debug("using auth.%s.* for authentication\n" % group)
         else:
             self.auth = None
-        return self.do_open(self._makesslconnection, req)
+        return self.do_open(self._makesslconnection, req, True)
 
     def _makesslconnection(self, host, port=443, *args, **kwargs):
         keyfile = None
