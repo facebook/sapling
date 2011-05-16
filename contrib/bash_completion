@@ -68,7 +68,7 @@ _hg_commands()
 
 _hg_paths()
 {
-    local paths="$(_hg_cmd paths | sed -e 's/ = .*$//')"
+    local paths="$(_hg_cmd paths -q)"
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$paths' -- "$cur"))
 }
 
