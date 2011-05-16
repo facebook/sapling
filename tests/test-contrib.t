@@ -229,8 +229,8 @@ binary file
   $ python -c "f = file('binary-local', 'w'); f.write('\x00'); f.close()"
   $ cat orig >> binary-local
   $ python simplemerge -p binary-local base other
-  abort: binary-local looks like a binary file.
-  [255]
+  warning: binary-local looks like a binary file.
+  [1]
 
 binary file --text
 
