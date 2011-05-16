@@ -73,8 +73,8 @@ def Popen4(cmd, wd, timeout):
     p.tochild = p.stdin
     p.childerr = p.stderr
 
+    p.timeout = False
     if timeout:
-        p.timeout = False
         def t():
             start = time.time()
             while time.time() - start < timeout and p.returncode is None:
@@ -241,6 +241,10 @@ def parseargs():
         if options.timeout != defaults['timeout']:
             sys.stderr.write(
                 'warning: --timeout option ignored with --debug\n')
+        options.timeout = 0
+    if options.timeout and not hasattr(subprocess.Popen, 'terminate'):
+        sys.stderr.write('warning: timeout is not supported on this '
+                         'platform and will be ignored')
         options.timeout = 0
     if options.py3k_warnings:
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
