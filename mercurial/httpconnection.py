@@ -107,6 +107,7 @@ class HTTPConnection(httpclient.HTTPConnection):
 
 
 _configuredlogging = False
+LOGFMT = '%(levelname)s:%(name)s:%(lineno)d:%(message)s'
 # Subclass BOTH of these because otherwise urllib2 "helpfully"
 # reinserts them since it notices we don't include any subclasses of
 # them.
@@ -122,7 +123,9 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
             _configuredlogging = True
             logger = logging.getLogger('mercurial.httpclient')
             logger.setLevel(getattr(logging, loglevel.upper()))
-            logger.addHandler(logging.StreamHandler())
+            handler = logging.StreamHandler()
+            handler.setFormatter(logging.Formatter(LOGFMT))
+            logger.addHandler(handler)
 
     def close_all(self):
         """Close and remove all connection objects being kept for reuse."""
