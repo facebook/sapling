@@ -1299,6 +1299,23 @@ related changes with force
   popping foo
   patch queue now empty
   $ hg st
+
+related renamed source without change
+  $ hg qpush
+  applying foo
+  now at: foo
+  $ echo 1 > 1
+  $ hg mv 1 2
+  $ hg qref --git
+  $ hg qpop
+  popping foo
+  patch queue now empty
+  $ echo 3 > 1
+  $ hg st
+  M 1
+  $ hg qpush
+  abort: local changes found
+  [255]
   $ cd ..
 
 test qpush with --force, issue1087

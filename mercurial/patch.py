@@ -1315,6 +1315,10 @@ def changedfiles(patchpath, strip=1):
                 for gp in values:
                     gp.path = pathstrip(gp.path, strip - 1)[1]
                     changed.add(gp.path)
+                    if gp.oldpath:
+                        gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
+                        if gp.op == 'RENAME':
+                            changed.add(gp.oldpath)
             else:
                 raise util.Abort(_('unsupported parser state: %s') % state)
         return changed
