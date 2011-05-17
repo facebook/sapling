@@ -112,6 +112,10 @@ class HTTPResponse(object):
 
     def complete(self):
         """Returns true if this response is completely loaded.
+
+        Note that if this is a connection where complete means the
+        socket is closed, this will nearly always return False, even
+        in cases where all the data has actually been loaded.
         """
         if self._chunked:
             return self._chunked_done
@@ -174,10 +178,7 @@ class HTTPResponse(object):
             return True
         logger.debug('response read %d data during _select', len(data))
         if not data:
-            if not self.headers:
-                self._load_response(self._end_headers)
-                self._content_len = 0
-            elif self._content_len == _LEN_CLOSE_IS_END:
+            if self.headers and self._content_len == _LEN_CLOSE_IS_END:
                 self._content_len = len(self._body)
             return False
         else:
@@ -561,17 +562,46 @@ class HTTPConnection(object):
                         continue
                     if not data:
                         logger.info('socket appears closed in read')
-                        outgoing_headers = body = None
-                        break
+                        self.sock = None
+                        self._current_response = None
+                        # This if/elif ladder is a bit subtle,
+                        # comments in each branch should help.
+                        if response is not None and (
+                            response.complete() or
+                            response._content_len == _LEN_CLOSE_IS_END):
+                            # Server responded completely and then
+                            # closed the socket. We should just shut
+                            # things down and let the caller get their
+                            # response.
+                            logger.info('Got an early response, '
+                                        'aborting remaining request.')
+                            break
+                        elif was_first and response is None:
+                            # Most likely a keepalive that got killed
+                            # on the server's end. Commonly happens
+                            # after getting a really large response
+                            # from the server.
+                            logger.info(
+                                'Connection appeared closed in read on first'
+                                ' request loop iteration, will retry.')
+                            reconnect('read')
+                            continue
+                        else:
+                            # We didn't just send the first data hunk,
+                            # and either have a partial response or no
+                            # response at all. There's really nothing
+                            # meaningful we can do here.
+                            raise HTTPStateError(
+                                'Connection appears closed after '
+                                'some request data was written, but the '
+                                'response was missing or incomplete!')
+                    logger.debug('read %d bytes in request()', len(data))
                     if response is None:
                         response = self.response_class(r[0], self.timeout)
                     response._load_response(data)
-                    if (response._content_len == _LEN_CLOSE_IS_END
-                        and len(data) == 0):
-                        response._content_len = len(response._body)
-                    if response.complete():
-                        w = []
-                        response.will_close = True
+                    # Jump to the next select() call so we load more
+                    # data if the server is still sending us content.
+                    continue
                 except socket.error, e:
                     if e[0] != errno.EPIPE and not was_first:
                         raise
@@ -662,4 +692,7 @@ class BadRequestData(httplib.HTTPException):
 
 class HTTPProxyConnectFailedException(httplib.HTTPException):
     """Connecting to the HTTP proxy failed."""
+
+class HTTPStateError(httplib.HTTPException):
+    """Invalid internal state encountered."""
 # no-check-code

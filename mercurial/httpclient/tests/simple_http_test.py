@@ -26,6 +26,7 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import socket
 import unittest
 
 import http
@@ -39,7 +40,7 @@ class SimpleHttpTest(util.HttpTestBase, unittest.TestCase):
     def _run_simple_test(self, host, server_data, expected_req, expected_data):
         con = http.HTTPConnection(host)
         con._connect()
-        con.sock.data.extend(server_data)
+        con.sock.data = server_data
         con.request('GET', '/')
 
         self.assertStringEqual(expected_req, con.sock.sent)
@@ -353,4 +354,33 @@ dotencode
 
         self.assertEqual(('1.2.3.4', 80), con.sock.sa)
         self.assertEqual(expected_req, con.sock.sent)
+
+    def test_conn_keep_alive_but_server_close_anyway(self):
+        sockets = []
+        def closingsocket(*args, **kwargs):
+            s = util.MockSocket(*args, **kwargs)
+            sockets.append(s)
+            s.data = ['HTTP/1.1 200 OK\r\n',
+                      'Server: BogusServer 1.0\r\n',
+                      'Connection: Keep-Alive\r\n',
+                      'Content-Length: 16',
+                      '\r\n\r\n',
+                      'You can do that.']
+            s.close_on_empty = True
+            return s
+
+        socket.socket = closingsocket
+        con = http.HTTPConnection('1.2.3.4:80')
+        con._connect()
+        con.request('GET', '/')
+        r1 = con.getresponse()
+        r1.read()
+        self.assertFalse(con.sock.closed)
+        self.assert_(con.sock.remote_closed)
+        con.request('GET', '/')
+        self.assertEqual(2, len(sockets))
+
+    def test_no_response_raises_response_not_ready(self):
+        con = http.HTTPConnection('foo')
+        self.assertRaises(http.httplib.ResponseNotReady, con.getresponse)
 # no-check-code

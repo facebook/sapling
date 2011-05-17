@@ -53,7 +53,7 @@ class ChunkedTransferTest(util.HttpTestBase, unittest.TestCase):
         con = http.HTTPConnection('1.2.3.4:80')
         con._connect()
         sock = con.sock
-        sock.read_wait_sentinel = 'end-of-body'
+        sock.read_wait_sentinel = '0\r\n\r\n'
         sock.data = ['HTTP/1.1 200 OK\r\n',
                      'Server: BogusServer 1.0\r\n',
                      'Content-Length: 6',
