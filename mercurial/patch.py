@@ -543,15 +543,6 @@ class patchfile(object):
             cand.sort(key=lambda x: abs(x - linenum))
         return cand
 
-    def makerejlines(self, fname):
-        base = os.path.basename(fname)
-        yield "--- %s\n+++ %s\n" % (base, base)
-        for x in self.rej:
-            for l in x.hunk:
-                yield l
-                if l[-1] != '\n':
-                    yield "\n\ No newline at end of file\n"
-
     def write_rej(self):
         # our rejects are a little different from patch(1).  This always
         # creates rejects in the same form as the original patch.  A file
@@ -559,8 +550,14 @@ class patchfile(object):
         # without having to type the filename.
         if not self.rej:
             return
-        self.backend.writerej(self.fname, len(self.rej), self.hunks,
-                              self.makerejlines(self.fname))
+        base = os.path.basename(self.fname)
+        lines = ["--- %s\n+++ %s\n" % (base, base)]
+        for x in self.rej:
+            for l in x.hunk:
+                lines.append(l)
+                if l[-1] != '\n':
+                    lines.append("\n\ No newline at end of file\n")
+        self.backend.writerej(self.fname, len(self.rej), self.hunks, lines)
 
     def apply(self, h):
         if not h.complete():
