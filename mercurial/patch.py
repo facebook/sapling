@@ -18,25 +18,6 @@ gitre = re.compile('diff --git a/(.*) b/(.*)')
 class PatchError(Exception):
     pass
 
-# helper functions
-
-def copyfile(src, dst, basedir):
-    abssrc, absdst = [scmutil.canonpath(basedir, basedir, x)
-                        for x in [src, dst]]
-    if os.path.lexists(absdst):
-        raise util.Abort(_("cannot create %s: destination already exists") %
-                         dst)
-
-    dstdir = os.path.dirname(absdst)
-    if dstdir and not os.path.isdir(dstdir):
-        try:
-            os.makedirs(dstdir)
-        except IOError:
-            raise util.Abort(
-                _("cannot create %s: unable to create destination directory")
-                % dst)
-
-    util.copyfile(abssrc, absdst)
 
 # public functions
 
@@ -406,10 +387,17 @@ class abstractbackend(object):
         """
         pass
 
+    def copy(self, src, dst):
+        """Copy src file into dst file. Create intermediate directories if
+        necessary. Files are specified relatively to the patching base
+        directory.
+        """
+        raise NotImplementedError
+
 class fsbackend(abstractbackend):
-    def __init__(self, ui, opener):
+    def __init__(self, ui, basedir):
         super(fsbackend, self).__init__(ui)
-        self.opener = opener
+        self.opener = scmutil.opener(basedir)
 
     def readlines(self, fname):
         if os.path.islink(fname):
@@ -455,6 +443,23 @@ class fsbackend(abstractbackend):
         fp = self.opener(fname, 'w')
         fp.writelines(lines)
         fp.close()
+
+    def copy(self, src, dst):
+        basedir = self.opener.base
+        abssrc, absdst = [scmutil.canonpath(basedir, basedir, x)
+                          for x in [src, dst]]
+        if os.path.lexists(absdst):
+            raise util.Abort(_("cannot create %s: destination already exists")
+                             % dst)
+        dstdir = os.path.dirname(absdst)
+        if dstdir and not os.path.isdir(dstdir):
+            try:
+                os.makedirs(dstdir)
+            except IOError:
+                raise util.Abort(
+                    _("cannot create %s: unable to create destination directory")
+                    % dst)
+        util.copyfile(abssrc, absdst)
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
@@ -1147,15 +1152,15 @@ def applydiff(ui, fp, changed, strip=1, eolmode='strict'):
     Callers probably want to call '_updatedir' after this to
     apply certain categories of changes not done by this function.
     """
-    return _applydiff(ui, fp, patchfile, copyfile, changed, strip=strip,
+    return _applydiff(ui, fp, patchfile, changed, strip=strip,
                       eolmode=eolmode)
 
-def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
+def _applydiff(ui, fp, patcher, changed, strip=1, eolmode='strict'):
     rejects = 0
     err = 0
     current_file = None
     cwd = os.getcwd()
-    backend = fsbackend(ui, scmutil.opener(cwd))
+    backend = fsbackend(ui, os.getcwd())
 
     for state, values in iterhunks(fp):
         if state == 'hunk':
@@ -1188,7 +1193,7 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
                 # Binary patches really overwrite target files, copying them
                 # will just make it fails with "target file exists"
                 if gp.op in ('COPY', 'RENAME') and not gp.binary:
-                    copyfn(gp.oldpath, gp.path, cwd)
+                    backend.copy(gp.oldpath, gp.path)
                 changed[gp.path] = gp
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
