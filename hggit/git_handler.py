@@ -1,6 +1,6 @@
 import os, math, urllib, re
 
-from dulwich.errors import HangupException
+from dulwich.errors import HangupException, GitProtocolError
 from dulwich.index import commit_tree
 from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone
 from dulwich.pack import create_delta, apply_delta
@@ -151,8 +151,8 @@ class GitHandler(object):
                        for r in old_refs)
 
             return old, new
-        except HangupException:
-            raise hgutil.Abort("the remote end hung up unexpectedly")
+        except (HangupException, GitProtocolError), e:
+            raise hgutil.Abort(_("git remote error: ") + str(e))
 
     def push(self, remote, revs, force):
         self.export_commits()
