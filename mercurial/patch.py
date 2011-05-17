@@ -394,6 +394,9 @@ class abstractbackend(object):
         """
         raise NotImplementedError
 
+    def exists(self, fname):
+        raise NotImplementedError
+
 class fsbackend(abstractbackend):
     def __init__(self, ui, basedir):
         super(fsbackend, self).__init__(ui)
@@ -460,6 +463,9 @@ class fsbackend(abstractbackend):
                     _("cannot create %s: unable to create destination directory")
                     % dst)
         util.copyfile(abssrc, absdst)
+
+    def exists(self, fname):
+        return os.path.lexists(fname)
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
@@ -970,16 +976,16 @@ def pathstrip(path, strip):
         count -= 1
     return path[:i].lstrip(), path[i:].rstrip()
 
-def selectfile(afile_orig, bfile_orig, hunk, strip):
+def selectfile(backend, afile_orig, bfile_orig, hunk, strip):
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
     abase, afile = pathstrip(afile_orig, strip)
-    gooda = not nulla and os.path.lexists(afile)
+    gooda = not nulla and backend.exists(afile)
     bbase, bfile = pathstrip(bfile_orig, strip)
     if afile == bfile:
         goodb = gooda
     else:
-        goodb = not nullb and os.path.lexists(bfile)
+        goodb = not nullb and backend.exists(bfile)
     createfunc = hunk.createfile
     missing = not goodb and not gooda and not createfunc()
 
@@ -1176,7 +1182,7 @@ def _applydiff(ui, fp, patcher, changed, strip=1, eolmode='strict'):
                 rejects += current_file.close()
             afile, bfile, first_hunk = values
             try:
-                current_file, missing = selectfile(afile, bfile,
+                current_file, missing = selectfile(backend, afile, bfile,
                                                    first_hunk, strip)
                 current_file = patcher(ui, current_file, backend,
                                        missing=missing, eolmode=eolmode)
@@ -1347,7 +1353,8 @@ def patch(ui, repo, patchname, strip=1, cwd=None, files=None, eolmode='strict',
     except PatchError, err:
         raise util.Abort(str(err))
 
-def changedfiles(patchpath, strip=1):
+def changedfiles(ui, repo, patchpath, strip=1):
+    backend = fsbackend(ui, repo.root)
     fp = open(patchpath, 'rb')
     try:
         changed = set()
@@ -1356,7 +1363,7 @@ def changedfiles(patchpath, strip=1):
                 continue
             elif state == 'file':
                 afile, bfile, first_hunk = values
-                current_file, missing = selectfile(afile, bfile,
+                current_file, missing = selectfile(backend, afile, bfile,
                                                    first_hunk, strip)
                 changed.add(current_file)
             elif state == 'git':

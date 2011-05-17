@@ -1178,7 +1178,7 @@ class queue(object):
                 if wcfiles:
                     for patchname in s:
                         pf = os.path.join(self.path, patchname)
-                        patchfiles = patchmod.changedfiles(pf, strip=1)
+                        patchfiles = patchmod.changedfiles(self.ui, repo, pf)
                         if wcfiles.intersection(patchfiles):
                             self.localchangesfound(self.applied)
             elif mergeq:
