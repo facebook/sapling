@@ -381,48 +381,42 @@ class linereader(object):
                 break
             yield l
 
-# @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
-unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
-contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
-eolmodes = ['strict', 'crlf', 'lf', 'auto']
-
-class patchfile(object):
-    def __init__(self, ui, fname, opener, missing=False, eolmode='strict'):
-        self.fname = fname
-        self.eolmode = eolmode
-        self.eol = None
-        self.opener = opener
+class abstractbackend(object):
+    def __init__(self, ui):
         self.ui = ui
-        self.lines = []
-        self.exists = False
-        self.missing = missing
-        if not missing:
-            try:
-                self.lines = self.readlines(fname)
-                self.exists = True
-            except IOError:
-                pass
-        else:
-            self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
 
-        self.hash = {}
-        self.dirty = False
-        self.offset = 0
-        self.skew = 0
-        self.rej = []
-        self.fileprinted = False
-        self.printfile(False)
-        self.hunks = 0
+    def readlines(self, fname):
+        """Return target file lines, or its content as a single line
+        for symlinks.
+        """
+        raise NotImplementedError
+
+    def writelines(self, fname, lines):
+        """Write lines to target file."""
+        raise NotImplementedError
+
+    def unlink(self, fname):
+        """Unlink target file."""
+        raise NotImplementedError
+
+    def writerej(self, fname, failed, total, lines):
+        """Write rejected lines for fname. total is the number of hunks
+        which failed to apply and total the total number of hunks for this
+        files.
+        """
+        pass
+
+class fsbackend(abstractbackend):
+    def __init__(self, ui, opener):
+        super(fsbackend, self).__init__(ui)
+        self.opener = opener
 
     def readlines(self, fname):
         if os.path.islink(fname):
             return [os.readlink(fname)]
         fp = self.opener(fname, 'r')
         try:
-            lr = linereader(fp, self.eolmode != 'strict')
-            lines = list(lr)
-            self.eol = lr.eol
-            return lines
+            return list(fp)
         finally:
             fp.close()
 
@@ -442,20 +436,7 @@ class patchfile(object):
                     raise
             fp = self.opener(fname, 'w')
         try:
-            if self.eolmode == 'auto':
-                eol = self.eol
-            elif self.eolmode == 'crlf':
-                eol = '\r\n'
-            else:
-                eol = '\n'
-
-            if self.eolmode != 'strict' and eol and eol != '\n':
-                for l in lines:
-                    if l and l[-1] == '\n':
-                        l = l[:-1] + eol
-                    fp.write(l)
-            else:
-                fp.writelines(lines)
+            fp.writelines(lines)
             if islink:
                 self.opener.symlink(fp.getvalue(), fname)
             if st_mode is not None:
@@ -465,6 +446,79 @@ class patchfile(object):
 
     def unlink(self, fname):
         os.unlink(fname)
+
+    def writerej(self, fname, failed, total, lines):
+        fname = fname + ".rej"
+        self.ui.warn(
+            _("%d out of %d hunks FAILED -- saving rejects to file %s\n") %
+            (failed, total, fname))
+        fp = self.opener(fname, 'w')
+        fp.writelines(lines)
+        fp.close()
+
+# @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
+unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
+contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
+eolmodes = ['strict', 'crlf', 'lf', 'auto']
+
+class patchfile(object):
+    def __init__(self, ui, fname, backend, missing=False, eolmode='strict'):
+        self.fname = fname
+        self.eolmode = eolmode
+        self.eol = None
+        self.backend = backend
+        self.ui = ui
+        self.lines = []
+        self.exists = False
+        self.missing = missing
+        if not missing:
+            try:
+                self.lines = self.backend.readlines(fname)
+                if self.lines:
+                    # Normalize line endings
+                    if self.lines[0].endswith('\r\n'):
+                        self.eol = '\r\n'
+                    elif self.lines[0].endswith('\n'):
+                        self.eol = '\n'
+                    if eolmode != 'strict':
+                        nlines = []
+                        for l in self.lines:
+                            if l.endswith('\r\n'):
+                                l = l[:-2] + '\n'
+                            nlines.append(l)
+                        self.lines = nlines
+                self.exists = True
+            except IOError:
+                pass
+        else:
+            self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
+
+        self.hash = {}
+        self.dirty = 0
+        self.offset = 0
+        self.skew = 0
+        self.rej = []
+        self.fileprinted = False
+        self.printfile(False)
+        self.hunks = 0
+
+    def writelines(self, fname, lines):
+        if self.eolmode == 'auto':
+            eol = self.eol
+        elif self.eolmode == 'crlf':
+            eol = '\r\n'
+        else:
+            eol = '\n'
+
+        if self.eolmode != 'strict' and eol and eol != '\n':
+            rawlines = []
+            for l in lines:
+                if l and l[-1] == '\n':
+                    l = l[:-1] + eol
+                rawlines.append(l)
+            lines = rawlines
+
+        self.backend.writelines(fname, lines)
 
     def printfile(self, warn):
         if self.fileprinted:
@@ -503,18 +557,10 @@ class patchfile(object):
         # creates rejects in the same form as the original patch.  A file
         # header is inserted so that you can run the reject through patch again
         # without having to type the filename.
-
         if not self.rej:
             return
-
-        fname = self.fname + ".rej"
-        self.ui.warn(
-            _("%d out of %d hunks FAILED -- saving rejects to file %s\n") %
-            (len(self.rej), self.hunks, fname))
-
-        fp = self.opener(fname, 'w')
-        fp.writelines(self.makerejlines(self.fname))
-        fp.close()
+        self.backend.writerej(self.fname, len(self.rej), self.hunks,
+                              self.makerejlines(self.fname))
 
     def apply(self, h):
         if not h.complete():
@@ -535,7 +581,7 @@ class patchfile(object):
 
         if isinstance(h, binhunk):
             if h.rmfile():
-                self.unlink(self.fname)
+                self.backend.unlink(self.fname)
             else:
                 self.lines[:] = h.new()
                 self.offset += len(h.new())
@@ -563,7 +609,7 @@ class patchfile(object):
         # fast case code
         if self.skew == 0 and diffhelpers.testhunk(old, self.lines, start) == 0:
             if h.rmfile():
-                self.unlink(self.fname)
+                self.backend.unlink(self.fname)
             else:
                 self.lines[start : start + h.lena] = h.new()
                 self.offset += h.lenb - h.lena
@@ -1112,7 +1158,7 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
     err = 0
     current_file = None
     cwd = os.getcwd()
-    opener = scmutil.opener(cwd)
+    backend = fsbackend(ui, scmutil.opener(cwd))
 
     for state, values in iterhunks(fp):
         if state == 'hunk':
@@ -1130,7 +1176,7 @@ def _applydiff(ui, fp, patcher, copyfn, changed, strip=1, eolmode='strict'):
             try:
                 current_file, missing = selectfile(afile, bfile,
                                                    first_hunk, strip)
-                current_file = patcher(ui, current_file, opener,
+                current_file = patcher(ui, current_file, backend,
                                        missing=missing, eolmode=eolmode)
             except PatchError, inst:
                 ui.warn(str(inst) + '\n')
