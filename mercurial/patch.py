@@ -478,6 +478,49 @@ class fsbackend(abstractbackend):
     def setmode(self, fname, islink, isexec):
         util.setflags(self._join(fname), islink, isexec)
 
+class workingbackend(fsbackend):
+    def __init__(self, ui, repo, similarity):
+        super(workingbackend, self).__init__(ui, repo.root)
+        self.repo = repo
+        self.similarity = similarity
+        self.removed = set()
+        self.changed = set()
+        self.copied = []
+
+    def writelines(self, fname, lines, mode):
+        super(workingbackend, self).writelines(fname, lines, mode)
+        self.changed.add(fname)
+
+    def unlink(self, fname):
+        super(workingbackend, self).unlink(fname)
+        self.removed.add(fname)
+        self.changed.add(fname)
+
+    def copy(self, src, dst):
+        super(workingbackend, self).copy(src, dst)
+        self.copied.append((src, dst))
+        self.changed.add(dst)
+
+    def setmode(self, fname, islink, isexec):
+        super(workingbackend, self).setmode(fname, islink, isexec)
+        self.changed.add(fname)
+
+    def close(self):
+        wctx = self.repo[None]
+        addremoved = set(self.changed)
+        for src, dst in self.copied:
+            scmutil.dirstatecopy(self.ui, self.repo, wctx, src, dst)
+            addremoved.discard(src)
+        if (not self.similarity) and self.removed:
+            wctx.remove(sorted(self.removed))
+        if addremoved:
+            cwd = self.repo.getcwd()
+            if cwd:
+                addremoved = [util.pathto(self.repo.root, cwd, f)
+                              for f in addremoved]
+            scmutil.addremove(self.repo, addremoved, similarity=self.similarity)
+        return sorted(self.changed)
+
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
@@ -1169,9 +1212,6 @@ def applydiff(ui, fp, changed, backend, strip=1, eolmode='strict'):
     If 'eolmode' is 'strict', the patch content and patched file are
     read in binary mode. Otherwise, line endings are ignored when
     patching then normalized according to 'eolmode'.
-
-    Callers probably want to call '_updatedir' after this to
-    apply certain categories of changes not done by this function.
     """
     return _applydiff(ui, fp, patchfile, backend, changed, strip=strip,
                       eolmode=eolmode)
@@ -1311,7 +1351,7 @@ def _externalpatch(patcher, patchname, ui, strip, cwd, files):
                          util.explainexit(code)[0])
     return fuzz
 
-def internalpatch(ui, repo, patchobj, strip, cwd, files=None, eolmode='strict',
+def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
                   similarity=0):
     """use builtin patch to apply <patchobj> to the working directory.
     returns whether patch was applied with fuzz factor."""
@@ -1324,7 +1364,7 @@ def internalpatch(ui, repo, patchobj, strip, cwd, files=None, eolmode='strict',
         raise util.Abort(_('unsupported line endings type: %s') % eolmode)
     eolmode = eolmode.lower()
 
-    backend = fsbackend(ui, cwd)
+    backend = workingbackend(ui, repo, similarity)
     try:
         fp = open(patchobj, 'rb')
     except TypeError:
@@ -1334,8 +1374,7 @@ def internalpatch(ui, repo, patchobj, strip, cwd, files=None, eolmode='strict',
     finally:
         if fp != patchobj:
             fp.close()
-        touched = _updatedir(ui, repo, files, similarity)
-        files.update(dict.fromkeys(touched))
+        files.update(dict.fromkeys(backend.close()))
     if ret < 0:
         raise PatchError(_('patch failed to apply'))
     return ret > 0
@@ -1364,7 +1403,7 @@ def patch(ui, repo, patchname, strip=1, cwd=None, files=None, eolmode='strict',
             finally:
                 touched = _updatedir(ui, repo, files, similarity)
                 files.update(dict.fromkeys(touched))
-        return internalpatch(ui, repo, patchname, strip, cwd, files, eolmode,
+        return internalpatch(ui, repo, patchname, strip, files, eolmode,
                              similarity)
     except PatchError, err:
         raise util.Abort(str(err))
