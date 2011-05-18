@@ -44,9 +44,6 @@ abort: you appear to have run strip - please run hg git-cleanup
 git commit map cleaned
 % pull works after 'hg git-cleanup'
 pulling from git://localhost/gitrepo
-Counting objects: 6, done.
-Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
-Total 6 (delta 0), reused 0 (delta 0)
 importing git objects into hg
 (run 'hg update' to get a working copy)
 o  changeset:   2:611948b1ec6a
