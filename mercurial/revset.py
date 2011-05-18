@@ -428,7 +428,8 @@ def hasfile(repo, subset, x):
 
 def contains(repo, subset, x):
     """``contains(pattern)``
-    Revision contains pattern.
+    Revision contains a file matching pattern. See :hg:`help patterns`
+    for information about file patterns.
     """
     # i18n: "contains" is a keyword
     pat = getstring(x, _("contains requires a pattern"))
