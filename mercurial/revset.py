@@ -381,7 +381,8 @@ def keyword(repo, subset, x):
 def grep(repo, subset, x):
     """``grep(regex)``
     Like ``keyword(string)`` but accepts a regex. Use ``grep(r'...')``
-    to ensure special escape characters are handled correctly.
+    to ensure special escape characters are handled correctly. Unlike
+    ``keyword(string)``, the match is case-sensitive.
     """
     try:
         # i18n: "grep" is a keyword
