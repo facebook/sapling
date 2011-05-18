@@ -182,7 +182,7 @@ def parseargs():
                 os.access(options.with_hg, os.X_OK)):
             parser.error('--with-hg must specify an executable hg script')
         if not os.path.basename(options.with_hg) == 'hg':
-            sys.stderr.write('warning: --with-hg should specify an hg script')
+            sys.stderr.write('warning: --with-hg should specify an hg script\n')
     if options.local:
         testdir = os.path.dirname(os.path.realpath(sys.argv[0]))
         hgbin = os.path.join(os.path.dirname(testdir), 'hg')
@@ -241,7 +241,7 @@ def parseargs():
         options.timeout = 0
     if options.timeout and not hasattr(subprocess.Popen, 'terminate'):
         sys.stderr.write('warning: timeout is not supported on this '
-                         'platform and will be ignored')
+                         'platform and will be ignored\n')
         options.timeout = 0
     if options.py3k_warnings:
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
