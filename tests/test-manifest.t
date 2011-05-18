@@ -53,6 +53,10 @@ The next call is expected to return nothing:
   b/a
   l
 
+  $ hg manifest --all
+  a
+  b/a
+  l
 
 The next two calls are expected to abort:
 

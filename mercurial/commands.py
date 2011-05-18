@@ -3392,9 +3392,10 @@ def log(ui, repo, *pats, **opts):
     displayer.close()
 
 @command('manifest',
-    [('r', 'rev', '', _('revision to display'), _('REV'))],
+    [('r', 'rev', '', _('revision to display'), _('REV')),
+     ('', 'all', False, _("list files from all revisions"))],
     _('[-r REV]'))
-def manifest(ui, repo, node=None, rev=None):
+def manifest(ui, repo, node=None, rev=None, **opts):
     """output the current or given revision of the project manifest
 
     Print a list of version controlled files for the given revision.
@@ -3404,8 +3405,30 @@ def manifest(ui, repo, node=None, rev=None):
     With -v, print file permissions, symlink and executable bits.
     With --debug, print file revision hashes.
 
+    If option --all is specified, the list of all files from all revisions
+    is printed. This includes deleted and renamed files.
+
     Returns 0 on success.
     """
+    if opts.get('all'):
+        if rev or node:
+            raise util.Abort(_("can't specify a revision with --all"))
+
+        res = []
+        prefix = "data/"
+        suffix = ".i"
+        plen = len(prefix)
+        slen = len(suffix)
+        lock = repo.lock()
+        try:
+            for fn, b, size in repo.store.datafiles():
+                if size != 0 and fn[-slen:] == suffix and fn[:plen] == prefix:
+                    res.append(fn[plen:-slen])
+        finally:
+            lock.release()
+        for f in sorted(res):
+            ui.write("%s\n" % f)
+        return
 
     if rev and node:
         raise util.Abort(_("please specify just one revision"))

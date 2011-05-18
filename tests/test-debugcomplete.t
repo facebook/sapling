@@ -246,7 +246,7 @@ Show all commands + options
   import: strip, base, force, no-commit, exact, import-branch, message, logfile, date, user, similarity
   incoming: force, newest-first, bundle, rev, bookmarks, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, insecure, subrepos
   locate: rev, print0, fullpath, include, exclude
-  manifest: rev
+  manifest: rev, all
   outgoing: force, rev, newest-first, bookmarks, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, insecure, subrepos
   parents: rev, style, template
   paths: 
