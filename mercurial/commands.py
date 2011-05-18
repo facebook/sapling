@@ -3204,8 +3204,7 @@ def incoming(ui, repo, source="default", **opts):
 
     repo._subtoppath = ui.expandpath(source)
     try:
-        ret = hg.incoming(ui, repo, source, opts)
-        return ret
+        return hg.incoming(ui, repo, source, opts)
     finally:
         del repo._subtoppath
 
@@ -3544,8 +3543,7 @@ def outgoing(ui, repo, dest=None, **opts):
 
     repo._subtoppath = ui.expandpath(dest or 'default-push', dest or 'default')
     try:
-        ret = hg.outgoing(ui, repo, dest, opts)
-        return ret
+        return hg.outgoing(ui, repo, dest, opts)
     finally:
         del repo._subtoppath
 
