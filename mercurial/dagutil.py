@@ -205,6 +205,34 @@ class revlogdag(revlogbaseddag):
         assert headrevs
         return headrevs
 
+    def linearize(self, ixs):
+        '''linearize and topologically sort a list of revisions
+
+        The linearization process tries to create long runs of revs where
+        a child rev comes immediately after its first parent. This is done by
+        visiting the heads of the given revs in inverse topological order,
+        and for each visited rev, visiting its second parent, then its first
+        parent, then adding the rev itself to the output list.
+        '''
+        sorted = []
+        visit = list(self.headsetofconnecteds(ixs))
+        visit.sort(reverse=True)
+        finished = set()
+
+        while visit:
+            cur = visit.pop()
+            if cur < 0:
+                cur = -cur - 1
+                if cur not in finished:
+                    sorted.append(cur)
+                    finished.add(cur)
+            else:
+                visit.append(-cur - 1)
+                visit += [p for p in self.parents(cur)
+                          if p in ixs and p not in finished]
+        assert len(sorted) == len(ixs)
+        return sorted
+
 
 class inverserevlogdag(revlogbaseddag, genericdag):
     '''inverse of an existing revlog dag; see revlogdag.inverse()'''
