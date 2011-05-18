@@ -366,7 +366,7 @@ def date(repo, subset, x):
 def keyword(repo, subset, x):
     """``keyword(string)``
     Search commit message, user name, and names of changed files for
-    string.
+    string. The match is case-insensitive.
     """
     # i18n: "keyword" is a keyword
     kw = getstring(x, _("keyword requires a string")).lower()
@@ -407,7 +407,7 @@ def author(repo, subset, x):
 
 def user(repo, subset, x):
     """``user(string)``
-    User name is string.
+    User name contains string. The match is case-insensitive.
     """
     return author(repo, subset, x)
 
