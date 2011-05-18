@@ -1165,7 +1165,6 @@ def _applydiff(ui, fp, patcher, changed, strip=1, eolmode='strict'):
     rejects = 0
     err = 0
     current_file = None
-    cwd = os.getcwd()
     backend = fsbackend(ui, os.getcwd())
 
     for state, values in iterhunks(fp):
