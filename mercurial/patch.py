@@ -402,9 +402,12 @@ class fsbackend(abstractbackend):
         super(fsbackend, self).__init__(ui)
         self.opener = scmutil.opener(basedir)
 
+    def _join(self, f):
+        return os.path.join(self.opener.base, f)
+
     def readlines(self, fname):
-        if os.path.islink(fname):
-            return [os.readlink(fname)]
+        if os.path.islink(self._join(fname)):
+            return [os.readlink(self._join(fname))]
         fp = self.opener(fname, 'r')
         try:
             return list(fp)
@@ -416,12 +419,12 @@ class fsbackend(abstractbackend):
         # a symlink. _updatedir will -too magically- take care
         # of setting it to the proper type afterwards.
         st_mode = None
-        islink = os.path.islink(fname)
+        islink = os.path.islink(self._join(fname))
         if islink:
             fp = cStringIO.StringIO()
         else:
             try:
-                st_mode = os.lstat(fname).st_mode & 0777
+                st_mode = os.lstat(self._join(fname)).st_mode & 0777
             except OSError, e:
                 if e.errno != errno.ENOENT:
                     raise
@@ -431,12 +434,12 @@ class fsbackend(abstractbackend):
             if islink:
                 self.opener.symlink(fp.getvalue(), fname)
             if st_mode is not None:
-                os.chmod(fname, st_mode)
+                os.chmod(self._join(fname), st_mode)
         finally:
             fp.close()
 
     def unlink(self, fname):
-        os.unlink(fname)
+        os.unlink(self._join(fname))
 
     def writerej(self, fname, failed, total, lines):
         fname = fname + ".rej"
@@ -465,7 +468,7 @@ class fsbackend(abstractbackend):
         util.copyfile(abssrc, absdst)
 
     def exists(self, fname):
-        return os.path.lexists(fname)
+        return os.path.lexists(self._join(fname))
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
@@ -1144,7 +1147,7 @@ def iterhunks(fp):
             state = BFILE
             hunknum = 0
 
-def applydiff(ui, fp, changed, strip=1, eolmode='strict'):
+def applydiff(ui, fp, changed, backend, strip=1, eolmode='strict'):
     """Reads a patch from fp and tries to apply it.
 
     The dict 'changed' is filled in with all of the filenames changed
@@ -1158,14 +1161,13 @@ def applydiff(ui, fp, changed, strip=1, eolmode='strict'):
     Callers probably want to call '_updatedir' after this to
     apply certain categories of changes not done by this function.
     """
-    return _applydiff(ui, fp, patchfile, changed, strip=strip,
+    return _applydiff(ui, fp, patchfile, backend, changed, strip=strip,
                       eolmode=eolmode)
 
-def _applydiff(ui, fp, patcher, changed, strip=1, eolmode='strict'):
+def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
     rejects = 0
     err = 0
     current_file = None
-    backend = fsbackend(ui, os.getcwd())
 
     for state, values in iterhunks(fp):
         if state == 'hunk':
@@ -1303,18 +1305,14 @@ def internalpatch(ui, repo, patchobj, strip, cwd, files=None, eolmode='strict',
         raise util.Abort(_('unsupported line endings type: %s') % eolmode)
     eolmode = eolmode.lower()
 
+    backend = fsbackend(ui, cwd)
     try:
         fp = open(patchobj, 'rb')
     except TypeError:
         fp = patchobj
-    if cwd:
-        curdir = os.getcwd()
-        os.chdir(cwd)
     try:
-        ret = applydiff(ui, fp, files, strip=strip, eolmode=eolmode)
+        ret = applydiff(ui, fp, files, backend, strip=strip, eolmode=eolmode)
     finally:
-        if cwd:
-            os.chdir(curdir)
         if fp != patchobj:
             fp.close()
         touched = _updatedir(ui, repo, files, similarity)
