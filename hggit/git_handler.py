@@ -563,8 +563,8 @@ class GitHandler(object):
             self.ui.status(_("creating and sending data\n"))
             changed_refs = client.send_pack(path, changed, genpack)
             return changed_refs
-        except HangupException:
-            raise hgutil.Abort("the remote end hung up unexpectedly")
+        except (HangupException, GitProtocolError), e:
+            raise hgutil.Abort(_("git remote error: ") + str(e))
 
     def get_changed_refs(self, refs, revs, force):
         new_refs = refs.copy()
@@ -673,8 +673,8 @@ class GitHandler(object):
             try:
                 return client.fetch_pack(path, determine_wants, graphwalker,
                                          f.write, self.ui.status)
-            except HangupException:
-                raise hgutil.Abort("the remote end hung up unexpectedly")
+            except (HangupException, GitProtocolError), e:
+                raise hgutil.Abort(_("git remote error: ") + str(e))
         finally:
             commit()
 
