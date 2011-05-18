@@ -3202,8 +3202,13 @@ def incoming(ui, repo, source="default", **opts):
         ui.status(_('comparing with %s\n') % util.hidepassword(source))
         return bookmarks.diff(ui, repo, other)
 
-    ret = hg.incoming(ui, repo, source, opts)
-    return ret
+    repo._subtoppath = ui.expandpath(source)
+    try:
+        ret = hg.incoming(ui, repo, source, opts)
+        return ret
+    finally:
+        del repo._subtoppath
+
 
 @command('^init', remoteopts, _('[-e CMD] [--remotecmd CMD] [DEST]'))
 def init(ui, dest=".", **opts):
@@ -3537,8 +3542,12 @@ def outgoing(ui, repo, dest=None, **opts):
         ui.status(_('comparing with %s\n') % util.hidepassword(dest))
         return bookmarks.diff(ui, other, repo)
 
-    ret = hg.outgoing(ui, repo, dest, opts)
-    return ret
+    repo._subtoppath = ui.expandpath(dest or 'default-push', dest or 'default')
+    try:
+        ret = hg.outgoing(ui, repo, dest, opts)
+        return ret
+    finally:
+        del repo._subtoppath
 
 @command('parents',
     [('r', 'rev', '', _('show parents of the specified revision'), _('REV')),
