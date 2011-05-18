@@ -181,14 +181,15 @@ class GitHandler(object):
     ## CHANGESET CONVERSION METHODS
 
     def export_git_objects(self):
-        self.ui.status(_("importing Hg objects into Git\n"))
         self.init_if_missing()
 
         nodes = [self.repo.lookup(n) for n in self.repo]
         export = [node for node in nodes if not hex(node) in self._map_hg]
         total = len(export)
+        if total:
+            self.ui.status(_("exporting hg objects to git\n"))
         for i, rev in enumerate(export):
-            util.progress(self.ui, 'importing', i, total=total)
+            util.progress(self.ui, 'exporting', i, total=total)
             ctx = self.repo.changectx(rev)
             state = ctx.extra().get('hg-git', None)
             if state == 'octopus':
@@ -360,7 +361,6 @@ class GitHandler(object):
             yield f, blobid, mode
 
     def import_git_objects(self, remote_name=None, refs=None):
-        self.ui.status(_("importing Git objects into Hg\n"))
         self.init_if_missing()
 
         # import heads and fetched tags as remote references
@@ -416,6 +416,9 @@ class GitHandler(object):
         commits = [commit for commit in commits if not commit in self._map_git]
         # import each of the commits, oldest first
         total = len(commits)
+        if total:
+            self.ui.status(_("importing git objects into hg\n"))
+
         for i, csha in enumerate(commits):
             util.progress(self.ui, 'importing', i, total=total, unit='commits')
             commit = convert_list[csha]
