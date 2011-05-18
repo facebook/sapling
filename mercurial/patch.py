@@ -440,7 +440,11 @@ class fsbackend(abstractbackend):
                 util.setflags(self._join(fname), False, True)
 
     def unlink(self, fname):
-        os.unlink(self._join(fname))
+        try:
+            util.unlinkpath(self._join(fname))
+        except OSError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
 
     def writerej(self, fname, failed, total, lines):
         fname = fname + ".rej"
@@ -1217,14 +1221,23 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
         rejects += current_file.close()
 
     # Handle mode changes without hunk
+    removed = set()
     for gp in changed.itervalues():
-        if not gp or not gp.mode:
+        if not gp:
             continue
-        if gp.op == 'ADD' and not backend.exists(gp.path):
-            # Added files without content have no hunk and must be created
-            backend.writelines(gp.path, [], gp.mode)
-        else:
-            backend.setmode(gp.path, gp.mode[0], gp.mode[1])
+        if gp.op == 'DELETE':
+            removed.add(gp.path)
+            continue
+        if gp.op == 'RENAME':
+            removed.add(gp.oldpath)
+        if gp.mode:
+            if gp.op == 'ADD' and not backend.exists(gp.path):
+                # Added files without content have no hunk and must be created
+                backend.writelines(gp.path, [], gp.mode)
+            else:
+                backend.setmode(gp.path, gp.mode[0], gp.mode[1])
+    for path in sorted(removed):
+        backend.unlink(path)
 
     if rejects:
         return -1
@@ -1256,7 +1269,7 @@ def _updatedir(ui, repo, patches, similarity=0):
     for src, dst in copies:
         scmutil.dirstatecopy(ui, repo, wctx, src, dst, cwd=cwd)
     if (not similarity) and removes:
-        wctx.remove(sorted(removes), True)
+        wctx.remove(sorted(removes))
 
     scmutil.addremove(repo, cfiles, similarity=similarity)
     files = patches.keys()
