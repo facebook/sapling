@@ -193,6 +193,26 @@ annotate after rename merge with -l
   3 b:5: b5
   7 b:7: d
 
+Issue2807: alignment of line numbers with -l
+
+  $ echo more >> b
+  $ hg ci -mmore -d '5 0'
+  $ echo more >> b
+  $ hg ci -mmore -d '6 0'
+  $ echo more >> b
+  $ hg ci -mmore -d '7 0'
+  $ hg annotate -nlf b
+   0 a: 1: a
+   6 b: 2: z
+   1 a: 3: a
+   3 b: 4: b4
+   4 b: 5: c
+   3 b: 5: b5
+   7 b: 7: d
+   8 b: 8: more
+   9 b: 9: more
+  10 b:10: more
+
 linkrev vs rev
 
   $ hg annotate -r tip -n a
@@ -231,5 +251,5 @@ annotate after ABA with follow
 missing file
 
   $ hg ann nosuchfile
-  abort: nosuchfile: no such file in rev c8abddb41a00
+  abort: nosuchfile: no such file in rev e9e6b4fa872f
   [255]

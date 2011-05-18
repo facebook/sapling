@@ -238,11 +238,12 @@ def annotate(ui, repo, *pats, **opts):
     if not pats:
         raise util.Abort(_('at least one filename or pattern is required'))
 
-    opmap = [('user', lambda x: ui.shortuser(x[0].user())),
-             ('number', lambda x: str(x[0].rev())),
-             ('changeset', lambda x: short(x[0].node())),
-             ('date', getdate),
-             ('file', lambda x: x[0].path()),
+    opmap = [('user', ' ', lambda x: ui.shortuser(x[0].user())),
+             ('number', ' ', lambda x: str(x[0].rev())),
+             ('changeset', ' ', lambda x: short(x[0].node())),
+             ('date', ' ', getdate),
+             ('file', ' ', lambda x: x[0].path()),
+             ('line_number', ':', lambda x: str(x[1])),
             ]
 
     if (not opts.get('user') and not opts.get('changeset')
@@ -253,10 +254,8 @@ def annotate(ui, repo, *pats, **opts):
     if linenumber and (not opts.get('changeset')) and (not opts.get('number')):
         raise util.Abort(_('at least one of -n/-c is required for -l'))
 
-    funcmap = [func for op, func in opmap if opts.get(op)]
-    if linenumber:
-        lastfunc = funcmap[-1]
-        funcmap[-1] = lambda x: "%s:%s" % (lastfunc(x), x[1])
+    funcmap = [(func, sep) for op, sep, func in opmap if opts.get(op)]
+    funcmap[0] = (funcmap[0][0], '') # no separator in front of first column
 
     def bad(x, y):
         raise util.Abort("%s: %s" % (x, y))
@@ -274,16 +273,17 @@ def annotate(ui, repo, *pats, **opts):
         lines = fctx.annotate(follow=follow, linenumber=linenumber)
         pieces = []
 
-        for f in funcmap:
+        for f, sep in funcmap:
             l = [f(n) for n, dummy in lines]
             if l:
                 sized = [(x, encoding.colwidth(x)) for x in l]
                 ml = max([w for x, w in sized])
-                pieces.append(["%s%s" % (' ' * (ml - w), x) for x, w in sized])
+                pieces.append(["%s%s%s" % (sep, ' ' * (ml - w), x)
+                               for x, w in sized])
 
         if pieces:
             for p, l in zip(zip(*pieces), lines):
-                ui.write("%s: %s" % (" ".join(p), l[1]))
+                ui.write("%s: %s" % ("".join(p), l[1]))
 
 @command('archive',
     [('', 'no-decode', None, _('do not pass files through decoders')),
