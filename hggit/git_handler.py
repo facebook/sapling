@@ -101,6 +101,7 @@ class GitHandler(object):
         refs = self.fetch_pack(remote, heads)
         remote_name = self.remote_name(remote)
 
+        oldrefs = self.git.get_refs()
         if refs:
             self.import_git_objects(remote_name, refs)
             self.import_tags(refs)
@@ -116,10 +117,22 @@ class GitHandler(object):
                               lambda : None)()
                 if bms:
                     bookmarks.setcurrent(self.repo, bms[0])
-        else:
-            self.ui.status(_("nothing new on the server\n"))
+
+        def remoteref(ref):
+            rn = remote_name or 'default'
+            if ref.startswith('refs/tags/'):
+                return ref
+            return 'refs/remotes/' + rn + ref[10:]
+
+        modheads = set([refs[k] for k in refs if k != 'HEAD'
+                        and refs[k] != oldrefs.get(remoteref(k))])
+
+        if not modheads:
+            self.ui.status(_("no changes found\n"))
 
         self.save_map()
+
+        return len(modheads)
 
     def export_commits(self):
         try:
