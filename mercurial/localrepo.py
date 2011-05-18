@@ -25,7 +25,7 @@ class localrepository(repo.repository):
     supported = supportedformats | set(('store', 'fncache', 'shared',
                                         'dotencode'))
 
-    def __init__(self, baseui, path=None, create=0):
+    def __init__(self, baseui, path=None, create=False):
         repo.repository.__init__(self)
         self.root = os.path.realpath(util.expandpath(path))
         self.path = os.path.join(self.root, ".hg")

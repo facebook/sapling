@@ -3223,7 +3223,7 @@ def init(ui, dest=".", **opts):
 
     Returns 0 on success.
     """
-    hg.repository(hg.remoteui(ui, opts), ui.expandpath(dest), create=1)
+    hg.repository(hg.remoteui(ui, opts), ui.expandpath(dest), create=True)
 
 @command('locate',
     [('r', 'rev', '', _('search the repository as it is in REV'), _('REV')),

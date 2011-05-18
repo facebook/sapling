@@ -19,7 +19,7 @@ class remotelock(object):
             self.release()
 
 class sshrepository(wireproto.wirerepository):
-    def __init__(self, ui, path, create=0):
+    def __init__(self, ui, path, create=False):
         self._url = path
         self.ui = ui
 
