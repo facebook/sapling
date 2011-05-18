@@ -333,7 +333,8 @@ def closed(repo, subset, x):
 
 def contains(repo, subset, x):
     """``contains(pattern)``
-    Revision contains pattern.
+    Revision contains a file matching pattern. See :hg:`help patterns`
+    for information about file patterns.
     """
     # i18n: "contains" is a keyword
     pat = getstring(x, _("contains requires a pattern"))
@@ -432,7 +433,8 @@ def getall(repo, subset, x):
 def grep(repo, subset, x):
     """``grep(regex)``
     Like ``keyword(string)`` but accepts a regex. Use ``grep(r'...')``
-    to ensure special escape characters are handled correctly.
+    to ensure special escape characters are handled correctly. Unlike
+    ``keyword(string)``, the match is case-sensitive.
     """
     try:
         # i18n: "grep" is a keyword
@@ -485,7 +487,7 @@ def heads(repo, subset, x):
 def keyword(repo, subset, x):
     """``keyword(string)``
     Search commit message, user name, and names of changed files for
-    string.
+    string. The match is case-insensitive.
     """
     # i18n: "keyword" is a keyword
     kw = getstring(x, _("keyword requires a string")).lower()
@@ -780,7 +782,7 @@ def sort(repo, subset, x):
     return [e[-1] for e in l]
 
 def tag(repo, subset, x):
-    """``tag(name)``
+    """``tag([name])``
     The specified tag by name, or all tagged revisions if no name is given.
     """
     # i18n: "tag" is a keyword
@@ -802,7 +804,7 @@ def tagged(repo, subset, x):
 
 def user(repo, subset, x):
     """``user(string)``
-    User name is string.
+    User name contains string. The match is case-insensitive.
     """
     return author(repo, subset, x)
 
