@@ -923,7 +923,7 @@ class binhunk:
         self.hunk = ['GIT binary patch\n']
 
     def createfile(self):
-        return self.gitpatch.op in ('ADD', 'RENAME', 'COPY')
+        return self.gitpatch.op == 'ADD'
 
     def rmfile(self):
         return self.gitpatch.op == 'DELETE'
@@ -1209,9 +1209,7 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
                 gp.path = pathstrip(gp.path, strip - 1)[1]
                 if gp.oldpath:
                     gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
-                # Binary patches really overwrite target files, copying them
-                # will just make it fails with "target file exists"
-                if gp.op in ('COPY', 'RENAME') and not gp.binary:
+                if gp.op in ('COPY', 'RENAME'):
                     backend.copy(gp.oldpath, gp.path)
                 changed[gp.path] = gp
         else:
