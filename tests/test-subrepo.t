@@ -660,6 +660,26 @@ Try to push from the other side
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
+Incoming and outgoing should not use the default path:
+
+  $ hg clone -q issue1852a issue1852d
+  $ hg -R issue1852d outgoing --subrepos issue1852c
+  comparing with issue1852c
+  searching for changes
+  no changes found
+  comparing with issue1852c/sub/repo
+  searching for changes
+  no changes found
+  [1]
+  $ hg -R issue1852d incoming --subrepos issue1852c
+  comparing with issue1852c
+  searching for changes
+  no changes found
+  comparing with issue1852c/sub/repo
+  searching for changes
+  no changes found
+  [1]
+
 Check status of files when none of them belong to the first
 subrepository:
 

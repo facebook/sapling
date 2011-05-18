@@ -2516,8 +2516,13 @@ def incoming(ui, repo, source="default", **opts):
         ui.status(_('comparing with %s\n') % url.hidepassword(source))
         return bookmarks.diff(ui, repo, other)
 
-    ret = hg.incoming(ui, repo, source, opts)
-    return ret
+    repo._subtoppath = ui.expandpath(source)
+    try:
+        ret = hg.incoming(ui, repo, source, opts)
+        return ret
+    finally:
+        del repo._subtoppath
+
 
 def init(ui, dest=".", **opts):
     """create a new repository in the given directory
@@ -2803,8 +2808,12 @@ def outgoing(ui, repo, dest=None, **opts):
         ui.status(_('comparing with %s\n') % url.hidepassword(dest))
         return bookmarks.diff(ui, other, repo)
 
-    ret = hg.outgoing(ui, repo, dest, opts)
-    return ret
+    repo._subtoppath = ui.expandpath(dest or 'default-push', dest or 'default')
+    try:
+        ret = hg.outgoing(ui, repo, dest, opts)
+        return ret
+    finally:
+        del repo._subtoppath
 
 def parents(ui, repo, file_=None, **opts):
     """show the parents of the working directory or revision
