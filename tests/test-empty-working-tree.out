@@ -2,15 +2,14 @@ Initialized empty Git repository in gitrepo/.git/
 
 Initialized empty Git repository in gitrepo2/
 
-importing Hg objects into Git
 Counting objects: 2, done.
 Total 2 (delta 0), reused 0 (delta 0)
-importing Git objects into Hg
+importing git objects into hg
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 files: 
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
-importing Hg objects into Git
+exporting hg objects to git
 creating and sending data
 commit 678256865a8c85ae925bf834369264193c88f8de
 Author: test <test@example.org>

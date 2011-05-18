@@ -15,11 +15,11 @@
 updating to branch default
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-importing Hg objects into Git
+exporting hg objects to git
 % do some work
 Already on "master"
 % get things back to hg
-importing Git objects into Hg
+importing git objects into hg
 o  changeset:   1:7108ae7bd184226a29b8203619a8253d314643bf
 |  tag:         tip
 |  parent:      0:0221c246a56712c6aa64e5ee382244d8a471b1e2

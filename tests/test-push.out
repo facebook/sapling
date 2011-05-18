@@ -1,13 +1,12 @@
 Initialized empty Git repository in gitrepo/.git/
 
 Switched to a new branch "not-master"
-importing Hg objects into Git
 Counting objects: 3, done.
 Total 3 (delta 0), reused 0 (delta 0)
-importing Git objects into Hg
+importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to git://localhost/gitrepo
-importing Hg objects into Git
+exporting hg objects to git
 creating and sending data
     default::refs/heads/beta => GIT:cffa0e8d
     default::refs/heads/not-master => GIT:7eeab2ea
@@ -21,20 +20,17 @@ Switched to branch "master"
 Switched to branch "not-master"
 % this should fail
 pushing to git://localhost/gitrepo
-importing Hg objects into Git
 creating and sending data
 abort: refs/heads/master changed on the server, please pull and merge before pushing
 % ... even with -f
 pushing to git://localhost/gitrepo
-importing Hg objects into Git
 creating and sending data
 abort: refs/heads/master changed on the server, please pull and merge before pushing
 pulling from git://localhost/gitrepo
-importing Hg objects into Git
 Counting objects: 3, done.
 Compressing objects:  50% (1/2)   Compressing objects: 100% (2/2)   Compressing objects: 100% (2/2), done.
 Total 3 (delta 0), reused 0 (delta 0)
-importing Git objects into Hg
+importing git objects into hg
 (run 'hg update' to get a working copy)
 % master and default/master should be diferent
 changeset:   2:72f56395749d
@@ -52,12 +48,10 @@ summary:     add delta
 
 % this should also fail
 pushing to git://localhost/gitrepo
-importing Hg objects into Git
 creating and sending data
 abort: pushing refs/heads/master overwrites 72f56395749d
 % ... but succeed with -f
 pushing to git://localhost/gitrepo
-importing Hg objects into Git
 creating and sending data
     default::refs/heads/beta => GIT:cffa0e8d
     default::refs/heads/not-master => GIT:7eeab2ea

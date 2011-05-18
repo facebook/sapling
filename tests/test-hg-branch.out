@@ -1,20 +1,19 @@
 Initialized empty Git repository in gitrepo/.git/
 
 Switched to a new branch 'not-master'
-importing Hg objects into Git
 Counting objects: 3, done.
 Total 3 (delta 0), reused 0 (delta 0)
-importing Git objects into Hg
+importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to git://localhost/gitrepo
-importing Hg objects into Git
+exporting hg objects to git
 creating and sending data
     default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:05c2bcbe
 marked working directory as branch gamma
 pushing to git://localhost/gitrepo
-importing Hg objects into Git
+exporting hg objects to git
 creating and sending data
     default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:296802ef
@@ -37,11 +36,10 @@ o  changeset:   0:3442585be8a6
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha
 
-importing Hg objects into Git
 Counting objects: 6, done.
 Compressing objects:  33% (1/3)   Compressing objects:  66% (2/3)   Compressing objects: 100% (3/3)   Compressing objects: 100% (3/3), done.
 Total 6 (delta 0), reused 0 (delta 0)
-importing Git objects into Hg
+importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 o  changeset:   2:05aed681ccb3
 |  branch:      gamma

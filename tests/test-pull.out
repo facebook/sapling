@@ -2,10 +2,9 @@ Initialized empty Git repository in gitrepo/.git/
 
 Switched to a new branch "beta"
 % clone a tag
-importing Hg objects into Git
 Counting objects: 3, done.
 Total 3 (delta 0), reused 0 (delta 0)
-importing Git objects into Hg
+importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   0:3442585be8a6
    tag:         alpha
@@ -16,11 +15,10 @@ importing Git objects into Hg
    summary:     add alpha
 
 % clone a branch
-importing Hg objects into Git
 Counting objects: 6, done.
 Compressing objects:  33% (1/3)   Compressing objects:  66% (2/3)   Compressing objects: 100% (3/3)   Compressing objects: 100% (3/3), done.
 Total 6 (delta 0), reused 0 (delta 0)
-importing Git objects into Hg
+importing git objects into hg
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   1:7bcd915dc873
 |  tag:         default/beta

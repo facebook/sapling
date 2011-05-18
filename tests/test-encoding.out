@@ -8,11 +8,10 @@ You may want to amend it after fixing the message, or set the config
 variable i18n.commitencoding to the encoding your project uses.
 Initialized empty Git repository in gitrepo2/
 
-importing Hg objects into Git
 Counting objects: 12, done.
 Compressing objects:  14% (1/7)   Compressing objects:  28% (2/7)   Compressing objects:  42% (3/7)   Compressing objects:  57% (4/7)   Compressing objects:  71% (5/7)   Compressing objects:  85% (6/7)   Compressing objects: 100% (7/7)   Compressing objects: 100% (7/7), done.
 Total 12 (delta 1), reused 0 (delta 0)
-importing Git objects into Hg
+importing git objects into hg
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   3:8549ee7fe0801b2dafc06047ca6f66d36da709f5
 |  tag:         default/master
@@ -75,7 +74,7 @@ o  changeset:   0:bb7d36568d6188ce0de2392246c43f6f213df954
 
 clearing out the git cache data
 pushing to git://localhost/gitrepo2
-importing Hg objects into Git
+exporting hg objects to git
 creating and sending data
 commit da0edb01d4f3d1abf08b1be298379b0b2960e680
 Author: tést èncödîng <test@example.org>
