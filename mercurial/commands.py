@@ -1865,7 +1865,9 @@ def debugrevlog(ui, repo, file_ = None, **opts):
         ts = 0
         heads = set()
         for rev in xrange(numrevs):
-            dbase = r.base(rev)
+            dbase = r.deltaparent(rev)
+            if dbase == -1:
+                dbase = rev
             cbase = r.chainbase(rev)
             p1, p2 = r.parentrevs(rev)
             rs = r.rawsize(rev)
