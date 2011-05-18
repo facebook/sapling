@@ -649,7 +649,7 @@ def outgoing(repo, subset, x):
     return [r for r in subset if r in o]
 
 def tag(repo, subset, x):
-    """``tag(name)``
+    """``tag([name])``
     The specified tag by name, or all tagged revisions if no name is given.
     """
     # i18n: "tag" is a keyword
