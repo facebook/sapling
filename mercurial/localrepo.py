@@ -1544,18 +1544,23 @@ class localrepository(repo.repository):
                 return fstate[1][x]
 
         bundler = changegroup.bundle10(lookup)
+        reorder = self.ui.config('bundle', 'reorder', 'auto')
+        if reorder == 'auto':
+            reorder = None
+        else:
+            reorder = util.parsebool(reorder)
 
         def gengroup():
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
-            for chunk in cl.group(csets, bundler):
+            for chunk in cl.group(csets, bundler, reorder=reorder):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
             count[0] = 0
-            for chunk in mf.group(prune(mf, mfs), bundler):
+            for chunk in mf.group(prune(mf, mfs), bundler, reorder=reorder):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1572,7 +1577,7 @@ class localrepository(repo.repository):
                 first = True
 
                 for chunk in filerevlog.group(prune(filerevlog, fstate[1]),
-                                              bundler):
+                                              bundler, reorder=reorder):
                     if first:
                         if chunk == bundler.close():
                             break
@@ -1640,17 +1645,22 @@ class localrepository(repo.repository):
                 return cl.node(revlog.linkrev(revlog.rev(x)))
 
         bundler = changegroup.bundle10(lookup)
+        reorder = self.ui.config('bundle', 'reorder', 'auto')
+        if reorder == 'auto':
+            reorder = None
+        else:
+            reorder = util.parsebool(reorder)
 
         def gengroup():
             '''yield a sequence of changegroup chunks (strings)'''
             # construct a list of all changed files
 
-            for chunk in cl.group(nodes, bundler):
+            for chunk in cl.group(nodes, bundler, reorder=reorder):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
             count[0] = 0
-            for chunk in mf.group(gennodelst(mf), bundler):
+            for chunk in mf.group(gennodelst(mf), bundler, reorder=reorder):
                 yield chunk
             self.ui.progress(_('bundling'), None)
 
@@ -1661,7 +1671,8 @@ class localrepository(repo.repository):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 fstate[0] = fname
                 first = True
-                for chunk in filerevlog.group(gennodelst(filerevlog), bundler):
+                for chunk in filerevlog.group(gennodelst(filerevlog), bundler,
+                                              reorder=reorder):
                     if first:
                         if chunk == bundler.close():
                             break

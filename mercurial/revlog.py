@@ -14,7 +14,7 @@ and O(changes) merge between branches.
 # import stuff from node for others to import from revlog
 from node import bin, hex, nullid, nullrev, short #@UnusedImport
 from i18n import _
-import ancestor, mdiff, parsers, error, util
+import ancestor, mdiff, parsers, error, util, dagutil
 import struct, zlib, errno
 
 _pack = struct.pack
@@ -1086,7 +1086,7 @@ class revlog(object):
         self._basecache = (curr, chainbase)
         return node
 
-    def group(self, nodelist, bundler):
+    def group(self, nodelist, bundler, reorder=None):
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
 
@@ -1098,7 +1098,14 @@ class revlog(object):
         changegroup starts with a full revision.
         """
 
-        revs = sorted([self.rev(n) for n in nodelist])
+        # for generaldelta revlogs, we linearize the revs; this will both be
+        # much quicker and generate a much smaller bundle
+        if (self._generaldelta and reorder is not False) or reorder:
+            dag = dagutil.revlogdag(self)
+            revs = set(self.rev(n) for n in nodelist)
+            revs = dag.linearize(revs)
+        else:
+            revs = sorted([self.rev(n) for n in nodelist])
 
         # if we don't have any revisions touched by these changesets, bail
         if not revs:
