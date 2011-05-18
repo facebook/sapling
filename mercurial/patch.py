@@ -372,8 +372,10 @@ class abstractbackend(object):
         """
         raise NotImplementedError
 
-    def writelines(self, fname, lines):
-        """Write lines to target file."""
+    def writelines(self, fname, lines, mode):
+        """Write lines to target file. mode is a (islink, isexec)
+        tuple, or None if there is no mode information.
+        """
         raise NotImplementedError
 
     def unlink(self, fname):
@@ -397,6 +399,10 @@ class abstractbackend(object):
     def exists(self, fname):
         raise NotImplementedError
 
+    def setmode(self, fname, islink, isexec):
+        """Change target file mode."""
+        raise NotImplementedError
+
 class fsbackend(abstractbackend):
     def __init__(self, ui, basedir):
         super(fsbackend, self).__init__(ui)
@@ -414,29 +420,24 @@ class fsbackend(abstractbackend):
         finally:
             fp.close()
 
-    def writelines(self, fname, lines):
-        # Ensure supplied data ends in fname, being a regular file or
-        # a symlink. _updatedir will -too magically- take care
-        # of setting it to the proper type afterwards.
-        st_mode = None
-        islink = os.path.islink(self._join(fname))
-        if islink:
-            fp = cStringIO.StringIO()
-        else:
+    def writelines(self, fname, lines, mode):
+        if not mode:
+            # Preserve mode information
+            isexec, islink = False, False
             try:
-                st_mode = os.lstat(self._join(fname)).st_mode & 0777
+                isexec = os.lstat(self._join(fname)).st_mode & 0100 != 0
+                islink = os.path.islink(self._join(fname))
             except OSError, e:
                 if e.errno != errno.ENOENT:
                     raise
-            fp = self.opener(fname, 'w')
-        try:
-            fp.writelines(lines)
-            if islink:
-                self.opener.symlink(fp.getvalue(), fname)
-            if st_mode is not None:
-                os.chmod(self._join(fname), st_mode)
-        finally:
-            fp.close()
+        else:
+            islink, isexec = mode
+        if islink:
+            self.opener.symlink(''.join(lines), fname)
+        else:
+            self.opener(fname, 'w').writelines(lines)
+            if isexec:
+                util.setflags(self._join(fname), False, True)
 
     def unlink(self, fname):
         os.unlink(self._join(fname))
@@ -470,13 +471,17 @@ class fsbackend(abstractbackend):
     def exists(self, fname):
         return os.path.lexists(self._join(fname))
 
+    def setmode(self, fname, islink, isexec):
+        util.setflags(self._join(fname), islink, isexec)
+
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
 eolmodes = ['strict', 'crlf', 'lf', 'auto']
 
 class patchfile(object):
-    def __init__(self, ui, fname, backend, missing=False, eolmode='strict'):
+    def __init__(self, ui, fname, backend, mode, missing=False,
+                 eolmode='strict'):
         self.fname = fname
         self.eolmode = eolmode
         self.eol = None
@@ -485,6 +490,7 @@ class patchfile(object):
         self.lines = []
         self.exists = False
         self.missing = missing
+        self.mode = mode
         if not missing:
             try:
                 self.lines = self.backend.readlines(fname)
@@ -516,7 +522,7 @@ class patchfile(object):
         self.printfile(False)
         self.hunks = 0
 
-    def writelines(self, fname, lines):
+    def writelines(self, fname, lines, mode):
         if self.eolmode == 'auto':
             eol = self.eol
         elif self.eolmode == 'crlf':
@@ -532,7 +538,7 @@ class patchfile(object):
                 rawlines.append(l)
             lines = rawlines
 
-        self.backend.writelines(fname, lines)
+        self.backend.writelines(fname, lines, mode)
 
     def printfile(self, warn):
         if self.fileprinted:
@@ -670,7 +676,7 @@ class patchfile(object):
 
     def close(self):
         if self.dirty:
-            self.writelines(self.fname, self.lines)
+            self.writelines(self.fname, self.lines, self.mode)
         self.write_rej()
         return len(self.rej)
 
@@ -1087,14 +1093,16 @@ def iterhunks(fp):
             hunknum += 1
             if emitfile:
                 emitfile = False
-                yield 'file', (afile, bfile, h)
+                yield 'file', (afile, bfile, h, gpatch and gpatch.mode or None)
             yield 'hunk', h
         elif state == BFILE and x.startswith('GIT binary patch'):
-            h = binhunk(changed[bfile])
+            gpatch = changed[bfile]
+            h = binhunk(gpatch)
             hunknum += 1
             if emitfile:
                 emitfile = False
-                yield 'file', ('a/' + afile, 'b/' + bfile, h)
+                yield 'file', ('a/' + afile, 'b/' + bfile, h,
+                               gpatch and gpatch.mode or None)
             h.extract(lr)
             yield 'hunk', h
         elif x.startswith('diff --git'):
@@ -1181,11 +1189,11 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
         elif state == 'file':
             if current_file:
                 rejects += current_file.close()
-            afile, bfile, first_hunk = values
+            afile, bfile, first_hunk, mode = values
             try:
                 current_file, missing = selectfile(backend, afile, bfile,
                                                    first_hunk, strip)
-                current_file = patcher(ui, current_file, backend,
+                current_file = patcher(ui, current_file, backend, mode,
                                        missing=missing, eolmode=eolmode)
             except PatchError, inst:
                 ui.warn(str(inst) + '\n')
@@ -1207,6 +1215,16 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
 
     if current_file:
         rejects += current_file.close()
+
+    # Handle mode changes without hunk
+    for gp in changed.itervalues():
+        if not gp or not gp.mode:
+            continue
+        if gp.op == 'ADD' and not backend.exists(gp.path):
+            # Added files without content have no hunk and must be created
+            backend.writelines(gp.path, [], gp.mode)
+        else:
+            backend.setmode(gp.path, gp.mode[0], gp.mode[1])
 
     if rejects:
         return -1
@@ -1240,16 +1258,6 @@ def _updatedir(ui, repo, patches, similarity=0):
     if (not similarity) and removes:
         wctx.remove(sorted(removes), True)
 
-    for f in patches:
-        gp = patches[f]
-        if gp and gp.mode:
-            islink, isexec = gp.mode
-            dst = repo.wjoin(gp.path)
-            # patch won't create empty files
-            if gp.op == 'ADD' and not os.path.lexists(dst):
-                flags = (isexec and 'x' or '') + (islink and 'l' or '')
-                repo.wwrite(gp.path, '', flags)
-            util.setflags(dst, islink, isexec)
     scmutil.addremove(repo, cfiles, similarity=similarity)
     files = patches.keys()
     files.extend([r for r in removes if r not in files])
@@ -1359,7 +1367,7 @@ def changedfiles(ui, repo, patchpath, strip=1):
             if state == 'hunk':
                 continue
             elif state == 'file':
-                afile, bfile, first_hunk = values
+                afile, bfile, first_hunk, mode = values
                 current_file, missing = selectfile(backend, afile, bfile,
                                                    first_hunk, strip)
                 changed.add(current_file)
