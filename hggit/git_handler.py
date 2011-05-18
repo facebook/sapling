@@ -667,6 +667,7 @@ class GitHandler(object):
             else:
                 want = [sha for ref, sha in refs.iteritems()
                         if not ref.endswith('^{}')]
+            want = [x for x in want if x not in self.git]
             return want
         f, commit = self.git.object_store.add_pack()
         try:
