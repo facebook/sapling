@@ -366,16 +366,16 @@ class abstractbackend(object):
     def __init__(self, ui):
         self.ui = ui
 
-    def readlines(self, fname):
-        """Return target file lines, or its content as a single line
-        for symlinks.
+    def getfile(self, fname):
+        """Return target file data and flags as a (data, (islink,
+        isexec)) tuple.
         """
         raise NotImplementedError
 
-    def setfile(self, fname, lines, mode):
-        """Write lines to target file. mode is a (islink, isexec)
-        tuple, or None if there is no mode information. If lines is None,
-        the file must exists and its content is left unchanged.
+    def setfile(self, fname, data, mode):
+        """Write data to target file fname and set its mode. mode is a
+        (islink, isexec) tuple. If data is None, the file content should
+        be left unchanged.
         """
         raise NotImplementedError
 
@@ -408,35 +408,28 @@ class fsbackend(abstractbackend):
     def _join(self, f):
         return os.path.join(self.opener.base, f)
 
-    def readlines(self, fname):
-        if os.path.islink(self._join(fname)):
-            return [os.readlink(self._join(fname))]
-        fp = self.opener(fname, 'r')
+    def getfile(self, fname):
+        path = self._join(fname)
+        if os.path.islink(path):
+            return (os.readlink(path), (True, False))
+        isexec, islink = False, False
         try:
-            return list(fp)
-        finally:
-            fp.close()
+            isexec = os.lstat(path).st_mode & 0100 != 0
+            islink = os.path.islink(path)
+        except OSError, e:
+            if e.errno != errno.ENOENT:
+                raise
+        return (self.opener.read(fname), (islink, isexec))
 
-    def setfile(self, fname, lines, mode):
-        if lines is None:
-            if mode:
-                util.setflags(self._join(fname), mode[0], mode[1])
+    def setfile(self, fname, data, mode):
+        islink, isexec = mode
+        if data is None:
+            util.setflags(self._join(fname), islink, isexec)
             return
-        if not mode:
-            # Preserve mode information
-            isexec, islink = False, False
-            try:
-                isexec = os.lstat(self._join(fname)).st_mode & 0100 != 0
-                islink = os.path.islink(self._join(fname))
-            except OSError, e:
-                if e.errno != errno.ENOENT:
-                    raise
-        else:
-            islink, isexec = mode
         if islink:
-            self.opener.symlink(''.join(lines), fname)
+            self.opener.symlink(data, fname)
         else:
-            self.opener(fname, 'w').writelines(lines)
+            self.opener.write(fname, data)
             if isexec:
                 util.setflags(self._join(fname), False, True)
 
@@ -485,8 +478,8 @@ class workingbackend(fsbackend):
         self.changed = set()
         self.copied = []
 
-    def setfile(self, fname, lines, mode):
-        super(workingbackend, self).setfile(fname, lines, mode)
+    def setfile(self, fname, data, mode):
+        super(workingbackend, self).setfile(fname, data, mode)
         self.changed.add(fname)
 
     def unlink(self, fname):
@@ -534,7 +527,11 @@ class patchfile(object):
         self.mode = mode
         if not missing:
             try:
-                self.lines = self.backend.readlines(fname)
+                data, mode = self.backend.getfile(fname)
+                if data:
+                    self.lines = data.splitlines(True)
+                if self.mode is None:
+                    self.mode = mode
                 if self.lines:
                     # Normalize line endings
                     if self.lines[0].endswith('\r\n'):
@@ -550,7 +547,8 @@ class patchfile(object):
                         self.lines = nlines
                 self.exists = True
             except IOError:
-                pass
+                if self.mode is None:
+                    self.mode = (False, False)
         else:
             self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
 
@@ -579,7 +577,7 @@ class patchfile(object):
                 rawlines.append(l)
             lines = rawlines
 
-        self.backend.setfile(fname, lines, mode)
+        self.backend.setfile(fname, ''.join(lines), mode)
 
     def printfile(self, warn):
         if self.fileprinted:
@@ -1250,7 +1248,7 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
                     if gp.op == 'ADD':
                         # Added files without content have no hunk and
                         # must be created
-                        data = []
+                        data = ''
                     backend.setfile(path, data, gp.mode)
             if not first_hunk:
                 continue
