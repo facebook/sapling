@@ -1157,7 +1157,8 @@ def iterhunks(fp):
                 # scan whole input for git metadata
                 gitpatches = [('b/' + gp.path, gp) for gp
                               in scangitpatch(lr, x)]
-                yield 'git', [g[1] for g in gitpatches]
+                yield 'git', [g[1] for g in gitpatches
+                              if g[1].op in ('COPY', 'RENAME')]
                 gitpatches.reverse()
             afile = 'a/' + m.group(1)
             bfile = 'b/' + m.group(2)
@@ -1220,6 +1221,10 @@ def applydiff(ui, fp, changed, backend, strip=1, eolmode='strict'):
                       eolmode=eolmode)
 
 def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
+
+    def pstrip(p):
+        return pathstrip(p, strip - 1)[1]
+
     rejects = 0
     err = 0
     current_file = None
@@ -1239,18 +1244,19 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
                 current_file = None
             afile, bfile, first_hunk, gp = values
             if gp:
-                changed[gp.path] = gp
+                path = pstrip(gp.path)
+                changed[path] = gp
                 if gp.op == 'DELETE':
-                    backend.unlink(gp.path)
+                    backend.unlink(path)
                     continue
                 if gp.op == 'RENAME':
-                    backend.unlink(gp.oldpath)
+                    backend.unlink(pstrip(gp.oldpath))
                 if gp.mode and not first_hunk:
                     if gp.op == 'ADD':
                         # Added files without content have no hunk and must be created
-                        backend.writelines(gp.path, [], gp.mode)
+                        backend.writelines(path, [], gp.mode)
                     else:
-                        backend.setmode(gp.path, gp.mode[0], gp.mode[1])
+                        backend.setmode(path, gp.mode[0], gp.mode[1])
             if not first_hunk:
                 continue
             try:
@@ -1266,11 +1272,7 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
                 continue
         elif state == 'git':
             for gp in values:
-                gp.path = pathstrip(gp.path, strip - 1)[1]
-                if gp.oldpath:
-                    gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
-                if gp.op in ('COPY', 'RENAME'):
-                    backend.copy(gp.oldpath, gp.path)
+                backend.copy(pstrip(gp.oldpath), pstrip(gp.path))
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
 
@@ -1387,25 +1389,18 @@ def changedfiles(ui, repo, patchpath, strip=1):
     try:
         changed = set()
         for state, values in iterhunks(fp):
-            if state == 'hunk':
-                continue
-            elif state == 'file':
+            if state == 'file':
                 afile, bfile, first_hunk, gp = values
                 if gp:
-                    changed.add(gp.path)
+                    changed.add(pathstrip(gp.path, strip - 1)[1])
                     if gp.op == 'RENAME':
-                        changed.add(gp.oldpath)
+                        changed.add(pathstrip(gp.oldpath, strip - 1)[1])
                 if not first_hunk:
                     continue
                 current_file, missing = selectfile(backend, afile, bfile,
                                                    first_hunk, strip)
                 changed.add(current_file)
-            elif state == 'git':
-                for gp in values:
-                    gp.path = pathstrip(gp.path, strip - 1)[1]
-                    if gp.oldpath:
-                        gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
-            else:
+            elif state not in ('hunk', 'git'):
                 raise util.Abort(_('unsupported parser state: %s') % state)
         return changed
     finally:
