@@ -1113,13 +1113,12 @@ def iterhunks(fp):
     - ("git", gitchanges): current diff is in git format, gitchanges
     maps filenames to gitpatch records. Unique event.
     """
-    changed = {}
     afile = ""
     bfile = ""
     state = None
     hunknum = 0
     emitfile = newfile = False
-    git = False
+    gitpatches = None
 
     # our states
     BFILE = 1
@@ -1134,7 +1133,9 @@ def iterhunks(fp):
             (not context and x[0] == '@')
             or (context is not False and x.startswith('***************'))
             or x.startswith('GIT binary patch')):
-            gp = changed.get(bfile)
+            gp = None
+            if gitpatches and gitpatches[-1][0] == bfile:
+                gp = gitpatches.pop()[1]
             if x.startswith('GIT binary patch'):
                 h = binhunk(gp, lr)
             else:
@@ -1146,22 +1147,24 @@ def iterhunks(fp):
             hunknum += 1
             if emitfile:
                 emitfile = False
-                yield 'file', (afile, bfile, h, gp and gp.mode or None)
+                yield 'file', (afile, bfile, h, gp)
             yield 'hunk', h
         elif x.startswith('diff --git'):
             m = gitre.match(x)
             if not m:
                 continue
-            if not git:
+            if gitpatches is None:
                 # scan whole input for git metadata
-                git = True
-                gitpatches = scangitpatch(lr, x)
-                for gp in gitpatches:
-                    changed['b/' + gp.path] = gp
-                yield 'git', gitpatches
+                gitpatches = [('b/' + gp.path, gp) for gp
+                              in scangitpatch(lr, x)]
+                yield 'git', [g[1] for g in gitpatches]
+                gitpatches.reverse()
             afile = 'a/' + m.group(1)
             bfile = 'b/' + m.group(2)
-            gp = changed[bfile]
+            while bfile != gitpatches[-1][0]:
+                gp = gitpatches.pop()[1]
+                yield 'file', ('a/' + gp.path, 'b/' + gp.path, None, gp)
+            gp = gitpatches[-1][1]
             # copy/rename + modify should modify target, not source
             if gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD') or gp.mode:
                 afile = bfile
@@ -1198,6 +1201,10 @@ def iterhunks(fp):
             state = BFILE
             hunknum = 0
 
+    while gitpatches:
+        gp = gitpatches.pop()[1]
+        yield 'file', ('a/' + gp.path, 'b/' + gp.path, None, gp)
+
 def applydiff(ui, fp, changed, backend, strip=1, eolmode='strict'):
     """Reads a patch from fp and tries to apply it.
 
@@ -1229,8 +1236,25 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
         elif state == 'file':
             if current_file:
                 rejects += current_file.close()
-            afile, bfile, first_hunk, mode = values
+                current_file = None
+            afile, bfile, first_hunk, gp = values
+            if gp:
+                changed[gp.path] = gp
+                if gp.op == 'DELETE':
+                    backend.unlink(gp.path)
+                    continue
+                if gp.op == 'RENAME':
+                    backend.unlink(gp.oldpath)
+                if gp.mode and not first_hunk:
+                    if gp.op == 'ADD':
+                        # Added files without content have no hunk and must be created
+                        backend.writelines(gp.path, [], gp.mode)
+                    else:
+                        backend.setmode(gp.path, gp.mode[0], gp.mode[1])
+            if not first_hunk:
+                continue
             try:
+                mode = gp and gp.mode or None
                 current_file, missing = selectfile(backend, afile, bfile,
                                                    first_hunk, strip)
                 current_file = patcher(ui, current_file, backend, mode,
@@ -1247,31 +1271,11 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
                     gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
                 if gp.op in ('COPY', 'RENAME'):
                     backend.copy(gp.oldpath, gp.path)
-                changed[gp.path] = gp
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
 
     if current_file:
         rejects += current_file.close()
-
-    # Handle mode changes without hunk
-    removed = set()
-    for gp in changed.itervalues():
-        if not gp:
-            continue
-        if gp.op == 'DELETE':
-            removed.add(gp.path)
-            continue
-        if gp.op == 'RENAME':
-            removed.add(gp.oldpath)
-        if gp.mode:
-            if gp.op == 'ADD' and not backend.exists(gp.path):
-                # Added files without content have no hunk and must be created
-                backend.writelines(gp.path, [], gp.mode)
-            else:
-                backend.setmode(gp.path, gp.mode[0], gp.mode[1])
-    for path in sorted(removed):
-        backend.unlink(path)
 
     if rejects:
         return -1
@@ -1386,18 +1390,21 @@ def changedfiles(ui, repo, patchpath, strip=1):
             if state == 'hunk':
                 continue
             elif state == 'file':
-                afile, bfile, first_hunk, mode = values
+                afile, bfile, first_hunk, gp = values
+                if gp:
+                    changed.add(gp.path)
+                    if gp.op == 'RENAME':
+                        changed.add(gp.oldpath)
+                if not first_hunk:
+                    continue
                 current_file, missing = selectfile(backend, afile, bfile,
                                                    first_hunk, strip)
                 changed.add(current_file)
             elif state == 'git':
                 for gp in values:
                     gp.path = pathstrip(gp.path, strip - 1)[1]
-                    changed.add(gp.path)
                     if gp.oldpath:
                         gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
-                        if gp.op == 'RENAME':
-                            changed.add(gp.oldpath)
             else:
                 raise util.Abort(_('unsupported parser state: %s') % state)
         return changed
