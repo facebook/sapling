@@ -1129,28 +1129,26 @@ def iterhunks(fp):
         x = lr.readline()
         if not x:
             break
-        if (state == BFILE and ((not context and x[0] == '@') or
-            ((context is not False) and x.startswith('***************')))):
-            if context is None and x.startswith('***************'):
-                context = True
-            gpatch = changed.get(bfile)
-            create = afile == '/dev/null' or gpatch and gpatch.op == 'ADD'
-            remove = bfile == '/dev/null' or gpatch and gpatch.op == 'DELETE'
-            h = hunk(x, hunknum + 1, lr, context, create, remove)
+        if state == BFILE and (
+            (not context and x[0] == '@')
+            or (context is not False and x.startswith('***************'))
+            or x.startswith('GIT binary patch')):
+            gp = changed.get(bfile)
+            if x.startswith('GIT binary patch'):
+                h = binhunk(gp)
+                h.extract(lr)
+                afile = 'a/' + afile
+                bfile = 'b/' + bfile
+            else:
+                if context is None and x.startswith('***************'):
+                    context = True
+                create = afile == '/dev/null' or gp and gp.op == 'ADD'
+                remove = bfile == '/dev/null' or gp and gp.op == 'DELETE'
+                h = hunk(x, hunknum + 1, lr, context, create, remove)
             hunknum += 1
             if emitfile:
                 emitfile = False
-                yield 'file', (afile, bfile, h, gpatch and gpatch.mode or None)
-            yield 'hunk', h
-        elif state == BFILE and x.startswith('GIT binary patch'):
-            gpatch = changed[bfile]
-            h = binhunk(gpatch)
-            hunknum += 1
-            if emitfile:
-                emitfile = False
-                yield 'file', ('a/' + afile, 'b/' + bfile, h,
-                               gpatch and gpatch.mode or None)
-            h.extract(lr)
+                yield 'file', (afile, bfile, h, gp and gp.mode or None)
             yield 'hunk', h
         elif x.startswith('diff --git'):
             # check for git diff, scanning the whole patch file if needed
