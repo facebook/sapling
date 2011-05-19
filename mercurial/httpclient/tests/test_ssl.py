@@ -41,15 +41,15 @@ class HttpSslTest(util.HttpTestBase, unittest.TestCase):
         con._connect()
         # extend the list instead of assign because of how
         # MockSSLSocket works.
-        con.sock.data.extend(['HTTP/1.1 200 OK\r\n',
-                              'Server: BogusServer 1.0\r\n',
-                              'MultiHeader: Value\r\n'
-                              'MultiHeader: Other Value\r\n'
-                              'MultiHeader: One More!\r\n'
-                              'Content-Length: 10\r\n',
-                              '\r\n'
-                              '1234567890'
-                              ])
+        con.sock.data = ['HTTP/1.1 200 OK\r\n',
+                         'Server: BogusServer 1.0\r\n',
+                         'MultiHeader: Value\r\n'
+                         'MultiHeader: Other Value\r\n'
+                         'MultiHeader: One More!\r\n'
+                         'Content-Length: 10\r\n',
+                         '\r\n'
+                         '1234567890'
+                         ]
         con.request('GET', '/')
 
         expected_req = ('GET / HTTP/1.1\r\n'
@@ -68,17 +68,15 @@ class HttpSslTest(util.HttpTestBase, unittest.TestCase):
     def testSslRereadInEarlyResponse(self):
         con = http.HTTPConnection('1.2.3.4:443')
         con._connect()
-        # extend the list instead of assign because of how
-        # MockSSLSocket works.
-        con.sock.early_data.extend(['HTTP/1.1 200 OK\r\n',
-                                    'Server: BogusServer 1.0\r\n',
-                                    'MultiHeader: Value\r\n'
-                                    'MultiHeader: Other Value\r\n'
-                                    'MultiHeader: One More!\r\n'
-                                    'Content-Length: 10\r\n',
-                                    '\r\n'
-                                    '1234567890'
-                                    ])
+        con.sock.early_data = ['HTTP/1.1 200 OK\r\n',
+                               'Server: BogusServer 1.0\r\n',
+                               'MultiHeader: Value\r\n'
+                               'MultiHeader: Other Value\r\n'
+                               'MultiHeader: One More!\r\n'
+                               'Content-Length: 10\r\n',
+                               '\r\n'
+                               '1234567890'
+                               ]
 
         expected_req = self.doPost(con, False)
         self.assertEqual(None, con.sock,
@@ -92,3 +90,4 @@ class HttpSslTest(util.HttpTestBase, unittest.TestCase):
                          resp.headers.getheaders('multiheader'))
         self.assertEqual(['BogusServer 1.0'],
                          resp.headers.getheaders('server'))
+# no-check-code

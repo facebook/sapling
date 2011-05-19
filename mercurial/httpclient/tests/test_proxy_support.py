@@ -43,7 +43,7 @@ def make_preloaded_socket(data):
     """
     def s(*args, **kwargs):
         sock = util.MockSocket(*args, **kwargs)
-        sock.data = data[:]
+        sock.early_data = data[:]
         return sock
     return s
 
@@ -97,24 +97,27 @@ class ProxyHttpTest(util.HttpTestBase, unittest.TestCase):
              '\r\n'
              '1234567890'])
         con._connect()
-        con.sock.data.extend(['HTTP/1.1 200 OK\r\n',
-                              'Server: BogusServer 1.0\r\n',
-                              'Content-Length: 10\r\n',
-                              '\r\n'
-                              '1234567890'
-                              ])
+        con.sock.data = ['HTTP/1.1 200 OK\r\n',
+                         'Server: BogusServer 1.0\r\n',
+                         'Content-Length: 10\r\n',
+                         '\r\n'
+                         '1234567890'
+                         ]
+        connect_sent = con.sock.sent
+        con.sock.sent = ''
         con.request('GET', '/')
 
-        expected_req = ('CONNECT 1.2.3.4:443 HTTP/1.0\r\n'
-                        'Host: 1.2.3.4\r\n'
-                        'accept-encoding: identity\r\n'
-                        '\r\n'
-                        'GET / HTTP/1.1\r\n'
-                        'Host: 1.2.3.4\r\n'
-                        'accept-encoding: identity\r\n\r\n')
+        expected_connect = ('CONNECT 1.2.3.4:443 HTTP/1.0\r\n'
+                            'Host: 1.2.3.4\r\n'
+                            'accept-encoding: identity\r\n'
+                            '\r\n')
+        expected_request = ('GET / HTTP/1.1\r\n'
+                            'Host: 1.2.3.4\r\n'
+                            'accept-encoding: identity\r\n\r\n')
 
         self.assertEqual(('127.0.0.42', 4242), con.sock.sa)
-        self.assertStringEqual(expected_req, con.sock.sent)
+        self.assertStringEqual(expected_connect, connect_sent)
+        self.assertStringEqual(expected_request, con.sock.sent)
         resp = con.getresponse()
         self.assertEqual(resp.status, 200)
         self.assertEqual('1234567890', resp.read())

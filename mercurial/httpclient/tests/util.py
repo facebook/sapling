@@ -88,7 +88,7 @@ class MockSocket(object):
     def ready_for_read(self):
         return ((self.early_data and http._END_HEADERS in self.sent)
                 or (self.read_wait_sentinel in self.sent and self.data)
-                or self.closed)
+                or self.closed or self.remote_closed)
 
     def send(self, data):
         # this is a horrible mock, but nothing needs us to raise the
@@ -116,6 +116,11 @@ class MockSSLSocket(object):
 
     def __getattr__(self, key):
         return getattr(self._sock, key)
+
+    def __setattr__(self, key, value):
+        if key not in ('_sock', '_fail_recv'):
+            return setattr(self._sock, key, value)
+        return object.__setattr__(self, key, value)
 
     def recv(self, amt=-1):
         try:

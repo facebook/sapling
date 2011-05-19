@@ -144,7 +144,7 @@ plain mode with exceptions
   $ echo "plain=./plain.py" >> $HGRCPATH
   $ HGPLAINEXCEPT=; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
-  plain: ['']
+  plain: True
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
@@ -153,7 +153,7 @@ plain mode with exceptions
   none: ui.quiet=False
   $ unset HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
-  plain: ['']
+  plain: True
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
@@ -162,7 +162,7 @@ plain mode with exceptions
   none: ui.quiet=False
   $ HGPLAINEXCEPT=i18n; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
-  plain: ['i18n']
+  plain: True
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
