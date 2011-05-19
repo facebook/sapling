@@ -620,7 +620,7 @@ class queue(object):
         files = {}
         try:
             fuzz = patchmod.patch(self.ui, repo, patchfile, strip=1,
-                                  cwd=repo.root, files=files, eolmode=None)
+                                  files=files, eolmode=None)
             return (True, list(files), fuzz)
         except Exception, inst:
             self.ui.note(str(inst) + '\n')

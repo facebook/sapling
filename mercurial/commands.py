@@ -3105,8 +3105,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                 repo.dirstate.setbranch(branch or 'default')
 
             files = {}
-            patch.patch(ui, repo, tmpname, strip=strip, cwd=repo.root,
-                        files=files, eolmode=None, similarity=sim / 100.0)
+            patch.patch(ui, repo, tmpname, strip=strip, files=files,
+                        eolmode=None, similarity=sim / 100.0)
             files = list(files)
             if opts.get('no_commit'):
                 if message:

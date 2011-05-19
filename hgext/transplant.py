@@ -227,8 +227,7 @@ class transplanter(object):
         if patchfile:
             try:
                 files = {}
-                patch.patch(self.ui, repo, patchfile, cwd=repo.root,
-                            files=files, eolmode=None)
+                patch.patch(self.ui, repo, patchfile, files=files, eolmode=None)
                 files = list(files)
                 if not files:
                     self.ui.warn(_('%s: empty changeset') % revlog.hex(node))

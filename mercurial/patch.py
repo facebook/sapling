@@ -1281,13 +1281,14 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
         return -1
     return err
 
-def _externalpatch(ui, repo, patcher, patchname, strip, cwd, files,
+def _externalpatch(ui, repo, patcher, patchname, strip, files,
                    similarity):
     """use <patcher> to apply <patchname> to the working directory.
     returns whether patch was applied with fuzz factor."""
 
     fuzz = False
     args = []
+    cwd = repo.root
     if cwd:
         args.append('-d %s' % util.shellquote(cwd))
     fp = util.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
@@ -1355,7 +1356,7 @@ def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
         raise PatchError(_('patch failed to apply'))
     return ret > 0
 
-def patch(ui, repo, patchname, strip=1, cwd=None, files=None, eolmode='strict',
+def patch(ui, repo, patchname, strip=1, files=None, eolmode='strict',
           similarity=0):
     """Apply <patchname> to the working directory.
 
@@ -1374,7 +1375,7 @@ def patch(ui, repo, patchname, strip=1, cwd=None, files=None, eolmode='strict',
     try:
         if patcher:
             return _externalpatch(ui, repo, patcher, patchname, strip,
-                                  cwd, files, similarity)
+                                  files, similarity)
         return internalpatch(ui, repo, patchname, strip, files, eolmode,
                              similarity)
     except PatchError, err:
