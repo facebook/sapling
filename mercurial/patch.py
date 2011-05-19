@@ -1281,40 +1281,8 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
         return -1
     return err
 
-def _updatedir(ui, repo, patches, similarity=0):
-    '''Update dirstate after patch application according to metadata'''
-    if not patches:
-        return []
-    copies = []
-    removes = set()
-    cfiles = patches.keys()
-    cwd = repo.getcwd()
-    if cwd:
-        cfiles = [util.pathto(repo.root, cwd, f) for f in patches.keys()]
-    for f in patches:
-        gp = patches[f]
-        if not gp:
-            continue
-        if gp.op == 'RENAME':
-            copies.append((gp.oldpath, gp.path))
-            removes.add(gp.oldpath)
-        elif gp.op == 'COPY':
-            copies.append((gp.oldpath, gp.path))
-        elif gp.op == 'DELETE':
-            removes.add(gp.path)
-
-    wctx = repo[None]
-    for src, dst in copies:
-        scmutil.dirstatecopy(ui, repo, wctx, src, dst, cwd=cwd)
-    if (not similarity) and removes:
-        wctx.remove(sorted(removes))
-
-    scmutil.addremove(repo, cfiles, similarity=similarity)
-    files = patches.keys()
-    files.extend([r for r in removes if r not in files])
-    return sorted(files)
-
-def _externalpatch(patcher, patchname, ui, strip, cwd, files):
+def _externalpatch(ui, repo, patcher, patchname, strip, cwd, files,
+                   similarity):
     """use <patcher> to apply <patchname> to the working directory.
     returns whether patch was applied with fuzz factor."""
 
@@ -1324,27 +1292,35 @@ def _externalpatch(patcher, patchname, ui, strip, cwd, files):
         args.append('-d %s' % util.shellquote(cwd))
     fp = util.popen('%s %s -p%d < %s' % (patcher, ' '.join(args), strip,
                                        util.shellquote(patchname)))
-
-    for line in fp:
-        line = line.rstrip()
-        ui.note(line + '\n')
-        if line.startswith('patching file '):
-            pf = util.parsepatchoutput(line)
-            printed_file = False
-            files.setdefault(pf, None)
-        elif line.find('with fuzz') >= 0:
-            fuzz = True
-            if not printed_file:
-                ui.warn(pf + '\n')
-                printed_file = True
-            ui.warn(line + '\n')
-        elif line.find('saving rejects to file') >= 0:
-            ui.warn(line + '\n')
-        elif line.find('FAILED') >= 0:
-            if not printed_file:
-                ui.warn(pf + '\n')
-                printed_file = True
-            ui.warn(line + '\n')
+    try:
+        for line in fp:
+            line = line.rstrip()
+            ui.note(line + '\n')
+            if line.startswith('patching file '):
+                pf = util.parsepatchoutput(line)
+                printed_file = False
+                files.setdefault(pf, None)
+            elif line.find('with fuzz') >= 0:
+                fuzz = True
+                if not printed_file:
+                    ui.warn(pf + '\n')
+                    printed_file = True
+                ui.warn(line + '\n')
+            elif line.find('saving rejects to file') >= 0:
+                ui.warn(line + '\n')
+            elif line.find('FAILED') >= 0:
+                if not printed_file:
+                    ui.warn(pf + '\n')
+                    printed_file = True
+                ui.warn(line + '\n')
+    finally:
+        if files:
+            cfiles = list(files)
+            cwd = repo.getcwd()
+            if cwd:
+                cfiles = [util.pathto(repo.root, cwd, f)
+                          for f in cfile]
+            scmutil.addremove(repo, cfiles, similarity=similarity)
     code = fp.close()
     if code:
         raise PatchError(_("patch command failed: %s") %
@@ -1397,12 +1373,8 @@ def patch(ui, repo, patchname, strip=1, cwd=None, files=None, eolmode='strict',
         files = {}
     try:
         if patcher:
-            try:
-                return _externalpatch(patcher, patchname, ui, strip, cwd,
-                                      files)
-            finally:
-                touched = _updatedir(ui, repo, files, similarity)
-                files.update(dict.fromkeys(touched))
+            return _externalpatch(ui, repo, patcher, patchname, strip,
+                                  cwd, files, similarity)
         return internalpatch(ui, repo, patchname, strip, files, eolmode,
                              similarity)
     except PatchError, err:
