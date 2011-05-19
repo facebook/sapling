@@ -205,6 +205,11 @@ class changelog(revlog.revlog):
 
     def add(self, manifest, files, desc, transaction, p1, p2,
                   user, date=None, extra=None):
+        # Convert to UTF-8 encoded bytestrings as the very first
+        # thing: calling any method on a localstr object will turn it
+        # into a str object and the cached UTF-8 string is thus lost.
+        user, desc = encoding.fromlocal(user), encoding.fromlocal(desc)
+
         user = user.strip()
         # An empty username or a username with a "\n" will make the
         # revision text contain two "\n\n" sequences -> corrupt
@@ -217,8 +222,6 @@ class changelog(revlog.revlog):
 
         # strip trailing whitespace and leading and trailing empty lines
         desc = '\n'.join([l.rstrip() for l in desc.splitlines()]).strip('\n')
-
-        user, desc = encoding.fromlocal(user), encoding.fromlocal(desc)
 
         if date:
             parseddate = "%d %d" % util.parsedate(date)
