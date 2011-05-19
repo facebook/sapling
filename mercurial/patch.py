@@ -1149,22 +1149,23 @@ def iterhunks(fp):
                 yield 'file', (afile, bfile, h, gp and gp.mode or None)
             yield 'hunk', h
         elif x.startswith('diff --git'):
-            # check for git diff, scanning the whole patch file if needed
             m = gitre.match(x)
-            if m:
-                if not git:
-                    git = True
-                    gitpatches = scangitpatch(lr, x)
-                    for gp in gitpatches:
-                        changed['b/' + gp.path] = gp
-                    yield 'git', gitpatches
-                afile = 'a/' + m.group(1)
-                bfile = 'b/' + m.group(2)
-                gp = changed[bfile]
-                # copy/rename + modify should modify target, not source
-                if gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD') or gp.mode:
-                    afile = bfile
-                newfile = True
+            if not m:
+                continue
+            if not git:
+                # scan whole input for git metadata
+                git = True
+                gitpatches = scangitpatch(lr, x)
+                for gp in gitpatches:
+                    changed['b/' + gp.path] = gp
+                yield 'git', gitpatches
+            afile = 'a/' + m.group(1)
+            bfile = 'b/' + m.group(2)
+            gp = changed[bfile]
+            # copy/rename + modify should modify target, not source
+            if gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD') or gp.mode:
+                afile = bfile
+            newfile = True
         elif x.startswith('---'):
             # check for a unified diff
             l2 = lr.readline()
