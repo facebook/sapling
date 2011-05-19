@@ -383,3 +383,22 @@ Consecutive import with renames (issue2459)
   a   0         -1 unset               b
   $ hg ci -m done
   $ cd ..
+
+Renames and strip
+
+  $ hg init renameandstrip
+  $ cd renameandstrip
+  $ echo a > a
+  $ hg ci -Am adda
+  adding a
+  $ hg import --no-commit -p2 - <<EOF
+  > diff --git a/foo/a b/foo/b
+  > rename from foo/a
+  > rename to foo/b
+  > EOF
+  applying patch from stdin
+  $ hg st --copies
+  A b
+    a
+  R a
+  $ cd ..

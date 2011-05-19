@@ -1158,14 +1158,12 @@ def iterhunks(fp):
                 if not git:
                     git = True
                     gitpatches = scangitpatch(lr, x)
-                    yield 'git', gitpatches
                     for gp in gitpatches:
                         changed[gp.path] = gp
-                # else error?
+                    yield 'git', gitpatches
                 # copy/rename + modify should modify target, not source
-                gp = changed.get(bfile)
-                if gp and (gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD')
-                           or gp.mode):
+                gp = changed[bfile]
+                if gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD') or gp.mode:
                     afile = bfile
                 newfile = True
         elif x.startswith('---'):
