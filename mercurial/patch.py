@@ -960,10 +960,11 @@ class hunk(object):
 
 class binhunk:
     'A binary patch file. Only understands literals so far.'
-    def __init__(self, gitpatch):
+    def __init__(self, gitpatch, lr):
         self.gitpatch = gitpatch
         self.text = None
         self.hunk = ['GIT binary patch\n']
+        self._read(lr)
 
     def createfile(self):
         return self.gitpatch.op == 'ADD'
@@ -977,7 +978,7 @@ class binhunk:
     def new(self):
         return [self.text]
 
-    def extract(self, lr):
+    def _read(self, lr):
         line = lr.readline()
         self.hunk.append(line)
         while line and not line.startswith('literal '):
@@ -1135,8 +1136,7 @@ def iterhunks(fp):
             or x.startswith('GIT binary patch')):
             gp = changed.get(bfile)
             if x.startswith('GIT binary patch'):
-                h = binhunk(gp)
-                h.extract(lr)
+                h = binhunk(gp, lr)
                 afile = 'a/' + afile
                 bfile = 'b/' + bfile
             else:
