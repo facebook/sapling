@@ -243,13 +243,15 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
     src_lock = dest_lock = dir_cleanup = None
     try:
+        abspath = origsource
+        if islocal(origsource):
+            abspath = os.path.abspath(util.localpath(origsource))
+
         if islocal(dest):
             dir_cleanup = DirCleanup(dest)
 
-        abspath = origsource
         copy = False
         if src_repo.cancopy() and islocal(dest):
-            abspath = os.path.abspath(util.localpath(origsource))
             copy = not pull and not rev
 
         if copy:
