@@ -372,9 +372,10 @@ class abstractbackend(object):
         """
         raise NotImplementedError
 
-    def writelines(self, fname, lines, mode):
+    def setfile(self, fname, lines, mode):
         """Write lines to target file. mode is a (islink, isexec)
-        tuple, or None if there is no mode information.
+        tuple, or None if there is no mode information. If lines is None,
+        the file must exists and its content is left unchanged.
         """
         raise NotImplementedError
 
@@ -399,10 +400,6 @@ class abstractbackend(object):
     def exists(self, fname):
         raise NotImplementedError
 
-    def setmode(self, fname, islink, isexec):
-        """Change target file mode."""
-        raise NotImplementedError
-
 class fsbackend(abstractbackend):
     def __init__(self, ui, basedir):
         super(fsbackend, self).__init__(ui)
@@ -420,7 +417,11 @@ class fsbackend(abstractbackend):
         finally:
             fp.close()
 
-    def writelines(self, fname, lines, mode):
+    def setfile(self, fname, lines, mode):
+        if lines is None:
+            if mode:
+                util.setflags(self._join(fname), mode[0], mode[1])
+            return
         if not mode:
             # Preserve mode information
             isexec, islink = False, False
@@ -475,9 +476,6 @@ class fsbackend(abstractbackend):
     def exists(self, fname):
         return os.path.lexists(self._join(fname))
 
-    def setmode(self, fname, islink, isexec):
-        util.setflags(self._join(fname), islink, isexec)
-
 class workingbackend(fsbackend):
     def __init__(self, ui, repo, similarity):
         super(workingbackend, self).__init__(ui, repo.root)
@@ -487,8 +485,8 @@ class workingbackend(fsbackend):
         self.changed = set()
         self.copied = []
 
-    def writelines(self, fname, lines, mode):
-        super(workingbackend, self).writelines(fname, lines, mode)
+    def setfile(self, fname, lines, mode):
+        super(workingbackend, self).setfile(fname, lines, mode)
         self.changed.add(fname)
 
     def unlink(self, fname):
@@ -500,10 +498,6 @@ class workingbackend(fsbackend):
         super(workingbackend, self).copy(src, dst)
         self.copied.append((src, dst))
         self.changed.add(dst)
-
-    def setmode(self, fname, islink, isexec):
-        super(workingbackend, self).setmode(fname, islink, isexec)
-        self.changed.add(fname)
 
     def close(self):
         wctx = self.repo[None]
@@ -585,7 +579,7 @@ class patchfile(object):
                 rawlines.append(l)
             lines = rawlines
 
-        self.backend.writelines(fname, lines, mode)
+        self.backend.setfile(fname, lines, mode)
 
     def printfile(self, warn):
         if self.fileprinted:
@@ -1252,11 +1246,12 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
                 if gp.op == 'RENAME':
                     backend.unlink(pstrip(gp.oldpath))
                 if gp.mode and not first_hunk:
+                    data = None
                     if gp.op == 'ADD':
-                        # Added files without content have no hunk and must be created
-                        backend.writelines(path, [], gp.mode)
-                    else:
-                        backend.setmode(path, gp.mode[0], gp.mode[1])
+                        # Added files without content have no hunk and
+                        # must be created
+                        data = []
+                    backend.setfile(path, data, gp.mode)
             if not first_hunk:
                 continue
             try:
