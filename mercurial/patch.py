@@ -1137,8 +1137,6 @@ def iterhunks(fp):
             gp = changed.get(bfile)
             if x.startswith('GIT binary patch'):
                 h = binhunk(gp, lr)
-                afile = 'a/' + afile
-                bfile = 'b/' + bfile
             else:
                 if context is None and x.startswith('***************'):
                     context = True
@@ -1154,15 +1152,16 @@ def iterhunks(fp):
             # check for git diff, scanning the whole patch file if needed
             m = gitre.match(x)
             if m:
-                afile, bfile = m.group(1, 2)
                 if not git:
                     git = True
                     gitpatches = scangitpatch(lr, x)
                     for gp in gitpatches:
-                        changed[gp.path] = gp
+                        changed['b/' + gp.path] = gp
                     yield 'git', gitpatches
-                # copy/rename + modify should modify target, not source
+                afile = 'a/' + m.group(1)
+                bfile = 'b/' + m.group(2)
                 gp = changed[bfile]
+                # copy/rename + modify should modify target, not source
                 if gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD') or gp.mode:
                     afile = bfile
                 newfile = True
