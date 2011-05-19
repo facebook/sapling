@@ -1025,7 +1025,13 @@ def pathstrip(path, strip):
         count -= 1
     return path[:i].lstrip(), path[i:].rstrip()
 
-def selectfile(backend, afile_orig, bfile_orig, hunk, strip):
+def selectfile(backend, afile_orig, bfile_orig, hunk, strip, gp):
+    if gp:
+        # Git patches do not play games. Excluding copies from the
+        # following heuristic avoids a lot of confusion
+        fname = pathstrip(gp.path, strip - 1)[1]
+        missing = not hunk.createfile() and not backend.exists(fname)
+        return fname, missing
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
     abase, afile = pathstrip(afile_orig, strip)
@@ -1255,7 +1261,7 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
             try:
                 mode = gp and gp.mode or None
                 current_file, missing = selectfile(backend, afile, bfile,
-                                                   first_hunk, strip)
+                                                   first_hunk, strip, gp)
                 current_file = patcher(ui, current_file, backend, mode,
                                        missing=missing, eolmode=eolmode)
             except PatchError, inst:
@@ -1391,7 +1397,7 @@ def changedfiles(ui, repo, patchpath, strip=1):
                 if not first_hunk:
                     continue
                 current_file, missing = selectfile(backend, afile, bfile,
-                                                   first_hunk, strip)
+                                                   first_hunk, strip, gp)
                 changed.add(current_file)
             elif state not in ('hunk', 'git'):
                 raise util.Abort(_('unsupported parser state: %s') % state)
