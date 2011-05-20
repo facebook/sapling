@@ -120,11 +120,10 @@ class GitHandler(object):
 
         def remoteref(ref):
             rn = remote_name or 'default'
-            if ref.startswith('refs/tags/'):
-                return ref
             return 'refs/remotes/' + rn + ref[10:]
 
-        modheads = set([refs[k] for k in refs if k != 'HEAD'
+        modheads = set([refs[k] for k in refs if k.startswith('refs/heads/')
+                        and not k.endswith('^{}')
                         and refs[k] != oldrefs.get(remoteref(k))])
 
         if not modheads:
