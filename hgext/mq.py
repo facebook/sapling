@@ -1829,11 +1829,14 @@ class queue(object):
                     patchname = filename
 
             else:
+                if filename == '-' and not patchname:
+                    raise util.Abort(_('need --name to import a patch from -'))
+                elif not patchname:
+                    patchname = normname(os.path.basename(filename))
+                self.check_reserved_name(patchname)
+                checkfile(patchname)
                 try:
                     if filename == '-':
-                        if not patchname:
-                            raise util.Abort(
-                                _('need --name to import a patch from -'))
                         text = sys.stdin.read()
                     else:
                         fp = url.open(self.ui, filename)
@@ -1841,10 +1844,6 @@ class queue(object):
                         fp.close()
                 except (OSError, IOError):
                     raise util.Abort(_("unable to read file %s") % filename)
-                if not patchname:
-                    patchname = normname(os.path.basename(filename))
-                self.check_reserved_name(patchname)
-                checkfile(patchname)
                 patchf = self.opener(patchname, "w")
                 patchf.write(text)
                 patchf.close()

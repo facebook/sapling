@@ -202,3 +202,9 @@ qimport -e --name with --force
   $ hg qser
   this-name-is-better
   url.diff
+
+qimport with bad name, should abort before reading file
+
+  $ hg qimport non-existant-file --name .hg
+  abort: patch name cannot begin with ".hg"
+  [255]
