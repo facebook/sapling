@@ -208,3 +208,20 @@ qimport with bad name, should abort before reading file
   $ hg qimport non-existant-file --name .hg
   abort: patch name cannot begin with ".hg"
   [255]
+
+qimport http:// patch with leading slashes in url
+
+set up hgweb
+
+  $ cd ..
+  $ hg init served
+  $ cd served
+  $ echo a > a
+  $ hg ci -Am patch
+  adding a
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ cd ../repo
+  $ hg qimport http://localhost:$HGPORT/raw-rev/0///
+  adding 0 to series file

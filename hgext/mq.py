@@ -1832,7 +1832,7 @@ class queue(object):
                 if filename == '-' and not patchname:
                     raise util.Abort(_('need --name to import a patch from -'))
                 elif not patchname:
-                    patchname = normname(os.path.basename(filename))
+                    patchname = normname(os.path.basename(filename.rstrip('/')))
                 self.check_reserved_name(patchname)
                 checkfile(patchname)
                 try:
