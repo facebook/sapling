@@ -1684,12 +1684,17 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 def diffstatdata(lines):
     diffre = re.compile('^diff .*-r [a-z0-9]+\s(.*)$')
 
+    results = []
     filename, adds, removes = None, 0, 0
+
+    def addresult():
+        if filename:
+            isbinary = adds == 0 and removes == 0
+            results.append((filename, adds, removes, isbinary))
+
     for line in lines:
         if line.startswith('diff'):
-            if filename:
-                isbinary = adds == 0 and removes == 0
-                yield (filename, adds, removes, isbinary)
+            addresult()
             # set numbers to 0 anyway when starting new file
             adds, removes = 0, 0
             if line.startswith('diff --git'):
@@ -1701,9 +1706,8 @@ def diffstatdata(lines):
             adds += 1
         elif line.startswith('-') and not line.startswith('---'):
             removes += 1
-    if filename:
-        isbinary = adds == 0 and removes == 0
-        yield (filename, adds, removes, isbinary)
+    addresult()
+    return results
 
 def diffstat(lines, width=80, git=False):
     output = []
