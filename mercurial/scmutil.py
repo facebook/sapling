@@ -256,6 +256,9 @@ class opener(abstractopener):
             f.close()
             self._fixfilemode(dst)
 
+    def audit(self, path):
+        self.auditor(path)
+
 class filteropener(abstractopener):
     '''Wrapper opener for filtering filenames with a function.'''
 
