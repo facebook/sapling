@@ -42,9 +42,6 @@ def generate_repo_subclass(baseclass):
 
             git = GitHandler(self, self.ui)
             for tag, rev in git.tags.iteritems():
-                if tag in tags:
-                    continue
-
                 tags[tag] = bin(rev)
                 tagtypes[tag] = 'git'
 

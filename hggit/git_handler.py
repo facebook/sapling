@@ -437,6 +437,20 @@ class GitHandler(object):
             self.import_git_commit(commit)
         util.progress(self.ui, 'importing', None, total=total, unit='commits')
 
+        # Remove any dangling tag references.
+        for name, rev in self.repo.tags().items():
+            if not rev in self.repo:
+                if hasattr(self, 'tagscache') and self.tagscache and \
+                        'name' in self.tagscache:
+                    # Mercurial 1.4 and earlier.
+                    del self.repo.tagscache[name]
+                elif hasattr(self, '_tags') and self._tags and \
+                        'name' in self._tags:
+                    # Mercurial 1.5 and later.
+                    del self.repo._tags[name]
+                if name in self.repo._tagtypes:
+                    del self.repo._tagtypes[name]
+
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
 
