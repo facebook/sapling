@@ -1681,6 +1681,16 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             if text:
                 yield text
 
+def diffstatsum(stats):
+    maxfile, addtotal, removetotal, binary = 0, 0, 0, False
+    for f, a, r, b in stats:
+        maxfile = max(maxfile, encoding.colwidth(f))
+        addtotal += a
+        removetotal += r
+        binary = binary or b
+
+    return maxfile, addtotal, removetotal, binary
+
 def diffstatdata(lines):
     diffre = re.compile('^diff .*-r [a-z0-9]+\s(.*)$')
 
