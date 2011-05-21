@@ -1721,22 +1721,9 @@ def diffstatdata(lines):
 
 def diffstat(lines, width=80, git=False):
     output = []
-    stats = list(diffstatdata(lines))
-
-    maxtotal, maxname = 0, 0
-    totaladds, totalremoves = 0, 0
-    hasbinary = False
-
-    sized = [(filename, adds, removes, isbinary, encoding.colwidth(filename))
-             for filename, adds, removes, isbinary in stats]
-
-    for filename, adds, removes, isbinary, namewidth in sized:
-        totaladds += adds
-        totalremoves += removes
-        maxname = max(maxname, namewidth)
-        maxtotal = max(maxtotal, adds + removes)
-        if isbinary:
-            hasbinary = True
+    stats = diffstatdata(lines)
+    maxname, totaladds, totalremoves, hasbinary = diffstatsum(stats)
+    maxtotal = totaladds + totalremoves
 
     countwidth = len(str(maxtotal))
     if hasbinary and countwidth < 3:
@@ -1753,7 +1740,7 @@ def diffstat(lines, width=80, git=False):
         # if there were at least some changes.
         return max(i * graphwidth // maxtotal, int(bool(i)))
 
-    for filename, adds, removes, isbinary, namewidth in sized:
+    for filename, adds, removes, isbinary in stats:
         if git and isbinary:
             count = 'Bin'
         else:
@@ -1761,9 +1748,8 @@ def diffstat(lines, width=80, git=False):
         pluses = '+' * scale(adds)
         minuses = '-' * scale(removes)
         output.append(' %s%s |  %*s %s%s\n' %
-                      (filename, ' ' * (maxname - namewidth),
-                       countwidth, count,
-                       pluses, minuses))
+                      (filename, ' ' * (maxname - encoding.colwidth(filename)),
+                       countwidth, count, pluses, minuses))
 
     if stats:
         output.append(_(' %d files changed, %d insertions(+), %d deletions(-)\n')
