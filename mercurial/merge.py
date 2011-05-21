@@ -373,6 +373,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
                 repo.ui.warn(" %s\n" % nf)
         elif m == "e": # exec
             flags = a[2]
+            repo.wopener.audit(f)
             util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
     ms.commit()
     u.progress(_('updating'), None, total=numupdates, unit=_('files'))
