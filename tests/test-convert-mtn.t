@@ -39,12 +39,12 @@ create monotone repository
   $ python -c 'file("bin", "wb").write("a\\x00b")'
   $ echo c > c
   $ mtn add a dir/b dir/d c bin
-  mtn: adding a to workspace manifest
-  mtn: adding bin to workspace manifest
-  mtn: adding c to workspace manifest
-  mtn: adding dir to workspace manifest
-  mtn: adding dir/b to workspace manifest
-  mtn: adding dir/d to workspace manifest
+  mtn: adding 'a' to workspace manifest
+  mtn: adding 'bin' to workspace manifest
+  mtn: adding 'c' to workspace manifest
+  mtn: adding 'dir' to workspace manifest
+  mtn: adding 'dir/b' to workspace manifest
+  mtn: adding 'dir/d' to workspace manifest
   $ mtn ci -m initialize
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 0f6e5e4f2e7d2a8ef312408f57618abf026afd90
@@ -52,12 +52,12 @@ create monotone repository
 update monotone working directory
 
   $ mtn mv a dir/a
-  mtn: skipping dir, already accounted for in workspace
-  mtn: renaming a to dir/a in workspace manifest
+  mtn: skipping 'dir', already accounted for in workspace
+  mtn: renaming 'a' to 'dir/a' in workspace manifest
   $ echo a >> dir/a
   $ echo b >> dir/b
   $ mtn drop c
-  mtn: dropping c from workspace manifest
+  mtn: dropping 'c' from workspace manifest
   $ python -c 'file("bin", "wb").write("b\\x00c")'
   $ mtn ci -m update1
   mtn: beginning commit on branch 'com.selenic.test'
@@ -77,11 +77,11 @@ convert once
   $ cd workingdir
   $ echo e > e
   $ mtn add e
-  mtn: adding e to workspace manifest
+  mtn: adding 'e' to workspace manifest
   $ mtn drop dir/b
-  mtn: dropping dir/b from workspace manifest
+  mtn: dropping 'dir/b' from workspace manifest
   $ mtn mv bin bin2
-  mtn: renaming bin to bin2 in workspace manifest
+  mtn: renaming 'bin' to 'bin2' in workspace manifest
   $ mtn ci -m 'update2 "with" quotes'
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision ebe58335d85d8cb176b6d0a12be04f5314b998da
@@ -93,17 +93,17 @@ test directory move
   $ echo file1 > dir1/subdir1/file1
   $ echo file2 > dir1/subdir2_other/file1
   $ mtn add dir1/subdir1/file1 dir1/subdir2_other/file1
-  mtn: adding dir1 to workspace manifest
-  mtn: adding dir1/subdir1 to workspace manifest
-  mtn: adding dir1/subdir1/file1 to workspace manifest
-  mtn: adding dir1/subdir2_other to workspace manifest
-  mtn: adding dir1/subdir2_other/file1 to workspace manifest
+  mtn: adding 'dir1' to workspace manifest
+  mtn: adding 'dir1/subdir1' to workspace manifest
+  mtn: adding 'dir1/subdir1/file1' to workspace manifest
+  mtn: adding 'dir1/subdir2_other' to workspace manifest
+  mtn: adding 'dir1/subdir2_other/file1' to workspace manifest
   $ mtn ci -m createdir1
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision a8d62bc04fee4d2936d28e98bbcc81686dd74306
   $ mtn rename dir1/subdir1 dir1/subdir2
-  mtn: skipping dir1, already accounted for in workspace
-  mtn: renaming dir1/subdir1 to dir1/subdir2 in workspace manifest
+  mtn: skipping 'dir1', already accounted for in workspace
+  mtn: renaming 'dir1/subdir1' to 'dir1/subdir2' in workspace manifest
   $ mtn ci -m movedir1
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 2c3d241bbbfe538b1b51d910f5676407e3f4d3a6
@@ -111,12 +111,12 @@ test directory move
 test subdirectory move
 
   $ mtn mv dir dir2
-  mtn: renaming dir to dir2 in workspace manifest
+  mtn: renaming 'dir' to 'dir2' in workspace manifest
   $ echo newfile > dir2/newfile
   $ mtn drop dir2/d
-  mtn: dropping dir2/d from workspace manifest
+  mtn: dropping 'dir2/d' from workspace manifest
   $ mtn add dir2/newfile
-  mtn: adding dir2/newfile to workspace manifest
+  mtn: adding 'dir2/newfile' to workspace manifest
   $ mtn ci -m movedir
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision fdb5a02dae8bfce3a79b3393680af471016e1b4c
@@ -132,10 +132,10 @@ Test directory removal with empty directory
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 8bbf76d717001d24964e4604739fdcd0f539fc88
   $ mtn drop -R dir2/dir
-  mtn: dropping dir2/dir/subdir/f from workspace manifest
-  mtn: dropping dir2/dir/subdir from workspace manifest
-  mtn: dropping dir2/dir/emptydir from workspace manifest
-  mtn: dropping dir2/dir from workspace manifest
+  mtn: dropping 'dir2/dir/subdir/f' from workspace manifest
+  mtn: dropping 'dir2/dir/subdir' from workspace manifest
+  mtn: dropping 'dir2/dir/emptydir' from workspace manifest
+  mtn: dropping 'dir2/dir' from workspace manifest
   $ mtn ci -m dropdirectory
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 2323d4bc324e6c82628dc04d47a9fd32ad24e322
@@ -145,18 +145,18 @@ test directory and file move
   $ mkdir -p dir3/d1
   $ echo a > dir3/a
   $ mtn add dir3/a dir3/d1
-  mtn: adding dir3 to workspace manifest
-  mtn: adding dir3/a to workspace manifest
-  mtn: adding dir3/d1 to workspace manifest
+  mtn: adding 'dir3' to workspace manifest
+  mtn: adding 'dir3/a' to workspace manifest
+  mtn: adding 'dir3/d1' to workspace manifest
   $ mtn ci -m dirfilemove
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 47b192f720faa622f48c68d1eb075b26d405aa8b
   $ mtn mv dir3/a dir3/d1/a
-  mtn: skipping dir3/d1, already accounted for in workspace
-  mtn: renaming dir3/a to dir3/d1/a in workspace manifest
+  mtn: skipping 'dir3/d1', already accounted for in workspace
+  mtn: renaming 'dir3/a' to 'dir3/d1/a' in workspace manifest
   $ mtn mv dir3/d1 dir3/d2
-  mtn: skipping dir3, already accounted for in workspace
-  mtn: renaming dir3/d1 to dir3/d2 in workspace manifest
+  mtn: skipping 'dir3', already accounted for in workspace
+  mtn: renaming 'dir3/d1' to 'dir3/d2' in workspace manifest
   $ mtn ci -m dirfilemove2
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 8b543a400d3ee7f6d4bb1835b9b9e3747c8cb632
@@ -167,17 +167,17 @@ test directory move into another directory move
   $ mkdir dir5
   $ echo a > dir4/a
   $ mtn add dir4/a dir5
-  mtn: adding dir4 to workspace manifest
-  mtn: adding dir4/a to workspace manifest
-  mtn: adding dir5 to workspace manifest
+  mtn: adding 'dir4' to workspace manifest
+  mtn: adding 'dir4/a' to workspace manifest
+  mtn: adding 'dir5' to workspace manifest
   $ mtn ci -m dirdirmove
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 466e0b2afc7a55aa2b4ab2f57cb240bb6cd66fc7
   $ mtn mv dir5 dir6
-  mtn: renaming dir5 to dir6 in workspace manifest
+  mtn: renaming 'dir5' to 'dir6' in workspace manifest
   $ mtn mv dir4 dir6/dir4
-  mtn: skipping dir6, already accounted for in workspace
-  mtn: renaming dir4 to dir6/dir4 in workspace manifest
+  mtn: skipping 'dir6', already accounted for in workspace
+  mtn: renaming 'dir4' to 'dir6/dir4' in workspace manifest
   $ mtn ci -m dirdirmove2
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 3d1f77ebad0c23a5d14911be3b670f990991b749
@@ -189,21 +189,21 @@ test diverging directory moves
   $ echo b > dir7/dir9/b
   $ echo c > dir7/c
   $ mtn add -R dir7
-  mtn: adding dir7 to workspace manifest
-  mtn: adding dir7/c to workspace manifest
-  mtn: adding dir7/dir9 to workspace manifest
-  mtn: adding dir7/dir9/b to workspace manifest
-  mtn: adding dir7/dir9/dir8 to workspace manifest
-  mtn: adding dir7/dir9/dir8/a to workspace manifest
+  mtn: adding 'dir7' to workspace manifest
+  mtn: adding 'dir7/c' to workspace manifest
+  mtn: adding 'dir7/dir9' to workspace manifest
+  mtn: adding 'dir7/dir9/b' to workspace manifest
+  mtn: adding 'dir7/dir9/dir8' to workspace manifest
+  mtn: adding 'dir7/dir9/dir8/a' to workspace manifest
   $ mtn ci -m divergentdirmove
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 08a08511f18b428d840199b062de90d0396bc2ed
   $ mtn mv dir7 dir7-2
-  mtn: renaming dir7 to dir7-2 in workspace manifest
+  mtn: renaming 'dir7' to 'dir7-2' in workspace manifest
   $ mtn mv dir7-2/dir9 dir9-2
-  mtn: renaming dir7-2/dir9 to dir9-2 in workspace manifest
+  mtn: renaming 'dir7-2/dir9' to 'dir9-2' in workspace manifest
   $ mtn mv dir9-2/dir8 dir8-2
-  mtn: renaming dir9-2/dir8 to dir8-2 in workspace manifest
+  mtn: renaming 'dir9-2/dir8' to 'dir8-2' in workspace manifest
   $ mtn ci -m divergentdirmove2
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision 4a736634505795f17786fffdf2c9cbf5b11df6f6
@@ -214,7 +214,7 @@ test large file support (> 32kB)
   $ $TESTDIR/md5sum.py large-file
   5d6de8a95c3b6bf9e0ffb808ba5299c1  large-file
   $ mtn add large-file
-  mtn: adding large-file to workspace manifest
+  mtn: adding 'large-file' to workspace manifest
   $ mtn ci -m largefile
   mtn: beginning commit on branch 'com.selenic.test'
   mtn: committed revision f0a20fecd10dc4392d18fe69a03f1f4919d3387b
