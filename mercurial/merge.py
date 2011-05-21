@@ -296,13 +296,14 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             if f != fd and move:
                 moves.append(f)
 
+    audit = scmutil.pathauditor(repo.root)
+
     # remove renamed files after safely stored
     for f in moves:
         if os.path.lexists(repo.wjoin(f)):
             repo.ui.debug("removing %s\n" % f)
+            audit(f)
             os.unlink(repo.wjoin(f))
-
-    audit_path = scmutil.pathauditor(repo.root)
 
     numupdates = len(action)
     for i, a in enumerate(action):
@@ -313,7 +314,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             continue
         if m == "r": # remove
             repo.ui.note(_("removing %s\n") % f)
-            audit_path(f)
+            audit(f)
             if f == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
             try:
@@ -340,6 +341,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             if (move and repo.dirstate.normalize(fd) != f
                 and os.path.lexists(repo.wjoin(f))):
                 repo.ui.debug("removing %s\n" % f)
+                audit(f)
                 os.unlink(repo.wjoin(f))
         elif m == "g": # get
             flags = a[2]
@@ -354,6 +356,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             f2, fd, flags = a[2:]
             if f:
                 repo.ui.note(_("moving %s to %s\n") % (f, fd))
+                audit(f)
                 t = wctx.filectx(f).data()
                 repo.wwrite(fd, t, flags)
                 util.unlinkpath(repo.wjoin(f))
