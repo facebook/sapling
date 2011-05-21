@@ -12,7 +12,7 @@ and O(changes) merge between branches.
 """
 
 # import stuff from node for others to import from revlog
-from node import bin, hex, nullid, nullrev, short #@UnusedImport
+from node import bin, hex, nullid, nullrev
 from i18n import _
 import ancestor, mdiff, parsers, error, util, dagutil
 import struct, zlib, errno

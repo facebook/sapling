@@ -15,6 +15,7 @@ map from a changeset hash to its hash in the source repository.
 
 from mercurial.i18n import _
 import os, tempfile
+from mercurial.node import short
 from mercurial import bundlerepo, hg, merge, match
 from mercurial import patch, revlog, scmutil, util, error, cmdutil
 from mercurial import revset, templatekw
@@ -110,7 +111,7 @@ class transplanter(object):
             lock = repo.lock()
             for rev in revs:
                 node = revmap[rev]
-                revstr = '%s:%s' % (rev, revlog.short(node))
+                revstr = '%s:%s' % (rev, short(node))
 
                 if self.applied(repo, node, p1):
                     self.ui.warn(_('skipping already applied revision %s\n') %
@@ -143,7 +144,7 @@ class transplanter(object):
 
                 if parents[1] != revlog.nullid:
                     self.ui.note(_('skipping merge changeset %s:%s\n')
-                                 % (rev, revlog.short(node)))
+                                 % (rev, short(node)))
                     patchfile = None
                 else:
                     fd, patchfile = tempfile.mkstemp(prefix='hg-transplant-')
@@ -163,11 +164,11 @@ class transplanter(object):
                                           filter=opts.get('filter'))
                         if n and domerge:
                             self.ui.status(_('%s merged at %s\n') % (revstr,
-                                      revlog.short(n)))
+                                      short(n)))
                         elif n:
                             self.ui.status(_('%s transplanted to %s\n')
-                                           % (revlog.short(node),
-                                              revlog.short(n)))
+                                           % (short(node),
+                                              short(n)))
                     finally:
                         if patchfile:
                             os.unlink(patchfile)
@@ -219,7 +220,7 @@ class transplanter(object):
             # we don't translate messages inserted into commits
             message += '\n(transplanted from %s)' % revlog.hex(node)
 
-        self.ui.status(_('applying %s\n') % revlog.short(node))
+        self.ui.status(_('applying %s\n') % short(node))
         self.ui.note('%s %s\n%s\n' % (user, date, message))
 
         if not patchfile and not merge:
@@ -270,8 +271,8 @@ class transplanter(object):
         '''recover last transaction and apply remaining changesets'''
         if os.path.exists(os.path.join(self.path, 'journal')):
             n, node = self.recover(repo)
-            self.ui.status(_('%s transplanted as %s\n') % (revlog.short(node),
-                                                           revlog.short(n)))
+            self.ui.status(_('%s transplanted as %s\n') % (short(node),
+                                                           short(n)))
         seriespath = os.path.join(self.path, 'series')
         if not os.path.exists(seriespath):
             self.transplants.write()
