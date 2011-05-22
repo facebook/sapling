@@ -368,7 +368,7 @@ def record(ui, repo, *pats, **opts):
 
     This command is not available when committing a merge.'''
 
-    dorecord(ui, repo, commands.commit, *pats, **opts)
+    dorecord(ui, repo, commands.commit, 'commit', *pats, **opts)
 
 
 def qrecord(ui, repo, patch, *pats, **opts):
@@ -386,12 +386,13 @@ def qrecord(ui, repo, patch, *pats, **opts):
     def committomq(ui, repo, *pats, **opts):
         mq.new(ui, repo, patch, *pats, **opts)
 
-    dorecord(ui, repo, committomq, *pats, **opts)
+    dorecord(ui, repo, committomq, 'qnew', *pats, **opts)
 
 
-def dorecord(ui, repo, commitfunc, *pats, **opts):
+def dorecord(ui, repo, commitfunc, cmdsuggest, *pats, **opts):
     if not ui.interactive():
-        raise util.Abort(_('running non-interactively, use commit instead'))
+        raise util.Abort(_('running non-interactively, use %s instead') %
+                         cmdsuggest)
 
     def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
