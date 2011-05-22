@@ -12,6 +12,9 @@ from mercurial import cmdutil, commands, extensions, hg, mdiff, patch
 from mercurial import util
 import copy, cStringIO, errno, os, re, shutil, tempfile
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
 lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
 
 def scanpatch(fp):
@@ -341,6 +344,9 @@ def filterpatch(ui, headers):
     return sum([h for h in applied.itervalues()
                if h[0].special() or len(h) > 1], [])
 
+@command("record",
+         commands.table['^commit|ci'][1], # same options as commit
+          _('hg record [OPTION]... [FILE]...'))
 def record(ui, repo, *pats, **opts):
     '''interactively select changes to commit
 
@@ -529,15 +535,9 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, *pats, **opts):
     finally:
         ui.write = oldwrite
 
-cmdtable = {
-    "record":
-        (record, commands.table['^commit|ci'][1], # same options as commit
-         _('hg record [OPTION]... [FILE]...')),
-    "qrecord":
-        (qrecord, {}, # placeholder until mq is available
-         _('hg qrecord [OPTION]... PATCH [FILE]...')),
-}
-
+cmdtable["qrecord"] = \
+    (qrecord, {}, # placeholder until mq is available
+     _('hg qrecord [OPTION]... PATCH [FILE]...'))
 
 def uisetup(ui):
     try:
@@ -545,11 +545,6 @@ def uisetup(ui):
     except KeyError:
         return
 
-    qcmdtable = {
-    "qrecord":
+    cmdtable["qrecord"] = \
         (qrecord, mq.cmdtable['^qnew'][1], # same options as qnew
-         _('hg qrecord [OPTION]... PATCH [FILE]...')),
-    }
-
-    cmdtable.update(qcmdtable)
-
+         _('hg qrecord [OPTION]... PATCH [FILE]...'))
