@@ -1,0 +1,42 @@
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+created new head
+merging afile
+warning: conflicts during merge.
+merging afile failed!
+0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+@    3:2,1   120385945d08   1970-01-01 00:00 +0000   test
+|\     merge to B
+| |
+| o  2:0   ea82b67264a1   1970-01-01 00:00 +0000   test
+| |    A->C
+| |
+o |  1   7205e83b5a3f   1970-01-01 00:00 +0000   test
+|/     A->B
+|
+o  0   5d1a6b64f9d0   1970-01-01 00:00 +0000   test
+     origin
+
+Initialized empty Git repository in gitrepo/
+
+pushing to git://localhost/gitrepo
+exporting hg objects to git
+creating and sending data
+Counting objects: 10, done.
+Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
+Total 10 (delta 0), reused 0 (delta 0)
+importing git objects into hg
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% expect the same revision ids as above
+@    3:1,2   120385945d08   1970-01-01 00:00 +0000   test
+|\     merge to B
+| |
+| o  2:0   7205e83b5a3f   1970-01-01 00:00 +0000   test
+| |    A->B
+| |
+o |  1   ea82b67264a1   1970-01-01 00:00 +0000   test
+|/     A->C
+|
+o  0   5d1a6b64f9d0   1970-01-01 00:00 +0000   test
+     origin
+
