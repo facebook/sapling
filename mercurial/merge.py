@@ -329,6 +329,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
                 subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx), overwrite)
                 continue
             f2, fd, flags, move = a[2:]
+            repo.wopener.audit(fd)
             r = ms.resolve(fd, wctx, mctx)
             if r is not None and r > 0:
                 unresolved += 1
