@@ -277,5 +277,47 @@ Local is superset:
   [1]
   $ cd ..
 
+Partial pull:
+
+  $ stop ; start main
+  $ hg clone $remote partial --rev name2
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 12 changes to 2 files
+  updating to branch name2
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd partial
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  6 a7892891da29: r2 name1
+  7 2c8d5d5ec612: r3 name1
+  8 e71dbbc70e03: r4 name1
+  9 025829e08038: r9 both
+  10 8b6bad1512e1: r10 both
+  11 a19bfa7e7328: r11 both
+  $ hg incoming $remote --rev name1
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  6 a7892891da29: r2 name1
+  7 2c8d5d5ec612: r3 name1
+  8 e71dbbc70e03: r4 name1
+  $ hg pull $remote --rev name1
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 6 changes to 2 files (+1 heads)
+  (run 'hg heads' to see heads)
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  9 025829e08038: r9 both
+  10 8b6bad1512e1: r10 both
+  11 a19bfa7e7328: r11 both
+  $ cd ..
+
   $ stop
 
