@@ -34,3 +34,7 @@ class gitrepo(repo.repository):
 
 
 instance = gitrepo
+
+def islocal(path):
+    u = util.url(path)
+    return not u.scheme or u.scheme == 'file'
