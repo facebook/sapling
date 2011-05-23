@@ -383,11 +383,11 @@ def gincoming(ui, repo, source="default", **opts):
 
 def uisetup(ui):
     '''Initialize the extension.'''
-    _wrapcmd(ui, 'log', commands.table, graphlog)
-    _wrapcmd(ui, 'incoming', commands.table, gincoming)
-    _wrapcmd(ui, 'outgoing', commands.table, goutgoing)
+    _wrapcmd('log', commands.table, graphlog)
+    _wrapcmd('incoming', commands.table, gincoming)
+    _wrapcmd('outgoing', commands.table, goutgoing)
 
-def _wrapcmd(ui, cmd, table, wrapfn):
+def _wrapcmd(cmd, table, wrapfn):
     '''wrap the command'''
     def graph(orig, *args, **kwargs):
         if kwargs['graph']:
