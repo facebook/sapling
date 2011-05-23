@@ -99,9 +99,24 @@ qrecord patch (mq not present)
   abort: 'mq' extension not loaded
   [255]
 
+help (bad mq)
+
+  $ echo "mq=nonexistant" >> $HGRCPATH
+  $ hg help qrecord
+  *** failed to import extension mq from nonexistant: [Errno 2] No such file or directory
+  hg qrecord [OPTION]... PATCH [FILE]...
+  
+  interactively record a new patch
+  
+      See "hg help qnew" & "hg help record" for more information and usage.
+  
+  use "hg -v help qrecord" to show global options
+
 help (mq present)
 
-  $ echo "mq="              >> $HGRCPATH
+  $ sed 's/mq=nonexistant/mq=/' $HGRCPATH > hgrc.tmp
+  $ mv hgrc.tmp $HGRCPATH
+
   $ hg help qrecord
   hg qrecord [OPTION]... PATCH [FILE]...
   

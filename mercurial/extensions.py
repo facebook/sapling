@@ -21,13 +21,17 @@ def extensions():
 
 def find(name):
     '''return module with given extension name'''
+    mod = None
     try:
-        return _extensions[name]
+        mod =  _extensions[name]
     except KeyError:
         for k, v in _extensions.iteritems():
             if k.endswith('.' + name) or k.endswith('/' + name):
-                return v
+                mod = v
+                break
+    if not mod:
         raise KeyError(name)
+    return mod
 
 def loadpath(path, module_name):
     module_name = module_name.replace('.', '_')
