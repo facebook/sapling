@@ -3894,6 +3894,9 @@ def remove(ui, repo, *pats, **opts):
       -A     W  W  W  R
       -Af    R  R  R  R
 
+    Note that remove never deletes files in Added [A] state from the
+    working directory, not even if option --force is specified.
+
     This command schedules the files to be removed at the next commit.
     To undo a remove before that, see :hg:`revert`.
 
