@@ -10,7 +10,7 @@ from mercurial import extensions, repo
 def extsetup():
     extensions.wrapfunction(repo.repository, 'capable', wrapper)
 def wrapper(orig, self, name, *args, **kwargs):
-    if name == '$CAP':
+    if name in '$CAP'.split(' '):
         return False
     return orig(self, name, *args, **kwargs)
 EOF
