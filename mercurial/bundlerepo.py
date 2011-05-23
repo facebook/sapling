@@ -326,15 +326,14 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
     if bundlename or not other.local():
         # create a bundle (uncompressed if other repo is not local)
 
-        if onlyheads is None and other.capable('changegroupsubset'):
-            onlyheads = rheads
-
         if other.capable('getbundle'):
-            cg = other.getbundle('incoming', common=common, heads=onlyheads)
-        elif onlyheads is None:
+            cg = other.getbundle('incoming', common=common, heads=rheads)
+        elif onlyheads is None and not other.capable('changegroupsubset'):
+            # compat with older servers when pulling all remote heads
             cg = other.changegroup(incoming, "incoming")
+            rheads = None
         else:
-            cg = other.changegroupsubset(incoming, onlyheads, 'incoming')
+            cg = other.changegroupsubset(incoming, rheads, 'incoming')
         bundletype = other.local() and "HG10BZ" or "HG10UN"
         fname = bundle = changegroup.writebundle(cg, bundlename, bundletype)
         # keep written bundle?
@@ -346,7 +345,7 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
             # this repo contains local and other now, so filter out local again
             common = repo.heads()
 
-    csets = localrepo.changelog.findmissing(common, onlyheads)
+    csets = localrepo.changelog.findmissing(common, rheads)
 
     def cleanup():
         if bundlerepo:
