@@ -565,9 +565,13 @@ def uisetup(ui):
         return
 
     cmdtable["qrecord"] = \
-        (qrecord, mq.cmdtable['^qnew'][1], # same options as qnew
+        (qrecord,
+         # same options as qnew, but copy them so we don't get
+         # -i/--interactive for qrecord
+         mq.cmdtable['^qnew'][1][:],
          _('hg qrecord [OPTION]... PATCH [FILE]...'))
 
+    _wrapcmd('qnew', mq.cmdtable, qrecord, _("interactively record a new patch"))
     _wrapcmd('qrefresh', mq.cmdtable, qrefresh,
              _("interactively select changes to refresh"))
 
