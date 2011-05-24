@@ -56,6 +56,9 @@ def parse_index2(data, inline):
             n += 1
             off += s
 
+    if off != len(data):
+        raise ValueError('corrupt index file')
+
     if index:
         e = list(index[0])
         type = gettype(e[0])
