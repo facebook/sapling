@@ -127,7 +127,8 @@ class httprepository(wireproto.wirerepository):
         if resp_url.endswith(qs):
             resp_url = resp_url[:-len(qs)]
         if self._url.rstrip('/') != resp_url.rstrip('/'):
-            self.ui.status(_('real URL is %s\n') % resp_url)
+            if not self.ui.quiet:
+                self.ui.warn(_('real URL is %s\n') % resp_url)
         self._url = resp_url
         try:
             proto = resp.getheader('content-type')
