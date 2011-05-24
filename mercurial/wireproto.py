@@ -139,7 +139,7 @@ class wirerepository(repo.repository):
         remote server as a bundle. Return an integer indicating the
         result of the push (see localrepository.addchangegroup()).'''
 
-        if self.capable('unbundlehash'):
+        if heads != ['force'] and self.capable('unbundlehash'):
             heads = encodelist(['hashed',
                                 util.sha1(''.join(sorted(heads))).digest()])
         else:
