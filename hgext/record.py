@@ -389,7 +389,10 @@ def qrecord(ui, repo, patch, *pats, **opts):
     except KeyError:
         raise util.Abort(_("'mq' extension not loaded"))
 
+    repo.mq.checkpatchname(patch)
+
     def committomq(ui, repo, *pats, **opts):
+        opts['checkname'] = False
         mq.new(ui, repo, patch, *pats, **opts)
 
     dorecord(ui, repo, committomq, 'qnew', *pats, **opts)

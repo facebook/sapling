@@ -219,6 +219,12 @@ Whole diff
    someone
    up
 
+qrecord with bad patch name, should abort before prompting
+
+  $ hg qrecord .hg
+  abort: patch name cannot begin with ".hg"
+  [255]
+
 qrecord a.patch
 
   $ hg qrecord -d '0 0' -m aaa a.patch <<EOF

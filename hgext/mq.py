@@ -892,7 +892,8 @@ class queue(object):
         if date:
             date = util.parsedate(date)
         diffopts = self.diffopts({'git': opts.get('git')})
-        self.checkpatchname(patchfn)
+        if opts.get('checkname', True):
+            self.checkpatchname(patchfn)
         inclsubs = self.check_substate(repo)
         if inclsubs:
             inclsubs.append('.hgsubstate')
