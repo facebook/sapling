@@ -28,7 +28,7 @@ class TestPull(test_util.TestBase):
         commands.pull(self.repo.ui, repo)
         self.assertEqual(state, repo.parents())
         self.assertTrue('tip' not in repo[None].tags())
-    
+
     def test_onerevision_doupdate(self):
         repo = self._load_fixture_and_fetch('single_rev.svndump')
         state = repo.parents()
