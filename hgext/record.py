@@ -376,6 +376,18 @@ def record(ui, repo, *pats, **opts):
 
     dorecord(ui, repo, commands.commit, 'commit', False, *pats, **opts)
 
+def qrefresh(ui, repo, *pats, **opts):
+    mq = extensions.find('mq')
+
+    def committomq(ui, repo, *pats, **opts):
+        # At this point the working copy contains only changes that
+        # were accepted. All other changes were reverted.
+        # We can't pass *pats here since qrefresh will undo all other
+        # changed files in the patch that aren't in pats.
+        mq.refresh(ui, repo, **opts)
+
+    # backup all changed files
+    dorecord(ui, repo, committomq, 'qrefresh', True, *pats, **opts)
 
 def qrecord(ui, repo, patch, *pats, **opts):
     '''interactively record a new patch
@@ -555,3 +567,15 @@ def uisetup(ui):
     cmdtable["qrecord"] = \
         (qrecord, mq.cmdtable['^qnew'][1], # same options as qnew
          _('hg qrecord [OPTION]... PATCH [FILE]...'))
+
+    _wrapcmd('qrefresh', mq.cmdtable, qrefresh,
+             _("interactively select changes to refresh"))
+
+def _wrapcmd(cmd, table, wrapfn, msg):
+    '''wrap the command'''
+    def wrapper(orig, *args, **kwargs):
+        if kwargs['interactive']:
+            return wrapfn(*args, **kwargs)
+        return orig(*args, **kwargs)
+    entry = extensions.wrapcommand(table, cmd, wrapper)
+    entry[1].append(('i', 'interactive', None, msg))
