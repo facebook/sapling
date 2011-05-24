@@ -20,6 +20,7 @@ from mercurial import error
 
 import _ssh
 import util
+from overlay import overlayrepo
 
 class GitHandler(object):
     mapfile = 'git-mapfile'
@@ -122,9 +123,9 @@ class GitHandler(object):
             rn = remote_name or 'default'
             return 'refs/remotes/' + rn + ref[10:]
 
-        modheads = set([refs[k] for k in refs if k.startswith('refs/heads/')
-                        and not k.endswith('^{}')
-                        and refs[k] != oldrefs.get(remoteref(k))])
+        modheads = [refs[k] for k in refs if k.startswith('refs/heads/')
+                    and not k.endswith('^{}')
+                    and refs[k] != oldrefs.get(remoteref(k))]
 
         if not modheads:
             self.ui.status(_("no changes found\n"))
@@ -189,6 +190,27 @@ class GitHandler(object):
             os.rmdir(self.gitdir)
         if os.path.exists(mapfile):
             os.remove(mapfile)
+
+    # incoming support
+    def getremotechanges(self, remote, revs):
+        self.export_commits()
+        refs = self.fetch_pack(remote.path, revs)
+
+        # refs contains all remote refs. Prune to only those requested.
+        if revs:
+            reqrefs = {}
+            for rev in revs:
+                for n in ('refs/heads/' + rev, 'refs/tags/' + rev):
+                    if n in refs:
+                        reqrefs[n] = refs[n]
+        else:
+            reqrefs = refs
+
+        commits = [bin(c) for c in self.getnewgitcommits(reqrefs)[1]]
+
+        b = overlayrepo(self, commits, refs)
+
+        return (b, commits, lambda: None)
 
     ## CHANGESET CONVERSION METHODS
 
@@ -374,7 +396,7 @@ class GitHandler(object):
 
             yield f, blobid, mode
 
-    def import_git_objects(self, remote_name=None, refs=None):
+    def getnewgitcommits(self, refs=None):
         self.init_if_missing()
 
         # import heads and fetched tags as remote references
@@ -427,7 +449,10 @@ class GitHandler(object):
                 done.add(sha)
                 todo.pop()
 
-        commits = [commit for commit in commits if not commit in self._map_git]
+        return convert_list, [commit for commit in commits if not commit in self._map_git]
+
+    def import_git_objects(self, remote_name=None, refs=None):
+        convert_list, commits = self.getnewgitcommits(refs)
         # import each of the commits, oldest first
         total = len(commits)
         if total:

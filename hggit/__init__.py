@@ -18,6 +18,7 @@ Try hg clone git:// or hg clone git+ssh://
 import inspect
 import os
 
+from mercurial import bundlerepo
 from mercurial import commands
 from mercurial import demandimport
 from mercurial import extensions
@@ -152,6 +153,21 @@ try:
         extensions.wrapfunction(discovery, 'findcommonoutgoing',
                                 findoutgoing)
 except ImportError:
+    pass
+
+def getremotechanges(orig, ui, repo, other, revs, *args, **opts):
+    if isinstance(other, gitrepo.gitrepo):
+        git = GitHandler(repo, ui)
+        r, c, cleanup = git.getremotechanges(other, revs)
+        # ugh. This is ugly even by mercurial API compatibility standards
+        if 'onlyheads' not in orig.func_code.co_varnames:
+            cleanup = None
+        return r, c, cleanup
+    return orig(ui, repo, other, revs, *args, **opts)
+try:
+    extensions.wrapfunction(bundlerepo, 'getremotechanges', getremotechanges)
+except AttributeError:
+    # 1.7+
     pass
 
 cmdtable = {

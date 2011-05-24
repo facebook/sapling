@@ -1,0 +1,96 @@
+Initialized empty Git repository in gitrepo/.git/
+
+Counting objects: 3, done.
+Total 3 (delta 0), reused 0 (delta 0)
+importing git objects into hg
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+comparing with git://localhost/gitrepo
+no changes found
+comparing with git://localhost/gitrepo
+Counting objects: 3, done.
+Compressing objects:  50% (1/2)   Compressing objects: 100% (2/2)   Compressing objects: 100% (2/2), done.
+Total 3 (delta 0), reused 0 (delta 0)
+changeset:   1:9497a4ee62e1
+bookmark:    master
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:11 2007 +0000
+summary:     add beta
+
+Switched to a new branch 'b1'
+comparing with git://localhost/gitrepo
+Counting objects: 8, done.
+Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
+Total 8 (delta 0), reused 0 (delta 0)
+changeset:   1:9497a4ee62e1
+bookmark:    master
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:11 2007 +0000
+summary:     add beta
+
+diff -r 3442585be8a6 -r 9497a4ee62e1 beta
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/beta	Mon Jan 01 00:00:11 2007 +0000
+@@ -0,0 +1,1 @@
++beta
+
+changeset:   2:9865e289be73
+tag:         t1
+parent:      0:3442585be8a6
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:12 2007 +0000
+summary:     add d/gamma
+
+diff -r 3442585be8a6 -r 9865e289be73 d/gamma
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/d/gamma	Mon Jan 01 00:00:12 2007 +0000
+@@ -0,0 +1,1 @@
++gamma
+
+changeset:   3:5202f48c20c9
+bookmark:    b1
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:13 2007 +0000
+summary:     add d/gamma line 2
+
+diff -r 9865e289be73 -r 5202f48c20c9 d/gamma
+--- a/d/gamma	Mon Jan 01 00:00:12 2007 +0000
++++ b/d/gamma	Mon Jan 01 00:00:13 2007 +0000
+@@ -1,1 +1,2 @@
+ gamma
++gamma 2
+
+% incoming -r
+comparing with git://localhost/gitrepo
+changeset:   1:9497a4ee62e1
+bookmark:    master
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:11 2007 +0000
+summary:     add beta
+
+comparing with git://localhost/gitrepo
+changeset:   1:9865e289be73
+tag:         t1
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:12 2007 +0000
+summary:     add d/gamma
+
+changeset:   2:5202f48c20c9
+bookmark:    b1
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:13 2007 +0000
+summary:     add d/gamma line 2
+
+comparing with git://localhost/gitrepo
+changeset:   1:9865e289be73
+tag:         t1
+user:        test <test@example.org>
+date:        Mon Jan 01 00:00:12 2007 +0000
+summary:     add d/gamma
+
+% nothing incoming after pull
+pulling from git://localhost/gitrepo
+importing git objects into hg
+(run 'hg heads' to see heads, 'hg merge' to merge)
+comparing with git://localhost/gitrepo
+no changes found
+done
