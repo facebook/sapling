@@ -873,6 +873,14 @@ class queue(object):
                 raise util.Abort(_('"%s" cannot be used in the name of a patch')
                                  % c)
 
+    def checkpatchname(self, name, force=False):
+        self.check_reserved_name(name)
+        if not force and os.path.exists(self.join(name)):
+            if os.path.isdir(self.join(name)):
+                raise util.Abort(_('"%s" already exists as a directory')
+                                 % name)
+            else:
+                raise util.Abort(_('patch "%s" already exists') % name)
 
     def new(self, repo, patchfn, *pats, **opts):
         """options:
