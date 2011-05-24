@@ -330,11 +330,9 @@ def readgitpatch(lr):
 
 class linereader(object):
     # simple class to allow pushing lines back into the input stream
-    def __init__(self, fp, textmode=False):
+    def __init__(self, fp):
         self.fp = fp
         self.buf = []
-        self.textmode = textmode
-        self.eol = None
 
     def push(self, line):
         if line is not None:
@@ -345,15 +343,7 @@ class linereader(object):
             l = self.buf[0]
             del self.buf[0]
             return l
-        l = self.fp.readline()
-        if not self.eol:
-            if l.endswith('\r\n'):
-                self.eol = '\r\n'
-            elif l.endswith('\n'):
-                self.eol = '\n'
-        if self.textmode and l.endswith('\r\n'):
-            l = l[:-2] + '\n'
-        return l
+        return self.fp.readline()
 
     def __iter__(self):
         while 1:
@@ -1097,7 +1087,7 @@ def scangitpatch(lr, firstline):
         fp = lr.fp
     except IOError:
         fp = cStringIO.StringIO(lr.fp.read())
-    gitlr = linereader(fp, lr.textmode)
+    gitlr = linereader(fp)
     gitlr.push(firstline)
     gitpatches = readgitpatch(gitlr)
     fp.seek(pos)
