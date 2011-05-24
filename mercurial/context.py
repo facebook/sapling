@@ -852,15 +852,15 @@ class workingctx(changectx):
             yield changectx(self._repo, a)
 
     def remove(self, list, unlink=False):
-        if unlink:
-            for f in list:
-                try:
-                    util.unlinkpath(self._repo.wjoin(f))
-                except OSError, inst:
-                    if inst.errno != errno.ENOENT:
-                        raise
         wlock = self._repo.wlock()
         try:
+            if unlink:
+                for f in list:
+                    try:
+                        util.unlinkpath(self._repo.wjoin(f))
+                    except OSError, inst:
+                        if inst.errno != errno.ENOENT:
+                            raise
             for f in list:
                 if unlink and os.path.lexists(self._repo.wjoin(f)):
                     self._repo.ui.warn(_("%s still exists!\n") % f)
