@@ -137,6 +137,10 @@ def submerge(repo, wctx, mctx, actx, overwrite):
         elif ld == a: # remote removed, local unchanged
             debug(s, "remote removed, remove")
             wctx.sub(s).remove()
+        elif a == nullstate: # not present in remote or ancestor
+            debug(s, "local added, keep")
+            sm[s] = l
+            continue
         else:
             if repo.ui.promptchoice(
                 _(' local changed subrepository %s which remote removed\n'
