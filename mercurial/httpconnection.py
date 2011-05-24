@@ -37,7 +37,7 @@ class httpsendfile(object):
         self.write = self._data.write
         self._len = os.fstat(self._data.fileno()).st_size
         self._pos = 0
-        self._total = len(self) / 1024 * 2
+        self._total = self._len / 1024 * 2
 
     def read(self, *args, **kwargs):
         try:
