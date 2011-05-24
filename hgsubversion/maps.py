@@ -365,8 +365,8 @@ class TagMap(dict):
     oldname = newname
     other =
 
-	The oldname tag from SVN will be represented as newname in the hg tags;
-	the other tag will not be reflected in the hg repository.
+        The oldname tag from SVN will be represented as newname in the hg tags;
+        the other tag will not be reflected in the hg repository.
     '''
 
     def __init__(self, ui, path):
