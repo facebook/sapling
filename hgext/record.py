@@ -374,7 +374,7 @@ def record(ui, repo, *pats, **opts):
 
     This command is not available when committing a merge.'''
 
-    dorecord(ui, repo, commands.commit, 'commit', *pats, **opts)
+    dorecord(ui, repo, commands.commit, 'commit', False, *pats, **opts)
 
 
 def qrecord(ui, repo, patch, *pats, **opts):
@@ -395,10 +395,9 @@ def qrecord(ui, repo, patch, *pats, **opts):
         opts['checkname'] = False
         mq.new(ui, repo, patch, *pats, **opts)
 
-    dorecord(ui, repo, committomq, 'qnew', *pats, **opts)
+    dorecord(ui, repo, committomq, 'qnew', False, *pats, **opts)
 
-
-def dorecord(ui, repo, commitfunc, cmdsuggest, *pats, **opts):
+def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
     if not ui.interactive():
         raise util.Abort(_('running non-interactively, use %s instead') %
                          cmdsuggest)
@@ -450,18 +449,22 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, *pats, **opts):
         modified = set(changes[0])
 
         # 2. backup changed files, so we can restore them in the end
+        if backupall:
+            tobackup = changed
+        else:
+            tobackup = [f for f in newfiles if f in modified]
+
         backups = {}
-        backupdir = repo.join('record-backups')
-        try:
-            os.mkdir(backupdir)
-        except OSError, err:
-            if err.errno != errno.EEXIST:
-                raise
+        if tobackup:
+            backupdir = repo.join('record-backups')
+            try:
+                os.mkdir(backupdir)
+            except OSError, err:
+                if err.errno != errno.EEXIST:
+                    raise
         try:
             # backup continues
-            for f in newfiles:
-                if f not in modified:
-                    continue
+            for f in tobackup:
                 fd, tmpname = tempfile.mkstemp(prefix=f.replace('/', '_')+'.',
                                                dir=backupdir)
                 os.close(fd)
@@ -522,7 +525,8 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, *pats, **opts):
                     # writing it.
                     shutil.copystat(tmpname, repo.wjoin(realname))
                     os.unlink(tmpname)
-                os.rmdir(backupdir)
+                if tobackup:
+                    os.rmdir(backupdir)
             except OSError:
                 pass
 
