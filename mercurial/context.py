@@ -862,9 +862,7 @@ class workingctx(changectx):
                         if inst.errno != errno.ENOENT:
                             raise
             for f in list:
-                if unlink and os.path.lexists(self._repo.wjoin(f)):
-                    self._repo.ui.warn(_("%s still exists!\n") % f)
-                elif self._repo.dirstate[f] == 'a':
+                if self._repo.dirstate[f] == 'a':
                     self._repo.dirstate.forget(f)
                 elif f not in self._repo.dirstate:
                     self._repo.ui.warn(_("%s not tracked!\n") % f)
