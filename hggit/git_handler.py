@@ -499,14 +499,38 @@ class GitHandler(object):
 
         oldenc = self.swap_out_encoding()
 
-        def getfilectx(repo, memctx, f):
-            delete, mode, sha = files[f]
-            if delete:
-                raise IOError
+        def findconvergedfiles(p1, p2):
+            # If any files have the same contents in both parents of a merge
+            # (and are therefore not reported as changed by Git) but are at
+            # different file revisions in Mercurial (because they arrived at
+            # those contents in different ways), we need to include them in
+            # the list of changed files so that Mercurial can join up their
+            # filelog histories (same as if the merge was done in Mercurial to
+            # begin with).
+            if p2 == nullid:
+                return []
+            manifest1 = self.repo.changectx(p1).manifest()
+            manifest2 = self.repo.changectx(p2).manifest()
+            return [path for path, node1 in manifest1.iteritems()
+                    if path not in files and manifest2.get(path, node1) != node1]
 
-            data = self.git[sha].data
-            copied_path = hg_renames.get(f)
-            e = self.convert_git_int_mode(mode)
+        def getfilectx(repo, memctx, f):
+            info = files.get(f)
+            if info != None:
+                # it's a file reported as modified from Git
+                delete, mode, sha = info
+                if delete:
+                    raise IOError
+
+                data = self.git[sha].data
+                copied_path = hg_renames.get(f)
+                e = self.convert_git_int_mode(mode)
+            else:
+                # it's a converged file
+                fc = context.filectx(self.repo, f, changeid=memctx.p1().rev())
+                data = fc.data()
+                e = fc.flags()
+                copied_path = fc.renamed()
 
             return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
 
@@ -517,8 +541,9 @@ class GitHandler(object):
         if len(gparents) > 1:
             # merge, possibly octopus
             def commit_octopus(p1, p2):
-                ctx = context.memctx(self.repo, (p1, p2), text, list(files), getfilectx,
-                                     author, date, {'hg-git': 'octopus'})
+                ctx = context.memctx(self.repo, (p1, p2), text,
+                                     list(files) + findconvergedfiles(p1, p2),
+                                     getfilectx, author, date, {'hg-git': 'octopus'})
                 return hex(self.repo.commitctx(ctx))
 
             octopus = len(gparents) > 2
@@ -567,8 +592,9 @@ class GitHandler(object):
         if not (repo_contains(p1) and repo_contains(p2)):
             raise hgutil.Abort(_('you appear to have run strip - '
                                  'please run hg git-cleanup'))
-        ctx = context.memctx(self.repo, (p1, p2), text, list(files), getfilectx,
-                             author, date, extra)
+        ctx = context.memctx(self.repo, (p1, p2), text,
+                             list(files) + findconvergedfiles(p1, p2),
+                             getfilectx, author, date, extra)
 
         node = self.repo.commitctx(ctx)
 
