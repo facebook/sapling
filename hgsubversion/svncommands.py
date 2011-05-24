@@ -238,7 +238,8 @@ def rebuildmeta(ui, repo, args, **opts):
 
                 if parentpath.startswith('tags/') and parentextra.get('close'):
                     continue
-                elif parentpath.startswith('branches/'):                    branch = parentpath[len('branches/'):]
+                elif parentpath.startswith('branches/'):
+                    branch = parentpath[len('branches/'):]
                 elif parentpath == 'trunk':
                     branch = None
                 else:
