@@ -11,15 +11,19 @@ import util, commands, hg, fancyopts, extensions, hook, error
 import cmdutil, encoding
 import ui as uimod
 
+class request(object):
+    def __init__(self, args):
+        self.args = args
+
 def run():
     "run the command in sys.argv"
-    sys.exit(dispatch(sys.argv[1:]))
+    sys.exit(dispatch(request(sys.argv[1:])))
 
-def dispatch(args):
-    "run the command specified in args"
+def dispatch(req):
+    "run the command specified in req.args"
     try:
         u = uimod.ui()
-        if '--traceback' in args:
+        if '--traceback' in req.args:
             u.setconfig('ui', 'traceback', 'on')
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
@@ -33,9 +37,9 @@ def dispatch(args):
         else:
             sys.stderr.write(_("hg: parse error: %s\n") % inst.args[0])
         return -1
-    return _runcatch(u, args)
+    return _runcatch(u, req)
 
-def _runcatch(ui, args):
+def _runcatch(ui, req):
     def catchterm(*args):
         raise error.SignalInterrupt
 
@@ -50,17 +54,17 @@ def _runcatch(ui, args):
     try:
         try:
             # enter the debugger before command execution
-            if '--debugger' in args:
+            if '--debugger' in req.args:
                 ui.warn(_("entering debugger - "
                         "type c to continue starting hg or h for help\n"))
                 pdb.set_trace()
             try:
-                return _dispatch(ui, args)
+                return _dispatch(ui, req)
             finally:
                 ui.flush()
         except:
             # enter the debugger when we hit an exception
-            if '--debugger' in args:
+            if '--debugger' in req.args:
                 traceback.print_exc()
                 pdb.post_mortem(sys.exc_info()[2])
             ui.traceback()
@@ -486,7 +490,8 @@ def _checkshellalias(ui, args):
     os.chdir(cwd)
 
 _loaded = set()
-def _dispatch(ui, args):
+def _dispatch(ui, req):
+    args = req.args
     shellaliasfn = _checkshellalias(ui, args)
     if shellaliasfn:
         return shellaliasfn()
@@ -596,7 +601,8 @@ def _dispatch(ui, args):
                     repos = map(cmdutil.findrepo, args)
                     guess = repos[0]
                     if guess and repos.count(guess) == len(repos):
-                        return _dispatch(ui, ['--repository', guess] + fullargs)
+                        req.args = ['--repository', guess] + fullargs
+                        return _dispatch(ui, req)
                 if not path:
                     raise error.RepoError(_("no repository found in %r"
                                             " (.hg not found)") % os.getcwd())

@@ -7,7 +7,8 @@ def testdispatch(cmd):
     Prints command and result value, but does not handle quoting.
     """
     print "running: %s" % (cmd,)
-    result = dispatch.dispatch(cmd.split())
+    req = dispatch.request(cmd.split())
+    result = dispatch.dispatch(req)
     print "result: %r" % (result,)
 
 
