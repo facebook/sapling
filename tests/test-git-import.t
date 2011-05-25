@@ -402,3 +402,42 @@ Renames and strip
     a
   R a
   $ cd ..
+
+Pure copy with existing destination
+
+  $ hg init copytoexisting
+  $ cd copytoexisting
+  $ echo a > a
+  $ echo b > b
+  $ hg ci -Am add
+  adding a
+  adding b
+  $ hg import --no-commit - <<EOF
+  > diff --git a/a b/b
+  > copy from a
+  > copy to b
+  > EOF
+  applying patch from stdin
+  abort: cannot create b: destination already exists
+  [255]
+  $ cat b
+  b
+
+Copy and changes with existing destination
+
+  $ hg import --no-commit - <<EOF
+  > diff --git a/a b/b
+  > copy from a
+  > copy to b
+  > --- a/a
+  > +++ b/b
+  > @@ -1,1 +1,2 @@
+  > a
+  > +b
+  > EOF
+  applying patch from stdin
+  abort: cannot create b: destination already exists
+  [255]
+  $ cat b
+  b
+  $ cd ..
