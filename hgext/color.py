@@ -114,7 +114,7 @@ _effects = {'none': 0, 'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
             'blue_background': 44, 'purple_background': 45,
             'cyan_background': 46, 'white_background': 47}
 
-def _terminfosetup(ui):
+def _terminfosetup(ui, mode):
     '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
 
     global _terminfo_params
@@ -122,7 +122,6 @@ def _terminfosetup(ui):
     if not _terminfo_params:
         return
     # Otherwise, see what the config file says.
-    mode = ui.config('color', 'mode', 'auto')
     if mode not in ('auto', 'terminfo'):
         return
 
@@ -148,6 +147,51 @@ def _terminfosetup(ui):
         ui.warn(_("no terminfo entry for setab/setaf: reverting to "
           "ECMA-48 color\n"))
         _terminfo_params = {}
+
+def _modesetup(ui, opts):
+    global _terminfo_params
+
+    coloropt = opts['color']
+    auto = coloropt == 'auto'
+    always = not auto and util.parsebool(coloropt)
+    if not always and not auto:
+        return None
+
+    formatted = always or (os.environ.get('TERM') != 'dumb' and ui.formatted())
+
+    mode = ui.config('color', 'mode', 'auto')
+    realmode = mode
+    if mode == 'auto':
+        if os.name == 'nt' and 'TERM' not in os.environ:
+            # looks line a cmd.exe console, use win32 API or nothing
+            realmode = 'win32'
+        elif not formatted:
+            realmode = 'ansi'
+        else:
+            realmode = 'terminfo'
+
+    if realmode == 'win32':
+        if not w32effects and mode == 'win32':
+            # only warn if color.mode is explicitly set to win32
+            ui.warn(_('warning: failed to set color mode to %s\n') % mode)
+            return None
+        _effects.update(w32effects)
+    elif realmode == 'ansi':
+        _terminfo_params = {}
+    elif realmode == 'terminfo':
+        _terminfosetup(ui, mode)
+        if not _terminfo_params:
+            if mode == 'terminfo':
+                ## FIXME Shouldn't we return None in this case too?
+                # only warn if color.mode is explicitly set to win32
+                ui.warn(_('warning: failed to set color mode to %s\n') % mode)
+            realmode = 'ansi'
+    else:
+        return None
+
+    if always or (auto and formatted):
+        return realmode
+    return None
 
 try:
     import curses
@@ -301,40 +345,9 @@ def uisetup(ui):
     global _terminfo_params
     if ui.plain():
         return
-
-    formatted = (os.environ.get('TERM') != 'dumb' and ui.formatted())
-    mode = ui.config('color', 'mode', 'auto')
-    if mode == 'auto':
-        if os.name == 'nt' and 'TERM' not in os.environ:
-            # looks line a cmd.exe console, use win32 API or nothing
-            mode = w32effects and 'win32' or 'none'
-        else:
-            if not formatted:
-                _terminfo_params = False
-            else:
-                _terminfosetup(ui)
-                if not _terminfo_params:
-                    mode = 'ansi'
-                else:
-                    mode = 'terminfo'
-    if mode == 'win32':
-        if w32effects is None:
-            # only warn if color.mode is explicitly set to win32
-            ui.warn(_('warning: failed to set color mode to %s\n') % mode)
-            return
-        _effects.update(w32effects)
-    elif mode == 'ansi':
-        _terminfo_params = {}
-    elif mode == 'terminfo':
-        _terminfosetup(ui)
-    else:
-        return
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
-        coloropt = opts['color']
-        auto = coloropt == 'auto'
-        always = util.parsebool(coloropt)
-        if (always or
-            (always is None and auto and formatted)):
+        mode = _modesetup(ui_, opts)
+        if mode:
             colorui._colormode = mode
             colorui.__bases__ = (ui_.__class__,)
             ui_.__class__ = colorui
