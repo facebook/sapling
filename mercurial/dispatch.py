@@ -12,8 +12,9 @@ import cmdutil, encoding
 import ui as uimod
 
 class request(object):
-    def __init__(self, args):
+    def __init__(self, args, ui=None):
         self.args = args
+        self.ui = ui
 
 def run():
     "run the command in sys.argv"
@@ -22,9 +23,10 @@ def run():
 def dispatch(req):
     "run the command specified in req.args"
     try:
-        u = uimod.ui()
+        if not req.ui:
+            req.ui = uimod.ui()
         if '--traceback' in req.args:
-            u.setconfig('ui', 'traceback', 'on')
+            req.ui.setconfig('ui', 'traceback', 'on')
     except util.Abort, inst:
         sys.stderr.write(_("abort: %s\n") % inst)
         if inst.hint:
@@ -37,12 +39,13 @@ def dispatch(req):
         else:
             sys.stderr.write(_("hg: parse error: %s\n") % inst.args[0])
         return -1
-    return _runcatch(u, req)
+    return _runcatch(req)
 
-def _runcatch(ui, req):
+def _runcatch(req):
     def catchterm(*args):
         raise error.SignalInterrupt
 
+    ui = req.ui
     try:
         for name in 'SIGBREAK', 'SIGHUP', 'SIGTERM':
             num = getattr(signal, name, None)
@@ -59,7 +62,7 @@ def _runcatch(ui, req):
                         "type c to continue starting hg or h for help\n"))
                 pdb.set_trace()
             try:
-                return _dispatch(ui, req)
+                return _dispatch(req)
             finally:
                 ui.flush()
         except:
@@ -490,8 +493,10 @@ def _checkshellalias(ui, args):
     os.chdir(cwd)
 
 _loaded = set()
-def _dispatch(ui, req):
+def _dispatch(req):
     args = req.args
+    ui = req.ui
+
     shellaliasfn = _checkshellalias(ui, args)
     if shellaliasfn:
         return shellaliasfn()
@@ -602,7 +607,7 @@ def _dispatch(ui, req):
                     guess = repos[0]
                     if guess and repos.count(guess) == len(repos):
                         req.args = ['--repository', guess] + fullargs
-                        return _dispatch(ui, req)
+                        return _dispatch(req)
                 if not path:
                     raise error.RepoError(_("no repository found in %r"
                                             " (.hg not found)") % os.getcwd())
