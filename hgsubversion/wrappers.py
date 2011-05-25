@@ -310,11 +310,13 @@ def pull(repo, source, heads=[], force=False):
         total = stopat_rev - start
     else:
         total = svn.HEAD - start
+    lastpulled = None
     try:
         try:
             # start converting revisions
             firstrun = True
             for r in svn.revisions(start=start, stop=stopat_rev):
+                lastpulled = r.revnum
                 if (r.author is None and
                     r.message == 'This is an empty revision for padding.'):
                     continue
@@ -371,6 +373,8 @@ def pull(repo, source, heads=[], force=False):
         util.progress(ui, 'pull', None, total=total)
         util.swap_out_encoding(old_encoding)
 
+    if lastpulled is not None:
+        meta.revmap.youngest = lastpulled
     revisions = len(meta.revmap) - oldrevisions
 
     if revisions == 0:

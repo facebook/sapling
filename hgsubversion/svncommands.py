@@ -95,6 +95,7 @@ def rebuildmeta(ui, repo, args, **opts):
     if not os.path.exists(svnmetadir):
         os.makedirs(svnmetadir)
 
+    lastpulled = open(os.path.join(svnmetadir, 'lastpulled'), 'wb')
     revmap = open(os.path.join(svnmetadir, 'rev_map'), 'w')
     revmap.write('1\n')
     last_rev = -1
@@ -120,13 +121,18 @@ def rebuildmeta(ui, repo, args, **opts):
     # it would make us use O(revisions^2) time, so we perform an extra traversal
     # of the repository instead. During this traversal, we find all converted
     # changesets that close a branch, and store their first parent
+    youngest = 0
     for rev in repo:
         util.progress(ui, 'prepare', rev, total=numrevs)
         ctx = repo[rev]
         extra = ctx.extra()
         convinfo = extra.get('convert_revision', None)
+        if not convinfo:
+            continue
+        svnrevnum = int(convinfo.rsplit('@', 1)[1])
+        youngest = max(youngest, svnrevnum)
 
-        if not convinfo or not extra.get('close', None):
+        if extra.get('close', None) is None:
             continue
 
         droprev = lambda x: x.rsplit('@', 1)[0]
@@ -136,6 +142,7 @@ def rebuildmeta(ui, repo, args, **opts):
         if droprev(parentinfo) == droprev(convinfo):
             closed.add(parentctx.rev())
 
+    lastpulled.write(str(youngest) + '\n')
     util.progress(ui, 'prepare', None, total=numrevs)
 
     for rev in repo:

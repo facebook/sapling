@@ -12,6 +12,17 @@ from mercurial import ui
 from hgsubversion import svncommands
 from hgsubversion import svnmeta
 
+# These test repositories have harmless skew in rebuildmeta for the
+# last-pulled-rev because the last rev in svn causes absolutely no
+# changes in hg.
+expect_youngest_skew = [('file_mixed_with_branches.svndump', False, False),
+                        ('file_mixed_with_branches.svndump', True, False),
+                        ('unrelatedbranch.svndump', False, False),
+                        ('unrelatedbranch.svndump', True, False),
+                        ]
+
+
+
 def _do_case(self, name, stupid, single):
     subdir = test_util.subdir.get(name, '')
     layout = 'auto'
@@ -44,12 +55,18 @@ def _do_case(self, name, stupid, single):
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
                     'no .hg/svn directory in the destination!')
     dest = hg.repository(u, os.path.dirname(dest.path))
-    for tf in ('rev_map', 'uuid', 'tagmap', 'layout', 'subdir', ):
+    for tf in ('lastpulled', 'rev_map', 'uuid', 'tagmap', 'layout', 'subdir', ):
+
         stf = os.path.join(src.path, 'svn', tf)
         self.assertTrue(os.path.isfile(stf), '%r is missing!' % stf)
         dtf = os.path.join(dest.path, 'svn', tf)
         self.assertTrue(os.path.isfile(dtf), '%r is missing!' % tf)
         old, new = open(stf).read(), open(dtf).read()
+        if tf == 'lastpulled' and (name,
+                                   stupid, single) in expect_youngest_skew:
+            self.assertNotEqual(old, new,
+                                'rebuildmeta unexpected match on youngest rev!')
+            continue
         self.assertMultiLineEqual(old, new)
         self.assertEqual(src.branchtags(), dest.branchtags())
     srcbi = pickle.load(open(os.path.join(src.path, 'svn', 'branch_info')))

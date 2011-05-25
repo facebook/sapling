@@ -2,6 +2,7 @@ import test_util
 
 import os.path
 import subprocess
+from mercurial import node
 from mercurial import ui
 from mercurial import util as hgutil
 from mercurial import commands
@@ -50,6 +51,12 @@ class TestPull(test_util.TestBase):
         self.assertEqual(state, repo.parents())
         self.assertTrue('tip' not in repo[None].tags())
         self.assertEqual(len(repo.heads()), 2)
+
+    def test_tag_repull_doesnt_happen(self):
+        repo = self._load_fixture_and_fetch('branchtagcollision.svndump')
+        oldheads = map(node.hex, repo.heads())
+        commands.pull(repo.ui, repo)
+        self.assertEqual(oldheads, map(node.hex, repo.heads()))
 
 def suite():
     import unittest, sys
