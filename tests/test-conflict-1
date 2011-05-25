@@ -17,7 +17,7 @@ echo 'hgext.bookmarks =' >> $HGRCPATH
 hg init hgrepo1
 cd hgrepo1
 echo A > afile
-hg add afile 
+hg add afile
 hg ci -m "origin"
 
 echo B > afile
@@ -27,7 +27,7 @@ hg up -r0
 echo C > afile
 hg ci -m "A->C"
 
-hg merge -r1
+hg merge -r1 | sed 's/-C ./-C/' | grep -v 'merging afile'
 # resolve using first parent
 echo C > afile
 hg resolve -m afile

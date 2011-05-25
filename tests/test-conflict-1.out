@@ -1,10 +1,9 @@
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 created new head
-merging afile
 warning: conflicts during merge.
 merging afile failed!
 0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
 @    3:2,1   6c53bc0f062f   1970-01-01 00:00 +0000   test
 |\     merge to C
 | |
