@@ -2,18 +2,22 @@
   $ cd repo
   $ i=0; while [ "$i" -lt 213 ]; do echo a >> a; i=`expr $i + 1`; done
   $ hg add a
+  $ cp a b
+  $ hg add b
 
 Wide diffstat:
 
   $ hg diff --stat
    a |  213 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   1 files changed, 213 insertions(+), 0 deletions(-)
+   b |  213 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   2 files changed, 426 insertions(+), 0 deletions(-)
 
 diffstat width:
 
   $ COLUMNS=24 hg diff --config ui.interactive=true --stat
    a |  213 ++++++++++++++
-   1 files changed, 213 insertions(+), 0 deletions(-)
+   b |  213 ++++++++++++++
+   2 files changed, 426 insertions(+), 0 deletions(-)
 
   $ hg ci -m adda
 
@@ -31,19 +35,19 @@ Narrow diffstat:
 
   $ hg ci -m appenda
 
-  $ printf '\0' > b
-  $ hg add b
+  $ printf '\0' > c
+  $ hg add c
 
 Binary diffstat:
 
   $ hg diff --stat
-   b |    0 
+   c |    0 
    1 files changed, 0 insertions(+), 0 deletions(-)
 
 Binary git diffstat:
 
   $ hg diff --stat --git
-   b |  Bin 
+   c |  Bin 
    1 files changed, 0 insertions(+), 0 deletions(-)
 
   $ hg ci -m createb

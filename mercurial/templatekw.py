@@ -186,7 +186,7 @@ def showdiffstat(repo, ctx, templ, **args):
     "modified files: +added/-removed lines"
     """
     stats = patch.diffstatdata(util.iterlines(ctx.diff()))
-    maxname, adds, removes, binary = patch.diffstatsum(stats)
+    maxname, maxtotal, adds, removes, binary = patch.diffstatsum(stats)
     return '%s: +%s/-%s' % (len(stats), adds, removes)
 
 def showextras(**args):
