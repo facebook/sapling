@@ -390,12 +390,12 @@ def recordupdates(repo, action, branchmerge):
             if branchmerge:
                 repo.dirstate.remove(f)
             else:
-                repo.dirstate.forget(f)
+                repo.dirstate.drop(f)
         elif m == "a": # re-add
             if not branchmerge:
                 repo.dirstate.add(f)
         elif m == "f": # forget
-            repo.dirstate.forget(f)
+            repo.dirstate.drop(f)
         elif m == "e": # exec change
             repo.dirstate.normallookup(f)
         elif m == "g": # get
@@ -425,7 +425,7 @@ def recordupdates(repo, action, branchmerge):
                 if f2 == fd: # file not locally copied/moved
                     repo.dirstate.normallookup(fd)
                 if move:
-                    repo.dirstate.forget(f)
+                    repo.dirstate.drop(f)
         elif m == "d": # directory rename
             f2, fd, flag = a[2:]
             if not f2 and f not in repo.dirstate:
@@ -441,7 +441,7 @@ def recordupdates(repo, action, branchmerge):
             else:
                 repo.dirstate.normal(fd)
                 if f:
-                    repo.dirstate.forget(f)
+                    repo.dirstate.drop(f)
 
 def update(repo, node, branchmerge, force, partial, ancestor=None):
     """

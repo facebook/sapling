@@ -4264,7 +4264,7 @@ def revert(ui, repo, *pats, **opts):
             audit_path = scmutil.pathauditor(repo.root)
             for f in remove[0]:
                 if repo.dirstate[f] == 'a':
-                    repo.dirstate.forget(f)
+                    repo.dirstate.drop(f)
                     continue
                 audit_path(f)
                 try:

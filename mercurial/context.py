@@ -842,7 +842,7 @@ class workingctx(changectx):
                 if self._repo.dirstate[f] != 'a':
                     self._repo.ui.warn(_("%s not added!\n") % f)
                 else:
-                    self._repo.dirstate.forget(f)
+                    self._repo.dirstate.drop(f)
         finally:
             wlock.release()
 
@@ -863,7 +863,7 @@ class workingctx(changectx):
                             raise
             for f in list:
                 if self._repo.dirstate[f] == 'a':
-                    self._repo.dirstate.forget(f)
+                    self._repo.dirstate.drop(f)
                 elif f not in self._repo.dirstate:
                     self._repo.ui.warn(_("%s not tracked!\n") % f)
                 else:

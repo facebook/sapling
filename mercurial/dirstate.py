@@ -365,14 +365,11 @@ class dirstate(object):
         if f in self._copymap:
             del self._copymap[f]
 
-    def forget(self, f):
-        '''Forget a file.'''
+    def drop(self, f):
+        '''Drop a file from the dirstate'''
         self._dirty = True
-        try:
-            self._droppath(f)
-            del self._map[f]
-        except KeyError:
-            self._ui.warn(_("not in dirstate: %s\n") % f)
+        self._droppath(f)
+        del self._map[f]
 
     def _normalize(self, path, isknown):
         normed = os.path.normcase(path)

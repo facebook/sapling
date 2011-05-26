@@ -1037,7 +1037,7 @@ class localrepository(repo.repository):
             for f in changes[0] + changes[1]:
                 self.dirstate.normal(f)
             for f in changes[2]:
-                self.dirstate.forget(f)
+                self.dirstate.drop(f)
             self.dirstate.setparents(ret)
             ms.reset()
         finally:

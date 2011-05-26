@@ -1302,7 +1302,7 @@ class queue(object):
                     except OSError, e:
                         if e.errno != errno.ENOENT:
                             raise
-                    repo.dirstate.forget(f)
+                    repo.dirstate.drop(f)
                 for f in m + r:
                     fctx = ctx[f]
                     repo.wwrite(f, fctx.data(), fctx.flags())
@@ -1480,7 +1480,7 @@ class queue(object):
                 for f in mm:
                     repo.dirstate.normallookup(f)
                 for f in forget:
-                    repo.dirstate.forget(f)
+                    repo.dirstate.drop(f)
 
                 if not msg:
                     if not ph.message:
@@ -2617,7 +2617,7 @@ def rename(ui, repo, patch, name=None, **opts):
         wlock = r.wlock()
         try:
             if r.dirstate[patch] == 'a':
-                r.dirstate.forget(patch)
+                r.dirstate.drop(patch)
                 r.dirstate.add(name)
             else:
                 if r.dirstate[name] == 'r':
