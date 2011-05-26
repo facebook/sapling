@@ -1215,9 +1215,9 @@ def command(table):
     def cmd(name, options, synopsis=None):
         def decorator(func):
             if synopsis:
-                table[name] = func, options, synopsis
+                table[name] = func, options[:], synopsis
             else:
-                table[name] = func, options
+                table[name] = func, options[:]
             return func
         return decorator
 
