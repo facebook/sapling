@@ -623,7 +623,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         wctx = repo[None]
         wlock = repo.wlock()
         try:
-            wctx.remove(deleted)
+            wctx.forget(deleted)
             wctx.add(unknown)
             for new, old in copies.iteritems():
                 wctx.copy(old, new)

@@ -835,12 +835,14 @@ class workingctx(changectx):
         finally:
             wlock.release()
 
-    def forget(self, list):
+    def forget(self, files):
         wlock = self._repo.wlock()
         try:
-            for f in list:
+            for f in files:
                 if self._repo.dirstate[f] != 'a':
-                    self._repo.ui.warn(_("%s not added!\n") % f)
+                    self._repo.dirstate.remove(f)
+                elif f not in self._repo.dirstate:
+                    self._repo.ui.warn(_("%s not tracked!\n") % f)
                 else:
                     self._repo.dirstate.drop(f)
         finally:

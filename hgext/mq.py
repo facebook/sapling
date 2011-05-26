@@ -735,10 +735,9 @@ class queue(object):
         if not keep:
             r = self.qrepo()
             if r:
-                r[None].remove(patches, True)
-            else:
-                for p in patches:
-                    os.unlink(self.join(p))
+                r[None].forget(patches)
+            for p in patches:
+                os.unlink(self.join(p))
 
         if numrevs:
             qfinished = self.applied[:numrevs]
@@ -2623,7 +2622,7 @@ def rename(ui, repo, patch, name=None, **opts):
                 if r.dirstate[name] == 'r':
                     wctx.undelete([name])
                 wctx.copy(patch, name)
-                wctx.remove([patch], False)
+                wctx.forget([patch])
         finally:
             wlock.release()
 

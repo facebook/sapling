@@ -2269,7 +2269,7 @@ def forget(ui, repo, *pats, **opts):
         if ui.verbose or not m.exact(f):
             ui.status(_('removing %s\n') % m.rel(f))
 
-    repo[None].remove(forget, unlink=False)
+    repo[None].forget(forget)
     return errs
 
 @command('grep',

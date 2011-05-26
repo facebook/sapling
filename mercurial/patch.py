@@ -489,7 +489,7 @@ class workingbackend(fsbackend):
             scmutil.dirstatecopy(self.ui, self.repo, wctx, src, dst)
             addremoved.discard(src)
         if (not self.similarity) and self.removed:
-            wctx.remove(sorted(self.removed))
+            wctx.forget(sorted(self.removed))
         if addremoved:
             cwd = self.repo.getcwd()
             if cwd:
