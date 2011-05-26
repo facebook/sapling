@@ -212,7 +212,7 @@ checks = {
     "icasefs": (has_icasefs, "case insensitive file system"),
     "inotify": (has_inotify, "inotify extension support"),
     "lsprof": (has_lsprof, "python lsprof module"),
-    "mtn": (has_mtn, "monotone client (> 0.31)"),
+    "mtn": (has_mtn, "monotone client (>= 1.0)"),
     "outer-repo": (has_outer_repo, "outer repo"),
     "p4": (has_p4, "Perforce server and client"),
     "pyflakes": (has_pyflakes, "Pyflakes python linter"),
