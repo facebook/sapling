@@ -467,10 +467,10 @@ if __name__ == "__main__":
         print
         return blocks
 
-    text = util.readfile(sys.argv[1])
+    text = sys.stdin.read()
     blocks = debug(findblocks, text)
     blocks = debug(findliteralblocks, blocks)
-    blocks, pruned = debug(prunecontainers, blocks, sys.argv[2:])
+    blocks, pruned = debug(prunecontainers, blocks, sys.argv[1:])
     blocks = debug(inlineliterals, blocks)
     blocks = debug(splitparagraphs, blocks)
     blocks = debug(updatefieldlists, blocks)
