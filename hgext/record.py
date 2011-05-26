@@ -555,7 +555,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
         ui.write = oldwrite
 
 cmdtable["qrecord"] = \
-    (qrecord, {}, # placeholder until mq is available
+    (qrecord, [], # placeholder until mq is available
      _('hg qrecord [OPTION]... PATCH [FILE]...'))
 
 def uisetup(ui):
