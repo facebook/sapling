@@ -8,7 +8,7 @@
 from node import hex, bin, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
-import os, re, sys, difflib, time, tempfile
+import os, re, sys, difflib, time, tempfile, errno
 import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
 import patch, help, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
@@ -3918,15 +3918,15 @@ def remove(ui, repo, *pats, **opts):
             ret = 1
 
     if force:
-        remove, forget = modified + deleted + clean, added
+        list = modified + deleted + clean + added
     elif after:
-        remove, forget = deleted, []
+        list = deleted
         for f in modified + added + clean:
             ui.warn(_('not removing %s: file still exists (use -f'
                       ' to force removal)\n') % m.rel(f))
             ret = 1
     else:
-        remove, forget = deleted + clean, []
+        list = deleted + clean
         for f in modified:
             ui.warn(_('not removing %s: file is modified (use -f'
                       ' to force removal)\n') % m.rel(f))
@@ -3936,12 +3936,25 @@ def remove(ui, repo, *pats, **opts):
                       ' to force removal)\n') % m.rel(f))
             ret = 1
 
-    for f in sorted(remove + forget):
+    for f in sorted(list):
         if ui.verbose or not m.exact(f):
             ui.status(_('removing %s\n') % m.rel(f))
 
-    repo[None].forget(forget)
-    repo[None].remove(remove, unlink=not after)
+    wlock = repo.wlock()
+    try:
+        if not after:
+            for f in list:
+                if f in added:
+                    continue # we never unlink added files on remove
+                try:
+                    util.unlinkpath(repo.wjoin(f))
+                except OSError, inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
+        repo[None].forget(list)
+    finally:
+        wlock.release()
+
     return ret
 
 @command('rename|move|mv',
