@@ -209,12 +209,12 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
     if isinstance(source, str):
         origsource = ui.expandpath(source)
         source, branch = parseurl(origsource, branch)
-        src_repo = repository(ui, source)
+        srcrepo = repository(ui, source)
     else:
-        src_repo = source
+        srcrepo = source
         branch = (None, branch or [])
-        origsource = source = src_repo.url()
-    rev, checkout = addbranchrevs(src_repo, src_repo, branch, rev)
+        origsource = source = srcrepo.url()
+    rev, checkout = addbranchrevs(srcrepo, srcrepo, branch, rev)
 
     if dest is None:
         dest = defaultdest(source)
@@ -241,17 +241,17 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
-    src_lock = dest_lock = dir_cleanup = None
+    srclock = destlock = dircleanup = None
     try:
         abspath = origsource
         if islocal(origsource):
             abspath = os.path.abspath(util.localpath(origsource))
 
         if islocal(dest):
-            dir_cleanup = DirCleanup(dest)
+            dircleanup = DirCleanup(dest)
 
         copy = False
-        if src_repo.cancopy() and islocal(dest):
+        if srcrepo.cancopy() and islocal(dest):
             copy = not pull and not rev
 
         if copy:
@@ -260,40 +260,40 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
                 # can end up with extra data in the cloned revlogs that's
                 # not pointed to by changesets, thus causing verify to
                 # fail
-                src_lock = src_repo.lock(wait=False)
+                srclock = srcrepo.lock(wait=False)
             except error.LockError:
                 copy = False
 
         if copy:
-            src_repo.hook('preoutgoing', throw=True, source='clone')
+            srcrepo.hook('preoutgoing', throw=True, source='clone')
             hgdir = os.path.realpath(os.path.join(dest, ".hg"))
             if not os.path.exists(dest):
                 os.mkdir(dest)
             else:
                 # only clean up directories we create ourselves
-                dir_cleanup.dir_ = hgdir
+                dircleanup.dir_ = hgdir
             try:
-                dest_path = hgdir
-                util.makedir(dest_path, notindexed=True)
+                destpath = hgdir
+                util.makedir(destpath, notindexed=True)
             except OSError, inst:
                 if inst.errno == errno.EEXIST:
-                    dir_cleanup.close()
+                    dircleanup.close()
                     raise util.Abort(_("destination '%s' already exists")
                                      % dest)
                 raise
 
             hardlink = None
             num = 0
-            for f in src_repo.store.copylist():
-                src = os.path.join(src_repo.sharedpath, f)
-                dst = os.path.join(dest_path, f)
+            for f in srcrepo.store.copylist():
+                src = os.path.join(srcrepo.sharedpath, f)
+                dst = os.path.join(destpath, f)
                 dstbase = os.path.dirname(dst)
                 if dstbase and not os.path.exists(dstbase):
                     os.mkdir(dstbase)
                 if os.path.exists(src):
                     if dst.endswith('data'):
                         # lock to avoid premature writing to the target
-                        dest_lock = lock.lock(os.path.join(dstbase, "lock"))
+                        destlock = lock.lock(os.path.join(dstbase, "lock"))
                     hardlink, n = util.copyfiles(src, dst, hardlink)
                     num += n
             if hardlink:
@@ -303,82 +303,82 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
             # we need to re-init the repo after manually copying the data
             # into it
-            dest_repo = repository(ui, dest)
-            src_repo.hook('outgoing', source='clone',
+            destrepo = repository(ui, dest)
+            srcrepo.hook('outgoing', source='clone',
                           node=node.hex(node.nullid))
         else:
             try:
-                dest_repo = repository(ui, dest, create=True)
+                destrepo = repository(ui, dest, create=True)
             except OSError, inst:
                 if inst.errno == errno.EEXIST:
-                    dir_cleanup.close()
+                    dircleanup.close()
                     raise util.Abort(_("destination '%s' already exists")
                                      % dest)
                 raise
 
             revs = None
             if rev:
-                if 'lookup' not in src_repo.capabilities:
+                if 'lookup' not in srcrepo.capabilities:
                     raise util.Abort(_("src repository does not support "
                                        "revision lookup and so doesn't "
                                        "support clone by revision"))
-                revs = [src_repo.lookup(r) for r in rev]
+                revs = [srcrepo.lookup(r) for r in rev]
                 checkout = revs[0]
-            if dest_repo.local():
-                dest_repo.clone(src_repo, heads=revs, stream=stream)
-            elif src_repo.local():
-                src_repo.push(dest_repo, revs=revs)
+            if destrepo.local():
+                destrepo.clone(srcrepo, heads=revs, stream=stream)
+            elif srcrepo.local():
+                srcrepo.push(destrepo, revs=revs)
             else:
                 raise util.Abort(_("clone from remote to remote not supported"))
 
-        if dir_cleanup:
-            dir_cleanup.close()
+        if dircleanup:
+            dircleanup.close()
 
-        if dest_repo.local():
-            fp = dest_repo.opener("hgrc", "w", text=True)
+        if destrepo.local():
+            fp = destrepo.opener("hgrc", "w", text=True)
             fp.write("[paths]\n")
             fp.write("default = %s\n" % abspath)
             fp.close()
 
-            dest_repo.ui.setconfig('paths', 'default', abspath)
+            destrepo.ui.setconfig('paths', 'default', abspath)
 
             if update:
                 if update is not True:
                     checkout = update
-                    if src_repo.local():
-                        checkout = src_repo.lookup(update)
+                    if srcrepo.local():
+                        checkout = srcrepo.lookup(update)
                 for test in (checkout, 'default', 'tip'):
                     if test is None:
                         continue
                     try:
-                        uprev = dest_repo.lookup(test)
+                        uprev = destrepo.lookup(test)
                         break
                     except error.RepoLookupError:
                         continue
-                bn = dest_repo[uprev].branch()
-                dest_repo.ui.status(_("updating to branch %s\n") % bn)
-                _update(dest_repo, uprev)
+                bn = destrepo[uprev].branch()
+                destrepo.ui.status(_("updating to branch %s\n") % bn)
+                _update(destrepo, uprev)
 
         # clone all bookmarks
-        if dest_repo.local() and src_repo.capable("pushkey"):
-            rb = src_repo.listkeys('bookmarks')
+        if destrepo.local() and srcrepo.capable("pushkey"):
+            rb = srcrepo.listkeys('bookmarks')
             for k, n in rb.iteritems():
                 try:
-                    m = dest_repo.lookup(n)
-                    dest_repo._bookmarks[k] = m
+                    m = destrepo.lookup(n)
+                    destrepo._bookmarks[k] = m
                 except error.RepoLookupError:
                     pass
             if rb:
-                bookmarks.write(dest_repo)
-        elif src_repo.local() and dest_repo.capable("pushkey"):
-            for k, n in src_repo._bookmarks.iteritems():
-                dest_repo.pushkey('bookmarks', k, '', hex(n))
+                bookmarks.write(destrepo)
+        elif srcrepo.local() and destrepo.capable("pushkey"):
+            for k, n in srcrepo._bookmarks.iteritems():
+                destrepo.pushkey('bookmarks', k, '', hex(n))
 
-        return src_repo, dest_repo
+        return srcrepo, destrepo
     finally:
-        release(src_lock, dest_lock)
-        if dir_cleanup is not None:
-            dir_cleanup.cleanup()
+        release(srclock, destlock)
+        if dircleanup is not None:
+            dircleanup.cleanup()
 
 def _showstats(repo, stats):
     repo.ui.status(_("%d files updated, %d files merged, "
