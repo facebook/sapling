@@ -79,9 +79,8 @@ def state(ctx, ui):
 
 def writestate(repo, state):
     """rewrite .hgsubstate in (outer) repo with these subrepo states"""
-    repo.wwrite('.hgsubstate',
-                ''.join(['%s %s\n' % (state[s][1], s)
-                         for s in sorted(state)]), '')
+    lines = ['%s %s\n' % (state[s][1], s) for s in sorted(state)]
+    repo.wwrite('.hgsubstate', ''.join(lines), '')
 
 def submerge(repo, wctx, mctx, actx, overwrite):
     """delegated from merge.applyupdates: merging of .hgsubstate file
