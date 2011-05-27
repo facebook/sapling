@@ -136,6 +136,7 @@ help (mq present)
    -X --exclude PATTERN [+]  exclude names matching the given patterns
    -m --message TEXT         use text as commit message
    -l --logfile FILE         read commit message from file
+      --mq                   operate on patch repository
   
   [+] marked option can be specified multiple times
   

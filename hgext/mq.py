@@ -3269,7 +3269,7 @@ def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'init', mqinit)
     entry[1].extend(mqopt)
 
-    nowrap = set(commands.norepo.split(" ") + ['qrecord'])
+    nowrap = set(commands.norepo.split(" "))
 
     def dotable(cmdtable):
         for cmd in cmdtable.keys():
