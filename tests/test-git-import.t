@@ -436,7 +436,9 @@ Copy and changes with existing destination
   > +b
   > EOF
   applying patch from stdin
-  abort: cannot create b: destination already exists
+  cannot create b: destination already exists
+  1 out of 1 hunks FAILED -- saving rejects to file b.rej
+  abort: patch failed to apply
   [255]
   $ cat b
   b

@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 import cStringIO, email.Parser, os, errno, re
-import tempfile, zlib
+import tempfile, zlib, shutil
 
 from i18n import _
 from node import hex, nullid, short
@@ -362,10 +362,11 @@ class abstractbackend(object):
         """
         raise NotImplementedError
 
-    def setfile(self, fname, data, mode):
+    def setfile(self, fname, data, mode, copysource):
         """Write data to target file fname and set its mode. mode is a
         (islink, isexec) tuple. If data is None, the file content should
-        be left unchanged.
+        be left unchanged. If the file is modified after being copied,
+        copysource is set to the original file name.
         """
         raise NotImplementedError
 
@@ -379,13 +380,6 @@ class abstractbackend(object):
         files.
         """
         pass
-
-    def copy(self, src, dst):
-        """Copy src file into dst file. Create intermediate directories if
-        necessary. Files are specified relatively to the patching base
-        directory.
-        """
-        raise NotImplementedError
 
     def exists(self, fname):
         raise NotImplementedError
@@ -411,7 +405,7 @@ class fsbackend(abstractbackend):
                 raise
         return (self.opener.read(fname), (islink, isexec))
 
-    def setfile(self, fname, data, mode):
+    def setfile(self, fname, data, mode, copysource):
         islink, isexec = mode
         if data is None:
             util.setflags(self._join(fname), islink, isexec)
@@ -439,23 +433,6 @@ class fsbackend(abstractbackend):
         fp.writelines(lines)
         fp.close()
 
-    def copy(self, src, dst):
-        basedir = self.opener.base
-        abssrc, absdst = [scmutil.canonpath(basedir, basedir, x)
-                          for x in [src, dst]]
-        if os.path.lexists(absdst):
-            raise util.Abort(_("cannot create %s: destination already exists")
-                             % dst)
-        dstdir = os.path.dirname(absdst)
-        if dstdir and not os.path.isdir(dstdir):
-            try:
-                os.makedirs(dstdir)
-            except IOError:
-                raise util.Abort(
-                    _("cannot create %s: unable to create destination directory")
-                    % dst)
-        util.copyfile(abssrc, absdst)
-
     def exists(self, fname):
         return os.path.lexists(self._join(fname))
 
@@ -468,19 +445,16 @@ class workingbackend(fsbackend):
         self.changed = set()
         self.copied = []
 
-    def setfile(self, fname, data, mode):
-        super(workingbackend, self).setfile(fname, data, mode)
+    def setfile(self, fname, data, mode, copysource):
+        super(workingbackend, self).setfile(fname, data, mode, copysource)
+        if copysource is not None:
+            self.copied.append((copysource, fname))
         self.changed.add(fname)
 
     def unlink(self, fname):
         super(workingbackend, self).unlink(fname)
         self.removed.add(fname)
         self.changed.add(fname)
-
-    def copy(self, src, dst):
-        super(workingbackend, self).copy(src, dst)
-        self.copied.append((src, dst))
-        self.changed.add(dst)
 
     def close(self):
         wctx = self.repo[None]
@@ -498,14 +472,40 @@ class workingbackend(fsbackend):
             scmutil.addremove(self.repo, addremoved, similarity=self.similarity)
         return sorted(self.changed)
 
+class filestore(object):
+    def __init__(self):
+        self.opener = None
+        self.files = {}
+        self.created = 0
+
+    def setfile(self, fname, data, mode):
+        if self.opener is None:
+            root = tempfile.mkdtemp(prefix='hg-patch-')
+            self.opener = scmutil.opener(root)
+        # Avoid filename issues with these simple names
+        fn = str(self.created)
+        self.opener.write(fn, data)
+        self.created += 1
+        self.files[fname] = (fn, mode)
+
+    def getfile(self, fname):
+        if fname not in self.files:
+            raise IOError()
+        fn, mode = self.files[fname]
+        return self.opener.read(fn), mode
+
+    def close(self):
+        if self.opener:
+            shutil.rmtree(self.opener.base)
+
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
 contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
 eolmodes = ['strict', 'crlf', 'lf', 'auto']
 
 class patchfile(object):
-    def __init__(self, ui, fname, backend, mode, create, remove, missing=False,
-                 eolmode='strict'):
+    def __init__(self, ui, fname, backend, store, mode, create, remove,
+                 eolmode='strict', copysource=None):
         self.fname = fname
         self.eolmode = eolmode
         self.eol = None
@@ -513,36 +513,43 @@ class patchfile(object):
         self.ui = ui
         self.lines = []
         self.exists = False
-        self.missing = missing
+        self.missing = True
         self.mode = mode
+        self.copysource = copysource
         self.create = create
         self.remove = remove
-        if not missing:
-            try:
-                data, mode = self.backend.getfile(fname)
-                if data:
-                    self.lines = data.splitlines(True)
-                if self.mode is None:
-                    self.mode = mode
-                if self.lines:
-                    # Normalize line endings
-                    if self.lines[0].endswith('\r\n'):
-                        self.eol = '\r\n'
-                    elif self.lines[0].endswith('\n'):
-                        self.eol = '\n'
-                    if eolmode != 'strict':
-                        nlines = []
-                        for l in self.lines:
-                            if l.endswith('\r\n'):
-                                l = l[:-2] + '\n'
-                            nlines.append(l)
-                        self.lines = nlines
+        try:
+            if copysource is None:
+                data, mode = backend.getfile(fname)
                 self.exists = True
-            except IOError:
-                if self.mode is None:
-                    self.mode = (False, False)
-        else:
-            self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
+            else:
+                data, mode = store.getfile(copysource)
+                self.exists = backend.exists(fname)
+            self.missing = False
+            if data:
+                self.lines = data.splitlines(True)
+            if self.mode is None:
+                self.mode = mode
+            if self.lines:
+                # Normalize line endings
+                if self.lines[0].endswith('\r\n'):
+                    self.eol = '\r\n'
+                elif self.lines[0].endswith('\n'):
+                    self.eol = '\n'
+                if eolmode != 'strict':
+                    nlines = []
+                    for l in self.lines:
+                        if l.endswith('\r\n'):
+                            l = l[:-2] + '\n'
+                        nlines.append(l)
+                    self.lines = nlines
+        except IOError:
+            if create:
+                self.missing = False
+            if self.mode is None:
+                self.mode = (False, False)
+        if self.missing:
+             self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
 
         self.hash = {}
         self.dirty = 0
@@ -569,7 +576,7 @@ class patchfile(object):
                 rawlines.append(l)
             lines = rawlines
 
-        self.backend.setfile(fname, ''.join(lines), mode)
+        self.backend.setfile(fname, ''.join(lines), mode, self.copysource)
 
     def printfile(self, warn):
         if self.fileprinted:
@@ -623,7 +630,11 @@ class patchfile(object):
             return -1
 
         if self.exists and self.create:
-            self.ui.warn(_("file %s already exists\n") % self.fname)
+            if self.copysource:
+                self.ui.warn(_("cannot create %s: destination already "
+                               "exists\n" % self.fname))
+            else:
+                self.ui.warn(_("file %s already exists\n") % self.fname)
             self.rej.append(h)
             return -1
 
@@ -1005,10 +1016,10 @@ def selectfile(backend, afile_orig, bfile_orig, hunk, strip, gp):
         # Git patches do not play games. Excluding copies from the
         # following heuristic avoids a lot of confusion
         fname = pathstrip(gp.path, strip - 1)[1]
-        create = gp.op == 'ADD'
+        create = gp.op in ('ADD', 'COPY', 'RENAME')
         remove = gp.op == 'DELETE'
         missing = not create and not backend.exists(fname)
-        return fname, missing, create, remove
+        return fname, create, remove
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
     create = nulla and hunk.starta == 0 and hunk.lena == 0
@@ -1050,7 +1061,7 @@ def selectfile(backend, afile_orig, bfile_orig, hunk, strip, gp):
         else:
             raise PatchError(_("undefined source and destination files"))
 
-    return fname, missing, create, remove
+    return fname, create, remove
 
 def scangitpatch(lr, firstline):
     """
@@ -1177,7 +1188,7 @@ def iterhunks(fp):
         gp = gitpatches.pop()[1]
         yield 'file', ('a/' + gp.path, 'b/' + gp.path, None, gp)
 
-def applydiff(ui, fp, changed, backend, strip=1, eolmode='strict'):
+def applydiff(ui, fp, changed, backend, store, strip=1, eolmode='strict'):
     """Reads a patch from fp and tries to apply it.
 
     The dict 'changed' is filled in with all of the filenames changed
@@ -1188,10 +1199,11 @@ def applydiff(ui, fp, changed, backend, strip=1, eolmode='strict'):
     read in binary mode. Otherwise, line endings are ignored when
     patching then normalized according to 'eolmode'.
     """
-    return _applydiff(ui, fp, patchfile, backend, changed, strip=strip,
+    return _applydiff(ui, fp, patchfile, backend, store, changed, strip=strip,
                       eolmode=eolmode)
 
-def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
+def _applydiff(ui, fp, patcher, backend, store, changed, strip=1,
+               eolmode='strict'):
 
     def pstrip(p):
         return pathstrip(p, strip - 1)[1]
@@ -1214,30 +1226,42 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
                 rejects += current_file.close()
                 current_file = None
             afile, bfile, first_hunk, gp = values
+            copysource = None
             if gp:
                 path = pstrip(gp.path)
+                if gp.oldpath:
+                    copysource = pstrip(gp.oldpath)
                 changed[path] = gp
                 if gp.op == 'DELETE':
                     backend.unlink(path)
                     continue
                 if gp.op == 'RENAME':
-                    backend.unlink(pstrip(gp.oldpath))
-                if gp.mode and not first_hunk:
-                    data = None
-                    if gp.op == 'ADD':
-                        # Added files without content have no hunk and
-                        # must be created
-                        data = ''
-                    backend.setfile(path, data, gp.mode)
+                    backend.unlink(copysource)
+                if not first_hunk:
+                    data, mode = None, None
+                    if gp.op in ('RENAME', 'COPY'):
+                        data, mode = store.getfile(copysource)
+                    if gp.mode:
+                        mode = gp.mode
+                        if gp.op == 'ADD':
+                            # Added files without content have no hunk and
+                            # must be created
+                            data = ''
+                    if data or mode:
+                        if (gp.op in ('ADD', 'RENAME', 'COPY')
+                            and backend.exists(path)):
+                            raise PatchError(_("cannot create %s: destination "
+                                               "already exists") % path)
+                        backend.setfile(path, data, mode, copysource)
             if not first_hunk:
                 continue
             try:
                 mode = gp and gp.mode or None
-                current_file, missing, create, remove = selectfile(
+                current_file, create, remove = selectfile(
                     backend, afile, bfile, first_hunk, strip, gp)
-                current_file = patcher(ui, current_file, backend, mode,
-                                       create, remove, missing=missing,
-                                       eolmode=eolmode)
+                current_file = patcher(ui, current_file, backend, store, mode,
+                                       create, remove, eolmode=eolmode,
+                                       copysource=copysource)
             except PatchError, inst:
                 ui.warn(str(inst) + '\n')
                 current_file = None
@@ -1245,7 +1269,9 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
                 continue
         elif state == 'git':
             for gp in values:
-                backend.copy(pstrip(gp.oldpath), pstrip(gp.path))
+                path = pstrip(gp.oldpath)
+                data, mode = backend.getfile(path)
+                store.setfile(path, data, mode)
         else:
             raise util.Abort(_('unsupported parser state: %s') % state)
 
@@ -1316,17 +1342,20 @@ def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
         raise util.Abort(_('unsupported line endings type: %s') % eolmode)
     eolmode = eolmode.lower()
 
+    store = filestore()
     backend = workingbackend(ui, repo, similarity)
     try:
         fp = open(patchobj, 'rb')
     except TypeError:
         fp = patchobj
     try:
-        ret = applydiff(ui, fp, files, backend, strip=strip, eolmode=eolmode)
+        ret = applydiff(ui, fp, files, backend, store, strip=strip,
+                        eolmode=eolmode)
     finally:
         if fp != patchobj:
             fp.close()
         files.update(dict.fromkeys(backend.close()))
+        store.close()
     if ret < 0:
         raise PatchError(_('patch failed to apply'))
     return ret > 0
@@ -1370,7 +1399,7 @@ def changedfiles(ui, repo, patchpath, strip=1):
                         changed.add(pathstrip(gp.oldpath, strip - 1)[1])
                 if not first_hunk:
                     continue
-                current_file, missing, create, remove = selectfile(
+                current_file, create, remove = selectfile(
                     backend, afile, bfile, first_hunk, strip, gp)
                 changed.add(current_file)
             elif state not in ('hunk', 'git'):

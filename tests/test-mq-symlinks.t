@@ -115,6 +115,8 @@ check patch does not overwrite untracked symlinks
   $ ln -s linkbb linkb
   $ hg qpush
   applying movelink
+  cannot create linkb: destination already exists
+  1 out of 1 hunks FAILED -- saving rejects to file linkb.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working dir
   errors during apply, please fix and refresh movelink

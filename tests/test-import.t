@@ -617,7 +617,7 @@ test paths outside repo root
   > rename to bar
   > EOF
   applying patch from stdin
-  abort: ../outside/foo not under root
+  abort: path contains illegal component: ../outside/foo
   [255]
   $ cd ..
 
