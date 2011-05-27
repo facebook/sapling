@@ -504,7 +504,7 @@ contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
 eolmodes = ['strict', 'crlf', 'lf', 'auto']
 
 class patchfile(object):
-    def __init__(self, ui, fname, backend, mode, missing=False,
+    def __init__(self, ui, fname, backend, mode, create, remove, missing=False,
                  eolmode='strict'):
         self.fname = fname
         self.eolmode = eolmode
@@ -515,6 +515,8 @@ class patchfile(object):
         self.exists = False
         self.missing = missing
         self.mode = mode
+        self.create = create
+        self.remove = remove
         if not missing:
             try:
                 data, mode = self.backend.getfile(fname)
@@ -620,13 +622,13 @@ class patchfile(object):
             self.rej.append(h)
             return -1
 
-        if self.exists and h.createfile():
+        if self.exists and self.create:
             self.ui.warn(_("file %s already exists\n") % self.fname)
             self.rej.append(h)
             return -1
 
         if isinstance(h, binhunk):
-            if h.rmfile():
+            if self.remove:
                 self.backend.unlink(self.fname)
             else:
                 self.lines[:] = h.new()
@@ -654,7 +656,7 @@ class patchfile(object):
         # when the hunk cleanly applies at start + skew, so skip the
         # fast case code
         if self.skew == 0 and diffhelpers.testhunk(old, self.lines, start) == 0:
-            if h.rmfile():
+            if self.remove:
                 self.backend.unlink(self.fname)
             else:
                 self.lines[start : start + h.lena] = h.new()
@@ -710,7 +712,7 @@ class patchfile(object):
         return len(self.rej)
 
 class hunk(object):
-    def __init__(self, desc, num, lr, context, create=False, remove=False):
+    def __init__(self, desc, num, lr, context):
         self.number = num
         self.desc = desc
         self.hunk = [desc]
@@ -723,8 +725,6 @@ class hunk(object):
                 self.read_context_hunk(lr)
             else:
                 self.read_unified_hunk(lr)
-        self.create = create
-        self.remove = remove and not create
 
     def getnormalized(self):
         """Return a copy with line endings normalized to LF."""
@@ -738,7 +738,7 @@ class hunk(object):
             return nlines
 
         # Dummy object, it is rebuilt manually
-        nh = hunk(self.desc, self.number, None, None, False, False)
+        nh = hunk(self.desc, self.number, None, None)
         nh.number = self.number
         nh.desc = self.desc
         nh.hunk = self.hunk
@@ -748,8 +748,6 @@ class hunk(object):
         nh.startb = self.startb
         nh.lena = self.lena
         nh.lenb = self.lenb
-        nh.create = self.create
-        nh.remove = self.remove
         return nh
 
     def read_unified_hunk(self, lr):
@@ -891,12 +889,6 @@ class hunk(object):
     def complete(self):
         return len(self.a) == self.lena and len(self.b) == self.lenb
 
-    def createfile(self):
-        return self.starta == 0 and self.lena == 0 and self.create
-
-    def rmfile(self):
-        return self.startb == 0 and self.lenb == 0 and self.remove
-
     def fuzzit(self, l, fuzz, toponly):
         # this removes context lines from the top and bottom of list 'l'.  It
         # checks the hunk to make sure only context lines are removed, and then
@@ -942,17 +934,10 @@ class hunk(object):
 
 class binhunk:
     'A binary patch file. Only understands literals so far.'
-    def __init__(self, gitpatch, lr):
-        self.gitpatch = gitpatch
+    def __init__(self, lr):
         self.text = None
         self.hunk = ['GIT binary patch\n']
         self._read(lr)
-
-    def createfile(self):
-        return self.gitpatch.op == 'ADD'
-
-    def rmfile(self):
-        return self.gitpatch.op == 'DELETE'
 
     def complete(self):
         return self.text is not None
@@ -1020,10 +1005,14 @@ def selectfile(backend, afile_orig, bfile_orig, hunk, strip, gp):
         # Git patches do not play games. Excluding copies from the
         # following heuristic avoids a lot of confusion
         fname = pathstrip(gp.path, strip - 1)[1]
-        missing = not hunk.createfile() and not backend.exists(fname)
-        return fname, missing
+        create = gp.op == 'ADD'
+        remove = gp.op == 'DELETE'
+        missing = not create and not backend.exists(fname)
+        return fname, missing, create, remove
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
+    create = nulla and hunk.starta == 0 and hunk.lena == 0
+    remove = nullb and hunk.startb == 0 and hunk.lenb == 0
     abase, afile = pathstrip(afile_orig, strip)
     gooda = not nulla and backend.exists(afile)
     bbase, bfile = pathstrip(bfile_orig, strip)
@@ -1031,20 +1020,16 @@ def selectfile(backend, afile_orig, bfile_orig, hunk, strip, gp):
         goodb = gooda
     else:
         goodb = not nullb and backend.exists(bfile)
-    createfunc = hunk.createfile
-    missing = not goodb and not gooda and not createfunc()
+    missing = not goodb and not gooda and not create
 
     # some diff programs apparently produce patches where the afile is
     # not /dev/null, but afile starts with bfile
     abasedir = afile[:afile.rfind('/') + 1]
     bbasedir = bfile[:bfile.rfind('/') + 1]
-    if missing and abasedir == bbasedir and afile.startswith(bfile):
-        # this isn't very pretty
-        hunk.create = True
-        if createfunc():
-            missing = False
-        else:
-            hunk.create = False
+    if (missing and abasedir == bbasedir and afile.startswith(bfile)
+        and hunk.starta == 0 and hunk.lena == 0):
+        create = True
+        missing = False
 
     # If afile is "a/b/foo" and bfile is "a/b/foo.orig" we assume the
     # diff is between a file and its backup. In this case, the original
@@ -1065,7 +1050,7 @@ def selectfile(backend, afile_orig, bfile_orig, hunk, strip, gp):
         else:
             raise PatchError(_("undefined source and destination files"))
 
-    return fname, missing
+    return fname, missing, create, remove
 
 def scangitpatch(lr, firstline):
     """
@@ -1125,13 +1110,11 @@ def iterhunks(fp):
             if gitpatches and gitpatches[-1][0] == bfile:
                 gp = gitpatches.pop()[1]
             if x.startswith('GIT binary patch'):
-                h = binhunk(gp, lr)
+                h = binhunk(lr)
             else:
                 if context is None and x.startswith('***************'):
                     context = True
-                create = afile == '/dev/null' or gp and gp.op == 'ADD'
-                remove = bfile == '/dev/null' or gp and gp.op == 'DELETE'
-                h = hunk(x, hunknum + 1, lr, context, create, remove)
+                h = hunk(x, hunknum + 1, lr, context)
             hunknum += 1
             if emitfile:
                 emitfile = False
@@ -1250,10 +1233,11 @@ def _applydiff(ui, fp, patcher, backend, changed, strip=1, eolmode='strict'):
                 continue
             try:
                 mode = gp and gp.mode or None
-                current_file, missing = selectfile(backend, afile, bfile,
-                                                   first_hunk, strip, gp)
+                current_file, missing, create, remove = selectfile(
+                    backend, afile, bfile, first_hunk, strip, gp)
                 current_file = patcher(ui, current_file, backend, mode,
-                                       missing=missing, eolmode=eolmode)
+                                       create, remove, missing=missing,
+                                       eolmode=eolmode)
             except PatchError, inst:
                 ui.warn(str(inst) + '\n')
                 current_file = None
@@ -1386,8 +1370,8 @@ def changedfiles(ui, repo, patchpath, strip=1):
                         changed.add(pathstrip(gp.oldpath, strip - 1)[1])
                 if not first_hunk:
                     continue
-                current_file, missing = selectfile(backend, afile, bfile,
-                                                   first_hunk, strip, gp)
+                current_file, missing, create, remove = selectfile(
+                    backend, afile, bfile, first_hunk, strip, gp)
                 changed.add(current_file)
             elif state not in ('hunk', 'git'):
                 raise util.Abort(_('unsupported parser state: %s') % state)
