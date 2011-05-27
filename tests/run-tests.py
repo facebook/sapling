@@ -733,11 +733,9 @@ def runone(options, test):
     else:
         return None # not a supported test, don't record
 
-    if options.blacklist:
-        filename = options.blacklist.get(test)
-        if filename is not None:
-            skip("blacklisted")
-            return None
+    if options.blacklist and filename in options.blacklist:
+        skip("blacklisted")
+        return None
 
     if options.retest and not os.path.exists(test + ".err"):
         ignore("not retesting")
