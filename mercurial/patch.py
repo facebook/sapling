@@ -445,13 +445,19 @@ class workingbackend(fsbackend):
         self.changed = set()
         self.copied = []
 
+    def _checkknown(self, fname):
+        if self.repo.dirstate[fname] == '?' and self.exists(fname):
+            raise PatchError(_('cannot patch %s: file is not tracked') % fname)
+
     def setfile(self, fname, data, mode, copysource):
+        self._checkknown(fname)
         super(workingbackend, self).setfile(fname, data, mode, copysource)
         if copysource is not None:
             self.copied.append((copysource, fname))
         self.changed.add(fname)
 
     def unlink(self, fname):
+        self._checkknown(fname)
         super(workingbackend, self).unlink(fname)
         self.removed.add(fname)
         self.changed.add(fname)
