@@ -577,11 +577,14 @@ def pullrebase(orig, ui, repo, *args, **opts):
                 # there was nothing to rebase we force an update
                 hg.update(repo, dest)
     else:
+        if opts.get('tool'):
+            raise util.Abort(_('--tool can only be used with --rebase'))
         orig(ui, repo, *args, **opts)
 
 def uisetup(ui):
     'Replace pull with a decorator to provide --rebase option'
     entry = extensions.wrapcommand(commands.table, 'pull', pullrebase)
     entry[1].append(('', 'rebase', None,
-                     _("rebase working directory to branch head"))
-)
+                     _("rebase working directory to branch head")))
+    entry[1].append(('t', 'tool', '',
+                     _("specify merge tool for rebase")))
