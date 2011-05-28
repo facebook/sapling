@@ -2400,7 +2400,7 @@ msgid ""
 msgstr ""
 
 msgid "    See :hg:`help dates` for a list of formats valid for -d/--date."
-msgstr ""
+msgstr "    Список возможных форматов для --d/--dates см. :hg:`help dates`"
 
 msgid ""
 "    Returns 0 on success.\n"
@@ -6390,7 +6390,7 @@ msgid "empty commit message"
 msgstr ""
 
 msgid "add the specified files on the next commit"
-msgstr "добавить указанные файлы при следующем коммите"
+msgstr "добавить указанный файл при следующем коммите"
 
 msgid ""
 "    Schedule files to be version controlled and added to the\n"
@@ -6591,18 +6591,24 @@ msgid "cannot archive plain files to stdout"
 msgstr "не могу архивировать обычный каталог в stdout"
 
 msgid "reverse effect of earlier changeset"
-msgstr ""
+msgstr "отменить эффект более раннего набора изменений"
 
 msgid ""
 "    Prepare a new changeset with the effect of REV undone in the\n"
 "    current working directory."
 msgstr ""
+"    Создает в текущем рабочем каталоге новый набор изменений, который\n"
+"    имеет эффект отмены изменений РЕВИЗИИ."
 
 msgid ""
 "    If REV is the parent of the working directory, then this new changeset\n"
 "    is committed automatically. Otherwise, hg needs to merge the\n"
 "    changes and the merged result is left uncommitted."
 msgstr ""
+"    Если РЕВИЗИЯ - родитель рабочего каталога, то созданный набор\n"
+"    изменений коммитится автоматически. В противном случае Mercurial\n"
+"    проводит слияние изменений, результат слияния остается\n"
+"    незакоммиченным."
 
 msgid ""
 "    By default, the pending changeset will have one parent,\n"
@@ -6610,6 +6616,11 @@ msgid ""
 "    will instead have two parents: the old parent of the working\n"
 "    directory and a new child of REV that simply undoes REV."
 msgstr ""
+"    По умолчанию, созданный набор изменений будет иметь одного\n"
+"    родителя, что сохраняет линейую история. Если указан --merge,\n"
+"    он будет иметь двух родителей: предыдущего родителя рабочего\n"
+"    каталога и новую дочернюю ревизию РЕВИЗИИ, которая просто\n"
+"    отменяет ее действие."
 
 msgid ""
 "    Before version 1.7, the behavior without --merge was equivalent to\n"
@@ -6617,39 +6628,44 @@ msgid ""
 "    the merge and leave the child of REV as a head to be merged\n"
 "    separately."
 msgstr ""
+"    До версии 1.7 поведение без --merge было эквивалентно поведению\n"
+"    с --merge с последующим :hg:`update --clean .` с целью отменить\n"
+"    слияние и оставить дочернюю ревизию РЕВИЗИИ как голову для\n"
+"    для дальнейшего слияния"
 
 msgid "please specify just one revision"
-msgstr ""
+msgstr "пожалуйста, укажите ровно одну ревизию"
 
 msgid "please specify a revision to backout"
-msgstr ""
+msgstr "пожалуйста, укажите ревизию для отмены"
 
 msgid "cannot backout change on a different branch"
-msgstr ""
+msgstr "не могу отменить ревизию на другой ветке"
 
 msgid "cannot backout a change with no parents"
-msgstr ""
+msgstr "не могу отменить ревизию без родителей"
 
 msgid "cannot backout a merge changeset without --parent"
-msgstr ""
+msgstr "немогу отменить ревизию слияния без --parent"
 
 #, python-format
 msgid "%s is not a parent of %s"
-msgstr ""
+msgstr "%s не родитель %s"
 
 msgid "cannot use --parent on non-merge changeset"
 msgstr ""
+"нельзя использовать --parent для ревизии, не являющейся результатом слияния"
 
 #, python-format
 msgid "changeset %s backs out changeset %s\n"
-msgstr ""
+msgstr "ревизия %s отменяет ревизию %s\n"
 
 #, python-format
 msgid "merging with changeset %s\n"
-msgstr ""
+msgstr "слияние с ревизией %s\n"
 
 msgid "subdivision search of changesets"
-msgstr ""
+msgstr "поиск ревизии методом деления пополам"
 
 msgid ""
 "    This command helps to find changesets which introduce problems. To\n"
@@ -6661,11 +6677,23 @@ msgid ""
 "    bad, and bisect will either update to another candidate changeset\n"
 "    or announce that it has found the bad revision."
 msgstr ""
+"    Эта команда полезна при поиске ревизии, в которой была внесена\n"
+"    ошибка. Для этого самая ранняя ревизия, про которую известно, что\n"
+"    она содержит ошибку, помечается как плохая, после чего самая\n"
+"    поздняя ревизия, не содержащая эту ошибку, помечается как хорошая.\n"
+"    Bisect обновит рабочий каталог до ревизии для тестирования (если\n"
+"    не указан -U/--update). После того, как тесты проведены, ревизия\n"
+"    помечается как хорошая или плохая в зависимости от результата, и\n"
+"    bisect либо обновит каталог до новой ревизии-кандидата, либо\n"
+"    объявит, что нашел плохую ревизию."
 
 msgid ""
 "    As a shortcut, you can also use the revision argument to mark a\n"
 "    revision as good or bad without checking it out first."
 msgstr ""
+"    Для краткости можно также использовать номер ревизии в качестве\n"
+"    параметра, чтобы пометить ревизию как плохую или хорошую, не\n"
+"    обновляя до нее предварительно рабочий каталог."
 
 msgid ""
 "    If you supply a command, it will be used for automatic bisection.\n"
@@ -6674,12 +6702,17 @@ msgid ""
 "    (command not found) will abort the bisection, and any other\n"
 "    non-zero exit status means the revision is bad."
 msgstr ""
+"    Если вы укажите команду, она будет использована для автоматического\n"
+"    поиска. Ее код возврата будет использован чтобы пометить ревизию\n"
+"    как плохую или хорошую: код 0 - хорошая, код 125 означает пропустить\n"
+"    ревизию, 127 (команда не найдена) отменяет поиск, любой другой\n"
+"    код возврата означает плохую ревизию."
 
 msgid "The first good revision is:\n"
-msgstr ""
+msgstr "Первая хорошая ревизия:\n"
 
 msgid "The first bad revision is:\n"
-msgstr ""
+msgstr "Первая плохая ревизия:\n"
 
 #, python-format
 msgid ""
@@ -6687,50 +6720,53 @@ msgid ""
 "Use bisect --extend to continue the bisection from\n"
 "the common ancestor, %s.\n"
 msgstr ""
+"Не все предки этого набора изменений были проверены.\n"
+"Используйте bisect --extend чтобы продолжить поиск\n"
+"от общей родительской ревизии %s.\n"
 
 msgid "Due to skipped revisions, the first good revision could be any of:\n"
-msgstr ""
+msgstr "Из-за пропущенных ревизий, первой хорошей может быть любая из:\n"
 
 msgid "Due to skipped revisions, the first bad revision could be any of:\n"
-msgstr ""
+msgstr "Из-за пропущенных ревизий, первой плохой может быть любая из:\n"
 
 msgid "cannot bisect (no known good revisions)"
-msgstr ""
+msgstr "не могу поделить пополам (нет известных хороших ревизий)"
 
 msgid "cannot bisect (no known bad revisions)"
-msgstr ""
+msgstr "не могу поделить пополам (нет известных плохих ревизий)"
 
 msgid "(use of 'hg bisect <cmd>' is deprecated)\n"
-msgstr ""
+msgstr "(использование 'hg bisect <cmd>' устарело)\n"
 
 msgid "incompatible arguments"
-msgstr ""
+msgstr "несовместимые аргументы"
 
 #, python-format
 msgid "failed to execute %s"
-msgstr ""
+msgstr "не удалось выполнить %s"
 
 #, python-format
 msgid "%s killed"
-msgstr ""
+msgstr "%s завершен (killed)"
 
 #, python-format
 msgid "Changeset %d:%s: %s\n"
-msgstr ""
+msgstr "Набор изменений %d:%s: %s\n"
 
 #, python-format
 msgid "Extending search to changeset %d:%s\n"
-msgstr ""
+msgstr "Расширяем поиск до ревизии %d:%s\n"
 
 msgid "nothing to extend"
-msgstr ""
+msgstr "некуда расширять поиск"
 
 #, python-format
 msgid "Testing changeset %d:%s (%d changesets remaining, ~%d tests)\n"
-msgstr ""
+msgstr "Тестирование ревизии %d:%s (%d ревизий осталось, ~%d тестов)\n"
 
 msgid "track a line of development with movable markers"
-msgstr ""
+msgstr "отслеживать ветвь разработки с помощью передвигаемых меток"
 
 msgid ""
 "    Bookmarks are pointers to certain commits that move when\n"
@@ -6738,6 +6774,11 @@ msgid ""
 "    deleted. It is possible to use bookmark names in :hg:`merge` and\n"
 "    :hg:`update` to merge and update respectively to a given bookmark."
 msgstr ""
+"    Закладки (bookmarks) - это указатели на некторый коммит, которые\n"
+"    перемещаются при коммите. Закладки локальны. Их можно переименовывать\n"
+"    копировать и удалять. Можно использовать имя закладки в :hg:`merge`\n"
+"    и :hg:`update` для слияния или обновления до заданной закладки\n"
+"    соответвенно."
 
 msgid ""
 "    You can use :hg:`bookmark NAME` to set a bookmark on the working\n"
@@ -6745,6 +6786,10 @@ msgid ""
 "    a revision using -r REV (where REV may be an existing bookmark),\n"
 "    the bookmark is assigned to that revision."
 msgstr ""
+"    Используйте :hg:`bookmark ИМЯ` чтобы создать закладку с заданным\n"
+"    именем на родительскую ревизию рабочего каталога. Если указывается\n"
+"    -r РЕВИЗИЯ (где РЕВИЗИЯ может также быть существующей закладкой),\n"
+"    закладка будет указывать на эту ревизию."
 
 msgid ""
 "    Bookmarks can be pushed and pulled between repositories (see :hg:`help\n"
@@ -6754,35 +6799,42 @@ msgid ""
 "    the bookmarks extension must be enabled.\n"
 "    "
 msgstr ""
+"    Закладки могут передаваться между репозиториями с помощью команд\n"
+"    push и pull (см. :hg:`help push` и :hg:`help pull). Для этого\n"
+"    необходимо, чтобы удаленный и локальный репозиторий поддерживали\n"
+"    закладки. Для Mercurial версий меньше 1.8 это означает, "
+"что\n"
+"    должно быть включено расширение bookmarks.\n"
+"    "
 
 #, python-format
 msgid "bookmark '%s' does not exist"
-msgstr ""
+msgstr "закладки '%s' не существует"
 
 #, python-format
 msgid "bookmark '%s' already exists (use -f to force)"
-msgstr ""
+msgstr "закладка '%s' уже существует (-f - принудительно) "
 
 msgid "new bookmark name required"
-msgstr ""
+msgstr "укажите новое имя закладки"
 
 msgid "bookmark name required"
-msgstr ""
+msgstr "укажите имя закладки"
 
 msgid "bookmark name cannot contain newlines"
-msgstr ""
+msgstr "имя закладки не может содержать символ перевода строки"
 
 msgid "bookmark names cannot consist entirely of whitespace"
-msgstr ""
+msgstr "имя закладки не может состоять из одних пробелов"
 
 msgid "a bookmark cannot have the name of an existing branch"
-msgstr ""
+msgstr "закладка не может назыаться так же, как существующая ветвь"
 
 msgid "no bookmarks set\n"
-msgstr ""
+msgstr "нет ни одной закладки\n"
 
 msgid "set or show the current branch name"
-msgstr ""
+msgstr "задать или показать имя текущей ветви"
 
 msgid ""
 "    With no argument, show the current branch name. With one argument,\n"
@@ -6791,11 +6843,17 @@ msgid ""
 "    recommends that primary development take place on the 'default'\n"
 "    branch."
 msgstr ""
+"    Без аргументов показывает имя текущей ветви. С одним аргументом\n"
+"    задает имя ветви для рабочего каталога (ветвь не будет создана\n"
+"    в репозитории до следующего коммита). Рекомендуется вести основную\n"
+"    разработку в ветви 'default'."
 
 msgid ""
 "    Unless -f/--force is specified, branch will not let you set a\n"
 "    branch name that already exists, even if it's inactive."
 msgstr ""
+"    Если не указан -f/--force, branch не даст вам задать имя\n"
+"    существующей ветви, даже если она не активна."
 
 msgid ""
 "    Use -C/--clean to reset the working directory branch to that of\n"
@@ -6807,20 +6865,23 @@ msgid ""
 "    Use the command :hg:`update` to switch to an existing branch. Use\n"
 "    :hg:`commit --close-branch` to mark this branch as closed."
 msgstr ""
+"    Используйте команду :hg:`update` чтобы переключиться на существующую\n"
+"    ветвь. Используйте :hg:`commit --close-branch` чтобы пометить эту\n"
+"    ветвь как закрытую."
 
 #, python-format
 msgid "reset working directory to branch %s\n"
-msgstr ""
+msgstr "рабочий каталог сброшен на ветвь %s\n"
 
 msgid "a branch of the same name already exists"
-msgstr ""
+msgstr "ветвь с таким именем уже существует"
 
 msgid "use 'hg update' to switch to it"
-msgstr ""
+msgstr "используйте 'hg update' чтобы переключиться на нее"
 
 #, python-format
 msgid "marked working directory as branch %s\n"
-msgstr ""
+msgstr "рабочий каталог помечен как ветвь %s\n"
 
 msgid "list repository named branches"
 msgstr ""
@@ -8916,19 +8977,19 @@ msgid "exclude names matching the given patterns"
 msgstr "исключить имена, соответствующие данным шаблонам"
 
 msgid "use text as commit message"
-msgstr ""
+msgstr "текст комментария к коммиту"
 
 msgid "read commit message from file"
-msgstr ""
+msgstr "читать журнальные сообщения из файла"
 
 msgid "record the specified date as commit date"
-msgstr ""
+msgstr "использовать эту дату в качестве даты коммита"
 
 msgid "record the specified user as committer"
-msgstr ""
+msgstr "использовать этого пользователя как автора коммита"
 
 msgid "STYLE"
-msgstr ""
+msgstr "СТИЛЬ"
 
 msgid "display using template map file"
 msgstr ""
@@ -9027,65 +9088,66 @@ msgstr "тип создаваемого архива"
 msgid "[ПАРАМЕТР]... ВЫХОД"
 msgstr ""
 
+#, fuzzy
 msgid "merge with old dirstate parent after backout"
-msgstr ""
+msgstr "слить со старым родителем после отмены"
 
 msgid "parent to choose when backing out merge"
-msgstr ""
+msgstr "выбираемая родительская ревизия при отмене слияния"
 
 msgid "revision to backout"
-msgstr ""
+msgstr "ревизия для отмены"
 
 msgid "[OPTION]... [-r] REV"
-msgstr ""
+msgstr "[ПАРАМЕТР]... [-r] РЕВИЗИЯ"
 
 msgid "reset bisect state"
-msgstr ""
+msgstr "сбросить поиск"
 
 msgid "mark changeset good"
-msgstr ""
+msgstr "пометить ревизию как хорошую"
 
 msgid "mark changeset bad"
-msgstr ""
+msgstr "пометить ревизию как плохую"
 
 msgid "skip testing changeset"
-msgstr ""
+msgstr "пропустить тестирование набора изменений"
 
 msgid "extend the bisect range"
-msgstr ""
+msgstr "расширить диапазон поиска"
 
 msgid "use command to check changeset state"
-msgstr ""
+msgstr "использовать команду для проверки состояния набора изменений"
 
 msgid "do not update to target"
-msgstr ""
+msgstr "не обновляться до целевой ревизии"
 
 msgid "[-gbsr] [-U] [-c CMD] [REV]"
-msgstr ""
+msgstr "[-gbsr] [-U] [-c КОМАНДА] [РЕВИЗИЯ]"
 
 msgid "force"
-msgstr ""
+msgstr "принудительно"
 
 msgid "delete a given bookmark"
-msgstr ""
+msgstr "удалить указанную закладку"
 
 msgid "rename a given bookmark"
-msgstr ""
+msgstr "переимновать указанную закладку"
 
 msgid "do not mark a new bookmark active"
-msgstr ""
+msgstr "не помечать новую закладку как активную"
 
 msgid "hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]"
-msgstr ""
+msgstr "hg bookmarks [-f] [-d] [-i] [-m ИМЯ] [-r РЕВИЗИЯ] [ИМЯ]"
 
 msgid "set branch name even if it shadows an existing branch"
-msgstr ""
+msgstr "использовать имя ветви, даже если оно скрывает уже существующую ветвь"
 
 msgid "reset branch name to parent branch name"
-msgstr ""
+msgstr "сбросить имя ветви в имя ветви родителя"
 
 msgid "[-fC] [NAME]"
-msgstr ""
+msgstr "[-fC] [ИМЯ]"
 
 msgid "show only branches that have unmerged heads"
 msgstr ""
