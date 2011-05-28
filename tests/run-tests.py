@@ -733,7 +733,7 @@ def runone(options, test):
     else:
         return None # not a supported test, don't record
 
-    if options.blacklist and filename in options.blacklist:
+    if options.blacklist and test in options.blacklist:
         skip("blacklisted")
         return None
 
