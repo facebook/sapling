@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-05-29 01:27+0400\n"
+"POT-Creation-Date: 2011-05-12 21:40+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -38,7 +38,7 @@ msgstr ""
 "справочной системе."
 
 msgid "Options:"
-msgstr "Опции:"
+msgstr "Параметры:"
 
 #, python-format
 msgid "    aliases: %s"
@@ -1016,7 +1016,7 @@ msgid ""
 "    order. Sort modes have the following effects:"
 msgstr ""
 "    По умолчанию все источники кроме Mercurial преобразуются с\n"
-"    опцией --branchsort. Для репозитория Mercurial используется\n"
+"    параметром --branchsort. Для репозитория Mercurial используется\n"
 "    --sourcesort, чтобы сохранить исходный порядок номеров ревизий.\n"
 "    Режимы сортировки имеют следующий смысл:"
 
@@ -1088,8 +1088,7 @@ msgstr ""
 msgid "      source author = destination author"
 msgstr "      автор в источнике = автор на выходе"
 
-#, fuzzy
-msgid "    Empty lines and lines starting with a ``#`` are ignored."
+msgid "    Empty lines and lines starting with a ``#`` are ignored.\n"
 msgstr "    Пустые строки и строки, начинающиеся с ``#`` игнорируются\n"
 
 msgid ""
@@ -1219,7 +1218,7 @@ msgid ""
 "    options, which you can set on the command line with ``--config``:"
 msgstr ""
 "    При конвертации из репозитория Mercurial возможны следующие\n"
-"    опции, которые можно указать в командной строке с помощью\n"
+"    параметры, которые можно указать в командной строке с помощью\n"
 "    ``--config``:"
 
 msgid ""
@@ -1279,7 +1278,7 @@ msgstr ""
 "    песочнице будут проигнорированы."
 
 msgid "    The following options can be used with ``--config``:"
-msgstr "    Следующие опции могут использоваться с ``--config``:"
+msgstr "    Следующие параметры могут использоваться с ``--config``:"
 
 msgid ""
 "    :convert.cvsps.cache: Set to False to disable remote log caching,\n"
@@ -1385,12 +1384,12 @@ msgstr ""
 "     ``svn://репозиторий/путь/tags`` существует, в нем ищутся\n"
 "     метки, ссылающиеся на конвертируемые ветви. Значения по умолчанию\n"
 "     для ``trunc``, ``branches`` и ``tags`` могут быть изменены\n"
-"     нижеперечисленными опциями. Установите их в пути относительно\n"
+"     нижеперечисленными параметрами. Установите их в пути относительно\n"
 "     URL источника или оставьте пустыми чтобы отключить автоматическое\n"
 "     определение."
 
 msgid "    The following options can be set with ``--config``:"
-msgstr "    Следующие опции могут быть заданы в ``--config``:"
+msgstr "    Следующие параметры могут быть заданы в ``--config``:"
 
 msgid ""
 "    :convert.svn.branches: specify the directory containing branches.\n"
@@ -1473,7 +1472,7 @@ msgstr ""
 "    ''''''''''''''''''''''''''''''"
 
 msgid "    The following options are supported:"
-msgstr "    Поддерживаются следующие опции:"
+msgstr "    Поддерживаются следующие параметры:"
 
 #, fuzzy
 msgid ""
@@ -1558,7 +1557,7 @@ msgid "preserve source changesets order"
 msgstr "сохранять порядок ревизий источника"
 
 msgid "hg convert [OPTION]... SOURCE [DEST [REVMAP]]"
-msgstr "hg convert [ОПЦИЯ]... ИСТОЧНИК [НАЗН [REVMAP]]"
+msgstr "hg convert [ПАРАМЕТР]... ИСТОЧНИК [НАЗН [REVMAP]]"
 
 msgid "only return changes on specified branches"
 msgstr "возвращать только изменения на указанных ветвях"
@@ -1591,7 +1590,7 @@ msgid "ignored for compatibility"
 msgstr "игнорировать для совместимости"
 
 msgid "hg debugcvsps [OPTION]... [PATH]..."
-msgstr "hg debugcvsps [ОПЦИИ]... [ПУТЬ]..."
+msgstr "hg debugcvsps [ПАРАМЕТР]... [ПУТЬ]..."
 
 msgid ":svnrev: String. Converted subversion revision number."
 msgstr ""
@@ -2238,7 +2237,7 @@ msgid ""
 msgstr ""
 
 msgid ""
-"The extdiff extension also allows you to configure new diff commands, so\n"
+"The extdiff extension also allows to configure new diff commands, so\n"
 "you do not need to type :hg:`extdiff -p kdiff3` always. ::"
 msgstr ""
 
@@ -2407,6 +2406,8 @@ msgid ""
 "    Returns 0 on success.\n"
 "    "
 msgstr ""
+"    В случае успеха возвращает 0.\n"
+"    "
 
 msgid ""
 "working dir not at branch tip (use \"hg update\" to check out branch tip)"
@@ -2485,9 +2486,6 @@ msgstr ""
 msgid "%s Note: This key has expired (signed by: \"%s\")\n"
 msgstr ""
 
-msgid "hg sigs"
-msgstr ""
-
 msgid "list signed changesets"
 msgstr ""
 
@@ -2495,38 +2493,11 @@ msgstr ""
 msgid "%s:%d node does not exist\n"
 msgstr ""
 
-msgid "hg sigcheck REVISION"
-msgstr ""
-
 msgid "verify all the signatures there may be for a particular revision"
 msgstr ""
 
 #, python-format
 msgid "No valid signature for %s\n"
-msgstr ""
-
-msgid "make the signature local"
-msgstr ""
-
-msgid "sign even if the sigfile is modified"
-msgstr ""
-
-msgid "do not commit the sigfile after signing"
-msgstr ""
-
-msgid "ID"
-msgstr "ID"
-
-msgid "the key id to sign with"
-msgstr ""
-
-msgid "TEXT"
-msgstr ""
-
-msgid "commit message"
-msgstr ""
-
-msgid "hg sign [OPTION]... [REVISION]..."
 msgstr ""
 
 msgid "add a signature for the current or given revision"
@@ -2560,6 +2531,36 @@ msgstr ""
 msgid "unknown signature version"
 msgstr ""
 
+msgid "make the signature local"
+msgstr ""
+
+msgid "sign even if the sigfile is modified"
+msgstr ""
+
+msgid "do not commit the sigfile after signing"
+msgstr ""
+
+msgid "ID"
+msgstr "ID"
+
+msgid "the key id to sign with"
+msgstr ""
+
+msgid "TEXT"
+msgstr ""
+
+msgid "commit message"
+msgstr ""
+
+msgid "hg sign [OPTION]... [REVISION]..."
+msgstr ""
+
+msgid "hg sigcheck REVISION"
+msgstr ""
+
+msgid "hg sigs"
+msgstr ""
+
 msgid "command to view revision graphs from a shell"
 msgstr ""
 
@@ -2574,21 +2575,6 @@ msgid "-G/--graph option is incompatible with --%s"
 msgstr ""
 
 msgid "-G/--graph option is incompatible with --follow with file argument"
-msgstr ""
-
-msgid "NUM"
-msgstr ""
-
-msgid "limit number of changes displayed"
-msgstr "ограничивать количество отображаемых изменений"
-
-msgid "show patch"
-msgstr ""
-
-msgid "show the specified revision or range"
-msgstr ""
-
-msgid "hg glog [OPTION]... [FILE]"
 msgstr ""
 
 msgid "show revision history alongside an ASCII revision graph"
@@ -2606,6 +2592,21 @@ msgid ""
 msgstr ""
 
 msgid "show the revision DAG"
+msgstr ""
+
+msgid "NUM"
+msgstr ""
+
+msgid "limit number of changes displayed"
+msgstr "ограничивать количество отображаемых изменений"
+
+msgid "show patch"
+msgstr ""
+
+msgid "show the specified revision or range"
+msgstr ""
+
+msgid "hg glog [OPTION]... [FILE]"
 msgstr ""
 
 msgid "hooks for integrating with the CIA.vc notification service"
@@ -2627,7 +2628,7 @@ msgid ""
 "  # Append a diffstat to the log message (optional)\n"
 "  #diffstat = False\n"
 "  # Template to use for log messages (optional)\n"
-"  #template = {desc}\\n{baseurl}{webroot}/rev/{node}-- {diffstat}\n"
+"  #template = {desc}\\n{baseurl}/rev/{node}-- {diffstat}\n"
 "  # Style to use (optional)\n"
 "  #style = foo\n"
 "  # The URL of the CIA notification service (optional)\n"
@@ -2636,9 +2637,7 @@ msgid ""
 "  # Make sure to set email.from if you do this.\n"
 "  #url = http://cia.vc/\n"
 "  # print message instead of sending it (optional)\n"
-"  #test = False\n"
-"  # number of slashes to strip for url paths\n"
-"  #strip = 0"
+"  #test = False"
 msgstr ""
 
 msgid ""
@@ -3096,15 +3095,6 @@ msgstr ""
 msgid "no [keyword] patterns configured"
 msgstr ""
 
-msgid "show default keyword template maps"
-msgstr ""
-
-msgid "read maps from rcfile"
-msgstr ""
-
-msgid "hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]..."
-msgstr ""
-
 msgid "print [keywordmaps] configuration and an expansion example"
 msgstr ""
 
@@ -3176,9 +3166,6 @@ msgid ""
 "\tkeywords expanded\n"
 msgstr ""
 
-msgid "hg kwexpand [OPTION]... [FILE]..."
-msgstr ""
-
 msgid "expand keywords in the working directory"
 msgstr ""
 
@@ -3188,18 +3175,6 @@ msgstr ""
 msgid ""
 "    kwexpand refuses to run if given files contain local changes.\n"
 "    "
-msgstr ""
-
-msgid "show keyword status flags of all files"
-msgstr ""
-
-msgid "show files excluded from expansion"
-msgstr ""
-
-msgid "only show unknown (not tracked) files"
-msgstr ""
-
-msgid "hg kwfiles [OPTION]... [FILE]..."
 msgstr ""
 
 msgid "show files configured for keyword expansion"
@@ -3234,9 +3209,6 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "hg kwshrink [OPTION]... [FILE]..."
-msgstr ""
-
 msgid "revert expanded keywords in the working directory"
 msgstr ""
 
@@ -3246,6 +3218,33 @@ msgstr ""
 msgid ""
 "    kwshrink refuses to run if given files contain local changes.\n"
 "    "
+msgstr ""
+
+msgid "show default keyword template maps"
+msgstr ""
+
+msgid "read maps from rcfile"
+msgstr ""
+
+msgid "hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]..."
+msgstr ""
+
+msgid "hg kwexpand [OPTION]... [FILE]..."
+msgstr ""
+
+msgid "show keyword status flags of all files"
+msgstr ""
+
+msgid "show files excluded from expansion"
+msgstr ""
+
+msgid "only show unknown (not tracked) files"
+msgstr ""
+
+msgid "hg kwfiles [OPTION]... [FILE]..."
+msgstr ""
+
+msgid "hg kwshrink [OPTION]... [FILE]..."
 msgstr ""
 
 msgid "manage a stack of patches"
@@ -3302,9 +3301,6 @@ msgstr ""
 msgid ""
 "You will by default be managing a patch queue named \"patches\". You can\n"
 "create other, independent patch queues with the :hg:`qqueue` command.\n"
-msgstr ""
-
-msgid "print first line of patch header"
 msgstr ""
 
 #, python-format
@@ -3692,15 +3688,6 @@ msgstr ""
 msgid "adding %s to series file\n"
 msgstr ""
 
-msgid "keep patch file"
-msgstr ""
-
-msgid "stop managing a revision (DEPRECATED)"
-msgstr ""
-
-msgid "hg qdelete [-k] [PATCH]..."
-msgstr ""
-
 msgid "remove patches from queue"
 msgstr ""
 
@@ -3715,12 +3702,6 @@ msgid ""
 "    use the :hg:`qfinish` command."
 msgstr ""
 
-msgid "show only the last patch"
-msgstr ""
-
-msgid "hg qapplied [-1] [-s] [PATCH]"
-msgstr ""
-
 msgid "print the patches already applied"
 msgstr ""
 
@@ -3730,40 +3711,10 @@ msgstr ""
 msgid "only one patch applied\n"
 msgstr ""
 
-msgid "show only the first patch"
-msgstr ""
-
-msgid "hg qunapplied [-1] [-s] [PATCH]"
-msgstr ""
-
 msgid "print the patches not yet applied"
 msgstr ""
 
 msgid "all patches applied\n"
-msgstr ""
-
-msgid "import file in patch directory"
-msgstr ""
-
-msgid "NAME"
-msgstr ""
-
-msgid "name of patch file"
-msgstr ""
-
-msgid "overwrite existing files"
-msgstr ""
-
-msgid "place existing revisions under mq control"
-msgstr ""
-
-msgid "use git extended diff format"
-msgstr ""
-
-msgid "qpush after importing"
-msgstr ""
-
-msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE..."
 msgstr ""
 
 msgid "import a patch"
@@ -3816,12 +3767,6 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "create queue repository"
-msgstr ""
-
-msgid "hg qinit [-c]"
-msgstr ""
-
 msgid "init a new queue repository (DEPRECATED)"
 msgstr ""
 
@@ -3836,24 +3781,6 @@ msgstr ""
 msgid ""
 "    This command is deprecated. Without -c, it's implied by other relevant\n"
 "    commands. With -c, use :hg:`init --mq` instead."
-msgstr ""
-
-msgid "use pull protocol to copy metadata"
-msgstr "использовать протокол затягивания для копирования метаданных"
-
-msgid "do not update the new working directories"
-msgstr ""
-
-msgid "use uncompressed transfer (fast over LAN)"
-msgstr ""
-
-msgid "REPO"
-msgstr ""
-
-msgid "location of source patch repository"
-msgstr ""
-
-msgid "hg qclone [OPTION]... SOURCE [DEST]"
 msgstr ""
 
 msgid "clone main and patch repository at same time"
@@ -3897,61 +3824,22 @@ msgstr ""
 msgid "updating destination repository\n"
 msgstr ""
 
-msgid "hg qcommit [OPTION]... [FILE]..."
-msgstr ""
-
 msgid "commit changes in the queue repository (DEPRECATED)"
 msgstr ""
 
 msgid "    This command is deprecated; use :hg:`commit --mq` instead."
 msgstr ""
 
-msgid "print patches not in series"
-msgstr ""
-
-msgid "hg qseries [-ms]"
-msgstr ""
-
 msgid "print the entire series file"
-msgstr ""
-
-msgid "hg qtop [-s]"
 msgstr ""
 
 msgid "print the name of the current patch"
 msgstr ""
 
-msgid "hg qnext [-s]"
-msgstr ""
-
 msgid "print the name of the next patch"
 msgstr ""
 
-msgid "hg qprev [-s]"
-msgstr ""
-
 msgid "print the name of the previous patch"
-msgstr ""
-
-msgid "import uncommitted changes (DEPRECATED)"
-msgstr ""
-
-msgid "add \"From: <current user>\" to patch"
-msgstr ""
-
-msgid "USER"
-msgstr ""
-
-msgid "add \"From: <USER>\" to patch"
-msgstr ""
-
-msgid "add \"Date: <current date>\" to patch"
-msgstr ""
-
-msgid "add \"Date: <DATE>\" to patch"
-msgstr ""
-
-msgid "hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]..."
 msgstr ""
 
 msgid "create a new patch"
@@ -3990,24 +3878,6 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "refresh only files already in the patch and specified files"
-msgstr ""
-
-msgid "add/update author field in patch with current user"
-msgstr ""
-
-msgid "add/update author field in patch with given user"
-msgstr ""
-
-msgid "add/update date field in patch with current date"
-msgstr ""
-
-msgid "add/update date field in patch with given date"
-msgstr ""
-
-msgid "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."
-msgstr ""
-
 msgid "update the current patch"
 msgstr ""
 
@@ -4040,9 +3910,6 @@ msgstr ""
 msgid "option \"-e\" incompatible with \"-m\" or \"-l\""
 msgstr ""
 
-msgid "hg qdiff [OPTION]... [FILE]..."
-msgstr ""
-
 msgid "diff of the current patch and subsequent modifications"
 msgstr ""
 
@@ -4058,15 +3925,6 @@ msgid ""
 "    last qrefresh, or :hg:`export qtip` if you want to see changes\n"
 "    made by the current patch without including changes made since the\n"
 "    qrefresh."
-msgstr ""
-
-msgid "edit patch header"
-msgstr ""
-
-msgid "keep folded patch files"
-msgstr ""
-
-msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
 msgstr ""
 
 msgid "fold the named patches into the current patch"
@@ -4101,22 +3959,7 @@ msgstr ""
 msgid "error folding patch %s"
 msgstr ""
 
-msgid "overwrite any local changes"
-msgstr ""
-
-msgid "hg qgoto [OPTION]... PATCH"
-msgstr ""
-
 msgid "push or pop patches until named patch is at top of stack"
-msgstr ""
-
-msgid "list all patches and guards"
-msgstr ""
-
-msgid "drop all guards"
-msgstr ""
-
-msgid "hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]"
 msgstr ""
 
 msgid "set or print guards for a patch"
@@ -4157,34 +4000,7 @@ msgstr ""
 msgid "no patch named %s"
 msgstr ""
 
-msgid "hg qheader [PATCH]"
-msgstr ""
-
 msgid "print the header of the topmost or specified patch"
-msgstr ""
-
-msgid "apply on top of local changes"
-msgstr ""
-
-msgid "apply the target patch to its recorded parent"
-msgstr ""
-
-msgid "list patch name in commit text"
-msgstr ""
-
-msgid "apply all patches"
-msgstr ""
-
-msgid "merge from another queue (DEPRECATED)"
-msgstr ""
-
-msgid "merge queue name (DEPRECATED)"
-msgstr ""
-
-msgid "reorder patch series and apply only the patch"
-msgstr ""
-
-msgid "hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]"
 msgstr ""
 
 msgid "push the next patch onto the stack"
@@ -4202,18 +4018,6 @@ msgstr ""
 msgid "merging with queue at: %s\n"
 msgstr ""
 
-msgid "pop all patches"
-msgstr ""
-
-msgid "queue name to pop (DEPRECATED)"
-msgstr ""
-
-msgid "forget any local changes to patched files"
-msgstr ""
-
-msgid "hg qpop [-a] [-f] [PATCH | INDEX]"
-msgstr ""
-
 msgid "pop the current patch off the stack"
 msgstr ""
 
@@ -4225,9 +4029,6 @@ msgstr ""
 
 #, python-format
 msgid "using patch queue: %s\n"
-msgstr ""
-
-msgid "hg qrename PATCH1 [PATCH2]"
 msgstr ""
 
 msgid "rename a patch"
@@ -4246,34 +4047,10 @@ msgstr ""
 msgid "A patch named %s already exists in the series file"
 msgstr ""
 
-msgid "delete save entry"
-msgstr ""
-
-msgid "update queue working directory"
-msgstr ""
-
-msgid "hg qrestore [-d] [-u] REV"
-msgstr ""
-
 msgid "restore the queue state saved by a revision (DEPRECATED)"
 msgstr ""
 
 msgid "    This command is deprecated, use :hg:`rebase` instead."
-msgstr ""
-
-msgid "copy patch directory"
-msgstr ""
-
-msgid "copy directory name"
-msgstr ""
-
-msgid "clear queue status file"
-msgstr ""
-
-msgid "force copy"
-msgstr ""
-
-msgid "hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]"
 msgstr ""
 
 msgid "save current queue state (DEPRECATED)"
@@ -4289,26 +4066,6 @@ msgstr ""
 
 #, python-format
 msgid "copy %s to %s\n"
-msgstr ""
-
-msgid "force removal of changesets, discard uncommitted changes (no backup)"
-msgstr ""
-
-msgid ""
-"bundle only changesets with local revision number greater than REV which are "
-"not descendants of REV (DEPRECATED)"
-msgstr ""
-
-msgid "no backups"
-msgstr ""
-
-msgid "no backups (DEPRECATED)"
-msgstr ""
-
-msgid "do not modify working copy during strip"
-msgstr ""
-
-msgid "hg strip [-k] [-f] [-n] REV..."
 msgstr ""
 
 msgid "strip changesets and all their descendants from the repository"
@@ -4343,21 +4100,6 @@ msgid ""
 msgstr ""
 
 msgid "empty revision set"
-msgstr ""
-
-msgid "disable all guards"
-msgstr ""
-
-msgid "list all guards in series file"
-msgstr ""
-
-msgid "pop to before first guarded applied patch"
-msgstr ""
-
-msgid "pop, then reapply patches"
-msgstr ""
-
-msgid "hg qselect [OPTION]... [GUARD]..."
 msgstr ""
 
 msgid "set or print guarded patches to push"
@@ -4436,12 +4178,6 @@ msgstr ""
 msgid "reapplying unguarded patches\n"
 msgstr ""
 
-msgid "finish all applied changesets"
-msgstr ""
-
-msgid "hg qfinish [-a] [REV]..."
-msgstr ""
-
 msgid "move applied patches into repository history"
 msgstr ""
 
@@ -4465,24 +4201,6 @@ msgid ""
 msgstr ""
 
 msgid "no revisions specified"
-msgstr ""
-
-msgid "list all available queues"
-msgstr ""
-
-msgid "create new queue"
-msgstr ""
-
-msgid "rename active queue"
-msgstr ""
-
-msgid "delete reference to queue"
-msgstr ""
-
-msgid "delete queue, and remove patch dir"
-msgstr ""
-
-msgid "[OPTION] [QUEUE]"
 msgstr ""
 
 msgid "manage multiple patch queues"
@@ -4581,15 +4299,288 @@ msgstr ""
 msgid "mq:     (empty queue)\n"
 msgstr ""
 
-msgid ""
-"``mq()``\n"
-"    Changesets managed by MQ."
-msgstr ""
-
-msgid "mq takes no arguments"
-msgstr ""
-
 msgid "operate on patch repository"
+msgstr "работать с репозиторием патчей mq"
+
+msgid "print first line of patch header"
+msgstr ""
+
+msgid "show only the last patch"
+msgstr ""
+
+msgid "hg qapplied [-1] [-s] [PATCH]"
+msgstr ""
+
+msgid "use pull protocol to copy metadata"
+msgstr "использовать протокол затягивания для копирования метаданных"
+
+msgid "do not update the new working directories"
+msgstr ""
+
+msgid "use uncompressed transfer (fast over LAN)"
+msgstr ""
+
+msgid "REPO"
+msgstr ""
+
+msgid "location of source patch repository"
+msgstr ""
+
+msgid "hg qclone [OPTION]... SOURCE [DEST]"
+msgstr ""
+
+msgid "hg qcommit [OPTION]... [FILE]..."
+msgstr ""
+
+msgid "hg qdiff [OPTION]... [FILE]..."
+msgstr ""
+
+msgid "keep patch file"
+msgstr ""
+
+msgid "stop managing a revision (DEPRECATED)"
+msgstr ""
+
+msgid "hg qdelete [-k] [PATCH]..."
+msgstr ""
+
+msgid "edit patch header"
+msgstr ""
+
+msgid "keep folded patch files"
+msgstr ""
+
+msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
+msgstr ""
+
+msgid "overwrite any local changes"
+msgstr ""
+
+msgid "hg qgoto [OPTION]... PATCH"
+msgstr ""
+
+msgid "list all patches and guards"
+msgstr ""
+
+msgid "drop all guards"
+msgstr ""
+
+msgid "hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]"
+msgstr ""
+
+msgid "hg qheader [PATCH]"
+msgstr ""
+
+msgid "import file in patch directory"
+msgstr ""
+
+msgid "NAME"
+msgstr ""
+
+msgid "name of patch file"
+msgstr ""
+
+msgid "overwrite existing files"
+msgstr ""
+
+msgid "place existing revisions under mq control"
+msgstr ""
+
+msgid "use git extended diff format"
+msgstr ""
+
+msgid "qpush after importing"
+msgstr ""
+
+msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE..."
+msgstr ""
+
+msgid "create queue repository"
+msgstr ""
+
+msgid "hg qinit [-c]"
+msgstr ""
+
+msgid "import uncommitted changes (DEPRECATED)"
+msgstr ""
+
+msgid "add \"From: <current user>\" to patch"
+msgstr ""
+
+msgid "USER"
+msgstr ""
+
+msgid "add \"From: <USER>\" to patch"
+msgstr ""
+
+msgid "add \"Date: <current date>\" to patch"
+msgstr ""
+
+msgid "add \"Date: <DATE>\" to patch"
+msgstr ""
+
+msgid "hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]..."
+msgstr ""
+
+msgid "hg qnext [-s]"
+msgstr ""
+
+msgid "hg qprev [-s]"
+msgstr ""
+
+msgid "pop all patches"
+msgstr ""
+
+msgid "queue name to pop (DEPRECATED)"
+msgstr ""
+
+msgid "forget any local changes to patched files"
+msgstr ""
+
+msgid "hg qpop [-a] [-f] [PATCH | INDEX]"
+msgstr ""
+
+msgid "apply on top of local changes"
+msgstr ""
+
+msgid "apply the target patch to its recorded parent"
+msgstr ""
+
+msgid "list patch name in commit text"
+msgstr ""
+
+msgid "apply all patches"
+msgstr ""
+
+msgid "merge from another queue (DEPRECATED)"
+msgstr ""
+
+msgid "merge queue name (DEPRECATED)"
+msgstr ""
+
+msgid "reorder patch series and apply only the patch"
+msgstr ""
+
+msgid "hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]"
+msgstr ""
+
+msgid "refresh only files already in the patch and specified files"
+msgstr ""
+
+msgid "add/update author field in patch with current user"
+msgstr ""
+
+msgid "add/update author field in patch with given user"
+msgstr ""
+
+msgid "add/update date field in patch with current date"
+msgstr ""
+
+msgid "add/update date field in patch with given date"
+msgstr ""
+
+msgid "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."
+msgstr ""
+
+msgid "hg qrename PATCH1 [PATCH2]"
+msgstr ""
+
+msgid "delete save entry"
+msgstr ""
+
+msgid "update queue working directory"
+msgstr ""
+
+msgid "hg qrestore [-d] [-u] REV"
+msgstr ""
+
+msgid "copy patch directory"
+msgstr ""
+
+msgid "copy directory name"
+msgstr ""
+
+msgid "clear queue status file"
+msgstr ""
+
+msgid "force copy"
+msgstr ""
+
+msgid "hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]"
+msgstr ""
+
+msgid "disable all guards"
+msgstr ""
+
+msgid "list all guards in series file"
+msgstr ""
+
+msgid "pop to before first guarded applied patch"
+msgstr ""
+
+msgid "pop, then reapply patches"
+msgstr ""
+
+msgid "hg qselect [OPTION]... [GUARD]..."
+msgstr ""
+
+msgid "print patches not in series"
+msgstr ""
+
+msgid "hg qseries [-ms]"
+msgstr ""
+
+msgid "force removal of changesets, discard uncommitted changes (no backup)"
+msgstr ""
+
+msgid ""
+"bundle only changesets with local revision number greater than REV which are "
+"not descendants of REV (DEPRECATED)"
+msgstr ""
+
+msgid "no backups"
+msgstr ""
+
+msgid "no backups (DEPRECATED)"
+msgstr ""
+
+msgid "do not modify working copy during strip"
+msgstr ""
+
+msgid "hg strip [-k] [-f] [-n] REV..."
+msgstr ""
+
+msgid "hg qtop [-s]"
+msgstr ""
+
+msgid "show only the first patch"
+msgstr ""
+
+msgid "hg qunapplied [-1] [-s] [PATCH]"
+msgstr ""
+
+msgid "finish all applied changesets"
+msgstr ""
+
+msgid "hg qfinish [-a] [REV]..."
+msgstr ""
+
+msgid "list all available queues"
+msgstr ""
+
+msgid "create new queue"
+msgstr ""
+
+msgid "rename active queue"
+msgstr ""
+
+msgid "delete reference to queue"
+msgstr ""
+
+msgid "delete queue, and remove patch dir"
+msgstr ""
+
+msgid "[OPTION] [QUEUE]"
 msgstr ""
 
 msgid "hooks for sending email notifications at commit/push time"
@@ -4836,81 +4827,6 @@ msgstr ""
 msgid "Please enter a valid value.\n"
 msgstr ""
 
-msgid "send patches as attachments"
-msgstr "отправить патчи как вложения"
-
-msgid "send patches as inline attachments"
-msgstr "отправить патчи как вложения в тексте"
-
-msgid "email addresses of blind carbon copy recipients"
-msgstr ""
-
-msgid "email addresses of copy recipients"
-msgstr ""
-
-msgid "ask for confirmation before sending"
-msgstr ""
-
-msgid "add diffstat output to messages"
-msgstr "добавить статистику различий к сообщениям"
-
-msgid "use the given date as the sending date"
-msgstr ""
-
-msgid "use the given file as the series description"
-msgstr ""
-
-msgid "email address of sender"
-msgstr ""
-
-msgid "print messages that would be sent"
-msgstr ""
-
-msgid "write messages to mbox file instead of sending them"
-msgstr ""
-
-msgid "email addresses replies should be sent to"
-msgstr ""
-
-msgid "subject of first message (intro or single patch)"
-msgstr ""
-
-msgid "message identifier to reply to"
-msgstr ""
-
-msgid "flags to add in subject prefixes"
-msgstr ""
-
-msgid "email addresses of recipients"
-msgstr ""
-
-msgid "omit hg patch header"
-msgstr ""
-
-msgid "send changes not found in the target repository"
-msgstr ""
-
-msgid "send changes not in target as a binary bundle"
-msgstr ""
-
-msgid "name of the bundle attachment file"
-msgstr ""
-
-msgid "a revision to send"
-msgstr ""
-
-msgid "run even when remote repository is unrelated (with -b/--bundle)"
-msgstr ""
-
-msgid "a base changeset to specify instead of a destination (with -b/--bundle)"
-msgstr ""
-
-msgid "send an introduction email for a single patch"
-msgstr ""
-
-msgid "hg email [OPTION]... [DEST]..."
-msgstr ""
-
 msgid "send changesets by email"
 msgstr ""
 
@@ -5079,6 +4995,81 @@ msgstr ""
 msgid "sending"
 msgstr ""
 
+msgid "send patches as attachments"
+msgstr "отправить патчи как вложения"
+
+msgid "send patches as inline attachments"
+msgstr "отправить патчи как вложения в тексте"
+
+msgid "email addresses of blind carbon copy recipients"
+msgstr ""
+
+msgid "email addresses of copy recipients"
+msgstr ""
+
+msgid "ask for confirmation before sending"
+msgstr ""
+
+msgid "add diffstat output to messages"
+msgstr "добавить статистику различий к сообщениям"
+
+msgid "use the given date as the sending date"
+msgstr ""
+
+msgid "use the given file as the series description"
+msgstr ""
+
+msgid "email address of sender"
+msgstr ""
+
+msgid "print messages that would be sent"
+msgstr ""
+
+msgid "write messages to mbox file instead of sending them"
+msgstr ""
+
+msgid "email addresses replies should be sent to"
+msgstr ""
+
+msgid "subject of first message (intro or single patch)"
+msgstr ""
+
+msgid "message identifier to reply to"
+msgstr ""
+
+msgid "flags to add in subject prefixes"
+msgstr ""
+
+msgid "email addresses of recipients"
+msgstr ""
+
+msgid "omit hg patch header"
+msgstr ""
+
+msgid "send changes not found in the target repository"
+msgstr ""
+
+msgid "send changes not in target as a binary bundle"
+msgstr ""
+
+msgid "name of the bundle attachment file"
+msgstr ""
+
+msgid "a revision to send"
+msgstr ""
+
+msgid "run even when remote repository is unrelated (with -b/--bundle)"
+msgstr ""
+
+msgid "a base changeset to specify instead of a destination (with -b/--bundle)"
+msgstr ""
+
+msgid "send an introduction email for a single patch"
+msgstr ""
+
+msgid "hg email [OPTION]... [DEST]..."
+msgstr ""
+
 msgid "show progress bars for some actions"
 msgstr ""
 
@@ -5107,9 +5098,9 @@ msgstr ""
 
 msgid ""
 "Valid entries for the format field are topic, bar, number, unit,\n"
-"estimate, speed, and item. item defaults to the last 20 characters of\n"
-"the item, but this can be changed by adding either ``-<num>`` which\n"
-"would take the last num characters, or ``+<num>`` for the first num\n"
+"estimate, and item. item defaults to the last 20 characters of the\n"
+"item, but this can be changed by adding either ``-<num>`` which would\n"
+"take the last num characters, or ``+<num>`` for the first num\n"
 "characters.\n"
 msgstr ""
 
@@ -5143,26 +5134,7 @@ msgstr ""
 msgid "%dy%02dw"
 msgstr ""
 
-#, python-format
-msgid "%d %s/sec"
-msgstr ""
-
 msgid "command to delete untracked files from the working directory"
-msgstr ""
-
-msgid "abort if an error occurs"
-msgstr ""
-
-msgid "purge ignored files too"
-msgstr ""
-
-msgid "print filenames instead of deleting them"
-msgstr ""
-
-msgid "end filenames with NUL, for use with xargs (implies -p/--print)"
-msgstr ""
-
-msgid "hg purge [OPTION]... [DIR]..."
 msgstr ""
 
 msgid "removes files not tracked by Mercurial"
@@ -5220,6 +5192,21 @@ msgstr ""
 msgid "Removing directory %s\n"
 msgstr ""
 
+msgid "abort if an error occurs"
+msgstr ""
+
+msgid "purge ignored files too"
+msgstr ""
+
+msgid "print filenames instead of deleting them"
+msgstr ""
+
+msgid "end filenames with NUL, for use with xargs (implies -p/--print)"
+msgstr ""
+
+msgid "hg purge [OPTION]... [DIR]..."
+msgstr ""
+
 msgid "command to move sets of revisions to a different ancestor"
 msgstr ""
 
@@ -5231,49 +5218,6 @@ msgstr ""
 msgid ""
 "For more information:\n"
 "http://mercurial.selenic.com/wiki/RebaseExtension\n"
-msgstr ""
-
-msgid "rebase from the specified changeset"
-msgstr ""
-
-msgid ""
-"rebase from the base of the specified changeset (up to greatest common "
-"ancestor of base and dest)"
-msgstr ""
-
-msgid "rebase onto the specified changeset"
-msgstr ""
-
-msgid "collapse the rebased changesets"
-msgstr ""
-
-msgid "use text as collapse commit message"
-msgstr ""
-
-msgid "read collapse commit message from file"
-msgstr ""
-
-msgid "keep original changesets"
-msgstr ""
-
-msgid "keep original branch names"
-msgstr ""
-
-msgid "force detaching of source from its original branch"
-msgstr ""
-
-msgid "specify merge tool"
-msgstr ""
-
-msgid "continue an interrupted rebase"
-msgstr ""
-
-msgid "abort an interrupted rebase"
-msgstr ""
-
-msgid ""
-"hg rebase [-s REV | -b REV] [-d REV] [options]\n"
-"hg rebase {-a|-c}"
 msgstr ""
 
 msgid "move changeset (and descendants) to a different branch"
@@ -5423,6 +5367,49 @@ msgid "source is descendant of destination"
 msgstr ""
 
 msgid "rebase working directory to branch head"
+msgstr ""
+
+msgid "rebase from the specified changeset"
+msgstr ""
+
+msgid ""
+"rebase from the base of the specified changeset (up to greatest common "
+"ancestor of base and dest)"
+msgstr ""
+
+msgid "rebase onto the specified changeset"
+msgstr ""
+
+msgid "collapse the rebased changesets"
+msgstr ""
+
+msgid "use text as collapse commit message"
+msgstr ""
+
+msgid "read collapse commit message from file"
+msgstr ""
+
+msgid "keep original changesets"
+msgstr ""
+
+msgid "keep original branch names"
+msgstr ""
+
+msgid "force detaching of source from its original branch"
+msgstr ""
+
+msgid "specify merge tool"
+msgstr ""
+
+msgid "continue an interrupted rebase"
+msgstr ""
+
+msgid "abort an interrupted rebase"
+msgstr ""
+
+msgid ""
+"hg rebase [-s REV | -b REV] [-d REV] [options]\n"
+"hg rebase {-a|-c}"
 msgstr ""
 
 msgid "commands to interactively select changes for commit/qrefresh"
@@ -5805,36 +5792,6 @@ msgstr ""
 msgid "no such option\n"
 msgstr ""
 
-msgid "pull patches from REPO"
-msgstr ""
-
-msgid "BRANCH"
-msgstr ""
-
-msgid "pull patches from branch BRANCH"
-msgstr ""
-
-msgid "pull all changesets up to BRANCH"
-msgstr ""
-
-msgid "skip over REV"
-msgstr ""
-
-msgid "merge at REV"
-msgstr ""
-
-msgid "append transplant info to log message"
-msgstr ""
-
-msgid "continue last transplant session after repair"
-msgstr ""
-
-msgid "filter changesets through command"
-msgstr ""
-
-msgid "hg transplant [-s REPO] [-b BRANCH [-a]] [-p REV] [-m REV] [REV]..."
-msgstr ""
-
 msgid "transplant changesets from another branch"
 msgstr ""
 
@@ -5916,13 +5873,43 @@ msgid "outstanding local changes"
 msgstr ""
 
 msgid ""
-"``transplanted([set])``\n"
-"    Transplanted changesets in set, or all transplanted changesets."
+"``transplanted(set)``\n"
+"    Transplanted changesets in set."
 msgstr ""
 
 msgid ""
 ":transplanted: String. The node identifier of the transplanted\n"
 "    changeset if any."
+msgstr ""
+
+msgid "pull patches from REPO"
+msgstr ""
+
+msgid "BRANCH"
+msgstr ""
+
+msgid "pull patches from branch BRANCH"
+msgstr ""
+
+msgid "pull all changesets up to BRANCH"
+msgstr ""
+
+msgid "skip over REV"
+msgstr ""
+
+msgid "merge at REV"
+msgstr ""
+
+msgid "append transplant info to log message"
+msgstr ""
+
+msgid "continue last transplant session after repair"
+msgstr ""
+
+msgid "filter changesets through command"
+msgstr ""
+
+msgid "hg transplant [-s REPO] [-b BRANCH [-a]] [-p REV] [-m REV] [REV]..."
 msgstr ""
 
 msgid "allow the use of MBCS paths with problematic encodings"
@@ -6203,21 +6190,21 @@ msgstr ""
 msgid "invalid format spec '%%%s' in output filename"
 msgstr ""
 
-msgid "cannot specify --changelog and --manifest at the same time"
+#, python-format
+msgid "adding %s\n"
 msgstr ""
 
-msgid "cannot specify filename with --changelog or --manifest"
+#, python-format
+msgid "removing %s\n"
 msgstr ""
 
-msgid "cannot specify --changelog or --manifest without a repository"
+#, python-format
+msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr ""
 
-msgid "invalid arguments"
-msgstr "неверные параметры"
-
-#, fuzzy, python-format
-msgid "revlog '%s' not found"
-msgstr "репозиторий %s не найден"
+#, python-format
+msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
+msgstr ""
 
 #, python-format
 msgid "%s: not copying - file is not managed\n"
@@ -6360,10 +6347,6 @@ msgid "can only follow copies/renames for explicit filenames"
 msgstr ""
 
 #, python-format
-msgid "adding %s\n"
-msgstr ""
-
-#, python-format
 msgid "skipping missing subrepository: %s\n"
 msgstr ""
 
@@ -6406,162 +6389,25 @@ msgstr ""
 msgid "empty commit message"
 msgstr ""
 
-msgid "repository root directory or name of overlay bundle file"
-msgstr ""
-
-msgid "DIR"
-msgstr ""
-
-msgid "change working directory"
-msgstr ""
-
-msgid "do not prompt, assume 'yes' for any required answers"
-msgstr ""
-
-msgid "suppress output"
-msgstr "с подавлением вывода"
-
-msgid "enable additional output"
-msgstr "включить дополнительный вывод"
-
-msgid "set/override config option (use 'section.name=value')"
-msgstr ""
-
-msgid "CONFIG"
-msgstr ""
-
-msgid "enable debugging output"
-msgstr ""
-
-msgid "start debugger"
-msgstr "запустить отладчик"
-
-msgid "set the charset encoding"
-msgstr ""
-
-msgid "ENCODE"
-msgstr ""
-
-msgid "MODE"
-msgstr ""
-
-msgid "set the charset encoding mode"
-msgstr ""
-
-msgid "always print a traceback on exception"
-msgstr ""
-
-msgid "time how long the command takes"
-msgstr ""
-
-msgid "print command execution profile"
-msgstr "вывести профиль запуска команды"
-
-msgid "output version information and exit"
-msgstr ""
-
-msgid "display help and exit"
-msgstr "показать справку и выйти"
-
-msgid "do not perform actions, just print output"
-msgstr ""
-
-msgid "specify ssh command to use"
-msgstr ""
-
-msgid "specify hg command to run on the remote side"
-msgstr ""
-
-msgid "do not verify server certificate (ignoring web.cacerts config)"
-msgstr ""
-
-msgid "PATTERN"
-msgstr ""
-
-msgid "include names matching the given patterns"
-msgstr ""
-
-msgid "exclude names matching the given patterns"
-msgstr ""
-
-msgid "use text as commit message"
-msgstr ""
-
-msgid "read commit message from file"
-msgstr ""
-
-msgid "record the specified date as commit date"
-msgstr ""
-
-msgid "record the specified user as committer"
-msgstr ""
-
-msgid "STYLE"
-msgstr ""
-
-msgid "display using template map file"
-msgstr ""
-
-msgid "display with template"
-msgstr ""
-
-msgid "do not show merges"
-msgstr ""
-
-msgid "output diffstat-style summary of changes"
-msgstr ""
-
-msgid "treat all files as text"
-msgstr ""
-
-msgid "omit dates from diff headers"
-msgstr ""
-
-msgid "show which function each change is in"
-msgstr ""
-
-msgid "produce a diff that undoes the changes"
-msgstr ""
-
-msgid "ignore white space when comparing lines"
-msgstr ""
-
-msgid "ignore changes in the amount of white space"
-msgstr ""
-
-msgid "ignore changes whose lines are all blank"
-msgstr ""
-
-msgid "number of lines of context to show"
-msgstr ""
-
-msgid "SIMILARITY"
-msgstr ""
-
-msgid "guess renamed files by similarity (0<=s<=100)"
-msgstr ""
-
-msgid "recurse into subrepositories"
-msgstr ""
-
-msgid "[OPTION]... [FILE]..."
-msgstr ""
-
 msgid "add the specified files on the next commit"
-msgstr ""
+msgstr "добавить указанные файлы при следующем коммите"
 
 msgid ""
 "    Schedule files to be version controlled and added to the\n"
 "    repository."
 msgstr ""
+"    Планирует помещение файлов под контроль версий и\n"
+"    добавление их в репозиторий."
 
 msgid ""
 "    The files will be added to the repository at the next commit. To\n"
 "    undo an add before that, see :hg:`forget`."
 msgstr ""
+"    Файлы будут добавлены в репозиторий при следующем коммите. Чтобы\n"
+"    отменить добавление до коммита, см. :hg:`forget`."
 
 msgid "    If no names are given, add all files to the repository."
-msgstr ""
+msgstr "    Если имена файлов не заданы, в будут добавлены все файлы."
 
 msgid "    .. container:: verbose"
 msgstr ""
@@ -6570,6 +6416,8 @@ msgid ""
 "       An example showing how new (unknown) files are added\n"
 "       automatically by :hg:`add`::"
 msgstr ""
+"       Пример, демонстрирующий автоматическое добавление новых\n"
+"       (неизвестных) файлов с помощью :hg:`add`::"
 
 msgid ""
 "         $ ls\n"
@@ -6581,25 +6429,40 @@ msgid ""
 "         $ hg status\n"
 "         A foo.c"
 msgstr ""
+"         $ ls\n"
+"         foo.c\n"
+"         $ hg status\n"
+"         ? foo.c\n"
+"         $ hg add\n"
+"         adding foo.c\n"
+"         $ hg status\n"
+"         A foo.c"
 
 msgid ""
 "    Returns 0 if all files are successfully added.\n"
 "    "
 msgstr ""
+"    Возвращает 0, если все файлы были успешно добавлены.\n"
+"    "
 
 msgid "add all new files, delete all missing files"
-msgstr ""
+msgstr "добавить все новые, удалить все отсутвующие файлы"
 
 msgid ""
 "    Add all new files and remove all missing files from the\n"
 "    repository."
 msgstr ""
+"    Добавляет все новые и удаляет все отсутсвующие файлы из\n"
+"    репозитория."
 
 msgid ""
 "    New files are ignored if they match any of the patterns in\n"
 "    ``.hgignore``. As with add, these changes take effect at the next\n"
 "    commit."
 msgstr ""
+"    Новые файлы игнорируются, если они подходят под любой шаблон\n"
+"    в ``.hgignore``. Аналогично команде ``add``, изменения фиксируются\n"
+"    при следующем коммите."
 
 msgid ""
 "    Use the -s/--similarity option to detect renamed files. With a\n"
@@ -6610,55 +6473,39 @@ msgid ""
 "    can be expensive. After using this option, :hg:`status -C` can be\n"
 "    used to check which files were identified as moved or renamed."
 msgstr ""
+"    Используйте параметр -s/--similarity чтобы найти переименованные\n"
+"    файлы. Если этот параметр больше 0, то производится сравнение\n"
+"    каждого удаленного файла с каждым добавленным, и если они достаточно\n"
+"    похожи, то это фиксируется как переименование. Этот параметр принимает\n"
+"    в качестве параметра \"процент похожести\" от 0 (отключено) до 100\n"
+"    (файлы дожны быть одинаковыми). Этот способ нахождения\n"
+"    переименованных файлов может оказать дорогим. После использования\n"
+"    этого параметра можно использовать :hg:`status -C` чтобы проверить,\n"
+"    какие файлы были идентифицированы как перемещенные или\n"
+"    переименованные."
 
 msgid "similarity must be a number"
-msgstr ""
+msgstr "параметр \"similarity\" должен быть числом"
 
 msgid "similarity must be between 0 and 100"
-msgstr ""
-
-msgid "annotate the specified revision"
-msgstr ""
-
-msgid "follow copies/renames and list the filename (DEPRECATED)"
-msgstr ""
-
-msgid "don't follow copies and renames"
-msgstr ""
-
-msgid "list the author (long with -v)"
-msgstr ""
-
-msgid "list the filename"
-msgstr ""
-
-msgid "list the date (short with -q)"
-msgstr ""
-
-msgid "list the revision number (default)"
-msgstr ""
-
-msgid "list the changeset"
-msgstr ""
-
-msgid "show line number at the first appearance"
-msgstr ""
-
-msgid "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."
-msgstr ""
+msgstr "параметр similarity должен быть от 0 до 100"
 
 msgid "show changeset information by line for each file"
-msgstr ""
+msgstr "информация о наборе изменений построчно для каждого файла"
 
 msgid ""
 "    List changes in files, showing the revision id responsible for\n"
 "    each line"
 msgstr ""
+"    Для каждой строки файла показывает номер ревизии, из которой\n"
+"    эта строка взялась"
 
 msgid ""
 "    This command is useful for discovering when a change was made and\n"
 "    by whom."
 msgstr ""
+"    Эта комадна полезна для того чтобы узнать, когда и кем было внесено\n"
+"    изменение."
 
 msgid ""
 "    Without the -a/--text option, annotate will avoid processing files\n"
@@ -6666,50 +6513,40 @@ msgid ""
 "    anyway, although the results will probably be neither useful\n"
 "    nor desirable."
 msgstr ""
+"    Без параметра -a/--test, annotate не будет обрабатывать файлы,\n"
+"    которые она считает бинарными. С параметром -a, бинарные файлы\n"
+"    также будут аннотированы, хотя как правило это нежелательно и\n"
+"    бесполезно."
 
 msgid "at least one filename or pattern is required"
-msgstr ""
+msgstr "требуется указать как минимум одно имя файла или шаблон"
 
 msgid "at least one of -n/-c is required for -l"
-msgstr ""
+msgstr "с -l требуется указать хотя бы одно из -n/-c"
 
 #, python-format
 msgid "%s: binary file\n"
-msgstr ""
-
-msgid "do not pass files through decoders"
-msgstr ""
-
-msgid "directory prefix for files in archive"
-msgstr ""
-
-msgid "PREFIX"
-msgstr ""
-
-msgid "revision to distribute"
-msgstr ""
-
-msgid "type of distribution to create"
-msgstr ""
-
-msgid "[OPTION]... DEST"
-msgstr ""
+msgstr "%s: бинарный файл\n"
 
 msgid "create an unversioned archive of a repository revision"
-msgstr ""
+msgstr "создать неверсированную архивную копию ревизии из репозитория"
 
 msgid ""
 "    By default, the revision used is the parent of the working\n"
 "    directory; use -r/--rev to specify a different revision."
 msgstr ""
+"    По умолчанию используется ревизия, являющаяся родителем рабочего\n"
+"    каталога; используйте -r/--rev чтобы указать другую ревизию."
 
 msgid ""
 "    The archive type is automatically detected based on file\n"
 "    extension (or override using -t/--type)."
 msgstr ""
+"    Тип архива выбирается автоматически на основе расширения файла\n"
+"    (можно переопределить с помощью -t/--type)."
 
 msgid "    Valid types are:"
-msgstr ""
+msgstr "    Допустимые типы:"
 
 msgid ""
 "    :``files``: a directory full of files (default)\n"
@@ -6719,11 +6556,19 @@ msgid ""
 "    :``uzip``:  zip archive, uncompressed\n"
 "    :``zip``:   zip archive, compressed using deflate"
 msgstr ""
+"    :``files``: каталог с файлами (по умолчанию)\n"
+"    :``tar``:   tar-архив, без сжатия\n"
+"    :``tbz2``:  tar-архив, сжатый bzip2\n"
+"    :``tgz``:   tar-архив, сжатый gzip\n"
+"    :``uzip``:  zip-архив, без сжатия\n"
+"    :``zip``:   zip-архив, сжатый"
 
 msgid ""
 "    The exact name of the destination archive or directory is given\n"
 "    using a format string; see :hg:`help export` for details."
 msgstr ""
+"    Точное имя архива или каталога задается с помощью форматирующей\n"
+"    строки; см. :hg:`help export`."
 
 msgid ""
 "    Each member added to an archive file has a directory prefix\n"
@@ -6731,27 +6576,19 @@ msgid ""
 "    prefix. The default is the basename of the archive, with suffixes\n"
 "    removed."
 msgstr ""
+"    К каждому элементу архива добавляется префикс в виде имени\n"
+"    каталога. Префикс может быть задан в виде форматирующей строки\n"
+"    с помощью -p/--prefix. По умолчанию это имя архива с удаленным\n"
+"    расширением."
 
 msgid "no working directory: please specify a revision"
-msgstr ""
+msgstr "нет рабочего каталога: пожалуйста, укажите ревизию"
 
 msgid "repository root cannot be destination"
-msgstr ""
+msgstr "корень репозитория не может быть назначением"
 
 msgid "cannot archive plain files to stdout"
-msgstr ""
-
-msgid "merge with old dirstate parent after backout"
-msgstr ""
-
-msgid "parent to choose when backing out merge"
-msgstr ""
-
-msgid "revision to backout"
-msgstr ""
-
-msgid "[OPTION]... [-r] REV"
-msgstr ""
+msgstr "не могу архивировать обычный каталог в stdout"
 
 msgid "reverse effect of earlier changeset"
 msgstr ""
@@ -6809,30 +6646,6 @@ msgstr ""
 
 #, python-format
 msgid "merging with changeset %s\n"
-msgstr ""
-
-msgid "reset bisect state"
-msgstr ""
-
-msgid "mark changeset good"
-msgstr ""
-
-msgid "mark changeset bad"
-msgstr ""
-
-msgid "skip testing changeset"
-msgstr ""
-
-msgid "extend the bisect range"
-msgstr ""
-
-msgid "use command to check changeset state"
-msgstr ""
-
-msgid "do not update to target"
-msgstr ""
-
-msgid "[-gbsr] [-U] [-c CMD] [REV]"
 msgstr ""
 
 msgid "subdivision search of changesets"
@@ -6916,21 +6729,6 @@ msgstr ""
 msgid "Testing changeset %d:%s (%d changesets remaining, ~%d tests)\n"
 msgstr ""
 
-msgid "force"
-msgstr ""
-
-msgid "delete a given bookmark"
-msgstr ""
-
-msgid "rename a given bookmark"
-msgstr ""
-
-msgid "do not mark a new bookmark active"
-msgstr ""
-
-msgid "hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]"
-msgstr ""
-
 msgid "track a line of development with movable markers"
 msgstr ""
 
@@ -6983,15 +6781,6 @@ msgstr ""
 msgid "no bookmarks set\n"
 msgstr ""
 
-msgid "set branch name even if it shadows an existing branch"
-msgstr ""
-
-msgid "reset branch name to parent branch name"
-msgstr ""
-
-msgid "[-fC] [NAME]"
-msgstr ""
-
 msgid "set or show the current branch name"
 msgstr ""
 
@@ -7026,21 +6815,11 @@ msgstr ""
 msgid "a branch of the same name already exists"
 msgstr ""
 
-#. i18n: "it" refers to an existing branch
 msgid "use 'hg update' to switch to it"
 msgstr ""
 
 #, python-format
 msgid "marked working directory as branch %s\n"
-msgstr ""
-
-msgid "show only branches that have unmerged heads"
-msgstr ""
-
-msgid "show normal and closed branches"
-msgstr ""
-
-msgid "[-ac]"
 msgstr ""
 
 msgid "list repository named branches"
@@ -7069,27 +6848,6 @@ msgid " (closed)"
 msgstr ""
 
 msgid " (inactive)"
-msgstr ""
-
-msgid "run even when the destination is unrelated"
-msgstr ""
-
-msgid "a changeset intended to be added to the destination"
-msgstr ""
-
-msgid "a specific branch you would like to bundle"
-msgstr ""
-
-msgid "a base changeset assumed to be available at the destination"
-msgstr ""
-
-msgid "bundle all changesets in the repository"
-msgstr ""
-
-msgid "bundle compression type to use"
-msgstr ""
-
-msgid "[-f] [-t TYPE] [-a] [-r REV]... [--base REV]... FILE [DEST]"
 msgstr ""
 
 msgid "create a changegroup file"
@@ -7136,18 +6894,6 @@ msgstr ""
 msgid "unknown bundle type specified with --type"
 msgstr ""
 
-msgid "print output to file with formatted name"
-msgstr ""
-
-msgid "print the given revision"
-msgstr ""
-
-msgid "apply any matching decode filter"
-msgstr ""
-
-msgid "[OPTION]... FILE..."
-msgstr ""
-
 msgid "output the current or given revision of files"
 msgstr ""
 
@@ -7167,21 +6913,6 @@ msgid ""
 "    :``%s``: basename of file being printed\n"
 "    :``%d``: dirname of file being printed, or '.' if in repository root\n"
 "    :``%p``: root-relative path name of file being printed"
-msgstr ""
-
-msgid "the clone will include an empty working copy (only a repository)"
-msgstr ""
-
-msgid "revision, tag or branch to check out"
-msgstr ""
-
-msgid "include the specified changeset"
-msgstr ""
-
-msgid "clone only the specified branch"
-msgstr ""
-
-msgid "[OPTION]... SOURCE [DEST]"
 msgstr ""
 
 msgid "make a copy of an existing repository"
@@ -7272,12 +7003,6 @@ msgstr ""
 msgid "cannot specify both --noupdate and --updaterev"
 msgstr ""
 
-msgid "mark new/missing files as added/removed before committing"
-msgstr ""
-
-msgid "mark a branch as closed, hiding it from the branch list"
-msgstr ""
-
 msgid "commit the specified files or all outstanding changes"
 msgstr ""
 
@@ -7330,15 +7055,6 @@ msgstr ""
 msgid "committed changeset %d:%s\n"
 msgstr ""
 
-msgid "record a copy that has already occurred"
-msgstr ""
-
-msgid "forcibly copy over an existing managed file"
-msgstr ""
-
-msgid "[OPTION]... [SOURCE]... DEST"
-msgstr ""
-
 msgid "mark files as copied for the next commit"
 msgstr ""
 
@@ -7364,33 +7080,13 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "[INDEX] REV1 REV2"
-msgstr ""
-
 msgid "find the ancestor revision of two revisions in a given index"
 msgstr ""
 
 msgid "either two or three arguments required"
 msgstr ""
 
-msgid "add single file mergeable changes"
-msgstr ""
-
-msgid "add single file all revs overwrite"
-msgstr ""
-
-msgid "add new file at each rev"
-msgstr ""
-
-msgid "[OPTION]... [TEXT]"
-msgstr ""
-
-msgid "builds a repo with a given DAG from scratch in the current empty repo"
-msgstr ""
-
-msgid ""
-"    The description of the DAG is read from stdin if not given on the\n"
-"    command line."
+msgid "builds a repo with a given dag from scratch in the current empty repo"
 msgstr ""
 
 msgid "    Elements:"
@@ -7432,19 +7128,19 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "reading DAG from stdin\n"
-msgstr ""
-
 msgid "repository is not empty"
 msgstr ""
 
-msgid "building"
+msgid "list all available commands and options"
 msgstr ""
 
-msgid "show all details"
+msgid "returns the completion list associated with the given command"
 msgstr ""
 
-msgid "lists the contents of a bundle"
+msgid "show information detected about current filesystem"
+msgstr ""
+
+msgid "rebuild the dirstate as it would look like for the given revision"
 msgstr ""
 
 msgid "validate the correctness of the current dirstate"
@@ -7469,34 +7165,85 @@ msgstr ""
 msgid ".hg/dirstate inconsistent with current parent's manifest"
 msgstr ""
 
-msgid "[COMMAND]"
+msgid "show combined config settings from all hgrc files"
 msgstr ""
 
-msgid "list all available commands and options"
+msgid "    With no arguments, print names and values of all config items."
 msgstr ""
 
-msgid "show the command options"
-msgstr "показать параметры команды"
-
-msgid "[-o] CMD"
-msgstr "[-o] КОМАНДА"
-
-msgid "returns the completion list associated with the given command"
+msgid ""
+"    With one argument of the form section.name, print just the value\n"
+"    of that config item."
 msgstr ""
 
-msgid "use tags as labels"
+msgid ""
+"    With multiple arguments, print names and values of all config\n"
+"    items with matching section names."
 msgstr ""
 
-msgid "annotate with branch names"
+msgid ""
+"    With --debug, the source (filename and line number) is printed\n"
+"    for each config item."
 msgstr ""
 
-msgid "use dots for runs"
+#, python-format
+msgid "read config from: %s\n"
 msgstr ""
 
-msgid "separate elements by spaces"
+msgid "only one config item permitted"
 msgstr ""
 
-msgid "[OPTION]... [FILE [REV]...]"
+msgid "test whether node ids are known to a repo"
+msgstr ""
+
+msgid ""
+"    Every ID must be a full-length hex node id string. Returns a list of 0s "
+"and 1s\n"
+"    indicating unknown/known.\n"
+"    "
+msgstr ""
+
+msgid "lists the contents of a bundle"
+msgstr ""
+
+msgid "retrieves a bundle from a repo"
+msgstr ""
+
+msgid ""
+"    Every ID must be a full-length hex node id string. Saves the bundle to "
+"the\n"
+"    given file.\n"
+"    "
+msgstr ""
+
+msgid "access the pushkey key/value protocol"
+msgstr ""
+
+msgid "    With two args, list the keys in the given namespace."
+msgstr ""
+
+msgid ""
+"    With five args, set a key to new if it currently is set to old.\n"
+"    Reports success or failure.\n"
+"    "
+msgstr ""
+
+msgid "parse and apply a revision specification"
+msgstr ""
+
+msgid "manually set the parents of the current working directory"
+msgstr ""
+
+msgid ""
+"    This is useful for writing repository conversion tools, but should\n"
+"    be used with care."
+msgstr ""
+
+msgid "show the contents of the current dirstate"
+msgstr ""
+
+#, python-format
+msgid "copy: %s -> %s\n"
 msgstr ""
 
 msgid "format the changelog or an index DAG as a concise textual description"
@@ -7515,16 +7262,6 @@ msgstr ""
 msgid "need repo for changelog dag"
 msgstr ""
 
-#, fuzzy
-msgid "open changelog"
-msgstr "указать родительские ревизии"
-
-msgid "open manifest"
-msgstr ""
-
-msgid "-c|-m|FILE REV"
-msgstr ""
-
 msgid "dump the contents of a data file revision"
 msgstr ""
 
@@ -7532,50 +7269,7 @@ msgstr ""
 msgid "invalid revision identifier %s"
 msgstr ""
 
-msgid "try extended date formats"
-msgstr ""
-
-msgid "[-e] DATE [RANGE]"
-msgstr ""
-
 msgid "parse and display a date"
-msgstr ""
-
-msgid "use old-style discovery"
-msgstr ""
-
-msgid "use old-style discovery with non-heads included"
-msgstr ""
-
-msgid "[-l REV] [-r REV] [-b BRANCH]... [OTHER]"
-msgstr ""
-
-msgid "runs the changeset discovery protocol in isolation"
-msgstr ""
-
-msgid "[PATH]"
-msgstr ""
-
-msgid "show information detected about current filesystem"
-msgstr ""
-
-msgid "id of head node"
-msgstr ""
-
-msgid "id of common node"
-msgstr ""
-
-msgid "REPO FILE [-H|-C ID]..."
-msgstr ""
-
-msgid "retrieves a bundle from a repo"
-msgstr ""
-
-msgid ""
-"    Every ID must be a full-length hex node id string. Saves the bundle to "
-"the\n"
-"    given file.\n"
-"    "
 msgstr ""
 
 msgid "display the combined ignore pattern"
@@ -7584,10 +7278,7 @@ msgstr ""
 msgid "no ignore patterns found"
 msgstr ""
 
-msgid "revlog format"
-msgstr ""
-
-msgid "[-f FORMAT] -c|-m|FILE"
+msgid "runs the changeset discovery protocol in isolation"
 msgstr ""
 
 msgid "dump the contents of an index file"
@@ -7652,49 +7343,6 @@ msgstr ""
 msgid "%s problems detected, please check your install!\n"
 msgstr ""
 
-msgid "REPO ID..."
-msgstr ""
-
-msgid "test whether node ids are known to a repo"
-msgstr ""
-
-msgid ""
-"    Every ID must be a full-length hex node id string. Returns a list of 0s "
-"and 1s\n"
-"    indicating unknown/known.\n"
-"    "
-msgstr ""
-
-msgid "REPO NAMESPACE [KEY OLD NEW]"
-msgstr ""
-
-msgid "access the pushkey key/value protocol"
-msgstr ""
-
-msgid "    With two args, list the keys in the given namespace."
-msgstr ""
-
-msgid ""
-"    With five args, set a key to new if it currently is set to old.\n"
-"    Reports success or failure.\n"
-"    "
-msgstr ""
-
-msgid "revision to rebuild to"
-msgstr ""
-
-msgid "[-r REV] [REV]"
-msgstr ""
-
-msgid "rebuild the dirstate as it would look like for the given revision"
-msgstr ""
-
-msgid "revision to debug"
-msgstr ""
-
-msgid "[-r REV] FILE"
-msgstr ""
-
 msgid "dump rename information"
 msgstr ""
 
@@ -7706,55 +7354,7 @@ msgstr ""
 msgid "%s not renamed\n"
 msgstr ""
 
-msgid "dump index data"
-msgstr ""
-
-msgid "-c|-m|FILE"
-msgstr ""
-
-msgid "show data and statistics about a revlog"
-msgstr ""
-
-msgid "parse and apply a revision specification"
-msgstr ""
-
-msgid "REV1 [REV2]"
-msgstr ""
-
-msgid "manually set the parents of the current working directory"
-msgstr ""
-
-msgid ""
-"    This is useful for writing repository conversion tools, but should\n"
-"    be used with care."
-msgstr ""
-
-msgid "do not display the saved mtime"
-msgstr ""
-
-msgid "sort by saved mtime"
-msgstr ""
-
-msgid "[OPTION]..."
-msgstr ""
-
-msgid "show the contents of the current dirstate"
-msgstr ""
-
-#, python-format
-msgid "copy: %s -> %s\n"
-msgstr ""
-
-msgid "revision to check"
-msgstr ""
-
 msgid "show how files match on given patterns"
-msgstr ""
-
-msgid "REPO [OPTIONS]... [ONE [TWO]]"
-msgstr ""
-
-msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
 msgstr ""
 
 msgid "diff repository (or selected files)"
@@ -7787,15 +7387,6 @@ msgstr ""
 msgid ""
 "    Use the -g/--git option to generate diffs in the git extended diff\n"
 "    format. For more information, read :hg:`help diffs`."
-msgstr ""
-
-msgid "diff against the second parent"
-msgstr ""
-
-msgid "revisions to export"
-msgstr ""
-
-msgid "[OPTION]... [-o OUTFILESPEC] REV..."
 msgstr ""
 
 msgid "dump the header and diffs for one or more changesets"
@@ -7882,34 +7473,6 @@ msgstr ""
 msgid "not removing %s: file is already untracked\n"
 msgstr ""
 
-#, python-format
-msgid "removing %s\n"
-msgstr ""
-
-msgid "end fields with NUL"
-msgstr ""
-
-msgid "print all revisions that match"
-msgstr ""
-
-msgid "follow changeset history, or file history across copies and renames"
-msgstr ""
-
-msgid "ignore case when matching"
-msgstr ""
-
-msgid "print only filenames and revisions that match"
-msgstr ""
-
-msgid "print matching line numbers"
-msgstr ""
-
-msgid "only search files changed within revision range"
-msgstr ""
-
-msgid "[OPTION]... PATTERN [FILE]..."
-msgstr ""
-
 msgid "search for a pattern in specified files and revisions"
 msgstr ""
 
@@ -7938,24 +7501,6 @@ msgstr ""
 
 #, python-format
 msgid "grep: invalid match pattern: %s\n"
-msgstr ""
-
-msgid "STARTREV"
-msgstr ""
-
-msgid "show only heads which are descendants of STARTREV"
-msgstr ""
-
-msgid "show topological heads only"
-msgstr ""
-
-msgid "show active branchheads only (DEPRECATED)"
-msgstr ""
-
-msgid "show normal and closed branch heads"
-msgstr ""
-
-msgid "[-ac] [-r STARTREV] [REV]..."
 msgstr ""
 
 msgid "show current repository heads or show branch heads"
@@ -8005,16 +7550,6 @@ msgstr ""
 msgid " (started at %s)"
 msgstr ""
 
-msgid "show only help for extensions"
-msgstr ""
-
-#, fuzzy
-msgid "show only help for commands"
-msgstr "показать параметры команды"
-
-msgid "[-ec] [TOPIC]"
-msgstr ""
-
 msgid "show help for a given topic or a help overview"
 msgstr ""
 
@@ -8033,7 +7568,7 @@ msgid ""
 msgstr ""
 
 msgid "global options:"
-msgstr "глобальные настройки:"
+msgstr "глобальные параметры:"
 
 msgid "use \"hg help\" for the full list of commands"
 msgstr ""
@@ -8051,7 +7586,7 @@ msgstr ""
 
 #, python-format
 msgid "use \"hg -v help %s\" to show global options"
-msgstr "используйте \"hg -v help %s\" для просмотра глобальных опций"
+msgstr "используйте \"hg -v help %s\" для просмотра глобальных параметров"
 
 msgid "list of commands:"
 msgstr "список команд:"
@@ -8091,24 +7626,11 @@ msgstr ""
 "\n"
 "используйте \"hg -v help %s\" чтобы посмотреть подробную справку\n"
 
-#, fuzzy
 msgid "options:\n"
-msgstr "опции:\n"
-
-#, fuzzy, python-format
-msgid "use \"hg help -e %s\" to show help for the %s extension"
-msgstr "используйте \"hg -v help %s\" для просмотра глобальных опций"
+msgstr "параметры:\n"
 
 msgid "no commands defined\n"
 msgstr "команды не определены\n"
-
-#, fuzzy, python-format
-msgid ""
-"\n"
-"use \"hg help -c %s\" to see help for the %s command\n"
-msgstr ""
-"\n"
-"используйте \"hg -v help %s\" чтобы посмотреть подробную справку\n"
 
 msgid "no help text available"
 msgstr "справка недоступна"
@@ -8137,14 +7659,14 @@ msgid "VALUE"
 msgstr "ЗНАЧЕНИЕ"
 
 msgid "DEPRECATED"
-msgstr "УСТАРЕВШЕЕ"
+msgstr "УСТАРЕЛО"
 
 msgid ""
 "\n"
 "[+] marked option can be specified multiple times"
 msgstr ""
 "\n"
-"опции, помеченные [+] могут указываться многократно"
+"параметры, помеченные [+], могут указываться многократно"
 
 msgid ""
 "\n"
@@ -8152,27 +7674,6 @@ msgid ""
 msgstr ""
 "\n"
 "дополнительные разделы справки:"
-
-msgid "identify the specified revision"
-msgstr ""
-
-msgid "show local revision number"
-msgstr ""
-
-msgid "show global revision id"
-msgstr ""
-
-msgid "show branch"
-msgstr ""
-
-msgid "show tags"
-msgstr ""
-
-msgid "show bookmarks"
-msgstr ""
-
-msgid "[-nibtB] [-r REV] [SOURCE]"
-msgstr ""
 
 msgid "identify the working copy or specified revision"
 msgstr "описать рабочую копию или указанную ревизию"
@@ -8206,32 +7707,6 @@ msgstr ""
 msgid "can't query remote revision number, branch, or tags"
 msgstr "не могу запросить номер удаленной ревизии, ветви или метки"
 
-msgid ""
-"directory strip option for patch. This has the same meaning as the "
-"corresponding patch option"
-msgstr ""
-
-msgid "PATH"
-msgstr ""
-
-msgid "base path"
-msgstr ""
-
-msgid "skip check for outstanding uncommitted changes"
-msgstr ""
-
-msgid "don't commit, just update the working directory"
-msgstr ""
-
-msgid "apply patch to the nodes from which it was generated"
-msgstr ""
-
-msgid "use any branch information in patch (implied by --exact)"
-msgstr ""
-
-msgid "[OPTION]... PATCH..."
-msgstr ""
-
 msgid "import an ordered set of patches"
 msgstr "импортировать упорядоченный набор патчей"
 
@@ -8240,7 +7715,7 @@ msgid ""
 "    --no-commit is specified)."
 msgstr ""
 "    Импортирует список патчей и коммитит их по отдельности (если не\n"
-"    задана опция --no-commit)"
+"    задан параметр --no-commit)"
 
 msgid ""
 "    If there are outstanding changes in the working directory, import\n"
@@ -8301,27 +7776,6 @@ msgstr ""
 msgid "no diffs found"
 msgstr ""
 
-msgid "run even if remote repository is unrelated"
-msgstr ""
-
-msgid "show newest record first"
-msgstr ""
-
-msgid "file to store the bundles into"
-msgstr ""
-
-msgid "a remote changeset intended to be added"
-msgstr ""
-
-msgid "compare bookmarks"
-msgstr ""
-
-msgid "a specific branch you would like to pull"
-msgstr ""
-
-msgid "[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILENAME] [SOURCE]"
-msgstr ""
-
 msgid "show new changesets found in source"
 msgstr ""
 
@@ -8350,9 +7804,6 @@ msgstr ""
 msgid "remote doesn't support bookmarks\n"
 msgstr ""
 
-msgid "[-e CMD] [--remotecmd CMD] [DEST]"
-msgstr ""
-
 msgid "create a new repository in the given directory"
 msgstr ""
 
@@ -8367,18 +7818,6 @@ msgstr ""
 msgid ""
 "    It is possible to specify an ``ssh://`` URL as the destination.\n"
 "    See :hg:`help urls` for more information."
-msgstr ""
-
-msgid "search the repository as it is in REV"
-msgstr ""
-
-msgid "end filenames with NUL, for use with xargs"
-msgstr ""
-
-msgid "print complete paths from the filesystem root"
-msgstr ""
-
-msgid "[OPTION]... [PATTERN]..."
 msgstr ""
 
 msgid "locate files matching specific patterns"
@@ -8405,39 +7844,6 @@ msgid ""
 "    command, use the -0 option to both this command and \"xargs\". This\n"
 "    will avoid the problem of \"xargs\" treating single filenames that\n"
 "    contain whitespace as multiple filenames."
-msgstr ""
-
-msgid "only follow the first parent of merge changesets"
-msgstr ""
-
-msgid "show revisions matching date spec"
-msgstr ""
-
-msgid "show copied files"
-msgstr ""
-
-msgid "do case-insensitive search for a given text"
-msgstr ""
-
-msgid "include revisions where files were removed"
-msgstr ""
-
-msgid "show only merges"
-msgstr ""
-
-msgid "revisions committed by user"
-msgstr ""
-
-msgid "show only changesets within the given named branch (DEPRECATED)"
-msgstr ""
-
-msgid "show changesets within the given named branch"
-msgstr ""
-
-msgid "do not display revision or any of its ancestors"
-msgstr ""
-
-msgid "[OPTION]... [FILE]"
 msgstr ""
 
 msgid "show revision history of entire repository or files"
@@ -8478,12 +7884,6 @@ msgid ""
 "       will appear in files:."
 msgstr ""
 
-msgid "revision to display"
-msgstr ""
-
-msgid "[-r REV]"
-msgstr ""
-
 msgid "output the current or given revision of the project manifest"
 msgstr ""
 
@@ -8496,18 +7896,6 @@ msgstr ""
 msgid ""
 "    With -v, print file permissions, symlink and executable bits.\n"
 "    With --debug, print file revision hashes."
-msgstr ""
-
-msgid "force a merge with outstanding changes"
-msgstr ""
-
-msgid "revision to merge"
-msgstr ""
-
-msgid "review revisions to merge (no merge is performed)"
-msgstr ""
-
-msgid "[-P] [-f] [[-r] REV]"
 msgstr ""
 
 msgid "merge working directory with another revision"
@@ -8579,15 +7967,6 @@ msgstr ""
 msgid "use 'hg update' or merge with an explicit revision"
 msgstr ""
 
-msgid "a changeset intended to be included in the destination"
-msgstr ""
-
-msgid "a specific branch you would like to push"
-msgstr ""
-
-msgid "[-M] [-p] [-n] [-f] [-r REV]... [DEST]"
-msgstr ""
-
 msgid "show changesets not found in the destination"
 msgstr ""
 
@@ -8603,12 +7982,6 @@ msgstr ""
 msgid ""
 "    Returns 0 if there are outgoing changes, 1 otherwise.\n"
 "    "
-msgstr ""
-
-msgid "show parents of the specified revision"
-msgstr ""
-
-msgid "[-r REV] [FILE]"
 msgstr ""
 
 msgid "show the parents of the working directory or revision"
@@ -8629,20 +8002,12 @@ msgstr ""
 msgid "'%s' not found in manifest!"
 msgstr ""
 
-msgid "[NAME]"
-msgstr ""
-
 msgid "show aliases for remote repositories"
 msgstr ""
 
 msgid ""
 "    Show definition of symbolic path name NAME. If no name is given,\n"
 "    show definition of all available names."
-msgstr ""
-
-msgid ""
-"    Option -q/--quiet suppresses all output when searching for NAME\n"
-"    and shows only the path names when listing all definitions."
 msgstr ""
 
 msgid ""
@@ -8683,21 +8048,6 @@ msgid "(run 'hg heads' to see heads)\n"
 msgstr ""
 
 msgid "(run 'hg update' to get a working copy)\n"
-msgstr ""
-
-msgid "update to new branch head if changesets were pulled"
-msgstr ""
-
-msgid "run even when remote repository is unrelated"
-msgstr ""
-
-msgid "BOOKMARK"
-msgstr ""
-
-msgid "bookmark to pull"
-msgstr ""
-
-msgid "[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"
 msgstr ""
 
 msgid "pull changes from the specified source"
@@ -8741,18 +8091,6 @@ msgstr ""
 
 #, python-format
 msgid "importing bookmark %s\n"
-msgstr ""
-
-msgid "force push"
-msgstr ""
-
-msgid "bookmark to push"
-msgstr ""
-
-msgid "allow pushing a new branch"
-msgstr ""
-
-msgid "[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]"
 msgstr ""
 
 msgid "push changes to the specified destination"
@@ -8838,12 +8176,6 @@ msgid ""
 "    "
 msgstr ""
 
-msgid "record delete for missing files"
-msgstr ""
-
-msgid "remove (and delete) file even if added or modified"
-msgstr ""
-
 msgid "remove the specified files on the next commit"
 msgstr ""
 
@@ -8901,12 +8233,6 @@ msgid ""
 "not removing %s: file has been marked for add (use -f to force removal)\n"
 msgstr ""
 
-msgid "record a rename that has already occurred"
-msgstr ""
-
-msgid "[OPTION]... SOURCE... DEST"
-msgstr ""
-
 msgid "rename files; equivalent of copy + remove"
 msgstr ""
 
@@ -8919,21 +8245,6 @@ msgstr ""
 msgid ""
 "    This command takes effect at the next commit. To undo a rename\n"
 "    before that, see :hg:`revert`."
-msgstr ""
-
-msgid "select all unresolved files"
-msgstr ""
-
-msgid "list state of files needing merge"
-msgstr ""
-
-msgid "mark files as resolved"
-msgstr ""
-
-msgid "mark files as unresolved"
-msgstr ""
-
-msgid "hide status prefix"
 msgstr ""
 
 msgid "redo merges or set/view the merge status of files"
@@ -8995,21 +8306,6 @@ msgid "can't specify --all and patterns"
 msgstr ""
 
 msgid "no files or directories specified; use --all to remerge all files"
-msgstr ""
-
-msgid "revert all changes when no arguments given"
-msgstr ""
-
-msgid "tipmost revision matching date"
-msgstr ""
-
-msgid "revert to the specified revision"
-msgstr ""
-
-msgid "do not save backup copies of files"
-msgstr ""
-
-msgid "[OPTION]... [-r REV] [NAME]..."
 msgstr ""
 
 msgid "restore individual files or directories to an earlier state"
@@ -9144,52 +8440,6 @@ msgstr ""
 msgid "    Print the root directory of the current repository."
 msgstr ""
 
-msgid "name of access log file to write to"
-msgstr "имя файла для записи журнала доступа"
-
-msgid "name of error log file to write to"
-msgstr "имя файла для записи журнала ошибок"
-
-msgid "PORT"
-msgstr ""
-
-msgid "port to listen on (default: 8000)"
-msgstr ""
-
-msgid "address to listen on (default: all interfaces)"
-msgstr ""
-
-msgid "ADDR"
-msgstr ""
-
-msgid "prefix path to serve from (default: server root)"
-msgstr ""
-"префикс пути для предоставления доступа (по умолчанию: в корне сервера)"
-
-msgid "name to show in web pages (default: working directory)"
-msgstr ""
-
-msgid "name of the hgweb config file (see \"hg help hgweb\")"
-msgstr ""
-
-msgid "name of the hgweb config file (DEPRECATED)"
-msgstr "имя конфигурационного файла hgweb (УСТАРЕЛО)"
-
-msgid "for remote clients"
-msgstr "для удалённых клиентов"
-
-msgid "web templates to use"
-msgstr "используемые веб-шаблоны"
-
-msgid "template style to use"
-msgstr "используемый стиль шаблона"
-
-msgid "use IPv6 in addition to IPv4"
-msgstr "использовать IPv6 вместе с IPv4"
-
-msgid "SSL certificate file"
-msgstr "Файл сертификата SSL"
-
 msgid "start stand-alone webserver"
 msgstr ""
 
@@ -9225,73 +8475,6 @@ msgstr "Здесь нет репозитория Mercurial (.hg не обнар�
 
 #, python-format
 msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
-msgstr ""
-
-msgid "show untrusted configuration options"
-msgstr ""
-
-msgid "[-u] [NAME]..."
-msgstr ""
-
-msgid "show combined config settings from all hgrc files"
-msgstr ""
-
-msgid "    With no arguments, print names and values of all config items."
-msgstr ""
-
-msgid ""
-"    With one argument of the form section.name, print just the value\n"
-"    of that config item."
-msgstr ""
-
-msgid ""
-"    With multiple arguments, print names and values of all config\n"
-"    items with matching section names."
-msgstr ""
-
-msgid ""
-"    With --debug, the source (filename and line number) is printed\n"
-"    for each config item."
-msgstr ""
-
-#, python-format
-msgid "read config from: %s\n"
-msgstr ""
-
-msgid "only one config item permitted"
-msgstr ""
-
-msgid "show status of all files"
-msgstr ""
-
-msgid "show only modified files"
-msgstr ""
-
-msgid "show only added files"
-msgstr ""
-
-msgid "show only removed files"
-msgstr ""
-
-msgid "show only deleted (but tracked) files"
-msgstr ""
-
-msgid "show only files without changes"
-msgstr ""
-
-msgid "show only unknown (not tracked) files"
-msgstr ""
-
-msgid "show only ignored files"
-msgstr ""
-
-msgid "show source of copied files"
-msgstr ""
-
-msgid "show difference from revision"
-msgstr ""
-
-msgid "list the changed files of a revision"
 msgstr ""
 
 msgid "show changed files in the working directory"
@@ -9338,9 +8521,6 @@ msgid ""
 "      ? = not tracked\n"
 "      I = ignored\n"
 "        = origin of the previous file listed as A (added)"
-msgstr ""
-
-msgid "check for push and pull"
 msgstr ""
 
 msgid "summarize working directory state"
@@ -9462,24 +8642,6 @@ msgstr ""
 msgid "remote: (synced)\n"
 msgstr ""
 
-msgid "force tag"
-msgstr ""
-
-msgid "make the tag local"
-msgstr ""
-
-msgid "revision to tag"
-msgstr ""
-
-msgid "remove a tag"
-msgstr ""
-
-msgid "use <text> as commit message"
-msgstr ""
-
-msgid "[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
-msgstr ""
-
 msgid "add one or more tags for the current or given revision"
 msgstr ""
 
@@ -9558,9 +8720,6 @@ msgid ""
 "    switch is used, a third column \"local\" is printed for local tags."
 msgstr ""
 
-msgid "[-p] [-g]"
-msgstr ""
-
 msgid "show the tip revision"
 msgstr ""
 
@@ -9577,12 +8736,6 @@ msgid ""
 "    and cannot be renamed or assigned to a different changeset."
 msgstr ""
 
-msgid "update to new branch head if changesets were unbundled"
-msgstr ""
-
-msgid "[-u] FILE..."
-msgstr ""
-
 msgid "apply one or more changegroup files"
 msgstr ""
 
@@ -9594,15 +8747,6 @@ msgstr ""
 msgid ""
 "    Returns 0 on success, 1 if an update has unresolved files.\n"
 "    "
-msgstr ""
-
-msgid "discard uncommitted changes (no backup)"
-msgstr ""
-
-msgid "update across branches if no uncommitted changes"
-msgstr ""
-
-msgid "[-c] [-C] [-d DATE] [[-r] REV]"
 msgstr ""
 
 msgid "update working directory (or switch revisions)"
@@ -9691,6 +8835,841 @@ msgid ""
 "Copyright (C) 2005-2011 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
+msgstr ""
+
+msgid "repository root directory or name of overlay bundle file"
+msgstr ""
+
+msgid "DIR"
+msgstr ""
+
+msgid "change working directory"
+msgstr ""
+
+msgid "do not prompt, assume 'yes' for any required answers"
+msgstr ""
+
+msgid "suppress output"
+msgstr "с подавлением вывода"
+
+msgid "enable additional output"
+msgstr "включить дополнительный вывод"
+
+msgid "set/override config option (use 'section.name=value')"
+msgstr ""
+
+msgid "CONFIG"
+msgstr ""
+
+msgid "enable debugging output"
+msgstr ""
+
+msgid "start debugger"
+msgstr "запустить отладчик"
+
+msgid "set the charset encoding"
+msgstr ""
+
+msgid "ENCODE"
+msgstr ""
+
+msgid "MODE"
+msgstr ""
+
+msgid "set the charset encoding mode"
+msgstr ""
+
+msgid "always print a traceback on exception"
+msgstr ""
+
+msgid "time how long the command takes"
+msgstr ""
+
+msgid "print command execution profile"
+msgstr "вывести профиль запуска команды"
+
+msgid "output version information and exit"
+msgstr ""
+
+msgid "display help and exit"
+msgstr "показать справку и выйти"
+
+msgid "do not perform actions, just print output"
+msgstr "ничего реально не делать, просто напечатать вывод"
+
+msgid "specify ssh command to use"
+msgstr ""
+
+msgid "specify hg command to run on the remote side"
+msgstr ""
+
+msgid "do not verify server certificate (ignoring web.cacerts config)"
+msgstr ""
+
+msgid "PATTERN"
+msgstr "ШАБЛОН"
+
+msgid "include names matching the given patterns"
+msgstr "включить имена, соответствующие данным шаблонам"
+
+msgid "exclude names matching the given patterns"
+msgstr "исключить имена, соответствующие данным шаблонам"
+
+msgid "use text as commit message"
+msgstr ""
+
+msgid "read commit message from file"
+msgstr ""
+
+msgid "record the specified date as commit date"
+msgstr ""
+
+msgid "record the specified user as committer"
+msgstr ""
+
+msgid "STYLE"
+msgstr ""
+
+msgid "display using template map file"
+msgstr ""
+
+msgid "display with template"
+msgstr ""
+
+msgid "do not show merges"
+msgstr ""
+
+msgid "output diffstat-style summary of changes"
+msgstr ""
+
+msgid "treat all files as text"
+msgstr ""
+
+msgid "omit dates from diff headers"
+msgstr ""
+
+msgid "show which function each change is in"
+msgstr ""
+
+msgid "produce a diff that undoes the changes"
+msgstr ""
+
+msgid "ignore white space when comparing lines"
+msgstr ""
+
+msgid "ignore changes in the amount of white space"
+msgstr ""
+
+msgid "ignore changes whose lines are all blank"
+msgstr ""
+
+msgid "number of lines of context to show"
+msgstr ""
+
+msgid "SIMILARITY"
+msgstr "ПОХОЖЕСТЬ"
+
+msgid "guess renamed files by similarity (0<=s<=100)"
+msgstr ""
+"считать файлы переименованными исходя из степени их похожести (от 0 до 100)"
+
+msgid "recurse into subrepositories"
+msgstr "рекурсивно обрабатывать субрепозитории"
+
+msgid "[OPTION]... [FILE]..."
+msgstr "[ПАРАМЕТР]... [ФАЙЛ]..."
+
+msgid "annotate the specified revision"
+msgstr "аннотировать указанную ревизию"
+
+msgid "follow copies/renames and list the filename (DEPRECATED)"
+msgstr "отслеживать копирования/переименования и писать имя файла (УСТАРЕЛО)"
+
+msgid "don't follow copies and renames"
+msgstr "не отслеживать копирования и перемещения"
+
+msgid "list the author (long with -v)"
+msgstr "писать имя автора (длинный формат с -v)"
+
+msgid "list the filename"
+msgstr "писать имя файла"
+
+msgid "list the date (short with -q)"
+msgstr "писать дату (короткий формат с -q"
+
+msgid "list the revision number (default)"
+msgstr "писать номер ревизии (по умолчанию)"
+
+msgid "list the changeset"
+msgstr "писать набор изменений"
+
+msgid "show line number at the first appearance"
+msgstr "указывать номер строки при первом появлении"
+
+msgid "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."
+msgstr ""
+
+msgid "do not pass files through decoders"
+msgstr "не обрабатывать файлы декодерами"
+
+msgid "PREFIX"
+msgstr "ПРЕФИКС"
+
+msgid "directory prefix for files in archive"
+msgstr "префикс каталога для файлов в архиве"
+
+msgid "revision to distribute"
+msgstr "ревизия для архивирования"
+
+msgid "type of distribution to create"
+msgstr "тип создаваемого архива"
+
+msgid "[ПАРАМЕТР]... ВЫХОД"
+msgstr ""
+
+msgid "merge with old dirstate parent after backout"
+msgstr ""
+
+msgid "parent to choose when backing out merge"
+msgstr ""
+
+msgid "revision to backout"
+msgstr ""
+
+msgid "[OPTION]... [-r] REV"
+msgstr ""
+
+msgid "reset bisect state"
+msgstr ""
+
+msgid "mark changeset good"
+msgstr ""
+
+msgid "mark changeset bad"
+msgstr ""
+
+msgid "skip testing changeset"
+msgstr ""
+
+msgid "extend the bisect range"
+msgstr ""
+
+msgid "use command to check changeset state"
+msgstr ""
+
+msgid "do not update to target"
+msgstr ""
+
+msgid "[-gbsr] [-U] [-c CMD] [REV]"
+msgstr ""
+
+msgid "force"
+msgstr ""
+
+msgid "delete a given bookmark"
+msgstr ""
+
+msgid "rename a given bookmark"
+msgstr ""
+
+msgid "do not mark a new bookmark active"
+msgstr ""
+
+msgid "hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]"
+msgstr ""
+
+msgid "set branch name even if it shadows an existing branch"
+msgstr ""
+
+msgid "reset branch name to parent branch name"
+msgstr ""
+
+msgid "[-fC] [NAME]"
+msgstr ""
+
+msgid "show only branches that have unmerged heads"
+msgstr ""
+
+msgid "show normal and closed branches"
+msgstr ""
+
+msgid "[-ac]"
+msgstr ""
+
+msgid "run even when the destination is unrelated"
+msgstr ""
+
+msgid "a changeset intended to be added to the destination"
+msgstr ""
+
+msgid "a specific branch you would like to bundle"
+msgstr ""
+
+msgid "a base changeset assumed to be available at the destination"
+msgstr ""
+
+msgid "bundle all changesets in the repository"
+msgstr ""
+
+msgid "bundle compression type to use"
+msgstr ""
+
+msgid "[-f] [-t TYPE] [-a] [-r REV]... [--base REV]... FILE [DEST]"
+msgstr ""
+
+msgid "print output to file with formatted name"
+msgstr ""
+
+msgid "print the given revision"
+msgstr ""
+
+msgid "apply any matching decode filter"
+msgstr ""
+
+msgid "[OPTION]... FILE..."
+msgstr ""
+
+msgid "the clone will include an empty working copy (only a repository)"
+msgstr ""
+
+msgid "revision, tag or branch to check out"
+msgstr ""
+
+msgid "include the specified changeset"
+msgstr ""
+
+msgid "clone only the specified branch"
+msgstr ""
+
+msgid "[OPTION]... SOURCE [DEST]"
+msgstr ""
+
+msgid "mark new/missing files as added/removed before committing"
+msgstr ""
+
+msgid "mark a branch as closed, hiding it from the branch list"
+msgstr ""
+
+msgid "record a copy that has already occurred"
+msgstr ""
+
+msgid "forcibly copy over an existing managed file"
+msgstr ""
+
+msgid "[OPTION]... [SOURCE]... DEST"
+msgstr ""
+
+msgid "[INDEX] REV1 REV2"
+msgstr ""
+
+msgid "add single file mergeable changes"
+msgstr ""
+
+msgid "add single file all revs overwrite"
+msgstr ""
+
+msgid "add new file at each rev"
+msgstr ""
+
+msgid "[OPTION]... TEXT"
+msgstr ""
+
+msgid "show all details"
+msgstr ""
+
+msgid "[COMMAND]"
+msgstr ""
+
+msgid "show the command options"
+msgstr "показать параметры команды"
+
+msgid "[-o] CMD"
+msgstr "[-o] КОМАНДА"
+
+msgid "use tags as labels"
+msgstr ""
+
+msgid "annotate with branch names"
+msgstr ""
+
+msgid "use dots for runs"
+msgstr ""
+
+msgid "separate elements by spaces"
+msgstr ""
+
+msgid "[OPTION]... [FILE [REV]...]"
+msgstr ""
+
+msgid "try extended date formats"
+msgstr ""
+
+msgid "[-e] DATE [RANGE]"
+msgstr ""
+
+msgid "FILE REV"
+msgstr ""
+
+msgid "use old-style discovery"
+msgstr ""
+
+msgid "use old-style discovery with non-heads included"
+msgstr ""
+
+msgid "[-l REV] [-r REV] [-b BRANCH]... [OTHER]"
+msgstr ""
+
+msgid "[PATH]"
+msgstr ""
+
+msgid "id of head node"
+msgstr ""
+
+msgid "id of common node"
+msgstr ""
+
+msgid "REPO FILE [-H|-C ID]..."
+msgstr ""
+
+msgid "revlog format"
+msgstr ""
+
+msgid "REPO ID..."
+msgstr ""
+
+msgid "REPO NAMESPACE [KEY OLD NEW]"
+msgstr ""
+
+msgid "revision to rebuild to"
+msgstr ""
+
+msgid "[-r REV] [REV]"
+msgstr ""
+
+msgid "revision to debug"
+msgstr ""
+
+msgid "[-r REV] FILE"
+msgstr ""
+
+msgid "REV1 [REV2]"
+msgstr ""
+
+msgid "do not display the saved mtime"
+msgstr ""
+
+msgid "sort by saved mtime"
+msgstr ""
+
+msgid "[OPTION]..."
+msgstr ""
+
+msgid "revision to check"
+msgstr ""
+
+msgid "REPO [OPTIONS]... [ONE [TWO]]"
+msgstr ""
+
+msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
+msgstr ""
+
+msgid "diff against the second parent"
+msgstr ""
+
+msgid "revisions to export"
+msgstr ""
+
+msgid "[OPTION]... [-o OUTFILESPEC] REV..."
+msgstr ""
+
+msgid "end fields with NUL"
+msgstr ""
+
+msgid "print all revisions that match"
+msgstr ""
+
+msgid "follow changeset history, or file history across copies and renames"
+msgstr ""
+
+msgid "ignore case when matching"
+msgstr ""
+
+msgid "print only filenames and revisions that match"
+msgstr ""
+
+msgid "print matching line numbers"
+msgstr ""
+
+msgid "only search files changed within revision range"
+msgstr ""
+
+msgid "[OPTION]... PATTERN [FILE]..."
+msgstr ""
+
+msgid "show only heads which are descendants of STARTREV"
+msgstr ""
+
+msgid "STARTREV"
+msgstr ""
+
+msgid "show topological heads only"
+msgstr ""
+
+msgid "show active branchheads only (DEPRECATED)"
+msgstr ""
+
+msgid "show normal and closed branch heads"
+msgstr ""
+
+msgid "[-ac] [-r STARTREV] [REV]..."
+msgstr ""
+
+msgid "[TOPIC]"
+msgstr ""
+
+msgid "identify the specified revision"
+msgstr ""
+
+msgid "show local revision number"
+msgstr ""
+
+msgid "show global revision id"
+msgstr ""
+
+msgid "show branch"
+msgstr ""
+
+msgid "show tags"
+msgstr ""
+
+msgid "show bookmarks"
+msgstr ""
+
+msgid "[-nibtB] [-r REV] [SOURCE]"
+msgstr ""
+
+msgid ""
+"directory strip option for patch. This has the same meaning as the "
+"corresponding patch option"
+msgstr ""
+
+msgid "PATH"
+msgstr ""
+
+msgid "base path"
+msgstr ""
+
+msgid "skip check for outstanding uncommitted changes"
+msgstr ""
+
+msgid "don't commit, just update the working directory"
+msgstr ""
+
+msgid "apply patch to the nodes from which it was generated"
+msgstr ""
+
+msgid "use any branch information in patch (implied by --exact)"
+msgstr ""
+
+msgid "[OPTION]... PATCH..."
+msgstr ""
+
+msgid "run even if remote repository is unrelated"
+msgstr ""
+
+msgid "show newest record first"
+msgstr ""
+
+msgid "file to store the bundles into"
+msgstr ""
+
+msgid "a remote changeset intended to be added"
+msgstr ""
+
+msgid "compare bookmarks"
+msgstr ""
+
+msgid "a specific branch you would like to pull"
+msgstr ""
+
+msgid "[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILENAME] [SOURCE]"
+msgstr ""
+
+msgid "[-e CMD] [--remotecmd CMD] [DEST]"
+msgstr ""
+
+msgid "search the repository as it is in REV"
+msgstr ""
+
+msgid "end filenames with NUL, for use with xargs"
+msgstr ""
+
+msgid "print complete paths from the filesystem root"
+msgstr ""
+
+msgid "[OPTION]... [PATTERN]..."
+msgstr ""
+
+msgid "only follow the first parent of merge changesets"
+msgstr ""
+
+msgid "show revisions matching date spec"
+msgstr ""
+
+msgid "show copied files"
+msgstr ""
+
+msgid "do case-insensitive search for a given text"
+msgstr ""
+
+msgid "include revisions where files were removed"
+msgstr ""
+
+msgid "show only merges"
+msgstr ""
+
+msgid "revisions committed by user"
+msgstr ""
+
+msgid "show only changesets within the given named branch (DEPRECATED)"
+msgstr ""
+
+msgid "show changesets within the given named branch"
+msgstr ""
+
+msgid "do not display revision or any of its ancestors"
+msgstr ""
+
+msgid "[OPTION]... [FILE]"
+msgstr ""
+
+msgid "revision to display"
+msgstr ""
+
+msgid "[-r REV]"
+msgstr ""
+
+msgid "force a merge with outstanding changes"
+msgstr ""
+
+msgid "revision to merge"
+msgstr ""
+
+msgid "review revisions to merge (no merge is performed)"
+msgstr ""
+
+msgid "[-P] [-f] [[-r] REV]"
+msgstr ""
+
+msgid "a changeset intended to be included in the destination"
+msgstr ""
+
+msgid "a specific branch you would like to push"
+msgstr ""
+
+msgid "[-M] [-p] [-n] [-f] [-r REV]... [DEST]"
+msgstr ""
+
+msgid "show parents of the specified revision"
+msgstr ""
+
+msgid "[-r REV] [FILE]"
+msgstr ""
+
+msgid "[NAME]"
+msgstr ""
+
+msgid "update to new branch head if changesets were pulled"
+msgstr ""
+
+msgid "run even when remote repository is unrelated"
+msgstr ""
+
+msgid "BOOKMARK"
+msgstr ""
+
+msgid "bookmark to pull"
+msgstr ""
+
+msgid "[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"
+msgstr ""
+
+msgid "force push"
+msgstr ""
+
+msgid "bookmark to push"
+msgstr ""
+
+msgid "allow pushing a new branch"
+msgstr ""
+
+msgid "[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]"
+msgstr ""
+
+msgid "record delete for missing files"
+msgstr ""
+
+msgid "remove (and delete) file even if added or modified"
+msgstr ""
+
+msgid "record a rename that has already occurred"
+msgstr ""
+
+msgid "[OPTION]... SOURCE... DEST"
+msgstr ""
+
+msgid "select all unresolved files"
+msgstr ""
+
+msgid "list state of files needing merge"
+msgstr ""
+
+msgid "mark files as resolved"
+msgstr ""
+
+msgid "mark files as unresolved"
+msgstr ""
+
+msgid "hide status prefix"
+msgstr ""
+
+msgid "revert all changes when no arguments given"
+msgstr ""
+
+msgid "tipmost revision matching date"
+msgstr ""
+
+msgid "revert to the specified revision"
+msgstr ""
+
+msgid "do not save backup copies of files"
+msgstr ""
+
+msgid "[OPTION]... [-r REV] [NAME]..."
+msgstr ""
+
+msgid "name of access log file to write to"
+msgstr "имя файла для записи журнала доступа"
+
+msgid "name of error log file to write to"
+msgstr "имя файла для записи журнала ошибок"
+
+msgid "PORT"
+msgstr ""
+
+msgid "port to listen on (default: 8000)"
+msgstr ""
+
+msgid "ADDR"
+msgstr ""
+
+msgid "address to listen on (default: all interfaces)"
+msgstr ""
+
+msgid "prefix path to serve from (default: server root)"
+msgstr ""
+"префикс пути для предоставления доступа (по умолчанию: в корне сервера)"
+
+msgid "name to show in web pages (default: working directory)"
+msgstr ""
+
+msgid "name of the hgweb config file (see \"hg help hgweb\")"
+msgstr ""
+
+msgid "name of the hgweb config file (DEPRECATED)"
+msgstr "имя конфигурационного файла hgweb (УСТАРЕЛО)"
+
+msgid "for remote clients"
+msgstr "для удалённых клиентов"
+
+msgid "web templates to use"
+msgstr "используемые веб-шаблоны"
+
+msgid "template style to use"
+msgstr "используемый стиль шаблона"
+
+msgid "use IPv6 in addition to IPv4"
+msgstr "использовать IPv6 вместе с IPv4"
+
+msgid "SSL certificate file"
+msgstr "Файл сертификата SSL"
+
+msgid "show untrusted configuration options"
+msgstr ""
+
+msgid "[-u] [NAME]..."
+msgstr ""
+
+msgid "check for push and pull"
+msgstr ""
+
+msgid "show status of all files"
+msgstr ""
+
+msgid "show only modified files"
+msgstr ""
+
+msgid "show only added files"
+msgstr ""
+
+msgid "show only removed files"
+msgstr ""
+
+msgid "show only deleted (but tracked) files"
+msgstr ""
+
+msgid "show only files without changes"
+msgstr ""
+
+msgid "show only unknown (not tracked) files"
+msgstr ""
+
+msgid "show only ignored files"
+msgstr ""
+
+msgid "show source of copied files"
+msgstr ""
+
+msgid "show difference from revision"
+msgstr ""
+
+msgid "list the changed files of a revision"
+msgstr ""
+
+msgid "force tag"
+msgstr ""
+
+msgid "make the tag local"
+msgstr ""
+
+msgid "revision to tag"
+msgstr ""
+
+msgid "remove a tag"
+msgstr ""
+
+msgid "use <text> as commit message"
+msgstr ""
+
+msgid "[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
+msgstr ""
+
+msgid "[-p] [-g]"
+msgstr ""
+
+msgid "update to new branch head if changesets were unbundled"
+msgstr ""
+
+msgid "[-u] FILE..."
+msgstr ""
+
+msgid "discard uncommitted changes (no backup)"
+msgstr ""
+
+msgid "update across branches if no uncommitted changes"
+msgstr ""
+
+msgid "[-c] [-C] [-d DATE] [[-r] REV]"
 msgstr ""
 
 #, python-format
@@ -9997,6 +9976,9 @@ msgstr ""
 
 msgid "warning: --repository ignored\n"
 msgstr ""
+
+msgid "invalid arguments"
+msgstr "неверные параметры"
 
 #, python-format
 msgid "unrecognized profiling format '%s' - Ignored\n"
@@ -12206,13 +12188,6 @@ msgstr ""
 msgid "warning: %s hook %s\n"
 msgstr ""
 
-msgid "kb"
-msgstr ""
-
-#, python-format
-msgid "ignoring invalid [auth] key '%s'\n"
-msgstr ""
-
 msgid "connection ended unexpectedly"
 msgstr ""
 
@@ -12647,10 +12622,6 @@ msgid "Warning!"
 msgstr ""
 
 #, python-format
-msgid "%d out of %d hunks FAILED -- saving rejects to file %s\n"
-msgstr ""
-
-#, python-format
 msgid "cannot create %s: destination already exists"
 msgstr ""
 
@@ -12665,6 +12636,10 @@ msgstr ""
 #, python-format
 msgid "patching file %s\n"
 msgstr "применяется патч к файлу %s\n"
+
+#, python-format
+msgid "%d out of %d hunks FAILED -- saving rejects to file %s\n"
+msgstr ""
 
 #, python-format
 msgid "bad hunk #%d %s (%d %d %d %d)"
@@ -12907,8 +12882,7 @@ msgstr ""
 
 msgid ""
 "``contains(pattern)``\n"
-"    Revision contains a file matching pattern. See :hg:`help patterns`\n"
-"    for information about file patterns."
+"    Revision contains pattern."
 msgstr ""
 
 #. i18n: "contains" is a keyword
@@ -12930,22 +12904,8 @@ msgid ""
 msgstr ""
 
 msgid ""
-"``filelog(pattern)``\n"
-"    Changesets connected to the specified filelog."
-msgstr ""
-
-msgid "filelog requires a pattern"
-msgstr ""
-
-msgid ""
-"``follow([file])``\n"
-"    An alias for ``::.`` (ancestors of the working copy's first parent).\n"
-"    If a filename is specified, the history of the given file is followed,\n"
-"    including copies."
-msgstr ""
-
-#. i18n: "follow" is a keyword
-msgid "follow takes no arguments or a filename"
+"``follow()``\n"
+"    An alias for ``::.`` (ancestors of the working copy's first parent)."
 msgstr ""
 
 #. i18n: "follow" is a keyword
@@ -12964,8 +12924,7 @@ msgstr ""
 msgid ""
 "``grep(regex)``\n"
 "    Like ``keyword(string)`` but accepts a regex. Use ``grep(r'...')``\n"
-"    to ensure special escape characters are handled correctly. Unlike\n"
-"    ``keyword(string)``, the match is case-sensitive."
+"    to ensure special escape characters are handled correctly."
 msgstr ""
 
 #. i18n: "grep" is a keyword
@@ -13002,7 +12961,7 @@ msgstr ""
 msgid ""
 "``keyword(string)``\n"
 "    Search commit message, user name, and names of changed files for\n"
-"    string. The match is case-insensitive."
+"    string."
 msgstr ""
 
 #. i18n: "keyword" is a keyword
@@ -13184,7 +13143,7 @@ msgid "unknown sort key %r"
 msgstr ""
 
 msgid ""
-"``tag([name])``\n"
+"``tag(name)``\n"
 "    The specified tag by name, or all tagged revisions if no name is given."
 msgstr ""
 
@@ -13198,7 +13157,7 @@ msgstr ""
 
 msgid ""
 "``user(string)``\n"
-"    User name contains string. The match is case-insensitive."
+"    User name is string."
 msgstr ""
 
 msgid "can't negate that"
@@ -13236,14 +13195,6 @@ msgstr ""
 
 #, python-format
 msgid "could not symlink to %r: %s"
-msgstr ""
-
-#, python-format
-msgid "recording removal of %s as rename to %s (%d%% similar)\n"
-msgstr ""
-
-#, python-format
-msgid "%s has not been committed yet, so no copy data will be stored for %s.\n"
 msgstr ""
 
 msgid "searching for changes\n"
@@ -13426,10 +13377,6 @@ msgid "removing subrepo %s\n"
 msgstr ""
 
 #, python-format
-msgid "cloning subrepo %s from %s\n"
-msgstr ""
-
-#, python-format
 msgid "pulling subrepo %s from %s\n"
 msgstr ""
 
@@ -13445,6 +13392,10 @@ msgstr ""
 
 #, python-format
 msgid "not removing repo %s because it has changes.\n"
+msgstr ""
+
+#, python-format
+msgid "cloning subrepo %s from %s\n"
 msgstr ""
 
 #, python-format
@@ -13592,6 +13543,10 @@ msgstr "пароль: "
 msgid "edit failed"
 msgstr "неудача при редактировании"
 
+#, python-format
+msgid "ignoring invalid [auth] key '%s'\n"
+msgstr ""
+
 msgid "http authorization required"
 msgstr ""
 
@@ -13611,6 +13566,9 @@ msgstr "пользователь:"
 
 #, python-format
 msgid "http auth: user %s, password %s\n"
+msgstr ""
+
+msgid "kb"
 msgstr ""
 
 #, python-format
