@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os, copy
-from mercurial import match, patch, scmutil, error, ui
+from mercurial import match, patch, scmutil, error, ui, util
 from mercurial.node import hex, nullid
 
 def up(p):
@@ -210,6 +210,26 @@ def diffs(repo, tmpl, ctx, files, parity, style):
         block.append(chunk)
     yield tmpl('diffblock', parity=parity.next(),
                lines=prettyprintlines(''.join(block)))
+
+def diffstat(tmpl, ctx, parity):
+    '''Return a diffstat template for each file in the cset.'''
+
+    stats = patch.diffstatdata(util.iterlines(ctx.diff()))
+    maxname, maxtotal, addtotal, removetotal, binary = patch.diffstatsum(stats)
+
+    statsdict = {}
+    if maxtotal > 0:
+        for filename, adds, removes, isbinary in stats:
+            total = adds + removes
+            addpct = (float(adds) / maxtotal) * 100
+            removepct = (float(removes) / maxtotal) * 100
+            statsdict[filename] = (total, addpct, removepct)
+
+    for f in ctx.files():
+        template = f in ctx and 'diffstatlink' or 'diffstatnolink'
+        total, addpct, removepct = statsdict.get(f, ('', 0, 0))
+        yield tmpl(template, node=ctx.hex(), file=f, total=total,
+            addpct=addpct, removepct=removepct, parity=parity.next())
 
 class sessionvars(object):
     def __init__(self, vars, start='?'):

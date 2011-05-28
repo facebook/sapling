@@ -263,12 +263,16 @@ def changeset(web, req, tmpl):
                           node=ctx.hex(), file=f,
                           parity=parity.next()))
 
-    parity = paritygen(web.stripecount)
     style = web.config('web', 'style', 'paper')
     if 'style' in req.form:
         style = req.form['style'][0]
 
+    parity = paritygen(web.stripecount)
     diffs = webutil.diffs(web.repo, tmpl, ctx, None, parity, style)
+
+    parity = paritygen(web.stripecount)
+    diffstat = lambda: webutil.diffstat(tmpl, ctx, parity)
+
     return tmpl('changeset',
                 diff=diffs,
                 rev=ctx.rev(),
@@ -282,6 +286,7 @@ def changeset(web, req, tmpl):
                 desc=ctx.description(),
                 date=ctx.date(),
                 files=files,
+                diffstat=diffstat,
                 archives=web.archivelist(ctx.hex()),
                 tags=webutil.nodetagsdict(web.repo, ctx.node()),
                 bookmarks=webutil.nodebookmarksdict(web.repo, ctx.node()),
