@@ -334,6 +334,33 @@ Don't crash if the subrepo is missing
   $ hg sum | grep commit
   commit: (clean)
 
+Don't crash if the .hgsubstate entry is missing
+
+  $ hg update 1 -q
+  $ hg rm .hgsubstate
+  $ hg commit .hgsubstate -m 'no substate'
+  created new head
+  $ hg tag -l nosubstate
+  $ hg manifest
+  .hgsub
+  a
+
+  $ hg status -S
+  $ hg sum | grep commit
+  commit: 1 subrepos
+
+  $ hg commit -m 'restore substate'
+  committing subrepository s
+  $ hg manifest
+  .hgsub
+  .hgsubstate
+  a
+  $ hg sum | grep commit
+  commit: (clean)
+
+  $ hg update -qC nosubstate
+  $ ls s
+
 Check hg update --clean
   $ cd $TESTTMP/ta
   $ echo  > s/g
