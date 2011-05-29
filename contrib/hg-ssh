@@ -42,7 +42,7 @@ if orig_cmd.startswith('hg -R ') and orig_cmd.endswith(' serve --stdio'):
     path = orig_cmd[6:-14]
     repo = os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
     if repo in allowed_paths:
-        dispatch.dispatch(['-R', repo, 'serve', '--stdio'])
+        dispatch.dispatch(dispatch.request(['-R', repo, 'serve', '--stdio']))
     else:
         sys.stderr.write("Illegal repository %r\n" % repo)
         sys.exit(-1)
