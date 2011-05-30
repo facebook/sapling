@@ -1141,6 +1141,7 @@ The full set of options is:
 
     To disable SSL verification temporarily, specify ``--insecure`` from
     command line.
+
 ``cache``
     Whether to support caching in hgweb. Defaults to True.
 ``contact``
