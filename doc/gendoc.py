@@ -87,6 +87,10 @@ def show_doc(ui):
 
     # print topics
     for names, sec, doc in helptable:
+        if names[0] == "config":
+            # The config help topic is included in the hgrc.5 man
+            # page.
+            continue
         for name in names:
             ui.write(".. _%s:\n" % name)
         ui.write("\n")
