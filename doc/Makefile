@@ -25,6 +25,10 @@ hg.1.gendoc.txt: $(GENDOC)
 	${PYTHON} gendoc.py > $@.tmp
 	mv $@.tmp $@
 
+hgrc.5: ../mercurial/help/config.txt
+
+hgrc.5.html: ../mercurial/help/config.txt
+
 %: %.txt common.txt
 	$(PYTHON) runrst hgmanpage $(RSTARGS) --halt warning \
 	  --strip-elements-with-class htmlonly $*.txt $*
