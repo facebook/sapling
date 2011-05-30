@@ -44,6 +44,9 @@ Test document extraction
   % extracting documentation from ro
   checking for parse errors
   
+  % extracting documentation from ru
+  checking for parse errors
+  
   % extracting documentation from sv
   checking for parse errors
   
