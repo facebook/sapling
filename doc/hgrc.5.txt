@@ -19,9 +19,6 @@ configuration files for Mercurial
 Synopsis
 --------
 
-The Mercurial system uses a set of configuration files to control
-aspects of its behavior.
-
 .. include:: ../mercurial/help/config.txt
 
 Author

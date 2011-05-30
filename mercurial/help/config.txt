@@ -1,65 +1,27 @@
-Mercurial reads configuration data from several files, if they exist.
-Below we list the most specific file first.
+The Mercurial system uses a set of configuration files to control
+aspects of its behavior.
 
-On Windows, these configuration files are read:
-
-- ``<repo>\.hg\hgrc``
-- ``%USERPROFILE%\.hgrc``
-- ``%USERPROFILE%\mercurial.ini``
-- ``%HOME%\.hgrc``
-- ``%HOME%\mercurial.ini``
-- ``C:\mercurial\mercurial.ini`` (unless regkey or hgrc.d\ or mercurial.ini found)
-- ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial`` (unless hgrc.d\ or mercurial.ini found)
-- ``<hg.exe-dir>\hgrc.d\*.rc`` (unless mercurial.ini found)
-- ``<hg.exe-dir>\mercurial.ini``
-
-On Unix, these files are read:
-
-- ``<repo>/.hg/hgrc``
-- ``$HOME/.hgrc``
-- ``/etc/mercurial/hgrc``
-- ``/etc/mercurial/hgrc.d/*.rc``
-- ``<install-root>/etc/mercurial/hgrc``
-- ``<install-root>/etc/mercurial/hgrc.d/*.rc``
-
-These files do not exist by default and you will have to create the
-appropriate configuration files yourself: global configuration like
-the username setting is typically put into
-``%USERPROFILE%\mercurial.ini`` or ``$HOME/.hgrc`` and local
-configuration is put into the per-repository ``<repo>/.hg/hgrc`` file.
-
-If there is a per-repository configuration file which is not owned by
-the active user, Mercurial will warn you that the file is skipped::
-
-  not trusting file <repo>/.hg/hgrc from untrusted user USER, group GROUP
-
-If this bothers you, the warning can be silenced (the file would still
-be ignored) or trust can be established. Use one of the following
-settings, the syntax is explained below:
-
-- ``ui.report_untrusted = False``
-- ``trusted.users = USER``
-- ``trusted.groups = GROUP``
-
-The configuration files for Mercurial use a simple ini-file format. A
-configuration file consists of sections, led by a ``[section]`` header
-and followed by ``name = value`` entries::
+The configuration files use a simple ini-file format. A configuration
+file consists of sections, led by a ``[section]`` header and followed
+by ``name = value`` entries::
 
   [ui]
   username = Firstname Lastname <firstname.lastname@example.net>
   verbose = True
 
 The above entries will be referred to as ``ui.username`` and
-``ui.verbose``, respectively. Please see the hgrc man page for a full
-description of the possible configuration values:
-
-- on Unix-like systems: ``man hgrc``
-- online: http://www.selenic.com/mercurial/hgrc.5.html
+``ui.verbose``, respectively. See the Syntax section below.
 
 Files
 -----
 
 Mercurial reads configuration data from several files, if they exist.
+These files do not exist by default and you will have to create the
+appropriate configuration files yourself: global configuration like
+the username setting is typically put into
+``%USERPROFILE%\mercurial.ini`` or ``$HOME/.hgrc`` and local
+configuration is put into the per-repository ``<repo>/.hg/hgrc`` file.
+
 The names of these files depend on the system on which Mercurial is
 installed. ``*.rc`` files from a single directory are read in
 alphabetical order, later ones overriding earlier ones. Where multiple
@@ -74,7 +36,7 @@ ones.
     this file override options in all other configuration files. On
     Unix, most of this file will be ignored if it doesn't belong to a
     trusted user or to a trusted group. See the documentation for the
-    trusted_ section below for more details.
+    Trusted section below for more details.
 
 | (Unix) ``$HOME/.hgrc``
 | (Windows) ``%USERPROFILE%\.hgrc``
@@ -106,8 +68,8 @@ ones.
     in ``/shared/tools/etc/mercurial/hgrc``. Options in these files apply
     to all Mercurial commands executed by any user in any directory.
 
-| (Windows) ``<install-dir>\Mercurial.ini``
-| (Windows) ``<install-dir>\hgrc.d\*.rc``
+| (Windows) ``<install-dir>\Mercurial.ini`` **or**
+| (Windows) ``<install-dir>\hgrc.d\*.rc`` **or**
 | (Windows) ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial``
 
     Per-installation/system configuration files, for the system on
