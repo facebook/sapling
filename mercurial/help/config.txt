@@ -294,21 +294,26 @@ Supported arguments:
     1). If the prefix doesn't include a scheme, the match is performed
     against the URI with its scheme stripped as well, and the schemes
     argument, q.v., is then subsequently consulted.
+
 ``username``
     Optional. Username to authenticate with. If not given, and the
     remote site requires basic or digest authentication, the user will
     be prompted for it. Environment variables are expanded in the
     username letting you do ``foo.username = $USER``.
+
 ``password``
     Optional. Password to authenticate with. If not given, and the
     remote site requires basic or digest authentication, the user
     will be prompted for it.
+
 ``key``
     Optional. PEM encoded client certificate key file. Environment
     variables are expanded in the filename.
+
 ``cert``
     Optional. PEM encoded client certificate chain file. Environment
     variables are expanded in the filename.
+
 ``schemes``
     Optional. Space separated list of URI schemes to use this
     authentication entry with. Only used if the prefix doesn't include
@@ -395,16 +400,22 @@ Boolean and defaults to False.
 
 ``git``
     Use git extended diff format.
+
 ``nodates``
     Don't include dates in diff headers.
+
 ``showfunc``
     Show which function each change is in.
+
 ``ignorews``
     Ignore white space when comparing lines.
+
 ``ignorewsamount``
     Ignore changes in the amount of white space.
+
 ``ignoreblanklines``
     Ignore changes whose lines are all blank.
+
 ``unified``
     Number of lines of context to show.
 
@@ -416,14 +427,18 @@ Settings for extensions that send email messages.
 ``from``
     Optional. Email address to use in "From" header and SMTP envelope
     of outgoing messages.
+
 ``to``
     Optional. Comma-separated list of recipients' email addresses.
+
 ``cc``
     Optional. Comma-separated list of carbon copy recipients'
     email addresses.
+
 ``bcc``
     Optional. Comma-separated list of blind carbon copy recipients'
     email addresses.
+
 ``method``
     Optional. Method to use to send email messages. If value is ``smtp``
     (default), use SMTP (see the SMTP_ section for configuration).
@@ -431,6 +446,7 @@ Settings for extensions that send email messages.
     (takes ``-f`` option for sender, list of recipients on command line,
     message on stdin). Normally, setting this to ``sendmail`` or
     ``/usr/sbin/sendmail`` is enough to use sendmail to send messages.
+
 ``charsets``
     Optional. Comma-separated list of character sets considered
     convenient for recipients. Addresses, headers, and parts not
@@ -570,26 +586,32 @@ Supported arguments:
 ``priority``
   The priority in which to evaluate this tool.
   Default: 0.
+
 ``executable``
   Either just the name of the executable or its pathname.  On Windows,
   the path can use environment variables with ${ProgramFiles} syntax.
   Default: the tool name.
+
 ``args``
   The arguments to pass to the tool executable. You can refer to the
   files being merged as well as the output file through these
   variables: ``$base``, ``$local``, ``$other``, ``$output``.
   Default: ``$local $base $other``
+
 ``premerge``
   Attempt to run internal non-interactive 3-way merge tool before
   launching external tool.  Options are ``true``, ``false``, or ``keep``
   to leave markers in the file if the premerge fails.
   Default: True
+
 ``binary``
   This tool can merge binary files. Defaults to False, unless tool
   was selected by file pattern match.
+
 ``symlink``
   This tool can merge symlinks. Defaults to False, even if tool was
   selected by file pattern match.
+
 ``check``
   A list of merge success-checking options:
 
@@ -603,28 +625,35 @@ Supported arguments:
 ``checkchanged``
   True is equivalent to ``check = changed``.
   Default: False
+
 ``checkconflicts``
   True is equivalent to ``check = conflicts``.
   Default: False
+
 ``fixeol``
   Attempt to fix up EOL changes caused by the merge tool.
   Default: False
+
 ``gui``
   This tool requires a graphical interface to run. Default: False
+
 ``regkey``
   Windows registry key which describes install location of this
   tool. Mercurial will search for this key first under
   ``HKEY_CURRENT_USER`` and then under ``HKEY_LOCAL_MACHINE``.
   Default: None
+
 ``regkeyalt``
   An alternate Windows registry key to try if the first key is not
   found.  The alternate key uses the same ``regname`` and ``regappend``
   semantics of the primary key.  The most common use for this key
   is to search for 32bit applications on 64bit operating systems.
   Default: None
+
 ``regname``
   Name of value to read from specified registry key. Defaults to the
   unnamed (default) value.
+
 ``regappend``
   String to append to the value read from the registry, typically
   the executable name of the tool.
@@ -658,18 +687,22 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   Run after a changegroup has been added via push, pull or unbundle.
   ID of the first new changeset is in ``$HG_NODE``. URL from which
   changes came is in ``$HG_URL``.
+
 ``commit``
   Run after a changeset has been created in the local repository. ID
   of the newly created changeset is in ``$HG_NODE``. Parent changeset
   IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
+
 ``incoming``
   Run after a changeset has been pulled, pushed, or unbundled into
   the local repository. The ID of the newly arrived changeset is in
   ``$HG_NODE``. URL that was source of changes came is in ``$HG_URL``.
+
 ``outgoing``
   Run after sending changes from local repository to another. ID of
   first changeset sent is in ``$HG_NODE``. Source of operation is in
   ``$HG_SOURCE``; see "preoutgoing" hook for description.
+
 ``post-<command>``
   Run after successful invocations of the associated command. The
   contents of the command line are passed as ``$HG_ARGS`` and the result
@@ -678,6 +711,7 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   the python data internally passed to <command>. ``$HG_OPTS`` is a 
   dictionary of options (with unspecified options set to their defaults).
   ``$HG_PATS`` is a list of arguments. Hook failure is ignored.
+
 ``pre-<command>``
   Run before executing the associated command. The contents of the
   command line are passed as ``$HG_ARGS``. Parsed command line arguments
@@ -687,19 +721,23 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   defaults). ``$HG_PATS`` is a list of arguments. If the hook returns 
   failure, the command doesn't execute and Mercurial returns the failure
   code.
+
 ``prechangegroup``
   Run before a changegroup is added via push, pull or unbundle. Exit
   status 0 allows the changegroup to proceed. Non-zero status will
   cause the push, pull or unbundle to fail. URL from which changes
   will come is in ``$HG_URL``.
+
 ``precommit``
   Run before starting a local commit. Exit status 0 allows the
   commit to proceed. Non-zero status will cause the commit to fail.
   Parent changeset IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
+
 ``prelistkeys``
   Run before listing pushkeys (like bookmarks) in the
   repository. Non-zero status will cause failure. The key namespace is
   in ``$HG_NAMESPACE``.
+
 ``preoutgoing``
   Run before collecting changes to send from the local repository to
   another. Non-zero status will cause failure. This lets you prevent
@@ -709,17 +747,20 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   ``$HG_SOURCE``. If "serve", operation is happening on behalf of remote
   SSH or HTTP repository. If "push", "pull" or "bundle", operation
   is happening on behalf of repository on same system.
+
 ``prepushkey``
   Run before a pushkey (like a bookmark) is added to the
   repository. Non-zero status will cause the key to be rejected. The
   key namespace is in ``$HG_NAMESPACE``, the key is in ``$HG_KEY``,
   the old value (if any) is in ``$HG_OLD``, and the new value is in
   ``$HG_NEW``.
+
 ``pretag``
   Run before creating a tag. Exit status 0 allows the tag to be
   created. Non-zero status will cause the tag to fail. ID of
   changeset to tag is in ``$HG_NODE``. Name of tag is in ``$HG_TAG``. Tag is
   local if ``$HG_LOCAL=1``, in repository if ``$HG_LOCAL=0``.
+
 ``pretxnchangegroup``
   Run after a changegroup has been added via push, pull or unbundle,
   but before the transaction has been committed. Changegroup is
@@ -729,6 +770,7 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   status will cause the transaction to be rolled back and the push,
   pull or unbundle will fail. URL that was source of changes is in
   ``$HG_URL``.
+
 ``pretxncommit``
   Run after a changeset has been created but the transaction not yet
   committed. Changeset is visible to hook program. This lets you
@@ -736,24 +778,29 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   commit to proceed. Non-zero status will cause the transaction to
   be rolled back. ID of changeset is in ``$HG_NODE``. Parent changeset
   IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
+
 ``preupdate``
   Run before updating the working directory. Exit status 0 allows
   the update to proceed. Non-zero status will prevent the update.
   Changeset ID of first new parent is in ``$HG_PARENT1``. If merge, ID
   of second new parent is in ``$HG_PARENT2``.
+
 ``listkeys``
   Run after listing pushkeys (like bookmarks) in the repository. The
   key namespace is in ``$HG_NAMESPACE``. ``$HG_VALUES`` is a
   dictionary containing the keys and values.
+
 ``pushkey``
   Run after a pushkey (like a bookmark) is added to the
   repository. The key namespace is in ``$HG_NAMESPACE``, the key is in
   ``$HG_KEY``, the old value (if any) is in ``$HG_OLD``, and the new
   value is in ``$HG_NEW``.
+
 ``tag``
   Run after a tag is created. ID of tagged changeset is in ``$HG_NODE``.
   Name of tag is in ``$HG_TAG``. Tag is local if ``$HG_LOCAL=1``, in
   repository if ``$HG_LOCAL=0``.
+
 ``update``
   Run after updating the working directory. Changeset ID of first
   new parent is in ``$HG_PARENT1``. If merge, ID of second new parent is
@@ -796,13 +843,17 @@ proxy.
 ``host``
     Host name and (optional) port of the proxy server, for example
     "myproxy:8000".
+
 ``no``
     Optional. Comma-separated list of host names that should bypass
     the proxy.
+
 ``passwd``
     Optional. Password to authenticate with at the proxy server.
+
 ``user``
     Optional. User name to authenticate with at the proxy server.
+
 ``always``
     Optional. Always use the proxy, even for localhost and any entries
     in ``http_proxy.no``. True or False. Default: False.
@@ -814,18 +865,23 @@ Configuration for extensions that need to send email messages.
 
 ``host``
     Host name of mail server, e.g. "mail.example.com".
+
 ``port``
     Optional. Port to connect to on mail server. Default: 25.
+
 ``tls``
     Optional. Method to enable TLS when connecting to mail server: starttls,
     smtps or none. Default: none.
+
 ``username``
     Optional. User name for authenticating with the SMTP server.
     Default: none.
+
 ``password``
     Optional. Password for authenticating with the SMTP server. If not
     specified, interactive sessions will prompt the user for a
     password; non-interactive sessions will fail. Default: none.
+
 ``local_hostname``
     Optional. It's the hostname that the sender can use to identify
     itself to the MTA.
@@ -861,6 +917,7 @@ the following entries.
     Directory or URL to use when pulling if no source is specified.
     Default is set to repository from which the current repository was
     cloned.
+
 ``default-push``
     Optional. Directory or URL to use when pushing if no destination
     is specified.
@@ -887,6 +944,7 @@ using lsprof.
       Format profiling data for kcachegrind use: when saving to a
       file, the generated file can directly be loaded into
       kcachegrind.
+
 ``output``
     File path where profiling data or report should be saved. If the
     file exists, it is replaced. Default: None, data is printed on
@@ -951,6 +1009,7 @@ user or service running Mercurial.
 
 ``users``
   Comma-separated list of trusted users.
+
 ``groups``
   Comma-separated list of trusted groups.
 
@@ -965,24 +1024,30 @@ User interface controls.
     (hashes for the repository base and for tip) in archives created
     by the :hg:`archive` command or downloaded via hgweb.
     Default is True.
+
 ``askusername``
     Whether to prompt for a username when committing. If True, and
     neither ``$HGUSER`` nor ``$EMAIL`` has been specified, then the user will
     be prompted to enter a username. If no username is entered, the
     default ``USER@HOST`` is used instead.
     Default is False.
+
 ``commitsubrepos``
     Whether to commit modified subrepositories when committing the
     parent repository. If False and one subrepository has uncommitted
     changes, abort the commit.
     Default is True.
+
 ``debug``
     Print debugging information. True or False. Default is False.
+
 ``editor``
     The editor to use during a commit. Default is ``$EDITOR`` or ``vi``.
+
 ``fallbackencoding``
     Encoding to try if it's not possible to decode the changelog using
     UTF-8. Default is ISO-8859-1.
+
 ``ignore``
     A file to read per-user ignore patterns from. This file should be
     in the same format as a repository-wide .hgignore file. This
@@ -990,14 +1055,18 @@ User interface controls.
     ignore files, you can do so by setting something like
     ``ignore.other = ~/.hgignore2``. For details of the ignore file
     format, see the |hgignore(5)|_ man page.
+
 ``interactive``
     Allow to prompt the user. True or False. Default is True.
+
 ``logtemplate``
     Template string for commands that print changesets.
+
 ``merge``
     The conflict resolution program to use during a manual merge.
     For more information on merge tools see :hg:`help merge-tools`.
     For configuring merge tools see the merge-tools_ section.
+
 ``portablefilenames``
     Check for portable filenames. Can be ``warn``, ``ignore`` or ``abort``.
     Default is ``warn``.
@@ -1009,34 +1078,44 @@ User interface controls.
     If set to ``ignore`` (or ``false``), no warning is printed.
     If set to ``abort``, the command is aborted.
     On Windows, this configuration option is ignored and the command aborted.
+
 ``quiet``
     Reduce the amount of output printed. True or False. Default is False.
+
 ``remotecmd``
     remote command to use for clone/push/pull operations. Default is ``hg``.
+
 ``report_untrusted``
     Warn if a ``.hg/hgrc`` file is ignored due to not being owned by a
     trusted user or group. True or False. Default is True.
+
 ``slash``
     Display paths using a slash (``/``) as the path separator. This
     only makes a difference on systems where the default path
     separator is not the slash character (e.g. Windows uses the
     backslash character (``\``)).
     Default is False.
+
 ``ssh``
     command to use for SSH connections. Default is ``ssh``.
+
 ``strict``
     Require exact command names, instead of allowing unambiguous
     abbreviations. True or False. Default is False.
+
 ``style``
     Name of style to use for command output.
+
 ``timeout``
     The timeout used when a lock is held (in seconds), a negative value
     means no timeout. Default is 600.
+
 ``traceback``
     Mercurial always prints a traceback when an unknown exception
     occurs. Setting this to True will make Mercurial print a traceback
     on all exceptions, even those recognized by Mercurial (such as
     IOError or MemoryError). Default is False.
+
 ``username``
     The committer of a changeset created when running "commit".
     Typically a person's name and email address, e.g. ``Fred Widget
@@ -1045,6 +1124,7 @@ User interface controls.
     in a different hgrc file (e.g. ``$HOME/.hgrc``, if the admin set
     ``username =``  in the system hgrc). Environment variables in the
     username are expanded.
+
 ``verbose``
     Increase the amount of output printed. True or False. Default is False.
 
@@ -1077,21 +1157,27 @@ The full set of options is:
 
 ``accesslog``
     Where to output the access log. Default is stdout.
+
 ``address``
     Interface address to bind to. Default is all.
+
 ``allow_archive``
     List of archive format (bz2, gz, zip) allowed for downloading.
     Default is empty.
+
 ``allowbz2``
     (DEPRECATED) Whether to allow .tar.bz2 downloading of repository
     revisions.
     Default is False.
+
 ``allowgz``
     (DEPRECATED) Whether to allow .tar.gz downloading of repository
     revisions.
     Default is False.
+
 ``allowpull``
     Whether to allow pulling from the repository. Default is True.
+
 ``allow_push``
     Whether to allow pushing to the repository. If empty or not set,
     push is not allowed. If the special value ``*``, any remote user can
@@ -1099,6 +1185,7 @@ The full set of options is:
     must have been authenticated, and the authenticated user name must
     be present in this list. The contents of the allow_push list are
     examined after the deny_push list.
+
 ``allow_read``
     If the user has not already been denied repository access due to
     the contents of deny_read, this list determines whether to grant
@@ -1109,13 +1196,16 @@ The full set of options is:
     special value ``*`` is equivalent to it not being set (i.e. access
     is permitted to all users). The contents of the allow_read list are
     examined after the deny_read list.
+
 ``allowzip``
     (DEPRECATED) Whether to allow .zip downloading of repository
     revisions. Default is False. This feature creates temporary files.
+
 ``baseurl``
     Base URL to use when publishing URLs in other locations, so
     third-party tools like email notification hooks can construct
     URLs. Example: ``http://hgserver/repos/``.
+
 ``cacerts``
     Path to file containing a list of PEM encoded certificate
     authority certificates. Environment variables and ``~user``
@@ -1144,15 +1234,18 @@ The full set of options is:
 
 ``cache``
     Whether to support caching in hgweb. Defaults to True.
+
 ``contact``
     Name or email address of the person in charge of the repository.
     Defaults to ui.username or ``$EMAIL`` or "unknown" if unset or empty.
+
 ``deny_push``
     Whether to deny pushing to the repository. If empty or not set,
     push is not denied. If the special value ``*``, all remote users are
     denied push. Otherwise, unauthenticated users are all denied, and
     any authenticated user name present in this list is also denied. The
     contents of the deny_push list are examined before the allow_push list.
+
 ``deny_read``
     Whether to deny reading/viewing of the repository. If this list is
     not empty, unauthenticated users are all denied, and any
@@ -1167,49 +1260,66 @@ The full set of options is:
     the list of repositories. The contents of the deny_read list have
     priority over (are examined before) the contents of the allow_read
     list.
+
 ``descend``
     hgwebdir indexes will not descend into subdirectories. Only repositories
     directly in the current path will be shown (other repositories are still
     available from the index corresponding to their containing path).
+
 ``description``
     Textual description of the repository's purpose or contents.
     Default is "unknown".
+
 ``encoding``
     Character encoding name. Default is the current locale charset.
     Example: "UTF-8"
+
 ``errorlog``
     Where to output the error log. Default is stderr.
+
 ``hidden``
     Whether to hide the repository in the hgwebdir index.
     Default is False.
+
 ``ipv6``
     Whether to use IPv6. Default is False.
+
 ``logourl``
     Base URL to use for logos. If unset, ``http://mercurial.selenic.com/``
     will be used.
+
 ``name``
     Repository name to use in the web interface. Default is current
     working directory.
+
 ``maxchanges``
     Maximum number of changes to list on the changelog. Default is 10.
+
 ``maxfiles``
     Maximum number of files to list per changeset. Default is 10.
+
 ``port``
     Port to listen on. Default is 8000.
+
 ``prefix``
     Prefix path to serve from. Default is '' (server root).
+
 ``push_ssl``
     Whether to require that inbound pushes be transported over SSL to
     prevent password sniffing. Default is True.
+
 ``staticurl``
     Base URL to use for static files. If unset, static files (e.g. the
     hgicon.png favicon) will be served by the CGI script itself. Use
     this setting to serve them directly with the HTTP server.
     Example: ``http://hgserver/static/``.
+
 ``stripes``
     How many lines a "zebra stripe" should span in multiline output.
     Default is 1; set to 0 to disable.
+
 ``style``
     Which template map style to use.
+
 ``templates``
     Where to find the HTML templates. Default is install path.
