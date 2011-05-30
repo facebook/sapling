@@ -2126,7 +2126,7 @@ def series(ui, repo, **opts):
     repo.mq.qseries(repo, missing=opts.get('missing'), summary=opts.get('summary'))
     return 0
 
-@command("qtop", [] + seriesopts, _('hg qtop [-s]'))
+@command("qtop", seriesopts, _('hg qtop [-s]'))
 def top(ui, repo, **opts):
     """print the name of the current patch
 
@@ -2140,7 +2140,7 @@ def top(ui, repo, **opts):
         ui.write(_("no patches applied\n"))
         return 1
 
-@command("qnext", [] + seriesopts, _('hg qnext [-s]'))
+@command("qnext", seriesopts, _('hg qnext [-s]'))
 def next(ui, repo, **opts):
     """print the name of the next patch
 
@@ -2152,7 +2152,7 @@ def next(ui, repo, **opts):
         return 1
     q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
 
-@command("qprev", [] + seriesopts, _('hg qprev [-s]'))
+@command("qprev", seriesopts, _('hg qprev [-s]'))
 def prev(ui, repo, **opts):
     """print the name of the previous patch
 
