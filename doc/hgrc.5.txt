@@ -179,6 +179,7 @@ and their possible values.
 
 ``alias``
 """""""""
+
 Defines command aliases.
 Aliases allow you to define your own commands in terms of other
 commands (or aliases), optionally including arguments. Positional
@@ -287,6 +288,7 @@ for credentials as usual if required by the remote.
 
 ``decode/encode``
 """""""""""""""""
+
 Filters for transforming files on checkout/checkin. This would
 typically be used for newline processing or other
 localization/canonicalization of files.
@@ -374,6 +376,7 @@ Boolean and defaults to False.
 
 ``email``
 """""""""
+
 Settings for extensions that send email messages.
 
 ``from``
@@ -596,6 +599,7 @@ Supported arguments:
 
 ``hooks``
 """""""""
+
 Commands or Python functions that get automatically executed by
 various actions such as starting or finishing a commit. Multiple
 hooks can be run for the same action by appending a suffix to the
@@ -751,6 +755,7 @@ is treated as a failure.
 
 ``http_proxy``
 """"""""""""""
+
 Used to access web-based Mercurial repositories through a HTTP
 proxy.
 
@@ -770,6 +775,7 @@ proxy.
 
 ``smtp``
 """"""""
+
 Configuration for extensions that need to send email messages.
 
 ``host``
@@ -793,6 +799,7 @@ Configuration for extensions that need to send email messages.
 
 ``patch``
 """""""""
+
 Settings used when applying patches, for instance through the 'import'
 command or with Mercurial Queues extension.
 
@@ -810,6 +817,7 @@ command or with Mercurial Queues extension.
 
 ``paths``
 """""""""
+
 Assigns symbolic names to repositories. The left side is the
 symbolic name, and the right gives the directory or URL that is the
 location of the repository. Default paths can be declared by setting
@@ -826,6 +834,7 @@ the following entries.
 
 ``profiling``
 """""""""""""
+
 Specifies profiling format and file output. In this section
 description, 'profiling data' stands for the raw data collected
 during profiling, while 'profiling report' stands for a statistical
@@ -851,6 +860,7 @@ using lsprof.
 
 ``server``
 """"""""""
+
 Controls generic server settings.
 
 ``uncompressed``
@@ -872,6 +882,7 @@ Controls generic server settings.
 
 ``subpaths``
 """"""""""""
+
 Defines subrepositories source locations rewriting rules of the form::
 
     <pattern> = <replacement>
