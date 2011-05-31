@@ -46,8 +46,12 @@ issue1829: wrong indentation
   $ export FAKEPATH
   $ echo '%include $FAKEPATH/no-such-file' > $HGRCPATH
   $ hg version
-  hg: parse error at $TESTTMP/hgrc:1: cannot include /path/to/nowhere/no-such-file (No such file or directory)
-  [255]
+  Mercurial Distributed SCM (version 1.8.2+121-52aebe8983a4+20110423)
+  (see http://mercurial.selenic.com for more information)
+  
+  Copyright (C) 2005-2011 Matt Mackall and others
+  This is free software; see the source for copying conditions. There is NO
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   $ unset FAKEPATH
 
 username expansion
