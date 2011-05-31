@@ -824,7 +824,7 @@ class gitsubrepo(abstractsubrepo):
 
     def dirty(self, ignoreupdate=False):
         if self._gitmissing():
-            return True
+            return self._state[1] != ''
         if self._gitisbare():
             return True
         if not ignoreupdate and self._state[1] != self._gitstate():
@@ -836,6 +836,9 @@ class gitsubrepo(abstractsubrepo):
 
     def get(self, state, overwrite=False):
         source, revision, kind = state
+        if not revision:
+            self.remove()
+            return
         self._fetch(source, revision)
         # if the repo was set to be bare, unbare it
         if self._gitisbare():
@@ -953,6 +956,8 @@ class gitsubrepo(abstractsubrepo):
             mergefunc()
 
     def push(self, force):
+        if not self._state[1]:
+            return True
         if self._gitmissing():
             raise util.Abort(_("subrepo %s is missing") % self._relpath)
         # if a branch in origin contains the revision, nothing to do
@@ -1009,6 +1014,8 @@ class gitsubrepo(abstractsubrepo):
 
     def archive(self, ui, archiver, prefix):
         source, revision = self._state
+        if not revision:
+            return
         self._fetch(source, revision)
 
         # Parse git's native archive command.
@@ -1033,10 +1040,10 @@ class gitsubrepo(abstractsubrepo):
 
 
     def status(self, rev2, **opts):
-        if self._gitmissing():
+        rev1 = self._state[1]
+        if self._gitmissing() or not rev1:
             # if the repo is missing, return no results
             return [], [], [], [], [], [], []
-        rev1 = self._state[1]
         modified, added, removed = [], [], []
         if rev2:
             command = ['diff-tree', rev1, rev2]
