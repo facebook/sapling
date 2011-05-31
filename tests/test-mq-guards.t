@@ -63,7 +63,7 @@ should print +a
 should fail
 
   $ hg qpush a.patch
-  cannot push 'a.patch' - guarded by ['+a']
+  cannot push 'a.patch' - guarded by '+a'
   [1]
 
   $ hg qguard a.patch
@@ -366,9 +366,9 @@ new.patch, b.patch: Guarded. c.patch: Applied. d.patch: Guarded.
   3 G d.patch
   $ hg qpush -a
   applying new.patch
-  skipping b.patch - guarded by ['+2']
+  skipping b.patch - guarded by '+2'
   applying c.patch
-  skipping d.patch - guarded by ['+2']
+  skipping d.patch - guarded by '+2'
   now at: c.patch
   $ qappunappv
   % hg qapplied

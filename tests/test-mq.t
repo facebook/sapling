@@ -460,7 +460,7 @@ qpush --move
   $ hg qguard test1b.patch -- -negguard
   $ hg qguard test2.patch -- +posguard
   $ hg qpush --move test2.patch # can't move guarded patch
-  cannot push 'test2.patch' - guarded by ['+posguard']
+  cannot push 'test2.patch' - guarded by '+posguard'
   [1]
   $ hg qselect posguard
   number of unguarded, unapplied patches has changed from 2 to 3

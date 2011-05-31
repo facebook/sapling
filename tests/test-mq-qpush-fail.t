@@ -122,7 +122,7 @@ Test qpush to a patch below the currently applied patch.
 try to push and pop while a is guarded
 
   $ hg qpush a
-  cannot push 'a' - guarded by ['+block']
+  cannot push 'a' - guarded by '+block'
   [1]
   $ hg qpush -a
   applying b

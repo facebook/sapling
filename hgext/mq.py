@@ -455,13 +455,13 @@ class queue(object):
         guards = self.active()
         exactneg = [g for g in patchguards if g[0] == '-' and g[1:] in guards]
         if exactneg:
-            return False, exactneg[0]
+            return False, repr(exactneg[0])
         pos = [g for g in patchguards if g[0] == '+']
         exactpos = [g for g in pos if g[1:] in guards]
         if pos:
             if exactpos:
-                return True, exactpos[0]
-            return False, pos
+                return True, repr(exactpos[0])
+            return False, ' '.join(map(repr, pos))
         return True, ''
 
     def explain_pushable(self, idx, all_patches=False):
@@ -479,11 +479,11 @@ class queue(object):
                         write(_('allowing %s - no matching negative guards\n') %
                               self.series[idx])
                     else:
-                        write(_('allowing %s - guarded by %r\n') %
+                        write(_('allowing %s - guarded by %s\n') %
                               (self.series[idx], why))
             if not pushable:
                 if why:
-                    write(_('skipping %s - guarded by %r\n') %
+                    write(_('skipping %s - guarded by %s\n') %
                           (self.series[idx], why))
                 else:
                     write(_('skipping %s - no matching guards\n') %
@@ -1114,7 +1114,7 @@ class queue(object):
                             _("cannot push to a previous patch: %s") % patch)
                 else:
                     if reason:
-                        reason = _('guarded by %r') % reason
+                        reason = _('guarded by %s') % reason
                     else:
                         reason = _('no matching guards')
                     self.ui.warn(_("cannot push '%s' - %s\n") % (patch, reason))
