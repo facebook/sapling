@@ -14,7 +14,7 @@
   $ hg update 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg update
-  abort: crosses branches (merge branches or use --check to force update)
+  abort: crosses branches (merge branches or update --check to force update)
   [255]
   $ hg update -c
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

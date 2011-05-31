@@ -3655,10 +3655,11 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
         return
     if optupdate:
-        if (modheads <= 1 or len(repo.branchheads()) == 1) or checkout:
+        try:
             return hg.update(repo, checkout)
-        else:
-            ui.status(_("not updating, since new heads added\n"))
+        except util.Abort, inst:
+            ui.warn(_("not updating: %s\n" % str(inst)))
+            return 0
     if modheads > 1:
         currentbranchheads = len(repo.branchheads())
         if currentbranchheads == modheads:

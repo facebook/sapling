@@ -529,7 +529,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
                 raise util.Abort(_("crosses branches (merge branches or use"
                                    " --clean to discard changes)"))
             elif onode is None:
-                raise util.Abort(_("crosses branches (merge branches or use"
+                raise util.Abort(_("crosses branches (merge branches or update"
                                    " --check to force update)"))
             else:
                 # Allow jumping branches if clean and specific rev given
