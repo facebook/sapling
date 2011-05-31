@@ -540,11 +540,13 @@ class svnsubrepo(abstractsubrepo):
         env['LC_MESSAGES'] = 'C'
         p = subprocess.Popen(cmd, bufsize=-1, close_fds=util.closefds,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             universal_newlines=True, env=env)
+                              universal_newlines=True, env=env)
         stdout, stderr = p.communicate()
         stderr = stderr.strip()
+        if p.returncode:
+            raise util.Abort(stderr or 'exited with code %d' % p.returncode)
         if stderr:
-            raise util.Abort(stderr)
+            self._ui.warn(stderr + '\n')
         return stdout
 
     @propertycache
