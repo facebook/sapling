@@ -2522,15 +2522,15 @@ def heads(ui, repo, *branchrevs, **opts):
         heads = [repo[h] for h in repo.heads(start)]
     else:
         heads = []
-        for b, ls in repo.branchmap().iteritems():
+        for bheads in repo.branchmap().itervalues():
             if start is None:
-                heads += [repo[h] for h in ls]
+                heads += [repo[h] for h in bheads]
                 continue
             startrev = repo.changelog.rev(start)
             descendants = set(repo.changelog.descendants(startrev))
             descendants.add(startrev)
             rev = repo.changelog.rev
-            heads += [repo[h] for h in ls if rev(h) in descendants]
+            heads += [repo[h] for h in bheads if rev(h) in descendants]
 
     if branchrevs:
         branches = set(repo[br].branch() for br in branchrevs)
