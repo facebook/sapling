@@ -691,3 +691,13 @@ def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
                 wctx.add([dst])
         elif not dryrun:
             wctx.copy(origsrc, dst)
+
+def readrequires(opener, supported):
+    '''Reads and parses .hg/requires and checks if all entries found
+    are in the list of supported features.'''
+    requirements = set(opener.read("requires").splitlines())
+    for r in requirements:
+        if r not in supported:
+            raise error.RequirementError(
+                _("requirement '%s' not supported") % r)
+    return requirements

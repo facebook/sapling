@@ -68,16 +68,12 @@ class localrepository(repo.repository):
         elif create:
             raise error.RepoError(_("repository %s already exists") % path)
         else:
-            # find requirements
-            requirements = set()
             try:
-                requirements = set(self.opener.read("requires").splitlines())
+                requirements = scmutil.readrequires(self.opener, self.supported)
             except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
-            for r in requirements - self.supported:
-                raise error.RequirementError(
-                          _("requirement '%s' not supported") % r)
+                requirements = set()
 
         self.sharedpath = self.path
         try:

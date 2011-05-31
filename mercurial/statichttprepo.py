@@ -91,12 +91,13 @@ class statichttprepository(localrepo.localrepository):
         opener = build_opener(ui, authinfo)
         self.opener = opener(self.path)
 
-        # find requirements
         try:
-            requirements = self.opener.read("requires").splitlines()
+            requirements = scmutil.readrequires(self.opener, self.supported)
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
+            requirements = set()
+
             # check if it is a non-empty old-style repository
             try:
                 fp = self.opener("00changelog.i")
@@ -108,13 +109,6 @@ class statichttprepository(localrepo.localrepository):
                 # we do not care about empty old-style repositories here
                 msg = _("'%s' does not appear to be an hg repository") % path
                 raise error.RepoError(msg)
-            requirements = []
-
-        # check them
-        for r in requirements:
-            if r not in self.supported:
-                raise error.RequirementError(
-                        _("requirement '%s' not supported") % r)
 
         # setup store
         self.store = store.store(requirements, self.path, opener)
