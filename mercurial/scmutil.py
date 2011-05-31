@@ -698,6 +698,8 @@ def readrequires(opener, supported):
     requirements = set(opener.read("requires").splitlines())
     for r in requirements:
         if r not in supported:
+            if not r or not r[0].isalnum():
+                raise error.RequirementError(_(".hg/requires file is corrupt"))
             raise error.RequirementError(_("unknown repository format: "
                 "requires feature '%s' (upgrade Mercurial)") % r)
     return requirements
