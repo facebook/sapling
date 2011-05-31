@@ -107,11 +107,11 @@ Make sure we do not obscure unknown requires file entries (issue2649)
 
   $ echo fake >> .hg/requires
   $ hg id
-  abort: requirement 'fake' not supported!
+  abort: unknown repository format: requires feature 'fake' (upgrade Mercurial)!
   [255]
 
   $ cd ..
   $ hg id test
-  abort: requirement 'fake' not supported!
+  abort: unknown repository format: requires feature 'fake' (upgrade Mercurial)!
   [255]
 

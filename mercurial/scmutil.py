@@ -698,6 +698,6 @@ def readrequires(opener, supported):
     requirements = set(opener.read("requires").splitlines())
     for r in requirements:
         if r not in supported:
-            raise error.RequirementError(
-                _("requirement '%s' not supported") % r)
+            raise error.RequirementError(_("unknown repository format: "
+                "requires feature '%s' (upgrade Mercurial)") % r)
     return requirements

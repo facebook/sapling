@@ -9,5 +9,5 @@
   [255]
   $ echo indoor-pool > .hg/requires
   $ hg tip
-  abort: requirement 'indoor-pool' not supported!
+  abort: unknown repository format: requires feature 'indoor-pool' (upgrade Mercurial)!
   [255]
