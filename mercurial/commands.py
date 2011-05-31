@@ -2522,22 +2522,13 @@ def heads(ui, repo, *branchrevs, **opts):
         heads = [repo[h] for h in repo.heads(start)]
     else:
         heads = []
-        for bheads in repo.branchmap().itervalues():
-            if start is None:
-                heads += [repo[h] for h in bheads]
-                continue
-            startrev = repo.changelog.rev(start)
-            descendants = set(repo.changelog.descendants(startrev))
-            descendants.add(startrev)
-            rev = repo.changelog.rev
-            heads += [repo[h] for h in bheads if rev(h) in descendants]
+        for branch in repo.branchmap():
+            heads += repo.branchheads(branch, start, opts.get('closed'))
+        heads = [repo[h] for h in heads]
 
     if branchrevs:
         branches = set(repo[br].branch() for br in branchrevs)
         heads = [h for h in heads if h.branch() in branches]
-
-    if not opts.get('closed'):
-        heads = [h for h in heads if not h.extra().get('close')]
 
     if opts.get('active') and branchrevs:
         dagheads = repo.heads(start)
