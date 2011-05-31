@@ -7,7 +7,7 @@
 
 from i18n import _
 import error, util
-import re, os
+import re, os, errno
 
 class sortdict(dict):
     'a simple sorted dictionary'
@@ -103,9 +103,10 @@ class config(object):
                     try:
                         include(inc, remap=remap, sections=sections)
                     except IOError, inst:
-                        raise error.ParseError(_("cannot include %s (%s)")
-                                               % (inc, inst.strerror),
-                                               "%s:%s" % (src, line))
+                        if inst.errno != errno.ENOENT:
+                            raise error.ParseError(_("cannot include %s (%s)")
+                                                   % (inc, inst.strerror),
+                                                   "%s:%s" % (src, line))
                 continue
             if emptyre.match(l):
                 continue
