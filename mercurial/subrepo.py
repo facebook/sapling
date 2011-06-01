@@ -524,13 +524,17 @@ class svnsubrepo(abstractsubrepo):
 
     def _svncommand(self, commands, filename=''):
         cmd = ['svn']
-        # Starting in svn 1.5 --non-interactive is a global flag
-        # instead of being per-command, but we need to support 1.4 so
-        # we have to be intelligent about what commands take
-        # --non-interactive.
-        if (not self._ui.interactive() and
-            commands[0] in ('update', 'checkout', 'commit')):
-            cmd.append('--non-interactive')
+        extrakw = {}
+        if not self._ui.interactive():
+            # Making stdin be a pipe should prevent svn from behaving
+            # interactively even if we can't pass --non-interactive.
+            extrakw['stdin'] = subprocess.PIPE
+            # Starting in svn 1.5 --non-interactive is a global flag
+            # instead of being per-command, but we need to support 1.4 so
+            # we have to be intelligent about what commands take
+            # --non-interactive.
+            if commands[0] in ('update', 'checkout', 'commit'):
+                cmd.append('--non-interactive')
         cmd.extend(commands)
         if filename is not None:
             path = os.path.join(self._ctx._repo.origroot, self._path, filename)
@@ -540,7 +544,7 @@ class svnsubrepo(abstractsubrepo):
         env['LC_MESSAGES'] = 'C'
         p = subprocess.Popen(cmd, bufsize=-1, close_fds=util.closefds,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                              universal_newlines=True, env=env)
+                              universal_newlines=True, env=env, **extrakw)
         stdout, stderr = p.communicate()
         stderr = stderr.strip()
         if p.returncode:
