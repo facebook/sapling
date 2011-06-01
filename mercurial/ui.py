@@ -473,12 +473,9 @@ class ui(object):
         '''
         i = self.configbool("ui", "interactive", None)
         if i is None:
-            try:
-                return sys.stdin.isatty()
-            except AttributeError:
-                # some environments replace stdin without implementing isatty
-                # usually those are non-interactive
-                return False
+            # some environments replace stdin without implementing isatty
+            # usually those are non-interactive
+            return util.isatty(sys.stdin)
 
         return i
 
@@ -514,17 +511,14 @@ class ui(object):
 
         i = self.configbool("ui", "formatted", None)
         if i is None:
-            try:
-                return sys.stdout.isatty()
-            except AttributeError:
-                # some environments replace stdout without implementing isatty
-                # usually those are non-interactive
-                return False
+            # some environments replace stdout without implementing isatty
+            # usually those are non-interactive
+            return util.isatty(sys.stdout)
 
         return i
 
     def _readline(self, prompt=''):
-        if sys.stdin.isatty():
+        if util.isatty(sys.stdin):
             try:
                 # magically add command line editing support, where
                 # available

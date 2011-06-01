@@ -60,7 +60,7 @@ from mercurial.i18n import _
 def _runpager(p):
     if not hasattr(os, 'fork'):
         sys.stdout = util.popen(p, 'wb')
-        if sys.stderr.isatty():
+        if util.isatty(sys.stderr):
             sys.stderr = sys.stdout
         return
     fdin, fdout = os.pipe()
@@ -68,7 +68,7 @@ def _runpager(p):
     if pid == 0:
         os.close(fdin)
         os.dup2(fdout, sys.stdout.fileno())
-        if sys.stderr.isatty():
+        if util.isatty(sys.stderr):
             os.dup2(fdout, sys.stderr.fileno())
         os.close(fdout)
         return
@@ -86,12 +86,13 @@ def _runpager(p):
             raise
 
 def uisetup(ui):
-    if ui.plain():
+    if ui.plain() or '--debugger' in sys.argv or not util.isatty(sys.stdout):
         return
 
     def pagecmd(orig, ui, options, cmd, cmdfunc):
         p = ui.config("pager", "pager", os.environ.get("PAGER"))
-        if p and sys.stdout.isatty() and '--debugger' not in sys.argv:
+
+        if p:
             attend = ui.configlist('pager', 'attend', attended)
             auto = options['pager'] == 'auto'
             always = util.parsebool(options['pager'])

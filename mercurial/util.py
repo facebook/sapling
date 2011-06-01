@@ -1591,3 +1591,9 @@ def removeauth(u):
     u = url(u)
     u.user = u.passwd = None
     return str(u)
+
+def isatty(fd):
+    try:
+        return fd.isatty()
+    except AttributeError:
+        return False
