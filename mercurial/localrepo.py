@@ -1309,7 +1309,7 @@ class localrepository(repo.repository):
         b = []
         for n in nodes:
             t = n
-            while 1:
+            while True:
                 p = self.changelog.parents(n)
                 if p[1] != nullid or p[0] == nullid:
                     b.append((t, n, p[0], p[1]))
@@ -1777,7 +1777,7 @@ class localrepository(repo.repository):
             pr.total = efiles
             source.callback = None
 
-            while 1:
+            while True:
                 chunkdata = source.filelogheader()
                 if not chunkdata:
                     break

@@ -8,7 +8,7 @@ def timer(func, title=None):
     results = []
     begin = time.time()
     count = 0
-    while 1:
+    while True:
         ostart = os.times()
         cstart = time.time()
         r = func()

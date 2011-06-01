@@ -163,6 +163,8 @@ pypats = [
     (r' is\s+(not\s+)?["\'0-9-]', "object comparison with literal"),
     (r' [=!]=\s+(True|False|None)',
      "comparison with singleton, use 'is' or 'is not' instead"),
+    (r'^\s*(while|if) [01]:',
+     "use True/False for constant Boolean expression"),
     (r'opener\([^)]*\).read\(',
      "use opener.read() instead"),
     (r'opener\([^)]*\).write\(',

@@ -76,7 +76,7 @@ def ancestor(a, b, pfunc):
     # increment each ancestor list until it is closer to root than
     # the other, or they match
     try:
-        while 1:
+        while True:
             if gx[0] == gy[0]:
                 for v in gx[1]:
                     if v in gy[1]:

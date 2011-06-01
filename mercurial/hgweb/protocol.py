@@ -33,7 +33,7 @@ class webproto(object):
         args = self.req.form.copy()
         chunks = []
         i = 1
-        while 1:
+        while True:
             h = self.req.env.get('HTTP_X_HGARG_' + str(i))
             if h is None:
                 break
@@ -50,7 +50,7 @@ class webproto(object):
         sys.stderr = sys.stdout = cStringIO.StringIO()
     def groupchunks(self, cg):
         z = zlib.compressobj()
-        while 1:
+        while True:
             chunk = cg.read(4096)
             if not chunk:
                 break

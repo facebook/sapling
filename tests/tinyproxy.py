@@ -95,7 +95,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
         iw = [self.connection, soc]
         ow = []
         count = 0
-        while 1:
+        while True:
             count += 1
             (ins, _, exs) = select.select(iw, ow, iw, 3)
             if exs:

@@ -346,7 +346,7 @@ class linereader(object):
         return self.fp.readline()
 
     def __iter__(self):
-        while 1:
+        while True:
             l = self.readline()
             if not l:
                 break

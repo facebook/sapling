@@ -33,7 +33,7 @@ class bundlerevlog(revlog.revlog):
         self.basemap = {}
         n = len(self)
         chain = None
-        while 1:
+        while True:
             chunkdata = bundle.deltachunk(chain)
             if not chunkdata:
                 break
@@ -185,7 +185,7 @@ class bundlerepository(localrepo.localrepository):
 
             try:
                 fptemp.write("HG10UN")
-                while 1:
+                while True:
                     chunk = self.bundle.read(2**18)
                     if not chunk:
                         break
@@ -232,13 +232,13 @@ class bundlerepository(localrepo.localrepository):
     def file(self, f):
         if not self.bundlefilespos:
             self.bundle.seek(self.filestart)
-            while 1:
+            while True:
                 chunkdata = self.bundle.filelogheader()
                 if not chunkdata:
                     break
                 fname = chunkdata['filename']
                 self.bundlefilespos[fname] = self.bundle.tell()
-                while 1:
+                while True:
                     c = self.bundle.deltachunk(None)
                     if not c:
                         break

@@ -29,7 +29,7 @@ for filename in sys.argv[1:]:
 
     m = md5()
     try:
-        while 1:
+        while True:
             data = fp.read(8192)
             if not data:
                 break

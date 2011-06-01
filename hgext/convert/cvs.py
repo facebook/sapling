@@ -227,7 +227,7 @@ class convert_cvs(converter_source):
 
         data = ""
         mode = None
-        while 1:
+        while True:
             line = self.readp.readline()
             if line.startswith("Created ") or line.startswith("Updated "):
                 self.readp.readline() # path

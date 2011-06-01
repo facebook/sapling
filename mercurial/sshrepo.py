@@ -88,7 +88,7 @@ class sshrepository(wireproto.wirerepository):
                 break
 
     def readerr(self):
-        while 1:
+        while True:
             size = util.fstat(self.pipee).st_size
             if size == 0:
                 break
@@ -148,7 +148,7 @@ class sshrepository(wireproto.wirerepository):
         r = self._call(cmd, **args)
         if r:
             return '', r
-        while 1:
+        while True:
             d = fp.read(4096)
             if not d:
                 break
@@ -193,7 +193,7 @@ class sshrepository(wireproto.wirerepository):
         d = self._call("addchangegroup")
         if d:
             self._abort(error.RepoError(_("push refused: %s") % d))
-        while 1:
+        while True:
             d = cg.read(4096)
             if not d:
                 break

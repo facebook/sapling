@@ -91,7 +91,7 @@ def writebundle(cg, filename, bundletype):
         while not empty or count <= 2:
             empty = True
             count += 1
-            while 1:
+            while True:
                 chunk = getchunk(cg)
                 if not chunk:
                     break

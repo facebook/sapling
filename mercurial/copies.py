@@ -134,7 +134,7 @@ def copies(repo, c1, c2, ca, checkdirs=False):
             if f2r is None:
                 f2 = g2.next()
 
-            while 1:
+            while True:
                 f1r, f2r = f1.rev(), f2.rev()
                 if f1r > f2r:
                     f1 = g1.next()

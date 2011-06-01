@@ -591,7 +591,7 @@ class DNSIncoming(object):
 		next = -1
 		first = off
 
-		while 1:
+		while True:
 			len = ord(self.data[off])
 			off += 1
 			if len == 0:
@@ -939,7 +939,7 @@ class Reaper(threading.Thread):
 		self.start()
 
 	def run(self):
-		while 1:
+		while True:
 			self.zeroconf.wait(10 * 1000)
 			if globals()['_GLOBAL_DONE']:
 				return
@@ -1003,7 +1003,7 @@ class ServiceBrowser(threading.Thread):
 		self.zeroconf.notifyAll()
 
 	def run(self):
-		while 1:
+		while True:
 			event = None
 			now = currentTimeMillis()
 			if len(self.list) == 0 and self.nextTime > now:

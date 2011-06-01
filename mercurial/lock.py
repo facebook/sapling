@@ -51,7 +51,7 @@ class lock(object):
 
     def lock(self):
         timeout = self.timeout
-        while 1:
+        while True:
             try:
                 self.trylock()
                 return 1

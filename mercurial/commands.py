@@ -1342,7 +1342,7 @@ def debugbundle(ui, bundlepath, all=None, **opts):
             def showchunks(named):
                 ui.write("\n%s\n" % named)
                 chain = None
-                while 1:
+                while True:
                     chunkdata = gen.deltachunk(chain)
                     if not chunkdata:
                         break
@@ -1361,7 +1361,7 @@ def debugbundle(ui, bundlepath, all=None, **opts):
             showchunks("changelog")
             chunkdata = gen.manifestheader()
             showchunks("manifest")
-            while 1:
+            while True:
                 chunkdata = gen.filelogheader()
                 if not chunkdata:
                     break
@@ -1370,7 +1370,7 @@ def debugbundle(ui, bundlepath, all=None, **opts):
         else:
             chunkdata = gen.changelogheader()
             chain = None
-            while 1:
+            while True:
                 chunkdata = gen.deltachunk(chain)
                 if not chunkdata:
                     break

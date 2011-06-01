@@ -1151,7 +1151,7 @@ class revlog(object):
         try:
             # loop through our set of deltas
             chain = None
-            while 1:
+            while True:
                 chunkdata = bundle.deltachunk(chain)
                 if not chunkdata:
                     break
