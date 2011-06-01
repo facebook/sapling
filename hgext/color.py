@@ -349,8 +349,9 @@ def uisetup(ui):
         mode = _modesetup(ui_, opts)
         if mode:
             colorui._colormode = mode
-            colorui.__bases__ = (ui_.__class__,)
-            ui_.__class__ = colorui
+            if not issubclass(ui_.__class__, colorui):
+                colorui.__bases__ = (ui_.__class__,)
+                ui_.__class__ = colorui
             extstyles()
             configstyles(ui_)
         return orig(ui_, opts, cmd, cmdfunc)
