@@ -281,9 +281,11 @@ def copy(ui, repo, pats, opts, rename=False):
                 if not os.path.isdir(targetdir):
                     os.makedirs(targetdir)
                 util.copyfile(src, target)
+                srcexists = True
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
                     ui.warn(_('%s: deleted in working copy\n') % relsrc)
+                    srcexists = False
                 else:
                     ui.warn(_('%s: cannot copy - %s\n') %
                             (relsrc, inst.strerror))
@@ -301,7 +303,9 @@ def copy(ui, repo, pats, opts, rename=False):
         scmutil.dirstatecopy(ui, repo, wctx, abssrc, abstarget,
                              dryrun=dryrun, cwd=cwd)
         if rename and not dryrun:
-            wctx.remove([abssrc], not after)
+            if not after and srcexists:
+                util.unlinkpath(repo.wjoin(abssrc))
+            wctx.forget([abssrc])
 
     # pat: ossep
     # dest ossep

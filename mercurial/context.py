@@ -853,20 +853,6 @@ class workingctx(changectx):
             *[p.rev() for p in self._parents]):
             yield changectx(self._repo, a)
 
-    def remove(self, list, unlink=False):
-        wlock = self._repo.wlock()
-        try:
-            if unlink:
-                for f in list:
-                    try:
-                        util.unlinkpath(self._repo.wjoin(f))
-                    except OSError, inst:
-                        if inst.errno != errno.ENOENT:
-                            raise
-            self.forget(list)
-        finally:
-            wlock.release()
-
     def undelete(self, list):
         pctxs = self.parents()
         wlock = self._repo.wlock()
