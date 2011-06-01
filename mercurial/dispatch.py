@@ -12,9 +12,10 @@ import cmdutil, encoding
 import ui as uimod
 
 class request(object):
-    def __init__(self, args, ui=None):
+    def __init__(self, args, ui=None, repo=None):
         self.args = args
         self.ui = ui
+        self.repo = repo
 
 def run():
     "run the command in sys.argv"
@@ -592,26 +593,31 @@ def _dispatch(req):
     repo = None
     cmdpats = args[:]
     if cmd not in commands.norepo.split():
-        try:
-            repo = hg.repository(ui, path=path)
-            ui = repo.ui
-            if not repo.local():
-                raise util.Abort(_("repository '%s' is not local") % path)
-            ui.setconfig("bundle", "mainreporoot", repo.root)
-        except error.RequirementError:
-            raise
-        except error.RepoError:
-            if cmd not in commands.optionalrepo.split():
-                if args and not path: # try to infer -R from command args
-                    repos = map(cmdutil.findrepo, args)
-                    guess = repos[0]
-                    if guess and repos.count(guess) == len(repos):
-                        req.args = ['--repository', guess] + fullargs
-                        return _dispatch(req)
-                if not path:
-                    raise error.RepoError(_("no repository found in %r"
-                                            " (.hg not found)") % os.getcwd())
+        # use the repo from the request only if we don't have -R
+        if not rpath:
+            repo = req.repo
+
+        if not repo:
+            try:
+                repo = hg.repository(ui, path=path)
+                ui = repo.ui
+                if not repo.local():
+                    raise util.Abort(_("repository '%s' is not local") % path)
+                ui.setconfig("bundle", "mainreporoot", repo.root)
+            except error.RequirementError:
                 raise
+            except error.RepoError:
+                if cmd not in commands.optionalrepo.split():
+                    if args and not path: # try to infer -R from command args
+                        repos = map(cmdutil.findrepo, args)
+                        guess = repos[0]
+                        if guess and repos.count(guess) == len(repos):
+                            req.args = ['--repository', guess] + fullargs
+                            return _dispatch(req)
+                    if not path:
+                        raise error.RepoError(_("no repository found in %r"
+                                                " (.hg not found)") % os.getcwd())
+                    raise
         args.insert(0, repo)
     elif rpath:
         ui.warn(_("warning: --repository ignored\n"))
