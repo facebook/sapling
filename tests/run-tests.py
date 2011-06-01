@@ -104,12 +104,35 @@ defaults = {
     'shell': ('HGTEST_SHELL', '/bin/sh'),
 }
 
+def parselistfiles(files, listtype, warn=True):
+    entries = dict()
+    for filename in files:
+        try:
+            path = os.path.expanduser(os.path.expandvars(filename))
+            f = open(path, "r")
+        except IOError, err:
+            if err.errno != errno.ENOENT:
+                raise
+            if warn:
+                print "warning: no such %s file: %s" % (listtype, filename)
+            continue
+
+        for line in f.readlines():
+            line = line.split('#', 1)[0].strip()
+            if line:
+                entries[line] = filename
+
+        f.close()
+    return entries
+
 def parseargs():
     parser = optparse.OptionParser("%prog [options] [tests]")
 
     # keep these sorted
     parser.add_option("--blacklist", action="append",
         help="skip tests listed in the specified blacklist file")
+    parser.add_option("--whitelist", action="append",
+        help="always run tests listed in the specified whitelist file")
     parser.add_option("-C", "--annotate", action="store_true",
         help="output files annotated with coverage")
     parser.add_option("--child", type="int",
@@ -247,25 +270,12 @@ def parseargs():
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
             parser.error('--py3k-warnings can only be used on Python 2.6+')
     if options.blacklist:
-        blacklist = dict()
-        for filename in options.blacklist:
-            try:
-                path = os.path.expanduser(os.path.expandvars(filename))
-                f = open(path, "r")
-            except IOError, err:
-                if err.errno != errno.ENOENT:
-                    raise
-                print "warning: no such blacklist file: %s" % filename
-                continue
-
-            for line in f.readlines():
-                line = line.split('#', 1)[0].strip()
-                if line:
-                    blacklist[line] = filename
-
-            f.close()
-
-        options.blacklist = blacklist
+        options.blacklist = parselistfiles(options.blacklist, 'blacklist')
+    if options.whitelist:
+        options.whitelisted = parselistfiles(options.whitelist, 'whitelist',
+                                             warn=options.child is None)
+    else:
+        options.whitelisted = {}
 
     return (options, args)
 
@@ -733,24 +743,25 @@ def runone(options, test):
     else:
         return None # not a supported test, don't record
 
-    if options.blacklist and test in options.blacklist:
-        skip("blacklisted")
-        return None
+    if not (options.whitelisted and test in options.whitelisted):
+        if options.blacklist and test in options.blacklist:
+            skip("blacklisted")
+            return None
 
-    if options.retest and not os.path.exists(test + ".err"):
-        ignore("not retesting")
-        return None
+        if options.retest and not os.path.exists(test + ".err"):
+            ignore("not retesting")
+            return None
 
-    if options.keywords:
-        fp = open(test)
-        t = fp.read().lower() + test.lower()
-        fp.close()
-        for k in options.keywords.lower().split():
-            if k in t:
-                break
-            else:
-                ignore("doesn't match keyword")
-                return None
+        if options.keywords:
+            fp = open(test)
+            t = fp.read().lower() + test.lower()
+            fp.close()
+            for k in options.keywords.lower().split():
+                if k in t:
+                    break
+                else:
+                    ignore("doesn't match keyword")
+                    return None
 
     vlog("# Test", test)
 
@@ -920,6 +931,14 @@ def runchildren(options, tests):
     optcopy = dict(options.__dict__)
     optcopy['jobs'] = 1
 
+    # Because whitelist has to override keyword matches, we have to
+    # actually load the whitelist in the children as well, so we allow
+    # the list of whitelist files to pass through and be parsed in the
+    # children, but not the dict of whitelisted tests resulting from
+    # the parse, used here to override blacklisted tests.
+    whitelist = optcopy['whitelisted'] or []
+    del optcopy['whitelisted']
+
     blacklist = optcopy['blacklist'] or []
     del optcopy['blacklist']
     blacklisted = []
@@ -946,7 +965,7 @@ def runchildren(options, tests):
             if not tests:
                 break
             test = tests.pop()
-            if test in blacklist:
+            if test not in whitelist and test in blacklist:
                 blacklisted.append(test)
             else:
                 job.append(test)
