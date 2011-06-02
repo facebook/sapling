@@ -56,7 +56,8 @@ def tokenize(program):
                 pos += 1
             else:
                 raise error.ParseError(_("unterminated string"), s)
-        elif c.isalnum() or c in '.*{}[]?' or ord(c) > 127: # gather up a symbol/keyword
+        elif c.isalnum() or c in '.*{}[]?' or ord(c) > 127:
+            # gather up a symbol/keyword
             s = pos
             pos += 1
             while pos < l: # find end of symbol
