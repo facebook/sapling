@@ -271,7 +271,7 @@ def changeset(web, req, tmpl):
     diffs = webutil.diffs(web.repo, tmpl, ctx, None, parity, style)
 
     parity = paritygen(web.stripecount)
-    diffstat = lambda: webutil.diffstat(tmpl, ctx, parity)
+    diffstat = webutil.diffstat(tmpl, ctx, parity)
 
     return tmpl('changeset',
                 diff=diffs,
