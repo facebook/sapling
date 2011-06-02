@@ -27,6 +27,13 @@ should print a warning that this is not a real copy; foo is added
   A foo
   $ hg commit -m1
 
+moving a missing file
+  $ rm foo
+  $ hg mv foo foo3
+  foo: deleted in working copy
+  foo3 does not exist!
+  $ hg up -qC .
+
 copy --after to a nonexistant target filename
   $ hg cp -A foo dummy
   foo: not recording copy - dummy does not exist
