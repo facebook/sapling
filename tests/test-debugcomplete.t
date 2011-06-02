@@ -76,6 +76,7 @@ Show debug commands if there are no other candidates
   debugdata
   debugdate
   debugdiscovery
+  debugfileset
   debugfsinfo
   debuggetbundle
   debugignore
@@ -222,6 +223,7 @@ Show all commands + options
   debugdata: changelog, manifest
   debugdate: extended
   debugdiscovery: old, nonheads, ssh, remotecmd, insecure
+  debugfileset: 
   debugfsinfo: 
   debuggetbundle: head, common, type
   debugignore: 

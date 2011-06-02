@@ -13,7 +13,7 @@ import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
 import patch, help, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
 import merge as mergemod
-import minirst, revset
+import minirst, revset, fileset
 import dagparser, context, simplemerge
 import random, setdiscovery, treediscovery, dagutil
 
@@ -1596,6 +1596,13 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
                                                  opts.get('remote_head'))
         localrevs = opts.get('local_head')
         doit(localrevs, remoterevs)
+
+@command('debugfileset', [], ('REVSPEC'))
+def debugfileset(ui, repo, expr):
+    '''parse and apply a fileset specification'''
+    if ui.verbose:
+        tree = fileset.parse(expr)[0]
+        ui.note(tree, "\n")
 
 @command('debugfsinfo', [], _('[PATH]'))
 def debugfsinfo(ui, path = "."):
