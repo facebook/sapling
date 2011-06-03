@@ -572,6 +572,6 @@ bundle single branch
   bundling: 2/2 changesets (100.00%)
   bundling: 1/2 manifests (50.00%)
   bundling: 2/2 manifests (100.00%)
-  bundling: b 0/2 files (0.00%)
-  bundling: b1 1/2 files (50.00%)
+  bundling: b 1/2 files (50.00%)
+  bundling: b1 2/2 files (100.00%)
 

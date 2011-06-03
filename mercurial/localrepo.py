@@ -1570,17 +1570,14 @@ class localrepository(repo.repository):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 fstate[0] = fname
                 fstate[1] = fnodes.pop(fname, {})
-                first = True
 
-                for chunk in filerevlog.group(prune(filerevlog, fstate[1]),
-                                              bundler, reorder=reorder):
-                    if first:
-                        if chunk == bundler.close():
-                            break
-                        count[0] += 1
-                        yield bundler.fileheader(fname)
-                        first = False
-                    yield chunk
+                nodelist = prune(filerevlog, fstate[1])
+                if nodelist:
+                    count[0] += 1
+                    yield bundler.fileheader(fname)
+                    for chunk in filerevlog.group(nodelist, bundler, reorder):
+                        yield chunk
+
             # Signal that no more groups are left.
             yield bundler.close()
             self.ui.progress(_('bundling'), None)
@@ -1665,16 +1662,12 @@ class localrepository(repo.repository):
                 if not len(filerevlog):
                     raise util.Abort(_("empty or missing revlog for %s") % fname)
                 fstate[0] = fname
-                first = True
-                for chunk in filerevlog.group(gennodelst(filerevlog), bundler,
-                                              reorder=reorder):
-                    if first:
-                        if chunk == bundler.close():
-                            break
-                        count[0] += 1
-                        yield bundler.fileheader(fname)
-                        first = False
-                    yield chunk
+                nodelist = gennodelst(filerevlog)
+                if nodelist:
+                    count[0] += 1
+                    yield bundler.fileheader(fname)
+                    for chunk in filerevlog.group(nodelist, bundler, reorder):
+                        yield chunk
             yield bundler.close()
             self.ui.progress(_('bundling'), None)
 

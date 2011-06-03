@@ -97,9 +97,9 @@ Extension disabled for lack of a hook
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -153,9 +153,9 @@ Extension disabled for lack of acl.sources
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -212,9 +212,9 @@ No [acl.allow]/[acl.deny]
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -280,9 +280,9 @@ Empty [acl.allow]
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -345,9 +345,9 @@ fred is allowed inside foo/
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -415,9 +415,9 @@ Empty [acl.deny]
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -482,9 +482,9 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -554,9 +554,9 @@ fred is allowed inside foo/, but not foo/Bar/
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -623,9 +623,9 @@ fred is allowed inside foo/, but not foo/Bar/
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -694,9 +694,9 @@ barney is allowed everywhere
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -769,9 +769,9 @@ wilma can change files with a .txt extension
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -847,9 +847,9 @@ file specified by acl.config does not exist
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -919,9 +919,9 @@ betty is allowed inside foo/ by a acl.config file
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1003,9 +1003,9 @@ acl.config can set only [acl.allow]/[acl.deny]
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1079,9 +1079,9 @@ fred is always allowed
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1151,9 +1151,9 @@ no one is allowed inside foo/Bar/
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1225,9 +1225,9 @@ OS-level groups
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1298,9 +1298,9 @@ OS-level groups
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 0/3 files (0.00%)
-  bundling: foo/file.txt 1/3 files (33.33%)
-  bundling: quux/file.py 2/3 files (66.67%)
+  bundling: foo/Bar/file.txt 1/3 files (33.33%)
+  bundling: foo/file.txt 2/3 files (66.67%)
+  bundling: quux/file.py 3/3 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1413,10 +1413,10 @@ No branch acls specified
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
   bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 0/4 files (0.00%)
-  bundling: foo/Bar/file.txt 1/4 files (25.00%)
-  bundling: foo/file.txt 2/4 files (50.00%)
-  bundling: quux/file.py 3/4 files (75.00%)
+  bundling: abc.txt 1/4 files (25.00%)
+  bundling: foo/Bar/file.txt 2/4 files (50.00%)
+  bundling: foo/file.txt 3/4 files (75.00%)
+  bundling: quux/file.py 4/4 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1493,10 +1493,10 @@ Branch acl deny test
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
   bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 0/4 files (0.00%)
-  bundling: foo/Bar/file.txt 1/4 files (25.00%)
-  bundling: foo/file.txt 2/4 files (50.00%)
-  bundling: quux/file.py 3/4 files (75.00%)
+  bundling: abc.txt 1/4 files (25.00%)
+  bundling: foo/Bar/file.txt 2/4 files (50.00%)
+  bundling: foo/file.txt 3/4 files (75.00%)
+  bundling: quux/file.py 4/4 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1570,10 +1570,10 @@ Branch acl empty allow test
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
   bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 0/4 files (0.00%)
-  bundling: foo/Bar/file.txt 1/4 files (25.00%)
-  bundling: foo/file.txt 2/4 files (50.00%)
-  bundling: quux/file.py 3/4 files (75.00%)
+  bundling: abc.txt 1/4 files (25.00%)
+  bundling: foo/Bar/file.txt 2/4 files (50.00%)
+  bundling: foo/file.txt 3/4 files (75.00%)
+  bundling: quux/file.py 4/4 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1643,10 +1643,10 @@ Branch acl allow other
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
   bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 0/4 files (0.00%)
-  bundling: foo/Bar/file.txt 1/4 files (25.00%)
-  bundling: foo/file.txt 2/4 files (50.00%)
-  bundling: quux/file.py 3/4 files (75.00%)
+  bundling: abc.txt 1/4 files (25.00%)
+  bundling: foo/Bar/file.txt 2/4 files (50.00%)
+  bundling: foo/file.txt 3/4 files (75.00%)
+  bundling: quux/file.py 4/4 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1710,10 +1710,10 @@ Branch acl allow other
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
   bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 0/4 files (0.00%)
-  bundling: foo/Bar/file.txt 1/4 files (25.00%)
-  bundling: foo/file.txt 2/4 files (50.00%)
-  bundling: quux/file.py 3/4 files (75.00%)
+  bundling: abc.txt 1/4 files (25.00%)
+  bundling: foo/Bar/file.txt 2/4 files (50.00%)
+  bundling: foo/file.txt 3/4 files (75.00%)
+  bundling: quux/file.py 4/4 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1795,10 +1795,10 @@ push foobar into the remote
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
   bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 0/4 files (0.00%)
-  bundling: foo/Bar/file.txt 1/4 files (25.00%)
-  bundling: foo/file.txt 2/4 files (50.00%)
-  bundling: quux/file.py 3/4 files (75.00%)
+  bundling: abc.txt 1/4 files (25.00%)
+  bundling: foo/Bar/file.txt 2/4 files (50.00%)
+  bundling: foo/file.txt 3/4 files (75.00%)
+  bundling: quux/file.py 4/4 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1879,10 +1879,10 @@ Branch acl conflicting deny
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
   bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 0/4 files (0.00%)
-  bundling: foo/Bar/file.txt 1/4 files (25.00%)
-  bundling: foo/file.txt 2/4 files (50.00%)
-  bundling: quux/file.py 3/4 files (75.00%)
+  bundling: abc.txt 1/4 files (25.00%)
+  bundling: foo/Bar/file.txt 2/4 files (50.00%)
+  bundling: foo/file.txt 3/4 files (75.00%)
+  bundling: quux/file.py 4/4 files (100.00%)
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
