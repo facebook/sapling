@@ -1511,9 +1511,8 @@ class localrepository(repo.repository):
 
         # filter any nodes that claim to be part of the known set
         def prune(revlog, missing):
-            for n in missing:
-                if revlog.linkrev(revlog.rev(n)) not in commonrevs:
-                    yield n
+            return [n for n in missing
+                    if revlog.linkrev(revlog.rev(n)) not in commonrevs]
 
         def lookup(revlog, x):
             if revlog == cl:
@@ -1618,9 +1617,7 @@ class localrepository(repo.repository):
         revset = set([cl.rev(n) for n in nodes])
 
         def gennodelst(log):
-            for r in log:
-                if log.linkrev(r) in revset:
-                    yield log.node(r)
+            return [log.node(r) for r in log if log.linkrev(r) in revset]
 
         def lookup(revlog, x):
             if revlog == cl:
