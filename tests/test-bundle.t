@@ -568,8 +568,8 @@ bundle single branch
   list of changesets:
   d2ae7f538514cd87c17547b0de4cea71fe1af9fb
   5ece8e77363e2b5269e27c66828b72da29e4341a
-  bundling: 1 changesets
-  bundling: 2 changesets
+  bundling: 1/2 changesets (50.00%)
+  bundling: 2/2 changesets (100.00%)
   bundling: 1/2 manifests (50.00%)
   bundling: 2/2 manifests (100.00%)
   bundling: b 0/2 files (0.00%)

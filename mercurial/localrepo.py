@@ -1521,7 +1521,8 @@ class localrepository(repo.repository):
                 changedfiles.update(c[3])
                 mfs.setdefault(c[0], x)
                 count[0] += 1
-                self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
+                self.ui.progress(_('bundling'), count[0],
+                                 unit=_('changesets'), total=len(csets))
                 return x
             elif revlog == mf:
                 clnode = mfs[x]
@@ -1627,7 +1628,8 @@ class localrepository(repo.repository):
                 changedfiles.update(c[3])
                 mfs.setdefault(c[0], x)
                 count[0] += 1
-                self.ui.progress(_('bundling'), count[0], unit=_('changesets'))
+                self.ui.progress(_('bundling'), count[0],
+                                 unit=_('changesets'), total=len(nodes))
                 return x
             elif revlog == mf:
                 count[0] += 1

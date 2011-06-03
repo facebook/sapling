@@ -91,9 +91,9 @@ Extension disabled for lack of a hook
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -147,9 +147,9 @@ Extension disabled for lack of acl.sources
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -206,9 +206,9 @@ No [acl.allow]/[acl.deny]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -274,9 +274,9 @@ Empty [acl.allow]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -339,9 +339,9 @@ fred is allowed inside foo/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -409,9 +409,9 @@ Empty [acl.deny]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -476,9 +476,9 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -548,9 +548,9 @@ fred is allowed inside foo/, but not foo/Bar/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -617,9 +617,9 @@ fred is allowed inside foo/, but not foo/Bar/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -688,9 +688,9 @@ barney is allowed everywhere
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -763,9 +763,9 @@ wilma can change files with a .txt extension
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -841,9 +841,9 @@ file specified by acl.config does not exist
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -913,9 +913,9 @@ betty is allowed inside foo/ by a acl.config file
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -997,9 +997,9 @@ acl.config can set only [acl.allow]/[acl.deny]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -1073,9 +1073,9 @@ fred is always allowed
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -1145,9 +1145,9 @@ no one is allowed inside foo/Bar/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -1219,9 +1219,9 @@ OS-level groups
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -1292,9 +1292,9 @@ OS-level groups
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
+  bundling: 1/3 changesets (33.33%)
+  bundling: 2/3 changesets (66.67%)
+  bundling: 3/3 changesets (100.00%)
   bundling: 1/3 manifests (33.33%)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
@@ -1405,10 +1405,10 @@ No branch acls specified
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
-  bundling: 4 changesets
+  bundling: 1/4 changesets (25.00%)
+  bundling: 2/4 changesets (50.00%)
+  bundling: 3/4 changesets (75.00%)
+  bundling: 4/4 changesets (100.00%)
   bundling: 1/4 manifests (25.00%)
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
@@ -1485,10 +1485,10 @@ Branch acl deny test
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
-  bundling: 4 changesets
+  bundling: 1/4 changesets (25.00%)
+  bundling: 2/4 changesets (50.00%)
+  bundling: 3/4 changesets (75.00%)
+  bundling: 4/4 changesets (100.00%)
   bundling: 1/4 manifests (25.00%)
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
@@ -1562,10 +1562,10 @@ Branch acl empty allow test
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
-  bundling: 4 changesets
+  bundling: 1/4 changesets (25.00%)
+  bundling: 2/4 changesets (50.00%)
+  bundling: 3/4 changesets (75.00%)
+  bundling: 4/4 changesets (100.00%)
   bundling: 1/4 manifests (25.00%)
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
@@ -1635,10 +1635,10 @@ Branch acl allow other
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
-  bundling: 4 changesets
+  bundling: 1/4 changesets (25.00%)
+  bundling: 2/4 changesets (50.00%)
+  bundling: 3/4 changesets (75.00%)
+  bundling: 4/4 changesets (100.00%)
   bundling: 1/4 manifests (25.00%)
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
@@ -1702,10 +1702,10 @@ Branch acl allow other
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
-  bundling: 4 changesets
+  bundling: 1/4 changesets (25.00%)
+  bundling: 2/4 changesets (50.00%)
+  bundling: 3/4 changesets (75.00%)
+  bundling: 4/4 changesets (100.00%)
   bundling: 1/4 manifests (25.00%)
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
@@ -1787,10 +1787,10 @@ push foobar into the remote
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
-  bundling: 4 changesets
+  bundling: 1/4 changesets (25.00%)
+  bundling: 2/4 changesets (50.00%)
+  bundling: 3/4 changesets (75.00%)
+  bundling: 4/4 changesets (100.00%)
   bundling: 1/4 manifests (25.00%)
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
@@ -1871,10 +1871,10 @@ Branch acl conflicting deny
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   adding changesets
-  bundling: 1 changesets
-  bundling: 2 changesets
-  bundling: 3 changesets
-  bundling: 4 changesets
+  bundling: 1/4 changesets (25.00%)
+  bundling: 2/4 changesets (50.00%)
+  bundling: 3/4 changesets (75.00%)
+  bundling: 4/4 changesets (100.00%)
   bundling: 1/4 manifests (25.00%)
   bundling: 2/4 manifests (50.00%)
   bundling: 3/4 manifests (75.00%)
