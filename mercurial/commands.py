@@ -11,7 +11,8 @@ from i18n import _, gettext
 import os, re, difflib, time, tempfile, errno
 import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
 import patch, help, url, encoding, templatekw, discovery
-import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
+import archival, changegroup, cmdutil, hbisect
+import sshserver, hgweb, hgweb.server, commandserver
 import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge
@@ -4418,6 +4419,7 @@ def root(ui, repo):
      _('FILE')),
     ('', 'pid-file', '', _('name of file to write process ID to'), _('FILE')),
     ('', 'stdio', None, _('for remote clients')),
+    ('', 'cmdserver', '', _('for remote clients'), _('MODE')),
     ('t', 'templates', '', _('web templates to use'), _('TEMPLATE')),
     ('', 'style', '', _('template style to use'), _('STYLE')),
     ('6', 'ipv6', None, _('use IPv6 in addition to IPv4')),
@@ -4448,12 +4450,23 @@ def serve(ui, repo, **opts):
     Returns 0 on success.
     """
 
-    if opts["stdio"]:
+    if opts["stdio"] and opts["cmdserver"]:
+        raise util.Abort(_("cannot use --stdio with --cmdserver"))
+
+    def checkrepo():
         if repo is None:
             raise error.RepoError(_("There is no Mercurial repository here"
                               " (.hg not found)"))
+
+    if opts["stdio"]:
+        checkrepo()
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
+
+    if opts["cmdserver"]:
+        checkrepo()
+        s = commandserver.server(ui, repo, opts["cmdserver"])
+        return s.serve()
 
     # this way we can check if something was given in the command-line
     if opts.get('port'):
