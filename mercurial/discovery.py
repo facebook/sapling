@@ -159,9 +159,14 @@ def prepush(repo, remote, force, revs, newbranch):
             newhs = set(newmap[branch])
             oldhs = set(oldmap[branch])
             if len(newhs) > len(oldhs):
+                dhs = list(newhs - oldhs)
                 if error is None:
-                    error = _("push creates new remote heads "
-                              "on branch '%s'!") % branch
+                    if branch != 'default':
+                        error = _("push creates new remote head %s "
+                                  "on branch '%s'!") % (short(dhs[0]), branch)
+                    else:
+                        error = _("push creates new remote head %s!"
+                                  ) % short(dhs[0])
                     if branch in unsynced:
                         hint = _("you should pull and merge or "
                                  "use push -f to force")
@@ -169,7 +174,7 @@ def prepush(repo, remote, force, revs, newbranch):
                         hint = _("did you forget to merge? "
                                  "use push -f to force")
                 repo.ui.debug("new remote heads on branch '%s'\n" % branch)
-                for h in (newhs - oldhs):
+                for h in dhs:
                     repo.ui.debug("new remote head %s\n" % short(h))
         if error:
             raise util.Abort(error, hint=hint)

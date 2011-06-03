@@ -289,7 +289,7 @@ push -f
   no changes found
   pushing subrepo s to $TESTTMP/sub/t/s
   searching for changes
-  abort: push creates new remote heads on branch 'default'!
+  abort: push creates new remote head 12a213df6fa9!
   (did you forget to merge? use push -f to force)
   [255]
   $ hg push -f
@@ -562,7 +562,7 @@ Issue1977: multirepo push should fail if subrepo push fails
   $ hg -R repo2 ci -m3
   committing subrepository s
   $ hg -q -R repo2 push
-  abort: push creates new remote heads on branch 'default'!
+  abort: push creates new remote head 9d66565e64e1!
   (did you forget to merge? use push -f to force)
   [255]
   $ hg -R repo update
