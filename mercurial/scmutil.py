@@ -414,8 +414,8 @@ if os.name != 'nt':
         path = []
         # old mod_python does not set sys.argv
         if len(getattr(sys, 'argv', [])) > 0:
-            path.extend(rcfiles(os.path.dirname(sys.argv[0]) +
-                                  '/../etc/mercurial'))
+            p = os.path.dirname(os.path.dirname(sys.argv[0]))
+            path.extend(rcfiles(os.path.join(p, 'etc/mercurial')))
         path.extend(rcfiles('/etc/mercurial'))
         return path
 
