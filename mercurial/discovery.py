@@ -173,9 +173,9 @@ def prepush(repo, remote, force, revs, newbranch):
                     else:
                         hint = _("did you forget to merge? "
                                  "use push -f to force")
-                repo.ui.debug("new remote heads on branch '%s'\n" % branch)
+                repo.ui.note("new remote heads on branch '%s'\n" % branch)
                 for h in dhs:
-                    repo.ui.debug("new remote head %s\n" % short(h))
+                    repo.ui.note("new remote head %s\n" % short(h))
         if error:
             raise util.Abort(error, hint=hint)
 

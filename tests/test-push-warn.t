@@ -124,16 +124,22 @@
   (did you forget to merge? use push -f to force)
   [255]
 
-  $ hg push -r 3 -r 4 ../c
+  $ hg push -v -r 3 -r 4 ../c
   pushing to ../c
   searching for changes
+  all remote heads known locally
+  new remote heads on branch 'default'
+  new remote head a5dda829a167
+  new remote head ee8fbc7a0295
   abort: push creates new remote head a5dda829a167!
   (did you forget to merge? use push -f to force)
   [255]
 
-  $ hg push -f -r 3 -r 4 ../c
+  $ hg push -v -f -r 3 -r 4 ../c
   pushing to ../c
   searching for changes
+  all remote heads known locally
+  2 changesets found
   adding changesets
   adding manifests
   adding file changes
