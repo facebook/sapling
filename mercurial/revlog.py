@@ -1096,6 +1096,11 @@ class revlog(object):
         changegroup starts with a full revision.
         """
 
+        # if we don't have any revisions touched by these changesets, bail
+        if len(nodelist) == 0:
+            yield bundler.close()
+            return
+
         # for generaldelta revlogs, we linearize the revs; this will both be
         # much quicker and generate a much smaller bundle
         if (self._generaldelta and reorder is not False) or reorder:
@@ -1104,11 +1109,6 @@ class revlog(object):
             revs = dag.linearize(revs)
         else:
             revs = sorted([self.rev(n) for n in nodelist])
-
-        # if we don't have any revisions touched by these changesets, bail
-        if not revs:
-            yield bundler.close()
-            return
 
         # add the parent of the first rev
         p = self.parentrevs(revs[0])[0]
