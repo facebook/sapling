@@ -1008,9 +1008,7 @@ class memctx(object):
         self._filectxfn = filectxfn
 
         self._extra = extra and extra.copy() or {}
-        if 'branch' not in self._extra:
-            self._extra['branch'] = 'default'
-        elif self._extra.get('branch') == '':
+        if self._extra.get('branch', '') == '':
             self._extra['branch'] = 'default'
 
     def __str__(self):
