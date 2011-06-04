@@ -262,6 +262,14 @@ def _disabledhelp(path):
 
 def disabled():
     '''find disabled extensions from hgext. returns a dict of {name: desc}'''
+    try:
+        from hgext import __index__
+        return dict((name, gettext(desc))
+                    for name, desc in __index__.docs.iteritems()
+                    if name not in _order)
+    except ImportError:
+        pass
+
     paths = _disabledpaths()
     if not paths:
         return None
@@ -276,6 +284,15 @@ def disabled():
 
 def disabledext(name):
     '''find a specific disabled extension from hgext. returns desc'''
+    try:
+        from hgext import __index__
+        if name in _order:  # enabled
+            return
+        else:
+            return gettext(__index__.docs.get(name))
+    except ImportError:
+        pass
+
     paths = _disabledpaths()
     if name in paths:
         return _disabledhelp(paths[name])
