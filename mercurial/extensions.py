@@ -261,9 +261,7 @@ def _disabledhelp(path):
         return _('(no help text available)')
 
 def disabled():
-    '''find disabled extensions from hgext
-    returns a dict of {name: desc}, and the max name length'''
-
+    '''find disabled extensions from hgext. returns a dict of {name: desc}'''
     paths = _disabledpaths()
     if not paths:
         return None
@@ -328,7 +326,7 @@ def disabledcmd(ui, cmd, strict=False):
     raise error.UnknownCommand(cmd)
 
 def enabled():
-    '''return a dict of {name: desc} of extensions, and the max name length'''
+    '''return a dict of {name: desc} of extensions'''
     exts = {}
     for ename, ext in extensions():
         doc = (gettext(ext.__doc__) or _('(no help text available)'))
