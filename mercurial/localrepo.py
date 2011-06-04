@@ -1012,9 +1012,7 @@ class localrepository(repo.repository):
             # Save commit message in case this transaction gets rolled back
             # (e.g. by a pretxncommit hook).  Leave the content alone on
             # the assumption that the user will use the same editor again.
-            msgfile = self.opener('last-message.txt', 'wb')
-            msgfile.write(cctx._text)
-            msgfile.close()
+            msgfn = self.savecommitmessage(cctx._text)
 
             p1, p2 = self.dirstate.parents()
             hookp1, hookp2 = hex(p1), (p2 != nullid and hex(p2) or '')
@@ -1023,7 +1021,6 @@ class localrepository(repo.repository):
                 ret = self.commitctx(cctx, True)
             except:
                 if edited:
-                    msgfn = self.pathto(msgfile.name[len(self.root)+1:])
                     self.ui.write(
                         _('note: commit message saved in %s\n') % msgfn)
                 raise
@@ -1953,6 +1950,14 @@ class localrepository(repo.repository):
     def debugwireargs(self, one, two, three=None, four=None, five=None):
         '''used to test argument passing over the wire'''
         return "%s %s %s %s %s" % (one, two, three, four, five)
+
+    def savecommitmessage(self, text):
+        fp = self.opener('last-message.txt', 'wb')
+        try:
+            fp.write(text)
+        finally:
+            fp.close()
+        return self.pathto(fp.name[len(self.root)+1:])
 
 # used to avoid circular references so destructors work
 def aftertrans(files):

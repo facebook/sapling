@@ -3159,7 +3159,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 raise util.Abort(_('no diffs found'))
 
         if msgs:
-            repo.opener.write('last-message.txt', '\n* * *\n'.join(msgs))
+            repo.savecommitmessage('\n* * *\n'.join(msgs))
     finally:
         release(lock, wlock)
 
