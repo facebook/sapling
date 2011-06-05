@@ -2993,7 +2993,7 @@ def identify(ui, repo, source=None, rev=None,
     [('p', 'strip', 1,
      _('directory strip option for patch. This has the same '
        'meaning as the corresponding patch option'), _('NUM')),
-    ('b', 'base', '', _('base path'), _('PATH')),
+    ('b', 'base', '', _('base path (DEPRECATED)'), _('PATH')),
     ('f', 'force', None, _('skip check for outstanding uncommitted changes')),
     ('', 'no-commit', None,
      _("don't commit, just update the working directory")),
