@@ -396,14 +396,13 @@ class fsbackend(abstractbackend):
         path = self._join(fname)
         if os.path.islink(path):
             return (os.readlink(path), (True, False))
-        isexec, islink = False, False
+        isexec = False
         try:
             isexec = os.lstat(path).st_mode & 0100 != 0
-            islink = os.path.islink(path)
         except OSError, e:
             if e.errno != errno.ENOENT:
                 raise
-        return (self.opener.read(fname), (islink, isexec))
+        return (self.opener.read(fname), (False, isexec))
 
     def setfile(self, fname, data, mode, copysource):
         islink, isexec = mode
