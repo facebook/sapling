@@ -1237,12 +1237,12 @@ def _applydiff(ui, fp, patcher, backend, store, changed, strip=1,
                 if gp.oldpath:
                     copysource = pstrip(gp.oldpath)
                 changed[path] = gp
-                if gp.op == 'DELETE':
-                    backend.unlink(path)
-                    continue
                 if gp.op == 'RENAME':
                     backend.unlink(copysource)
                 if not first_hunk:
+                    if gp.op == 'DELETE':
+                        backend.unlink(path)
+                        continue
                     data, mode = None, None
                     if gp.op in ('RENAME', 'COPY'):
                         data, mode = store.getfile(copysource)

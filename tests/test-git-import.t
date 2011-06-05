@@ -442,4 +442,27 @@ Copy and changes with existing destination
   [255]
   $ cat b
   b
+
+  $ ln -s b linkb
+  $ hg add linkb
+  $ hg ci -m addlinkb
+  $ hg import --no-commit - <<EOF
+  > diff --git a/linkb b/linkb
+  > deleted file mode 120000
+  > --- a/linkb
+  > +++ /dev/null
+  > @@ -1,1 +0,0 @@
+  > -badhunk
+  > \ No newline at end of file
+  > EOF
+  applying patch from stdin
+  patching file linkb
+  Hunk #1 FAILED at 0
+  1 out of 1 hunks FAILED -- saving rejects to file linkb.rej
+  abort: patch failed to apply
+  [255]
+  $ hg st
+  ? b.rej
+  ? linkb.rej
+
   $ cd ..
