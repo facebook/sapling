@@ -1122,8 +1122,9 @@ def iterhunks(fp):
             or (context is not False and x.startswith('***************'))
             or x.startswith('GIT binary patch')):
             gp = None
-            if gitpatches and gitpatches[-1][0] == bfile:
-                gp = gitpatches.pop()[1]
+            if (gitpatches and
+                (gitpatches[-1][0] == afile or gitpatches[-1][1] == bfile)):
+                gp = gitpatches.pop()[2]
             if x.startswith('GIT binary patch'):
                 h = binhunk(lr)
             else:
@@ -1141,17 +1142,17 @@ def iterhunks(fp):
                 continue
             if gitpatches is None:
                 # scan whole input for git metadata
-                gitpatches = [('b/' + gp.path, gp) for gp
+                gitpatches = [('a/' + gp.path, 'b/' + gp.path, gp) for gp
                               in scangitpatch(lr, x)]
-                yield 'git', [g[1] for g in gitpatches
-                              if g[1].op in ('COPY', 'RENAME')]
+                yield 'git', [g[2] for g in gitpatches
+                              if g[2].op in ('COPY', 'RENAME')]
                 gitpatches.reverse()
             afile = 'a/' + m.group(1)
             bfile = 'b/' + m.group(2)
-            while bfile != gitpatches[-1][0]:
-                gp = gitpatches.pop()[1]
+            while afile != gitpatches[-1][0] and bfile != gitpatches[-1][1]:
+                gp = gitpatches.pop()[2]
                 yield 'file', ('a/' + gp.path, 'b/' + gp.path, None, gp)
-            gp = gitpatches[-1][1]
+            gp = gitpatches[-1][2]
             # copy/rename + modify should modify target, not source
             if gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD') or gp.mode:
                 afile = bfile
@@ -1189,7 +1190,7 @@ def iterhunks(fp):
             hunknum = 0
 
     while gitpatches:
-        gp = gitpatches.pop()[1]
+        gp = gitpatches.pop()[2]
         yield 'file', ('a/' + gp.path, 'b/' + gp.path, None, gp)
 
 def applydiff(ui, fp, changed, backend, store, strip=1, eolmode='strict'):
