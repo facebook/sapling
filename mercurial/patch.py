@@ -1023,7 +1023,6 @@ def selectfile(backend, afile_orig, bfile_orig, hunk, strip, gp):
         fname = pathstrip(gp.path, strip - 1)[1]
         create = gp.op in ('ADD', 'COPY', 'RENAME')
         remove = gp.op == 'DELETE'
-        missing = not create and not backend.exists(fname)
         return fname, create, remove
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
