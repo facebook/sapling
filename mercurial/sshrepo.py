@@ -186,7 +186,7 @@ class sshrepository(wireproto.wirerepository):
     def unlock(self):
         self._call("unlock")
 
-    def addchangegroup(self, cg, source, url):
+    def addchangegroup(self, cg, source, url, lock=None):
         '''Send a changegroup to the remote server.  Return an integer
         similar to unbundle(). DEPRECATED, since it requires locking the
         remote.'''
