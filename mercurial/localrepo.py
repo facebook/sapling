@@ -944,18 +944,28 @@ class localrepository(repo.repository):
             # check subrepos
             subs = []
             removedsubs = set()
-            for p in wctx.parents():
-                removedsubs.update(s for s in p.substate if match(s))
-            for s in wctx.substate:
-                removedsubs.discard(s)
-                if match(s) and wctx.sub(s).dirty():
-                    subs.append(s)
-            if (subs or removedsubs):
-                if (not match('.hgsub') and
-                    '.hgsub' in (wctx.modified() + wctx.added())):
-                    raise util.Abort(_("can't commit subrepos without .hgsub"))
-                if '.hgsubstate' not in changes[0]:
-                    changes[0].insert(0, '.hgsubstate')
+            if '.hgsub' in wctx:
+                # only manage subrepos and .hgsubstate if .hgsub is present
+                for p in wctx.parents():
+                    removedsubs.update(s for s in p.substate if match(s))
+                for s in wctx.substate:
+                    removedsubs.discard(s)
+                    if match(s) and wctx.sub(s).dirty():
+                        subs.append(s)
+                if (subs or removedsubs):
+                    if (not match('.hgsub') and
+                        '.hgsub' in (wctx.modified() + wctx.added())):
+                        raise util.Abort(
+                            _("can't commit subrepos without .hgsub"))
+                    if '.hgsubstate' not in changes[0]:
+                        changes[0].insert(0, '.hgsubstate')
+                        if '.hgsubstate' in changes[2]:
+                            changes[2].remove('.hgsubstate')
+            elif '.hgsub' in changes[2]:
+                # clean up .hgsubstate when .hgsub is removed
+                if ('.hgsubstate' in wctx and
+                    '.hgsubstate' not in changes[0] + changes[1] + changes[2]):
+                    changes[2].insert(0, '.hgsubstate')
 
             if subs and not self.ui.configbool('ui', 'commitsubrepos', True):
                 changedsubs = [s for s in subs if wctx.sub(s).dirty(True)]
