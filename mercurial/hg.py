@@ -318,7 +318,7 @@ def clone(ui, source, dest=None, pull=False, rev=None, update=True,
 
             revs = None
             if rev:
-                if 'lookup' not in srcrepo.capabilities:
+                if not srcrepo.capable('lookup'):
                     raise util.Abort(_("src repository does not support "
                                        "revision lookup and so doesn't "
                                        "support clone by revision"))
