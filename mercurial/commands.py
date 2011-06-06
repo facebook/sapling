@@ -4086,7 +4086,7 @@ def resolve(ui, repo, *pats, **opts):
     ] + walkopts + dryrunopts,
     _('[OPTION]... [-r REV] [NAME]...'))
 def revert(ui, repo, *pats, **opts):
-    """restore individual files or directories to an earlier state
+    """restore files to their checkout state
 
     .. note::
        This command is most likely not what you are looking for.

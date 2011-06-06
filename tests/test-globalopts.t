@@ -316,7 +316,7 @@ Testing -h/--help:
    remove       remove the specified files on the next commit
    rename       rename files; equivalent of copy + remove
    resolve      redo merges or set/view the merge status of files
-   revert       restore individual files or directories to an earlier state
+   revert       restore files to their checkout state
    rollback     roll back the last transaction (dangerous)
    root         print the root (top) of the current working directory
    serve        start stand-alone webserver
@@ -396,7 +396,7 @@ Testing -h/--help:
    remove       remove the specified files on the next commit
    rename       rename files; equivalent of copy + remove
    resolve      redo merges or set/view the merge status of files
-   revert       restore individual files or directories to an earlier state
+   revert       restore files to their checkout state
    rollback     roll back the last transaction (dangerous)
    root         print the root (top) of the current working directory
    serve        start stand-alone webserver
