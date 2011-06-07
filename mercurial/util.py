@@ -354,7 +354,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
     env = dict(os.environ)
     env.update((k, py2shell(v)) for k, v in environ.iteritems())
     env['HG'] = hgexecutable()
-    if out is None:
+    if out is None or out == sys.__stdout__:
         rc = subprocess.call(cmd, shell=True, close_fds=closefds,
                              env=env, cwd=cwd)
     else:

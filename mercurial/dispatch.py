@@ -276,7 +276,7 @@ class cmdalias(object):
                 replace['0'] = self.name
                 replace['@'] = ' '.join(args)
                 cmd = util.interpolate(r'\$', replace, cmd, escape_prefix=True)
-                return util.system(cmd, environ=env)
+                return util.system(cmd, environ=env, out=ui.fout)
             self.fn = fn
             return
 
