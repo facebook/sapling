@@ -4101,8 +4101,8 @@ def revert(ui, repo, *pats, **opts):
     directories to their contents as of a specific revision. Because
     revert does not change the working directory parents, this will
     cause these files to appear modified. This can be helpful to "back
-    out" some or all of an earlier change.
-
+    out" some or all of an earlier change. See :hg:`backout` for a
+    related method.
 
     If names are given, all files matching the names are reverted.
     If no arguments are given, no files are reverted.
