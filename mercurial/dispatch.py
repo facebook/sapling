@@ -12,10 +12,15 @@ import cmdutil, encoding
 import ui as uimod
 
 class request(object):
-    def __init__(self, args, ui=None, repo=None):
+    def __init__(self, args, ui=None, repo=None, fin=None, fout=None, ferr=None):
         self.args = args
         self.ui = ui
         self.repo = repo
+
+        # input/output/error streams
+        self.fin = fin
+        self.fout = fout
+        self.ferr = ferr
 
 def run():
     "run the command in sys.argv"
