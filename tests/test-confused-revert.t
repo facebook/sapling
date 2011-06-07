@@ -59,7 +59,8 @@ Should show a removed and b added:
 Revert should fail:
 
   $ hg revert
-  abort: uncommitted merge - use "hg update", see "hg help revert"
+  abort: no files or directories specified
+  (use --all to revert all files)
   [255]
 
 Revert should be ok now:

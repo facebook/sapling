@@ -185,7 +185,8 @@ Issue241: update and revert produces inconsistent repositories
 should fail - no arguments
 
   $ hg revert -rtip
-  abort: no files or directories specified; use --all to revert the whole repo
+  abort: no files or directories specified
+  (use --all to revert all files)
   [255]
 
 should succeed

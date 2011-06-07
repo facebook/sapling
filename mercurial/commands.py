@@ -4093,11 +4093,9 @@ def revert(ui, repo, *pats, **opts):
        To cancel a merge (and lose your changes), use :hg:`update --clean .`.
 
     With no revision specified, revert the named files or directories
-    to the contents they had in the parent of the working directory.
+    to the contents they had in the first parent of the working directory.
     This restores the contents of the affected files to an unmodified
-    state and unschedules adds, removes, copies, and renames. If the
-    working directory has two parents, you must explicitly specify a
-    revision.
+    state and unschedules adds, removes, copies, and renames.
 
     Using the -r/--rev option, revert the given files or directories
     to their contents as of a specific revision. This can be helpful
@@ -4129,13 +4127,10 @@ def revert(ui, repo, *pats, **opts):
         opts["rev"] = cmdutil.finddate(ui, repo, opts["date"])
 
     parent, p2 = repo.dirstate.parents()
-    if not opts.get('rev') and p2 != nullid:
-        raise util.Abort(_('uncommitted merge - '
-                           'use "hg update", see "hg help revert"'))
 
     if not pats and not opts.get('all'):
-        raise util.Abort(_('no files or directories specified; '
-                           'use --all to revert the whole repo'))
+        raise util.Abort(_('no files or directories specified'),
+                         hint=_('use --all to revert all files'))
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
     node = ctx.node()
