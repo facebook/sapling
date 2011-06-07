@@ -4100,12 +4100,8 @@ def revert(ui, repo, *pats, **opts):
     Using the -r/--rev or -d/--date options, revert the given files or
     directories to their contents as of a specific revision. This can
     be helpful to "roll back" some or all of an earlier change.
-
-    Revert modifies the working directory. It does not commit any
-    changes, or change the parent of the working directory. If you
-    revert to a revision other than the parent of the working
-    directory, the reverted files will thus appear modified
-    afterwards.
+    Because revert does not change the working directory parents, this
+    will cause these files to appear modified.
 
     If names are given, all files matching the names are reverted.
     If no arguments are given, no files are reverted.
