@@ -443,26 +443,26 @@ class ui(object):
             self._buffers[-1].extend([str(a) for a in args])
         else:
             for a in args:
-                sys.stdout.write(str(a))
+                self.fout.write(str(a))
 
     def write_err(self, *args, **opts):
         try:
-            if not getattr(sys.stdout, 'closed', False):
-                sys.stdout.flush()
+            if not getattr(self.fout, 'closed', False):
+                self.fout.flush()
             for a in args:
-                sys.stderr.write(str(a))
+                self.ferr.write(str(a))
             # stderr may be buffered under win32 when redirected to files,
             # including stdout.
-            if not getattr(sys.stderr, 'closed', False):
-                sys.stderr.flush()
+            if not getattr(self.ferr, 'closed', False):
+                self.ferr.flush()
         except IOError, inst:
             if inst.errno not in (errno.EPIPE, errno.EIO):
                 raise
 
     def flush(self):
-        try: sys.stdout.flush()
+        try: self.fout.flush()
         except: pass
-        try: sys.stderr.flush()
+        try: self.ferr.flush()
         except: pass
 
     def interactive(self):
@@ -483,7 +483,7 @@ class ui(object):
         if i is None:
             # some environments replace stdin without implementing isatty
             # usually those are non-interactive
-            return util.isatty(sys.stdin)
+            return util.isatty(self.fin)
 
         return i
 
@@ -521,12 +521,12 @@ class ui(object):
         if i is None:
             # some environments replace stdout without implementing isatty
             # usually those are non-interactive
-            return util.isatty(sys.stdout)
+            return util.isatty(self.fout)
 
         return i
 
     def _readline(self, prompt=''):
-        if util.isatty(sys.stdin):
+        if util.isatty(self.fin):
             try:
                 # magically add command line editing support, where
                 # available
@@ -536,7 +536,14 @@ class ui(object):
                 # windows sometimes raises something other than ImportError
             except Exception:
                 pass
+
+        # instead of trying to emulate raw_input, swap our in/out
+        # with sys.stdin/out
+        old = sys.stdout, sys.stdin
+        sys.stdout, sys.stdin = self.fout, self.fin
         line = raw_input(prompt)
+        sys.stdout, sys.stdin = old
+
         # When stdin is in binary mode on Windows, it can cause
         # raw_input() to emit an extra trailing carriage return
         if os.linesep == '\r\n' and line and line[-1] == '\r':

@@ -19,13 +19,13 @@ hgrc.close()
 ui_ = ui.ui()
 ui_.setconfig('ui', 'formatted', 'True')
 
+# we're not interested in the output, so write that to devnull
+ui_.fout = open(os.devnull, 'w')
+
 # call some arbitrary command just so we go through
 # color's wrapped _runcommand twice.
-# we're not interested in the output, so write that to devnull
 def runcmd():
-    sys.stdout = open(os.devnull, 'w')
     dispatch.dispatch(dispatch.request(['version', '-q'], ui_))
-    sys.stdout = sys.__stdout__
 
 runcmd()
 print "colored? " + str(issubclass(ui_.__class__, color.colorui))

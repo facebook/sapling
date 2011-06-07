@@ -14,11 +14,11 @@ class sshserver(object):
         self.ui = ui
         self.repo = repo
         self.lock = None
-        self.fin = sys.stdin
-        self.fout = sys.stdout
+        self.fin = ui.fin
+        self.fout = ui.fout
 
         hook.redirect(True)
-        sys.stdout = sys.stderr
+        ui.fout = repo.ui.fout = ui.ferr
 
         # Prevent insertion/deletion of CRs
         util.setbinary(self.fin)
