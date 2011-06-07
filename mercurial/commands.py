@@ -4104,9 +4104,6 @@ def revert(ui, repo, *pats, **opts):
     out" some or all of an earlier change. See :hg:`backout` for a
     related method.
 
-    If names are given, all files matching the names are reverted.
-    If no arguments are given, no files are reverted.
-
     Modified files are saved with a .orig suffix before reverting.
     To disable these backups, use --no-backup.
 
