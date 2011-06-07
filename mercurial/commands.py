@@ -4093,7 +4093,7 @@ def revert(ui, repo, *pats, **opts):
        To cancel a merge (and lose your changes), use :hg:`update --clean .`.
 
     With no revision specified, revert the named files or directories
-    to the contents they had in the first parent of the working directory.
+    to the state they had in the first parent of the working directory.
     This restores the contents of the affected files to an unmodified
     state and unschedules adds, removes, copies, and renames.
 
@@ -4107,10 +4107,6 @@ def revert(ui, repo, *pats, **opts):
     revert to a revision other than the parent of the working
     directory, the reverted files will thus appear modified
     afterwards.
-
-    If a file has been deleted, it is restored. Files scheduled for
-    addition are just unscheduled and left as they are. If the
-    executable mode of a file was changed, it is reset.
 
     If names are given, all files matching the names are reverted.
     If no arguments are given, no files are reverted.
