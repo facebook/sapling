@@ -1456,7 +1456,7 @@ class localrepository(repo.repository):
 
     def changegroupsubset(self, bases, heads, source):
         """Compute a changegroup consisting of all the nodes that are
-        descendents of any of the bases and ancestors of any of the heads.
+        descendants of any of the bases and ancestors of any of the heads.
         Return a chunkbuffer object whose read() method will return
         successive changegroup chunks.
 

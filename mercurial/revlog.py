@@ -491,7 +491,7 @@ class revlog(object):
                 return nonodes
             lowestrev = min([self.rev(n) for n in roots])
         else:
-            roots = [nullid] # Everybody's a descendent of nullid
+            roots = [nullid] # Everybody's a descendant of nullid
             lowestrev = nullrev
         if (lowestrev == nullrev) and (heads is None):
             # We want _all_ the nodes!
@@ -528,7 +528,7 @@ class revlog(object):
                 r = self.rev(n)
                 if r >= lowestrev:
                     if n not in ancestors:
-                        # If we are possibly a descendent of one of the roots
+                        # If we are possibly a descendant of one of the roots
                         # and we haven't already been marked as an ancestor
                         ancestors.add(n) # Mark as ancestor
                         # Add non-nullid parents to list of nodes to tag.
@@ -562,41 +562,41 @@ class revlog(object):
                 lowestrev = nullrev
                 roots = [nullid]
         # Transform our roots list into a set.
-        descendents = set(roots)
+        descendants = set(roots)
         # Also, keep the original roots so we can filter out roots that aren't
         # 'real' roots (i.e. are descended from other roots).
-        roots = descendents.copy()
+        roots = descendants.copy()
         # Our topologically sorted list of output nodes.
         orderedout = []
         # Don't start at nullid since we don't want nullid in our output list,
         # and if nullid shows up in descedents, empty parents will look like
-        # they're descendents.
+        # they're descendants.
         for r in xrange(max(lowestrev, 0), highestrev + 1):
             n = self.node(r)
-            isdescendent = False
-            if lowestrev == nullrev:  # Everybody is a descendent of nullid
-                isdescendent = True
-            elif n in descendents:
-                # n is already a descendent
-                isdescendent = True
+            isdescendant = False
+            if lowestrev == nullrev:  # Everybody is a descendant of nullid
+                isdescendant = True
+            elif n in descendants:
+                # n is already a descendant
+                isdescendant = True
                 # This check only needs to be done here because all the roots
-                # will start being marked is descendents before the loop.
+                # will start being marked is descendants before the loop.
                 if n in roots:
                     # If n was a root, check if it's a 'real' root.
                     p = tuple(self.parents(n))
-                    # If any of its parents are descendents, it's not a root.
-                    if (p[0] in descendents) or (p[1] in descendents):
+                    # If any of its parents are descendants, it's not a root.
+                    if (p[0] in descendants) or (p[1] in descendants):
                         roots.remove(n)
             else:
                 p = tuple(self.parents(n))
-                # A node is a descendent if either of its parents are
-                # descendents.  (We seeded the dependents list with the roots
+                # A node is a descendant if either of its parents are
+                # descendants.  (We seeded the dependents list with the roots
                 # up there, remember?)
-                if (p[0] in descendents) or (p[1] in descendents):
-                    descendents.add(n)
-                    isdescendent = True
-            if isdescendent and ((ancestors is None) or (n in ancestors)):
-                # Only include nodes that are both descendents and ancestors.
+                if (p[0] in descendants) or (p[1] in descendants):
+                    descendants.add(n)
+                    isdescendant = True
+            if isdescendant and ((ancestors is None) or (n in ancestors)):
+                # Only include nodes that are both descendants and ancestors.
                 orderedout.append(n)
                 if (ancestors is not None) and (n in heads):
                     # We're trying to figure out which heads are reachable

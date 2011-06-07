@@ -211,7 +211,7 @@ class Merge3Text(object):
         Method is as follows:
 
         The two sequences align only on regions which match the base
-        and both descendents.  These are found by doing a two-way diff
+        and both descendants.  These are found by doing a two-way diff
         of each one against the base, and then finding the
         intersections between those regions.  These "sync regions"
         are by definition unchanged in both and easily dealt with.
@@ -315,7 +315,7 @@ class Merge3Text(object):
     mismatch_region = staticmethod(mismatch_region)
 
     def find_sync_regions(self):
-        """Return a list of sync regions, where both descendents match the base.
+        """Return a list of sync regions, where both descendants match the base.
 
         Generates a list of (base1, base2, a1, a2, b1, b2).  There is
         always a zero-length sync region at the end of all the files.
