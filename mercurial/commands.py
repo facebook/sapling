@@ -4089,12 +4089,8 @@ def revert(ui, repo, *pats, **opts):
     """restore files to their checkout state
 
     .. note::
-       This command is most likely not what you are looking for.
-       Revert will partially overwrite content in the working
-       directory without changing the working directory parents. Use
-       :hg:`update -r rev` to check out earlier revisions, or
-       :hg:`update --clean .` to undo a merge which has added another
-       parent.
+       To check out earlier revisions, you should use :hg:`update REV`.
+       To cancel a merge (and lose your changes), use :hg:`update --clean .`.
 
     With no revision specified, revert the named files or directories
     to the contents they had in the parent of the working directory.
