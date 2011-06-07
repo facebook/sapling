@@ -21,6 +21,10 @@ class ui(object):
         self._trustgroups = set()
 
         if src:
+            self.fout = src.fout
+            self.ferr = src.ferr
+            self.fin = src.fin
+
             self._tcfg = src._tcfg.copy()
             self._ucfg = src._ucfg.copy()
             self._ocfg = src._ocfg.copy()
@@ -29,6 +33,10 @@ class ui(object):
             self.environ = src.environ
             self.fixconfig()
         else:
+            self.fout = sys.stdout
+            self.ferr = sys.stderr
+            self.fin = sys.stdin
+
             # shared read-only environment
             self.environ = os.environ
             # we always trust global config files
