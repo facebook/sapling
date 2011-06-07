@@ -4092,15 +4092,14 @@ def revert(ui, repo, *pats, **opts):
        To check out earlier revisions, you should use :hg:`update REV`.
        To cancel a merge (and lose your changes), use :hg:`update --clean .`.
 
-    With no revision specified, revert the named files or directories
+    With no revision specified, revert the specified files or directories
     to the state they had in the first parent of the working directory.
-    This restores the contents of the affected files to an unmodified
+    This restores the contents of files to an unmodified
     state and unschedules adds, removes, copies, and renames.
 
-    Using the -r/--rev option, revert the given files or directories
-    to their contents as of a specific revision. This can be helpful
-    to "roll back" some or all of an earlier change. See :hg:`help
-    dates` for a list of formats valid for -d/--date.
+    Using the -r/--rev or -d/--date options, revert the given files or
+    directories to their contents as of a specific revision. This can
+    be helpful to "roll back" some or all of an earlier change.
 
     Revert modifies the working directory. It does not commit any
     changes, or change the parent of the working directory. If you
@@ -4113,6 +4112,8 @@ def revert(ui, repo, *pats, **opts):
 
     Modified files are saved with a .orig suffix before reverting.
     To disable these backups, use --no-backup.
+
+    See :hg:`help dates` for a list of formats valid for -d/--date.
 
     Returns 0 on success.
     """
