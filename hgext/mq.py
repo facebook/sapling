@@ -48,7 +48,7 @@ from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
 from mercurial import repair, extensions, url, error
 from mercurial import patch as patchmod
-import os, sys, re, errno, shutil
+import os, re, errno, shutil
 
 commands.norepo += " qclone"
 
@@ -1831,7 +1831,7 @@ class queue(object):
                 self.checkpatchname(patchname, force)
                 try:
                     if filename == '-':
-                        text = sys.stdin.read()
+                        text = self.ui.fin.read()
                     else:
                         fp = url.open(self.ui, filename)
                         text = fp.read()
