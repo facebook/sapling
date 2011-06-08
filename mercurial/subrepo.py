@@ -443,8 +443,8 @@ class hgsubrepo(abstractsubrepo):
                                      % (subrelpath(self), srcurl))
                 parentrepo = self._repo._subparent
                 shutil.rmtree(self._repo.root)
-                other, self._repo = hg.clone(self._repo._subparent.ui, other,
-                                             self._repo.root, update=False)
+                other, self._repo = hg.clone(self._repo._subparent.ui, {}, other,
+                                         self._repo.root, update=False)
                 self._initrepo(parentrepo, source, create=True)
             else:
                 self._repo.ui.status(_('pulling subrepo %s from %s\n')

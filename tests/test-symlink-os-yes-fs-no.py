@@ -10,7 +10,7 @@ if not hasattr(os, "symlink"):
 
 # clone with symlink support
 u = ui.ui()
-hg.clone(u, BUNDLEPATH, 'test0')
+hg.clone(u, {}, BUNDLEPATH, 'test0')
 
 repo = hg.repository(u, 'test0')
 
@@ -39,4 +39,4 @@ commands.status(u, repo)
 
 # try cloning a repo which contains symlinks
 u = ui.ui()
-hg.clone(u, BUNDLEPATH, 'test1')
+hg.clone(u, {}, BUNDLEPATH, 'test1')

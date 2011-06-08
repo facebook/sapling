@@ -2084,13 +2084,13 @@ def clone(ui, source, dest=None, **opts):
         except error.RepoError:
             pass
     ui.note(_('cloning main repository\n'))
-    sr, dr = hg.clone(ui, sr.url(), dest,
+    sr, dr = hg.clone(ui, opts, sr.url(), dest,
                       pull=opts.get('pull'),
                       rev=destrev,
                       update=False,
                       stream=opts.get('uncompressed'))
     ui.note(_('cloning patch repository\n'))
-    hg.clone(ui, opts.get('patches') or patchdir(sr), patchdir(dr),
+    hg.clone(ui, opts, opts.get('patches') or patchdir(sr), patchdir(dr),
              pull=opts.get('pull'), update=not opts.get('noupdate'),
              stream=opts.get('uncompressed'))
     if dr.local():

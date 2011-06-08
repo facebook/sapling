@@ -433,7 +433,7 @@ iterable in addbranchrevs()
   > from mercurial import ui, hg
   > myui = ui.ui()
   > repo = hg.repository(myui, 'a')
-  > hg.clone(myui, repo, dest="ua")
+  > hg.clone(myui, {}, repo, dest="ua")
   > EOF
 
   $ python simpleclone.py
@@ -446,7 +446,7 @@ iterable in addbranchrevs()
   > from mercurial import ui, hg
   > myui = ui.ui()
   > repo = hg.repository(myui, 'a')
-  > hg.clone(myui, repo, dest="ua", branch=["stable",])
+  > hg.clone(myui, {}, repo, dest="ua", branch=["stable",])
   > EOF
 
   $ python branchclone.py

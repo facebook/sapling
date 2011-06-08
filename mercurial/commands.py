@@ -1026,7 +1026,7 @@ def clone(ui, source, dest=None, **opts):
     if opts.get('noupdate') and opts.get('updaterev'):
         raise util.Abort(_("cannot specify both --noupdate and --updaterev"))
 
-    r = hg.clone(hg.remoteui(ui, opts), source, dest,
+    r = hg.clone(ui, opts, source, dest,
                  pull=opts.get('pull'),
                  stream=opts.get('uncompressed'),
                  rev=opts.get('rev'),
