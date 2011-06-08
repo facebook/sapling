@@ -160,7 +160,7 @@ def makefileobj(repo, pat, node=None, total=None,
     writable = mode not in ('r', 'rb')
 
     if not pat or pat == '-':
-        fp = writable and sys.stdout or sys.stdin
+        fp = writable and repo.ui.fout or repo.ui.fin
         return os.fdopen(os.dup(fp.fileno()), mode)
     if hasattr(pat, 'write') and writable:
         return pat
