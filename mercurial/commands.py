@@ -8,7 +8,7 @@
 from node import hex, bin, nullid, nullrev, short
 from lock import release
 from i18n import _, gettext
-import os, re, sys, difflib, time, tempfile, errno
+import os, re, difflib, time, tempfile, errno
 import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
 import patch, help, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, sshserver, hbisect, hgweb, hgweb.server
@@ -336,7 +336,7 @@ def archive(ui, repo, dest, **opts):
     if dest == '-':
         if kind == 'files':
             raise util.Abort(_('cannot archive plain files to stdout'))
-        dest = sys.stdout
+        dest = ui.fout
         if not prefix:
             prefix = os.path.basename(repo.root) + '-%h'
 
@@ -1232,7 +1232,7 @@ def debugbuilddag(ui, repo, text=None,
 
     if text is None:
         ui.status(_("reading DAG from stdin\n"))
-        text = sys.stdin.read()
+        text = ui.fin.read()
 
     cl = repo.changelog
     if len(cl) > 0:
@@ -3194,7 +3194,7 @@ def import_(ui, repo, patch1, *patches, **opts):
 
             if pf == '-':
                 ui.status(_("applying patch from stdin\n"))
-                pf = sys.stdin
+                pf = ui.fin
             else:
                 ui.status(_("applying %s\n") % p)
                 pf = url.open(ui, pf)
