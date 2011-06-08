@@ -22,6 +22,8 @@ filedifflink = '<a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%url
 filenodelink = '<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a> '
 filenolink = '{file|escape} '
 fileellipses = '...'
+diffstatlink = diffstat.tmpl
+diffstatnolink = diffstat.tmpl
 changelogentry = shortlogentry.tmpl
 searchentry = shortlogentry.tmpl
 changeset = changeset.tmpl

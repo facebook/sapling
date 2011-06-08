@@ -103,6 +103,26 @@ a { text-decoration:none; }
 .minusline { color: #dc143c; } /* crimson */
 .atline { color: purple; }
 
+.diffstat-file {
+  white-space: nowrap;
+  font-size: 90%;
+}
+.diffstat-total {
+  white-space: nowrap;
+  font-size: 90%;
+}
+.diffstat-graph {
+  width: 100%;
+}
+.diffstat-add {
+  background-color: green;
+  float: left;
+}
+.diffstat-remove {
+  background-color: red;
+  float: left;
+}
+
 .navigate {
   text-align: right;
   font-size: 60%;
