@@ -223,10 +223,12 @@ def diffstat(tmpl, ctx, parity):
             return 0
         return (float(i) / maxtotal) * 100
 
+    fileno = 0
     for filename, adds, removes, isbinary in stats:
         template = filename in files and 'diffstatlink' or 'diffstatnolink'
         total = adds + removes
-        yield tmpl(template, node=ctx.hex(), file=filename,
+        fileno += 1
+        yield tmpl(template, node=ctx.hex(), file=filename, fileno=fileno,
                    total=total, addpct=pct(adds), removepct=pct(removes),
                    parity=parity.next())
 
