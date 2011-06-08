@@ -28,23 +28,39 @@ def run():
 
 def dispatch(req):
     "run the command specified in req.args"
+    if req.ferr:
+        ferr = req.ferr
+    elif req.ui:
+        ferr = req.ui.ferr
+    else:
+        ferr = sys.stderr
+
     try:
         if not req.ui:
             req.ui = uimod.ui()
         if '--traceback' in req.args:
             req.ui.setconfig('ui', 'traceback', 'on')
+
+        # set ui streams from the request
+        if req.fin:
+            req.ui.fin = req.fin
+        if req.fout:
+            req.ui.fout = req.fout
+        if req.ferr:
+            req.ui.ferr = req.ferr
     except util.Abort, inst:
-        sys.stderr.write(_("abort: %s\n") % inst)
+        ferr.write(_("abort: %s\n") % inst)
         if inst.hint:
-            sys.stderr.write(_("(%s)\n") % inst.hint)
+            ferr.write(_("(%s)\n") % inst.hint)
         return -1
     except error.ParseError, inst:
         if len(inst.args) > 1:
-            sys.stderr.write(_("hg: parse error at %s: %s\n") %
+            ferr.write(_("hg: parse error at %s: %s\n") %
                              (inst.args[1], inst.args[0]))
         else:
-            sys.stderr.write(_("hg: parse error: %s\n") % inst.args[0])
+            ferr.write(_("hg: parse error: %s\n") % inst.args[0])
         return -1
+
     return _runcatch(req)
 
 def _runcatch(req):
