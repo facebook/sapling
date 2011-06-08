@@ -114,7 +114,7 @@ def setcurrent(repo, mark):
     wlock = repo.wlock()
     try:
         file = repo.opener('bookmarks.current', 'w', atomictemp=True)
-        file.write(mark)
+        file.write(encoding.fromlocal(mark))
         file.rename()
     finally:
         wlock.release()
