@@ -212,24 +212,23 @@ def diffs(repo, tmpl, ctx, files, parity, style):
                lines=prettyprintlines(''.join(block)))
 
 def diffstat(tmpl, ctx, parity):
-    '''Return a diffstat template for each file in the cset.'''
+    '''Return a diffstat template for each file in the diff.'''
 
     stats = patch.diffstatdata(util.iterlines(ctx.diff()))
     maxname, maxtotal, addtotal, removetotal, binary = patch.diffstatsum(stats)
+    files = ctx.files()
 
-    statsdict = {}
-    if maxtotal > 0:
-        for filename, adds, removes, isbinary in stats:
-            total = adds + removes
-            addpct = (float(adds) / maxtotal) * 100
-            removepct = (float(removes) / maxtotal) * 100
-            statsdict[filename] = (total, addpct, removepct)
+    def pct(i):
+        if maxtotal == 0:
+            return 0
+        return (float(i) / maxtotal) * 100
 
-    for f in ctx.files():
-        template = f in ctx and 'diffstatlink' or 'diffstatnolink'
-        total, addpct, removepct = statsdict.get(f, ('', 0, 0))
-        yield tmpl(template, node=ctx.hex(), file=f, total=total,
-            addpct=addpct, removepct=removepct, parity=parity.next())
+    for filename, adds, removes, isbinary in stats:
+        template = filename in files and 'diffstatlink' or 'diffstatnolink'
+        total = adds + removes
+        yield tmpl(template, node=ctx.hex(), file=filename,
+                   total=total, addpct=pct(adds), removepct=pct(removes),
+                   parity=parity.next())
 
 class sessionvars(object):
     def __init__(self, vars, start='?'):
