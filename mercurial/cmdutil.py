@@ -76,7 +76,7 @@ def bailifchanged(repo):
     if modified or added or removed or deleted:
         raise util.Abort(_("outstanding uncommitted changes"))
 
-def logmessage(opts):
+def logmessage(ui, opts):
     """ get the log message according to -m and -l option """
     message = opts.get('message')
     logfile = opts.get('logfile')
@@ -87,7 +87,7 @@ def logmessage(opts):
     if not message and logfile:
         try:
             if logfile == '-':
-                message = sys.stdin.read()
+                message = ui.fin.read()
             else:
                 message = '\n'.join(util.readfile(logfile).splitlines())
         except IOError, inst:
@@ -1163,7 +1163,7 @@ def commit(ui, repo, commitfunc, pats, opts):
     date = opts.get('date')
     if date:
         opts['date'] = util.parsedate(date)
-    message = logmessage(opts)
+    message = logmessage(ui, opts)
 
     # extract addremove carefully -- this function can be called from a command
     # that doesn't support addremove

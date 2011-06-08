@@ -122,7 +122,7 @@ def fetch(ui, repo, source='default', **opts):
 
         if not err:
             # we don't translate commit messages
-            message = (cmdutil.logmessage(opts) or
+            message = (cmdutil.logmessage(ui, opts) or
                        ('Automated merge with %s' %
                         util.removeauth(other.url())))
             editor = cmdutil.commiteditor

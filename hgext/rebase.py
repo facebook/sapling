@@ -117,7 +117,7 @@ def rebase(ui, repo, **opts):
         contf = opts.get('continue')
         abortf = opts.get('abort')
         collapsef = opts.get('collapse', False)
-        collapsemsg = cmdutil.logmessage(opts)
+        collapsemsg = cmdutil.logmessage(ui, opts)
         extrafn = opts.get('extrafn') # internal, used by e.g. hgsubversion
         keepf = opts.get('keep', False)
         keepbranchesf = opts.get('keepbranches', False)

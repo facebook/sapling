@@ -3097,7 +3097,7 @@ def import_(ui, repo, patch1, *patches, **opts):
         commitid = _('to working directory')
 
         try:
-            cmdline_message = cmdutil.logmessage(opts)
+            cmdline_message = cmdutil.logmessage(ui, opts)
             if cmdline_message:
                 # pickup the cmdline msg
                 message = cmdline_message
