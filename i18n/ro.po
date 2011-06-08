@@ -101,13 +101,13 @@
 #  - a   hook                 un hook
 #  - a   patch                un patch
 #
-# Daniel Dumitriu <daniel.dumitriu@gmail.com>, 2010.
+# Daniel Dumitriu <daniel.dumitriu@gmail.com>, 2010, 2011.
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2011-06-08 15:03+0200\n"
-"PO-Revision-Date: 2010-11-04 12:56+0100\n"
+"PO-Revision-Date: 2011-06-08 17:00+0200\n"
 "Last-Translator: Daniel Dumitriu <daniel.dumitriu@gmail.com>\n"
 "Language-Team: Romanian <>\n"
 "MIME-Version: 1.0\n"
@@ -135,9 +135,8 @@ msgid ""
 "Mercurial. Help for other extensions is available in the help system."
 msgstr ""
 
-#, fuzzy
 msgid "Options:"
-msgstr "Opțiuni"
+msgstr "Opțiuni:"
 
 #, python-format
 msgid "    aliases: %s"
@@ -648,9 +647,8 @@ msgid ""
 "    incoming.bugzilla = python:hgext.bugzilla.hook"
 msgstr ""
 
-#, fuzzy
 msgid "Example configurations:"
-msgstr "Fișiere de configurare"
+msgstr "Configurări exemplu:"
 
 msgid ""
 "XMLRPC example configuration. This uses the Bugzilla at\n"
@@ -791,13 +789,12 @@ msgstr ""
 msgid "cannot find bugzilla user id for %s or %s"
 msgstr ""
 
-#, fuzzy
 msgid "configuration 'bzemail' missing"
-msgstr "Fișiere de configurare"
+msgstr "Lipsește configurarea 'bzemail'"
 
-#, fuzzy, python-format
+#, python-format
 msgid "default bugzilla user %s email not found"
-msgstr "calea implicită pentru subdepozitul %s nu a fost găsită"
+msgstr "Nu s-a găsit email-ul utilizatorului bugzilla implicit %s "
 
 #, python-format
 msgid "bugzilla version %s not supported"
@@ -813,9 +810,9 @@ msgstr ""
 msgid "hook type %s does not pass a changeset id"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "Bugzilla error: %s"
-msgstr "hg: eroare de parsare: %s\n"
+msgstr "Eroare Bugzilla: %s"
 
 msgid "command to display child changesets"
 msgstr "comandă pentru afișarea seturilor de modificări fii"
@@ -1873,9 +1870,8 @@ msgstr ""
 msgid "updating tags\n"
 msgstr "se actualizează etichetele\n"
 
-#, fuzzy
 msgid "updating bookmarks\n"
-msgstr "se actualizează semnul de carte %s\n"
+msgstr "se actualizează semnele de carte\n"
 
 #, python-format
 msgid "%s is not a valid start revision"
@@ -3265,9 +3261,9 @@ msgstr ""
 msgid "print first line of patch header"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "malformated mq status line: %s\n"
-msgstr "se omite alias-ul eronat %s\n"
+msgstr "linie de stare mq eronată: %s\n"
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
@@ -3304,13 +3300,13 @@ msgstr ""
 msgid "allowing %s - no matching negative guards\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "allowing %s - guarded by %s\n"
-msgstr "se omite %s - gardat de către %r\n"
+msgstr "se permite %s - gardat de către %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "skipping %s - guarded by %s\n"
-msgstr "se omite %s - gardat de către %r\n"
+msgstr "se omite %s - gardat de către %s\n"
 
 #, python-format
 msgid "skipping %s - no matching guards\n"
@@ -3362,9 +3358,8 @@ msgstr ""
 msgid "patch %s is empty\n"
 msgstr ""
 
-#, fuzzy
 msgid "repository commit failed"
-msgstr "depozitul %s nu a fost găsit"
+msgstr "depozitarea a eșuat"
 
 msgid "patch failed, rejects left in working dir\n"
 msgstr ""
@@ -3372,13 +3367,13 @@ msgstr ""
 msgid "fuzz found when applying patch, stopping\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "revision %s refers to unknown patches: %s\n"
-msgstr "alias-ul '%s' corespunde comenzii necunoscute '%s'\n"
+msgstr "revizia %s face referință la patch-uri necunoscute: %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "unknown patches: %s\n"
-msgstr "hg: comandă necunoscută '%s'\n"
+msgstr "patch-uri necunoscute: %s\n"
 
 #, python-format
 msgid "revision %d is not managed"
@@ -3409,9 +3404,9 @@ msgstr ""
 msgid "working directory revision is not qtip"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "uncommitted changes in subrepository %s"
-msgstr "înlătură modificările nedepozitate (fără copie de siguranță)"
+msgstr "modificări nedepozitate în subdepozitul %s"
 
 msgid "local changes found, refresh first"
 msgstr ""
@@ -3492,9 +3487,8 @@ msgstr ""
 msgid "cannot use --exact and --move together"
 msgstr ""
 
-#, fuzzy
 msgid "cannot push --exact with applied patches"
-msgstr "detach nu se poate folosi cu continue sau abort"
+msgstr "nu se poate executa push --exact cu patch-uri aplicate"
 
 #, python-format
 msgid "%s does not have a parent recorded"
@@ -3578,9 +3572,8 @@ msgstr ""
 msgid "saved queue repository parents: %s %s\n"
 msgstr ""
 
-#, fuzzy
 msgid "updating queue directory\n"
-msgstr "se actualizează directorul de lucru\n"
+msgstr "se actualizează directorul coadă\n"
 
 msgid "Unable to load queue repository\n"
 msgstr ""
@@ -4058,9 +4051,9 @@ msgstr ""
 msgid "qfold requires at least one patch name"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "Skipping already folded patch %s\n"
-msgstr "Se omite patch-ul deja pliat %s"
+msgstr "Se omite patch-ul deja pliat %s\n"
 
 #, python-format
 msgid "qfold cannot fold already applied patch %s"
@@ -4252,9 +4245,10 @@ msgstr ""
 msgid "copy %s to %s\n"
 msgstr ""
 
-#, fuzzy
 msgid "force removal of changesets, discard uncommitted changes (no backup)"
-msgstr "înlătură modificările nedepozitate (fără copie de siguranță)"
+msgstr ""
+"forțează înlăturarea seturilor de modificări, renunță la modificările "
+"nedepozitate (fără copie de siguranță)"
 
 msgid ""
 "bundle only changesets with local revision number greater than REV which are "
@@ -4868,6 +4862,8 @@ msgstr ""
 
 msgid "run even when remote repository is unrelated (with -b/--bundle)"
 msgstr ""
+"execută chiar când depozitul la distanță este neînrudit\n"
+"(cu -b/--bundle)"
 
 msgid "a base changeset to specify instead of a destination (with -b/--bundle)"
 msgstr ""
@@ -5214,13 +5210,11 @@ msgstr "repoziționează la setul de modificări specificat"
 msgid "collapse the rebased changesets"
 msgstr "restrânge seturile de modificări repoziționate"
 
-#, fuzzy
 msgid "use text as collapse commit message"
-msgstr "folosește textul drept mesaj de depozitare"
+msgstr "folosește textul drept mesaj de depozitare pentru colapsare"
 
-#, fuzzy
 msgid "read collapse commit message from file"
-msgstr "citește mesajul pentru depozitare din fișier"
+msgstr "citește mesajul pentru depozitare la colapsare din fișier"
 
 msgid "keep original changesets"
 msgstr ""
@@ -5381,7 +5375,7 @@ msgstr ""
 msgid "warning: new changesets detected on target branch, can't abort\n"
 msgstr ""
 "avertisment: au fost detectate seturi de modificări noi în ramura\n"
-", destinație, nu se poate abandona\n"
+"destinație,r nu se poate abandona\n"
 
 msgid "rebase aborted\n"
 msgstr ""
@@ -5401,9 +5395,8 @@ msgstr ""
 msgid "rebase working directory to branch head"
 msgstr "repoziționează directorul de lucru la capătul de ramură"
 
-#, fuzzy
 msgid "specify merge tool for rebase"
-msgstr "specifică instrumentul pentru fuziune"
+msgstr "specifică instrumentul pentru fuziune pentru rebase"
 
 msgid "commands to interactively select changes for commit/qrefresh"
 msgstr ""
@@ -5510,9 +5503,8 @@ msgstr "      ? - afișează ajutorul"
 msgid "    This command is not available when committing a merge."
 msgstr ""
 
-#, fuzzy
 msgid "interactively record a new patch"
-msgstr "creează un nou patch"
+msgstr "înregistrează interactiv un nou patch"
 
 msgid ""
 "    See :hg:`help qnew` & :hg:`help record` for more information and\n"
@@ -5583,9 +5575,8 @@ msgstr ""
 msgid "hardlinks are not supported on this system"
 msgstr ""
 
-#, fuzzy
 msgid "must specify local origin repository"
-msgstr "realizează o copie a unui depozit existent"
+msgstr "trebuie să specifice depozitul de origine local"
 
 #, python-format
 msgid "relinking %s to %s\n"
@@ -6143,13 +6134,11 @@ msgstr "se actualizează semnul de carte %s\n"
 msgid "not updating divergent bookmark %s\n"
 msgstr "nu se actualizează semnul de carte divergent %s\n"
 
-#, fuzzy
 msgid "searching for changed bookmarks\n"
-msgstr "se caută modificări\n"
+msgstr "se caută semne de carte modificate\n"
 
-#, fuzzy
 msgid "no changed bookmarks found\n"
-msgstr "nu s-au găsit modificări\n"
+msgstr "nu s-au găsit semne de carte modificate\n"
 
 msgid "unknown parent"
 msgstr ""
@@ -6217,9 +6206,9 @@ msgstr ""
 msgid "invalid arguments"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "revlog '%s' not found"
-msgstr "depozitul %s nu a fost găsit"
+msgstr "revlog-ul '%s' nu a fost găsit"
 
 #, python-format
 msgid "%s: not copying - file is not managed\n"
@@ -6291,9 +6280,9 @@ msgstr "set de modificări:   %d:%s\n"
 msgid "branch:      %s\n"
 msgstr "ramură:              %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "bookmark:    %s\n"
-msgstr "rezumat:             %s\n"
+msgstr "semn de carte:    %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
@@ -6452,7 +6441,7 @@ msgid "set the charset encoding mode"
 msgstr "setează modul de codificare pentru setul de caractere"
 
 msgid "always print a traceback on exception"
-msgstr ""
+msgstr "în caz de excepție, afișează întotdeauna un traceback"
 
 msgid "time how long the command takes"
 msgstr "durata de execuție a comenzii"
@@ -6477,6 +6466,7 @@ msgstr "specifică comanda hg care va fi executată pe mașina la distanță"
 
 msgid "do not verify server certificate (ignoring web.cacerts config)"
 msgstr ""
+"nu verifica certificatul serverului (ignorând configurarea web.cacerts)"
 
 msgid "PATTERN"
 msgstr "TIPAR"
@@ -6493,10 +6483,8 @@ msgstr "folosește textul drept mesaj de depozitare"
 msgid "read commit message from file"
 msgstr "citește mesajul pentru depozitare din fișier"
 
-#, fuzzy
 msgid "record the specified date as commit date"
-msgstr ""
-"înregistrează utilizatorul specificat ca fiind cel care a făcut depozitarea"
+msgstr "înregistrează data specificată drept dată a depozitării"
 
 msgid "record the specified user as committer"
 msgstr ""
@@ -6935,9 +6923,9 @@ msgstr ""
 msgid "Changeset %d:%s: %s\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "Extending search to changeset %d:%s\n"
-msgstr "se omite setul de modificări de fuziune %s:%s\n"
+msgstr "Se extinde căutarea la setul de modificări %d:%s\n"
 
 msgid "nothing to extend"
 msgstr ""
@@ -6958,9 +6946,8 @@ msgstr ""
 msgid "do not mark a new bookmark active"
 msgstr ""
 
-#, fuzzy
 msgid "hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]"
-msgstr "[-M] [-p] [-n] [-f] [-r REV]... [DEST]"
+msgstr "hg bookmarks [-f] [-d] [-i] [-m NUME] [-r REV] [NUME]"
 
 msgid "track a line of development with movable markers"
 msgstr "urmărește cu marcatori mobili o linie de dezvoltare "
@@ -6988,9 +6975,9 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "bookmark '%s' does not exist"
-msgstr "semnul de carte de exportat"
+msgstr "semnul de carte '%s' nu există"
 
 #, python-format
 msgid "bookmark '%s' already exists (use -f to force)"
@@ -7103,7 +7090,7 @@ msgid " (inactive)"
 msgstr ""
 
 msgid "run even when the destination is unrelated"
-msgstr ""
+msgstr "execută chiar când destinația este neînrudită"
 
 msgid "a changeset intended to be added to the destination"
 msgstr ""
@@ -7230,28 +7217,26 @@ msgstr ""
 "    Dacă nu se specifică numele directorului destinație, acesta va fi\n"
 "    implicit numele de bază (basename) al sursei."
 
-#, fuzzy
 msgid ""
 "    The location of the source is added to the new repository's\n"
 "    ``.hg/hgrc`` file, as the default to be used for future pulls."
 msgstr ""
-"    Amplasarea sursei este adăugată în fișierul .hg/hgrc al noului\n"
-"    depozit, ca amplasarea implicită pentru viitoarele comenzi 'pull'."
+"    Amplasarea sursei este adăugată în fișierul ``.hg/hgrc`` al noului\n"
+"    depozit, ca amplasare implicită pentru viitoarele comenzi 'pull'."
 
 msgid "    See :hg:`help urls` for valid source format details."
 msgstr ""
 "    Vezi :hg:`help urls` pentru detalii legate de formate valide de surse."
 
-#, fuzzy
 msgid ""
 "    It is possible to specify an ``ssh://`` URL as the destination, but no\n"
 "    ``.hg/hgrc`` and working directory will be created on the remote side.\n"
 "    Please see :hg:`help urls` for important details about ``ssh://`` URLs."
 msgstr ""
-"    Ca destinație se poate specifica un URL ``ssh://``, dar nu va fi creat.\n"
+"    Ca destinație se poate specifica un URL ``ssh://``, dar nu va fi creat\n"
 "    niciun fișier .hg/hgrc pe mașina la distanță.\n"
-"    Vezi :hg:`help urls` pentru detalii importante despre URL-urile ``ssh://"
-"``."
+"    Vezi :hg:`help urls` pentru detalii importante despre URL-urile\n"
+"    ``ssh://``."
 
 msgid ""
 "    A set of changesets (tags, or branch names) to pull may be specified\n"
@@ -7369,7 +7354,6 @@ msgstr "marchează o ramură ca închisă, ascunzând-o din lista ramurilor"
 msgid "commit the specified files or all outstanding changes"
 msgstr "depozitează fișierele specificate sau toate modificările în suspensie"
 
-#, fuzzy
 msgid ""
 "    Commit changes to the given files into the repository. Unlike a\n"
 "    centralized SCM, this operation is a local operation. See\n"
@@ -7487,7 +7471,6 @@ msgstr ""
 msgid "add new file at each rev"
 msgstr ""
 
-#, fuzzy
 msgid "[OPTION]... [TEXT]"
 msgstr "[OPȚIUNE]... TEXT"
 
@@ -7544,17 +7527,14 @@ msgstr ""
 msgid "repository is not empty"
 msgstr ""
 
-#, fuzzy
 msgid "building"
-msgstr "se actualizează"
+msgstr "se generează"
 
-#, fuzzy
 msgid "show all details"
-msgstr "afișează doar fișierele adăugate"
+msgstr "afișează toate detaliile"
 
-#, fuzzy
 msgid "lists the contents of a bundle"
-msgstr "afișează conținutul unui fișier index"
+msgstr "afișează conținutul unui fișier bundle"
 
 msgid "validate the correctness of the current dirstate"
 msgstr ""
@@ -7624,13 +7604,11 @@ msgstr ""
 msgid "need repo for changelog dag"
 msgstr ""
 
-#, fuzzy
 msgid "open changelog"
-msgstr "afișează seturile de modificări părinte"
+msgstr "deschide changelog-ul"
 
-#, fuzzy
 msgid "open manifest"
-msgstr "se verifică manifestele\n"
+msgstr "deschide manifestul"
 
 msgid "-c|-m|FILE REV"
 msgstr ""
@@ -7675,9 +7653,8 @@ msgstr "afișează informațiile detectate despre sistemul de fișiere curent"
 msgid "id of head node"
 msgstr ""
 
-#, fuzzy
 msgid "id of common node"
-msgstr "lista comenzilor:"
+msgstr "id-ul nodului comun"
 
 msgid "REPO FILE [-H|-C ID]..."
 msgstr ""
@@ -7707,9 +7684,9 @@ msgstr ""
 msgid "dump the contents of an index file"
 msgstr "afișează conținutul unui fișier index"
 
-#, fuzzy, python-format
+#, python-format
 msgid "unknown format %d"
-msgstr "hg: comandă necunoscută '%s'\n"
+msgstr "format necunoscut %d"
 
 msgid "dump an index DAG as a graphviz dot file"
 msgstr "afișează un DAG index sub forma unui fișier dot graphviz"
@@ -7865,9 +7842,8 @@ msgstr ""
 msgid "show how files match on given patterns"
 msgstr "afișează modul în care fișierele se potrivesc cu tiparele specificate"
 
-#, fuzzy
 msgid "REPO [OPTIONS]... [ONE [TWO]]"
-msgstr "[OPȚIUNE]... SURSĂ [DEST]"
+msgstr "DEPOZIT [OPȚIUNI]... [UNU [DOI]]"
 
 msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
 msgstr "[OPȚIUNE]... ([-c REV] | [-r REV1 [-r REV2]]) [FIȘIER]..."
@@ -8142,17 +8118,14 @@ msgstr ""
 msgid " (started at %s)"
 msgstr ""
 
-#, fuzzy
 msgid "show only help for extensions"
-msgstr "afișează fișierele excluse de la expandare"
+msgstr "afișează doar ajutorul pentru extensii"
 
-#, fuzzy
 msgid "show only help for commands"
-msgstr "afișează doar primul patch"
+msgstr "afișează doar ajutorul pentru comenzi"
 
-#, fuzzy
 msgid "[-ec] [TOPIC]"
-msgstr "[SUBIECT]"
+msgstr "[-ec] [SUBIECT]"
 
 msgid "show help for a given topic or a help overview"
 msgstr ""
@@ -8185,17 +8158,15 @@ msgstr ""
 "folosiți \"hg help\" pentru lista completă a comenzilor sau \"hg -v\" pentru "
 "detalii"
 
-#, fuzzy, python-format
+#, python-format
 msgid "use \"hg help %s\" to show the full help text"
-msgstr ""
-"\n"
-"folosiți \"hg -v help %s\" pentru afișarea ajutorului detaliat\n"
+msgstr "folosiți \"hg help %s\" pentru afișarea textului complet al ajutorului"
 
-#, fuzzy, python-format
+#, python-format
 msgid "use \"hg -v help%s\" to show builtin aliases and global options"
 msgstr ""
-"folosiți \"hg -v help%s\" pentru afișarea alias-urilor și a opțiunilor "
-"globale"
+"folosiți \"hg -v help%s\" pentru afișarea alias-urilor și a opțiunilor\n"
+"globale integrate"
 
 #, python-format
 msgid "use \"hg -v help %s\" to show global options"
@@ -8242,18 +8213,22 @@ msgstr ""
 msgid "options:\n"
 msgstr "opțiuni:\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "use \"hg help -e %s\" to show help for the %s extension"
-msgstr "folosiți \"hg -v help %s\" pentru afișarea opțiunilor globale"
+msgstr ""
+"folosiți \"hg help -e %s\" pentru afișarea ajutorului pentru\n"
+"extensia %s"
 
 msgid "no commands defined\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "\n"
 "use \"hg help -c %s\" to see help for the %s command\n"
-msgstr "folosiți \"hg help\" pentru lista completă a comenzilor"
+msgstr ""
+"\n"
+"folosiți \"hg help -c %s\" pentru a vedea ajutorul pentru comanda %s\n"
 
 msgid "no help text available"
 msgstr ""
@@ -8313,13 +8288,11 @@ msgstr "afișează ramura"
 msgid "show tags"
 msgstr "afișează etichetele"
 
-#, fuzzy
 msgid "show bookmarks"
-msgstr "se actualizează semnul de carte %s\n"
+msgstr "arată semnele de carte"
 
-#, fuzzy
 msgid "[-nibtB] [-r REV] [SOURCE]"
-msgstr "[-nibt] [-r REV] [SURSĂ]"
+msgstr "[-nibtB] [-r REV] [SURSĂ]"
 
 msgid "identify the working copy or specified revision"
 msgstr ""
@@ -8446,16 +8419,15 @@ msgid "show newest record first"
 msgstr "afișează începând cu cea mai nouă înregistrare"
 
 msgid "file to store the bundles into"
-msgstr ""
+msgstr "fișierul în care va fi salvat bundle-ul"
 
 msgid "a remote changeset intended to be added"
 msgstr ""
 "un set de modificări la distanță care se intenționează a fi\n"
 "adăugat"
 
-#, fuzzy
 msgid "compare bookmarks"
-msgstr "se actualizează semnul de carte %s\n"
+msgstr "compară semnele de carte"
 
 msgid "a specific branch you would like to pull"
 msgstr "o ramură specifică pe care ați dori să o trimiteți"
@@ -8471,11 +8443,18 @@ msgid ""
 "    pull location. These are the changesets that would have been pulled\n"
 "    if a pull at the time you issued this command."
 msgstr ""
+"    Afișează seturile noi de modificări găsite în calea sau URL-ul\n"
+"    specificat sau la amplasarea implicită pentru 'pull'. Acestea\n"
+"    sunt seturi care ar fi fost aduse dacă s-ar fi executat o\n"
+"    comandă 'pull' la momentul emiterii comenzii."
 
 msgid ""
 "    For remote repository, using --bundle avoids downloading the\n"
 "    changesets twice if the incoming is followed by a pull."
 msgstr ""
+"    Pentru depozitul la distantă, folosirea lui --bundle evită\n"
+"    descărcarea de două ori a setului de modificări în cazul\n"
+"    în care 'incoming' este urmat de 'pull'."
 
 msgid "    See pull for valid source format details."
 msgstr "    Vezi pull pentru detalii legate de formate valide de surse."
@@ -8616,7 +8595,6 @@ msgstr ""
 "    strămoși sau descendenți ai reviziei de stat. --follow-first\n"
 "    urmărește doar primul părinte al reviziilor fuzionate."
 
-#, fuzzy
 msgid ""
 "    If no revision range is specified, the default is ``tip:0`` unless\n"
 "    --follow is set, in which case the working directory parent is\n"
@@ -8624,10 +8602,9 @@ msgid ""
 "    log, see :hg:`help revsets` for more information."
 msgstr ""
 "    Dacă nu se specifică niciun interval de revizii, acesta este implicit\n"
-"    tip:0 (vârf:0), cu excepția cazului când --follow este setat, în "
-"această\n"
-"    situație părintele directorului de lucru este folosit ca revizie de "
-"stat.\n"
+"    tip:0 (vârf:0), cu excepția cazului când --follow este setat, în\n"
+"    această situație părintele directorului de lucru este folosit ca\n"
+"    revizie de start.\n"
 "    Puteți specifica un set de revizii pentru 'log'; pentru mai multe\n"
 "    informații, vezi :hg:`help revsets`."
 
@@ -8658,9 +8635,8 @@ msgstr ""
 msgid "revision to display"
 msgstr "revizia de afișat"
 
-#, fuzzy
 msgid "list files from all revisions"
-msgstr "afișează fișierele modificate ale unei revizii"
+msgstr "afișează fișierele din toate reviziile"
 
 msgid "[-r REV]"
 msgstr "[-r REV]"
@@ -8723,7 +8699,6 @@ msgstr ""
 "    altă actualizare a depozitului. Următoarea depozitare va avea\n"
 "    doi părinți."
 
-#, fuzzy
 msgid ""
 "    ``--tool`` can be used to specify the merge tool used for file\n"
 "    merges. It overrides the HGMERGE environment variable and your\n"
@@ -8732,7 +8707,7 @@ msgstr ""
 "    ``--tool`` poate fi folosit pentru a specifica instrumentul\n"
 "    pentru fuziune folosit la fuziunile de fișiere. Acesta\n"
 "    prevalează asupra variabilei de mediu HGMERGE și a fișierelor\n"
-"    dvs. de configurare."
+"    dvs. de configurare. Pentru opțiuni vezi :hg:`help merge-tools`."
 
 msgid ""
 "    If no revision is specified, the working directory's parent is a\n"
@@ -8788,9 +8763,8 @@ msgstr ""
 msgid "%s - use \"hg update\" instead"
 msgstr ""
 
-#, fuzzy
 msgid "working directory not at a head revision"
-msgstr "fuzionează directorul de lucru cu o altă revizie"
+msgstr "directorul de lucru nu se află la o revizie capăt"
 
 msgid "use 'hg update' or merge with an explicit revision"
 msgstr ""
@@ -8812,9 +8786,16 @@ msgid ""
 "    or the default push location. These are the changesets that would\n"
 "    be pushed if a push was requested."
 msgstr ""
+"    Afișează seturile de modificări care nu se regăsesc în depozitul\n"
+"    destinație specificat sau în calea pentru 'push' implicită\n"
+"    'default'. Acestea sunt seturile de modificări care ar fi\n"
+"    difuzate dacă s-ar executa o comandă 'push' la momentul\n"
+"    emiterii comenzii."
 
 msgid "    See pull for details of valid destination formats."
 msgstr ""
+"    Vezi 'pull' pentru detalii legate de formatele valide pentru\n"
+"    destinații."
 
 msgid ""
 "    Returns 0 if there are outgoing changes, 1 otherwise.\n"
@@ -8888,9 +8869,9 @@ msgstr ""
 msgid "not found!\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "not updating: %s\n"
-msgstr "se actualizează etichetele\n"
+msgstr "nu se actualizează: %s\n"
 
 msgid "(run 'hg heads' to see heads, 'hg merge' to merge)\n"
 msgstr ""
@@ -8915,7 +8896,6 @@ msgstr "execută chiar când depozitul la distanță este neînrudit"
 msgid "BOOKMARK"
 msgstr ""
 
-#, fuzzy
 msgid "bookmark to pull"
 msgstr "semnul de carte de importat"
 
@@ -8955,7 +8935,7 @@ msgid ""
 "    If SOURCE is omitted, the 'default' path will be used.\n"
 "    See :hg:`help urls` for more information."
 msgstr ""
-"    Dacă SURSĂ este omis, va fi folosită calea 'implicită'.\n"
+"    Dacă SURSA este omisă, va fi folosită calea implicită 'default'.\n"
 "    Pentru mai multe informații, vezi :hg:`help urls`."
 
 msgid ""
@@ -8982,9 +8962,8 @@ msgstr ""
 msgid "force push"
 msgstr "forțează `push`"
 
-#, fuzzy
 msgid "bookmark to push"
-msgstr "semnul de carte de importat"
+msgstr "semnul de carte de exportat"
 
 msgid "allow pushing a new branch"
 msgstr "permite trimiterea unei ramuri noi"
@@ -9774,13 +9753,13 @@ msgstr "1 sau mai multe de primit"
 msgid "%d outgoing"
 msgstr "%d de trimis"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d incoming bookmarks"
-msgstr "se actualizează semnul de carte %s\n"
+msgstr "%d semne de carte de primit"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%d outgoing bookmarks"
-msgstr "se actualizează semnul de carte %s\n"
+msgstr "%d semne de carte de trimis"
 
 #, python-format
 msgid "remote: %s\n"
@@ -9789,9 +9768,8 @@ msgstr "la distanță: %s\n"
 msgid "remote: (synced)\n"
 msgstr "la distanță: (sincronizat)\n"
 
-#, fuzzy
 msgid "force tag"
-msgstr "forțează `push`"
+msgstr "forțează eticheta"
 
 msgid "make the tag local"
 msgstr "fă eticheta locală"
@@ -9874,9 +9852,8 @@ msgstr ""
 msgid "tag '%s' already exists (use -f to force)"
 msgstr ""
 
-#, fuzzy
 msgid "uncommitted merge"
-msgstr "fuziune nedepozitată în suspensie"
+msgstr "fuziune nedepozitată"
 
 msgid "not at a branch head (use -f to force)"
 msgstr ""
@@ -10050,16 +10027,14 @@ msgstr ""
 "(versiunea %s)\n"
 
 msgid "(see http://mercurial.selenic.com for more information)"
-msgstr ""
+msgstr "(vezi http://mercurial.selenic.com pentru mai multe informații)"
 
-#, fuzzy
 msgid ""
 "Copyright (C) 2005-2011 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"\n"
-"Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> și alții\n"
+"Copyright (C) 2005-2011 Matt Mackall și alții\n"
 "Acesta este software liber; vezi sursa pentru condițiile de copiere.\n"
 "Nu există NICIO garanție; nici măcar pentru COMERCIALIZARE sau\n"
 "COMPATIBILITATE ÎN ANUMITE SCOPURI.\n"
@@ -10356,9 +10331,9 @@ msgstr "Durată: real %.3f sec (utilizator %.3f+%.3f sistem %.3f+%.3f)\n"
 msgid "repository '%s' is not local"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "no repository found in %r (.hg not found)"
-msgstr "depozitul %s nu a fost găsit"
+msgstr "nu s-a găsit niciun depozit în %r (nu s-a găsit .hg)"
 
 msgid "warning: --repository ignored\n"
 msgstr ""
@@ -10494,9 +10469,8 @@ msgstr "Căi URL"
 msgid "Using additional features"
 msgstr "Folosirea facilităților suplimentare"
 
-#, fuzzy
 msgid "Subrepositories"
-msgstr "depozitul %s"
+msgstr "Subdepozite"
 
 msgid "Configuring hgweb"
 msgstr "Configurarea hgweb"
@@ -10504,9 +10478,8 @@ msgstr "Configurarea hgweb"
 msgid "Glossary"
 msgstr "Glosar"
 
-#, fuzzy
 msgid "syntax for Mercurial ignore files"
-msgstr "afișează doar fișierele ignorate"
+msgstr "sintaxa pentru fișierele de ignorare Mercurial"
 
 msgid ""
 "The Mercurial system uses a set of configuration files to control\n"
@@ -11033,46 +11006,52 @@ msgid ""
 "Boolean and defaults to False."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "``git``\n"
 "    Use git extended diff format."
-msgstr "folosește formatul diff extins al lui git"
+msgstr ""
+"``git``\n"
+"    Folosește formatul diff extins al lui git."
 
 msgid ""
 "``nodates``\n"
 "    Don't include dates in diff headers."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "``showfunc``\n"
 "    Show which function each change is in."
-msgstr "afișează funcția în care se află fiecare modificare"
+msgstr ""
+"``showfunc``\n"
+"    Afișează funcția în care se află fiecare modificare."
 
-#, fuzzy
 msgid ""
 "``ignorews``\n"
 "    Ignore white space when comparing lines."
-msgstr "ignoră spațiul alb la compararea liniilor"
+msgstr ""
+"``ignorews``\n"
+"    Ignoră spațiul alb la compararea liniilor."
 
-#, fuzzy
 msgid ""
 "``ignorewsamount``\n"
 "    Ignore changes in the amount of white space."
-msgstr "ignoră modificările cantității de spațiu alb"
+msgstr ""
+"``ignorewsamount``\n"
+"    Ignoră modificările cantității de spațiu alb."
 
-#, fuzzy
 msgid ""
 "``ignoreblanklines``\n"
 "    Ignore changes whose lines are all blank."
-msgstr "ignoră modificările ale căror linii sunt toate vide"
+msgstr ""
+"``ignoreblanklines``\n"
+"    Ignoră modificările ale căror linii sunt toate vide."
 
-#, fuzzy
 msgid ""
 "``unified``\n"
 "    Number of lines of context to show."
-msgstr "numărul liniilor de context care vor fi afișate"
+msgstr ""
+"``unified``\n"
+"    Numărul liniilor de context care vor fi afișate."
 
 msgid ""
 "``email``\n"
@@ -12104,9 +12083,8 @@ msgid ""
 "that this should not be used for public servers."
 msgstr ""
 
-#, fuzzy
 msgid "The full set of options is:"
-msgstr "    opțiuni:"
+msgstr "Setul complet de opțiuni este:"
 
 msgid ""
 "``accesslog``\n"
@@ -12313,11 +12291,12 @@ msgid ""
 "    Maximum number of files to list per changeset. Default is 10."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "``port``\n"
 "    Port to listen on. Default is 8000."
-msgstr "portul pe care se va asculta (implicit: 8000)"
+msgstr ""
+"``port``\n"
+"    Portul pe care se va asculta (implicit: 8000)"
 
 msgid ""
 "``prefix``\n"
@@ -13185,11 +13164,12 @@ msgid ""
 "for files that it is not currently tracking."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "Description\n"
 "-----------"
-msgstr "descriere:\n"
+msgstr ""
+"Descriere\n"
+"---------"
 
 msgid ""
 "The working directory of a Mercurial repository will often contain\n"
@@ -13933,13 +13913,12 @@ msgid ""
 "``.hgsubstate`` and bind it to the committed changeset."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "Synchronizing a Subrepository\n"
 "-----------------------------"
 msgstr ""
-"Controlul accesului pe bază de ramură\n"
-"-------------------------------------"
+"Sincronizarea unui subdepozit\n"
+"-----------------------------"
 
 msgid ""
 "Subrepos do not automatically track the latest changeset of their\n"
@@ -13955,26 +13934,24 @@ msgid ""
 "commit in the parent repository to record the new combination."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "Deleting a Subrepository\n"
 "------------------------"
 msgstr ""
-"Controlul accesului pe bază de ramură\n"
-"-------------------------------------"
+"Ștergerea unui subdepozit\n"
+"-------------------------"
 
 msgid ""
 "To remove a subrepository from the parent repository, delete its\n"
 "reference from ``.hgsub``, then remove its files."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "Interaction with Mercurial Commands\n"
 "-----------------------------------"
 msgstr ""
-"Controlul accesului pe bază de ramură\n"
-"-------------------------------------"
+"Interacțiunea cu comenzile Mercurial\n"
+"------------------------------------"
 
 msgid ""
 ":add: add does not recurse in subrepos unless -S/--subrepos is\n"
@@ -14047,13 +14024,12 @@ msgid ""
 "    can require network access when using subrepositories."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "Remapping Subrepositories Sources\n"
 "---------------------------------"
 msgstr ""
-"Controlul accesului pe bază de ramură\n"
-"-------------------------------------"
+"Refacerea corespondențelor cu sursele subdepozitelor\n"
+"----------------------------------------------------"
 
 msgid ""
 "A subrepository source location may change during a project life,\n"
@@ -14285,9 +14261,9 @@ msgstr ""
 msgid "(branch merge, don't forget to commit)\n"
 msgstr "(fuziune între ramuri, nu uitați să depozitați)\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "config file %s not found!"
-msgstr "depozitul %s nu a fost găsit"
+msgstr "nu s-a găsit fișierul de configurare %s!"
 
 #, python-format
 msgid "error reading %s/.hg/hgrc: %s\n"
@@ -14481,13 +14457,13 @@ msgstr ""
 msgid "named branch could not be reset, current branch is still: %s\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "working directory now based on revisions %d and %d\n"
-msgstr "fuzionează directorul de lucru cu o altă revizie"
+msgstr "directorul de lucru se bazează acum pe reviziile %d și %d\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "working directory now based on revision %d\n"
-msgstr "fuzionează directorul de lucru cu o altă revizie"
+msgstr "directorul de lucru se bazează acum pe revizia %d\n"
 
 msgid "no rollback information available\n"
 msgstr ""
@@ -14514,9 +14490,9 @@ msgstr ""
 msgid "can't commit subrepos without .hgsub"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "uncommitted changes in subrepo %s"
-msgstr "înlătură modificările nedepozitate (fără copie de siguranță)"
+msgstr "modificări nedepozitate în subdepozitul %s"
 
 msgid "file not found!"
 msgstr ""
@@ -14554,9 +14530,8 @@ msgstr ""
 msgid "%d changesets found\n"
 msgstr ""
 
-#, fuzzy
 msgid "bundling"
-msgstr "se actualizează"
+msgstr "se creează bundle-ul"
 
 msgid "manifests"
 msgstr ""
@@ -14765,9 +14740,9 @@ msgstr ""
 "modificări nedepozitate în suspensie (folosiți 'hg status' pentru a afișa "
 "modificările)"
 
-#, fuzzy, python-format
+#, python-format
 msgid "outstanding uncommitted changes in subrepository '%s'"
-msgstr "înlătură modificările nedepozitate (fără copie de siguranță)"
+msgstr "modificările încă nedepozitate în subdepozitul '%s'"
 
 msgid "crosses branches (merge branches or use --clean to discard changes)"
 msgstr ""
@@ -14957,9 +14932,8 @@ msgstr "%s nu a fost găsit în tranzacție"
 msgid "consistency error in delta"
 msgstr "eroare de consistență în delta"
 
-#, fuzzy
 msgid "unknown delta base"
-msgstr "hg: comandă necunoscută '%s'\n"
+msgstr "bază necunoscută pentru delta"
 
 msgid "missing argument"
 msgstr ""
@@ -15522,9 +15496,11 @@ msgstr ""
 msgid "invalid entry in fncache, line %s"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "warning: subrepo spec file %s not found\n"
-msgstr "depozitul %s nu a fost găsit"
+msgstr ""
+"avertisment: fișierul de specificație %s pentru subdepozit nu\n"
+"a fost găsit\n"
 
 #, python-format
 msgid "subrepo spec file %s not found"
@@ -15590,9 +15566,9 @@ msgstr ""
 msgid "removing subrepo %s\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "cloning subrepo %s from %s\n"
-msgstr "%d subdepozite"
+msgstr "se clonează subdepozitul %s de la %s\n"
 
 #, python-format
 msgid "pulling subrepo %s from %s\n"
@@ -15655,16 +15631,16 @@ msgstr ""
 msgid ".hg/cache/tags is corrupt, rebuilding it\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "unknown method '%s'"
-msgstr "hg: comandă necunoscută '%s'\n"
+msgstr "metodă necunoscută '%s'"
 
 msgid "expected a symbol"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "unknown function '%s'"
-msgstr "hg: comandă necunoscută '%s'\n"
+msgstr "funcție necunoscută '%s'"
 
 msgid "expected template specifier"
 msgstr ""
@@ -15680,9 +15656,9 @@ msgstr ""
 msgid "style not found: %s"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "\"%s\" not in template map"
-msgstr "afișează folosind fișierul cu harta de șabloane"
+msgstr "\"%s\" nu se află în harta de șabloane"
 
 #, python-format
 msgid "template file %s: %s"
