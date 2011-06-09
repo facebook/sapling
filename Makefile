@@ -46,7 +46,7 @@ clean:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command
 	find . \( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f $(addprefix mercurial/,$(notdir $(wildcard mercurial/pure/*.py)))
-	rm -f MANIFEST tests/*.err
+	rm -f MANIFEST MANIFEST.in tests/*.err
 	rm -rf build mercurial/locale
 	$(MAKE) -C doc clean
 
@@ -69,14 +69,14 @@ install-home-doc: doc
 MANIFEST-doc:
 	$(MAKE) -C doc MANIFEST
 
-MANIFEST: MANIFEST-doc
-	hg manifest > MANIFEST
-	echo mercurial/__version__.py >> MANIFEST
-	cat doc/MANIFEST >> MANIFEST
+MANIFEST.in: MANIFEST-doc
+	hg manifest | sed -e 's/^/include /' > MANIFEST.in
+	echo include mercurial/__version__.py >> MANIFEST.in
+	sed -e 's/^/include /' < doc/MANIFEST >> MANIFEST.in
 
 dist:	tests dist-notests
 
-dist-notests:	doc MANIFEST
+dist-notests:	doc MANIFEST.in
 	TAR_OPTIONS="--owner=root --group=root --mode=u+w,go-w,a+rX-s" $(PYTHON) setup.py -q sdist
 
 check: tests
