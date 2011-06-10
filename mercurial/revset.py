@@ -599,7 +599,7 @@ def outgoing(repo, subset, x):
     revs, checkout = hg.addbranchrevs(repo, repo, branches, [])
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
-    other = hg.repository(hg.remoteui(repo, {}), dest)
+    other = hg.peer(repo, {}, dest)
     repo.ui.pushbuffer()
     common, outheads = discovery.findcommonoutgoing(repo, other, onlyheads=revs)
     repo.ui.popbuffer()

@@ -112,7 +112,7 @@ class mercurial_sink(converter_sink):
             self.after()
             for pbranch, heads in missings.iteritems():
                 pbranchpath = os.path.join(self.path, pbranch)
-                prepo = hg.repository(self.ui, pbranchpath)
+                prepo = hg.peer(self.ui, {}, pbranchpath)
                 self.ui.note(_('pulling from %s into %s\n') % (pbranch, branch))
                 self.repo.pull(prepo, [prepo.lookup(h) for h in heads])
             self.before()

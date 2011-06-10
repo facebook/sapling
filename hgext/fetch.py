@@ -63,8 +63,7 @@ def fetch(ui, repo, source='default', **opts):
             raise util.Abort(_('multiple heads in this branch '
                                '(use "hg heads ." and "hg merge" to merge)'))
 
-        other = hg.repository(hg.remoteui(repo, opts),
-                              ui.expandpath(source))
+        other = hg.peer(repo, opts, ui.expandpath(source))
         ui.status(_('pulling from %s\n') %
                   util.hidepassword(ui.expandpath(source)))
         revs = None

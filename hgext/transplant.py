@@ -561,7 +561,7 @@ def transplant(ui, repo, *revs, **opts):
 
     sourcerepo = opts.get('source')
     if sourcerepo:
-        source = hg.repository(ui, ui.expandpath(sourcerepo))
+        source = hg.peer(ui, opts, ui.expandpath(sourcerepo))
         branches = map(source.lookup, opts.get('branch', ()))
         source, csets, cleanupfn = bundlerepo.getremotechanges(ui, repo, source,
                                     onlyheads=branches, force=True)

@@ -437,7 +437,7 @@ class hgsubrepo(abstractsubrepo):
         if revision not in self._repo:
             self._repo._subsource = source
             srcurl = _abssource(self._repo)
-            other = hg.repository(self._repo.ui, srcurl)
+            other = hg.peer(self._repo.ui, {}, srcurl)
             if len(self._repo) == 0:
                 self._repo.ui.status(_('cloning subrepo %s from %s\n')
                                      % (subrelpath(self), srcurl))
@@ -495,7 +495,7 @@ class hgsubrepo(abstractsubrepo):
         dsturl = _abssource(self._repo, True)
         self._repo.ui.status(_('pushing subrepo %s to %s\n') %
             (subrelpath(self), dsturl))
-        other = hg.repository(self._repo.ui, dsturl)
+        other = hg.peer(self._repo.ui, {}, dsturl)
         return self._repo.push(other, force)
 
     def outgoing(self, ui, dest, opts):

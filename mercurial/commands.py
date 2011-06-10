@@ -891,7 +891,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
-        other = hg.repository(hg.remoteui(repo, opts), dest)
+        other = hg.peer(repo, opts, dest)
         revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
         heads = revs and map(repo.lookup, revs) or revs
         common, outheads = discovery.findcommonoutgoing(repo, other,
@@ -1542,7 +1542,7 @@ def debugdate(ui, date, range=None, **opts):
 def debugdiscovery(ui, repo, remoteurl="default", **opts):
     """runs the changeset discovery protocol in isolation"""
     remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl), opts.get('branch'))
-    remote = hg.repository(hg.remoteui(repo, opts), remoteurl)
+    remote = hg.peer(repo, opts, remoteurl)
     ui.status(_('comparing with %s\n') % util.hidepassword(remoteurl))
 
     # make sure tests are repeatable
@@ -1629,7 +1629,7 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
     Every ID must be a full-length hex node id string. Saves the bundle to the
     given file.
     """
-    repo = hg.repository(ui, repopath)
+    repo = hg.peer(ui, opts, repopath)
     if not repo.capable('getbundle'):
         raise util.Abort("getbundle() not supported by target repository")
     args = {}
@@ -1804,14 +1804,14 @@ def debugknown(ui, repopath, *ids, **opts):
     Every ID must be a full-length hex node id string. Returns a list of 0s and 1s
     indicating unknown/known.
     """
-    repo = hg.repository(ui, repopath)
+    repo = hg.peer(ui, opts, repopath)
     if not repo.capable('known'):
         raise util.Abort("known() not supported by target repository")
     flags = repo.known([bin(s) for s in ids])
     ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
 
 @command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'))
-def debugpushkey(ui, repopath, namespace, *keyinfo):
+def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
     '''access the pushkey key/value protocol
 
     With two args, list the keys in the given namespace.
@@ -1820,7 +1820,7 @@ def debugpushkey(ui, repopath, namespace, *keyinfo):
     Reports success or failure.
     '''
 
-    target = hg.repository(ui, repopath)
+    target = hg.peer(ui, {}, repopath)
     if keyinfo:
         key, old, new = keyinfo
         r = target.pushkey(namespace, key, old, new)
@@ -2117,7 +2117,7 @@ def debugwalk(ui, repo, *pats, **opts):
     ] + remoteopts,
     _('REPO [OPTIONS]... [ONE [TWO]]'))
 def debugwireargs(ui, repopath, *vals, **opts):
-    repo = hg.repository(hg.remoteui(ui, opts), repopath)
+    repo = hg.peer(ui, opts, repopath)
     for opt in remoteopts:
         del opts[opt[1]]
     args = {}
@@ -2914,7 +2914,7 @@ def identify(ui, repo, source=None, rev=None,
 
     if source:
         source, branches = hg.parseurl(ui.expandpath(source))
-        repo = hg.repository(ui, source)
+        repo = hg.peer(ui, {}, source)
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
 
     if not repo.local():
@@ -3199,7 +3199,7 @@ def incoming(ui, repo, source="default", **opts):
     if opts.get('bookmarks'):
         source, branches = hg.parseurl(ui.expandpath(source),
                                        opts.get('branch'))
-        other = hg.repository(hg.remoteui(repo, opts), source)
+        other = hg.peer(repo, opts, source)
         if 'bookmarks' not in other.listkeys('namespaces'):
             ui.warn(_("remote doesn't support bookmarks\n"))
             return 0
@@ -3227,7 +3227,7 @@ def init(ui, dest=".", **opts):
 
     Returns 0 on success.
     """
-    hg.repository(hg.remoteui(ui, opts), ui.expandpath(dest), create=True)
+    hg.peer(ui, opts, ui.expandpath(dest), create=True)
 
 @command('locate',
     [('r', 'rev', '', _('search the repository as it is in REV'), _('REV')),
@@ -3561,7 +3561,7 @@ def outgoing(ui, repo, dest=None, **opts):
     if opts.get('bookmarks'):
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
-        other = hg.repository(hg.remoteui(repo, opts), dest)
+        other = hg.peer(repo, opts, dest)
         if 'bookmarks' not in other.listkeys('namespaces'):
             ui.warn(_("remote doesn't support bookmarks\n"))
             return 0
@@ -3713,7 +3713,7 @@ def pull(ui, repo, source="default", **opts):
     Returns 0 on success, 1 if an update had unresolved files.
     """
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
-    other = hg.repository(hg.remoteui(repo, opts), source)
+    other = hg.peer(repo, opts, source)
     ui.status(_('pulling from %s\n') % util.hidepassword(source))
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
 
@@ -3810,7 +3810,7 @@ def push(ui, repo, dest=None, **opts):
     dest, branches = hg.parseurl(dest, opts.get('branch'))
     ui.status(_('pushing to %s\n') % util.hidepassword(dest))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
-    other = hg.repository(hg.remoteui(repo, opts), dest)
+    other = hg.peer(repo, opts, dest)
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
@@ -4742,7 +4742,7 @@ def summary(ui, repo, **opts):
     if opts.get('remote'):
         t = []
         source, branches = hg.parseurl(ui.expandpath('default'))
-        other = hg.repository(hg.remoteui(repo, {}), source)
+        other = hg.peer(repo, {}, source)
         revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
         ui.debug('comparing with %s\n' % util.hidepassword(source))
         repo.ui.pushbuffer()
@@ -4755,7 +4755,7 @@ def summary(ui, repo, **opts):
         dest, branches = hg.parseurl(ui.expandpath('default-push', 'default'))
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
         if source != dest:
-            other = hg.repository(hg.remoteui(repo, {}), dest)
+            other = hg.peer(repo, {}, dest)
             commoninc = None
             ui.debug('comparing with %s\n' % util.hidepassword(dest))
         repo.ui.pushbuffer()

@@ -428,7 +428,7 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source,
     and is supposed to contain only code that can't be unified.
     """
     source, branches = parseurl(ui.expandpath(source), opts.get('branch'))
-    other = repository(remoteui(repo, opts), source)
+    other = peer(repo, opts, source)
     ui.status(_('comparing with %s\n') % util.hidepassword(source))
     revs, checkout = addbranchrevs(repo, other, branches, opts.get('rev'))
 
@@ -486,7 +486,7 @@ def _outgoing(ui, repo, dest, opts):
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
-    other = repository(remoteui(repo, opts), dest)
+    other = peer(repo, opts, dest)
     common, outheads = discovery.findcommonoutgoing(repo, other, revs,
                                                     force=opts.get('force'))
     o = repo.changelog.findmissing(common, outheads)
