@@ -26,6 +26,7 @@ doc/*.[0-9]
 doc/*.[0-9].gendoc.txt
 doc/*.[0-9].{x,ht}ml
 MANIFEST
+MANIFEST.in
 patches
 mercurial/__version__.py
 mercurial.egg-info
