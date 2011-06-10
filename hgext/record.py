@@ -17,6 +17,15 @@ command = cmdutil.command(cmdtable)
 
 lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
 
+diffopts = [
+    ('w', 'ignore-all-space', False,
+     _('ignore white space when comparing lines')),
+    ('b', 'ignore-space-change', None,
+     _('ignore changes in the amount of white space')),
+    ('B', 'ignore-blank-lines', None,
+     _('ignore changes whose lines are all blank')),
+]
+
 def scanpatch(fp):
     """like patch.iterhunks, but yield different events
 
@@ -345,7 +354,8 @@ def filterpatch(ui, headers):
                if h[0].special() or len(h) > 1], [])
 
 @command("record",
-         commands.table['^commit|ci'][1], # same options as commit
+         # same options as commit + white space diff options
+         commands.table['^commit|ci'][1][:] + diffopts,
           _('hg record [OPTION]... [FILE]...'))
 def record(ui, repo, *pats, **opts):
     '''interactively select changes to commit
@@ -435,7 +445,10 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
                                '(use "hg commit" instead)'))
 
         changes = repo.status(match=match)[:3]
-        diffopts = mdiff.diffopts(git=True, nodates=True)
+        diffopts = mdiff.diffopts(git=True, nodates=True,
+                                  ignorews=opts.get('ignore_all_space'),
+                                  ignorewsamount=opts.get('ignore_space_change'),
+                                  ignoreblanklines=opts.get('ignore_blank_lines'))
         chunks = patch.diff(repo, changes=changes, opts=diffopts)
         fp = cStringIO.StringIO()
         fp.write(''.join(chunks))
@@ -567,8 +580,8 @@ def uisetup(ui):
     cmdtable["qrecord"] = \
         (qrecord,
          # same options as qnew, but copy them so we don't get
-         # -i/--interactive for qrecord
-         mq.cmdtable['^qnew'][1][:],
+         # -i/--interactive for qrecord and add white space diff options
+         mq.cmdtable['^qnew'][1][:] + diffopts,
          _('hg qrecord [OPTION]... PATCH [FILE]...'))
 
     _wrapcmd('qnew', mq.cmdtable, qrecord, _("interactively record a new patch"))

@@ -64,6 +64,9 @@ help record (record)
    -l --logfile FILE         read commit message from file
    -d --date DATE            record the specified date as commit date
    -u --user USER            record the specified user as committer
+   -w --ignore-all-space     ignore white space when comparing lines
+   -b --ignore-space-change  ignore changes in the amount of white space
+   -B --ignore-blank-lines   ignore changes whose lines are all blank
   
   [+] marked option can be specified multiple times
   
@@ -136,6 +139,9 @@ help (mq present)
    -X --exclude PATTERN [+]  exclude names matching the given patterns
    -m --message TEXT         use text as commit message
    -l --logfile FILE         read commit message from file
+   -w --ignore-all-space     ignore white space when comparing lines
+   -b --ignore-space-change  ignore changes in the amount of white space
+   -B --ignore-blank-lines   ignore changes whose lines are all blank
       --mq                   operate on patch repository
   
   [+] marked option can be specified multiple times
