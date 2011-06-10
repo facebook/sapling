@@ -52,7 +52,7 @@ def has_darcs():
 
 def has_mtn():
     return matchoutput('mtn --version', r'monotone', True) and not matchoutput(
-        'mtn --version', r'monotone 0\.(\d|[12]\d|3[01])[^\d]', True)
+        'mtn --version', r'monotone 0\.', True)
 
 def has_eol_in_paths():
     try:
