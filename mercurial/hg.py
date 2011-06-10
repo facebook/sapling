@@ -101,7 +101,7 @@ def repository(ui, path='', create=False):
 def peer(ui, opts, path, create=False):
     '''return a repository peer for the specified path'''
     rui = remoteui(ui, opts)
-    return repository(rui, path, create)
+    return _lookup(path).instance(rui, path, create)
 
 def defaultdest(source):
     '''return default destination of clone if none is given'''
