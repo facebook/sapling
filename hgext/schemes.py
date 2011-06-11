@@ -69,7 +69,7 @@ class ShortRepository(object):
             tail = ''
         context = dict((str(i + 1), v) for i, v in enumerate(parts))
         url = ''.join(self.templater.process(self.url, context)) + tail
-        return hg._lookup(url).instance(ui, url, create)
+        return hg._peerlookup(url).instance(ui, url, create)
 
 def hasdriveletter(orig, path):
     for scheme in schemes:
@@ -93,6 +93,6 @@ def extsetup(ui):
             and os.path.exists('%s:\\' % scheme)):
             raise util.Abort(_('custom scheme %s:// conflicts with drive '
                                'letter %s:\\\n') % (scheme, scheme.upper()))
-        hg.schemes[scheme] = ShortRepository(url, scheme, t)
+        hg._peerschemes[scheme] = ShortRepository(url, scheme, t)
 
     extensions.wrapfunction(util, 'hasdriveletter', hasdriveletter)

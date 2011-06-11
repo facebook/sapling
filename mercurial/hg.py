@@ -61,7 +61,7 @@ def parseurl(path, branches=None):
         u.fragment = None
     return str(u), (branch, branches or [])
 
-schemes = {
+_reposchemes = {
     'bundle': bundlerepo,
     'file': _local,
     'http': httprepo,
@@ -70,10 +70,10 @@ schemes = {
     'static-http': statichttprepo,
 }
 
-def _lookup(path):
+def _repolookup(path):
     u = util.url(path)
     scheme = u.scheme or 'file'
-    thing = schemes.get(scheme) or schemes['file']
+    thing = _reposchemes.get(scheme) or _reposchemes['file']
     try:
         return thing(path)
     except TypeError:
@@ -83,14 +83,14 @@ def islocal(repo):
     '''return true if repo or path is local'''
     if isinstance(repo, str):
         try:
-            return _lookup(repo).islocal(repo)
+            return _repolookup(repo).islocal(repo)
         except AttributeError:
             return False
     return repo.local()
 
 def repository(ui, path='', create=False):
     """return a repository object for the specified path"""
-    repo = _lookup(path).instance(ui, path, create)
+    repo = _repolookup(path).instance(ui, path, create)
     ui = getattr(repo, "ui", ui)
     for name, module in extensions.extensions():
         hook = getattr(module, 'reposetup', None)
@@ -98,10 +98,28 @@ def repository(ui, path='', create=False):
             hook(ui, repo)
     return repo
 
+_peerschemes = {
+    'bundle': bundlerepo,
+    'file': _local,
+    'http': httprepo,
+    'https': httprepo,
+    'ssh': sshrepo,
+    'static-http': statichttprepo,
+}
+
+def _peerlookup(path):
+    u = util.url(path)
+    scheme = u.scheme or 'file'
+    thing = _peerschemes.get(scheme) or _peerschemes['file']
+    try:
+        return thing(path)
+    except TypeError:
+        return thing
+
 def peer(ui, opts, path, create=False):
     '''return a repository peer for the specified path'''
     rui = remoteui(ui, opts)
-    return _lookup(path).instance(rui, path, create)
+    return _peerlookup(path).instance(rui, path, create)
 
 def defaultdest(source):
     '''return default destination of clone if none is given'''
