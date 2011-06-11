@@ -16,6 +16,7 @@ XXX copied from test-convert-cvs-synthetic
 
   $ cvsci()
   > {
+  >     sleep 1
   >     cvs -f ci "$@" > /dev/null
   > }
 
@@ -53,7 +54,6 @@ create two release branches
 modify file1 on branch v1_0
 
   $ cvscall -Q update -rv1_0
-  $ sleep 1
   $ echo "change" >> file1
   $ cvsci -m"add text"
   cvs commit: Examining .
@@ -96,7 +96,6 @@ non-merged change on trunk
 this will create rev 1.3
 change on trunk to backport
 
-  $ sleep 1
   $ echo "backport me" >> file1
   $ cvsci -m"add other text" file1
   $ cvscall log file1
@@ -150,7 +149,6 @@ backport trunk change to v1_1
 fix bug on v1_1, merge to trunk with error
 
   $ cvscall -Q update -rv1_1
-  $ sleep 1
   $ echo "merge forward" >> file1
   $ cvscall -Q tag unmerged
   $ cvsci -m"fix file1"
