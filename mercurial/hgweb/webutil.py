@@ -8,6 +8,7 @@
 
 import os, copy
 from mercurial import match, patch, scmutil, error, ui, util
+from mercurial.i18n import _
 from mercurial.node import hex, nullid
 
 def up(p):
@@ -211,11 +212,25 @@ def diffs(repo, tmpl, ctx, files, parity, style):
     yield tmpl('diffblock', parity=parity.next(),
                lines=prettyprintlines(''.join(block)))
 
-def diffstat(tmpl, ctx, parity):
-    '''Return a diffstat template for each file in the diff.'''
+def diffstatgen(ctx):
+    '''Generator function that provides the diffstat data.'''
 
     stats = patch.diffstatdata(util.iterlines(ctx.diff()))
     maxname, maxtotal, addtotal, removetotal, binary = patch.diffstatsum(stats)
+    while True:
+        yield stats, maxname, maxtotal, addtotal, removetotal, binary
+
+def diffsummary(statgen):
+    '''Return a short summary of the diff.'''
+
+    stats, maxname, maxtotal, addtotal, removetotal, binary = statgen.next()
+    return _(' %d files changed, %d insertions(+), %d deletions(-)\n') % (
+             len(stats), addtotal, removetotal)
+
+def diffstat(tmpl, ctx, statgen, parity):
+    '''Return a diffstat template for each file in the diff.'''
+
+    stats, maxname, maxtotal, addtotal, removetotal, binary = statgen.next()
     files = ctx.files()
 
     def pct(i):

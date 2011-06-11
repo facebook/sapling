@@ -271,7 +271,8 @@ def changeset(web, req, tmpl):
     diffs = webutil.diffs(web.repo, tmpl, ctx, None, parity, style)
 
     parity = paritygen(web.stripecount)
-    diffstat = webutil.diffstat(tmpl, ctx, parity)
+    diffstatgen = webutil.diffstatgen(ctx)
+    diffstat = webutil.diffstat(tmpl, ctx, diffstatgen, parity)
 
     return tmpl('changeset',
                 diff=diffs,
@@ -286,6 +287,7 @@ def changeset(web, req, tmpl):
                 desc=ctx.description(),
                 date=ctx.date(),
                 files=files,
+                diffsummary=lambda **x: webutil.diffsummary(diffstatgen),
                 diffstat=diffstat,
                 archives=web.archivelist(ctx.hex()),
                 tags=webutil.nodetagsdict(web.repo, ctx.node()),
