@@ -227,7 +227,7 @@ class transplanter(object):
             raise util.Abort(_('can only omit patchfile if merging'))
         if patchfile:
             try:
-                files = {}
+                files = set()
                 patch.patch(self.ui, repo, patchfile, files=files, eolmode=None)
                 files = list(files)
                 if not files:

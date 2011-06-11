@@ -3106,7 +3106,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             if opts.get('exact') or opts.get('import_branch'):
                 repo.dirstate.setbranch(branch or 'default')
 
-            files = {}
+            files = set()
             patch.patch(ui, repo, tmpname, strip=strip, files=files,
                         eolmode=None, similarity=sim / 100.0)
             files = list(files)

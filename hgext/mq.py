@@ -617,7 +617,7 @@ class queue(object):
     def patch(self, repo, patchfile):
         '''Apply patchfile  to the working directory.
         patchfile: name of patch file'''
-        files = {}
+        files = set()
         try:
             fuzz = patchmod.patch(self.ui, repo, patchfile, strip=1,
                                   files=files, eolmode=None)

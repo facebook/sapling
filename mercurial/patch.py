@@ -1223,7 +1223,7 @@ def _applydiff(ui, fp, patcher, backend, store, changed, strip=1,
                 continue
             ret = current_file.apply(values)
             if ret >= 0:
-                changed.setdefault(current_file.fname, None)
+                changed.add(current_file.fname)
                 if ret > 0:
                     err = 1
         elif state == 'file':
@@ -1236,7 +1236,7 @@ def _applydiff(ui, fp, patcher, backend, store, changed, strip=1,
                 path = pstrip(gp.path)
                 if gp.oldpath:
                     copysource = pstrip(gp.oldpath)
-                changed[path] = gp
+                changed.add(path)
                 if gp.op == 'RENAME':
                     backend.unlink(copysource)
                 if not first_hunk:
@@ -1306,7 +1306,7 @@ def _externalpatch(ui, repo, patcher, patchname, strip, files,
             if line.startswith('patching file '):
                 pf = util.parsepatchoutput(line)
                 printed_file = False
-                files.setdefault(pf, None)
+                files.add(pf)
             elif line.find('with fuzz') >= 0:
                 fuzz = True
                 if not printed_file:
@@ -1340,7 +1340,7 @@ def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
     returns whether patch was applied with fuzz factor."""
 
     if files is None:
-        files = {}
+        files = set()
     if eolmode is None:
         eolmode = ui.config('patch', 'eol', 'strict')
     if eolmode.lower() not in eolmodes:
@@ -1359,7 +1359,7 @@ def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
     finally:
         if fp != patchobj:
             fp.close()
-        files.update(dict.fromkeys(backend.close()))
+        files.update(backend.close())
         store.close()
     if ret < 0:
         raise PatchError(_('patch failed to apply'))
@@ -1380,7 +1380,7 @@ def patch(ui, repo, patchname, strip=1, files=None, eolmode='strict',
     """
     patcher = ui.config('ui', 'patch')
     if files is None:
-        files = {}
+        files = set()
     try:
         if patcher:
             return _externalpatch(ui, repo, patcher, patchname, strip,
