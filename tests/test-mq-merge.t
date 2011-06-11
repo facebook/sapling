@@ -130,7 +130,7 @@ Merge:
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working dir
   patch didn't work out, merging patcha
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   applying patcha2

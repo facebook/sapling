@@ -1193,21 +1193,20 @@ def iterhunks(fp):
         gp = gitpatches.pop()[2]
         yield 'file', ('a/' + gp.path, 'b/' + gp.path, None, gp)
 
-def applydiff(ui, fp, changed, backend, store, strip=1, eolmode='strict'):
+def applydiff(ui, fp, backend, store, strip=1, eolmode='strict'):
     """Reads a patch from fp and tries to apply it.
 
-    The dict 'changed' is filled in with all of the filenames changed
-    by the patch. Returns 0 for a clean patch, -1 if any rejects were
-    found and 1 if there was any fuzz.
+    Returns 0 for a clean patch, -1 if any rejects were found and 1 if
+    there was any fuzz.
 
     If 'eolmode' is 'strict', the patch content and patched file are
     read in binary mode. Otherwise, line endings are ignored when
     patching then normalized according to 'eolmode'.
     """
-    return _applydiff(ui, fp, patchfile, backend, store, changed, strip=strip,
+    return _applydiff(ui, fp, patchfile, backend, store, strip=strip,
                       eolmode=eolmode)
 
-def _applydiff(ui, fp, patcher, backend, store, changed, strip=1,
+def _applydiff(ui, fp, patcher, backend, store, strip=1,
                eolmode='strict'):
 
     def pstrip(p):
@@ -1222,10 +1221,8 @@ def _applydiff(ui, fp, patcher, backend, store, changed, strip=1,
             if not current_file:
                 continue
             ret = current_file.apply(values)
-            if ret >= 0:
-                changed.add(current_file.fname)
-                if ret > 0:
-                    err = 1
+            if ret > 0:
+                err = 1
         elif state == 'file':
             if current_file:
                 rejects += current_file.close()
@@ -1236,7 +1233,6 @@ def _applydiff(ui, fp, patcher, backend, store, changed, strip=1,
                 path = pstrip(gp.path)
                 if gp.oldpath:
                     copysource = pstrip(gp.oldpath)
-                changed.add(path)
                 if gp.op == 'RENAME':
                     backend.unlink(copysource)
                 if not first_hunk:
@@ -1354,7 +1350,7 @@ def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
     except TypeError:
         fp = patchobj
     try:
-        ret = applydiff(ui, fp, files, backend, store, strip=strip,
+        ret = applydiff(ui, fp, backend, store, strip=strip,
                         eolmode=eolmode)
     finally:
         if fp != patchobj:
