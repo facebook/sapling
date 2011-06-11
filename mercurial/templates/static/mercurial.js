@@ -2,6 +2,7 @@
 //
 // Rendering of branch DAGs on the client side
 // Display of elapsed time
+// Show or hide diffstat
 //
 // Copyright 2008 Dirkjan Ochtman <dirkjan AT ochtman DOT nl>
 // Copyright 2006 Alexander Schremmer <alex AT alexanderweb DOT de>
@@ -218,3 +219,13 @@ process_dates = (function(document, RegExp, Math, isNaN, Date, _false, _true){
 		}
 	}
 })(document, RegExp, Math, isNaN, Date, false, true)
+
+function showDiffstat() {
+	document.getElementById('diffstatdetails').style.display = 'inline';
+	document.getElementById('diffstatexpand').style.display = 'none';
+}
+
+function hideDiffstat() {
+	document.getElementById('diffstatdetails').style.display = 'none';
+	document.getElementById('diffstatexpand').style.display = 'inline';
+}

@@ -62,6 +62,18 @@ files, or words in the commit message</div>
  <th class="files">files</th>
  <td class="files">{files}</td>
 </tr>
+<tr>
+  <th class="diffstat">diffstat</th>
+  <td class="diffstat">
+    {diffsummary}
+    <a id="diffstatexpand" href="javascript:showDiffstat()"/>[+]</a>
+    <div id="diffstatdetails" style="display:none;">
+      <a href="javascript:hideDiffstat()"/>[-]</a>
+      <p>
+      <table>{diffstat}</table>
+    </div>
+  </td>
+</tr>
 </table>
 
 <div class="overflow">

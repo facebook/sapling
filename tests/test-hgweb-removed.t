@@ -89,6 +89,27 @@ revision
    <th class="files">files</th>
    <td class="files">a </td>
   </tr>
+  <tr>
+    <th class="diffstat">diffstat</th>
+    <td class="diffstat">
+       1 files changed, 0 insertions(+), 1 deletions(-)
+  
+      <a id="diffstatexpand" href="javascript:showDiffstat()"/>[+]</a>
+      <div id="diffstatdetails" style="display:none;">
+        <a href="javascript:hideDiffstat()"/>[-]</a>
+        <p>
+        <table>  <tr class="parity0">
+      <td class="diffstat-file"><a href="#l1.1">a</a></td>
+      <td class="diffstat-total" align="right">1</td>
+      <td class="diffstat-graph">
+        <span class="diffstat-add" style="width:0.0%;">&nbsp;</span>
+        <span class="diffstat-remove" style="width:100.0%;">&nbsp;</span>
+      </td>
+    </tr>
+  </table>
+      </div>
+    </td>
+  </tr>
   </table>
   
   <div class="overflow">
