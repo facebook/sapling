@@ -250,6 +250,7 @@ Create mq repo with guarded patches foo and bar:
   $ hg qnew foo
   $ hg qguard foo +baz
   $ echo foo > foo
+  $ hg add foo
   $ hg qref
   $ hg qpop
   popping foo
@@ -258,6 +259,7 @@ Create mq repo with guarded patches foo and bar:
   $ hg qnew bar
   $ hg qguard bar +baz
   $ echo bar > bar
+  $ hg add bar
   $ hg qref
 
   $ hg qguard -l
@@ -272,13 +274,13 @@ Create mq repo with guarded patches foo and bar:
 Create new head to rebase bar onto:
 
   $ hg up -C 0
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > b
   $ hg add b
   $ hg ci -m b
   created new head
   $ hg up -C 1
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg qref
 
@@ -290,13 +292,19 @@ Create new head to rebase bar onto:
   o  0:* 'a' tags: qparent (glob)
   
 
-Rebase bar:
+Rebase bar (make sure series order is preserved):
 
+  $ hg qseries
+  bar
+  foo
   $ hg -q rebase -d 1
+  $ hg qseries
+  bar
+  foo
 
   $ hg qguard -l
-  foo: +baz
   bar: +baz
+  foo: +baz
 
   $ hg tglog
   @  2:* '[mq]: bar' tags: bar qbase qtip tip (glob)
