@@ -741,6 +741,7 @@ def runone(options, test):
             skip("doesn't exist")
             return None
     else:
+        vlog('# Test file', test, 'not supported, ignoring')
         return None # not a supported test, don't record
 
     if not (options.whitelisted and test in options.whitelisted):
