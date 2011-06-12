@@ -3136,7 +3136,7 @@ def reposetup(ui, repo):
 
             try:
                 self.changelog.rev(mqtags[-1][0])
-            except error.RepoLookupError:
+            except error.LookupError:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(mqtags[-1][0]))
                 return result
