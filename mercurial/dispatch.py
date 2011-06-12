@@ -572,16 +572,20 @@ def _dispatch(req):
         atexit.register(print_time)
 
     if options['verbose'] or options['debug'] or options['quiet']:
-        ui.setconfig('ui', 'verbose', str(bool(options['verbose'])))
-        ui.setconfig('ui', 'debug', str(bool(options['debug'])))
-        ui.setconfig('ui', 'quiet', str(bool(options['quiet'])))
+        for ui in (ui, lui):
+            ui.setconfig('ui', 'verbose', str(bool(options['verbose'])))
+            ui.setconfig('ui', 'debug', str(bool(options['debug'])))
+            ui.setconfig('ui', 'quiet', str(bool(options['quiet'])))
     if options['traceback']:
-        ui.setconfig('ui', 'traceback', 'on')
+        for ui in (ui, lui):
+            ui.setconfig('ui', 'traceback', 'on')
     if options['noninteractive']:
-        ui.setconfig('ui', 'interactive', 'off')
+        for ui in (ui, lui):
+            ui.setconfig('ui', 'interactive', 'off')
 
     if cmdoptions.get('insecure', False):
-        ui.setconfig('web', 'cacerts', '')
+        for ui in (ui, lui):
+            ui.setconfig('web', 'cacerts', '')
 
     if options['help']:
         return commands.help_(ui, cmd, options['version'])

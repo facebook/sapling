@@ -346,6 +346,9 @@ preoutgoing hook can prevent outgoing changes for local clones
   > def brokenhook(**args):
   >     return 1 + {}
   > 
+  > def verbosehook(ui, **args):
+  >     ui.note('verbose output from hook\n')
+  > 
   > class container:
   >     unreachable = 1
   > EOF
@@ -535,3 +538,14 @@ commit and update hooks should run after command completion
   cb9a9f314b8b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+make sure --verbose (and --quiet/--debug etc.) are propogated to the local ui
+that is passed to pre/post hooks
+
+  $ echo '[hooks]' > .hg/hgrc
+  $ echo 'pre-identify = python:hooktests.verbosehook' >> .hg/hgrc
+  $ hg id
+  cb9a9f314b8b
+  $ hg id --verbose
+  calling hook pre-identify: hooktests.verbosehook
+  verbose output from hook
+  cb9a9f314b8b
