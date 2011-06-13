@@ -404,7 +404,7 @@ def updatemq(repo, state, skipped, **opts):
                 mq.fullseries.remove(pname)
                 mq.fullseries.append(s)
                 mq.series_dirty = True
-        mq.save_dirty()
+        mq.savedirty()
 
 def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
                                                                 external):

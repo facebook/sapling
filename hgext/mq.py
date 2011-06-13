@@ -489,7 +489,7 @@ class queue(object):
                     write(_('skipping %s - no matching guards\n') %
                           self.series[idx])
 
-    def save_dirty(self):
+    def savedirty(self):
         def write_list(items, path):
             fp = self.opener(path, 'w')
             for i in items:
@@ -611,7 +611,7 @@ class queue(object):
                 self.applied_dirty = 1
             if err:
                 return (err, head)
-        self.save_dirty()
+        self.savedirty()
         return (0, head)
 
     def patch(self, repo, patchfile):
@@ -639,7 +639,7 @@ class queue(object):
                 ret = self._apply(repo, series, list, update_status,
                                   strict, patchdir, merge, all_files=all_files)
                 tr.close()
-                self.save_dirty()
+                self.savedirty()
                 return ret
             except:
                 try:
@@ -1511,7 +1511,7 @@ class queue(object):
             except:
                 ctx = repo[cparents[0]]
                 repo.dirstate.rebuild(ctx.node(), ctx.manifest())
-                self.save_dirty()
+                self.savedirty()
                 self.ui.warn(_('refresh interrupted while patch was popped! '
                                '(revert --all, qpush to recover)\n'))
                 raise
@@ -1869,7 +1869,7 @@ def delete(ui, repo, *patches, **opts):
     use the :hg:`qfinish` command."""
     q = repo.mq
     q.delete(repo, patches, opts)
-    q.save_dirty()
+    q.savedirty()
     return 0
 
 @command("qapplied",
@@ -1979,7 +1979,7 @@ def qimport(ui, repo, *filename, **opts):
               existing=opts.get('existing'), force=opts.get('force'),
               rev=opts.get('rev'), git=opts.get('git'))
     finally:
-        q.save_dirty()
+        q.savedirty()
 
     if opts.get('push') and not opts.get('rev'):
         return q.push(repo, None)
@@ -1995,7 +1995,7 @@ def qinit(ui, repo, create):
     Returns 0 if initialization succeeded."""
     q = repo.mq
     r = q.init(repo, create)
-    q.save_dirty()
+    q.savedirty()
     if r:
         if not os.path.exists(r.wjoin('.hgignore')):
             fp = r.wopener('.hgignore', 'w')
@@ -2222,7 +2222,7 @@ def new(ui, repo, patch, *args, **opts):
         opts['msg'] = msg
     setupheaderopts(ui, opts)
     q.new(repo, patch, *args, **opts)
-    q.save_dirty()
+    q.savedirty()
     return 0
 
 @command("^qrefresh",
@@ -2276,7 +2276,7 @@ def refresh(ui, repo, *pats, **opts):
         repo.savecommitmessage(message)
     setupheaderopts(ui, opts)
     ret = q.refresh(repo, pats, msg=message, **opts)
-    q.save_dirty()
+    q.savedirty()
     return ret
 
 @command("^qdiff",
@@ -2368,7 +2368,7 @@ def fold(ui, repo, *files, **opts):
     diffopts = q.patchopts(q.diffopts(), *patches)
     q.refresh(repo, msg=message, git=diffopts.git)
     q.delete(repo, patches, opts)
-    q.save_dirty()
+    q.savedirty()
 
 @command("qgoto",
          [('f', 'force', None, _('overwrite any local changes'))],
@@ -2383,7 +2383,7 @@ def goto(ui, repo, patch, **opts):
         ret = q.pop(repo, patch, force=opts.get('force'))
     else:
         ret = q.push(repo, patch, force=opts.get('force'))
-    q.save_dirty()
+    q.savedirty()
     return ret
 
 @command("qguard",
@@ -2455,7 +2455,7 @@ def guard(ui, repo, *args, **opts):
         if idx is None:
             raise util.Abort(_('no patch named %s') % patch)
         q.setguards(idx, args)
-        q.save_dirty()
+        q.savedirty()
     else:
         status(q.series.index(q.lookup(patch)))
 
@@ -2561,7 +2561,7 @@ def pop(ui, repo, patch=None, **opts):
         q = repo.mq
     ret = q.pop(repo, patch, force=opts.get('force'), update=localupdate,
                 all=opts.get('all'))
-    q.save_dirty()
+    q.savedirty()
     return ret
 
 @command("qrename|qmv", [], _('hg qrename PATCH1 [PATCH2]'))
@@ -2624,7 +2624,7 @@ def rename(ui, repo, patch, name=None, **opts):
         finally:
             wlock.release()
 
-    q.save_dirty()
+    q.savedirty()
 
 @command("qrestore",
          [('d', 'delete', None, _('delete save entry')),
@@ -2638,7 +2638,7 @@ def restore(ui, repo, rev, **opts):
     q = repo.mq
     q.restore(repo, rev, delete=opts.get('delete'),
               qupdate=opts.get('update'))
-    q.save_dirty()
+    q.savedirty()
     return 0
 
 @command("qsave",
@@ -2657,7 +2657,7 @@ def save(ui, repo, **opts):
     ret = q.save(repo, msg=message)
     if ret:
         return ret
-    q.save_dirty()
+    q.savedirty()
     if opts.get('copy'):
         path = q.path
         if opts.get('name'):
@@ -2755,7 +2755,7 @@ def strip(ui, repo, *revs, **opts):
                     start = i
                     break
             del q.applied[start:end]
-            q.save_dirty()
+            q.savedirty()
 
     revs = list(rootnodes)
     if update and opts.get('keep'):
@@ -2820,7 +2820,7 @@ def select(ui, repo, *args, **opts):
         old_guarded = [i for i in xrange(len(q.applied)) if
                        not q.pushable(i)[0]]
         q.setactive(args)
-        q.save_dirty()
+        q.savedirty()
         if not args:
             ui.status(_('guards deactivated\n'))
         if not opts.get('pop') and not opts.get('reapply'):
@@ -2881,7 +2881,7 @@ def select(ui, repo, *args, **opts):
                 ui.status(_('reapplying unguarded patches\n'))
                 q.push(repo, reapply)
         finally:
-            q.save_dirty()
+            q.savedirty()
 
 @command("qfinish",
          [('a', 'applied', None, _('finish all applied changesets'))],
@@ -2916,7 +2916,7 @@ def finish(ui, repo, *revrange, **opts):
 
     revs = scmutil.revrange(repo, revrange)
     q.finish(repo, revs)
-    q.save_dirty()
+    q.savedirty()
     return 0
 
 @command("qqueue",
