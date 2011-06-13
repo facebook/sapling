@@ -61,7 +61,7 @@ def parseurl(path, branches=None):
         u.fragment = None
     return str(u), (branch, branches or [])
 
-peerschemes = {
+schemes = {
     'bundle': bundlerepo,
     'file': _local,
     'http': httprepo,
@@ -73,7 +73,7 @@ peerschemes = {
 def _peerlookup(path):
     u = util.url(path)
     scheme = u.scheme or 'file'
-    thing = peerschemes.get(scheme) or peerschemes['file']
+    thing = schemes.get(scheme) or schemes['file']
     try:
         return thing(path)
     except TypeError:
