@@ -432,7 +432,7 @@ class queue(object):
                     self.active_guards.append(guard)
         return self.active_guards
 
-    def set_guards(self, idx, guards):
+    def setguards(self, idx, guards):
         for g in guards:
             if len(g) < 2:
                 raise util.Abort(_('guard %r too short') % g)
@@ -2454,7 +2454,7 @@ def guard(ui, repo, *args, **opts):
         idx = q.findseries(patch)
         if idx is None:
             raise util.Abort(_('no patch named %s') % patch)
-        q.set_guards(idx, args)
+        q.setguards(idx, args)
         q.save_dirty()
     else:
         status(q.series.index(q.lookup(patch)))
