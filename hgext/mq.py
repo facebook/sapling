@@ -833,7 +833,7 @@ class queue(object):
             return top, patch
         return None, None
 
-    def check_substate(self, repo):
+    def checksubstate(self, repo):
         '''return list of subrepos at a different revision than substate.
         Abort if any subrepos have uncommitted changes.'''
         inclsubs = []
@@ -893,7 +893,7 @@ class queue(object):
         diffopts = self.diffopts({'git': opts.get('git')})
         if opts.get('checkname', True):
             self.checkpatchname(patchfn)
-        inclsubs = self.check_substate(repo)
+        inclsubs = self.checksubstate(repo)
         if inclsubs:
             inclsubs.append('.hgsubstate')
         if opts.get('include') or opts.get('exclude') or pats:
@@ -1348,7 +1348,7 @@ class queue(object):
             if repo.changelog.heads(top) != [top]:
                 raise util.Abort(_("cannot refresh a revision with children"))
 
-            inclsubs = self.check_substate(repo)
+            inclsubs = self.checksubstate(repo)
 
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
