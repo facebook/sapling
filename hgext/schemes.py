@@ -93,6 +93,6 @@ def extsetup(ui):
             and os.path.exists('%s:\\' % scheme)):
             raise util.Abort(_('custom scheme %s:// conflicts with drive '
                                'letter %s:\\\n') % (scheme, scheme.upper()))
-        hg._peerschemes[scheme] = ShortRepository(url, scheme, t)
+        hg.peerschemes[scheme] = ShortRepository(url, scheme, t)
 
     extensions.wrapfunction(util, 'hasdriveletter', hasdriveletter)

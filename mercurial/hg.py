@@ -61,44 +61,7 @@ def parseurl(path, branches=None):
         u.fragment = None
     return str(u), (branch, branches or [])
 
-_reposchemes = {
-    'bundle': bundlerepo,
-    'file': _local,
-    'http': httprepo,
-    'https': httprepo,
-    'ssh': sshrepo,
-    'static-http': statichttprepo,
-}
-
-def _repolookup(path):
-    u = util.url(path)
-    scheme = u.scheme or 'file'
-    thing = _reposchemes.get(scheme) or _reposchemes['file']
-    try:
-        return thing(path)
-    except TypeError:
-        return thing
-
-def islocal(repo):
-    '''return true if repo or path is local'''
-    if isinstance(repo, str):
-        try:
-            return _repolookup(repo).islocal(repo)
-        except AttributeError:
-            return False
-    return repo.local()
-
-def repository(ui, path='', create=False):
-    """return a repository object for the specified path"""
-    repo = _repolookup(path).instance(ui, path, create)
-    ui = getattr(repo, "ui", ui)
-    for name, module in extensions.extensions():
-        hook = getattr(module, 'reposetup', None)
-        if hook:
-            hook(ui, repo)
-    return repo
-
-_peerschemes = {
+peerschemes = {
     'bundle': bundlerepo,
     'file': _local,
     'http': httprepo,
@@ -110,11 +73,30 @@ _peerschemes = {
 def _peerlookup(path):
     u = util.url(path)
     scheme = u.scheme or 'file'
-    thing = _peerschemes.get(scheme) or _peerschemes['file']
+    thing = peerschemes.get(scheme) or peerschemes['file']
     try:
         return thing(path)
     except TypeError:
         return thing
+
+def islocal(repo):
+    '''return true if repo or path is local'''
+    if isinstance(repo, str):
+        try:
+            return _peerlookup(repo).islocal(repo)
+        except AttributeError:
+            return False
+    return repo.local()
+
+def repository(ui, path='', create=False):
+    """return a repository object for the specified path"""
+    repo = _peerlookup(path).instance(ui, path, create)
+    ui = getattr(repo, "ui", ui)
+    for name, module in extensions.extensions():
+        hook = getattr(module, 'reposetup', None)
+        if hook:
+            hook(ui, repo)
+    return repo
 
 def peer(ui, opts, path, create=False):
     '''return a repository peer for the specified path'''
