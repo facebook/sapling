@@ -309,12 +309,12 @@ class queue(object):
 
     @util.propertycache
     def series(self):
-        self.parse_series()
+        self.parseseries()
         return self.series
 
     @util.propertycache
     def seriesguards(self):
-        self.parse_series()
+        self.parseseries()
         return self.seriesguards
 
     def invalidate(self):
@@ -371,7 +371,7 @@ class queue(object):
 
     guard_re = re.compile(r'\s?#([-+][^-+# \t\r\n\f][^# \t\r\n\f]*)')
 
-    def parse_series(self):
+    def parseseries(self):
         self.series = []
         self.seriesguards = []
         for l in self.fullseries:
@@ -443,7 +443,7 @@ class queue(object):
                 raise util.Abort(bad)
         drop = self.guard_re.sub('', self.fullseries[idx])
         self.fullseries[idx] = drop + ''.join([' #' + g for g in guards])
-        self.parse_series()
+        self.parseseries()
         self.series_dirty = True
 
     def pushable(self, idx):
@@ -763,7 +763,7 @@ class queue(object):
                 msg = _('unknown patches: %s\n')
                 raise util.Abort(''.join(msg % p for p in unknown))
 
-        self.parse_series()
+        self.parseseries()
         self.series_dirty = 1
 
     def _revpatches(self, repo, revs):
@@ -947,7 +947,7 @@ class queue(object):
                 try:
                     self.fullseries[insert:insert] = [patchfn]
                     self.applied.append(statusentry(n, patchfn))
-                    self.parse_series()
+                    self.parseseries()
                     self.series_dirty = 1
                     self.applied_dirty = 1
                     if msg:
@@ -1159,7 +1159,7 @@ class queue(object):
                 fullpatch = self.fullseries[index]
                 del self.fullseries[index]
                 self.fullseries.insert(start, fullpatch)
-                self.parse_series()
+                self.parseseries()
                 self.series_dirty = 1
 
             self.applied_dirty = 1
@@ -1640,7 +1640,7 @@ class queue(object):
         self.ui.warn(_("restoring status: %s\n") % lines[0])
         self.fullseries = series
         self.applied = applied
-        self.parse_series()
+        self.parseseries()
         self.series_dirty = 1
         self.applied_dirty = 1
         heads = repo.changelog.heads()
@@ -1800,7 +1800,7 @@ class queue(object):
 
                 self.added.append(patchname)
                 patchname = None
-            self.parse_series()
+            self.parseseries()
             self.applied_dirty = 1
             self.series_dirty = True
 
@@ -1846,7 +1846,7 @@ class queue(object):
             if patchname not in self.series:
                 index = self.full_series_end() + i
                 self.fullseries[index:index] = [patchname]
-            self.parse_series()
+            self.parseseries()
             self.series_dirty = True
             self.ui.warn(_("adding %s to series file\n") % patchname)
             self.added.append(patchname)
@@ -2596,7 +2596,7 @@ def rename(ui, repo, patch, name=None, **opts):
     i = q.findseries(patch)
     guards = q.guard_re.findall(q.fullseries[i])
     q.fullseries[i] = name + ''.join([' #' + g for g in guards])
-    q.parse_series()
+    q.parseseries()
     q.series_dirty = 1
 
     info = q.isapplied(patch)
