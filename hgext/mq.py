@@ -1029,7 +1029,7 @@ class queue(object):
                 return matches[0]
             if self.series and self.applied:
                 if s == 'qtip':
-                    return self.series[self.series_end(True)-1]
+                    return self.series[self.seriesend(True)-1]
                 if s == 'qbase':
                     return self.series[0]
             return None
@@ -1109,7 +1109,7 @@ class queue(object):
 
                 pushable, reason = self.pushable(patch)
                 if pushable:
-                    if self.series.index(patch) < self.series_end():
+                    if self.series.index(patch) < self.seriesend():
                         raise util.Abort(
                             _("cannot push to a previous patch: %s") % patch)
                 else:
@@ -1130,7 +1130,7 @@ class queue(object):
             # qpush without an argument is an error (nothing to
             # apply). This allows a loop of "...while hg qpush..." to
             # work as it detects an error when done
-            start = self.series_end()
+            start = self.seriesend()
             if start == len(self.series):
                 self.ui.warn(_('patch series already fully applied\n'))
                 return 1
@@ -1534,7 +1534,7 @@ class queue(object):
         if patch and patch not in self.series:
             raise util.Abort(_("patch %s is not in series file") % patch)
         if not patch:
-            start = self.series_end()
+            start = self.seriesend()
         else:
             start = self.series.index(patch) + 1
         unapplied = []
@@ -1702,7 +1702,7 @@ class queue(object):
             return end + 1
         return 0
 
-    def series_end(self, all_patches=False):
+    def seriesend(self, all_patches=False):
         """If all_patches is False, return the index of the next pushable patch
         in the series, or the series length. If all_patches is True, return the
         index of the first patch past the last applied one.
@@ -1888,7 +1888,7 @@ def applied(ui, repo, patch=None, **opts):
             raise util.Abort(_("patch %s is not in series file") % patch)
         end = q.series.index(patch) + 1
     else:
-        end = q.series_end(True)
+        end = q.seriesend(True)
 
     if opts.get('last') and not end:
         ui.write(_("no patches applied\n"))
@@ -1920,7 +1920,7 @@ def unapplied(ui, repo, patch=None, **opts):
             raise util.Abort(_("patch %s is not in series file") % patch)
         start = q.series.index(patch) + 1
     else:
-        start = q.series_end(True)
+        start = q.seriesend(True)
 
     if start == len(q.series) and opts.get('first'):
         ui.write(_("all patches applied\n"))
@@ -2132,7 +2132,7 @@ def top(ui, repo, **opts):
 
     Returns 0 on success."""
     q = repo.mq
-    t = q.applied and q.series_end(True) or 0
+    t = q.applied and q.seriesend(True) or 0
     if t:
         q.qseries(repo, start=t - 1, length=1, status='A',
                   summary=opts.get('summary'))
@@ -2146,7 +2146,7 @@ def next(ui, repo, **opts):
 
     Returns 0 on success."""
     q = repo.mq
-    end = q.series_end()
+    end = q.seriesend()
     if end == len(q.series):
         ui.write(_("all patches applied\n"))
         return 1
