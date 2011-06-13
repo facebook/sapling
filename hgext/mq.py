@@ -859,7 +859,7 @@ class queue(object):
         return m, a, r, d
 
     _reserved = ('series', 'status', 'guards', '.', '..')
-    def check_reserved_name(self, name):
+    def checkreservedname(self, name):
         if name in self._reserved:
             raise util.Abort(_('"%s" cannot be used as the name of a patch')
                              % name)
@@ -873,7 +873,7 @@ class queue(object):
                                  % c)
 
     def checkpatchname(self, name, force=False):
-        self.check_reserved_name(name)
+        self.checkreservedname(name)
         if not force and os.path.exists(self.join(name)):
             if os.path.isdir(self.join(name)):
                 raise util.Abort(_('"%s" already exists as a directory')
@@ -1809,7 +1809,7 @@ class queue(object):
                 if filename == '-':
                     raise util.Abort(_('-e is incompatible with import from -'))
                 filename = normname(filename)
-                self.check_reserved_name(filename)
+                self.checkreservedname(filename)
                 originpath = self.join(filename)
                 if not os.path.isfile(originpath):
                     raise util.Abort(_("patch %s does not exist") % filename)
