@@ -270,7 +270,7 @@ class queue(object):
         self.applied_dirty = 0
         self.series_dirty = 0
         self.added = []
-        self.series_path = "series"
+        self.seriespath = "series"
         self.status_path = "status"
         self.guards_path = "guards"
         self.active_guards = None
@@ -303,8 +303,8 @@ class queue(object):
 
     @util.propertycache
     def fullseries(self):
-        if os.path.exists(self.join(self.series_path)):
-            return self.opener.read(self.series_path).splitlines()
+        if os.path.exists(self.join(self.seriespath)):
+            return self.opener.read(self.seriespath).splitlines()
         return []
 
     @util.propertycache
@@ -388,7 +388,7 @@ class queue(object):
             if patch:
                 if patch in self.series:
                     raise util.Abort(_('%s appears more than once in %s') %
-                                     (patch, self.join(self.series_path)))
+                                     (patch, self.join(self.seriespath)))
                 self.series.append(patch)
                 self.seriesguards.append(self.guard_re.findall(comment))
 
@@ -498,7 +498,7 @@ class queue(object):
         if self.applied_dirty:
             write_list(map(str, self.applied), self.status_path)
         if self.series_dirty:
-            write_list(self.fullseries, self.series_path)
+            write_list(self.fullseries, self.seriespath)
         if self.guards_dirty:
             write_list(self.active_guards, self.guards_path)
         if self.added:
@@ -1593,7 +1593,7 @@ class queue(object):
                 for f in files:
                     fl = os.path.join(d, f)
                     if (fl not in self.series and
-                        fl not in (self.status_path, self.series_path,
+                        fl not in (self.status_path, self.seriespath,
                                    self.guards_path)
                         and not fl.startswith('.')):
                         msng_list.append(fl)
