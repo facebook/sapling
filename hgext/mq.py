@@ -302,7 +302,7 @@ class queue(object):
         return []
 
     @util.propertycache
-    def full_series(self):
+    def fullseries(self):
         if os.path.exists(self.join(self.series_path)):
             return self.opener.read(self.series_path).splitlines()
         return []
@@ -318,7 +318,7 @@ class queue(object):
         return self.series_guards
 
     def invalidate(self):
-        for a in 'applied full_series series series_guards'.split():
+        for a in 'applied fullseries series series_guards'.split():
             if a in self.__dict__:
                 delattr(self, a)
         self.applied_dirty = 0
@@ -364,7 +364,7 @@ class queue(object):
         def matchpatch(l):
             l = l.split('#', 1)[0]
             return l.strip() == patch
-        for index, l in enumerate(self.full_series):
+        for index, l in enumerate(self.fullseries):
             if matchpatch(l):
                 return index
         return None
@@ -374,7 +374,7 @@ class queue(object):
     def parse_series(self):
         self.series = []
         self.series_guards = []
-        for l in self.full_series:
+        for l in self.fullseries:
             h = l.find('#')
             if h == -1:
                 patch = l
@@ -441,8 +441,8 @@ class queue(object):
             bad = self.check_guard(g[1:])
             if bad:
                 raise util.Abort(bad)
-        drop = self.guard_re.sub('', self.full_series[idx])
-        self.full_series[idx] = drop + ''.join([' #' + g for g in guards])
+        drop = self.guard_re.sub('', self.fullseries[idx])
+        self.fullseries[idx] = drop + ''.join([' #' + g for g in guards])
         self.parse_series()
         self.series_dirty = True
 
@@ -498,7 +498,7 @@ class queue(object):
         if self.applied_dirty:
             write_list(map(str, self.applied), self.status_path)
         if self.series_dirty:
-            write_list(self.full_series, self.series_path)
+            write_list(self.fullseries, self.series_path)
         if self.guards_dirty:
             write_list(self.active_guards, self.guards_path)
         if self.added:
@@ -749,7 +749,7 @@ class queue(object):
         for (i, p) in sorted([(self.find_series(p), p) for p in patches],
                              reverse=True):
             if i is not None:
-                del self.full_series[i]
+                del self.fullseries[i]
             else:
                 unknown.append(p)
 
@@ -945,7 +945,7 @@ class queue(object):
                 if n is None:
                     raise util.Abort(_("repo commit failed"))
                 try:
-                    self.full_series[insert:insert] = [patchfn]
+                    self.fullseries[insert:insert] = [patchfn]
                     self.applied.append(statusentry(n, patchfn))
                     self.parse_series()
                     self.series_dirty = 1
@@ -1150,15 +1150,15 @@ class queue(object):
             if move:
                 if not patch:
                     raise util.Abort(_("please specify the patch to move"))
-                for i, rpn in enumerate(self.full_series[start:]):
+                for i, rpn in enumerate(self.fullseries[start:]):
                     # strip markers for patch guards
                     if self.guard_re.split(rpn, 1)[0] == patch:
                         break
                 index = start + i
-                assert index < len(self.full_series)
-                fullpatch = self.full_series[index]
-                del self.full_series[index]
-                self.full_series.insert(start, fullpatch)
+                assert index < len(self.fullseries)
+                fullpatch = self.fullseries[index]
+                del self.fullseries[index]
+                self.fullseries.insert(start, fullpatch)
                 self.parse_series()
                 self.series_dirty = 1
 
@@ -1638,7 +1638,7 @@ class queue(object):
             self.ui.warn(_("No saved patch data found\n"))
             return 1
         self.ui.warn(_("restoring status: %s\n") % lines[0])
-        self.full_series = series
+        self.fullseries = series
         self.applied = applied
         self.parse_series()
         self.series_dirty = 1
@@ -1684,7 +1684,7 @@ class queue(object):
             msg += "\nDirstate: %s %s" % (hex(pp[0]), hex(pp[1]))
         msg += "\n\nPatch Data:\n"
         msg += ''.join('%s\n' % x for x in self.applied)
-        msg += ''.join(':%s\n' % x for x in self.full_series)
+        msg += ''.join(':%s\n' % x for x in self.fullseries)
         n = repo.commit(msg, force=True)
         if not n:
             self.ui.warn(_("repo commit failed\n"))
@@ -1698,7 +1698,7 @@ class queue(object):
             p = self.applied[-1].name
             end = self.find_series(p)
             if end is None:
-                return len(self.full_series)
+                return len(self.fullseries)
             return end + 1
         return 0
 
@@ -1789,7 +1789,7 @@ class queue(object):
                     patchname = normname('%d.diff' % r)
                 checkseries(patchname)
                 self.checkpatchname(patchname, force)
-                self.full_series.insert(0, patchname)
+                self.fullseries.insert(0, patchname)
 
                 patchf = self.opener(patchname, "w")
                 cmdutil.export(repo, [n], fp=patchf, opts=diffopts)
@@ -1845,7 +1845,7 @@ class queue(object):
                 checkseries(patchname)
             if patchname not in self.series:
                 index = self.full_series_end() + i
-                self.full_series[index:index] = [patchname]
+                self.fullseries[index:index] = [patchname]
             self.parse_series()
             self.series_dirty = True
             self.ui.warn(_("adding %s to series file\n") % patchname)
@@ -2594,8 +2594,8 @@ def rename(ui, repo, patch, name=None, **opts):
 
     ui.note(_('renaming %s to %s\n') % (patch, name))
     i = q.find_series(patch)
-    guards = q.guard_re.findall(q.full_series[i])
-    q.full_series[i] = name + ''.join([' #' + g for g in guards])
+    guards = q.guard_re.findall(q.fullseries[i])
+    q.fullseries[i] = name + ''.join([' #' + g for g in guards])
     q.parse_series()
     q.series_dirty = 1
 

@@ -376,7 +376,7 @@ def updatemq(repo, state, skipped, **opts):
     'Update rebased mq patches - finalize and then import them'
     mqrebase = {}
     mq = repo.mq
-    original_series = mq.full_series[:]
+    original_series = mq.fullseries[:]
 
     for p in mq.applied:
         rev = repo[p.node].rev()
@@ -399,10 +399,10 @@ def updatemq(repo, state, skipped, **opts):
         # Restore missing guards
         for s in original_series:
             pname = mq.guard_re.split(s, 1)[0]
-            if pname in mq.full_series:
+            if pname in mq.fullseries:
                 repo.ui.debug('restoring guard for patch %s' % (pname))
-                mq.full_series.remove(pname)
-                mq.full_series.append(s)
+                mq.fullseries.remove(pname)
+                mq.fullseries.append(s)
                 mq.series_dirty = True
         mq.save_dirty()
 
