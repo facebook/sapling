@@ -563,7 +563,7 @@ class localrepository(repo.repository):
         return [(n in nm) for n in nodes]
 
     def local(self):
-        return True
+        return self
 
     def join(self, f):
         return os.path.join(self.path, f)
