@@ -313,12 +313,12 @@ class queue(object):
         return self.series
 
     @util.propertycache
-    def series_guards(self):
+    def seriesguards(self):
         self.parse_series()
-        return self.series_guards
+        return self.seriesguards
 
     def invalidate(self):
-        for a in 'applied fullseries series series_guards'.split():
+        for a in 'applied fullseries series seriesguards'.split():
             if a in self.__dict__:
                 delattr(self, a)
         self.applied_dirty = 0
@@ -373,7 +373,7 @@ class queue(object):
 
     def parse_series(self):
         self.series = []
-        self.series_guards = []
+        self.seriesguards = []
         for l in self.fullseries:
             h = l.find('#')
             if h == -1:
@@ -390,7 +390,7 @@ class queue(object):
                     raise util.Abort(_('%s appears more than once in %s') %
                                      (patch, self.join(self.series_path)))
                 self.series.append(patch)
-                self.series_guards.append(self.guard_re.findall(comment))
+                self.seriesguards.append(self.guard_re.findall(comment))
 
     def check_guard(self, guard):
         if not guard:
@@ -449,7 +449,7 @@ class queue(object):
     def pushable(self, idx):
         if isinstance(idx, str):
             idx = self.series.index(idx)
-        patchguards = self.series_guards[idx]
+        patchguards = self.seriesguards[idx]
         if not patchguards:
             return True, None
         guards = self.active()
@@ -2412,7 +2412,7 @@ def guard(ui, repo, *args, **opts):
     Returns 0 on success.
     '''
     def status(idx):
-        guards = q.series_guards[idx] or ['unguarded']
+        guards = q.seriesguards[idx] or ['unguarded']
         if q.series[idx] in applied:
             state = 'applied'
         elif q.pushable(idx)[0]:
@@ -2838,7 +2838,7 @@ def select(ui, repo, *args, **opts):
     elif opts.get('series'):
         guards = {}
         noguards = 0
-        for gs in q.series_guards:
+        for gs in q.seriesguards:
             if not gs:
                 noguards += 1
             for g in gs:
