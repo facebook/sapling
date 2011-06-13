@@ -913,7 +913,7 @@ class queue(object):
             raise util.Abort(_('cannot manage merge changesets'))
         commitfiles = m + a + r
         self.checktoppatch(repo)
-        insert = self.full_series_end()
+        insert = self.fullseriesend()
         wlock = repo.wlock()
         try:
             try:
@@ -1693,7 +1693,7 @@ class queue(object):
         self.applied_dirty = 1
         self.removeundo(repo)
 
-    def full_series_end(self):
+    def fullseriesend(self):
         if self.applied:
             p = self.applied[-1].name
             end = self.findseries(p)
@@ -1844,7 +1844,7 @@ class queue(object):
             if not force:
                 checkseries(patchname)
             if patchname not in self.series:
-                index = self.full_series_end() + i
+                index = self.fullseriesend() + i
                 self.fullseries[index:index] = [patchname]
             self.parseseries()
             self.series_dirty = True
