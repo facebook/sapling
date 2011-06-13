@@ -464,7 +464,7 @@ class queue(object):
             return False, ' '.join(map(repr, pos))
         return True, ''
 
-    def explain_pushable(self, idx, all_patches=False):
+    def explainpushable(self, idx, all_patches=False):
         write = all_patches and self.ui.write or self.ui.warn
         if all_patches or self.ui.verbose:
             if isinstance(idx, str):
@@ -598,7 +598,7 @@ class queue(object):
                 return (1, None)
             pushable, reason = self.pushable(patch)
             if not pushable:
-                self.explain_pushable(patch, all_patches=True)
+                self.explainpushable(patch, all_patches=True)
                 continue
             info = mergeq.isapplied(patch)
             if not info:
@@ -664,7 +664,7 @@ class queue(object):
         for patchname in series:
             pushable, reason = self.pushable(patchname)
             if not pushable:
-                self.explain_pushable(patchname, all_patches=True)
+                self.explainpushable(patchname, all_patches=True)
                 continue
             self.ui.status(_("applying %s\n") % patchname)
             pf = os.path.join(patchdir, patchname)
@@ -1542,7 +1542,7 @@ class queue(object):
             pushable, reason = self.pushable(i)
             if pushable:
                 unapplied.append((i, self.series[i]))
-            self.explain_pushable(i)
+            self.explainpushable(i)
         return unapplied
 
     def qseries(self, repo, missing=None, start=0, length=None, status=None,
@@ -1715,7 +1715,7 @@ class queue(object):
                 p, reason = self.pushable(i)
                 if p:
                     break
-                self.explain_pushable(i)
+                self.explainpushable(i)
             return i
         if self.applied:
             p = self.applied[-1].name
