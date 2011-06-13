@@ -267,7 +267,7 @@ class queue(object):
         self.path = patchdir or curpath
         self.opener = scmutil.opener(self.path)
         self.ui = ui
-        self.applied_dirty = 0
+        self.applieddirty = 0
         self.series_dirty = 0
         self.added = []
         self.seriespath = "series"
@@ -321,7 +321,7 @@ class queue(object):
         for a in 'applied fullseries series seriesguards'.split():
             if a in self.__dict__:
                 delattr(self, a)
-        self.applied_dirty = 0
+        self.applieddirty = 0
         self.series_dirty = 0
         self.guardsdirty = False
         self.activeguards = None
@@ -495,7 +495,7 @@ class queue(object):
             for i in items:
                 fp.write("%s\n" % i)
             fp.close()
-        if self.applied_dirty:
+        if self.applieddirty:
             write_list(map(str, self.applied), self.statuspath)
         if self.series_dirty:
             write_list(self.fullseries, self.seriespath)
@@ -587,7 +587,7 @@ class queue(object):
             n = repo.commit('[mq]: merge marker', force=True)
             self.removeundo(repo)
             self.applied.append(statusentry(n, pname))
-            self.applied_dirty = 1
+            self.applieddirty = 1
 
         head = self.qparents(repo)
 
@@ -608,7 +608,7 @@ class queue(object):
             err, head = self.mergeone(repo, mergeq, head, patch, rev, diffopts)
             if head:
                 self.applied.append(statusentry(head, patch))
-                self.applied_dirty = 1
+                self.applieddirty = 1
             if err:
                 return (err, head)
         self.savedirty()
@@ -742,7 +742,7 @@ class queue(object):
         if numrevs:
             qfinished = self.applied[:numrevs]
             del self.applied[:numrevs]
-            self.applied_dirty = 1
+            self.applieddirty = 1
 
         unknown = []
 
@@ -949,7 +949,7 @@ class queue(object):
                     self.applied.append(statusentry(n, patchfn))
                     self.parseseries()
                     self.series_dirty = 1
-                    self.applied_dirty = 1
+                    self.applieddirty = 1
                     if msg:
                         msg = msg + "\n\n"
                         p.write(msg)
@@ -1162,7 +1162,7 @@ class queue(object):
                 self.parseseries()
                 self.series_dirty = 1
 
-            self.applied_dirty = 1
+            self.applieddirty = 1
             if start > 0:
                 self.checktoppatch(repo)
             if not patch:
@@ -1265,7 +1265,7 @@ class queue(object):
                         break
                 update = needupdate
 
-            self.applied_dirty = 1
+            self.applieddirty = 1
             end = len(self.applied)
             rev = self.applied[start].node
             if update:
@@ -1494,7 +1494,7 @@ class queue(object):
                 # assumes strip can roll itself back if interrupted
                 repo.dirstate.setparents(*cparents)
                 self.applied.pop()
-                self.applied_dirty = 1
+                self.applieddirty = 1
                 self.strip(repo, [top], update=False,
                            backup='strip')
             except:
@@ -1642,7 +1642,7 @@ class queue(object):
         self.applied = applied
         self.parseseries()
         self.series_dirty = 1
-        self.applied_dirty = 1
+        self.applieddirty = 1
         heads = repo.changelog.heads()
         if delete:
             if rev not in heads:
@@ -1690,7 +1690,7 @@ class queue(object):
             self.ui.warn(_("repo commit failed\n"))
             return 1
         self.applied.append(statusentry(n, '.hg.patches.save.line'))
-        self.applied_dirty = 1
+        self.applieddirty = 1
         self.removeundo(repo)
 
     def fullseriesend(self):
@@ -1801,7 +1801,7 @@ class queue(object):
                 self.added.append(patchname)
                 patchname = None
             self.parseseries()
-            self.applied_dirty = 1
+            self.applieddirty = 1
             self.series_dirty = True
 
         for i, filename in enumerate(files):
@@ -2602,7 +2602,7 @@ def rename(ui, repo, patch, name=None, **opts):
     info = q.isapplied(patch)
     if info:
         q.applied[info[0]] = statusentry(info[1], name)
-    q.applied_dirty = 1
+    q.applieddirty = 1
 
     destdir = os.path.dirname(absdest)
     if not os.path.isdir(destdir):
@@ -2745,7 +2745,7 @@ def strip(ui, repo, *revs, **opts):
         # refresh queue state if we're about to strip
         # applied patches
         if cl.rev(repo.lookup('qtip')) in strippedrevs:
-            q.applied_dirty = True
+            q.applieddirty = True
             start = 0
             end = len(q.applied)
             for i, statusentry in enumerate(q.applied):
