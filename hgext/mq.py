@@ -274,7 +274,7 @@ class queue(object):
         self.statuspath = "status"
         self.guardspath = "guards"
         self.activeguards = None
-        self.guards_dirty = False
+        self.guardsdirty = False
         # Handle mq.git as a bool with extended values
         try:
             gitmode = ui.configbool('mq', 'git', None)
@@ -323,7 +323,7 @@ class queue(object):
                 delattr(self, a)
         self.applied_dirty = 0
         self.series_dirty = 0
-        self.guards_dirty = False
+        self.guardsdirty = False
         self.activeguards = None
 
     def diffopts(self, opts={}, patchfn=None):
@@ -412,7 +412,7 @@ class queue(object):
         guards = sorted(set(guards))
         self.ui.debug('active guards: %s\n' % ' '.join(guards))
         self.activeguards = guards
-        self.guards_dirty = True
+        self.guardsdirty = True
 
     def active(self):
         if self.activeguards is None:
@@ -499,7 +499,7 @@ class queue(object):
             write_list(map(str, self.applied), self.statuspath)
         if self.series_dirty:
             write_list(self.fullseries, self.seriespath)
-        if self.guards_dirty:
+        if self.guardsdirty:
             write_list(self.activeguards, self.guardspath)
         if self.added:
             qrepo = self.qrepo()
