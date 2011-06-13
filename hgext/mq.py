@@ -1016,7 +1016,7 @@ class queue(object):
     def lookup(self, patch, strict=False):
         patch = patch and str(patch)
 
-        def partial_name(s):
+        def partialname(s):
             if s in self.series:
                 return s
             matches = [x for x in self.series if s in x]
@@ -1049,12 +1049,12 @@ class queue(object):
                     return self.series[sno]
 
             if not strict:
-                res = partial_name(patch)
+                res = partialname(patch)
                 if res:
                     return res
                 minus = patch.rfind('-')
                 if minus >= 0:
-                    res = partial_name(patch[:minus])
+                    res = partialname(patch[:minus])
                     if res:
                         i = self.series.index(res)
                         try:
@@ -1066,7 +1066,7 @@ class queue(object):
                                 return self.series[i - off]
                 plus = patch.rfind('+')
                 if plus >= 0:
-                    res = partial_name(patch[:plus])
+                    res = partialname(patch[:plus])
                     if res:
                         i = self.series.index(res)
                         try:
