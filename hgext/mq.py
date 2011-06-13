@@ -3095,7 +3095,7 @@ def reposetup(ui, repo):
         def mq(self):
             return queue(self.ui, self.join(""))
 
-        def abort_if_wdir_patched(self, errmsg, force=False):
+        def abortifwdirpatched(self, errmsg, force=False):
             if self.mq.applied and not force:
                 parents = self.dirstate.parents()
                 patches = [s.node for s in self.mq.applied]
@@ -3104,7 +3104,7 @@ def reposetup(ui, repo):
 
         def commit(self, text="", user=None, date=None, match=None,
                    force=False, editor=False, extra={}):
-            self.abort_if_wdir_patched(
+            self.abortifwdirpatched(
                 _('cannot commit over an applied mq patch'),
                 force)
 
@@ -3189,9 +3189,9 @@ def reposetup(ui, repo):
         repo.__class__ = mqrepo
 
 def mqimport(orig, ui, repo, *args, **kwargs):
-    if (hasattr(repo, 'abort_if_wdir_patched')
+    if (hasattr(repo, 'abortifwdirpatched')
         and not kwargs.get('no_commit', False)):
-        repo.abort_if_wdir_patched(_('cannot import over an applied patch'),
+        repo.abortifwdirpatched(_('cannot import over an applied patch'),
                                    kwargs.get('force'))
     return orig(ui, repo, *args, **kwargs)
 
