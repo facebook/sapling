@@ -360,7 +360,7 @@ class queue(object):
     def join(self, *p):
         return os.path.join(self.path, *p)
 
-    def find_series(self, patch):
+    def findseries(self, patch):
         def matchpatch(l):
             l = l.split('#', 1)[0]
             return l.strip() == patch
@@ -746,7 +746,7 @@ class queue(object):
 
         unknown = []
 
-        for (i, p) in sorted([(self.find_series(p), p) for p in patches],
+        for (i, p) in sorted([(self.findseries(p), p) for p in patches],
                              reverse=True):
             if i is not None:
                 del self.fullseries[i]
@@ -1696,7 +1696,7 @@ class queue(object):
     def full_series_end(self):
         if self.applied:
             p = self.applied[-1].name
-            end = self.find_series(p)
+            end = self.findseries(p)
             if end is None:
                 return len(self.fullseries)
             return end + 1
@@ -2451,7 +2451,7 @@ def guard(ui, repo, *args, **opts):
     if patch is None:
         raise util.Abort(_('no patch to work with'))
     if args or opts.get('none'):
-        idx = q.find_series(patch)
+        idx = q.findseries(patch)
         if idx is None:
             raise util.Abort(_('no patch named %s') % patch)
         q.set_guards(idx, args)
@@ -2593,7 +2593,7 @@ def rename(ui, repo, patch, name=None, **opts):
     q.checkpatchname(name)
 
     ui.note(_('renaming %s to %s\n') % (patch, name))
-    i = q.find_series(patch)
+    i = q.findseries(patch)
     guards = q.guard_re.findall(q.fullseries[i])
     q.fullseries[i] = name + ''.join([' #' + g for g in guards])
     q.parse_series()
