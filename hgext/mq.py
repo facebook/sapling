@@ -823,7 +823,7 @@ class queue(object):
 
         self._cleanup(realpatches, numrevs, opts.get('keep'))
 
-    def check_toppatch(self, repo):
+    def checktoppatch(self, repo):
         if self.applied:
             top = self.applied[-1].node
             patch = self.applied[-1].name
@@ -912,7 +912,7 @@ class queue(object):
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot manage merge changesets'))
         commitfiles = m + a + r
-        self.check_toppatch(repo)
+        self.checktoppatch(repo)
         insert = self.full_series_end()
         wlock = repo.wlock()
         try:
@@ -1164,7 +1164,7 @@ class queue(object):
 
             self.applied_dirty = 1
             if start > 0:
-                self.check_toppatch(repo)
+                self.checktoppatch(repo)
             if not patch:
                 patch = self.series[start]
                 end = start + 1
@@ -1269,7 +1269,7 @@ class queue(object):
             end = len(self.applied)
             rev = self.applied[start].node
             if update:
-                top = self.check_toppatch(repo)[0]
+                top = self.checktoppatch(repo)[0]
 
             try:
                 heads = repo.changelog.heads(rev)
@@ -1319,7 +1319,7 @@ class queue(object):
             wlock.release()
 
     def diff(self, repo, pats, opts):
-        top, patch = self.check_toppatch(repo)
+        top, patch = self.checktoppatch(repo)
         if not top:
             self.ui.write(_("no patches applied\n"))
             return
@@ -1343,7 +1343,7 @@ class queue(object):
         wlock = repo.wlock()
 
         try:
-            self.check_toppatch(repo)
+            self.checktoppatch(repo)
             (top, patchfn) = (self.applied[-1].node, self.applied[-1].name)
             if repo.changelog.heads(top) != [top]:
                 raise util.Abort(_("cannot refresh a revision with children"))
@@ -2324,7 +2324,7 @@ def fold(ui, repo, *files, **opts):
 
     if not files:
         raise util.Abort(_('qfold requires at least one patch name'))
-    if not q.check_toppatch(repo)[0]:
+    if not q.checktoppatch(repo)[0]:
         raise util.Abort(_('no patches applied'))
     q.check_localchanges(repo)
 
