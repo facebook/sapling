@@ -490,17 +490,17 @@ class queue(object):
                           self.series[idx])
 
     def savedirty(self):
-        def write_list(items, path):
+        def writelist(items, path):
             fp = self.opener(path, 'w')
             for i in items:
                 fp.write("%s\n" % i)
             fp.close()
         if self.applieddirty:
-            write_list(map(str, self.applied), self.statuspath)
+            writelist(map(str, self.applied), self.statuspath)
         if self.seriesdirty:
-            write_list(self.fullseries, self.seriespath)
+            writelist(self.fullseries, self.seriespath)
         if self.guardsdirty:
-            write_list(self.activeguards, self.guardspath)
+            writelist(self.activeguards, self.guardspath)
         if self.added:
             qrepo = self.qrepo()
             if qrepo:
