@@ -2272,8 +2272,9 @@ def forget(ui, repo, *pats, **opts):
 
     for f in m.files():
         if f not in repo.dirstate and not os.path.isdir(m.rel(f)):
-            ui.warn(_('not removing %s: file is already untracked\n')
-                    % m.rel(f))
+            if os.path.exists(m.rel(f)):
+                ui.warn(_('not removing %s: file is already untracked\n')
+                        % m.rel(f))
             errs = 1
 
     for f in forget:
@@ -3917,7 +3918,8 @@ def remove(ui, repo, *pats, **opts):
 
     for f in m.files():
         if f not in repo.dirstate and not os.path.isdir(m.rel(f)):
-            ui.warn(_('not removing %s: file is untracked\n') % m.rel(f))
+            if os.path.exists(m.rel(f)):
+                ui.warn(_('not removing %s: file is untracked\n') % m.rel(f))
             ret = 1
 
     if force:
