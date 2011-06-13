@@ -23,6 +23,7 @@ output of 'cvs ci' varies unpredictably, so just discard it
 
   $ cvsci()
   > {
+  >     sleep 1
   >     cvs -f ci "$@" >/dev/null
   > }
   $ cvscall -d "$CVSROOT" init
