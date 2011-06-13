@@ -272,7 +272,7 @@ class queue(object):
         self.added = []
         self.seriespath = "series"
         self.statuspath = "status"
-        self.guards_path = "guards"
+        self.guardspath = "guards"
         self.active_guards = None
         self.guards_dirty = False
         # Handle mq.git as a bool with extended values
@@ -418,7 +418,7 @@ class queue(object):
         if self.active_guards is None:
             self.active_guards = []
             try:
-                guards = self.opener.read(self.guards_path).split()
+                guards = self.opener.read(self.guardspath).split()
             except IOError, err:
                 if err.errno != errno.ENOENT:
                     raise
@@ -427,7 +427,7 @@ class queue(object):
                 bad = self.checkguard(guard)
                 if bad:
                     self.ui.warn('%s:%d: %s\n' %
-                                 (self.join(self.guards_path), i + 1, bad))
+                                 (self.join(self.guardspath), i + 1, bad))
                 else:
                     self.active_guards.append(guard)
         return self.active_guards
@@ -500,7 +500,7 @@ class queue(object):
         if self.series_dirty:
             write_list(self.fullseries, self.seriespath)
         if self.guards_dirty:
-            write_list(self.active_guards, self.guards_path)
+            write_list(self.active_guards, self.guardspath)
         if self.added:
             qrepo = self.qrepo()
             if qrepo:
@@ -1594,7 +1594,7 @@ class queue(object):
                     fl = os.path.join(d, f)
                     if (fl not in self.series and
                         fl not in (self.statuspath, self.seriespath,
-                                   self.guards_path)
+                                   self.guardspath)
                         and not fl.startswith('.')):
                         msng_list.append(fl)
             for x in sorted(msng_list):
