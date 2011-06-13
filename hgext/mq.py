@@ -852,7 +852,7 @@ class queue(object):
         else:
             raise util.Abort(_("local changes found"))
 
-    def check_localchanges(self, repo, force=False, refresh=True):
+    def checklocalchanges(self, repo, force=False, refresh=True):
         m, a, r, d = repo.status()[:4]
         if (m or a or r or d) and not force:
             self.localchangesfound(refresh)
@@ -907,7 +907,7 @@ class queue(object):
             match.bad = badfn
             m, a, r, d = repo.status(match=match)[:4]
         else:
-            m, a, r, d = self.check_localchanges(repo, force=True)
+            m, a, r, d = self.checklocalchanges(repo, force=True)
             match = scmutil.matchfiles(repo, m + a + r + inclsubs)
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot manage merge changesets'))
@@ -986,7 +986,7 @@ class queue(object):
             lock = repo.lock()
 
             if update:
-                self.check_localchanges(repo, force=force, refresh=False)
+                self.checklocalchanges(repo, force=force, refresh=False)
                 urev = self.qparents(repo, revs[0])
                 hg.clean(repo, urev)
                 repo.dirstate.write()
@@ -1183,7 +1183,7 @@ class queue(object):
                         if wcfiles.intersection(patchfiles):
                             self.localchangesfound(self.applied)
             elif mergeq:
-                self.check_localchanges(refresh=self.applied)
+                self.checklocalchanges(refresh=self.applied)
 
             all_files = set()
             try:
@@ -2326,7 +2326,7 @@ def fold(ui, repo, *files, **opts):
         raise util.Abort(_('qfold requires at least one patch name'))
     if not q.checktoppatch(repo)[0]:
         raise util.Abort(_('no patches applied'))
-    q.check_localchanges(repo)
+    q.checklocalchanges(repo)
 
     message = cmdutil.logmessage(opts)
     if opts.get('edit'):
