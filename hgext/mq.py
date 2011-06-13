@@ -273,7 +273,7 @@ class queue(object):
         self.seriespath = "series"
         self.statuspath = "status"
         self.guardspath = "guards"
-        self.active_guards = None
+        self.activeguards = None
         self.guards_dirty = False
         # Handle mq.git as a bool with extended values
         try:
@@ -324,7 +324,7 @@ class queue(object):
         self.applied_dirty = 0
         self.series_dirty = 0
         self.guards_dirty = False
-        self.active_guards = None
+        self.activeguards = None
 
     def diffopts(self, opts={}, patchfn=None):
         diffopts = patchmod.diffopts(self.ui, opts)
@@ -411,12 +411,12 @@ class queue(object):
                 raise util.Abort(bad)
         guards = sorted(set(guards))
         self.ui.debug('active guards: %s\n' % ' '.join(guards))
-        self.active_guards = guards
+        self.activeguards = guards
         self.guards_dirty = True
 
     def active(self):
-        if self.active_guards is None:
-            self.active_guards = []
+        if self.activeguards is None:
+            self.activeguards = []
             try:
                 guards = self.opener.read(self.guardspath).split()
             except IOError, err:
@@ -429,8 +429,8 @@ class queue(object):
                     self.ui.warn('%s:%d: %s\n' %
                                  (self.join(self.guardspath), i + 1, bad))
                 else:
-                    self.active_guards.append(guard)
-        return self.active_guards
+                    self.activeguards.append(guard)
+        return self.activeguards
 
     def setguards(self, idx, guards):
         for g in guards:
@@ -500,7 +500,7 @@ class queue(object):
         if self.series_dirty:
             write_list(self.fullseries, self.seriespath)
         if self.guards_dirty:
-            write_list(self.active_guards, self.guardspath)
+            write_list(self.activeguards, self.guardspath)
         if self.added:
             qrepo = self.qrepo()
             if qrepo:
