@@ -271,7 +271,7 @@ class queue(object):
         self.series_dirty = 0
         self.added = []
         self.seriespath = "series"
-        self.status_path = "status"
+        self.statuspath = "status"
         self.guards_path = "guards"
         self.active_guards = None
         self.guards_dirty = False
@@ -287,7 +287,7 @@ class queue(object):
 
     @util.propertycache
     def applied(self):
-        if os.path.exists(self.join(self.status_path)):
+        if os.path.exists(self.join(self.statuspath)):
             def parselines(lines):
                 for l in lines:
                     entry = l.split(':', 1)
@@ -297,7 +297,7 @@ class queue(object):
                     elif l.strip():
                         self.ui.warn(_('malformated mq status line: %s\n') % entry)
                     # else we ignore empty lines
-            lines = self.opener.read(self.status_path).splitlines()
+            lines = self.opener.read(self.statuspath).splitlines()
             return list(parselines(lines))
         return []
 
@@ -496,7 +496,7 @@ class queue(object):
                 fp.write("%s\n" % i)
             fp.close()
         if self.applied_dirty:
-            write_list(map(str, self.applied), self.status_path)
+            write_list(map(str, self.applied), self.statuspath)
         if self.series_dirty:
             write_list(self.fullseries, self.seriespath)
         if self.guards_dirty:
@@ -1593,7 +1593,7 @@ class queue(object):
                 for f in files:
                     fl = os.path.join(d, f)
                     if (fl not in self.series and
-                        fl not in (self.status_path, self.seriespath,
+                        fl not in (self.statuspath, self.seriespath,
                                    self.guards_path)
                         and not fl.startswith('.')):
                         msng_list.append(fl)
@@ -2675,7 +2675,7 @@ def save(ui, repo, **opts):
         util.copyfiles(path, newpath)
     if opts.get('empty'):
         try:
-            os.unlink(q.join(q.status_path))
+            os.unlink(q.join(q.statuspath))
         except:
             pass
     return 0
