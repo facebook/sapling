@@ -392,7 +392,7 @@ class queue(object):
                 self.series.append(patch)
                 self.seriesguards.append(self.guard_re.findall(comment))
 
-    def check_guard(self, guard):
+    def checkguard(self, guard):
         if not guard:
             return _('guard cannot be an empty string')
         bad_chars = '# \t\r\n\f'
@@ -406,7 +406,7 @@ class queue(object):
 
     def set_active(self, guards):
         for guard in guards:
-            bad = self.check_guard(guard)
+            bad = self.checkguard(guard)
             if bad:
                 raise util.Abort(bad)
         guards = sorted(set(guards))
@@ -424,7 +424,7 @@ class queue(object):
                     raise
                 guards = []
             for i, guard in enumerate(guards):
-                bad = self.check_guard(guard)
+                bad = self.checkguard(guard)
                 if bad:
                     self.ui.warn('%s:%d: %s\n' %
                                  (self.join(self.guards_path), i + 1, bad))
@@ -438,7 +438,7 @@ class queue(object):
                 raise util.Abort(_('guard %r too short') % g)
             if g[0] not in '-+':
                 raise util.Abort(_('guard %r starts with invalid char') % g)
-            bad = self.check_guard(g[1:])
+            bad = self.checkguard(g[1:])
             if bad:
                 raise util.Abort(bad)
         drop = self.guard_re.sub('', self.fullseries[idx])
