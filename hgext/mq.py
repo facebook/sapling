@@ -404,7 +404,7 @@ class queue(object):
             if c in guard:
                 return _('invalid character in guard %r: %r') % (guard, c)
 
-    def set_active(self, guards):
+    def setactive(self, guards):
         for guard in guards:
             bad = self.checkguard(guard)
             if bad:
@@ -2819,7 +2819,7 @@ def select(ui, repo, *args, **opts):
         old_unapplied = q.unapplied(repo)
         old_guarded = [i for i in xrange(len(q.applied)) if
                        not q.pushable(i)[0]]
-        q.set_active(args)
+        q.setactive(args)
         q.save_dirty()
         if not args:
             ui.status(_('guards deactivated\n'))
