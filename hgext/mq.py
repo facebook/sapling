@@ -268,7 +268,7 @@ class queue(object):
         self.opener = scmutil.opener(self.path)
         self.ui = ui
         self.applieddirty = 0
-        self.series_dirty = 0
+        self.seriesdirty = 0
         self.added = []
         self.seriespath = "series"
         self.statuspath = "status"
@@ -322,7 +322,7 @@ class queue(object):
             if a in self.__dict__:
                 delattr(self, a)
         self.applieddirty = 0
-        self.series_dirty = 0
+        self.seriesdirty = 0
         self.guardsdirty = False
         self.activeguards = None
 
@@ -444,7 +444,7 @@ class queue(object):
         drop = self.guard_re.sub('', self.fullseries[idx])
         self.fullseries[idx] = drop + ''.join([' #' + g for g in guards])
         self.parseseries()
-        self.series_dirty = True
+        self.seriesdirty = True
 
     def pushable(self, idx):
         if isinstance(idx, str):
@@ -497,7 +497,7 @@ class queue(object):
             fp.close()
         if self.applieddirty:
             write_list(map(str, self.applied), self.statuspath)
-        if self.series_dirty:
+        if self.seriesdirty:
             write_list(self.fullseries, self.seriespath)
         if self.guardsdirty:
             write_list(self.activeguards, self.guardspath)
@@ -764,7 +764,7 @@ class queue(object):
                 raise util.Abort(''.join(msg % p for p in unknown))
 
         self.parseseries()
-        self.series_dirty = 1
+        self.seriesdirty = 1
 
     def _revpatches(self, repo, revs):
         firstrev = repo[self.applied[0].node].rev()
@@ -948,7 +948,7 @@ class queue(object):
                     self.fullseries[insert:insert] = [patchfn]
                     self.applied.append(statusentry(n, patchfn))
                     self.parseseries()
-                    self.series_dirty = 1
+                    self.seriesdirty = 1
                     self.applieddirty = 1
                     if msg:
                         msg = msg + "\n\n"
@@ -1160,7 +1160,7 @@ class queue(object):
                 del self.fullseries[index]
                 self.fullseries.insert(start, fullpatch)
                 self.parseseries()
-                self.series_dirty = 1
+                self.seriesdirty = 1
 
             self.applieddirty = 1
             if start > 0:
@@ -1641,7 +1641,7 @@ class queue(object):
         self.fullseries = series
         self.applied = applied
         self.parseseries()
-        self.series_dirty = 1
+        self.seriesdirty = 1
         self.applieddirty = 1
         heads = repo.changelog.heads()
         if delete:
@@ -1802,7 +1802,7 @@ class queue(object):
                 patchname = None
             self.parseseries()
             self.applieddirty = 1
-            self.series_dirty = True
+            self.seriesdirty = True
 
         for i, filename in enumerate(files):
             if existing:
@@ -1847,7 +1847,7 @@ class queue(object):
                 index = self.fullseriesend() + i
                 self.fullseries[index:index] = [patchname]
             self.parseseries()
-            self.series_dirty = True
+            self.seriesdirty = True
             self.ui.warn(_("adding %s to series file\n") % patchname)
             self.added.append(patchname)
             patchname = None
@@ -2597,7 +2597,7 @@ def rename(ui, repo, patch, name=None, **opts):
     guards = q.guard_re.findall(q.fullseries[i])
     q.fullseries[i] = name + ''.join([' #' + g for g in guards])
     q.parseseries()
-    q.series_dirty = 1
+    q.seriesdirty = 1
 
     info = q.isapplied(patch)
     if info:
