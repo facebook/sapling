@@ -491,7 +491,7 @@ class filestore(object):
         self.files = {}
         self.created = 0
 
-    def setfile(self, fname, data, mode):
+    def setfile(self, fname, data, mode, copied=None):
         if self.opener is None:
             root = tempfile.mkdtemp(prefix='hg-patch-')
             self.opener = scmutil.opener(root)
@@ -499,13 +499,13 @@ class filestore(object):
         fn = str(self.created)
         self.opener.write(fn, data)
         self.created += 1
-        self.files[fname] = (fn, mode)
+        self.files[fname] = (fn, mode, copied)
 
     def getfile(self, fname):
         if fname not in self.files:
             raise IOError()
-        fn, mode = self.files[fname]
-        return self.opener.read(fn), mode
+        fn, mode, copied = self.files[fname]
+        return self.opener.read(fn), mode, copied
 
     def close(self):
         if self.opener:
@@ -535,7 +535,7 @@ class patchfile(object):
                 data, mode = backend.getfile(self.fname)
                 self.exists = True
             else:
-                data, mode = store.getfile(self.copysource)
+                data, mode = store.getfile(self.copysource)[:2]
                 self.exists = backend.exists(self.fname)
             self.missing = False
             if data:
@@ -1248,7 +1248,7 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1,
                     continue
                 data, mode = None, None
                 if gp.op in ('RENAME', 'COPY'):
-                    data, mode = store.getfile(gp.oldpath)
+                    data, mode = store.getfile(gp.oldpath)[:2]
                 if gp.mode:
                     mode = gp.mode
                     if gp.op == 'ADD':
