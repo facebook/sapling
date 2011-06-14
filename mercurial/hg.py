@@ -174,8 +174,8 @@ def share(ui, source, dest=None, update=True):
                 continue
         _update(r, uprev)
 
-def clone(ui, opts, source, dest=None, pull=False, rev=None, update=True,
-          stream=False, branch=None):
+def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
+          update=True, stream=False, branch=None):
     """Make a copy of an existing repository.
 
     Create a copy of an existing repository in a new directory.  The
@@ -214,7 +214,7 @@ def clone(ui, opts, source, dest=None, pull=False, rev=None, update=True,
     if isinstance(source, str):
         origsource = ui.expandpath(source)
         source, branch = parseurl(origsource, branch)
-        srcrepo = repository(remoteui(ui, opts), source)
+        srcrepo = repository(remoteui(ui, peeropts), source)
     else:
         srcrepo = source
         branch = (None, branch or [])
@@ -308,12 +308,13 @@ def clone(ui, opts, source, dest=None, pull=False, rev=None, update=True,
 
             # we need to re-init the repo after manually copying the data
             # into it
-            destrepo = repository(remoteui(ui, opts), dest)
+            destrepo = repository(remoteui(ui, peeropts), dest)
             srcrepo.hook('outgoing', source='clone',
                           node=node.hex(node.nullid))
         else:
             try:
-                destrepo = repository(remoteui(ui, opts), dest, create=True)
+                destrepo = repository(remoteui(ui, peeropts), dest,
+                                      create=True)
             except OSError, inst:
                 if inst.errno == errno.EEXIST:
                     dircleanup.close()
