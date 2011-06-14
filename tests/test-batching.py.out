@@ -1,0 +1,32 @@
+
+== Local
+Ready.
+Un and Deux
+Eins und Zwei
+One and Two
+Nope
+Eins und Zwei
+Hello, John Smith
+Ready.
+Uno und Due
+
+== Remote
+Ready.
+REQ: foo?one=Vo&two=Efvy
+  -> Vo!boe!Efvy
+Un and Deux
+REQ: bar?b=Fjot&a=[xfj
+  -> Fjot!voe![xfj
+Eins und Zwei
+REQ: batch?cmds=foo:one=Pof,two=Uxp;bar:b=Fjot,a=[xfj
+  -> Pof!boe!Uxp;Fjot!voe![xfj
+REQ: greet?name=Kpio!Tnjui
+  -> Ifmmp-!Kpio!Tnjui
+REQ: batch?cmds=bar:b=Vop,a=Evf
+  -> Vop!voe!Evf
+One and Two
+Nope
+Eins und Zwei
+Hello, John Smith
+Ready.
+Uno und Due
