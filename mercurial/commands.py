@@ -3087,23 +3087,27 @@ def import_(ui, repo, patch1, *patches, **opts):
             ui.debug('message:\n%s\n' % message)
 
             wp = repo.parents()
+            if len(wp) == 1:
+                wp.append(repo[nullid])
             if opts.get('exact'):
                 if not nodeid or not p1:
                     raise util.Abort(_('not a Mercurial patch'))
-                p1 = repo.lookup(p1)
-                p2 = repo.lookup(p2 or hex(nullid))
-
-                if p1 != wp[0].node():
-                    hg.clean(repo, p1)
-                repo.dirstate.setparents(p1, p2)
+                p1 = repo[p1]
+                p2 = repo[p2 or nullid]
             elif p2:
                 try:
-                    p1 = repo.lookup(p1)
-                    p2 = repo.lookup(p2)
-                    if p1 == wp[0].node():
-                        repo.dirstate.setparents(p1, p2)
+                    p1 = repo[p1]
+                    p2 = repo[p2]
                 except error.RepoError:
-                    pass
+                    p1, p2 = wp
+            else:
+                p1, p2 = wp
+
+            if opts.get('exact') and p1 != wp[0]:
+                hg.clean(repo, p1.node())
+            if p1 != wp[0] and p2 != wp[1]:
+                repo.dirstate.setparents(p1.node(), p2.node())
+
             if opts.get('exact') or opts.get('import_branch'):
                 repo.dirstate.setbranch(branch or 'default')
 
