@@ -357,9 +357,9 @@ Logs and changes
     <td class="diffstat">
        2 files changed, 2 insertions(+), 0 deletions(-)
   
-      <a id="diffstatexpand" href="javascript:showDiffstat()"/>[+]</a>
+      <a id="diffstatexpand" href="javascript:showDiffstat()"/>[<tt>+</tt>]</a>
       <div id="diffstatdetails" style="display:none;">
-        <a href="javascript:hideDiffstat()"/>[-]</a>
+        <a href="javascript:hideDiffstat()"/>[<tt>-</tt>]</a>
         <p>
         <table>  <tr class="parity0">
       <td class="diffstat-file"><a href="#l1.1">da/foo</a></td>
