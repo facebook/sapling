@@ -197,7 +197,7 @@ with a web interface at ``http://my-project.org/hg``. ::
 
 XMLRPC+email example configuration. This uses the Bugzilla at
 ``http://my-project.org/bugzilla``, logging in as user
-``bugmail@my-project.org`` wityh password ``plugh``. It is used with a
+``bugmail@my-project.org`` with password ``plugh``. It is used with a
 collection of Mercurial repositories in ``/var/local/hg/repos/``,
 with a web interface at ``http://my-project.org/hg``. Bug comments
 are sent to the Bugzilla email address
