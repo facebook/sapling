@@ -2275,9 +2275,13 @@ def refresh(ui, repo, *pats, **opts):
         # We don't want to lose the patch message if qrefresh fails (issue2062)
         repo.savecommitmessage(message)
     setupheaderopts(ui, opts)
-    ret = q.refresh(repo, pats, msg=message, **opts)
-    q.savedirty()
-    return ret
+    wlock = repo.wlock()
+    try:
+        ret = q.refresh(repo, pats, msg=message, **opts)
+        q.savedirty()
+        return ret
+    finally:
+        wlock.release()
 
 @command("^qdiff",
          commands.diffopts + commands.diffopts2 + commands.walkopts,
@@ -2366,9 +2370,13 @@ def fold(ui, repo, *files, **opts):
         message = ui.edit(message, user or ui.username())
 
     diffopts = q.patchopts(q.diffopts(), *patches)
-    q.refresh(repo, msg=message, git=diffopts.git)
-    q.delete(repo, patches, opts)
-    q.savedirty()
+    wlock = repo.wlock()
+    try:
+        q.refresh(repo, msg=message, git=diffopts.git)
+        q.delete(repo, patches, opts)
+        q.savedirty()
+    finally:
+        wlock.release()
 
 @command("qgoto",
          [('f', 'force', None, _('overwrite any local changes'))],
