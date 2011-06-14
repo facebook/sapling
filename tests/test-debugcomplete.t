@@ -245,7 +245,7 @@ Show all commands + options
   heads: rev, topo, active, closed, style, template
   help: extension, command
   identify: rev, num, id, branch, tags, bookmarks
-  import: strip, base, force, no-commit, exact, import-branch, message, logfile, date, user, similarity
+  import: strip, base, force, no-commit, bypass, exact, import-branch, message, logfile, date, user, similarity
   incoming: force, newest-first, bundle, rev, bookmarks, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, insecure, subrepos
   locate: rev, print0, fullpath, include, exclude
   manifest: rev, all

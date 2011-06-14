@@ -3002,6 +3002,8 @@ def identify(ui, repo, source=None, rev=None,
     ('f', 'force', None, _('skip check for outstanding uncommitted changes')),
     ('', 'no-commit', None,
      _("don't commit, just update the working directory")),
+    ('', 'bypass', None,
+     _("apply patch without touching the working directory")),
     ('', 'exact', None,
      _('apply patch to the nodes from which it was generated')),
     ('', 'import-branch', None,
@@ -3035,6 +3037,11 @@ def import_(ui, repo, patch1, *patches, **opts):
     the patch. This may happen due to character set problems or other
     deficiencies in the text patch format.
 
+    Use --bypass to apply and commit patches directly to the
+    repository, not touching the working directory. Without --exact,
+    patches will be applied on top of the working directory parent
+    revision.
+
     With -s/--similarity, hg will attempt to discover renames and
     copies in the patch in the same way as 'addremove'.
 
@@ -3050,14 +3057,19 @@ def import_(ui, repo, patch1, *patches, **opts):
     if date:
         opts['date'] = util.parsedate(date)
 
+    update = not opts.get('bypass')
+    if not update and opts.get('no_commit'):
+        raise util.Abort(_('cannot use --no-commit with --bypass'))
     try:
         sim = float(opts.get('similarity') or 0)
     except ValueError:
         raise util.Abort(_('similarity must be a number'))
     if sim < 0 or sim > 100:
         raise util.Abort(_('similarity must be between 0 and 100'))
+    if sim and not update:
+        raise util.Abort(_('cannot use --similarity with --bypass'))
 
-    if opts.get('exact') or not opts.get('force'):
+    if (opts.get('exact') or not opts.get('force')) and update:
         cmdutil.bailifchanged(repo)
 
     d = opts["base"]
@@ -3065,7 +3077,12 @@ def import_(ui, repo, patch1, *patches, **opts):
     wlock = lock = None
     msgs = []
 
-    def tryone(ui, hunk):
+    def checkexact(repo, n, nodeid):
+        if opts.get('exact') and hex(n) != nodeid:
+            repo.rollback()
+            raise util.Abort(_('patch is damaged or loses information'))
+
+    def tryone(ui, hunk, parents):
         tmpname, message, user, date, branch, nodeid, p1, p2 = \
             patch.extract(ui, hunk)
 
@@ -3086,9 +3103,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                 message = None
             ui.debug('message:\n%s\n' % message)
 
-            wp = repo.parents()
-            if len(wp) == 1:
-                wp.append(repo[nullid])
+            if len(parents) == 1:
+                parents.append(repo[nullid])
             if opts.get('exact'):
                 if not nodeid or not p1:
                     raise util.Abort(_('not a Mercurial patch'))
@@ -3099,44 +3115,65 @@ def import_(ui, repo, patch1, *patches, **opts):
                     p1 = repo[p1]
                     p2 = repo[p2]
                 except error.RepoError:
-                    p1, p2 = wp
+                    p1, p2 = parents
             else:
-                p1, p2 = wp
+                p1, p2 = parents
 
-            if opts.get('exact') and p1 != wp[0]:
-                hg.clean(repo, p1.node())
-            if p1 != wp[0] and p2 != wp[1]:
-                repo.dirstate.setparents(p1.node(), p2.node())
+            n = None
+            if update:
+                if opts.get('exact') and p1 != parents[0]:
+                    hg.clean(repo, p1.node())
+                if p1 != parents[0] and p2 != parents[1]:
+                    repo.dirstate.setparents(p1.node(), p2.node())
 
-            if opts.get('exact') or opts.get('import_branch'):
-                repo.dirstate.setbranch(branch or 'default')
+                if opts.get('exact') or opts.get('import_branch'):
+                    repo.dirstate.setbranch(branch or 'default')
 
-            files = set()
-            patch.patch(ui, repo, tmpname, strip=strip, files=files,
-                        eolmode=None, similarity=sim / 100.0)
-            files = list(files)
-            if opts.get('no_commit'):
-                if message:
-                    msgs.append(message)
-            else:
-                if opts.get('exact'):
-                    m = None
+                files = set()
+                patch.patch(ui, repo, tmpname, strip=strip, files=files,
+                            eolmode=None, similarity=sim / 100.0)
+                files = list(files)
+                if opts.get('no_commit'):
+                    if message:
+                        msgs.append(message)
                 else:
-                    m = scmutil.matchfiles(repo, files or [])
-                n = repo.commit(message, opts.get('user') or user,
-                                opts.get('date') or date, match=m,
-                                editor=cmdutil.commiteditor)
-                if opts.get('exact'):
-                    if hex(n) != nodeid:
-                        repo.rollback()
-                        raise util.Abort(_('patch is damaged'
-                                           ' or loses information'))
-                # Force a dirstate write so that the next transaction
-                # backups an up-do-date file.
-                repo.dirstate.write()
-                if n:
-                    commitid = short(n)
-
+                    if opts.get('exact'):
+                        m = None
+                    else:
+                        m = scmutil.matchfiles(repo, files or [])
+                    n = repo.commit(message, opts.get('user') or user,
+                                    opts.get('date') or date, match=m,
+                                    editor=cmdutil.commiteditor)
+                    checkexact(repo, n, nodeid)
+                    # Force a dirstate write so that the next transaction
+                    # backups an up-to-date file.
+                    repo.dirstate.write()
+            else:
+                if opts.get('exact') or opts.get('import_branch'):
+                    branch = branch or 'default'
+                else:
+                    branch = p1.branch()
+                store = patch.filestore()
+                try:
+                    files = set()
+                    try:
+                        patch.patchrepo(ui, repo, p1, store, tmpname, strip,
+                                        files, eolmode=None)
+                    except patch.PatchError, e:
+                        raise util.Abort(str(e))
+                    memctx = patch.makememctx(repo, (p1.node(), p2.node()),
+                                              message,
+                                              opts.get('user') or user,
+                                              opts.get('date') or date,
+                                              branch, files, store,
+                                              editor=cmdutil.commiteditor)
+                    repo.savecommitmessage(memctx.description())
+                    n = memctx.commit()
+                    checkexact(repo, n, nodeid)
+                finally:
+                    store.close()
+            if n:
+                commitid = short(n)
             return commitid
         finally:
             os.unlink(tmpname)
@@ -3144,6 +3181,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
+        parents = repo.parents()
         lastcommit = None
         for p in patches:
             pf = os.path.join(d, p)
@@ -3157,12 +3195,16 @@ def import_(ui, repo, patch1, *patches, **opts):
 
             haspatch = False
             for hunk in patch.split(pf):
-                commitid = tryone(ui, hunk)
+                commitid = tryone(ui, hunk, parents)
                 if commitid:
                     haspatch = True
                     if lastcommit:
                         ui.status(_('applied %s\n') % lastcommit)
                     lastcommit = commitid
+                if update or opts.get('exact'):
+                    parents = repo.parents()
+                else:
+                    parents = [repo[commitid]]
 
             if not haspatch:
                 raise util.Abort(_('no diffs found'))

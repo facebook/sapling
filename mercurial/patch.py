@@ -11,7 +11,8 @@ import tempfile, zlib, shutil
 
 from i18n import _
 from node import hex, nullid, short
-import base85, mdiff, scmutil, util, diffhelpers, copies, encoding
+import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
+import context
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 
@@ -510,6 +511,48 @@ class filestore(object):
     def close(self):
         if self.opener:
             shutil.rmtree(self.opener.base)
+
+class repobackend(abstractbackend):
+    def __init__(self, ui, repo, ctx, store):
+        super(repobackend, self).__init__(ui)
+        self.repo = repo
+        self.ctx = ctx
+        self.store = store
+        self.changed = set()
+        self.removed = set()
+        self.copied = {}
+
+    def _checkknown(self, fname):
+        if fname not in self.ctx:
+            raise PatchError(_('cannot patch %s: file is not tracked') % fname)
+
+    def getfile(self, fname):
+        try:
+            fctx = self.ctx[fname]
+        except error.LookupError:
+            raise IOError()
+        flags = fctx.flags()
+        return fctx.data(), ('l' in flags, 'x' in flags)
+
+    def setfile(self, fname, data, mode, copysource):
+        if copysource:
+            self._checkknown(copysource)
+        if data is None:
+            data = self.ctx[fname].data()
+        self.store.setfile(fname, data, mode, copysource)
+        self.changed.add(fname)
+        if copysource:
+            self.copied[fname] = copysource
+
+    def unlink(self, fname):
+        self._checkknown(fname)
+        self.removed.add(fname)
+
+    def exists(self, fname):
+        return fname in self.ctx
+
+    def close(self):
+        return self.changed | self.removed
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
@@ -1332,11 +1375,7 @@ def _externalpatch(ui, repo, patcher, patchname, strip, files,
                          util.explainexit(code)[0])
     return fuzz
 
-def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
-                  similarity=0):
-    """use builtin patch to apply <patchobj> to the working directory.
-    returns whether patch was applied with fuzz factor."""
-
+def patchbackend(ui, backend, patchobj, strip, files=None, eolmode='strict'):
     if files is None:
         files = set()
     if eolmode is None:
@@ -1346,7 +1385,6 @@ def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
     eolmode = eolmode.lower()
 
     store = filestore()
-    backend = workingbackend(ui, repo, similarity)
     try:
         fp = open(patchobj, 'rb')
     except TypeError:
@@ -1362,6 +1400,33 @@ def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
     if ret < 0:
         raise PatchError(_('patch failed to apply'))
     return ret > 0
+
+def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
+                  similarity=0):
+    """use builtin patch to apply <patchobj> to the working directory.
+    returns whether patch was applied with fuzz factor."""
+    backend = workingbackend(ui, repo, similarity)
+    return patchbackend(ui, backend, patchobj, strip, files, eolmode)
+
+def patchrepo(ui, repo, ctx, store, patchobj, strip, files=None,
+              eolmode='strict'):
+    backend = repobackend(ui, repo, ctx, store)
+    return patchbackend(ui, backend, patchobj, strip, files, eolmode)
+
+def makememctx(repo, parents, text, user, date, branch, files, store,
+               editor=None):
+    def getfilectx(repo, memctx, path):
+        data, (islink, isexec), copied = store.getfile(path)
+        return context.memfilectx(path, data, islink=islink, isexec=isexec,
+                                  copied=copied)
+    extra = {}
+    if branch:
+        extra['branch'] = encoding.fromlocal(branch)
+    ctx =  context.memctx(repo, parents, text, files, getfilectx, user,
+                          date, extra)
+    if editor:
+        ctx._text = editor(repo, ctx, [])
+    return ctx
 
 def patch(ui, repo, patchname, strip=1, files=None, eolmode='strict',
           similarity=0):
