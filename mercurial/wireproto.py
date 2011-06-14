@@ -161,31 +161,42 @@ class wirerepository(repo.repository):
     def _submitone(self, op, args):
         return self._call(op, **args)
 
+    @batchable
     def lookup(self, key):
         self.requirecap('lookup', _('look up remote revision'))
-        d = self._call("lookup", key=encoding.fromlocal(key))
+        f = future()
+        yield todict(key=encoding.fromlocal(key)), f
+        d = f.value
         success, data = d[:-1].split(" ", 1)
         if int(success):
-            return bin(data)
+            yield bin(data)
         self._abort(error.RepoError(data))
 
+    @batchable
     def heads(self):
-        d = self._call("heads")
+        f = future()
+        yield {}, f
+        d = f.value
         try:
-            return decodelist(d[:-1])
+            yield decodelist(d[:-1])
         except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
+    @batchable
     def known(self, nodes):
-        n = encodelist(nodes)
-        d = self._call("known", nodes=n)
+        f = future()
+        yield todict(nodes=encodelist(nodes)), f
+        d = f.value
         try:
-            return [bool(int(f)) for f in d]
+            yield [bool(int(f)) for f in d]
         except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
+    @batchable
     def branchmap(self):
-        d = self._call("branchmap")
+        f = future()
+        yield {}, f
+        d = f.value
         try:
             branchmap = {}
             for branchpart in d.splitlines():
@@ -193,7 +204,7 @@ class wirerepository(repo.repository):
                 branchname = encoding.tolocal(urllib.unquote(branchname))
                 branchheads = decodelist(branchheads)
                 branchmap[branchname] = branchheads
-            return branchmap
+            yield branchmap
         except TypeError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
@@ -218,30 +229,35 @@ class wirerepository(repo.repository):
                 self._abort(error.ResponseError(_("unexpected response:"), d))
         return r
 
+    @batchable
     def pushkey(self, namespace, key, old, new):
         if not self.capable('pushkey'):
-            return False
-        d = self._call("pushkey",
-                       namespace=encoding.fromlocal(namespace),
-                       key=encoding.fromlocal(key),
-                       old=encoding.fromlocal(old),
-                       new=encoding.fromlocal(new))
+            yield False, None
+        f = future()
+        yield todict(namespace=encoding.fromlocal(namespace),
+                     key=encoding.fromlocal(key),
+                     old=encoding.fromlocal(old),
+                     new=encoding.fromlocal(new)), f
+        d = f.value
         try:
             d = bool(int(d))
         except ValueError:
             raise error.ResponseError(
                 _('push failed (unexpected response):'), d)
-        return d
+        yield d
 
+    @batchable
     def listkeys(self, namespace):
         if not self.capable('pushkey'):
-            return {}
-        d = self._call("listkeys", namespace=encoding.fromlocal(namespace))
+            yield {}, None
+        f = future()
+        yield todict(namespace=encoding.fromlocal(namespace)), f
+        d = f.value
         r = {}
         for l in d.splitlines():
             k, v = l.split('\t')
             r[encoding.tolocal(k)] = encoding.tolocal(v)
-        return r
+        yield r
 
     def stream_out(self):
         return self._callstream('stream_out')
