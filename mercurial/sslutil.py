@@ -18,6 +18,8 @@ try:
 except ImportError:
     CERT_REQUIRED = 2
 
+    import socket, httplib
+
     def ssl_wrap_socket(sock, key_file, cert_file,
                         cert_reqs=CERT_REQUIRED, ca_certs=None):
         if ca_certs:
