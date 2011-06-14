@@ -126,9 +126,41 @@ def decodelist(l, sep=' '):
 def encodelist(l, sep=' '):
     return sep.join(map(hex, l))
 
+# batched call argument encoding
+
+def escapearg(plain):
+    return (plain
+            .replace(':', '::')
+            .replace(',', ':,')
+            .replace(';', ':;')
+            .replace('=', ':='))
+
+def unescapearg(escaped):
+    return (escaped
+            .replace(':=', '=')
+            .replace(':;', ';')
+            .replace(':,', ',')
+            .replace('::', ':'))
+
 # client side
 
+def todict(**args):
+    return args
+
 class wirerepository(repo.repository):
+
+    def batch(self):
+        return remotebatch(self)
+    def _submitbatch(self, req):
+        cmds = []
+        for op, argsdict in req:
+            args = ','.join('%s=%s' % p for p in argsdict.iteritems())
+            cmds.append('%s %s' % (op, args))
+        rsp = self._call("batch", cmds=';'.join(cmds))
+        return rsp.split(';')
+    def _submitone(self, op, args):
+        return self._call(op, **args)
+
     def lookup(self, key):
         self.requirecap('lookup', _('look up remote revision'))
         d = self._call("lookup", key=encoding.fromlocal(key))
@@ -302,6 +334,34 @@ def options(cmd, keys, others):
                          % (cmd, ",".join(others)))
     return opts
 
+def batch(repo, proto, cmds, others):
+    res = []
+    for pair in cmds.split(';'):
+        op, args = pair.split(' ', 1)
+        vals = {}
+        for a in args.split(','):
+            if a:
+                n, v = a.split('=')
+                vals[n] = unescapearg(v)
+        func, spec = commands[op]
+        if spec:
+            keys = spec.split()
+            data = {}
+            for k in keys:
+                if k == '*':
+                    star = {}
+                    for key in vals.keys():
+                        if key not in keys:
+                            star[key] = vals[key]
+                    data['*'] = star
+                else:
+                    data[k] = vals[k]
+            result = func(repo, proto, *[data[k] for k in keys])
+        else:
+            result = func(repo, proto)
+        res.append(escapearg(result))
+    return ';'.join(res)
+
 def between(repo, proto, pairs):
     pairs = [decodelist(p, '-') for p in pairs.split(" ")]
     r = []
@@ -327,7 +387,7 @@ def branches(repo, proto, nodes):
 
 def capabilities(repo, proto):
     caps = ('lookup changegroupsubset branchmap pushkey known getbundle '
-            'unbundlehash').split()
+            'unbundlehash batch').split()
     if _allowstream(repo.ui):
         requiredformats = repo.requirements & repo.supportedformats
         # if our local revlogs are just revlogv1, add 'stream' cap
@@ -506,6 +566,7 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands = {
+    'batch': (batch, 'cmds *'),
     'between': (between, 'pairs'),
     'branchmap': (branchmap, ''),
     'branches': (branches, 'nodes'),

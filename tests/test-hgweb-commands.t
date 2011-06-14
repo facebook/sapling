@@ -981,7 +981,7 @@ capabilities
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=capabilities'; echo
   200 Script output follows
   
-  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
+  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
 
 heads
 
