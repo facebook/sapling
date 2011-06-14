@@ -32,6 +32,8 @@
     incoming.notify = python:hgext.notify.hook
     # batch emails when many changesets incoming at one time
     changegroup.notify = python:hgext.notify.hook
+    # batch emails when many changesets outgoing at one time (client side)
+    outgoing.notify = python:hgext.notify.hook
   
     [notify]
     # config items go here
@@ -48,7 +50,8 @@
     style = ...            # style file to use when formatting email
     template = ...         # template to use when formatting email
     incoming = ...         # template to use when run as incoming hook
-    changegroup = ...      # template when run as changegroup hook
+    outgoing = ...         # template to use when run as outgoing hook
+    changegroup = ...      # template to use when run as changegroup hook
     maxdiff = 300          # max lines of diffs to include (0=none, -1=all)
     maxsubject = 67        # truncate subject line longer than this
     diffstat = True        # add a diffstat before the diff content
