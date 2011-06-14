@@ -91,15 +91,27 @@ def findcommonheads(ui, local, remote,
     roundtrips = 0
     cl = local.changelog
     dag = dagutil.revlogdag(cl)
-    nodes = dag.nodeset()
 
-    # early exit if we know all the specified server heads already
+    # early exit if we know all the specified remote heads already
     ui.debug("query 1; heads\n")
     roundtrips += 1
-    srvheadhashes = remote.heads()
-
-    ## TODO We might want to request an additional random sample of the server's
-    ## nodes batched with the heads query here.
+    ownheads = dag.heads()
+    sample = ownheads
+    if remote.local():
+        # stopgap until we have a proper localpeer that supports batch()
+        srvheadhashes = remote.heads()
+        yesno = remote.known(dag.externalizeall(sample))
+    elif remote.capable('batch'):
+        batch = remote.batch()
+        srvheadhashesref = batch.heads()
+        yesnoref = batch.known(dag.externalizeall(sample))
+        batch.submit()
+        srvheadhashes = srvheadhashesref.value
+        yesno = yesnoref.value
+    else:
+        # compatibitity with pre-batch, but post-known remotes during 1.9 devel
+        srvheadhashes = remote.heads()
+        sample = []
 
     if cl.tip() == nullid:
         if srvheadhashes != [nullid]:
@@ -115,46 +127,48 @@ def findcommonheads(ui, local, remote,
         ui.note("all remote heads known locally\n")
         return (srvheadhashes, False, srvheadhashes,)
 
-    # full blown discovery
-    undecided = nodes # own nodes where I don't know if the server knows them
-    common = set() # own nodes I know we both know
-    missing = set() # own nodes I know the server lacks
+    if sample and util.all(yesno):
+        ui.note("all local heads known remotely\n")
+        ownheadhashes = dag.externalizeall(ownheads)
+        return (ownheadhashes, True, srvheadhashes,)
 
-    # treat remote heads as a first implicit sample response
+    # full blown discovery
+    undecided = dag.nodeset() # own nodes where I don't know if remote knows them
+    common = set() # own nodes I know we both know
+    missing = set() # own nodes I know remote lacks
+
+    # treat remote heads (and maybe own heads) as a first implicit sample response
     common.update(dag.ancestorset(srvheads))
     undecided.difference_update(common)
-    # use cheapish initial sample
-    if common:
-        ui.debug("taking initial sample\n")
-        sample = _takefullsample(dag, undecided, size=fullsamplesize)
-    else:
-        ui.debug("taking quick initial sample\n")
-        sample = _takequicksample(dag, nodes, size=initialsamplesize,
-                                  initial=True)
 
-    roundtrips += 1
-    ui.progress(_('searching'), roundtrips, unit=_('queries'))
-    ui.debug("query %i; still undecided: %i, sample size is: %i\n"
-             % (roundtrips, len(undecided), len(sample)))
-    # indices between sample and externalized version must match
-    sample = list(sample)
-    yesno = remote.known(dag.externalizeall(sample))
-
+    full = False
     while undecided:
-        commoninsample = set(n for i, n in enumerate(sample) if yesno[i])
-        common.update(dag.ancestorset(commoninsample, common))
 
-        missinginsample = [n for i, n in enumerate(sample) if not yesno[i]]
-        missing.update(dag.descendantset(missinginsample, missing))
+        if sample:
+            commoninsample = set(n for i, n in enumerate(sample) if yesno[i])
+            common.update(dag.ancestorset(commoninsample, common))
 
-        undecided.difference_update(missing)
-        undecided.difference_update(common)
+            missinginsample = [n for i, n in enumerate(sample) if not yesno[i]]
+            missing.update(dag.descendantset(missinginsample, missing))
+
+            undecided.difference_update(missing)
+            undecided.difference_update(common)
 
         if not undecided:
             break
 
-        ui.note("sampling from both directions\n")
-        sample = _takefullsample(dag, undecided, size=fullsamplesize)
+        if full:
+            ui.note("sampling from both directions\n")
+            sample = _takefullsample(dag, undecided, size=fullsamplesize)
+        elif common:
+            # use cheapish initial sample
+            ui.debug("taking initial sample\n")
+            sample = _takefullsample(dag, undecided, size=fullsamplesize)
+        else:
+            # use even cheaper initial sample
+            ui.debug("taking quick initial sample\n")
+            sample = _takequicksample(dag, undecided, size=initialsamplesize,
+                                      initial=True)
 
         roundtrips += 1
         ui.progress(_('searching'), roundtrips, unit=_('queries'))
@@ -163,6 +177,7 @@ def findcommonheads(ui, local, remote,
         # indices between sample and externalized version must match
         sample = list(sample)
         yesno = remote.known(dag.externalizeall(sample))
+        full = True
 
     result = dag.headsetofconnecteds(common)
     ui.progress(_('searching'), None)

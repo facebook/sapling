@@ -44,10 +44,7 @@ Small superset:
   comparing with b
   query 1; heads
   searching for changes
-  taking initial sample
-  searching: 2 queries
-  query 2; still undecided: 4, sample size is: 4
-  2 total queries
+  all local heads known remotely
   common heads: b5714e113bc0 01241442b3c2
   local is subset
   
@@ -83,9 +80,9 @@ Many new:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
+  taking initial sample
   searching: 2 queries
-  query 2; still undecided: 35, sample size is: 35
+  query 2; still undecided: 29, sample size is: 29
   2 total queries
   common heads: bebd167eb94d
   
@@ -101,7 +98,7 @@ Many new:
   searching for changes
   taking initial sample
   searching: 2 queries
-  query 2; still undecided: 3, sample size is: 3
+  query 2; still undecided: 2, sample size is: 2
   2 total queries
   common heads: bebd167eb94d
 
@@ -122,9 +119,9 @@ Both sides many new with stub:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
+  taking initial sample
   searching: 2 queries
-  query 2; still undecided: 34, sample size is: 34
+  query 2; still undecided: 29, sample size is: 29
   2 total queries
   common heads: 2dc09a01254d
   
@@ -140,7 +137,7 @@ Both sides many new with stub:
   searching for changes
   taking initial sample
   searching: 2 queries
-  query 2; still undecided: 30, sample size is: 30
+  query 2; still undecided: 29, sample size is: 29
   2 total queries
   common heads: 2dc09a01254d
 
@@ -163,7 +160,7 @@ Both many new:
   searching for changes
   taking quick initial sample
   searching: 2 queries
-  query 2; still undecided: 32, sample size is: 32
+  query 2; still undecided: 31, sample size is: 31
   2 total queries
   common heads: 66f7d451a68b
   
@@ -179,7 +176,7 @@ Both many new:
   searching for changes
   taking quick initial sample
   searching: 2 queries
-  query 2; still undecided: 32, sample size is: 32
+  query 2; still undecided: 31, sample size is: 31
   2 total queries
   common heads: 66f7d451a68b
 
@@ -202,7 +199,7 @@ Both many new skewed:
   searching for changes
   taking quick initial sample
   searching: 2 queries
-  query 2; still undecided: 52, sample size is: 52
+  query 2; still undecided: 51, sample size is: 51
   2 total queries
   common heads: 66f7d451a68b
   
@@ -218,7 +215,7 @@ Both many new skewed:
   searching for changes
   taking quick initial sample
   searching: 2 queries
-  query 2; still undecided: 32, sample size is: 32
+  query 2; still undecided: 31, sample size is: 31
   2 total queries
   common heads: 66f7d451a68b
 
@@ -241,7 +238,7 @@ Both many new on top of long history:
   searching for changes
   taking quick initial sample
   searching: 2 queries
-  query 2; still undecided: 1050, sample size is: 11
+  query 2; still undecided: 1049, sample size is: 11
   sampling from both directions
   searching: 3 queries
   query 3; still undecided: 31, sample size is: 31
@@ -260,7 +257,7 @@ Both many new on top of long history:
   searching for changes
   taking quick initial sample
   searching: 2 queries
-  query 2; still undecided: 1030, sample size is: 11
+  query 2; still undecided: 1029, sample size is: 11
   sampling from both directions
   searching: 3 queries
   query 3; still undecided: 16, sample size is: 16

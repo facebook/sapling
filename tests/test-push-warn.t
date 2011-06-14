@@ -35,7 +35,7 @@
   searching for changes
   taking quick initial sample
   searching: 2 queries
-  query 2; still undecided: 2, sample size is: 2
+  query 2; still undecided: 1, sample size is: 1
   2 total queries
   new remote heads on branch 'default'
   new remote head 1e108cc5548c

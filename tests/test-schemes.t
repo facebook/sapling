@@ -28,7 +28,7 @@ check that {1} syntax works
   sending capabilities command
   comparing with parts://localhost/
   query 1; heads
-  sending heads command
+  sending batch command
   searching for changes
   all remote heads known locally
   no changes found
