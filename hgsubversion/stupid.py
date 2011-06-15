@@ -49,7 +49,6 @@ def print_your_svn_is_old_message(ui): #pragma: no cover
     ui.status("In light of that, I'll fall back and do diffs, but it won't do "
               "as good a job. You should really upgrade your server.\n")
 
-
 def mempatchproxy(parentctx, files):
     # Avoid circular references patch.patchfile -> mempatch
     patchfile = patch.patchfile
@@ -116,6 +115,38 @@ def filteriterhunks(meta):
                 yield data
     return filterhunks
 
+def patchrepo(ui, meta, parentctx, patchfp):
+    files = {}
+    try:
+        oldpatchfile = patch.patchfile
+        olditerhunks = patch.iterhunks
+        patch.patchfile = mempatchproxy(parentctx, files)
+        patch.iterhunks = filteriterhunks(meta)
+        try:
+            # We can safely ignore the changed list since we are
+            # handling non-git patches. Touched files are known
+            # by our memory patcher.
+            patch_st = patch.applydiff(ui, patchfp, {}, strip=0)
+        finally:
+            patch.patchfile = oldpatchfile
+            patch.iterhunks = olditerhunks
+    except patch.PatchError:
+        # TODO: this happens if the svn server has the wrong mime
+        # type stored and doesn't know a file is binary. It would
+        # be better to do one file at a time and only do a
+        # full fetch on files that had problems.
+        raise BadPatchApply('patching failed')
+    # if this patch didn't apply right, fall back to exporting the
+    # entire rev.
+    if patch_st == -1:
+        assert False, ('This should only happen on case-insensitive'
+                       ' volumes.')
+    elif patch_st == 1:
+        # When converting Django, I saw fuzz on .po files that was
+        # causing revisions to end up failing verification. If that
+        # can be fixed, maybe this won't ever be reached.
+        raise BadPatchApply('patching succeeded with fuzz')
+    return files
 
 def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
     """Extract all 'branch' content at a given revision.
@@ -161,38 +192,9 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
     # are marked as touched. Content is loaded on demand.
     touched_files.update(any_file_re.findall(d))
     if d2.strip() and len(re.findall('\n[-+]', d2.strip())) > 0:
-        try:
-            oldpatchfile = patch.patchfile
-            olditerhunks = patch.iterhunks
-            patch.patchfile = mempatchproxy(parentctx, files_data)
-            patch.iterhunks = filteriterhunks(meta)
-            try:
-                # We can safely ignore the changed list since we are
-                # handling non-git patches. Touched files are known
-                # by our memory patcher.
-                patch_st = patch.applydiff(ui, cStringIO.StringIO(d2),
-                                           {}, strip=0)
-            finally:
-                patch.patchfile = oldpatchfile
-                patch.iterhunks = olditerhunks
-        except patch.PatchError:
-            # TODO: this happens if the svn server has the wrong mime
-            # type stored and doesn't know a file is binary. It would
-            # be better to do one file at a time and only do a
-            # full fetch on files that had problems.
-            raise BadPatchApply('patching failed')
+        files_data = patchrepo(ui, meta, parentctx, cStringIO.StringIO(d2))
         for x in files_data.iterkeys():
             ui.note('M  %s\n' % x)
-        # if this patch didn't apply right, fall back to exporting the
-        # entire rev.
-        if patch_st == -1:
-            assert False, ('This should only happen on case-insensitive'
-                           ' volumes.')
-        elif patch_st == 1:
-            # When converting Django, I saw fuzz on .po files that was
-            # causing revisions to end up failing verification. If that
-            # can be fixed, maybe this won't ever be reached.
-            raise BadPatchApply('patching succeeded with fuzz')
     else:
         ui.status('Not using patch for %s, diff had no hunks.\n' %
                   r.revnum)
