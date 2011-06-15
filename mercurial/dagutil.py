@@ -7,6 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 from node import nullrev
+from i18n import _
 
 
 class basedag(object):
