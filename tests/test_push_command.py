@@ -278,14 +278,14 @@ class PushTests(test_util.TestBase):
         self.test_push_to_branch(push=False)
         wc2path = self.wc_path + '_clone'
         u = self.repo.ui
-        hg.clone(self.repo.ui, self.wc_path, wc2path, update=False)
+        test_util.hgclone(self.repo.ui, self.wc_path, wc2path, update=False)
         res = self.pushrevisions()
         self.assertEqual(0, res)
         oldf = open(os.path.join(self.wc_path, '.hg', 'hgrc'))
         hgrc = oldf.read()
         oldf.close()
         shutil.rmtree(self.wc_path)
-        hg.clone(u, wc2path, self.wc_path, update=False)
+        test_util.hgclone(u, wc2path, self.wc_path, update=False)
         oldf = open(os.path.join(self.wc_path, '.hg', 'hgrc'), 'w')
         oldf.write(hgrc)
         oldf.close()

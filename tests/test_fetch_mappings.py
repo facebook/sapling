@@ -220,8 +220,8 @@ class MapTests(test_util.TestBase):
 
         # clone & rebuild
         ui = self.ui(stupid)
-        src, dest = hg.clone(ui, self.wc_path, self.wc_path + '_clone',
-                             update=False)
+        src, dest = test_util.hgclone(ui, self.wc_path, self.wc_path + '_clone',
+                                      update=False)
         svncommands.rebuildmeta(ui, dest,
                                 args=[test_util.fileurl(self.repo_path)])
 

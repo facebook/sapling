@@ -449,7 +449,13 @@ def clone(orig, ui, source, dest=None, **opts):
     """
 
     data = {}
-    def hgclonewrapper(orig, ui, origsource, dest, **opts):
+    def hgclonewrapper(orig, ui, *args, **opts):
+        if getattr(hg, 'peer', None):
+            # Since 1.9 (d976542986d2)
+            origsource = args[1]
+        else:
+            origsource = args[0]
+
         if isinstance(origsource, str):
             source, branch, checkout = util.parseurl(ui.expandpath(origsource),
                                          opts.get('branch'))
@@ -463,7 +469,7 @@ def clone(orig, ui, source, dest=None, **opts):
                 data['branches'] = branches
                 ui.setconfig('hgsubversion', 'branch', branches[-1])
 
-        data['srcrepo'], data['dstrepo'] = orig(ui, origsource, dest, **opts)
+        data['srcrepo'], data['dstrepo'] = orig(ui, *args, **opts)
 
     for opt, (section, name) in optionmap.iteritems():
         if opt in opts and opts[opt]:

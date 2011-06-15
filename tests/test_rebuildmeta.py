@@ -21,7 +21,7 @@ def _do_case(self, name, stupid, single):
     assert len(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
-    src, dest = hg.clone(u, self.wc_path, wc2_path, update=False)
+    src, dest = test_util.hgclone(u, self.wc_path, wc2_path, update=False)
 
     # insert a wrapper that prevents calling changectx.children()
     def failfn(orig, ctx):

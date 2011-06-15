@@ -236,6 +236,14 @@ def _verify_our_modules():
             'from the wrong path!'
         )
 
+def hgclone(ui, source, dest, update=True):
+    if getattr(hg, 'peer', None):
+        # Since 1.9 (d976542986d2)
+        src, dest = hg.clone(ui, {}, source, dest, update=update)
+    else:
+        src, dest = hg.clone(ui, source, dest, update=update)
+    return src, dest
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         _verify_our_modules()

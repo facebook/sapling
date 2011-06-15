@@ -115,7 +115,7 @@ rename a tag
             "Note: this test failing may be because of a rebuildmeta failure.\n"
             "You should check that before assuming issues with this test.\n")
         wc2_path = self.wc_path + '2'
-        src, dest = hg.clone(repo.ui, self.wc_path, wc2_path, update=False)
+        src, dest = test_util.hgclone(repo.ui, self.wc_path, wc2_path, update=False)
         svncommands.rebuildmeta(repo.ui,
                                dest,
                                args=[test_util.fileurl(self.repo_path), ])

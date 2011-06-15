@@ -28,7 +28,7 @@ def _do_case(self, name, layout):
         checkout_path += '/' + subdir
     u.setconfig('hgsubversion', 'stupid', '1')
     u.setconfig('hgsubversion', 'layout', layout)
-    hg.clone(u, test_util.fileurl(checkout_path), wc2_path, update=False)
+    test_util.hgclone(u, test_util.fileurl(checkout_path), wc2_path, update=False)
     if layout == 'single':
         self.assertEqual(len(self.repo.heads()), 1)
     self.repo2 = hg.repository(ui.ui(), wc2_path)
