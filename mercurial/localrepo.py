@@ -272,7 +272,9 @@ class localrepository(repo.repository):
 
         try:
             fp = self.wfile('.hgtags', 'rb+')
-        except IOError:
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
             fp = self.wfile('.hgtags', 'ab')
         else:
             prevtags = fp.read()
