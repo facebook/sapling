@@ -5,6 +5,18 @@ Ancestor
     changeset is an ancestor, and a parent of an ancestor is an
     ancestor. See also: 'Descendant'.
 
+Bookmark
+    Bookmarks are pointers to certain commits that move when
+    committing. They are similar to tags in that it is possible to use
+    bookmark names in all places where Mercurial expects a changeset
+    ID, e.g., with :hg:`update`. Unlike tags, bookmarks move along
+    when you make a commit.
+
+    Bookmarks can be renamed, copied and deleted. Bookmarks are local,
+    unless they are explicitly pushed or pulled between repositories.
+    Pushing and pulling bookmarks allow you to collaborate with others
+    on a branch without creating a named branch.
+
 Branch
     (Noun) A child changeset that has been created from a parent that
     is not a head. These are known as topological branches, see
