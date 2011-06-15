@@ -19,11 +19,16 @@ class TestFetchBranches(test_util.TestBase):
         repo = hg.clone(self.ui(), source=source, dest=self.wc_path)
         return hg.repository(self.ui(), self.wc_path)
 
-    def openbranches(self, repo):
+    def branches(self, repo):
         hctxs = [repo[hn] for hn in repo.heads()]
-        branches = set(ctx.branch() for ctx in hctxs if
-                       ctx.extra().get('close', None) != '1')
-        return sorted(branches)
+        openbranches = set(ctx.branch() for ctx in hctxs if
+                           ctx.extra().get('close', None) != '1')
+        closedbranches = set(ctx.branch() for ctx in hctxs if
+                             ctx.extra().get('close', None) == '1')
+        return sorted(openbranches), sorted(closedbranches)
+
+    def openbranches(self, repo):
+        return self.branches(repo)[0]
 
     def test_rename_branch_parent(self, stupid=False):
         repo = self._load_fixture_and_fetch('rename_branch_parent_dir.svndump', stupid)
@@ -58,10 +63,10 @@ class TestFetchBranches(test_util.TestBase):
     def test_renamed_branch_to_trunk(self, stupid=False):
         repo = self._load_fixture_and_fetch('branch_rename_to_trunk.svndump',
                                             stupid)
-        self.assertEqual(node.hex(repo['default'].node()),
-                         '14d252aef315857df241dd3fa4bc7833b09bd2f5')
         self.assertEqual(repo['default'].parents()[0].branch(), 'dev_branch')
+        self.assert_('iota' in repo['default'])
         self.assertEqual(repo['old_trunk'].parents()[0].branch(), 'default')
+        self.assert_('iota' not in repo['old_trunk'])
         expected = ['default', 'old_trunk']
         self.assertEqual(self.openbranches(repo), expected)
 
@@ -127,8 +132,10 @@ class TestFetchBranches(test_util.TestBase):
     def test_branch_delete_parent_dir(self, stupid=False):
         repo = self._load_fixture_and_fetch('branch_delete_parent_dir.svndump',
                                             stupid)
-        self.assertEqual(node.hex(repo['tip'].node()),
-                         '4108a81a82c7925d5551091165dc54c41b06a8a8')
+        openb, closedb = self.branches(repo)
+        self.assertEqual(openb, [])
+        self.assertEqual(closedb, ['dev_branch'])
+        self.assertEqual(list(repo['dev_branch']), ['foo'])
 
     def test_replace_branch_with_branch(self, stupid=False):
         repo = self._load_fixture_and_fetch('replace_branch_with_branch.svndump',
