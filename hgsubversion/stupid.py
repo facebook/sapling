@@ -115,7 +115,7 @@ def filteriterhunks(meta):
                 yield data
     return filterhunks
 
-def patchrepo(ui, meta, parentctx, patchfp):
+def patchrepoold(ui, meta, parentctx, patchfp):
     files = {}
     try:
         oldpatchfile = patch.patchfile
@@ -147,6 +147,39 @@ def patchrepo(ui, meta, parentctx, patchfp):
         # can be fixed, maybe this won't ever be reached.
         raise BadPatchApply('patching succeeded with fuzz')
     return files
+
+try:
+    class svnbackend(patch.repobackend):
+        def getfile(self, fname):
+            data, (islink, isexec) = super(svnbackend, self).getfile(fname)
+            if islink:
+                data = 'link ' + data
+            return data, (islink, isexec)
+except AttributeError:
+    svnbackend = None
+
+def patchrepo(ui, meta, parentctx, patchfp):
+    if not svnbackend:
+        return patchrepoold(ui, meta, parentctx, patchfp)
+    store = patch.filestore()
+    try:
+        touched = set()
+        backend = svnbackend(ui, meta.repo, parentctx, store)
+        ret = patch.patchbackend(ui, backend, patchfp, 0, touched)
+        if ret < 0:
+            raise BadPatchApply('patching failed')
+        if ret > 0:
+            raise BadPatchApply('patching succeeded with fuzz')
+        files = {}
+        for f in touched:
+            try:
+                data, mode, copied = store.getfile(f)
+                files[f] = data
+            except IOError:
+                files[f] = None
+        return files
+    finally:
+        store.close()
 
 def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
     """Extract all 'branch' content at a given revision.
