@@ -42,8 +42,11 @@ class TestPull(test_util.TestBase):
         self.commitchanges((('alpha', 'alpha', 'Changed another way'),))
         state = repo.parents()
         self._add_svn_rev({'trunk/alpha': 'Changed one way'})
-        self.assertRaises(hgutil.Abort, commands.pull,
-                          self.repo.ui, repo, update=True)
+        try:
+            commands.pull(self.repo.ui, repo, update=True)
+        except hgutil.Abort:
+            # hg < 1.9 raised when crossing branches
+            pass
         self.assertEqual(state, repo.parents())
         self.assertTrue('tip' not in repo[None].tags())
         self.assertEqual(len(repo.heads()), 2)
