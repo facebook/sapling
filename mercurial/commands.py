@@ -3345,6 +3345,7 @@ def locate(ui, repo, *pats, **opts):
      _('show changesets within the given named branch'), _('BRANCH')),
     ('P', 'prune', [],
      _('do not display revision or any of its ancestors'), _('REV')),
+    ('h', 'hidden', False, _('show hidden changesets')),
     ] + logopts + walkopts,
     _('[OPTION]... [FILE]'))
 def log(ui, repo, *pats, **opts):
@@ -3405,6 +3406,8 @@ def log(ui, repo, *pats, **opts):
         if opts.get('only_merges') and len(parents) != 2:
             return
         if opts.get('branch') and ctx.branch() not in opts['branch']:
+            return
+        if not opts.get('hidden') and ctx.hidden():
             return
         if df and not df(ctx.date()[0]):
             return
