@@ -339,6 +339,12 @@ Root
     A changeset that has only the null changeset as its parent. Most
     repositories have only a single root changeset.
 
+Tag
+    An alternative name given to a changeset. Tags can be used in all
+    places where Mercurial expects a changeset ID, e.g., with
+    :hg:`update`. The creation of a tag is stored in the history and
+    will thus automatically be shared with other using push and pull.
+
 Tip
     The changeset with the highest revision number. It is the changeset
     most recently added in a repository.
