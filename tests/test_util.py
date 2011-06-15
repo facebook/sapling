@@ -18,7 +18,7 @@ sys.path.insert(0, _rootdir)
 from mercurial import cmdutil
 from mercurial import commands
 from mercurial import context
-from mercurial import dispatch
+from mercurial import dispatch as dispatchmod
 from mercurial import hg
 from mercurial import i18n
 from mercurial import node
@@ -170,6 +170,13 @@ def load_svndump_fixture(path, fixture_name):
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     proc.communicate()
 
+def dispatch(cmd):
+    try:
+        req = dispatchmod.request(cmd)
+        dispatchmod.dispatch(req)
+    except AttributeError, e:
+        dispatchmod.dispatch(cmd)
+
 def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False,
                            subdir='', noupdate=True, layout='auto',
                            startrev=0, externals=None):
@@ -191,7 +198,7 @@ def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False,
     if externals:
         cmd[:0] = ['--config', 'hgsubversion.externals=%s' % externals]
 
-    dispatch.dispatch(cmd)
+    dispatch(cmd)
 
     return hg.repository(testui(), wc_path)
 

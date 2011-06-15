@@ -4,7 +4,6 @@ import errno
 import shutil
 import unittest
 
-from mercurial import dispatch
 from mercurial import commands
 from mercurial import context
 from mercurial import hg
@@ -236,7 +235,7 @@ class TestSingleDir(test_util.TestBase):
         if stupid:
             cmd.append('--stupid')
         cmd += [test_util.fileurl(self.repo_path), self.wc_path]
-        dispatch.dispatch(cmd)
+        test_util.dispatch(cmd)
 
         def file_callback(repo, memctx, path):
             if path == 'adding_file':

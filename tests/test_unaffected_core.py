@@ -10,6 +10,13 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 
+def _dispatch(ui, cmd):
+    try:
+        req = dispatch.request(cmd, ui=ui)
+        dispatch._dispatch(req)
+    except AttributeError:
+        dispatch._dispatch(ui, cmd)
+
 class TestMercurialCore(test_util.TestBase):
     '''
     Test that the core Mercurial operations aren't broken by hgsubversion.
@@ -19,7 +26,7 @@ class TestMercurialCore(test_util.TestBase):
     def test_update(self):
         ''' Test 'clone --updaterev' '''
         ui = self.ui()
-        dispatch._dispatch(ui, ['init', self.wc_path])
+        _dispatch(ui, ['init', self.wc_path])
         repo = self.repo
         repo.ui.setconfig('ui', 'username', 'anonymous')
 
@@ -39,7 +46,7 @@ class TestMercurialCore(test_util.TestBase):
         self.assertEqual(len(repo), 3)
 
         updaterev = 1
-        dispatch._dispatch(ui, ['clone', self.wc_path, self.wc_path + '2',
+        _dispatch(ui, ['clone', self.wc_path, self.wc_path + '2',
                                 '--updaterev=%s' % updaterev])
 
         repo2 = hg.repository(ui, self.wc_path + '2')
@@ -50,7 +57,7 @@ class TestMercurialCore(test_util.TestBase):
     def test_branch(self):
         ''' Test 'clone --branch' '''
         ui = self.ui()
-        dispatch._dispatch(ui, ['init', self.wc_path])
+        _dispatch(ui, ['init', self.wc_path])
         repo = self.repo
         repo.ui.setconfig('ui', 'username', 'anonymous')
 
@@ -73,7 +80,7 @@ class TestMercurialCore(test_util.TestBase):
         self.assertEqual(len(repo), 3)
 
         branch = 'B1'
-        dispatch._dispatch(ui, ['clone', self.wc_path, self.wc_path + '2',
+        _dispatch(ui, ['clone', self.wc_path, self.wc_path + '2',
                                 '--branch', branch])
 
         repo2 = hg.repository(ui, self.wc_path + '2')
