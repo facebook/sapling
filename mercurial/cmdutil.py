@@ -161,7 +161,22 @@ def makefileobj(repo, pat, node=None, total=None,
 
     if not pat or pat == '-':
         fp = writable and repo.ui.fout or repo.ui.fin
-        return os.fdopen(os.dup(fp.fileno()), mode)
+        if hasattr(fp, 'fileno'):
+            return os.fdopen(os.dup(fp.fileno()), mode)
+        else:
+            # if this fp can't be duped properly, return
+            # a dummy object that can be closed
+            class wrappedfileobj(object):
+                noop = lambda x: None
+                def __init__(self, f):
+                    self.f = f
+                def __getattr__(self, attr):
+                    if attr == 'close':
+                        return self.noop
+                    else:
+                        return getattr(self.f, attr)
+
+            return wrappedfileobj(fp)
     if hasattr(pat, 'write') and writable:
         return pat
     if hasattr(pat, 'read') and 'r' in mode:
