@@ -361,6 +361,19 @@ def date(repo, subset, x):
     dm = util.matchdate(ds)
     return [r for r in subset if dm(repo[r].date()[0])]
 
+def desc(repo, subset, x):
+    """``desc(string)``
+    Search commit message for string. The match is case-insensitive.
+    """
+    # i18n: "desc" is a keyword
+    ds = getstring(x, _("desc requires a string")).lower()
+    l = []
+    for r in subset:
+        c = repo[r]
+        if ds in c.description().lower():
+            l.append(r)
+    return l
+
 def descendants(repo, subset, x):
     """``descendants(set)``
     Changesets which are descendants of changesets in set.
@@ -821,6 +834,7 @@ symbols = {
     "closed": closed,
     "contains": contains,
     "date": date,
+    "desc": desc,
     "descendants": descendants,
     "file": hasfile,
     "filelog": filelog,
@@ -920,7 +934,8 @@ def optimize(x, small):
     elif op == 'func':
         f = getstring(x[1], _("not a symbol"))
         wa, ta = optimize(x[2], small)
-        if f in "grep date user author keyword branch file outgoing closed":
+        if f in ("author branch closed date desc file grep keyword "
+                 "outgoing user"):
             w = 10 # slow
         elif f in "modifies adds removes":
             w = 30 # slower

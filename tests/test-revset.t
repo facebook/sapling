@@ -190,6 +190,8 @@ quoting needed
   1
   3
   5
+  $ log 'desc(B)'
+  5
   $ log 'descendants(2 or 3)'
   2
   3
