@@ -142,7 +142,7 @@ class manifest(revlog.revlog):
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
             hex, flags = revlog.hex, map.flags
-            text = ''.join("%s\000%s%s\n" % (f, hex(map[f]), flags(f))
+            text = ''.join("%s\0%s%s\n" % (f, hex(map[f]), flags(f))
                            for f in files)
             arraytext = array.array('c', text)
             cachedelta = None
@@ -172,7 +172,7 @@ class manifest(revlog.revlog):
                 # bs will either be the index of the item or the insert point
                 start, end = self._search(addbuf, f, start)
                 if not todelete:
-                    l = "%s\000%s%s\n" % (f, revlog.hex(map[f]), map.flags(f))
+                    l = "%s\0%s%s\n" % (f, revlog.hex(map[f]), map.flags(f))
                 else:
                     if start == end:
                         # item we want to delete was not found, error out
