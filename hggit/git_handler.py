@@ -22,6 +22,46 @@ import _ssh
 import util
 from overlay import overlayrepo
 
+class GitProgress(object):
+    """convert git server progress strings into mercurial progress"""
+    def __init__(self, ui):
+        self.ui = ui
+
+        self.lasttopic = None
+        self.msgbuf = ''
+
+    def progress(self, msg):
+        # 'Counting objects: 33640, done.\n'
+        # 'Compressing objects:   0% (1/9955)   \r
+        msgs = re.split('[\r\n]', self.msgbuf + msg)
+        self.msgbuf = msgs.pop()
+
+        for msg in msgs:
+            td = msg.split(':', 1)
+            data = td.pop()
+            if not td:
+                self.flush(data)
+                continue
+            topic = td[0]
+
+            m = re.search('\((\d+)/(\d+)\)', data)
+            if m:
+                if self.lasttopic and self.lasttopic != topic:
+                    self.flush()
+                self.lasttopic = topic
+
+                pos, total = map(int, m.group(1, 2))
+                self.ui.progress(topic, pos, total=total)
+            else:
+                self.flush(msg)
+
+    def flush(self, msg=None):
+        if self.lasttopic:
+            self.ui.progress(self.lasttopic, None)
+        self.lasttopic = None
+        if msg:
+            self.ui.note(msg + '\n')
+
 class GitHandler(object):
     mapfile = 'git-mapfile'
     tagsfile = 'git-tags'
@@ -751,8 +791,11 @@ class GitHandler(object):
         f, commit = self.git.object_store.add_pack()
         try:
             try:
-                return client.fetch_pack(path, determine_wants, graphwalker,
-                                         f.write, self.ui.status)
+                progress = GitProgress(self.ui)
+                ret = client.fetch_pack(path, determine_wants, graphwalker,
+                                        f.write, progress.progress)
+                progress.flush()
+                return ret
             except (HangupException, GitProtocolError), e:
                 raise hgutil.Abort(_("git remote error: ") + str(e))
         finally:
