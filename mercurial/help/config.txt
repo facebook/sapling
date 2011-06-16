@@ -36,7 +36,7 @@ ones.
     this file override options in all other configuration files. On
     Unix, most of this file will be ignored if it doesn't belong to a
     trusted user or to a trusted group. See the documentation for the
-    Trusted section below for more details.
+    ``[trusted]`` section below for more details.
 
 | (Unix) ``$HOME/.hgrc``
 | (Windows) ``%USERPROFILE%\.hgrc``
@@ -228,8 +228,8 @@ echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
 
 Authentication credentials for HTTP authentication. This section
 allows you to store usernames and passwords for use when logging
-*into* HTTP servers. See the web_ configuration section if you want to
-configure *who* can login to your HTTP server.
+*into* HTTP servers. See the ``[web]`` configuration section if
+you want to configure *who* can login to your HTTP server.
 
 Each line has the following format::
 
@@ -404,7 +404,7 @@ Settings for extensions that send email messages.
 
 ``method``
     Optional. Method to use to send email messages. If value is ``smtp``
-    (default), use SMTP (see the SMTP_ section for configuration).
+    (default), use SMTP (see the ``[smtp]`` section for configuration).
     Otherwise, use as name of program to run that acts like sendmail
     (takes ``-f`` option for sender, list of recipients on command line,
     message on stdin). Normally, setting this to ``sendmail`` or
@@ -1028,7 +1028,7 @@ User interface controls.
 ``merge``
     The conflict resolution program to use during a manual merge.
     For more information on merge tools see :hg:`help merge-tools`.
-    For configuring merge tools see the merge-tools_ section.
+    For configuring merge tools see the ``[merge-tools]`` section.
 
 ``portablefilenames``
     Check for portable filenames. Can be ``warn``, ``ignore`` or ``abort``.
