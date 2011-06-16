@@ -99,7 +99,7 @@ they are treated as continuations of that entry. Leading whitespace is
 removed from values. Empty lines are skipped. Lines beginning with
 ``#`` or ``;`` are ignored and may be used to provide comments.
 
-Configuration keys can be set multiple times, in which case mercurial
+Configuration keys can be set multiple times, in which case Mercurial
 will use the value that was configured last. As an example::
 
     [spam]
