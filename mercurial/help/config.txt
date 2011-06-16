@@ -110,7 +110,8 @@ will use the value that was configured last. As an example::
 This would set the configuration key named ``eggs`` to ``small``.
 
 It is also possible to define a section multiple times. A section can
-be redefined on the same and/or on different hgrc files. For example::
+be redefined on the same and/or on different configuration files. For
+example::
 
     [foo]
     eggs=large
@@ -170,8 +171,8 @@ Sections
 --------
 
 This section describes the different sections that may appear in a
-Mercurial "hgrc" file, the purpose of each section, its possible keys,
-and their possible values.
+Mercurial configuration file, the purpose of each section, its possible
+keys, and their possible values.
 
 ``alias``
 """""""""
