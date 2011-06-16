@@ -74,7 +74,8 @@ class config(object):
         sectionre = re.compile(r'\[([^\[]+)\]')
         itemre = re.compile(r'([^=\s][^=]*?)\s*=\s*(.*\S|)')
         contre = re.compile(r'\s+(\S|\S.*\S)\s*$')
-        emptyre = re.compile(r'(;|#|\s*$)')
+        emptyre = re.compile(r'\s*(;|#|\s*$)')
+        commentre = re.compile(r'(;|#)')
         unsetre = re.compile(r'%unset\s+(\S+)')
         includere = re.compile(r'%include\s+(\S|\S.*\S)\s*$')
         section = ""
@@ -85,6 +86,8 @@ class config(object):
         for l in data.splitlines(True):
             line += 1
             if cont:
+                if commentre.match(l):
+                    continue
                 m = contre.match(l)
                 if m:
                     if sections and section not in sections:
