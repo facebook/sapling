@@ -286,4 +286,7 @@ def _writetagcache(ui, repo, heads, tagfnode, cachetags):
     for (name, (node, hist)) in cachetags.iteritems():
         cachefile.write("%s %s\n" % (hex(node), name))
 
-    cachefile.rename()
+    try:
+        cachefile.rename()
+    except (OSError, IOError):
+        pass
