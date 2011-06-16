@@ -48,6 +48,7 @@ import re
 
 from docutils import nodes, writers, languages
 import roman
+import inspect
 
 FIELD_LIST_INDENT = 7
 DEFINITION_LIST_INDENT = 7
@@ -160,7 +161,12 @@ class Translator(nodes.NodeVisitor):
         nodes.NodeVisitor.__init__(self, document)
         self.settings = settings = document.settings
         lcode = settings.language_code
-        self.language = languages.get_language(lcode)
+        arglen = len(inspect.getargspec(languages.get_language)[0])
+        if arglen == 2:
+            self.language = languages.get_language(lcode,
+                                                   self.document.reporter)
+        else:
+            self.language = languages.get_language(lcode)
         self.head = []
         self.body = []
         self.foot = []
