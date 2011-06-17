@@ -25,14 +25,13 @@ For example, say we have an untracked file, ``file.c``, at
 if any pattern in ``.hgignore`` matches ``a/b/file.c``, ``a/b`` or ``a``.
 
 In addition, a Mercurial configuration file can reference a set of
-per-user or global ignore files. See the
-``http://www.selenic.com/mercurial/hgrc.5.html`` man page for details
-of how to configure these files. Look for the "ignore" entry in the
-"ui" section.
+per-user or global ignore files. See the ``ignore`` configuration
+key on the ``[ui]`` section of :hg:`help config` for details of how to
+configure these files.
 
-To control Mercurial's handling of files that it manages, see the
-``http://www.selenic.com/mercurial/hg.1.html`` man page. Look for
-the ``-I`` and ``-X`` options.
+To control Mercurial's handling of files that it manages, many
+commands support the ``-I`` and ``-X`` options; see
+:hg:`help <command>` and :hg:`help patterns` for details.
 
 Syntax
 ------
