@@ -42,7 +42,7 @@ These are the supported infix operators:
 
 ``x - y``
   Changesets in x but not in y.
-  
+
 ``x^n``
   The nth parent of x, n == 0, 1, or 2.
   For n == 0, x; for n == 1, the first parent of each changeset in x;
