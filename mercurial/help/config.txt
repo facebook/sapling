@@ -913,6 +913,11 @@ using lsprof.
     file exists, it is replaced. Default: None, data is printed on
     stderr
 
+``revsetalias``
+"""""""""""""""
+
+Alias definitions for revsets. See :hg:`help revsets` for details.
+
 ``server``
 """"""""""
 
