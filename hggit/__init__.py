@@ -155,15 +155,16 @@ try:
 except ImportError:
     pass
 
-def getremotechanges(orig, ui, repo, other, revs, *args, **opts):
+def getremotechanges(orig, ui, repo, other, *args, **opts):
     if isinstance(other, gitrepo.gitrepo):
+        revs = opts.get('onlyheads', opts.get('revs'))
         git = GitHandler(repo, ui)
         r, c, cleanup = git.getremotechanges(other, revs)
         # ugh. This is ugly even by mercurial API compatibility standards
         if 'onlyheads' not in orig.func_code.co_varnames:
             cleanup = None
         return r, c, cleanup
-    return orig(ui, repo, other, revs, *args, **opts)
+    return orig(ui, repo, other, *args, **opts)
 try:
     extensions.wrapfunction(bundlerepo, 'getremotechanges', getremotechanges)
 except AttributeError:
