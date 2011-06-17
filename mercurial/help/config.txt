@@ -1017,7 +1017,7 @@ User interface controls.
     option supports hook syntax, so if you want to specify multiple
     ignore files, you can do so by setting something like
     ``ignore.other = ~/.hgignore2``. For details of the ignore file
-    format, see the |hgignore(5)|_ man page.
+    format, see the ``hgignore(5)`` man page.
 
 ``interactive``
     Allow to prompt the user. True or False. Default is True.
