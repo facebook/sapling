@@ -487,23 +487,34 @@ class workingbackend(fsbackend):
         return sorted(self.changed)
 
 class filestore(object):
-    def __init__(self):
+    def __init__(self, maxsize=None):
         self.opener = None
         self.files = {}
         self.created = 0
+        self.maxsize = maxsize
+        if self.maxsize is None:
+            self.maxsize = 4*(2**20)
+        self.size = 0
+        self.data = {}
 
     def setfile(self, fname, data, mode, copied=None):
-        if self.opener is None:
-            root = tempfile.mkdtemp(prefix='hg-patch-')
-            self.opener = scmutil.opener(root)
-        # Avoid filename issues with these simple names
-        fn = str(self.created)
-        self.opener.write(fn, data)
-        self.created += 1
-        self.files[fname] = (fn, mode, copied)
+        if self.maxsize < 0 or (len(data) + self.size) <= self.maxsize:
+            self.data[fname] = (data, mode, copied)
+            self.size += len(data)
+        else:
+            if self.opener is None:
+                root = tempfile.mkdtemp(prefix='hg-patch-')
+                self.opener = scmutil.opener(root)
+            # Avoid filename issues with these simple names
+            fn = str(self.created)
+            self.opener.write(fn, data)
+            self.created += 1
+            self.files[fname] = (fn, mode, copied)
 
     def getfile(self, fname):
-        if fname not in self.files:
+        if fname in self.data:
+            return self.data[fname]
+        if not self.opener or fname not in self.files:
             raise IOError()
         fn, mode, copied = self.files[fname]
         return self.opener.read(fn), mode, copied
