@@ -526,7 +526,7 @@ class svnsubrepo(abstractsubrepo):
         self._ctx = ctx
         self._ui = ctx._repo.ui
 
-    def _svncommand(self, commands, filename=''):
+    def _svncommand(self, commands, filename='', failok=False):
         cmd = ['svn']
         extrakw = {}
         if not self._ui.interactive():
@@ -551,15 +551,16 @@ class svnsubrepo(abstractsubrepo):
                               universal_newlines=True, env=env, **extrakw)
         stdout, stderr = p.communicate()
         stderr = stderr.strip()
-        if p.returncode:
-            raise util.Abort(stderr or 'exited with code %d' % p.returncode)
-        if stderr:
-            self._ui.warn(stderr + '\n')
-        return stdout
+        if not failok:
+            if p.returncode:
+                raise util.Abort(stderr or 'exited with code %d' % p.returncode)
+            if stderr:
+                self._ui.warn(stderr + '\n')
+        return stdout, stderr
 
     @propertycache
     def _svnversion(self):
-        output = self._svncommand(['--version'], filename=None)
+        output, err = self._svncommand(['--version'], filename=None)
         m = re.search(r'^svn,\s+version\s+(\d+)\.(\d+)', output)
         if not m:
             raise util.Abort(_('cannot retrieve svn tool version'))
@@ -569,7 +570,7 @@ class svnsubrepo(abstractsubrepo):
         # Get the working directory revision as well as the last
         # commit revision so we can compare the subrepo state with
         # both. We used to store the working directory one.
-        output = self._svncommand(['info', '--xml'])
+        output, err = self._svncommand(['info', '--xml'])
         doc = xml.dom.minidom.parseString(output)
         entries = doc.getElementsByTagName('entry')
         lastrev, rev = '0', '0'
@@ -588,7 +589,7 @@ class svnsubrepo(abstractsubrepo):
         if the working directory was changed, and extchanges is
         True if any of these changes concern an external entry.
         """
-        output = self._svncommand(['status', '--xml'])
+        output, err = self._svncommand(['status', '--xml'])
         externals, changes = [], []
         doc = xml.dom.minidom.parseString(output)
         for e in doc.getElementsByTagName('entry'):
@@ -623,13 +624,13 @@ class svnsubrepo(abstractsubrepo):
         if extchanged:
             # Do not try to commit externals
             raise util.Abort(_('cannot commit svn externals'))
-        commitinfo = self._svncommand(['commit', '-m', text])
+        commitinfo, err = self._svncommand(['commit', '-m', text])
         self._ui.status(commitinfo)
         newrev = re.search('Committed revision ([0-9]+).', commitinfo)
         if not newrev:
             raise util.Abort(commitinfo.splitlines()[-1])
         newrev = newrev.groups()[0]
-        self._ui.status(self._svncommand(['update', '-r', newrev]))
+        self._ui.status(self._svncommand(['update', '-r', newrev])[0])
         return newrev
 
     def remove(self):
@@ -663,9 +664,15 @@ class svnsubrepo(abstractsubrepo):
         if self._svnversion >= (1, 5):
             args.append('--force')
         args.extend([state[0], '--revision', state[1]])
-        status = self._svncommand(args)
+        status, err = self._svncommand(args, failok=True)
         if not re.search('Checked out revision [0-9]+.', status):
-            raise util.Abort(status.splitlines()[-1])
+            if ('is already a working copy for a different URL' in err
+                and (self._wcchanged() == (False, False))):
+                # obstructed but clean working copy, so just blow it away.
+                self.remove()
+                self.get(state, overwrite=False)
+                return
+            raise util.Abort((status or err).splitlines()[-1])
         self._ui.status(status)
 
     def merge(self, state):

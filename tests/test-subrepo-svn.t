@@ -489,3 +489,33 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   $ if "$TESTDIR/hghave" -q svn15; then
   > hg up 2 >/dev/null 2>&1 || echo update failed
   > fi
+
+Modify one of the externals to point to a different path so we can
+test having obstructions when switching branches on checkout:
+  $ hg checkout tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "obstruct =        [svn]       $SVNREPO/externals" >> .hgsub
+  $ svn co -r5 --quiet "$SVNREPO"/externals obstruct
+  $ hg commit -m 'Start making obstructed wc'
+  committing subrepository obstruct
+  $ hg book other
+  $ hg co -r 'p1(tip)'
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "obstruct =        [svn]       $SVNREPO/src" >> .hgsub
+  $ svn co -r5 --quiet "$SVNREPO"/src obstruct
+  $ hg commit -m 'Other branch which will be obstructed'
+  committing subrepository obstruct
+  created new head
+
+Switching back to the head where we have another path mapped to the
+same subrepo should work if the subrepo is clean.
+  $ hg co other
+  A    $TESTTMP/rebaserepo/obstruct/other
+  Checked out revision 1.
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+This is surprising, but is also correct based on the current code:
+  $ echo "updating should (maybe) fail" > obstruct/other
+  $ hg co tip
+  abort: crosses branches (merge branches or use --clean to discard changes)
+  [255]
