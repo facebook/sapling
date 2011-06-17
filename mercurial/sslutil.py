@@ -48,7 +48,8 @@ def _verifycert(cert, hostname):
         for name in certnames:
             if matchdnsname(name):
                 return None
-        return _('certificate is for %s') % ', '.join(certnames)
+        if certnames:
+            return _('certificate is for %s') % ', '.join(certnames)
 
     # subject is only checked when subjectAltName is empty
     for s in cert.get('subject', []):

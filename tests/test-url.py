@@ -33,9 +33,13 @@ check(_verifycert(san_cert, 'example.net'),
       None)
 check(_verifycert(san_cert, 'foo.example.net'),
       None)
-# subject is only checked when subjectAltName is empty
+# no fallback to subject commonName when subjectAltName has DNS
 check(_verifycert(san_cert, 'example.com'),
       'certificate is for *.example.net, example.net')
+# fallback to subject commonName when no DNS in subjectAltName
+san_cert = {'subject': ((('commonName', 'example.com'),),),
+            'subjectAltName': (('IP Address', '8.8.8.8'),)}
+check(_verifycert(san_cert, 'example.com'), None)
 
 # Avoid some pitfalls
 check(_verifycert(cert('*.foo'), 'foo'),
@@ -48,6 +52,10 @@ check(_verifycert({'subject': ()},
       'no commonName or subjectAltName found in certificate')
 check(_verifycert(None, 'example.com'),
       'no certificate received')
+
+# Unicode (IDN) certname isn't supported
+check(_verifycert(cert(u'\u4f8b.jp'), 'example.jp'),
+      'IDN in certificate not supported')
 
 import doctest
 
@@ -211,7 +219,3 @@ def test_url():
     """
 
 doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
-
-# Unicode (IDN) certname isn't supported
-check(_verifycert(cert(u'\u4f8b.jp'), 'example.jp'),
-      'IDN in certificate not supported')
