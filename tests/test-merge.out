@@ -8,9 +8,6 @@ Merge made by recursive.
  create mode 100644 beta
 Initialized empty Git repository in gitrepo2/
 
-Counting objects: 11, done.
-Compressing objects:  14% (1/7)   Compressing objects:  28% (2/7)   Compressing objects:  42% (3/7)   Compressing objects:  57% (4/7)   Compressing objects:  71% (5/7)   Compressing objects:  85% (6/7)   Compressing objects: 100% (7/7)   Compressing objects: 100% (7/7), done.
-Total 11 (delta 3), reused 0 (delta 0)
 importing git objects into hg
 3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % clear the cache to be sure it is regenerated correctly

@@ -1,8 +1,6 @@
 Initialized empty Git repository in gitrepo/.git/
 
 Switched to a new branch "not-master"
-Counting objects: 3, done.
-Total 3 (delta 0), reused 0 (delta 0)
 importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 pushing to git://localhost/gitrepo
@@ -27,9 +25,6 @@ pushing to git://localhost/gitrepo
 creating and sending data
 abort: refs/heads/master changed on the server, please pull and merge before pushing
 pulling from git://localhost/gitrepo
-Counting objects: 3, done.
-Compressing objects:  50% (1/2)   Compressing objects: 100% (2/2)   Compressing objects: 100% (2/2), done.
-Total 3 (delta 0), reused 0 (delta 0)
 importing git objects into hg
 (run 'hg update' to get a working copy)
 % master and default/master should be diferent

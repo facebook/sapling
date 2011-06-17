@@ -8,9 +8,6 @@ You may want to amend it after fixing the message, or set the config
 variable i18n.commitencoding to the encoding your project uses.
 Initialized empty Git repository in gitrepo2/
 
-Counting objects: 12, done.
-Compressing objects:  14% (1/7)   Compressing objects:  28% (2/7)   Compressing objects:  42% (3/7)   Compressing objects:  57% (4/7)   Compressing objects:  71% (5/7)   Compressing objects:  85% (6/7)   Compressing objects: 100% (7/7)   Compressing objects: 100% (7/7), done.
-Total 12 (delta 1), reused 0 (delta 0)
 importing git objects into hg
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   3:8549ee7fe0801b2dafc06047ca6f66d36da709f5

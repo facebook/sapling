@@ -51,13 +51,13 @@ class GitProgress(object):
                 self.lasttopic = topic
 
                 pos, total = map(int, m.group(1, 2))
-                self.ui.progress(topic, pos, total=total)
+                util.progress(self.ui, topic, pos, total=total)
             else:
                 self.flush(msg)
 
     def flush(self, msg=None):
         if self.lasttopic:
-            self.ui.progress(self.lasttopic, None)
+            util.progress(self.ui, self.lasttopic, None)
         self.lasttopic = None
         if msg:
             self.ui.note(msg + '\n')

@@ -21,9 +21,6 @@ Initialized empty Git repository in gitrepo/
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-Counting objects: 10, done.
-Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
-Total 10 (delta 0), reused 0 (delta 0)
 importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % expect the same revision ids as above

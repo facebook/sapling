@@ -6,9 +6,6 @@ rm 'foo/bar'
 beta
 Initialized empty Git repository in gitrepo2/
 
-Counting objects: 14, done.
-Compressing objects:  12% (1/8)   Compressing objects:  25% (2/8)   Compressing objects:  37% (3/8)   Compressing objects:  50% (4/8)   Compressing objects:  62% (5/8)   Compressing objects:  75% (6/8)   Compressing objects:  87% (7/8)   Compressing objects: 100% (8/8)   Compressing objects: 100% (8/8), done.
-Total 14 (delta 1), reused 0 (delta 0)
 importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   4:ea41a3f0ed10
