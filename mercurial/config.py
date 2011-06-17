@@ -74,7 +74,7 @@ class config(object):
         sectionre = re.compile(r'\[([^\[]+)\]')
         itemre = re.compile(r'([^=\s][^=]*?)\s*=\s*(.*\S|)')
         contre = re.compile(r'\s+(\S|\S.*\S)\s*$')
-        emptyre = re.compile(r'\s*(;|#|\s*$)')
+        emptyre = re.compile(r'(;|#|\s*$)')
         commentre = re.compile(r'(;|#)')
         unsetre = re.compile(r'%unset\s+(\S+)')
         includere = re.compile(r'%include\s+(\S|\S.*\S)\s*$')
