@@ -59,7 +59,7 @@ git daemon --base-path="$(pwd)"\
 hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
 
 cd hgrepo
-hg incoming
+hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
 
 cd ../gitrepo
 echo beta > beta
@@ -67,7 +67,7 @@ git add beta
 commit -m 'add beta'
 
 cd ../hgrepo
-hg incoming
+hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
 
 cd ../gitrepo
 git checkout -b b1 HEAD^
@@ -82,15 +82,15 @@ git add d/gamma
 commit -m'add d/gamma line 2'
 
 cd ../hgrepo
-hg incoming -p
+hg incoming -p | grep -v 'no changes found' | grep -v 'bookmark:'
 
 echo % incoming -r
-hg incoming -r master
-hg incoming -r b1
-hg incoming -r t1
+hg incoming -r master | grep -v 'no changes found' | grep -v 'bookmark:'
+hg incoming -r b1 | grep -v 'no changes found' | grep -v 'bookmark:'
+hg incoming -r t1 | grep -v 'no changes found' | grep -v 'bookmark:'
 
 echo % nothing incoming after pull
 hg pull
-hg incoming
+hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
 
 echo 'done'
