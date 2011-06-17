@@ -4817,8 +4817,8 @@ msgstr "não se pode importar sobre um patch aplicado"
 msgid "only a local queue repository may be initialized"
 msgstr "apenas um repositório de fila local pode ser inicializado"
 
-msgid "there is no Mercurial repository here (.hg not found)"
-msgstr "não há um repositório do Mercurial aqui (.hg não encontrado)"
+msgid "no repository found in %r (.hg not found)"
+msgstr "não foi encontrado um repositório em %r (.hg não encontrado)"
 
 msgid "no queue repository"
 msgstr "repositório da fila não existente"
