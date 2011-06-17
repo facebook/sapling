@@ -66,8 +66,9 @@ existing predicates or other aliases. An alias definition looks like::
 
   <alias> = <definition>
 
-in the ``revsetalias`` section of ``.hgrc``. Arguments of the form `$1`, `$2`,
-etc. are substituted from the alias into the definition.
+in the ``revsetalias`` section of a Mercurial configuration file. Arguments
+of the form `$1`, `$2`, etc. are substituted from the alias into the
+definition.
 
 For example,
 
