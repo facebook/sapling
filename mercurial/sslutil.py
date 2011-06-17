@@ -122,8 +122,7 @@ class validator(object):
                                  (host, nicefingerprint))
             else: # python 2.5 ?
                 if hostfingerprint:
-                    raise util.Abort(_('no certificate for %s with '
-                                       'configured hostfingerprint') % host)
-                self.ui.warn(_('warning: %s certificate not verified '
-                               '(check web.cacerts config setting)\n') %
-                             host)
+                    raise util.Abort(_("host fingerprint for %s can't be "
+                                       "verified (Python too old)") % host)
+                self.ui.warn(_("warning: certificate for %s can't be "
+                               "verified (Python too old)\n") % host)
