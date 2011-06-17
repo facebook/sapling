@@ -525,7 +525,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
         elif not overwrite:
             if pa == p1 or pa == p2: # linear
                 pass # all good
-            elif wc.files() or wc.deleted():
+            elif wc.dirty(missing=True):
                 raise util.Abort(_("crosses branches (merge branches or use"
                                    " --clean to discard changes)"))
             elif onode is None:
