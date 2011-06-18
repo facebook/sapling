@@ -11,7 +11,7 @@ from i18n import _
 
 class match(object):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
-                 default='glob', exact=False, auditor=None):
+                 default='glob', exact=False, auditor=None, ctx=None):
         """build an object to match a set of file patterns
 
         arguments:
@@ -37,6 +37,7 @@ class match(object):
         self._cwd = cwd
         self._files = []
         self._anypats = bool(include or exclude)
+        self._ctx = ctx
 
         if include:
             pats = _normalize(include, 'glob', root, cwd, auditor)

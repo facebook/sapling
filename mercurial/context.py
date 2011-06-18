@@ -212,7 +212,8 @@ class changectx(object):
     def match(self, pats=[], include=None, exclude=None, default='glob'):
         r = self._repo
         return matchmod.match(r.root, r.getcwd(), pats,
-                              include, exclude, default, auditor=r.auditor)
+                              include, exclude, default,
+                              auditor=r.auditor, ctx=self)
 
     def diff(self, ctx2=None, match=None, **opts):
         """Returns a diff generator for the given contexts and matcher"""
