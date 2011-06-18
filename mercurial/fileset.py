@@ -110,6 +110,41 @@ def notset(mctx, x):
 def listset(mctx, a, b):
     raise error.ParseError(_("can't use a list in this context"))
 
+def modified(mctx, x):
+    getargs(x, 0, 0, _("modified takes no arguments"))
+    s = mctx.status()[0]
+    return [f for f in mctx.subset if f in s]
+
+def added(mctx, x):
+    getargs(x, 0, 0, _("added takes no arguments"))
+    s = mctx.status()[1]
+    return [f for f in mctx.subset if f in s]
+
+def removed(mctx, x):
+    getargs(x, 0, 0, _("removed takes no arguments"))
+    s = mctx.status()[2]
+    return [f for f in mctx.subset if f in s]
+
+def deleted(mctx, x):
+    getargs(x, 0, 0, _("deleted takes no arguments"))
+    s = mctx.status()[3]
+    return [f for f in mctx.subset if f in s]
+
+def unknown(mctx, x):
+    getargs(x, 0, 0, _("unknown takes no arguments"))
+    s = mctx.status()[4]
+    return [f for f in mctx.subset if f in s]
+
+def ignored(mctx, x):
+    getargs(x, 0, 0, _("ignored takes no arguments"))
+    s = mctx.status()[5]
+    return [f for f in mctx.subset if f in s]
+
+def clean(mctx, x):
+    getargs(x, 0, 0, _("clean takes no arguments"))
+    s = mctx.status()[6]
+    return [f for f in mctx.subset if f in s]
+
 def func(mctx, a, b):
     if a[0] == 'symbol' and a[1] in symbols:
         return symbols[a[1]](mctx, b)
@@ -141,9 +176,16 @@ def symlink(mctx, x):
     return [f for f in mctx.subset if mctx.ctx.flags(f) == 'l']
 
 symbols = {
+    'added': added,
     'binary': binary,
+    'clean': clean,
+    'deleted': deleted,
     'exec': exec_,
+    'ignored': ignored,
+    'modified': modified,
+    'removed': removed,
     'symlink': symlink,
+    'unknown': unknown,
 }
 
 methods = {
@@ -158,17 +200,32 @@ methods = {
 }
 
 class matchctx(object):
-    def __init__(self, ctx, subset=None):
+    def __init__(self, ctx, subset=None, status=None):
         self.ctx = ctx
         self.subset = subset
+        self._status = status
+        if status is None:
+            # desperately wants optimizing
+            r = self.ctx._repo
+            self._status = r.status(self.ctx.p1(), self.ctx,
+                                    unknown=True, ignored=True, clean=True)
         if subset is None:
-            self.subset = ctx.walk(self.matcher([])) # optimize this later
+            self.subset = []
+            for c in self._status:
+                self.subset.extend(c)
+    def status(self):
+        if not self._status:
+            r = self.ctx._repo
+            # also wants optimizing
+            self._status = r.status(self.ctx.p1(), self.ctx,
+                                    unknown=True, ignored=True, clean=True)
+        return self._status
     def matcher(self, patterns):
         return self.ctx.match(patterns)
     def filter(self, files):
         return [f for f in files if f in self.subset]
     def narrow(self, files):
-        return matchctx(self.ctx, self.filter(files))
+        return matchctx(self.ctx, self.filter(files), self._status)
 
 def getfileset(ctx, expr):
     tree, pos = parse(expr)
