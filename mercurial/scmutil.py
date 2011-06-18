@@ -563,9 +563,8 @@ def match(repo, pats=[], opts={}, globbed=False, default='relpath'):
         pats = []
     if not globbed and default == 'relpath':
         pats = expandpats(pats or [])
-    m = matchmod.match(repo.root, repo.getcwd(), pats,
-                       opts.get('include'), opts.get('exclude'), default,
-                       auditor=repo.auditor)
+    m = repo[None].match(pats, opts.get('include'), opts.get('exclude'),
+                         default)
     def badfn(f, msg):
         repo.ui.warn("%s: %s\n" % (m.rel(f), msg))
     m.bad = badfn

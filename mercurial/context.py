@@ -8,6 +8,7 @@
 from node import nullid, nullrev, short, hex
 from i18n import _
 import ancestor, bdiff, error, util, scmutil, subrepo, patch, encoding
+import match as matchmod
 import os, errno, stat
 
 propertycache = util.propertycache
@@ -207,6 +208,11 @@ class changectx(object):
 
     def sub(self, path):
         return subrepo.subrepo(self, path)
+
+    def match(self, pats=[], include=None, exclude=None, default='glob'):
+        r = self._repo
+        return matchmod.match(r.root, r.getcwd(), pats,
+                              include, exclude, default, auditor=r.auditor)
 
     def diff(self, ctx2=None, match=None, **opts):
         """Returns a diff generator for the given contexts and matcher"""
