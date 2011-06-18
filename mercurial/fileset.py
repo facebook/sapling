@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import parser, error, util
+import parser, error, util, merge
 from i18n import _
 
 elements = {
@@ -175,6 +175,20 @@ def symlink(mctx, x):
     getargs(x, 0, 0, _("symlink takes no arguments"))
     return [f for f in mctx.subset if mctx.ctx.flags(f) == 'l']
 
+def resolved(mctx, x):
+    getargs(x, 0, 0, _("resolved takes no arguments"))
+    if mctx.ctx.rev() is not None:
+        return []
+    ms = merge.mergestate(mctx.ctx._repo)
+    return [f for f in mctx.subset if f in ms and ms[f] == 'r']
+
+def unresolved(mctx, x):
+    getargs(x, 0, 0, _("unresolved takes no arguments"))
+    if mctx.ctx.rev() is not None:
+        return []
+    ms = merge.mergestate(mctx.ctx._repo)
+    return [f for f in mctx.subset if f in ms and ms[f] == 'u']
+
 symbols = {
     'added': added,
     'binary': binary,
@@ -184,8 +198,10 @@ symbols = {
     'ignored': ignored,
     'modified': modified,
     'removed': removed,
+    'resolved': resolved,
     'symlink': symlink,
     'unknown': unknown,
+    'unresolved': unresolved,
 }
 
 methods = {
