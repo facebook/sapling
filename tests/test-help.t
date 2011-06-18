@@ -108,6 +108,7 @@ Short help:
    diffs        Diff Formats
    environment  Environment Variables
    extensions   Using additional features
+   filesets     Specifying File Sets
    glossary     Glossary
    hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb
@@ -182,6 +183,7 @@ Short help:
    diffs        Diff Formats
    environment  Environment Variables
    extensions   Using additional features
+   filesets     Specifying File Sets
    glossary     Glossary
    hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb
@@ -699,6 +701,7 @@ Test that default list of commands omits extension commands
    diffs        Diff Formats
    environment  Environment Variables
    extensions   Using additional features
+   filesets     Specifying File Sets
    glossary     Glossary
    hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb

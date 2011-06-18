@@ -7,7 +7,7 @@
 
 from i18n import gettext, _
 import sys, os
-import extensions, revset, templatekw, templatefilters
+import extensions, revset, fileset, templatekw, templatefilters
 import util
 
 def listexts(header, exts, indent=1):
@@ -61,6 +61,7 @@ helptable = sorted([
     (['mrevs', 'multirevs'], _('Specifying Multiple Revisions'),
      loaddoc('multirevs')),
     (['revset', 'revsets'], _("Specifying Revision Sets"), loaddoc('revsets')),
+    (['fileset', 'filesets'], _("Specifying File Sets"), loaddoc('filesets')),
     (['diffs'], _('Diff Formats'), loaddoc('diffs')),
     (['merge-tools'], _('Merge Tools'), loaddoc('merge-tools')),
     (['templating', 'templates'], _('Template Usage'),
@@ -102,6 +103,7 @@ def addtopicsymbols(topic, marker, symbols):
         return makeitemsdoc(topic, doc, marker, symbols)
     addtopichook(topic, add)
 
+addtopicsymbols('filesets', '.. predicatesmarker', fileset.symbols)
 addtopicsymbols('revsets', '.. predicatesmarker', revset.symbols)
 addtopicsymbols('templates', '.. keywordsmarker', templatekw.keywords)
 addtopicsymbols('templates', '.. filtersmarker', templatefilters.filters)

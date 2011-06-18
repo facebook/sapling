@@ -49,3 +49,5 @@ File examples::
 
   listfile:list.txt  read list from list.txt with one file pattern per line
   listfile0:list.txt read list from list.txt with null byte delimiters
+
+See also :hg:`help filesets`.

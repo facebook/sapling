@@ -338,6 +338,7 @@ Testing -h/--help:
    diffs        Diff Formats
    environment  Environment Variables
    extensions   Using additional features
+   filesets     Specifying File Sets
    glossary     Glossary
    hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb
@@ -418,6 +419,7 @@ Testing -h/--help:
    diffs        Diff Formats
    environment  Environment Variables
    extensions   Using additional features
+   filesets     Specifying File Sets
    glossary     Glossary
    hgignore     syntax for Mercurial ignore files
    hgweb        Configuring hgweb
