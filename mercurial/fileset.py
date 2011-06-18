@@ -313,11 +313,34 @@ def size(mctx, x):
 
     return [f for f in mctx.subset if m(mctx.ctx[f].size())]
 
+def encoding(mctx, x):
+    """``encoding(name)``
+    File can be successfully decoded with the given character
+    encoding. May not be useful for encodings other than ASCII and
+    UTF-8.
+    """
+
+    enc = getstring(x, _("encoding requires an encoding name"))
+
+    s = []
+    for f in mctx.subset:
+        d = mctx.ctx[f].data()
+        try:
+            d.decode(enc)
+        except LookupError:
+            raise util.Abort(_("unknown encoding '%s'") % enc)
+        except UnicodeDecodeError:
+            continue
+        s.append(f)
+
+    return s
+
 symbols = {
     'added': added,
     'binary': binary,
     'clean': clean,
     'deleted': deleted,
+    'encoding': encoding,
     'exec': exec_,
     'grep': grep,
     'ignored': ignored,
