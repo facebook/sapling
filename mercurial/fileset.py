@@ -204,21 +204,7 @@ class matchctx(object):
         self.ctx = ctx
         self.subset = subset
         self._status = status
-        if status is None:
-            # desperately wants optimizing
-            r = self.ctx._repo
-            self._status = r.status(self.ctx.p1(), self.ctx,
-                                    unknown=True, ignored=True, clean=True)
-        if subset is None:
-            self.subset = []
-            for c in self._status:
-                self.subset.extend(c)
     def status(self):
-        if not self._status:
-            r = self.ctx._repo
-            # also wants optimizing
-            self._status = r.status(self.ctx.p1(), self.ctx,
-                                    unknown=True, ignored=True, clean=True)
         return self._status
     def matcher(self, patterns):
         return self.ctx.match(patterns)
@@ -227,8 +213,35 @@ class matchctx(object):
     def narrow(self, files):
         return matchctx(self.ctx, self.filter(files), self._status)
 
+def _intree(funcs, tree):
+    if isinstance(tree, tuple):
+        if tree[0] == 'func' and tree[1][0] == 'symbol':
+            if tree[1][1] in funcs:
+                return True
+        for s in tree[1:]:
+            if _intree(funcs, s):
+                return True
+    return False
+
 def getfileset(ctx, expr):
     tree, pos = parse(expr)
     if (pos != len(expr)):
         raise error.ParseError("invalid token", pos)
-    return getset(matchctx(ctx), tree)
+
+    # do we need status info?
+    if _intree(['modified', 'added', 'removed', 'deleted',
+                'unknown', 'ignored', 'clean'], tree):
+        unknown = _intree(['unknown'], tree)
+        ignored = _intree(['ignored'], tree)
+
+        r = ctx._repo
+        status = r.status(ctx.p1(), ctx,
+                          unknown=unknown, ignored=ignored, clean=True)
+        subset = []
+        for c in status:
+            subset.extend(c)
+    else:
+        status = None
+        subset = ctx.walk(ctx.match([]))
+
+    return getset(matchctx(ctx, subset, status), tree)
