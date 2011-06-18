@@ -558,17 +558,11 @@ def expandpats(pats):
         ret.append(p)
     return ret
 
-def match(ctxorrepo, pats=[], opts={}, globbed=False, default='relpath'):
+def match(ctx, pats=[], opts={}, globbed=False, default='relpath'):
     if pats == ("",):
         pats = []
     if not globbed and default == 'relpath':
         pats = expandpats(pats or [])
-
-    if hasattr(ctxorrepo, 'match'):
-        ctx = ctxorrepo
-    else:
-        # will eventually abort here
-        ctx = ctxorrepo[None]
 
     m = ctx.match(pats, opts.get('include'), opts.get('exclude'),
                          default)
