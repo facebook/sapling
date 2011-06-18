@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import parser, error, util, merge
+import parser, error, util, merge, re
 from i18n import _
 
 elements = {
@@ -235,12 +235,21 @@ def hgignore(mctx, x):
     ignore = mctx.ctx._repo.dirstate._ignore
     return [f for f in mctx.subset if ignore(f)]
 
+def grep(mctx, x):
+    """``grep(regex)``
+    File contains the given regular expression.
+    """
+    pat = getstring(x, _("grep requires a pattern"))
+    r = re.compile(pat)
+    return [f for f in mctx.subset if r.search(mctx.ctx[f].data())]
+
 symbols = {
     'added': added,
     'binary': binary,
     'clean': clean,
     'deleted': deleted,
     'exec': exec_,
+    'grep': grep,
     'ignored': ignored,
     'hgignore': hgignore,
     'modified': modified,
