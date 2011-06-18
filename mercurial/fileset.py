@@ -335,10 +335,22 @@ def encoding(mctx, x):
 
     return s
 
+def copied(mctx, x):
+    """``copied()``
+    File that is recorded as being copied.
+    """
+    s = []
+    for f in mctx.subset:
+        p = mctx.ctx[f].parents()
+        if p and p[0].path() != f:
+            s.append(f)
+    return s
+
 symbols = {
     'added': added,
     'binary': binary,
     'clean': clean,
+    'copied': copied,
     'deleted': deleted,
     'encoding': encoding,
     'exec': exec_,
