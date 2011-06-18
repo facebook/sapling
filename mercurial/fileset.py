@@ -121,22 +121,20 @@ methods = {
 }
 
 class matchctx(object):
-    def __init__(self, ctx, matchfn, subset=None):
+    def __init__(self, ctx, subset=None):
         self.ctx = ctx
-        self.matchfn = matchfn
         self.subset = subset
         if subset is None:
-            self.subset = ctx.walk(matchfn([])) # optimize this later
-    def matcher(self, pattern):
-        return self.matchfn(pattern)
+            self.subset = ctx.walk(self.matcher([])) # optimize this later
+    def matcher(self, patterns):
+        return self.ctx.match(patterns)
     def filter(self, files):
         return [f for f in files if f in self.subset]
     def narrow(self, files):
-        return matchctx(self.ctx, self.matchfn,
-                        self.filter(files))
+        return matchctx(self.ctx, self.filter(files))
 
-def getfileset(ctx, matchfn, expr):
+def getfileset(ctx, expr):
     tree, pos = parse(expr)
     if (pos != len(expr)):
         raise error.ParseError("invalid token", pos)
-    return getset(matchctx(ctx, matchfn), tree)
+    return getset(matchctx(ctx), tree)

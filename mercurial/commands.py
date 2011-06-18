@@ -1610,9 +1610,8 @@ def debugfileset(ui, repo, expr):
     if ui.verbose:
         tree = fileset.parse(expr)[0]
         ui.note(tree, "\n")
-    matcher = lambda x: scmutil.match(repo[None], x, default='glob')
 
-    for f in fileset.getfileset(repo[None], matcher, expr):
+    for f in fileset.getfileset(repo[None], expr):
         ui.write("%s\n" % f)
 
 @command('debugfsinfo', [], _('[PATH]'))
