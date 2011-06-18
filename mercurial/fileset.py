@@ -111,36 +111,59 @@ def listset(mctx, a, b):
     raise error.ParseError(_("can't use a list in this context"))
 
 def modified(mctx, x):
+    """``modified()``
+    File that is modified according to status.
+    """
     getargs(x, 0, 0, _("modified takes no arguments"))
     s = mctx.status()[0]
     return [f for f in mctx.subset if f in s]
 
 def added(mctx, x):
+    """``added()``
+    File that is added according to status.
+    """
     getargs(x, 0, 0, _("added takes no arguments"))
     s = mctx.status()[1]
     return [f for f in mctx.subset if f in s]
 
 def removed(mctx, x):
+    """``removed()``
+    File that is removed according to status.
+    """
     getargs(x, 0, 0, _("removed takes no arguments"))
     s = mctx.status()[2]
     return [f for f in mctx.subset if f in s]
 
 def deleted(mctx, x):
+    """``deleted()``
+    File that is deleted according to status.
+    """
     getargs(x, 0, 0, _("deleted takes no arguments"))
     s = mctx.status()[3]
     return [f for f in mctx.subset if f in s]
 
 def unknown(mctx, x):
+    """``unknown()``
+    File that is unknown according to status. These files will only be
+    considered if this predicate is used.
+    """
     getargs(x, 0, 0, _("unknown takes no arguments"))
     s = mctx.status()[4]
     return [f for f in mctx.subset if f in s]
 
 def ignored(mctx, x):
+    """``ignored()``
+    File that is ignored according to status. These files will only be
+    considered if this predicate is used.
+    """
     getargs(x, 0, 0, _("ignored takes no arguments"))
     s = mctx.status()[5]
     return [f for f in mctx.subset if f in s]
 
 def clean(mctx, x):
+    """``clean()``
+    File that is clean according to status.
+    """
     getargs(x, 0, 0, _("clean takes no arguments"))
     s = mctx.status()[6]
     return [f for f in mctx.subset if f in s]
@@ -164,18 +187,30 @@ def getargs(x, min, max, err):
     return l
 
 def binary(mctx, x):
+    """``binary()``
+    File that appears to be binary (contails NUL bytes).
+    """
     getargs(x, 0, 0, _("binary takes no arguments"))
     return [f for f in mctx.subset if util.binary(mctx.ctx[f].data())]
 
 def exec_(mctx, x):
+    """``exec()``
+    File that is marked as executable.
+    """
     getargs(x, 0, 0, _("exec takes no arguments"))
     return [f for f in mctx.subset if mctx.ctx.flags(f) == 'x']
 
 def symlink(mctx, x):
+    """``symlink()``
+    File that is marked as a symlink.
+    """
     getargs(x, 0, 0, _("symlink takes no arguments"))
     return [f for f in mctx.subset if mctx.ctx.flags(f) == 'l']
 
 def resolved(mctx, x):
+    """``resolved()``
+    File that is marked resolved according to the resolve state.
+    """
     getargs(x, 0, 0, _("resolved takes no arguments"))
     if mctx.ctx.rev() is not None:
         return []
@@ -183,6 +218,9 @@ def resolved(mctx, x):
     return [f for f in mctx.subset if f in ms and ms[f] == 'r']
 
 def unresolved(mctx, x):
+    """``unresolved()``
+    File that is marked unresolved according to the resolve state.
+    """
     getargs(x, 0, 0, _("unresolved takes no arguments"))
     if mctx.ctx.rev() is not None:
         return []
@@ -190,6 +228,9 @@ def unresolved(mctx, x):
     return [f for f in mctx.subset if f in ms and ms[f] == 'u']
 
 def hgignore(mctx, x):
+    """``resolved()``
+    File that matches the active .hgignore pattern.
+    """
     getargs(x, 0, 0, _("hgignore takes no arguments"))
     ignore = mctx.ctx._repo.dirstate._ignore
     return [f for f in mctx.subset if ignore(f)]
@@ -267,3 +308,6 @@ def getfileset(ctx, expr):
         subset = ctx.walk(ctx.match([]))
 
     return getset(matchctx(ctx, subset, status), tree)
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = symbols.values()
