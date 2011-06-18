@@ -29,7 +29,7 @@ def autodiff(ui, repo, *pats, **opts):
         raise util.Abort('--git must be yes, no or auto')
 
     node1, node2 = scmutil.revpair(repo, [])
-    m = scmutil.match(repo, pats, opts)
+    m = scmutil.match(repo[node2], pats, opts)
     it = patch.diff(repo, node1, node2, match=m, opts=diffopts,
                     losedatafn=losedatafn)
     for chunk in it:

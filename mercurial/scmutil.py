@@ -573,7 +573,7 @@ def match(ctxorrepo, pats=[], opts={}, globbed=False, default='relpath'):
     m = ctx.match(pats, opts.get('include'), opts.get('exclude'),
                          default)
     def badfn(f, msg):
-        repo.ui.warn("%s: %s\n" % (m.rel(f), msg))
+        ctx._repo.ui.warn("%s: %s\n" % (m.rel(f), msg))
     m.bad = badfn
     return m
 
@@ -591,7 +591,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     # we'd use status here, except handling of symlinks and ignore is tricky
     added, unknown, deleted, removed = [], [], [], []
     audit_path = pathauditor(repo.root)
-    m = match(repo, pats, opts)
+    m = match(repo[None], pats, opts)
     for abs in repo.walk(m):
         target = repo.wjoin(abs)
         good = True

@@ -45,7 +45,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         assert node2 is not None
         mmap = repo[node1].manifest()
         mmap2 = repo[node2].manifest()
-        m = scmutil.match(repo, files)
+        m = scmutil.match(repo[node1], files)
         modified, added, removed  = repo.status(node1, node2, m)[:3]
         empty = short(nullid)
 
@@ -81,7 +81,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         if opts['patch']:
             if opts['pretty']:
                 catcommit(ui, repo, node2, "")
-            m = scmutil.match(repo, files)
+            m = scmutil.match(repo[node1], files)
             chunks = patch.diff(repo, node1, node2, match=m,
                                 opts=patch.diffopts(ui, {'git': True}))
             for chunk in chunks:

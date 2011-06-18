@@ -519,7 +519,7 @@ class queue(object):
     def printdiff(self, repo, diffopts, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
         stat = opts.get('stat')
-        m = scmutil.match(repo, files, opts)
+        m = scmutil.match(repo[node1], files, opts)
         cmdutil.diffordiffstat(self.ui, repo, diffopts, node1, node2,  m,
                                changes, stat, fp)
 
@@ -899,7 +899,7 @@ class queue(object):
         if opts.get('include') or opts.get('exclude') or pats:
             if inclsubs:
                 pats = list(pats or []) + inclsubs
-            match = scmutil.match(repo, pats, opts)
+            match = scmutil.match(repo[None], pats, opts)
             # detect missing files in pats
             def badfn(f, msg):
                 if f != '.hgsubstate': # .hgsubstate is auto-created
@@ -1380,7 +1380,7 @@ class queue(object):
             changes = repo.changelog.read(top)
             man = repo.manifest.read(changes[0])
             aaa = aa[:]
-            matchfn = scmutil.match(repo, pats, opts)
+            matchfn = scmutil.match(repo[None], pats, opts)
             # in short mode, we only diff the files included in the
             # patch already plus specified files
             if opts.get('short'):
@@ -1388,7 +1388,7 @@ class queue(object):
                 # files plus specified files - unfiltered
                 match = scmutil.matchfiles(repo, mm + aa + dd + matchfn.files())
                 # filter with inc/exl options
-                matchfn = scmutil.match(repo, opts=opts)
+                matchfn = scmutil.match(repo[None], opts=opts)
             else:
                 match = scmutil.matchall(repo)
             m, a, r, d = repo.status(match=match)[:4]

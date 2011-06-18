@@ -54,7 +54,7 @@ def countrate(ui, repo, amap, *pats, **opts):
     if opts.get('date'):
         df = util.matchdate(opts['date'])
 
-    m = scmutil.match(repo, pats, opts)
+    m = scmutil.match(repo[None], pats, opts)
     def prep(ctx, fns):
         rev = ctx.rev()
         if df and not df(ctx.date()[0]): # doesn't match date format

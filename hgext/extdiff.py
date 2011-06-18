@@ -137,7 +137,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         if node1b == nullid:
             do3way = False
 
-    matcher = scmutil.match(repo, pats, opts)
+    matcher = scmutil.match(repo[node2], pats, opts)
     mod_a, add_a, rem_a = map(set, repo.status(node1a, node2, matcher)[:3])
     if do3way:
         mod_b, add_b, rem_b = map(set, repo.status(node1b, node2, matcher)[:3])

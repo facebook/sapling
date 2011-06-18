@@ -234,7 +234,7 @@ def copy(ui, repo, pats, opts, rename=False):
     def walkpat(pat):
         srcs = []
         badstates = after and '?' or '?r'
-        m = scmutil.match(repo, [pat], opts, globbed=True)
+        m = scmutil.match(repo[None], [pat], opts, globbed=True)
         for abs in repo.walk(m):
             state = repo.dirstate[abs]
             rel = m.rel(abs)
@@ -1185,7 +1185,8 @@ def commit(ui, repo, commitfunc, pats, opts):
     if opts.get('addremove'):
         scmutil.addremove(repo, pats, opts)
 
-    return commitfunc(ui, repo, message, scmutil.match(repo, pats, opts), opts)
+    return commitfunc(ui, repo, message,
+                      scmutil.match(repo[None], pats, opts), opts)
 
 def commiteditor(repo, ctx, subs):
     if ctx.description():

@@ -326,7 +326,7 @@ def _status(ui, repo, kwt, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
-        return repo.status(match=scmutil.match(repo, pats, opts), clean=True,
+        return repo.status(match=scmutil.match(repo[None], pats, opts), clean=True,
                            unknown=opts.get('unknown') or opts.get('all'))
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
