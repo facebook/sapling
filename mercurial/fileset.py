@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import parser, error
+import parser, error, util
 from i18n import _
 
 elements = {
@@ -110,6 +110,42 @@ def notset(mctx, x):
 def listset(mctx, a, b):
     raise error.ParseError(_("can't use a list in this context"))
 
+def func(mctx, a, b):
+    if a[0] == 'symbol' and a[1] in symbols:
+        return symbols[a[1]](mctx, b)
+    raise error.ParseError(_("not a function: %s") % a[1])
+
+def getlist(x):
+    if not x:
+        return []
+    if x[0] == 'list':
+        return getlist(x[1]) + [x[2]]
+    return [x]
+
+def getargs(x, min, max, err):
+    l = getlist(x)
+    if len(l) < min or len(l) > max:
+        raise error.ParseError(err)
+    return l
+
+def binary(mctx, x):
+    getargs(x, 0, 0, _("binary takes no arguments"))
+    return [f for f in mctx.subset if util.binary(mctx.ctx[f].data())]
+
+def exec_(mctx, x):
+    getargs(x, 0, 0, _("exec takes no arguments"))
+    return [f for f in mctx.subset if mctx.ctx.flags(f) == 'x']
+
+def symlink(mctx, x):
+    getargs(x, 0, 0, _("symlink takes no arguments"))
+    return [f for f in mctx.subset if mctx.ctx.flags(f) == 'l']
+
+symbols = {
+    'binary': binary,
+    'exec': exec_,
+    'symlink': symlink,
+}
+
 methods = {
     'string': stringset,
     'symbol': stringset,
@@ -117,7 +153,8 @@ methods = {
     'or': orset,
     'list': listset,
     'group': getset,
-    'not': notset
+    'not': notset,
+    'func': func,
 }
 
 class matchctx(object):
