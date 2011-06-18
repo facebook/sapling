@@ -243,6 +243,76 @@ def grep(mctx, x):
     r = re.compile(pat)
     return [f for f in mctx.subset if r.search(mctx.ctx[f].data())]
 
+_units = dict(k=2**10, K=2**10, kB=2**10, KB=2**10,
+              M=2**20, MB=2**20, G=2**30, GB=2**30,
+              kiB=10**3, MiB=10**6, GiB=10**9)
+
+def _sizetoint(s):
+    try:
+        s = s.strip()
+        for k, v in _units.items():
+            if s.endswith(k):
+                return int(float(s[:-len(k)]) * v)
+        return int(s)
+    except ValueError:
+        raise
+        raise error.ParseError(_("couldn't parse size"), s)
+
+def _sizetomax(s):
+    try:
+        s = s.strip()
+        for k, v in _units.items():
+            if s.endswith(k):
+                # max(4k) = 5k - 1, max(4.5k) = 4.6k - 1
+                n = s[:-len(k)]
+                inc = 1.0
+                if "." in n:
+                    inc /= 10 ** len(n.split(".")[1])
+                return int((float(n) + inc) * v) - 1
+        # no extension, this is a precise value
+        return int(s)
+    except ValueError:
+        raise
+        raise error.ParseError(_("couldn't parse size"), s)
+
+def size(mctx, x):
+    """``size(expression)``
+    File size matches the given expression. Examples:
+
+    - 1k (files from 1024 to 2047 bytes)
+    - 1.0kiB (files from 1000 to 1100 bytes)
+    - < 20k (files less than 20480 bytes)
+    - >= .5MiB (files at least 500000 bytes)
+    - 4k - 1MB (files from 4096 bytes to 1048576 bytes)
+    """
+
+    expr = getstring(x, _("grep requires a pattern")).strip()
+    if '-' in expr: # do we have a range?
+        a, b = expr.split('-', 1)
+        a = _sizetoint(a)
+        b = _sizetoint(b)
+        m = lambda x: x >= a and x <= b
+    elif expr.startswith("<="):
+        a = _sizetoint(expr[2:])
+        m = lambda x: x <= a
+    elif expr.startswith("<"):
+        a = _sizetoint(expr[1:])
+        m = lambda x: x < a
+    elif expr.startswith(">="):
+        a = _sizetoint(expr[2:])
+        m = lambda x: x >= a
+    elif expr.startswith(">"):
+        a = _sizetoint(expr[1:])
+        m = lambda x: x > a
+    elif expr[0].isdigit or expr[0] == '.':
+        a = _sizetoint(expr)
+        b = _sizetomax(expr)
+        m = lambda x: x >=a and x <= b
+    else:
+        raise error.ParseError(_("couldn't parse size"), expr)
+
+    return [f for f in mctx.subset if m(mctx.ctx[f].size())]
+
 symbols = {
     'added': added,
     'binary': binary,
@@ -255,6 +325,7 @@ symbols = {
     'modified': modified,
     'removed': removed,
     'resolved': resolved,
+    'size': size,
     'symlink': symlink,
     'unknown': unknown,
     'unresolved': unresolved,
