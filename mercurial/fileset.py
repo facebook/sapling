@@ -189,6 +189,11 @@ def unresolved(mctx, x):
     ms = merge.mergestate(mctx.ctx._repo)
     return [f for f in mctx.subset if f in ms and ms[f] == 'u']
 
+def hgignore(mctx, x):
+    getargs(x, 0, 0, _("hgignore takes no arguments"))
+    ignore = mctx.ctx._repo.dirstate._ignore
+    return [f for f in mctx.subset if ignore(f)]
+
 symbols = {
     'added': added,
     'binary': binary,
@@ -196,6 +201,7 @@ symbols = {
     'deleted': deleted,
     'exec': exec_,
     'ignored': ignored,
+    'hgignore': hgignore,
     'modified': modified,
     'removed': removed,
     'resolved': resolved,
