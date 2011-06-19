@@ -67,9 +67,9 @@ hgcommit -m 'add gamma'
 
 hg book -r 1 beta
 
-hg outgoing
-hg outgoing -r beta
-hg outgoing -r master
+hg outgoing | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+hg outgoing -r beta | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+hg outgoing -r master | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
 
 cd ..
 
@@ -88,9 +88,9 @@ echo % this will fail # maybe we should try to make it work
 hg outgoing
 echo % let\'s pull and try again
 hg pull
-hg outgoing
-hg outgoing -r beta
-hg outgoing -r master
+hg outgoing | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+hg outgoing -r beta | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+hg outgoing -r master | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
 
 
 cd ..
