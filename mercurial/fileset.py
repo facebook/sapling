@@ -305,7 +305,7 @@ def size(mctx, x):
     elif expr[0].isdigit or expr[0] == '.':
         a = _sizetoint(expr)
         b = _sizetomax(expr)
-        m = lambda x: x >=a and x <= b
+        m = lambda x: x >= a and x <= b
     else:
         raise error.ParseError(_("couldn't parse size"), expr)
 
