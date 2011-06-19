@@ -244,8 +244,7 @@ def grep(mctx, x):
     return [f for f in mctx.subset if r.search(mctx.ctx[f].data())]
 
 _units = dict(k=2**10, K=2**10, kB=2**10, KB=2**10,
-              M=2**20, MB=2**20, G=2**30, GB=2**30,
-              kiB=10**3, MiB=10**6, GiB=10**9)
+              M=2**20, MB=2**20, G=2**30, GB=2**30)
 
 def _sizetoint(s):
     try:
@@ -280,9 +279,8 @@ def size(mctx, x):
     File size matches the given expression. Examples:
 
     - 1k (files from 1024 to 2047 bytes)
-    - 1.0kiB (files from 1000 to 1100 bytes)
     - < 20k (files less than 20480 bytes)
-    - >= .5MiB (files at least 500000 bytes)
+    - >= .5MB (files at least 524288 bytes)
     - 4k - 1MB (files from 4096 bytes to 1048576 bytes)
     """
 
