@@ -1378,7 +1378,7 @@ def _externalpatch(ui, repo, patcher, patchname, strip, files,
             cwd = repo.getcwd()
             if cwd:
                 cfiles = [util.pathto(repo.root, cwd, f)
-                          for f in cfile]
+                          for f in cfiles]
             scmutil.addremove(repo, cfiles, similarity=similarity)
     code = fp.close()
     if code:
