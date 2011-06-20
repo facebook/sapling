@@ -91,7 +91,7 @@ update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES)
 	$(PYTHON) i18n/hggettext mercurial/commands.py \
-	  hgext/*.py hgext/*/__init__.py mercurial/revset.py \
+	  hgext/*.py hgext/*/__init__.py mercurial/fileset.py mercurial/revset.py \
 	  $(DOCFILES) > i18n/hg.pot
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string
