@@ -319,5 +319,180 @@ Partial pull:
   11 a19bfa7e7328: r11 both
   $ cd ..
 
+Both have new stuff in new named branches:
+
+  $ stop
+  $ hg clone main repo1a --rev name1 -q
+  $ hg clone repo1a repo1b -q
+  $ hg clone main repo2a --rev name2 -q
+  $ hg clone repo2a repo2b -q
+  $ start repo1a
+
+  $ cd repo2a
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  6 a7892891da29: r2 name1
+  7 2c8d5d5ec612: r3 name1
+  8 e71dbbc70e03: r4 name1
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  2 70314b29987d: r5 name2
+  3 6c6f5d5f3c11: r6 name2
+  4 b6b4d315a2ac: r7 name2
+  5 d8f638ac69e9: r8 name2
+  $ hg push $remote --new-branch
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 4 changesets with 8 changes to 2 files (+1 heads)
+  $ hg pull $remote
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 6 changes to 2 files (+1 heads)
+  (run 'hg heads' to see heads)
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ cd ..
+
+  $ stop ; start repo1b
+  $ cd repo2b
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  6 a7892891da29: r2 name1
+  7 2c8d5d5ec612: r3 name1
+  8 e71dbbc70e03: r4 name1
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  2 70314b29987d: r5 name2
+  3 6c6f5d5f3c11: r6 name2
+  4 b6b4d315a2ac: r7 name2
+  5 d8f638ac69e9: r8 name2
+  $ hg pull $remote
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 6 changes to 2 files (+1 heads)
+  (run 'hg heads' to see heads)
+  $ hg push $remote --new-branch
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 4 changesets with 8 changes to 2 files (+1 heads)
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ cd ..
+
+Both have new stuff in existing named branches:
+
+  $ stop
+  $ rm -r repo1a repo1b repo2a repo2b
+  $ hg clone main repo1a --rev 3 --rev 8 -q
+  $ hg clone repo1a repo1b -q
+  $ hg clone main repo2a --rev 4 --rev 7 -q
+  $ hg clone repo2a repo2b -q
+  $ start repo1a
+
+  $ cd repo2a
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  8 d8f638ac69e9: r8 name2
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  4 e71dbbc70e03: r4 name1
+  $ hg push $remote --new-branch
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 2 changes to 2 files
+  $ hg pull $remote
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files
+  (run 'hg update' to get a working copy)
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ cd ..
+
+  $ stop ; start repo1b
+  $ cd repo2b
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  8 d8f638ac69e9: r8 name2
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  4 e71dbbc70e03: r4 name1
+  $ hg pull $remote
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files
+  (run 'hg update' to get a working copy)
+  $ hg push $remote --new-branch
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 2 changes to 2 files
+  $ hg incoming $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ cd ..
+
   $ stop
 

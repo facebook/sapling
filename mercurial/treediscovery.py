@@ -49,7 +49,6 @@ def findcommonincoming(repo, remote, heads=None, force=False):
     if not unknown:
         return list(base), [], list(heads)
 
-    heads = unknown
     req = set(unknown)
     reqcnt = 0
 
