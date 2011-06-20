@@ -27,6 +27,9 @@ class sortdict(dict):
     def update(self, src):
         for k in src:
             self[k] = src[k]
+    def clear(self):
+        dict.clear(self)
+        self._list = []
     def items(self):
         return [(k, self[k]) for k in self._list]
     def __delitem__(self, key):
