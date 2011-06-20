@@ -1359,6 +1359,8 @@ class url(object):
     <url scheme: 'bundle', path: '../foo'>
     >>> url(r'c:\foo\bar')
     <url path: 'c:\\foo\\bar'>
+    >>> url(r'\\blah\blah\blah')
+    <url path: '\\\\blah\\blah\\blah'>
 
     Authentication credentials:
 
@@ -1387,8 +1389,8 @@ class url(object):
         self._hostport = ''
         self._origpath = path
 
-        # special case for Windows drive letters
-        if hasdriveletter(path):
+        # special case for Windows drive letters and UNC paths
+        if hasdriveletter(path) or path.startswith(r'\\'):
             self.path = path
             return
 
