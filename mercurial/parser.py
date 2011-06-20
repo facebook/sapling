@@ -16,6 +16,7 @@
 # __call__(program) parses program into a labelled tree
 
 import error
+from i18n import _
 
 class parser(object):
     def __init__(self, tokenizer, elements, methods=None):
@@ -34,7 +35,7 @@ class parser(object):
     def _match(self, m, pos):
         'make sure the tokenizer matches an end condition'
         if self.current[0] != m:
-            raise error.ParseError("unexpected token: %s" % self.current[0],
+            raise error.ParseError(_("unexpected token: %s") % self.current[0],
                                    self.current[2])
         self._advance()
     def _parse(self, bind=0):
@@ -42,7 +43,7 @@ class parser(object):
         # handle prefix rules on current token
         prefix = self._elements[token][1]
         if not prefix:
-            raise error.ParseError("not a prefix: %s" % token, pos)
+            raise error.ParseError(_("not a prefix: %s") % token, pos)
         if len(prefix) == 1:
             expr = (prefix[0], value)
         else:
@@ -64,7 +65,7 @@ class parser(object):
             else:
                 # handle infix rules
                 if len(e) < 3 or not e[2]:
-                    raise error.ParseError("not an infix: %s" % token, pos)
+                    raise error.ParseError(_("not an infix: %s") % token, pos)
                 infix = e[2]
                 if len(infix) == 3 and infix[2] == self.current[0]:
                     self._match(infix[2], pos)

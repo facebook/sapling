@@ -979,7 +979,7 @@ class revsetalias(object):
                 value = value.replace(arg, repr(arg))
             self.replacement, pos = parse(value)
             if pos != len(value):
-                raise error.ParseError('invalid token', pos)
+                raise error.ParseError(_('invalid token'), pos)
         else:
             self.replacement = value
 
@@ -997,7 +997,8 @@ class revsetalias(object):
             (len(self.args) == 1 and tree[2][0] == 'list') or
             (len(self.args) > 1 and (tree[2][0] != 'list' or
                                      len(tree[2]) - 1 != len(self.args)))):
-            raise error.ParseError('invalid amount of arguments', len(tree) - 2)
+            raise error.ParseError(_('invalid amount of arguments'),
+                                   len(tree) - 2)
         return True
 
     def replace(self, tree):
@@ -1033,7 +1034,7 @@ def match(ui, spec):
         raise error.ParseError(_("empty query"))
     tree, pos = parse(spec)
     if (pos != len(spec)):
-        raise error.ParseError("invalid token", pos)
+        raise error.ParseError(_("invalid token"), pos)
     tree = findaliases(ui, tree)
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset):

@@ -402,7 +402,7 @@ def _intree(funcs, tree):
 def getfileset(ctx, expr):
     tree, pos = parse(expr)
     if (pos != len(expr)):
-        raise error.ParseError("invalid token", pos)
+        raise error.ParseError(_("invalid token"), pos)
 
     # do we need status info?
     if _intree(['modified', 'added', 'removed', 'deleted',
