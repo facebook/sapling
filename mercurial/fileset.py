@@ -228,7 +228,7 @@ def unresolved(mctx, x):
     return [f for f in mctx.subset if f in ms and ms[f] == 'u']
 
 def hgignore(mctx, x):
-    """``resolved()``
+    """``hgignore()``
     File that matches the active .hgignore pattern.
     """
     getargs(x, 0, 0, _("hgignore takes no arguments"))
