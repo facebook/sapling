@@ -186,7 +186,7 @@ should fail - no arguments
 
   $ hg revert -rtip
   abort: no files or directories specified
-  (use --all to revert all files)
+  (use --all to discard all changes)
   [255]
 
 should succeed

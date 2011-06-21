@@ -4182,7 +4182,7 @@ def revert(ui, repo, *pats, **opts):
 
     if not pats and not opts.get('all'):
         raise util.Abort(_('no files or directories specified'),
-                         hint=_('use --all to revert all files'))
+                         hint=_('use --all to discard all changes'))
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
     node = ctx.node()

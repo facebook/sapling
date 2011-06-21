@@ -60,7 +60,7 @@ Revert should fail:
 
   $ hg revert
   abort: no files or directories specified
-  (use --all to revert all files)
+  (use --all to discard all changes)
   [255]
 
 Revert should be ok now:
