@@ -420,6 +420,7 @@ aliases:
   $ echo 'm = merge()' >> .hg/hgrc
   $ echo 'd($1) = reverse(sort($1, date))' >> .hg/hgrc
   $ echo 'rs(ARG1, ARG2) = reverse(sort(ARG1, ARG2))' >> .hg/hgrc
+  $ echo 'rs4(ARG1, ARGA, ARGB, ARG2) = reverse(sort(ARG1, ARG2))' >> .hg/hgrc
 
   $ try m
   ('symbol', 'm')
@@ -434,6 +435,23 @@ aliases:
   2
   $ try 'rs(2 or 3, date)'
   ('func', ('symbol', 'rs'), ('list', ('or', ('symbol', '2'), ('symbol', '3')), ('symbol', 'date')))
+  ('func', ('symbol', 'reverse'), ('func', ('symbol', 'sort'), ('list', ('or', ('symbol', '2'), ('symbol', '3')), ('symbol', 'date'))))
+  3
+  2
+  $ try 'rs()'
+  ('func', ('symbol', 'rs'), None)
+  hg: parse error: invalid number of arguments: 0
+  [255]
+  $ try 'rs(2)'
+  ('func', ('symbol', 'rs'), ('symbol', '2'))
+  hg: parse error: invalid number of arguments: 1
+  [255]
+  $ try 'rs(2, data, 7)'
+  ('func', ('symbol', 'rs'), ('list', ('list', ('symbol', '2'), ('symbol', 'data')), ('symbol', '7')))
+  hg: parse error: invalid number of arguments: 3
+  [255]
+  $ try 'rs4(2 or 3, x, x, date)'
+  ('func', ('symbol', 'rs4'), ('list', ('list', ('list', ('or', ('symbol', '2'), ('symbol', '3')), ('symbol', 'x')), ('symbol', 'x')), ('symbol', 'date')))
   ('func', ('symbol', 'reverse'), ('func', ('symbol', 'sort'), ('list', ('or', ('symbol', '2'), ('symbol', '3')), ('symbol', 'date'))))
   3
   2

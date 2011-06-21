@@ -954,70 +954,46 @@ def optimize(x, small):
 
 class revsetalias(object):
     funcre = re.compile('^([^(]+)\(([^)]+)\)$')
-    args = ()
+    args = None
 
-    def __init__(self, token, value):
+    def __init__(self, name, value):
         '''Aliases like:
 
         h = heads(default)
         b($1) = ancestors($1) - ancestors(default)
         '''
-        if isinstance(token, tuple):
-            self.type, self.name = token
-        else:
-            m = self.funcre.search(token)
+        if isinstance(name, tuple): # parameter substitution
+            self.tree = name
+            self.replacement = value
+        else: # alias definition
+            m = self.funcre.search(name)
             if m:
-                self.type = 'func'
-                self.name = m.group(1)
+                self.tree = ('func', ('symbol', m.group(1)))
                 self.args = [x.strip() for x in m.group(2).split(',')]
+                for arg in self.args:
+                    value = value.replace(arg, repr(arg))
             else:
-                self.type = 'symbol'
-                self.name = token
+                self.tree = ('symbol', name)
 
-        if isinstance(value, str):
-            for arg in self.args:
-                value = value.replace(arg, repr(arg))
             self.replacement, pos = parse(value)
             if pos != len(value):
                 raise error.ParseError(_('invalid token'), pos)
-        else:
-            self.replacement = value
-
-    def match(self, tree):
-        if not tree:
-            return False
-        if tree == (self.type, self.name):
-            return True
-        if tree[0] != self.type:
-            return False
-        if len(tree) > 1 and tree[1] != ('symbol', self.name):
-            return False
-        # 'func' + funcname + args
-        if ((self.args and len(tree) != 3) or
-            (len(self.args) == 1 and tree[2][0] == 'list') or
-            (len(self.args) > 1 and (tree[2][0] != 'list' or
-                                     len(tree[2]) - 1 != len(self.args)))):
-            raise error.ParseError(_('invalid amount of arguments'),
-                                   len(tree) - 2)
-        return True
-
-    def replace(self, tree):
-        if tree == (self.type, self.name):
-            return self.replacement
-        result = self.replacement
-        def getsubtree(i):
-            if tree[2][0] == 'list':
-                return tree[2][i + 1]
-            return tree[i + 2]
-        for i, v in enumerate(self.args):
-            valalias = revsetalias(('string', v), getsubtree(i))
-            result = valalias.process(result)
-        return result
 
     def process(self, tree):
-        if self.match(tree):
-            return self.replace(tree)
         if isinstance(tree, tuple):
+            if self.args is None:
+                if tree == self.tree:
+                    return self.replacement
+            elif tree[:2] == self.tree:
+                l = getlist(tree[2])
+                if len(l) != len(self.args):
+                    raise error.ParseError(
+                        _('invalid number of arguments: %s') % len(l))
+                result = self.replacement
+                for a, v in zip(self.args, l):
+                    valalias = revsetalias(('string', a), v)
+                    result = valalias.process(result)
+                return result
             return tuple(map(self.process, tree))
         return tree
 
