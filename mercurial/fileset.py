@@ -282,7 +282,7 @@ def size(mctx, x):
     - 4k - 1MB (files from 4096 bytes to 1048576 bytes)
     """
 
-    expr = getstring(x, _("grep requires a pattern")).strip()
+    expr = getstring(x, _("size requires an expression")).strip()
     if '-' in expr: # do we have a range?
         a, b = expr.split('-', 1)
         a = _sizetoint(a)

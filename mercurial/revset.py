@@ -417,7 +417,7 @@ def follow(repo, subset, x):
     l = getargs(x, 0, 1, _("follow takes no arguments or a filename"))
     p = repo['.'].rev()
     if l:
-        x = getstring(l[0], "follow expected a filename")
+        x = getstring(l[0], _("follow expected a filename"))
         s = set(ctx.rev() for ctx in repo['.'][x].ancestors())
     else:
         s = set(repo.changelog.ancestors(p))
@@ -604,7 +604,7 @@ def outgoing(repo, subset, x):
     """
     import hg # avoid start-up nasties
     # i18n: "outgoing" is a keyword
-    l = getargs(x, 0, 1, _("outgoing requires a repository path"))
+    l = getargs(x, 0, 1, _("outgoing takes one or no arguments"))
     # i18n: "outgoing" is a keyword
     dest = l and getstring(l[0], _("outgoing requires a repository path")) or ''
     dest = repo.ui.expandpath(dest or 'default-push', dest or 'default')
