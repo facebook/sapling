@@ -333,7 +333,7 @@ class cmdalias(object):
 
     def __call__(self, ui, *args, **opts):
         if self.shadows:
-            ui.debug("alias '%s' shadows command '%s'\n" %
+            ui.debug(_("alias '%s' shadows command '%s'\n") %
                      (self.name, self.cmdname))
 
         if hasattr(self, 'shell'):
@@ -343,7 +343,7 @@ class cmdalias(object):
                 util.checksignature(self.fn)(ui, *args, **opts)
             except error.SignatureError:
                 args = ' '.join([self.cmdname] + self.args)
-                ui.debug("alias '%s' expands to '%s'\n" % (self.name, args))
+                ui.debug(_("alias '%s' expands to '%s'\n") % (self.name, args))
                 raise
 
 def addaliases(ui, cmdtable):
