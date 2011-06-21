@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-06-22 00:39+0400\n"
+"POT-Creation-Date: 2011-06-22 02:13+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -5644,10 +5644,6 @@ msgstr ""
 msgid "source and destination are on different devices"
 msgstr ""
 
-#, python-format
-msgid "not linkable: %s\n"
-msgstr ""
-
 msgid "pruning"
 msgstr ""
 
@@ -9877,10 +9873,6 @@ msgstr ""
 "    Если указан --debug, для каждого параметра печатается имя файла\n"
 "    и номер строки, откуда он был прочитан."
 
-#, python-format
-msgid "read config from: %s\n"
-msgstr "читаю конфиг из: %s\n"
-
 msgid "only one config item permitted"
 msgstr "можно указать только один парметр конфига"
 
@@ -10663,11 +10655,6 @@ msgstr ""
 
 #, python-format
 msgid ""
-"No argument found for substitution of %i variable in alias '%s' definition."
-msgstr ""
-
-#, python-format
-msgid ""
 "error in definition for alias '%s': %s may only be given on the command "
 "line\n"
 msgstr ""
@@ -10796,34 +10783,87 @@ msgid "merging %s failed!\n"
 msgstr ""
 
 msgid "unterminated string"
-msgstr ""
+msgstr "незавершенная строка"
 
 msgid "syntax error"
-msgstr ""
+msgstr "синтаксическая ошибка"
 
 msgid "missing argument"
-msgstr ""
+msgstr "не хватает аргументов"
 
 msgid "can't use a list in this context"
+msgstr "не могу использовать список в этом контексте"
+
+msgid ""
+"``modified()``\n"
+"    File that is modified according to status."
 msgstr ""
+"``modified()``\n"
+"    Файл, измененный согласно статусу."
 
 msgid "modified takes no arguments"
 msgstr "modified не требует аргументов"
 
+msgid ""
+"``added()``\n"
+"    File that is added according to status."
+msgstr ""
+"``added()``\n"
+"    Файл, добавленный согласно статусу."
+
 msgid "added takes no arguments"
 msgstr "added не требует аргументов"
+
+msgid ""
+"``removed()``\n"
+"    File that is removed according to status."
+msgstr ""
+"``removed()``\n"
+"    Файл, удаленный согласно статусу."
 
 msgid "removed takes no arguments"
 msgstr "removed не требует аргументов"
 
+msgid ""
+"``deleted()``\n"
+"    File that is deleted according to status."
+msgstr ""
+"``deleted()``\n"
+"    Файл, удаленный из рабочего каталога согласно статусу."
+
 msgid "deleted takes no arguments"
 msgstr "deleted не требует аргументов"
+
+msgid ""
+"``unknown()``\n"
+"    File that is unknown according to status. These files will only be\n"
+"    considered if this predicate is used."
+msgstr ""
+"``unknown()``\n"
+"    Файл, неизвестный согласно статусу. Эти файлы рассматриваются\n"
+"    только если исли используется этот предикат."
 
 msgid "unknown takes no arguments"
 msgstr "unknown не требует аргументов"
 
+msgid ""
+"``ignored()``\n"
+"    File that is ignored according to status. These files will only be\n"
+"    considered if this predicate is used."
+msgstr ""
+"``ignored()``\n"
+"    Файл, игнорируемый согласно статусу. Эти файлы рассматриваются\n"
+"    только если исли используется этот предикат."
+
 msgid "ignored takes no arguments"
 msgstr "ignored не требует аргументов"
+
+msgid ""
+"``clean()``\n"
+"    File that is clean according to status."
+msgstr ""
+"``clean()``\n"
+"    Файлы, не содержащие изменений согласно статусу."
 
 msgid "clean takes no arguments"
 msgstr "clean не требует аргументов"
@@ -10832,36 +10872,123 @@ msgstr "clean не требует аргументов"
 msgid "not a function: %s"
 msgstr ""
 
+msgid ""
+"``binary()``\n"
+"    File that appears to be binary (contails NUL bytes)."
+msgstr ""
+"``binary()``\n"
+"    Файл, который рассматривается как бинарный (содержит символы NUL)."
+
 msgid "binary takes no arguments"
 msgstr "binary не требует аргументов"
+
+msgid ""
+"``exec()``\n"
+"    File that is marked as executable."
+msgstr ""
+"``exec()``\n"
+"    Файл, который помечен как исполняемый."
 
 msgid "exec takes no arguments"
 msgstr "exec не требует аргументов"
 
+msgid ""
+"``symlink()``\n"
+"    File that is marked as a symlink."
+msgstr ""
+"``symlink()``\n"
+"    Файл, помеченный как символическая ссылка."
+
 msgid "symlink takes no arguments"
 msgstr "symlink не требует аргументов"
+
+msgid ""
+"``resolved()``\n"
+"    File that is marked resolved according to the resolve state."
+msgstr ""
+"``resolved()``\n"
+"    Файл, конфликты в котором считаются разрешенными."
 
 msgid "resolved takes no arguments"
 msgstr "resolved не требует аргументов"
 
+msgid ""
+"``unresolved()``\n"
+"    File that is marked unresolved according to the resolve state."
+msgstr ""
+"``unresolved()``\n"
+"    Файл, конфликты в котором считаются неразрешенными."
+
 msgid "unresolved takes no arguments"
 msgstr "unresolved не требует аргументов"
+
+msgid ""
+"``hgignore()``\n"
+"    File that matches the active .hgignore pattern."
+msgstr ""
+"``hgignore()``\n"
+"    Файл, подходящие под активный шаблон из .hgignore."
 
 msgid "hgignore takes no arguments"
 msgstr "hgignore не требует аргументов"
 
-msgid "grep requires a pattern"
+msgid ""
+"``grep(regex)``\n"
+"    File contains the given regular expression."
 msgstr ""
+"``grep(regex)``\n"
+"    Файл, содержащий заданное регулярное выражение."
+
+msgid "grep requires a pattern"
+msgstr "grep требует шаблон"
 
 msgid "couldn't parse size"
+msgstr "неверно задан размер"
+
+msgid ""
+"``size(expression)``\n"
+"    File size matches the given expression. Examples:"
 msgstr ""
+"``size(expression)``\n"
+"    Размер файла совпадает с данным шаблоном. Например:"
+
+msgid ""
+"    - 1k (files from 1024 to 2047 bytes)\n"
+"    - < 20k (files less than 20480 bytes)\n"
+"    - >= .5MB (files at least 524288 bytes)\n"
+"    - 4k - 1MB (files from 4096 bytes to 1048576 bytes)"
+msgstr ""
+"    - 1k (файлы от 1024 до 2047 байт)\n"
+"    - < 20k (файлы меньше 20480 байт)\n"
+"    - >= .5MB (файлы не меньше 524288 байт)\n"
+"    - 4k - 1MB (файлы от 4096 байт до 1048576 байт)"
+
+msgid ""
+"``encoding(name)``\n"
+"    File can be successfully decoded with the given character\n"
+"    encoding. May not be useful for encodings other than ASCII and\n"
+"    UTF-8."
+msgstr ""
+"``encoding(name)``\n"
+"    Файл, который может быть корректно представлен в данной кодировке.\n"
+"    Может быть бесполезным для кодировок, отличных от ASCII и UTF-8."
 
 msgid "encoding requires an encoding name"
-msgstr ""
+msgstr "не указана кодировка в encoding"
 
 #, python-format
 msgid "unknown encoding '%s'"
+msgstr "неизвестная кодировка '%s'"
+
+msgid ""
+"``copied()``\n"
+"    File that is recorded as being copied."
 msgstr ""
+"``copied()``\n"
+"    Файл, записанный как копируемый."
+
+msgid "invalid token"
+msgstr "неизвестный символ"
 
 msgid "starting revisions are not directly related"
 msgstr ""
@@ -11387,7 +11514,6 @@ msgid ""
 "\"\"\"\"\"\"\"\""
 msgstr ""
 
-#, fuzzy
 msgid ""
 "Authentication credentials for HTTP authentication. This section\n"
 "allows you to store usernames and passwords for use when logging\n"
@@ -11396,8 +11522,8 @@ msgid ""
 msgstr ""
 "Данные для аутентификации по HTTP. Эта секция позволяет хранить\n"
 "имена пользователей и пароли при доступе *к* HTTP-серверам. См.\n"
-"секции web_ если вы хотите настроить *кто* может логиниться на\n"
-"HTTP-сервер."
+"секции ``[web]``, если вы хотите настроить *кто* может логиниться\n"
+"на ваш HTTP-сервер."
 
 msgid "Each line has the following format::"
 msgstr "Каждая строка имеет следующий формат::"
@@ -12833,6 +12959,14 @@ msgstr ""
 "    Путь к выходному файлу, куда будут сохранены данные или отчет\n"
 "    профилирования. Если файл существует, от перезаписывается.\n"
 "    По умолчанию: не задан, данные печатаются в stderr"
+
+msgid ""
+"``revsetalias``\n"
+"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+msgstr ""
+
+msgid "Alias definitions for revsets. See :hg:`help revsets` for details."
+msgstr ""
 
 msgid ""
 "``server``\n"
@@ -15321,8 +15455,12 @@ msgstr ""
 
 msgid ""
 "``x - y``\n"
-"  Changesets in x but not in y.\n"
-"  \n"
+"  Changesets in x but not in y."
+msgstr ""
+"``x - y``\n"
+"  Наборы изменений, входящие в x, но не в y."
+
+msgid ""
 "``x^n``\n"
 "  The nth parent of x, n == 0, 1, or 2.\n"
 "  For n == 0, x; for n == 1, the first parent of each changeset in x;\n"
@@ -15357,9 +15495,9 @@ msgid "  <alias> = <definition>"
 msgstr ""
 
 msgid ""
-"in the ``revsetalias`` section of ``.hgrc``. Arguments of the form `$1`, `"
-"$2`,\n"
-"etc. are substituted from the alias into the definition."
+"in the ``revsetalias`` section of a Mercurial configuration file. Arguments\n"
+"of the form `$1`, `$2`, etc. are substituted from the alias into the\n"
+"definition."
 msgstr ""
 
 msgid "For example,"
@@ -16360,6 +16498,18 @@ msgid "Warning!"
 msgstr ""
 
 #, python-format
+msgid "unexpected token: %s"
+msgstr ""
+
+#, python-format
+msgid "not a prefix: %s"
+msgstr "не префиксный оператор: %s"
+
+#, python-format
+msgid "not an infix: %s"
+msgstr "не инфиксный оператор: %s"
+
+#, python-format
 msgid "%d out of %d hunks FAILED -- saving rejects to file %s\n"
 msgstr ""
 
@@ -16913,6 +17063,9 @@ msgstr ""
 msgid "not a symbol"
 msgstr ""
 
+msgid "invalid amount of arguments"
+msgstr "неверное количество аргументов"
+
 msgid "empty query"
 msgstr ""
 
@@ -17264,10 +17417,6 @@ msgid "(deprecated '%%' in path %s=%s from %s)\n"
 msgstr ""
 
 #, python-format
-msgid "ignoring untrusted configuration option %s.%s = %s\n"
-msgstr ""
-
-#, python-format
 msgid "%s.%s is not a boolean ('%s')"
 msgstr ""
 
@@ -17603,6 +17752,9 @@ msgstr ""
 
 msgid "push failed:"
 msgstr ""
+
+#~ msgid "read config from: %s\n"
+#~ msgstr "читаю конфиг из: %s\n"
 
 #~ msgid "restore individual files or directories to an earlier state"
 #~ msgstr "вернуть файлы или каталоги к более раннему состоянию"
