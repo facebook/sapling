@@ -4552,7 +4552,7 @@ def showconfig(ui, repo, *values, **opts):
     """
 
     for f in scmutil.rcpath():
-        ui.debug(_('read config from: %s\n') % f)
+        ui.debug('read config from: %s\n' % f)
     untrusted = bool(opts.get('untrusted'))
     if values:
         sections = [v for v in values if '.' not in v]

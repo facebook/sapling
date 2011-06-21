@@ -159,8 +159,8 @@ class ui(object):
         if self.debugflag and not untrusted and self._reportuntrusted:
             uvalue = self._ucfg.get(section, name)
             if uvalue is not None and uvalue != value:
-                self.debug(_("ignoring untrusted configuration option "
-                             "%s.%s = %s\n") % (section, name, uvalue))
+                self.debug("ignoring untrusted configuration option "
+                           "%s.%s = %s\n" % (section, name, uvalue))
         return value
 
     def configpath(self, section, name, default=None, untrusted=False):
@@ -330,8 +330,8 @@ class ui(object):
         if self.debugflag and not untrusted and self._reportuntrusted:
             for k, v in self._ucfg.items(section):
                 if self._tcfg.get(section, k) != v:
-                    self.debug(_("ignoring untrusted configuration option "
-                                "%s.%s = %s\n") % (section, k, v))
+                    self.debug("ignoring untrusted configuration option "
+                               "%s.%s = %s\n" % (section, k, v))
         return items
 
     def walkconfig(self, untrusted=False):
