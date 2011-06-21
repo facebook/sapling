@@ -178,6 +178,7 @@ pypats = [
     (r'[\s\(](open|file)\([^)]*\)\.',
      "always assign an opened file to a variable, and close it afterwards"),
     (r'(?i)descendent', "the proper spelling is descendAnt"),
+    (r'\.debug\(\_', "don't mark debug messages for translation"),
   ],
   # warnings
   [

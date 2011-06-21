@@ -117,7 +117,7 @@ def prune(candidates, src, dst, ui):
         tgt = os.path.join(dst, fn)
         ts = linkfilter(srcpath, tgt, st)
         if not ts:
-            ui.debug(_('not linkable: %s\n') % fn)
+            ui.debug('not linkable: %s\n' % fn)
             continue
         targets.append((fn, ts.st_size))
         ui.progress(_('pruning'), pos, fn, _('files'), total)
@@ -159,7 +159,7 @@ def do_relink(src, dst, files, ui):
         sfp.close()
         dfp.close()
         if sin:
-            ui.debug(_('not linkable: %s\n') % f)
+            ui.debug('not linkable: %s\n' % f)
             continue
         try:
             relinkfile(source, tgt)
