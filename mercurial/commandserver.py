@@ -155,6 +155,9 @@ class server(object):
             raise util.Abort(_('unknown mode %s') % mode)
 
     def _read(self, size):
+        if not size:
+            return ''
+
         data = self.client.read(size)
 
         # is the other end closed?
