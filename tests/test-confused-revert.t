@@ -60,7 +60,7 @@ Revert should fail:
 
   $ hg revert
   abort: no files or directories specified
-  (use --all to discard all changes)
+  (uncommitted merge, use --all to discard all changes, or 'hg update -C .' to abort the merge)
   [255]
 
 Revert should be ok now:

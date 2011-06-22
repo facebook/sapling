@@ -4181,8 +4181,12 @@ def revert(ui, repo, *pats, **opts):
     parent, p2 = repo.dirstate.parents()
 
     if not pats and not opts.get('all'):
-        raise util.Abort(_('no files or directories specified'),
-                         hint=_('use --all to discard all changes'))
+        msg = _("no files or directories specified")
+        hint = _("use --all to discard all changes")
+        if p2 != nullid:
+            hint = _("uncommitted merge, use --all to discard all changes,"
+                     " or 'hg update -C .' to abort the merge")
+        raise util.Abort(msg, hint=hint)
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
     node = ctx.node()
