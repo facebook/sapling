@@ -169,6 +169,7 @@ class opener(abstractopener):
     '''
     def __init__(self, base, audit=True):
         self.base = base
+        self._audit = audit
         if audit:
             self.auditor = pathauditor(base)
         else:
@@ -186,9 +187,10 @@ class opener(abstractopener):
         os.chmod(name, self.createmode & 0666)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False):
-        r = util.checkosfilename(path)
-        if r:
-            raise util.Abort("%s: %r" % (r, path))
+        if self._audit:
+            r = util.checkosfilename(path)
+            if r:
+                raise util.Abort("%s: %r" % (r, path))
         self.auditor(path)
         f = os.path.join(self.base, path)
 
