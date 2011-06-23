@@ -425,7 +425,7 @@ def follow(repo, subset, x):
     s |= set([p])
     return [r for r in subset if r in s]
 
-def followfile(repo, subset, f):
+def followfile(repo, subset, x):
     """``follow()``
     An alias for ``::.`` (ancestors of the working copy's first parent).
     """
