@@ -254,8 +254,7 @@ def _sizetoint(s):
                 return int(float(s[:-len(k)]) * v)
         return int(s)
     except ValueError:
-        raise
-        raise error.ParseError(_("couldn't parse size"), s)
+        raise error.ParseError(_("couldn't parse size: %s") % s)
 
 def _sizetomax(s):
     try:
@@ -271,8 +270,7 @@ def _sizetomax(s):
         # no extension, this is a precise value
         return int(s)
     except ValueError:
-        raise
-        raise error.ParseError(_("couldn't parse size"), s)
+        raise error.ParseError(_("couldn't parse size: %s") % s)
 
 def size(mctx, x):
     """``size(expression)``
@@ -307,7 +305,7 @@ def size(mctx, x):
         b = _sizetomax(expr)
         m = lambda x: x >= a and x <= b
     else:
-        raise error.ParseError(_("couldn't parse size"), expr)
+        raise error.ParseError(_("couldn't parse size: %s") % expr)
 
     return [f for f in mctx.subset if m(mctx.ctx[f].size())]
 
