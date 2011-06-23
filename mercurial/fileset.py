@@ -335,6 +335,7 @@ def copied(mctx, x):
     """``copied()``
     File that is recorded as being copied.
     """
+    getargs(x, 0, 0, _("copied takes no arguments"))
     s = []
     for f in mctx.subset:
         p = mctx.ctx[f].parents()
