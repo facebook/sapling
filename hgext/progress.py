@@ -251,7 +251,10 @@ class progbar(object):
                 self.lastprint = now
                 self.show(now, topic, *self.topicstates[topic])
 
+_singleton = None
+
 def uisetup(ui):
+    global _singleton
     class progressui(ui.__class__):
         _progbar = None
 
@@ -278,7 +281,9 @@ def uisetup(ui):
         # we instantiate one globally shared progress bar to avoid
         # competing progress bars when multiple UI objects get created
         if not progressui._progbar:
-            progressui._progbar = progbar(ui)
+            if _singleton is None:
+                _singleton = progbar(ui)
+            progressui._progbar = _singleton
 
 def reposetup(ui, repo):
     uisetup(repo.ui)
