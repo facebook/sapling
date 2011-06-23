@@ -282,8 +282,8 @@ def _buildregexmatch(pats, tail):
         l = len(pats)
         if l < 2:
             raise
-        pata, a = _buildmatch(pats[:l//2], tail)
-        patb, b = _buildmatch(pats[l//2:], tail)
+        pata, a = _buildregexmatch(pats[:l//2], tail)
+        patb, b = _buildregexmatch(pats[l//2:], tail)
         return pat, lambda s: a(s) or b(s)
     except re.error:
         for k, p in pats:
