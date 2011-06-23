@@ -129,13 +129,13 @@ try:
     if getattr(discovery, 'findcommonoutgoing', None):
         kwname = 'onlyheads'
     def findoutgoing(orig, local, remote, *args, **kwargs):
-        kw = {}
-        kw.update(kwargs)
-        for val, k in zip(args, ('base', kwname, 'force')):
-            kw[k] = val
         if isinstance(remote, gitrepo.gitrepo):
             # clean up this cruft when we're 1.7-only, remoteheads and
             # the return value change happened between 1.6 and 1.7.
+            kw = {}
+            kw.update(kwargs)
+            for val, k in zip(args, ('base', kwname, 'force')):
+                kw[k] = val
             git = GitHandler(local, local.ui)
             base, heads = git.get_refs(remote.path)
             newkw = {'base': base, kwname: heads}
@@ -146,7 +146,8 @@ try:
                 return [x[0] for x in r]
             if kwname == 'onlyheads':
                 del kw['base']
-        return orig(local, remote, **kw)
+            return orig(local, remote, **kw)
+        return orig(local, remote, *args, **kwargs)
     if getattr(discovery, 'findoutgoing', None):
         extensions.wrapfunction(discovery, 'findoutgoing', findoutgoing)
     else:
