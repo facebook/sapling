@@ -9,16 +9,28 @@
   >         total = loops
   >     if opts.get('total', None):
   >         total = int(opts.get('total'))
+  >     nested = False
+  >     if opts.get('nested', None):
+  >         nested = True
   >     loops = abs(loops)
   > 
   >     for i in range(loops):
   >         ui.progress('loop', i, 'loop.%d' % i, 'loopnum', total)
+  >         if opts.get('parallel'):
+  >             ui.progress('other', i, 'other.%d' % i, 'othernum', total)
+  >         if nested:
+  >             for j in range(2):
+  >                 ui.progress('nested', j, 'nested.%d' % j, 'nestnum', 2)
+  >             ui.progress('nested', None, 'nested.done', 'nestnum', 2)
   >     ui.progress('loop', None, 'loop.done', 'loopnum', total)
   > 
   > commands.norepo += " loop"
   > 
   > cmdtable = {
-  >     "loop": (loop, [('', 'total', '', 'override for total')],
+  >     "loop": (loop, [('', 'total', '', 'override for total'),
+  >                     ('', 'nested', False, 'show nested results'),
+  >                     ('', 'parallel', False, 'show parallel sets of results'),
+  >                    ],
   >              'hg loop LOOPS'),
   > }
   > EOF
@@ -47,6 +59,42 @@ test with delay=0, refresh=0
   loop [===============================>                ] 2/3
                                                               \r (esc)
 
+
+test nested short-lived topics (which shouldn't display with nestdelay):
+
+  $ hg -y loop 3 --nested 2>&1 | \
+  > python $TESTDIR/filtercr.py
+  
+  loop [                                                ] 0/3
+  loop [===============>                                ] 1/3
+  loop [===============================>                ] 2/3
+                                                              \r (esc)
+
+
+  $ hg --config progress.changedelay=0 -y loop 3 --nested 2>&1 | \
+  > python $TESTDIR/filtercr.py
+  
+  loop [                                                ] 0/3
+  nested [                                              ] 0/2
+  nested [======================>                       ] 1/2
+  loop [===============>                                ] 1/3
+  nested [                                              ] 0/2
+  nested [======================>                       ] 1/2
+  loop [===============================>                ] 2/3
+  nested [                                              ] 0/2
+  nested [======================>                       ] 1/2
+                                                              \r (esc)
+
+
+test two topics being printed in parallel (as when we're doing a local
+--pull clone, where you get the unbundle and bundle progress at the
+same time):
+  $ hg loop 3 --parallel 2>&1 | python $TESTDIR/filtercr.py
+  
+  loop [                                                ] 0/3
+  loop [===============>                                ] 1/3
+  loop [===============================>                ] 2/3
+                                                              \r (esc)
 test refresh is taken in account
 
   $ hg -y --config progress.refresh=100 loop 3 2>&1 | $TESTDIR/filtercr.py

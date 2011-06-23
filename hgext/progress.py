@@ -27,6 +27,9 @@ The following settings are available::
 
   [progress]
   delay = 3 # number of seconds (float) before showing the progress bar
+  changedelay = 1 # changedelay: minimum delay before showing a new topic.
+                  # If set to less than 3 * refresh, that value will
+                  # be used instead.
   refresh = 0.1 # time in seconds between refreshes of the progress bar
   format = topic bar number estimate # format of the progress bar
   width = <none> # if set, the maximum width of the progress information
@@ -105,9 +108,13 @@ class progbar(object):
         self.printed = False
         self.lastprint = time.time() + float(self.ui.config(
             'progress', 'delay', default=3))
+        self.lasttopic = None
         self.indetcount = 0
         self.refresh = float(self.ui.config(
             'progress', 'refresh', default=0.1))
+        self.changedelay = max(3 * self.refresh,
+                               float(self.ui.config(
+                                   'progress', 'changedelay', default=1)))
         self.order = self.ui.configlist(
             'progress', 'format',
             default=['topic', 'bar', 'number', 'estimate'])
@@ -184,6 +191,7 @@ class progbar(object):
         else:
             out = spacejoin(head, tail)
         sys.stderr.write('\r' + out[:termwidth])
+        self.lasttopic = topic
         sys.stderr.flush()
 
     def clear(self):
@@ -248,8 +256,13 @@ class progbar(object):
                 self.topics.append(topic)
             self.topicstates[topic] = pos, item, unit, total
             if now - self.lastprint >= self.refresh and self.topics:
-                self.lastprint = now
-                self.show(now, topic, *self.topicstates[topic])
+                if (self.lasttopic is None # first time we printed
+                    # not a topic change
+                    or topic == self.lasttopic
+                    # it's been long enough we should print anyway
+                    or now - self.lastprint >= self.changedelay):
+                    self.lastprint = now
+                    self.show(now, topic, *self.topicstates[topic])
 
 _singleton = None
 
