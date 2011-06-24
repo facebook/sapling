@@ -73,8 +73,8 @@ class channeledinput(object):
             s = self._read(size, self.channel)
             buf = s
             while s:
-                buf += s
                 s = self._read(size, self.channel)
+                buf += s
 
             return buf
         else:
@@ -104,8 +104,8 @@ class channeledinput(object):
             # keep asking for more until there's either no more or
             # we got a full line
             while s and s[-1] != '\n':
-                buf += s
                 s = self._read(size, 'L')
+                buf += s
 
             return buf
         else:
