@@ -57,6 +57,7 @@ HTTP:
 HTTP without the httpheader capability:
 
   $ HGRCPATH="`pwd`/repo/.hgrc"
+  $ export HGRCPATH
   $ CAP=httpheader
   $ . "$TESTDIR/notcapable"
 
