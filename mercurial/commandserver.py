@@ -143,6 +143,7 @@ class server(object):
                 logfile = open(logpath, 'a')
 
         self.repo = repo
+        self.repoui = repo.ui
 
         if mode == 'pipe':
             self.cerr = channeledoutput(sys.stderr, sys.stdout, 'e')
@@ -176,7 +177,9 @@ class server(object):
         else:
             args = self._read(length).split('\0')
 
-        # copy the ui so changes to it don't persist between requests
+        # copy the uis so changes (e.g. --config or --verbose) don't
+        # persist between requests
+        self.repo.ui = self.repo.dirstate._ui = self.repoui.copy()
         req = dispatch.request(args, self.ui.copy(), self.repo, self.cin,
                                self.cout, self.cerr)
 
