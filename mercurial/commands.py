@@ -5051,6 +5051,9 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     found, the working directory is updated to the specified
     changeset.
 
+    Update sets the working directory's parent revison to the specified
+    changeset (see :hg:`help parents`).
+
     The following rules apply when the working directory contains
     uncommitted changes:
 
