@@ -530,7 +530,7 @@ def _dispatch(req):
 
     # read --config before doing anything else
     # (e.g. to change trust settings for reading .hg/hgrc)
-    _parseconfig(ui, _earlygetopt(['--config'], args))
+    cfgs = _parseconfig(ui, _earlygetopt(['--config'], args))
 
     # check for cwd
     cwd = _earlygetopt(['--cwd'], args)
@@ -601,6 +601,10 @@ def _dispatch(req):
 
     if req.repo:
         uis.add(req.repo.ui)
+
+        # copy configs that were passed on the cmdline (--config) to the repo ui
+        for cfg in cfgs:
+            req.repo.ui.setconfig(*cfg)
 
     for opt in ('verbose', 'debug', 'quiet', 'traceback'):
         val = bool(options[opt])
