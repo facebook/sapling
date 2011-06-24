@@ -4179,6 +4179,8 @@ def revert(ui, repo, *pats, **opts):
         opts["rev"] = cmdutil.finddate(ui, repo, opts["date"])
 
     parent, p2 = repo.dirstate.parents()
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
+    node = ctx.node()
 
     if not pats and not opts.get('all'):
         msg = _("no files or directories specified")
@@ -4186,10 +4188,15 @@ def revert(ui, repo, *pats, **opts):
         if p2 != nullid:
             hint = _("uncommitted merge, use --all to discard all changes,"
                      " or 'hg update -C .' to abort the merge")
+        elif node != parent:
+            if util.any(repo.status()):
+                hint = _("uncommitted changes, use --all to discard all"
+                         " changes, or 'hg update %s' to update") % ctx.rev()
+            else:
+                hint = _("use --all to revert all files,"
+                         " or 'hg update %s' to update") % ctx.rev()
         raise util.Abort(msg, hint=hint)
 
-    ctx = scmutil.revsingle(repo, opts.get('rev'))
-    node = ctx.node()
     mf = ctx.manifest()
     if node == parent:
         pmf = mf
