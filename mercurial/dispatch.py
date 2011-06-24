@@ -654,7 +654,7 @@ def _dispatch(req):
         return runcommand(lui, repo, cmd, fullargs, ui, options, d,
                           cmdpats, cmdoptions)
     finally:
-        if repo != req.repo:
+        if repo and repo != req.repo:
             repo.close()
 
 def _runcommand(ui, options, cmd, cmdfunc):
