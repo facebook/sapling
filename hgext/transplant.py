@@ -200,7 +200,8 @@ class transplanter(object):
                         environ={'HGUSER': changelog[1],
                                  'HGREVISION': revlog.hex(node),
                                  },
-                        onerr=util.Abort, errprefix=_('filter failed'))
+                        onerr=util.Abort, errprefix=_('filter failed'),
+                        out=self.ui.fout)
             user, date, msg = self.parselog(file(headerfile))[1:4]
         finally:
             os.unlink(headerfile)
