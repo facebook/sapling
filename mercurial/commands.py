@@ -5082,8 +5082,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     Use null as the changeset to remove the working directory (like
     :hg:`clone -U`).
 
-    If you want to update just one file to an older changeset, use
-    :hg:`revert`.
+    If you want to revert just one file to an older revision, use
+    :hg:`revert [-r REV] NAME`.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
