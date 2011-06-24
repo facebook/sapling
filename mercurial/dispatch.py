@@ -592,18 +592,23 @@ def _dispatch(req):
                 (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
         atexit.register(print_time)
 
+    uis = set([ui, lui])
+
+    if req.repo:
+        uis.add(req.repo.ui)
+
     for opt in ('verbose', 'debug', 'quiet', 'traceback'):
         val = bool(options[opt])
         if val:
-            for ui_ in (ui, lui):
+            for ui_ in uis:
                 ui_.setconfig('ui', opt, str(val))
 
     if options['noninteractive']:
-        for ui_ in (ui, lui):
+        for ui_ in uis:
             ui_.setconfig('ui', 'interactive', 'off')
 
     if cmdoptions.get('insecure', False):
-        for ui_ in (ui, lui):
+        for ui_ in uis:
             ui_.setconfig('web', 'cacerts', '')
 
     if options['help']:
