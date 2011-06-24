@@ -337,7 +337,7 @@ def archive(ui, repo, dest, **opts):
     if dest == '-':
         if kind == 'files':
             raise util.Abort(_('cannot archive plain files to stdout'))
-        dest = ui.fout
+        dest = cmdutil.makefileobj(repo, dest)
         if not prefix:
             prefix = os.path.basename(repo.root) + '-%h'
 
