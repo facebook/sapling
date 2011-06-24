@@ -398,6 +398,8 @@ def _parse(ui, args):
 
 def _parseconfig(ui, config):
     """parse the --config options from the command line"""
+    configs = []
+
     for cfg in config:
         try:
             name, value = cfg.split('=', 1)
@@ -405,9 +407,12 @@ def _parseconfig(ui, config):
             if not section or not name:
                 raise IndexError
             ui.setconfig(section, name, value)
+            configs.append((section, name, value))
         except (IndexError, ValueError):
             raise util.Abort(_('malformed --config option: %r '
                                '(use --config section.name=value)') % cfg)
+
+    return configs
 
 def _earlygetopt(aliases, args):
     """Return list of values for an option (or aliases).
