@@ -1259,65 +1259,6 @@ Issue1033: test applying on an empty file
   now at: changea
   $ cd ..
 
-test qpop with local changes, issue2780
-
-  $ hg init forcepop
-  $ cd forcepop
-  $ echo 1 > 1
-  $ hg ci -Am 1
-  adding 1
-  $ hg qnew foo
-  $ echo 2 > 2
-  $ hg add
-  adding 2
-
-unrelated changes
-
-  $ hg qpop
-  popping foo
-  patch queue now empty
-
-related changes
-
-  $ hg forget 2
-  $ rm 2
-  $ hg qpush
-  applying foo
-  patch foo is empty
-  now at: foo
-  $ echo 2 >> 1
-  $ hg qrefresh
-  $ echo 2 >> 1
-  $ hg qpop
-  abort: local changes found, refresh first
-  [255]
-  $ hg st
-  M 1
-
-related changes with force
-  $ hg qpop --force
-  popping foo
-  patch queue now empty
-  $ hg st
-
-related renamed source without change
-  $ hg qpush
-  applying foo
-  now at: foo
-  $ echo 1 > 1
-  $ hg mv 1 2
-  $ hg qref --git
-  $ hg qpop
-  popping foo
-  patch queue now empty
-  $ echo 3 > 1
-  $ hg st
-  M 1
-  $ hg qpush
-  abort: local changes found
-  [255]
-  $ cd ..
-
 test qpush with --force, issue1087
 
   $ hg init forcepush
@@ -1334,9 +1275,16 @@ test qpush with --force, issue1087
   $ echo world >> hello.txt
 
 
-apply, should not discard changes with empty patch
+qpush should fail, local changes
 
   $ hg qpush
+  abort: local changes found
+  [255]
+
+
+apply force, should not discard changes with empty patch
+
+  $ hg qpush -f
   applying empty
   patch empty is empty
   now at: empty

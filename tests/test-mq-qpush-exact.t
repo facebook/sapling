@@ -163,12 +163,8 @@ qpush --exact --force with changes to an unpatched file
   $ hg update 1 -q
   $ echo c0 >> f0
   $ hg qpush -e
-  applying p0
-  now at: p0
-  $ cat f0
-  c0
-  $ hg qpop -aq
-  patch queue now empty
+  abort: local changes found
+  [255]
   $ hg qpush -ef
   applying p0
   now at: p0
@@ -182,13 +178,8 @@ qpush --exact --force with changes to an unpatched file
   $ hg update 1 -q
   $ echo c0 >> f0
   $ hg qpush -e p1
-  applying p0
-  applying p1
-  now at: p1
-  $ cat f0
-  c0
-  $ hg qpop -aq
-  patch queue now empty
+  abort: local changes found
+  [255]
   $ hg qpush -e p1 -f
   applying p0
   applying p1

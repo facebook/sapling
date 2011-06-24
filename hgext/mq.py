@@ -1134,6 +1134,8 @@ class queue(object):
             if start == len(self.series):
                 self.ui.warn(_('patch series already fully applied\n'))
                 return 1
+            if not force:
+                self.checklocalchanges(repo, refresh=self.applied)
 
             if exact:
                 if move:
@@ -1172,19 +1174,6 @@ class queue(object):
                 end = self.series.index(patch, start) + 1
 
             s = self.series[start:end]
-
-            if not force:
-                mm, aa, rr, dd = repo.status()[:4]
-                wcfiles = set(mm + aa + rr + dd)
-                if wcfiles:
-                    for patchname in s:
-                        pf = os.path.join(self.path, patchname)
-                        patchfiles = patchmod.changedfiles(self.ui, repo, pf)
-                        if wcfiles.intersection(patchfiles):
-                            self.localchangesfound(self.applied)
-            elif mergeq:
-                self.checklocalchanges(refresh=self.applied)
-
             all_files = set()
             try:
                 if mergeq:
@@ -1265,6 +1254,9 @@ class queue(object):
                         break
                 update = needupdate
 
+            if not force and update:
+                self.checklocalchanges(repo)
+
             self.applieddirty = 1
             end = len(self.applied)
             rev = self.applied[start].node
@@ -1287,12 +1279,6 @@ class queue(object):
                 qp = self.qparents(repo, rev)
                 ctx = repo[qp]
                 m, a, r, d = repo.status(qp, top)[:4]
-                parentfiles = set(m + a + r + d)
-                if not force and parentfiles:
-                    mm, aa, rr, dd = repo.status()[:4]
-                    wcfiles = set(mm + aa + rr + dd)
-                    if wcfiles.intersection(parentfiles):
-                        self.localchangesfound()
                 if d:
                     raise util.Abort(_("deletions found between repo revs"))
                 for f in a:
