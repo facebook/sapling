@@ -622,7 +622,12 @@ def _dispatch(req):
         if not rpath:
             repo = req.repo
 
-        if not repo:
+        if repo:
+            # set the descriptors of the repo ui to those of ui
+            repo.ui.fin = ui.fin
+            repo.ui.fout = ui.fout
+            repo.ui.ferr = ui.ferr
+        else:
             try:
                 repo = hg.repository(ui, path=path)
                 if not repo.local():
