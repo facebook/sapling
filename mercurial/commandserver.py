@@ -179,8 +179,11 @@ class server(object):
 
         # copy the uis so changes (e.g. --config or --verbose) don't
         # persist between requests
+        copiedui = self.ui.copy()
+        self.repo.baseui = copiedui
         self.repo.ui = self.repo.dirstate._ui = self.repoui.copy()
-        req = dispatch.request(args, self.ui.copy(), self.repo, self.cin,
+
+        req = dispatch.request(args, copiedui, self.repo, self.cin,
                                self.cout, self.cerr)
 
         ret = dispatch.dispatch(req) or 0 # might return None
