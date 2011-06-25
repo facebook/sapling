@@ -698,10 +698,14 @@ def readrequires(opener, supported):
     '''Reads and parses .hg/requires and checks if all entries found
     are in the list of supported features.'''
     requirements = set(opener.read("requires").splitlines())
+    missings = []
     for r in requirements:
         if r not in supported:
             if not r or not r[0].isalnum():
                 raise error.RequirementError(_(".hg/requires file is corrupt"))
-            raise error.RequirementError(_("unknown repository format: "
-                "requires feature '%s' (upgrade Mercurial)") % r)
+            missings.append(r)
+    missings.sort()
+    if missings:
+        raise error.RequirementError(_("unknown repository format: "
+            "requires features '%s' (upgrade Mercurial)") % "', '".join(missings))
     return requirements
