@@ -10,10 +10,12 @@
   $ echo indoor-pool > .hg/requires
   $ hg tip
   abort: unknown repository format: requires features 'indoor-pool' (upgrade Mercurial)!
+  (see http://mercurial.selenic.com/wiki/MissingRequirement for details)
   [255]
   $ echo outdoor-pool >> .hg/requires
   $ hg tip
   abort: unknown repository format: requires features 'indoor-pool', 'outdoor-pool' (upgrade Mercurial)!
+  (see http://mercurial.selenic.com/wiki/MissingRequirement for details)
   [255]
   $ cd ..
 
@@ -61,6 +63,7 @@ another repository of push/pull/clone on localhost:
 
   $ hg clone supported clone-dst
   abort: unknown repository format: requires features 'featuresetup-test' (upgrade Mercurial)!
+  (see http://mercurial.selenic.com/wiki/MissingRequirement for details)
   [255]
   $ hg clone --pull supported clone-dst
   abort: required features are not supported in the destination: featuresetup-test
