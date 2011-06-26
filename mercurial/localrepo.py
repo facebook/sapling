@@ -1773,7 +1773,7 @@ class localrepository(repo.repository):
 
             # process the files
             self.ui.status(_("adding file changes\n"))
-            pr.step = 'files'
+            pr.step = _('files')
             pr.count = 1
             pr.total = efiles
             source.callback = None
