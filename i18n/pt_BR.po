@@ -11021,8 +11021,19 @@ msgstr "você não pode especificar uma revisão e uma data"
 msgid "no files or directories specified"
 msgstr "nenhum arquivo ou diretório especificados"
 
-msgid "use --all to revert all files"
-msgstr "use --all para reverter todos os arquivos"
+msgid "use --all to discard all changes"
+msgstr "use --all para descartar todas as mudanças locais"
+
+msgid "uncommitted merge, use --all to discard all changes, or 'hg update -C .' to abort the merge"
+msgstr "mesclagem não consolidada, use --all para descartar todas as mudanças locais, ou 'hg update -C .' para abortar a mesclagem"
+
+#, python-format
+msgid "uncommitted changes, use --all to discard all changes, or 'hg update %s' to update"
+msgstr "mudanças não consolidadas, use --all para descartar todas as mudanças locais, ou 'hg update %s' para atualizar"
+
+#, python-format
+msgid "use --all to revert all files, or 'hg update %s' to update"
+msgstr "use --all para reverter todos os arquivos, ou 'hg update %s' para atualizar a revisão"
 
 #, python-format
 msgid "forgetting %s\n"
@@ -11699,6 +11710,13 @@ msgstr ""
 "    atualizado para a revisão pedida."
 
 msgid ""
+"    Update sets the working directory's parent revison to the specified\n"
+"    changeset (see :hg:`help parents`)."
+msgstr ""
+"    Update muda o pai do diretório de trabalho para a revisão especificada\n"
+"    (veja :hg:`help parents`)."
+
+msgid ""
 "    The following rules apply when the working directory contains\n"
 "    uncommitted changes:"
 msgstr ""
@@ -11746,11 +11764,11 @@ msgstr ""
 "    resultado semelhante a :hg:`clone -U`)."
 
 msgid ""
-"    If you want to update just one file to an older changeset, use\n"
-"    :hg:`revert`."
+"    If you want to revert just one file to an older revision, use\n"
+"    :hg:`revert [-r REV] NAME`."
 msgstr ""
-"    Se você quiser atualizar apenas um arquivo para uma revisão\n"
-"    anterior, use :hg:`revert`."
+"    Se você quiser reverter apenas um arquivo para seu conteúdo em\n"
+"    uma revisão anterior, use :hg:`revert [-r REV] NOME`."
 
 msgid "cannot specify both -c/--check and -C/--clean"
 msgstr "não se pode especificar ao mesmo tempo -c/--check e -C/--clean"
@@ -12190,6 +12208,7 @@ msgstr ""
 "``modified()``\n"
 "    Arquivo com status modificado (M)."
 
+#. i18n: "modified" is a keyword
 msgid "modified takes no arguments"
 msgstr "modified não tem argumentos"
 
@@ -12200,6 +12219,7 @@ msgstr ""
 "``added()``\n"
 "    Arquivo com status adicionado (A)."
 
+#. i18n: "added" is a keyword
 msgid "added takes no arguments"
 msgstr "added não tem argumentos"
 
@@ -12210,6 +12230,7 @@ msgstr ""
 "``removed()``\n"
 "    Arquivo com status removido (R)."
 
+#. i18n: "removed" is a keyword
 msgid "removed takes no arguments"
 msgstr "removed não tem argumentos"
 
@@ -12220,6 +12241,7 @@ msgstr ""
 "``deleted()``\n"
 "    Arquivo com status apagado (!)."
 
+#. i18n: "deleted" is a keyword
 msgid "deleted takes no arguments"
 msgstr "deleted não tem argumentos"
 
@@ -12232,6 +12254,7 @@ msgstr ""
 "    Arquivo com status desconhecido (?). Tais arquivos só serão\n"
 "    considerados se este predicado for usado."
 
+#. i18n: "unknown" is a keyword
 msgid "unknown takes no arguments"
 msgstr "unknown não tem argumentos"
 
@@ -12244,6 +12267,7 @@ msgstr ""
 "    Arquivo com status ignorado (I). Tais arquivos só serão\n"
 "    considerados se este predicado for usado."
 
+#. i18n: "ignored" is a keyword
 msgid "ignored takes no arguments"
 msgstr "ignored não tem argumentos"
 
@@ -12254,6 +12278,7 @@ msgstr ""
 "``clean()``\n"
 "    Arquivo com status limpo (C)."
 
+#. i18n: "clean" is a keyword
 msgid "clean takes no arguments"
 msgstr "clean não tem argumentos"
 
@@ -12268,6 +12293,7 @@ msgstr ""
 "``binary()``\n"
 "    O arquivo parece ser binário (contém bytes NUL)."
 
+#. i18n: "binary" is a keyword
 msgid "binary takes no arguments"
 msgstr "binary não tem argumentos"
 
@@ -12278,6 +12304,7 @@ msgstr ""
 "``exec()``\n"
 "    O arquivo foi marcado como executável."
 
+#. i18n: "exec" is a keyword
 msgid "exec takes no arguments"
 msgstr "exec não tem argumentos"
 
@@ -12288,6 +12315,7 @@ msgstr ""
 "``symlink()``\n"
 "    O arquivo foi marcado como link simbólico."
 
+#. i18n: "symlink" is a keyword
 msgid "symlink takes no arguments"
 msgstr "symlink não tem argumentos"
 
@@ -12299,6 +12327,7 @@ msgstr ""
 "    O arquivo foi marcado como resolvido de acordo com o estado de\n"
 "    resolução (comando resolve)."
 
+#. i18n: "resolved" is a keyword
 msgid "resolved takes no arguments"
 msgstr "resolved não tem argumentos"
 
@@ -12310,6 +12339,7 @@ msgstr ""
 "    O arquivo foi marcado como não resolvido de acordo com o estado de\n"
 "    resolução (comando resolve)."
 
+#. i18n: "unresolved" is a keyword
 msgid "unresolved takes no arguments"
 msgstr "unresolved não tem argumentos"
 
@@ -12333,8 +12363,9 @@ msgstr ""
 msgid "grep requires a pattern"
 msgstr "grep requer um padrão"
 
-msgid "couldn't parse size"
-msgstr "não foi possível decodificar o tamanho"
+#, python-format
+msgid "couldn't parse size: %s"
+msgstr "não foi possível decodificar o tamanho: %s"
 
 msgid ""
 "``size(expression)``\n"
@@ -12354,6 +12385,10 @@ msgstr ""
 "    - >= .5MB (arquivos com pelo menos 524288 bytes)\n"
 "    - 4k - 1MB (arquivos com tamanho entre 4096 bytes e 1048576 bytes)"
 
+#. i18n: "size" is a keyword
+msgid "size requires an expression"
+msgstr "size requer uma expressão"
+
 msgid ""
 "``encoding(name)``\n"
 "    File can be successfully decoded with the given character\n"
@@ -12365,6 +12400,7 @@ msgstr ""
 "    caracteres fornecida. Pode não ser muito útil para codificações\n"
 "    diferentes de ASCII e UTF-8."
 
+#. i18n: "encoding" is a keyword
 msgid "encoding requires an encoding name"
 msgstr "encoding requer um nome de codificação"
 
@@ -12378,6 +12414,10 @@ msgid ""
 msgstr ""
 "``copied()``\n"
 "    O arquivo foi registrado como cópia."
+
+#. i18n: "copied" is a keyword
+msgid "copied takes no arguments"
+msgstr "copied não tem argumentos"
 
 msgid "invalid token"
 msgstr "token inválido"
@@ -19267,6 +19307,9 @@ msgstr ""
 msgid "follow takes no arguments or a filename"
 msgstr "follow requer um nome de arquivo ou nenhum argumento"
 
+msgid "follow expected a filename"
+msgstr "follow espera um nome de arquivo"
+
 #. i18n: "follow" is a keyword
 msgid "follow takes no arguments"
 msgstr "follow não tem argumentos"
@@ -19445,6 +19488,10 @@ msgstr ""
 "    especificado pelo caminho ou na localização padrão de push."
 
 #. i18n: "outgoing" is a keyword
+msgid "outgoing takes one or no arguments"
+msgstr "outgoing recebe um ou nenhum argumento"
+
+#. i18n: "outgoing" is a keyword
 msgid "outgoing requires a repository path"
 msgstr "outgoing exige um caminho para um repositório"
 
@@ -19593,8 +19640,9 @@ msgstr "não é possível negar essa expressão"
 msgid "not a symbol"
 msgstr "não é um símbolo"
 
-msgid "invalid amount of arguments"
-msgstr "número de argumentos inválido"
+#, python-format
+msgid "invalid number of arguments: %s"
+msgstr "número de argumentos inválido: %s"
 
 msgid "empty query"
 msgstr "consulta vazia"
