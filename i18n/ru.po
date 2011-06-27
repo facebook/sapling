@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-06-22 02:13+0400\n"
+"POT-Creation-Date: 2011-06-27 21:37+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -9642,8 +9642,25 @@ msgstr "нельзя указывать одновременно дату и р�
 msgid "no files or directories specified"
 msgstr "не указаны файлы или каталоги"
 
-msgid "use --all to revert all files"
-msgstr "используйте --all чтобы восстановить все файлы"
+msgid "use --all to discard all changes"
+msgstr "используйте --all чтобы сбросить все изменения"
+
+msgid ""
+"uncommitted merge, use --all to discard all changes, or 'hg update -C .' to "
+"abort the merge"
+msgstr ""
+
+#, python-format
+msgid ""
+"uncommitted changes, use --all to discard all changes, or 'hg update %s' to "
+"update"
+msgstr ""
+
+#, python-format
+msgid "use --all to revert all files, or 'hg update %s' to update"
+msgstr ""
+"используйте --all чтобы восстановить все файлы, или 'hg update %s'\n"
+"чтобы обновиться"
 
 #, python-format
 msgid "forgetting %s\n"
@@ -10312,6 +10329,13 @@ msgstr ""
 "    нет, раочий каталог обновляется до указанной ревизии."
 
 msgid ""
+"    Update sets the working directory's parent revison to the specified\n"
+"    changeset (see :hg:`help parents`)."
+msgstr ""
+"    Update устанавливает ревизию родителя рабочего каталога в заданный\n"
+"    набор изменений (см. :hg:`help update`)."
+
+msgid ""
 "    The following rules apply when the working directory contains\n"
 "    uncommitted changes:"
 msgstr ""
@@ -10358,11 +10382,11 @@ msgstr ""
 "    (как :hg:`clone -U`)."
 
 msgid ""
-"    If you want to update just one file to an older changeset, use\n"
-"    :hg:`revert`."
+"    If you want to revert just one file to an older revision, use\n"
+"    :hg:`revert [-r REV] NAME`."
 msgstr ""
-"    Если вы хотите просто обновить один файл до состяния в более\n"
-"    ревизии, используйте :hg:`revert`."
+"    Если вы хотите просто вернуть один файл до более старой\n"
+"    ревизии, используйте :hg:`revert [-r РЕВИЗИЯ] ИМЯ`."
 
 msgid "cannot specify both -c/--check and -C/--clean"
 msgstr "нельзя одновременно указывать -c/--check и -C/-clean"
@@ -10801,6 +10825,7 @@ msgstr ""
 "``modified()``\n"
 "    Файл, измененный согласно статусу."
 
+#. i18n: "modified" is a keyword
 msgid "modified takes no arguments"
 msgstr "modified не требует аргументов"
 
@@ -10811,6 +10836,7 @@ msgstr ""
 "``added()``\n"
 "    Файл, добавленный согласно статусу."
 
+#. i18n: "added" is a keyword
 msgid "added takes no arguments"
 msgstr "added не требует аргументов"
 
@@ -10821,6 +10847,7 @@ msgstr ""
 "``removed()``\n"
 "    Файл, удаленный согласно статусу."
 
+#. i18n: "removed" is a keyword
 msgid "removed takes no arguments"
 msgstr "removed не требует аргументов"
 
@@ -10831,6 +10858,7 @@ msgstr ""
 "``deleted()``\n"
 "    Файл, удаленный из рабочего каталога согласно статусу."
 
+#. i18n: "deleted" is a keyword
 msgid "deleted takes no arguments"
 msgstr "deleted не требует аргументов"
 
@@ -10843,6 +10871,7 @@ msgstr ""
 "    Файл, неизвестный согласно статусу. Эти файлы рассматриваются\n"
 "    только если исли используется этот предикат."
 
+#. i18n: "unknown" is a keyword
 msgid "unknown takes no arguments"
 msgstr "unknown не требует аргументов"
 
@@ -10855,6 +10884,7 @@ msgstr ""
 "    Файл, игнорируемый согласно статусу. Эти файлы рассматриваются\n"
 "    только если исли используется этот предикат."
 
+#. i18n: "ignored" is a keyword
 msgid "ignored takes no arguments"
 msgstr "ignored не требует аргументов"
 
@@ -10865,6 +10895,7 @@ msgstr ""
 "``clean()``\n"
 "    Файлы, не содержащие изменений согласно статусу."
 
+#. i18n: "clean" is a keyword
 msgid "clean takes no arguments"
 msgstr "clean не требует аргументов"
 
@@ -10879,6 +10910,7 @@ msgstr ""
 "``binary()``\n"
 "    Файл, который рассматривается как бинарный (содержит символы NUL)."
 
+#. i18n: "binary" is a keyword
 msgid "binary takes no arguments"
 msgstr "binary не требует аргументов"
 
@@ -10889,6 +10921,7 @@ msgstr ""
 "``exec()``\n"
 "    Файл, который помечен как исполняемый."
 
+#. i18n: "exec" is a keyword
 msgid "exec takes no arguments"
 msgstr "exec не требует аргументов"
 
@@ -10899,6 +10932,7 @@ msgstr ""
 "``symlink()``\n"
 "    Файл, помеченный как символическая ссылка."
 
+#. i18n: "symlink" is a keyword
 msgid "symlink takes no arguments"
 msgstr "symlink не требует аргументов"
 
@@ -10909,6 +10943,7 @@ msgstr ""
 "``resolved()``\n"
 "    Файл, конфликты в котором считаются разрешенными."
 
+#. i18n: "resolved" is a keyword
 msgid "resolved takes no arguments"
 msgstr "resolved не требует аргументов"
 
@@ -10919,6 +10954,7 @@ msgstr ""
 "``unresolved()``\n"
 "    Файл, конфликты в котором считаются неразрешенными."
 
+#. i18n: "unresolved" is a keyword
 msgid "unresolved takes no arguments"
 msgstr "unresolved не требует аргументов"
 
@@ -10942,8 +10978,9 @@ msgstr ""
 msgid "grep requires a pattern"
 msgstr "grep требует шаблон"
 
-msgid "couldn't parse size"
-msgstr "неверно задан размер"
+#, python-format
+msgid "couldn't parse size: %s"
+msgstr "неверно задан размер: %s"
 
 msgid ""
 "``size(expression)``\n"
@@ -10963,6 +11000,10 @@ msgstr ""
 "    - >= .5MB (файлы не меньше 524288 байт)\n"
 "    - 4k - 1MB (файлы от 4096 байт до 1048576 байт)"
 
+#. i18n: "size" is a keyword
+msgid "size requires an expression"
+msgstr "size требует выражения"
+
 msgid ""
 "``encoding(name)``\n"
 "    File can be successfully decoded with the given character\n"
@@ -10973,6 +11014,7 @@ msgstr ""
 "    Файл, который может быть корректно представлен в данной кодировке.\n"
 "    Может быть бесполезным для кодировок, отличных от ASCII и UTF-8."
 
+#. i18n: "encoding" is a keyword
 msgid "encoding requires an encoding name"
 msgstr "не указана кодировка в encoding"
 
@@ -10986,6 +11028,10 @@ msgid ""
 msgstr ""
 "``copied()``\n"
 "    Файл, записанный как копируемый."
+
+#. i18n: "copied" is a keyword
+msgid "copied takes no arguments"
+msgstr "copied не требует аргументов"
 
 msgid "invalid token"
 msgstr "неизвестный символ"
@@ -15364,11 +15410,17 @@ msgid ""
 "configuration file can be used to specify the repository paths to use\n"
 "and global web configuration options."
 msgstr ""
+"Встроенный веб-сервер Mercurial, hgweb, может обслуживать как один\n"
+"репозиторий, так и несколько. В последнем случае может быть использован\n"
+"отдельный файл конфигурации чтобы задать пути к репозиториям вместе\n"
+"с глобальными настройками веб-сервера."
 
 msgid ""
 "This file uses the same syntax as other Mercurial configuration files,\n"
 "but only the following sections are recognized:"
 msgstr ""
+"Этот файл имеет тот же формат, что и другие файлы конфигурации\n"
+"Mercurial, но обрабатываются только следующие секции:"
 
 msgid ""
 "  - web\n"
@@ -15381,11 +15433,15 @@ msgid ""
 "section of the hgrc(5) documentation. See :hg:`help config` for\n"
 "information on where to find the manual page."
 msgstr ""
+"Секция ``web`` для задания всех параметров, описанных в справке по\n"
+"одноименной секции из :hg:`help config`."
 
 msgid ""
 "The ``paths`` section provides mappings of physical repository\n"
 "paths to virtual ones. For instance::"
 msgstr ""
+"Секция ``paths`` задает соответствие физических путей к репозиториям\n"
+"и виртуальных. Например::"
 
 msgid ""
 "  [paths]\n"
@@ -15409,12 +15465,28 @@ msgid ""
 "- The fifth entry recursively finds all repositories under the real\n"
 "  root, and maps their relative paths under the virtual root."
 msgstr ""
+"- Первые две строки показывают два репозитрия, физически находящихся по\n"
+"  разным путям, в одном каталоге в веб-интерфейсе\n"
+"- Третья строка показывает все репозитории Mercurial, находящиеся в\n"
+"  '/real/root', в каталоге 'web/root' веб-интерфейса. Такая форма\n"
+"  является предпочтительной по сравнению с секцией [collections],\n"
+"  т.к. использование абсолютных путей в качестве ключей поддерживается\n"
+"  не на всех платформах (в частности, не работает в Windows)\n"
+"- Четвертая строка иллюстрирует особый случай, при котором все\n"
+"  репозитории из каталога '/real/root2' отображаются в корневом\n"
+"  виртуальном каталоге.\n"
+"- Пятая строка рекурсивно ищет все репозитории в подкаталогах\n"
+"  /real/root2 и показывает из относительные пути в виртуальном\n"
+"  каталоге."
 
 msgid ""
 "The ``collections`` section provides mappings of trees of physical\n"
 "repositories paths to virtual ones, though the paths syntax is generally\n"
 "preferred. For instance::"
 msgstr ""
+"Секция ``collections`` задает соответстие деревьев физических путей\n"
+"репозиториев виртуальным. Однако, предпочтительно использовать секцию\n"
+"paths. Пример::"
 
 msgid ""
 "  [collections]\n"
@@ -15426,9 +15498,12 @@ msgid ""
 "right side. Thus ``/foo/bar`` and ``foo/quux/baz`` will be listed as\n"
 "``bar`` and ``quux/baz`` respectively.\n"
 msgstr ""
+"Здесь левая часть путей будет удалена из всех путей репозиториев,\n"
+"найденых в каталоге из правой части. Так, ``/foo/bar`` и ``foo/quux/baz``\n"
+"будут отображаться как ``bar`` и ``quux/baz`` соответственно.\n"
 
 msgid "To merge files Mercurial uses merge tools."
-msgstr ""
+msgstr "При слиянии файлов Mercurial использует специальные инструменты."
 
 msgid ""
 "A merge tool combines two different versions of a file into a merged\n"
@@ -15436,11 +15511,18 @@ msgid ""
 "ancestor of the two file versions, so they can determine the changes\n"
 "made on both branches."
 msgstr ""
+"Такой иструмент объединяет две различных версии файла в результирующую.\n"
+"Инструментом слияния является программа, которой передаются два файла\n"
+"и последний общий предок обеих версий, так что она может определить,\n"
+"какие изменения были были сделаны на каких ветках."
 
 msgid ""
 "Merge tools are used both for :hg:`resolve`, :hg:`merge`, :hg:`update`,\n"
 ":hg:`backout` and in several extensions."
 msgstr ""
+"Инструменты используются командами :hg:`resolve`, :hg:`merge`, :hg:"
+"`update`,\n"
+":hg:`backout` и несколькими раширениями."
 
 msgid ""
 "Usually, the merge tool tries to automatically reconcile the files by\n"
@@ -15452,17 +15534,29 @@ msgid ""
 "conflict markers. Mercurial does not include any interactive merge\n"
 "programs but relies on external tools for that."
 msgstr ""
+"Обычно, программы слияния пытаются автоматически разрешить конфликты,\n"
+"объединяя непересекающиеся изменения, которые были сделаны в двух\n"
+"различных ветвях истории файла. Более того, некоторые интерактивные\n"
+"инструменты слияния облегчают ручное разрешение конфликтов, используя\n"
+"графическое представление или вставляя особые маркеры. Mercurial\n"
+"не поставляется с интерактивными инструментами, полагаясь на внешние\n"
+"программы."
 
 msgid ""
 "Available merge tools\n"
 "\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
 msgstr ""
+"Возможные инструменты слияния\n"
+"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
 
 msgid ""
 "External merge tools and their properties are configured in the\n"
 "merge-tools configuration section - see hgrc(5) - but they can often just\n"
 "be named by their executable."
 msgstr ""
+"Внешние инструменты слияния и их свойства настраиваются в секции\n"
+"merge-tools конфигурационного файла (см :hg:`help config`), но как\n"
+"правило можно просто указать имя их исполнимого файла."
 
 msgid ""
 "A merge tool is generally usable if its executable can be found on the\n"
@@ -15473,11 +15567,19 @@ msgid ""
 "symlink, if it can handle binary files if the file is binary, and if a\n"
 "GUI is available if the tool requires a GUI."
 msgstr ""
+"Инстумент слияния может использоваться, если его исполняемый файл\n"
+"может быть найден системой, и если он может провести слияние.\n"
+"Исполняемый файл может быть найден, если он доступен по известным\n"
+"путям. Инструмент может провести слияние, если он корректно\n"
+"обрабатывает символические сслылки, в том случае если файл является\n"
+"символической ссылкой, обрабатывает бинарные файлы, если файл\n"
+"является бинарным, и если доступна графическая среда, в случае,\n"
+"если инструмент требует GUI."
 
 msgid ""
 "There are some internal merge tools which can be used. The internal\n"
 "merge tools are:"
-msgstr ""
+msgstr "Существуеют также встроенные инструменты слияния:"
 
 msgid ""
 "``internal:merge``\n"
@@ -15485,6 +15587,10 @@ msgid ""
 "   files. It will fail if there are any conflicts and leave markers in\n"
 "   the partially merged file."
 msgstr ""
+"``internal:merge``\n"
+"   Использует внутренний неинтерактивный простой алгоритм слияния.\n"
+"   Завершиться с ошибкой, если обнаружит конфликт, и оставит специальные\n"
+"   маркеры в частично слитом файле."
 
 msgid ""
 "``internal:fail``\n"
@@ -15492,22 +15598,33 @@ msgid ""
 "   branches, it marks them as unresolved. The resolve command must be\n"
 "   used to resolve these conflicts."
 msgstr ""
+"``internal:fail``\n"
+"   Вместо того, чтобы попытаться провести слияне файлов, измененных на\n"
+"   обеих ветках, он отмечает их как файлы с неразрешенными конфликтами.\n"
+"   После разрешения конфликта должна быть использована команда resolve."
 
 msgid ""
 "``internal:local``\n"
 "   Uses the local version of files as the merged version."
 msgstr ""
+"``internal:local``\n"
+"   Использует локальные версии файлов в качестве слитой версии."
 
 msgid ""
 "``internal:other``\n"
 "   Uses the other version of files as the merged version."
 msgstr ""
+"``internal:other``\n"
+"   Использует версию файла из репозитория в качестве слитой версии."
 
 msgid ""
 "``internal:prompt``\n"
 "   Asks the user which of the local or the other version to keep as\n"
 "   the merged version."
 msgstr ""
+"``internal:prompt``\n"
+"   Спрашивает пользователя, какую версию файла - локальную или \n"
+"   из репозитория - использовать в качестве слитой версии."
 
 msgid ""
 "``internal:dump``\n"
@@ -15518,20 +15635,31 @@ msgid ""
 "   ``a.txt.other`` and ``a.txt.base`` and they will be placed in the\n"
 "   same directory as ``a.txt``."
 msgstr ""
+"``internal:dump``\n"
+"   Создает три версии файла для слияния: локальную, из репозитория и\n"
+"   базовую. Эти файлы можно использовать для слияния вручную. Если\n"
+"   файл называется `a.txt``, то эти файлы будут называться ``a.txt.local``,\n"
+"   ``a.txt.other`` и ``a.txt.base`` соответсвенно и будут находиться\n"
+"   в том же каталоге, что и ``a.txt``."
 
 msgid ""
 "Internal tools are always available and do not require a GUI but will by "
 "default\n"
 "not handle symlinks or binary files."
 msgstr ""
+"Встроенные инструменты доступны всегда и не требуют графической среды,\n"
+"но они по умолчанию не обрабатывают символьные ссылки и бинарные\n"
+"файлы."
 
 msgid ""
 "Choosing a merge tool\n"
 "\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
 msgstr ""
+"Выбор инструмента слияния\n"
+"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
 
 msgid "Mercurial uses these rules when deciding which merge tool to use:"
-msgstr ""
+msgstr "Mercurial использует следующие правила при выбора программы слияния:"
 
 msgid ""
 "1. If a tool has been specified with the --tool option to merge or resolve, "
@@ -15542,12 +15670,18 @@ msgid ""
 "by\n"
 "   the shell."
 msgstr ""
+"1. Если иснтрумент был задан с помощью опции --tool, то используется он.\n"
+"   Если это имя инструмента из секции merge-tools, используются\n"
+"   настройки оттуда. В противном случае, заданный инструмент должен\n"
+"   быть пригодным для запуска командной оболочкой."
 
 msgid ""
 "2. If the ``HGMERGE`` environment variable is present, its value is used "
 "and\n"
 "   must be executable by the shell."
 msgstr ""
+"2. Если переменная окружения ``HGMERGE`` установлена, используется\n"
+"   ее значение, оно должно быть исполняемо оболочкой."
 
 msgid ""
 "3. If the filename of the file to be merged matches any of the patterns in "
@@ -15557,6 +15691,10 @@ msgid ""
 "the\n"
 "   merge tool are not considered."
 msgstr ""
+"3. Если имя сливаемого файла совпадает с любым шаблоном из секции\n"
+"   merge-patterns, используется первый соответствующий шаблону\n"
+"   инструмент слияния. При этои не учитываются возможности этого\n"
+"   инструмента для слияния двоичных файлов."
 
 msgid ""
 "4. If ui.merge is set it will be considered next. If the value is not the "
@@ -15565,25 +15703,39 @@ msgid ""
 "by\n"
 "   the shell. Otherwise the named tool is used if it is usable."
 msgstr ""
+"4. Если ui.merge установлен, он рассматривается следующим. Если значение\n"
+"   не является именем сконфигурированного инструмента, используется\n"
+"   указанное значение, которое должно быть исполнимо командной\n"
+"   оболочкой. В противном случае по возможности используется заданный\n"
+"   инструмент."
 
 msgid ""
 "5. If any usable merge tools are present in the merge-tools configuration\n"
 "   section, the one with the highest priority is used."
 msgstr ""
+"5. Если в секции merge-tools присутствуют любые подходящие инструменты\n"
+"   слияния, используется инструмент с максимальным приоритетом."
 
 msgid ""
 "6. If a program named ``hgmerge`` can be found on the system, it is used - "
 "but\n"
 "   it will by default not be used for symlinks and binary files."
 msgstr ""
+"6. Если программа ``hgmerge`` может быть найдена в системе, она будет\n"
+"   использована, но по умолчанию она не будет использоваться для\n"
+"   символьных ссылок и бинарных файлов по умолчанию."
 
 msgid ""
 "7. If the file to be merged is not binary and is not a symlink, then\n"
 "   ``internal:merge`` is used."
 msgstr ""
+"7. Если сливаемый файл не является символьной ссылкой или бинарным\n"
+"   файлом, используется ``internal:merge``."
 
 msgid "8. The merge of the file fails and must be resolved before commit."
 msgstr ""
+"8. Слияние завершается неудачей и должно быть завершено с помощью\n"
+"   resolve перед коммитом."
 
 msgid ""
 ".. note::\n"
@@ -15597,11 +15749,21 @@ msgid ""
 "by\n"
 "   default unless the file is binary or a symlink."
 msgstr ""
+".. note::\n"
+"   После выбора программы слияния, Mercurial по умолчанию пытается\n"
+"   слить файлы, используя простой алгоритм. Инструмент слияния будет\n"
+"   запущен, только если это не удастся из-за возникших конфликтов.\n"
+"   Решение о том, использовать или нет простой алгоритм слияния может\n"
+"   быть проконтролировано настройкой premerge инструмента слияния.\n"
+"   По умолчанию оно включено и используется, если сливаемый файл\n"
+"   не является бинарным или символьной ссылкой."
 
 msgid ""
 "See the merge-tools and ui sections of hgrc(5) for details on the\n"
 "configuration of merge tools.\n"
 msgstr ""
+"Подробнее см. секции merge-tools и ui в :hg:`help config` или\n"
+"man hgrc.\n"
 
 msgid ""
 "When Mercurial accepts more than one revision, they may be specified\n"
@@ -17150,11 +17312,15 @@ msgstr ""
 
 #. i18n: "follow" is a keyword
 msgid "follow takes no arguments or a filename"
-msgstr ""
+msgstr "follow не принимает аргументов или имени файла"
+
+#, fuzzy
+msgid "follow expected a filename"
+msgstr "писать имя файла"
 
 #. i18n: "follow" is a keyword
 msgid "follow takes no arguments"
-msgstr ""
+msgstr "follow не требует аргументов"
 
 msgid ""
 "``all()``\n"
@@ -17163,7 +17329,7 @@ msgstr ""
 
 #. i18n: "all" is a keyword
 msgid "all takes no arguments"
-msgstr ""
+msgstr "all не требует аргументов"
 
 msgid ""
 "``grep(regex)``\n"
@@ -17295,6 +17461,11 @@ msgid ""
 msgstr ""
 
 #. i18n: "outgoing" is a keyword
+#, fuzzy
+msgid "outgoing takes one or no arguments"
+msgstr "unknown не требует аргументов"
+
+#. i18n: "outgoing" is a keyword
 msgid "outgoing requires a repository path"
 msgstr ""
 
@@ -17411,8 +17582,9 @@ msgstr ""
 msgid "not a symbol"
 msgstr ""
 
-msgid "invalid amount of arguments"
-msgstr "неверное количество аргументов"
+#, python-format
+msgid "invalid number of arguments: %s"
+msgstr "неверное количество аргументов: %s"
 
 msgid "empty query"
 msgstr ""
@@ -17457,7 +17629,7 @@ msgid ".hg/requires file is corrupt"
 msgstr ""
 
 #, python-format
-msgid "unknown repository format: requires feature '%s' (upgrade Mercurial)"
+msgid "unknown repository format: requires features '%s' (upgrade Mercurial)"
 msgstr ""
 
 msgid "searching for changes\n"
