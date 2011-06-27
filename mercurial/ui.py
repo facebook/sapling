@@ -629,7 +629,8 @@ class ui(object):
 
             util.system("%s \"%s\"" % (editor, name),
                         environ={'HGUSER': user},
-                        onerr=util.Abort, errprefix=_("edit failed"))
+                        onerr=util.Abort, errprefix=_("edit failed"),
+                        out=self.fout)
 
             f = open(name)
             t = f.read()

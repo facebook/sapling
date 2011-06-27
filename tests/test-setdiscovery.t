@@ -3,7 +3,7 @@ Function to test discovery between two repos in both directions, using both the 
 (which is currently not activated by default) and the full remotable protocol:
 
   $ testdesc() { # revs_a, revs_b, dagdesc
-  >     if [ -e foo ]; then rm -rf foo; fi
+  >     if [ -d foo ]; then rm -rf foo; fi
   >     hg init foo
   >     cd foo
   >     hg debugbuilddag "$3"

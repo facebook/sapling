@@ -337,7 +337,7 @@ def archive(ui, repo, dest, **opts):
     if dest == '-':
         if kind == 'files':
             raise util.Abort(_('cannot archive plain files to stdout'))
-        dest = ui.fout
+        dest = cmdutil.makefileobj(repo, dest)
         if not prefix:
             prefix = os.path.basename(repo.root) + '-%h'
 
@@ -562,7 +562,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         try:
             while changesets:
                 # update state
-                status = util.system(command)
+                status = util.system(command, out=ui.fout)
                 if status == 125:
                     transition = "skip"
                 elif status == 0:

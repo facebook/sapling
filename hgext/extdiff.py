@@ -222,7 +222,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         cmdline = util.shellquote(diffcmd) + ' ' + args
 
         ui.debug('running %r in %s\n' % (cmdline, tmproot))
-        util.system(cmdline, cwd=tmproot)
+        util.system(cmdline, cwd=tmproot, out=ui.fout)
 
         for copy_fn, working_fn, mtime in fns_and_mtime:
             if os.lstat(copy_fn).st_mtime != mtime:

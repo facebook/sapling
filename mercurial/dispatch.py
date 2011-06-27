@@ -622,13 +622,17 @@ def _dispatch(req):
         if not rpath:
             repo = req.repo
 
-        if not repo:
+        if repo:
+            # set the descriptors of the repo ui to those of ui
+            repo.ui.fin = ui.fin
+            repo.ui.fout = ui.fout
+            repo.ui.ferr = ui.ferr
+        else:
             try:
                 repo = hg.repository(ui, path=path)
-                ui = repo.ui
                 if not repo.local():
                     raise util.Abort(_("repository '%s' is not local") % path)
-                ui.setconfig("bundle", "mainreporoot", repo.root)
+                repo.ui.setconfig("bundle", "mainreporoot", repo.root)
             except error.RequirementError:
                 raise
             except error.RepoError:
@@ -643,6 +647,8 @@ def _dispatch(req):
                         raise error.RepoError(_("no repository found in %r"
                                                 " (.hg not found)") % os.getcwd())
                     raise
+        if repo:
+            ui = repo.ui
         args.insert(0, repo)
     elif rpath:
         ui.warn(_("warning: --repository ignored\n"))
