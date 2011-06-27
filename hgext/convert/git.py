@@ -37,7 +37,7 @@ class convert_git(converter_source):
                 (sin, so, se) = util.popen3('GIT_DIR=%s %s' % (self.path, s))
                 return so
             else:
-                util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
+                return util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
 
     def gitread(self, s):
         fh = self.gitopen(s)

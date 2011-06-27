@@ -5,6 +5,14 @@
   $ echo 123 > e
   $ hg add a c e
   $ hg commit -m "first" a c e
+
+nothing changed
+
+  $ hg revert
+  abort: no files or directories specified
+  (use --all to discard all changes)
+  [255]
+
   $ echo 123 > b
 
 should show b unknown
