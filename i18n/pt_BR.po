@@ -19687,8 +19687,8 @@ msgid ".hg/requires file is corrupt"
 msgstr "arquivo .hg/requires corrompido"
 
 #, python-format
-msgid "unknown repository format: requires feature '%s' (upgrade Mercurial)"
-msgstr "formato de repositório desconhecido: requer funcionalidade '%s' (atualize o Mercurial)"
+msgid "unknown repository format: requires features '%s' (upgrade Mercurial)"
+msgstr "formato de repositório desconhecido: requer as funcionalidades '%s' (atualize o Mercurial)"
 
 msgid "searching for changes\n"
 msgstr "procurando por mudanças\n"
@@ -20340,15 +20340,3 @@ msgstr "procurar mudanças remotas"
 
 msgid "push failed:"
 msgstr "o push falhou:"
-
-msgid "not linkable: %s\n"
-msgstr "não é possível criar link: %s\n"
-
-msgid "read config from: %s\n"
-msgstr "configuração lida de: %s\n"
-
-msgid "No argument found for substitution of %i variable in alias '%s' definition."
-msgstr "Nenhum argumento encontrado para a substituição da variável %i na definição do apelido '%s'."
-
-msgid "ignoring untrusted configuration option %s.%s = %s\n"
-msgstr "ignorando opção de configuração não confiável %s.%s = %s\n"
