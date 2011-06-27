@@ -144,8 +144,11 @@ def _terminfosetup(ui, mode):
             ui.debug("no terminfo entry for %s\n" % e)
             del _terminfo_params[key]
     if not curses.tigetstr('setaf') or not curses.tigetstr('setab'):
-        ui.warn(_("no terminfo entry for setab/setaf: reverting to "
-          "ECMA-48 color\n"))
+        # Only warn about missing terminfo entries if we explicitly asked for
+        # terminfo mode.
+        if mode == "terminfo":
+            ui.warn(_("no terminfo entry for setab/setaf: reverting to "
+              "ECMA-48 color\n"))
         _terminfo_params = {}
 
 def _modesetup(ui, opts):
