@@ -4184,17 +4184,22 @@ def revert(ui, repo, *pats, **opts):
 
     if not pats and not opts.get('all'):
         msg = _("no files or directories specified")
-        hint = _("use --all to discard all changes")
         if p2 != nullid:
             hint = _("uncommitted merge, use --all to discard all changes,"
                      " or 'hg update -C .' to abort the merge")
-        elif node != parent:
-            if util.any(repo.status()):
+            raise util.Abort(msg, hint=hint)
+        dirty = util.any(repo.status())
+        if node != parent:
+            if dirty:
                 hint = _("uncommitted changes, use --all to discard all"
                          " changes, or 'hg update %s' to update") % ctx.rev()
             else:
                 hint = _("use --all to revert all files,"
                          " or 'hg update %s' to update") % ctx.rev()
+        elif dirty:
+            hint = _("uncommitted changes, use --all to discard all changes")
+        else:
+            hint = _("use --all to revert all files")
         raise util.Abort(msg, hint=hint)
 
     mf = ctx.manifest()

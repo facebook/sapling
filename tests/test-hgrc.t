@@ -54,6 +54,12 @@ issue1829: wrong indentation
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   $ unset FAKEPATH
 
+make sure unspecified global ui options don't override old values
+
+  $ hg showconfig --config ui.verbose=True --quiet
+  ui.verbose=True
+  ui.quiet=True
+
 username expansion
 
   $ olduser=$HGUSER
@@ -134,9 +140,7 @@ plain hgrc
   $ hg showconfig --config ui.traceback=True --debug
   read config from: $TESTTMP/hgrc
   none: ui.traceback=True
-  none: ui.verbose=False
   none: ui.debug=True
-  none: ui.quiet=False
 
 plain mode with exceptions
 
@@ -152,24 +156,18 @@ plain mode with exceptions
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
-  none: ui.verbose=False
   none: ui.debug=True
-  none: ui.quiet=False
   $ unset HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
-  none: ui.verbose=False
   none: ui.debug=True
-  none: ui.quiet=False
   $ HGPLAINEXCEPT=i18n; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
-  none: ui.verbose=False
   none: ui.debug=True
-  none: ui.quiet=False

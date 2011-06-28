@@ -233,7 +233,8 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         replace = dict(local=a, base=b, other=c, output=out)
         args = util.interpolate(r'\$', replace, args,
                                 lambda s: '"%s"' % util.localpath(s))
-        r = util.system(toolpath + ' ' + args, cwd=repo.root, environ=env)
+        r = util.system(toolpath + ' ' + args, cwd=repo.root, environ=env,
+                        out=ui.fout)
 
     if not r and (_toolbool(ui, tool, "checkconflicts") or
                   'conflicts' in _toollist(ui, tool, "check")):

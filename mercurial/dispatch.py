@@ -398,6 +398,8 @@ def _parse(ui, args):
 
 def _parseconfig(ui, config):
     """parse the --config options from the command line"""
+    configs = []
+
     for cfg in config:
         try:
             name, value = cfg.split('=', 1)
@@ -405,9 +407,12 @@ def _parseconfig(ui, config):
             if not section or not name:
                 raise IndexError
             ui.setconfig(section, name, value)
+            configs.append((section, name, value))
         except (IndexError, ValueError):
             raise util.Abort(_('malformed --config option: %r '
                                '(use --config section.name=value)') % cfg)
+
+    return configs
 
 def _earlygetopt(aliases, args):
     """Return list of values for an option (or aliases).
@@ -525,7 +530,7 @@ def _dispatch(req):
 
     # read --config before doing anything else
     # (e.g. to change trust settings for reading .hg/hgrc)
-    _parseconfig(ui, _earlygetopt(['--config'], args))
+    cfgs = _parseconfig(ui, _earlygetopt(['--config'], args))
 
     # check for cwd
     cwd = _earlygetopt(['--cwd'], args)
@@ -592,20 +597,27 @@ def _dispatch(req):
                 (t[4]-s[4], t[0]-s[0], t[2]-s[2], t[1]-s[1], t[3]-s[3]))
         atexit.register(print_time)
 
-    if options['verbose'] or options['debug'] or options['quiet']:
-        for ui_ in (ui, lui):
-            ui_.setconfig('ui', 'verbose', str(bool(options['verbose'])))
-            ui_.setconfig('ui', 'debug', str(bool(options['debug'])))
-            ui_.setconfig('ui', 'quiet', str(bool(options['quiet'])))
-    if options['traceback']:
-        for ui_ in (ui, lui):
-            ui_.setconfig('ui', 'traceback', 'on')
+    uis = set([ui, lui])
+
+    if req.repo:
+        uis.add(req.repo.ui)
+
+        # copy configs that were passed on the cmdline (--config) to the repo ui
+        for cfg in cfgs:
+            req.repo.ui.setconfig(*cfg)
+
+    for opt in ('verbose', 'debug', 'quiet', 'traceback'):
+        val = bool(options[opt])
+        if val:
+            for ui_ in uis:
+                ui_.setconfig('ui', opt, str(val))
+
     if options['noninteractive']:
-        for ui_ in (ui, lui):
+        for ui_ in uis:
             ui_.setconfig('ui', 'interactive', 'off')
 
     if cmdoptions.get('insecure', False):
-        for ui_ in (ui, lui):
+        for ui_ in uis:
             ui_.setconfig('web', 'cacerts', '')
 
     if options['help']:

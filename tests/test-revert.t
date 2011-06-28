@@ -10,7 +10,7 @@ nothing changed
 
   $ hg revert
   abort: no files or directories specified
-  (use --all to discard all changes)
+  (use --all to revert all files)
   [255]
 
   $ echo 123 > b
