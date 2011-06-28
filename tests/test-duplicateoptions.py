@@ -1,7 +1,7 @@
 import os
 from mercurial import ui, commands, extensions
 
-ignore = set(['highlight', 'win32text'])
+ignore = set(['highlight', 'inotify', 'win32text'])
 
 if os.name != 'nt':
     ignore.add('win32mbcs')
