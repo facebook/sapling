@@ -11021,9 +11021,6 @@ msgstr "você não pode especificar uma revisão e uma data"
 msgid "no files or directories specified"
 msgstr "nenhum arquivo ou diretório especificados"
 
-msgid "use --all to discard all changes"
-msgstr "use --all para descartar todas as mudanças locais"
-
 msgid "uncommitted merge, use --all to discard all changes, or 'hg update -C .' to abort the merge"
 msgstr "mesclagem não consolidada, use --all para descartar todas as mudanças locais, ou 'hg update -C .' para abortar a mesclagem"
 
@@ -11034,6 +11031,12 @@ msgstr "mudanças não consolidadas, use --all para descartar todas as mudanças
 #, python-format
 msgid "use --all to revert all files, or 'hg update %s' to update"
 msgstr "use --all para reverter todos os arquivos, ou 'hg update %s' para atualizar a revisão"
+
+msgid "uncommitted changes, use --all to discard all changes"
+msgstr "mudanças não consolidadas, use --all para descartar todas as mudanças locais"
+
+msgid "use --all to revert all files"
+msgstr "use --all para reverter todos os arquivos"
 
 #, python-format
 msgid "forgetting %s\n"
