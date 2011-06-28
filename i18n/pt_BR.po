@@ -32,7 +32,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2011-06-20 16:55-0300\n"
-"PO-Revision-Date: 2010-06-19 17:18+0200\n"
+"PO-Revision-Date: 2011-06-28 09:55+0200\n"
 "Last-Translator: Wagner Bruna <wbruna@yahoo.com>\n"
 "Language-Team: Brazilian Portuguese\n"
 "MIME-Version: 1.0\n"
@@ -12107,7 +12107,7 @@ msgstr "o repositório '%s' não é local"
 
 #, python-format
 msgid "no repository found in %r (.hg not found)"
-msgstr "no repository found in %r (.hg not found)"
+msgstr "não foi encontrado um repositório em %r (.hg não encontrado)"
 
 msgid "warning: --repository ignored\n"
 msgstr "aviso: opção --repository ignorada\n"
