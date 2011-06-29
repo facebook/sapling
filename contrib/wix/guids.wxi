@@ -29,7 +29,7 @@
   <?define templates.coal.guid = {B63CCAAB-4EAF-43b4-901E-4BD13F5B78FC} ?>
   <?define templates.gitweb.guid = {D8BFE3ED-06DD-4C4D-A00D-6D825955F922} ?>
   <?define templates.monoblue.guid = {A394B4D5-2AF7-4AAC-AEA8-E92176E5501E} ?>
-  <?define templates.paper.guid = {243CF61D-7028-4A25-93CC-7C402088EAE6} ?>
+  <?define templates.paper.guid = {D2591E56-709E-49F9-8A5F-1359E1CCD7E0} ?>
   <?define templates.raw.guid = {04DE03A2-FBFD-4c5f-8DEA-5436DDF4689D} ?>
   <?define templates.rss.guid = {A7D608DE-0CF6-44f4-AF1E-EE30CC237FDA} ?>
   <?define templates.spartan.guid = {80222625-FA8F-44b1-86CE-1781EF375D09} ?>

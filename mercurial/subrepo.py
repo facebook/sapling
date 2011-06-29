@@ -198,9 +198,9 @@ def _abssource(repo, push=False, abort=True):
     or on the top repo config. Abort or return None if no source found."""
     if hasattr(repo, '_subparent'):
         source = util.url(repo._subsource)
-        source.path = posixpath.normpath(source.path)
-        if posixpath.isabs(source.path) or source.scheme:
+        if source.isabs():
             return str(source)
+        source.path = posixpath.normpath(source.path)
         parent = _abssource(repo._subparent, push, abort=False)
         if parent:
             parent = util.url(parent)

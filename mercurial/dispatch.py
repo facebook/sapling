@@ -125,6 +125,8 @@ def _runcatch(req):
             commands.help_(ui, 'shortlist')
     except error.RepoError, inst:
         ui.warn(_("abort: %s!\n") % inst)
+        if inst.hint:
+            ui.warn(_("(%s)\n") % inst.hint)
     except error.ResponseError, inst:
         ui.warn(_("abort: %s") % inst.args[0])
         if not isinstance(inst.args[1], basestring):

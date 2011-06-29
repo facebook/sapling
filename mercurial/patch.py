@@ -1009,7 +1009,7 @@ class hunk(object):
     def new(self, fuzz=0, toponly=False):
         return self.fuzzit(self.b, fuzz, toponly)
 
-class binhunk:
+class binhunk(object):
     'A binary patch file. Only understands literals so far.'
     def __init__(self, lr):
         self.text = None

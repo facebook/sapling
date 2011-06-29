@@ -114,6 +114,7 @@
             <File Id="paper.branches.tmpl"      Name="branches.tmpl" KeyPath="yes" />
             <File Id="paper.bookmarks.tmpl"     Name="bookmarks.tmpl" />
             <File Id="paper.changeset.tmpl"     Name="changeset.tmpl" />
+            <File Id="paper.diffstat.tmpl"      Name="diffstat.tmpl" />
             <File Id="paper.error.tmpl"         Name="error.tmpl" />
             <File Id="paper.fileannotate.tmpl"  Name="fileannotate.tmpl" />
             <File Id="paper.filediff.tmpl"      Name="filediff.tmpl" />

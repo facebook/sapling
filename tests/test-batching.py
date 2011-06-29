@@ -85,7 +85,7 @@ def unescapearg(escaped):
 # server side
 
 # equivalent of wireproto's global functions
-class server:
+class server(object):
     def __init__(self, local):
         self.local = local
     def _call(self, name, args):

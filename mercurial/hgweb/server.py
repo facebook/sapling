@@ -251,7 +251,7 @@ except ImportError:
     if hasattr(os, "fork"):
         _mixin = SocketServer.ForkingMixIn
     else:
-        class _mixin:
+        class _mixin(object):
             pass
 
 def openlog(opt, default):

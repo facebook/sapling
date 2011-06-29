@@ -43,7 +43,9 @@ class ParseError(Exception):
     'Exception raised when parsing config files (msg[, pos])'
 
 class RepoError(Exception):
-    pass
+    def __init__(self, *args, **kw):
+        Exception.__init__(self, *args)
+        self.hint = kw.get('hint')
 
 class RepoLookupError(RepoError):
     pass

@@ -27,8 +27,21 @@
   > def any(x):
   >     pass
   > EOF
+  $ cat > classstyle.py <<EOF
+  > class newstyle_class(object):
+  >     pass
+  > 
+  > class oldstyle_class:
+  >     pass
+  > 
+  > class empty():
+  >     pass
+  > 
+  > no_class = 1:
+  >     pass
+  > EOF
   $ check_code="$TESTDIR"/../contrib/check-code.py
-  $ "$check_code" ./wrong.py ./correct.py ./quote.py ./non-py24.py
+  $ "$check_code" ./wrong.py ./correct.py ./quote.py ./non-py24.py ./classstyle.py
   ./wrong.py:1:
    > def toto( arg1, arg2):
    gratuitous whitespace in () or []
@@ -51,6 +64,12 @@
   ./non-py24.py:4:
    >     y = format(x)
    any/all/format not available in Python 2.4
+  ./classstyle.py:4:
+   > class oldstyle_class:
+   old-style class, use class foo(object)
+  ./classstyle.py:7:
+   > class empty():
+   class foo() not available in Python 2.4, use class foo(object)
   [1]
 
   $ cat > is-op.py <<EOF

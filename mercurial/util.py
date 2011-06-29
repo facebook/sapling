@@ -1555,6 +1555,17 @@ class url(object):
         return (s, (None, (str(self), self.host),
                     self.user, self.passwd or ''))
 
+    def isabs(self):
+        if self.scheme and self.scheme != 'file':
+            return True # remote URL
+        if hasdriveletter(self.path):
+            return True # absolute for our purposes - can't be joined()
+        if self.path.startswith(r'\\'):
+            return True # Windows UNC path
+        if self.path.startswith('/'):
+            return True # POSIX-style
+        return False
+
     def localpath(self):
         if self.scheme == 'file' or self.scheme == 'bundle':
             path = self.path or '/'

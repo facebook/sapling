@@ -124,7 +124,7 @@ if sys.version_info < (2, 4):
     HANDLE_ERRORS = 1
 else: HANDLE_ERRORS = 0
 
-class ConnectionManager:
+class ConnectionManager(object):
     """
     The connection manager must be able to:
       * keep track of all existing
@@ -187,7 +187,7 @@ class ConnectionManager:
         else:
             return dict(self._hostmap)
 
-class KeepAliveHandler:
+class KeepAliveHandler(object):
     def __init__(self):
         self._cm = ConnectionManager()
 
@@ -705,7 +705,7 @@ def fetch(N, url, delay=0):
 def test_timeout(url):
     global DEBUG
     dbbackup = DEBUG
-    class FakeLogger:
+    class FakeLogger(object):
         def debug(self, msg, *args):
             print msg % args
         info = warning = error = debug
