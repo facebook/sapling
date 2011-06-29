@@ -114,6 +114,7 @@ def modified(mctx, x):
     """``modified()``
     File that is modified according to status.
     """
+    # i18n: "modified" is a keyword
     getargs(x, 0, 0, _("modified takes no arguments"))
     s = mctx.status()[0]
     return [f for f in mctx.subset if f in s]
@@ -122,6 +123,7 @@ def added(mctx, x):
     """``added()``
     File that is added according to status.
     """
+    # i18n: "added" is a keyword
     getargs(x, 0, 0, _("added takes no arguments"))
     s = mctx.status()[1]
     return [f for f in mctx.subset if f in s]
@@ -130,6 +132,7 @@ def removed(mctx, x):
     """``removed()``
     File that is removed according to status.
     """
+    # i18n: "removed" is a keyword
     getargs(x, 0, 0, _("removed takes no arguments"))
     s = mctx.status()[2]
     return [f for f in mctx.subset if f in s]
@@ -138,6 +141,7 @@ def deleted(mctx, x):
     """``deleted()``
     File that is deleted according to status.
     """
+    # i18n: "deleted" is a keyword
     getargs(x, 0, 0, _("deleted takes no arguments"))
     s = mctx.status()[3]
     return [f for f in mctx.subset if f in s]
@@ -147,6 +151,7 @@ def unknown(mctx, x):
     File that is unknown according to status. These files will only be
     considered if this predicate is used.
     """
+    # i18n: "unknown" is a keyword
     getargs(x, 0, 0, _("unknown takes no arguments"))
     s = mctx.status()[4]
     return [f for f in mctx.subset if f in s]
@@ -156,6 +161,7 @@ def ignored(mctx, x):
     File that is ignored according to status. These files will only be
     considered if this predicate is used.
     """
+    # i18n: "ignored" is a keyword
     getargs(x, 0, 0, _("ignored takes no arguments"))
     s = mctx.status()[5]
     return [f for f in mctx.subset if f in s]
@@ -164,6 +170,7 @@ def clean(mctx, x):
     """``clean()``
     File that is clean according to status.
     """
+    # i18n: "clean" is a keyword
     getargs(x, 0, 0, _("clean takes no arguments"))
     s = mctx.status()[6]
     return [f for f in mctx.subset if f in s]
@@ -190,6 +197,7 @@ def binary(mctx, x):
     """``binary()``
     File that appears to be binary (contails NUL bytes).
     """
+    # i18n: "binary" is a keyword
     getargs(x, 0, 0, _("binary takes no arguments"))
     return [f for f in mctx.subset if util.binary(mctx.ctx[f].data())]
 
@@ -197,6 +205,7 @@ def exec_(mctx, x):
     """``exec()``
     File that is marked as executable.
     """
+    # i18n: "exec" is a keyword
     getargs(x, 0, 0, _("exec takes no arguments"))
     return [f for f in mctx.subset if mctx.ctx.flags(f) == 'x']
 
@@ -204,6 +213,7 @@ def symlink(mctx, x):
     """``symlink()``
     File that is marked as a symlink.
     """
+    # i18n: "symlink" is a keyword
     getargs(x, 0, 0, _("symlink takes no arguments"))
     return [f for f in mctx.subset if mctx.ctx.flags(f) == 'l']
 
@@ -211,6 +221,7 @@ def resolved(mctx, x):
     """``resolved()``
     File that is marked resolved according to the resolve state.
     """
+    # i18n: "resolved" is a keyword
     getargs(x, 0, 0, _("resolved takes no arguments"))
     if mctx.ctx.rev() is not None:
         return []
@@ -221,6 +232,7 @@ def unresolved(mctx, x):
     """``unresolved()``
     File that is marked unresolved according to the resolve state.
     """
+    # i18n: "unresolved" is a keyword
     getargs(x, 0, 0, _("unresolved takes no arguments"))
     if mctx.ctx.rev() is not None:
         return []
@@ -282,6 +294,7 @@ def size(mctx, x):
     - 4k - 1MB (files from 4096 bytes to 1048576 bytes)
     """
 
+    # i18n: "size" is a keyword
     expr = getstring(x, _("size requires an expression")).strip()
     if '-' in expr: # do we have a range?
         a, b = expr.split('-', 1)
@@ -316,6 +329,7 @@ def encoding(mctx, x):
     UTF-8.
     """
 
+    # i18n: "encoding" is a keyword
     enc = getstring(x, _("encoding requires an encoding name"))
 
     s = []
@@ -335,6 +349,7 @@ def copied(mctx, x):
     """``copied()``
     File that is recorded as being copied.
     """
+    # i18n: "copied" is a keyword
     getargs(x, 0, 0, _("copied takes no arguments"))
     s = []
     for f in mctx.subset:
