@@ -104,7 +104,7 @@ class Writer(writers.Writer):
         self.output = visitor.astext()
 
 
-class Table:
+class Table(object):
     def __init__(self):
         self._rows = []
         self._options = ['center']
@@ -300,7 +300,7 @@ class Translator(nodes.NodeVisitor):
         pass
 
     def list_start(self, node):
-        class enum_char:
+        class enum_char(object):
             enum_style = {
                     'bullet'     : '\\(bu',
                     'emdash'     : '\\(em',

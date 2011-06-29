@@ -64,7 +64,7 @@ class HTTPRangeHandler(urllib2.BaseHandler):
         # HTTP's Range Not Satisfiable error
         raise RangeError('Requested Range Not Satisfiable')
 
-class RangeableFileObject:
+class RangeableFileObject(object):
     """File object wrapper to enable raw range handling.
     This was implemented primarilary for handling range
     specifications for file:// urls. This object effectively makes
