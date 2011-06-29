@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-06-23 22:17+0200\n"
-"PO-Revision-Date: 2011-06-23 22:33+0200\n"
+"POT-Creation-Date: 2011-06-29 09:21+0200\n"
+"PO-Revision-Date: 2011-06-29 09:24+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -9561,8 +9561,32 @@ msgstr "du kan inte specificera en revision och ett datum"
 msgid "no files or directories specified"
 msgstr "inga filer eller kataloger angivna"
 
+msgid ""
+"uncommitted merge, use --all to discard all changes, or 'hg update -C .' to "
+"abort the merge"
+msgstr ""
+"oarkiverad sammanfogning, använd --all för att kasta alla ändringar, eller "
+"'hg update -C .' för att avbryta sammanfogningen"
+
+#, python-format
+msgid ""
+"uncommitted changes, use --all to discard all changes, or 'hg update %s' to "
+"update"
+msgstr ""
+"oarkiverade ändringar, använd --all för att kasta alla ändringar, eller 'hg "
+"update %s' för att uppdatera"
+
+#, python-format
+msgid "use --all to revert all files, or 'hg update %s' to update"
+msgstr ""
+"använd --all för att återställa alla filer, eller 'hg update %s' för att "
+"uppdatera"
+
+msgid "uncommitted changes, use --all to discard all changes"
+msgstr "oarkiverade ändringar, använd --all för att kasta alla ändringar"
+
 msgid "use --all to revert all files"
-msgstr "använd --all för att återställa alla filer"
+msgstr "använd --all för att återställa filer"
 
 #, python-format
 msgid "forgetting %s\n"
@@ -10213,6 +10237,11 @@ msgid ""
 msgstr ""
 
 msgid ""
+"    Update sets the working directory's parent revison to the specified\n"
+"    changeset (see :hg:`help parents`)."
+msgstr ""
+
+msgid ""
 "    The following rules apply when the working directory contains\n"
 "    uncommitted changes:"
 msgstr ""
@@ -10259,17 +10288,17 @@ msgstr ""
 "    :hg:`clone -U`)."
 
 msgid ""
-"    If you want to update just one file to an older changeset, use\n"
-"    :hg:`revert`."
+"    If you want to revert just one file to an older revision, use\n"
+"    :hg:`revert [-r REV] NAME`."
 msgstr ""
-"    Om du vill uppdatera bara en fil till en äldre ändring, använd\n"
-"    :hg:`revert`."
+"    Om du vill uppdatera bara en fil till en äldre revision, använd\n"
+"    :hg:`revert [-r REV] NAMN`."
 
 msgid "cannot specify both -c/--check and -C/--clean"
-msgstr ""
+msgstr "kan inte både ange -c/--check och -C/--clean"
 
 msgid "uncommitted local changes"
-msgstr ""
+msgstr "oarkiverade lokala ändringar"
 
 msgid "verify the integrity of the repository"
 msgstr "verifiera arkivets integritet"
@@ -10697,6 +10726,7 @@ msgid ""
 "    File that is modified according to status."
 msgstr ""
 
+#. i18n: "modified" is a keyword
 msgid "modified takes no arguments"
 msgstr "modified tar inga argument"
 
@@ -10705,6 +10735,7 @@ msgid ""
 "    File that is added according to status."
 msgstr ""
 
+#. i18n: "added" is a keyword
 msgid "added takes no arguments"
 msgstr "added tar inga argument"
 
@@ -10713,6 +10744,7 @@ msgid ""
 "    File that is removed according to status."
 msgstr ""
 
+#. i18n: "removed" is a keyword
 msgid "removed takes no arguments"
 msgstr "removed tar inga argument"
 
@@ -10721,6 +10753,7 @@ msgid ""
 "    File that is deleted according to status."
 msgstr ""
 
+#. i18n: "deleted" is a keyword
 msgid "deleted takes no arguments"
 msgstr "deleted tar inga argument"
 
@@ -10730,6 +10763,7 @@ msgid ""
 "    considered if this predicate is used."
 msgstr ""
 
+#. i18n: "unknown" is a keyword
 msgid "unknown takes no arguments"
 msgstr "unknown tar inga argument"
 
@@ -10739,6 +10773,7 @@ msgid ""
 "    considered if this predicate is used."
 msgstr ""
 
+#. i18n: "ignored" is a keyword
 msgid "ignored takes no arguments"
 msgstr "ignored tar inga argument"
 
@@ -10747,6 +10782,7 @@ msgid ""
 "    File that is clean according to status."
 msgstr ""
 
+#. i18n: "clean" is a keyword
 msgid "clean takes no arguments"
 msgstr "clean tar inga argument"
 
@@ -10759,6 +10795,7 @@ msgid ""
 "    File that appears to be binary (contails NUL bytes)."
 msgstr ""
 
+#. i18n: "binary" is a keyword
 msgid "binary takes no arguments"
 msgstr "binary tar inga argument"
 
@@ -10767,6 +10804,7 @@ msgid ""
 "    File that is marked as executable."
 msgstr ""
 
+#. i18n: "exec" is a keyword
 msgid "exec takes no arguments"
 msgstr "exec tar inga argument"
 
@@ -10775,6 +10813,7 @@ msgid ""
 "    File that is marked as a symlink."
 msgstr ""
 
+#. i18n: "symlink" is a keyword
 msgid "symlink takes no arguments"
 msgstr "symlink tar inga argument"
 
@@ -10783,6 +10822,7 @@ msgid ""
 "    File that is marked resolved according to the resolve state."
 msgstr ""
 
+#. i18n: "resolved" is a keyword
 msgid "resolved takes no arguments"
 msgstr "resolved tar inga argument"
 
@@ -10791,6 +10831,7 @@ msgid ""
 "    File that is marked unresolved according to the resolve state."
 msgstr ""
 
+#. i18n: "unresolved" is a keyword
 msgid "unresolved takes no arguments"
 msgstr "unresolved tar inga argument"
 
@@ -10810,7 +10851,8 @@ msgstr ""
 msgid "grep requires a pattern"
 msgstr "grep kräver ett mönster"
 
-msgid "couldn't parse size"
+#, python-format
+msgid "couldn't parse size: %s"
 msgstr ""
 
 msgid ""
@@ -10825,6 +10867,10 @@ msgid ""
 "    - 4k - 1MB (files from 4096 bytes to 1048576 bytes)"
 msgstr ""
 
+#. i18n: "size" is a keyword
+msgid "size requires an expression"
+msgstr "size kräver ett uttryck"
+
 msgid ""
 "``encoding(name)``\n"
 "    File can be successfully decoded with the given character\n"
@@ -10832,6 +10878,7 @@ msgid ""
 "    UTF-8."
 msgstr ""
 
+#. i18n: "encoding" is a keyword
 msgid "encoding requires an encoding name"
 msgstr ""
 
@@ -10843,6 +10890,10 @@ msgid ""
 "``copied()``\n"
 "    File that is recorded as being copied."
 msgstr ""
+
+#. i18n: "copied" is a keyword
+msgid "copied takes no arguments"
+msgstr "copied tar inga argument"
 
 msgid "invalid token"
 msgstr ""
@@ -13129,8 +13180,8 @@ msgstr ""
 msgid ""
 "Mercurial supports a functional language for selecting a set of\n"
 "files. "
-msgstr "Mercurial stöder ett funktionellt språk för att välja en\n"
-"uppsättning filer. "
+msgstr ""
+"Mercurial stöder ett funktionellt språk för att välja en uppsättning filer. "
 
 msgid ""
 "Like other file patterns, this pattern type is indicated by a prefix,\n"
@@ -15789,6 +15840,9 @@ msgstr ""
 msgid "follow takes no arguments or a filename"
 msgstr "follow tar inga argument eller ett filnamn"
 
+msgid "follow expected a filename"
+msgstr "follow förväntade sig ett filnamn"
+
 #. i18n: "follow" is a keyword
 msgid "follow takes no arguments"
 msgstr "follow tar inga argument"
@@ -15932,6 +15986,10 @@ msgid ""
 msgstr ""
 
 #. i18n: "outgoing" is a keyword
+msgid "outgoing takes one or no arguments"
+msgstr "outgoing tar ett eller inga argument"
+
+#. i18n: "outgoing" is a keyword
 msgid "outgoing requires a repository path"
 msgstr ""
 
@@ -16048,8 +16106,9 @@ msgstr "kan inte negera det"
 msgid "not a symbol"
 msgstr "inte en symbol"
 
-msgid "invalid amount of arguments"
-msgstr "felaktigt antal argument"
+#, fuzzy, python-format
+msgid "invalid number of arguments: %s"
+msgstr "felaktigt antal argument: %s"
 
 msgid "empty query"
 msgstr "tom fråga"
@@ -16095,8 +16154,8 @@ msgid ".hg/requires file is corrupt"
 msgstr "filen .hg/requires är korrupt"
 
 #, python-format
-msgid "unknown repository format: requires feature '%s' (upgrade Mercurial)"
-msgstr ""
+msgid "unknown repository format: requires features '%s' (upgrade Mercurial)"
+msgstr "okänt arkivformat: kräver att '%s' fungerar (uppgradera Mercurial)"
 
 msgid "searching for changes\n"
 msgstr "söker efter ändringar\n"
