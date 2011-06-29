@@ -432,10 +432,10 @@ def branches(web, req, tmpl):
             if limit > 0 and count >= limit:
                 return
             count += 1
-            if ctx.node() not in heads:
-                status = 'inactive'
-            elif not web.repo.branchheads(ctx.branch()):
+            if not web.repo.branchheads(ctx.branch()):
                 status = 'closed'
+            elif ctx.node() not in heads:
+                status = 'inactive'
             else:
                 status = 'open'
             yield {'parity': parity.next(),
