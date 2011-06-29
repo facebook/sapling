@@ -174,9 +174,10 @@ def _modesetup(ui, opts):
             realmode = 'terminfo'
 
     if realmode == 'win32':
-        if not w32effects and mode == 'win32':
-            # only warn if color.mode is explicitly set to win32
-            ui.warn(_('warning: failed to set color mode to %s\n') % mode)
+        if not w32effects:
+            if mode == 'win32':
+                # only warn if color.mode is explicitly set to win32
+                ui.warn(_('warning: failed to set color mode to %s\n') % mode)
             return None
         _effects.update(w32effects)
     elif realmode == 'ansi':
