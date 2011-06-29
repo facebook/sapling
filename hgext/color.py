@@ -75,6 +75,14 @@ ECMA-48 mode, the options are 'bold', 'inverse', 'italic', and
 Some may not be available for a given terminal type, and will be
 silently ignored.
 
+Note that on some systems, terminfo mode may cause problems when using
+color with the pager extension and less -R. less with the -R option
+will only display ECMA-48 color codes, and terminfo mode may sometimes
+emit codes that less doesn't understand. You can work around this by
+either using ansi mode (or auto mode), or by using less -r (which will
+pass through all terminal control codes, not just color control
+codes).
+
 Because there are only eight standard colors, this module allows you
 to define color names for other color slots which might be available
 for your terminal type, assuming terminfo mode.  For instance::
@@ -89,15 +97,15 @@ that have brighter colors defined in the upper eight) and, 'pink' and
 defined colors may then be used as any of the pre-defined eight,
 including appending '_background' to set the background to that color.
 
-The color extension will try to detect whether to use terminfo, ANSI
-codes or Win32 console APIs, unless it is made explicit; e.g.::
+By default, the color extension will use ANSI mode (or win32 mode on
+Windows) if it detects a terminal. To override auto mode (to enable
+terminfo mode, for example), set the following configuration option::
 
   [color]
-  mode = ansi
+  mode = terminfo
 
 Any value other than 'ansi', 'win32', 'terminfo', or 'auto' will
 disable color.
-
 '''
 
 import os
@@ -168,10 +176,8 @@ def _modesetup(ui, opts):
         if os.name == 'nt' and 'TERM' not in os.environ:
             # looks line a cmd.exe console, use win32 API or nothing
             realmode = 'win32'
-        elif not formatted:
-            realmode = 'ansi'
         else:
-            realmode = 'terminfo'
+            realmode = 'ansi'
 
     if realmode == 'win32':
         if not w32effects:
