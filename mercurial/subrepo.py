@@ -663,7 +663,9 @@ class svnsubrepo(abstractsubrepo):
         args = ['checkout']
         if self._svnversion >= (1, 5):
             args.append('--force')
-        args.extend([state[0], '--revision', state[1]])
+        # The revision must be specified at the end of the URL to properly
+        # update to a directory which has since been deleted and recreated.
+        args.append('%s@%s' % (state[0], state[1]))
         status, err = self._svncommand(args, failok=True)
         if not re.search('Checked out revision [0-9]+.', status):
             if ('is already a working copy for a different URL' in err
