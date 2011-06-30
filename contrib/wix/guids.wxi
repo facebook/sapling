@@ -18,20 +18,20 @@
   <?define doc.style.css = {172F8262-98E0-4711-BD39-4DAE0D77EF05} ?>
 
   <!-- help.wxs -->
-  <?define helpFolder.guid = {21FE9CF9-933E-4C2E-B2EC-413A569FB996} ?>
+  <?define helpFolder.guid = {84025FAA-7EB7-4D79-A097-D2D18852D78E} ?>
   
   <!-- i18n.wxs -->
   <?define i18nFolder.guid = {EADFA693-A0B5-4f31-87C9-3997CFAC1B42} ?>
 
   <!-- templates.wxs -->
   <?define templates.root.guid = {111509CB-4C96-4035-80BC-F66A99CD5ACB} ?>
-  <?define templates.atom.guid = {45FCDF84-DE27-44f4-AF6C-C41F5994AE0D} ?>
+  <?define templates.atom.guid = {AB5D2908-BC95-44BE-9D79-069EF43D93E2} ?>
   <?define templates.coal.guid = {B63CCAAB-4EAF-43b4-901E-4BD13F5B78FC} ?>
-  <?define templates.gitweb.guid = {D8BFE3ED-06DD-4C4D-A00D-6D825955F922} ?>
-  <?define templates.monoblue.guid = {A394B4D5-2AF7-4AAC-AEA8-E92176E5501E} ?>
+  <?define templates.gitweb.guid = {6A33D168-F84E-45AA-912C-23CAC2D66BCA} ?>
+  <?define templates.monoblue.guid = {D27AA750-9394-4DAC-84FC-A546CE8F347A} ?>
   <?define templates.paper.guid = {D2591E56-709E-49F9-8A5F-1359E1CCD7E0} ?>
   <?define templates.raw.guid = {04DE03A2-FBFD-4c5f-8DEA-5436DDF4689D} ?>
-  <?define templates.rss.guid = {A7D608DE-0CF6-44f4-AF1E-EE30CC237FDA} ?>
+  <?define templates.rss.guid = {36069748-1E2A-472B-A212-506CB656A9C1} ?>
   <?define templates.spartan.guid = {80222625-FA8F-44b1-86CE-1781EF375D09} ?>
   <?define templates.static.guid = {B27D7311-050A-4A96-9971-B674A0EA21D0} ?>
 

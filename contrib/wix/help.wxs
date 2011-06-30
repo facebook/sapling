@@ -13,7 +13,9 @@
           <File Name="diffs.txt" />
           <File Name="environment.txt" />
           <File Name="extensions.txt" />
+          <File Name="filesets.txt" />
           <File Name="glossary.txt" />
+          <File Name="hgignore.txt" />
           <File Name="hgweb.txt" />
           <File Name="merge-tools.txt" />
           <File Name="multirevs.txt" />
