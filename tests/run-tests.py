@@ -259,10 +259,6 @@ def parseargs():
             sys.stderr.write(
                 'warning: --timeout option ignored with --debug\n')
         options.timeout = 0
-    if options.timeout and not hasattr(subprocess.Popen, 'terminate'):
-        sys.stderr.write('warning: timeout is not supported on this '
-                         'platform and will be ignored\n')
-        options.timeout = 0
     if options.py3k_warnings:
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
             parser.error('--py3k-warnings can only be used on Python 2.6+')
