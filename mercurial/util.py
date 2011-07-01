@@ -1589,7 +1589,7 @@ def hasscheme(path):
 def hasdriveletter(path):
     return path[1:2] == ':' and path[0:1].isalpha()
 
-def localpath(path):
+def urllocalpath(path):
     return url(path, parsequery=False, parsefragment=False).localpath()
 
 def hidepassword(u):
