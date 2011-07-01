@@ -158,7 +158,7 @@ class eolfile(object):
         # about inconsistent newlines.
         self.match = match.match(root, '', [], include, exclude)
 
-    def setfilters(self, ui):
+    def copytoui(self, ui):
         for pattern, style in self.cfg.items('patterns'):
             key = style.upper()
             try:
@@ -167,6 +167,9 @@ class eolfile(object):
             except KeyError:
                 ui.warn(_("ignoring unknown EOL style '%s' from %s\n")
                         % (style, self.cfg.source('patterns', pattern)))
+        # eol.only-consistent can be specified in ~/.hgrc or .hgeol
+        for k, v in self.cfg.items('eol'):
+            ui.setconfig('eol', k, v)
 
     def checkrev(self, repo, ctx, files):
         failed = []
@@ -273,7 +276,7 @@ def reposetup(ui, repo):
             eol = parseeol(self.ui, self, nodes)
             if eol is None:
                 return None
-            eol.setfilters(self.ui)
+            eol.copytoui(self.ui)
             return eol.match
 
         def _hgcleardirstate(self):

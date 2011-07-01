@@ -441,3 +441,25 @@ Test handling of a broken .hgeol file:
   warning: ignoring .hgeol file due to parse error at .hgeol:1: bad
   $ hg status
   ? .hgeol.orig
+
+Test eol.only-consistent can be specified in .hgeol
+
+  $ cd $TESTTMP
+  $ hg init only-consistent
+  $ cd only-consistent
+  $ printf "first\nsecond\r\n" > a.txt
+  $ hg add a.txt
+  $ cat > .hgeol << EOF
+  > [eol]
+  > only-consistent = True
+  > EOF
+  $ hg commit -m 'inconsistent'
+  abort: inconsistent newline style in a.txt
+  
+  [255]
+  $ cat > .hgeol << EOF
+  > [eol]
+  > only-consistent = False
+  > EOF
+  $ hg commit -m 'consistent'
+
