@@ -17284,6 +17284,256 @@ msgstr "'%s' というノードはフォーマットが不適切です"
 msgid ".hg/cache/tags is corrupt, rebuilding it\n"
 msgstr ".hg/cache/tags が無効なため再構築中\n"
 
+msgid ""
+":addbreaks: Any text. Add an XHTML \"<br />\" tag before the end of\n"
+"    every line except the last."
+msgstr ""
+":addbreaks: 文字列。 最終行を除く各行の行末に XHTML の\n"
+"    \"<br />\" タグを追加します。"
+
+msgid ""
+":age: Date. Returns a human-readable date/time difference between the\n"
+"    given date/time and the current date/time."
+msgstr ""
+":age: 日時情報。 与えられた日時と、 現在日時との差分を表す\n"
+"    可読形式の文字列を生成します。"
+
+msgid ""
+":basename: Any text. Treats the text as a path, and returns the last\n"
+"    component of the path after splitting by the path separator\n"
+"    (ignoring trailing separators). For example, \"foo/bar/baz\" becomes\n"
+"    \"baz\" and \"foo/bar//\" becomes \"bar\"."
+msgstr ""
+":basename: 文字列。 与えられた文字列をパスとみなし、 パス区切りで\n"
+"    区切られた最後の要素だけを取り出します(末尾パス\n"
+"    区切りは無視されます)。\n"
+"    例) \"foo/bar/baz\" は \"baz\"、 \"foo/bar//\" は \"bar\""
+
+msgid ""
+":date: Date. Returns a date in a Unix date format, including the\n"
+"    timezone: \"Mon Sep 04 15:13:13 2006 0700\"."
+msgstr ""
+":date: 日時情報。 タイムゾーン込みの Unix date コマンド形式にします。\n"
+"    例) \"Mon Sep 04 15:13:13 2006 0700\""
+
+msgid ""
+":domain: Any text. Finds the first string that looks like an email\n"
+"    address, and extracts just the domain component. Example: ``User\n"
+"    <user@example.com>`` becomes ``example.com``."
+msgstr ""
+":domain: 文字列。 メールアドレスと思しき最初の文字列部分から\n"
+"    ドメイン部分だけを取り出します。\n"
+"    例) ``User <user@example.com>`` は ``example.com``"
+
+msgid ""
+":email: Any text. Extracts the first string that looks like an email\n"
+"    address. Example: ``User <user@example.com>`` becomes\n"
+"    ``user@example.com``."
+msgstr ""
+":email: 文字列。 メールアドレスと思しき最初の部分を取り出します。\n"
+"    例) ``User <user@example.com>`` は ``user@example.com``"
+
+msgid ""
+":escape: Any text. Replaces the special XML/XHTML characters \"&\", \"<\"\n"
+"    and \">\" with XML entities."
+msgstr ""
+":escape: 文字列。 XML/XHTML の特殊文字である \"&\"、 \"<\" および\n"
+"    \">\" を XML のエンティティ形式に変換します。"
+
+msgid ":fill68: Any text. Wraps the text to fit in 68 columns."
+msgstr ":fill68: 文字列。 68 桁に収まるように文字列を折り返します。"
+
+msgid ":fill76: Any text. Wraps the text to fit in 76 columns."
+msgstr ":fill76: 文字列。 76 桁に収まるように文字列を折り返します。"
+
+msgid ":firstline: Any text. Returns the first line of text."
+msgstr ":firstline: 文字列。 最初の行のみを取り出します。"
+
+msgid ""
+":hex: Any text. Convert a binary Mercurial node identifier into\n"
+"    its long hexadecimal representation."
+msgstr ""
+":hex: 文字列。 Mercurial の node 情報を 40 桁 16 進文字列に変換します。"
+
+msgid ""
+":hgdate: Date. Returns the date as a pair of numbers: \"1157407993\n"
+"    25200\" (Unix timestamp, timezone offset)."
+msgstr ""
+":hgdate: 日時情報。 Unix タイムスタンプとタイムゾーンオフセットによる\n"
+"   数値対形式で可読化します。\n"
+"   例) \"1157407993 25200\""
+
+msgid ""
+":isodate: Date. Returns the date in ISO 8601 format: \"2009-08-18 13:00\n"
+"    +0200\"."
+msgstr ""
+":isodate: 日時情報。 ISO 8601 形式で可読化します:\n"
+"   例) \"2009-08-18 13:00 +0200\""
+
+msgid ""
+":isodatesec: Date. Returns the date in ISO 8601 format, including\n"
+"    seconds: \"2009-08-18 13:00:13 +0200\". See also the rfc3339date\n"
+"    filter."
+msgstr ""
+":isodatesec: 日時情報。 秒情報付きの ISO 8601 形式で可読化します:\n"
+"   例) \"2009-08-18 13:00:13 +0200\"\n"
+"   ※ 後述する rfc3339date フィルタの説明も参照してください。"
+
+msgid ":localdate: Date. Converts a date to local date."
+msgstr ":localdate: 日時情報。 ローカル日時で可読化します。"
+
+msgid ":nonempty: Any text. Returns '(none)' if the string is empty."
+msgstr ":nonempty: 文字列。 与えられた文字列が空の場合 '(none)'となります。"
+
+msgid ""
+":obfuscate: Any text. Returns the input text rendered as a sequence of\n"
+"    XML entities."
+msgstr ":obfuscate: 文字列。 全ての文字を XML エンティティ形式に変換します。"
+
+msgid ":person: Any text. Returns the text before an email address."
+msgstr ":person: 文字列。 メールアドレス直前の部分だけを取り出します。"
+
+msgid ""
+":rfc3339date: Date. Returns a date using the Internet date format\n"
+"    specified in RFC 3339: \"2009-08-18T13:00:13+02:00\"."
+msgstr ""
+":rfc3339date: 日付情報。  RFC 3339 で定められた日付形式で可読化します。\n"
+"    例) \"2009-08-18T13:00:13+02:00\"."
+
+msgid ""
+":rfc822date: Date. Returns a date using the same format used in email\n"
+"    headers: \"Tue, 18 Aug 2009 13:00:13 +0200\"."
+msgstr ""
+":rfc822date: 日時情報。 メールのヘッダと同形式で可読化します:\n"
+"    例) \"Tue, 18 Aug 2009 13:00:13 +0200\"."
+
+msgid ""
+":short: Changeset hash. Returns the short form of a changeset hash,\n"
+"    i.e. a 12 hexadecimal digit string."
+msgstr ":short: リビジョンハッシュ 値。 12 桁程度の短縮形式にします。"
+
+msgid ":shortdate: Date. Returns a date like \"2006-09-18\"."
+msgstr ":shortdate: 日時情報。 \"2006-09-18\" 形式で可読化します。"
+
+msgid ""
+":stringify: Any type. Turns the value into text by converting values into\n"
+"    text and concatenating them."
+msgstr ":stringify: 任意のデータ。 値を文字列化して連結します"
+
+msgid ":strip: Any text. Strips all leading and trailing whitespace."
+msgstr ":strip: 文字列。 先頭／末尾の空白文字を取り除きます。"
+
+msgid ""
+":stripdir: Treat the text as path and strip a directory level, if\n"
+"    possible. For example, \"foo\" and \"foo/bar\" becomes \"foo\"."
+msgstr ""
+":stripdir: 文字列。 与えられた文字列をパスとみなし、 ディレクトリ\n"
+"    階層があればそれを取り除きます。\n"
+"    例) \"foo\" および \"foo/bar\" は \"foo\""
+
+#, fuzzy
+msgid ""
+":tabindent: Any text. Returns the text, with every line except the\n"
+"    first starting with a tab character."
+msgstr ":tabindent: 文字列。 タブ文字以外で始まる行をタブ文字で字下げします。"
+
+msgid ""
+":urlescape: Any text. Escapes all \"special\" characters. For example,\n"
+"    \"foo bar\" becomes \"foo%20bar\"."
+msgstr ""
+":urlescape: 文字列。 全ての「特殊」文字を変換します。\n"
+"    例えば \"foo bar\" は \"foo%20bar\" となります。"
+
+#, fuzzy
+msgid ":user: Any text. Returns the user portion of an email address."
+msgstr ":user: 文字列。 メールアドレスのユーザ名部分を取り出します。\n"
+
+msgid ":author: String. The unmodified author of the changeset."
+msgstr ":author: 文字列。 リビジョンの作者名(記録情報そのまま)。"
+
+msgid ""
+":branch: String. The name of the branch on which the changeset was\n"
+"    committed."
+msgstr ":branch: 文字列。 リビジョンの属するブランチ名。"
+
+msgid ""
+":branches: List of strings. The name of the branch on which the\n"
+"    changeset was committed. Will be empty if the branch name was\n"
+"    default."
+msgstr ""
+":branches: 文字列列挙。 リビジョンの属するブランチ名。\n"
+"    所属ブランチが default の場合は空。"
+
+#, fuzzy
+msgid ""
+":bookmarks: List of strings. Any bookmarks associated with the\n"
+"    changeset."
+msgstr ":tags: 文字列列挙。 当該リビジョンに付与されたタグの一覧。"
+
+msgid ":children: List of strings. The children of the changeset."
+msgstr ":children: 文字列列挙。 リビジョンの子供。"
+
+msgid ":date: Date information. The date when the changeset was committed."
+msgstr ":date: 日時情報。 リビジョンが記録された日時。"
+
+msgid ":desc: String. The text of the changeset description."
+msgstr ":desc:      文字列。 リビジョンのコミットメッセージ。"
+
+msgid ""
+":diffstat: String. Statistics of changes with the following format:\n"
+"    \"modified files: +added/-removed lines\""
+msgstr ""
+":diffstat: 文字列。 以下の形式での変更概要。\n"
+"    \"変更対象ファイル: +追加行数/-削除行数\""
+
+msgid ":file_adds: List of strings. Files added by this changeset."
+msgstr ":file_adds: 文字列列挙。 当該リビジョンでの追加ファイル一覧。"
+
+msgid ""
+":file_copies: List of strings. Files copied in this changeset with\n"
+"    their sources."
+msgstr ":file_copies: 文字列列挙。  当該リビジョンでの複製元ファイル一覧。"
+
+msgid ""
+":file_copies_switch: List of strings. Like \"file_copies\" but displayed\n"
+"    only if the --copied switch is set."
+msgstr ""
+":file_copies_switch: 文字列列挙。  \"file_copies\" と同義だが、\n"
+"    --copied 指定のある時のみ表示。"
+
+msgid ":file_dels: List of strings. Files removed by this changeset."
+msgstr ":file_dels: 文字列列挙。 当該リビジョンでの登録除外ファイル一覧。"
+
+msgid ":file_mods: List of strings. Files modified by this changeset."
+msgstr ":file_mods: 文字列列挙。 当該リビジョンでの変更ファイル一覧。"
+
+msgid ""
+":files: List of strings. All files modified, added, or removed by this\n"
+"    changeset."
+msgstr ""
+":files: 文字列列挙。 当該リビジョンでの、 変更／追加登録ないし\n"
+"    登録除外ファイルの一覧。"
+
+msgid ""
+":latesttag: String. Most recent global tag in the ancestors of this\n"
+"    changeset."
+msgstr ""
+":latesttag: 文字列。 当該リビジョンの先祖に対して最も最近に付与されたタグ"
+
+msgid ":latesttagdistance: Integer. Longest path to the latest tag."
+msgstr ":latesttagdistance: 整数。 最新タグへの最長パス"
+
+msgid ""
+":node: String. The changeset identification hash, as a 40 hexadecimal\n"
+"    digit string."
+msgstr ":node: 文字列。 リビジョン識別用の 40 桁 16 進数ハッシュ値。"
+
+msgid ":rev: Integer. The repository-local changeset revision number."
+msgstr ":rev: 整数。 各リポジトリ固有のリビジョン番号。"
+
+msgid ":tags: List of strings. Any tags associated with the changeset."
+msgstr ":tags: 文字列列挙。 当該リビジョンに付与されたタグの一覧。"
+
 #, python-format
 msgid "unknown method '%s'"
 msgstr "不明な処理 '%s' が指定されました"

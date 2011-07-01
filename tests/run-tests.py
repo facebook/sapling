@@ -78,10 +78,7 @@ def Popen4(cmd, wd, timeout):
                 time.sleep(1)
             p.timeout = True
             if p.returncode is None:
-                try:
-                    p.terminate()
-                except OSError:
-                    pass
+                terminate(p)
         threading.Thread(target=t).start()
 
     return p
@@ -262,10 +259,6 @@ def parseargs():
             sys.stderr.write(
                 'warning: --timeout option ignored with --debug\n')
         options.timeout = 0
-    if options.timeout and not hasattr(subprocess.Popen, 'terminate'):
-        sys.stderr.write('warning: timeout is not supported on this '
-                         'platform and will be ignored\n')
-        options.timeout = 0
     if options.py3k_warnings:
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
             parser.error('--py3k-warnings can only be used on Python 2.6+')
@@ -342,6 +335,17 @@ def checktools():
             vlog("# Found prerequisite", p, "at", found)
         else:
             print "WARNING: Did not find prerequisite tool: "+p
+
+def terminate(proc):
+    """Terminate subprocess (with fallback for Python versions < 2.6)"""
+    vlog('# Terminating process %d' % proc.pid)
+    try:
+        if hasattr(proc, 'terminate'):
+            proc.terminate()
+        else:
+            os.kill(proc.pid, signal.SIGTERM)
+    except OSError:
+        pass
 
 def killdaemons():
     # Kill off any leftover daemon processes
@@ -651,10 +655,7 @@ def run(cmd, wd, options, replacements):
 
     proc = Popen4(cmd, wd, options.timeout)
     def cleanup():
-        try:
-            proc.terminate()
-        except OSError:
-            pass
+        terminate(proc)
         ret = proc.wait()
         if ret == 0:
             ret = signal.SIGTERM << 8
