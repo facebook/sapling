@@ -54,6 +54,7 @@ create two release branches
 modify file1 on branch v1_0
 
   $ cvscall -Q update -rv1_0
+  $ sleep 1
   $ echo "change" >> file1
   $ cvsci -m"add text"
   cvs commit: Examining .

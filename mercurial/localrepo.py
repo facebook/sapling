@@ -1985,7 +1985,7 @@ def undoname(fn):
     return os.path.join(base, name.replace('journal', 'undo', 1))
 
 def instance(ui, path, create):
-    return localrepository(ui, util.localpath(path), create)
+    return localrepository(ui, util.urllocalpath(path), create)
 
 def islocal(path):
     return True

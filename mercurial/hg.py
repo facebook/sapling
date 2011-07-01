@@ -17,7 +17,7 @@ import verify as verifymod
 import errno, os, shutil
 
 def _local(path):
-    path = util.expandpath(util.localpath(path))
+    path = util.expandpath(util.urllocalpath(path))
     return (os.path.isfile(path) and bundlerepo or localrepo)
 
 def addbranchrevs(lrepo, repo, branches, revs):
@@ -227,8 +227,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     else:
         dest = ui.expandpath(dest)
 
-    dest = util.localpath(dest)
-    source = util.localpath(source)
+    dest = util.urllocalpath(dest)
+    source = util.urllocalpath(source)
 
     if os.path.exists(dest):
         if not os.path.isdir(dest):
@@ -250,7 +250,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     try:
         abspath = origsource
         if islocal(origsource):
-            abspath = os.path.abspath(util.localpath(origsource))
+            abspath = os.path.abspath(util.urllocalpath(origsource))
 
         if islocal(dest):
             dircleanup = DirCleanup(dest)
