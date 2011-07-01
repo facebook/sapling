@@ -463,3 +463,60 @@ Test eol.only-consistent can be specified in .hgeol
   > EOF
   $ hg commit -m 'consistent'
 
+
+Test trailing newline
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > eol=
+  > EOF
+
+setup repository
+
+  $ cd $TESTTMP
+  $ hg init trailing
+  $ cd trailing
+  $ cat > .hgeol <<EOF
+  > [patterns]
+  > **.txt = native
+  > [eol]
+  > fix-trailing-newline = False
+  > EOF
+
+add text without trailing newline
+
+  $ printf "first\nsecond" > a.txt
+  $ hg commit --addremove -m 'checking in'
+  adding .hgeol
+  adding a.txt
+  $ rm a.txt
+  $ hg update -C -q
+  $ cat a.txt
+  first
+  second (no-eol)
+
+  $ cat > .hgeol <<EOF
+  > [patterns]
+  > **.txt = native
+  > [eol]
+  > fix-trailing-newline = True
+  > EOF
+  $ printf "third\nfourth" > a.txt
+  $ hg commit -m 'checking in with newline fix'
+  $ rm a.txt
+  $ hg update -C -q
+  $ cat a.txt
+  third
+  fourth
+
+append a line without trailing newline
+
+  $ printf "fifth" >> a.txt
+  $ hg commit -m 'adding another line line'
+  $ rm a.txt
+  $ hg update -C -q
+  $ cat a.txt
+  third
+  fourth
+  fifth
+

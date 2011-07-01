@@ -106,6 +106,8 @@ def tolf(s, params, ui, **kwargs):
         return s
     if ui.configbool('eol', 'only-consistent', True) and inconsistenteol(s):
         return s
+    if ui.configbool('eol', 'fix-trailing-newline', False) and s and s[-1] != '\n':
+        s = s + '\n'
     return eolre.sub('\n', s)
 
 def tocrlf(s, params, ui, **kwargs):
@@ -114,6 +116,8 @@ def tocrlf(s, params, ui, **kwargs):
         return s
     if ui.configbool('eol', 'only-consistent', True) and inconsistenteol(s):
         return s
+    if ui.configbool('eol', 'fix-trailing-newline', False) and s and s[-1] != '\n':
+        s = s + '\n'
     return eolre.sub('\r\n', s)
 
 def isbinary(s, params):
