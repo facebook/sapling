@@ -322,11 +322,11 @@ class kwfilelog(filelog.filelog):
         text = self.kwt.shrink(self.path, text)
         return super(kwfilelog, self).cmp(node, text)
 
-def _status(ui, repo, kwt, *pats, **opts):
+def _status(ui, repo, wctx, kwt, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
-        return repo.status(match=scmutil.match(repo[None], pats, opts), clean=True,
+        return repo.status(match=scmutil.match(wctx, pats, opts), clean=True,
                            unknown=opts.get('unknown') or opts.get('all'))
     if ui.configitems('keyword'):
         raise util.Abort(_('[keyword] patterns cannot match'))
@@ -340,7 +340,7 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     kwt = kwtools['templater']
     wlock = repo.wlock()
     try:
-        status = _status(ui, repo, kwt, *pats, **opts)
+        status = _status(ui, repo, wctx, kwt, *pats, **opts)
         modified, added, removed, deleted, unknown, ignored, clean = status
         if modified or added or removed or deleted:
             raise util.Abort(_('outstanding uncommitted changes'))
@@ -475,13 +475,13 @@ def files(ui, repo, *pats, **opts):
       i = ignored (not tracked)
     '''
     kwt = kwtools['templater']
-    status = _status(ui, repo, kwt, *pats, **opts)
+    wctx = repo[None]
+    status = _status(ui, repo, wctx, kwt, *pats, **opts)
     cwd = pats and repo.getcwd() or ''
     modified, added, removed, deleted, unknown, ignored, clean = status
     files = []
     if not opts.get('unknown') or opts.get('all'):
         files = sorted(modified + added + clean)
-    wctx = repo[None]
     kwfiles = kwt.iskwfile(files, wctx)
     kwdeleted = kwt.iskwfile(deleted, wctx)
     kwunknown = kwt.iskwfile(unknown, wctx)
