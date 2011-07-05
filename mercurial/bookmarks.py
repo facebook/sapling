@@ -28,6 +28,9 @@ def read(repo):
         for line in repo.opener('bookmarks'):
             line = line.strip()
             if ' ' not in line:
+                if line:
+                    msg = _('malformed line in .hg/bookmarks: %r\n')
+                    repo.ui.warn( msg % line)
                 continue
             sha, refspec = line.strip().split(' ', 1)
             refspec = encoding.tolocal(refspec)

@@ -350,3 +350,11 @@ test wrongly formated bookmark
      Y                         2:db815d6d32e6
    * Z                         3:125c9a1d6df6
      x  y                      2:db815d6d32e6
+  $ echo "Ican'thasformatedlines" >> .hg/bookmarks
+  $ hg bookmarks
+  malformed line in .hg/bookmarks: "Ican'thasformatedlines"
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+   * Z                         3:125c9a1d6df6
+     x  y                      2:db815d6d32e6
+
