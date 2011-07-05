@@ -195,7 +195,7 @@ def getargs(x, min, max, err):
 
 def binary(mctx, x):
     """``binary()``
-    File that appears to be binary (contails NUL bytes).
+    File that appears to be binary (contains NUL bytes).
     """
     # i18n: "binary" is a keyword
     getargs(x, 0, 0, _("binary takes no arguments"))

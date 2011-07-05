@@ -46,9 +46,9 @@ Prepare source repo and patch:
   $ rm $HGRCPATH
   $ hg init c
   $ cd c
-  $ echo 0 > a
+  $ printf "a\rc" > a
   $ hg ci -A -m 0 a -d '0 0'
-  $ echo 1 >> a
+  $ printf "a\rb\rc" > a
   $ cat << eof > log
   > first line which can't start with '# '
   > # second line is a comment but that shouldn't be a problem.
@@ -73,7 +73,7 @@ Clone and apply patch:
   $ hg import ../c/p
   applying ../c/p
   $ hg log -v -r 1
-  changeset:   1:e8cc66fbbaa6
+  changeset:   1:cd0bde79c428
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

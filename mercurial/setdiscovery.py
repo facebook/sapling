@@ -124,7 +124,7 @@ def findcommonheads(ui, local, remote,
 
     srvheads = dag.internalizeall(srvheadhashes, filterunknown=True)
     if len(srvheads) == len(srvheadhashes):
-        ui.note("all remote heads known locally\n")
+        ui.debug("all remote heads known locally\n")
         return (srvheadhashes, False, srvheadhashes,)
 
     if sample and util.all(yesno):

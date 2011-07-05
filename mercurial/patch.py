@@ -593,7 +593,7 @@ class patchfile(object):
                 self.exists = backend.exists(self.fname)
             self.missing = False
             if data:
-                self.lines = data.splitlines(True)
+                self.lines = mdiff.splitnewlines(data)
             if self.mode is None:
                 self.mode = mode
             if self.lines:
