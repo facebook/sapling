@@ -127,7 +127,6 @@
   $ hg push -v -r 3 -r 4 ../c
   pushing to ../c
   searching for changes
-  all remote heads known locally
   new remote heads on branch 'default'
   new remote head a5dda829a167
   new remote head ee8fbc7a0295
@@ -138,7 +137,6 @@
   $ hg push -v -f -r 3 -r 4 ../c
   pushing to ../c
   searching for changes
-  all remote heads known locally
   2 changesets found
   adding changesets
   adding manifests
