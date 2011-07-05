@@ -13,14 +13,14 @@ Setup HTTP server control:
 
   $ remote=http://localhost:$HGPORT/
   $ export remote
-  $ start() {
+  $ tstart() {
   >   echo '[web]' > $1/.hg/hgrc
   >   echo 'push_ssl = false' >> $1/.hg/hgrc
   >   echo 'allow_push = *' >> $1/.hg/hgrc
   >   hg serve -R $1 -p $HGPORT -d --pid-file=hg.pid -E errors.log
   >   cat hg.pid >> $DAEMON_PIDS
   > }
-  $ stop() {
+  $ tstop() {
   >   "$TESTDIR/killdaemons.py"
   > }
 
@@ -28,7 +28,7 @@ Both are empty:
 
   $ hg init empty1
   $ hg init empty2
-  $ start empty2
+  $ tstart empty2
   $ hg incoming -R empty1 $remote
   comparing with http://localhost:$HGPORT/
   no changes found
@@ -43,7 +43,7 @@ Both are empty:
   $ hg push -R empty1 $remote
   pushing to http://localhost:$HGPORT/
   no changes found
-  $ stop
+  $ tstop
 
 Base repo:
 
@@ -76,7 +76,7 @@ Base repo:
   o  0 d57206cc072a: r0
   
   $ cd ..
-  $ start main
+  $ tstart main
 
 Full clone:
 
@@ -187,7 +187,7 @@ Local is subset:
 
 Remote is empty:
 
-  $ stop ; start empty2
+  $ tstop ; tstart empty2
   $ cd main
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -229,7 +229,7 @@ Remote is empty:
 
 Local is superset:
 
-  $ stop
+  $ tstop
   $ hg clone main subset2 --rev name2
   adding changesets
   adding manifests
@@ -237,7 +237,7 @@ Local is superset:
   added 6 changesets with 12 changes to 2 files
   updating to branch name2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ start subset2
+  $ tstart subset2
   $ cd main
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -279,7 +279,7 @@ Local is superset:
 
 Partial pull:
 
-  $ stop ; start main
+  $ tstop ; tstart main
   $ hg clone $remote partial --rev name2
   adding changesets
   adding manifests
@@ -321,12 +321,12 @@ Partial pull:
 
 Both have new stuff in new named branches:
 
-  $ stop
+  $ tstop
   $ hg clone main repo1a --rev name1 -q
   $ hg clone repo1a repo1b -q
   $ hg clone main repo2a --rev name2 -q
   $ hg clone repo2a repo2b -q
-  $ start repo1a
+  $ tstart repo1a
 
   $ cd repo2a
   $ hg incoming $remote
@@ -369,7 +369,7 @@ Both have new stuff in new named branches:
   [1]
   $ cd ..
 
-  $ stop ; start repo1b
+  $ tstop ; tstart repo1b
   $ cd repo2b
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -413,13 +413,13 @@ Both have new stuff in new named branches:
 
 Both have new stuff in existing named branches:
 
-  $ stop
+  $ tstop
   $ rm -r repo1a repo1b repo2a repo2b
   $ hg clone main repo1a --rev 3 --rev 8 -q
   $ hg clone repo1a repo1b -q
   $ hg clone main repo2a --rev 4 --rev 7 -q
   $ hg clone repo2a repo2b -q
-  $ start repo1a
+  $ tstart repo1a
 
   $ cd repo2a
   $ hg incoming $remote
@@ -457,7 +457,7 @@ Both have new stuff in existing named branches:
   [1]
   $ cd ..
 
-  $ stop ; start repo1b
+  $ tstop ; tstart repo1b
   $ cd repo2b
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -494,5 +494,5 @@ Both have new stuff in existing named branches:
   [1]
   $ cd ..
 
-  $ stop
+  $ tstop
 

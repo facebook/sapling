@@ -68,6 +68,7 @@ testpats = [
     (r'touch -d', "don't use 'touch -d', use 'touch -t' instead"),
     (r'ls\s+[^|-]+\s+-', "options to 'ls' must come before filenames"),
     (r'[^>]>\s*\$HGRCPATH', "don't overwrite $HGRCPATH, append to it"),
+    (r'stop\(\)', "don't use 'stop' as a shell function name"),
   ],
   # warnings
   []
