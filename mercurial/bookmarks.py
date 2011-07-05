@@ -26,6 +26,9 @@ def read(repo):
     bookmarks = {}
     try:
         for line in repo.opener('bookmarks'):
+            line = line.strip()
+            if ' ' not in line:
+                continue
             sha, refspec = line.strip().split(' ', 1)
             refspec = encoding.tolocal(refspec)
             try:

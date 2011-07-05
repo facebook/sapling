@@ -342,3 +342,11 @@ create bundle with two heads
    * Z                         3:125c9a1d6df6
      x  y                      2:db815d6d32e6
 
+test wrongly formated bookmark
+
+  $ echo '' >> .hg/bookmarks
+  $ hg bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+   * Z                         3:125c9a1d6df6
+     x  y                      2:db815d6d32e6
