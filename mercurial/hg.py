@@ -98,9 +98,9 @@ def repository(ui, path='', create=False):
             hook(ui, repo)
     return repo
 
-def peer(ui, opts, path, create=False):
+def peer(uiorrepo, opts, path, create=False):
     '''return a repository peer for the specified path'''
-    rui = remoteui(ui, opts)
+    rui = remoteui(uiorrepo, opts)
     return repository(rui, path, create)
 
 def defaultdest(source):
