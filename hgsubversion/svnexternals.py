@@ -12,10 +12,12 @@ try:
 except (ImportError, AttributeError), e:
     subrepo = None
 
+passpegrev = True # see svnsubrepo below
 try:
-    from mercurial.scmutil import canonpath
-except (ImportError, AttributeError):
     from mercurial.util import canonpath
+except (ImportError, AttributeError):
+    from mercurial.scmutil import canonpath
+    passpegrev = False
 
 import util
 
@@ -410,7 +412,12 @@ if subrepo:
                 svnurl = self._ctx._repo.ui.expandpath('default')
                 svnroot = getsvninfo(util.normalize_url(svnurl))[1]
                 source = resolvesource(self._ui, svnroot, source)
-            if pegrev is not None:
+            # hg < 1.9 svnsubrepo calls "svn checkout" with --rev
+            # only, so peg revisions are correctly used. 1.9 and
+            # higher, append the rev as a peg revision to the source
+            # URL, so we cannot add our own. We assume that "-r10
+            # url@2" will be similar to "url@10" most of the time.
+            if pegrev is not None and passpegrev:
                 source = source + '@' + pegrev
             state = (source, state[1])
             # hg-1.7.4-c19b9282d3a7 introduced the overwrite argument
