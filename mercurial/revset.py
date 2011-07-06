@@ -928,6 +928,14 @@ def optimize(x, small):
     elif op == 'group':
         return optimize(x[1], small)
     elif op in 'range list parent ancestorspec':
+        if op == 'parent':
+            # x^:y means (x^) : y, not x ^ (:y)
+            post = ('parentpost', x[1])
+            if x[2][0] == 'dagrangepre':
+                return optimize(('dagrange', post, x[2][1]), small)
+            elif x[2][0] == 'rangepre':
+                return optimize(('range', post, x[2][1]), small)
+
         wa, ta = optimize(x[1], small)
         wb, tb = optimize(x[2], small)
         return wa + wb, (op, ta, tb)
