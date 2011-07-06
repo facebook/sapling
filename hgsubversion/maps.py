@@ -34,6 +34,8 @@ class AuthorMap(dict):
 
     def load(self, path):
         ''' Load mappings from a file at the specified path. '''
+
+        path = os.path.expandvars(path)
         if not os.path.exists(path):
             return
 
