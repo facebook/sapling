@@ -119,6 +119,10 @@ diffopts2 = [
     ('', 'stat', None, _('output diffstat-style summary of changes')),
 ]
 
+mergetoolopts = [
+    ('t', 'tool', '', _('specify merge tool')),
+]
+
 similarityopts = [
     ('s', 'similarity', '',
      _('guess renamed files by similarity (0<=s<=100)'), _('SIMILARITY'))
@@ -349,9 +353,8 @@ def archive(ui, repo, dest, **opts):
 @command('backout',
     [('', 'merge', None, _('merge with old dirstate parent after backout')),
     ('', 'parent', '', _('parent to choose when backing out merge'), _('REV')),
-    ('t', 'tool', '', _('specify merge tool')),
     ('r', 'rev', '', _('revision to backout'), _('REV')),
-    ] + walkopts + commitopts + commitopts2,
+    ] + mergetoolopts + walkopts + commitopts + commitopts2,
     _('[OPTION]... [-r] REV'))
 def backout(ui, repo, node=None, rev=None, **opts):
     '''reverse effect of earlier changeset
@@ -3505,10 +3508,10 @@ def manifest(ui, repo, node=None, rev=None, **opts):
 
 @command('^merge',
     [('f', 'force', None, _('force a merge with outstanding changes')),
-    ('t', 'tool', '', _('specify merge tool')),
     ('r', 'rev', '', _('revision to merge'), _('REV')),
     ('P', 'preview', None,
-     _('review revisions to merge (no merge is performed)'))],
+     _('review revisions to merge (no merge is performed)'))
+     ] + mergetoolopts,
     _('[-P] [-f] [[-r] REV]'))
 def merge(ui, repo, node=None, **opts):
     """merge working directory with another revision
@@ -4049,9 +4052,8 @@ def rename(ui, repo, *pats, **opts):
     ('l', 'list', None, _('list state of files needing merge')),
     ('m', 'mark', None, _('mark files as resolved')),
     ('u', 'unmark', None, _('mark files as unresolved')),
-    ('t', 'tool', '', _('specify merge tool')),
     ('n', 'no-status', None, _('hide status prefix'))]
-    + walkopts,
+    + mergetoolopts + walkopts,
     _('[OPTION]... [FILE]...'))
 def resolve(ui, repo, *pats, **opts):
     """redo merges or set/view the merge status of files

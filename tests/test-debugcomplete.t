@@ -196,7 +196,7 @@ Show all commands + options
   forget: include, exclude
   init: ssh, remotecmd, insecure
   log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, hidden, patch, git, limit, no-merges, stat, style, template, include, exclude
-  merge: force, tool, rev, preview
+  merge: force, rev, preview, tool
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
   push: force, rev, bookmark, branch, new-branch, ssh, remotecmd, insecure
   remove: after, force, include, exclude
@@ -206,7 +206,7 @@ Show all commands + options
   update: clean, check, date, rev
   addremove: similarity, include, exclude, dry-run
   archive: no-decode, prefix, rev, type, subrepos, include, exclude
-  backout: merge, parent, tool, rev, include, exclude, message, logfile, date, user
+  backout: merge, parent, rev, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate
   bookmarks: force, rev, delete, rename, inactive
   branch: force, clean
@@ -255,7 +255,7 @@ Show all commands + options
   paths: 
   recover: 
   rename: after, force, include, exclude, dry-run
-  resolve: all, list, mark, unmark, tool, no-status, include, exclude
+  resolve: all, list, mark, unmark, no-status, tool, include, exclude
   revert: all, date, rev, no-backup, include, exclude, dry-run
   rollback: dry-run
   root: 
