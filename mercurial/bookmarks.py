@@ -32,7 +32,7 @@ def read(repo):
                     msg = _('malformed line in .hg/bookmarks: %r\n')
                     repo.ui.warn( msg % line)
                 continue
-            sha, refspec = line.strip().split(' ', 1)
+            sha, refspec = line.split(' ', 1)
             refspec = encoding.tolocal(refspec)
             try:
                 bookmarks[refspec] = repo.changelog.lookup(sha)
