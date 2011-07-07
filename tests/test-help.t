@@ -247,7 +247,8 @@ Test short command list with verbose option
    -R --repository REPO    repository root directory or name of overlay bundle
                            file
       --cwd DIR            change working directory
-   -y --noninteractive     do not prompt, assume 'yes' for any required answers
+   -y --noninteractive     do not prompt, automatically pick the first choice
+                           for all prompts
    -q --quiet              suppress output
    -v --verbose            enable additional output
       --config CONFIG [+]  set/override config option (use 'section.name=value')
@@ -331,8 +332,8 @@ Verbose help for add
    -R --repository REPO      repository root directory or name of overlay bundle
                              file
       --cwd DIR              change working directory
-   -y --noninteractive       do not prompt, assume 'yes' for any required
-                             answers
+   -y --noninteractive       do not prompt, automatically pick the first choice
+                             for all prompts
    -q --quiet                suppress output
    -v --verbose              enable additional output
       --config CONFIG [+]    set/override config option (use
