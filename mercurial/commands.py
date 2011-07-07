@@ -31,7 +31,7 @@ globalopts = [
     ('', 'cwd', '',
      _('change working directory'), _('DIR')),
     ('y', 'noninteractive', None,
-     _('do not prompt, assume \'yes\' for any required answers')),
+     _('do not prompt, automatically pick the first choice for all prompts')),
     ('q', 'quiet', None, _('suppress output')),
     ('v', 'verbose', None, _('enable additional output')),
     ('', 'config', [],
