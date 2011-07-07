@@ -52,9 +52,10 @@ Example versioned ``.hgeol`` file::
    The rules will first apply when files are touched in the working
    copy, e.g. by updating to null and back to tip to touch all files.
 
-The extension uses an optional ``[eol]`` section in your hgrc file
-(not the ``.hgeol`` file) for settings that control the overall
-behavior. There are two settings:
+The extension uses an optional ``[eol]`` section read from both the
+normal Mercurial configuration files and the ``.hgeol`` file, with the
+latter overriding the former. You can use that section to control the
+overall behavior. There are three settings:
 
 - ``eol.native`` (default ``os.linesep``) can be set to ``LF`` or
   ``CRLF`` to override the default interpretation of ``native`` for
@@ -66,6 +67,10 @@ behavior. There are two settings:
   means that there is both ``CRLF`` and ``LF`` present in the file.
   Such files are normally not touched under the assumption that they
   have mixed EOLs on purpose.
+
+- ``eol.fix-trailing-newline`` (default False) can be set to True to
+  ensure that converted files end with a EOL character (either ``\n``
+  or ``\r\n`` as per the configured patterns).
 
 The extension provides ``cleverencode:`` and ``cleverdecode:`` filters
 like the deprecated win32text extension does. This means that you can
