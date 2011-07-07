@@ -129,7 +129,8 @@ def wrapname(name, wrapper):
 funcs = '''os.path.join os.path.split os.path.splitext
  os.path.splitunc os.path.normpath os.path.normcase os.makedirs
  mercurial.util.endswithsep mercurial.util.splitpath mercurial.util.checkcase
- mercurial.util.fspath mercurial.util.pconvert mercurial.util.normpath'''
+ mercurial.util.fspath mercurial.util.pconvert mercurial.util.normpath
+ mercurial.util.checkwinfilename mercurial.util.checkosfilename'''
 
 # codec and alias names of sjis and big5 to be faked.
 problematic_encodings = '''big5 big5-tw csbig5 big5hkscs big5-hkscs
