@@ -14,9 +14,10 @@ except (ImportError, AttributeError), e:
 
 passpegrev = True # see svnsubrepo below
 try:
-    from mercurial.util import canonpath
+    canonpath = hgutil.canonpath
 except (ImportError, AttributeError):
-    from mercurial.scmutil import canonpath
+    from mercurial import scmutil
+    canonpath = scmutil.canonpath    
     passpegrev = False
 
 import util

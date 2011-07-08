@@ -16,9 +16,10 @@ import svnrepo
 import util
 
 try:
-    from mercurial.scmutil import revpair
+    from mercurial import scmutil
+    revpair = scmutil.revpair
 except ImportError:
-    from mercurial.cmdutil import revpair
+    revpair = cmdutil.revpair
 
 pullfuns = {
     True: replay.convert_rev,
