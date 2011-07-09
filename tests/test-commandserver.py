@@ -144,6 +144,16 @@ def localhgrc(server):
     runcommand(server, ['-R', 'foo', 'showconfig'])
     shutil.rmtree('foo')
 
+def hook(**args):
+    print 'hook talking'
+    print 'now try to read something: %r' % sys.stdin.read()
+
+def hookoutput(server):
+    readchannel(server)
+    runcommand(server, ['--config',
+                        'hooks.pre-identify=python:test-commandserver.hook', 'id'],
+               input=cStringIO.StringIO('some input'))
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -158,3 +168,4 @@ if __name__ == '__main__':
     hgrc.write('[ui]\nfoo=bar\n')
     hgrc.close()
     check(localhgrc)
+    check(hookoutput)

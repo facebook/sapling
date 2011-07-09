@@ -49,3 +49,6 @@ defaults.backout=-d "0 0"
 defaults.commit=-d "0 0"
 defaults.tag=-d "0 0"
 ui.slash=True
+hook talking
+now try to read something: 'some input'
+eff892de26ec tip

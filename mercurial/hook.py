@@ -65,6 +65,12 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                                '("%s" is not callable)') %
                              (hname, funcname))
     try:
+        # redirect IO descriptors the the ui descriptors so hooks that write
+        # directly to these don't mess the command protocol when running through
+        # the command server
+        old = sys.stdout, sys.stderr, sys.stdin
+        sys.stdout, sys.stderr, sys.stdin = ui.fout, ui.ferr, ui.fin
+
         r = obj(ui=ui, repo=repo, hooktype=name, **args)
     except KeyboardInterrupt:
         raise
@@ -79,6 +85,8 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
             raise
         ui.traceback()
         return True
+    finally:
+        sys.stdout, sys.stderr, sys.stdin = old
     if r:
         if throw:
             raise util.Abort(_('%s hook failed') % hname)
