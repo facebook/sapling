@@ -8,7 +8,7 @@
 from i18n import _
 import util, error, osutil, revset, similar
 import match as matchmod
-import os, errno, stat, sys, glob
+import os, errno, re, stat, sys, glob
 
 def checkfilename(f):
     '''Check that the filename f is an acceptable filename for a tracked file'''
