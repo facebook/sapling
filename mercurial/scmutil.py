@@ -709,3 +709,95 @@ def readrequires(opener, supported):
         raise error.RequirementError(_("unknown repository format: "
             "requires features '%s' (upgrade Mercurial)") % "', '".join(missings))
     return requirements
+
+class filecacheentry(object):
+    def __init__(self, path):
+        self.path = path
+        self.cachestat = filecacheentry.stat(self.path)
+
+        if self.cachestat:
+            self._cacheable = self.cachestat.cacheable()
+        else:
+            # None means we don't know yet
+            self._cacheable = None
+
+    def refresh(self):
+        if self.cacheable():
+            self.cachestat = filecacheentry.stat(self.path)
+
+    def cacheable(self):
+        if self._cacheable is not None:
+            return self._cacheable
+
+        # we don't know yet, assume it is for now
+        return True
+
+    def changed(self):
+        # no point in going further if we can't cache it
+        if not self.cacheable():
+            return True
+
+        newstat = filecacheentry.stat(self.path)
+
+        # we may not know if it's cacheable yet, check again now
+        if newstat and self._cacheable is None:
+            self._cacheable = newstat.cacheable()
+
+            # check again
+            if not self._cacheable:
+                return True
+
+        if self.cachestat != newstat:
+            self.cachestat = newstat
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def stat(path):
+        try:
+            return util.cachestat(path)
+        except OSError, e:
+            if e.errno != errno.ENOENT:
+                raise
+
+class filecache(object):
+    '''A property like decorator that tracks a file under .hg/ for updates.
+
+    Records stat info when called in _filecache.
+
+    On subsequent calls, compares old stat info with new info, and recreates
+    the object when needed, updating the new stat info in _filecache.
+
+    Mercurial either atomic renames or appends for files under .hg,
+    so to ensure the cache is reliable we need the filesystem to be able
+    to tell us if a file has been replaced. If it can't, we fallback to
+    recreating the object on every call (essentially the same behaviour as
+    propertycache).'''
+    def __init__(self, path, instore=False):
+        self.path = path
+        self.instore = instore
+
+    def __call__(self, func):
+        self.func = func
+        self.name = func.__name__
+        return self
+
+    def __get__(self, obj, type=None):
+        entry = obj._filecache.get(self.name)
+
+        if entry:
+            if entry.changed():
+                entry.obj = self.func(obj)
+        else:
+            path = self.instore and obj.sjoin(self.path) or obj.join(self.path)
+
+            # We stat -before- creating the object so our cache doesn't lie if
+            # a writer modified between the time we read and stat
+            entry = filecacheentry(path)
+            entry.obj = self.func(obj)
+
+            obj._filecache[self.name] = entry
+
+        setattr(obj, self.name, entry.obj)
+        return entry.obj
