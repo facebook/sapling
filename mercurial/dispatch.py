@@ -633,7 +633,7 @@ def _dispatch(req):
     cmdpats = args[:]
     if cmd not in commands.norepo.split():
         # use the repo from the request only if we don't have -R
-        if not rpath:
+        if not rpath and not cwd:
             repo = req.repo
 
         if repo:
