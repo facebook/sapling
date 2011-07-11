@@ -7,7 +7,7 @@
 
 from i18n import _
 import struct
-import sys
+import sys, os
 import dispatch, encoding, util
 
 logfile = None
@@ -131,6 +131,7 @@ class server(object):
     based stream to stdout.
     """
     def __init__(self, ui, repo, mode):
+        self.cwd = os.getcwd()
         self.ui = ui
 
         logpath = ui.config("cmdserver", "log", None)
@@ -183,10 +184,14 @@ class server(object):
         self.repo.baseui = copiedui
         self.repo.ui = self.repo.dirstate._ui = self.repoui.copy()
 
-        req = dispatch.request(args, copiedui, self.repo, self.cin,
+        req = dispatch.request(args[:], copiedui, self.repo, self.cin,
                                self.cout, self.cerr)
 
         ret = dispatch.dispatch(req) or 0 # might return None
+
+        # restore old cwd
+        if '--cwd' in args:
+            os.chdir(self.cwd)
 
         self.cresult.write(struct.pack('>i', int(ret)))
 

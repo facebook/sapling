@@ -120,6 +120,15 @@ diff -r 000000000000 -r c103a3dec114 a
     runcommand(server, ['import', '-'], input=cStringIO.StringIO(patch))
     runcommand(server, ['log'])
 
+def cwd(server):
+    """ check that --cwd doesn't persist between requests """
+    readchannel(server)
+    os.mkdir('foo')
+    open('foo/bar', 'w').write('a')
+    runcommand(server, ['--cwd', 'foo', 'st', 'bar'])
+    runcommand(server, ['st', 'foo/bar'])
+    os.remove('foo/bar')
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -128,3 +137,4 @@ if __name__ == '__main__':
     check(checkruncommand)
     check(inputeof)
     check(serverinput)
+    check(cwd)
