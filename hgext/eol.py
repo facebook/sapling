@@ -69,8 +69,8 @@ overall behavior. There are three settings:
   have mixed EOLs on purpose.
 
 - ``eol.fix-trailing-newline`` (default False) can be set to True to
-  ensure that converted files end with a EOL character (either ``\n``
-  or ``\r\n`` as per the configured patterns).
+  ensure that converted files end with a EOL character (either ``\\n``
+  or ``\\r\\n`` as per the configured patterns).
 
 The extension provides ``cleverencode:`` and ``cleverdecode:`` filters
 like the deprecated win32text extension does. This means that you can
