@@ -217,7 +217,7 @@ def ancestorspec(repo, subset, x, n):
     """
     try:
         n = int(n[1])
-    except ValueError:
+    except (TypeError, ValueError):
         raise error.ParseError(_("~ expects a number"))
     ps = set()
     cl = repo.changelog
@@ -521,7 +521,7 @@ def limit(repo, subset, x):
     try:
         # i18n: "limit" is a keyword
         lim = int(getstring(l[1], _("limit requires a number")))
-    except ValueError:
+    except (TypeError, ValueError):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
     ss = set(subset)
@@ -537,7 +537,7 @@ def last(repo, subset, x):
     try:
         # i18n: "last" is a keyword
         lim = int(getstring(l[1], _("last requires a number")))
-    except ValueError:
+    except (TypeError, ValueError):
         # i18n: "last" is a keyword
         raise error.ParseError(_("last expects a number"))
     ss = set(subset)
@@ -676,7 +676,7 @@ def parentspec(repo, subset, x, n):
         n = int(n[1])
         if n not in (0, 1, 2):
             raise ValueError
-    except ValueError:
+    except (TypeError, ValueError):
         raise error.ParseError(_("^ expects a number 0, 1, or 2"))
     ps = set()
     cl = repo.changelog
@@ -718,7 +718,7 @@ def rev(repo, subset, x):
     try:
         # i18n: "rev" is a keyword
         l = int(getstring(l[0], _("rev requires a number")))
-    except ValueError:
+    except (TypeError, ValueError):
         # i18n: "rev" is a keyword
         raise error.ParseError(_("rev expects a number"))
     return [r for r in subset if r == l]
