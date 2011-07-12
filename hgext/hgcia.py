@@ -81,6 +81,8 @@ class ciamsg(object):
         n = self.ctx.node()
         f = self.cia.repo.status(self.ctx.p1().node(), n)
         url = self.url or ''
+        if url and url[-1] == '/':
+            url = url[:-1]
         elems = []
         for path in f[0]:
             uri = '%s/diff/%s/%s' % (url, short(n), path)
@@ -141,8 +143,10 @@ class ciamsg(object):
         rev = '%d:%s' % (self.ctx.rev(), n)
         log = saxutils.escape(self.logmsg())
 
-        url = self.url and '<url>%s/rev/%s</url>' % (saxutils.escape(self.url),
-                                                     n) or ''
+        url = self.url
+        if url and url[-1] == '/':
+            url = url[:-1]
+        url = url and '<url>%s/rev/%s</url>' % (saxutils.escape(url), n) or ''
 
         msg = """
 <message>
@@ -190,7 +194,8 @@ class hgcia(object):
         self.emailfrom = self.ui.config('email', 'from')
         self.dryrun = self.ui.configbool('cia', 'test')
         self.url = self.ui.config('web', 'baseurl')
-        self.stripcount = int(self.ui.config('cia', 'strip', 0))
+        # Default to -1 for backward compatibility
+        self.stripcount = int(self.ui.config('cia', 'strip', -1))
         self.root = self.strip(self.repo.root)
 
         style = self.ui.config('cia', 'style')
@@ -208,6 +213,8 @@ class hgcia(object):
 
         path = util.pconvert(path)
         count = self.stripcount
+        if count < 0:
+            return ''
         while count > 0:
             c = path.find('/')
             if c == -1:
