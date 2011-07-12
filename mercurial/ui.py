@@ -46,7 +46,7 @@ class ui(object):
     def copy(self):
         return self.__class__(self)
 
-    def _is_trusted(self, fp, f):
+    def _trusted(self, fp, f):
         st = util.fstat(fp)
         if util.isowner(st):
             return True
@@ -75,7 +75,7 @@ class ui(object):
             raise
 
         cfg = config.config()
-        trusted = sections or trust or self._is_trusted(fp, filename)
+        trusted = sections or trust or self._trusted(fp, filename)
 
         try:
             cfg.read(filename, fp, sections=sections, remap=remap)
