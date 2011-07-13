@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -288,7 +289,8 @@ static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 #endif
 
 	if (pathlen >= PATH_MAX) {
-		PyErr_SetString(PyExc_ValueError, "path too long");
+		errno = ENAMETOOLONG;
+		PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
 		goto error_value;
 	}
 	strncpy(fullpath, path, PATH_MAX);
