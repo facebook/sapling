@@ -1105,8 +1105,8 @@ def commit(ui, repo, *pats, **opts):
     ctx = repo[node]
     parents = ctx.parents()
 
-    if bheads and not [x for x in parents
-                       if x.node() in bheads and x.branch() == branch]:
+    if (bheads and node not in bheads and not
+        [x for x in parents if x.node() in bheads and x.branch() == branch]):
         ui.status(_('created new head\n'))
         # The message is not printed for initial roots. For the other
         # changesets, it is printed in the following situations:
