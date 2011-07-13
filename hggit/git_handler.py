@@ -1058,11 +1058,20 @@ class GitHandler(object):
                 else:
                     hostpath_seper = '/'
 
+                port = None
                 host, path = hostpath.split(hostpath_seper, 1)
                 if hostpath_seper == '/':
                     transportpath = '/' + path
                 else:
-                    transportpath = path
-                return transport(host, thin_packs=False), transportpath
+                    # port number should be recognized
+                    m = re.match('^(?P<port>\d+)?(?P<path>.*)$', path)
+                    if m.group('port'):
+                        client.port = m.group('port')
+                        port = client.port
+                        transportpath = m.group('path')
+                    else:
+                        transportpath = path
+
+                return transport(host, thin_packs=False, port=port), transportpath
         # if its not git or git+ssh, try a local url..
         return client.SubprocessGitClient(thin_packs=False), uri
