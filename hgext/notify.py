@@ -167,9 +167,6 @@ class notifier(object):
         return [mail.addressencode(self.ui, s, self.charsets, self.test)
                 for s in sorted(subs)]
 
-    def url(self, path=None):
-        return self.ui.config('web', 'baseurl') + (path or self.root)
-
     def node(self, ctx, **props):
         '''format one changeset, unless it is a suppressed merge.'''
         if not self.merge and len(ctx.parents()) > 1:
