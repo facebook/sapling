@@ -726,6 +726,7 @@ def runone(options, test):
                     rename(testpath + ".err", testpath)
                 else:
                     rename(testpath + ".err", testpath + ".out")
+                result('p', test)
                 return
         result('f', (test, msg))
 
