@@ -72,4 +72,57 @@ push
   @@ -0,0 +1,2 @@
   +a
   +a
+  $ hg --cwd a rollback
+  repository tip rolled back to revision -1 (undo push)
+  working directory now based on revision -1
 
+unbundle with unrelated source
+
+  $ hg --cwd b bundle ../test.hg ../a
+  searching for changes
+  2 changesets found
+  $ hg --cwd a unbundle ../test.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hg --cwd a rollback
+  repository tip rolled back to revision -1 (undo unbundle)
+  working directory now based on revision -1
+
+unbundle with correct source
+
+  $ hg --config notify.sources=unbundle --cwd a unbundle ../test.hg 2>&1 |
+  >     python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Date: * (glob)
+  Subject: * (glob)
+  From: test
+  X-Hg-Notification: changeset cb9a9f314b8b
+  Message-Id: <*> (glob)
+  To: baz, foo@bar
+  
+  changeset cb9a9f314b8b in $TESTTMP/a
+  details: $TESTTMP/a?cmd=changeset;node=cb9a9f314b8b
+  summary: a
+  
+  changeset ba677d0156c1 in $TESTTMP/a
+  details: $TESTTMP/a?cmd=changeset;node=ba677d0156c1
+  summary: b
+  
+  diffs (6 lines):
+  
+  diff -r 000000000000 -r ba677d0156c1 a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,2 @@
+  +a
+  +a
+  (run 'hg update' to get a working copy)
