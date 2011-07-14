@@ -200,8 +200,11 @@ class GitHandler(object):
             changed_refs = [ref for ref, sha in new_refs.iteritems()
                             if sha != old_refs.get(ref)]
             new = [bin(self.map_hg_get(new_refs[ref])) for ref in changed_refs]
-            old = dict( (bin(self.map_hg_get(old_refs[r])), 1)
-                       for r in old_refs)
+            old = {}
+            for r in old_refs:
+                old_ref = self.map_hg_get(old_refs[r])
+                if old_ref:
+                    old[bin(old_ref)] = 1
 
             return old, new
         except (HangupException, GitProtocolError), e:
@@ -809,7 +812,9 @@ class GitHandler(object):
         # Create a local Git branch name for each
         # Mercurial bookmark.
         for key in heads:
-            self.git.refs['refs/heads/' + key] = self.map_git_get(heads[key])
+            git_ref = self.map_git_get(heads[key])
+            if git_ref:
+                self.git.refs['refs/heads/' + key] = self.map_git_get(heads[key])
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
