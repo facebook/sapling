@@ -1195,7 +1195,7 @@ class localrepository(repo.repository):
         if working: # we need to scan the working dir
             subrepos = []
             if '.hgsub' in self.dirstate:
-                subrepos = ctx1.substate.keys()
+                subrepos = ctx2.substate.keys()
             s = self.dirstate.status(match, subrepos, listignored,
                                      listclean, listunknown)
             cmp, modified, added, removed, deleted, unknown, ignored, clean = s
