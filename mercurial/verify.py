@@ -176,8 +176,6 @@ def _verify(repo):
 
         for f in sorted(filelinkrevs):
             count += 1
-            if m == nullid:
-                continue
             ui.progress(_('crosschecking'), count, total=total)
             if f not in filenodes:
                 lr = filelinkrevs[f][0]
