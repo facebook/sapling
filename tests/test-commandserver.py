@@ -1,4 +1,4 @@
-import sys, os, struct, subprocess, cStringIO, re
+import sys, os, struct, subprocess, cStringIO, re, shutil
 
 def connect(path=None):
     cmdline = ['hg', 'serve', '--cmdserver', 'pipe']
@@ -131,6 +131,19 @@ def cwd(server):
     runcommand(server, ['st', 'foo/bar'])
     os.remove('foo/bar')
 
+def localhgrc(server):
+    """ check that local configs for the cached repo aren't inherited when -R
+    is used """
+    readchannel(server)
+
+    # the cached repo local hgrc contains ui.foo=bar, so showconfig should show it
+    runcommand(server, ['showconfig'])
+
+    # but not for this repo
+    runcommand(server, ['init', 'foo'])
+    runcommand(server, ['-R', 'foo', 'showconfig'])
+    shutil.rmtree('foo')
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -140,3 +153,8 @@ if __name__ == '__main__':
     check(inputeof)
     check(serverinput)
     check(cwd)
+
+    hgrc = open('.hg/hgrc', 'a')
+    hgrc.write('[ui]\nfoo=bar\n')
+    hgrc.close()
+    check(localhgrc)
