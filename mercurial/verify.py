@@ -168,6 +168,8 @@ def _verify(repo):
         for c, m in sorted([(c, m) for m in mflinkrevs
                             for c in mflinkrevs[m]]):
             count += 1
+            if m == nullid:
+                continue
             ui.progress(_('crosschecking'), count, total=total)
             err(c, _("changeset refers to unknown manifest %s") % short(m))
         mflinkrevs = None # del is bad here due to scope issues
