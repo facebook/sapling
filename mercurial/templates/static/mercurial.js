@@ -160,13 +160,31 @@ process_dates = (function(document, RegExp, Math, isNaN, Date, _false, _true){
 		if (count > 1){
 			ret = ret + 's';
 		}
+ 		return ret;
+ 	}
+
+	function shortdate(date){
+		var ret = date.getFullYear() + '-';
+		// getMonth() gives a 0-11 result
+		var month = date.getMonth() + 1;
+		if (month <= 9){
+			ret += '0' + month;
+		} else {
+			ret += month;
+		}
+		ret += '-';
+		var day = date.getDate();
+		if (day <= 9){
+			ret += '0' + day;
+		} else {
+			ret += day;
+		}
 		return ret;
 	}
 
-	function age(datestr){
-		var now = new Date();
-		var once = new Date(datestr);
-
+ 	function age(datestr){
+ 		var now = new Date();
+ 		var once = new Date(datestr);
 		if (isNaN(once.getTime())){
 			// parsing error
 			return datestr;
@@ -184,7 +202,7 @@ process_dates = (function(document, RegExp, Math, isNaN, Date, _false, _true){
 		}
 
 		if (delta > (2 * scales.year)){
-			return once.getFullYear() + '-' + once.getMonth() + '-' + once.getDate();
+			return shortdate(once);
 		}
 
 		for (unit in scales){
