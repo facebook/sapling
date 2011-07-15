@@ -14,7 +14,7 @@ For more information:
 http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
-from mercurial import hg, util, repair, merge, cmdutil, commands
+from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
 from mercurial import extensions, copies, patch
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
@@ -181,6 +181,9 @@ def rebase(ui, repo, **opts):
             targetancestors = set(repo.changelog.ancestors(target))
             targetancestors.add(target)
 
+        # Keep track of the current bookmarks in order to reset them later
+        currentbookmarks = repo._bookmarks.copy()
+
         sortedstate = sorted(state)
         total = len(sortedstate)
         pos = 0
@@ -241,6 +244,13 @@ def rebase(ui, repo, **opts):
         if 'qtip' in repo.tags():
             updatemq(repo, state, skipped, **opts)
 
+        if currentbookmarks:
+            # Nodeids are needed to reset bookmarks
+            nstate = {}
+            for k, v in state.iteritems():
+                if v != nullmerge:
+                    nstate[repo[k].node()] = repo[v].node()
+
         if not keepf:
             # Remove no more useful revisions
             rebased = [rev for rev in state if state[rev] != nullmerge]
@@ -251,6 +261,9 @@ def rebase(ui, repo, **opts):
                 else:
                     # backup the old csets by default
                     repair.strip(ui, repo, repo[min(rebased)].node(), "all")
+
+        if currentbookmarks:
+            updatebookmarks(repo, nstate, currentbookmarks, **opts)
 
         clearstatus(repo)
         ui.note(_("rebase completed\n"))
@@ -400,6 +413,18 @@ def updatemq(repo, state, skipped, **opts):
         mq.fullseries = original_series
         mq.series_dirty = True
         mq.savedirty()
+
+def updatebookmarks(repo, nstate, originalbookmarks, **opts):
+    'Move bookmarks to their correct changesets'
+    current = repo._bookmarkcurrent
+    for k, v in originalbookmarks.iteritems():
+        if v in nstate:
+            if nstate[v] != nullmerge:
+                # reset the pointer if the bookmark was moved incorrectly
+                if k != current:
+                    repo._bookmarks[k] = nstate[v]
+
+    bookmarks.write(repo)
 
 def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
                                                                 external):
