@@ -482,7 +482,6 @@ def _getlocal(ui, rpath):
     return path, lui
 
 def _checkshellalias(ui, args):
-    cwd = os.getcwd()
     norepo = commands.norepo
     options = {}
 
@@ -494,10 +493,6 @@ def _checkshellalias(ui, args):
     if not args:
         return
 
-    _parseconfig(ui, options['config'])
-    if options['cwd']:
-        os.chdir(options['cwd'])
-
     path, lui = _getlocal(ui, [options['repository']])
 
     cmdtable = commands.table.copy()
@@ -508,7 +503,6 @@ def _checkshellalias(ui, args):
         aliases, entry = cmdutil.findcmd(cmd, cmdtable, lui.config("ui", "strict"))
     except (error.AmbiguousCommand, error.UnknownCommand):
         commands.norepo = norepo
-        os.chdir(cwd)
         return
 
     cmd = aliases[0]
@@ -519,7 +513,6 @@ def _checkshellalias(ui, args):
         return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d, [], {})
 
     commands.norepo = norepo
-    os.chdir(cwd)
 
 _loaded = set()
 def _dispatch(req):
