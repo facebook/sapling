@@ -785,7 +785,8 @@ class GitHandler(object):
                         raise hgutil.Abort("ambiguous reference %s: %r" % (h, r))
             else:
                 want = [sha for ref, sha in refs.iteritems()
-                        if not ref.endswith('^{}')]
+                        if not ref.endswith('^{}')
+                        and ( ref.startswith('refs/heads/') or ref.startswith('refs/tags/') ) ]
             want = [x for x in want if x not in self.git]
             return want
         f, commit = self.git.object_store.add_pack()
