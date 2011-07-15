@@ -124,7 +124,9 @@ def cwd(server):
     """ check that --cwd doesn't persist between requests """
     readchannel(server)
     os.mkdir('foo')
-    open('foo/bar', 'w').write('a')
+    f = open('foo/bar', 'w')
+    f.write('a')
+    f.close()
     runcommand(server, ['--cwd', 'foo', 'st', 'bar'])
     runcommand(server, ['st', 'foo/bar'])
     os.remove('foo/bar')
