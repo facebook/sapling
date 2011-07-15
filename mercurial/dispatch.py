@@ -481,7 +481,7 @@ def _getlocal(ui, rpath):
 
     return path, lui
 
-def _checkshellalias(ui, args):
+def _checkshellalias(lui, ui, args):
     norepo = commands.norepo
     options = {}
 
@@ -492,8 +492,6 @@ def _checkshellalias(ui, args):
 
     if not args:
         return
-
-    path, lui = _getlocal(ui, [options['repository']])
 
     cmdtable = commands.table.copy()
     addaliases(lui, cmdtable)
@@ -533,7 +531,7 @@ def _dispatch(req):
 
     # Now that we're operating in the right directory/repository with
     # the right config settings, check for shell aliases
-    shellaliasfn = _checkshellalias(ui, args)
+    shellaliasfn = _checkshellalias(lui, ui, args)
     if shellaliasfn:
         return shellaliasfn()
 
