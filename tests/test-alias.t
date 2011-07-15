@@ -251,7 +251,7 @@ shell aliases with global options
   $ hg --cwd .. count 'branch(default)'
   2
   $ hg echo --cwd ..
-  --cwd ..
+  
 
 
 repo specific shell aliases
@@ -274,8 +274,6 @@ shell alias defined in current repo
   hg: unknown command 'subalias'
   [255]
   $ hg -R .. subalias > /dev/null
-  hg: unknown command 'subalias'
-  [255]
 
 
 shell alias defined in other repo
@@ -284,6 +282,7 @@ shell alias defined in other repo
   hg: unknown command 'mainalias'
   [255]
   $ hg -R .. mainalias
+  warning: --repository ignored
   main
   $ hg --cwd .. mainalias
   main

@@ -526,10 +526,6 @@ def _dispatch(req):
     args = req.args
     ui = req.ui
 
-    shellaliasfn = _checkshellalias(ui, args)
-    if shellaliasfn:
-        return shellaliasfn()
-
     # read --config before doing anything else
     # (e.g. to change trust settings for reading .hg/hgrc)
     cfgs = _parseconfig(ui, _earlygetopt(['--config'], args))
@@ -541,6 +537,12 @@ def _dispatch(req):
 
     rpath = _earlygetopt(["-R", "--repository", "--repo"], args)
     path, lui = _getlocal(ui, rpath)
+
+    # Now that we're operating in the right directory/repository with
+    # the right config settings, check for shell aliases
+    shellaliasfn = _checkshellalias(ui, args)
+    if shellaliasfn:
+        return shellaliasfn()
 
     # Configure extensions in phases: uisetup, extsetup, cmdtable, and
     # reposetup. Programs like TortoiseHg will call _dispatch several
