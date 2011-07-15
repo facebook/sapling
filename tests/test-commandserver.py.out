@@ -38,3 +38,14 @@ summary:     1
 
 ? bar
 ? foo/bar
+bundle.mainreporoot=$TESTTMP
+defaults.backout=-d "0 0"
+defaults.commit=-d "0 0"
+defaults.tag=-d "0 0"
+ui.slash=True
+ui.foo=bar
+bundle.mainreporoot=$TESTTMP/foo
+defaults.backout=-d "0 0"
+defaults.commit=-d "0 0"
+defaults.tag=-d "0 0"
+ui.slash=True
