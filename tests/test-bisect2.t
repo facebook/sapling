@@ -431,3 +431,22 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   date:        Thu Jan 01 00:00:09 1970 +0000
   summary:     9
   
+
+user adds irrelevant but consistent information (here: -g 2) to bisect state
+
+  $ hg bisect -r
+  $ hg bisect -b 13
+  $ hg bisect -g 8
+  Testing changeset 11:82ca6f06eccd (3 changesets remaining, ~1 tests)
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg bisect -g 2
+  Testing changeset 11:82ca6f06eccd (3 changesets remaining, ~1 tests)
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg bisect -b
+  The first bad revision is:
+  changeset:   11:82ca6f06eccd
+  parent:      8:dab8161ac8fc
+  user:        test
+  date:        Thu Jan 01 00:00:11 1970 +0000
+  summary:     11
+  
