@@ -223,6 +223,10 @@ alias, as was done above for the purge alias. In addition,
 ``$HG_ARGS`` expand to the arguments given to Mercurial. In the ``hg
 echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
 
+.. note:: Some global configuration options such as ``-R`` are
+   processed before shell aliases and will thus not be passed to
+   aliases.
+
 ``auth``
 """"""""
 
