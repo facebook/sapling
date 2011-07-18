@@ -175,6 +175,14 @@ def rebase(ui, repo, **opts):
             assert not extrafn, 'cannot use both keepbranches and extrafn'
             def extrafn(ctx, extra):
                 extra['branch'] = ctx.branch()
+            if collapsef:
+                branches = set()
+                for rev in state:
+                    branches.add(repo[rev].branch())
+                    if len(branches) > 1:
+                        raise util.Abort(_('cannot collapse multiple named ' 
+                            'branches'))
+
 
         # Rebase
         if not targetancestors:

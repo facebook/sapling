@@ -442,3 +442,41 @@ Rebase and collapse - B onto F:
   D
   F
 
+Interactions between collapse and keepbranches
+  $ cd ..
+  $ hg init e
+  $ cd e
+  $ echo 'a' > a
+  $ hg ci -Am 'A'
+  adding a
+
+  $ hg branch '1'
+  marked working directory as branch 1
+  $ echo 'b' > b
+  $ hg ci -Am 'B'
+  adding b
+
+  $ hg branch '2'
+  marked working directory as branch 2
+  $ echo 'c' > c
+  $ hg ci -Am 'C'
+  adding c
+
+  $ hg up -q 0
+  $ echo 'd' > d
+  $ hg ci -Am 'D'
+  adding d
+
+  $ hg tglog
+  @  3: 'D'
+  |
+  | o  2: 'C' 2
+  | |
+  | o  1: 'B' 1
+  |/
+  o  0: 'A'
+  
+  $ hg rebase --keepbranches --collapse -s 1 -d 3
+  abort: cannot collapse multiple named branches
+  [255]
+
