@@ -4720,6 +4720,7 @@ def summary(ui, repo, **opts):
     ctx = repo[None]
     parents = ctx.parents()
     pnode = parents[0].node()
+    marks = []
 
     for p in parents:
         # label with log.changeset (instead of log.parent) since this
@@ -4728,7 +4729,7 @@ def summary(ui, repo, **opts):
                  label='log.changeset')
         ui.write(' '.join(p.tags()), label='log.tag')
         if p.bookmarks():
-            ui.write(' ' + ' '.join(p.bookmarks()), label='log.bookmark')
+            marks.extend(p.bookmarks())
         if p.rev() == -1:
             if not len(repo):
                 ui.write(_(' (empty repository)'))
@@ -4746,6 +4747,17 @@ def summary(ui, repo, **opts):
         ui.write(m, label='log.branch')
     else:
         ui.status(m, label='log.branch')
+
+    if marks:
+        current = repo._bookmarkcurrent
+        if current is not None:
+            try:
+                marks.remove(current)
+                marks = ['*' + current] + marks
+            except ValueError:
+                # current bookmark not in parent ctx marks
+                pass
+        ui.write(_('bookmarks: %s\n') % ' '.join(marks), label='log.bookmark')
 
     st = list(repo.status(unknown=True))[:6]
 
