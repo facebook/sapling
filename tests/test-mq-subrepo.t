@@ -348,3 +348,14 @@ handle subrepos safely on qrecord
   % debugsub should be empty
 
   $ cd ..
+
+
+correctly handle subrepos with patch queues
+  $ mkrepo repo-subrepo-with-queue
+  $ mksubrepo sub
+  adding a
+  $ hg -R sub qnew sub0.diff
+  $ echo sub = sub >> .hgsub
+  $ hg add .hgsub
+  $ hg qnew 0.diff
+  committing subrepository sub
