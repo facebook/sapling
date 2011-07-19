@@ -135,6 +135,7 @@ class GitHandler(object):
 
     def import_commits(self, remote_name):
         self.import_git_objects(remote_name)
+        self.update_hg_bookmarks(self.git.get_refs())
         self.save_map()
 
     def fetch(self, remote, heads):

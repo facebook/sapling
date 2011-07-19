@@ -66,4 +66,5 @@ commit -m 'add beta'
 echo % get things back to hg
 hg gimport
 hg log --graph --debug | grep -v ': *master'
+echo % gimport should have updated the bookmarks as well
 hg bookmarks
