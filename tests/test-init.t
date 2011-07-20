@@ -19,8 +19,8 @@ creating 'local'
   store created
   00changelog.i created
   revlogv1
-  store
   fncache
+  store
   dotencode
   $ echo this > local/foo
   $ hg ci --cwd local -A -m "init"
@@ -48,8 +48,8 @@ creating repo with format.dotencode=false
   store created
   00changelog.i created
   revlogv1
-  store
   fncache
+  store
 
 test failure
 
@@ -145,8 +145,8 @@ creating 'local/sub/repo'
   store created
   00changelog.i created
   revlogv1
-  store
   fncache
+  store
   dotencode
 
 prepare test of init of url configured from paths
@@ -162,8 +162,8 @@ init should (for consistency with clone) expand the url
   store created
   00changelog.i created
   revlogv1
-  store
   fncache
+  store
   dotencode
 
 verify that clone also expand urls
@@ -175,8 +175,8 @@ verify that clone also expand urls
   store created
   00changelog.i created
   revlogv1
-  store
   fncache
+  store
   dotencode
 
 clone bookmarks

@@ -63,6 +63,7 @@ class localrepository(repo.repository):
                     )
                 if self.ui.configbool('format', 'generaldelta', False):
                     requirements.append("generaldelta")
+                requirements = set(requirements)
             else:
                 raise error.RepoError(_("repository %s not found") % path)
         elif create:
