@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import parser, util, error, discovery, hbisect
+import parser, util, error, discovery, hbisect, node
 import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _
@@ -1025,6 +1025,63 @@ def match(ui, spec):
     def mfunc(repo, subset):
         return getset(repo, subset, tree)
     return mfunc
+
+def formatspec(expr, *args):
+    '''
+    This is a convenience function for using revsets internally, and
+    escapes arguments appropriately. Aliases are intentionally ignored
+    so that intended expression behavior isn't accidentally subverted.
+
+    Supported arguments:
+
+    %d = int(arg), no quoting
+    %s = string(arg), escaped and single-quoted
+    %b = arg.branch(), escaped and single-quoted
+    %n = hex(arg), single-quoted
+    %% = a literal '%'
+
+    >>> formatspec('%d:: and not %d::', 10, 20)
+    '10:: and not 20::'
+    >>> formatspec('keyword(%s)', 'foo\\xe9')
+    "keyword('foo\\\\xe9')"
+    >>> b = lambda: 'default'
+    >>> b.branch = b
+    >>> formatspec('branch(%b)', b)
+    "branch('default')"
+    '''
+
+    def quote(s):
+        return repr(str(s))
+
+    ret = ''
+    pos = 0
+    arg = 0
+    while pos < len(expr):
+        c = expr[pos]
+        if c == '%':
+            pos += 1
+            d = expr[pos]
+            if d == '%':
+                ret += d
+            elif d == 'd':
+                ret += str(int(args[arg]))
+                arg += 1
+            elif d == 's':
+                ret += quote(args[arg])
+                arg += 1
+            elif d == 'n':
+                ret += quote(node.hex(args[arg]))
+                arg += 1
+            elif d == 'b':
+                ret += quote(args[arg].branch())
+                arg += 1
+            else:
+                raise util.Abort('unexpected revspec format character %s' % d)
+        else:
+            ret += c
+        pos += 1
+
+    return ret
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()

@@ -33,3 +33,6 @@ doctest.testmod(mercurial.hgweb.hgwebdir_mod)
 
 import hgext.convert.cvsps
 doctest.testmod(hgext.convert.cvsps)
+
+import mercurial.revset
+doctest.testmod(mercurial.revset)
