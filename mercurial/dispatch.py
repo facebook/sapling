@@ -658,7 +658,7 @@ def _dispatch(req):
                             req.args = ['--repository', guess] + fullargs
                             return _dispatch(req)
                     if not path:
-                        raise error.RepoError(_("no repository found in %r"
+                        raise error.RepoError(_("no repository found in '%s'"
                                                 " (.hg not found)") % os.getcwd())
                     raise
         if repo:
