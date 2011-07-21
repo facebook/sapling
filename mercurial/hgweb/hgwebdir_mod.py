@@ -348,6 +348,7 @@ class hgwebdir(object):
         start = url[-1] == '?' and '&' or '?'
         sessionvars = webutil.sessionvars(vars, start)
         logourl = config('web', 'logourl', 'http://mercurial.selenic.com/')
+        logoimg = config('web', 'logoimg', 'hglogo.png')
         staticurl = config('web', 'staticurl') or url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
@@ -358,6 +359,7 @@ class hgwebdir(object):
                                              "motd": motd,
                                              "url": url,
                                              "logourl": logourl,
+                                             "logoimg": logoimg,
                                              "staticurl": staticurl,
                                              "sessionvars": sessionvars})
         return tmpl

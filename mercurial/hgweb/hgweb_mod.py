@@ -235,6 +235,7 @@ class hgweb(object):
         port = port != default_port and (":" + port) or ""
         urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
         logourl = self.config("web", "logourl", "http://mercurial.selenic.com/")
+        logoimg = self.config("web", "logoimg", "hglogo.png")
         staticurl = self.config("web", "staticurl") or req.url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
@@ -275,6 +276,7 @@ class hgweb(object):
         tmpl = templater.templater(mapfile,
                                    defaults={"url": req.url,
                                              "logourl": logourl,
+                                             "logoimg": logoimg,
                                              "staticurl": staticurl,
                                              "urlbase": urlbase,
                                              "repo": self.reponame,
