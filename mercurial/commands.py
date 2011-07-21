@@ -4750,14 +4750,17 @@ def summary(ui, repo, **opts):
 
     if marks:
         current = repo._bookmarkcurrent
+        ui.write(_('bookmarks:'), label='log.bookmark')
         if current is not None:
             try:
                 marks.remove(current)
-                marks = ['*' + current] + marks
+                ui.write(' *' + current, label='bookmarks.current')
             except ValueError:
                 # current bookmark not in parent ctx marks
                 pass
-        ui.write(_('bookmarks: %s\n') % ' '.join(marks), label='log.bookmark')
+        for m in marks:
+          ui.write(' ' + m, label='log.bookmark')
+        ui.write('\n', label='log.bookmark')
 
     st = list(repo.status(unknown=True))[:6]
 
