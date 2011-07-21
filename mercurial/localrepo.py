@@ -10,7 +10,7 @@ from i18n import _
 import repo, changegroup, subrepo, discovery, pushkey
 import changelog, dirstate, filelog, manifest, context, bookmarks
 import lock, transaction, store, encoding
-import scmutil, util, extensions, hook, error
+import scmutil, util, extensions, hook, error, revset
 import match as matchmod
 import merge as mergemod
 import tags as tagsmod
@@ -216,6 +216,17 @@ class localrepository(repo.repository):
     def __iter__(self):
         for i in xrange(len(self)):
             yield i
+
+    def set(self, expr, *args):
+        '''
+        Yield a context for each matching revision, after doing arg
+        replacement via formatrevspec
+        '''
+
+        expr = revset.formatspec(expr, *args)
+        m = revset.match(None, expr)
+        for r in m(self, range(len(self))):
+            yield self[r]
 
     def url(self):
         return 'file:' + self.root
