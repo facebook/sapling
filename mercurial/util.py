@@ -19,6 +19,11 @@ import errno, re, shutil, sys, tempfile, traceback
 import os, time, calendar, textwrap, unicodedata, signal
 import imp, socket, urllib
 
+if os.name == 'nt':
+    from windows import *
+else:
+    from posix import *
+
 # Python compatibility
 
 def sha1(s):
@@ -477,9 +482,6 @@ def checkwinfilename(path):
 
 if os.name == 'nt':
     checkosfilename = checkwinfilename
-    from windows import *
-else:
-    from posix import *
 
 def makelock(info, pathname):
     try:
