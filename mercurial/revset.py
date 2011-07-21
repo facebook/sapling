@@ -1019,7 +1019,8 @@ def match(ui, spec):
     tree, pos = parse(spec)
     if (pos != len(spec)):
         raise error.ParseError(_("invalid token"), pos)
-    tree = findaliases(ui, tree)
+    if ui:
+        tree = findaliases(ui, tree)
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset):
         return getset(repo, subset, tree)
