@@ -340,3 +340,11 @@ def unlinkpath(f):
 
 def lookupreg(key, name=None, scope=None):
     return None
+
+def hidewindow():
+    """Hide current shell window.
+
+    Used to hide the window opened when starting asynchronous
+    child process under Windows, unneeded on other systems.
+    """
+    pass

@@ -475,14 +475,6 @@ def checkwinfilename(path):
             return _("filename ends with '%s', which is not allowed "
                      "on Windows") % t
 
-def hidewindow():
-    """Hide current shell window.
-
-    Used to hide the window opened when starting asynchronous
-    child process under Windows, unneeded on other systems.
-    """
-    pass
-
 if os.name == 'nt':
     checkosfilename = checkwinfilename
     from windows import *
