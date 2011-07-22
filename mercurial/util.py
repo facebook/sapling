@@ -1353,6 +1353,8 @@ class url(object):
     <url scheme: 'ssh', host: '[::1]', port: '2200', path: '/home/joe/repo'>
     >>> url('file:///home/joe/repo')
     <url scheme: 'file', path: '/home/joe/repo'>
+    >>> url('file:///c:/temp/foo/')
+    <url scheme: 'file', path: 'c:/temp/foo/'>
     >>> url('bundle:foo')
     <url scheme: 'bundle', path: 'foo'>
     >>> url('bundle://../foo')
@@ -1442,7 +1444,7 @@ class url(object):
                     path = None
                 if not self.host:
                     self.host = None
-                    if path:
+                    if path and not hasdriveletter(path):
                         path = '/' + path
 
             if self.host and '@' in self.host:
