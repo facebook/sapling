@@ -325,3 +325,6 @@ def termwidth():
     except ImportError:
         pass
     return 80
+
+def makedir(path, notindexed):
+    os.mkdir(path)
