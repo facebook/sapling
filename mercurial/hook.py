@@ -65,26 +65,27 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                                '("%s" is not callable)') %
                              (hname, funcname))
     try:
-        # redirect IO descriptors the the ui descriptors so hooks that write
-        # directly to these don't mess the command protocol when running through
-        # the command server
-        old = sys.stdout, sys.stderr, sys.stdin
-        sys.stdout, sys.stderr, sys.stdin = ui.fout, ui.ferr, ui.fin
+        try:
+            # redirect IO descriptors the the ui descriptors so hooks
+            # that write directly to these don't mess up the command
+            # protocol when running through the command server
+            old = sys.stdout, sys.stderr, sys.stdin
+            sys.stdout, sys.stderr, sys.stdin = ui.fout, ui.ferr, ui.fin
 
-        r = obj(ui=ui, repo=repo, hooktype=name, **args)
-    except KeyboardInterrupt:
-        raise
-    except Exception, exc:
-        if isinstance(exc, util.Abort):
-            ui.warn(_('error: %s hook failed: %s\n') %
-                         (hname, exc.args[0]))
-        else:
-            ui.warn(_('error: %s hook raised an exception: '
-                           '%s\n') % (hname, exc))
-        if throw:
+            r = obj(ui=ui, repo=repo, hooktype=name, **args)
+        except KeyboardInterrupt:
             raise
-        ui.traceback()
-        return True
+        except Exception, exc:
+            if isinstance(exc, util.Abort):
+                ui.warn(_('error: %s hook failed: %s\n') %
+                             (hname, exc.args[0]))
+            else:
+                ui.warn(_('error: %s hook raised an exception: '
+                               '%s\n') % (hname, exc))
+            if throw:
+                raise
+            ui.traceback()
+            return True
     finally:
         sys.stdout, sys.stderr, sys.stdin = old
     if r:
