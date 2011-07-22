@@ -12140,8 +12140,8 @@ msgid "repository '%s' is not local"
 msgstr "o repositório '%s' não é local"
 
 #, python-format
-msgid "no repository found in %r (.hg not found)"
-msgstr "não foi encontrado um repositório em %r (.hg não encontrado)"
+msgid "no repository found in '%s' (.hg not found)"
+msgstr "não foi encontrado um repositório em '%s' (.hg não encontrado)"
 
 msgid "warning: --repository ignored\n"
 msgstr "aviso: opção --repository ignorada\n"
