@@ -180,7 +180,7 @@ def rebase(ui, repo, **opts):
                 for rev in state:
                     branches.add(repo[rev].branch())
                     if len(branches) > 1:
-                        raise util.Abort(_('cannot collapse multiple named ' 
+                        raise util.Abort(_('cannot collapse multiple named '
                             'branches'))
 
 
