@@ -6539,6 +6539,9 @@ msgstr "não se pode especificar base com detach"
 msgid "nothing to rebase\n"
 msgstr "nada para rebasear\n"
 
+msgid "cannot collapse multiple named branches"
+msgstr "não é possível colapsar múltiplos ramos nomeados"
+
 msgid "rebasing"
 msgstr "rebaseando"
 
@@ -7648,7 +7651,7 @@ msgstr "processo filho falhou ao iniciar"
 
 #, python-format
 msgid "changeset:   %d:%s\n"
-msgstr "revisão:   %d:%s\n"
+msgstr "revisão:     %d:%s\n"
 
 #, python-format
 msgid "branch:      %s\n"
@@ -7782,8 +7785,8 @@ msgstr "DIR"
 msgid "change working directory"
 msgstr "muda o diretório de trabalho"
 
-msgid "do not prompt, assume 'yes' for any required answers"
-msgstr "não solicita entrada, assume 'sim' para qualquer resposta necessária"
+msgid "do not prompt, automatically pick the first choice for all prompts"
+msgstr "não consulta o usuário, usa automaticamente a primeira opção em todas as escolhas"
 
 msgid "suppress output"
 msgstr "suprime saída"
@@ -11002,15 +11005,18 @@ msgstr ""
 
 msgid ""
 "    With no revision specified, revert the specified files or directories\n"
-"    to the state they had in the first parent of the working directory.\n"
+"    to the contents they had in the parent of the working directory.\n"
 "    This restores the contents of files to an unmodified\n"
-"    state and unschedules adds, removes, copies, and renames."
+"    state and unschedules adds, removes, copies, and renames. If the\n"
+"    working directory has two parents, you must explicitly specify a\n"
+"    revision."
 msgstr ""
 "    Se não for pedida uma revisão, reverte os arquivos ou diretórios\n"
-"    pedidos para o estado que eles possuíam no primeiro pai do diretório de\n"
+"    pedidos para o conteúdo que eles possuíam no primeiro pai do diretório de\n"
 "    trabalho. Isto restaura o conteúdo do arquivos afetados para um\n"
 "    estado inalterado e reverte operações de adição, remoção, cópia e\n"
-"    renomeação."
+"    renomeação. Se o diretório de trabalho tiver dois pais, você deve\n"
+"    especificar uma revisão explicitamente."
 
 msgid ""
 "    Using the -r/--rev or -d/--date options, revert the given files or\n"
@@ -11036,6 +11042,12 @@ msgstr ""
 
 msgid "you can't specify a revision and a date"
 msgstr "você não pode especificar uma revisão e uma data"
+
+msgid "uncommitted merge with no revision specified"
+msgstr "mesclagem não consolidada, e não foi especificada uma revisão"
+
+msgid "use \"hg update\" or see \"hg help revert\""
+msgstr "use \"hg update\" ou veja \"hg help revert\""
 
 msgid "no files or directories specified"
 msgstr "nenhum arquivo ou diretório especificados"
