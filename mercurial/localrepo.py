@@ -220,7 +220,7 @@ class localrepository(repo.repository):
     def set(self, expr, *args):
         '''
         Yield a context for each matching revision, after doing arg
-        replacement via formatrevspec
+        replacement via revset.formatspec
         '''
 
         expr = revset.formatspec(expr, *args)
