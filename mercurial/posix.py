@@ -328,3 +328,13 @@ def termwidth():
 
 def makedir(path, notindexed):
     os.mkdir(path)
+
+def unlinkpath(f):
+    """unlink and remove the directory if it is empty"""
+    os.unlink(f)
+    # try removing directories that might now be empty
+    try:
+        os.removedirs(os.path.dirname(f))
+    except OSError:
+        pass
+
