@@ -475,9 +475,6 @@ def checkwinfilename(path):
             return _("filename ends with '%s', which is not allowed "
                      "on Windows") % t
 
-def lookupreg(key, name=None, scope=None):
-    return None
-
 def hidewindow():
     """Hide current shell window.
 

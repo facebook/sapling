@@ -338,3 +338,5 @@ def unlinkpath(f):
     except OSError:
         pass
 
+def lookupreg(key, name=None, scope=None):
+    return None
