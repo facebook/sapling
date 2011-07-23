@@ -166,6 +166,8 @@ class ui(object):
     def configpath(self, section, name, default=None, untrusted=False):
         'get a path config item, expanded relative to config file'
         v = self.config(section, name, default, untrusted)
+        if v is None:
+            return None
         if not os.path.isabs(v) or "://" not in v:
             src = self.configsource(section, name, untrusted)
             if ':' in src:
