@@ -169,7 +169,7 @@ class ui(object):
         if not os.path.isabs(v) or "://" not in v:
             src = self.configsource(section, name, untrusted)
             if ':' in src:
-                base = os.path.dirname(src.rsplit(':'))
+                base = os.path.dirname(src.rsplit(':')[0])
                 v = os.path.join(base, os.path.expanduser(v))
         return v
 
