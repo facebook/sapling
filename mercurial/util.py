@@ -374,6 +374,8 @@ def hgexecutable():
             _sethgexecutable(hg)
         elif mainfrozen():
             _sethgexecutable(sys.executable)
+        elif getattr(sys.modules['__main__'], '__file__', '').endswith('hg'):
+            _sethgexecutable(sys.modules['__main__'].__file__)
         else:
             exe = findexe('hg') or os.path.basename(sys.argv[0])
             _sethgexecutable(exe)
