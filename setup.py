@@ -221,9 +221,13 @@ class hgbuildmo(build):
 # when build_py is run next.
 build.sub_commands.insert(0, ('build_mo', None))
 
-Distribution.pure = 0
-Distribution.global_options.append(('pure', None, "use pure (slow) Python "
-                                    "code instead of C extensions"))
+class hgdist(Distribution):
+    pure = 0
+
+    global_options = Distribution.global_options + \
+                     [('pure', None, "use pure (slow) Python "
+                        "code instead of C extensions"),
+                     ]
 
 class hgbuildext(build_ext):
 
@@ -435,6 +439,7 @@ setup(name='mercurial',
       data_files=datafiles,
       package_data=packagedata,
       cmdclass=cmdclass,
+      distclass=hgdist,
       options=dict(py2exe=dict(packages=['hgext', 'email']),
                    bdist_mpkg=dict(zipdist=True,
                                    license='COPYING',
