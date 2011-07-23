@@ -281,6 +281,9 @@ def groupmembers(name):
     # Don't support groups on Windows for now
     raise KeyError()
 
+def isexec(f):
+    return False
+
 from win32 import *
 
 expandglobs = True

@@ -20,9 +20,54 @@ import os, time, calendar, textwrap, unicodedata, signal
 import imp, socket, urllib
 
 if os.name == 'nt':
-    from windows import *
+    import windows as platform
 else:
-    from posix import *
+    import posix as platform
+
+checkexec = platform.checkexec
+checklink = platform.checklink
+executablepath = platform.executablepath
+expandglobs = platform.expandglobs
+explainexit = platform.explainexit
+findexe = platform.findexe
+gethgcmd = platform.gethgcmd
+getuser = platform.getuser
+groupmembers = platform.groupmembers
+groupname = platform.groupname
+hidewindow = platform.hidewindow
+isexec = platform.isexec
+isowner = platform.isowner
+localpath = platform.localpath
+lookupreg = platform.lookupreg
+makedir = platform.makedir
+nlinks = platform.nlinks
+normpath = platform.normpath
+nulldev = platform.nulldev
+openhardlinks = platform.openhardlinks
+oslink = platform.oslink
+parsepatchoutput = platform.parsepatchoutput
+pconvert = platform.pconvert
+popen = platform.popen
+posixfile = platform.posixfile
+quotecommand = platform.quotecommand
+realpath = platform.realpath
+rename = platform.rename
+samedevice = platform.samedevice
+samefile = platform.samefile
+samestat = platform.samestat
+setbinary = platform.setbinary
+setflags = platform.setflags
+setsignalhandler = platform.setsignalhandler
+shellquote = platform.shellquote
+spawndetached = platform.spawndetached
+sshargs = platform.sshargs
+statfiles = platform.statfiles
+termwidth = platform.termwidth
+testpid = platform.testpid
+umask = platform.umask
+unlink = platform.unlink
+unlinkpath = platform.unlinkpath
+username = platform.username
 
 # Python compatibility
 
@@ -482,6 +527,8 @@ def checkwinfilename(path):
 
 if os.name == 'nt':
     checkosfilename = checkwinfilename
+else:
+    checkosfilename = platform.checkosfilename
 
 def makelock(info, pathname):
     try:

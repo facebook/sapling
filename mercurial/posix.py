@@ -348,3 +348,6 @@ def hidewindow():
     child process under Windows, unneeded on other systems.
     """
     pass
+
+def executablepath():
+    return None # available on Windows only
