@@ -172,14 +172,14 @@ def runmap(context, mapping, data):
 def buildfunc(exp, context):
     n = getsymbol(exp[1])
     args = [compileexp(x, context) for x in getlist(exp[2])]
+    if n in funcs:
+        f = funcs[n]
+        return (f, args)
     if n in context._filters:
         if len(args) != 1:
             raise error.ParseError(_("filter %s expects one argument") % n)
         f = context._filters[n]
         return (runfilter, (args[0][0], args[0][1], f))
-    elif n in context._funcs:
-        f = context._funcs[n]
-        return (f, args)
 
 methods = {
     "string": lambda e, c: (runstring, e[1]),
@@ -190,6 +190,9 @@ methods = {
     "%": buildmap,
     "func": buildfunc,
     }
+
+funcs = {
+}
 
 # template engine
 
