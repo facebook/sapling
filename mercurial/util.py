@@ -370,12 +370,13 @@ def hgexecutable():
     """
     if _hgexecutable is None:
         hg = os.environ.get('HG')
+        mainmod = sys.modules['__main__']
         if hg:
             _sethgexecutable(hg)
         elif mainfrozen():
             _sethgexecutable(sys.executable)
-        elif getattr(sys.modules['__main__'], '__file__', '').endswith('hg'):
-            _sethgexecutable(sys.modules['__main__'].__file__)
+        elif os.path.basename(getattr(mainmod, '__file__', '')) == 'hg':
+            _sethgexecutable(mainmod.__file__)
         else:
             exe = findexe('hg') or os.path.basename(sys.argv[0])
             _sethgexecutable(exe)
