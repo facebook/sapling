@@ -164,7 +164,7 @@ class ui(object):
         return value
 
     def configpath(self, section, name, default=None, untrusted=False):
-        'get a path config item, expanded relative to config file'
+        'get a path config item, expanded relative to repo root or config file'
         v = self.config(section, name, default, untrusted)
         if v is None:
             return None
