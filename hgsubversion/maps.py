@@ -45,12 +45,9 @@ class AuthorMap(dict):
 
         self.ui.note('reading authormap from %s\n' % path)
         f = open(path, 'r')
-        for number, line in enumerate(f):
+        for number, line_org in enumerate(f):
 
-            if writing:
-                writing.write(line)
-
-            line = line.split('#')[0]
+            line = line_org.split('#')[0]
             if not line.strip():
                 continue
 
@@ -63,10 +60,15 @@ class AuthorMap(dict):
 
             src = src.strip()
             dst = dst.strip()
-            self.ui.debug('adding author %s to author map\n' % src)
-            if src in self and dst != self[src]:
-                msg = 'overriding author: "%s" to "%s" (%s)\n'
-                self.ui.status(msg % (self[src], dst, src))
+
+            if writing:
+                if not src in self:
+                    self.ui.debug('adding author %s to author map\n' % src)
+                elif dst != self[src]:
+                    msg = 'overriding author: "%s" to "%s" (%s)\n'
+                    self.ui.status(msg % (self[src], dst, src))
+                writing.write(line_org)
+
             self[src] = dst
 
         f.close()
