@@ -181,22 +181,22 @@ def _updateprompt(ui, sub, dirty, local, remote):
 def reporelpath(repo):
     """return path to this (sub)repo as seen from outermost repo"""
     parent = repo
-    while hasattr(parent, '_subparent'):
+    while util.safehasattr(parent, '_subparent'):
         parent = parent._subparent
     return repo.root[len(parent.root)+1:]
 
 def subrelpath(sub):
     """return path to this subrepo as seen from outermost repo"""
-    if hasattr(sub, '_relpath'):
+    if util.safehasattr(sub, '_relpath'):
         return sub._relpath
-    if not hasattr(sub, '_repo'):
+    if not util.safehasattr(sub, '_repo'):
         return sub._path
     return reporelpath(sub._repo)
 
 def _abssource(repo, push=False, abort=True):
     """return pull/push path of repo - either based on parent repo .hgsub info
     or on the top repo config. Abort or return None if no source found."""
-    if hasattr(repo, '_subparent'):
+    if util.safehasattr(repo, '_subparent'):
         source = util.url(repo._subsource)
         if source.isabs():
             return str(source)
@@ -208,7 +208,7 @@ def _abssource(repo, push=False, abort=True):
             parent.path = posixpath.normpath(parent.path)
             return str(parent)
     else: # recursion reached top repo
-        if hasattr(repo, '_subtoppath'):
+        if util.safehasattr(repo, '_subtoppath'):
             return repo._subtoppath
         if push and repo.ui.config('paths', 'default-push'):
             return repo.ui.config('paths', 'default-push')
