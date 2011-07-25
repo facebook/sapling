@@ -97,17 +97,9 @@ class localrepository(repo.repository):
         if create:
             self._writerequirements()
 
-        # These two define the set of tags for this repository.  _tags
-        # maps tag name to node; _tagtypes maps tag name to 'global' or
-        # 'local'.  (Global tags are defined by .hgtags across all
-        # heads, and local tags are defined in .hg/localtags.)  They
-        # constitute the in-memory cache of tags.
-        self._tags = None
-        self._tagtypes = None
 
         self._branchcache = None
         self._branchcachetip = None
-        self.nodetagscache = None
         self.filterpats = {}
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
@@ -268,8 +260,8 @@ class localrepository(repo.repository):
                 fp.write('\n')
             for name in names:
                 m = munge and munge(name) or name
-                if self._tagtypes and name in self._tagtypes:
-                    old = self._tags.get(name, nullid)
+                if self._tagscache.tagtypes and name in self._tagscache.tagtypes:
+                    old = self.tags().get(name, nullid)
                     fp.write('%s %s\n' % (hex(old), m))
                 fp.write('%s %s\n' % (hex(node), m))
             fp.close()
@@ -344,12 +336,31 @@ class localrepository(repo.repository):
         self.tags() # instantiate the cache
         self._tag(names, node, message, local, user, date)
 
+    @propertycache
+    def _tagscache(self):
+        '''Returns a tagscache object that contains various tags related caches.'''
+
+        # This simplifies its cache management by having one decorated
+        # function (this one) and the rest simply fetch things from it.
+        class tagscache(object):
+            def __init__(self):
+                # These two define the set of tags for this repository. tags
+                # maps tag name to node; tagtypes maps tag name to 'global' or
+                # 'local'. (Global tags are defined by .hgtags across all
+                # heads, and local tags are defined in .hg/localtags.)
+                # They constitute the in-memory cache of tags.
+                self.tags = self.tagtypes = None
+
+                self.nodetagscache = self.tagslist = None
+
+        cache = tagscache()
+        cache.tags, cache.tagtypes = self._findtags()
+
+        return cache
+
     def tags(self):
         '''return a mapping of tag to node'''
-        if self._tags is None:
-            (self._tags, self._tagtypes) = self._findtags()
-
-        return self._tags
+        return self._tagscache.tags
 
     def _findtags(self):
         '''Do the hard work of finding tags.  Return a pair of dicts
@@ -398,27 +409,29 @@ class localrepository(repo.repository):
         None     : tag does not exist
         '''
 
-        self.tags()
-
-        return self._tagtypes.get(tagname)
+        return self._tagscache.tagtypes.get(tagname)
 
     def tagslist(self):
         '''return a list of tags ordered by revision'''
-        l = []
-        for t, n in self.tags().iteritems():
-            r = self.changelog.rev(n)
-            l.append((r, t, n))
-        return [(t, n) for r, t, n in sorted(l)]
+        if not self._tagscache.tagslist:
+            l = []
+            for t, n in self.tags().iteritems():
+                r = self.changelog.rev(n)
+                l.append((r, t, n))
+            self._tagscache.tagslist = [(t, n) for r, t, n in sorted(l)]
+
+        return self._tagscache.tagslist
 
     def nodetags(self, node):
         '''return the tags associated with a node'''
-        if not self.nodetagscache:
-            self.nodetagscache = {}
+        if not self._tagscache.nodetagscache:
+            nodetagscache = {}
             for t, n in self.tags().iteritems():
-                self.nodetagscache.setdefault(n, []).append(t)
-            for tags in self.nodetagscache.itervalues():
+                nodetagscache.setdefault(n, []).append(t)
+            for tags in nodetagscache.itervalues():
                 tags.sort()
-        return self.nodetagscache.get(node, [])
+            self._tagscache.nodetagscache = nodetagscache
+        return self._tagscache.nodetagscache.get(node, [])
 
     def nodebookmarks(self, node):
         marks = []
@@ -792,9 +805,11 @@ class localrepository(repo.repository):
             release(lock, wlock)
 
     def invalidatecaches(self):
-        self._tags = None
-        self._tagtypes = None
-        self.nodetagscache = None
+        try:
+            delattr(self, '_tagscache')
+        except AttributeError:
+            pass
+
         self._branchcache = None # in UTF-8
         self._branchcachetip = None
 
