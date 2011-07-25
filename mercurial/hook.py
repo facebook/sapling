@@ -28,7 +28,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                                'a module)') % (hname, funcname))
         modname = funcname[:d]
         oldpaths = sys.path
-        if hasattr(sys, "frozen"):
+        if util.mainfrozen():
             # binary installs require sys.path manipulation
             modpath, modfile = os.path.split(modname)
             if modpath and modfile:

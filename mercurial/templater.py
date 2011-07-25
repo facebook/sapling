@@ -341,7 +341,7 @@ def templatepath(name=None):
     normpaths = []
 
     # executable version (py2exe) doesn't support __file__
-    if hasattr(sys, 'frozen'):
+    if util.mainfrozen():
         module = sys.executable
     else:
         module = __file__
