@@ -8,7 +8,7 @@ from distutils.command.build_py import build_py_2to3
 from lib2to3.refactor import get_fixers_from_package as getfixers
 
 import sys
-if not hasattr(sys, 'version_info') or sys.version_info < (2, 4, 0, 'final'):
+if getattr(sys, 'version_info', (0, 0, 0)) < (2, 4, 0, 'final'):
     raise SystemExit("Mercurial requires Python 2.4 or later.")
 
 if sys.version_info[0] >= 3:
@@ -236,7 +236,7 @@ class hgbuildext(build_ext):
         try:
             build_ext.build_extension(self, ext)
         except CCompilerError:
-            if not hasattr(ext, 'optional') or not ext.optional:
+            if getattr(ext, 'optional', False):
                 raise
             log.warn("Failed to build optional extension '%s' (skipping)",
                      ext.name)
