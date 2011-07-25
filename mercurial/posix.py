@@ -349,5 +349,21 @@ def hidewindow():
     """
     pass
 
+class cachestat(object):
+    def __init__(self, path):
+        self.stat = os.stat(path)
+
+    def cacheable(self):
+        return bool(self.stat.st_ino)
+
+    def __eq__(self, other):
+        try:
+            return self.stat == other.stat
+        except AttributeError:
+            return False
+
+    def __ne__(self, other):
+        return not self == other
+
 def executablepath():
     return None # available on Windows only

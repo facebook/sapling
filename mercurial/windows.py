@@ -286,4 +286,11 @@ def isexec(f):
 
 from win32 import *
 
+class cachestat(object):
+    def __init__(self, path):
+        pass
+
+    def cacheable(self):
+        return False
+
 expandglobs = True
