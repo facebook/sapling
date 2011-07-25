@@ -184,7 +184,7 @@ class localrepository(repo.repository):
                 c.readpending('00changelog.i.a')
         return c
 
-    @propertycache
+    @filecache('00manifest.i', True)
     def manifest(self):
         return manifest.manifest(self.sopener)
 
