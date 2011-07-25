@@ -151,11 +151,10 @@ def update(repo, parents, node):
 def listbookmarks(repo):
     # We may try to list bookmarks on a repo type that does not
     # support it (e.g., statichttprepository).
-    if not hasattr(repo, '_bookmarks'):
-        return {}
+    marks = getattr(repo, '_bookmarks', {})
 
     d = {}
-    for k, v in repo._bookmarks.iteritems():
+    for k, v in marks.iteritems():
         d[k] = hex(v)
     return d
 
