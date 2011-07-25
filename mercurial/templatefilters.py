@@ -188,7 +188,7 @@ def json(obj):
         return '"%s"' % jsonescape(u)
     elif isinstance(obj, unicode):
         return '"%s"' % jsonescape(obj)
-    elif hasattr(obj, 'keys'):
+    elif util.safehasattr(obj, 'keys'):
         out = []
         for k, v in obj.iteritems():
             s = '%s: %s' % (json(k), json(v))
