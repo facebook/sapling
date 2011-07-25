@@ -2648,7 +2648,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
         doc = gettext(entry[0].__doc__)
         if not doc:
             doc = _("(no help text available)")
-        if hasattr(entry[0], 'definition'):  # aliased command
+        if util.safehasattr(entry[0], 'definition'):  # aliased command
             if entry[0].definition.startswith('!'):  # shell alias
                 doc = _('shell alias for::\n\n    %s') % entry[0].definition[1:]
             else:
