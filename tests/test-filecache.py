@@ -74,7 +74,8 @@ def fakeuncacheable():
         pass
 
     originit = extensions.wrapfunction(util.cachestat, '__init__', wrapinit)
-    origcacheable = extensions.wrapfunction(util.cachestat, 'cacheable', wrapcacheable)
+    origcacheable = extensions.wrapfunction(util.cachestat, 'cacheable',
+                                            wrapcacheable)
 
     try:
         os.remove('x')
