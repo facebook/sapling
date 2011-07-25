@@ -2732,7 +2732,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
         # description
         if not doc:
             doc = _("(no help text available)")
-        if hasattr(doc, '__call__'):
+        if util.safehasattr(doc, '__call__'):
             doc = doc()
 
         ui.write("%s\n\n" % header)

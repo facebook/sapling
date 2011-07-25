@@ -135,7 +135,7 @@ def runsymbol(context, mapping, key):
     v = mapping.get(key)
     if v is None:
         v = context._defaults.get(key, '')
-    if hasattr(v, '__call__'):
+    if util.safehasattr(v, '__call__'):
         return v(**mapping)
     return v
 
