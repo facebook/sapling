@@ -194,7 +194,7 @@ def json(obj):
             s = '%s: %s' % (json(k), json(v))
             out.append(s)
         return '{' + ', '.join(out) + '}'
-    elif hasattr(obj, '__iter__'):
+    elif util.safehasattr(obj, '__iter__'):
         out = []
         for i in obj:
             out.append(json(i))
@@ -279,7 +279,7 @@ def stringify(thing):
     """:stringify: Any type. Turns the value into text by converting values into
     text and concatenating them.
     """
-    if hasattr(thing, '__iter__') and not isinstance(thing, str):
+    if util.safehasattr(thing, '__iter__') and not isinstance(thing, str):
         return "".join([stringify(t) for t in thing if t is not None])
     return str(thing)
 

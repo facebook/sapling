@@ -101,7 +101,7 @@ class wsgirequest(object):
             self.headers = []
 
     def write(self, thing):
-        if hasattr(thing, "__iter__"):
+        if util.safehasattr(thing, "__iter__"):
             for part in thing:
                 self.write(part)
         else:

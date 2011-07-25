@@ -203,14 +203,14 @@ def _flatten(thing):
     '''yield a single stream from a possibly nested set of iterators'''
     if isinstance(thing, str):
         yield thing
-    elif not hasattr(thing, '__iter__'):
+    elif not util.safehasattr(thing, '__iter__'):
         if thing is not None:
             yield str(thing)
     else:
         for i in thing:
             if isinstance(i, str):
                 yield i
-            elif not hasattr(i, '__iter__'):
+            elif not util.safehasattr(i, '__iter__'):
                 if i is not None:
                     yield str(i)
             elif i is not None:
