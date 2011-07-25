@@ -175,7 +175,7 @@ class localrepository(repo.repository):
     def _bookmarkcurrent(self):
         return bookmarks.readcurrent(self)
 
-    @propertycache
+    @filecache('00changelog.i', True)
     def changelog(self):
         c = changelog.changelog(self.sopener)
         if 'HG_PENDING' in os.environ:
