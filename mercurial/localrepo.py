@@ -167,11 +167,11 @@ class localrepository(repo.repository):
                 parts.pop()
         return False
 
-    @util.propertycache
+    @filecache('bookmarks')
     def _bookmarks(self):
         return bookmarks.read(self)
 
-    @util.propertycache
+    @filecache('bookmarks.current')
     def _bookmarkcurrent(self):
         return bookmarks.readcurrent(self)
 
