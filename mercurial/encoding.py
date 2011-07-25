@@ -140,12 +140,12 @@ ambiguous = os.environ.get("HGENCODINGAMBIGUOUS", "narrow")
 def colwidth(s):
     "Find the column width of a UTF-8 string for display"
     d = s.decode(encoding, 'replace')
-    if hasattr(unicodedata, 'east_asian_width'):
+    eaw = getattr(unicodedata, 'east_asian_width', None)
+    if eaw is not None:
         wide = "WF"
         if ambiguous == "wide":
             wide = "WFA"
-        w = unicodedata.east_asian_width
-        return sum([w(c) in wide and 2 or 1 for c in d])
+        return sum([eaw(c) in wide and 2 or 1 for c in d])
     return len(d)
 
 def lower(s):
