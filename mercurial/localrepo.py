@@ -17,6 +17,7 @@ import tags as tagsmod
 from lock import release
 import weakref, errno, os, time, inspect
 propertycache = util.propertycache
+filecache = scmutil.filecache
 
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey',
@@ -187,7 +188,7 @@ class localrepository(repo.repository):
     def manifest(self):
         return manifest.manifest(self.sopener)
 
-    @propertycache
+    @filecache('dirstate')
     def dirstate(self):
         warned = [0]
         def validate(node):
@@ -797,6 +798,20 @@ class localrepository(repo.repository):
         self._branchcache = None # in UTF-8
         self._branchcachetip = None
 
+    def invalidatedirstate(self):
+        '''Invalidates the dirstate, causing the next call to dirstate
+        to check if it was modified since the last time it was read,
+        rereading it if it has.
+
+        This is different to dirstate.invalidate() that it doesn't always
+        rereads the dirstate. Use dirstate.invalidate() if you want to
+        explicitly read the dirstate again (i.e. restoring it to a previous
+        known good state).'''
+        try:
+            delattr(self, 'dirstate')
+        except AttributeError:
+            pass
+
     def invalidate(self):
         for a in ("changelog", "manifest", "_bookmarks", "_bookmarkcurrent"):
             if a in self.__dict__:
@@ -841,8 +856,14 @@ class localrepository(repo.repository):
             l.lock()
             return l
 
-        l = self._lock(self.join("wlock"), wait, self.dirstate.write,
-                       self.dirstate.invalidate, _('working directory of %s') %
+        def unlock():
+            self.dirstate.write()
+            ce = self._filecache.get('dirstate')
+            if ce:
+                ce.refresh()
+
+        l = self._lock(self.join("wlock"), wait, unlock,
+                       self.invalidatedirstate, _('working directory of %s') %
                        self.origroot)
         self._wlockref = weakref.ref(l)
         return l
