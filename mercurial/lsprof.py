@@ -86,9 +86,7 @@ def label(code):
         for k, v in list(sys.modules.iteritems()):
             if v is None:
                 continue
-            if not hasattr(v, '__file__'):
-                continue
-            if not isinstance(v.__file__, str):
+            if not isinstance(getattr(v, '__file__', None), str):
                 continue
             if v.__file__.startswith(code.co_filename):
                 mname = _fn2mod[code.co_filename] = k
