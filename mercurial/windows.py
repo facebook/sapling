@@ -99,8 +99,9 @@ def checklink(path):
 def setbinary(fd):
     # When run without console, pipes may expose invalid
     # fileno(), usually set to -1.
-    if hasattr(fd, 'fileno') and fd.fileno() >= 0:
-        msvcrt.setmode(fd.fileno(), os.O_BINARY)
+    fno = getattr(fd, 'fileno', None)
+    if fno is not None and fno() >= 0:
+        msvcrt.setmode(fno(), os.O_BINARY)
 
 def pconvert(path):
     return '/'.join(path.split(os.sep))
