@@ -157,6 +157,9 @@ def reposetup(ui, repo):
             for branch, nodes in bm.iteritems():
                 for n in nodes:
                     f.write('%s %s/%s\n' % (node.hex(n), remote, branch))
+                    alias_default = ui.configbool('remotebranches', 'alias.default')
+                    if remote != 'default' and branch == 'default' and alias_default:
+                        f.write('%s %s\n' % (node.hex(n), remote))
                 real[branch] = [node.hex(x) for x in nodes]
             f.close()
 
