@@ -324,10 +324,10 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
     def errhandler(err):
         if err.filename == path:
             raise err
-    if followsym and hasattr(os.path, 'samestat'):
+    samestat = getattr(os.path, 'samestat', None)
+    if followsym and samestat is not None:
         def adddir(dirlst, dirname):
             match = False
-            samestat = os.path.samestat
             dirstat = os.stat(dirname)
             for lstdirstat in dirlst:
                 if samestat(dirstat, lstdirstat):
