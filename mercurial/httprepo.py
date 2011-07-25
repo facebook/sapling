@@ -44,8 +44,7 @@ class httprepository(wireproto.wirerepository):
     def __del__(self):
         for h in self.urlopener.handlers:
             h.close()
-            if hasattr(h, "close_all"):
-                h.close_all()
+            getattr(h, "close_all", lambda : None)()
 
     def url(self):
         return self.path
