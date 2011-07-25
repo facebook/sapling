@@ -842,7 +842,14 @@ class localrepository(repo.repository):
             l.lock()
             return l
 
-        l = self._lock(self.sjoin("lock"), wait, self.store.write,
+        def unlock():
+            self.store.write()
+            for k, ce in self._filecache.items():
+                if k == 'dirstate':
+                    continue
+                ce.refresh()
+
+        l = self._lock(self.sjoin("lock"), wait, unlock,
                        self.invalidate, _('repository %s') % self.origroot)
         self._lockref = weakref.ref(l)
         return l
