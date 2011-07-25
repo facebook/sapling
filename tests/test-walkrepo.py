@@ -5,7 +5,7 @@ from os import mkdir, chdir
 from os.path import join as pjoin
 
 u = ui.ui()
-sym = hasattr(os, 'symlink') and hasattr(os.path, 'samestat')
+sym = getattr(os, 'symlink', False) and getattr(os.path, 'samestat', False)
 
 hg.repository(u, 'top1', create=1)
 mkdir('subdir')

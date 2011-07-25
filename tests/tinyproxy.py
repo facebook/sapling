@@ -23,7 +23,8 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
 
     def handle(self):
         (ip, port) =  self.client_address
-        if hasattr(self, 'allowed_clients') and ip not in self.allowed_clients:
+        allowed = getattr(self, 'allowed_clients', None)
+        if allowed is not None and ip not in allowed:
             self.raw_requestline = self.rfile.readline()
             if self.parse_request():
                 self.send_error(403)
