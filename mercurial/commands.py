@@ -1659,8 +1659,9 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
 def debugignore(ui, repo, *values, **opts):
     """display the combined ignore pattern"""
     ignore = repo.dirstate._ignore
-    if hasattr(ignore, 'includepat'):
-        ui.write("%s\n" % ignore.includepat)
+    includepat = getattr(ignore, 'includepat', None)
+    if includepat is not None:
+        ui.write("%s\n" % includepat)
     else:
         raise util.Abort(_("no ignore patterns found"))
 
