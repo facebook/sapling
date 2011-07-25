@@ -813,9 +813,15 @@ class localrepository(repo.repository):
             pass
 
     def invalidate(self):
-        for a in ("changelog", "manifest", "_bookmarks", "_bookmarkcurrent"):
-            if a in self.__dict__:
-                delattr(self, a)
+        for k in self._filecache:
+            # dirstate is invalidated separately in invalidatedirstate()
+            if k == 'dirstate':
+                continue
+
+            try:
+                delattr(self, k)
+            except AttributeError:
+                pass
         self.invalidatecaches()
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
