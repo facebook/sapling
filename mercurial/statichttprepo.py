@@ -125,6 +125,7 @@ class statichttprepository(localrepo.localrepository):
         self.encodepats = None
         self.decodepats = None
         self.capabilities.difference_update(["pushkey"])
+        self._filecache = {}
 
     def url(self):
         return self._url

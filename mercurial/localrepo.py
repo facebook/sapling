@@ -111,6 +111,12 @@ class localrepository(repo.repository):
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
 
+        # A cache for various files under .hg/ that tracks file changes,
+        # (used by the filecache decorator)
+        #
+        # Maps a property name to its util.filecacheentry
+        self._filecache = {}
+
     def _applyrequirements(self, requirements):
         self.requirements = requirements
         openerreqs = set(('revlogv1', 'generaldelta'))
