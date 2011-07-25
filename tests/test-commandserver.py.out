@@ -52,3 +52,16 @@ ui.slash=True
 hook talking
 now try to read something: 'some input'
 eff892de26ec tip
+changeset:   1:d3a0a68be6de
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     2
+
+no bookmarks set
+   bm1                       1:d3a0a68be6de
+   bm2                       1:d3a0a68be6de
+ * bm1                       1:d3a0a68be6de
+   bm2                       1:d3a0a68be6de
+
+foo

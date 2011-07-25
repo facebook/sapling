@@ -154,6 +154,30 @@ def hookoutput(server):
                         'hooks.pre-identify=python:test-commandserver.hook', 'id'],
                input=cStringIO.StringIO('some input'))
 
+def outsidechanges(server):
+    readchannel(server)
+    os.system('echo a >> a && hg ci -Am2')
+    runcommand(server, ['tip'])
+
+def bookmarks(server):
+    readchannel(server)
+    runcommand(server, ['bookmarks'])
+
+    # changes .hg/bookmarks
+    os.system('hg bookmark -i bm1')
+    os.system('hg bookmark -i bm2')
+    runcommand(server, ['bookmarks'])
+
+    # changes .hg/bookmarks.current
+    os.system('hg upd bm1 -q')
+    runcommand(server, ['bookmarks'])
+
+def tagscache(server):
+    readchannel(server)
+    runcommand(server, ['id', '-t', '-r', '0'])
+    os.system('hg tag -r 0 foo')
+    runcommand(server, ['id', '-t', '-r', '0'])
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -169,3 +193,6 @@ if __name__ == '__main__':
     hgrc.close()
     check(localhgrc)
     check(hookoutput)
+    check(outsidechanges)
+    check(bookmarks)
+    check(tagscache)

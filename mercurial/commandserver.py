@@ -185,6 +185,7 @@ class server(object):
         copiedui = self.ui.copy()
         self.repo.baseui = copiedui
         self.repo.ui = self.repo.dirstate._ui = self.repoui.copy()
+        self.repo.invalidate()
 
         req = dispatch.request(args[:], copiedui, self.repo, self.cin,
                                self.cout, self.cerr)
