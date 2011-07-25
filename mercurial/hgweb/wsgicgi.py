@@ -78,5 +78,4 @@ def launch(application):
         for chunk in content:
             write(chunk)
     finally:
-        if hasattr(content, 'close'):
-            content.close()
+        getattr(content, 'close', lambda : None)()
