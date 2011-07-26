@@ -9,7 +9,7 @@ import encoding
 import gettext, sys, os
 
 # modelled after templater.templatepath:
-if hasattr(sys, 'frozen'):
+if getattr(sys, 'frozen', None) is not None:
     module = sys.executable
 else:
     module = __file__
@@ -61,4 +61,3 @@ if _plain():
     _ = lambda message: message
 else:
     _ = gettext
-
