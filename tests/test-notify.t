@@ -17,67 +17,111 @@
   > * = baz
   > EOF
   $ hg help notify
-  notify extension - hooks for sending email notifications at commit/push time
+  notify extension - hooks for sending email push notifications
   
-  Subscriptions can be managed through a hgrc file. Default mode is to print
-  messages to stdout, for testing and configuring.
+  This extension let you run hooks sending email notifications when changesets
+  are being pushed, from the sending or receiving side.
   
-  To use, configure the notify extension and enable it in hgrc like this:
-  
-    [extensions]
-    notify =
+  First, enable the extension as explained in "hg help extensions", and register
+  the hook you want to run. "incoming" and "outgoing" hooks are run by the
+  changesets receiver while the "outgoing" one is for the sender:
   
     [hooks]
     # one email for each incoming changeset
     incoming.notify = python:hgext.notify.hook
-    # batch emails when many changesets incoming at one time
+    # one email for all incoming changesets
     changegroup.notify = python:hgext.notify.hook
-    # batch emails when many changesets outgoing at one time (client side)
+  
+    # one email for all outgoing changesets
     outgoing.notify = python:hgext.notify.hook
   
-    [notify]
-    # config items go here
-  
-  Required configuration items:
-  
-    config = /path/to/file # file containing subscriptions
-  
-  Optional configuration items:
-  
-    test = True            # print messages to stdout for testing
-    strip = 3              # number of slashes to strip for url paths
-    domain = example.com   # domain to use if committer missing domain
-    style = ...            # style file to use when formatting email
-    template = ...         # template to use when formatting email
-    incoming = ...         # template to use when run as incoming hook
-    outgoing = ...         # template to use when run as outgoing hook
-    changegroup = ...      # template to use when run as changegroup hook
-    maxdiff = 300          # max lines of diffs to include (0=none, -1=all)
-    maxsubject = 67        # truncate subject line longer than this
-    diffstat = True        # add a diffstat before the diff content
-    sources = serve        # notify if source of incoming changes in this list
-                           # (serve == ssh or http, push, pull, bundle)
-    merge = False          # send notification for merges (default True)
-    [email]
-    from = user@host.com   # email address to send as if none given
-    [web]
-    baseurl = http://hgserver/... # root of hg web site for browsing commits
-  
-  The notify config file has same format as a regular hgrc file. It has two
-  sections so you can express subscriptions in whatever way is handier for you.
+  Now the hooks are running, subscribers must be assigned to repositories. Use
+  the "[usersubs]" section to map repositories to a given email or the
+  "[reposubs]" section to map emails to a single repository:
   
     [usersubs]
-    # key is subscriber email, value is ","-separated list of glob patterns
+    # key is subscriber email, value is a comma-separated list of glob
+    # patterns
     user@host = pattern
   
     [reposubs]
-    # key is glob pattern, value is ","-separated list of subscriber emails
+    # key is glob pattern, value is a comma-separated list of subscriber
+    # emails
     pattern = user@host
   
-  Glob patterns are matched against path to repository root.
+  Glob patterns are matched against absolute path to repository root. The
+  subscriptions can be defined in their own file and referenced with:
   
-  If you like, you can put notify config file in repository that users can push
-  changes to, they can manage their own subscriptions.
+    [notify]
+    config = /path/to/subscriptionsfile
+  
+  Alternatively, they can be added to Mercurial configuration files by setting
+  the previous entry to an empty value.
+  
+  At this point, notifications should be generated but will not be sent until
+  you set the "notify.test" entry to "False".
+  
+  Notifications content can be tweaked with the following configuration entries:
+  
+  notify.test
+    If "True", print messages to stdout instead of sending them. Default: True.
+  
+  notify.sources
+    Space separated list of change sources. Notifications are sent only if it
+    includes the incoming or outgoing changes source. Incoming sources can be
+    "serve" for changes coming from http or ssh, "pull" for pulled changes,
+    "unbundle" for changes added by "hg unbundle" or "push" for changes being
+    pushed locally. Outgoing sources are the same except for "unbundle" which is
+    replaced by "bundle". Default: serve.
+  
+  notify.strip
+    Number of leading slashes to strip from url paths. By default, notifications
+    references repositories with their absolute path. "notify.strip" let you
+    turn them into relative paths. For example, "notify.strip=3" will change
+    "/long/path/repository" into "repository". Default: 0.
+  
+  notify.domain
+    If subscribers emails or the from email have no domain set, complete them
+    with this value.
+  
+  notify.style
+    Style file to use when formatting emails.
+  
+  notify.template
+    Template to use when formatting emails.
+  
+  notify.incoming
+    Template to use when run as incoming hook, override "notify.template".
+  
+  notify.outgoing
+    Template to use when run as outgoing hook, override "notify.template".
+  
+  notify.changegroup
+    Template to use when running as changegroup hook, override
+    "notify.template".
+  
+  notify.maxdiff
+    Maximum number of diff lines to include in notification email. Set to 0 to
+    disable the diff, -1 to include all of it. Default: 300.
+  
+  notify.maxsubject
+    Maximum number of characters in emails subject line. Default: 67.
+  
+  notify.diffstat
+    Set to True to include a diffstat before diff content. Default: True.
+  
+  notify.merge
+    If True, send notifications for merge changesets. Default: True.
+  
+  If set, the following entries will also be used to customize the
+  notifications:
+  
+  email.from
+    Email "From" address to use if none can be found in generated email content.
+  
+  web.baseurl
+    Root repository browsing URL to combine with repository paths when making
+    references. See also "notify.strip".
   
   no commands defined
   $ hg init a
