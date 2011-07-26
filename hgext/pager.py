@@ -58,7 +58,7 @@ from mercurial import commands, dispatch, util, extensions
 from mercurial.i18n import _
 
 def _runpager(p):
-    if not hasattr(os, 'fork'):
+    if not util.safehasattr(os, 'fork'):
         sys.stdout = util.popen(p, 'wb')
         if util.isatty(sys.stderr):
             sys.stderr = sys.stdout

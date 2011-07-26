@@ -36,7 +36,8 @@ def relink(ui, repo, origin=None, **opts):
     command is running. (Both repositories will be locked against
     writes.)
     """
-    if not hasattr(util, 'samefile') or not hasattr(util, 'samedevice'):
+    if (not util.safehasattr(util, 'samefile') or
+        not util.safehasattr(util, 'samedevice')):
         raise util.Abort(_('hardlinks are not supported on this system'))
     src = hg.repository(ui, ui.expandpath(origin or 'default-relink',
                                           origin or 'default'))

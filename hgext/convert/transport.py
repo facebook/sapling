@@ -54,7 +54,7 @@ def _create_auth_baton(pool):
                 if p:
                     providers.append(p)
     else:
-        if hasattr(svn.client, 'get_windows_simple_provider'):
+        if util.safehasattr(svn.client, 'get_windows_simple_provider'):
             providers.append(svn.client.get_windows_simple_provider(pool))
 
     return svn.core.svn_auth_open(providers, pool)
@@ -73,7 +73,7 @@ class SvnRaTransport(object):
         self.password = ''
 
         # Only Subversion 1.4 has reparent()
-        if ra is None or not hasattr(svn.ra, 'reparent'):
+        if ra is None or not util.safehasattr(svn.ra, 'reparent'):
             self.client = svn.client.create_context(self.pool)
             ab = _create_auth_baton(self.pool)
             if False:
