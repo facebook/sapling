@@ -78,6 +78,7 @@ class httprepository(wireproto.wirerepository):
 
         if data and self.ui.configbool('ui', 'usehttp2', False):
             headers['Expect'] = '100-Continue'
+            headers['X-HgHttp2'] = '1'
 
         self.ui.debug("sending %s command\n" % cmd)
         q = [('cmd', cmd)]
