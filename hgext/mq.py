@@ -938,7 +938,7 @@ class queue(object):
                         p.write("# User " + user + "\n")
                     if date:
                         p.write("# Date %s %s\n\n" % date)
-                if hasattr(msg, '__call__'):
+                if util.safehasattr(msg, '__call__'):
                     msg = msg()
                 commitmsg = msg and msg or ("[mq]: %s" % patchfn)
                 n = repo.commit(commitmsg, user, date, match=match, force=True)

@@ -9,6 +9,7 @@ from mercurial.commands import table, globalopts
 from mercurial.i18n import _
 from mercurial.help import helptable
 from mercurial import extensions
+from mercurial import util
 
 def get_desc(docstr):
     if not docstr:
@@ -95,7 +96,7 @@ def show_doc(ui):
             ui.write(".. _%s:\n" % name)
         ui.write("\n")
         section(ui, sec)
-        if hasattr(doc, '__call__'):
+        if util.safehasattr(doc, '__call__'):
             doc = doc()
         ui.write(doc)
         ui.write("\n")

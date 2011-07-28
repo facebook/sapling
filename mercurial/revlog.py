@@ -226,9 +226,10 @@ class revlog(object):
         self._nodepos = None
 
         v = REVLOG_DEFAULT_VERSION
-        if hasattr(opener, 'options'):
-            if 'revlogv1' in opener.options:
-                if 'generaldelta' in opener.options:
+        opts = getattr(opener, 'options', None)
+        if opts is not None:
+            if 'revlogv1' in opts:
+                if 'generaldelta' in opts:
                     v |= REVLOGGENERALDELTA
             else:
                 v = 0

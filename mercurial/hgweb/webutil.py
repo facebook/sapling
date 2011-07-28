@@ -72,7 +72,7 @@ def _siblings(siblings=[], hiderev=None):
         d['date'] = s.date()
         d['description'] = s.description()
         d['branch'] = s.branch()
-        if hasattr(s, 'path'):
+        if util.safehasattr(s, 'path'):
             d['file'] = s.path()
         yield d
 

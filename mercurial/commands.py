@@ -1659,8 +1659,9 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
 def debugignore(ui, repo, *values, **opts):
     """display the combined ignore pattern"""
     ignore = repo.dirstate._ignore
-    if hasattr(ignore, 'includepat'):
-        ui.write("%s\n" % ignore.includepat)
+    includepat = getattr(ignore, 'includepat', None)
+    if includepat is not None:
+        ui.write("%s\n" % includepat)
     else:
         raise util.Abort(_("no ignore patterns found"))
 
@@ -2647,7 +2648,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
         doc = gettext(entry[0].__doc__)
         if not doc:
             doc = _("(no help text available)")
-        if hasattr(entry[0], 'definition'):  # aliased command
+        if util.safehasattr(entry[0], 'definition'):  # aliased command
             if entry[0].definition.startswith('!'):  # shell alias
                 doc = _('shell alias for::\n\n    %s') % entry[0].definition[1:]
             else:
@@ -2732,7 +2733,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
         # description
         if not doc:
             doc = _("(no help text available)")
-        if hasattr(doc, '__call__'):
+        if util.safehasattr(doc, '__call__'):
             doc = doc()
 
         ui.write("%s\n\n" % header)

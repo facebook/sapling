@@ -159,16 +159,16 @@ def _runcatch(req):
         elif m in "zlib".split():
             ui.warn(_("(is your Python install correct?)\n"))
     except IOError, inst:
-        if hasattr(inst, "code"):
+        if util.safehasattr(inst, "code"):
             ui.warn(_("abort: %s\n") % inst)
-        elif hasattr(inst, "reason"):
+        elif util.safehasattr(inst, "reason"):
             try: # usually it is in the form (errno, strerror)
                 reason = inst.reason.args[1]
             except (AttributeError, IndexError):
                  # it might be anything, for example a string
                 reason = inst.reason
             ui.warn(_("abort: error: %s\n") % reason)
-        elif hasattr(inst, "args") and inst.args[0] == errno.EPIPE:
+        elif util.safehasattr(inst, "args") and inst.args[0] == errno.EPIPE:
             if ui.debugflag:
                 ui.warn(_("broken pipe\n"))
         elif getattr(inst, "strerror", None):
@@ -338,7 +338,7 @@ class cmdalias(object):
             ui.debug("alias '%s' shadows command '%s'\n" %
                      (self.name, self.cmdname))
 
-        if hasattr(self, 'shell'):
+        if util.safehasattr(self, 'shell'):
             return self.fn(ui, *args, **opts)
         else:
             try:
@@ -506,7 +506,7 @@ def _checkshellalias(lui, ui, args):
     cmd = aliases[0]
     fn = entry[0]
 
-    if cmd and hasattr(fn, 'shell'):
+    if cmd and util.safehasattr(fn, 'shell'):
         d = lambda: fn(ui, *args[1:])
         return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d, [], {})
 

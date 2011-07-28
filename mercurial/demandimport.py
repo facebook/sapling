@@ -27,6 +27,8 @@ These imports will not be delayed:
 import __builtin__
 _origimport = __import__
 
+nothing = object()
+
 class _demandmod(object):
     """module demand-loader and proxy"""
     def __init__(self, name, globals, locals):
@@ -50,7 +52,7 @@ class _demandmod(object):
                 h, t = p, None
                 if '.' in p:
                     h, t = p.split('.', 1)
-                if not hasattr(mod, h):
+                if getattr(mod, h, nothing) is nothing:
                     setattr(mod, h, _demandmod(p, mod.__dict__, mod.__dict__))
                 elif t:
                     subload(getattr(mod, h), t)
@@ -109,12 +111,12 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
         mod = _origimport(name, globals, locals)
         # recurse down the module chain
         for comp in name.split('.')[1:]:
-            if not hasattr(mod, comp):
+            if getattr(mod, comp, nothing) is nothing:
                 setattr(mod, comp, _demandmod(comp, mod.__dict__, mod.__dict__))
             mod = getattr(mod, comp)
         for x in fromlist:
             # set requested submodules for demand load
-            if not hasattr(mod, x):
+            if getattr(mod, x, nothing) is nothing:
                 setattr(mod, x, _demandmod(x, mod.__dict__, locals))
         return mod
 
@@ -137,6 +139,8 @@ ignore = [
     # raise ImportError if x not defined
     '__main__',
     '_ssl', # conditional imports in the stdlib, issue1964
+    'rfc822',
+    'mimetools',
     ]
 
 def enable():
@@ -146,4 +150,3 @@ def enable():
 def disable():
     "disable global demand-loading of modules"
     __builtin__.__import__ = _origimport
-

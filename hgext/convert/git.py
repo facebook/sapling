@@ -16,7 +16,7 @@ class convert_git(converter_source):
     # Windows does not support GIT_DIR= construct while other systems
     # cannot remove environment variable. Just assume none have
     # both issues.
-    if hasattr(os, 'unsetenv'):
+    if util.safehasattr(os, 'unsetenv'):
         def gitopen(self, s, noerr=False):
             prevgitdir = os.environ.get('GIT_DIR')
             os.environ['GIT_DIR'] = self.path

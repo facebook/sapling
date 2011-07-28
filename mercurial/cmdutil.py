@@ -161,7 +161,7 @@ def makefileobj(repo, pat, node=None, total=None,
 
     if not pat or pat == '-':
         fp = writable and repo.ui.fout or repo.ui.fin
-        if hasattr(fp, 'fileno'):
+        if util.safehasattr(fp, 'fileno'):
             return os.fdopen(os.dup(fp.fileno()), mode)
         else:
             # if this fp can't be duped properly, return
@@ -177,9 +177,9 @@ def makefileobj(repo, pat, node=None, total=None,
                         return getattr(self.f, attr)
 
             return wrappedfileobj(fp)
-    if hasattr(pat, 'write') and writable:
+    if util.safehasattr(pat, 'write') and writable:
         return pat
-    if hasattr(pat, 'read') and 'r' in mode:
+    if util.safehasattr(pat, 'read') and 'r' in mode:
         return pat
     return open(makefilename(repo, pat, node, total, seqno, revwidth,
                               pathname),
@@ -520,7 +520,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
                              revwidth=revwidth, mode='ab')
             if fp != template:
                 shouldclose = True
-        if fp != sys.stdout and hasattr(fp, 'name'):
+        if fp != sys.stdout and util.safehasattr(fp, 'name'):
             repo.ui.note("%s\n" % fp.name)
 
         fp.write("# HG changeset patch\n")

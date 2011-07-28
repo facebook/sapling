@@ -75,6 +75,10 @@ username = platform.username
 def sha1(s):
     return _fastsha1(s)
 
+_notset = object()
+def safehasattr(thing, attr):
+    return getattr(thing, attr, _notset) is not _notset
+
 def _fastsha1(s):
     # This function will import sha1 from hashlib or sha (whichever is
     # available) and overwrite itself with it on the first call.
@@ -354,8 +358,8 @@ def mainfrozen():
     The code supports py2exe (most common, Windows only) and tools/freeze
     (portable, not much used).
     """
-    return (hasattr(sys, "frozen") or # new py2exe
-            hasattr(sys, "importers") or # old py2exe
+    return (safehasattr(sys, "frozen") or # new py2exe
+            safehasattr(sys, "importers") or # old py2exe
             imp.is_frozen("__main__")) # tools/freeze
 
 def hgexecutable():
@@ -779,7 +783,7 @@ class atomictempfile(object):
             self._fp.close()
 
     def __del__(self):
-        if hasattr(self, '_fp'): # constructor actually did something
+        if safehasattr(self, '_fp'): # constructor actually did something
             self.close()
 
 def makedirs(name, mode=None):
@@ -1250,8 +1254,9 @@ def rundetached(args, condfn):
     def handler(signum, frame):
         terminated.add(os.wait())
     prevhandler = None
-    if hasattr(signal, 'SIGCHLD'):
-        prevhandler = signal.signal(signal.SIGCHLD, handler)
+    SIGCHLD = getattr(signal, 'SIGCHLD', None)
+    if SIGCHLD is not None:
+        prevhandler = signal.signal(SIGCHLD, handler)
     try:
         pid = spawndetached(args)
         while not condfn():

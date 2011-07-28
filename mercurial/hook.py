@@ -21,14 +21,14 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
 
     ui.note(_("calling hook %s: %s\n") % (hname, funcname))
     obj = funcname
-    if not hasattr(obj, '__call__'):
+    if not util.safehasattr(obj, '__call__'):
         d = funcname.rfind('.')
         if d == -1:
             raise util.Abort(_('%s hook is invalid ("%s" not in '
                                'a module)') % (hname, funcname))
         modname = funcname[:d]
         oldpaths = sys.path
-        if hasattr(sys, "frozen"):
+        if util.mainfrozen():
             # binary installs require sys.path manipulation
             modpath, modfile = os.path.split(modname)
             if modpath and modfile:
@@ -60,7 +60,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
             raise util.Abort(_('%s hook is invalid '
                                '("%s" is not defined)') %
                              (hname, funcname))
-        if not hasattr(obj, '__call__'):
+        if not util.safehasattr(obj, '__call__'):
             raise util.Abort(_('%s hook is invalid '
                                '("%s" is not callable)') %
                              (hname, funcname))
@@ -99,7 +99,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
 
     env = {}
     for k, v in args.iteritems():
-        if hasattr(v, '__call__'):
+        if util.safehasattr(v, '__call__'):
             v = v()
         if isinstance(v, dict):
             # make the dictionary element order stable across Python
@@ -145,7 +145,7 @@ def hook(ui, repo, name, throw=False, **args):
         for hname, cmd in ui.configitems('hooks'):
             if hname.split('.')[0] != name or not cmd:
                 continue
-            if hasattr(cmd, '__call__'):
+            if util.safehasattr(cmd, '__call__'):
                 r = _pythonhook(ui, repo, name, hname, cmd, args, throw) or r
             elif cmd.startswith('python:'):
                 if cmd.count(':') >= 2:

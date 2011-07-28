@@ -11,6 +11,7 @@
 # todo: socket permissions
 
 from mercurial.i18n import _
+from mercurial import util
 import server
 from client import client, QueryFailed
 
@@ -31,7 +32,7 @@ def debuginotify(ui, repo, **opts):
         ui.write(('  %s/\n') % path)
 
 def reposetup(ui, repo):
-    if not hasattr(repo, 'dirstate'):
+    if not util.safehasattr(repo, 'dirstate'):
         return
 
     class inotifydirstate(repo.dirstate.__class__):

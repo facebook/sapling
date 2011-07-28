@@ -129,7 +129,7 @@ def _gen_sendfile(orgsend):
             orgsend(self, data)
     return _sendfile
 
-has_https = hasattr(urllib2, 'HTTPSHandler')
+has_https = util.safehasattr(urllib2, 'HTTPSHandler')
 if has_https:
     try:
         _create_connection = socket.create_connection
@@ -186,8 +186,8 @@ class httpconnection(keepalive.HTTPConnection):
 # general transaction handler to support different ways to handle
 # HTTPS proxying before and after Python 2.6.3.
 def _generic_start_transaction(handler, h, req):
-    if hasattr(req, '_tunnel_host') and req._tunnel_host:
-        tunnel_host = req._tunnel_host
+    tunnel_host = getattr(req, '_tunnel_host', None)
+    if tunnel_host:
         if tunnel_host[:7] not in ['http://', 'https:/']:
             tunnel_host = 'https://' + tunnel_host
         new_tunnel = True

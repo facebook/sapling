@@ -5,7 +5,7 @@ TESTDIR = os.environ["TESTDIR"]
 BUNDLEPATH = os.path.join(TESTDIR, 'bundles', 'test-no-symlinks.hg')
 
 # only makes sense to test on os which supports symlinks
-if not hasattr(os, "symlink"):
+if not getattr(os, "symlink", False):
     sys.exit(80) # SKIPPED_STATUS defined in run-tests.py
 
 # clone with symlink support

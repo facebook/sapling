@@ -50,7 +50,7 @@ import sys
 #sys.path.insert(0, r'c:\path\to\python\lib')
 
 # Enable tracing. Run 'python -m win32traceutil' to debug
-if hasattr(sys, 'isapidllhandle'):
+if getattr(sys, 'isapidllhandle', None) is not None:
     import win32traceutil
 
 # To serve pages in local charset instead of UTF-8, remove the two lines below

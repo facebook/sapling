@@ -31,7 +31,7 @@ def loaddoc(topic):
     """Return a delayed loader for help/topic.txt."""
 
     def loader():
-        if hasattr(sys, 'frozen'):
+        if util.mainfrozen():
             module = sys.executable
         else:
             module = __file__

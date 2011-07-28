@@ -547,13 +547,14 @@ def safesend(self, str):
         print "send:", repr(str)
     try:
         blocksize = 8192
-        if hasattr(str,'read') :
+        read = getattr(str, 'read', None)
+        if read is not None:
             if self.debuglevel > 0:
                 print "sendIng a read()able"
-            data = str.read(blocksize)
+            data = read(blocksize)
             while data:
                 self.sock.sendall(data)
-                data = str.read(blocksize)
+                data = read(blocksize)
         else:
             self.sock.sendall(str)
     except socket.error, v:

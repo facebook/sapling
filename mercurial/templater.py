@@ -135,7 +135,7 @@ def runsymbol(context, mapping, key):
     v = mapping.get(key)
     if v is None:
         v = context._defaults.get(key, '')
-    if hasattr(v, '__call__'):
+    if util.safehasattr(v, '__call__'):
         return v(**mapping)
     return v
 
@@ -203,14 +203,14 @@ def _flatten(thing):
     '''yield a single stream from a possibly nested set of iterators'''
     if isinstance(thing, str):
         yield thing
-    elif not hasattr(thing, '__iter__'):
+    elif not util.safehasattr(thing, '__iter__'):
         if thing is not None:
             yield str(thing)
     else:
         for i in thing:
             if isinstance(i, str):
                 yield i
-            elif not hasattr(i, '__iter__'):
+            elif not util.safehasattr(i, '__iter__'):
                 if i is not None:
                     yield str(i)
             elif i is not None:
@@ -341,7 +341,7 @@ def templatepath(name=None):
     normpaths = []
 
     # executable version (py2exe) doesn't support __file__
-    if hasattr(sys, 'frozen'):
+    if util.mainfrozen():
         module = sys.executable
     else:
         module = __file__
