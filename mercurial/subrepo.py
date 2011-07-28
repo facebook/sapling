@@ -606,7 +606,7 @@ class svnsubrepo(abstractsubrepo):
             if item == 'external':
                 externals.append(path)
             if (item not in ('', 'normal', 'unversioned', 'external')
-                or props not in ('', 'none')):
+                or props not in ('', 'none', 'normal')):
                 changes.append(path)
         for path in changes:
             for ext in externals:
