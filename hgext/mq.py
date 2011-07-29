@@ -2915,6 +2915,7 @@ def finish(ui, repo, *revrange, **opts):
 
 @command("qqueue",
          [('l', 'list', False, _('list all available queues')),
+          ('', 'active', False, _('print name of active queue')),
           ('c', 'create', False, _('create new queue')),
           ('', 'rename', False, _('rename active queue')),
           ('', 'delete', False, _('delete reference to queue')),
@@ -2929,7 +2930,8 @@ def qqueue(ui, repo, name=None, **opts):
 
     Omitting a queue name or specifying -l/--list will show you the registered
     queues - by default the "normal" patches queue is registered. The currently
-    active queue will be marked with "(active)".
+    active queue will be marked with "(active)". Specifying --active will print
+    only the name of the active queue.
 
     To create a new queue, use -c/--create. The queue is automatically made
     active, except in the case where there are applied patches from the
@@ -3022,8 +3024,11 @@ def qqueue(ui, repo, name=None, **opts):
         fh.close()
         util.rename(repo.join('patches.queues.new'), repo.join(_allqueues))
 
-    if not name or opts.get('list'):
+    if not name or opts.get('list') or opts.get('active'):
         current = _getcurrent()
+        if opts.get('active'):
+            ui.write('%s\n' % (current,))
+            return
         for queue in _getqueues():
             ui.write('%s' % (queue,))
             if queue == current and not ui.quiet:
