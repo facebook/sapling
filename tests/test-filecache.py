@@ -1,8 +1,6 @@
 import sys, os, subprocess
 
-try:
-    subprocess.check_call(['%s/hghave' % os.environ['TESTDIR'], 'cacheable'])
-except subprocess.CalledProcessError:
+if subprocess.call(['%s/hghave' % os.environ['TESTDIR'], 'cacheable']):
     sys.exit(80)
 
 from mercurial import util, scmutil, extensions
