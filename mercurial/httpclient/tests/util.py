@@ -133,7 +133,7 @@ class MockSSLSocket(object):
 
 def mocksslwrap(sock, keyfile=None, certfile=None,
                 server_side=False, cert_reqs=http.socketutil.CERT_NONE,
-                ssl_version=http.socketutil.PROTOCOL_SSLv23, ca_certs=None,
+                ssl_version=None, ca_certs=None,
                 do_handshake_on_connect=True,
                 suppress_ragged_eofs=True):
     return MockSSLSocket(sock)

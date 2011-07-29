@@ -78,10 +78,6 @@ if ssl:
     CERT_NONE = ssl.CERT_NONE
     CERT_OPTIONAL = ssl.CERT_OPTIONAL
     CERT_REQUIRED = ssl.CERT_REQUIRED
-    PROTOCOL_SSLv2 = ssl.PROTOCOL_SSLv2
-    PROTOCOL_SSLv3 = ssl.PROTOCOL_SSLv3
-    PROTOCOL_SSLv23 = ssl.PROTOCOL_SSLv23
-    PROTOCOL_TLSv1 = ssl.PROTOCOL_TLSv1
 else:
     class FakeSocket(httplib.FakeSocket):
         """Socket wrapper that supports SSL.
@@ -105,10 +101,7 @@ else:
                     else:
                         raise x
 
-    PROTOCOL_SSLv2 = 0
-    PROTOCOL_SSLv3 = 1
-    PROTOCOL_SSLv23 = 2
-    PROTOCOL_TLSv1 = 3
+    _PROTOCOL_SSLv23 = 2
 
     CERT_NONE = 0
     CERT_OPTIONAL = 1
@@ -116,7 +109,7 @@ else:
 
     def wrap_socket(sock, keyfile=None, certfile=None,
                 server_side=False, cert_reqs=CERT_NONE,
-                ssl_version=PROTOCOL_SSLv23, ca_certs=None,
+                ssl_version=_PROTOCOL_SSLv23, ca_certs=None,
                 do_handshake_on_connect=True,
                 suppress_ragged_eofs=True):
         if cert_reqs != CERT_NONE and ca_certs:
