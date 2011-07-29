@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import util, error, osutil, revset, similar
+import util, error, osutil, revset, similar, encoding
 import match as matchmod
 import os, errno, re, stat, sys, glob
 
@@ -46,10 +46,10 @@ class casecollisionauditor(object):
         self._abort = abort
         self._map = {}
         for f in existingiter:
-            self._map[f.lower()] = f
+            self._map[encoding.lower(f)] = f
 
     def __call__(self, f):
-        fl = f.lower()
+        fl = encoding.lower(f)
         map = self._map
         if fl in map and map[fl] != f:
             msg = _('possible case-folding collision for %s') % f

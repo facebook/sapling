@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, hex, bin
 from i18n import _
-import scmutil, util, filemerge, copies, subrepo
+import scmutil, util, filemerge, copies, subrepo, encoding
 import errno, os, shutil
 
 class mergestate(object):
@@ -92,7 +92,7 @@ def _checkcollision(mctx):
     "check for case folding collisions in the destination context"
     folded = {}
     for fn in mctx:
-        fold = fn.lower()
+        fold = encoding.lower(fn)
         if fold in folded:
             raise util.Abort(_("case-folding collision between %s and %s")
                              % (fn, folded[fold]))

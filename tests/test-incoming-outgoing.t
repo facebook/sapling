@@ -465,3 +465,16 @@ limit to 3 changesets
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11
   
+
+incoming from empty remote repository
+
+  $ hg init r1
+  $ hg init r2
+  $ echo a > r1/foo
+  $ hg -R r1 ci -Ama
+  adding foo
+  $ hg -R r1 incoming r2 --bundle x.hg
+  comparing with r2
+  searching for changes
+  no changes found
+  [1]
