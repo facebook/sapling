@@ -180,6 +180,7 @@ def _modesetup(ui, opts):
             realmode = 'ansi'
 
     if realmode == 'win32':
+        _terminfo_params = {}
         if not w32effects:
             if mode == 'win32':
                 # only warn if color.mode is explicitly set to win32
