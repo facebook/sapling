@@ -134,12 +134,16 @@ def hook(ui, repo, name, throw=False, **args):
 
     oldstdout = -1
     if _redirect:
-        stdoutno = sys.__stdout__.fileno()
-        stderrno = sys.__stderr__.fileno()
-        # temporarily redirect stdout to stderr, if possible
-        if stdoutno >= 0 and stderrno >= 0:
-            oldstdout = os.dup(stdoutno)
-            os.dup2(stderrno, stdoutno)
+        try:
+            stdoutno = sys.__stdout__.fileno()
+            stderrno = sys.__stderr__.fileno()
+            # temporarily redirect stdout to stderr, if possible
+            if stdoutno >= 0 and stderrno >= 0:
+                oldstdout = os.dup(stdoutno)
+                os.dup2(stderrno, stdoutno)
+        except AttributeError:
+            # __stdout/err__ doesn't have fileno(), it's not a real file
+            pass
 
     try:
         for hname, cmd in ui.configitems('hooks'):
