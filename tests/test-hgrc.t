@@ -54,11 +54,19 @@ issue1829: wrong indentation
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   $ unset FAKEPATH
 
-make sure unspecified global ui options don't override old values
+make sure global options given on the cmdline take precedence
 
   $ hg showconfig --config ui.verbose=True --quiet
-  ui.verbose=True
+  ui.verbose=False
+  ui.debug=False
   ui.quiet=True
+
+  $ touch foobar/untracked
+  $ cat >> foobar/.hg/hgrc <<EOF
+  > [ui]
+  > verbose=True
+  > EOF
+  $ hg -R foobar st -q
 
 username expansion
 
@@ -140,7 +148,9 @@ plain hgrc
   $ hg showconfig --config ui.traceback=True --debug
   read config from: $TESTTMP/hgrc
   none: ui.traceback=True
+  none: ui.verbose=False
   none: ui.debug=True
+  none: ui.quiet=False
 
 plain mode with exceptions
 
@@ -156,18 +166,24 @@ plain mode with exceptions
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
+  none: ui.verbose=False
   none: ui.debug=True
+  none: ui.quiet=False
   $ unset HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
+  none: ui.verbose=False
   none: ui.debug=True
+  none: ui.quiet=False
   $ HGPLAINEXCEPT=i18n; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
+  none: ui.verbose=False
   none: ui.debug=True
+  none: ui.quiet=False

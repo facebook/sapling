@@ -608,11 +608,15 @@ def _dispatch(req):
         for cfg in cfgs:
             req.repo.ui.setconfig(*cfg)
 
-    for opt in ('verbose', 'debug', 'quiet', 'traceback'):
-        val = bool(options[opt])
-        if val:
+    if options['verbose'] or options['debug'] or options['quiet']:
+        for opt in ('verbose', 'debug', 'quiet'):
+            val = str(bool(options[opt]))
             for ui_ in uis:
-                ui_.setconfig('ui', opt, str(val))
+                ui_.setconfig('ui', opt, val)
+
+    if options['traceback']:
+        for ui_ in uis:
+            ui_.setconfig('ui', 'traceback', 'on')
 
     if options['noninteractive']:
         for ui_ in uis:
