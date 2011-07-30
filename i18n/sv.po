@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-06-29 09:21+0200\n"
-"PO-Revision-Date: 2011-06-29 09:24+0200\n"
+"POT-Creation-Date: 2011-07-29 20:08+0200\n"
+"PO-Revision-Date: 2011-07-30 09:39+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -961,6 +961,22 @@ msgstr ""
 "det tysta."
 
 msgid ""
+"Note that on some systems, terminfo mode may cause problems when using\n"
+"color with the pager extension and less -R. less with the -R option\n"
+"will only display ECMA-48 color codes, and terminfo mode may sometimes\n"
+"emit codes that less doesn't understand. You can work around this by\n"
+"either using ansi mode (or auto mode), or by using less -r (which will\n"
+"pass through all terminal control codes, not just color control\n"
+"codes)."
+msgstr ""
+"Notera att på vissa system kan terminfo-läget orsaka problem när color-\n"
+"och pager-utökningarna används med less -R. less med flaggan -R kommer bara\n"
+"att visa ECMA-48-färgkoder, och terminfo kan sända koder som less inte\n"
+"förstår. Du kan gå runt detta genom att endera använda ansi-läge (eller\n"
+"auto-läge), eller att använda less -r (som skickar vidare alla\n"
+"terminalkoder, inte bara färgkoder)."
+
+msgid ""
 "Because there are only eight standard colors, this module allows you\n"
 "to define color names for other color slots which might be available\n"
 "for your terminal type, assuming terminfo mode.  For instance::"
@@ -993,25 +1009,28 @@ msgstr ""
 "bakgrunden till den färgen."
 
 msgid ""
-"The color extension will try to detect whether to use terminfo, ANSI\n"
-"codes or Win32 console APIs, unless it is made explicit; e.g.::"
+"By default, the color extension will use ANSI mode (or win32 mode on\n"
+"Windows) if it detects a terminal. To override auto mode (to enable\n"
+"terminfo mode, for example), set the following configuration option::"
 msgstr ""
-"Utökningen color försöker att upptäcka om terminfo, ANSI-koder eller\n"
-"APIer för konsolen i Win32 om det inte anges explicit::"
+"Som standard kommer color-utökningen att använda ANSI-läge (eller\n"
+"win32-läge i Windows) om en terminal upptäcks. För att upphäva auto-läge\n"
+"(för att exempelvis aktivera terminfo-läge), sätt följande\n"
+"konfigurationsflagga::"
 
 msgid ""
 "  [color]\n"
-"  mode = ansi"
+"  mode = terminfo"
 msgstr ""
 "  [color]\n"
-"  mode = ansi"
+"  mode = terminfo"
 
 msgid ""
 "Any value other than 'ansi', 'win32', 'terminfo', or 'auto' will\n"
-"disable color."
+"disable color.\n"
 msgstr ""
 "Ett värde skilt från 'ansi', 'win32', 'terminfo' eller 'auto' stänger av\n"
-"färg."
+"färg.\n"
 
 msgid "no terminfo entry for setab/setaf: reverting to ECMA-48 color\n"
 msgstr "ingen terminfo-post för setab/setaf: återgår till ECMA-48-färger\n"
@@ -5380,6 +5399,9 @@ msgstr "kan inte ange en bas med detach"
 msgid "nothing to rebase\n"
 msgstr ""
 
+msgid "cannot collapse multiple named branches"
+msgstr "kan inte kollapsa flera namngivna grenar"
+
 msgid "rebasing"
 msgstr ""
 
@@ -6352,13 +6374,13 @@ msgid "date:        %s\n"
 msgstr "datum:       %s\n"
 
 msgid "files+:"
-msgstr ""
+msgstr "filer+:"
 
 msgid "files-:"
-msgstr ""
+msgstr "filer-:"
 
 msgid "files:"
-msgstr ""
+msgstr "filer:"
 
 #, python-format
 msgid "files:       %s\n"
@@ -6413,7 +6435,7 @@ msgstr ""
 
 #, python-format
 msgid "HG: user: %s"
-msgstr ""
+msgstr "HG: användare: %s"
 
 msgid "HG: branch merge"
 msgstr ""
@@ -6428,21 +6450,21 @@ msgstr ""
 
 #, python-format
 msgid "HG: added %s"
-msgstr ""
+msgstr "HG: lade till %s"
 
 #, python-format
 msgid "HG: changed %s"
-msgstr ""
+msgstr "HG: ändrade %s"
 
 #, python-format
 msgid "HG: removed %s"
-msgstr ""
+msgstr "HG: raderade %s"
 
 msgid "HG: no files changed"
-msgstr ""
+msgstr "HG: inga ändrade filer"
 
 msgid "empty commit message"
-msgstr ""
+msgstr "tomt arkiveringsmeddelande"
 
 msgid "repository root directory or name of overlay bundle file"
 msgstr "arkivrotkatalog eller namn på påläggsbuntfil"
@@ -6453,8 +6475,8 @@ msgstr ""
 msgid "change working directory"
 msgstr "ändra arbetskatalog"
 
-msgid "do not prompt, assume 'yes' for any required answers"
-msgstr "fråga inte, anta att svaret är 'ja' på alla frågor"
+msgid "do not prompt, automatically pick the first choice for all prompts"
+msgstr "fråga inte, välj automatiskt det första valet för alla frågor"
 
 msgid "suppress output"
 msgstr "förhindra utmatning"
@@ -9525,14 +9547,17 @@ msgstr ""
 
 msgid ""
 "    With no revision specified, revert the specified files or directories\n"
-"    to the state they had in the first parent of the working directory.\n"
+"    to the contents they had in the parent of the working directory.\n"
 "    This restores the contents of files to an unmodified\n"
-"    state and unschedules adds, removes, copies, and renames."
+"    state and unschedules adds, removes, copies, and renames. If the\n"
+"    working directory has two parents, you must explicitly specify a\n"
+"    revision."
 msgstr ""
 "    Om ingen revision anges, så återställs de givna filerna eller\n"
-"    katalogerna till läget de hade i arbetskatalogens första förälder. Det\n"
-"    sätter filer i ett omodifierad läge och avbeställer adderingar,\n"
-"    raderingar, kopior och namnbyten."
+"    katalogerna till innehållet de hade i arbetskatalogens första förälder.\n"
+"    Det sätter filer i ett omodifierad läge och avbeställer adderingar,\n"
+"    raderingar, kopior och namnbyten. Om arbetskatalogen har två föräldrar,\n"
+"    så måste du ange en revision."
 
 msgid ""
 "    Using the -r/--rev or -d/--date options, revert the given files or\n"
@@ -9557,6 +9582,12 @@ msgstr ""
 
 msgid "you can't specify a revision and a date"
 msgstr "du kan inte specificera en revision och ett datum"
+
+msgid "uncommitted merge with no revision specified"
+msgstr "oarkiverad sammanfogning utan angiven revision"
+
+msgid "use \"hg update\" or see \"hg help revert\""
+msgstr "använd \"hg update\" eller se \"hg help revert\""
 
 msgid "no files or directories specified"
 msgstr "inga filer eller kataloger angivna"
@@ -10625,11 +10656,11 @@ msgstr ""
 
 #, python-format
 msgid "repository '%s' is not local"
-msgstr ""
+msgstr "arkivet '%s' är inte lokalt"
 
 #, python-format
-msgid "no repository found in %r (.hg not found)"
-msgstr "inget arkiv hittades i %r (.hg hittades inte)"
+msgid "no repository found in '%s' (.hg not found)"
+msgstr "inget arkiv hittades i '%s' (.hg hittades inte)"
 
 msgid "warning: --repository ignored\n"
 msgstr "varning: --repository ignorerades\n"
@@ -10792,7 +10823,7 @@ msgstr "inte en funktion: %s"
 
 msgid ""
 "``binary()``\n"
-"    File that appears to be binary (contails NUL bytes)."
+"    File that appears to be binary (contains NUL bytes)."
 msgstr ""
 
 #. i18n: "binary" is a keyword
@@ -13270,7 +13301,7 @@ msgstr ""
 msgid "    hg revert \"set:copied() and binary() and size('>1M')\""
 msgstr ""
 
-msgid "- Remove files listed in files.lst that contain the letter a or b::"
+msgid "- Remove files listed in foo.lst that contain the letter a or b::"
 msgstr ""
 
 msgid "    hg remove \"set: 'listfile:foo.lst' and (**a* or **b*)\""
@@ -16106,7 +16137,7 @@ msgstr "kan inte negera det"
 msgid "not a symbol"
 msgstr "inte en symbol"
 
-#, fuzzy, python-format
+#, python-format
 msgid "invalid number of arguments: %s"
 msgstr "felaktigt antal argument: %s"
 
@@ -16242,7 +16273,7 @@ msgid ""
 "hostfingerprints or web.cacerts config setting)\n"
 msgstr ""
 "varning: %s-certificatet med fingeravtrycket %s overifierad (kontrollera "
-"hostfingerprints inställningen web.cacerts)\n"
+"inställningen för hostfingerprints eller web.cacerts)\n"
 
 #, python-format
 msgid "host fingerprint for %s can't be verified (Python too old)"
@@ -16254,7 +16285,7 @@ msgstr "varning: certificatet för %s kan inte verifieras (för gammal Python)\n
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
-msgstr ""
+msgstr "'%s' verkar inte vara ett hg-arkiv"
 
 msgid "cannot lock static-http repository"
 msgstr ""
@@ -16400,6 +16431,209 @@ msgstr ""
 
 msgid ".hg/cache/tags is corrupt, rebuilding it\n"
 msgstr ".hg/cache/tags är korrupt, bygger om den\n"
+
+msgid ""
+":addbreaks: Any text. Add an XHTML \"<br />\" tag before the end of\n"
+"    every line except the last."
+msgstr ""
+
+msgid ""
+":age: Date. Returns a human-readable date/time difference between the\n"
+"    given date/time and the current date/time."
+msgstr ""
+
+msgid ""
+":basename: Any text. Treats the text as a path, and returns the last\n"
+"    component of the path after splitting by the path separator\n"
+"    (ignoring trailing separators). For example, \"foo/bar/baz\" becomes\n"
+"    \"baz\" and \"foo/bar//\" becomes \"bar\"."
+msgstr ""
+
+msgid ""
+":date: Date. Returns a date in a Unix date format, including the\n"
+"    timezone: \"Mon Sep 04 15:13:13 2006 0700\"."
+msgstr ""
+
+msgid ""
+":domain: Any text. Finds the first string that looks like an email\n"
+"    address, and extracts just the domain component. Example: ``User\n"
+"    <user@example.com>`` becomes ``example.com``."
+msgstr ""
+
+msgid ""
+":email: Any text. Extracts the first string that looks like an email\n"
+"    address. Example: ``User <user@example.com>`` becomes\n"
+"    ``user@example.com``."
+msgstr ""
+
+msgid ""
+":escape: Any text. Replaces the special XML/XHTML characters \"&\", \"<\"\n"
+"    and \">\" with XML entities."
+msgstr ""
+
+msgid ":fill68: Any text. Wraps the text to fit in 68 columns."
+msgstr ""
+
+msgid ":fill76: Any text. Wraps the text to fit in 76 columns."
+msgstr ""
+
+msgid ":firstline: Any text. Returns the first line of text."
+msgstr ""
+
+msgid ""
+":hex: Any text. Convert a binary Mercurial node identifier into\n"
+"    its long hexadecimal representation."
+msgstr ""
+
+msgid ""
+":hgdate: Date. Returns the date as a pair of numbers: \"1157407993\n"
+"    25200\" (Unix timestamp, timezone offset)."
+msgstr ""
+
+msgid ""
+":isodate: Date. Returns the date in ISO 8601 format: \"2009-08-18 13:00\n"
+"    +0200\"."
+msgstr ""
+
+msgid ""
+":isodatesec: Date. Returns the date in ISO 8601 format, including\n"
+"    seconds: \"2009-08-18 13:00:13 +0200\". See also the rfc3339date\n"
+"    filter."
+msgstr ""
+
+msgid ":localdate: Date. Converts a date to local date."
+msgstr ""
+
+msgid ":nonempty: Any text. Returns '(none)' if the string is empty."
+msgstr ""
+
+msgid ""
+":obfuscate: Any text. Returns the input text rendered as a sequence of\n"
+"    XML entities."
+msgstr ""
+
+msgid ":person: Any text. Returns the text before an email address."
+msgstr ""
+
+msgid ""
+":rfc3339date: Date. Returns a date using the Internet date format\n"
+"    specified in RFC 3339: \"2009-08-18T13:00:13+02:00\"."
+msgstr ""
+
+msgid ""
+":rfc822date: Date. Returns a date using the same format used in email\n"
+"    headers: \"Tue, 18 Aug 2009 13:00:13 +0200\"."
+msgstr ""
+
+msgid ""
+":short: Changeset hash. Returns the short form of a changeset hash,\n"
+"    i.e. a 12 hexadecimal digit string."
+msgstr ""
+
+msgid ":shortdate: Date. Returns a date like \"2006-09-18\"."
+msgstr ""
+
+msgid ""
+":stringify: Any type. Turns the value into text by converting values into\n"
+"    text and concatenating them."
+msgstr ""
+
+msgid ":strip: Any text. Strips all leading and trailing whitespace."
+msgstr ""
+
+msgid ""
+":stripdir: Treat the text as path and strip a directory level, if\n"
+"    possible. For example, \"foo\" and \"foo/bar\" becomes \"foo\"."
+msgstr ""
+
+msgid ""
+":tabindent: Any text. Returns the text, with every line except the\n"
+"    first starting with a tab character."
+msgstr ""
+
+msgid ""
+":urlescape: Any text. Escapes all \"special\" characters. For example,\n"
+"    \"foo bar\" becomes \"foo%20bar\"."
+msgstr ""
+
+msgid ":user: Any text. Returns the user portion of an email address."
+msgstr ""
+
+msgid ":author: String. The unmodified author of the changeset."
+msgstr ""
+
+msgid ""
+":branch: String. The name of the branch on which the changeset was\n"
+"    committed."
+msgstr ""
+
+msgid ""
+":branches: List of strings. The name of the branch on which the\n"
+"    changeset was committed. Will be empty if the branch name was\n"
+"    default."
+msgstr ""
+
+msgid ""
+":bookmarks: List of strings. Any bookmarks associated with the\n"
+"    changeset."
+msgstr ""
+
+msgid ":children: List of strings. The children of the changeset."
+msgstr ""
+
+msgid ":date: Date information. The date when the changeset was committed."
+msgstr ""
+
+msgid ":desc: String. The text of the changeset description."
+msgstr ""
+
+msgid ""
+":diffstat: String. Statistics of changes with the following format:\n"
+"    \"modified files: +added/-removed lines\""
+msgstr ""
+
+msgid ":file_adds: List of strings. Files added by this changeset."
+msgstr ""
+
+msgid ""
+":file_copies: List of strings. Files copied in this changeset with\n"
+"    their sources."
+msgstr ""
+
+msgid ""
+":file_copies_switch: List of strings. Like \"file_copies\" but displayed\n"
+"    only if the --copied switch is set."
+msgstr ""
+
+msgid ":file_dels: List of strings. Files removed by this changeset."
+msgstr ""
+
+msgid ":file_mods: List of strings. Files modified by this changeset."
+msgstr ""
+
+msgid ""
+":files: List of strings. All files modified, added, or removed by this\n"
+"    changeset."
+msgstr ""
+
+msgid ""
+":latesttag: String. Most recent global tag in the ancestors of this\n"
+"    changeset."
+msgstr ""
+
+msgid ":latesttagdistance: Integer. Longest path to the latest tag."
+msgstr ""
+
+msgid ""
+":node: String. The changeset identification hash, as a 40 hexadecimal\n"
+"    digit string."
+msgstr ""
+
+msgid ":rev: Integer. The repository-local changeset revision number."
+msgstr ""
+
+msgid ":tags: List of strings. Any tags associated with the changeset."
+msgstr ""
 
 #, python-format
 msgid "unknown method '%s'"
