@@ -7,7 +7,7 @@
   >    hg ci -m "foo-$i"
   > done
 
-  $ for out in "%nof%N" "%%%H" "%b-%R" "%h" "%r"; do
+  $ for out in "%nof%N" "%%%H" "%b-%R" "%h" "%r" "%m"; do
   >    echo
   >    echo "# foo-$out.patch"
   >    hg export -v -o "foo-$out.patch" 2:tip
@@ -77,6 +77,19 @@
   foo-09.patch
   foo-10.patch
   foo-11.patch
+  
+  # foo-%m.patch
+  exporting patches:
+  foo-foo_2.patch
+  foo-foo_3.patch
+  foo-foo_4.patch
+  foo-foo_5.patch
+  foo-foo_6.patch
+  foo-foo_7.patch
+  foo-foo_8.patch
+  foo-foo_9.patch
+  foo-foo_10.patch
+  foo-foo_11.patch
 
 Exporting 4 changesets to a file:
 
@@ -107,4 +120,12 @@ Exporting revision -2 to a file:
    foo-8
    foo-9
   +foo-10
+
+Checking if only alphanumeric characters are used in the file name (%m option):
+
+  $ echo "line" >> foo
+  $ hg commit -m " !\"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\`abcdefghijklmnopqrstuvwxyz{|}~" 
+  $ hg export -v -o %m.patch tip
+  exporting patch:
+  ____________0123456789_______ABCDEFGHIJKLMNOPQRSTUVWXYZ______abcdefghijklmnopqrstuvwxyz____.patch
 

@@ -2229,6 +2229,7 @@ def export(ui, repo, *changesets, **opts):
     :``%R``: changeset revision number
     :``%b``: basename of the exporting repository
     :``%h``: short-form changeset hash (12 hexadecimal digits)
+    :``%m``: first line of the commit message (only alphanumeric characters)
     :``%n``: zero-padded sequence number, starting at 1
     :``%r``: zero-padded changeset revision number
 
