@@ -32,6 +32,8 @@ def log(web, req, tmpl):
         return changelog(web, req, tmpl)
 
 def rawfile(web, req, tmpl):
+    guessmime = web.configbool('web', 'guessmime', False)
+
     path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
     if not path:
         content = manifest(web, req, tmpl)
@@ -50,9 +52,11 @@ def rawfile(web, req, tmpl):
 
     path = fctx.path()
     text = fctx.data()
-    mt = mimetypes.guess_type(path)[0]
-    if mt is None:
-        mt = binary(text) and 'application/octet-stream' or 'text/plain'
+    mt = 'application/binary'
+    if guessmime:
+        mt = mimetypes.guess_type(path)[0]
+        if mt is None:
+            mt = binary(text) and 'application/binary' or 'text/plain'
     if mt.startswith('text/'):
         mt += '; charset="%s"' % encoding.encoding
 
