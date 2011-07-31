@@ -1468,8 +1468,9 @@ class url(object):
 
         self.path = path
 
+        # leave the query string escaped
         for a in ('user', 'passwd', 'host', 'port',
-                  'path', 'query', 'fragment'):
+                  'path', 'fragment'):
             v = getattr(self, a)
             if v is not None:
                 setattr(self, a, _urlunquote(v))
@@ -1490,6 +1491,10 @@ class url(object):
 
         >>> str(url('http://user:pw@host:80/?foo#bar'))
         'http://user:pw@host:80/?foo#bar'
+        >>> str(url('http://user:pw@host:80/?foo=bar&baz=42'))
+        'http://user:pw@host:80/?foo=bar&baz=42'
+        >>> str(url('http://user:pw@host:80/?foo=bar%3dbaz'))
+        'http://user:pw@host:80/?foo=bar%3dbaz'
         >>> str(url('ssh://user:pw@[::1]:2200//home/joe#'))
         'ssh://user:pw@[::1]:2200//home/joe#'
         >>> str(url('http://localhost:80//'))
@@ -1538,9 +1543,13 @@ class url(object):
         if self.host:
             s += '/'
         if self.path:
+            # TODO: similar to the query string, we should not unescape the
+            # path when we store it, the path might contain '%2f' = '/',
+            # which we should *not* escape.
             s += urllib.quote(self.path, safe=self._safepchars)
         if self.query:
-            s += '?' + urllib.quote(self.query, safe=self._safepchars)
+            # we store the query in escaped form.
+            s += '?' + self.query
         if self.fragment is not None:
             s += '#' + urllib.quote(self.fragment, safe=self._safepchars)
         return s
