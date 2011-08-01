@@ -51,6 +51,33 @@ def urlrepos(prefix, roothead, paths):
         yield (prefix + '/' +
                util.pconvert(path[len(roothead):]).lstrip('/')).strip('/'), path
 
+def geturlcgivars(baseurl, port):
+    """
+    Extract CGI variables from baseurl
+
+    >>> geturlcgivars("http://host.org/base", "80")
+    ('host.org', '80', '/base')
+    >>> geturlcgivars("http://host.org:8000/base", "80")
+    ('host.org', '8000', '/base')
+    >>> geturlcgivars('/base', 8000)
+    ('', '8000', '/base')
+    >>> geturlcgivars("base", '8000')
+    ('', '8000', '/base')
+    >>> geturlcgivars("http://host", '8000')
+    ('host', '8000', '/')
+    >>> geturlcgivars("http://host/", '8000')
+    ('host', '8000', '/')
+    """
+    u = util.url(baseurl)
+    name = u.host or ''
+    if u.port:
+        port = u.port
+    path = u.path or ""
+    if not path.startswith('/'):
+        path = '/' + path
+
+    return name, str(port), path
+
 class hgwebdir(object):
     refreshinterval = 20
 
@@ -366,11 +393,7 @@ class hgwebdir(object):
 
     def updatereqenv(self, env):
         if self._baseurl is not None:
-            u = util.url(self._baseurl)
-            env['SERVER_NAME'] = u.host
-            if u.port:
-                env['SERVER_PORT'] = u.port
-            path = u.path or ""
-            if not path.startswith('/'):
-                path = '/' + path
+            name, port, path = geturlcgivars(self._baseurl, env['SERVER_PORT'])
+            env['SERVER_NAME'] = name
+            env['SERVER_PORT'] = port
             env['SCRIPT_NAME'] = path
