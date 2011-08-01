@@ -537,12 +537,15 @@ class ui(object):
             except Exception:
                 pass
 
-        # instead of trying to emulate raw_input, swap our in/out
-        # with sys.stdin/out
-        old = sys.stdout, sys.stdin
-        sys.stdout, sys.stdin = self.fout, self.fin
-        line = raw_input(prompt)
-        sys.stdout, sys.stdin = old
+        # call write() so output goes through subclassed implementation
+        # e.g. color extension on Windows
+        self.write(prompt)
+
+        # instead of trying to emulate raw_input, swap self.fin with sys.stdin
+        old = sys.stdin
+        sys.stdin = self.fin
+        line = raw_input()
+        sys.stdin = old
 
         # When stdin is in binary mode on Windows, it can cause
         # raw_input() to emit an extra trailing carriage return
