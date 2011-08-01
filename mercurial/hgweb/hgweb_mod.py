@@ -129,8 +129,9 @@ class hgweb(object):
                 # A client that sends unbundle without 100-continue will
                 # break if we respond early.
                 if (cmd == 'unbundle' and
-                    req.env.get('HTTP_EXPECT',
-                                '').lower() != '100-continue'):
+                    (req.env.get('HTTP_EXPECT',
+                                 '').lower() != '100-continue') or
+                    req.env.get('X-HgHttp2', '')):
                     req.drain()
                 req.respond(inst, protocol.HGTYPE)
                 return '0\n%s\n' % inst.message
