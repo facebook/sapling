@@ -14,6 +14,10 @@ URI: https://example.org/foo/bar
      abort
 URI: https://example.org/bar
      abort
+URI: https://x@example.org/bar
+     abort
+URI: https://y@example.org/bar
+     abort
 CFG: {x.prefix: https://example.org}
 URI: http://example.org/foo
      abort
@@ -27,6 +31,10 @@ URI: https://example.org/foo/bar
      ('x', 'x')
 URI: https://example.org/bar
      ('x', 'x')
+URI: https://x@example.org/bar
+     ('x', 'x')
+URI: https://y@example.org/bar
+     abort
 CFG: {x.prefix: http://example.org, x.schemes: https}
 URI: http://example.org/foo
      ('x', 'x')
@@ -39,6 +47,10 @@ URI: https://example.org/foo
 URI: https://example.org/foo/bar
      abort
 URI: https://example.org/bar
+     abort
+URI: https://x@example.org/bar
+     abort
+URI: https://y@example.org/bar
      abort
 CFG: {x.prefix: https://example.org, x.schemes: http}
 URI: http://example.org/foo
@@ -53,6 +65,10 @@ URI: https://example.org/foo/bar
      ('x', 'x')
 URI: https://example.org/bar
      ('x', 'x')
+URI: https://x@example.org/bar
+     ('x', 'x')
+URI: https://y@example.org/bar
+     abort
 
 *** Test separately configured schemes
 
@@ -69,6 +85,10 @@ URI: https://example.org/foo/bar
      abort
 URI: https://example.org/bar
      abort
+URI: https://x@example.org/bar
+     abort
+URI: https://y@example.org/bar
+     abort
 CFG: {x.prefix: example.org, x.schemes: https}
 URI: http://example.org/foo
      abort
@@ -82,6 +102,10 @@ URI: https://example.org/foo/bar
      ('x', 'x')
 URI: https://example.org/bar
      ('x', 'x')
+URI: https://x@example.org/bar
+     ('x', 'x')
+URI: https://y@example.org/bar
+     abort
 CFG: {x.prefix: example.org, x.schemes: http https}
 URI: http://example.org/foo
      ('x', 'x')
@@ -95,6 +119,10 @@ URI: https://example.org/foo/bar
      ('x', 'x')
 URI: https://example.org/bar
      ('x', 'x')
+URI: https://x@example.org/bar
+     ('x', 'x')
+URI: https://y@example.org/bar
+     abort
 
 *** Test prefix matching
 
@@ -111,6 +139,10 @@ URI: https://example.org/foo/bar
      abort
 URI: https://example.org/bar
      abort
+URI: https://x@example.org/bar
+     abort
+URI: https://y@example.org/bar
+     abort
 CFG: {x.prefix: http://example.org/foo, y.prefix: http://example.org/foo/bar}
 URI: http://example.org/foo
      ('x', 'x')
@@ -123,6 +155,10 @@ URI: https://example.org/foo
 URI: https://example.org/foo/bar
      abort
 URI: https://example.org/bar
+     abort
+URI: https://x@example.org/bar
+     abort
+URI: https://y@example.org/bar
      abort
 CFG: {x.prefix: *, y.prefix: https://example.org/bar}
 URI: http://example.org/foo
@@ -137,3 +173,19 @@ URI: https://example.org/foo/bar
      ('x', 'x')
 URI: https://example.org/bar
      ('y', 'y')
+URI: https://x@example.org/bar
+     ('x', 'x')
+URI: https://y@example.org/bar
+     ('y', 'y')
+
+*** Test user matching
+
+CFG: {x.password: xpassword, x.prefix: http://example.org/foo, x.username: None}
+URI: http://y@example.org/foo
+     ('y', 'xpassword')
+CFG: {x.password: xpassword, x.prefix: http://example.org/foo, x.username: None, y.password: ypassword, y.prefix: http://example.org/foo, y.username: y}
+URI: http://y@example.org/foo
+     ('y', 'ypassword')
+CFG: {x.password: xpassword, x.prefix: http://example.org/foo/bar, x.username: None, y.password: ypassword, y.prefix: http://example.org/foo, y.username: y}
+URI: http://y@example.org/foo/bar
+     ('y', 'xpassword')
