@@ -368,4 +368,7 @@ class hgwebdir(object):
             env['SERVER_NAME'] = u.host
             if u.port:
                 env['SERVER_PORT'] = u.port
-            env['SCRIPT_NAME'] = '/' + u.path
+            path = u.path or ""
+            if not path.startswith('/'):
+                path = '/' + path
+            env['SCRIPT_NAME'] = path
