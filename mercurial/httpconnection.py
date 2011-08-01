@@ -72,10 +72,19 @@ def readauthforuri(ui, uri):
         gdict[setting] = val
 
     # Find the best match
+    uri = util.url(uri)
+    user = uri.user
+    uri.user = uri.password = None
+    uri = str(uri)
     scheme, hostpath = uri.split('://', 1)
+    bestuser = None
     bestlen = 0
     bestauth = None
     for group, auth in config.iteritems():
+        if user and user != auth.get('username', user):
+            # If a username was set in the URI, the entry username
+            # must either match it or be unset
+            continue
         prefix = auth.get('prefix')
         if not prefix:
             continue
@@ -85,9 +94,14 @@ def readauthforuri(ui, uri):
         else:
             schemes = (auth.get('schemes') or 'https').split()
         if (prefix == '*' or hostpath.startswith(prefix)) and \
-            len(prefix) > bestlen and scheme in schemes:
+            (len(prefix) > bestlen or (len(prefix) == bestlen and \
+                not bestuser and 'username' in auth)) \
+             and scheme in schemes:
             bestlen = len(prefix)
             bestauth = group, auth
+            bestuser = auth.get('username')
+            if user and not bestuser:
+                auth['username'] = user
     return bestauth
 
 # Mercurial (at least until we can remove the old codepath) requires

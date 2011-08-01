@@ -25,7 +25,7 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
             self._writedebug(user, passwd)
             return (user, passwd)
 
-        if not user:
+        if not user or not passwd:
             res = httpconnectionmod.readauthforuri(self.ui, authuri)
             if res:
                 group, auth = res

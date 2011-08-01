@@ -262,7 +262,9 @@ Supported arguments:
     Optional. Username to authenticate with. If not given, and the
     remote site requires basic or digest authentication, the user will
     be prompted for it. Environment variables are expanded in the
-    username letting you do ``foo.username = $USER``.
+    username letting you do ``foo.username = $USER``. If the URI
+    includes a username, only ``[auth]`` entries with a matching
+    username or without a username will be considered.
 
 ``password``
     Optional. Password to authenticate with. If not given, and the
