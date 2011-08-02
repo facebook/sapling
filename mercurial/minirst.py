@@ -465,6 +465,25 @@ def format(text, width, indent=0, keep=None):
     else:
         return text, pruned
 
+def getsections(blocks):
+    '''return a list of (section name, nesting level, blocks) tuples'''
+    nest = ""
+    level = 0
+    secs = []
+    for b in blocks:
+        if b['type'] == 'section':
+            i = b['underline']
+            if i not in nest:
+                nest += i
+            level = nest.index(i) + 1
+            nest = nest[:level]
+            secs.append((b['lines'][0], level, [b]))
+        else:
+            if not secs:
+                # add an initial empty section
+                secs = [('', 0, [])]
+            secs[-1][2].append(b)
+    return secs
 
 if __name__ == "__main__":
     from pprint import pprint
