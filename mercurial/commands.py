@@ -4147,7 +4147,7 @@ def resolve(ui, repo, *pats, **opts):
     [('a', 'all', None, _('revert all changes when no arguments given')),
     ('d', 'date', '', _('tipmost revision matching date'), _('DATE')),
     ('r', 'rev', '', _('revert to the specified revision'), _('REV')),
-    ('', 'no-backup', None, _('do not save backup copies of files')),
+    ('C', 'no-backup', None, _('do not save backup copies of files')),
     ] + walkopts + dryrunopts,
     _('[OPTION]... [-r REV] [NAME]...'))
 def revert(ui, repo, *pats, **opts):
