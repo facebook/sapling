@@ -701,6 +701,21 @@ def gui():
     else:
         return os.name == "nt" or os.environ.get("DISPLAY")
 
+def copymode(src, dst, mode=None):
+    '''Copy the file mode from the file at path src to dst.
+    If src doesn't exist, we're using mode instead. If mode is None, we're
+    using umask.'''
+    try:
+        st_mode = os.lstat(src).st_mode & 0777
+    except OSError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+        st_mode = mode
+        if st_mode is None:
+            st_mode = ~umask
+        st_mode &= 0666
+    os.chmod(dst, st_mode)
+
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name
 
@@ -717,16 +732,7 @@ def mktempcopy(name, emptyok=False, createmode=None):
     # Temporary files are created with mode 0600, which is usually not
     # what we want.  If the original file already exists, just copy
     # its mode.  Otherwise, manually obey umask.
-    try:
-        st_mode = os.lstat(name).st_mode & 0777
-    except OSError, inst:
-        if inst.errno != errno.ENOENT:
-            raise
-        st_mode = createmode
-        if st_mode is None:
-            st_mode = ~umask
-        st_mode &= 0666
-    os.chmod(temp, st_mode)
+    copymode(name, temp, createmode)
     if emptyok:
         return temp
     try:
