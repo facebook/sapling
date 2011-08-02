@@ -10,6 +10,7 @@ from mercurial import util, wireproto
 from common import HTTP_OK
 
 HGTYPE = 'application/mercurial-0.1'
+HGERRTYPE = 'application/hg-error'
 
 class webproto(object):
     def __init__(self, req, ui):
@@ -89,4 +90,8 @@ def call(repo, req, cmd):
         p.restore()
         rsp = '0\n%s\n' % rsp.res
         req.respond(HTTP_OK, HGTYPE, length=len(rsp))
+        return [rsp]
+    elif isinstance(rsp, wireproto.ooberror):
+        rsp = rsp.message
+        req.respond(HTTP_OK, HGERRTYPE, length=len(rsp))
         return [rsp]

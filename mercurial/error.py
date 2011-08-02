@@ -39,6 +39,9 @@ class Abort(Exception):
 class ConfigError(Abort):
     'Exception raised when parsing config files'
 
+class OutOfBandError(Exception):
+    'Exception raised when a remote repo reports failure'
+
 class ParseError(Exception):
     'Exception raised when parsing config files (msg[, pos])'
 

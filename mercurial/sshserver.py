@@ -82,6 +82,12 @@ class sshserver(object):
     def sendpusherror(self, rsp):
         self.sendresponse(rsp.res)
 
+    def sendooberror(self, rsp):
+        self.ui.ferr.write('%s\n-\n' % rsp.message)
+        self.ui.ferr.flush()
+        self.fout.write('\n')
+        self.fout.flush()
+
     def serve_forever(self):
         try:
             while self.serve_one():
@@ -96,6 +102,7 @@ class sshserver(object):
         wireproto.streamres: sendstream,
         wireproto.pushres: sendpushresponse,
         wireproto.pusherr: sendpusherror,
+        wireproto.ooberror: sendooberror,
     }
 
     def serve_one(self):

@@ -335,6 +335,10 @@ class pusherr(object):
     def __init__(self, res):
         self.res = res
 
+class ooberror(object):
+    def __init__(self, message):
+        self.message = message
+
 def dispatch(repo, proto, command):
     func, spec = commands[command]
     args = proto.getargs(spec)
@@ -376,6 +380,8 @@ def batch(repo, proto, cmds, others):
             result = func(repo, proto, *[data[k] for k in keys])
         else:
             result = func(repo, proto)
+        if isinstance(result, ooberror):
+            return result
         res.append(escapearg(result))
     return ';'.join(res)
 

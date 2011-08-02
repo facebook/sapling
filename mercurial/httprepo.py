@@ -136,6 +136,8 @@ class httprepository(wireproto.wirerepository):
             proto = resp.headers.get('content-type', '')
 
         safeurl = util.hidepassword(self._url)
+        if proto.startswith('application/hg-error'):
+            raise error.OutOfBandError(resp.read())
         # accept old "text/plain" and "application/hg-changegroup" for now
         if not (proto.startswith('application/mercurial-') or
                 proto.startswith('text/plain') or
