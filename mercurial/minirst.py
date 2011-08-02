@@ -433,9 +433,9 @@ def formatblock(block, width):
                      initindent=indent,
                      hangindent=subindent)
 
-
-def format(text, width, indent=0, keep=None):
-    """Parse and format the text according to width."""
+def parse(text, indent=0, keep=None):
+    """Parse text into a list of blocks"""
+    pruned = []
     blocks = findblocks(text)
     for b in blocks:
         b['indent'] += indent
@@ -450,6 +450,11 @@ def format(text, width, indent=0, keep=None):
     blocks = addmargins(blocks)
     blocks = prunecomments(blocks)
     blocks = findadmonitions(blocks)
+    return blocks, pruned
+
+def format(text, width, indent=0, keep=None):
+    """Parse and format the text according to width."""
+    blocks, pruned = parse(text, indent, keep or [])
     text = '\n'.join(formatblock(b, width) for b in blocks)
     if keep is None:
         return text
