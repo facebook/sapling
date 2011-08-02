@@ -27,6 +27,7 @@ else:
 cachestat = platform.cachestat
 checkexec = platform.checkexec
 checklink = platform.checklink
+copymode = platform.copymode
 executablepath = platform.executablepath
 expandglobs = platform.expandglobs
 explainexit = platform.explainexit
@@ -700,21 +701,6 @@ def gui():
             return True
     else:
         return os.name == "nt" or os.environ.get("DISPLAY")
-
-def copymode(src, dst, mode=None):
-    '''Copy the file mode from the file at path src to dst.
-    If src doesn't exist, we're using mode instead. If mode is None, we're
-    using umask.'''
-    try:
-        st_mode = os.lstat(src).st_mode & 0777
-    except OSError, inst:
-        if inst.errno != errno.ENOENT:
-            raise
-        st_mode = mode
-        if st_mode is None:
-            st_mode = ~umask
-        st_mode &= 0666
-    os.chmod(dst, st_mode)
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name

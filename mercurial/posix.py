@@ -84,6 +84,21 @@ def setflags(f, l, x):
         # Turn off all +x bits
         os.chmod(f, s & 0666)
 
+def copymode(src, dst, mode=None):
+    '''Copy the file mode from the file at path src to dst.
+    If src doesn't exist, we're using mode instead. If mode is None, we're
+    using umask.'''
+    try:
+        st_mode = os.lstat(src).st_mode & 0777
+    except OSError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+        st_mode = mode
+        if st_mode is None:
+            st_mode = ~umask
+        st_mode &= 0666
+    os.chmod(dst, st_mode)
+
 def checkexec(path):
     """
     Check whether the given path is on a filesystem with UNIX-like exec flags

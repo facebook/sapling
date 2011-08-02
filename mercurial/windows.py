@@ -105,6 +105,9 @@ def sshargs(sshcmd, host, user, port):
 def setflags(f, l, x):
     pass
 
+def copymode(src, dst, mode=None):
+    pass
+
 def checkexec(path):
     return False
 
