@@ -452,6 +452,10 @@ def parse(text, indent=0, keep=None):
     blocks = findadmonitions(blocks)
     return blocks, pruned
 
+def formatblocks(blocks, width):
+    text = '\n'.join(formatblock(b, width) for b in blocks)
+    return text
+
 def format(text, width, indent=0, keep=None):
     """Parse and format the text according to width."""
     blocks, pruned = parse(text, indent, keep or [])
