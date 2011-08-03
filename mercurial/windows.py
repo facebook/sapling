@@ -9,20 +9,21 @@ from i18n import _
 import osutil
 import errno, msvcrt, os, re, sys
 
-from win32 import executablepath
-from win32 import getuser
-from win32 import hidewindow
-from win32 import lookupreg
-from win32 import makedir
-from win32 import nlinks
-from win32 import oslink
-from win32 import samedevice
-from win32 import samefile
-from win32 import setsignalhandler
-from win32 import spawndetached
-from win32 import termwidth
-from win32 import testpid
-from win32 import unlink
+import win32
+executablepath = win32.executablepath
+getuser = win32.getuser
+hidewindow = win32.hidewindow
+lookupreg = win32.lookupreg
+makedir = win32.makedir
+nlinks = win32.nlinks
+oslink = win32.oslink
+samedevice = win32.samedevice
+samefile = win32.samefile
+setsignalhandler = win32.setsignalhandler
+spawndetached = win32.spawndetached
+termwidth = win32.termwidth
+testpid = win32.testpid
+unlink = win32.unlink
 
 nulldev = 'NUL:'
 umask = 002
