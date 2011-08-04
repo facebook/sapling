@@ -1444,6 +1444,8 @@ class url(object):
                     path = None
                 if not self.host:
                     self.host = None
+                    # path of file:///d is /d
+                    # path of file:///d:/ is d:/, not /d:/
                     if path and not hasdriveletter(path):
                         path = '/' + path
 
@@ -1586,11 +1588,6 @@ class url(object):
                 path = self._hostport + '/' + self.path
             elif self.host is not None and self.path:
                 path = '/' + path
-            # We also need to handle the case of file:///C:/, which
-            # should return C:/, not /C:/.
-            elif hasdriveletter(path):
-                # Strip leading slash from paths with drive names
-                return path[1:]
             return path
         return self._origpath
 
