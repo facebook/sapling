@@ -2589,14 +2589,14 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
     Returns 0 if successful.
     """
-    option_lists = []
+    optlist = []
     textwidth = min(ui.termwidth(), 80) - 2
 
     def addglobalopts(aliases):
         if ui.verbose:
-            option_lists.append((_("global options:"), globalopts))
+            optlist.append((_("global options:"), globalopts))
             if name == 'shortlist':
-                option_lists.append((_('use "hg help" for the full list '
+                optlist.append((_('use "hg help" for the full list '
                                        'of commands'), ()))
         else:
             if name == 'shortlist':
@@ -2609,7 +2609,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                         'global options') % (name and " " + name or "")
             else:
                 msg = _('use "hg -v help %s" to show global options') % name
-            option_lists.append((msg, ()))
+            optlist.append((msg, ()))
 
     def helpcmd(name):
         try:
@@ -2661,7 +2661,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         if not ui.quiet:
             # options
             if entry[1]:
-                option_lists.append((_("options:\n"), entry[1]))
+                optlist.append((_("options:\n"), entry[1]))
 
             addglobalopts(False)
 
@@ -2820,10 +2820,19 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             if text:
                 ui.write("\n%s\n" % minirst.format(text, textwidth))
 
+    if not name:
+        ui.write(_("\nadditional help topics:\n\n"))
+        topics = []
+        for names, header, doc in help.helptable:
+            topics.append((sorted(names, key=len, reverse=True)[0], header))
+        topics_len = max([len(s[0]) for s in topics])
+        for t, desc in topics:
+            ui.write(" %-*s  %s\n" % (topics_len, t, desc))
+
     # list all option lists
     opt_output = []
     multioccur = False
-    for title, options in option_lists:
+    for title, options in optlist:
         opt_output.append(("\n%s" % title, None))
         for option in options:
             if len(option) == 5:
@@ -2855,15 +2864,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             opt_output.append((msg, None))
         else:
             opt_output.insert(-1, (msg, None))
-
-    if not name:
-        ui.write(_("\nadditional help topics:\n\n"))
-        topics = []
-        for names, header, doc in help.helptable:
-            topics.append((sorted(names, key=len, reverse=True)[0], header))
-        topics_len = max([len(s[0]) for s in topics])
-        for t, desc in topics:
-            ui.write(" %-*s  %s\n" % (topics_len, t, desc))
 
     if opt_output:
         colwidth = encoding.colwidth
