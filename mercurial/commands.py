@@ -2579,7 +2579,7 @@ def heads(ui, repo, *branchrevs, **opts):
     [('e', 'extension', None, _('show only help for extensions')),
      ('c', 'command', None, _('show only help for commands'))],
     _('[-ec] [TOPIC]'))
-def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts):
+def help_(ui, name=None, unknowncmd=False, full=True, **opts):
     """show help for a given topic or a help overview
 
     With no arguments, print a list of commands with short help messages.
@@ -2612,10 +2612,6 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
             option_lists.append((msg, ()))
 
     def helpcmd(name):
-        if with_version:
-            version_(ui)
-            ui.write('\n')
-
         try:
             aliases, entry = cmdutil.findcmd(name, table, strict=unknowncmd)
         except error.AmbiguousCommand, inst:
@@ -2809,10 +2805,7 @@ def help_(ui, name=None, with_version=False, unknowncmd=False, full=True, **opts
 
     else:
         # program name
-        if ui.verbose or with_version:
-            version_(ui)
-        else:
-            ui.status(_("Mercurial Distributed SCM\n"))
+        ui.status(_("Mercurial Distributed SCM\n"))
         ui.status('\n')
 
         # list of commands

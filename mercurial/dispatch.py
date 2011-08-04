@@ -622,10 +622,10 @@ def _dispatch(req):
         for ui_ in uis:
             ui_.setconfig('web', 'cacerts', '')
 
-    if options['help']:
-        return commands.help_(ui, cmd, options['version'])
-    elif options['version']:
+    if options['version']:
         return commands.version_(ui)
+    if options['help']:
+        return commands.help_(ui, cmd)
     elif not cmd:
         return commands.help_(ui, 'shortlist')
 

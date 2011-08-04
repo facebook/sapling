@@ -199,12 +199,7 @@ Short help:
 Test short command list with verbose option
 
   $ hg -v help shortlist
-  Mercurial Distributed SCM (version *) (glob)
-  (see http://mercurial.selenic.com for more information)
-  
-  Copyright (C) 2005-2011 Matt Mackall and others
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  Mercurial Distributed SCM
   
   basic commands:
   
@@ -359,32 +354,6 @@ Test help option with version option
   Copyright (C) 2005-2011 Matt Mackall and others
   This is free software; see the source for copying conditions. There is NO
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-  
-  hg add [OPTION]... [FILE]...
-  
-  add the specified files on the next commit
-  
-      Schedule files to be version controlled and added to the repository.
-  
-      The files will be added to the repository at the next commit. To undo an
-      add before that, see "hg forget".
-  
-      If no names are given, add all files to the repository.
-  
-      Returns 0 if all files are successfully added.
-  
-  use "hg -v help add" to show verbose help
-  
-  options:
-  
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
-   -S --subrepos             recurse into subrepositories
-   -n --dry-run              do not perform actions, just print output
-  
-  [+] marked option can be specified multiple times
-  
-  use "hg -v help add" to show global options
 
   $ hg add --skjdfks
   hg add: option --skjdfks not recognized
