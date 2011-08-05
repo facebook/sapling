@@ -189,3 +189,8 @@ URI: http://y@example.org/foo
 CFG: {x.password: xpassword, x.prefix: http://example.org/foo/bar, x.username: None, y.password: ypassword, y.prefix: http://example.org/foo, y.username: y}
 URI: http://y@example.org/foo/bar
      ('y', 'xpassword')
+
+*** Test urllib2 and util.url
+
+URIs: http://user@example.com:8080/foo http://example.com:8080/foo
+('user', '')

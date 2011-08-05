@@ -1565,7 +1565,9 @@ class url(object):
             self.user, self.passwd = user, passwd
         if not self.user:
             return (s, None)
-        return (s, (None, (str(self), self.host),
+        # authinfo[1] is passed to urllib2 password manager, and its URIs
+        # must not contain credentials.
+        return (s, (None, (s, self.host),
                     self.user, self.passwd or ''))
 
     def isabs(self):
