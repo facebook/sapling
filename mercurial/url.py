@@ -26,7 +26,7 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
             return (user, passwd)
 
         if not user or not passwd:
-            res = httpconnectionmod.readauthforuri(self.ui, authuri)
+            res = httpconnectionmod.readauthforuri(self.ui, authuri, user)
             if res:
                 group, auth = res
                 user, passwd = auth.get('username'), auth.get('password')
@@ -52,6 +52,10 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def _writedebug(self, user, passwd):
         msg = _('http auth: user %s, password %s\n')
         self.ui.debug(msg % (user, passwd and '*' * len(passwd) or 'not set'))
+
+    def find_stored_password(self, authuri):
+        return urllib2.HTTPPasswordMgrWithDefaultRealm.find_user_password(
+            self, None, authuri)
 
 class proxyhandler(urllib2.ProxyHandler):
     def __init__(self, ui):
@@ -342,7 +346,11 @@ if has_https:
             return keepalive.KeepAliveHandler._start_transaction(self, h, req)
 
         def https_open(self, req):
-            res = httpconnectionmod.readauthforuri(self.ui, req.get_full_url())
+            # req.get_full_url() does not contain credentials and we may
+            # need them to match the certificates.
+            url = req.get_full_url()
+            user, password = self.pwmgr.find_stored_password(url)
+            res = httpconnectionmod.readauthforuri(self.ui, url, user)
             if res:
                 group, auth = res
                 self.auth = auth

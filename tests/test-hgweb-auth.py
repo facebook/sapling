@@ -37,10 +37,10 @@ def test(auth, urls=None):
         print 'URI:', uri
         try:
             pm = url.passwordmgr(ui)
-            authinfo = util.url(uri).authinfo()[1]
+            u, authinfo = util.url(uri).authinfo()
             if authinfo is not None:
                 pm.add_password(*authinfo)
-            print '    ', pm.find_user_password('test', uri)
+            print '    ', pm.find_user_password('test', u)
         except Abort, e:
             print 'abort'
 
