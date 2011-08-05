@@ -204,18 +204,32 @@ def test_url():
     <url scheme: 'file', path: '/foo/bar/baz'>
     >>> str(u)
     'file:///foo/bar/baz'
+    >>> u.localpath()
+    '/foo/bar/baz'
 
     >>> u = url('file:///foo/bar/baz')
     >>> u
     <url scheme: 'file', path: '/foo/bar/baz'>
     >>> str(u)
     'file:///foo/bar/baz'
+    >>> u.localpath()
+    '/foo/bar/baz'
+
+    >>> u = url('file:///f:oo/bar/baz')
+    >>> u
+    <url scheme: 'file', path: 'f:oo/bar/baz'>
+    >>> str(u)
+    'file:f%3Aoo/bar/baz'
+    >>> u.localpath()
+    'f:oo/bar/baz'
 
     >>> u = url('file:foo/bar/baz')
     >>> u
     <url scheme: 'file', path: 'foo/bar/baz'>
     >>> str(u)
     'file:foo/bar/baz'
+    >>> u.localpath()
+    'foo/bar/baz'
     """
 
 doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)

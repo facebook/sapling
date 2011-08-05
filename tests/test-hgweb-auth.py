@@ -1,4 +1,5 @@
 from mercurial import demandimport; demandimport.enable()
+import urllib2
 from mercurial import ui, util
 from mercurial import url
 from mercurial.error import Abort
@@ -36,10 +37,10 @@ def test(auth, urls=None):
         print 'URI:', uri
         try:
             pm = url.passwordmgr(ui)
-            authinfo = util.url(uri).authinfo()[1]
+            u, authinfo = util.url(uri).authinfo()
             if authinfo is not None:
                 pm.add_password(*authinfo)
-            print '    ', pm.find_user_password('test', uri)
+            print '    ', pm.find_user_password('test', u)
         except Abort, e:
             print 'abort'
 
@@ -95,3 +96,12 @@ test({'x.prefix': 'http://example.org/foo/bar',
       'y.username': 'y',
       'y.password': 'ypassword'},
      urls=['http://y@example.org/foo/bar'])
+
+def testauthinfo(fullurl, authurl):
+    print 'URIs:', fullurl, authurl
+    pm = urllib2.HTTPPasswordMgrWithDefaultRealm()
+    pm.add_password(*util.url(fullurl).authinfo()[1])
+    print pm.find_user_password('test', authurl)
+
+print '\n*** Test urllib2 and util.url\n'
+testauthinfo('http://user@example.com:8080/foo', 'http://example.com:8080/foo')

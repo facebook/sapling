@@ -1468,6 +1468,8 @@ class url(object):
                     path = None
                 if not self.host:
                     self.host = None
+                    # path of file:///d is /d
+                    # path of file:///d:/ is d:/, not /d:/
                     if path and not hasdriveletter(path):
                         path = '/' + path
 
@@ -1587,7 +1589,9 @@ class url(object):
             self.user, self.passwd = user, passwd
         if not self.user:
             return (s, None)
-        return (s, (None, (str(self), self.host),
+        # authinfo[1] is passed to urllib2 password manager, and its URIs
+        # must not contain credentials.
+        return (s, (None, (s, self.host),
                     self.user, self.passwd or ''))
 
     def isabs(self):
@@ -1610,11 +1614,6 @@ class url(object):
                 path = self._hostport + '/' + self.path
             elif self.host is not None and self.path:
                 path = '/' + path
-            # We also need to handle the case of file:///C:/, which
-            # should return C:/, not /C:/.
-            elif hasdriveletter(path):
-                # Strip leading slash from paths with drive names
-                return path[1:]
             return path
         return self._origpath
 

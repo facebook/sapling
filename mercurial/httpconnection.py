@@ -58,7 +58,7 @@ class httpsendfile(object):
         return self._len
 
 # moved here from url.py to avoid a cycle
-def readauthforuri(ui, uri):
+def readauthforuri(ui, uri, user):
     # Read configuration
     config = dict()
     for key, val in ui.configitems('auth'):
@@ -72,10 +72,6 @@ def readauthforuri(ui, uri):
         gdict[setting] = val
 
     # Find the best match
-    uri = util.url(uri)
-    user = uri.user
-    uri.user = uri.password = None
-    uri = str(uri)
     scheme, hostpath = uri.split('://', 1)
     bestuser = None
     bestlen = 0
@@ -238,7 +234,11 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
         return self.do_open(HTTPConnection, req, False)
 
     def https_open(self, req):
-        res = readauthforuri(self.ui, req.get_full_url())
+        # req.get_full_url() does not contain credentials and we may
+        # need them to match the certificates.
+        url = req.get_full_url()
+        user, password = self.pwmgr.find_stored_password(url)
+        res = readauthforuri(self.ui, url, user)
         if res:
             group, auth = res
             self.auth = auth
