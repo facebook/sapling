@@ -1148,16 +1148,14 @@ def MBTextWrapper(**kwargs):
         def __init__(self, **kwargs):
             textwrap.TextWrapper.__init__(self, **kwargs)
 
-        def _cutdown(self, str, space_left):
+        def _cutdown(self, ucstr, space_left):
             l = 0
-            ucstr = unicode(str, encoding.encoding)
             colwidth = unicodedata.east_asian_width
             for i in xrange(len(ucstr)):
                 l += colwidth(ucstr[i]) in 'WFA' and 2 or 1
                 if space_left < l:
-                    return (ucstr[:i].encode(encoding.encoding),
-                            ucstr[i:].encode(encoding.encoding))
-            return str, ''
+                    return (ucstr[:i], ucstr[i:])
+            return ucstr, ''
 
         # overriding of base class
         def _handle_long_word(self, reversed_chunks, cur_line, cur_len, width):
@@ -1179,10 +1177,13 @@ def wrap(line, width, initindent='', hangindent=''):
     if width <= maxindent:
         # adjust for weird terminal size
         width = max(78, maxindent + 1)
+    line = line.decode(encoding.encoding, encoding.encodingmode)
+    initindent = initindent.decode(encoding.encoding, encoding.encodingmode)
+    hangindent = hangindent.decode(encoding.encoding, encoding.encodingmode)
     wrapper = MBTextWrapper(width=width,
                             initial_indent=initindent,
                             subsequent_indent=hangindent)
-    return wrapper.fill(line)
+    return wrapper.fill(line).encode(encoding.encoding)
 
 def iterlines(iterator):
     for chunk in iterator:
