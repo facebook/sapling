@@ -1589,8 +1589,10 @@ class url(object):
             self.user, self.passwd = user, passwd
         if not self.user:
             return (s, None)
-        # authinfo[1] is passed to urllib2 password manager, and its URIs
-        # must not contain credentials.
+        # authinfo[1] is passed to urllib2 password manager, and its
+        # URIs must not contain credentials. The host is passed in the
+        # URIs list because Python < 2.4.3 uses only that to search for
+        # a password.
         return (s, (None, (s, self.host),
                     self.user, self.passwd or ''))
 
