@@ -249,10 +249,15 @@ class kwtemplater(object):
         kwcmd = self.restrict and lookup # kwexpand/kwshrink
         if self.restrict or expand and lookup:
             mf = ctx.manifest()
+        if self.restrict or rekw:
+            re_kw = self.rekw
+        else:
+            re_kw = self.rekwexp
+        if expand:
+            msg = _('overwriting %s expanding keywords\n')
+        else:
+            msg = _('overwriting %s shrinking keywords\n')
         lctx = ctx
-        re_kw = (self.restrict or rekw) and self.rekw or self.rekwexp
-        msg = (expand and _('overwriting %s expanding keywords\n')
-               or _('overwriting %s shrinking keywords\n'))
         for f in candidates:
             if self.restrict:
                 data = self.repo.file(f).read(mf[f])
@@ -293,7 +298,9 @@ class kwtemplater(object):
     def wread(self, fname, data):
         '''If in restricted mode returns data read from wdir with
         keyword substitutions removed.'''
-        return self.restrict and self.shrink(fname, data) or data
+        if self.restrict:
+            return self.shrink(fname, data)
+        return data
 
 class kwfilelog(filelog.filelog):
     '''
@@ -412,7 +419,10 @@ def demo(ui, repo, *args, **opts):
                 ui.setconfig('keywordmaps', k, v)
     else:
         ui.status(_('\n\tconfiguration using current keyword template maps\n'))
-        kwmaps = dict(uikwmaps) or _defaultkwmaps(ui)
+        if uikwmaps:
+            kwmaps = dict(uikwmaps)
+        else:
+            kwmaps = _defaultkwmaps(ui)
 
     uisetup(ui)
     reposetup(ui, repo)
