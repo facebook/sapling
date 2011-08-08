@@ -73,7 +73,7 @@ else:
             # find_msvcrt was introduced in Python 2.6
             return ctypes.util.find_msvcrt()
         except AttributeError:
-            return 'msvcr80.dll' # CPython 2.5
+            return 'msvcr71.dll' # CPython 2.5 and 2.4
 
     _crt = ctypes.PyDLL(_crtname())
 
