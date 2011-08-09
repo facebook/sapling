@@ -49,7 +49,6 @@ class match(object):
         '<something>' - a pattern of the specified default type
         """
 
-        self._ctx = None
         self._root = root
         self._cwd = cwd
         self._files = []
