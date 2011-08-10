@@ -170,7 +170,7 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 	int state, mode, size, mtime;
 	unsigned int flen;
 	int len;
-	char decode[16]; /* for alignment */
+	uint32_t decode[4]; /* for alignment */
 
 	if (!PyArg_ParseTuple(args, "O!O!s#:parse_dirstate",
 			      &PyDict_Type, &dmap,
@@ -194,10 +194,10 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 		/* unpack header */
 		state = *cur;
 		memcpy(decode, cur + 1, 16);
-		mode = ntohl(*(uint32_t *)(decode));
-		size = ntohl(*(uint32_t *)(decode + 4));
-		mtime = ntohl(*(uint32_t *)(decode + 8));
-		flen = ntohl(*(uint32_t *)(decode + 12));
+		mode = ntohl(decode[0]);
+		size = ntohl(decode[1]);
+		mtime = ntohl(decode[2]);
+		flen = ntohl(decode[3]);
 		cur += 17;
 		if (cur + flen > end || cur + flen < cur) {
 			PyErr_SetString(PyExc_ValueError, "overflow in dirstate");
@@ -264,27 +264,27 @@ static int _parse_index_ng(const char *data, int size, int inlined,
 	int comp_len, uncomp_len, base_rev, link_rev, parent_1, parent_2;
 	const char *c_node_id;
 	const char *end = data + size;
-	char decode[64]; /* to enforce alignment with inline data */
+	uint32_t decode[8]; /* to enforce alignment with inline data */
 
 	while (data < end) {
 		unsigned int step;
 
-		memcpy(decode, data, 64);
-		offset_flags = ntohl(*((uint32_t *) (decode + 4)));
+		memcpy(decode, data, 32);
+		offset_flags = ntohl(decode[1]);
 		if (n == 0) /* mask out version number for the first entry */
 			offset_flags &= 0xFFFF;
 		else {
-			uint32_t offset_high =  ntohl(*((uint32_t *)decode));
+			uint32_t offset_high =  ntohl(decode[0]);
 			offset_flags |= ((uint64_t)offset_high) << 32;
 		}
 
-		comp_len = ntohl(*((uint32_t *)(decode + 8)));
-		uncomp_len = ntohl(*((uint32_t *)(decode + 12)));
-		base_rev = ntohl(*((uint32_t *)(decode + 16)));
-		link_rev = ntohl(*((uint32_t *)(decode + 20)));
-		parent_1 = ntohl(*((uint32_t *)(decode + 24)));
-		parent_2 = ntohl(*((uint32_t *)(decode + 28)));
-		c_node_id = decode + 32;
+		comp_len = ntohl(decode[2]);
+		uncomp_len = ntohl(decode[3]);
+		base_rev = ntohl(decode[4]);
+		link_rev = ntohl(decode[5]);
+		parent_1 = ntohl(decode[6]);
+		parent_2 = ntohl(decode[7]);
+		c_node_id = data + 32;
 
 		entry = Py_BuildValue("Liiiiiis#", offset_flags, comp_len,
 			      uncomp_len, base_rev, link_rev,
