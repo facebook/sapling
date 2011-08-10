@@ -6,7 +6,9 @@
 '''share a common history between several working directories'''
 
 from mercurial.i18n import _
-from mercurial import hg, commands
+from mercurial import hg, commands, util
+
+import os.path
 
 def share(ui, source, dest=None, noupdate=False):
     """create a new shared repository
@@ -28,11 +30,46 @@ def share(ui, source, dest=None, noupdate=False):
 
     return hg.share(ui, source, dest, not noupdate)
 
+def unshare(ui, repo):
+    """convert a shared repository to a normal one
+
+    Copy the store data to the repo and remove the sharedpath data.
+    """
+
+    if repo.sharedpath == repo.path:
+        raise util.Abort(_("this is not a shared repo"))
+
+    destlock = lock = None
+    lock = repo.lock()
+    try:
+        # we use locks here because if we race with commit, we
+        # can end up with extra data in the cloned revlogs that's
+        # not pointed to by changesets, thus causing verify to
+        # fail
+
+        destlock = hg.copystore(ui, repo, repo.path)
+
+        sharefile = repo.join('sharedpath')
+        util.rename(sharefile, sharefile + '.old')
+
+        repo.requirements.discard('sharedpath')
+        repo._writerequirements()
+    finally:
+        destlock and destlock.release()
+        lock and lock.release()
+
+    # update store, spath, sopener and sjoin of repo
+    repo.__init__(ui, repo.root)
+
 cmdtable = {
     "share":
     (share,
      [('U', 'noupdate', None, _('do not create a working copy'))],
      _('[-U] SOURCE [DEST]')),
+    "unshare":
+    (unshare,
+    [],
+    ''),
 }
 
 commands.norepo += " share"
