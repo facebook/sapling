@@ -174,6 +174,36 @@ def share(ui, source, dest=None, update=True):
                 continue
         _update(r, uprev)
 
+def copystore(ui, srcrepo, destpath):
+    '''copy files from store of srcrepo in destpath
+
+    returns destlock
+    '''
+    destlock = None
+    try:
+        hardlink = None
+        num = 0
+        for f in srcrepo.store.copylist():
+            src = os.path.join(srcrepo.sharedpath, f)
+            dst = os.path.join(destpath, f)
+            dstbase = os.path.dirname(dst)
+            if dstbase and not os.path.exists(dstbase):
+                os.mkdir(dstbase)
+            if os.path.exists(src):
+                if dst.endswith('data'):
+                    # lock to avoid premature writing to the target
+                    destlock = lock.lock(os.path.join(dstbase, "lock"))
+                hardlink, n = util.copyfiles(src, dst, hardlink)
+                num += n
+        if hardlink:
+            ui.debug("linked %d files\n" % num)
+        else:
+            ui.debug("copied %d files\n" % num)
+        return destlock
+    except:
+        release(destlock)
+        raise
+
 def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
           update=True, stream=False, branch=None):
     """Make a copy of an existing repository.
@@ -287,24 +317,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                                      % dest)
                 raise
 
-            hardlink = None
-            num = 0
-            for f in srcrepo.store.copylist():
-                src = os.path.join(srcrepo.sharedpath, f)
-                dst = os.path.join(destpath, f)
-                dstbase = os.path.dirname(dst)
-                if dstbase and not os.path.exists(dstbase):
-                    os.mkdir(dstbase)
-                if os.path.exists(src):
-                    if dst.endswith('data'):
-                        # lock to avoid premature writing to the target
-                        destlock = lock.lock(os.path.join(dstbase, "lock"))
-                    hardlink, n = util.copyfiles(src, dst, hardlink)
-                    num += n
-            if hardlink:
-                ui.debug("linked %d files\n" % num)
-            else:
-                ui.debug("copied %d files\n" % num)
+            destlock = copystore(ui, srcrepo, destpath)
 
             # we need to re-init the repo after manually copying the data
             # into it
