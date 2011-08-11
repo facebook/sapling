@@ -155,7 +155,19 @@ class ui(object):
         return self._data(untrusted).source(section, name) or 'none'
 
     def config(self, section, name, default=None, untrusted=False):
-        value = self._data(untrusted).get(section, name, default)
+        if isinstance(name, list):
+            alternates = name
+        else:
+            alternates = [name]
+
+        for n in alternates:
+            value = self._data(untrusted).get(section, name, None)
+            if value is not None:
+                name = n
+                break
+        else:
+            value = default
+
         if self.debugflag and not untrusted and self._reportuntrusted:
             uvalue = self._ucfg.get(section, name)
             if uvalue is not None and uvalue != value:
