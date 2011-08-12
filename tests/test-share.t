@@ -97,3 +97,21 @@ hg serve shared clone
   -rw-r--r-- 2 b
   
   
+
+test unshare command
+
+  $ hg unshare
+  $ test -d .hg/store
+  $ test -f .hg/sharedpath
+  [1]
+  $ hg unshare
+  abort: this is not a shared repo
+  [255]
+
+check that a change does not propagate
+
+  $ echo b >> b
+  $ hg commit -m'change in unshared'
+  $ cd ../repo1
+  $ hg id -r tip
+  c2e0ac586386 tip
