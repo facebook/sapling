@@ -177,6 +177,8 @@ def extsetup():
 def reposetup(ui, repo):
     if repo.local():
         svnrepo.generate_repo_class(ui, repo)
+        for tunnel in ui.configlist('hgsubversion', 'tunnels'):
+            hg.schemes['svn+' + tunnel] = svnrepo
 
 _old_local = hg.schemes['file']
 def _lookup(url):
