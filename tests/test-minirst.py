@@ -232,14 +232,13 @@ Empty comment above
 
 debugformat('comments', comments, 30)
 
-table = """
-  === === ===
-   a   b   c
-  === === ===
-   1   2   3
-  foo bar baz
-  aa   bb  sdfsdfsdf this line is way too long for this cell.
-  === === ===
-"""
+
+data = [['a', 'b', 'c'],
+         ['1', '2', '3'],
+         ['foo', 'bar', 'baz this list is very very very long man']]
+
+table = minirst.maketable(data, 2, True)
+
+print table
 
 debugformat('table', table, 30)

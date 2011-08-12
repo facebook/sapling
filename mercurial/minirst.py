@@ -553,3 +553,19 @@ def decorateblocks(blocks, width):
         text = formatblocks(s[2], width)
         lines.append([(section, l) for l in text.splitlines(True)])
     return lines
+
+def maketable(data, indent=0, header=False):
+    '''Generate an RST table for the given table data'''
+
+    widths = [max(encoding.colwidth(e) for e in c) for c in zip(*data)]
+    indent = ' ' * indent
+    f = indent + ' '.join('%%-%ds' % w for w in widths) + '\n'
+    div = indent + ' '.join('=' * w for w in widths) + '\n'
+
+    out = [div]
+    for row in data:
+        out.append(f % tuple(row))
+    if header and len(data) > 1:
+        out.insert(2, div)
+    out.append(div)
+    return ''.join(out)

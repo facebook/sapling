@@ -388,15 +388,21 @@ Some text.
 Empty comment above
 ----------------------------------------------------------------------
 
+  === === ========================================
+  a   b   c                                       
+  === === ========================================
+  1   2   3                                       
+  foo bar baz this list is very very very long man
+  === === ========================================
+
 table formatted to fit within 30 characters:
 ----------------------------------------------------------------------
   a   b   c
   ------------------------------
   1   2   3
-  foo bar baz
-  aa  bb  sdfsdfsdf this line
-          is way too long for
-          this cell.
+  foo bar baz this list is
+          very very very long
+          man
 
 ----------------------------------------------------------------------
 
