@@ -18,7 +18,7 @@ Remember to update http://mercurial.selenic.com/wiki/HelpStyleGuide
 when adding support for new constructs.
 """
 
-import re, sys
+import re
 import util, encoding
 from i18n import _
 
@@ -553,27 +553,3 @@ def decorateblocks(blocks, width):
         text = formatblocks(s[2], width)
         lines.append([(section, l) for l in text.splitlines(True)])
     return lines
-
-if __name__ == "__main__":
-    from pprint import pprint
-
-    def debug(func, *args):
-        blocks = func(*args)
-        print "*** after %s:" % func.__name__
-        pprint(blocks)
-        print
-        return blocks
-
-    text = sys.stdin.read()
-    blocks = debug(findblocks, text)
-    blocks = debug(findliteralblocks, blocks)
-    blocks, pruned = debug(prunecontainers, blocks, sys.argv[1:])
-    blocks = debug(inlineliterals, blocks)
-    blocks = debug(splitparagraphs, blocks)
-    blocks = debug(updatefieldlists, blocks)
-    blocks = debug(updateoptionlists, blocks)
-    blocks = debug(findsections, blocks)
-    blocks = debug(addmargins, blocks)
-    blocks = debug(prunecomments, blocks)
-    blocks = debug(findadmonitions, blocks)
-    print '\n'.join(formatblock(b, 30) for b in blocks)
