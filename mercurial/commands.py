@@ -3950,13 +3950,16 @@ def remove(ui, repo, *pats, **opts):
     file states (columns) and option combinations (rows). The file
     states are Added [A], Clean [C], Modified [M] and Missing [!] (as
     reported by :hg:`status`). The actions are Warn, Remove (from
-    branch) and Delete (from disk)::
+    branch) and Delete (from disk):
 
-             A  C  M  !
-      none   W  RD W  R
-      -f     R  RD RD R
-      -A     W  W  W  R
-      -Af    R  R  R  R
+      ======= == == == ==
+              A  C  M  !
+      ======= == == == ==
+      none    W  RD W  R
+      -f      R  RD RD R
+      -A      W  W  W  R
+      -Af     R  R  R  R
+      ======= == == == ==
 
     Note that remove never deletes files in Added [A] state from the
     working directory, not even if option --force is specified.

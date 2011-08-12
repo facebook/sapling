@@ -231,3 +231,15 @@ Empty comment above
 """
 
 debugformat('comments', comments, 30)
+
+table = """
+  === === ===
+   a   b   c
+  === === ===
+   1   2   3
+  foo bar baz
+  aa   bb  sdfsdfsdf this line is way too long for this cell.
+  === === ===
+"""
+
+debugformat('table', table, 30)

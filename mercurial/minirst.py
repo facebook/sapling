@@ -103,6 +103,7 @@ _optionre = re.compile(r'^(-([a-zA-Z0-9]), )?(--[a-z0-9-]+)'
                        r'((.*)  +)(.*)$')
 _fieldre = re.compile(r':(?![: ])([^:]*)(?<! ):[ ]+(.*)')
 _definitionre = re.compile(r'[^ ]')
+_tablere = re.compile(r'(=+\s+)*=+')
 
 def splitparagraphs(blocks):
     """Split paragraphs into lists."""
@@ -251,6 +252,46 @@ def prunecontainers(blocks, keep):
 
 _sectionre = re.compile(r"""^([-=`:.'"~^_*+#])\1+$""")
 
+def findtables(blocks):
+    '''Find simple tables
+
+       Only simple one-line table elements are supported
+    '''
+
+    for block in blocks:
+        # Searching for a block that looks like this:
+        #
+        # === ==== ===
+        #  A    B   C
+        # === ==== ===  <- optional
+        #  1    2   3
+        #  x    y   z
+        # === ==== ===
+        if (block['type'] == 'paragraph' and
+            len(block['lines']) > 4 and
+            _tablere.match(block['lines'][0]) and
+            block['lines'][0] == block['lines'][-1]):
+            block['type'] = 'table'
+            block['header'] = False
+            div = block['lines'][0]
+            columns = [x for x in xrange(len(div))
+                       if div[x] == '=' and (x == 0 or div[x - 1] == ' ')]
+            rows = []
+            for l in block['lines'][1:-1]:
+                if l == div:
+                    block['header'] = True
+                    continue
+                row = []
+                for n, start in enumerate(columns):
+                    if n + 1 < len(columns):
+                        row.append(l[start:columns[n + 1]].strip())
+                    else:
+                        row.append(l[start:].strip())
+                rows.append(row)
+            block['table'] = rows
+
+    return blocks
+
 def findsections(blocks):
     """Finds sections.
 
@@ -392,6 +433,24 @@ def formatblock(block, width):
     if block['type'] == 'section':
         underline = encoding.colwidth(block['lines'][0]) * block['underline']
         return "%s%s\n%s%s" % (indent, block['lines'][0],indent, underline)
+    if block['type'] == 'table':
+        table = block['table']
+        # compute column widths
+        widths = [max([encoding.colwidth(e) for e in c]) for c in zip(*table)]
+        text = ''
+        span = sum(widths) + len(widths) - 1
+        indent = ' ' * block['indent']
+        hang = ' ' * (len(indent) + span - widths[-1])
+        f = ' '.join('%%-%ds' % n for n in widths)
+
+        for row in table:
+            l = f % tuple(row)
+            l = util.wrap(l, width=width, initindent=indent, hangindent=hang)
+            if not text and block['header']:
+                text = l + '\n' + indent + '-' * (min(width, span)) + '\n'
+            else:
+                text += l + "\n"
+        return text
     if block['type'] == 'definition':
         term = indent + block['lines'][0]
         hang = len(block['lines'][-1]) - len(block['lines'][-1].lstrip())
@@ -440,6 +499,7 @@ def parse(text, indent=0, keep=None):
     for b in blocks:
         b['indent'] += indent
     blocks = findliteralblocks(blocks)
+    blocks = findtables(blocks)
     blocks, pruned = prunecontainers(blocks, keep or [])
     blocks = findsections(blocks)
     blocks = inlineliterals(blocks)
