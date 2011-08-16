@@ -96,9 +96,9 @@ def diff(ext1, ext2):
 class BadDefinition(Exception):
     pass
 
-re_defold = re.compile(r'^\s*(.*?)\s+(?:-r\s*(\d+|\{REV\})\s+)?([a-zA-Z]+://.*)\s*$')
-re_defnew = re.compile(r'^\s*(?:-r\s*(\d+|\{REV\})\s+)?((?:[a-zA-Z]+://|\^/).*)\s+(\S+)\s*$')
-re_scheme = re.compile(r'^[a-zA-Z]+://')
+re_defold = re.compile(r'^\s*(.*?)\s+(?:-r\s*(\d+|\{REV\})\s+)?([a-zA-Z+]+://.*)\s*$')
+re_defnew = re.compile(r'^\s*(?:-r\s*(\d+|\{REV\})\s+)?((?:[a-zA-Z+]+://|\^/).*)\s+(\S+)\s*$')
+re_scheme = re.compile(r'^[a-zA-Z+]+://')
 
 def parsedefinition(line):
     """Parse an external definition line, return a tuple (path, rev, source)
