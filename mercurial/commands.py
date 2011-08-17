@@ -4068,7 +4068,7 @@ def resolve(ui, repo, *pats, **opts):
     - :hg:`resolve [--tool TOOL] FILE...`: attempt to re-merge the specified
       files, discarding any previous merge attempts. Re-merging is not
       performed for files already marked as resolved. Use ``--all/-a``
-      to selects all unresolved files. ``--tool`` can be used to specify
+      to select all unresolved files. ``--tool`` can be used to specify
       the merge tool used for the given files. It overrides the HGMERGE
       environment variable and your configuration files.
 
