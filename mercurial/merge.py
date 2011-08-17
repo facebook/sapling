@@ -273,7 +273,6 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
     action.sort(key=actionkey)
 
     # prescan for merges
-    u = repo.ui
     for a in action:
         f, m = a[:2]
         if m == 'm': # merge
@@ -308,8 +307,8 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
     numupdates = len(action)
     for i, a in enumerate(action):
         f, m = a[:2]
-        u.progress(_('updating'), i + 1, item=f, total=numupdates,
-                   unit=_('files'))
+        repo.ui.progress(_('updating'), i + 1, item=f, total=numupdates,
+                         unit=_('files'))
         if f and f[0] == "/":
             continue
         if m == "r": # remove
@@ -377,7 +376,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             repo.wopener.audit(f)
             util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
     ms.commit()
-    u.progress(_('updating'), None, total=numupdates, unit=_('files'))
+    repo.ui.progress(_('updating'), None, total=numupdates, unit=_('files'))
 
     return updated, merged, removed, unresolved
 
