@@ -739,6 +739,17 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     marks = repo._bookmarks
     cur   = repo.changectx('.').node()
 
+    if delete:
+        if mark is None:
+            raise util.Abort(_("bookmark name required"))
+        if mark not in marks:
+            raise util.Abort(_("bookmark '%s' does not exist") % mark)
+        if mark == repo._bookmarkcurrent:
+            bookmarks.setcurrent(repo, None)
+        del marks[mark]
+        bookmarks.write(repo)
+        return
+
     if rename:
         if rename not in marks:
             raise util.Abort(_("bookmark '%s' does not exist") % rename)
@@ -751,17 +762,6 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if repo._bookmarkcurrent == rename and not inactive:
             bookmarks.setcurrent(repo, mark)
         del marks[rename]
-        bookmarks.write(repo)
-        return
-
-    if delete:
-        if mark is None:
-            raise util.Abort(_("bookmark name required"))
-        if mark not in marks:
-            raise util.Abort(_("bookmark '%s' does not exist") % mark)
-        if mark == repo._bookmarkcurrent:
-            bookmarks.setcurrent(repo, None)
-        del marks[mark]
         bookmarks.write(repo)
         return
 
