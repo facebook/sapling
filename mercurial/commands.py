@@ -2518,7 +2518,9 @@ def heads(ui, repo, *branchrevs, **opts):
     no child changeset on the same branch.
 
     If one or more REVs are given, only branch heads on the branches
-    associated with the specified changesets are shown.
+    associated with the specified changesets are shown. This means
+    that you can use :hg:`heads foo` to see the heads on a branch
+    named ``foo``.
 
     If -c/--closed is specified, also show branch heads marked closed
     (see :hg:`commit --close-branch`).
