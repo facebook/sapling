@@ -1162,7 +1162,7 @@ The full set of options is:
     extension. This will serve HTML files as ``text/html`` and might
     allow cross-site scripting attacks when serving untrusted
     repositories. Default is False.
-   
+
 ``allow_read``
     If the user has not already been denied repository access due to
     the contents of deny_read, this list determines whether to grant
