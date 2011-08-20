@@ -5010,19 +5010,22 @@ def tags(ui, repo):
 
     for t, n in reversed(repo.tagslist()):
         if ui.quiet:
-            ui.write("%s\n" % t)
+            ui.write("%s\n" % t, label='tags.normal')
             continue
 
         hn = hexfunc(n)
         r = "%5d:%s" % (repo.changelog.rev(n), hn)
+        rev = ui.label(r, 'log.changeset')
         spaces = " " * (30 - encoding.colwidth(t))
 
+        tag = ui.label(t, 'tags.normal')
         if ui.verbose:
             if repo.tagtype(t) == 'local':
                 tagtype = " local"
+                tag = ui.label(t, 'tags.local')
             else:
                 tagtype = ""
-        ui.write("%s%s %s%s\n" % (t, spaces, r, tagtype))
+        ui.write("%s%s %s%s\n" % (tag, spaces, rev, tagtype))
 
 @command('tip',
     [('p', 'patch', None, _('show patch')),
