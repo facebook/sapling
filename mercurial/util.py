@@ -783,16 +783,15 @@ def makedirs(name, mode=None):
     parent = os.path.abspath(os.path.dirname(name))
     try:
         os.mkdir(name)
-        if mode is not None:
-            os.chmod(name, mode)
-        return
     except OSError, err:
         if err.errno == errno.EEXIST:
             return
         if not name or parent == name or err.errno != errno.ENOENT:
             raise
-    makedirs(parent, mode)
-    makedirs(name, mode)
+        makedirs(parent, mode)
+        makedirs(name, mode)
+    if mode is not None:
+        os.chmod(name, mode)
 
 def readfile(path):
     fp = open(path, 'rb')
