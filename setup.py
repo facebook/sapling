@@ -68,6 +68,18 @@ from distutils.errors import CCompilerError, DistutilsExecError
 from distutils.sysconfig import get_python_inc
 from distutils.version import StrictVersion
 
+convert2to3 = '--c2to3' in sys.argv
+if convert2to3:
+    try:
+        from distutils.command.build_py import build_py_2to3 as build_py
+        from lib2to3.refactor import get_fixers_from_package as getfixers
+    except ImportError:
+        if sys.version_info[0] < 3:
+            raise SystemExit("--c2to3 is only compatible with python3.")
+        raise
+    sys.path.append('contrib')
+
+
 scripts = ['hg']
 if os.name == 'nt':
     scripts.append('contrib/win32/hg.bat')
@@ -190,6 +202,11 @@ class hgbuild(build):
     # Insert hgbuildmo first so that files in mercurial/locale/ are found
     # when build_py is run next.
     sub_commands = [('build_mo', None),
+    # We also need build_ext before build_py. Otherwise, when 2to3 is called (in
+    # build_py), it will not find osutil & friends, thinking that those modules are
+    # global and, consequently, making a mess, now that all module imports are
+    # global.
+                    ('build_ext', build.has_ext_modules),
                    ] + build.sub_commands
 
 class hgbuildmo(Command):
@@ -235,6 +252,8 @@ class hgdist(Distribution):
     global_options = Distribution.global_options + \
                      [('pure', None, "use pure (slow) Python "
                         "code instead of C extensions"),
+                      ('c2to3', None, "(experimental!) convert "
+                        "code with 2to3"),
                      ]
 
     def has_ext_modules(self):
@@ -254,6 +273,9 @@ class hgbuildext(build_ext):
                      ext.name)
 
 class hgbuildpy(build_py):
+    if convert2to3:
+        fixer_names = sorted(set(getfixers("lib2to3.fixes") +
+                                 getfixers("hgfixes")))
 
     def finalize_options(self):
         build_py.finalize_options(self)
@@ -344,7 +366,7 @@ class hginstallscripts(install_scripts):
             fp.close()
 
             # skip binary files
-            if '\0' in data:
+            if b('\0') in data:
                 continue
 
             data = data.replace('@LIBDIR@', libdir.encode('string_escape'))
