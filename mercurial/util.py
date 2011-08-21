@@ -789,7 +789,7 @@ def makedirs(name, mode=None):
         if not name or parent == name or err.errno != errno.ENOENT:
             raise
         makedirs(parent, mode)
-        makedirs(name, mode)
+        os.mkdir(name)
     if mode is not None:
         os.chmod(name, mode)
 
