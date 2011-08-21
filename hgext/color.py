@@ -68,6 +68,9 @@ Default effects may be overridden from your configuration file::
   branches.current = green
   branches.inactive = none
 
+  tags.normal = green
+  tags.local = black bold
+
 The available effects in terminfo mode are 'blink', 'bold', 'dim',
 'inverse', 'invisible', 'italic', 'standout', and 'underline'; in
 ECMA-48 mode, the options are 'bold', 'inverse', 'italic', and
@@ -257,7 +260,9 @@ _styles = {'grep.match': 'red bold',
            'status.ignored': 'black bold',
            'status.modified': 'blue bold',
            'status.removed': 'red bold',
-           'status.unknown': 'magenta bold underline'}
+           'status.unknown': 'magenta bold underline',
+           'tags.normal': 'green',
+           'tags.local': 'black bold'}
 
 
 def _effect_str(effect):
