@@ -29,6 +29,15 @@ _origimport = __import__
 
 nothing = object()
 
+try:
+    _origimport(__builtin__.__name__, {}, {}, None, -1)
+except TypeError: # no level argument
+    def _import(name, globals, locals, fromlist, level):
+        "call _origimport with no level argument"
+        return _origimport(name, globals, locals, fromlist)
+else:
+    _import = _origimport
+
 class _demandmod(object):
     """module demand-loader and proxy"""
     def __init__(self, name, globals, locals):
@@ -83,20 +92,14 @@ class _demandmod(object):
 def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
     if not locals or name in ignore or fromlist == ('*',):
         # these cases we can't really delay
-        if level == -1:
-            return _origimport(name, globals, locals, fromlist)
-        else:
-            return _origimport(name, globals, locals, fromlist, level)
+        return _import(name, globals, locals, fromlist, level)
     elif not fromlist:
         # import a [as b]
         if '.' in name: # a.b
             base, rest = name.split('.', 1)
             # email.__init__ loading email.mime
             if globals and globals.get('__name__', None) == base:
-                if level != -1:
-                    return _origimport(name, globals, locals, fromlist, level)
-                else:
-                    return _origimport(name, globals, locals, fromlist)
+                return _import(name, globals, locals, fromlist, level)
             # if a is already demand-loaded, add b to its submodule list
             if base in locals:
                 if isinstance(locals[base], _demandmod):
