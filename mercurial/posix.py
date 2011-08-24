@@ -256,7 +256,9 @@ def findexe(command):
     for path in os.environ.get('PATH', '').split(os.pathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
-            return executable
+            st = os.stat(executable)
+            if (st.st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)):
+                return executable
     return None
 
 def setsignalhandler():
