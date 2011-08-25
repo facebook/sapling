@@ -260,7 +260,7 @@ class inverserevlogdag(revlogbaseddag, genericdag):
             if isroot:
                 roots.append(rev)
             rev -= 1
-        self._walkfrom = rev - 1
+        self._walkfrom = rev
 
     def _getheads(self):
         self._walkto(nullrev)

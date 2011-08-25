@@ -260,7 +260,7 @@ Both many new on top of long history:
   query 2; still undecided: 1029, sample size is: 11
   sampling from both directions
   searching: 3 queries
-  query 3; still undecided: 16, sample size is: 16
+  query 3; still undecided: 15, sample size is: 15
   3 total queries
   common heads: 7ead0cba2838
 
