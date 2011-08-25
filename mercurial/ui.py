@@ -544,7 +544,7 @@ class ui(object):
         # instead of trying to emulate raw_input, swap self.fin with sys.stdin
         old = sys.stdin
         sys.stdin = self.fin
-        line = raw_input()
+        line = raw_input(' ')
         sys.stdin = old
 
         # When stdin is in binary mode on Windows, it can cause
@@ -561,7 +561,7 @@ class ui(object):
             self.write(msg, ' ', default, "\n")
             return default
         try:
-            r = self._readline(self.label(msg, 'ui.prompt') + ' ')
+            r = self._readline(self.label(msg, 'ui.prompt'))
             if not r:
                 return default
             return r
