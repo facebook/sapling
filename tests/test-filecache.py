@@ -59,7 +59,7 @@ def basic(repo):
     # because of inode change
     f = scmutil.opener('.')('x', 'w', atomictemp=True)
     f.write('b')
-    f.rename()
+    f.close()
 
     repo.invalidate()
     repo.cached

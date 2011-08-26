@@ -345,7 +345,7 @@ class fncache(object):
         fp = self.opener('fncache', mode='wb', atomictemp=True)
         for p in self.entries:
             fp.write(encodedir(p) + '\n')
-        fp.rename()
+        fp.close()
         self._dirty = False
 
     def add(self, fn):

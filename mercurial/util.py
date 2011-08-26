@@ -745,11 +745,10 @@ class atomictempfile(object):
     '''writeable file object that atomically updates a file
 
     All writes will go to a temporary copy of the original file. Call
-    rename() when you are done writing, and atomictempfile will rename
-    the temporary copy to the original name, making the changes visible.
-
-    Unlike other file-like objects, close() discards your writes by
-    simply deleting the temporary file.
+    close() when you are done writing, and atomictempfile will rename
+    the temporary copy to the original name, making the changes
+    visible. If the object is destroyed without being closed, all your
+    writes are discarded.
     '''
     def __init__(self, name, mode='w+b', createmode=None):
         self.__name = name      # permanent name
@@ -761,12 +760,12 @@ class atomictempfile(object):
         self.write = self._fp.write
         self.fileno = self._fp.fileno
 
-    def rename(self):
+    def close(self):
         if not self._fp.closed:
             self._fp.close()
             rename(self._tempname, localpath(self.__name))
 
-    def close(self):
+    def discard(self):
         if not self._fp.closed:
             try:
                 os.unlink(self._tempname)
@@ -776,7 +775,7 @@ class atomictempfile(object):
 
     def __del__(self):
         if safehasattr(self, '_fp'): # constructor actually did something
-            self.close()
+            self.discard()
 
 def makedirs(name, mode=None):
     """recursive directory creation with parent mode inheritance"""

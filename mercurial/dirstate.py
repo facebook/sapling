@@ -453,7 +453,7 @@ class dirstate(object):
             write(e)
             write(f)
         st.write(cs.getvalue())
-        st.rename()
+        st.close()
         self._lastnormaltime = None
         self._dirty = self._dirtypl = False
 

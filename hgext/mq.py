@@ -1492,7 +1492,7 @@ class queue(object):
                 n = repo.commit(message, user, ph.date, match=match,
                                 force=True)
                 # only write patch after a successful commit
-                patchf.rename()
+                patchf.close()
                 self.applied.append(statusentry(n, patchfn))
             except:
                 ctx = repo[cparents[0]]

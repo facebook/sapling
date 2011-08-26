@@ -521,7 +521,7 @@ class localrepository(repo.repository):
             for label, nodes in branches.iteritems():
                 for node in nodes:
                     f.write("%s %s\n" % (hex(node), encoding.fromlocal(label)))
-            f.rename()
+            f.close()
         except (IOError, OSError):
             pass
 

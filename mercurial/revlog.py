@@ -946,9 +946,9 @@ class revlog(object):
             e = self._io.packentry(self.index[i], self.node, self.version, i)
             fp.write(e)
 
-        # if we don't call rename, the temp file will never replace the
+        # if we don't call close, the temp file will never replace the
         # real index
-        fp.rename()
+        fp.close()
 
         tr.replace(self.indexfile, trindex * self._io.size)
         self._chunkclear()

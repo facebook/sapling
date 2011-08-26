@@ -150,7 +150,7 @@ def save_state(repo, state):
         for kind in state:
             for node in state[kind]:
                 f.write("%s %s\n" % (kind, hex(node)))
-        f.rename()
+        f.close()
     finally:
         wlock.release()
 

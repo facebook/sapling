@@ -445,7 +445,7 @@ def simplemerge(ui, local, base, other, **opts):
         out.write(line)
 
     if not opts.get('print'):
-        out.rename()
+        out.close()
 
     if m3.conflicts:
         if not opts.get('quiet'):

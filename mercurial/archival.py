@@ -195,7 +195,7 @@ class fileit(object):
             return
         f = self.opener(name, "w", atomictemp=True)
         f.write(data)
-        f.rename()
+        f.close()
         destfile = os.path.join(self.basedir, name)
         os.chmod(destfile, mode)
 

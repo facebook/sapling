@@ -90,7 +90,7 @@ def write(repo):
         file = repo.opener('bookmarks', 'w', atomictemp=True)
         for refspec, node in refs.iteritems():
             file.write("%s %s\n" % (hex(node), encoding.fromlocal(refspec)))
-        file.rename()
+        file.close()
 
         # touch 00changelog.i so hgweb reloads bookmarks (no lock needed)
         try:
@@ -121,7 +121,7 @@ def setcurrent(repo, mark):
     try:
         file = repo.opener('bookmarks.current', 'w', atomictemp=True)
         file.write(encoding.fromlocal(mark))
-        file.rename()
+        file.close()
     finally:
         wlock.release()
     repo._bookmarkcurrent = mark
