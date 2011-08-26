@@ -204,7 +204,7 @@ def _abssource(repo, push=False, abort=True):
         parent = _abssource(repo._subparent, push, abort=False)
         if parent:
             parent = util.url(parent)
-            parent.path = posixpath.join(parent.path, source.path)
+            parent.path = posixpath.join(parent.path or '', source.path)
             parent.path = posixpath.normpath(parent.path)
             return str(parent)
     else: # recursion reached top repo

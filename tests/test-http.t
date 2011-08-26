@@ -159,6 +159,32 @@ test http authentication
 
   $ cd ..
 
+clone of serve with repo in root and unserved subrepo (issue2970)
+
+  $ hg --cwd test init sub
+  $ hg --cwd test/sub tag something
+  $ echo sub = sub > test/.hgsub
+  $ hg --cwd test add .hgsub
+  $ hg --cwd test commit -qm 'add subrepo'
+  $ hg clone http://localhost:$HGPORT noslash-clone
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 7 changes to 7 files
+  updating to branch default
+  abort: HTTP Error 404: Not Found
+  [255]
+  $ hg clone http://localhost:$HGPORT/ slash-clone
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 7 changes to 7 files
+  updating to branch default
+  abort: HTTP Error 404: Not Found
+  [255]
+
 check error log
 
   $ cat error.log
