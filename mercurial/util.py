@@ -16,7 +16,7 @@ hide platform-specific details from the core.
 from i18n import _
 import error, osutil, encoding
 import errno, re, shutil, sys, tempfile, traceback
-import os, time, calendar, textwrap, unicodedata, signal
+import os, time, calendar, textwrap, signal
 import imp, socket, urllib
 
 # Python compatibility
@@ -1135,24 +1135,31 @@ def uirepr(s):
 def MBTextWrapper(**kwargs):
     class tw(textwrap.TextWrapper):
         """
-        Extend TextWrapper for double-width characters.
+        Extend TextWrapper for width-awareness.
 
-        Some Asian characters use two terminal columns instead of one.
-        A good example of this behavior can be seen with u'\u65e5\u672c',
-        the two Japanese characters for "Japan":
-        len() returns 2, but when printed to a terminal, they eat 4 columns.
+        Neither number of 'bytes' in any encoding nor 'characters' is
+        appropriate to calculate terminal columns for specified string.
 
-        (Note that this has nothing to do whatsoever with unicode
-        representation, or encoding of the underlying string)
+        Original TextWrapper implementation uses built-in 'len()' directly,
+        so overriding is needed to use width information of each characters.
+
+        In addition, characters classified into 'ambiguous' width are
+        treated as wide in east asian area, but as narrow in other.
+
+        This requires use decision to determine width of such characters.
         """
         def __init__(self, **kwargs):
             textwrap.TextWrapper.__init__(self, **kwargs)
 
+            # for compatibility between 2.4 and 2.6
+            if getattr(self, 'drop_whitespace', None) is None:
+                self.drop_whitespace = kwargs.get('drop_whitespace', True)
+
         def _cutdown(self, ucstr, space_left):
             l = 0
-            colwidth = unicodedata.east_asian_width
+            colwidth = encoding.ucolwidth
             for i in xrange(len(ucstr)):
-                l += colwidth(ucstr[i]) in 'WFA' and 2 or 1
+                l += colwidth(ucstr[i])
                 if space_left < l:
                     return (ucstr[:i], ucstr[i:])
             return ucstr, ''
@@ -1167,6 +1174,69 @@ def MBTextWrapper(**kwargs):
                 reversed_chunks[-1] = res
             elif not cur_line:
                 cur_line.append(reversed_chunks.pop())
+
+        # this overriding code is imported from TextWrapper of python 2.6
+        # to calculate columns of string by 'encoding.ucolwidth()'
+        def _wrap_chunks(self, chunks):
+            colwidth = encoding.ucolwidth
+
+            lines = []
+            if self.width <= 0:
+                raise ValueError("invalid width %r (must be > 0)" % self.width)
+
+            # Arrange in reverse order so items can be efficiently popped
+            # from a stack of chucks.
+            chunks.reverse()
+
+            while chunks:
+
+                # Start the list of chunks that will make up the current line.
+                # cur_len is just the length of all the chunks in cur_line.
+                cur_line = []
+                cur_len = 0
+
+                # Figure out which static string will prefix this line.
+                if lines:
+                    indent = self.subsequent_indent
+                else:
+                    indent = self.initial_indent
+
+                # Maximum width for this line.
+                width = self.width - len(indent)
+
+                # First chunk on line is whitespace -- drop it, unless this
+                # is the very beginning of the text (ie. no lines started yet).
+                if self.drop_whitespace and chunks[-1].strip() == '' and lines:
+                    del chunks[-1]
+
+                while chunks:
+                    l = colwidth(chunks[-1])
+
+                    # Can at least squeeze this chunk onto the current line.
+                    if cur_len + l <= width:
+                        cur_line.append(chunks.pop())
+                        cur_len += l
+
+                    # Nope, this line is full.
+                    else:
+                        break
+
+                # The current line is full, and the next chunk is too big to
+                # fit on *any* line (not just this one).
+                if chunks and colwidth(chunks[-1]) > width:
+                    self._handle_long_word(chunks, cur_line, cur_len, width)
+
+                # If the last chunk on this line is all whitespace, drop it.
+                if (self.drop_whitespace and
+                    cur_line and cur_line[-1].strip() == ''):
+                    del cur_line[-1]
+
+                # Convert current line back to a string and store it in list
+                # of all lines (return value).
+                if cur_line:
+                    lines.append(indent + ''.join(cur_line))
+
+            return lines
 
     global MBTextWrapper
     MBTextWrapper = tw
