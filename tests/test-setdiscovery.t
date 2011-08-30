@@ -265,4 +265,62 @@ Both many new on top of long history:
   common heads: 7ead0cba2838
 
 
+One with >200 heads, which used to use up all of the sample:
+
+  $ hg init manyheads
+  $ cd manyheads
+  $ echo "+300:r @a" >dagdesc
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
+  $ echo "@b *r+3" >>dagdesc # one more head
+  $ hg debugbuilddag <dagdesc
+  reading DAG from stdin
+
+  $ hg heads -t --template . | wc -c
+  261
+
+  $ hg clone -b a . a
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1340 changesets with 0 changes to 0 files (+259 heads)
+  updating to branch a
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -b b . b
+  adding changesets
+  adding manifests
+  adding file changes
+  added 304 changesets with 0 changes to 0 files
+  updating to branch b
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg -R a debugdiscovery b --debug --verbose
+  comparing with b
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 1080, sample size is: 260
+  sampling from both directions
+  searching: 3 queries
+  query 3; still undecided: 820, sample size is: 260
+  sampling from both directions
+  searching: 4 queries
+  query 4; still undecided: 560, sample size is: 260
+  sampling from both directions
+  searching: 5 queries
+  query 5; still undecided: 300, sample size is: 200
+  5 total queries
+  common heads: 3ee37d65064a
 

@@ -41,7 +41,7 @@ def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
 def _setupsample(dag, nodes, size):
     if len(nodes) <= size:
         return set(nodes), None, 0
-    always = set(dag.heads())
+    always = dag.headsetofconnecteds(nodes)
     desiredlen = size - len(always)
     if desiredlen <= 0:
         # This could be bad if there are very many heads, all unknown to the

@@ -135,16 +135,17 @@ def fromlocal(s):
         raise error.Abort("%s, please check your locale settings" % k)
 
 # How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
-ambiguous = os.environ.get("HGENCODINGAMBIGUOUS", "narrow")
+wide = (os.environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide"
+        and "WFA" or "WF")
 
 def colwidth(s):
     "Find the column width of a UTF-8 string for display"
-    d = s.decode(encoding, 'replace')
+    return ucolwidth(s.decode(encoding, 'replace'))
+
+def ucolwidth(d):
+    "Find the column width of a Unicode string for display"
     eaw = getattr(unicodedata, 'east_asian_width', None)
     if eaw is not None:
-        wide = "WF"
-        if ambiguous == "wide":
-            wide = "WFA"
         return sum([eaw(c) in wide and 2 or 1 for c in d])
     return len(d)
 
