@@ -541,11 +541,15 @@ class ui(object):
         # e.g. color extension on Windows
         self.write(prompt)
 
-        # instead of trying to emulate raw_input, swap self.fin with sys.stdin
-        old = sys.stdin
+        # instead of trying to emulate raw_input, swap (self.fin,
+        # self.fout) with (sys.stdin, sys.stdout)
+        oldin = sys.stdin
+        oldout = sys.stdout
         sys.stdin = self.fin
+        sys.stdout = self.fout
         line = raw_input(' ')
-        sys.stdin = old
+        sys.stdin = oldin
+        sys.stdout = oldout
 
         # When stdin is in binary mode on Windows, it can cause
         # raw_input() to emit an extra trailing carriage return
