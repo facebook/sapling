@@ -165,6 +165,7 @@ _hg_revrange() {
 _hg_labels() {
   _hg_tags "$@"
   _hg_bookmarks "$@"
+  _hg_branches "$@"
 }
 
 _hg_tags() {
@@ -189,6 +190,17 @@ _hg_bookmarks() {
     fi
   done
   (( $#bookmarks )) && _describe -t bookmarks 'bookmarks' bookmarks
+}
+
+_hg_branches() {
+  typeset -a branches
+  local branch
+
+  _hg_cmd branches | while read branch
+  do
+    branches+=(${branch/ #    [0-9]#:*})
+  done
+  (( $#branches )) && _describe -t branches 'branches' branches
 }
 
 # likely merge candidates
@@ -617,6 +629,7 @@ _hg_cmd_log() {
   '(--only-merges -m)'{-m,--only-merges}'[show only merges]' \
   '(--patch -p)'{-p,--patch}'[show patch]' \
   '(--prune -P)'{-P+,--prune}'[do not display revision or any of its ancestors]:revision:_hg_labels' \
+  '(--branch -b)'{-b+,--branch}'[show changesets within the given named branch]:branch:_hg_branches' \
   '*:files:_hg_files'
 }
 
