@@ -270,15 +270,20 @@ Update and expand
   xxx $
   ignore $Id$
 
-Check whether expansion is filewise
+Check whether expansion is filewise and file mode is preserved
 
   $ echo '$Id$' > c
   $ echo 'tests for different changenodes' >> c
+  $ chmod 600 c
+  $ ls -l c | cut -b 1-10
+  -rw-------
 
 commit file c
 
   $ hg commit -A -mcndiff -d '1 0' -u 'User Name <user@example.com>'
   adding c
+  $ ls -l c | cut -b 1-10
+  -rw-------
 
 force expansion
 
