@@ -93,13 +93,15 @@ class proxyhandler(urllib2.ProxyHandler):
             proxies = {}
 
         # urllib2 takes proxy values from the environment and those
-        # will take precedence if found, so drop them
-        for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
-            try:
-                if env in os.environ:
-                    del os.environ[env]
-            except OSError:
-                pass
+        # will take precedence if found. So, if there's a config entry
+        # defining a proxy, drop the environment ones
+        if ui.config("http_proxy", "host"):
+            for env in ["HTTP_PROXY", "http_proxy", "no_proxy"]:
+                try:
+                    if env in os.environ:
+                        del os.environ[env]
+                except OSError:
+                    pass
 
         urllib2.ProxyHandler.__init__(self, proxies)
         self.ui = ui
