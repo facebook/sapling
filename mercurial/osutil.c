@@ -523,9 +523,9 @@ static PyObject *isgui(PyObject *self)
 
 	if (dict != NULL) {
 		CFRelease(dict);
-		return Py_True;
+		Py_RETURN_TRUE;
 	} else {
-		return Py_False;
+		Py_RETURN_FALSE;
 	}
 }
 #endif
