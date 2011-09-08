@@ -270,7 +270,10 @@ class kwtemplater(object):
                 data, found = _shrinktext(data, re_kw.subn)
             if found:
                 self.ui.note(msg % f)
+                fpath = self.repo.wjoin(f)
+                mode = os.lstat(fpath).st_mode
                 self.repo.wwrite(f, data, ctx.flags(f))
+                os.chmod(fpath, mode)
                 if kwcmd:
                     self.repo.dirstate.normal(f)
                 elif self.record:
