@@ -281,7 +281,7 @@ Some tests for hgweb in an empty repository
   	item = item.replace(/_DATE/, cur[5]);
   
   	var tagspan = '';
-  	if (cur[7].length || (cur[6][0] != 'default' || cur[6][1])) {
+  	if (cur[7].length || cur[8].length || (cur[6][0] != 'default' || cur[6][1])) {
   		tagspan = '<span class="logtags">';
   		if (cur[6][1]) {
   			tagspan += '<span class="branchhead" title="' + cur[6][0] + '">';
