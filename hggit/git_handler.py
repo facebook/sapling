@@ -113,7 +113,10 @@ class GitHandler(object):
         file = self.repo.opener(self.mapfile, 'w+', atomictemp=True)
         for hgsha, gitsha in sorted(self._map_hg.iteritems()):
             file.write("%s %s\n" % (gitsha, hgsha))
-        file.rename()
+        # If this complains that NoneType is not callable, then
+        # atomictempfile no longer has either of rename (pre-1.9) or
+        # close (post-1.9)
+        getattr(file, 'rename', getattr(file, 'close', None))()
 
     def load_tags(self):
         self.tags = {}
@@ -127,7 +130,10 @@ class GitHandler(object):
         for name, sha in sorted(self.tags.iteritems()):
             if not self.repo.tagtype(name) == 'global':
                 file.write("%s %s\n" % (sha, name))
-        file.rename()
+        # If this complains that NoneType is not callable, then
+        # atomictempfile no longer has either of rename (pre-1.9) or
+        # close (post-1.9)
+        getattr(file, 'rename', getattr(file, 'close', None))()
 
     ## END FILE LOAD AND SAVE METHODS
 
