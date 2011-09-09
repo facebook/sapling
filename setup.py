@@ -19,5 +19,5 @@ project that is in Git.  A bridger of worlds, this plugin be.
     keywords='hg git mercurial',
     license='GPLv2',
     packages=['hggit'],
-    install_requires=['dulwich>=0.6.0'],
+    install_requires=['dulwich>=0.8.1'],
 )
