@@ -14,9 +14,59 @@ exporting hg objects to git
 creating and sending data
     default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:2b9ec6a4
-@  changeset:   2:92d33c0dd6e1
+pushing to git://localhost/gitrepo
+exporting hg objects to git
+creating and sending data
+    default::refs/heads/not-master => GIT:7eeab2ea
+    default::refs/heads/master => GIT:fee30180
+pushing to git://localhost/gitrepo
+exporting hg objects to git
+creating and sending data
+    default::refs/heads/not-master => GIT:7eeab2ea
+    default::refs/heads/master => GIT:d1659250
+pushing to git://localhost/gitrepo
+exporting hg objects to git
+creating and sending data
+    default::refs/heads/not-master => GIT:7eeab2ea
+    default::refs/heads/master => GIT:ee985f12
+pushing to git://localhost/gitrepo
+exporting hg objects to git
+creating and sending data
+    default::refs/heads/not-master => GIT:7eeab2ea
+    default::refs/heads/master => GIT:d21e26b4
+pushing to git://localhost/gitrepo
+exporting hg objects to git
+creating and sending data
+    default::refs/heads/not-master => GIT:7eeab2ea
+    default::refs/heads/master => GIT:8c878c97
+@  changeset:   7:b90e988091a2
 |  tag:         default/master
 |  tag:         tip
+|  user:        test < test@example.com >
+|  date:        Mon Jan 01 00:00:17 2007 +0000
+|  summary:     add eta
+|
+o  changeset:   6:7ede2f971cae
+|  user:        test
+|  date:        Mon Jan 01 00:00:16 2007 +0000
+|  summary:     add zeta
+|
+o  changeset:   5:1454a94056ec
+|  user:        name <test@example.com
+|  date:        Mon Jan 01 00:00:15 2007 +0000
+|  summary:     add epsilon
+|
+o  changeset:   4:a045fd599678
+|  user:        name<test@example.com>
+|  date:        Mon Jan 01 00:00:14 2007 +0000
+|  summary:     add delta
+|
+o  changeset:   3:8da3ab8b31d0
+|  user:        <test@example.com>
+|  date:        Mon Jan 01 00:00:13 2007 +0000
+|  summary:     add gamma
+|
+o  changeset:   2:92d33c0dd6e1
 |  user:        test <test@example.com> (comment)
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  summary:     modify beta
@@ -33,10 +83,35 @@ o  changeset:   0:3442585be8a6
    summary:     add alpha
 
 importing git objects into hg
-2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  changeset:   2:92d33c0dd6e1
+7 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  changeset:   7:8ab87d5066e4
 |  tag:         default/master
 |  tag:         tip
+|  user:        test <test@example.com>
+|  date:        Mon Jan 01 00:00:17 2007 +0000
+|  summary:     add eta
+|
+o  changeset:   6:ff226cc916bd
+|  user:        test
+|  date:        Mon Jan 01 00:00:16 2007 +0000
+|  summary:     add zeta
+|
+o  changeset:   5:5f1557c62c53
+|  user:        name <test@example.com>
+|  date:        Mon Jan 01 00:00:15 2007 +0000
+|  summary:     add epsilon
+|
+o  changeset:   4:fc51727b28fe
+|  user:        name <test@example.com>
+|  date:        Mon Jan 01 00:00:14 2007 +0000
+|  summary:     add delta
+|
+o  changeset:   3:8da3ab8b31d0
+|  user:        <test@example.com>
+|  date:        Mon Jan 01 00:00:13 2007 +0000
+|  summary:     add gamma
+|
+o  changeset:   2:92d33c0dd6e1
 |  user:        test <test@example.com> (comment)
 |  date:        Mon Jan 01 00:00:12 2007 +0000
 |  summary:     modify beta
@@ -52,3 +127,50 @@ o  changeset:   0:3442585be8a6
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha
 
+commit 8c878c9764e96e67ed9f62b3f317d156bf71bc52
+Author: test <test@example.com>
+Date:   Mon Jan 1 00:00:17 2007 +0000
+
+    add eta
+
+commit d21e26b48c6136340dd1212bb45ba0e9debb130c
+Author: test <none@none>
+Date:   Mon Jan 1 00:00:16 2007 +0000
+
+    add zeta
+
+commit ee985f124d2f13ee8ad2a346a6d1b0ada8b0d491
+Author: name <test@example.com>
+Date:   Mon Jan 1 00:00:15 2007 +0000
+
+    add epsilon
+
+commit d16592507ac83a6a633b90ca255f65e5d024f0bc
+Author: name <test@example.com>
+Date:   Mon Jan 1 00:00:14 2007 +0000
+
+    add delta
+
+commit fee30180efc4943fb916de04fcf6a64b638d9325
+Author:  <test@example.com>
+Date:   Mon Jan 1 00:00:13 2007 +0000
+
+    add gamma
+
+commit 2b9ec6a47b93191986a79eeb771e461c4508c7c4
+Author: test ext:(%20%28comment%29) <test@example.com>
+Date:   Mon Jan 1 00:00:12 2007 +0000
+
+    modify beta
+
+commit cffa0e8d8ad5f284c69c898c0f3c1e32d078af8a
+Author: test <none@none>
+Date:   Mon Jan 1 00:00:11 2007 +0000
+
+    add beta
+
+commit 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03
+Author: test <test@example.org>
+Date:   Mon Jan 1 00:00:10 2007 +0000
+
+    add alpha

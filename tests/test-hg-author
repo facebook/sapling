@@ -74,11 +74,40 @@ echo gamma >> beta
 hgcommit -u "test <test@example.com> (comment)" -m 'modify beta'
 hg push
 
+echo gamma > gamma
+hg add gamma
+hgcommit -u "<test@example.com>" -m 'add gamma'
+hg push
+
+echo delta > delta
+hg add delta
+hgcommit -u "name<test@example.com>" -m 'add delta'
+hg push
+
+echo epsilon > epsilon
+hg add epsilon
+hgcommit -u "name <test@example.com" -m 'add epsilon'
+hg push
+
+echo zeta > zeta
+hg add zeta
+hgcommit -u " test " -m 'add zeta'
+hg push
+
+echo eta > eta
+hg add eta
+hgcommit -u "test < test@example.com >" -m 'add eta'
+hg push
+
 hg log --graph | egrep -v ': *(not-master|master)'
 
 cd ..
 hg clone git://localhost/gitrepo hgrepo2 | grep -v '^updating'
 cd hgrepo2
 hg log --graph | egrep -v ': *(not-master|master)'
+
+cd ..
+cd gitrepo
+git log --pretty=medium master
 
 cd ..

@@ -344,24 +344,27 @@ class GitHandler(object):
         self.swap_out_encoding(oldenc)
         return commit.id
 
+    def get_valid_git_username_email(self, name):
+        return name.lstrip('< ').rstrip('> ')
+
     def get_git_author(self, ctx):
         # hg authors might not have emails
         author = ctx.user()
 
         # check for git author pattern compliance
-        regex = re.compile('^(.*?) \<(.*?)\>(.*)$')
+        regex = re.compile('^(.*?) ?\<(.*?)(?:\>(.*))?$')
         a = regex.match(author)
 
         if a:
             name = a.group(1)
             email = a.group(2)
-            if len(a.group(3)) > 0:
+            if a.group(3) != None and len(a.group(3)) != 0:
                 name += ' ext:(' + urllib.quote(a.group(3)) + ')'
-            author = name + ' <' + email + '>'
+            author = self.get_valid_git_username_email(name) + ' <' + self.get_valid_git_username_email(email) + '>'
         elif '@' in author:
-            author = author + ' <' + author + '>'
+            author = self.get_valid_git_username_email(author) + ' <' + self.get_valid_git_username_email(author) + '>'
         else:
-            author = author + ' <none@none>'
+            author = self.get_valid_git_username_email(author) + ' <none@none>'
 
         if 'author' in ctx.extra():
             author = "".join(apply_delta(author, ctx.extra()['author']))
