@@ -42,15 +42,15 @@ class overlaymanifest(object):
         self._flagmap = {}
 
         def addtree(tree, dirname):
-            for entry in tree.entries():
-                if entry[0] & 040000:
+            for entry in tree.iteritems():
+                if entry.mode & 040000:
                     # expand directory
-                    subtree = self.repo.handler.git.get_object(entry[2])
-                    addtree(subtree, dirname + entry[1] + '/')
+                    subtree = self.repo.handler.git.get_object(entry.sha)
+                    addtree(subtree, dirname + entry.path + '/')
                 else:
-                    path = dirname + entry[1]
-                    self._map[path] = bin(entry[2])
-                    self._flagmap[path] = entry[0]
+                    path = dirname + entry.path
+                    self._map[path] = bin(entry.sha)
+                    self._flagmap[path] = entry.mode
 
         addtree(self.tree, '')
 
