@@ -1,14 +1,9 @@
 Initialized empty Git repository in gitrepo/.git/
 
-Counting objects: 3, done.
-Total 3 (delta 0), reused 0 (delta 0)
 importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 comparing with git://localhost/gitrepo
 comparing with git://localhost/gitrepo
-Counting objects: 3, done.
-Compressing objects:  50% (1/2)   Compressing objects: 100% (2/2)   Compressing objects: 100% (2/2), done.
-Total 3 (delta 0), reused 0 (delta 0)
 changeset:   1:9497a4ee62e1
 user:        test <test@example.org>
 date:        Mon Jan 01 00:00:11 2007 +0000
@@ -16,9 +11,6 @@ summary:     add beta
 
 Switched to a new branch 'b1'
 comparing with git://localhost/gitrepo
-Counting objects: 8, done.
-Compressing objects:  25% (1/4)   Compressing objects:  50% (2/4)   Compressing objects:  75% (3/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
-Total 8 (delta 0), reused 0 (delta 0)
 changeset:   1:9497a4ee62e1
 user:        test <test@example.org>
 date:        Mon Jan 01 00:00:11 2007 +0000
