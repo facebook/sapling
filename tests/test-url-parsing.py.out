@@ -14,3 +14,15 @@ git@heroku.com
 /webjam/webjam.git
 % expect 'github.com'
 github.com
+% expect '/webjam/webjam.git'
+/webjam/webjam.git
+% expect 'git@github.com'
+git@github.com
+% expect '10022'
+10022
+% expect '/webjam/webjam.git'
+/webjam/webjam.git
+% expect 'github.com'
+github.com
+% expect '19418'
+19418

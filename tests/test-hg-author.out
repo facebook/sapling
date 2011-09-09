@@ -1,8 +1,6 @@
 Initialized empty Git repository in gitrepo/.git/
 
 Switched to a new branch 'not-master'
-Counting objects: 3, done.
-Total 3 (delta 0), reused 0 (delta 0)
 importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -34,9 +32,6 @@ o  changeset:   0:3442585be8a6
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha
 
-Counting objects: 9, done.
-Compressing objects:  20% (1/5)   Compressing objects:  40% (2/5)   Compressing objects:  60% (3/5)   Compressing objects:  80% (4/5)   Compressing objects: 100% (5/5)   Compressing objects: 100% (5/5), done.
-Total 9 (delta 0), reused 0 (delta 0)
 importing git objects into hg
 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   2:92d33c0dd6e1

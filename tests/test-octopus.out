@@ -13,9 +13,6 @@ Merge made by octopus.
  create mode 100644 gamma
 Initialized empty Git repository in gitrepo2/
 
-Counting objects: 14, done.
-Compressing objects:  11% (1/9)   Compressing objects:  22% (2/9)   Compressing objects:  33% (3/9)   Compressing objects:  44% (4/9)   Compressing objects:  55% (5/9)   Compressing objects:  66% (6/9)   Compressing objects:  77% (7/9)   Compressing objects:  88% (8/9)   Compressing objects: 100% (9/9)   Compressing objects: 100% (9/9), done.
-Total 14 (delta 3), reused 0 (delta 0)
 importing git objects into hg
 4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @    5:3,4   6523aa9f4775   2007-01-01 00:00 +0000   test

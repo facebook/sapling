@@ -1,7 +1,5 @@
 Initialized empty Git repository in gitrepo/.git/
 
-Counting objects: 3, done.
-Total 3 (delta 0), reused 0 (delta 0)
 importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 comparing with git://localhost/gitrepo
@@ -47,9 +45,6 @@ comparing with git://localhost/gitrepo
 abort: refs/heads/master changed on the server, please pull and merge before pushing
 % let's pull and try again
 pulling from git://localhost/gitrepo
-Counting objects: 3, done.
-Compressing objects:  50% (1/2)   Compressing objects: 100% (2/2)   Compressing objects: 100% (2/2), done.
-Total 3 (delta 0), reused 0 (delta 0)
 importing git objects into hg
 (run 'hg update' to get a working copy)
 comparing with git://localhost/gitrepo

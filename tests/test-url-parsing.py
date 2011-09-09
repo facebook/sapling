@@ -50,13 +50,31 @@ class TestUrlParsing(object):
         except AttributeError:
             self.assertEquals(client.host, 'github.com')
 
+    def test_ssh_github_style_slash_with_port(self):
+        url = "git+ssh://git@github.com:10022/webjam/webjam.git"
+        client, path = self.handler.get_transport_and_path(url)
+        self.assertEquals(path, '/webjam/webjam.git')
+        self.assertEquals(client.host, 'git@github.com')
+        self.assertEquals(client.port, '10022')
+
+    def test_gitdaemon_style_with_port(self):
+        url = "git://github.com:19418/webjam/webjam.git"
+        client, path = self.handler.get_transport_and_path(url)
+        self.assertEquals(path, '/webjam/webjam.git')
+        try:
+            self.assertEquals(client._host, 'github.com')
+        except AttributeError:
+            self.assertEquals(client.host, 'github.com')
+        self.assertEquals(client._port, '19418')
 
 if __name__ == '__main__':
     tc = TestUrlParsing()
     for test in ['test_ssh_github_style_slash',
                  'test_ssh_github_style_colon',
                  'test_ssh_heroku_style',
-                 'test_gitdaemon_style']:
+                 'test_gitdaemon_style',
+                 'test_ssh_github_style_slash_with_port',
+                 'test_gitdaemon_style_with_port']:
         tc.setUp()
         getattr(tc, test)()
         tc.tearDown()

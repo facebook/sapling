@@ -16,9 +16,6 @@ rm '.gitmodules'
  2 files changed, 0 insertions(+), 4 deletions(-)
  delete mode 100644 .gitmodules
  delete mode 160000 subrepo
-Counting objects: 7, done.
-Compressing objects:  20% (1/5)   Compressing objects:  40% (2/5)   Compressing objects:  60% (3/5)   Compressing objects:  80% (4/5)   Compressing objects: 100% (5/5)   Compressing objects: 100% (5/5), done.
-Total 7 (delta 1), reused 0 (delta 0)
 importing git objects into hg
 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 @  changeset:   2:954cdf1c8c82
