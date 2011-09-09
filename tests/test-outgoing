@@ -2,6 +2,7 @@
 
 # Fails for some reason, need to investigate
 # "$TESTDIR/hghave" git || exit 80
+python -c 'from mercurial import util ; assert util.version() < "1.8"' || exit 80
 
 # bail if the user does not have dulwich
 python -c 'import dulwich, dulwich.repo' || exit 80
