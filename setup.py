@@ -5,7 +5,7 @@ except:
 
 setup(
     name='hg-git',
-    version='0.2.6',
+    version='0.3.0',
     author='Scott Chacon',
     maintainer='Augie Fackler',
     maintainer_email='durin42@gmail.com',
