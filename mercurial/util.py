@@ -1434,6 +1434,8 @@ class url(object):
     <url path: 'c:\\foo\\bar'>
     >>> url(r'\\blah\blah\blah')
     <url path: '\\\\blah\\blah\\blah'>
+    >>> url(r'\\blah\blah\blah#baz')
+    <url path: '\\\\blah\\blah\\blah', fragment: 'baz'>
 
     Authentication credentials:
 
@@ -1462,6 +1464,11 @@ class url(object):
         self._hostport = ''
         self._origpath = path
 
+        if parsefragment and '#' in path:
+            path, self.fragment = path.split('#', 1)
+            if not path:
+                path = None
+
         # special case for Windows drive letters and UNC paths
         if hasdriveletter(path) or path.startswith(r'\\'):
             self.path = path
@@ -1489,10 +1496,6 @@ class url(object):
                 self.path = ''
                 return
         else:
-            if parsefragment and '#' in path:
-                path, self.fragment = path.split('#', 1)
-                if not path:
-                    path = None
             if self._localpath:
                 self.path = path
                 return
