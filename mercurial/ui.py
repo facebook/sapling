@@ -653,9 +653,9 @@ class ui(object):
         printed.'''
         if self.tracebackflag:
             if exc:
-                traceback.print_exception(exc[0], exc[1], exc[2])
+                traceback.print_exception(exc[0], exc[1], exc[2], file=self.ferr)
             else:
-                traceback.print_exc()
+                traceback.print_exc(file=self.ferr)
         return self.tracebackflag
 
     def geteditor(self):
