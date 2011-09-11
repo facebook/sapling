@@ -295,7 +295,8 @@ class queue(object):
                         n, name = entry
                         yield statusentry(bin(n), name)
                     elif l.strip():
-                        self.ui.warn(_('malformated mq status line: %s\n') % entry)
+                        msg = _('malformated mq status line: %s\n') % entry
+                        self.ui.warn(msg)
                     # else we ignore empty lines
             lines = self.opener.read(self.statuspath).splitlines()
             return list(parselines(lines))
