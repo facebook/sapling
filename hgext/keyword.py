@@ -257,7 +257,6 @@ class kwtemplater(object):
             msg = _('overwriting %s expanding keywords\n')
         else:
             msg = _('overwriting %s shrinking keywords\n')
-        lctx = ctx
         for f in candidates:
             if self.restrict:
                 data = self.repo.file(f).read(mf[f])
@@ -267,18 +266,17 @@ class kwtemplater(object):
                 continue
             if expand:
                 if lookup:
-                    lctx = self.linkctx(f, mf[f])
-                data, found = self.substitute(data, f, lctx, re_kw.subn)
+                    ctx = self.linkctx(f, mf[f])
+                data, found = self.substitute(data, f, ctx, re_kw.subn)
             elif self.restrict:
                 found = re_kw.search(data)
             else:
                 data, found = _shrinktext(data, re_kw.subn)
             if found:
                 self.ui.note(msg % f)
-                fpath = self.repo.wjoin(f)
-                mode = os.lstat(fpath).st_mode
-                self.repo.wwrite(f, data, ctx.flags(f))
-                os.chmod(fpath, mode)
+                fp = self.repo.wopener(f, "wb", atomictemp=True)
+                fp.write(data)
+                fp.close()
                 if kwcmd:
                     self.repo.dirstate.normal(f)
                 elif self.record:
