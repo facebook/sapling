@@ -626,6 +626,7 @@ class queue(object):
             self.ui.note(str(inst) + '\n')
             if not self.ui.verbose:
                 self.ui.warn(_("patch failed, unable to continue (try -v)\n"))
+            self.ui.traceback()
             return (False, list(files), False)
 
     def apply(self, repo, series, list=False, update_status=True,
