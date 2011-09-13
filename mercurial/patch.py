@@ -1199,7 +1199,7 @@ def iterhunks(fp):
             m = gitre.match(x)
             if not m:
                 continue
-            if gitpatches is None:
+            if not gitpatches:
                 # scan whole input for git metadata
                 gitpatches = [('a/' + gp.path, 'b/' + gp.path, gp) for gp
                               in scangitpatch(lr, x)]
