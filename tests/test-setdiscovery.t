@@ -288,7 +288,7 @@ One with >200 heads, which used to use up all of the sample:
   reading DAG from stdin
 
   $ hg heads -t --template . | wc -c
-   *261 (re)
+  \s*261 (re)
 
   $ hg clone -b a . a
   adding changesets
