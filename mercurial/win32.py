@@ -138,8 +138,11 @@ _kernel32.GetFileInformationByHandle.restype = _BOOL
 _kernel32.CloseHandle.argtypes = [_HANDLE]
 _kernel32.CloseHandle.restype = _BOOL
 
-_kernel32.CreateHardLinkA.argtypes = [_LPCSTR, _LPCSTR, ctypes.c_void_p]
-_kernel32.CreateHardLinkA.restype = _BOOL
+try:
+    _kernel32.CreateHardLinkA.argtypes = [_LPCSTR, _LPCSTR, ctypes.c_void_p]
+    _kernel32.CreateHardLinkA.restype = _BOOL
+except AttributeError:
+    pass
 
 _kernel32.SetFileAttributesA.argtypes = [_LPCSTR, _DWORD]
 _kernel32.SetFileAttributesA.restype = _BOOL
