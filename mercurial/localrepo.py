@@ -79,7 +79,7 @@ class localrepository(repo.repository):
 
         self.sharedpath = self.path
         try:
-            s = os.path.realpath(self.opener.read("sharedpath"))
+            s = os.path.realpath(self.opener.read("sharedpath").rstrip('\n'))
             if not os.path.exists(s):
                 raise error.RepoError(
                     _('.hg/sharedpath points to nonexistent directory %s') % s)

@@ -28,6 +28,15 @@ Some sed versions appends newline, some don't, and some just fails
   $ cat .hg/sharedpath; echo
   $TESTTMP/repo1/.hg
 
+trailing newline on .hg/sharedpath is ok
+  $ hg tip -q
+  0:d3873e73d99e
+  $ echo '' >> .hg/sharedpath
+  $ cat .hg/sharedpath
+  $TESTTMP/repo1/.hg
+  $ hg tip -q
+  0:d3873e73d99e
+
 commit in shared clone
 
   $ echo a >> a
