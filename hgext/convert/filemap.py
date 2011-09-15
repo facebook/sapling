@@ -375,3 +375,6 @@ class filemap_source(converter_source):
 
     def lookuprev(self, rev):
         return self.base.lookuprev(rev)
+
+    def getbookmarks(self):
+        return self.base.getbookmarks()
