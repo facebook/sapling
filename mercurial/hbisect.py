@@ -8,7 +8,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os
+import os, error
 from i18n import _
 from node import short, hex
 import util
@@ -154,3 +154,14 @@ def save_state(repo, state):
     finally:
         wlock.release()
 
+def get(repo, status):
+    """
+    Return a list of revision(s) that match the given status:
+
+    - ``good``, ``bad``, ``skip``: as the names imply
+    """
+    state = load_state(repo)
+    if status in ('good', 'bad', 'skip'):
+        return [repo.changelog.rev(n) for n in state[status]]
+    else:
+        raise error.ParseError(_('invalid bisect state'))

@@ -237,13 +237,10 @@ def author(repo, subset, x):
 
 def bisect(repo, subset, x):
     """``bisect(string)``
-    Changesets marked in the specified bisect state (good, bad, skip).
+    Changesets marked in the specified bisect status (good, bad, skip).
     """
-    state = getstring(x, _("bisect requires a string")).lower()
-    if state not in ('good', 'bad', 'skip'):
-        raise error.ParseError(_('invalid bisect state'))
-    marked = set(repo.changelog.rev(n) for n in hbisect.load_state(repo)[state])
-    return [r for r in subset if r in marked]
+    status = getstring(x, _("bisect requires a string")).lower()
+    return [r for r in subset if r in hbisect.get(repo, status)]
 
 # Backward-compatibility
 # - no help entry so that we do not advertise it any more
