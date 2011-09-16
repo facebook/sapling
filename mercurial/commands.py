@@ -3135,6 +3135,27 @@ def import_(ui, repo, patch1, *patches, **opts):
     a URL is specified, the patch will be downloaded from it.
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
+    .. container:: verbose
+
+      Examples:
+
+      - import a traditional patch from a website and detect renames::
+
+          hg import -s 80 http://example.com/bugfix.patch
+
+      - import a changeset from an hgweb server::
+
+          hg import http://www.selenic.com/hg/rev/5ca8c111e9aa
+
+      - import all the patches in an Unix-style mbox::
+
+          hg import incoming-patches.mbox
+
+      - attempt to exactly restore an exported changeset (not always
+        possible)::
+
+          hg import --exact proposed-fix.patch
+
     Returns 0 on success.
     """
     patches = (patch1,) + patches
