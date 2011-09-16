@@ -2281,6 +2281,25 @@ def export(ui, repo, *changesets, **opts):
     With the --switch-parent option, the diff will be against the
     second parent. It can be useful to review a merge.
 
+    .. container:: verbose
+
+      Examples:
+
+      - use export and import to transplant a bugfix to the current
+        branch::
+
+          hg export -r 9353 | hg import -
+
+      - export all the changesets between two revisions to a file with
+        rename information::
+
+          hg export --git -r 123:150 > changes.txt
+
+      - split outgoing changes into a series of patches with
+        descriptive names::
+
+          hg export -r "outgoing()" -o "%n-%m.patch"
+
     Returns 0 on success.
     """
     changesets += tuple(opts.get('rev', []))
