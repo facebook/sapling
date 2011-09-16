@@ -3361,18 +3361,14 @@ def log(ui, repo, *pats, **opts):
     Print the revision history of the specified files or the entire
     project.
 
+    If no revision range is specified, the default is ``tip:0`` unless
+    --follow is set, in which case the working directory parent is
+    used as the starting revision.
+
     File history is shown without following rename or copy history of
     files. Use -f/--follow with a filename to follow history across
     renames and copies. --follow without a filename will only show
-    ancestors or descendants of the starting revision. --follow-first
-    only follows the first parent of merge revisions.
-
-    If no revision range is specified, the default is ``tip:0`` unless
-    --follow is set, in which case the working directory parent is
-    used as the starting revision. You can specify a revision set for
-    log, see :hg:`help revsets` for more information.
-
-    See :hg:`help dates` for a list of formats valid for -d/--date.
+    ancestors or descendants of the starting revision.
 
     By default this command prints revision number and changeset id,
     tags, non-trivial parents, user, date and time, and a summary for
@@ -3424,6 +3420,11 @@ def log(ui, repo, *pats, **opts):
       - summary of all changesets after the last tag::
 
           hg log -r "last(tagged())::" --template "{desc|firstline}\\n"
+
+    See :hg:`help dates` for a list of formats valid for -d/--date.
+
+    See :hg:`help revisions` and :hg:`help revsets` for more about
+    specifying revisions.
 
     Returns 0 on success.
     """
