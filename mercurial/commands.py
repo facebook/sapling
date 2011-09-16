@@ -4081,19 +4081,24 @@ def recover(ui, repo):
 def remove(ui, repo, *pats, **opts):
     """remove the specified files on the next commit
 
-    Schedule the indicated files for removal from the repository.
+    Schedule the indicated files for removal from the current branch.
 
-    This only removes files from the current branch, not from the
-    entire project history. -A/--after can be used to remove only
-    files that have already been deleted, -f/--force can be used to
-    force deletion, and -Af can be used to remove files from the next
-    revision without deleting them from the working directory.
+    This command schedules the files to be removed at the next commit.
+    To undo a remove before that, see :hg:`revert`. To undo added
+    files, see :hg:`forget`.
 
-    The following table details the behavior of remove for different
-    file states (columns) and option combinations (rows). The file
-    states are Added [A], Clean [C], Modified [M] and Missing [!] (as
-    reported by :hg:`status`). The actions are Warn, Remove (from
-    branch) and Delete (from disk):
+    .. container:: verbose
+
+      -A/--after can be used to remove only files that have already
+      been deleted, -f/--force can be used to force deletion, and -Af
+      can be used to remove files from the next revision without
+      deleting them from the working directory.
+
+      The following table details the behavior of remove for different
+      file states (columns) and option combinations (rows). The file
+      states are Added [A], Clean [C], Modified [M] and Missing [!]
+      (as reported by :hg:`status`). The actions are Warn, Remove
+      (from branch) and Delete (from disk):
 
       ======= == == == ==
               A  C  M  !
@@ -4104,11 +4109,8 @@ def remove(ui, repo, *pats, **opts):
       -Af     R  R  R  R
       ======= == == == ==
 
-    Note that remove never deletes files in Added [A] state from the
-    working directory, not even if option --force is specified.
-
-    This command schedules the files to be removed at the next commit.
-    To undo a remove before that, see :hg:`revert`.
+      Note that remove never deletes files in Added [A] state from the
+      working directory, not even if option --force is specified.
 
     Returns 0 on success, 1 if any warnings encountered.
     """
