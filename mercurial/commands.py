@@ -3385,6 +3385,46 @@ def log(ui, repo, *pats, **opts):
        its first parent. Also, only files different from BOTH parents
        will appear in files:.
 
+    .. container:: verbose
+
+      Some examples:
+
+      - changesets with full descriptions and file lists::
+
+          hg log -v
+
+      - changesets ancestral to the working directory::
+
+          hg log -f
+
+      - last 10 commits on the current branch::
+
+          hg log -l 10 -b .
+
+      - changesets showing all modifications of a file, including removals::
+
+          hg log --removed file.c
+
+      - all changesets that touch a directory, with diffs, excluding merges::
+
+          hg log -Mp lib/
+
+      - all revision numbers that match a keyword::
+
+          hg log -k bug --template "{rev}\\n"
+
+      - check if a given changeset is included is a tagged release::
+
+          hg log -r "a21ccf and ancestor(1.9)"
+
+      - find all changesets by some user in a date range::
+
+          hg log -k alice -d "may 2008 to jul 2008"
+
+      - summary of all changesets after the last tag::
+
+          hg log -r "last(tagged())::" --template "{desc|firstline}\\n"
+
     Returns 0 on success.
     """
 
