@@ -3381,6 +3381,12 @@ def log(ui, repo, *pats, **opts):
        its first parent. Also, only files different from BOTH parents
        will appear in files:.
 
+    .. note::
+       for performance reasons, log FILE may omit duplicate changes
+       made on branches and will not show deletions. To see all
+       changes including duplicates and deletions, use the --removed
+       switch.
+
     .. container:: verbose
 
       Some examples:
