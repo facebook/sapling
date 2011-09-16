@@ -29,7 +29,7 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove bar
-  not removing bar: file has been marked for add (use -f to force removal)
+  not removing bar: file has been marked for add (use forget to undo)
   exit code: 1
   A bar
   ./bar

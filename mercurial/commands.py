@@ -4145,8 +4145,8 @@ def remove(ui, repo, *pats, **opts):
                       ' to force removal)\n') % m.rel(f))
             ret = 1
         for f in added:
-            ui.warn(_('not removing %s: file has been marked for add (use -f'
-                      ' to force removal)\n') % m.rel(f))
+            ui.warn(_('not removing %s: file has been marked for add'
+                      ' (use forget to undo)\n') % m.rel(f))
             ret = 1
 
     for f in sorted(list):
