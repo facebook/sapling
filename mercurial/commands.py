@@ -307,6 +307,18 @@ def archive(ui, repo, dest, **opts):
     The archive type is automatically detected based on file
     extension (or override using -t/--type).
 
+    .. container:: verbose
+
+      Examples:
+
+      - create a zip file containing the 1.0 release::
+
+          hg archive -r 1.0 project-1.0.zip
+
+      - create a tarball excluding .hg files::
+
+          hg archive project.tar.gz -X ".hg*"
+
     Valid types are:
 
     :``files``: a directory full of files (default)
