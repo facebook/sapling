@@ -2186,6 +2186,32 @@ def diff(ui, repo, *pats, **opts):
     Use the -g/--git option to generate diffs in the git extended diff
     format. For more information, read :hg:`help diffs`.
 
+    .. container:: verbose
+
+      Examples:
+
+      - compare a file in the current working directory to its parent::
+
+          hg diff foo.c
+
+      - compare two historical versions of a directory, with rename info::
+
+          hg diff --git -r 1.0:1.2 lib/
+
+      - get change stats relative to the last change on some date::
+
+          hg diff --stat -r "date('may 2')"
+
+      - diff all newly-added files that contain a keyword::
+
+          hg diff "set:added() and grep(GNU)"
+
+      - compare a revision and its parents::
+
+          hg diff -c 9353         # compare against first parent
+          hg diff -r 9353^:9353   # same using revset syntax
+          hg diff -r 9353^2:9353  # compare against the second parent
+
     Returns 0 on success.
     """
 

@@ -432,6 +432,8 @@ Test command without options
   
       Returns 0 on success.
   
+  use "hg -v help diff" to show verbose help
+  
   options:
   
    -r --rev REV [+]          revision
