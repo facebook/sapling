@@ -239,10 +239,10 @@ def prunecontainers(blocks, keep):
             # Always delete "..container:: type" block
             del blocks[i]
             j = i
+            i -= 1
             while j < len(blocks) and blocks[j]['indent'] > indent:
                 if prune:
                     del blocks[j]
-                    i -= 1 # adjust outer index
                 else:
                     blocks[j]['indent'] -= adjustment
                     j += 1
