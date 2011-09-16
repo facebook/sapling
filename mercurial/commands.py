@@ -2971,6 +2971,22 @@ def identify(ui, repo, source=None, rev=None,
     Specifying a path to a repository root or Mercurial bundle will
     cause lookup to operate on that repository/bundle.
 
+    .. container:: verbose
+
+      Examples:
+
+      - generate a build identifier for the working directory::
+
+          hg id --id > build-id.dat
+
+      - find the revision corresponding to a tag::
+
+          hg id -n -r 1.3
+
+      - check the most recent revision of a remote repository::
+
+          hg id -r tip http://selenic.com/hg/
+
     Returns 0 if successful.
     """
 
