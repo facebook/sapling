@@ -242,6 +242,7 @@ def bisect(repo, subset, x):
 
     - ``range``      : all csets taking part in the bisection
     - ``pruned``     : good|bad|skip, excluding out-of-range csets
+    - ``untested``   : csets whose fate is yet unknown
     """
     status = getstring(x, _("bisect requires a string")).lower()
     return [r for r in subset if r in hbisect.get(repo, status)]

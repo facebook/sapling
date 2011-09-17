@@ -161,6 +161,7 @@ def get(repo, status):
     - ``good``, ``bad``, ``skip``: as the names imply
     - ``range``              : all csets taking part in the bisection
     - ``pruned``             : good|bad|skip, excluding out-of-range csets
+    - ``untested``           : csets whose fate is yet unknown
     """
     state = load_state(repo)
     if status in ('good', 'bad', 'skip'):
@@ -194,6 +195,9 @@ def get(repo, status):
         elif status == 'pruned':
             # We do not want skipped csets that are out-of-range
             return [c for c in range if c in (goods | bads | skips)]
+        elif status == 'untested':
+            # Return the csets in range that are not pruned
+            return [c for c in range if not c in (goods | bads | skips)]
 
         else:
             raise error.ParseError(_('invalid bisect state'))
