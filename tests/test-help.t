@@ -496,6 +496,8 @@ Test command without options
   
       Returns 0 on success.
   
+  use "hg -v help status" to show verbose help
+  
   options:
   
    -A --all                  show status of all files
