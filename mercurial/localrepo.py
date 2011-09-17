@@ -768,44 +768,49 @@ class localrepository(repo.repository):
             release(lock, wlock)
 
     def _rollback(self, dryrun):
+        ui = self.ui
         try:
-            args = self.opener.read("undo.desc").splitlines()
-            if len(args) >= 3 and self.ui.verbose:
-                desc = _("repository tip rolled back to revision %s"
-                         " (undo %s: %s)\n") % (
-                         int(args[0]) - 1, args[1], args[2])
-            elif len(args) >= 2:
-                desc = _("repository tip rolled back to revision %s"
-                         " (undo %s)\n") % (
-                         int(args[0]) - 1, args[1])
+            args = self.opener.read('undo.desc').splitlines()
+            (oldlen, desc, detail) = (int(args[0]), args[1], None)
+            if len(args) >= 3:
+                detail = args[2]
+            oldtip = oldlen - 1
+
+            if detail and ui.verbose:
+                msg = (_('repository tip rolled back to revision %s'
+                         ' (undo %s: %s)\n')
+                       % (oldtip, desc, detail))
+            else:
+                msg = (_('repository tip rolled back to revision %s'
+                         ' (undo %s)\n')
+                       % (oldtip, desc))
         except IOError:
-            desc = _("rolling back unknown transaction\n")
-        self.ui.status(desc)
+            msg = _('rolling back unknown transaction\n')
+        ui.status(msg)
         if dryrun:
             return 0
-        transaction.rollback(self.sopener, self.sjoin("undo"),
-                             self.ui.warn)
-        util.rename(self.join("undo.dirstate"), self.join("dirstate"))
+        transaction.rollback(self.sopener, self.sjoin('undo'), ui.warn)
+        util.rename(self.join('undo.dirstate'), self.join('dirstate'))
         if os.path.exists(self.join('undo.bookmarks')):
             util.rename(self.join('undo.bookmarks'),
                         self.join('bookmarks'))
         try:
-            branch = self.opener.read("undo.branch")
+            branch = self.opener.read('undo.branch')
             self.dirstate.setbranch(branch)
         except IOError:
-            self.ui.warn(_("named branch could not be reset, "
-                           "current branch is still: %s\n")
-                         % self.dirstate.branch())
+            ui.warn(_('named branch could not be reset: '
+                      'current branch is still \'%s\'\n')
+                    % self.dirstate.branch())
         self.invalidate()
         self.dirstate.invalidate()
         self.destroyed()
         parents = tuple([p.rev() for p in self.parents()])
         if len(parents) > 1:
-            self.ui.status(_("working directory now based on "
-                             "revisions %d and %d\n") % parents)
+            ui.status(_('working directory now based on '
+                        'revisions %d and %d\n') % parents)
         else:
-            self.ui.status(_("working directory now based on "
-                             "revision %d\n") % parents)
+            ui.status(_('working directory now based on '
+                        'revision %d\n') % parents)
         return 0
 
     def invalidatecaches(self):
