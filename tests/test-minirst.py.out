@@ -6,6 +6,7 @@ This is some text in the first paragraph.
   containing random whitespace.
 
 The third and final paragraph.
+
 ----------------------------------------------------------------------
 
 paragraphs formatted to fit within 30 characters:
@@ -19,6 +20,7 @@ paragraph.
   whitespace.
 
 The third and final paragraph.
+
 ----------------------------------------------------------------------
 
 definitions formatted to fit within 60 characters:
@@ -33,6 +35,7 @@ Another Term
 
   A Nested/Indented Term
     Definition.
+
 ----------------------------------------------------------------------
 
 definitions formatted to fit within 30 characters:
@@ -52,6 +55,7 @@ Another Term
 
   A Nested/Indented Term
     Definition.
+
 ----------------------------------------------------------------------
 
 literals formatted to fit within 60 characters:
@@ -72,6 +76,7 @@ space-double-colon.
   This literal block is started with '::',
     the so-called expanded form. The paragraph
       with '::' disappears in the final output.
+
 ----------------------------------------------------------------------
 
 literals formatted to fit within 30 characters:
@@ -94,6 +99,7 @@ with space-double-colon.
   This literal block is started with '::',
     the so-called expanded form. The paragraph
       with '::' disappears in the final output.
+
 ----------------------------------------------------------------------
 
 lists formatted to fit within 60 characters:
@@ -129,6 +135,7 @@ Line blocks are also a form of list:
 
 This is the first line. The line continues here.
 This is the second line.
+
 ----------------------------------------------------------------------
 
 lists formatted to fit within 30 characters:
@@ -173,6 +180,7 @@ list:
 This is the first line. The
 line continues here.
 This is the second line.
+
 ----------------------------------------------------------------------
 
 options formatted to fit within 60 characters:
@@ -200,6 +208,7 @@ two-space marker after the option. It is treated as a normal
 paragraph:
 
 --foo bar baz
+
 ----------------------------------------------------------------------
 
 options formatted to fit within 30 characters:
@@ -272,6 +281,7 @@ option. It is treated as a
 normal paragraph:
 
 --foo bar baz
+
 ----------------------------------------------------------------------
 
 fields formatted to fit within 60 characters:
@@ -286,6 +296,7 @@ small       The larger key below triggers full indentation
             here.
 much too large
             This key is big enough to get its own line.
+
 ----------------------------------------------------------------------
 
 fields formatted to fit within 30 characters:
@@ -305,11 +316,13 @@ much too large
             This key is big
             enough to get its
             own line.
+
 ----------------------------------------------------------------------
 
 containers (normal) formatted to fit within 60 characters:
 ----------------------------------------------------------------------
 Normal output.
+
 ----------------------------------------------------------------------
 
 containers (verbose) formatted to fit within 60 characters:
@@ -317,6 +330,7 @@ containers (verbose) formatted to fit within 60 characters:
 Normal output.
 
 Verbose output.
+
 ----------------------------------------------------------------------
 ['debug', 'debug']
 ----------------------------------------------------------------------
@@ -326,6 +340,7 @@ containers (debug) formatted to fit within 60 characters:
 Normal output.
 
 Initial debug output.
+
 ----------------------------------------------------------------------
 ['verbose']
 ----------------------------------------------------------------------
@@ -339,6 +354,7 @@ Initial debug output.
 Verbose output.
 
 Debug output.
+
 ----------------------------------------------------------------------
 []
 ----------------------------------------------------------------------
@@ -346,6 +362,7 @@ Debug output.
 roles formatted to fit within 60 characters:
 ----------------------------------------------------------------------
 Please see "hg add".
+
 ----------------------------------------------------------------------
 
 sections formatted to fit within 20 characters:
@@ -361,6 +378,7 @@ Subsection
 
 Markup: "foo" and "hg help"
 ---------------------------
+
 ----------------------------------------------------------------------
 
 admonitions formatted to fit within 30 characters:
@@ -377,6 +395,7 @@ Note:
 
 !Danger!
    This is danger
+
 ----------------------------------------------------------------------
 
 comments formatted to fit within 30 characters:
@@ -386,6 +405,7 @@ Some text.
    Some indented text.
 
 Empty comment above
+
 ----------------------------------------------------------------------
 
   === === ========================================

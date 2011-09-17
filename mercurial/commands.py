@@ -2782,7 +2782,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             doc = doc.splitlines()[0]
         keep = ui.verbose and ['verbose'] or []
         formatted, pruned = minirst.format(doc, textwidth, keep=keep)
-        ui.write("\n%s\n" % formatted)
+        ui.write("\n%s" % formatted)
         if pruned:
             ui.write(_('\nuse "hg -v help %s" to show verbose help\n') % name)
 
@@ -2862,7 +2862,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             doc = doc()
 
         ui.write("%s\n\n" % header)
-        ui.write("%s\n" % minirst.format(doc, textwidth, indent=4))
+        ui.write("%s" % minirst.format(doc, textwidth, indent=4))
         try:
             cmdutil.findcmd(name, table)
             ui.write(_('\nuse "hg help -c %s" to see help for '
@@ -2887,7 +2887,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         ui.write(_('%s extension - %s\n\n') % (name.split('.')[-1], head))
         if tail:
             ui.write(minirst.format(tail, textwidth))
-            ui.status('\n\n')
+            ui.status('\n')
 
         if mod:
             try:
@@ -2907,7 +2907,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         msg = help.listexts(_("'%s' is provided by the following "
                               "extension:") % cmd, {ext: doc}, indent=4)
         ui.write(minirst.format(msg, textwidth))
-        ui.write('\n\n')
+        ui.write('\n')
         ui.write(_('use "hg help extensions" for information on enabling '
                    'extensions\n'))
 
@@ -2946,7 +2946,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         if name != 'shortlist':
             text = help.listexts(_('enabled extensions:'), extensions.enabled())
             if text:
-                ui.write("\n%s\n" % minirst.format(text, textwidth))
+                ui.write("\n%s" % minirst.format(text, textwidth))
 
     if not name:
         ui.write(_("\nadditional help topics:\n\n"))

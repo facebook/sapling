@@ -398,7 +398,7 @@ def formatoption(block, width):
     hanging = block['optstrwidth']
     initindent = '%s%s  ' % (block['optstr'], ' ' * ((hanging - colwidth)))
     hangindent = ' ' * (encoding.colwidth(initindent) + 1)
-    return ' %s' % (util.wrap(desc, usablewidth,
+    return ' %s\n' % (util.wrap(desc, usablewidth,
                                            initindent=initindent,
                                            hangindent=hangindent))
 
@@ -413,17 +413,18 @@ def formatblock(block, width):
 
         defindent = indent + hang * ' '
         text = ' '.join(map(str.strip, block['lines']))
-        return '%s\n%s' % (indent + admonition, util.wrap(text, width=width,
-                                           initindent=defindent,
-                                           hangindent=defindent))
+        return '%s\n%s\n' % (indent + admonition,
+                             util.wrap(text, width=width,
+                                       initindent=defindent,
+                                       hangindent=defindent))
     if block['type'] == 'margin':
-        return ''
+        return '\n'
     if block['type'] == 'literal':
         indent += '  '
-        return indent + ('\n' + indent).join(block['lines'])
+        return indent + ('\n' + indent).join(block['lines']) + '\n'
     if block['type'] == 'section':
         underline = encoding.colwidth(block['lines'][0]) * block['underline']
-        return "%s%s\n%s%s" % (indent, block['lines'][0],indent, underline)
+        return "%s%s\n%s%s\n" % (indent, block['lines'][0],indent, underline)
     if block['type'] == 'table':
         table = block['table']
         # compute column widths
@@ -447,9 +448,9 @@ def formatblock(block, width):
         hang = len(block['lines'][-1]) - len(block['lines'][-1].lstrip())
         defindent = indent + hang * ' '
         text = ' '.join(map(str.strip, block['lines'][1:]))
-        return '%s\n%s' % (term, util.wrap(text, width=width,
-                                           initindent=defindent,
-                                           hangindent=defindent))
+        return '%s\n%s\n' % (term, util.wrap(text, width=width,
+                                             initindent=defindent,
+                                             hangindent=defindent))
     subindent = indent
     if block['type'] == 'bullet':
         if block['lines'][0].startswith('| '):
@@ -481,7 +482,7 @@ def formatblock(block, width):
     text = ' '.join(map(str.strip, block['lines']))
     return util.wrap(text, width=width,
                      initindent=indent,
-                     hangindent=subindent)
+                     hangindent=subindent) + '\n'
 
 def parse(text, indent=0, keep=None):
     """Parse text into a list of blocks"""
@@ -504,13 +505,13 @@ def parse(text, indent=0, keep=None):
     return blocks, pruned
 
 def formatblocks(blocks, width):
-    text = '\n'.join(formatblock(b, width) for b in blocks)
+    text = ''.join(formatblock(b, width) for b in blocks)
     return text
 
 def format(text, width, indent=0, keep=None):
     """Parse and format the text according to width."""
     blocks, pruned = parse(text, indent, keep or [])
-    text = '\n'.join(formatblock(b, width) for b in blocks)
+    text = ''.join(formatblock(b, width) for b in blocks)
     if keep is None:
         return text
     else:
