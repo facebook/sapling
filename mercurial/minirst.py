@@ -22,7 +22,6 @@ import re
 import util, encoding
 from i18n import _
 
-
 def replace(text, substs):
     for f, t in substs:
         text = text.replace(f, t)
@@ -43,7 +42,6 @@ def findblocks(text):
         lines = [l[indent:] for l in lines]
         blocks.append(dict(indent=indent, lines=lines))
     return blocks
-
 
 def findliteralblocks(blocks):
     """Finds literal blocks and adds a 'type' field to the blocks.
@@ -145,7 +143,6 @@ def splitparagraphs(blocks):
         i += 1
     return blocks
 
-
 _fieldwidth = 12
 
 def updatefieldlists(blocks):
@@ -171,7 +168,6 @@ def updatefieldlists(blocks):
         i = j + 1
 
     return blocks
-
 
 def updateoptionlists(blocks):
     i = 0
@@ -247,7 +243,6 @@ def prunecontainers(blocks, keep):
         i += 1
     return blocks, pruned
 
-
 _sectionre = re.compile(r"""^([-=`:.'"~^_*+#])\1+$""")
 
 def findtables(blocks):
@@ -312,14 +307,12 @@ def findsections(blocks):
             del block['lines'][1]
     return blocks
 
-
 def inlineliterals(blocks):
     substs = [('``', '"')]
     for b in blocks:
         if b['type'] in ('paragraph', 'section'):
             b['lines'] = [replace(l, substs) for l in b['lines']]
     return blocks
-
 
 def hgrole(blocks):
     substs = [(':hg:`', '"hg '), ('`', '"')]
@@ -331,7 +324,6 @@ def hgrole(blocks):
             # (run the blocks through inlineliterals first).
             b['lines'] = [replace(l, substs) for l in b['lines']]
     return blocks
-
 
 def addmargins(blocks):
     """Adds empty blocks for vertical spacing.
