@@ -2805,6 +2805,8 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         except KeyError:
             pass
 
+        ui.write(opttext(optlist, textwidth))
+
     def helplist(select=None):
         # list of commands
         if name == "shortlist":
@@ -2866,6 +2868,8 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             topics_len = max([len(s[0]) for s in topics])
             for t, desc in topics:
                 ui.write(" %-*s  %s\n" % (topics_len, t, desc))
+
+        ui.write(opttext(optlist, textwidth))
 
     def helptopic(name):
         for names, header, doc in help.helptable:
@@ -2955,7 +2959,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         ui.status('\n')
         helplist()
 
-    ui.write(opttext(optlist, textwidth))
 
 @command('identify|id',
     [('r', 'rev', '',
