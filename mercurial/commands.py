@@ -2747,7 +2747,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             # except block, nor can be used inside a lambda. python issue4617
             prefix = inst.args[0]
             select = lambda c: c.lstrip('^').startswith(prefix)
-            helplist(_('list of commands:\n\n'), select)
+            helplist(select)
             return
 
         # check if it's an invalid alias and display its error if it is
@@ -2805,7 +2805,13 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         except KeyError:
             pass
 
-    def helplist(header, select=None):
+    def helplist(select=None):
+        # list of commands
+        if name == "shortlist":
+            header = _('basic commands:\n\n')
+        else:
+            header = _('list of commands:\n\n')
+
         h = {}
         cmds = {}
         for c, e in table.iteritems():
@@ -2908,7 +2914,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             except AttributeError:
                 ct = {}
             modcmds = set([c.split('|', 1)[0] for c in ct])
-            helplist(_('list of commands:\n\n'), modcmds.__contains__)
+            helplist(modcmds.__contains__)
         else:
             ui.write(_('use "hg help extensions" for information on enabling '
                        'extensions\n'))
@@ -2943,19 +2949,11 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 i = inst
         if i:
             raise i
-
     else:
         # program name
         ui.status(_("Mercurial Distributed SCM\n"))
         ui.status('\n')
-
-        # list of commands
-        if name == "shortlist":
-            header = _('basic commands:\n\n')
-        else:
-            header = _('list of commands:\n\n')
-
-        helplist(header)
+        helplist()
 
     ui.write(opttext(optlist, textwidth))
 
