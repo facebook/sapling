@@ -4815,6 +4815,22 @@ def status(ui, repo, *pats, **opts):
       I = ignored
         = origin of the previous file listed as A (added)
 
+    .. container:: verbose
+
+      Examples:
+
+      - show changes in the working directory relative to a changeset:
+
+          hg status --rev 9353
+
+      - show all changes including copies in an existing changeset::
+
+          hg status --copies --change 9353
+
+      - get a NUL separated list of added files, suitable for xargs::
+
+          hg status -an0
+
     Returns 0 on success.
     """
 
