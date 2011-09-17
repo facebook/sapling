@@ -24,11 +24,9 @@ from i18n import _
 
 
 def replace(text, substs):
-    utext = text.decode(encoding.encoding)
     for f, t in substs:
-        utext = utext.replace(f, t)
-    return utext.encode(encoding.encoding)
-
+        text = text.replace(f, t)
+    return text
 
 _blockre = re.compile(r"\n(?:\s*\n)+")
 
