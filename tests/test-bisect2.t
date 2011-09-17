@@ -288,6 +288,14 @@ complex bisect test 1  # first bad rev is 9
   15:857b178a7cf3
   16:609d82a7ebae
   17:228c06deef46
+  $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
+  6:a214d5d3811a
+  8:dab8161ac8fc
+  9:3c77083deb4a
+  10:429fcd26f52d
+  13:b0a32c86eb31
+  17:228c06deef46
 
 complex bisect test 2  # first good rev is 13
 
@@ -326,6 +334,13 @@ complex bisect test 2  # first good rev is 13
   12:9f259202bbe7
   13:b0a32c86eb31
   15:857b178a7cf3
+  18:d42e18c7bc9b
+  $ hg log -q -r 'bisect(pruned)'
+  1:4ca5088da217
+  6:a214d5d3811a
+  10:429fcd26f52d
+  12:9f259202bbe7
+  13:b0a32c86eb31
   18:d42e18c7bc9b
 
 complex bisect test 3
@@ -394,6 +409,15 @@ first bad rev is 15
   13:b0a32c86eb31
   15:857b178a7cf3
   16:609d82a7ebae
+  $ hg log -q -r 'bisect(pruned)'
+  1:4ca5088da217
+  6:a214d5d3811a
+  9:3c77083deb4a
+  10:429fcd26f52d
+  12:9f259202bbe7
+  13:b0a32c86eb31
+  15:857b178a7cf3
+  16:609d82a7ebae
 
 complex bisect test 4
 
@@ -443,6 +467,13 @@ first good revision is 17
   15:857b178a7cf3
   16:609d82a7ebae
   17:228c06deef46
+  $ hg log -q -r 'bisect(pruned)'
+  8:dab8161ac8fc
+  10:429fcd26f52d
+  13:b0a32c86eb31
+  15:857b178a7cf3
+  16:609d82a7ebae
+  17:228c06deef46
 
 test unrelated revs:
 
@@ -452,6 +483,7 @@ test unrelated revs:
   abort: starting revisions are not directly related
   [255]
   $ hg log -q -r 'bisect(range)'
+  $ hg log -q -r 'bisect(pruned)'
   $ hg bisect --reset
 
 end at merge: 17 bad, 11 good (but 9 is first bad)
@@ -483,6 +515,11 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   15:857b178a7cf3
   16:609d82a7ebae
   17:228c06deef46
+  $ hg log -q -r 'bisect(pruned)'
+  11:82ca6f06eccd
+  13:b0a32c86eb31
+  15:857b178a7cf3
+  17:228c06deef46
   $ hg bisect --extend
   Extending search to changeset 8:dab8161ac8fc
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
@@ -505,6 +542,13 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   13:b0a32c86eb31
   15:857b178a7cf3
   16:609d82a7ebae
+  17:228c06deef46
+  $ hg log -q -r 'bisect(pruned)'
+  8:dab8161ac8fc
+  9:3c77083deb4a
+  11:82ca6f06eccd
+  13:b0a32c86eb31
+  15:857b178a7cf3
   17:228c06deef46
 
 user adds irrelevant but consistent information (here: -g 2) to bisect state
@@ -529,4 +573,8 @@ user adds irrelevant but consistent information (here: -g 2) to bisect state
   8:dab8161ac8fc
   11:82ca6f06eccd
   12:9f259202bbe7
+  13:b0a32c86eb31
+  $ hg log -q -r 'bisect(pruned)'
+  8:dab8161ac8fc
+  11:82ca6f06eccd
   13:b0a32c86eb31
