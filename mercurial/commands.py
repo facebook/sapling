@@ -2661,7 +2661,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
     Returns 0 if successful.
     """
 
-    optlist = []
     textwidth = min(ui.termwidth(), 80) - 2
 
     # list all option lists
@@ -2720,7 +2719,10 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
         return text
 
-    def addglobalopts(aliases):
+    def addglobalopts(optlist, aliases):
+        if ui.quiet:
+            return []
+
         if ui.verbose:
             optlist.append((_("global options:"), globalopts))
             if name == 'shortlist':
@@ -2740,6 +2742,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             optlist.append((msg, ()))
 
     def helpcmd(name):
+        optlist = []
         try:
             aliases, entry = cmdutil.findcmd(name, table, strict=unknowncmd)
         except error.AmbiguousCommand, inst:
@@ -2791,8 +2794,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             if entry[1]:
                 optlist.append((_("options:\n"), entry[1]))
 
-            addglobalopts(False)
-
         # check if this command shadows a non-trivial (multi-line)
         # extension help text
         try:
@@ -2805,6 +2806,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         except KeyError:
             pass
 
+        addglobalopts(optlist, False)
         ui.write(opttext(optlist, textwidth))
 
     def helplist(select=None):
@@ -2853,9 +2855,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                                              initindent=' %-*s   ' % (m, f),
                                              hangindent=' ' * (m + 4))))
 
-        if not ui.quiet:
-            addglobalopts(True)
-
         if not name:
             text = help.listexts(_('enabled extensions:'), extensions.enabled())
             if text:
@@ -2869,6 +2868,8 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             for t, desc in topics:
                 ui.write(" %-*s  %s\n" % (topics_len, t, desc))
 
+        optlist = []
+        addglobalopts(optlist, True)
         ui.write(opttext(optlist, textwidth))
 
     def helptopic(name):
