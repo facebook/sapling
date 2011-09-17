@@ -2327,6 +2327,18 @@ def forget(ui, repo, *pats, **opts):
 
     To undo a forget before the next commit, see :hg:`add`.
 
+    .. container:: verbose
+
+      Examples:
+
+      - forget newly-added binary files::
+
+          hg forget "set:added() and binary()"
+
+      - forget files that would be excluded by .hgignore::
+
+          hg forget "set:hgignore()"
+
     Returns 0 on success.
     """
 
