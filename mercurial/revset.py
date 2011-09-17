@@ -407,6 +407,12 @@ def filelog(repo, subset, x):
 
     return [r for r in subset if r in s]
 
+def first(repo, subset, x):
+    """``first(set, [n])``
+    An alias for limit().
+    """
+    return limit(repo, subset, x)
+
 def follow(repo, subset, x):
     """``follow([file])``
     An alias for ``::.`` (ancestors of the working copy's first parent).
@@ -842,6 +848,7 @@ symbols = {
     "descendants": descendants,
     "file": hasfile,
     "filelog": filelog,
+    "first": first,
     "follow": follow,
     "grep": grep,
     "head": head,
@@ -955,7 +962,7 @@ def optimize(x, small):
             w = 100 # very slow
         elif f == "ancestor":
             w = 1 * smallbonus
-        elif f in "reverse limit":
+        elif f in "reverse limit first":
             w = 0
         elif f in "sort":
             w = 10 # assume most sorts look at changelog
