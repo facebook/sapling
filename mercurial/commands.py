@@ -2848,6 +2848,19 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         if not ui.quiet:
             addglobalopts(True)
 
+        if not name:
+            text = help.listexts(_('enabled extensions:'), extensions.enabled())
+            if text:
+                ui.write("\n%s" % minirst.format(text, textwidth))
+
+            ui.write(_("\nadditional help topics:\n\n"))
+            topics = []
+            for names, header, doc in help.helptable:
+                topics.append((sorted(names, key=len, reverse=True)[0], header))
+            topics_len = max([len(s[0]) for s in topics])
+            for t, desc in topics:
+                ui.write(" %-*s  %s\n" % (topics_len, t, desc))
+
     def helptopic(name):
         for names, header, doc in help.helptable:
             if name in names:
@@ -2943,19 +2956,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             header = _('list of commands:\n\n')
 
         helplist(header)
-        if name != 'shortlist':
-            text = help.listexts(_('enabled extensions:'), extensions.enabled())
-            if text:
-                ui.write("\n%s" % minirst.format(text, textwidth))
-
-    if not name:
-        ui.write(_("\nadditional help topics:\n\n"))
-        topics = []
-        for names, header, doc in help.helptable:
-            topics.append((sorted(names, key=len, reverse=True)[0], header))
-        topics_len = max([len(s[0]) for s in topics])
-        for t, desc in topics:
-            ui.write(" %-*s  %s\n" % (topics_len, t, desc))
 
     ui.write(opttext(optlist, textwidth))
 
