@@ -159,9 +159,37 @@ def get(repo, status):
     Return a list of revision(s) that match the given status:
 
     - ``good``, ``bad``, ``skip``: as the names imply
+    - ``range``              : all csets taking part in the bisection
     """
     state = load_state(repo)
     if status in ('good', 'bad', 'skip'):
         return [repo.changelog.rev(n) for n in state[status]]
     else:
-        raise error.ParseError(_('invalid bisect state'))
+        # Build sets of good, bad, and skipped csets
+        goods = set(repo.changelog.rev(n) for n in state['good'])
+        bads  = set(repo.changelog.rev(n) for n in state['bad'])
+        skips = set(repo.changelog.rev(n) for n in state['skip'])
+
+        # Build kinship of good csets
+        ga = goods.copy()   # Goods' Ancestors
+        gd = goods.copy()   # Goods' Descendants
+        for g in goods:
+            ga |= set(repo.changelog.ancestors(g))
+            gd |= set(repo.changelog.descendants(g))
+
+        # Build kinship of bad csets
+        ba = bads.copy()    # Bads' Ancestors
+        bd = bads.copy()    # Bads' Descendants
+        for b in bads:
+            ba |= set(repo.changelog.ancestors(b))
+            bd |= set(repo.changelog.descendants(b))
+
+        # Build the range of the bisection
+        range  = set(c for c in ba if c in gd)
+        range |= set(c for c in ga if c in bd)
+
+        if status == 'range':
+            return [c for c in range]
+
+        else:
+            raise error.ParseError(_('invalid bisect state'))

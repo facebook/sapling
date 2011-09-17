@@ -271,6 +271,23 @@ complex bisect test 1  # first bad rev is 9
   date:        Thu Jan 01 00:00:09 1970 +0000
   summary:     9
   
+  $ hg log -q -r 'bisect(range)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
+  2:051e12f87bf1
+  3:0950834f0a9c
+  4:5c668c22234f
+  5:385a529b6670
+  6:a214d5d3811a
+  8:dab8161ac8fc
+  9:3c77083deb4a
+  10:429fcd26f52d
+  11:82ca6f06eccd
+  12:9f259202bbe7
+  13:b0a32c86eb31
+  15:857b178a7cf3
+  16:609d82a7ebae
+  17:228c06deef46
 
 complex bisect test 2  # first good rev is 13
 
@@ -295,6 +312,21 @@ complex bisect test 2  # first good rev is 13
   date:        Thu Jan 01 00:00:13 1970 +0000
   summary:     13
   
+  $ hg log -q -r 'bisect(range)'
+  1:4ca5088da217
+  2:051e12f87bf1
+  3:0950834f0a9c
+  4:5c668c22234f
+  5:385a529b6670
+  6:a214d5d3811a
+  8:dab8161ac8fc
+  9:3c77083deb4a
+  10:429fcd26f52d
+  11:82ca6f06eccd
+  12:9f259202bbe7
+  13:b0a32c86eb31
+  15:857b178a7cf3
+  18:d42e18c7bc9b
 
 complex bisect test 3
 
@@ -347,6 +379,21 @@ first bad rev is 15
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     merge 10,13
   
+  $ hg log -q -r 'bisect(range)'
+  1:4ca5088da217
+  2:051e12f87bf1
+  3:0950834f0a9c
+  4:5c668c22234f
+  5:385a529b6670
+  6:a214d5d3811a
+  8:dab8161ac8fc
+  9:3c77083deb4a
+  10:429fcd26f52d
+  11:82ca6f06eccd
+  12:9f259202bbe7
+  13:b0a32c86eb31
+  15:857b178a7cf3
+  16:609d82a7ebae
 
 complex bisect test 4
 
@@ -386,6 +433,16 @@ first good revision is 17
   date:        Thu Jan 01 00:00:17 1970 +0000
   summary:     17
   
+  $ hg log -q -r 'bisect(range)'
+  8:dab8161ac8fc
+  9:3c77083deb4a
+  10:429fcd26f52d
+  11:82ca6f06eccd
+  12:9f259202bbe7
+  13:b0a32c86eb31
+  15:857b178a7cf3
+  16:609d82a7ebae
+  17:228c06deef46
 
 test unrelated revs:
 
@@ -394,6 +451,7 @@ test unrelated revs:
   $ hg bisect -g 14
   abort: starting revisions are not directly related
   [255]
+  $ hg log -q -r 'bisect(range)'
   $ hg bisect --reset
 
 end at merge: 17 bad, 11 good (but 9 is first bad)
@@ -418,6 +476,13 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   Not all ancestors of this changeset have been checked.
   Use bisect --extend to continue the bisection from
   the common ancestor, dab8161ac8fc.
+  $ hg log -q -r 'bisect(range)'
+  11:82ca6f06eccd
+  12:9f259202bbe7
+  13:b0a32c86eb31
+  15:857b178a7cf3
+  16:609d82a7ebae
+  17:228c06deef46
   $ hg bisect --extend
   Extending search to changeset 8:dab8161ac8fc
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
@@ -431,6 +496,16 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   date:        Thu Jan 01 00:00:09 1970 +0000
   summary:     9
   
+  $ hg log -q -r 'bisect(range)'
+  8:dab8161ac8fc
+  9:3c77083deb4a
+  10:429fcd26f52d
+  11:82ca6f06eccd
+  12:9f259202bbe7
+  13:b0a32c86eb31
+  15:857b178a7cf3
+  16:609d82a7ebae
+  17:228c06deef46
 
 user adds irrelevant but consistent information (here: -g 2) to bisect state
 
@@ -450,3 +525,8 @@ user adds irrelevant but consistent information (here: -g 2) to bisect state
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     11
   
+  $ hg log -q -r 'bisect(range)'
+  8:dab8161ac8fc
+  11:82ca6f06eccd
+  12:9f259202bbe7
+  13:b0a32c86eb31

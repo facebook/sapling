@@ -237,7 +237,10 @@ def author(repo, subset, x):
 
 def bisect(repo, subset, x):
     """``bisect(string)``
-    Changesets marked in the specified bisect status (good, bad, skip).
+    Changesets marked in the specified bisect status (``good``, ``bad``,
+    ``skip``), or any of the meta-status:
+
+    - ``range``      : all csets taking part in the bisection
     """
     status = getstring(x, _("bisect requires a string")).lower()
     return [r for r in subset if r in hbisect.get(repo, status)]
