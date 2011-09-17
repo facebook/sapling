@@ -38,9 +38,10 @@ def findblocks(text):
     blocks = []
     for b in _blockre.split(text.lstrip('\n').rstrip()):
         lines = b.splitlines()
-        indent = min((len(l) - len(l.lstrip())) for l in lines)
-        lines = [l[indent:] for l in lines]
-        blocks.append(dict(indent=indent, lines=lines))
+        if lines:
+            indent = min((len(l) - len(l.lstrip())) for l in lines)
+            lines = [l[indent:] for l in lines]
+            blocks.append(dict(indent=indent, lines=lines))
     return blocks
 
 def findliteralblocks(blocks):
