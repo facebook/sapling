@@ -513,14 +513,16 @@ def keyword(repo, subset, x):
     return l
 
 def limit(repo, subset, x):
-    """``limit(set, n)``
-    First n members of set.
+    """``limit(set, [n])``
+    First n members of set, defaulting to 1.
     """
     # i18n: "limit" is a keyword
-    l = getargs(x, 2, 2, _("limit requires two arguments"))
+    l = getargs(x, 1, 2, _("limit requires one or two arguments"))
     try:
-        # i18n: "limit" is a keyword
-        lim = int(getstring(l[1], _("limit requires a number")))
+        lim = 1
+        if len(l) == 2:
+            # i18n: "limit" is a keyword
+            lim = int(getstring(l[1], _("limit requires a number")))
     except (TypeError, ValueError):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
@@ -529,14 +531,16 @@ def limit(repo, subset, x):
     return [r for r in os if r in ss]
 
 def last(repo, subset, x):
-    """``last(set, n)``
-    Last n members of set.
+    """``last(set, [n])``
+    Last n members of set, defaulting to 1.
     """
     # i18n: "last" is a keyword
-    l = getargs(x, 2, 2, _("last requires two arguments"))
+    l = getargs(x, 1, 2, _("last requires one or two arguments"))
     try:
-        # i18n: "last" is a keyword
-        lim = int(getstring(l[1], _("last requires a number")))
+        lim = 1
+        if len(l) == 2:
+            # i18n: "last" is a keyword
+            lim = int(getstring(l[1], _("last requires a number")))
     except (TypeError, ValueError):
         # i18n: "last" is a keyword
         raise error.ParseError(_("last expects a number"))
