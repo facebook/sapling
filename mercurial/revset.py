@@ -235,8 +235,8 @@ def author(repo, subset, x):
     n = getstring(x, _("author requires a string")).lower()
     return [r for r in subset if n in repo[r].user().lower()]
 
-def bisected(repo, subset, x):
-    """``bisected(string)``
+def bisect(repo, subset, x):
+    """``bisect(string)``
     Changesets marked in the specified bisect state (good, bad, skip).
     """
     state = getstring(x, _("bisect requires a string")).lower()
@@ -244,6 +244,11 @@ def bisected(repo, subset, x):
         raise error.ParseError(_('invalid bisect state'))
     marked = set(repo.changelog.rev(n) for n in hbisect.load_state(repo)[state])
     return [r for r in subset if r in marked]
+
+# Backward-compatibility
+# - no help entry so that we do not advertise it any more
+def bisected(repo, subset, x):
+    return bisect(repo, subset, x)
 
 def bookmark(repo, subset, x):
     """``bookmark([name])``
@@ -837,6 +842,7 @@ symbols = {
     "ancestor": ancestor,
     "ancestors": ancestors,
     "author": author,
+    "bisect": bisect,
     "bisected": bisected,
     "bookmark": bookmark,
     "branch": branch,
