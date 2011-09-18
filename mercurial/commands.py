@@ -501,6 +501,52 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     (command not found) will abort the bisection, and any other
     non-zero exit status means the revision is bad.
 
+    .. container:: verbose
+
+      Some examples:
+
+      - start a bisection with known bad revision 12, and good revision 34::
+
+          hg bisect --bad 34
+          hg bisect --good 12
+
+      - advance the current bisection by marking current revision as good or
+        bad::
+
+          hg bisect --good
+          hg bisect --bad
+
+      - mark the current revision, or a known revision, to be skipped (eg. if
+        that revision is not usable because of another issue)::
+
+          hg bisect --skip
+          hg bisect --skip 23
+
+      - forget the current bisection::
+
+          hg bisect --reset
+
+      - use 'make && make tests' to automatically find the first broken
+        revision::
+
+          hg bisect --reset
+          hg bisect --bad 34
+          hg bisect --good 12
+          hg bisect --command 'make && make tests'
+
+      - see all changesets whose states are already known in the current
+        bisection::
+
+          hg log -r "bisect(pruned)"
+
+      - see all changesets that took part in the current bisection::
+
+          hg log -r "bisect(range)"
+
+      - with the graphlog extension, you can even get a nice graph::
+
+          hg log --graph -r "bisect(range)"
+
     Returns 0 on success.
     """
     def extendbisectrange(nodes, good):
