@@ -74,7 +74,6 @@ push
   +a
   $ hg --cwd a rollback
   repository tip rolled back to revision -1 (undo push)
-  working directory now based on revision -1
 
 unbundle with unrelated source
 
@@ -89,7 +88,6 @@ unbundle with unrelated source
   (run 'hg update' to get a working copy)
   $ hg --cwd a rollback
   repository tip rolled back to revision -1 (undo unbundle)
-  working directory now based on revision -1
 
 unbundle with correct source
 

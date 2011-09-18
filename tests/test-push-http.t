@@ -64,7 +64,6 @@ expect success
   % serve errors
   $ hg rollback
   repository tip rolled back to revision 0 (undo serve)
-  working directory now based on revision 0
 
 expect success, server lacks the httpheader capability
 
@@ -81,7 +80,6 @@ expect success, server lacks the httpheader capability
   % serve errors
   $ hg rollback
   repository tip rolled back to revision 0 (undo serve)
-  working directory now based on revision 0
 
 expect success, server lacks the unbundlehash capability
 
@@ -98,7 +96,6 @@ expect success, server lacks the unbundlehash capability
   % serve errors
   $ hg rollback
   repository tip rolled back to revision 0 (undo serve)
-  working directory now based on revision 0
 
 expect authorization error: all users denied
 

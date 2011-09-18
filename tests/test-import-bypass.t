@@ -62,7 +62,6 @@ Test --user, --date and --message
   
   $ hg rollback
   repository tip rolled back to revision 1 (undo commit)
-  working directory now based on revision 0
 
 Test --import-branch
 
@@ -75,7 +74,6 @@ Test --import-branch
   
   $ hg rollback
   repository tip rolled back to revision 1 (undo commit)
-  working directory now based on revision 0
 
 Test --strip
 
@@ -98,7 +96,6 @@ Test --strip
   applying patch from stdin
   $ hg rollback
   repository tip rolled back to revision 1 (undo commit)
-  working directory now based on revision 0
 
 Test unsupported combinations
 

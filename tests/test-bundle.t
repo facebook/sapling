@@ -90,7 +90,6 @@ Rollback empty
 
   $ hg -R empty rollback
   repository tip rolled back to revision -1 (undo pull)
-  working directory now based on revision -1
 
 Pull full.hg into empty again (using --cwd)
 
@@ -121,7 +120,6 @@ Rollback empty
 
   $ hg -R empty rollback
   repository tip rolled back to revision -1 (undo pull)
-  working directory now based on revision -1
 
 Pull full.hg into empty again (using -R)
 
@@ -219,7 +217,6 @@ Rollback empty
 
   $ hg rollback
   repository tip rolled back to revision -1 (undo pull)
-  working directory now based on revision -1
   $ cd ..
 
 Log -R bundle:empty+full.hg

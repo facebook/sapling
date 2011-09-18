@@ -121,7 +121,6 @@ Extension disabled for lack of a hook
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
-  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -179,7 +178,6 @@ Extension disabled for lack of acl.sources
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
-  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -247,7 +245,6 @@ No [acl.allow]/[acl.deny]
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
-  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -729,7 +726,6 @@ barney is allowed everywhere
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
-  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -1038,7 +1034,6 @@ acl.config can set only [acl.allow]/[acl.deny]
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
-  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -1114,7 +1109,6 @@ fred is always allowed
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
-  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -1261,7 +1255,6 @@ OS-level groups
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
-  working directory now based on revision 0
   0:6675d58eff77
   
 
@@ -1456,7 +1449,6 @@ No branch acls specified
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 2 (undo push)
-  working directory now based on revision 2
   2:fb35475503ef
   
 
@@ -1753,7 +1745,6 @@ Branch acl allow other
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 2 (undo push)
-  working directory now based on revision 2
   2:fb35475503ef
   
 
@@ -1838,7 +1829,6 @@ push foobar into the remote
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 2 (undo push)
-  working directory now based on revision 2
   2:fb35475503ef
   
 Branch acl conflicting deny

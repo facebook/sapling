@@ -64,6 +64,35 @@ Test rollback of hg before issue 902 was fixed
   $ hg branch
   test
 
+working dir unaffected by rollback: do not restore dirstate et. al.
+  $ hg log --template '{rev}  {branch}  {desc|firstline}\n'
+  0  default  add a again
+  $ hg status
+  M a
+  $ hg bookmark foo
+  $ hg commit -m'modify a again'
+  $ echo b > b
+  $ hg commit -Am'add b'
+  adding b
+  $ hg log --template '{rev}  {branch}  {desc|firstline}\n'
+  2  test  add b
+  1  test  modify a again
+  0  default  add a again
+  $ hg update default
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg bookmark bar
+  $ cat .hg/undo.branch ; echo
+  test
+  $ hg rollback
+  repository tip rolled back to revision 1 (undo commit)
+  $ hg id -n
+  0
+  $ hg branch
+  default
+  $ cat .hg/bookmarks.current ; echo
+  bar
+  $ hg bookmark --delete foo
+
 rollback by pretxncommit saves commit message (issue 1635)
 
   $ echo a >> a
@@ -102,18 +131,18 @@ test rollback on served repository
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
+  added 3 changesets with 2 changes to 1 files (+1 heads)
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd u
   $ hg id default
-  8902593132ae
+  068774709090
 
 now rollback and observe that 'hg serve' reloads the repository and
 presents the correct tip changeset:
 
   $ hg -R ../t rollback
-  repository tip rolled back to revision 0 (undo commit)
+  repository tip rolled back to revision 1 (undo commit)
   working directory now based on revision 0
   $ hg id default
-  23b0221f3370
+  791dd2169706

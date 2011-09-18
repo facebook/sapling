@@ -789,28 +789,35 @@ class localrepository(repo.repository):
         ui.status(msg)
         if dryrun:
             return 0
+
+        parents = self.dirstate.parents()
         transaction.rollback(self.sopener, self.sjoin('undo'), ui.warn)
-        util.rename(self.join('undo.dirstate'), self.join('dirstate'))
         if os.path.exists(self.join('undo.bookmarks')):
             util.rename(self.join('undo.bookmarks'),
                         self.join('bookmarks'))
-        try:
-            branch = self.opener.read('undo.branch')
-            self.dirstate.setbranch(branch)
-        except IOError:
-            ui.warn(_('named branch could not be reset: '
-                      'current branch is still \'%s\'\n')
-                    % self.dirstate.branch())
         self.invalidate()
-        self.dirstate.invalidate()
-        self.destroyed()
-        parents = tuple([p.rev() for p in self.parents()])
-        if len(parents) > 1:
-            ui.status(_('working directory now based on '
-                        'revisions %d and %d\n') % parents)
-        else:
-            ui.status(_('working directory now based on '
-                        'revision %d\n') % parents)
+
+        parentgone = (parents[0] not in self.changelog.nodemap or
+                      parents[1] not in self.changelog.nodemap)
+        if parentgone:
+            util.rename(self.join('undo.dirstate'), self.join('dirstate'))
+            try:
+                branch = self.opener.read('undo.branch')
+                self.dirstate.setbranch(branch)
+            except IOError:
+                ui.warn(_('named branch could not be reset: '
+                          'current branch is still \'%s\'\n')
+                        % self.dirstate.branch())
+
+            self.dirstate.invalidate()
+            self.destroyed()
+            parents = tuple([p.rev() for p in self.parents()])
+            if len(parents) > 1:
+                ui.status(_('working directory now based on '
+                            'revisions %d and %d\n') % parents)
+            else:
+                ui.status(_('working directory now based on '
+                            'revision %d\n') % parents)
         return 0
 
     def invalidatecaches(self):

@@ -112,7 +112,6 @@ convert fresh repo with --filemap
   1 import
   filtering out empty revision
   repository tip rolled back to revision 0 (undo commit)
-  working directory now based on revision -1
   0 ci0
   updating tags
   $ hgcat b/c

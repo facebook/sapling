@@ -161,7 +161,6 @@ We can fix the head and push again
   added 3 changesets with 3 changes to 2 files (+1 heads)
   $ hg -R ../main rollback
   repository tip rolled back to revision 5 (undo push)
-  working directory now based on revision -1
 
 Test it still fails with checkallhook
 

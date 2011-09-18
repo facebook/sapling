@@ -277,7 +277,6 @@ outgoing hooks can see env vars
   (run 'hg update' to get a working copy)
   $ hg rollback
   repository tip rolled back to revision 3 (undo pull)
-  working directory now based on revision 0
 
 preoutgoing hook can prevent outgoing changes
 

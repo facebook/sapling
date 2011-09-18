@@ -102,7 +102,6 @@ Changing original repo:
   $ cd clone
   $ hg rollback
   repository tip rolled back to revision 1 (undo push)
-  working directory now based on revision 1
 
   $ hg -q incoming
   2:faba9097cad4
@@ -147,10 +146,6 @@ No new revs, no update:
 
   $ hg rollback
   repository tip rolled back to revision 1 (undo pull)
-  working directory now based on revision 1
-
-  $ hg up -C 0
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg parents -q
   0:1f0dee641bb7
