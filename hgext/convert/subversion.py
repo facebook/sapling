@@ -501,11 +501,11 @@ class svn_source(converter_source):
                                 and not p[2].startswith(badroot + '/')]
 
                 # Tell tag renamings from tag creations
-                remainings = []
+                renamings = []
                 for source, sourcerev, dest in pendings:
                     tagname = dest.split('/')[-1]
                     if source.startswith(srctagspath):
-                        remainings.append([source, sourcerev, tagname])
+                        renamings.append([source, sourcerev, tagname])
                         continue
                     if tagname in tags:
                         # Keep the latest tag value
@@ -521,7 +521,7 @@ class svn_source(converter_source):
                         # but were really created in the tag
                         # directory.
                         pass
-                pendings = remainings
+                pendings = renamings
                 tagspath = srctagspath
         finally:
             stream.close()
