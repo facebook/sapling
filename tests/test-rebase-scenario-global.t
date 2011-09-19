@@ -212,7 +212,7 @@ G onto F - rebase onto an ancestor:
   $ cd a7
 
   $ hg rebase -s 6 -d 5
-  abort: source is descendant of destination
+  abort: source is a child of destination
   [255]
 
 F onto G - rebase onto a descendant:
@@ -247,4 +247,26 @@ F onto G - rebase onto a descendant:
   $ hg rebase -b 5 -d 6
   nothing to rebase
   [1]
+
+C onto A - rebase onto an ancestor:
+
+  $ hg rebase -d 0 -s 2
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/5fddd98957c8-backup.hg
+  $ hg tglog
+  @  7: 'D'
+  |
+  o  6: 'C'
+  |
+  | o  5: 'H'
+  | |
+  | | o  4: 'G'
+  | |/|
+  | o |  3: 'F'
+  |/ /
+  | o  2: 'E'
+  |/
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  
 

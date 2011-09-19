@@ -51,7 +51,7 @@ These fail:
   $ cd a1
 
   $ hg rebase -s 8 -d 7
-  abort: source is descendant of destination
+  abort: source is a child of destination
   [255]
 
   $ hg rebase --continue --abort

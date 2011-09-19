@@ -281,3 +281,25 @@ Rebasing across null as ancestor
   |/
   o  0: 'A'
   
+
+  $ hg rebase -d 5 -s 7
+  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/13547172c9c0-backup.hg
+  $ hg tglog
+  @  8: 'D'
+  |
+  o  7: 'C'
+  |
+  | o  6: 'B'
+  |/
+  o  5: 'extra branch'
+  
+  o  4: 'H'
+  |
+  | o  3: 'G'
+  |/|
+  o |  2: 'F'
+  | |
+  | o  1: 'E'
+  |/
+  o  0: 'A'
+  
