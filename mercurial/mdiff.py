@@ -157,6 +157,7 @@ def _unidiff(t1, t2, l1, l2, opts=defaultopts):
             return 0
         return ret
 
+    lastfunc = [0, '']
     def yieldhunk(hunk):
         (astart, a2, bstart, b2, delta) = hunk
         aend = contextend(a2, len(l1))
@@ -165,13 +166,19 @@ def _unidiff(t1, t2, l1, l2, opts=defaultopts):
 
         func = ""
         if opts.showfunc:
-            # walk backwards from the start of the context
-            # to find a line starting with an alphanumeric char.
-            for x in xrange(astart - 1, -1, -1):
-                t = l1[x].rstrip()
-                if funcre.match(t):
-                    func = ' ' + t[:40]
+            lastpos, func = lastfunc
+            # walk backwards from the start of the context up to the start of
+            # the previous hunk context until we find a line starting with an
+            # alphanumeric char.
+            for i in xrange(astart - 1, lastpos - 1, -1):
+                if l1[i][0].isalnum():
+                    func = ' ' + l1[i].rstrip()[:40]
+                    lastfunc[1] = func
                     break
+            # by recording this hunk's starting point as the next place to
+            # start looking for function lines, we avoid reading any line in
+            # the file more than once.
+            lastfunc[0] = astart
 
         yield "@@ -%d,%d +%d,%d @@%s\n" % (astart + 1, alen,
                                            bstart + 1, blen, func)
@@ -179,9 +186,6 @@ def _unidiff(t1, t2, l1, l2, opts=defaultopts):
             yield x
         for x in xrange(a2, aend):
             yield ' ' + l1[x]
-
-    if opts.showfunc:
-        funcre = re.compile('\w')
 
     # bdiff.blocks gives us the matching sequences in the files.  The loop
     # below finds the spaces between those matching sequences and translates
