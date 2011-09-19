@@ -1059,6 +1059,8 @@ def formatspec(expr, *args):
     %n = hex(arg), single-quoted
     %% = a literal '%'
 
+    Prefixing the type with 'l' specifies a list of that type.
+
     >>> formatspec('%d:: and not %d::', 10, 20)
     '10:: and not 20::'
     >>> formatspec('keyword(%s)', 'foo\\xe9')
@@ -1067,10 +1069,22 @@ def formatspec(expr, *args):
     >>> b.branch = b
     >>> formatspec('branch(%b)', b)
     "branch('default')"
+    >>> formatspec('root(%ls)', ['a', 'b', 'c', 'd'])
+    "root(('a' or 'b' or 'c' or 'd'))"
     '''
 
     def quote(s):
         return repr(str(s))
+
+    def argtype(c, arg):
+        if c == 'd':
+            return str(int(arg))
+        elif c == 's':
+            return quote(arg)
+        elif c == 'n':
+            return quote(node.hex(arg))
+        elif c == 'b':
+            return quote(arg.branch())
 
     ret = ''
     pos = 0
@@ -1082,17 +1096,15 @@ def formatspec(expr, *args):
             d = expr[pos]
             if d == '%':
                 ret += d
-            elif d == 'd':
-                ret += str(int(args[arg]))
+            elif d in 'dsnb':
+                ret += argtype(d, args[arg])
                 arg += 1
-            elif d == 's':
-                ret += quote(args[arg])
-                arg += 1
-            elif d == 'n':
-                ret += quote(node.hex(args[arg]))
-                arg += 1
-            elif d == 'b':
-                ret += quote(args[arg].branch())
+            elif d == 'l':
+                # a list of some type
+                pos += 1
+                d = expr[pos]
+                lv = ' or '.join(argtype(d, e) for e in args[arg])
+                ret += '(%s)' % lv
                 arg += 1
             else:
                 raise util.Abort('unexpected revspec format character %s' % d)
