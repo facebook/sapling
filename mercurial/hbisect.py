@@ -160,44 +160,43 @@ def get(repo, status):
 
     - ``good``, ``bad``, ``skip``: as the names imply
     - ``range``              : all csets taking part in the bisection
-    - ``pruned``             : good|bad|skip, excluding out-of-range csets
+    - ``pruned``             : csets that are good, bad or skipped
     - ``untested``           : csets whose fate is yet unknown
     """
     state = load_state(repo)
     if status in ('good', 'bad', 'skip'):
         return [repo.changelog.rev(n) for n in state[status]]
     else:
-        # Build sets of good, bad, and skipped csets
-        goods = set(repo.changelog.rev(n) for n in state['good'])
-        bads  = set(repo.changelog.rev(n) for n in state['bad'])
-        skips = set(repo.changelog.rev(n) for n in state['skip'])
+        # In the floowing sets, we do *not* call 'bisect()' with more
+        # than one level of recusrsion, because that can be very, very
+        # time consuming. Instead, we always develop the expression as
+        # much as possible.
 
-        # Build kinship of good csets
-        ga = goods.copy()   # Goods' Ancestors
-        gd = goods.copy()   # Goods' Descendants
-        for g in goods:
-            ga |= set(repo.changelog.ancestors(g))
-            gd |= set(repo.changelog.descendants(g))
+        # 'range' is all csets that make the bisection:
+        #   - have a good ancestor and a bad descendant, or conversely
+        # that's because the bisection can go either way
+        range = '( bisect(bad)::bisect(good) | bisect(good)::bisect(bad) )'
 
-        # Build kinship of bad csets
-        ba = bads.copy()    # Bads' Ancestors
-        bd = bads.copy()    # Bads' Descendants
-        for b in bads:
-            ba |= set(repo.changelog.ancestors(b))
-            bd |= set(repo.changelog.descendants(b))
+        # 'pruned' is all csets whose fate is already known:
+        #   - a good ancestor and a good ascendant, or
+        #   - a bad ancestor and a bad descendant, or
+        #   - skipped
+        # But in case of irrelevant goods/bads, we also need to
+        # include them.
+        pg = 'bisect(good)::bisect(good)'   # Pruned goods
+        pb = 'bisect(bad)::bisect(bad)'     # Pruned bads
+        ps = 'bisect(skip)'                 # Pruned skipped
+        pruned = '( (%s) | (%s) | (%s) )' % (pg, pb, ps)
 
-        # Build the range of the bisection
-        range  = set(c for c in ba if c in gd)
-        range |= set(c for c in ga if c in bd)
+        # 'untested' is all cset that are- in 'range', but not in 'pruned'
+        untested = '( (%s) - (%s) )' % (range, pruned)
 
         if status == 'range':
-            return [c for c in range]
+            return [c.rev() for c in repo.set(range)]
         elif status == 'pruned':
-            # We do not want skipped csets that are out-of-range
-            return [c for c in range if c in (goods | bads | skips)]
+            return [c.rev() for c in repo.set(pruned)]
         elif status == 'untested':
-            # Return the csets in range that are not pruned
-            return [c for c in range if not c in (goods | bads | skips)]
+            return [c.rev() for c in repo.set(untested)]
 
         else:
             raise error.ParseError(_('invalid bisect state'))

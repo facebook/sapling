@@ -241,7 +241,7 @@ def bisect(repo, subset, x):
     ``skip``), or any of the meta-status:
 
     - ``range``      : all csets taking part in the bisection
-    - ``pruned``     : good|bad|skip, excluding out-of-range csets
+    - ``pruned``     : csets that are good, bad or skipped
     - ``untested``   : csets whose fate is yet unknown
     """
     status = getstring(x, _("bisect requires a string")).lower()
