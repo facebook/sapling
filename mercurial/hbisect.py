@@ -162,6 +162,7 @@ def get(repo, status):
     - ``range``              : all csets taking part in the bisection
     - ``pruned``             : csets that are good, bad or skipped
     - ``untested``           : csets whose fate is yet unknown
+    - ``ignored``            : csets ignored due to DAG topology
     """
     state = load_state(repo)
     if status in ('good', 'bad', 'skip'):
@@ -191,12 +192,22 @@ def get(repo, status):
         # 'untested' is all cset that are- in 'range', but not in 'pruned'
         untested = '( (%s) - (%s) )' % (range, pruned)
 
+        # 'ignored' is all csets that were not used during the bisection
+        # due to DAG topology, but may however have had an impact.
+        # Eg., a branch merged between bads and goods, but whose branch-
+        # point is out-side of the range.
+        iba = '::bisect(bad) - ::bisect(good)'  # Ignored bads' ancestors
+        iga = '::bisect(good) - ::bisect(bad)'  # Ignored goods' ancestors
+        ignored = '( ( (%s) | (%s) ) - (%s) )' % (iba, iga, range)
+
         if status == 'range':
             return [c.rev() for c in repo.set(range)]
         elif status == 'pruned':
             return [c.rev() for c in repo.set(pruned)]
         elif status == 'untested':
             return [c.rev() for c in repo.set(untested)]
+        elif status == 'ignored':
+            return [c.rev() for c in repo.set(ignored)]
 
         else:
             raise error.ParseError(_('invalid bisect state'))

@@ -547,6 +547,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
           hg log --graph -r "bisect(range)"
 
+      See :hg:`help revsets` for more about the `bisect()` keyword.
+
     Returns 0 on success.
     """
     def extendbisectrange(nodes, good):

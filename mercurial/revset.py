@@ -243,6 +243,7 @@ def bisect(repo, subset, x):
     - ``range``      : all csets taking part in the bisection
     - ``pruned``     : csets that are good, bad or skipped
     - ``untested``   : csets whose fate is yet unknown
+    - ``ignored``    : csets ignored due to DAG topology
     """
     status = getstring(x, _("bisect requires a string")).lower()
     return [r for r in subset if r in hbisect.get(repo, status)]
