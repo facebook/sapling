@@ -443,7 +443,7 @@ class socketlistener(object):
             if err.args[0] != errno.EPIPE:
                 raise
 
-if sys.platform == 'linux2':
+if sys.platform.startswith('linux'):
     import linuxserver as _server
 else:
     raise ImportError
