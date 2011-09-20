@@ -2677,7 +2677,11 @@ def save(ui, repo, **opts):
     return 0
 
 @command("strip",
-         [('f', 'force', None, _('force removal of changesets, discard '
+         [
+          ('r', 'rev', [], _('strip specified revision (optional, '
+                               'can specify revisions without this '
+                               'option)'), _('REV')),
+          ('f', 'force', None, _('force removal of changesets, discard '
                                  'uncommitted changes (no backup)')),
           ('b', 'backup', None, _('bundle only changesets with local revision'
                                   ' number greater than REV which are not'
@@ -2718,6 +2722,7 @@ def strip(ui, repo, *revs, **opts):
         backup = 'none'
 
     cl = repo.changelog
+    revs = list(revs) + opts.get('rev')
     revs = set(scmutil.revrange(repo, revs))
     if not revs:
         raise util.Abort(_('empty revision set'))
