@@ -7,6 +7,7 @@
 
 import cgi, re, os, time, urllib
 import encoding, node, util
+import hbisect
 
 def addbreaks(text):
     """:addbreaks: Any text. Add an XHTML "<br />" tag before the end of
@@ -268,6 +269,14 @@ def short(text):
     """
     return text[:12]
 
+def shortbisect(text):
+    """:shortbisect: Any text. Treats `text` as a bisection status, and
+    returns a single-character representing the status (G: good, B: bad,
+    S: skipped, U: untested, I: ignored). Returns single space if `text`
+    is not a valid bisection status.
+    """
+    return hbisect.shortlabel(text) or ' '
+
 def shortdate(text):
     """:shortdate: Date. Returns a date like "2006-09-18"."""
     return util.shortdate(text)
@@ -347,6 +356,7 @@ filters = {
     "rfc3339date": rfc3339date,
     "rfc822date": rfc822date,
     "short": short,
+    "shortbisect": shortbisect,
     "shortdate": shortdate,
     "stringescape": stringescape,
     "stringify": stringify,

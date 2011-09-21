@@ -7,6 +7,7 @@
 
 from node import hex
 import patch, util, error
+import hbisect
 
 def showlist(name, values, plural=None, **args):
     '''expand set of values.
@@ -144,6 +145,10 @@ def getrenamedfn(repo, endrev=None):
 def showauthor(repo, ctx, templ, **args):
     """:author: String. The unmodified author of the changeset."""
     return ctx.user()
+
+def showbisect(repo, ctx, templ, **args):
+    """:bisect: String. The changeset bisection status."""
+    return hbisect.label(repo, ctx.node())
 
 def showbranch(**args):
     """:branch: String. The name of the branch on which the changeset was
@@ -288,6 +293,7 @@ def showtags(**args):
 # revcache - a cache dictionary for the current revision
 keywords = {
     'author': showauthor,
+    'bisect': showbisect,
     'branch': showbranch,
     'branches': showbranches,
     'bookmarks': showbookmarks,
