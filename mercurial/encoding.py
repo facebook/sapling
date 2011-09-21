@@ -139,7 +139,7 @@ wide = (os.environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide"
         and "WFA" or "WF")
 
 def colwidth(s):
-    "Find the column width of a UTF-8 string for display"
+    "Find the column width of a string for display in the local encoding"
     return ucolwidth(s.decode(encoding, 'replace'))
 
 def ucolwidth(d):
