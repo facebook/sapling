@@ -115,3 +115,118 @@ test template
   I 2:b1ad1b6bcc5c
   G 1:37f42ae8b45e
   G 0:b4e73ffab476
+
+test style
+
+  $ hg log --style bisect
+  changeset:   14:cecd84203acc
+  bisect:      
+  tag:         tip
+  user:        test
+  date:        Wed Dec 31 23:59:46 1969 -0000
+  summary:     14
+  
+  changeset:   13:86f7c8cdb6df
+  bisect:      
+  parent:      3:e7f031aee8ca
+  user:        test
+  date:        Wed Dec 31 23:59:47 1969 -0000
+  summary:     13
+  
+  changeset:   12:a76089b5f47c
+  bisect:      bad
+  user:        test
+  date:        Wed Dec 31 23:59:48 1969 -0000
+  summary:     12
+  
+  changeset:   11:5c3eb122d29c
+  bisect:      bad (implicit)
+  user:        test
+  date:        Wed Dec 31 23:59:49 1969 -0000
+  summary:     11
+  
+  changeset:   10:b097cef2be03
+  bisect:      bad
+  user:        test
+  date:        Wed Dec 31 23:59:50 1969 -0000
+  summary:     10
+  
+  changeset:   9:8bcbdb072033
+  bisect:      untested
+  parent:      8:3cd112f87d77
+  parent:      3:e7f031aee8ca
+  user:        test
+  date:        Wed Dec 31 23:59:51 1969 -0000
+  summary:     9=8+3
+  
+  changeset:   8:3cd112f87d77
+  bisect:      untested
+  user:        test
+  date:        Wed Dec 31 23:59:52 1969 -0000
+  summary:     8
+  
+  changeset:   7:577e237a73bd
+  bisect:      skipped
+  user:        test
+  date:        Wed Dec 31 23:59:53 1969 -0000
+  summary:     7
+  
+  changeset:   6:e597fa2707c5
+  bisect:      good
+  user:        test
+  date:        Wed Dec 31 23:59:54 1969 -0000
+  summary:     6
+  
+  changeset:   5:b9cea37a76bc
+  bisect:      good (implicit)
+  user:        test
+  date:        Wed Dec 31 23:59:55 1969 -0000
+  summary:     5
+  
+  changeset:   4:da6b357259d7
+  bisect:      good
+  parent:      1:37f42ae8b45e
+  user:        test
+  date:        Wed Dec 31 23:59:56 1969 -0000
+  summary:     4
+  
+  changeset:   3:e7f031aee8ca
+  bisect:      ignored
+  user:        test
+  date:        Wed Dec 31 23:59:57 1969 -0000
+  summary:     3
+  
+  changeset:   2:b1ad1b6bcc5c
+  bisect:      ignored
+  user:        test
+  date:        Wed Dec 31 23:59:58 1969 -0000
+  summary:     2
+  
+  changeset:   1:37f42ae8b45e
+  bisect:      good (implicit)
+  user:        test
+  date:        Wed Dec 31 23:59:59 1969 -0000
+  summary:     1
+  
+  changeset:   0:b4e73ffab476
+  bisect:      good (implicit)
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     0
+  
+  $ hg log --quiet --style bisect
+    14:cecd84203acc
+    13:86f7c8cdb6df
+  B 12:a76089b5f47c
+  B 11:5c3eb122d29c
+  B 10:b097cef2be03
+  U 9:8bcbdb072033
+  U 8:3cd112f87d77
+  S 7:577e237a73bd
+  G 6:e597fa2707c5
+  G 5:b9cea37a76bc
+  G 4:da6b357259d7
+  I 3:e7f031aee8ca
+  I 2:b1ad1b6bcc5c
+  G 1:37f42ae8b45e
+  G 0:b4e73ffab476
