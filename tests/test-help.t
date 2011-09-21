@@ -239,23 +239,24 @@ Test short command list with verbose option
         update working directory (or switch revisions)
   
   global options:
-   -R --repository REPO    repository root directory or name of overlay bundle
-                           file
-      --cwd DIR            change working directory
-   -y --noninteractive     do not prompt, automatically pick the first choice
-                           for all prompts
-   -q --quiet              suppress output
-   -v --verbose            enable additional output
-      --config CONFIG [+]  set/override config option (use 'section.name=value')
-      --debug              enable debugging output
-      --debugger           start debugger
-      --encoding ENCODE    set the charset encoding (default: ascii)
-      --encodingmode MODE  set the charset encoding mode (default: strict)
-      --traceback          always print a traceback on exception
-      --time               time how long the command takes
-      --profile            print command execution profile
-      --version            output version information and exit
-   -h --help               display help and exit
+  
+   -R --repository REPO   repository root directory or name of overlay bundle
+                          file
+      --cwd DIR           change working directory
+   -y --noninteractive    do not prompt, automatically pick the first choice for
+                          all prompts
+   -q --quiet             suppress output
+   -v --verbose           enable additional output
+      --config CONFIG [+] set/override config option (use 'section.name=value')
+      --debug             enable debugging output
+      --debugger          start debugger
+      --encoding ENCODE   set the charset encoding (default: ascii)
+      --encodingmode MODE set the charset encoding mode (default: strict)
+      --traceback         always print a traceback on exception
+      --time              time how long the command takes
+      --profile           print command execution profile
+      --version           output version information and exit
+   -h --help              display help and exit
   
   [+] marked option can be specified multiple times
   
@@ -279,10 +280,10 @@ Test short command list with verbose option
   
   options:
   
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
-   -S --subrepos             recurse into subrepositories
-   -n --dry-run              do not perform actions, just print output
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -S --subrepos            recurse into subrepositories
+   -n --dry-run             do not perform actions, just print output
   
   [+] marked option can be specified multiple times
   
@@ -318,30 +319,32 @@ Verbose help for add
   
   options:
   
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
-   -S --subrepos             recurse into subrepositories
-   -n --dry-run              do not perform actions, just print output
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -S --subrepos            recurse into subrepositories
+   -n --dry-run             do not perform actions, just print output
+  
+  [+] marked option can be specified multiple times
   
   global options:
-   -R --repository REPO      repository root directory or name of overlay bundle
-                             file
-      --cwd DIR              change working directory
-   -y --noninteractive       do not prompt, automatically pick the first choice
-                             for all prompts
-   -q --quiet                suppress output
-   -v --verbose              enable additional output
-      --config CONFIG [+]    set/override config option (use
-                             'section.name=value')
-      --debug                enable debugging output
-      --debugger             start debugger
-      --encoding ENCODE      set the charset encoding (default: ascii)
-      --encodingmode MODE    set the charset encoding mode (default: strict)
-      --traceback            always print a traceback on exception
-      --time                 time how long the command takes
-      --profile              print command execution profile
-      --version              output version information and exit
-   -h --help                 display help and exit
+  
+   -R --repository REPO   repository root directory or name of overlay bundle
+                          file
+      --cwd DIR           change working directory
+   -y --noninteractive    do not prompt, automatically pick the first choice for
+                          all prompts
+   -q --quiet             suppress output
+   -v --verbose           enable additional output
+      --config CONFIG [+] set/override config option (use 'section.name=value')
+      --debug             enable debugging output
+      --debugger          start debugger
+      --encoding ENCODE   set the charset encoding (default: ascii)
+      --encodingmode MODE set the charset encoding mode (default: strict)
+      --traceback         always print a traceback on exception
+      --time              time how long the command takes
+      --profile           print command execution profile
+      --version           output version information and exit
+   -h --help              display help and exit
   
   [+] marked option can be specified multiple times
 
@@ -363,10 +366,10 @@ Test help option with version option
   
   options:
   
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
-   -S --subrepos             recurse into subrepositories
-   -n --dry-run              do not perform actions, just print output
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -S --subrepos            recurse into subrepositories
+   -n --dry-run             do not perform actions, just print output
   
   [+] marked option can be specified multiple times
   
@@ -436,21 +439,21 @@ Test command without options
   
   options:
   
-   -r --rev REV [+]          revision
-   -c --change REV           change made by revision
-   -a --text                 treat all files as text
-   -g --git                  use git extended diff format
-      --nodates              omit dates from diff headers
-   -p --show-function        show which function each change is in
-      --reverse              produce a diff that undoes the changes
-   -w --ignore-all-space     ignore white space when comparing lines
-   -b --ignore-space-change  ignore changes in the amount of white space
-   -B --ignore-blank-lines   ignore changes whose lines are all blank
-   -U --unified NUM          number of lines of context to show
-      --stat                 output diffstat-style summary of changes
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
-   -S --subrepos             recurse into subrepositories
+   -r --rev REV [+]         revision
+   -c --change REV          change made by revision
+   -a --text                treat all files as text
+   -g --git                 use git extended diff format
+      --nodates             omit dates from diff headers
+   -p --show-function       show which function each change is in
+      --reverse             produce a diff that undoes the changes
+   -w --ignore-all-space    ignore white space when comparing lines
+   -b --ignore-space-change ignore changes in the amount of white space
+   -B --ignore-blank-lines  ignore changes whose lines are all blank
+   -U --unified NUM         number of lines of context to show
+      --stat                output diffstat-style summary of changes
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -S --subrepos            recurse into subrepositories
   
   [+] marked option can be specified multiple times
   
@@ -500,22 +503,22 @@ Test command without options
   
   options:
   
-   -A --all                  show status of all files
-   -m --modified             show only modified files
-   -a --added                show only added files
-   -r --removed              show only removed files
-   -d --deleted              show only deleted (but tracked) files
-   -c --clean                show only files without changes
-   -u --unknown              show only unknown (not tracked) files
-   -i --ignored              show only ignored files
-   -n --no-status            hide status prefix
-   -C --copies               show source of copied files
-   -0 --print0               end filenames with NUL, for use with xargs
-      --rev REV [+]          show difference from revision
-      --change REV           list the changed files of a revision
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
-   -S --subrepos             recurse into subrepositories
+   -A --all                 show status of all files
+   -m --modified            show only modified files
+   -a --added               show only added files
+   -r --removed             show only removed files
+   -d --deleted             show only deleted (but tracked) files
+   -c --clean               show only files without changes
+   -u --unknown             show only unknown (not tracked) files
+   -i --ignored             show only ignored files
+   -n --no-status           hide status prefix
+   -C --copies              show source of copied files
+   -0 --print0              end filenames with NUL, for use with xargs
+      --rev REV [+]         show difference from revision
+      --change REV          list the changed files of a revision
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -S --subrepos            recurse into subrepositories
   
   [+] marked option can be specified multiple times
   

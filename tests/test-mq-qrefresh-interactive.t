@@ -31,18 +31,18 @@ help qrefresh (no record)
   
   options:
   
-   -e --edit                 edit commit message
-   -g --git                  use git extended diff format
-   -s --short                refresh only files already in the patch and
-                             specified files
-   -U --currentuser          add/update author field in patch with current user
-   -u --user USER            add/update author field in patch with given user
-   -D --currentdate          add/update date field in patch with current date
-   -d --date DATE            add/update date field in patch with given date
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
-   -m --message TEXT         use text as commit message
-   -l --logfile FILE         read commit message from file
+   -e --edit                edit commit message
+   -g --git                 use git extended diff format
+   -s --short               refresh only files already in the patch and
+                            specified files
+   -U --currentuser         add/update author field in patch with current user
+   -u --user USER           add/update author field in patch with given user
+   -D --currentdate         add/update date field in patch with current date
+   -d --date DATE           add/update date field in patch with given date
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -m --message TEXT        use text as commit message
+   -l --logfile FILE        read commit message from file
   
   [+] marked option can be specified multiple times
   
@@ -75,19 +75,19 @@ help qrefresh (record)
   
   options:
   
-   -e --edit                 edit commit message
-   -g --git                  use git extended diff format
-   -s --short                refresh only files already in the patch and
-                             specified files
-   -U --currentuser          add/update author field in patch with current user
-   -u --user USER            add/update author field in patch with given user
-   -D --currentdate          add/update date field in patch with current date
-   -d --date DATE            add/update date field in patch with given date
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
-   -m --message TEXT         use text as commit message
-   -l --logfile FILE         read commit message from file
-   -i --interactive          interactively select changes to refresh
+   -e --edit                edit commit message
+   -g --git                 use git extended diff format
+   -s --short               refresh only files already in the patch and
+                            specified files
+   -U --currentuser         add/update author field in patch with current user
+   -u --user USER           add/update author field in patch with given user
+   -D --currentdate         add/update date field in patch with current date
+   -d --date DATE           add/update date field in patch with given date
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -m --message TEXT        use text as commit message
+   -l --logfile FILE        read commit message from file
+   -i --interactive         interactively select changes to refresh
   
   [+] marked option can be specified multiple times
   

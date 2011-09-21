@@ -443,7 +443,6 @@ def formatblock(block, width):
         span = sum(widths) + len(widths) - 1
         indent = ' ' * block['indent']
         hang = ' ' * (len(indent) + span - widths[-1])
-        f = ' '.join('%%-%ds' % n for n in widths)
 
         for row in table:
             l = []

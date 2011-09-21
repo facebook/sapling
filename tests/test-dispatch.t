@@ -25,11 +25,11 @@ Missing arg:
   
   options:
   
-   -o --output FORMAT        print output to file with formatted name
-   -r --rev REV              print the given revision
-      --decode               apply any matching decode filter
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -o --output FORMAT       print output to file with formatted name
+   -r --rev REV             print the given revision
+      --decode              apply any matching decode filter
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
   
   [+] marked option can be specified multiple times
   

@@ -182,23 +182,24 @@ Check hgweb's load order:
         yet another foo command
   
   global options:
-   -R --repository REPO    repository root directory or name of overlay bundle
-                           file
-      --cwd DIR            change working directory
-   -y --noninteractive     do not prompt, automatically pick the first choice
-                           for all prompts
-   -q --quiet              suppress output
-   -v --verbose            enable additional output
-      --config CONFIG [+]  set/override config option (use 'section.name=value')
-      --debug              enable debugging output
-      --debugger           start debugger
-      --encoding ENCODE    set the charset encoding (default: ascii)
-      --encodingmode MODE  set the charset encoding mode (default: strict)
-      --traceback          always print a traceback on exception
-      --time               time how long the command takes
-      --profile            print command execution profile
-      --version            output version information and exit
-   -h --help               display help and exit
+  
+   -R --repository REPO   repository root directory or name of overlay bundle
+                          file
+      --cwd DIR           change working directory
+   -y --noninteractive    do not prompt, automatically pick the first choice for
+                          all prompts
+   -q --quiet             suppress output
+   -v --verbose           enable additional output
+      --config CONFIG [+] set/override config option (use 'section.name=value')
+      --debug             enable debugging output
+      --debugger          start debugger
+      --encoding ENCODE   set the charset encoding (default: ascii)
+      --encodingmode MODE set the charset encoding mode (default: strict)
+      --traceback         always print a traceback on exception
+      --time              time how long the command takes
+      --profile           print command execution profile
+      --version           output version information and exit
+   -h --help              display help and exit
   
   [+] marked option can be specified multiple times
 
@@ -213,23 +214,24 @@ Check hgweb's load order:
         yet another foo command
   
   global options:
-   -R --repository REPO    repository root directory or name of overlay bundle
-                           file
-      --cwd DIR            change working directory
-   -y --noninteractive     do not prompt, automatically pick the first choice
-                           for all prompts
-   -q --quiet              suppress output
-   -v --verbose            enable additional output
-      --config CONFIG [+]  set/override config option (use 'section.name=value')
-      --debug              enable debugging output
-      --debugger           start debugger
-      --encoding ENCODE    set the charset encoding (default: ascii)
-      --encodingmode MODE  set the charset encoding mode (default: strict)
-      --traceback          always print a traceback on exception
-      --time               time how long the command takes
-      --profile            print command execution profile
-      --version            output version information and exit
-   -h --help               display help and exit
+  
+   -R --repository REPO   repository root directory or name of overlay bundle
+                          file
+      --cwd DIR           change working directory
+   -y --noninteractive    do not prompt, automatically pick the first choice for
+                          all prompts
+   -q --quiet             suppress output
+   -v --verbose           enable additional output
+      --config CONFIG [+] set/override config option (use 'section.name=value')
+      --debug             enable debugging output
+      --debugger          start debugger
+      --encoding ENCODE   set the charset encoding (default: ascii)
+      --encodingmode MODE set the charset encoding mode (default: strict)
+      --traceback         always print a traceback on exception
+      --time              time how long the command takes
+      --profile           print command execution profile
+      --version           output version information and exit
+   -h --help              display help and exit
   
   [+] marked option can be specified multiple times
   $ echo 'debugextension = !' >> $HGRCPATH
@@ -260,12 +262,12 @@ Extension module help vs command help:
   
   options:
   
-   -p --program CMD          comparison program to run
-   -o --option OPT [+]       pass option to comparison program
-   -r --rev REV [+]          revision
-   -c --change REV           change made by revision
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -p --program CMD         comparison program to run
+   -o --option OPT [+]      pass option to comparison program
+   -r --rev REV [+]         revision
+   -c --change REV          change made by revision
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
   
   [+] marked option can be specified multiple times
   

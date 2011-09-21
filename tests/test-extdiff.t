@@ -39,11 +39,11 @@ Should diff cloned directories:
   
   options:
   
-   -o --option OPT [+]       pass option to comparison program
-   -r --rev REV [+]          revision
-   -c --change REV           change made by revision
-   -I --include PATTERN [+]  include names matching the given patterns
-   -X --exclude PATTERN [+]  exclude names matching the given patterns
+   -o --option OPT [+]      pass option to comparison program
+   -r --rev REV [+]         revision
+   -c --change REV          change made by revision
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
   
   [+] marked option can be specified multiple times
   

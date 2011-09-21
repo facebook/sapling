@@ -249,16 +249,16 @@
   
   options:
   
-   -s --source-type TYPE  source repository type
-   -d --dest-type TYPE    destination repository type
-   -r --rev REV           import up to target revision REV
-   -A --authormap FILE    remap usernames using this file
-      --filemap FILE      remap file names using contents of file
-      --splicemap FILE    splice synthesized history into place
-      --branchmap FILE    change branch names while converting
-      --branchsort        try to sort changesets by branches
-      --datesort          try to sort changesets by date
-      --sourcesort        preserve source changesets order
+   -s --source-type TYPE source repository type
+   -d --dest-type TYPE   destination repository type
+   -r --rev REV          import up to target revision REV
+   -A --authormap FILE   remap usernames using this file
+      --filemap FILE     remap file names using contents of file
+      --splicemap FILE   splice synthesized history into place
+      --branchmap FILE   change branch names while converting
+      --branchsort       try to sort changesets by branches
+      --datesort         try to sort changesets by date
+      --sourcesort       preserve source changesets order
   
   use "hg -v help convert" to show global options
   $ hg init a
