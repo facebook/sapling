@@ -149,6 +149,14 @@ def ucolwidth(d):
         return sum([eaw(c) in wide and 2 or 1 for c in d])
     return len(d)
 
+def getcols(s, start, c):
+    '''Use colwidth to find a c-column substring of s starting at byte
+    index start'''
+    for x in xrange(start + c, len(s)):
+        t = s[start:x]
+        if colwidth(t) == c:
+            return t
+
 def lower(s):
     "best-effort encoding-aware case-folding of local string s"
     try:
