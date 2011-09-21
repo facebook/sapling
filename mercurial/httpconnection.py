@@ -22,8 +22,9 @@ from mercurial.i18n import _
 class httpsendfile(object):
     """This is a wrapper around the objects returned by python's "open".
 
-    Its purpose is to send file-like objects via HTTP and, to do so, it
-    defines a __len__ attribute to feed the Content-Length header.
+    Its purpose is to send file-like objects via HTTP.
+    It do however not define a __len__ attribute because the length
+    might be more than Py_ssize_t can handle.
     """
 
     def __init__(self, ui, *args, **kwargs):
@@ -35,9 +36,9 @@ class httpsendfile(object):
         self.seek = self._data.seek
         self.close = self._data.close
         self.write = self._data.write
-        self._len = os.fstat(self._data.fileno()).st_size
+        self.length = os.fstat(self._data.fileno()).st_size
         self._pos = 0
-        self._total = self._len / 1024 * 2
+        self._total = self.length / 1024 * 2
 
     def read(self, *args, **kwargs):
         try:
@@ -53,9 +54,6 @@ class httpsendfile(object):
         self.ui.progress(_('sending'), self._pos / 1024,
                          unit=_('kb'), total=self._total)
         return ret
-
-    def __len__(self):
-        return self._len
 
 # moved here from url.py to avoid a cycle
 def readauthforuri(ui, uri, user):

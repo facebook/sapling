@@ -74,9 +74,14 @@ class httprepository(wireproto.wirerepository):
         if cmd == 'pushkey':
             args['data'] = ''
         data = args.pop('data', None)
+        size = 0
+        if util.safehasattr(data, 'length'):
+            size = data.length
+        elif data is not None:
+            size = len(data)
         headers = args.pop('headers', {})
 
-        if data and self.ui.configbool('ui', 'usehttp2', False):
+        if size and self.ui.configbool('ui', 'usehttp2', False):
             headers['Expect'] = '100-Continue'
             headers['X-HgHttp2'] = '1'
 
@@ -105,9 +110,6 @@ class httprepository(wireproto.wirerepository):
         cu = "%s%s" % (self._url, qs)
         req = urllib2.Request(cu, data, headers)
         if data is not None:
-            # len(data) is broken if data doesn't fit into Py_ssize_t
-            # add the header ourself to avoid OverflowError
-            size = data.__len__()
             self.ui.debug("sending %s bytes\n" % size)
             req.add_unredirected_header('Content-Length', '%d' % size)
         try:
