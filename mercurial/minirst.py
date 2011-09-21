@@ -268,6 +268,9 @@ def findtables(blocks):
             block['type'] = 'table'
             block['header'] = False
             div = block['lines'][0]
+
+            # column markers are ASCII so we can calculate column
+            # position in bytes
             columns = [x for x in xrange(len(div))
                        if div[x] == '=' and (x == 0 or div[x - 1] == ' ')]
             rows = []
@@ -276,12 +279,19 @@ def findtables(blocks):
                     block['header'] = True
                     continue
                 row = []
+                # we measure columns not in bytes or characters but in
+                # colwidth which makes things tricky
+                pos = columns[0] # leading whitespace is bytes
                 for n, start in enumerate(columns):
                     if n + 1 < len(columns):
-                        row.append(l[start:columns[n + 1]].strip())
+                        width = columns[n + 1] - start
+                        v = encoding.getcols(l, pos, width) # gather columns
+                        pos += len(v) # calculate byte position of end
+                        row.append(v.strip())
                     else:
-                        row.append(l[start:].strip())
+                        row.append(l[pos:].strip())
                 rows.append(row)
+
             block['table'] = rows
 
     return blocks
@@ -436,7 +446,11 @@ def formatblock(block, width):
         f = ' '.join('%%-%ds' % n for n in widths)
 
         for row in table:
-            l = f % tuple(row)
+            l = []
+            for w, v in zip(widths, row):
+                pad = ' ' * (w - encoding.colwidth(v))
+                l.append(v + pad)
+            l = ' '.join(l)
             l = util.wrap(l, width=width, initindent=indent, hangindent=hang)
             if not text and block['header']:
                 text = l + '\n' + indent + '-' * (min(width, span)) + '\n'
@@ -551,12 +565,15 @@ def maketable(data, indent=0, header=False):
 
     widths = [max(encoding.colwidth(e) for e in c) for c in zip(*data)]
     indent = ' ' * indent
-    f = indent + ' '.join('%%-%ds' % w for w in widths) + '\n'
     div = indent + ' '.join('=' * w for w in widths) + '\n'
 
     out = [div]
     for row in data:
-        out.append(f % tuple(row))
+        l = []
+        for w, v in zip(widths, row):
+            pad = ' ' * (w - encoding.colwidth(v))
+            l.append(v + pad)
+        out.append(indent + ' '.join(l) + "\n")
     if header and len(data) > 1:
         out.insert(2, div)
     out.append(div)
