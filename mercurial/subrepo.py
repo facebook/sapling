@@ -50,15 +50,7 @@ def state(ctx, ui):
             if err.errno != errno.ENOENT:
                 raise
 
-    state = {}
-    for path, src in p[''].items():
-        kind = 'hg'
-        if src.startswith('['):
-            if ']' not in src:
-                raise util.Abort(_('missing ] in subrepo source'))
-            kind, src = src.split(']', 1)
-            kind = kind[1:]
-
+    def remap(src):
         for pattern, repl in p.items('subpaths'):
             # Turn r'C:\foo\bar' into r'C:\\foo\\bar' since re.sub
             # does a string decode.
@@ -72,7 +64,17 @@ def state(ctx, ui):
             except re.error, e:
                 raise util.Abort(_("bad subrepository pattern in %s: %s")
                                  % (p.source('subpaths', pattern), e))
+        return src
 
+    state = {}
+    for path, src in p[''].items():
+        kind = 'hg'
+        if src.startswith('['):
+            if ']' not in src:
+                raise util.Abort(_('missing ] in subrepo source'))
+            kind, src = src.split(']', 1)
+            kind = kind[1:]
+        src = remap(src)
         state[path] = (src.strip(), rev.get(path, ''), kind)
 
     return state
