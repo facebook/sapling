@@ -74,6 +74,23 @@ def state(ctx, ui):
                 raise util.Abort(_('missing ] in subrepo source'))
             kind, src = src.split(']', 1)
             kind = kind[1:]
+            src = src.lstrip() # strip any extra whitespace after ']'
+
+        if not util.url(src).isabs():
+            parent = _abssource(ctx._repo, abort=False)
+            if parent:
+                parent = util.url(parent)
+                parent.path = posixpath.join(parent.path or '', src)
+                parent.path = posixpath.normpath(parent.path)
+                joined = str(parent)
+                # Remap the full joined path and use it if it changes,
+                # else remap the original source.
+                remapped = remap(joined)
+                if remapped == joined:
+                    src = remap(src)
+                else:
+                    src = remapped
+
         src = remap(src)
         state[path] = (src.strip(), rev.get(path, ''), kind)
 
