@@ -220,3 +220,32 @@ def get(repo, status):
 
         else:
             raise error.ParseError(_('invalid bisect state'))
+
+def label(repo, node, short=False):
+    rev = repo.changelog.rev(node)
+
+    # Try explicit sets
+    if rev in get(repo, 'good'):
+        return _('good')
+    if rev in get(repo, 'bad'):
+        return _('bad')
+    if rev in get(repo, 'skip'):
+        return _('skipped')
+    if rev in get(repo, 'untested'):
+        return _('untested')
+    if rev in get(repo, 'ignored'):
+        return _('ignored')
+
+    # Try implicit sets
+    if rev in get(repo, 'goods'):
+        return _('good (implicit)')
+    if rev in get(repo, 'bads'):
+        return _('bad (implicit)')
+
+    return None
+
+def shortlabel(label):
+    if label:
+        return label[0].upper()
+
+    return None
