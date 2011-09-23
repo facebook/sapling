@@ -891,7 +891,12 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
         minutes = abs(tz) // 60
         format = format.replace("%1", "%c%02d" % (sign, minutes // 60))
         format = format.replace("%2", "%02d" % (minutes % 60))
-    s = time.strftime(format, time.gmtime(float(t) - tz))
+    try:
+        t = time.gmtime(float(t) - tz)
+    except ValueError:
+        # time was out of range
+        t = time.gmtime(sys.maxint)
+    s = time.strftime(format, t)
     return s
 
 def shortdate(date=None):
