@@ -237,13 +237,14 @@ def author(repo, subset, x):
 
 def bisect(repo, subset, x):
     """``bisect(string)``
-    Changesets marked in the specified bisect status (``good``, ``bad``,
-    ``skip``), or any of the meta-status:
+    Changesets marked in the specified bisect status:
 
-    - ``range``      : all csets taking part in the bisection
-    - ``pruned``     : csets that are good, bad or skipped
-    - ``untested``   : csets whose fate is yet unknown
-    - ``ignored``    : csets ignored due to DAG topology
+    - ``good``, ``bad``, ``skip``: csets explicitly marked as good/bad/skip
+    - ``goods``, ``bads``      : csets topologicaly good/bad
+    - ``range``              : csets taking part in the bisection
+    - ``pruned``             : csets that are goods, bads or skipped
+    - ``untested``           : csets whose fate is yet unknown
+    - ``ignored``            : csets ignored due to DAG topology
     """
     status = getstring(x, _("bisect requires a string")).lower()
     return [r for r in subset if r in hbisect.get(repo, status)]

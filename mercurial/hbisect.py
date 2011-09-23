@@ -158,9 +158,10 @@ def get(repo, status):
     """
     Return a list of revision(s) that match the given status:
 
-    - ``good``, ``bad``, ``skip``: as the names imply
-    - ``range``              : all csets taking part in the bisection
-    - ``pruned``             : csets that are good, bad or skipped
+    - ``good``, ``bad``, ``skip``: csets explicitly marked as good/bad/skip
+    - ``goods``, ``bads``      : csets topologicaly good/bad
+    - ``range``              : csets taking part in the bisection
+    - ``pruned``             : csets that are goods, bads or skipped
     - ``untested``           : csets whose fate is yet unknown
     - ``ignored``            : csets ignored due to DAG topology
     """
@@ -178,16 +179,20 @@ def get(repo, status):
         # that's because the bisection can go either way
         range = '( bisect(bad)::bisect(good) | bisect(good)::bisect(bad) )'
 
-        # 'pruned' is all csets whose fate is already known:
-        #   - a good ancestor and a good ascendant, or
-        #   - a bad ancestor and a bad descendant, or
-        #   - skipped
-        # But in case of irrelevant goods/bads, we also need to
-        # include them.
-        pg = 'bisect(good)::bisect(good)'   # Pruned goods
-        pb = 'bisect(bad)::bisect(bad)'     # Pruned bads
-        ps = 'bisect(skip)'                 # Pruned skipped
-        pruned = '( (%s) | (%s) | (%s) )' % (pg, pb, ps)
+        _t = [c.rev() for c in repo.set('bisect(good)::bisect(bad)')]
+        # The sets of topologically good or bad csets
+        if len(_t) == 0:
+            # Goods are topologically after bads
+            goods = 'bisect(good)::'    # Pruned good csets
+            bads  = '::bisect(bad)'     # Pruned bad csets
+        else:
+            # Goods are topologically before bads
+            goods = '::bisect(good)'    # Pruned good csets
+            bads  = 'bisect(bad)::'     # Pruned bad csets
+
+        # 'pruned' is all csets whose fate is already known: good, bad, skip
+        skips = 'bisect(skip)'                 # Pruned skipped csets
+        pruned = '( (%s) | (%s) | (%s) )' % (goods, bads, skips)
 
         # 'untested' is all cset that are- in 'range', but not in 'pruned'
         untested = '( (%s) - (%s) )' % (range, pruned)
@@ -208,6 +213,10 @@ def get(repo, status):
             return [c.rev() for c in repo.set(untested)]
         elif status == 'ignored':
             return [c.rev() for c in repo.set(ignored)]
+        elif status == "goods":
+            return [c.rev() for c in repo.set(goods)]
+        elif status == "bads":
+            return [c.rev() for c in repo.set(bads)]
 
         else:
             raise error.ParseError(_('invalid bisect state'))

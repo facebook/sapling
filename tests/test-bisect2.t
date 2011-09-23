@@ -322,9 +322,26 @@ complex bisect test 1  # first bad rev is 9
   15:857b178a7cf3
   16:609d82a7ebae
   17:228c06deef46
+  18:d42e18c7bc9b
   $ hg log -q -r 'bisect(untested)'
   11:82ca6f06eccd
   12:9f259202bbe7
+  $ hg log -q -r 'bisect(goods)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
+  2:051e12f87bf1
+  3:0950834f0a9c
+  4:5c668c22234f
+  5:385a529b6670
+  6:a214d5d3811a
+  8:dab8161ac8fc
+  $ hg log -q -r 'bisect(bads)'
+  9:3c77083deb4a
+  10:429fcd26f52d
+  15:857b178a7cf3
+  16:609d82a7ebae
+  17:228c06deef46
+  18:d42e18c7bc9b
 
 complex bisect test 2  # first good rev is 13
 
@@ -337,6 +354,7 @@ complex bisect test 2  # first good rev is 13
   Testing changeset 10:429fcd26f52d (13 changesets remaining, ~3 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
   1:4ca5088da217
   6:a214d5d3811a
   18:d42e18c7bc9b
@@ -344,6 +362,7 @@ complex bisect test 2  # first good rev is 13
   Testing changeset 12:9f259202bbe7 (5 changesets remaining, ~2 tests)
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
   1:4ca5088da217
   2:051e12f87bf1
   3:0950834f0a9c
@@ -396,8 +415,10 @@ first bad rev is 15
   Testing changeset 6:a214d5d3811a (13 changesets remaining, ~3 tests)
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
   1:4ca5088da217
   16:609d82a7ebae
+  17:228c06deef46
   $ hg bisect -g      # -> update to rev 13
   Testing changeset 13:b0a32c86eb31 (8 changesets remaining, ~3 tests)
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -408,6 +429,7 @@ first bad rev is 15
   Testing changeset 12:9f259202bbe7 (8 changesets remaining, ~3 tests)
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
   1:4ca5088da217
   2:051e12f87bf1
   3:0950834f0a9c
@@ -417,6 +439,7 @@ first bad rev is 15
   10:429fcd26f52d
   13:b0a32c86eb31
   16:609d82a7ebae
+  17:228c06deef46
   $ hg bisect -g      # -> update to rev 9
   Testing changeset 9:3c77083deb4a (5 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -484,6 +507,13 @@ first good revision is 17
   Testing changeset 15:857b178a7cf3 (3 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
+  2:051e12f87bf1
+  3:0950834f0a9c
+  4:5c668c22234f
+  5:385a529b6670
+  6:a214d5d3811a
   8:dab8161ac8fc
   9:3c77083deb4a
   10:429fcd26f52d
@@ -495,6 +525,13 @@ first good revision is 17
   Testing changeset 16:609d82a7ebae (3 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
+  2:051e12f87bf1
+  3:0950834f0a9c
+  4:5c668c22234f
+  5:385a529b6670
+  6:a214d5d3811a
   8:dab8161ac8fc
   9:3c77083deb4a
   10:429fcd26f52d
@@ -533,6 +570,13 @@ first good revision is 17
   16:609d82a7ebae
   17:228c06deef46
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
+  2:051e12f87bf1
+  3:0950834f0a9c
+  4:5c668c22234f
+  5:385a529b6670
+  6:a214d5d3811a
   8:dab8161ac8fc
   9:3c77083deb4a
   10:429fcd26f52d
@@ -552,6 +596,11 @@ test unrelated revs:
   [255]
   $ hg log -q -r 'bisect(range)'
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
+  2:051e12f87bf1
+  3:0950834f0a9c
+  4:5c668c22234f
   7:50c76098bbf2
   14:faa450606157
   $ hg bisect --reset
@@ -594,12 +643,16 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   16:609d82a7ebae
   17:228c06deef46
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
+  8:dab8161ac8fc
   11:82ca6f06eccd
   12:9f259202bbe7
   13:b0a32c86eb31
   15:857b178a7cf3
   16:609d82a7ebae
   17:228c06deef46
+  18:d42e18c7bc9b
   $ hg log -q -r 'bisect(untested)'
   $ hg log -q -r 'bisect(ignored)'
   2:051e12f87bf1
@@ -633,6 +686,18 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   4:5c668c22234f
   5:385a529b6670
   6:a214d5d3811a
+  $ hg log -q -r 'bisect(goods)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
+  8:dab8161ac8fc
+  11:82ca6f06eccd
+  12:9f259202bbe7
+  13:b0a32c86eb31
+  $ hg log -q -r 'bisect(bads)'
+  15:857b178a7cf3
+  16:609d82a7ebae
+  17:228c06deef46
+  18:d42e18c7bc9b
   $ hg bisect -b
   The first bad revision is:
   changeset:   9:3c77083deb4a
@@ -651,6 +716,8 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   16:609d82a7ebae
   17:228c06deef46
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
   8:dab8161ac8fc
   9:3c77083deb4a
   10:429fcd26f52d
@@ -660,6 +727,7 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   15:857b178a7cf3
   16:609d82a7ebae
   17:228c06deef46
+  18:d42e18c7bc9b
   $ hg log -q -r 'bisect(untested)'
   $ hg log -q -r 'bisect(ignored)'
   2:051e12f87bf1
@@ -667,6 +735,20 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   4:5c668c22234f
   5:385a529b6670
   6:a214d5d3811a
+  $ hg log -q -r 'bisect(goods)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
+  8:dab8161ac8fc
+  11:82ca6f06eccd
+  12:9f259202bbe7
+  13:b0a32c86eb31
+  $ hg log -q -r 'bisect(bads)'
+  9:3c77083deb4a
+  10:429fcd26f52d
+  15:857b178a7cf3
+  16:609d82a7ebae
+  17:228c06deef46
+  18:d42e18c7bc9b
 
 user adds irrelevant but consistent information (here: -g 2) to bisect state
 
@@ -698,9 +780,16 @@ user adds irrelevant but consistent information (here: -g 2) to bisect state
   12:9f259202bbe7
   13:b0a32c86eb31
   $ hg log -q -r 'bisect(pruned)'
+  0:33b1f9bc8bc5
+  1:4ca5088da217
   2:051e12f87bf1
   8:dab8161ac8fc
   11:82ca6f06eccd
   12:9f259202bbe7
   13:b0a32c86eb31
+  14:faa450606157
+  15:857b178a7cf3
+  16:609d82a7ebae
+  17:228c06deef46
+  18:d42e18c7bc9b
   $ hg log -q -r 'bisect(untested)'
