@@ -1,0 +1,49 @@
+= largefiles - manage large binary files =
+This extension is based off of Greg Ward's bfiles extension which can be found
+at http://mercurial.selenic.com/wiki/BfilesExtension.
+
+== The largefile store ==
+
+largefile stores are, in the typical use case, centralized servers that have
+every past revision of a given binary file.  Each largefile is identified by
+its sha1 hash, and all interactions with the store take one of the following
+forms.
+
+-Download a bfile with this hash
+-Upload a bfile with this hash
+-Check if the store has a bfile with this hash
+
+largefiles stores can take one of two forms:
+
+-Directories on a network file share
+-Mercurial wireproto servers, either via ssh or http (hgweb)
+
+== The Local Repository ==
+
+The local repository has a largefile cache in .hg/largefiles which holds a
+subset of the largefiles needed. On a clone only the largefiles at tip are
+downloaded. When largefiles are downloaded from the central store, a copy is
+saved in this store.
+
+== The Global Cache ==
+
+largefiles in a local repository cache are hardlinked to files in the global
+cache. Before a file is downloaded we check if it is in the global cache.
+
+== Implementation Details ==
+
+Each largefile has a standin which is in .hglf. The standin is tracked by
+Mercurial.  The standin contains the SHA1 hash of the largefile. When a
+largefile is added/removed/copied/renamed/etc the same operation is applied to
+the standin. Thus the history of the standin is the history of the largefile.
+
+For performance reasons, the contents of a standin are only updated before a
+commit.  Standins are added/removed/copied/renamed from add/remove/copy/rename
+Mercurial commands but their contents will not be updated. The contents of a
+standin will always be the hash of the largefile as of the last commit. To
+support some commands (revert) some standins are temporarily updated but will
+be changed back after the command is finished.
+
+A Mercurial dirstate object tracks the state of the largefiles. The dirstate
+uses the last modified time and current size to detect if a file has changed
+(without reading the entire contents of the file).

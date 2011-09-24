@@ -1,0 +1,51 @@
+Largefiles allows for tracking large, incompressible binary files in Mercurial
+without requiring excessive bandwidth for clones and pulls.  Files added as
+largefiles are not tracked directly by Mercurial; rather, their revisions are
+identified by a checksum, and Mercurial tracks these checksums.  This way, when
+you clone a repository or pull in changesets, the large files in older
+revisions of the repository are not needed, and only the ones needed to update
+to the current version are downloaded.  This saves both disk space and
+bandwidth.
+
+If you are starting a new repository or adding new large binary files, using
+largefiles for them is as easy as adding '--large' to your hg add command.  For
+example:
+
+$ dd if=/dev/urandom of=thisfileislarge count=2000
+$ hg add --large thisfileislarge
+$ hg commit -m 'add thisfileislarge, which is large, as a largefile'
+
+When you push a changeset that affects largefiles to a remote repository, its
+largefile revisions will be uploaded along with it.  Note that the remote
+Mercurial must also have the largefiles extension enabled for this to work.
+
+When you pull a changeset that affects largefiles from a remote repository,
+nothing different from Mercurial's normal behavior happens.  However, when you
+update to such a revision, any largefiles needed by that revision are
+downloaded and cached if they have never been downloaded before.  This means
+that network access is required to update to revision you have not yet updated
+to.
+
+If you already have large files tracked by Mercurial without the largefiles
+extension, you will need to convert your repository in order to benefit from
+largefiles.  This is done with the 'hg lfconvert' command:
+
+$ hg lfconvert --size 10 oldrepo newrepo
+
+By default, in repositories that already have largefiles in them, any new file
+over 10MB will automatically be added as largefiles.  To change this
+threshhold, set [largefiles].size in your Mercurial config file to the minimum
+size in megabytes to track as a largefile, or use the --lfsize option to the
+add command (also in megabytes):
+
+[largefiles]
+size = 2
+
+$ hg add --lfsize 2
+
+The [largefiles].patterns config option allows you to specify specific
+space-separated filename patterns (in shell glob syntax) that should always be
+tracked as largefiles:
+
+[largefiles]
+pattens = *.jpg *.{png,bmp} library.zip content/audio/*
