@@ -429,29 +429,28 @@ def patchbomb(ui, repo, *revs, **opts):
 
     showaddrs = []
 
-    def getaddrs(opt, prpt=None, default=None):
-        addrs = opts.get(opt.replace('-', '_'))
-        if opt != 'reply-to':
-            showaddr = '%s:' % opt.capitalize()
-        else:
-            showaddr = 'Reply-To:'
-
+    def getaddrs(header, ask=False, default=None):
+        configkey = header.lower()
+        opt = header.replace('-', '_').lower()
+        addrs = opts.get(opt)
         if addrs:
-            showaddrs.append('%s %s' % (showaddr, ', '.join(addrs)))
+            showaddrs.append('%s: %s' % (header, ', '.join(addrs)))
             return mail.addrlistencode(ui, addrs, _charsets, opts.get('test'))
 
-        addrs = ui.config('email', opt) or ui.config('patchbomb', opt) or ''
-        if not addrs and prpt:
-            addrs = prompt(ui, prpt, default)
+        # not on the command line: fallback to config and then maybe ask
+        addr = (ui.config('email', configkey) or
+                ui.config('patchbomb', configkey) or
+                '')
+        if not addr and ask:
+            addr = prompt(ui, header, default)
+        if addr:
+            showaddrs.append('%s: %s' % (header, addr))
+        return mail.addrlistencode(ui, [addr], _charsets, opts.get('test'))
 
-        if addrs:
-            showaddrs.append('%s %s' % (showaddr, addrs))
-        return mail.addrlistencode(ui, [addrs], _charsets, opts.get('test'))
-
-    to = getaddrs('to', 'To')
-    cc = getaddrs('cc', 'Cc', '')
-    bcc = getaddrs('bcc')
-    replyto = getaddrs('reply-to')
+    to = getaddrs('To', ask=True)
+    cc = getaddrs('Cc', ask=True, default='')
+    bcc = getaddrs('Bcc')
+    replyto = getaddrs('Reply-To')
 
     if opts.get('diffstat') or opts.get('confirm'):
         ui.write(_('\nFinal summary:\n\n'))
