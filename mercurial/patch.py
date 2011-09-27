@@ -188,7 +188,7 @@ def extract(ui, fileobj):
                 pend = subject.find(']')
                 if pend >= 0:
                     subject = subject[pend + 1:].lstrip()
-            subject = subject.replace('\n\t', ' ')
+            subject = re.sub(r'\n[ \t]+', ' ', subject)
             ui.debug('Subject: %s\n' % subject)
         if user:
             ui.debug('From: %s\n' % user)
