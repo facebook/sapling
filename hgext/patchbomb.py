@@ -57,24 +57,25 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 
 def prompt(ui, prompt, default=None, rest=':'):
-    if not ui.interactive() and default is None:
-        raise util.Abort(_("%s Please enter a valid value" % (prompt + rest)))
+    if not ui.interactive():
+        return default
     if default:
         prompt += ' [%s]' % default
     prompt += rest
     while True:
-        r = ui.prompt(prompt, default=default)
-        if r:
-            return r
-        if default is not None:
+        result = ui.prompt(prompt, default=default)
+        if result is not None:
+            return result
+        elif default is not None:
             return default
-        ui.warn(_('Please enter a valid value.\n'))
+        else:
+            ui.warn(_('Please enter a valid value.\n'))
 
-def introneeded(opts, number):
-    '''is an introductory message required?'''
+def introwanted(opts, number):
+    '''is an introductory message apparently wanted?'''
     return number > 1 or opts.get('intro') or opts.get('desc')
 
-def makepatch(ui, repo, patchlines, opts, _charsets, idx, total,
+def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
               patchname=None):
 
     desc = []
@@ -141,7 +142,7 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total,
         flag = ' ' + flag
 
     subj = desc[0].strip().rstrip('. ')
-    if not introneeded(opts, total):
+    if not numbered:
         subj = '[PATCH%s] %s' % (flag, opts.get('subject') or subj)
     else:
         tlen = len(str(total))
@@ -352,51 +353,66 @@ def patchbomb(ui, repo, *revs, **opts):
             ui.write(_('\nWrite the introductory message for the '
                        'patch series.\n\n'))
             body = ui.edit(body, sender)
-            # Save serie description in case sendmail fails
+            # Save series description in case sendmail fails
             msgfile = repo.opener('last-email.txt', 'wb')
             msgfile.write(body)
             msgfile.close()
         return body
 
     def getpatchmsgs(patches, patchnames=None):
-        jumbo = []
         msgs = []
 
         ui.write(_('This patch series consists of %d patches.\n\n')
                  % len(patches))
 
+        # build the intro message, or skip it if the user declines
+        if introwanted(opts, len(patches)):
+            msg = makeintro(patches)
+            if msg:
+                msgs.append(msg)
+
+        # are we going to send more than one message?
+        numbered = len(msgs) + len(patches) > 1
+
+        # now generate the actual patch messages
         name = None
         for i, p in enumerate(patches):
-            jumbo.extend(p)
             if patchnames:
                 name = patchnames[i]
             msg = makepatch(ui, repo, p, opts, _charsets, i + 1,
-                            len(patches), name)
+                            len(patches), numbered, name)
             msgs.append(msg)
 
-        if introneeded(opts, len(patches)):
-            tlen = len(str(len(patches)))
-
-            flag = ' '.join(opts.get('flag'))
-            if flag:
-                subj = '[PATCH %0*d of %d %s]' % (tlen, 0, len(patches), flag)
-            else:
-                subj = '[PATCH %0*d of %d]' % (tlen, 0, len(patches))
-            subj += ' ' + (opts.get('subject') or
-                           prompt(ui, 'Subject: ', rest=subj))
-
-            body = ''
-            ds = patch.diffstat(jumbo)
-            if ds and opts.get('diffstat'):
-                body = '\n' + ds
-
-            body = getdescription(body, sender)
-            msg = mail.mimeencode(ui, body, _charsets, opts.get('test'))
-            msg['Subject'] = mail.headencode(ui, subj, _charsets,
-                                             opts.get('test'))
-
-            msgs.insert(0, (msg, subj, ds))
         return msgs
+
+    def makeintro(patches):
+        tlen = len(str(len(patches)))
+
+        flag = opts.get('flag') or ''
+        if flag:
+            flag = ' ' + ' '.join(flag)
+        prefix = '[PATCH %0*d of %d%s]' % (tlen, 0, len(patches), flag)
+
+        subj = (opts.get('subject') or
+                prompt(ui, 'Subject: ', rest=prefix, default=''))
+        if not subj:
+            return None         # skip intro if the user doesn't bother
+
+        subj = prefix + ' ' + subj
+
+        body = ''
+        if opts.get('diffstat'):
+            # generate a cumulative diffstat of the whole patch series
+            diffstat = patch.diffstat(sum(patches, []))
+            body = '\n' + diffstat
+        else:
+            diffstat = None
+
+        body = getdescription(body, sender)
+        msg = mail.mimeencode(ui, body, _charsets, opts.get('test'))
+        msg['Subject'] = mail.headencode(ui, subj, _charsets,
+                                         opts.get('test'))
+        return (msg, subj, diffstat)
 
     def getbundlemsgs(bundle):
         subj = (opts.get('subject')
@@ -442,14 +458,19 @@ def patchbomb(ui, repo, *revs, **opts):
                 ui.config('patchbomb', configkey) or
                 '')
         if not addr and ask:
-            addr = prompt(ui, header, default)
+            addr = prompt(ui, header, default=default)
         if addr:
             showaddrs.append('%s: %s' % (header, addr))
-        return mail.addrlistencode(ui, [addr], _charsets, opts.get('test'))
+            return mail.addrlistencode(ui, [addr], _charsets, opts.get('test'))
+        else:
+            return default
 
     to = getaddrs('To', ask=True)
-    cc = getaddrs('Cc', ask=True, default='')
-    bcc = getaddrs('Bcc')
+    if not to:
+        # we can get here in non-interactive mode
+        raise util.Abort(_('no recipient addresses provided'))
+    cc = getaddrs('Cc', ask=True, default='') or []
+    bcc = getaddrs('Bcc') or []
     replyto = getaddrs('Reply-To')
 
     if opts.get('diffstat') or opts.get('confirm'):
