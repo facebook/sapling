@@ -59,17 +59,7 @@ command = cmdutil.command(cmdtable)
 def prompt(ui, prompt, default=None, rest=':'):
     if default:
         prompt += ' [%s]' % default
-    prompt += rest
-    while True:
-        result = ui.prompt(prompt, default=default)
-        if not ui.interactive():
-            return result
-        if result is not None:
-            return result
-        elif default is not None:
-            return default
-        else:
-            ui.warn(_('Please enter a valid value.\n'))
+    return ui.prompt(prompt + rest, default)
 
 def introwanted(opts, number):
     '''is an introductory message apparently wanted?'''
