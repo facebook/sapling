@@ -22,6 +22,8 @@ except ImportError:
 
     def ssl_wrap_socket(sock, key_file, cert_file,
                         cert_reqs=CERT_REQUIRED, ca_certs=None):
+        if not util.safehasattr(socket, 'ssl'):
+            raise util.Abort(_('Python SSL support not found'))
         if ca_certs:
             raise util.Abort(_(
                 'certificate checking requires Python 2.6'))
