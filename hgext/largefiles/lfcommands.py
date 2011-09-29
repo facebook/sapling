@@ -164,7 +164,8 @@ def _addchangeset(ui, rsrc, rdst, ctx, revmap):
                 fd = open(path, 'rb')
                 data = fd.read()
             finally:
-                if fd: fd.close()
+                if fd:
+                    fd.close()
             return context.memfilectx(f, data, 'l' in fctx.flags(),
                                       'x' in fctx.flags(), renamed)
         else:
