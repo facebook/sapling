@@ -483,7 +483,7 @@ def override_revert(orig, ui, repo, *pats, **opts):
             oldmatch = None # for the closure
             def override_match(ctxorrepo, pats=[], opts={}, globbed=False,
                     default='relpath'):
-                if hasattr(ctxorrepo, 'match'):
+                if util.safehasattr(ctxorrepo, 'match'):
                     ctx0 = ctxorrepo
                 else:
                     ctx0 = ctxorrepo[None]

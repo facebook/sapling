@@ -170,7 +170,7 @@ def openlfdirstate(ui, repo):
     except ImportError:
         # Mercurial <= 1.8
         opener = util.opener(admin)
-    if hasattr(repo.dirstate, '_validate'):
+    if util.safehasattr(repo.dirstate, '_validate'):
         lfdirstate = largefiles_dirstate(opener, ui, repo.root,
             repo.dirstate._validate)
     else:

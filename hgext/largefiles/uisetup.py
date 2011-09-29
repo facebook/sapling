@@ -69,7 +69,7 @@ def uisetup(ui):
     extensions.wrapfunction(hg, 'merge', overrides.hg_merge)
 
     extensions.wrapfunction(archival, 'archive', overrides.override_archive)
-    if hasattr(cmdutil, 'bailifchanged'):
+    if util.safehasattr(cmdutil, 'bailifchanged'):
         extensions.wrapfunction(cmdutil, 'bailifchanged',
             overrides.override_bailifchanged)
     else:

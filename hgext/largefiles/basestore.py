@@ -179,7 +179,7 @@ def _openstore(repo, remote=None, put=False):
 
     # The path could be a scheme so use Mercurial's normal functionality
     # to resolve the scheme to a repository and use its path
-    path = hasattr(remote, 'url') and remote.url() or remote.path
+    path = util.safehasattr(remote, 'url') and remote.url() or remote.path
 
     match = _scheme_re.match(path)
     if not match:                       # regular filesystem path
