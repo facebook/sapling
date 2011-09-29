@@ -114,7 +114,7 @@ def reposetup(ui, repo):
                             return file in ctx.manifest()
                         ctx[file]
                         return True
-                    except:
+                    except KeyError:
                         return False
 
                 # create a copy of match that matches standins instead of

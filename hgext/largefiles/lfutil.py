@@ -103,12 +103,7 @@ def findoutgoing(repo, remote, force):
 
 if os.name == 'nt':
     from mercurial import win32
-    try:
-        linkfn = win32.oslink
-    except:
-        linkfn = win32.os_link
-else:
-    linkfn = os.link
+    linkfn = win32.oslink
 
 def link(src, dest):
     try:

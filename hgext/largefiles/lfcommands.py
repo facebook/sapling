@@ -65,6 +65,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
         ui.traceback()
         raise util.Abort(_('%s is not a repo') % dest)
 
+    success = False
     try:
         # Lock destination to prevent modification while it is converted to.
         # Don't need to lock src because we are just reading from its history
@@ -106,7 +107,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
                     os.unlink(rdst.wjoin(f))
                 try:
                     os.removedirs(os.path.dirname(rdst.wjoin(f)))
-                except:
+                except OSError:
                     pass
 
         else:
@@ -116,11 +117,11 @@ def lfconvert(ui, src, dest, *pats, **opts):
                 _addchangeset(ui, rsrc, rdst, ctx, revmap)
 
             ui.progress(_('converting revisions'), None)
-    except:
-        # we failed, remove the new directory
-        shutil.rmtree(rdst.root)
-        raise
+        success = True
     finally:
+        if not success:
+            # we failed, remove the new directory
+            shutil.rmtree(rdst.root)
         dst_lock.release()
 
 def _addchangeset(ui, rsrc, rdst, ctx, revmap):
