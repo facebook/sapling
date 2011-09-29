@@ -353,7 +353,7 @@ def uploadlfiles(ui, rsrc, rdst, files):
         # XXX check for errors here
         store.put(source, hash)
         at += 1
-    ui.progress('uploading largefiles', None)
+    ui.progress(_('uploading largefiles'), None)
 
 def verifylfiles(ui, repo, all=False, contents=False):
     '''Verify that every big file revision in the current changeset
