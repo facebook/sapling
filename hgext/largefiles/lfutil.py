@@ -488,8 +488,8 @@ def unixpath(path):
     return os.path.normpath(path).replace(os.sep, '/')
 
 def islfilesrepo(repo):
-    return 'largefiles' in repo.requirements and any_(shortname+'/' in f[0] for f in
-        repo.store.datafiles())
+    return ('largefiles' in repo.requirements and
+            any_(shortname + '/' in f[0] for f in repo.store.datafiles())
 
 def any_(gen):
     for x in gen:

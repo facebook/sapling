@@ -105,7 +105,8 @@ def wirereposetup(ui, repo):
             try:
                 length = int(length)
             except ValueError:
-                self._abort(error.ResponseError(_("unexpected response:"), length))
+                self._abort(error.ResponseError(_("unexpected response:"),
+                                                length))
             return (length, stream)
 
         def statlfile(self, sha):

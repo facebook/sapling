@@ -87,7 +87,8 @@ def override_add(orig, ui, repo, *pats, **opts):
         try:
             lfsize = int(lfsize)
         except ValueError:
-            raise util.Abort(_('largefiles: size must be an integer, was %s\n') % lfsize)
+            raise util.Abort(_('largefiles: size must be an integer, was %s\n')
+                             % lfsize)
 
     lfmatcher = None
     if os.path.exists(repo.wjoin(lfutil.shortname)):
@@ -530,7 +531,8 @@ def override_revert(orig, ui, repo, *pats, **opts):
         finally:
             restorematchfn()
         lfileslist = getattr(repo, '_lfilestoupdate', [])
-        lfcommands.updatelfiles(ui, repo, filelist=lfileslist, printmessage=False)
+        lfcommands.updatelfiles(ui, repo, filelist=lfileslist,
+                                printmessage=False)
         # Empty out the lfiles list so we start fresh next time
         repo._lfilestoupdate = []
         for lfile in modified:

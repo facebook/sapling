@@ -58,8 +58,8 @@ def reposetup(ui, repo):
                 class lfiles_ctx(ctx.__class__):
                     def files(self):
                         filenames = super(lfiles_ctx, self).files()
-                        return [re.sub('^\\'+lfutil.shortname+'/', '', filename) for filename
-                            in filenames]
+                        return [re.sub('^\\'+lfutil.shortname+'/', '',
+                                       filename) for filename in filenames]
                     def manifest(self):
                         man1 = super(lfiles_ctx, self).manifest()
                         man1.__class__ = lfiles_manifestdict

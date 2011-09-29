@@ -39,8 +39,8 @@ def lfconvert(ui, src, dest, *pats, **opts):
             try:
                 size = int(size)
             except ValueError:
-                raise util.Abort(_('largefiles.size must be integer, was %s\n') % \
-                    size)
+                raise util.Abort(_('largefiles.size must be integer, was %s\n')
+                                 % size)
             except TypeError:
                 raise util.Abort(_('size must be specified'))
 
@@ -232,7 +232,8 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                 if 'l' in fctx.flags():
                     if renamedlfile:
                         raise util.Abort(
-                            _('Renamed/copied largefile %s becomes symlink') % f)
+                            _('Renamed/copied largefile %s becomes symlink')
+                            % f)
                     islfile = False
             if islfile:
                 lfiles.add(f)
@@ -341,10 +342,12 @@ def uploadlfiles(ui, rsrc, rdst, files):
     at = 0
     files = filter(lambda h: not store.exists(h), files)
     for hash in files:
-        ui.progress(_('uploading largefiles'), at, unit='largefile', total=len(files))
+        ui.progress(_('uploading largefiles'), at, unit='largefile',
+                    total=len(files))
         source = lfutil.findfile(rsrc, hash)
         if not source:
-            raise util.Abort(_('Missing largefile %s needs to be uploaded') % hash)
+            raise util.Abort(_('Missing largefile %s needs to be uploaded')
+                             % hash)
         # XXX check for errors here
         store.put(source, hash)
         at += 1
@@ -475,8 +478,8 @@ def _updatelfile(repo, lfdirstate, lfile):
 cmdtable = {
     'lfconvert': (lfconvert,
                   [('s', 'size', 0, 'All files over this size (in megabytes) '
-                  'will be considered largefiles. This can also be specified in '
-                  'your hgrc as [largefiles].size.'),
+                  'will be considered largefiles. This can also be specified '
+                  'in your hgrc as [largefiles].size.'),
                   ('','tonormal',False,
                       'Convert from a largefiles repo to a normal repo')],
                   _('hg lfconvert SOURCE DEST [FILE ...]')),

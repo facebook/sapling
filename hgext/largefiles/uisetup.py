@@ -20,7 +20,8 @@ def uisetup(ui):
     # Disable auto-status for some commands which assume that all
     # files in the result are under Mercurial's control
 
-    entry = extensions.wrapcommand(commands.table, 'add', overrides.override_add)
+    entry = extensions.wrapcommand(commands.table, 'add',
+                                   overrides.override_add)
     addopt = [('', 'large', None, _('add as largefile')),
             ('', 'lfsize', '', _('add all files above this size (in megabytes)'
                                  'as largefiles (default: 10)'))]
@@ -28,14 +29,19 @@ def uisetup(ui):
 
     entry = extensions.wrapcommand(commands.table, 'addremove',
             overrides.override_addremove)
-    entry = extensions.wrapcommand(commands.table, 'remove', overrides.override_remove)
-    entry = extensions.wrapcommand(commands.table, 'forget', overrides.override_forget)
-    entry = extensions.wrapcommand(commands.table, 'status', overrides.override_status)
-    entry = extensions.wrapcommand(commands.table, 'log', overrides.override_log)
+    entry = extensions.wrapcommand(commands.table, 'remove',
+                                   overrides.override_remove)
+    entry = extensions.wrapcommand(commands.table, 'forget',
+                                   overrides.override_forget)
+    entry = extensions.wrapcommand(commands.table, 'status',
+                                   overrides.override_status)
+    entry = extensions.wrapcommand(commands.table, 'log',
+                                   overrides.override_log)
     entry = extensions.wrapcommand(commands.table, 'rollback',
-            overrides.override_rollback)
+                                   overrides.override_rollback)
+    entry = extensions.wrapcommand(commands.table, 'verify',
+                                   overrides.override_verify)
 
-    entry = extensions.wrapcommand(commands.table, 'verify', overrides.override_verify)
     verifyopt = [('', 'large', None, _('verify largefiles')),
                  ('', 'lfa', None,
                      _('verify all revisions of largefiles not just current')),
@@ -47,19 +53,26 @@ def uisetup(ui):
         overrides.override_outgoing)
     outgoingopt = [('', 'large', None, _('display outgoing largefiles'))]
     entry[1].extend(outgoingopt)
-    entry = extensions.wrapcommand(commands.table, 'summary', overrides.override_summary)
+    entry = extensions.wrapcommand(commands.table, 'summary',
+                                   overrides.override_summary)
     summaryopt = [('', 'large', None, _('display outgoing largefiles'))]
     entry[1].extend(summaryopt)
 
-    entry = extensions.wrapcommand(commands.table, 'update', overrides.override_update)
-    entry = extensions.wrapcommand(commands.table, 'pull', overrides.override_pull)
-    entry = extensions.wrapfunction(filemerge, 'filemerge', overrides.override_filemerge)
-    entry = extensions.wrapfunction(cmdutil, 'copy', overrides.override_copy)
+    entry = extensions.wrapcommand(commands.table, 'update',
+                                   overrides.override_update)
+    entry = extensions.wrapcommand(commands.table, 'pull',
+                                   overrides.override_pull)
+    entry = extensions.wrapfunction(filemerge, 'filemerge',
+                                    overrides.override_filemerge)
+    entry = extensions.wrapfunction(cmdutil, 'copy',
+                                    overrides.override_copy)
 
     # Backout calls revert so we need to override both the command and the
     # function
-    entry = extensions.wrapcommand(commands.table, 'revert', overrides.override_revert)
-    entry = extensions.wrapfunction(commands, 'revert', overrides.override_revert)
+    entry = extensions.wrapcommand(commands.table, 'revert',
+                                   overrides.override_revert)
+    entry = extensions.wrapfunction(commands, 'revert',
+                                    overrides.override_revert)
 
     # clone uses hg._update instead of hg.update even though they are the
     # same function... so wrap both of them)
