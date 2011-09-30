@@ -1040,8 +1040,9 @@ def clone(ui, source, dest=None, **opts):
     The location of the source is added to the new repository's
     ``.hg/hgrc`` file, as the default to be used for future pulls.
 
-    It is possible to specify an ``ssh://`` URL as the destination, but no
-    ``.hg/hgrc`` and working directory will be created on the remote side.
+    Only local paths and ``ssh://`` URLs are supported as
+    destinations. For ``ssh://`` destinations, no working directory or
+    ``.hg/hgrc`` will be created on the remote side.
 
     To pull only a subset of changesets, specify one or more revisions
     identifiers with -r/--rev or branches with -b/--branch. The
@@ -1051,38 +1052,40 @@ def clone(ui, source, dest=None, **opts):
     tag will include the tagged changeset but not the changeset
     containing the tag.
 
-    For efficiency, hardlinks are used for cloning whenever the source
-    and destination are on the same filesystem (note this applies only
-    to the repository data, not to the working directory). Some
-    filesystems, such as AFS, implement hardlinking incorrectly, but
-    do not report errors. In these cases, use the --pull option to
-    avoid hardlinking.
+    .. container:: verbose
 
-    In some cases, you can clone repositories and the working directory
-    using full hardlinks with ::
+      For efficiency, hardlinks are used for cloning whenever the
+      source and destination are on the same filesystem (note this
+      applies only to the repository data, not to the working
+      directory). Some filesystems, such as AFS, implement hardlinking
+      incorrectly, but do not report errors. In these cases, use the
+      --pull option to avoid hardlinking.
 
-      $ cp -al REPO REPOCLONE
+      In some cases, you can clone repositories and the working
+      directory using full hardlinks with ::
 
-    This is the fastest way to clone, but it is not always safe. The
-    operation is not atomic (making sure REPO is not modified during
-    the operation is up to you) and you have to make sure your editor
-    breaks hardlinks (Emacs and most Linux Kernel tools do so). Also,
-    this is not compatible with certain extensions that place their
-    metadata under the .hg directory, such as mq.
+        $ cp -al REPO REPOCLONE
 
-    Mercurial will update the working directory to the first applicable
-    revision from this list:
+      This is the fastest way to clone, but it is not always safe. The
+      operation is not atomic (making sure REPO is not modified during
+      the operation is up to you) and you have to make sure your
+      editor breaks hardlinks (Emacs and most Linux Kernel tools do
+      so). Also, this is not compatible with certain extensions that
+      place their metadata under the .hg directory, such as mq.
 
-    a) null if -U or the source repository has no changesets
-    b) if -u . and the source repository is local, the first parent of
-       the source repository's working directory
-    c) the changeset specified with -u (if a branch name, this means the
-       latest head of that branch)
-    d) the changeset specified with -r
-    e) the tipmost head specified with -b
-    f) the tipmost head specified with the url#branch source syntax
-    g) the tipmost head of the default branch
-    h) tip
+      Mercurial will update the working directory to the first applicable
+      revision from this list:
+
+      a) null if -U or the source repository has no changesets
+      b) if -u . and the source repository is local, the first parent of
+         the source repository's working directory
+      c) the changeset specified with -u (if a branch name, this means the
+         latest head of that branch)
+      d) the changeset specified with -r
+      e) the tipmost head specified with -b
+      f) the tipmost head specified with the url#branch source syntax
+      g) the tipmost head of the default branch
+      h) tip
 
     See :hg:`help urls` for details on specifying URLs.
 
