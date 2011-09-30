@@ -5,6 +5,7 @@ from mercurial import util as hgutil
 from mercurial import node
 
 import svncommands
+import util
 
 class AuthorMap(dict):
     '''A mapping from Subversion-style authors to Mercurial-style
@@ -185,11 +186,10 @@ class RevMap(dict):
         self.ypath = os.path.join(repo.path, 'svn', 'lastpulled')
         # TODO(durin42): Consider moving management of the youngest
         # file to svnmeta itself rather than leaving it here.
-        self._youngest = 0
         # must load youngest file first, or else self._load() can
         # clobber the info
-        if os.path.isfile(self.ypath):
-            self._youngest = int(open(self.ypath).read().strip())
+        _yonngest_str = util.load_string(self.ypath, '0')
+        self._youngest = int(_yonngest_str.strip())
         self.oldest = 0
         if os.path.isfile(self.path):
             self._load()
@@ -198,9 +198,7 @@ class RevMap(dict):
 
     def _set_youngest(self, rev):
         self._youngest = max(self._youngest, rev)
-        fp = open(self.ypath, 'wb')
-        fp.write(str(self._youngest) + '\n')
-        fp.close()
+        util.save_string(self.ypath, str(self._youngest) + '\n')
 
     def _get_youngest(self):
         return self._youngest
