@@ -1052,6 +1052,9 @@ def clone(ui, source, dest=None, **opts):
     tag will include the tagged changeset but not the changeset
     containing the tag.
 
+    To check out a particular version, use -u/--update, or
+    -U/--noupdate to create a clone with no working directory.
+
     .. container:: verbose
 
       For efficiency, hardlinks are used for cloning whenever the
