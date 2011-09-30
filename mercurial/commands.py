@@ -1046,17 +1046,13 @@ def clone(ui, source, dest=None, **opts):
     ``.hg/hgrc`` and working directory will be created on the remote side.
     Please see :hg:`help urls` for important details about ``ssh://`` URLs.
 
-    A set of changesets (tags, or branch names) to pull may be specified
-    by listing each changeset (tag, or branch name) with -r/--rev.
-    If -r/--rev is used, the cloned repository will contain only a subset
-    of the changesets of the source repository. Only the set of changesets
-    defined by all -r/--rev options (including all their ancestors)
-    will be pulled into the destination repository.
-    No subsequent changesets (including subsequent tags) will be present
-    in the destination.
-
-    Using -r/--rev (or 'clone src#rev dest') implies --pull, even for
-    local source repositories.
+    To pull only a subset of changesets, specify one or more revisions
+    identifiers with -r/--rev or branches with -b/--branch. The
+    resulting clone will contain only the specified changesets and
+    their ancestors. These options (or 'clone src#rev dest') imply
+    --pull, even for local source repositories. Note that specifying a
+    tag will include the tagged changeset but not the changeset
+    containing the tag.
 
     For efficiency, hardlinks are used for cloning whenever the source
     and destination are on the same filesystem (note this applies only
