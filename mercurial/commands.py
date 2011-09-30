@@ -1090,6 +1090,33 @@ def clone(ui, source, dest=None, **opts):
       g) the tipmost head of the default branch
       h) tip
 
+      Examples:
+
+      - clone a remote repository to a new directory named hg/::
+
+          hg clone http://selenic.com/hg
+
+      - create a lightweight local clone::
+
+          hg clone project/ project-feature/
+
+      - clone from an absolute path on an ssh server (note double-slash)::
+
+          hg clone ssh://user@server//home/projects/alpha/
+
+      - do a high-speed clone over a LAN while checking out a
+        specified version::
+
+          hg clone --uncompressed http://server/repo -u 1.5
+
+      - create a repository without changesets after a particular revision::
+
+          hg clone -r 04e544 experimental/ good/
+
+      - clone (and track) a particular named branch::
+
+          hg clone http://selenic.com/hg#stable
+
     See :hg:`help urls` for details on specifying URLs.
 
     Returns 0 on success.
