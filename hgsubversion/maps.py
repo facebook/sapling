@@ -136,14 +136,14 @@ class Tags(dict):
             print 'tagmap too new -- please upgrade'
             raise NotImplementedError
         for l in f:
-            hash, revision, tag = l.split(' ', 2)
+            ha, revision, tag = l.split(' ', 2)
             revision = int(revision)
             tag = tag[:-1]
             if self.endrev is not None and revision > self.endrev:
                 break
             if not tag:
                 continue
-            dict.__setitem__(self, tag, node.bin(hash))
+            dict.__setitem__(self, tag, node.bin(ha))
         f.close()
 
     def _write(self):
@@ -168,11 +168,11 @@ class Tags(dict):
     def __setitem__(self, tag, info):
         if not tag:
             raise hgutil.Abort('tag cannot be empty')
-        hash, revision = info
+        ha, revision = info
         f = open(self.path, 'a')
-        f.write('%s %s %s\n' % (node.hex(hash), revision, tag))
+        f.write('%s %s %s\n' % (node.hex(ha), revision, tag))
         f.close()
-        dict.__setitem__(self, tag, hash)
+        dict.__setitem__(self, tag, ha)
 
 
 class RevMap(dict):
@@ -221,7 +221,7 @@ class RevMap(dict):
             print 'revmap too new -- please upgrade'
             raise NotImplementedError
         for l in f:
-            revnum, hash, branch = l.split(' ', 2)
+            revnum, ha, branch = l.split(' ', 2)
             if branch == '\n':
                 branch = None
             else:
@@ -231,7 +231,7 @@ class RevMap(dict):
                 self.youngest = revnum
             if revnum < self.oldest or not self.oldest:
                 self.oldest = revnum
-            dict.__setitem__(self, (revnum, branch), node.bin(hash))
+            dict.__setitem__(self, (revnum, branch), node.bin(ha))
         f.close()
 
     def _write(self):
@@ -239,17 +239,17 @@ class RevMap(dict):
         f.write('%s\n' % self.VERSION)
         f.close()
 
-    def __setitem__(self, key, hash):
+    def __setitem__(self, key, ha):
         revnum, branch = key
         f = open(self.path, 'a')
         b = branch or ''
-        f.write(str(revnum) + ' ' + node.hex(hash) + ' ' + b + '\n')
+        f.write(str(revnum) + ' ' + node.hex(ha) + ' ' + b + '\n')
         f.close()
         if revnum > self.youngest or not self.youngest:
             self.youngest = revnum
         if revnum < self.oldest or not self.oldest:
             self.oldest = revnum
-        dict.__setitem__(self, (revnum, branch), hash)
+        dict.__setitem__(self, (revnum, branch), ha)
 
 
 class FileMap(object):
@@ -269,12 +269,12 @@ class FileMap(object):
             yield name[:e], name[e+1:]
             e = name.rfind('/', 0, e)
 
-    def check(self, map, path):
-        map = getattr(self, map)
-        for pre, suf in self._rpairs(path):
-            if pre not in map:
+    def check(self, m, path):
+        m = getattr(self, m)
+        for pre, _suf in self._rpairs(path):
+            if pre not in m:
                 continue
-            return map[pre]
+            return m[pre]
         return None
 
     def __contains__(self, path):
@@ -294,13 +294,13 @@ class FileMap(object):
     def __len__(self):
         return len(self.include) + len(self.exclude)
 
-    def add(self, fn, map, path):
-        mapping = getattr(self, map)
+    def add(self, fn, m, path):
+        mapping = getattr(self, m)
         if path in mapping:
             msg = 'duplicate %s entry in %s: "%s"\n'
-            self.ui.status(msg % (map, fn, path))
+            self.ui.status(msg % (m, fn, path))
             return
-        bits = map.strip('e'), path
+        bits = m.strip('e'), path
         self.ui.debug('%sing %s\n' % bits)
         mapping[path] = path
 
