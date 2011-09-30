@@ -1040,11 +1040,8 @@ def clone(ui, source, dest=None, **opts):
     The location of the source is added to the new repository's
     ``.hg/hgrc`` file, as the default to be used for future pulls.
 
-    See :hg:`help urls` for valid source format details.
-
     It is possible to specify an ``ssh://`` URL as the destination, but no
     ``.hg/hgrc`` and working directory will be created on the remote side.
-    Please see :hg:`help urls` for important details about ``ssh://`` URLs.
 
     To pull only a subset of changesets, specify one or more revisions
     identifiers with -r/--rev or branches with -b/--branch. The
@@ -1086,6 +1083,8 @@ def clone(ui, source, dest=None, **opts):
     f) the tipmost head specified with the url#branch source syntax
     g) the tipmost head of the default branch
     h) tip
+
+    See :hg:`help urls` for details on specifying URLs.
 
     Returns 0 on success.
     """
