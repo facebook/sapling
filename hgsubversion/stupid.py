@@ -2,10 +2,11 @@ import cStringIO
 import errno
 import re
 
-from mercurial import patch
-from mercurial import node
 from mercurial import context
+from mercurial import node
+from mercurial import patch
 from mercurial import revlog
+from mercurial import util as hgutil
 
 import svnwrap
 import svnexternals
@@ -588,6 +589,9 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
 
 def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
     # this server fails at replay
+
+    if meta.filemap:
+        raise hgutil.Abort('filemaps currently unsupported with stupid replay.')
 
     branches = branches_in_paths(meta, tbdelta, r.paths, r.revnum,
                                  svn.checkpath, svn.list_files)

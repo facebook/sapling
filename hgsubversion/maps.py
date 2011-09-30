@@ -290,6 +290,10 @@ class FileMap(object):
             return False
         return True
 
+    # Needed so empty filemaps are false
+    def __len__(self):
+        return len(self.include) + len(self.exclude)
+
     def add(self, fn, map, path):
         mapping = getattr(self, map)
         if path in mapping:

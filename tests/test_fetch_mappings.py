@@ -26,7 +26,7 @@ class MapTests(test_util.TestBase):
     @property
     def branchmap(self):
         return os.path.join(self.tmpdir, 'branchmap')
-	
+
     @property
     def tagmap(self):
         return os.path.join(self.tmpdir, 'tagmap')
@@ -112,7 +112,8 @@ class MapTests(test_util.TestBase):
         self.assertEqual(node.hex(self.repo['default'].node()), 'e524296152246b3837fe9503c83b727075835155')
 
     def test_file_map_stupid(self):
-        self.test_file_map(True)
+        # TODO: re-enable test if we ever reinstate this feature
+        self.assertRaises(hgutil.Abort, self.test_file_map, True)
 
     def test_file_map_exclude(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'replace_trunk_with_branch.svndump')
@@ -127,7 +128,8 @@ class MapTests(test_util.TestBase):
         self.assertEqual(node.hex(self.repo['default'].node()), 'b37a3c0297b71f989064d9b545b5a478bbed7cc1')
 
     def test_file_map_exclude_stupid(self):
-        self.test_file_map_exclude(True)
+        # TODO: re-enable test if we ever reinstate this feature
+        self.assertRaises(hgutil.Abort, self.test_file_map_exclude, True)
 
     def test_branchmap(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'branchmap.svndump')
