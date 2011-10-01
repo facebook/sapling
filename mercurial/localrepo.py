@@ -754,20 +754,20 @@ class localrepository(repo.repository):
         finally:
             lock.release()
 
-    def rollback(self, dryrun=False):
+    def rollback(self, dryrun=False, force=False):
         wlock = lock = None
         try:
             wlock = self.wlock()
             lock = self.lock()
             if os.path.exists(self.sjoin("undo")):
-                return self._rollback(dryrun)
+                return self._rollback(dryrun, force)
             else:
                 self.ui.warn(_("no rollback information available\n"))
                 return 1
         finally:
             release(lock, wlock)
 
-    def _rollback(self, dryrun):
+    def _rollback(self, dryrun, force):
         ui = self.ui
         try:
             args = self.opener.read('undo.desc').splitlines()
@@ -786,6 +786,13 @@ class localrepository(repo.repository):
                        % (oldtip, desc))
         except IOError:
             msg = _('rolling back unknown transaction\n')
+            desc = None
+
+        if not force and self['.'] != self['tip'] and desc == 'commit':
+            raise util.Abort(
+                _('rollback of last commit while not checked out '
+                  'may lose data (use -f to force)'))
+
         ui.status(msg)
         if dryrun:
             return 0

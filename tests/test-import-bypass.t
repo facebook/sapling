@@ -60,7 +60,7 @@ Test --user, --date and --message
   |/
   @  0:07f494440405 test 0 0 - default - adda
   
-  $ hg rollback
+  $ hg rollback -f
   repository tip rolled back to revision 1 (undo commit)
 
 Test --import-branch
@@ -72,7 +72,7 @@ Test --import-branch
   |
   @  0:07f494440405 test 0 0 - default - adda
   
-  $ hg rollback
+  $ hg rollback -f
   repository tip rolled back to revision 1 (undo commit)
 
 Test --strip
@@ -94,7 +94,7 @@ Test --strip
   > +a
   > EOF
   applying patch from stdin
-  $ hg rollback
+  $ hg rollback -f
   repository tip rolled back to revision 1 (undo commit)
 
 Test unsupported combinations

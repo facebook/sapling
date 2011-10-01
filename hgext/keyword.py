@@ -590,12 +590,12 @@ def reposetup(ui, repo):
                 kwt.restrict = restrict
             return n
 
-        def rollback(self, dryrun=False):
+        def rollback(self, dryrun=False, force=False):
             wlock = self.wlock()
             try:
                 if not dryrun:
                     changed = self['.'].files()
-                ret = super(kwrepo, self).rollback(dryrun)
+                ret = super(kwrepo, self).rollback(dryrun, force)
                 if not dryrun:
                     ctx = self['.']
                     modified, added = _preselect(self[None].status(), changed)

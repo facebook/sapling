@@ -4612,7 +4612,8 @@ def revert(ui, repo, *pats, **opts):
     finally:
         wlock.release()
 
-@command('rollback', dryrunopts)
+@command('rollback', dryrunopts +
+         [('f', 'force', False, _('ignore safety measures'))])
 def rollback(ui, repo, **opts):
     """roll back the last transaction (dangerous)
 
@@ -4633,6 +4634,12 @@ def rollback(ui, repo, **opts):
     - push (with this repository as the destination)
     - unbundle
 
+    It's possible to lose data with rollback: commit, update back to
+    an older changeset, and then rollback. The update removes the
+    changes you committed from the working directory, and rollback
+    removes them from history. To avoid data loss, you must pass
+    --force in this case.
+
     This command is not intended for use on public repositories. Once
     changes are visible for pull by other users, rolling a transaction
     back locally is ineffective (someone else may already have pulled
@@ -4642,7 +4649,8 @@ def rollback(ui, repo, **opts):
 
     Returns 0 on success, 1 if no rollback data is available.
     """
-    return repo.rollback(opts.get('dry_run'))
+    return repo.rollback(dryrun=opts.get('dry_run'),
+                         force=opts.get('force'))
 
 @command('root', [])
 def root(ui, repo):

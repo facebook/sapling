@@ -257,7 +257,7 @@ Show all commands + options
   rename: after, force, include, exclude, dry-run
   resolve: all, list, mark, unmark, no-status, tool, include, exclude
   revert: all, date, rev, no-backup, include, exclude, dry-run
-  rollback: dry-run
+  rollback: dry-run, force
   root: 
   showconfig: untrusted
   tag: force, local, rev, remove, edit, message, date, user

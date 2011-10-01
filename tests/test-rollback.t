@@ -83,7 +83,7 @@ working dir unaffected by rollback: do not restore dirstate et. al.
   $ hg bookmark bar
   $ cat .hg/undo.branch ; echo
   test
-  $ hg rollback
+  $ hg rollback -f
   repository tip rolled back to revision 1 (undo commit)
   $ hg id -n
   0
@@ -146,3 +146,37 @@ presents the correct tip changeset:
   working directory now based on revision 0
   $ hg id default
   791dd2169706
+
+update to older changeset and then refuse rollback, because
+that would lose data (issue2998)
+  $ cd ../t
+  $ hg -q update
+  $ rm `hg status -un`
+  $ template='{rev}:{node|short}  [{branch}]  {desc|firstline}\n'
+  $ echo 'valuable new file' > b
+  $ echo 'valuable modification' >> a
+  $ hg commit -A -m'a valuable change'
+  adding b
+  $ hg update 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg rollback
+  abort: rollback of last commit while not checked out may lose data (use -f to force)
+  [255]
+  $ hg tip -q
+  2:4d9cd3795eea
+  $ hg rollback -f
+  repository tip rolled back to revision 1 (undo commit)
+  $ hg status
+  $ hg log --removed b   # yep, it's gone
+
+same again, but emulate an old client that doesn't write undo.desc
+  $ hg -q update
+  $ echo 'valuable modification redux' >> a
+  $ hg commit -m'a valuable change redux'
+  $ rm .hg/undo.desc
+  $ hg update 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg rollback
+  rolling back unknown transaction
+  $ cat a
+  a
