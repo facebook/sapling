@@ -791,7 +791,7 @@ class localrepository(repo.repository):
         if not force and self['.'] != self['tip'] and desc == 'commit':
             raise util.Abort(
                 _('rollback of last commit while not checked out '
-                  'may lose data (use -f to force)'))
+                  'may lose data'), hint=_('use -f to force'))
 
         ui.status(msg)
         if dryrun:

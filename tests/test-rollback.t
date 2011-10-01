@@ -160,7 +160,8 @@ that would lose data (issue2998)
   $ hg update 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg rollback
-  abort: rollback of last commit while not checked out may lose data (use -f to force)
+  abort: rollback of last commit while not checked out may lose data
+  (use -f to force)
   [255]
   $ hg tip -q
   2:4d9cd3795eea
