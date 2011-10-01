@@ -386,7 +386,10 @@ def record(ui, repo, *pats, **opts):
 
     dorecord(ui, repo, commands.commit, 'commit', False, *pats, **opts)
 
-def qrefresh(ui, repo, *pats, **opts):
+def qrefresh(origfn, ui, repo, *pats, **opts):
+    if not opts['interactive']:
+        return origfn(ui, repo, *pats, **opts)
+
     mq = extensions.find('mq')
 
     def committomq(ui, repo, *pats, **opts):
@@ -418,6 +421,11 @@ def qrecord(ui, repo, patch, *pats, **opts):
         mq.new(ui, repo, patch, *pats, **opts)
 
     dorecord(ui, repo, committomq, 'qnew', False, *pats, **opts)
+
+def qnew(origfn, ui, repo, patch, *args, **opts):
+    if opts['interactive']:
+        return qrecord(ui, repo, patch, *args, **opts)
+    return origfn(ui, repo, patch, *args, **opts)
 
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
     if not ui.interactive():
@@ -584,15 +592,10 @@ def uisetup(ui):
          mq.cmdtable['^qnew'][1][:] + diffopts,
          _('hg qrecord [OPTION]... PATCH [FILE]...'))
 
-    _wrapcmd('qnew', mq.cmdtable, qrecord, _("interactively record a new patch"))
+    _wrapcmd('qnew', mq.cmdtable, qnew, _("interactively record a new patch"))
     _wrapcmd('qrefresh', mq.cmdtable, qrefresh,
              _("interactively select changes to refresh"))
 
 def _wrapcmd(cmd, table, wrapfn, msg):
-    '''wrap the command'''
-    def wrapper(orig, *args, **kwargs):
-        if kwargs['interactive']:
-            return wrapfn(*args, **kwargs)
-        return orig(*args, **kwargs)
-    entry = extensions.wrapcommand(table, cmd, wrapper)
+    entry = extensions.wrapcommand(table, cmd, wrapfn)
     entry[1].append(('i', 'interactive', None, msg))
