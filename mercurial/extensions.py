@@ -69,7 +69,9 @@ def load(ui, name, path):
             return mod
         try:
             mod = importh("hgext.%s" % name)
-        except ImportError:
+        except ImportError, err:
+            ui.debug('could not import hgext.%s (%s): trying %s\n'
+                     % (name, err, name))
             mod = importh(name)
     _extensions[shortname] = mod
     _order.append(shortname)
