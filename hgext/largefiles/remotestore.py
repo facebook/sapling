@@ -7,7 +7,6 @@
 '''Remote largefile store; the base class for servestore'''
 
 import urllib2
-import HTTPError
 
 from mercurial import util
 from mercurial.i18n import _
@@ -57,7 +56,7 @@ class remotestore(basestore.basestore):
 
         try:
             length, infile = self._get(hash)
-        except HTTPError, e:
+        except urllib2.HTTPError, e:
             # 401s get converted to util.Aborts; everything else is fine being
             # turned into a StoreError
             raise basestore.StoreError(filename, hash, self.url, str(e))
