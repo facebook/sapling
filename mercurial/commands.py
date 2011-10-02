@@ -3261,7 +3261,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     if (opts.get('exact') or not opts.get('force')) and update:
         cmdutil.bailifchanged(repo)
 
-    d = opts["base"]
+    base = opts["base"]
     strip = opts["strip"]
     wlock = lock = None
     msgs = []
@@ -3371,18 +3371,17 @@ def import_(ui, repo, patch1, *patches, **opts):
         wlock = repo.wlock()
         lock = repo.lock()
         parents = repo.parents()
-        for p in patches:
-            pf = os.path.join(d, p)
-
-            if pf == '-':
-                ui.status(_("applying patch from stdin\n"))
-                pf = ui.fin
+        for patchurl in patches:
+            patchurl = os.path.join(base, patchurl)
+            if patchurl == '-':
+                ui.status(_('applying patch from stdin\n'))
+                patchfile = ui.fin
             else:
-                ui.status(_("applying %s\n") % p)
-                pf = url.open(ui, pf)
+                ui.status(_('applying %s\n') % patchurl)
+                patchfile = url.open(ui, patchurl)
 
             haspatch = False
-            for hunk in patch.split(pf):
+            for hunk in patch.split(patchfile):
                 (msg, node) = tryone(ui, hunk, parents)
                 if msg:
                     haspatch = True
