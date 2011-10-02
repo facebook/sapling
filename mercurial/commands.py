@@ -3263,7 +3263,7 @@ def import_(ui, repo, patch1, *patches, **opts):
 
     base = opts["base"]
     strip = opts["strip"]
-    wlock = lock = None
+    wlock = lock = tr = None
     msgs = []
 
     def checkexact(repo, n, nodeid):
@@ -3334,9 +3334,6 @@ def import_(ui, repo, patch1, *patches, **opts):
                                     opts.get('date') or date, match=m,
                                     editor=cmdutil.commiteditor)
                     checkexact(repo, n, nodeid)
-                    # Force a dirstate write so that the next transaction
-                    # backups an up-to-date file.
-                    repo.dirstate.write()
             else:
                 if opts.get('exact') or opts.get('import_branch'):
                     branch = branch or 'default'
@@ -3370,6 +3367,7 @@ def import_(ui, repo, patch1, *patches, **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
+        tr = repo.transaction('import')
         parents = repo.parents()
         for patchurl in patches:
             if patchurl == '-':
@@ -3395,9 +3393,18 @@ def import_(ui, repo, patch1, *patches, **opts):
             if not haspatch:
                 raise util.Abort(_('%s: no diffs found') % patchurl)
 
+        tr.close()
         if msgs:
             repo.savecommitmessage('\n* * *\n'.join(msgs))
+    except:
+        # wlock.release() indirectly calls dirstate.write(): since
+        # we're crashing, we do not want to change the working dir
+        # parent after all, so make sure it writes nothing
+        repo.dirstate.invalidate()
+        raise
     finally:
+        if tr:
+            tr.release()
         release(lock, wlock)
 
 @command('incoming|in',

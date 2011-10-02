@@ -365,10 +365,10 @@ patches: import patch1 patch2; rollback
   a
   created 6d019af21222
   $ hg --cwd b rollback
-  repository tip rolled back to revision 1 (undo commit)
-  working directory now based on revision 1
+  repository tip rolled back to revision 0 (undo import)
+  working directory now based on revision 0
   $ hg --cwd b parents --template 'parent: {rev}\n'
-  parent: 1
+  parent: 0
   $ rm -r b
 
 
@@ -688,6 +688,7 @@ Issue1495: add empty file from the end of patch
   adding a
   $ hg ci -m "commit"
   $ cat > a.patch <<EOF
+  > add a, b
   > diff --git a/a b/a
   > --- a/a
   > +++ b/a
@@ -698,8 +699,24 @@ Issue1495: add empty file from the end of patch
   > EOF
   $ hg import --no-commit a.patch
   applying a.patch
-  $ cd ..
 
+apply a good patch followed by an empty patch (mainly to ensure
+that dirstate is *not* updated when import crashes)
+  $ hg update -q -C .
+  $ rm b
+  $ touch empty.patch
+  $ hg import a.patch empty.patch
+  applying a.patch
+  applying empty.patch
+  transaction abort!
+  rollback completed
+  abort: empty.patch: no diffs found
+  [255]
+  $ hg tip --template '{rev}  {desc|firstline}\n'
+  0  commit
+  $ hg -q status
+  M a
+  $ cd ..
 
 create file when source is not /dev/null
 

@@ -825,7 +825,7 @@ Imported patch should not be rejected
   ignore $Id$
 
   $ hg rollback
-  repository tip rolled back to revision 2 (undo commit)
+  repository tip rolled back to revision 2 (undo import)
   working directory now based on revision 2
   $ hg update --clean
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
