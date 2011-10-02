@@ -3276,8 +3276,8 @@ def import_(ui, repo, patch1, *patches, **opts):
             patch.extract(ui, hunk)
 
         if not tmpname:
-            return None
-        commitid = _('to working directory')
+            return (None, None)
+        msg = _('applied to working directory')
 
         try:
             cmdline_message = cmdutil.logmessage(ui, opts)
@@ -3362,8 +3362,8 @@ def import_(ui, repo, patch1, *patches, **opts):
                 finally:
                     store.close()
             if n:
-                commitid = short(n)
-            return commitid
+                msg = _('created %s') % short(n)
+            return (msg, n)
         finally:
             os.unlink(tmpname)
 
@@ -3371,7 +3371,6 @@ def import_(ui, repo, patch1, *patches, **opts):
         wlock = repo.wlock()
         lock = repo.lock()
         parents = repo.parents()
-        lastcommit = None
         for p in patches:
             pf = os.path.join(d, p)
 
@@ -3384,16 +3383,14 @@ def import_(ui, repo, patch1, *patches, **opts):
 
             haspatch = False
             for hunk in patch.split(pf):
-                commitid = tryone(ui, hunk, parents)
-                if commitid:
+                (msg, node) = tryone(ui, hunk, parents)
+                if msg:
                     haspatch = True
-                    if lastcommit:
-                        ui.status(_('applied %s\n') % lastcommit)
-                    lastcommit = commitid
+                    ui.note(msg + '\n')
                 if update or opts.get('exact'):
                     parents = repo.parents()
                 else:
-                    parents = [repo[commitid]]
+                    parents = [repo[node]]
 
             if not haspatch:
                 raise util.Abort(_('no diffs found'))

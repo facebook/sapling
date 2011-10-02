@@ -37,7 +37,7 @@ check custom patch options are honored
   $ hg --cwd b import -v ../a.diff
   applying ../a.diff
   Using custom patch
-
+  applied to working directory
 
 Issue2417: hg import with # comments in description
 

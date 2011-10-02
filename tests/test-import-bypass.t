@@ -171,7 +171,6 @@ Test applying multiple patches
   $ hg import --bypass ../patch1.diff ../patch2.diff
   applying ../patch1.diff
   applying ../patch2.diff
-  applied 16581080145e
   $ shortlog
   o  3:bc8ca3f8a7c4 test 0 0 - default - addf
   |
@@ -196,7 +195,6 @@ Test applying multiple patches with --exact
   $ hg import --bypass --exact ../patch1.diff ../patch2.diff
   applying ../patch1.diff
   applying ../patch2.diff
-  applied 16581080145e
   $ shortlog
   o  3:d60cb8989666 test 0 0 - foo - addf
   |

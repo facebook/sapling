@@ -69,6 +69,7 @@ import patch
   Hunk #2 succeeded at 87 (offset 34 lines).
   Hunk #3 succeeded at 109 (offset 34 lines).
   a
+  created 189885cecb41
 
 compare imported changes against reference file
 
