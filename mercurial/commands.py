@@ -3372,11 +3372,11 @@ def import_(ui, repo, patch1, *patches, **opts):
         lock = repo.lock()
         parents = repo.parents()
         for patchurl in patches:
-            patchurl = os.path.join(base, patchurl)
             if patchurl == '-':
                 ui.status(_('applying patch from stdin\n'))
                 patchfile = ui.fin
             else:
+                patchurl = os.path.join(base, patchurl)
                 ui.status(_('applying %s\n') % patchurl)
                 patchfile = url.open(ui, patchurl)
 
