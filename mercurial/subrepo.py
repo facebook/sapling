@@ -548,9 +548,13 @@ class svnsubrepo(abstractsubrepo):
         self._state = state
         self._ctx = ctx
         self._ui = ctx._repo.ui
+        self._exe = util.findexe('svn')
+        if not self._exe:
+            raise util.Abort(_("'svn' executable not found for subrepo '%s'")
+                             % self._path)
 
     def _svncommand(self, commands, filename='', failok=False):
-        cmd = ['svn']
+        cmd = [self._exe]
         extrakw = {}
         if not self._ui.interactive():
             # Making stdin be a pipe should prevent svn from behaving
