@@ -3375,6 +3375,7 @@ def import_(ui, repo, patch1, *patches, **opts):
             if patchurl == '-':
                 ui.status(_('applying patch from stdin\n'))
                 patchfile = ui.fin
+                patchurl = 'stdin'      # for error message
             else:
                 patchurl = os.path.join(base, patchurl)
                 ui.status(_('applying %s\n') % patchurl)
@@ -3392,7 +3393,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                     parents = [repo[node]]
 
             if not haspatch:
-                raise util.Abort(_('no diffs found'))
+                raise util.Abort(_('%s: no diffs found') % patchurl)
 
         if msgs:
             repo.savecommitmessage('\n* * *\n'.join(msgs))
