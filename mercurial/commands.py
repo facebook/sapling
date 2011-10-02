@@ -2768,6 +2768,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             data.append((so, lo, desc))
 
         rst = minirst.maketable(data, 1)
+
         if multioccur:
             rst += _("\n[+] marked option can be specified multiple times")
 

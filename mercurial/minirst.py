@@ -262,7 +262,7 @@ def findtables(blocks):
         #  x    y   z
         # === ==== ===
         if (block['type'] == 'paragraph' and
-            len(block['lines']) > 4 and
+            len(block['lines']) > 2 and
             _tablere.match(block['lines'][0]) and
             block['lines'][0] == block['lines'][-1]):
             block['type'] = 'table'
