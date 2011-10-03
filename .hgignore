@@ -12,3 +12,4 @@ MANIFEST
 dist
 *.egg-info
 hgsubversion/__version__.py
+nbproject
