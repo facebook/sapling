@@ -105,10 +105,11 @@ class transplanter(object):
         diffopts = patch.diffopts(self.ui, opts)
         diffopts.git = True
 
-        lock = wlock = None
+        lock = wlock = tr = None
         try:
             wlock = repo.wlock()
             lock = repo.lock()
+            tr = repo.transaction('transplant')
             for rev in revs:
                 node = revmap[rev]
                 revstr = '%s:%s' % (rev, short(node))
@@ -172,12 +173,15 @@ class transplanter(object):
                     finally:
                         if patchfile:
                             os.unlink(patchfile)
+            tr.close()
             if pulls:
                 repo.pull(source, heads=pulls)
                 merge.update(repo, pulls[-1], False, False, None)
         finally:
             self.saveseries(revmap, merges)
             self.transplants.write()
+            if tr:
+                tr.release()
             lock.release()
             wlock.release()
 

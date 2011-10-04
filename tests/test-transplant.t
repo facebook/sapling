@@ -81,6 +81,19 @@ test tranplanted keyword
   1 
   0 
 
+rollback the transplant
+  $ hg rollback
+  repository tip rolled back to revision 4 (undo transplant)
+  working directory now based on revision 1
+  $ hg tip -q
+  4:a53251cdf717
+  $ hg parents -q
+  1:d11e3596cc1a
+  $ hg status
+  ? b1
+  ? b2
+  ? b3
+
   $ hg clone ../t ../prune
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
