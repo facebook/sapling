@@ -13,6 +13,11 @@ try:
     from mercurial import commands
 except ImportError:
     from hgext import bookmarks
+try:
+    from mercurial.error import RepoError
+except ImportError:
+    from mercurial.repo import RepoError
+
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
 from mercurial import context, util as hgutil
@@ -1089,5 +1094,17 @@ class GitHandler(object):
                         transportpath = path
 
                 return transport(host, thin_packs=False, port=port), transportpath
+
+        httpclient = getattr(client, 'HttpGitClient', None)
+
+        if uri.startswith('git+http://') or uri.startswith('git+https://'):
+            uri = uri[4:]
+
+        if uri.startswith('http://') or uri.startswith('https://'):
+            if not httpclient:
+                raise RepoError('git via HTTP requires dulwich 0.8.1 or later')
+            else:
+                return client.HttpGitClient(uri, thin_packs=False), uri
+
         # if its not git or git+ssh, try a local url..
         return client.SubprocessGitClient(thin_packs=False), uri
