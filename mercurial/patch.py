@@ -1619,27 +1619,36 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
 def difflabel(func, *args, **kw):
     '''yields 2-tuples of (output, label) based on the output of func()'''
-    prefixes = [('diff', 'diff.diffline'),
-                ('copy', 'diff.extended'),
-                ('rename', 'diff.extended'),
-                ('old', 'diff.extended'),
-                ('new', 'diff.extended'),
-                ('deleted', 'diff.extended'),
-                ('---', 'diff.file_a'),
-                ('+++', 'diff.file_b'),
-                ('@@', 'diff.hunk'),
-                ('-', 'diff.deleted'),
-                ('+', 'diff.inserted')]
-
+    headprefixes = [('diff', 'diff.diffline'),
+                    ('copy', 'diff.extended'),
+                    ('rename', 'diff.extended'),
+                    ('old', 'diff.extended'),
+                    ('new', 'diff.extended'),
+                    ('deleted', 'diff.extended'),
+                    ('---', 'diff.file_a'),
+                    ('+++', 'diff.file_b')]
+    textprefixes = [('@', 'diff.hunk'),
+                    ('-', 'diff.deleted'),
+                    ('+', 'diff.inserted')]
+    head = False
     for chunk in func(*args, **kw):
         lines = chunk.split('\n')
         for i, line in enumerate(lines):
             if i != 0:
                 yield ('\n', '')
+            if head:
+                if line.startswith('@'):
+                    head = False
+            else:
+                if line and not line[0] in ' +-@':
+                    head = True
             stripline = line
-            if line and line[0] in '+-':
+            if not head and line and line[0] in '+-':
                 # highlight trailing whitespace, but only in changed lines
                 stripline = line.rstrip()
+            prefixes = textprefixes
+            if head:
+                prefixes = headprefixes
             for prefix, label in prefixes:
                 if stripline.startswith(prefix):
                     yield (stripline, label)
