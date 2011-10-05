@@ -363,8 +363,14 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         elif state == 8:
             # store commit log message
             if re_31.match(line):
-                state = 5
-                store = True
+                cpeek = peek
+                if cpeek.endswith('\n'):
+                    cpeek = cpeek[:-1]
+                if re_50.match(cpeek):
+                    state = 5
+                    store = True
+                else:
+                    e.comment.append(line)
             elif re_32.match(line):
                 state = 0
                 store = True
