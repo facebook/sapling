@@ -101,13 +101,9 @@ def findoutgoing(repo, remote, force):
 
 # -- Private worker functions ------------------------------------------
 
-if os.name == 'nt':
-    from mercurial import win32
-    linkfn = win32.oslink
-
 def link(src, dest):
     try:
-        linkfn(src, dest)
+        util.oslink(src, dest)
     except OSError:
         # If hardlinks fail fall back on copy
         shutil.copyfile(src, dest)
