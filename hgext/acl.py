@@ -216,6 +216,8 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     if user is None:
         user = getpass.getuser()
 
+    ui.debug('acl: checking access for user "%s"\n' % user)
+
     cfg = ui.config('acl', 'config')
     if cfg:
         ui.readconfig(cfg, sections = ['acl.groups', 'acl.allow.branches',
@@ -242,9 +244,9 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
 
         for f in ctx.files():
             if deny and deny(f):
-                ui.debug('acl: user %s denied on %s\n' % (user, f))
-                raise util.Abort(_('acl: access denied for changeset %s') % ctx)
+                raise util.Abort(_('acl: user "%s" denied on "%s"'
+                ' (changeset "%s")') % (user, f, ctx))
             if allow and not allow(f):
-                ui.debug('acl: user %s not allowed on %s\n' % (user, f))
-                raise util.Abort(_('acl: access denied for changeset %s') % ctx)
-        ui.debug('acl: allowing changeset %s\n' % ctx)
+                raise util.Abort(_('acl: user "%s" not allowed on "%s"'
+                ' (changeset "%s")') % (user, f, ctx))
+        ui.debug('acl: path access granted: "%s"\n' % ctx)

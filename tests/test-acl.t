@@ -232,16 +232,17 @@ No [acl.allow]/[acl.deny]
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "fred"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: allowing changeset 911600dab2ae
+  acl: path access granted: "911600dab2ae"
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
@@ -299,16 +300,16 @@ Empty [acl.allow]
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "fred"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 0 entries for user fred
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: user fred not allowed on foo/file.txt
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset ef1ea85a6374
+  error: pretxnchangegroup.acl hook failed: acl: user "fred" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset ef1ea85a6374
+  abort: acl: user "fred" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
   no rollback information available
   0:6675d58eff77
   
@@ -364,20 +365,20 @@ fred is allowed inside foo/
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "fred"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 1 entries for user fred
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: user fred not allowed on quux/file.py
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
+  error: pretxnchangegroup.acl hook failed: acl: user "fred" not allowed on "quux/file.py" (changeset "911600dab2ae")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset 911600dab2ae
+  abort: acl: user "fred" not allowed on "quux/file.py" (changeset "911600dab2ae")
   no rollback information available
   0:6675d58eff77
   
@@ -434,16 +435,16 @@ Empty [acl.deny]
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "barney"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 0 entries for user barney
   acl: acl.deny enabled, 0 entries for user barney
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: user barney not allowed on foo/file.txt
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset ef1ea85a6374
+  error: pretxnchangegroup.acl hook failed: acl: user "barney" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset ef1ea85a6374
+  abort: acl: user "barney" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
   no rollback information available
   0:6675d58eff77
   
@@ -501,20 +502,20 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "fred"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 1 entries for user fred
   acl: acl.deny enabled, 1 entries for user fred
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: user fred not allowed on quux/file.py
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
+  error: pretxnchangegroup.acl hook failed: acl: user "fred" not allowed on "quux/file.py" (changeset "911600dab2ae")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset 911600dab2ae
+  abort: acl: user "fred" not allowed on "quux/file.py" (changeset "911600dab2ae")
   no rollback information available
   0:6675d58eff77
   
@@ -573,18 +574,18 @@ fred is allowed inside foo/, but not foo/Bar/
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "fred"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 1 entries for user fred
   acl: acl.deny enabled, 2 entries for user fred
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: user fred denied on foo/Bar/file.txt
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset f9cafe1212c8
+  error: pretxnchangegroup.acl hook failed: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset f9cafe1212c8
+  abort: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
   no rollback information available
   0:6675d58eff77
   
@@ -642,16 +643,16 @@ fred is allowed inside foo/, but not foo/Bar/
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "barney"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 0 entries for user barney
   acl: acl.deny enabled, 0 entries for user barney
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: user barney not allowed on foo/file.txt
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset ef1ea85a6374
+  error: pretxnchangegroup.acl hook failed: acl: user "barney" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset ef1ea85a6374
+  abort: acl: user "barney" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
   no rollback information available
   0:6675d58eff77
   
@@ -713,16 +714,17 @@ barney is allowed everywhere
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "barney"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 1 entries for user barney
   acl: acl.deny enabled, 0 entries for user barney
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: allowing changeset 911600dab2ae
+  acl: path access granted: "911600dab2ae"
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
@@ -787,20 +789,20 @@ wilma can change files with a .txt extension
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "wilma"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 1 entries for user wilma
   acl: acl.deny enabled, 0 entries for user wilma
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: user wilma not allowed on quux/file.py
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
+  error: pretxnchangegroup.acl hook failed: acl: user "wilma" not allowed on "quux/file.py" (changeset "911600dab2ae")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset 911600dab2ae
+  abort: acl: user "wilma" not allowed on "quux/file.py" (changeset "911600dab2ae")
   no rollback information available
   0:6675d58eff77
   
@@ -865,6 +867,7 @@ file specified by acl.config does not exist
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "barney"
   error: pretxnchangegroup.acl hook raised an exception: [Errno 2] No such file or directory: '../acl.config'
   transaction abort!
   rollback completed
@@ -937,20 +940,20 @@ betty is allowed inside foo/ by a acl.config file
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "betty"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 1 entries for user betty
   acl: acl.deny enabled, 0 entries for user betty
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: user betty not allowed on quux/file.py
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset 911600dab2ae
+  error: pretxnchangegroup.acl hook failed: acl: user "betty" not allowed on "quux/file.py" (changeset "911600dab2ae")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset 911600dab2ae
+  abort: acl: user "betty" not allowed on "quux/file.py" (changeset "911600dab2ae")
   no rollback information available
   0:6675d58eff77
   
@@ -1021,16 +1024,17 @@ acl.config can set only [acl.allow]/[acl.deny]
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "barney"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 1 entries for user barney
   acl: acl.deny enabled, 0 entries for user barney
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: allowing changeset 911600dab2ae
+  acl: path access granted: "911600dab2ae"
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
@@ -1096,16 +1100,17 @@ fred is always allowed
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "fred"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 1 entries for user fred
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: allowing changeset 911600dab2ae
+  acl: path access granted: "911600dab2ae"
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
@@ -1167,18 +1172,18 @@ no one is allowed inside foo/Bar/
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "fred"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow enabled, 1 entries for user fred
   acl: acl.deny enabled, 1 entries for user fred
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: user fred denied on foo/Bar/file.txt
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset f9cafe1212c8
+  error: pretxnchangegroup.acl hook failed: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset f9cafe1212c8
+  abort: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
   no rollback information available
   0:6675d58eff77
   
@@ -1241,17 +1246,18 @@ OS-level groups
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "fred"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: "group1" not defined in [acl.groups]
   acl: acl.allow enabled, 1 entries for user fred
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: allowing changeset 911600dab2ae
+  acl: path access granted: "911600dab2ae"
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 0 (undo push)
@@ -1313,6 +1319,7 @@ OS-level groups
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "fred"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: "group1" not defined in [acl.groups]
@@ -1320,13 +1327,12 @@ OS-level groups
   acl: "group1" not defined in [acl.groups]
   acl: acl.deny enabled, 1 entries for user fred
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: user fred denied on foo/Bar/file.txt
-  error: pretxnchangegroup.acl hook failed: acl: access denied for changeset f9cafe1212c8
+  error: pretxnchangegroup.acl hook failed: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
   transaction abort!
   rollback completed
-  abort: acl: access denied for changeset f9cafe1212c8
+  abort: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
   no rollback information available
   0:6675d58eff77
   
@@ -1434,18 +1440,19 @@ No branch acls specified
   files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "astro"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches not enabled
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: allowing changeset 911600dab2ae
+  acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
-  acl: allowing changeset e8fc755d4d82
+  acl: path access granted: "e8fc755d4d82"
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 2 (undo push)
@@ -1513,16 +1520,17 @@ Branch acl deny test
   files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "astro"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches enabled, 1 entries for user astro
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: allowing changeset 911600dab2ae
+  acl: path access granted: "911600dab2ae"
   error: pretxnchangegroup.acl hook failed: acl: user "astro" denied on branch "foobar" (changeset "e8fc755d4d82")
   transaction abort!
   rollback completed
@@ -1590,6 +1598,7 @@ Branch acl empty allow test
   files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "astro"
   acl: acl.allow.branches enabled, 0 entries for user astro
   acl: acl.deny.branches not enabled
   acl: acl.allow not enabled
@@ -1663,6 +1672,7 @@ Branch acl allow other
   files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "astro"
   acl: acl.allow.branches enabled, 0 entries for user astro
   acl: acl.deny.branches not enabled
   acl: acl.allow not enabled
@@ -1730,18 +1740,19 @@ Branch acl allow other
   files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "george"
   acl: acl.allow.branches enabled, 1 entries for user george
   acl: acl.deny.branches not enabled
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: allowing changeset 911600dab2ae
+  acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
-  acl: allowing changeset e8fc755d4d82
+  acl: path access granted: "e8fc755d4d82"
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 2 (undo push)
@@ -1814,18 +1825,19 @@ push foobar into the remote
   files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "george"
   acl: acl.allow.branches enabled, 1 entries for user george
   acl: acl.deny.branches not enabled
   acl: acl.allow not enabled
   acl: acl.deny not enabled
   acl: branch access granted: "ef1ea85a6374" on branch "default"
-  acl: allowing changeset ef1ea85a6374
+  acl: path access granted: "ef1ea85a6374"
   acl: branch access granted: "f9cafe1212c8" on branch "default"
-  acl: allowing changeset f9cafe1212c8
+  acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
-  acl: allowing changeset 911600dab2ae
+  acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
-  acl: allowing changeset e8fc755d4d82
+  acl: path access granted: "e8fc755d4d82"
   updating the branch cache
   checking for updated bookmarks
   repository tip rolled back to revision 2 (undo push)
@@ -1897,6 +1909,7 @@ Branch acl conflicting deny
   files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
+  acl: checking access for user "george"
   acl: acl.allow.branches not enabled
   acl: acl.deny.branches enabled, 1 entries for user george
   acl: acl.allow not enabled
