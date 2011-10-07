@@ -271,7 +271,7 @@ Extension module help vs command help:
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help extdiff" to show global options
+  use "hg -v help extdiff" to show more info
 
   $ hg help --extension extdiff
   extdiff extension - command to allow external programs to compare revisions
@@ -373,7 +373,7 @@ Test help topic with same name as extension
   
   multirevs command
   
-  use "hg -v help multirevs" to show global options
+  use "hg -v help multirevs" to show more info
 
   $ hg multirevs
   hg multirevs: invalid arguments

@@ -70,7 +70,7 @@ help record (record)
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help record" to show global options
+  use "hg -v help record" to show more info
 
 help (no mq, so no qrecord)
 
@@ -81,7 +81,7 @@ help (no mq, so no qrecord)
   
       See "hg help qnew" & "hg help record" for more information and usage.
   
-  use "hg -v help qrecord" to show global options
+  use "hg -v help qrecord" to show more info
 
   $ hg init a
 
@@ -113,7 +113,7 @@ help (bad mq)
   
       See "hg help qnew" & "hg help record" for more information and usage.
   
-  use "hg -v help qrecord" to show global options
+  use "hg -v help qrecord" to show more info
 
 help (mq present)
 
@@ -146,7 +146,7 @@ help (mq present)
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help qrecord" to show global options
+  use "hg -v help qrecord" to show more info
 
   $ cd a
 

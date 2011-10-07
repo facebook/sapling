@@ -2807,7 +2807,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 msg = _('use "hg -v help%s" to show builtin aliases and '
                         'global options') % (name and " " + name or "")
             else:
-                msg = _('use "hg -v help %s" to show global options') % name
+                msg = _('use "hg -v help %s" to show more info') % name
             optlist.append((msg, ()))
 
     def helpcmd(name):
@@ -2855,8 +2855,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         keep = ui.verbose and ['verbose'] or []
         formatted, pruned = minirst.format(doc, textwidth, keep=keep)
         ui.write("\n%s" % formatted)
-        if pruned:
-            ui.write(_('\nuse "hg -v help %s" to show verbose help\n') % name)
 
         if not ui.quiet:
             # options

@@ -260,7 +260,7 @@
       --datesort         try to sort changesets by date
       --sourcesort       preserve source changesets order
   
-  use "hg -v help convert" to show global options
+  use "hg -v help convert" to show more info
   $ hg init a
   $ cd a
   $ echo a > a

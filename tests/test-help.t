@@ -276,8 +276,6 @@ Test short command list with verbose option
   
       Returns 0 if all files are successfully added.
   
-  use "hg -v help add" to show verbose help
-  
   options:
   
    -I --include PATTERN [+] include names matching the given patterns
@@ -287,7 +285,7 @@ Test short command list with verbose option
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help add" to show global options
+  use "hg -v help add" to show more info
 
 Verbose help for add
 
@@ -402,7 +400,7 @@ Test command without options
   
       Returns 0 on success, 1 if errors are encountered.
   
-  use "hg -v help verify" to show global options
+  use "hg -v help verify" to show more info
 
   $ hg help diff
   hg diff [OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...
@@ -435,8 +433,6 @@ Test command without options
   
       Returns 0 on success.
   
-  use "hg -v help diff" to show verbose help
-  
   options:
   
    -r --rev REV [+]         revision
@@ -457,7 +453,7 @@ Test command without options
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help diff" to show global options
+  use "hg -v help diff" to show more info
 
   $ hg help status
   hg status [OPTION]... [FILE]...
@@ -499,8 +495,6 @@ Test command without options
   
       Returns 0 on success.
   
-  use "hg -v help status" to show verbose help
-  
   options:
   
    -A --all                 show status of all files
@@ -522,7 +516,7 @@ Test command without options
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help status" to show global options
+  use "hg -v help status" to show more info
 
   $ hg -q help status
   hg status [OPTION]... [FILE]...
@@ -606,7 +600,7 @@ Test command with no help text
   
   (no help text available)
   
-  use "hg -v help nohelp" to show global options
+  use "hg -v help nohelp" to show more info
 
 Test that default list of commands omits extension commands
 
