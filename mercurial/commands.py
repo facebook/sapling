@@ -1854,9 +1854,10 @@ def debuginstall(ui):
         problems += 1
 
     # templates
-    ui.status(_("Checking templates...\n"))
+    import templater
+    p = templater.templatepath()
+    ui.status(_("Checking templates (%s)...\n") % ' '.join(p))
     try:
-        import templater
         templater.templater(templater.templatepath("map-cmdline.default"))
     except Exception, inst:
         ui.write(" %s\n" % inst)
