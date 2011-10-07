@@ -305,7 +305,7 @@ invalid arguments
 
   $ hg rt foo
   hg rt: invalid arguments
-  hg rt 
+  hg rt
   
   alias for: hg root
   

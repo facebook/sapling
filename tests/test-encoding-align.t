@@ -46,7 +46,7 @@ alignment of option descriptions in help
 check alignment of option descriptions in help
 
   $ hg help showoptlist
-  hg showoptlist 
+  hg showoptlist
   
   dummy command to show option descriptions
   

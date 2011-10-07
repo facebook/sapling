@@ -2771,7 +2771,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         rst = minirst.maketable(data, 1)
 
         if multioccur:
-            rst += _("\n[+] marked option can be specified multiple times")
+            rst += _("\n[+] marked option can be specified multiple times\n")
 
         return rst
 
@@ -2782,9 +2782,11 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             return ''
 
         for title, options in optlist:
-            rst += '\n%s\n\n' % title
-            rst += optrst(options)
-            rst += '\n'
+            rst += '\n%s\n' % title
+            if options:
+                rst += "\n"
+                rst += optrst(options)
+                rst += '\n'
 
         return '\n' + minirst.format(rst, width)
 
@@ -2811,7 +2813,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             optlist.append((msg, ()))
 
     def helpcmd(name):
-        optlist = []
         try:
             aliases, entry = cmdutil.findcmd(name, table, strict=unknowncmd)
         except error.AmbiguousCommand, inst:
@@ -2828,18 +2829,20 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 entry[0](ui)
             return
 
+        rst = ""
+
         # synopsis
         if len(entry) > 2:
             if entry[2].startswith('hg'):
-                ui.write("%s\n" % entry[2])
+                rst += "%s\n" % entry[2]
             else:
-                ui.write('hg %s %s\n' % (aliases[0], entry[2]))
+                rst += 'hg %s %s\n' % (aliases[0], entry[2])
         else:
-            ui.write('hg %s\n' % aliases[0])
+            rst += 'hg %s\n' % aliases[0]
 
         # aliases
         if full and not ui.quiet and len(aliases) > 1:
-            ui.write(_("\naliases: %s\n") % ', '.join(aliases[1:]))
+            rst += _("\naliases: %s\n") % ', '.join(aliases[1:])
 
         # description
         doc = gettext(entry[0].__doc__)
@@ -2852,14 +2855,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 doc = _('alias for: hg %s\n\n%s') % (entry[0].definition, doc)
         if ui.quiet or not full:
             doc = doc.splitlines()[0]
-        keep = ui.verbose and ['verbose'] or []
-        formatted, pruned = minirst.format(doc, textwidth, keep=keep)
-        ui.write("\n%s" % formatted)
-
-        if not ui.quiet:
-            # options
-            if entry[1]:
-                optlist.append((_("options:\n"), entry[1]))
+        rst += "\n" + doc + "\n"
 
         # check if this command shadows a non-trivial (multi-line)
         # extension help text
@@ -2869,12 +2865,30 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             if '\n' in doc.strip():
                 msg = _('use "hg help -e %s" to show help for '
                         'the %s extension') % (name, name)
-                ui.write('\n%s\n' % msg)
+                rst += '\n%s\n' % msg
         except KeyError:
             pass
 
-        addglobalopts(optlist, False)
-        ui.write(opttext(optlist, textwidth))
+        # options
+        if not ui.quiet and entry[1]:
+            rst += '\noptions:\n\n'
+            rst += optrst(entry[1])
+
+        if ui.verbose:
+            rst += '\nglobal options:\n\n'
+            rst += optrst(globalopts)
+
+        keep = ui.verbose and ['verbose'] or []
+        formatted, pruned = minirst.format(rst, textwidth, keep=keep)
+        ui.write(formatted)
+
+        if not ui.verbose:
+            if not full:
+                ui.write(_('\nuse "hg help %s" to show the full help text\n')
+                           % name)
+            elif not ui.quiet:
+                ui.write(_('\nuse "hg -v help %s" to show more info\n') % name)
+
 
     def helplist(select=None):
         # list of commands
