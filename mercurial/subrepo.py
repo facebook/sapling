@@ -202,7 +202,8 @@ def reporelpath(repo):
     parent = repo
     while util.safehasattr(parent, '_subparent'):
         parent = parent._subparent
-    return repo.root[len(parent.root)+1:]
+    p = parent.root.rstrip(os.sep)
+    return repo.root[len(p) + 1:]
 
 def subrelpath(sub):
     """return path to this subrepo as seen from outermost repo"""
