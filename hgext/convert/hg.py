@@ -178,7 +178,7 @@ class mercurial_sink(converter_sink):
             closed = 'close' in commit.extra
             if not closed and not man.cmp(m1node, man.revision(mnode)):
                 self.ui.status(_("filtering out empty revision\n"))
-                self.repo.rollback()
+                self.repo.rollback(force=True)
                 return parent
         return p2
 
