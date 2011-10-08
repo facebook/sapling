@@ -378,6 +378,10 @@ def backout(ui, repo, node=None, rev=None, **opts):
     is committed automatically. Otherwise, hg needs to merge the
     changes and the merged result is left uncommitted.
 
+    .. note::
+      backout cannot be used to fix either an unwanted or
+      incorrect merge.
+
     .. container:: verbose
 
       By default, the pending changeset will have one parent,
