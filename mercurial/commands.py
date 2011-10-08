@@ -364,7 +364,8 @@ def archive(ui, repo, dest, **opts):
 
 @command('backout',
     [('', 'merge', None, _('merge with old dirstate parent after backout')),
-    ('', 'parent', '', _('parent to choose when backing out merge'), _('REV')),
+    ('', 'parent', '',
+     _('parent to choose when backing out merge (DEPRECATED)'), _('REV')),
     ('r', 'rev', '', _('revision to backout'), _('REV')),
     ] + mergetoolopts + walkopts + commitopts + commitopts2,
     _('[OPTION]... [-r] REV'))
@@ -424,8 +425,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
         raise util.Abort(_('cannot backout a change with no parents'))
     if p2 != nullid:
         if not opts.get('parent'):
-            raise util.Abort(_('cannot backout a merge changeset without '
-                               '--parent'))
+            raise util.Abort(_('cannot backout a merge changeset'))
         p = repo.lookup(opts['parent'])
         if p not in (p1, p2):
             raise util.Abort(_('%s is not a parent of %s') %

@@ -182,7 +182,7 @@ with --merge
 backout of merge should fail
 
   $ hg backout 4
-  abort: cannot backout a merge changeset without --parent
+  abort: cannot backout a merge changeset
   [255]
 
 backout of merge with bad parent should fail
