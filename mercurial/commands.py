@@ -378,15 +378,17 @@ def backout(ui, repo, node=None, rev=None, **opts):
     is committed automatically. Otherwise, hg needs to merge the
     changes and the merged result is left uncommitted.
 
-    By default, the pending changeset will have one parent,
-    maintaining a linear history. With --merge, the pending changeset
-    will instead have two parents: the old parent of the working
-    directory and a new child of REV that simply undoes REV.
+    .. container:: verbose
 
-    Before version 1.7, the behavior without --merge was equivalent to
-    specifying --merge followed by :hg:`update --clean .` to cancel
-    the merge and leave the child of REV as a head to be merged
-    separately.
+      By default, the pending changeset will have one parent,
+      maintaining a linear history. With --merge, the pending
+      changeset will instead have two parents: the old parent of the
+      working directory and a new child of REV that simply undoes REV.
+
+      Before version 1.7, the behavior without --merge was equivalent
+      to specifying --merge followed by :hg:`update --clean .` to
+      cancel the merge and leave the child of REV as a head to be
+      merged separately.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
