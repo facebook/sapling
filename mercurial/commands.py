@@ -836,7 +836,6 @@ def branch(ui, repo, label=None, **opts):
     :hg:`commit --close-branch` to mark this branch as closed.
 
     .. note::
-
        Branch names are permanent. Use :hg:`bookmark` to create a
        light-weight bookmark instead. See :hg:`help glossary` for more
        information about named branches and bookmarks.
