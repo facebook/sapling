@@ -2,7 +2,7 @@ Initialized empty Git repository in gitrepo/.git/
 
 Switched to a new branch "beta"
 Switched to branch "master"
-Merge made by recursive.
+Merge successful
  beta |    1 +
  1 files changed, 1 insertions(+), 0 deletions(-)
  create mode 100644 beta

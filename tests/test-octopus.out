@@ -5,7 +5,7 @@ Switched to a new branch "branch2"
 Switched to branch "master"
 Trying simple merge with branch1
 Trying simple merge with branch2
-Merge made by octopus.
+Merge successful
  beta  |    1 +
  gamma |    1 +
  2 files changed, 2 insertions(+), 0 deletions(-)
