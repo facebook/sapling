@@ -1,13 +1,14 @@
 Subrepositories let you nest external repositories or projects into a
 parent Mercurial repository, and make commands operate on them as a
-group. External Mercurial and Subversion projects are currently
-supported.
+group.
+
+Mercurial currently supports Mercurial, Git, and Subversion
+subrepositories.
 
 Subrepositories are made of three components:
 
 1. Nested repository checkouts. They can appear anywhere in the
-   parent working directory, and are Mercurial clones or Subversion
-   checkouts.
+   parent working directory.
 
 2. Nested repository references. They are defined in ``.hgsub`` and
    tell where the subrepository checkouts come from. Mercurial
@@ -15,12 +16,15 @@ Subrepositories are made of three components:
 
      path/to/nested = https://example.com/nested/repo/path
 
+   Git and Subversion subrepos are also supported:
+
+     path/to/nested = [git]git://example.com/nested/repo/path
+     path/to/nested = [svn]https://example.com/nested/trunk/path
+
    where ``path/to/nested`` is the checkout location relatively to the
    parent Mercurial root, and ``https://example.com/nested/repo/path``
    is the source repository path. The source can also reference a
-   filesystem path. Subversion repositories are defined with:
-
-     path/to/nested = [svn]https://example.com/nested/trunk/path
+   filesystem path.
 
    Note that ``.hgsub`` does not exist by default in Mercurial
    repositories, you have to create and add it to the parent
