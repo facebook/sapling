@@ -8,7 +8,7 @@
 from node import hex, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, tempfile
-import util, scmutil, templater, patch, error, templatekw, revlog
+import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
 import subrepo
 
@@ -1175,6 +1175,19 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix):
         rejected = wctx.add(names, prefix)
         bad.extend(f for f in rejected if f in match.files())
     return bad
+
+def duplicatecopies(repo, rev, p1, p2):
+    "Reproduce copies found in the source revision in the dirstate for grafts"
+    # Here we simulate the copies and renames in the source changeset
+    cop, diver = copies.copies(repo, repo[rev], repo[p1], repo[p2], True)
+    m1 = repo[rev].manifest()
+    m2 = repo[p1].manifest()
+    for k, v in cop.iteritems():
+        if k in m1:
+            if v in m1 or v in m2:
+                repo.dirstate.copy(v, k)
+                if v in m2 and v not in m1 and k in m2:
+                    repo.dirstate.remove(v)
 
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''

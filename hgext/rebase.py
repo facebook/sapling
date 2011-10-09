@@ -15,7 +15,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
-from mercurial import extensions, copies, patch
+from mercurial import extensions, patch
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
@@ -215,7 +215,7 @@ def rebase(ui, repo, **opts):
                                         'resolve, then hg rebase --continue)'))
                     finally:
                         ui.setconfig('ui', 'forcemerge', '')
-                updatedirstate(repo, rev, target, p2)
+                cmdutil.duplicatecopies(repo, rev, target, p2)
                 if not collapsef:
                     newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn)
                 else:
@@ -300,20 +300,6 @@ def checkexternal(repo, state, targetancestors):
                             'than one external parent'))
                 external = p.rev()
     return external
-
-def updatedirstate(repo, rev, p1, p2):
-    """Keep track of renamed files in the revision that is going to be rebased
-    """
-    # Here we simulate the copies and renames in the source changeset
-    cop, diver = copies.copies(repo, repo[rev], repo[p1], repo[p2], True)
-    m1 = repo[rev].manifest()
-    m2 = repo[p1].manifest()
-    for k, v in cop.iteritems():
-        if k in m1:
-            if v in m1 or v in m2:
-                repo.dirstate.copy(v, k)
-                if v in m2 and v not in m1 and k in m2:
-                    repo.dirstate.remove(v)
 
 def concludenode(repo, rev, p1, p2, commitmsg=None, extrafn=None):
     'Commit the changes and store useful information in extra'
