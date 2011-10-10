@@ -342,7 +342,8 @@ cmdclass = {'build_mo': hgbuildmo,
 
 packages = ['mercurial', 'mercurial.hgweb',
             'mercurial.httpclient', 'mercurial.httpclient.tests',
-            'hgext', 'hgext.convert', 'hgext.highlight', 'hgext.zeroconf']
+            'hgext', 'hgext.convert', 'hgext.highlight', 'hgext.zeroconf',
+            'hgext.largefiles']
 
 pymodules = []
 
