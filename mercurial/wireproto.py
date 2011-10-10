@@ -10,7 +10,6 @@ from i18n import _
 from node import bin, hex
 import changegroup as changegroupmod
 import repo, error, encoding, util, store
-import pushkey as pushkeymod
 
 # abstract batching support
 
@@ -461,7 +460,7 @@ def hello(repo, proto):
     return "capabilities: %s\n" % (capabilities(repo, proto))
 
 def listkeys(repo, proto, namespace):
-    d = pushkeymod.list(repo, encoding.tolocal(namespace)).items()
+    d = repo.listkeys(encoding.tolocal(namespace)).items()
     t = '\n'.join(['%s\t%s' % (encoding.fromlocal(k), encoding.fromlocal(v))
                    for k, v in d])
     return t
@@ -491,9 +490,8 @@ def pushkey(repo, proto, namespace, key, old, new):
     else:
         new = encoding.tolocal(new) # normal path
 
-    r = pushkeymod.push(repo,
-                        encoding.tolocal(namespace), encoding.tolocal(key),
-                        encoding.tolocal(old), new)
+    r = repo.pushkey(encoding.tolocal(namespace), encoding.tolocal(key),
+                     encoding.tolocal(old), new)
     return '%s\n' % int(r)
 
 def _allowstream(ui):
