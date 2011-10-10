@@ -380,6 +380,21 @@ dotencode
         con.request('GET', '/')
         self.assertEqual(2, len(sockets))
 
+    def test_server_closes_before_end_of_body(self):
+        con = http.HTTPConnection('1.2.3.4:80')
+        con._connect()
+        s = con.sock
+        s.data = ['HTTP/1.1 200 OK\r\n',
+                  'Server: BogusServer 1.0\r\n',
+                  'Connection: Keep-Alive\r\n',
+                  'Content-Length: 16',
+                  '\r\n\r\n',
+                  'You can '] # Note: this is shorter than content-length
+        s.close_on_empty = True
+        con.request('GET', '/')
+        r1 = con.getresponse()
+        self.assertRaises(http.HTTPRemoteClosedError, r1.read)
+
     def test_no_response_raises_response_not_ready(self):
         con = http.HTTPConnection('foo')
         self.assertRaises(http.httplib.ResponseNotReady, con.getresponse)

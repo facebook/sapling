@@ -134,4 +134,20 @@ class ChunkedTransferTest(util.HttpTestBase, unittest.TestCase):
         con.request('GET', '/')
         self.assertStringEqual('hi there\nthere\nthere\nthere\nthere\n',
                                con.getresponse().read())
+
+    def testChunkedDownloadEarlyHangup(self):
+        con = http.HTTPConnection('1.2.3.4:80')
+        con._connect()
+        sock = con.sock
+        broken = chunkedblock('hi'*20)[:-1]
+        sock.data = ['HTTP/1.1 200 OK\r\n',
+                     'Server: BogusServer 1.0\r\n',
+                     'transfer-encoding: chunked',
+                     '\r\n\r\n',
+                     broken,
+                     ]
+        sock.close_on_empty = True
+        con.request('GET', '/')
+        resp = con.getresponse()
+        self.assertRaises(http.HTTPRemoteClosedError, resp.read)
 # no-check-code

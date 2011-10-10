@@ -171,6 +171,14 @@ class HTTPResponse(object):
             logger.info('cl: %r body: %r', self._content_len, self._body)
         try:
             data = self.sock.recv(INCOMING_BUFFER_SIZE)
+            # If the socket was readable and no data was read, that
+            # means the socket was closed. If this isn't a
+            # _CLOSE_IS_END socket, then something is wrong if we're
+            # here (we shouldn't enter _select() if the response is
+            # complete), so abort.
+            if not data and self._content_len != _LEN_CLOSE_IS_END:
+                raise HTTPRemoteClosedError(
+                    'server appears to have closed the socket mid-response')
         except socket.sslerror, e:
             if e.args[0] != socket.SSL_ERROR_WANT_READ:
                 raise
@@ -693,6 +701,11 @@ class BadRequestData(httplib.HTTPException):
 class HTTPProxyConnectFailedException(httplib.HTTPException):
     """Connecting to the HTTP proxy failed."""
 
+
 class HTTPStateError(httplib.HTTPException):
     """Invalid internal state encountered."""
+
+
+class HTTPRemoteClosedError(httplib.HTTPException):
+    """The server closed the remote socket in the middle of a response."""
 # no-check-code
