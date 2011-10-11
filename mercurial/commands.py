@@ -3185,6 +3185,7 @@ def identify(ui, repo, source=None, rev=None,
      _('directory strip option for patch. This has the same '
        'meaning as the corresponding patch option'), _('NUM')),
     ('b', 'base', '', _('base path (DEPRECATED)'), _('PATH')),
+    ('e', 'edit', False, _('invoke editor on commit messages')),
     ('f', 'force', None, _('skip check for outstanding uncommitted changes')),
     ('', 'no-commit', None,
      _("don't commit, just update the working directory")),
@@ -3263,6 +3264,10 @@ def import_(ui, repo, patch1, *patches, **opts):
     date = opts.get('date')
     if date:
         opts['date'] = util.parsedate(date)
+
+    editor = cmdutil.commiteditor
+    if opts.get('edit'):
+        editor = cmdutil.commitforceeditor
 
     update = not opts.get('bypass')
     if not update and opts.get('no_commit'):
@@ -3350,7 +3355,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                         m = scmutil.matchfiles(repo, files or [])
                     n = repo.commit(message, opts.get('user') or user,
                                     opts.get('date') or date, match=m,
-                                    editor=cmdutil.commiteditor)
+                                    editor=editor)
                     checkexact(repo, n, nodeid)
             else:
                 if opts.get('exact') or opts.get('import_branch'):
