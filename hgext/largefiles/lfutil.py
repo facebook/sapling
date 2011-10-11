@@ -10,13 +10,11 @@
 
 import os
 import errno
-import inspect
 import shutil
 import stat
 import hashlib
 
-from mercurial import cmdutil, dirstate, httpconnection, match as match_, \
-        url as url_, util
+from mercurial import dirstate, httpconnection, match as match_, util
 from mercurial.i18n import _
 
 try:
@@ -30,74 +28,38 @@ longname = 'largefiles'
 
 # -- Portability wrappers ----------------------------------------------
 
-if 'subrepos' in inspect.getargspec(dirstate.dirstate.status)[0]:
-    # for Mercurial >= 1.5
-    def dirstate_walk(dirstate, matcher, unknown=False, ignored=False):
-        return dirstate.walk(matcher, [], unknown, ignored)
-else:
-    # for Mercurial <= 1.4
-    def dirstate_walk(dirstate, matcher, unknown=False, ignored=False):
-        return dirstate.walk(matcher, unknown, ignored)
+def dirstate_walk(dirstate, matcher, unknown=False, ignored=False):
+    return dirstate.walk(matcher, [], unknown, ignored)
 
 def repo_add(repo, list):
-    try:
-        # Mercurial <= 1.5
-        add = repo.add
-    except AttributeError:
-        # Mercurial >= 1.6
-        add = repo[None].add
+    add = repo[None].add
     return add(list)
 
 def repo_remove(repo, list, unlink=False):
-    try:
-        # Mercurial <= 1.5
-        remove = repo.remove
-    except AttributeError:
-        # Mercurial >= 1.6
+    def remove(list, unlink):
+        wlock = repo.wlock()
         try:
-            # Mercurial <= 1.8
-            remove = repo[None].remove
-        except AttributeError:
-            # Mercurial >= 1.9
-            def remove(list, unlink):
-                wlock = repo.wlock()
-                try:
-                    if unlink:
-                        for f in list:
-                            try:
-                                util.unlinkpath(repo.wjoin(f))
-                            except OSError, inst:
-                                if inst.errno != errno.ENOENT:
-                                    raise
-                    repo[None].forget(list)
-                finally:
-                    wlock.release()
-
+            if unlink:
+                for f in list:
+                    try:
+                        util.unlinkpath(repo.wjoin(f))
+                    except OSError, inst:
+                        if inst.errno != errno.ENOENT:
+                            raise
+            repo[None].forget(list)
+        finally:
+            wlock.release()
     return remove(list, unlink=unlink)
 
 def repo_forget(repo, list):
-    try:
-        # Mercurial <= 1.5
-        forget = repo.forget
-    except AttributeError:
-        # Mercurial >= 1.6
-        forget = repo[None].forget
+    forget = repo[None].forget
     return forget(list)
 
 def findoutgoing(repo, remote, force):
-    # First attempt is for Mercurial <= 1.5 second is for >= 1.6
-    try:
-        return repo.findoutgoing(remote)
-    except AttributeError:
-        from mercurial import discovery
-        try:
-            # Mercurial <= 1.8
-            return discovery.findoutgoing(repo, remote, force=force)
-        except AttributeError:
-            # Mercurial >= 1.9
-            common, _anyinc, _heads = discovery.findcommonincoming(repo,
-                remote, force=force)
-            return repo.changelog.findmissing(common)
+    from mercurial import discovery
+    common, _anyinc, _heads = discovery.findcommonincoming(repo,
+        remote, force=force)
+    return repo.changelog.findmissing(common)
 
 # -- Private worker functions ------------------------------------------
 
@@ -155,12 +117,7 @@ def openlfdirstate(ui, repo):
     repo root, but it is saved in .hg/largefiles/dirstate.
     '''
     admin = repo.join(longname)
-    try:
-        # Mercurial >= 1.9
-        opener = scmutil.opener(admin)
-    except ImportError:
-        # Mercurial <= 1.8
-        opener = util.opener(admin)
+    opener = scmutil.opener(admin)
     if util.safehasattr(repo.dirstate, '_validate'):
         lfdirstate = largefiles_dirstate(opener, ui, repo.root,
             repo.dirstate._validate)
@@ -286,12 +243,7 @@ def getmatcher(repo, pats=[], opts={}, showbad=True):
     '''Wrapper around scmutil.match() that adds showbad: if false, neuter
     the match object\'s bad() method so it does not print any warnings
     about missing files or directories.'''
-    try:
-        # Mercurial >= 1.9
-        match = scmutil.match(repo[None], pats, opts)
-    except ImportError:
-        # Mercurial <= 1.8
-        match = cmdutil.match(repo, pats, opts)
+    match = scmutil.match(repo[None], pats, opts)
 
     if not showbad:
         match.bad = lambda f, msg: None
@@ -462,16 +414,7 @@ def hexsha1(data):
     return h.hexdigest()
 
 def httpsendfile(ui, filename):
-    try:
-        # Mercurial >= 1.9
-        return httpconnection.httpsendfile(ui, filename, 'rb')
-    except ImportError:
-        if 'ui' in inspect.getargspec(url_.httpsendfile.__init__)[0]:
-            # Mercurial == 1.8
-            return url_.httpsendfile(ui, filename, 'rb')
-        else:
-            # Mercurial <= 1.7
-            return url_.httpsendfile(filename, 'rb')
+    return httpconnection.httpsendfile(ui, filename, 'rb')
 
 # Convert a path to a unix style path. This is used to give a
 # canonical path to the lfdirstate.

@@ -140,11 +140,7 @@ def sshproto_refuseclient(self, message):
 
 def heads(repo, proto):
     if lfutil.islfilesrepo(repo):
-        try:
-            # Mercurial >= f4522df38c65
-            return wireproto.ooberror(LARGEFILES_REQUIRED_MSG)
-        except AttributeError:
-            return proto.refuseclient(LARGEFILES_REQUIRED_MSG)
+        return wireproto.ooberror(LARGEFILES_REQUIRED_MSG)
     return wireproto.heads(repo, proto)
 
 def sshrepo_callstream(self, cmd, **args):

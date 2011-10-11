@@ -466,12 +466,7 @@ def _updatelfile(repo, lfdirstate, lfile):
     elif state == 'a':
         lfdirstate.add(lfile)
     elif state == '?':
-        try:
-            # Mercurial >= 1.9
-            lfdirstate.drop(lfile)
-        except AttributeError:
-            # Mercurial <= 1.8
-            lfdirstate.forget(lfile)
+        lfdirstate.drop(lfile)
     return ret
 
 # -- hg commands declarations ------------------------------------------------

@@ -267,12 +267,7 @@ def reposetup(ui, repo):
                     for lfile in lfdirstate:
                         if not os.path.exists(
                                 repo.wjoin(lfutil.standin(lfile))):
-                            try:
-                                # Mercurial >= 1.9
-                                lfdirstate.drop(lfile)
-                            except AttributeError:
-                                # Mercurial <= 1.8
-                                lfdirstate.forget(lfile)
+                            lfdirstate.drop(lfile)
                     lfdirstate.write()
 
                     return orig(text=text, user=user, date=date, match=match,
@@ -306,12 +301,7 @@ def reposetup(ui, repo):
                         lfutil.updatestandin(self, standin)
                         lfdirstate.normal(lfile)
                     else:
-                        try:
-                            # Mercurial >= 1.9
-                            lfdirstate.drop(lfile)
-                        except AttributeError:
-                            # Mercurial <= 1.8
-                            lfdirstate.forget(lfile)
+                        lfdirstate.drop(lfile)
                 lfdirstate.write()
 
                 # Cook up a new matcher that only matches regular files or
@@ -386,12 +376,8 @@ def reposetup(ui, repo):
                     toupload = toupload.union(set([ctx[f].data().strip() for f\
                         in files if lfutil.isstandin(f) and f in ctx]))
                 lfcommands.uploadlfiles(ui, self, remote, toupload)
-            # Mercurial >= 1.6 takes the newbranch argument, try that first.
-            try:
-                return super(lfiles_repo, self).push(remote, force, revs,
-                    newbranch)
-            except TypeError:
-                return super(lfiles_repo, self).push(remote, force, revs)
+            return super(lfiles_repo, self).push(remote, force, revs,
+                newbranch)
 
     repo.__class__ = lfiles_repo
 

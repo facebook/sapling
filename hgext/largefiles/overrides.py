@@ -43,19 +43,9 @@ def installnormalfilesmatchfn(manifest):
     oldmatch = installmatchfn(override_match)
 
 def installmatchfn(f):
-    try:
-        # Mercurial >= 1.9
-        oldmatch = scmutil.match
-    except ImportError:
-        # Mercurial <= 1.8
-        oldmatch = cmdutil.match
+    oldmatch = scmutil.match
     setattr(f, 'oldmatch', oldmatch)
-    try:
-        # Mercurial >= 1.9
-        scmutil.match = f
-    except ImportError:
-        # Mercurial <= 1.8
-        cmdutil.match = f
+    scmutil.match = f
     return oldmatch
 
 def restorematchfn():
@@ -64,12 +54,7 @@ def restorematchfn():
 
     Note that n calls to installnormalfilesmatchfn will require n calls to
     restore matchfn to reverse'''
-    try:
-        # Mercurial >= 1.9
-        scmutil.match = getattr(scmutil.match, 'oldmatch', scmutil.match)
-    except ImportError:
-        # Mercurial <= 1.8
-        cmdutil.match = getattr(cmdutil.match, 'oldmatch', cmdutil.match)
+    scmutil.match = getattr(scmutil.match, 'oldmatch', scmutil.match)
 
 # -- Wrappers: modify existing commands --------------------------------
 
@@ -98,12 +83,7 @@ def override_add(orig, ui, repo, *pats, **opts):
             lfmatcher = match_.match(repo.root, '', list(lfpats))
 
     lfnames = []
-    try:
-        # Mercurial >= 1.9
-        m = scmutil.match(repo[None], pats, opts)
-    except ImportError:
-        # Mercurial <= 1.8
-        m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo[None], pats, opts)
     m.bad = lambda x, y: None
     wctx = repo[None]
     for f in repo.walk(m):
@@ -165,12 +145,7 @@ def override_remove(orig, ui, repo, *pats, **opts):
     after, force = opts.get('after'), opts.get('force')
     if not pats and not after:
         raise util.Abort(_('no files specified'))
-    try:
-        # Mercurial >= 1.9
-        m = scmutil.match(repo[None], pats, opts)
-    except ImportError:
-        # Mercurial <= 1.8
-        m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo[None], pats, opts)
     try:
         repo.lfstatus = True
         s = repo.status(match=m, clean=True)
@@ -332,21 +307,11 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
         return orig(ui, repo, pats, opts, rename)
 
     def makestandin(relpath):
-        try:
-            # Mercurial >= 1.9
-            path = scmutil.canonpath(repo.root, repo.getcwd(), relpath)
-        except ImportError:
-            # Mercurial <= 1.8
-            path = util.canonpath(repo.root, repo.getcwd(), relpath)
+        path = scmutil.canonpath(repo.root, repo.getcwd(), relpath)
         return os.path.join(os.path.relpath('.', repo.getcwd()),
             lfutil.standin(path))
 
-    try:
-        # Mercurial >= 1.9
-        fullpats = scmutil.expandpats(pats)
-    except ImportError:
-        # Mercurial <= 1.8
-        fullpats = cmdutil.expandpats(pats)
+    fullpats = scmutil.expandpats(pats)
     dest = fullpats[-1]
 
     if os.path.isdir(dest):
@@ -520,13 +485,8 @@ def override_revert(orig, ui, repo, *pats, **opts):
                 m.matchfn = matchfn
                 return m
             oldmatch = installmatchfn(override_match)
-            try:
-                # Mercurial >= 1.9
-                scmutil.match
-                matches = override_match(repo[None], pats, opts)
-            except ImportError:
-                # Mercurial <= 1.8
-                matches = override_match(repo, pats, opts)
+            scmutil.match
+            matches = override_match(repo[None], pats, opts)
             orig(ui, repo, *pats, **opts)
         finally:
             restorematchfn()
@@ -547,12 +507,7 @@ def override_revert(orig, ui, repo, *pats, **opts):
             standin = lfutil.standin(lfile)
             if standin not in ctx and (standin in matches or opts.get('all')):
                 if lfile in lfdirstate:
-                    try:
-                        # Mercurial >= 1.9
-                        lfdirstate.drop(lfile)
-                    except AttributeError:
-                        # Mercurial <= 1.8
-                        lfdirstate.forget(lfile)
+                    lfdirstate.drop(lfile)
                 util.unlinkpath(repo.wjoin(standin))
         lfdirstate.write()
     finally:
@@ -586,12 +541,7 @@ def override_pull(orig, ui, repo, source=None, **opts):
                  ui.debug('--update and --rebase are not compatible, ignoring '
                           'the update flag\n')
             del opts['rebase']
-            try:
-                # Mercurial >= 1.9
-                cmdutil.bailifchanged(repo)
-            except AttributeError:
-                # Mercurial <= 1.8
-                cmdutil.bail_if_changed(repo)
+            cmdutil.bailifchanged(repo)
             revsprepull = len(repo)
             origpostincoming = commands.postincoming
             def _dummy(*args, **kwargs):
@@ -635,37 +585,22 @@ def override_archive(orig, repo, dest, node, kind, decode=True, matchfn=None,
 
     ctx = repo[node]
 
-    # In Mercurial <= 1.5 the prefix is passed to the archiver so try that
-    # if that doesn't work we are probably in Mercurial >= 1.6 where the
-    # prefix is not handled by the archiver
-    try:
-        archiver = archival.archivers[kind](dest, prefix, mtime or \
-                ctx.date()[0])
+    if kind == 'files':
+        if prefix:
+            raise util.Abort(
+                _('cannot give prefix when archiving to files'))
+    else:
+        prefix = archival.tidyprefix(dest, kind, prefix)
 
-        def write(name, mode, islink, getdata):
-            if matchfn and not matchfn(name):
-                return
-            data = getdata()
-            if decode:
-                data = repo.wwritedata(name, data)
-            archiver.addfile(name, mode, islink, data)
-    except TypeError:
-        if kind == 'files':
-            if prefix:
-                raise util.Abort(
-                    _('cannot give prefix when archiving to files'))
-        else:
-            prefix = archival.tidyprefix(dest, kind, prefix)
+    def write(name, mode, islink, getdata):
+        if matchfn and not matchfn(name):
+            return
+        data = getdata()
+        if decode:
+            data = repo.wwritedata(name, data)
+        archiver.addfile(prefix + name, mode, islink, data)
 
-        def write(name, mode, islink, getdata):
-            if matchfn and not matchfn(name):
-                return
-            data = getdata()
-            if decode:
-                data = repo.wwritedata(name, data)
-            archiver.addfile(prefix + name, mode, islink, data)
-
-        archiver = archival.archivers[kind](dest, mtime or ctx.date()[0])
+    archiver = archival.archivers[kind](dest, mtime or ctx.date()[0])
 
     if repo.ui.configbool("ui", "archivemeta", True):
         def metadata():
@@ -739,12 +674,7 @@ def override_forget(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())
     orig(ui, repo, *pats, **opts)
     restorematchfn()
-    try:
-        # Mercurial >= 1.9
-        m = scmutil.match(repo[None], pats, opts)
-    except ImportError:
-        # Mercurial <= 1.8
-        m = cmdutil.match(repo, pats, opts)
+    m = scmutil.match(repo[None], pats, opts)
 
     try:
         repo.lfstatus = True
@@ -787,11 +717,7 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
-    # Mercurial <= 1.5 had remoteui in cmdutil, then it moved to hg
-    try:
-        remoteui = cmdutil.remoteui
-    except AttributeError:
-        remoteui = hg.remoteui
+    remoteui = hg.remoteui
 
     try:
         remote = hg.repository(remoteui(repo, opts), dest)
