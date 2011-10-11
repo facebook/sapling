@@ -14,13 +14,8 @@ import shutil
 import stat
 import hashlib
 
-from mercurial import dirstate, httpconnection, match as match_, util
+from mercurial import dirstate, httpconnection, match as match_, util, scmutil
 from mercurial.i18n import _
-
-try:
-    from mercurial import scmutil
-except ImportError:
-    pass
 
 shortname = '.hglf'
 longname = 'largefiles'
