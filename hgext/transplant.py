@@ -81,6 +81,7 @@ class transplanter(object):
         self.opener = scmutil.opener(self.path)
         self.transplants = transplants(self.path, 'transplants',
                                        opener=self.opener)
+        self.editor = None
 
     def applied(self, repo, node, parent):
         '''returns True if a node is already an ancestor of parent
@@ -257,7 +258,8 @@ class transplanter(object):
         else:
             m = match.exact(repo.root, '', files)
 
-        n = repo.commit(message, user, date, extra=extra, match=m)
+        n = repo.commit(message, user, date, extra=extra, match=m,
+                        editor=self.editor)
         if not n:
             # Crash here to prevent an unclear crash later, in
             # transplants.write().  This can happen if patch.patch()
@@ -308,7 +310,8 @@ class transplanter(object):
                                  revlog.hex(parents[0]))
             if merge:
                 repo.dirstate.setparents(p1, parents[1])
-            n = repo.commit(message, user, date, extra=extra)
+            n = repo.commit(message, user, date, extra=extra,
+                            editor=self.editor)
             if not n:
                 raise util.Abort(_('commit failed'))
             if not merge:
@@ -465,6 +468,7 @@ def browserevs(ui, repo, nodes, opts):
     ('a', 'all', None, _('pull all changesets up to BRANCH')),
     ('p', 'prune', [], _('skip over REV'), _('REV')),
     ('m', 'merge', [], _('merge at REV'), _('REV')),
+    ('e', 'edit', False, _('invoke editor on commit messages')),
     ('', 'log', None, _('append transplant info to log message')),
     ('c', 'continue', None, _('continue last transplant session '
                               'after repair')),
@@ -553,6 +557,8 @@ def transplant(ui, repo, *revs, **opts):
         opts['filter'] = ui.config('transplant', 'filter')
 
     tp = transplanter(ui, repo)
+    if opts.get('edit'):
+        tp.editor = cmdutil.commitforceeditor
 
     p1, p2 = repo.dirstate.parents()
     if len(repo) > 0 and p1 == revlog.nullid:
