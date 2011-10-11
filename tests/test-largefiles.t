@@ -4,7 +4,7 @@
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
-files.
+files (testing that status correctly shows largefiles.
 
   $ hg init a
   $ cd a
@@ -20,6 +20,11 @@ files.
   $ echo normal22 > sub/normal2
   $ echo large11 > large1
   $ echo large22 > sub/large2
+  $ hg st
+  M large1
+  M normal1
+  M sub/large2
+  M sub/normal2
   $ hg commit -m "edit files"
 
 Verify that committing new versions of largefiles results in correct
