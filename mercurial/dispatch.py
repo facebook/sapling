@@ -366,7 +366,7 @@ def addaliases(ui, cmdtable):
             # definition might not exist or it might not be a cmdalias
             pass
 
-        cmdtable[aliasdef.cmd] = (aliasdef, aliasdef.opts, aliasdef.help)
+        cmdtable[aliasdef.name] = (aliasdef, aliasdef.opts, aliasdef.help)
         if aliasdef.norepo:
             commands.norepo += ' %s' % alias
 

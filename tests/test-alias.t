@@ -4,6 +4,8 @@
   > graphlog=
   > 
   > [alias]
+  > # should clobber ci but not commit (issue2993)
+  > ci = version
   > myinit = init
   > cleanstatus = status -c
   > unknown = bargle
@@ -113,7 +115,7 @@ no usage
   no rollback information available
 
   $ echo foo > foo
-  $ hg ci -Amfoo
+  $ hg commit -Amfoo
   adding foo
 
 
@@ -195,7 +197,7 @@ simple shell aliases
   $ hg echo2 foo
   
   $ echo bar > bar
-  $ hg ci -qA -m bar
+  $ hg commit -qA -m bar
   $ hg count .
   1
   $ hg count 'branch(default)'
