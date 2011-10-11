@@ -39,6 +39,7 @@ command = cmdutil.command(cmdtable)
     ('', 'collapse', False, _('collapse the rebased changesets')),
     ('m', 'message', '',
      _('use text as collapse commit message'), _('TEXT')),
+    ('e', 'edit', False, _('invoke editor on commit messages')),
     ('l', 'logfile', '',
      _('read collapse commit message from file'), _('FILE')),
     ('', 'keep', False, _('keep original changesets')),
@@ -104,6 +105,10 @@ def rebase(ui, repo, **opts):
     state = {}
     skipped = set()
     targetancestors = set()
+
+    editor = None
+    if opts.get('edit'):
+        editor = cmdutil.commitforceeditor
 
     lock = wlock = None
     try:
@@ -217,7 +222,8 @@ def rebase(ui, repo, **opts):
                         ui.setconfig('ui', 'forcemerge', '')
                 cmdutil.duplicatecopies(repo, rev, target, p2)
                 if not collapsef:
-                    newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn)
+                    newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn,
+                                          editor=editor)
                 else:
                     # Skip commit if we are collapsing
                     repo.dirstate.setparents(repo[p1].node())
@@ -247,7 +253,7 @@ def rebase(ui, repo, **opts):
                         commitmsg += '\n* %s' % repo[rebased].description()
                 commitmsg = ui.edit(commitmsg, repo.ui.username())
             newrev = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
-                                  extrafn=extrafn)
+                                  extrafn=extrafn, editor=editor)
 
         if 'qtip' in repo.tags():
             updatemq(repo, state, skipped, **opts)
@@ -301,7 +307,7 @@ def checkexternal(repo, state, targetancestors):
                 external = p.rev()
     return external
 
-def concludenode(repo, rev, p1, p2, commitmsg=None, extrafn=None):
+def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
     'Commit the changes and store useful information in extra'
     try:
         repo.dirstate.setparents(repo[p1].node(), repo[p2].node())
@@ -313,7 +319,7 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, extrafn=None):
             extrafn(ctx, extra)
         # Commit might fail if unresolved files exist
         newrev = repo.commit(text=commitmsg, user=ctx.user(),
-                             date=ctx.date(), extra=extra)
+                             date=ctx.date(), extra=extra, editor=editor)
         repo.dirstate.setbranch(repo[newrev].branch())
         return newrev
     except util.Abort:
