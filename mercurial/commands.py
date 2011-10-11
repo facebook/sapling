@@ -4332,7 +4332,8 @@ def resolve(ui, repo, *pats, **opts):
       performed for files already marked as resolved. Use ``--all/-a``
       to select all unresolved files. ``--tool`` can be used to specify
       the merge tool used for the given files. It overrides the HGMERGE
-      environment variable and your configuration files.
+      environment variable and your configuration files.  Previous file
+      contents are saved with a ``.orig`` suffix.
 
     - :hg:`resolve -m [FILE]`: mark a file as having been resolved
       (e.g. after having manually fixed-up the files). The default is
