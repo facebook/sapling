@@ -639,7 +639,7 @@ class SVNMeta(object):
                              self.authors[rev.author],
                              date,
                              parentctx.extra())
-        new_hash = self.repo.commitctx(ctx)
+        new_hash = self.repo.svn_commitctx(ctx)
         if not newparent:
             assert self.revmap[revnum, branch] == parentctx.node()
             self.revmap[revnum, branch] = new_hash
@@ -704,7 +704,7 @@ class SVNMeta(object):
                                  self.authors[rev.author],
                                  date,
                                  extra)
-            new = self.repo.commitctx(ctx)
+            new = self.repo.svn_commitctx(ctx)
 
             if not fromtag and (rev.revnum, b) not in self.revmap:
                 self.revmap[rev.revnum, b] = new
@@ -726,5 +726,5 @@ class SVNMeta(object):
                              self.authors[rev.author],
                              self.fixdate(rev.date),
                              extra)
-        new = self.repo.commitctx(ctx)
+        new = self.repo.svn_commitctx(ctx)
         self.ui.status('Marked branch %s as closed.\n' % (branch or 'default'))

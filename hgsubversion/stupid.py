@@ -713,7 +713,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                                      meta.authors[r.author],
                                      date,
                                      extra)
-        ha = meta.repo.commitctx(current_ctx)
+        ha = meta.repo.svn_commitctx(current_ctx)
 
         if not tag:
             if (not origbranch in meta.branches

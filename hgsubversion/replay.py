@@ -174,7 +174,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                                      date,
                                      extra)
 
-        new_hash = meta.repo.commitctx(current_ctx)
+        new_hash = meta.repo.svn_commitctx(current_ctx)
         util.describe_commit(ui, new_hash, branch)
         if (rev.revnum, branch) not in meta.revmap and not tag:
             meta.revmap[rev.revnum, branch] = new_hash
@@ -209,7 +209,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                                      meta.authors[rev.author],
                                      date,
                                      extra)
-        new_hash = meta.repo.commitctx(current_ctx)
+        new_hash = meta.repo.svn_commitctx(current_ctx)
         util.describe_commit(ui, new_hash, branch)
         if (rev.revnum, branch) not in meta.revmap:
             meta.revmap[rev.revnum, branch] = new_hash

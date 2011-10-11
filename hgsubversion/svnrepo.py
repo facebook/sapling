@@ -14,6 +14,8 @@ subclass: pull() is called on the instance pull *to*, but not the one pulled
   are used to distinguish and filter these operations from others.
 """
 
+import errno
+
 from mercurial import error
 from mercurial import util as hgutil
 from mercurial import httprepo
@@ -25,6 +27,25 @@ import svnwrap
 import svnmeta
 
 propertycache = hgutil.propertycache
+
+class ctxctx(object):
+    """Proxies a ctx object and ensures files is never empty."""
+    def __init__(self, ctx):
+        self._ctx = ctx
+
+    def files(self):
+        return self._ctx.files() or ['.svn']
+
+    def filectx(self, path, filelog=None):
+        if path == '.svn':
+            raise IOError(errno.ENOENT, '.svn is a fake file')
+        return self._ctx.filectx(path, filelog=filelog)
+
+    def __getattr__(self, name):
+        return getattr(self._ctx, name)
+
+    def __getitem__(self, key):
+        return self._ctx[key]
 
 def generate_repo_class(ui, repo):
     """ This function generates the local repository wrapper. """
@@ -53,6 +74,10 @@ def generate_repo_class(ui, repo):
         return wrapper
 
     class svnlocalrepo(superclass):
+        def svn_commitctx(self, ctx):
+            """Commits a ctx, but defeats manifest recycling introduced in hg 1.9."""
+            return self.commitctx(ctxctx(ctx))
+
         # TODO use newbranch to allow branch creation in Subversion?
         @remotesvn
         def push(self, remote, force=False, revs=None, newbranch=None):
