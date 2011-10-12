@@ -2447,6 +2447,75 @@ def forget(ui, repo, *pats, **opts):
     repo[None].forget(forget)
     return errs
 
+@command('graft',
+    [],
+    _('[OPTION]... REVISION...'))
+def graft(ui, repo, rev, *revs, **opts):
+    '''copy changes from other branches onto the current branch
+
+    This command uses Mercurial's merge logic to copy individual
+    changes from other branches without merging branches in the
+    history graph. This is sometimes known as 'backporting' or
+    'cherry-picking'.
+
+    Changesets that are ancestors of the current revision, that have
+    already been grafted, or that are merges will be skipped.
+
+    Returns 0 on successful completion.
+    '''
+
+    cmdutil.bailifchanged(repo)
+
+    revs = [rev] + list(revs)
+    revs = scmutil.revrange(repo, revs)
+
+    # check for merges
+    for ctx in repo.set('%ld and merge()', revs):
+        ui.warn(_('skipping ungraftable merge revision %s\n') % ctx.rev())
+        revs.remove(ctx.rev())
+    if not revs:
+        return -1
+
+    # check for ancestors of dest branch
+    for ctx in repo.set('::. and %ld', revs):
+        ui.warn(_('skipping ancestor revision %s\n') % ctx.rev())
+        revs.remove(ctx.rev())
+    if not revs:
+        return -1
+
+    # check ancestors for earlier grafts
+    ui.debug('scanning for existing transplants')
+    for ctx in repo.set("::. - ::%ld", revs):
+        n = ctx.extra().get('source')
+        if n and n in repo:
+            r = repo[n].rev()
+            ui.warn(_('skipping already grafted revision %s\n') % r)
+            revs.remove(r)
+    if not revs:
+        return -1
+
+    for ctx in repo.set("%ld", revs):
+        current = repo['.']
+        ui.debug('grafting revision %s', ctx.rev())
+        # perform the graft merge with p1(rev) as 'ancestor'
+        stats = mergemod.update(repo, ctx.node(), True, True, False,
+                             ctx.p1().node())
+        # drop the second merge parent
+        repo.dirstate.setparents(current.node(), nullid)
+        repo.dirstate.write()
+        # fix up dirstate for copies and renames
+        cmdutil.duplicatecopies(repo, ctx.rev(), current.node(), nullid)
+        # report any conflicts
+        if stats and stats[3] > 0:
+            raise util.Abort(_("unresolved conflicts, can't continue"),
+                             hint=_('use hg resolve and hg graft --continue'))
+        # commit
+        extra = {'source': ctx.hex()}
+        repo.commit(text=ctx.description(), user=ctx.user(),
+                    date=ctx.date(), extra=extra)
+
+    return 0
+
 @command('grep',
     [('0', 'print0', None, _('end fields with NUL')),
     ('', 'all', None, _('print all revisions that match')),

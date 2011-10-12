@@ -66,6 +66,7 @@ Short help:
    diff         diff repository (or selected files)
    export       dump the header and diffs for one or more changesets
    forget       forget the specified files on the next commit
+   graft        copy changes from other branches onto the current branch
    grep         search for a pattern in specified files and revisions
    heads        show current repository heads or show branch heads
    help         show help for a given topic or a help overview
@@ -141,6 +142,7 @@ Short help:
    diff         diff repository (or selected files)
    export       dump the header and diffs for one or more changesets
    forget       forget the specified files on the next commit
+   graft        copy changes from other branches onto the current branch
    grep         search for a pattern in specified files and revisions
    heads        show current repository heads or show branch heads
    help         show help for a given topic or a help overview
@@ -626,6 +628,7 @@ Test that default list of commands omits extension commands
    diff         diff repository (or selected files)
    export       dump the header and diffs for one or more changesets
    forget       forget the specified files on the next commit
+   graft        copy changes from other branches onto the current branch
    grep         search for a pattern in specified files and revisions
    heads        show current repository heads or show branch heads
    help         show help for a given topic or a help overview
