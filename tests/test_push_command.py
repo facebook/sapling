@@ -490,12 +490,12 @@ class PushTests(test_util.TestBase):
 
 def suite():
     test_classes = [PushTests, ]
-    tests = []
+    all_tests = []
     # This is the quickest hack I could come up with to load all the tests from
     # both classes. Would love a patch that simplifies this without adding
     # dependencies.
     for tc in test_classes:
         for attr in dir(tc):
             if attr.startswith('test_'):
-                tests.append(tc(attr))
-    return unittest.TestSuite(tests)
+                all_tests.append(tc(attr))
+    return unittest.TestSuite(all_tests)
