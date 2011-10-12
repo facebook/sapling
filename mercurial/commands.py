@@ -2447,8 +2447,14 @@ def forget(ui, repo, *pats, **opts):
     repo[None].forget(forget)
     return errs
 
-@command('graft',
-    [('e', 'edit', False, _('invoke editor on commit messages'))],
+@command(
+    'graft',
+    [('e', 'edit', False, _('invoke editor on commit messages')),
+    ('D', 'currentdate', False,
+     _('record the current date as commit date')),
+    ('U', 'currentuser', False,
+     _('record the current user as committer'), _('DATE'))]
+    + commitopts2 + mergetoolopts,
     _('[OPTION]... REVISION...'))
 def graft(ui, repo, rev, *revs, **opts):
     '''copy changes from other branches onto the current branch
@@ -2465,6 +2471,11 @@ def graft(ui, repo, rev, *revs, **opts):
     '''
 
     cmdutil.bailifchanged(repo)
+
+    if not opts.get('user') and opts.get('currentuser'):
+        opts['user'] = ui.username()
+    if not opts.get('date') and opts.get('currentdate'):
+        opts['date'] = "%d %d" % util.makedate()
 
     editor = None
     if opts.get('edit'):
@@ -2502,8 +2513,13 @@ def graft(ui, repo, rev, *revs, **opts):
         current = repo['.']
         ui.debug('grafting revision %s', ctx.rev())
         # perform the graft merge with p1(rev) as 'ancestor'
-        stats = mergemod.update(repo, ctx.node(), True, True, False,
-                             ctx.p1().node())
+        try:
+            # ui.forcemerge is an internal variable, do not document
+            repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+            stats = mergemod.update(repo, ctx.node(), True, True, False,
+                                    ctx.p1().node())
+        finally:
+            ui.setconfig('ui', 'forcemerge', '')
         # drop the second merge parent
         repo.dirstate.setparents(current.node(), nullid)
         repo.dirstate.write()
@@ -2515,8 +2531,14 @@ def graft(ui, repo, rev, *revs, **opts):
                              hint=_('use hg resolve and hg graft --continue'))
         # commit
         extra = {'source': ctx.hex()}
-        repo.commit(text=ctx.description(), user=ctx.user(),
-                    date=ctx.date(), extra=extra, editor=editor)
+        user = ctx.user()
+        if opts.get('user'):
+            user = opts['user']
+        date = ctx.date()
+        if opts.get('date'):
+            date = opts['date']
+        repo.commit(text=ctx.description(), user=user,
+                    date=date, extra=extra, editor=editor)
 
     return 0
 
