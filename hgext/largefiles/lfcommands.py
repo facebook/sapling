@@ -33,17 +33,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
         tolfile = False
     else:
         tolfile = True
-        size = opts['size']
-        if not size:
-            size = ui.config(lfutil.longname, 'size', default=None)
-            try:
-                size = int(size)
-            except ValueError:
-                raise util.Abort(_('largefiles.size must be integer, was %s\n')
-                                 % size)
-            except TypeError:
-                raise util.Abort(_('size must be specified'))
-
+        size = lfutil.getminsize(ui, True, opts.get('size'), default=None)
     try:
         rsrc = hg.repository(ui, src)
         if not rsrc.local():

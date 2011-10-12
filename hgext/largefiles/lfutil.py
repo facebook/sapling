@@ -58,6 +58,20 @@ def findoutgoing(repo, remote, force):
 
 # -- Private worker functions ------------------------------------------
 
+def getminsize(ui, assumelfiles, opt, default=10):
+    lfsize = opt
+    if not lfsize and assumelfiles:
+        lfsize = ui.config(longname, 'size', default=default)
+    if lfsize:
+        try:
+            lfsize = int(lfsize)
+        except ValueError:
+            raise util.Abort(_('largefiles: size must be an integer, was %s\n')
+                             % lfsize)
+    if lfsize is None:
+        raise util.Abort(_('minimum size for largefiles must be specified'))
+    return lfsize
+
 def link(src, dest):
     try:
         util.oslink(src, dest)

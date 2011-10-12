@@ -16,6 +16,7 @@ from mercurial import hg, commands, util, cmdutil, match as match_, node, \
 from mercurial.i18n import _
 from mercurial.node import hex
 from hgext import rebase
+import lfutil
 
 try:
     from mercurial import scmutil
@@ -64,16 +65,8 @@ def restorematchfn():
 # version of add.
 def override_add(orig, ui, repo, *pats, **opts):
     large = opts.pop('large', None)
-
-    lfsize = opts.pop('lfsize', None)
-    if not lfsize and lfutil.islfilesrepo(repo):
-        lfsize = ui.config(lfutil.longname, 'size', default='10')
-    if lfsize:
-        try:
-            lfsize = int(lfsize)
-        except ValueError:
-            raise util.Abort(_('largefiles: size must be an integer, was %s\n')
-                             % lfsize)
+    lfsize = lfutil.getminsize(
+        ui, lfutil.islfilesrepo(repo), opts.pop('lfsize', None))
 
     lfmatcher = None
     if os.path.exists(repo.wjoin(lfutil.shortname)):
