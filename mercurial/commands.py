@@ -1852,6 +1852,7 @@ def debuginstall(ui):
               % os.path.dirname(__file__))
     try:
         import bdiff, mpatch, base85, osutil
+        dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes
     except Exception, inst:
         ui.write(" %s\n" % inst)
         ui.write(_(" One or more extensions could not be found"))
