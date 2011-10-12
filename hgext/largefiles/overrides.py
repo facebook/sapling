@@ -70,9 +70,8 @@ def override_add(orig, ui, repo, *pats, **opts):
 
     lfmatcher = None
     if os.path.exists(repo.wjoin(lfutil.shortname)):
-        lfpats = ui.config(lfutil.longname, 'patterns', default=())
+        lfpats = ui.configlist(lfutil.longname, 'patterns', default=[])
         if lfpats:
-            lfpats = lfpats.split(' ')
             lfmatcher = match_.match(repo.root, '', list(lfpats))
 
     lfnames = []
