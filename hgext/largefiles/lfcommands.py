@@ -464,7 +464,7 @@ def _updatelfile(repo, lfdirstate, lfile):
 
 cmdtable = {
     'lfconvert': (lfconvert,
-                  [('s', 'size', 0, 'All files over this size (in megabytes) '
+                  [('s', 'size', '', 'All files over this size (in megabytes) '
                   'will be considered largefiles. This can also be specified '
                   'in your hgrc as [largefiles].size.'),
                   ('','tonormal',False,

@@ -64,9 +64,9 @@ def getminsize(ui, assumelfiles, opt, default=10):
         lfsize = ui.config(longname, 'size', default=default)
     if lfsize:
         try:
-            lfsize = int(lfsize)
+            lfsize = float(lfsize)
         except ValueError:
-            raise util.Abort(_('largefiles: size must be an integer, was %s\n')
+            raise util.Abort(_('largefiles: size must be number (not %s)\n')
                              % lfsize)
     if lfsize is None:
         raise util.Abort(_('minimum size for largefiles must be specified'))
