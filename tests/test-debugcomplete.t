@@ -243,7 +243,7 @@ Show all commands + options
   debugsub: rev
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
-  graft: edit, currentdate, currentuser, date, user, tool
+  graft: continue, edit, currentdate, currentuser, date, user, tool
   grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
   heads: rev, topo, active, closed, style, template
   help: extension, command

@@ -2449,14 +2449,15 @@ def forget(ui, repo, *pats, **opts):
 
 @command(
     'graft',
-    [('e', 'edit', False, _('invoke editor on commit messages')),
-    ('D', 'currentdate', False,
-     _('record the current date as commit date')),
-    ('U', 'currentuser', False,
-     _('record the current user as committer'), _('DATE'))]
+    [('c', 'continue', False, _('resume interrupted graft')),
+     ('e', 'edit', False, _('invoke editor on commit messages')),
+     ('D', 'currentdate', False,
+      _('record the current date as commit date')),
+     ('U', 'currentuser', False,
+      _('record the current user as committer'), _('DATE'))]
     + commitopts2 + mergetoolopts,
     _('[OPTION]... REVISION...'))
-def graft(ui, repo, rev, *revs, **opts):
+def graft(ui, repo, *revs, **opts):
     '''copy changes from other branches onto the current branch
 
     This command uses Mercurial's merge logic to copy individual
@@ -2467,10 +2468,16 @@ def graft(ui, repo, rev, *revs, **opts):
     Changesets that are ancestors of the current revision, that have
     already been grafted, or that are merges will be skipped.
 
+    If a graft merge results in conflicts, the graft process is
+    aborted so that the current merge can be manually resolved. Once
+    all conflicts are addressed, the graft process can be continued
+    with the -c/--continue option.
+
+    .. note::
+      The -c/--continue option does not reapply earlier options.
+
     Returns 0 on successful completion.
     '''
-
-    cmdutil.bailifchanged(repo)
 
     if not opts.get('user') and opts.get('currentuser'):
         opts['user'] = ui.username()
@@ -2481,8 +2488,24 @@ def graft(ui, repo, rev, *revs, **opts):
     if opts.get('edit'):
         editor = cmdutil.commitforceeditor
 
-    revs = [rev] + list(revs)
-    revs = scmutil.revrange(repo, revs)
+    cont = False
+    if opts['continue']:
+        cont = True
+        if revs:
+            raise util.Abort(_("can't specify --continue and revisions"))
+        # read in unfinished revisions
+        try:
+            nodes = repo.opener.read('graftstate').splitlines()
+            revs = [repo[node].rev() for node in nodes]
+        except IOError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
+            raise util.Abort(_("no graft state found, can't continue"))
+    else:
+        cmdutil.bailifchanged(repo)
+        if not revs:
+            raise util.Abort(_('no revisions specified'))
+        revs = scmutil.revrange(repo, revs)
 
     # check for merges
     for ctx in repo.set('%ld and merge()', revs):
@@ -2509,26 +2532,36 @@ def graft(ui, repo, rev, *revs, **opts):
     if not revs:
         return -1
 
-    for ctx in repo.set("%ld", revs):
+    for pos, ctx in enumerate(repo.set("%ld", revs)):
         current = repo['.']
         ui.debug('grafting revision %s', ctx.rev())
-        # perform the graft merge with p1(rev) as 'ancestor'
-        try:
-            # ui.forcemerge is an internal variable, do not document
-            repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-            stats = mergemod.update(repo, ctx.node(), True, True, False,
-                                    ctx.p1().node())
-        finally:
-            ui.setconfig('ui', 'forcemerge', '')
-        # drop the second merge parent
-        repo.dirstate.setparents(current.node(), nullid)
-        repo.dirstate.write()
-        # fix up dirstate for copies and renames
-        cmdutil.duplicatecopies(repo, ctx.rev(), current.node(), nullid)
-        # report any conflicts
-        if stats and stats[3] > 0:
-            raise util.Abort(_("unresolved conflicts, can't continue"),
-                             hint=_('use hg resolve and hg graft --continue'))
+
+        # we don't merge the first commit when continuing
+        if not cont:
+            # perform the graft merge with p1(rev) as 'ancestor'
+            try:
+                # ui.forcemerge is an internal variable, do not document
+                repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                stats = mergemod.update(repo, ctx.node(), True, True, False,
+                                        ctx.p1().node())
+            finally:
+                ui.setconfig('ui', 'forcemerge', '')
+            # drop the second merge parent
+            repo.dirstate.setparents(current.node(), nullid)
+            repo.dirstate.write()
+            # fix up dirstate for copies and renames
+            cmdutil.duplicatecopies(repo, ctx.rev(), current.node(), nullid)
+            # report any conflicts
+            if stats and stats[3] > 0:
+                # write out state for --continue
+                nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
+                repo.opener.write('graftstate', ''.join(nodelines))
+                raise util.Abort(
+                    _("unresolved conflicts, can't continue"),
+                    hint=_('use hg resolve and hg graft --continue'))
+        else:
+            cont = False
+
         # commit
         extra = {'source': ctx.hex()}
         user = ctx.user()
@@ -2539,6 +2572,10 @@ def graft(ui, repo, rev, *revs, **opts):
             date = opts['date']
         repo.commit(text=ctx.description(), user=user,
                     date=date, extra=extra, editor=editor)
+
+    # remove state when we complete successfully
+    if os.path.exists(repo.join('graftstate')):
+        util.unlinkpath(repo.join('graftstate'))
 
     return 0
 
