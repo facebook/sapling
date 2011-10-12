@@ -20,14 +20,23 @@ import basestore
 # -- Commands ----------------------------------------------------------
 
 def lfconvert(ui, src, dest, *pats, **opts):
-    '''Convert a normal repository to a largefiles repository
+    '''convert a normal repository to a largefiles repository
 
-    Convert source repository creating an identical repository, except that all
-    files that match the patterns given, or are over the given size will be
-    added as largefiles. The size used to determine whether or not to track a
-    file as a largefile is the size of the first version of the file. After
-    running this command you will need to make sure that largefiles is enabled
-    anywhere you intend to push the new repository.'''
+    Convert repository SOURCE to a new repository DEST, identical to
+    SOURCE except that certain files will be converted as largefiles:
+    specifically, any file that matches any PATTERN *or* whose size is
+    above the minimum size threshold is converted as a largefile. The
+    size used to determine whether or not to track a file as a
+    largefile is the size of the first version of the file. The
+    minimum size can be specified either with --size or in
+    configuration as ``largefiles.size``.
+
+    After running this command you will need to make sure that
+    largefiles is enabled anywhere you intend to push the new
+    repository.
+
+    Use --tonormal to convert largefiles back to normal files; after
+    this, the DEST repository can be used without largefiles at all.'''
 
     if opts['tonormal']:
         tolfile = False
@@ -464,10 +473,12 @@ def _updatelfile(repo, lfdirstate, lfile):
 
 cmdtable = {
     'lfconvert': (lfconvert,
-                  [('s', 'size', '', 'All files over this size (in megabytes) '
-                  'will be considered largefiles. This can also be specified '
-                  'in your hgrc as [largefiles].size.'),
-                  ('','tonormal',False,
-                      'Convert from a largefiles repo to a normal repo')],
+                  [('s', 'size', '',
+                    _('minimum size (MB) for files to be converted '
+                      'as largefiles'),
+                    'SIZE'),
+                  ('', 'tonormal', False,
+                   _('convert from a largefiles repo to a normal repo')),
+                  ],
                   _('hg lfconvert SOURCE DEST [FILE ...]')),
     }
