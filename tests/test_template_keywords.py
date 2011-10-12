@@ -15,7 +15,7 @@ try:
     from mercurial import revset
     revset.methods
 except ImportError:
-   revset = None
+    revset = None
 
 class CapturingUI(ui.ui):
 
