@@ -33,6 +33,6 @@ class TestFetchExec(test_util.TestBase):
         self.test_empty_prop_val_executable(True)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExec),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExec),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

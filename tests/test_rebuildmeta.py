@@ -117,6 +117,6 @@ RebuildMetaTests = type('RebuildMetaTests', (test_util.TestBase,), attrs)
 
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(RebuildMetaTests),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(RebuildMetaTests),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

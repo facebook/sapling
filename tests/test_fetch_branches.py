@@ -163,6 +163,6 @@ class TestFetchBranches(test_util.TestBase):
         self.test_replace_branch_with_branch(True)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

@@ -56,6 +56,6 @@ StupidPullTests = type('StupidPullTests', (test_util.TestBase,), attrs)
 
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(StupidPullTests),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(StupidPullTests),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

@@ -96,8 +96,8 @@ class MapTests(test_util.TestBase):
         test = maps.AuthorMap(self.ui(), self.authors)
         fromself = set(test)
         test.load(orig)
-        all = set(test)
-        self.assertEqual(fromself.symmetric_difference(all), set())
+        all_tests = set(test)
+        self.assertEqual(fromself.symmetric_difference(all_tests), set())
 
     def test_file_map(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'replace_trunk_with_branch.svndump')

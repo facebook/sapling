@@ -75,6 +75,6 @@ class TestFetchRenames(test_util.TestBase):
         self._test_case(True)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchRenames),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchRenames),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

@@ -38,6 +38,6 @@ class DiffTests(test_util.TestBase):
 
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(DiffTests),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(DiffTests),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

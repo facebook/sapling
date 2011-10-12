@@ -88,5 +88,5 @@ class TestMercurialCore(test_util.TestBase):
         self.assertEqual(repo[branch].hex(), repo2['.'].hex())
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestMercurialCore)]
-    return unittest.TestSuite(all)
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestMercurialCore)]
+    return unittest.TestSuite(all_tests)

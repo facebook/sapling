@@ -224,7 +224,7 @@ class TestStupidPull(test_util.TestBase):
                          '1a6c3f30911d57abb67c257ec0df3e7bc44786f7')
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
            unittest.TestLoader().loadTestsFromTestCase(TestStupidPull),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

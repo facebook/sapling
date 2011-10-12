@@ -37,6 +37,6 @@ class TestPushEol(test_util.TestBase):
         self._test_push_dirs(True)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestPushEol),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestPushEol),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

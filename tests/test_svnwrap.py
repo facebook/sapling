@@ -71,6 +71,6 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
         ))
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
            unittest.TestLoader().loadTestsFromTestCase(TestRootAsSubdirOfRepo)]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

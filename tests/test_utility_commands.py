@@ -251,6 +251,6 @@ class UtilityTests(test_util.TestBase):
 
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(UtilityTests),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(UtilityTests),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

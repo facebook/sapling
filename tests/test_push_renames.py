@@ -119,6 +119,6 @@ class TestPushRenames(test_util.TestBase):
 
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestPushRenames),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestPushRenames),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

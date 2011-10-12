@@ -31,6 +31,6 @@ class TestFetchTruncatedHistory(test_util.TestBase):
         self.test_truncated_history(True)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchTruncatedHistory),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchTruncatedHistory),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

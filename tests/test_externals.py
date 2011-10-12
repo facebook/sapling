@@ -408,7 +408,7 @@ HEAD subdir1/deps/project1
         self.assertchanges(changes, self.repo['tip'])
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExternals),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExternals),
            unittest.TestLoader().loadTestsFromTestCase(TestPushExternals),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

@@ -65,6 +65,6 @@ StartRevTests = type('StartRevTests', (test_util.TestBase,), attrs)
 
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(StartRevTests),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(StartRevTests),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

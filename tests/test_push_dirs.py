@@ -105,6 +105,6 @@ class TestPushDirectories(test_util.TestBase):
                           'tag_r3/new'])
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestPushDirectories),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestPushDirectories),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

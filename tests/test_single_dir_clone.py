@@ -266,5 +266,5 @@ class TestSingleDir(test_util.TestBase):
         self.test_push_single_dir_renamed_branch(True)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestSingleDir)]
-    return unittest.TestSuite(all)
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestSingleDir)]
+    return unittest.TestSuite(all_tests)
