@@ -2448,7 +2448,7 @@ def forget(ui, repo, *pats, **opts):
     return errs
 
 @command('graft',
-    [],
+    [('e', 'edit', False, _('invoke editor on commit messages'))],
     _('[OPTION]... REVISION...'))
 def graft(ui, repo, rev, *revs, **opts):
     '''copy changes from other branches onto the current branch
@@ -2465,6 +2465,10 @@ def graft(ui, repo, rev, *revs, **opts):
     '''
 
     cmdutil.bailifchanged(repo)
+
+    editor = None
+    if opts.get('edit'):
+        editor = cmdutil.commitforceeditor
 
     revs = [rev] + list(revs)
     revs = scmutil.revrange(repo, revs)
@@ -2512,7 +2516,7 @@ def graft(ui, repo, rev, *revs, **opts):
         # commit
         extra = {'source': ctx.hex()}
         repo.commit(text=ctx.description(), user=ctx.user(),
-                    date=ctx.date(), extra=extra)
+                    date=ctx.date(), extra=extra, editor=editor)
 
     return 0
 
