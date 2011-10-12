@@ -2463,7 +2463,8 @@ def graft(ui, repo, *revs, **opts):
     This command uses Mercurial's merge logic to copy individual
     changes from other branches without merging branches in the
     history graph. This is sometimes known as 'backporting' or
-    'cherry-picking'.
+    'cherry-picking'. By default, graft will copy user, date, and
+    description from the source changesets.
 
     Changesets that are ancestors of the current revision, that have
     already been grafted, or that are merges will be skipped.
@@ -2475,6 +2476,27 @@ def graft(ui, repo, *revs, **opts):
 
     .. note::
       The -c/--continue option does not reapply earlier options.
+
+    .. container:: verbose
+
+      Examples:
+
+      - copy a single change to the stable branch and edit its description::
+
+          hg update stable
+          hg graft --edit 9393
+
+      - graft a range of changesets with one exception, updating dates::
+
+          hg graft -D "2085::2093 and not 2091"
+
+      - continue a graft after resolving conflicts::
+
+          hg graft -c
+
+      - show the source of a grafted changeset::
+
+          hg log --debug -r tip
 
     Returns 0 on successful completion.
     '''
