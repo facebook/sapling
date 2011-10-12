@@ -521,6 +521,26 @@ def escapef(m):
 def stringescape(s):
     return escapesub(escapef, s)
 
+def transformtst(lines):
+    inblock = False
+    for l in lines:
+        if inblock:
+            if l.startswith('  $ '):
+                inblock = False
+                yield '  > EOF\n'
+                yield l
+            else:
+                yield '  > ' + l[2:]
+        else:
+            if l.startswith('  >>> '):
+                inblock = True
+                yield '  $ %s -m heredoctest <<EOF\n' % PYTHON
+                yield '  > ' + l[2:]
+            else:
+                yield l
+    if inblock:
+        yield '  > EOF\n'
+
 def tsttest(test, wd, options, replacements):
     t = open(test)
     out = []
@@ -530,7 +550,7 @@ def tsttest(test, wd, options, replacements):
     pos = prepos = -1
     after = {}
     expected = {}
-    for n, l in enumerate(t):
+    for n, l in enumerate(transformtst(t)):
         if not l.endswith('\n'):
             l += '\n'
         if l.startswith('  $ '): # commands
@@ -833,7 +853,7 @@ def runone(options, test):
         refout = None                   # to match "out is None"
     elif os.path.exists(ref):
         f = open(ref, "r")
-        refout = splitnewlines(f.read())
+        refout = list(transformtst(splitnewlines(f.read())))
         f.close()
     else:
         refout = []
