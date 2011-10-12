@@ -75,6 +75,10 @@ def bailifchanged(repo):
     modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:
         raise util.Abort(_("outstanding uncommitted changes"))
+    ctx = repo[None]
+    for s in ctx.substate:
+        if ctx.sub(s).dirty():
+            raise util.Abort(_("uncommitted changes in subrepo %s") % s)
 
 def logmessage(ui, opts):
     """ get the log message according to -m and -l option """

@@ -52,6 +52,14 @@ Issue2022: update -C
   commit: (clean)
   update: (current)
 
+commands that require a clean repo should respect subrepos
+
+  $ echo b >> s/a
+  $ hg backout tip
+  abort: uncommitted changes in subrepo s
+  [255]
+  $ hg revert -C -R s s/a
+
 add sub sub
 
   $ echo ss = ss > s/.hgsub
