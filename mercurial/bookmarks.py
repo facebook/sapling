@@ -146,7 +146,7 @@ def update(repo, parents, node):
             marks[mark] = new.node()
             update = True
     if update:
-        write(repo)
+        repo._writebookmarks(marks)
 
 def listbookmarks(repo):
     # We may try to list bookmarks on a repo type that does not

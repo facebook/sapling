@@ -167,6 +167,9 @@ class localrepository(repo.repository):
     def _bookmarkcurrent(self):
         return bookmarks.readcurrent(self)
 
+    def _writebookmarks(self, marks):
+      bookmarks.write(self)
+
     @filecache('00changelog.i', True)
     def changelog(self):
         c = changelog.changelog(self.sopener)
