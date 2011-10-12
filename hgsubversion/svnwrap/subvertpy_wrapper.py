@@ -87,7 +87,7 @@ class PathAdapter(object):
             self.copyfrom_path = intern(self.copyfrom_path)
 
 class AbstractEditor(object):
-    __slots__ = ('editor', )
+    __slots__ = ('editor',)
 
     def __init__(self, editor):
         self.editor = editor
@@ -131,7 +131,7 @@ class AbstractEditor(object):
         self.editor.delete_entry(path, revnum, None)
 
 class FileEditor(AbstractEditor):
-    __slots__ = ('path', )
+    __slots__ = ('path',)
 
     def __init__(self, editor, path):
         super(FileEditor, self).__init__(editor)
@@ -145,7 +145,7 @@ class FileEditor(AbstractEditor):
         del self.path
 
 class DirectoryEditor(AbstractEditor):
-    __slots__ = ('path', )
+    __slots__ = ('path',)
 
     def __init__(self, editor, path):
         super(DirectoryEditor, self).__init__(editor)
@@ -306,7 +306,7 @@ class SubversionRepo(object):
                 #       ra.get_log(), even with chunk_size set, takes a while
                 #       when converting the 65k+ rev. in LLVM.
                 self.remote.get_log(paths=paths, revprops=revprops,
-                                    start=start+1, end=stop, limit=chunk_size,
+                                    start=start + 1, end=stop, limit=chunk_size,
                                     discover_changed_paths=True,
                                     callback=callback)
             except SubversionException, e:
@@ -477,7 +477,7 @@ class SubversionRepo(object):
                 # File not found
                 raise IOError(errno.ENOENT, e.args[0])
             raise
-        if mode  == 'l':
+        if mode == 'l':
             linkprefix = "link "
             if data.startswith(linkprefix):
                 data = data[len(linkprefix):]
@@ -531,4 +531,4 @@ class SubversionRepo(object):
         if not path or path == '.':
             return self.svn_url
         assert path[0] != '/', path
-        return '/'.join((self.svn_url, urllib.quote(path).rstrip('/'), ))
+        return '/'.join((self.svn_url, urllib.quote(path).rstrip('/'),))

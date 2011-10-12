@@ -408,7 +408,7 @@ def fetch_externals(ui, svn, branchpath, r, parentctx):
     # revision in the common case.
     dirs = set(externals)
     if parentctx.node() == revlog.nullid:
-        dirs.update([p for p,k in svn.list_files(branchpath, r.revnum) if k == 'd'])
+        dirs.update([p for p, k in svn.list_files(branchpath, r.revnum) if k == 'd'])
         dirs.add('')
     else:
         branchprefix = (branchpath and branchpath + '/') or branchpath
@@ -560,7 +560,7 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
             # we need to detect those branches. It's a little thorny and slow, but
             # seems to be the best option.
             elif paths[p].copyfrom_path and not p.startswith('tags/'):
-                paths_need_discovery.extend(['%s/%s' % (p,x[0])
+                paths_need_discovery.extend(['%s/%s' % (p, x[0])
                                              for x in listdir(p, revnum)
                                              if x[1] == 'f'])
 

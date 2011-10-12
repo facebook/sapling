@@ -119,7 +119,7 @@ class HgEditor(svnwrap.Editor):
                 # assuming it is a directory
                 self.current.externals[path] = None
                 map(self.current.delete, [pat for pat in self.current.files.iterkeys()
-                                          if pat.startswith(path+'/')])
+                                          if pat.startswith(path + '/')])
                 for f in ctx.walk(util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     if f_p not in self.current.files:

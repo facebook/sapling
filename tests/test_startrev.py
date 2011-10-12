@@ -61,7 +61,7 @@ for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')
     name = bname + '_stupid'
     attrs[name] = buildmethod(case, name, subdir, True)
 
-StartRevTests = type('StartRevTests', (test_util.TestBase, ), attrs)
+StartRevTests = type('StartRevTests', (test_util.TestBase,), attrs)
 
 
 def suite():

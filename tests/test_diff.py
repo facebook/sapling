@@ -33,7 +33,7 @@ class DiffTests(test_util.TestBase):
                             ])
         u = ui.ui()
         u.pushbuffer()
-        wrappers.diff(lambda x,y,z: None, u, self.repo, svn=True)
+        wrappers.diff(lambda x, y, z: None, u, self.repo, svn=True)
         self.assertEqual(u.popbuffer(), expected_diff_output)
 
 

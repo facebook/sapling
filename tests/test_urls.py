@@ -29,16 +29,16 @@ class TestSubversionUrls(test_util.TestBase):
 
     def test_svnssh_preserve_user(self):
         self.assertEqual(
-            ('user', 't3stpw', 'svn+ssh://user@svn.testurl.com/repo', ),
+            ('user', 't3stpw', 'svn+ssh://user@svn.testurl.com/repo',),
             parse_url('svn+ssh://user:t3stpw@svn.testurl.com/repo'))
         self.assertEqual(
-            ('bob', '123abc', 'svn+ssh://bob@svn.testurl.com/repo', ),
+            ('bob', '123abc', 'svn+ssh://bob@svn.testurl.com/repo',),
             parse_url('svn+ssh://user:t3stpw@svn.testurl.com/repo', 'bob', '123abc'))
         self.assertEqual(
-            ('user2', None, 'svn+ssh://user2@svn.testurl.com/repo', ),
+            ('user2', None, 'svn+ssh://user2@svn.testurl.com/repo',),
             parse_url('svn+ssh://user2@svn.testurl.com/repo'))
         self.assertEqual(
-            ('bob', None, 'svn+ssh://bob@svn.testurl.com/repo', ),
+            ('bob', None, 'svn+ssh://bob@svn.testurl.com/repo',),
             parse_url('svn+ssh://user2@svn.testurl.com/repo', 'bob'))
 
     def test_user_password_url(self):

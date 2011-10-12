@@ -43,7 +43,7 @@ class PushTests(test_util.TestBase):
                              file_callback,
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
-                             {'branch': 'default',})
+                             {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         old_tip = repo['tip'].node()
@@ -64,7 +64,7 @@ class PushTests(test_util.TestBase):
                              file_callback,
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
-                             {'branch': 'default',})
+                             {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         # Touch an existing file
@@ -116,7 +116,7 @@ class PushTests(test_util.TestBase):
                                  filectxfn=file_callback,
                                  user='an_author',
                                  date='2008-10-07 20:59:48 -0500',
-                                 extra={'branch': 'default',})
+                                 extra={'branch': 'default', })
             new_hash = repo.commitctx(ctx)
             if not commit:
                 return # some tests use this test as an extended setup.
@@ -161,7 +161,7 @@ class PushTests(test_util.TestBase):
                              file_callback,
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
-                             {'branch': 'default',})
+                             {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         if not commit:
             return # some tests use this test as an extended setup.
@@ -183,7 +183,7 @@ class PushTests(test_util.TestBase):
                                       copied=False)
         oldtiphash = self.repo['default'].node()
         ctx = context.memctx(self.repo,
-                             (self.repo[0].node(), revlog.nullid, ),
+                             (self.repo[0].node(), revlog.nullid,),
                              'automated test',
                              ['gamma', ],
                              filectxfn,
@@ -229,7 +229,7 @@ class PushTests(test_util.TestBase):
                              file_callback,
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
-                             {'branch': 'default',})
+                             {'branch': 'default', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions()
@@ -264,7 +264,7 @@ class PushTests(test_util.TestBase):
                              file_callback,
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
-                             {'branch': 'the_branch',})
+                             {'branch': 'the_branch', })
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         if push:
@@ -291,7 +291,7 @@ class PushTests(test_util.TestBase):
         oldf.close()
 
         # do a commit here
-        self.commitchanges([('foobaz', 'foobaz', 'This file is added on default.', ),
+        self.commitchanges([('foobaz', 'foobaz', 'This file is added on default.',),
                             ],
                            parent='default',
                            message='commit to default')
@@ -469,13 +469,13 @@ class PushTests(test_util.TestBase):
 
     def test_push_outdated_base_text(self):
         self.test_push_two_revs()
-        changes = [('adding_file', 'adding_file', 'different_content', ),
+        changes = [('adding_file', 'adding_file', 'different_content',),
                    ]
         par = self.repo['tip'].rev()
         self.commitchanges(changes, parent=par)
         self.pushrevisions()
         changes = [('adding_file', 'adding_file',
-                    'even_more different_content', ),
+                    'even_more different_content',),
                    ]
         self.commitchanges(changes, parent=par)
         try:

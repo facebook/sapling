@@ -35,7 +35,7 @@ def filterdiff(diff, oldrev, newrev):
                                   diff)
     oldrev = formatrev(oldrev)
     newrev = formatrev(newrev)
-    diff = a_re.sub(r'--- \1'+ oldrev, diff)
+    diff = a_re.sub(r'--- \1' + oldrev, diff)
     diff = b_re.sub(r'+++ \1' + newrev, diff)
     diff = devnull_re.sub(r'\1 /dev/null\t(working copy)', diff)
     diff = header_re.sub(r'Index: \1' + '\n' + ('=' * 67), diff)
@@ -65,9 +65,9 @@ def islocalrepo(url):
     path = url[prefixlen:]
     path = urllib.url2pathname(path).replace(os.sep, '/')
     while '/' in path:
-        if reduce(lambda x,y: x and y,
+        if reduce(lambda x, y: x and y,
                   map(lambda p: os.path.exists(os.path.join(path, p)),
-                      ('hooks', 'format', 'db', ))):
+                      ('hooks', 'format', 'db',))):
             return True
         path = path.rsplit('/', 1)[0]
     return False

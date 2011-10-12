@@ -257,7 +257,7 @@ class SVNMeta(object):
                     branchpath = branch[3:]
                 else:
                     branchpath = 'branches/%s' % branch
-            path = '%s/%s' % (subdir , branchpath)
+            path = '%s/%s' % (subdir, branchpath)
 
         extra['convert_revision'] = 'svn:%(uuid)s%(path)s@%(rev)s' % {
             'uuid': self.uuid,
@@ -368,7 +368,7 @@ class SVNMeta(object):
         else:
             path = test.split('/')[-1]
             test = '/'.join(test.split('/')[:-1])
-        ln =  self.localname(test)
+        ln = self.localname(test)
         if ln and ln.startswith('../'):
             return None, None, None
         return path, ln, test
@@ -424,7 +424,7 @@ class SVNMeta(object):
             branch_created_rev = self.branches[branch][2]
             if parent_branch == 'trunk':
                 parent_branch = None
-            if branch_created_rev <= number+1 and branch != parent_branch:
+            if branch_created_rev <= number + 1 and branch != parent_branch:
                 # did the branch exist in previous run
                 if exact and branch in self.prevbranches:
                     if self.prevbranches[branch][1] < real_num:
@@ -450,7 +450,7 @@ class SVNMeta(object):
                     return node.hex(self.revmap[tagged])
                 tag = fromtag
             # Reference an existing tag
-            limitedtags = maps.Tags(self.repo, endrev=number-1)
+            limitedtags = maps.Tags(self.repo, endrev=number - 1)
             if tag in limitedtags:
                 return limitedtags[tag]
         r, br = self.get_parent_svn_branch_and_rev(number - 1, branch, exact)
@@ -609,7 +609,7 @@ class SVNMeta(object):
             branchparent = branchparent.parents()[0]
         branch = self.get_source_rev(ctx=branchparent)[1]
 
-        parentctx = self.repo[self.get_parent_revision(rev.revnum+1, branch)]
+        parentctx = self.repo[self.get_parent_revision(rev.revnum + 1, branch)]
         if '.hgtags' in parentctx:
             tagdata = parentctx.filectx('.hgtags').data()
         else:

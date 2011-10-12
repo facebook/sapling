@@ -38,7 +38,7 @@ def parse_url(url, user=None, passwd=None):
                 user, passwd = userpass, ''
             user, passwd = urllib.unquote(user), urllib.unquote(passwd)
     if user and scheme == 'svn+ssh':
-        netloc = '@'.join((user, netloc, ))
+        netloc = '@'.join((user, netloc,))
     url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
     return (user or None, passwd or None, url)
 

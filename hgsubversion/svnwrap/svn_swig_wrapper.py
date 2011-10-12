@@ -293,7 +293,7 @@ class SubversionRepo(object):
                 #       when converting the 65k+ rev. in LLVM.
                 ra.get_log(self.ra,
                            paths,
-                           start+1,
+                           start + 1,
                            stop,
                            chunk_size, #limit of how many log messages to load
                            True, # don't need to know changed paths
@@ -497,7 +497,7 @@ class SubversionRepo(object):
             if e.args[1] in notfound: # File not found
                 raise IOError(errno.ENOENT, e.args[0])
             raise
-        if mode  == 'l':
+        if mode == 'l':
             linkprefix = "link "
             if data.startswith(linkprefix):
                 data = data[len(linkprefix):]

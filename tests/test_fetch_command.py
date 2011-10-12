@@ -165,7 +165,7 @@ class TestBasicRepoLayout(test_util.TestBase):
 
         commands.clone(ui, repo_url + subdir, wc_path)
         commands.clone(ui, repo_url + quoted_subdir, wc2_path)
-        repo  = hg.repository(ui, wc_path)
+        repo = hg.repository(ui, wc_path)
         repo2 = hg.repository(ui, wc2_path)
 
         self.assertEqual(repo['tip'].extra()['convert_revision'],

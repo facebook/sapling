@@ -82,5 +82,5 @@ class TestLogKeywords(test_util.TestBase):
                           template='{rev}:{svnrev} ', **defaults)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestLogKeywords),]
+    all = [unittest.TestLoader().loadTestsFromTestCase(TestLogKeywords), ]
     return unittest.TestSuite(all)

@@ -48,7 +48,7 @@ class TestPushDirectories(test_util.TestBase):
     def test_push_new_dir_project_root_not_repo_root(self):
         self._load_fixture_and_fetch('fetch_missing_files_subdir.svndump',
                                      subdir='foo')
-        changes = [('magic_new/a', 'magic_new/a', 'ohai', ),
+        changes = [('magic_new/a', 'magic_new/a', 'ohai',),
                    ]
         self.commitchanges(changes)
         self.pushrevisions()
@@ -64,20 +64,21 @@ class TestPushDirectories(test_util.TestBase):
     def test_push_new_file_existing_dir_root_not_repo_root(self):
         self._load_fixture_and_fetch('empty_dir_in_trunk_not_repo_root.svndump',
                                      subdir='project')
-        changes = [('narf/a', 'narf/a', 'ohai', ),
+        changes = [('narf/a', 'narf/a', 'ohai',),
                    ]
         self.commitchanges(changes)
         self.assertEqual(self.svnls('project/trunk'), ['a',
-                                                       'narf',])
+                                                       'narf',
+                                                       ])
         self.pushrevisions()
         self.assertEqual(self.svnls('project/trunk'), ['a',
                                                        'narf',
                                                        'narf/a'])
-        changes = [('narf/a', None, None, ),
+        changes = [('narf/a', None, None,),
                    ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(self.svnls('project/trunk'), ['a' ,])
+        self.assertEqual(self.svnls('project/trunk'), ['a'])
 
     def test_push_single_dir_change_in_subdir(self):
         # Tests simple pushing from default branch to a single dir repo

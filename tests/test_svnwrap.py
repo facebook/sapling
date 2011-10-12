@@ -22,10 +22,10 @@ class TestBasicRepoLayout(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
-        subprocess.call(['svnadmin', 'create', self.repo_path,])
+        subprocess.call(['svnadmin', 'create', self.repo_path, ])
         inp = open(os.path.join(os.path.dirname(__file__), 'fixtures',
                                 'project_root_at_repo_root.svndump'))
-        proc = subprocess.call(['svnadmin', 'load', self.repo_path,],
+        proc = subprocess.call(['svnadmin', 'load', self.repo_path, ],
                                 stdin=inp,
                                 close_fds=test_util.canCloseFds,
                                 stdout=subprocess.PIPE,
@@ -57,10 +57,10 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
-        subprocess.call(['svnadmin', 'create', self.repo_path,])
+        subprocess.call(['svnadmin', 'create', self.repo_path, ])
         inp = open(os.path.join(os.path.dirname(__file__), 'fixtures',
                                 'project_root_not_repo_root.svndump'))
-        ret = subprocess.call(['svnadmin', 'load', self.repo_path,],
+        ret = subprocess.call(['svnadmin', 'load', self.repo_path, ],
                               stdin=inp,
                               close_fds=test_util.canCloseFds,
                               stdout=subprocess.PIPE,

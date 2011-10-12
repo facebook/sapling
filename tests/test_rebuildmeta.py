@@ -55,7 +55,7 @@ def _do_case(self, name, stupid, single):
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
                     'no .hg/svn directory in the destination!')
     dest = hg.repository(u, os.path.dirname(dest.path))
-    for tf in ('lastpulled', 'rev_map', 'uuid', 'tagmap', 'layout', 'subdir', ):
+    for tf in ('lastpulled', 'rev_map', 'uuid', 'tagmap', 'layout', 'subdir',):
 
         stf = os.path.join(src.path, 'svn', tf)
         self.assertTrue(os.path.isfile(stf), '%r is missing!' % stf)
@@ -113,7 +113,7 @@ for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')
     name = bname + '_single'
     attrs[name] = buildmethod(case, name, False, True)
 
-RebuildMetaTests = type('RebuildMetaTests', (test_util.TestBase, ), attrs)
+RebuildMetaTests = type('RebuildMetaTests', (test_util.TestBase,), attrs)
 
 
 def suite():

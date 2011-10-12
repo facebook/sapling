@@ -39,7 +39,7 @@ class TestFetchSymlinks(test_util.TestBase):
                 'linka4': 'link to this',
                 },
             }
-            
+
         for rev in repo:
             ctx = repo[rev]
             for f in ctx.manifest():

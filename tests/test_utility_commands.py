@@ -112,7 +112,7 @@ class UtilityTests(test_util.TestBase):
         self._load_fixture_and_fetch('two_heads.svndump')
         u = self.ui()
         u.pushbuffer()
-        parents = (self.repo['the_branch'].node(), revlog.nullid, )
+        parents = (self.repo['the_branch'].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
             return context.memfilectx(path=path,
                                       data='added',
@@ -155,7 +155,7 @@ class UtilityTests(test_util.TestBase):
     def test_outgoing_output(self):
         self._load_fixture_and_fetch('two_heads.svndump')
         u = self.ui()
-        parents = (self.repo['the_branch'].node(), revlog.nullid, )
+        parents = (self.repo['the_branch'].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
             return context.memfilectx(path=path,
                                       data='added',
@@ -185,7 +185,7 @@ class UtilityTests(test_util.TestBase):
 
     def test_rebase(self):
         self._load_fixture_and_fetch('two_revs.svndump')
-        parents = (self.repo[0].node(), revlog.nullid, )
+        parents = (self.repo[0].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
             return context.memfilectx(path=path,
                                       data='added',
