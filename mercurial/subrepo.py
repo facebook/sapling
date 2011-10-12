@@ -833,9 +833,10 @@ class gitsubrepo(abstractsubrepo):
         for b in branches:
             if b.startswith('refs/remotes/'):
                 continue
-            remote = self._gitcommand(['config', 'branch.%s.remote' % b])
+            bname = b.split('/', 2)[2]
+            remote = self._gitcommand(['config', 'branch.%s.remote' % bname])
             if remote:
-                ref = self._gitcommand(['config', 'branch.%s.merge' % b])
+                ref = self._gitcommand(['config', 'branch.%s.merge' % bname])
                 tracking['refs/remotes/%s/%s' %
                          (remote, ref.split('/', 2)[2])] = b
         return tracking
