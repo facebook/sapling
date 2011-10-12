@@ -366,11 +366,11 @@ nomem:
 
 static PyObject *bdiff(PyObject *self, PyObject *args)
 {
-	char *sa, *sb;
+	char *sa, *sb, *rb;
 	PyObject *result = NULL;
 	struct line *al, *bl;
 	struct hunk l, *h;
-	char encode[12], *rb;
+	uint32_t encode[3];
 	int an, bn, len = 0, la, lb, count;
 
 	if (!PyArg_ParseTuple(args, "s#s#:bdiff", &sa, &la, &sb, &lb))
@@ -407,9 +407,9 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	for (h = l.next; h; h = h->next) {
 		if (h->a1 != la || h->b1 != lb) {
 			len = bl[h->b1].l - bl[lb].l;
-			*(uint32_t *)(encode)     = htonl(al[la].l - al->l);
-			*(uint32_t *)(encode + 4) = htonl(al[h->a1].l - al->l);
-			*(uint32_t *)(encode + 8) = htonl(len);
+			encode[0] = htonl(al[la].l - al->l);
+			encode[1] = htonl(al[h->a1].l - al->l);
+			encode[2] = htonl(len);
 			memcpy(rb, encode, 12);
 			memcpy(rb + 12, bl[lb].l, len);
 			rb += 12 + len;
