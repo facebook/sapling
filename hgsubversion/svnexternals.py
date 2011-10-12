@@ -119,7 +119,7 @@ def parsedefinition(line):
         revgroup = 2
         path, rev, source = m.group(1, 2, 3)
     try:
-        nrev = int(rev)
+        int(rev) # ensure revision is int()able, so we bail otherwise
         norevline = line[:m.start(revgroup)] + '{REV}' + line[m.end(revgroup):]
     except (TypeError, ValueError):
         norevline = line
