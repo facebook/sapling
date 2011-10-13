@@ -16,6 +16,20 @@ Multi-line command:
   $ foo
   bar
 
+Doctest commands:
+
+  >>> print 'foo'
+  foo
+  $ echo interleaved
+  interleaved
+  >>> for c in 'xyz':
+  ...     print c
+  x
+  y
+  z
+  >>> print
+  <BLANKLINE>
+
 Regular expressions:
 
   $ echo foobarbaz
