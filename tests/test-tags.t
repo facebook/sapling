@@ -135,8 +135,6 @@ Add invalid tags:
   $ echo >> .hgtags
   $ echo "foo bar" >> .hgtags
   $ echo "a5a5 invalid" >> .hg/localtags
-  $ echo "committing .hgtags:"
-  committing .hgtags:
   $ cat .hgtags 
   acb14030fe0a21b60322c440ad2d20cf7685a376 first
   spam

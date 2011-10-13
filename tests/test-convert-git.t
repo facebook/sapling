@@ -198,8 +198,6 @@ full conversion
   354ae8da6e890359ef49ade27b68bbc361f3ca88 644   baz
   9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
   88dfeab657e8cf2cef3dec67b914f49791ae76b1 644   quux
-  $ echo
-  
 
 test binary conversion (issue 1359)
 
@@ -226,8 +224,6 @@ convert binary file
   $ python -c 'print len(file("b", "rb").read())'
   4096
   $ cd ..
-  $ echo
-  
 
 test author vs committer
 

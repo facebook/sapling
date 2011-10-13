@@ -16,16 +16,14 @@
   [hooks]
   pretxncommit.crlf = python:hgext.win32text.forbidcrlf
   pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf
-  $ echo
-  
+
   $ echo hello > f
   $ hg add f
 
 commit should succeed
 
   $ hg ci -m 1
-  $ echo
-  
+
   $ hg clone . ../zoz
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -41,8 +39,7 @@ commit should fail
   rollback completed
   abort: pretxncommit.crlf hook failed
   [255]
-  $ echo
-  
+
   $ mv .hg/hgrc .hg/hgrc.bak
 
 commits should succeed
@@ -50,8 +47,6 @@ commits should succeed
   $ hg ci -m 2
   $ hg cp f g
   $ hg ci -m 2.2
-  $ echo
-  
 
 push should fail
 
@@ -84,8 +79,7 @@ push should fail
   rollback completed
   abort: pretxnchangegroup.crlf hook failed
   [255]
-  $ echo
-  
+
   $ mv .hg/hgrc.bak .hg/hgrc
   $ echo hello > f
   $ hg rm g
@@ -93,8 +87,6 @@ push should fail
 commit should succeed
 
   $ hg ci -m 2.3
-  $ echo
-  
 
 push should succeed
 
@@ -105,8 +97,6 @@ push should succeed
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files
-  $ echo
-  
 
 and now for something completely different
 
@@ -124,12 +114,10 @@ and now for something completely different
   $ hg revert -a
   forgetting d/f2
   $ rm d/f2
-  $ echo
-  
+
   $ hg rem f
   $ hg ci -m 4
-  $ echo
-  
+
   $ python -c 'file("bin", "wb").write("hello\x00\x0D\x0A")'
   $ hg add bin
   $ hg ci -m 5
@@ -183,13 +171,10 @@ and now for something completely different
   1
   
   
-  $ echo
-  
   $ hg clone . dupe
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo
-  
+
   $ for x in a b c d; do echo content > dupe/$x; done
   $ hg -R dupe add
   adding dupe/a
@@ -274,8 +259,6 @@ and now for something completely different
   1
   
   
-  $ echo
-  
   $ hg pull dupe
   pulling from dupe
   searching for changes
@@ -306,8 +289,7 @@ and now for something completely different
   rollback completed
   abort: pretxnchangegroup.crlf hook failed
   [255]
-  $ echo
-  
+
   $ hg log -v
   changeset:   5:f0b1c8d75fce
   tag:         tip
@@ -358,8 +340,6 @@ and now for something completely different
   1
   
   
-  $ echo
-  
   $ rm .hg/hgrc
   $ (echo some; echo text) > f3
   $ python -c 'file("f4.bat", "wb").write("rem empty\x0D\x0A")'
@@ -372,8 +352,7 @@ and now for something completely different
   text
   $ cat f4.bat
   rem empty\r (esc)
-  $ echo
-  
+
   $ echo '[extensions]' >> .hg/hgrc
   $ echo 'win32text = ' >> .hg/hgrc
   $ echo '[decode]' >> .hg/hgrc
@@ -415,8 +394,7 @@ Disable warning:
   text\r (esc)
   $ cat f4.bat
   rem empty\r (esc)
-  $ echo
-  
+
   $ python -c 'file("f5.sh", "wb").write("# empty\x0D\x0A")'
   $ hg add f5.sh
   $ hg ci -m 7

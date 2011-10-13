@@ -155,8 +155,6 @@ test fetch with named branches
   $ echo b > nbase/b
   $ hg -R nbase ci -Ad '3 0' -m b
   adding b
-  $ echo
-  
 
 pull in change on foreign branch
 
@@ -185,8 +183,6 @@ parent should be 2 (no automatic update)
   $ hg -R n2 parents --template '{rev}\n'
   2
   $ rm -fr n1 n2
-  $ echo
-  
 
 pull in changes on both foreign and local branches
 
@@ -220,8 +216,6 @@ parent should be 4 (fast forward)
   $ hg -R n2 parents --template '{rev}\n'
   4
   $ rm -fr n1 n2
-  $ echo
-  
 
 pull changes on foreign (2 new heads) and local (1 new head) branches
 with a local change
@@ -393,8 +387,6 @@ test issue1726
   new changeset 3:* merges remote changes with local (glob)
   $ hg --cwd i1726r2 heads default --template '{rev}\n'
   3
-  $ echo
-  
 
 test issue2047
 

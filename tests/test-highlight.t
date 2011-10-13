@@ -520,8 +520,6 @@ hgweb fileannotate, raw
   $ echo "" >> b
   $ echo "" >> b
   $ diff -u b a
-  $ echo
-  
 
 hgweb filerevision, raw
 
@@ -531,8 +529,6 @@ hgweb filerevision, raw
   $ echo "" >> b
   $ hg cat primes.py >> b
   $ diff -u b a
-  $ echo
-  
 
 hgweb highlightcss friendly
 

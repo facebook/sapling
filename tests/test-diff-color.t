@@ -94,8 +94,7 @@ record
    a
    c
   \x1b[0;33mrecord this change to 'a'? [Ynsfdaq?]\x1b[0m  (esc)
-  $ echo
-  
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
   $ hg rollback
@@ -123,5 +122,3 @@ qrecord
    a
    c
   \x1b[0;33mrecord this change to 'a'? [Ynsfdaq?]\x1b[0m  (esc)
-  $ echo
-  

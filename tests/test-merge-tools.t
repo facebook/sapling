@@ -31,8 +31,7 @@ revision 3 - simple to merge
   $ hg commit -Am "revision 3"
   created new head
   $ echo "[merge-tools]" > .hg/hgrc
-  $ echo
-  
+
   $ beforemerge() {
   >   cat .hg/hgrc
   >   echo "# hg update -C 1"
@@ -44,7 +43,6 @@ revision 3 - simple to merge
   >   echo "# hg stat"
   >   hg stat
   >   rm -f f.orig
-  >   echo
   > }
   $ domerge() {
   >   beforemerge
@@ -52,13 +50,8 @@ revision 3 - simple to merge
   >   hg merge $*
   >   aftermerge
   > }
-  $ echo
-  
 
 Tool selection
-
-  $ echo
-  
 
 default is internal merge:
 
@@ -88,7 +81,6 @@ running from a devel copy, not a temp installation
   # hg stat
   M f
   ? f.orig
-  
 
 simplest hgrc using false for merge:
 
@@ -108,7 +100,6 @@ simplest hgrc using false for merge:
   # hg stat
   M f
   ? f.orig
-  
 
 true with higher .priority gets precedence:
 
@@ -127,7 +118,6 @@ true with higher .priority gets precedence:
   space
   # hg stat
   M f
-  
 
 unless lowered on command line:
 
@@ -147,7 +137,6 @@ unless lowered on command line:
   # hg stat
   M f
   ? f.orig
-  
 
 or false set higher on command line:
 
@@ -167,7 +156,6 @@ or false set higher on command line:
   # hg stat
   M f
   ? f.orig
-  
 
 or true.executable not found in PATH:
 
@@ -187,7 +175,6 @@ or true.executable not found in PATH:
   # hg stat
   M f
   ? f.orig
-  
 
 or true.executable with bogus path:
 
@@ -207,7 +194,6 @@ or true.executable with bogus path:
   # hg stat
   M f
   ? f.orig
-  
 
 but true.executable set to cat found in PATH works:
 
@@ -233,7 +219,6 @@ but true.executable set to cat found in PATH works:
   space
   # hg stat
   M f
-  
 
 and true.executable set to cat with path works:
 
@@ -258,14 +243,8 @@ and true.executable set to cat with path works:
   space
   # hg stat
   M f
-  
-  $ echo
-  
 
 Tool selection and merge-patterns
-
-  $ echo
-  
 
 merge-patterns specifies new tool false:
 
@@ -286,7 +265,6 @@ merge-patterns specifies new tool false:
   # hg stat
   M f
   ? f.orig
-  
 
 merge-patterns specifies executable not found in PATH and gets warning:
 
@@ -308,7 +286,6 @@ merge-patterns specifies executable not found in PATH and gets warning:
   # hg stat
   M f
   ? f.orig
-  
 
 merge-patterns specifies executable with bogus path and gets warning:
 
@@ -330,14 +307,8 @@ merge-patterns specifies executable with bogus path and gets warning:
   # hg stat
   M f
   ? f.orig
-  
-  $ echo
-  
 
 ui.merge overrules priority
-
-  $ echo
-  
 
 ui.merge specifies false:
 
@@ -358,7 +329,6 @@ ui.merge specifies false:
   # hg stat
   M f
   ? f.orig
-  
 
 ui.merge specifies internal:fail:
 
@@ -376,7 +346,6 @@ ui.merge specifies internal:fail:
   space
   # hg stat
   M f
-  
 
 ui.merge specifies internal:local:
 
@@ -394,7 +363,6 @@ ui.merge specifies internal:local:
   space
   # hg stat
   M f
-  
 
 ui.merge specifies internal:other:
 
@@ -412,7 +380,6 @@ ui.merge specifies internal:other:
   space
   # hg stat
   M f
-  
 
 ui.merge specifies internal:prompt:
 
@@ -432,7 +399,6 @@ ui.merge specifies internal:prompt:
   space
   # hg stat
   M f
-  
 
 ui.merge specifies internal:dump:
 
@@ -455,7 +421,6 @@ ui.merge specifies internal:dump:
   ? f.local
   ? f.orig
   ? f.other
-  
 
 f.base:
 
@@ -475,8 +440,6 @@ f.other:
   revision 2
   space
   $ rm f.base f.local f.other
-  $ echo
-  
 
 ui.merge specifies internal:other but is overruled by pattern for false:
 
@@ -497,14 +460,8 @@ ui.merge specifies internal:other but is overruled by pattern for false:
   # hg stat
   M f
   ? f.orig
-  
-  $ echo
-  
 
 Premerge
-
-  $ echo
-  
 
 ui.merge specifies internal:other but is overruled by --tool=false
 
@@ -525,7 +482,7 @@ ui.merge specifies internal:other but is overruled by --tool=false
   # hg stat
   M f
   ? f.orig
-  
+
 HGMERGE specifies internal:other but is overruled by --tool=false
 
   $ HGMERGE=internal:other ; export HGMERGE
@@ -546,7 +503,7 @@ HGMERGE specifies internal:other but is overruled by --tool=false
   # hg stat
   M f
   ? f.orig
-  
+
   $ unset HGMERGE # make sure HGMERGE doesn't interfere with remaining tests
 
 Default is silent simplemerge:
@@ -567,7 +524,6 @@ Default is silent simplemerge:
   revision 3
   # hg stat
   M f
-  
 
 .premerge=True is same:
 
@@ -587,7 +543,6 @@ Default is silent simplemerge:
   revision 3
   # hg stat
   M f
-  
 
 .premerge=False executes merge-tool:
 
@@ -613,16 +568,11 @@ Default is silent simplemerge:
   space
   # hg stat
   M f
-  
-  $ echo
-  
 
 Tool execution
 
-  $ echo
-  
-  $ echo '# set tools.args explicit to include $base $local $other $output:' # default '$local $base $other'
-  # set tools.args explicit to include $base $local $other $output:
+set tools.args explicit to include $base $local $other $output:
+
   $ beforemerge
   [merge-tools]
   false.whatever=
@@ -655,9 +605,9 @@ Tool execution
   space
   # hg stat
   M f
-  
-  $ echo '# Merge with "echo mergeresult > $local":'
-  # Merge with "echo mergeresult > $local":
+
+Merge with "echo mergeresult > $local":
+
   $ beforemerge
   [merge-tools]
   false.whatever=
@@ -673,9 +623,9 @@ Tool execution
   mergeresult
   # hg stat
   M f
-  
-  $ echo '# - and $local is the file f:'
-  # - and $local is the file f:
+
+- and $local is the file f:
+
   $ beforemerge
   [merge-tools]
   false.whatever=
@@ -691,9 +641,9 @@ Tool execution
   mergeresult
   # hg stat
   M f
-  
-  $ echo '# Merge with "echo mergeresult > $output" - the variable is a bit magic:'
-  # Merge with "echo mergeresult > $output" - the variable is a bit magic:
+
+Merge with "echo mergeresult > $output" - the variable is a bit magic:
+
   $ beforemerge
   [merge-tools]
   false.whatever=
@@ -709,7 +659,6 @@ Tool execution
   mergeresult
   # hg stat
   M f
-  
 
 Merge using tool with a path that must be quoted:
 
@@ -739,14 +688,8 @@ Merge using tool with a path that must be quoted:
   space
   # hg stat
   M f
-  
-  $ echo
-  
 
 Merge post-processing
-
-  $ echo
-  
 
 cat is a bad merge-tool and doesn't change:
 
@@ -775,4 +718,3 @@ cat is a bad merge-tool and doesn't change:
   # hg stat
   M f
   ? f.orig
-  

@@ -110,8 +110,7 @@ merge fails
   $ hg merge 2
   abort: outstanding uncommitted changes (use 'hg status' to list changes)
   [255]
-  $ echo %% merge expected!
-  %% merge expected!
+merge expected!
   $ hg merge -f 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

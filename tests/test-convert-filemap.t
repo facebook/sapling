@@ -86,8 +86,7 @@ final file versions in this repo:
   bc3eca3f47023a3e70ca0d8cc95a22a6827db19d 644   quux
   $ hg debugrename copied
   copied renamed from foo:2ed2a3912a0b24502043eae84ee4b279c18b90dd
-  $ echo
-  
+
   $ cd ..
   $ splitrepo()
   > {
