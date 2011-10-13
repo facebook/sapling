@@ -525,7 +525,7 @@ def transformtst(lines):
     inblock = False
     for l in lines:
         if inblock:
-            if l.startswith('  $ '):
+            if l.startswith('  $ ') or not l.startswith('  '):
                 inblock = False
                 yield '  > EOF\n'
                 yield l
