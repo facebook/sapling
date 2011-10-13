@@ -76,7 +76,7 @@ def link(src, dest):
     try:
         util.oslink(src, dest)
     except OSError:
-        # If hardlinks fail fall back on copy
+        # if hardlinks fail, fallback on copy
         shutil.copyfile(src, dest)
         os.chmod(dest, os.stat(src).st_mode)
 
@@ -122,8 +122,8 @@ class largefiles_dirstate(dirstate.dirstate):
 
 def openlfdirstate(ui, repo):
     '''
-    Return a dirstate object that tracks big files: i.e. its root is the
-    repo root, but it is saved in .hg/largefiles/dirstate.
+    Return a dirstate object that tracks largefiles: i.e. its root is
+    the repo root, but it is saved in .hg/largefiles/dirstate.
     '''
     admin = repo.join(longname)
     opener = scmutil.opener(admin)
@@ -133,10 +133,10 @@ def openlfdirstate(ui, repo):
     else:
         lfdirstate = largefiles_dirstate(opener, ui, repo.root)
 
-    # If the largefiles dirstate does not exist, populate and create it.  This
-    # ensures that we create it on the first meaningful largefiles operation in
-    # a new clone.  It also gives us an easy way to forcibly rebuild largefiles
-    # state:
+    # If the largefiles dirstate does not exist, populate and create
+    # it. This ensures that we create it on the first meaningful
+    # largefiles operation in a new clone. It also gives us an easy
+    # way to forcibly rebuild largefiles state:
     #   rm .hg/largefiles/dirstate && hg status
     # Or even, if things are really messed up:
     #   rm -rf .hg/largefiles && hg status
@@ -177,7 +177,8 @@ def lfdirstate_status(lfdirstate, repo, rev):
     return (modified, added, removed, missing, unknown, ignored, clean)
 
 def listlfiles(repo, rev=None, matcher=None):
-    '''list largefiles in the working copy or specified changeset'''
+    '''return a list of largefiles in the working copy or the
+    specified changeset'''
 
     if matcher is None:
         matcher = getstandinmatcher(repo)
@@ -197,10 +198,11 @@ def cachepath(repo, hash):
     return repo.join(os.path.join(longname, hash))
 
 def copyfromcache(repo, hash, filename):
-    '''copyfromcache copies the specified largefile from the repo or system
-    cache to the specified location in the repository.  It will not throw an
-    exception on failure, as it is meant to be called only after ensuring that
-    the needed largefile exists in the cache.'''
+    '''Copy the specified largefile from the repo or system cache to
+    filename in the repository. Return true on success or false if the
+    file was not found in either cache (which should not happened:
+    this is meant to be called only after ensuring that the needed
+    largefile exists in the cache).'''
     path = findfile(repo, hash)
     if path is None:
         return False
@@ -249,9 +251,9 @@ def getstandinmatcher(repo, pats=[], opts={}):
     return getmatcher(repo, pats, opts, showbad=False)
 
 def getmatcher(repo, pats=[], opts={}, showbad=True):
-    '''Wrapper around scmutil.match() that adds showbad: if false, neuter
-    the match object\'s bad() method so it does not print any warnings
-    about missing files or directories.'''
+    '''Wrapper around scmutil.match() that adds showbad: if false,
+    neuter the match object's bad() method so it does not print any
+    warnings about missing files or directories.'''
     match = scmutil.match(repo[None], pats, opts)
 
     if not showbad:
@@ -259,9 +261,9 @@ def getmatcher(repo, pats=[], opts={}, showbad=True):
     return match
 
 def composestandinmatcher(repo, rmatcher):
-    '''Return a matcher that accepts standins corresponding to the files
-    accepted by rmatcher. Pass the list of files in the matcher as the
-    paths specified by the user.'''
+    '''Return a matcher that accepts standins corresponding to the
+    files accepted by rmatcher. Pass the list of files in the matcher
+    as the paths specified by the user.'''
     smatcher = getstandinmatcher(repo, rmatcher.files())
     isstandin = smatcher.matchfn
     def composed_matchfn(f):
@@ -283,8 +285,8 @@ def standin(filename):
     return shortname + '/' + filename.replace(os.sep, '/')
 
 def isstandin(filename):
-    '''Return true if filename is a big file standin.  filename must
-    be in Mercurial\'s internal form (slash-separated).'''
+    '''Return true if filename is a big file standin. filename must be
+    in Mercurial's internal form (slash-separated).'''
     return filename.startswith(shortname + '/')
 
 def splitstandin(filename):
@@ -310,7 +312,7 @@ def readstandin(repo, filename, node=None):
     return repo[node][standin(filename)].data().strip()
 
 def writestandin(repo, standin, hash, executable):
-    '''write hhash to <repo.root>/<standin>'''
+    '''write hash to <repo.root>/<standin>'''
     writehash(hash, repo.wjoin(standin), executable)
 
 def copyandhash(instream, outfile):
@@ -323,7 +325,7 @@ def copyandhash(instream, outfile):
         outfile.write(data)
 
     # Blecch: closing a file that somebody else opened is rude and
-    # wrong.  But it's so darn convenient and practical!  After all,
+    # wrong. But it's so darn convenient and practical! After all,
     # outfile was opened just to copy and hash.
     outfile.close()
 
@@ -364,7 +366,7 @@ def blockstream(infile, blocksize=128 * 1024):
         if not data:
             break
         yield data
-    # Same blecch as above.
+    # same blecch as copyandhash() above
     infile.close()
 
 def readhash(filename):
@@ -425,9 +427,8 @@ def hexsha1(data):
 def httpsendfile(ui, filename):
     return httpconnection.httpsendfile(ui, filename, 'rb')
 
-# Convert a path to a unix style path. This is used to give a
-# canonical path to the lfdirstate.
 def unixpath(path):
+    '''Return a version of path normalized for use with the lfdirstate.'''
     return os.path.normpath(path).replace(os.sep, '/')
 
 def islfilesrepo(repo):

@@ -59,9 +59,9 @@ def restorematchfn():
 
 # -- Wrappers: modify existing commands --------------------------------
 
-# Add works by going through the files that the user wanted to add
-# and checking if they should be added as lfiles. Then making a new
-# matcher which matches only the normal files and running the original
+# Add works by going through the files that the user wanted to add and
+# checking if they should be added as largefiles. Then it makes a new
+# matcher which matches only the normal files and runs the original
 # version of add.
 def override_add(orig, ui, repo, *pats, **opts):
     large = opts.pop('large', None)
@@ -101,8 +101,8 @@ def override_add(orig, ui, repo, *pats, **opts):
     bad = []
     standins = []
 
-    # Need to lock otherwise there could be a race condition inbetween when
-    # standins are created and added to the repo
+    # Need to lock, otherwise there could be a race condition between
+    # when standins are created and added to the repo.
     wlock = repo.wlock()
     try:
         if not opts.get('dry_run'):
@@ -221,8 +221,8 @@ def override_update(orig, ui, repo, *pats, **opts):
         False, False)
     (unsure, modified, added, removed, missing, unknown, ignored, clean) = s
 
-    # Need to lock between the standins getting updated and their lfiles
-    # getting updated
+    # Need to lock between the standins getting updated and their
+    # largefiles getting updated
     wlock = repo.wlock()
     try:
         if opts['check']:
@@ -245,9 +245,9 @@ def override_update(orig, ui, repo, *pats, **opts):
         wlock.release()
     return orig(ui, repo, *pats, **opts)
 
-# Override filemerge to prompt the user about how they wish to merge lfiles.
-# This will handle identical edits, and copy/rename + edit without prompting
-# the user.
+# Override filemerge to prompt the user about how they wish to merge
+# largefiles. This will handle identical edits, and copy/rename +
+# edit without prompting the user.
 def override_filemerge(origfn, repo, mynode, orig, fcd, fco, fca):
     # Use better variable names here. Because this is a wrapper we cannot
     # change the variable names in the function declaration.
@@ -288,12 +288,13 @@ def override_filemerge(origfn, repo, mynode, orig, fcd, fco, fca):
             repo.wwrite(fcdest.path(), fcother.data(), fcother.flags())
             return 0
 
-# Copy first changes the matchers to match standins instead of lfiles.
-# Then it overrides util.copyfile in that function it checks if the destination
-# lfile already exists. It also keeps a list of copied files so that the lfiles
-# can be copied and the dirstate updated.
+# Copy first changes the matchers to match standins instead of
+# largefiles.  Then it overrides util.copyfile in that function it
+# checks if the destination largefile already exists. It also keeps a
+# list of copied files so that the largefiles can be copied and the
+# dirstate updated.
 def override_copy(orig, ui, repo, pats, opts, rename=False):
-    # doesn't remove lfile on rename
+    # doesn't remove largefile on rename
     if len(pats) < 2:
         # this isn't legal, let the original function deal with it
         return orig(ui, repo, pats, opts, rename)
@@ -309,9 +310,10 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
     if os.path.isdir(dest):
         if not os.path.isdir(makestandin(dest)):
             os.makedirs(makestandin(dest))
-    # This could copy both lfiles and normal files in one command, but we don't
-    # want to do that first replace their matcher to only match normal files
-    # and run it then replace it to just match lfiles and run it again
+    # This could copy both largefiles and normal files in one command,
+    # but we don't want to do that first replace their matcher to only
+    # match normal files and run it then replace it to just match
+    # lfiles and run it again
     nonormalfiles = False
     nolfiles = False
     try:

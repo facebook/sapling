@@ -42,9 +42,10 @@ def reposetup(ui, repo):
         def status_nolfiles(self, *args, **kwargs):
             return super(lfiles_repo, self).status(*args, **kwargs)
 
-        # When lfstatus is set, return a context that gives the names of lfiles
-        # instead of their corresponding standins and identifies the lfiles as
-        # always binary, regardless of their actual contents.
+        # When lfstatus is set, return a context that gives the names
+        # of largefiles instead of their corresponding standins and
+        # identifies the largefiles as always binary, regardless of
+        # their actual contents.
         def __getitem__(self, changeid):
             ctx = super(lfiles_repo, self).__getitem__(changeid)
             if self.lfstatus:
@@ -81,9 +82,9 @@ def reposetup(ui, repo):
             return ctx
 
         # Figure out the status of big files and insert them into the
-        # appropriate list in the result. Also removes standin files from
-        # the listing. This function reverts to the original status if
-        # self.lfstatus is False
+        # appropriate list in the result. Also removes standin files
+        # from the listing. Revert to the original status if
+        # self.lfstatus is False.
         def status(self, node1='.', node2=None, match=None, ignored=False,
                 clean=False, unknown=False, listsubrepos=False):
             listignored, listclean, listunknown = ignored, clean, unknown
@@ -131,8 +132,8 @@ def reposetup(ui, repo):
                 m = copy.copy(match)
                 m._files = [tostandin(f) for f in m._files]
 
-                # get ignored clean and unknown but remove them later if they
-                # were not asked for
+                # get ignored, clean, and unknown but remove them
+                # later if they were not asked for
                 try:
                     result = super(lfiles_repo, self).status(node1, node2, m,
                         True, True, True, listsubrepos)
@@ -140,11 +141,11 @@ def reposetup(ui, repo):
                     result = super(lfiles_repo, self).status(node1, node2, m,
                         True, True, True)
                 if working:
-                    # Hold the wlock while we read lfiles and update the
-                    # lfdirstate
+                    # hold the wlock while we read largefiles and
+                    # update the lfdirstate
                     wlock = repo.wlock()
                     try:
-                        # Any non lfiles that were explicitly listed must be
+                        # Any non-largefiles that were explicitly listed must be
                         # taken out or lfdirstate.status will report an error.
                         # The status of these files was already computed using
                         # super's status.
@@ -334,15 +335,15 @@ def reposetup(ui, repo):
                 for f in match._files:
                     fstandin = lfutil.standin(f)
 
-                    # Ignore known lfiles and standins
+                    # ignore known largefiles and standins
                     if f in lfiles or fstandin in standins:
                         continue
 
-                    # Append directory separator to avoid collisions
+                    # append directory separator to avoid collisions
                     if not fstandin.endswith(os.sep):
                         fstandin += os.sep
 
-                    # Prevalidate matching standin directories
+                    # prevalidate matching standin directories
                     if lfutil.any_(st for st in match._files if \
                             st.startswith(fstandin)):
                         continue
@@ -397,8 +398,8 @@ def reposetup(ui, repo):
     def checkrequireslfiles(ui, repo, **kwargs):
         if 'largefiles' not in repo.requirements and lfutil.any_(
                 lfutil.shortname+'/' in f[0] for f in repo.store.datafiles()):
-            # work around bug in mercurial 1.9 whereby requirements is a list
-            # on newly-cloned repos
+            # workaround bug in Mercurial 1.9 whereby requirements is
+            # a list on newly-cloned repos
             repo.requirements = set(repo.requirements)
 
             repo.requirements |= set(['largefiles'])

@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''largefile store working over mercurial's wire protocol'''
+'''largefile store working over Mercurial's wire protocol'''
 
 import lfutil
 import remotestore

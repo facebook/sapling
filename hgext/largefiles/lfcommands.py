@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''High-level command functions: lfadd() et. al, plus the cmdtable.'''
+'''High-level command function for lfconvert, plus the cmdtable.'''
 
 import os
 import shutil
@@ -316,11 +316,9 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
     revmap[ctx.node()] = rdst.changelog.tip()
 
 def _islfile(file, ctx, matcher, size):
-    '''
-    A file is a lfile if it matches a pattern or is over
-    the given size.
-    '''
-    # Never store hgtags or hgignore as lfiles
+    '''Return true if file should be considered a largefile, i.e.
+    matcher matches it or it is larger than size.'''
+    # never store special .hg* files as largefiles
     if file == '.hgtags' or file == '.hgignore' or file == '.hgsigs':
         return False
     if matcher and matcher(file):

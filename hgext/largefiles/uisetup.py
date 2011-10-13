@@ -110,8 +110,8 @@ def uisetup(ui):
     proto.capabilities_orig = wireproto.capabilities
     wireproto.capabilities = proto.capabilities
 
-    # these let us reject non-lfiles clients and make them display our error
-    # messages
+    # these let us reject non-largefiles clients and make them display
+    # our error messages
     protocol.webproto.refuseclient = proto.webproto_refuseclient
     sshserver.sshserver.refuseclient = proto.sshproto_refuseclient
 

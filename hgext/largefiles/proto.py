@@ -17,8 +17,8 @@ LARGEFILES_REQUIRED_MSG = '\nThis repository uses the largefiles extension.' \
                           'file.\n'
 
 def putlfile(repo, proto, sha):
-    """putlfile puts a largefile into a repository's local cache and into the
-    system cache."""
+    '''Put a largefile into a repository's local cache and into the
+    system cache.'''
     f = None
     proto.redirect()
     try:
@@ -40,17 +40,19 @@ def putlfile(repo, proto, sha):
     return wireproto.pushres(0)
 
 def getlfile(repo, proto, sha):
-    """getlfile retrieves a largefile from the repository-local cache or system
-    cache."""
+    '''Retrieve a largefile from the repository-local cache or system
+    cache.'''
     filename = lfutil.findfile(repo, sha)
     if not filename:
         raise util.Abort(_('requested largefile %s not present in cache') % sha)
     f = open(filename, 'rb')
     length = os.fstat(f.fileno())[6]
-    # since we can't set an HTTP content-length header here, and mercurial core
-    # provides no way to give the length of a streamres (and reading the entire
-    # file into RAM would be ill-advised), we just send the length on the first
-    # line of the response, like the ssh proto does for string responses.
+
+    # Since we can't set an HTTP content-length header here, and
+    # Mercurial core provides no way to give the length of a streamres
+    # (and reading the entire file into RAM would be ill-advised), we
+    # just send the length on the first line of the response, like the
+    # ssh proto does for string responses.
     def generator():
         yield '%d\n' % length
         for chunk in f:
@@ -58,8 +60,8 @@ def getlfile(repo, proto, sha):
     return wireproto.streamres(generator())
 
 def statlfile(repo, proto, sha):
-    """statlfile sends '2\n' if the largefile is missing, '1\n' if it has a
-    mismatched checksum, or '0\n' if it is in good condition"""
+    '''Return '2\n' if the largefile is missing, '1\n' if it has a
+    mismatched checksum, or '0\n' if it is in good condition'''
     filename = lfutil.findfile(repo, sha)
     if not filename:
         return '2\n'
@@ -113,10 +115,10 @@ def wirereposetup(ui, repo):
             try:
                 return int(self._call("statlfile", sha=sha))
             except (ValueError, urllib2.HTTPError):
-                # if the server returns anything but an integer followed by a
+                # If the server returns anything but an integer followed by a
                 # newline, newline, it's not speaking our language; if we get
                 # an HTTP error, we can't be sure the largefile is present;
-                # either way, consider it missing
+                # either way, consider it missing.
                 return 2
 
     repo.__class__ = lfileswirerepository

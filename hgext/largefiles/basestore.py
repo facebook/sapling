@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''Base class for store implementations and store-related utility code.'''
+'''base class for store implementations and store-related utility code'''
 
 import os
 import tempfile
@@ -168,9 +168,10 @@ def _openstore(repo, remote=None, put=False):
     if not remote:
         path = getattr(repo, 'lfpullsource', None) or \
             ui.expandpath('default-push', 'default')
-        # If 'default-push' and 'default' can't be expanded
-        # they are just returned. In that case use the empty string which
-        # use the filescheme.
+
+        # ui.expandpath() leaves 'default-push' and 'default' alone if
+        # they cannot be expanded: fallback to the empty string,
+        # meaning the current directory.
         if path == 'default-push' or path == 'default':
             path = ''
             remote = repo
