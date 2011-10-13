@@ -34,7 +34,8 @@ def _findtool(ui, tool):
             p = util.findexe(p + _toolstr(ui, tool, "regappend"))
             if p:
                 return p
-    return util.findexe(_toolstr(ui, tool, "executable", tool))
+    exe = _toolstr(ui, tool, "executable", tool)
+    return util.findexe(util.expandpath(exe))
 
 def _picktool(repo, ui, path, binary, symlink):
     def check(tool, pat, symlink, binary):

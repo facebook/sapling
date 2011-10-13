@@ -244,6 +244,30 @@ and true.executable set to cat with path works:
   # hg stat
   M f
 
+environment variables in true.executable are handled:
+
+  $ cat > $HGTMP/merge.sh <<EOF
+  > #!/bin/sh
+  > echo 'custom merge tool'
+  > EOF
+  $ chmod +x $HGTMP/merge.sh
+  $ domerge -r 2 --config merge-tools.true.executable='$HGTMP/merge.sh'
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+  # hg merge -r 2 --config merge-tools.true.executable=$HGTMP/merge.sh
+  merging f
+  custom merge tool
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  # cat f
+  revision 1
+  space
+  # hg stat
+  M f
+
 Tool selection and merge-patterns
 
 merge-patterns specifies new tool false:
