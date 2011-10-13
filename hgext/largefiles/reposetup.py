@@ -248,26 +248,39 @@ def reposetup(ui, repo):
                     # after the rebase.
                     lfcommands.updatelfiles(repo.ui, repo)
                 # Case 1: user calls commit with no specific files or
-                # include/exclude patterns: refresh and commit everything.
+                # include/exclude patterns: refresh and commit all files that
+                # are "dirty".
                 if (match is None) or (not match.anypats() and not \
                         match.files()):
-                    lfiles = lfutil.listlfiles(self)
+                    # Spend a bit of time here to get a list of files we know
+                    # are modified so we can compare only against those.
+                    # It can cost a lot of time (several seconds)
+                    # otherwise to update all standins if the largefiles are
+                    # large.
                     lfdirstate = lfutil.openlfdirstate(ui, self)
+                    dirtymatch = match_.always(repo.root, repo.getcwd())
+                    s = lfdirstate.status(dirtymatch, [], False, False, False)
+                    modifiedfiles = []
+                    for i in s:
+                        modifiedfiles.extend(i)
+                    lfiles = lfutil.listlfiles(self)
                     # this only loops through lfiles that exist (not
                     # removed/renamed)
                     for lfile in lfiles:
-                        if os.path.exists(self.wjoin(lfutil.standin(lfile))):
-                            # this handles the case where a rebase is being
-                            # performed and the working copy is not updated
-                            # yet.
-                            if os.path.exists(self.wjoin(lfile)):
-                                lfutil.updatestandin(self,
-                                    lfutil.standin(lfile))
-                                lfdirstate.normal(lfile)
+                        if lfile in modifiedfiles:
+                            if os.path.exists(self.wjoin(lfutil.standin(lfile))):
+                                # this handles the case where a rebase is being
+                                # performed and the working copy is not updated
+                                # yet.
+                                if os.path.exists(self.wjoin(lfile)):
+                                    lfutil.updatestandin(self,
+                                        lfutil.standin(lfile))
+                                    lfdirstate.normal(lfile)
                     for lfile in lfdirstate:
-                        if not os.path.exists(
-                                repo.wjoin(lfutil.standin(lfile))):
-                            lfdirstate.drop(lfile)
+                        if lfile in modifiedfiles:
+                            if not os.path.exists(
+                                    repo.wjoin(lfutil.standin(lfile))):
+                                lfdirstate.drop(lfile)
                     lfdirstate.write()
 
                     return orig(text=text, user=user, date=date, match=match,
