@@ -200,4 +200,8 @@ Pull -u takes us back to branch foo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
   
+Test handling of invalid urls
 
+  $ hg id http://foo/?bar
+  abort: unsupported URL component: "bar"
+  [255]
