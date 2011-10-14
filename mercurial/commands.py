@@ -2556,7 +2556,7 @@ def graft(ui, repo, *revs, **opts):
 
     for pos, ctx in enumerate(repo.set("%ld", revs)):
         current = repo['.']
-        ui.debug('grafting revision %s', ctx.rev())
+        ui.status('grafting revision %s', ctx.rev())
 
         # we don't merge the first commit when continuing
         if not cont:
