@@ -287,26 +287,31 @@ class queue(object):
 
     @util.propertycache
     def applied(self):
-        if os.path.exists(self.join(self.statuspath)):
-            def parselines(lines):
-                for l in lines:
-                    entry = l.split(':', 1)
-                    if len(entry) > 1:
-                        n, name = entry
-                        yield statusentry(bin(n), name)
-                    elif l.strip():
-                        msg = _('malformated mq status line: %s\n') % entry
-                        self.ui.warn(msg)
-                    # else we ignore empty lines
+        def parselines(lines):
+            for l in lines:
+                entry = l.split(':', 1)
+                if len(entry) > 1:
+                    n, name = entry
+                    yield statusentry(bin(n), name)
+                elif l.strip():
+                    self.ui.warn(_('malformated mq status line: %s\n') % entry)
+                # else we ignore empty lines
+        try:
             lines = self.opener.read(self.statuspath).splitlines()
             return list(parselines(lines))
-        return []
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                return []
+            raise
 
     @util.propertycache
     def fullseries(self):
-        if os.path.exists(self.join(self.seriespath)):
-            return self.opener.read(self.seriespath).splitlines()
-        return []
+        try:
+             return self.opener.read(self.seriespath).splitlines()
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                return []
+            raise
 
     @util.propertycache
     def series(self):
