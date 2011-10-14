@@ -12,9 +12,9 @@ from mercurial.i18n import _
 
 import lfutil
 
-LARGEFILES_REQUIRED_MSG = '\nThis repository uses the largefiles extension.' \
-                          '\n\nPlease enable it in your Mercurial config ' \
-                          'file.\n'
+LARGEFILES_REQUIRED_MSG = ('\nThis repository uses the largefiles extension.'
+                           '\n\nPlease enable it in your Mercurial config '
+                           'file.\n')
 
 def putlfile(repo, proto, sha):
     '''Put a largefile into a repository's local cache and into the

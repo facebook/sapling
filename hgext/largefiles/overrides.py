@@ -92,8 +92,9 @@ def override_add(orig, ui, repo, *pats, **opts):
             continue
 
         if exact or not exists:
-            if large or (lfsize and os.path.getsize(repo.wjoin(f)) >= \
-                    lfsize * 1024 * 1024) or (lfmatcher and lfmatcher(f)):
+            abovemin = (lfsize and
+                        os.path.getsize(repo.wjoin(f)) >= lfsize * 1024 * 1024)
+            if large or abovemin or (lfmatcher and lfmatcher(f)):
                 lfnames.append(f)
                 if ui.verbose or not exact:
                     ui.status(_('adding %s as a largefile\n') % m.rel(f))
@@ -117,8 +118,9 @@ def override_add(orig, ui, repo, *pats, **opts):
                 else:
                     lfdirstate.add(f)
             lfdirstate.write()
-            bad += [lfutil.splitstandin(f) for f in lfutil.repo_add(repo,
-                standins) if f in m.files()]
+            bad += [lfutil.splitstandin(f)
+                    for f in lfutil.repo_add(repo, standins)
+                    if f in m.files()]
     finally:
         wlock.release()
 
@@ -143,8 +145,9 @@ def override_remove(orig, ui, repo, *pats, **opts):
         s = repo.status(match=m, clean=True)
     finally:
         repo.lfstatus = False
-    modified, added, deleted, clean = [[f for f in list if lfutil.standin(f) \
-        in manifest] for list in [s[0], s[1], s[3], s[6]]]
+    modified, added, deleted, clean = [[f for f in list
+                                        if lfutil.standin(f) in manifest]
+                                       for list in [s[0], s[1], s[3], s[6]]]
 
     def warn(files, reason):
         for f in files:
@@ -358,9 +361,10 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
             m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
             m._fmap = set(m._files)
             orig_matchfn = m.matchfn
-            m.matchfn = lambda f: lfutil.isstandin(f) and \
-                lfile(lfutil.splitstandin(f)) and \
-                orig_matchfn(lfutil.splitstandin(f)) or None
+            m.matchfn = lambda f: (lfutil.isstandin(f) and
+                                   lfile(lfutil.splitstandin(f)) and
+                                   orig_matchfn(lfutil.splitstandin(f)) or
+                                   None)
             return m
         oldmatch = installmatchfn(override_match)
         listpats = []
@@ -744,8 +748,8 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
             for f in mc:
                 if mc[f] != mp1.get(f, None) or mc[f] != mp2.get(f, None):
                     files.add(f)
-        toupload = toupload.union(set([f for f in files if lfutil.isstandin(f)\
-            and f in ctx]))
+        toupload = toupload.union(
+            set([f for f in files if lfutil.isstandin(f) and f in ctx]))
     return toupload
 
 def override_outgoing(orig, ui, repo, dest=None, **opts):

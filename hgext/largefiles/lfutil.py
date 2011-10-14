@@ -86,8 +86,8 @@ def systemcachepath(ui, hash):
         path = os.path.join(path, hash)
     else:
         if os.name == 'nt':
-            path = os.path.join(os.getenv('LOCALAPPDATA') or \
-                os.getenv('APPDATA'), longname, hash)
+            appdata = os.getenv('LOCALAPPDATA', os.getenv('APPDATA'))
+            path = os.path.join(appdata, longname, hash)
         elif os.name == 'posix':
             path = os.path.join(os.getenv('HOME'), '.' + longname, hash)
         else:
@@ -184,7 +184,8 @@ def listlfiles(repo, rev=None, matcher=None):
         matcher = getstandinmatcher(repo)
 
     # ignore unknown files in working directory
-    return [splitstandin(f) for f in repo[rev].walk(matcher) \
+    return [splitstandin(f)
+            for f in repo[rev].walk(matcher)
             if rev is not None or repo.dirstate[f] != '?']
 
 def incache(repo, hash):
@@ -394,8 +395,9 @@ def writehash(hash, filename, executable):
 
 def getexecutable(filename):
     mode = os.stat(filename).st_mode
-    return (mode & stat.S_IXUSR) and (mode & stat.S_IXGRP) and (mode & \
-        stat.S_IXOTH)
+    return ((mode & stat.S_IXUSR) and
+            (mode & stat.S_IXGRP) and
+            (mode & stat.S_IXOTH))
 
 def getmode(executable):
     if executable:

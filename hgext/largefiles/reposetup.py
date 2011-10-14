@@ -30,8 +30,8 @@ def reposetup(ui, repo):
         method = getattr(repo, name)
         #if not (isinstance(method, types.MethodType) and
         #        method.im_func is repo.__class__.commitctx.im_func):
-        if isinstance(method, types.FunctionType) and method.func_name == \
-            'wrap':
+        if (isinstance(method, types.FunctionType) and
+            method.func_name == 'wrap'):
             ui.warn(_('largefiles: repo method %r appears to have already been'
                     ' wrapped by another extension: '
                     'largefiles may behave incorrectly\n')
@@ -193,16 +193,18 @@ def reposetup(ui, repo):
                     lfiles = (modified, added, removed, missing, [], [], clean)
                     result = list(result)
                     # Unknown files
-                    result[4] = [f for f in unknown if repo.dirstate[f] == '?'\
-                        and not lfutil.isstandin(f)]
+                    result[4] = [f for f in unknown
+                                 if (repo.dirstate[f] == '?' and
+                                     not lfutil.isstandin(f))]
                     # Ignored files must be ignored by both the dirstate and
                     # lfdirstate
                     result[5] = set(ignored).intersection(set(result[5]))
                     # combine normal files and largefiles
-                    normals = [[fn for fn in filelist if not \
-                        lfutil.isstandin(fn)] for filelist in result]
-                    result = [sorted(list1 + list2) for (list1, list2) in \
-                        zip(normals, lfiles)]
+                    normals = [[fn for fn in filelist
+                                if not lfutil.isstandin(fn)]
+                               for filelist in result]
+                    result = [sorted(list1 + list2)
+                              for (list1, list2) in zip(normals, lfiles)]
                 else:
                     def toname(f):
                         if lfutil.isstandin(f):
@@ -251,8 +253,8 @@ def reposetup(ui, repo):
                 # Case 1: user calls commit with no specific files or
                 # include/exclude patterns: refresh and commit all files that
                 # are "dirty".
-                if (match is None) or (not match.anypats() and not \
-                        match.files()):
+                if ((match is None) or
+                    (not match.anypats() and not match.files())):
                     # Spend a bit of time here to get a list of files we know
                     # are modified so we can compare only against those.
                     # It can cost a lot of time (several seconds)
@@ -345,8 +347,8 @@ def reposetup(ui, repo):
                         fstandin += os.sep
 
                     # prevalidate matching standin directories
-                    if lfutil.any_(st for st in match._files if \
-                            st.startswith(fstandin)):
+                    if lfutil.any_(st for st in match._files
+                                   if st.startswith(fstandin)):
                         continue
                     actualfiles.append(f)
                 match._files = actualfiles
@@ -369,8 +371,8 @@ def reposetup(ui, repo):
                 toupload = set()
                 o = repo.changelog.nodesbetween(o, revs)[0]
                 for n in o:
-                    parents = [p for p in repo.changelog.parents(n) if p != \
-                        node.nullid]
+                    parents = [p for p in repo.changelog.parents(n)
+                               if p != node.nullid]
                     ctx = repo[n]
                     files = set(ctx.files())
                     if len(parents) == 2:
@@ -388,8 +390,10 @@ def reposetup(ui, repo):
                                     None):
                                 files.add(f)
 
-                    toupload = toupload.union(set([ctx[f].data().strip() for f\
-                        in files if lfutil.isstandin(f) and f in ctx]))
+                    toupload = toupload.union(
+                        set([ctx[f].data().strip()
+                             for f in files
+                             if lfutil.isstandin(f) and f in ctx]))
                 lfcommands.uploadlfiles(ui, self, remote, toupload)
             return super(lfiles_repo, self).push(remote, force, revs,
                 newbranch)

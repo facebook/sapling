@@ -383,9 +383,9 @@ def cachelfiles(ui, repo, node):
         # if it exists and its hash matches, it might have been locally
         # modified before updating and the user chose 'local'.  in this case,
         # it will not be in any store, so don't look for it.
-        if (not os.path.exists(repo.wjoin(lfile)) \
-                or expectedhash != lfutil.hashfile(repo.wjoin(lfile))) and \
-                not lfutil.findfile(repo, expectedhash):
+        if ((not os.path.exists(repo.wjoin(lfile)) or
+             expectedhash != lfutil.hashfile(repo.wjoin(lfile))) and
+            not lfutil.findfile(repo, expectedhash)):
             toget.append((lfile, expectedhash))
 
     if toget:
@@ -441,9 +441,9 @@ def _updatelfile(repo, lfdirstate, lfile):
         if os.path.exists(absstandin+'.orig'):
             shutil.copyfile(abslfile, abslfile+'.orig')
         expecthash = lfutil.readstandin(repo, lfile)
-        if expecthash != '' and \
-                (not os.path.exists(abslfile) or \
-                expecthash != lfutil.hashfile(abslfile)):
+        if (expecthash != '' and
+            (not os.path.exists(abslfile) or
+             expecthash != lfutil.hashfile(abslfile))):
             if not lfutil.copyfromcache(repo, expecthash, lfile):
                 return None # don't try to set the mode or update the dirstate
             ret = 1
@@ -467,7 +467,6 @@ def _updatelfile(repo, lfdirstate, lfile):
     return ret
 
 # -- hg commands declarations ------------------------------------------------
-
 
 cmdtable = {
     'lfconvert': (lfconvert,
