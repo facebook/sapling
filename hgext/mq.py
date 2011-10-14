@@ -1034,8 +1034,6 @@ class queue(object):
                     return self.series[0]
             return None
 
-        if patch is None:
-            return None
         if patch in self.series:
             return patch
 
@@ -1095,12 +1093,12 @@ class queue(object):
                 self.ui.warn(_('no patches in series\n'))
                 return 0
 
-            patch = self.lookup(patch)
             # Suppose our series file is: A B C and the current 'top'
             # patch is B. qpush C should be performed (moving forward)
             # qpush B is a NOP (no change) qpush A is an error (can't
             # go backwards with qpush)
             if patch:
+                patch = self.lookup(patch)
                 info = self.isapplied(patch)
                 if info and info[0] >= len(self.applied) - 1:
                     self.ui.warn(
