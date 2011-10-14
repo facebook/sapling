@@ -91,7 +91,7 @@ def systemcachepath(ui, hash):
         elif os.name == 'posix':
             path = os.path.join(os.getenv('HOME'), '.' + longname, hash)
         else:
-            raise util.Abort(_('Unknown operating system: %s\n') % os.name)
+            raise util.Abort(_('unknown operating system: %s\n') % os.name)
     return path
 
 def insystemcache(ui, hash):

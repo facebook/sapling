@@ -345,8 +345,8 @@ def uploadlfiles(ui, rsrc, rdst, files):
                     total=len(files))
         source = lfutil.findfile(rsrc, hash)
         if not source:
-            raise util.Abort(_('Missing largefile %s needs to be uploaded')
-                             % hash)
+            raise util.Abort(_('largefile %s missing from store'
+                               ' (needs to be uploaded)') % hash)
         # XXX check for errors here
         store.put(source, hash)
         at += 1

@@ -172,7 +172,8 @@ Check that committing standins is not allowed.
   $ cd ..
   $ echo large3 > large3
   $ hg commit .hglf/large3 -m "try to commit standin"
-  abort: Don't commit largefile standin. Commit largefile.
+  abort: file ".hglf/large3" is a largefile standin
+  (commit the largefile itself instead)
   [255]
 
 Test some cornercases for adding largefiles.

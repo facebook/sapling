@@ -50,9 +50,10 @@ class remotestore(basestore.basestore):
     def _getfile(self, tmpfile, filename, hash):
         # quit if the largefile isn't there
         stat = self._stat(hash)
-        if stat:
-            raise util.Abort(_('remotestore: largefile %s is %s') %
-                             (hash, stat == 1 and 'invalid' or 'missing'))
+        if stat == 1:
+            raise util.Abort(_('remotestore: largefile %s is invalid') % hash)
+        elif stat == 2:
+            raise util.Abort(_('remotestore: largefile %s is missing') % hash)
 
         try:
             length, infile = self._get(hash)
@@ -64,7 +65,7 @@ class remotestore(basestore.basestore):
             # This usually indicates a connection problem, so don't
             # keep trying with the other files... they will probably
             # all fail too.
-            raise util.Abort('%s: %s' % (self.url, str(e.reason)))
+            raise util.Abort('%s: %s' % (self.url, e.reason))
         except IOError, e:
             raise basestore.StoreError(filename, hash, self.url, str(e))
 
@@ -101,5 +102,5 @@ class remotestore(basestore.basestore):
                 % (cset, filename))
             return True # failed
         else:
-            raise util.Abort(_('check failed, unexpected response'
-                               'statlfile: %d') % stat)
+            raise RuntimeError('verify failed: unexpected response from '
+                               'statlfile (%r)' % stat)

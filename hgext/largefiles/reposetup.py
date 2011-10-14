@@ -287,10 +287,11 @@ def reposetup(ui, repo):
                     return orig(text=text, user=user, date=date, match=match,
                                     force=force, editor=editor, extra=extra)
 
-                for file in match.files():
-                    if lfutil.isstandin(file):
+                for f in match.files():
+                    if lfutil.isstandin(f):
                         raise util.Abort(
-                            "Don't commit largefile standin. Commit largefile.")
+                            _('file "%s" is a largefile standin') % f,
+                            hint=('commit the largefile itself instead'))
 
                 # Case 2: user calls commit with specified patterns: refresh
                 # any matching big files.
