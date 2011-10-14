@@ -4652,6 +4652,10 @@ def revert(ui, repo, *pats, **opts):
         def badfn(path, msg):
             if path in names:
                 return
+            if path in repo[node].substate:
+                ui.warn("%s: %s\n" % (m.rel(path),
+                    'reverting subrepos is unsupported'))
+                return
             path_ = path + '/'
             for f in names:
                 if f.startswith(path_):

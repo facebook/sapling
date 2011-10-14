@@ -34,6 +34,18 @@ Issue2232: committing a subrepo without .hgsub
   $ hg ci -m1
   committing subrepository s
 
+Revert can't (yet) revert subrepos:
+
+  $ echo b > s/a
+  $ hg revert s
+  s: reverting subrepos is unsupported
+
+Revert currently ignores subrepos by default
+
+  $ hg revert -a
+  $ hg revert -R s -a -C
+  reverting s/a
+
 Issue2022: update -C
 
   $ echo b > s/a
