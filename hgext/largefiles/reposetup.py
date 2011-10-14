@@ -118,12 +118,11 @@ def reposetup(ui, repo):
                     except KeyError:
                         return False
 
-                # create a copy of match that matches standins instead of
-                # lfiles if matcher not set then it is the always matcher so
-                # overwrite that
                 if match is None:
                     match = match_.always(self.root, self.getcwd())
 
+                # Create a copy of match that matches standins instead
+                # of largefiles.
                 def tostandin(file):
                     if inctx(lfutil.standin(file), ctx2):
                         return lfutil.standin(file)
@@ -199,7 +198,7 @@ def reposetup(ui, repo):
                     # Ignored files must be ignored by both the dirstate and
                     # lfdirstate
                     result[5] = set(ignored).intersection(set(result[5]))
-                    # combine normal files and lfiles
+                    # combine normal files and largefiles
                     normals = [[fn for fn in filelist if not \
                         lfutil.isstandin(fn)] for filelist in result]
                     result = [sorted(list1 + list2) for (list1, list2) in \
@@ -220,8 +219,8 @@ def reposetup(ui, repo):
                 self.lfstatus = True
                 return result
 
-        # This call happens after a commit has occurred. Copy all of the lfiles
-        # into the cache
+        # As part of committing, copy all of the largefiles into the
+        # cache.
         def commitctx(self, *args, **kwargs):
             node = super(lfiles_repo, self).commitctx(*args, **kwargs)
             ctx = self[node]
@@ -232,9 +231,9 @@ def reposetup(ui, repo):
 
             return node
 
-        # This call happens before a commit has occurred. The lfile standins
-        # have not had their contents updated (to reflect the hash of their
-        # lfile).  Do that here.
+        # Before commit, largefile standins have not had their
+        # contents updated to reflect the hash of their largefile.
+        # Do that here.
         def commit(self, text="", user=None, date=None, match=None,
                 force=False, editor=False, extra={}):
             orig = super(lfiles_repo, self).commit
@@ -242,11 +241,12 @@ def reposetup(ui, repo):
             wlock = repo.wlock()
             try:
                 if getattr(repo, "_isrebasing", False):
-                    # We have to take the time to pull down the new lfiles now.
-                    # Otherwise if we are rebasing, any lfiles that were
-                    # modified in the changesets we are rebasing on top of get
-                    # overwritten either by the rebase or in the first commit
-                    # after the rebase.
+                    # We have to take the time to pull down the new
+                    # largefiles now. Otherwise if we are rebasing,
+                    # any largefiles that were modified in the
+                    # destination changesets get overwritten, either
+                    # by the rebase or in the first commit after the
+                    # rebase.
                     lfcommands.updatelfiles(repo.ui, repo)
                 # Case 1: user calls commit with no specific files or
                 # include/exclude patterns: refresh and commit all files that
@@ -265,7 +265,7 @@ def reposetup(ui, repo):
                     for i in s:
                         modifiedfiles.extend(i)
                     lfiles = lfutil.listlfiles(self)
-                    # this only loops through lfiles that exist (not
+                    # this only loops through largefiles that exist (not
                     # removed/renamed)
                     for lfile in lfiles:
                         if lfile in modifiedfiles:
@@ -327,9 +327,9 @@ def reposetup(ui, repo):
                 match = copy.copy(match)
                 orig_matchfn = match.matchfn
 
-                # Check both the list of lfiles and the list of standins
-                # because if a lfile was removed, it won't be in the list of
-                # lfiles at this point
+                # Check both the list of largefiles and the list of
+                # standins because if a largefile was removed, it
+                # won't be in the list of largefiles at this point
                 match._files += sorted(standins)
 
                 actualfiles = []

@@ -243,13 +243,13 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
 
         if f in lfiles:
             dstfiles.append(lfutil.standin(f))
-            # lfile in manifest if it has not been removed/renamed
+            # largefile in manifest if it has not been removed/renamed
             if f in ctx.manifest():
                 if 'l' in ctx.filectx(f).flags():
                     if renamed and renamed[0] in lfiles:
                         raise util.Abort(_('largefile %s becomes symlink') % f)
 
-                # lfile was modified, update standins
+                # largefile was modified, update standins
                 fullpath = rdst.wjoin(f)
                 lfutil.createdir(os.path.dirname(fullpath))
                 m = util.sha1('')
@@ -282,7 +282,7 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                 raise IOError()
             renamed = fctx.renamed()
             if renamed:
-                # standin is always a lfile because lfileness
+                # standin is always a largefile because largefile-ness
                 # doesn't change after rename or copy
                 renamed = lfutil.standin(renamed[0])
 

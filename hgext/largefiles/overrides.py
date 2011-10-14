@@ -310,10 +310,10 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
     if os.path.isdir(dest):
         if not os.path.isdir(makestandin(dest)):
             os.makedirs(makestandin(dest))
-    # This could copy both largefiles and normal files in one command,
-    # but we don't want to do that first replace their matcher to only
-    # match normal files and run it then replace it to just match
-    # lfiles and run it again
+    # This could copy both lfiles and normal files in one command,
+    # but we don't want to do that. First replace their matcher to
+    # only match normal files and run it, then replace it to just
+    # match largefiles and run it again.
     nonormalfiles = False
     nolfiles = False
     try:
@@ -418,18 +418,20 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
 
     return result
 
-# When the user calls revert, we have to be careful to not revert any changes
-# to other lfiles accidentally.  This means we have to keep track of the lfiles
-# that are being reverted so we only pull down the necessary lfiles.
+# When the user calls revert, we have to be careful to not revert any
+# changes to other largefiles accidentally. This means we have to keep
+# track of the largefiles that are being reverted so we only pull down
+# the necessary largefiles.
 #
-# Standins are only updated (to match the hash of lfiles) before commits.
-# Update the standins then run the original revert (changing the matcher to hit
-# standins instead of lfiles). Based on the resulting standins update the
-# lfiles. Then return the standins to their proper state
+# Standins are only updated (to match the hash of largefiles) before
+# commits. Update the standins then run the original revert, changing
+# the matcher to hit standins instead of largefiles. Based on the
+# resulting standins update the largefiles. Then return the standins
+# to their proper state
 def override_revert(orig, ui, repo, *pats, **opts):
-    # Because we put the standins in a bad state (by updating them) and then
-    # return them to a correct state we need to lock to prevent others from
-    # changing them in their incorrect state.
+    # Because we put the standins in a bad state (by updating them)
+    # and then return them to a correct state we need to lock to
+    # prevent others from changing them in their incorrect state.
     wlock = repo.wlock()
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)
@@ -461,11 +463,11 @@ def override_revert(orig, ui, repo, *pats, **opts):
                 orig_matchfn = m.matchfn
                 def matchfn(f):
                     if lfutil.isstandin(f):
-                        # We need to keep track of what lfiles are being
-                        # matched so we know which ones to update later
-                        # (otherwise we revert changes to other lfiles
-                        # accidentally).  This is repo specific, so duckpunch
-                        # the repo object to keep the list of lfiles for us
+                        # We need to keep track of what largefiles are being
+                        # matched so we know which ones to update later --
+                        # otherwise we accidentally revert changes to other
+                        # largefiles. This is repo-specific, so duckpunch the
+                        # repo object to keep the list of largefiles for us
                         # later.
                         if orig_matchfn(lfutil.splitstandin(f)) and \
                                 (f in repo[None] or f in ctx):
@@ -487,7 +489,8 @@ def override_revert(orig, ui, repo, *pats, **opts):
         lfileslist = getattr(repo, '_lfilestoupdate', [])
         lfcommands.updatelfiles(ui, repo, filelist=lfileslist,
                                 printmessage=False)
-        # Empty out the lfiles list so we start fresh next time
+
+        # empty out the largefiles list so we start fresh next time
         repo._lfilestoupdate = []
         for lfile in modified:
             if lfile in lfileslist:
@@ -523,9 +526,9 @@ def hg_merge(orig, repo, node, force=None, remind=True):
     lfcommands.updatelfiles(repo.ui, repo)
     return result
 
-# When we rebase a repository with remotely changed lfiles, we need
-# to take some extra care so that the lfiles are correctly updated
-# in the working copy
+# When we rebase a repository with remotely changed largefiles, we need to
+# take some extra care so that the largefiles are correctly updated in the
+# working copy
 def override_pull(orig, ui, repo, source=None, **opts):
     if opts.get('rebase', False):
         repo._isrebasing = True
@@ -569,9 +572,8 @@ def override_rebase(orig, ui, repo, **opts):
 
 def override_archive(orig, repo, dest, node, kind, decode=True, matchfn=None,
             prefix=None, mtime=None, subrepos=None):
-    # No need to lock because we are only reading history and lfile caches
-    # neither of which are modified
-
+    # No need to lock because we are only reading history and
+    # largefile caches, neither of which are modified.
     lfcommands.cachelfiles(repo.ui, repo, node)
 
     if kind not in archival.archivers:
@@ -643,10 +645,10 @@ def override_archive(orig, repo, dest, node, kind, decode=True, matchfn=None,
 
     archiver.done()
 
-# If a lfile is modified the change is not reflected in its standin until a
-# commit.  cmdutil.bailifchanged raises an exception if the repo has
-# uncommitted changes.  Wrap it to also check if lfiles were changed. This is
-# used by bisect and backout.
+# If a largefile is modified, the change is not reflected in its
+# standin until a commit. cmdutil.bailifchanged() raises an exception
+# if the repo has uncommitted changes. Wrap it to also check if
+# largefiles were changed. This is used by bisect and backout.
 def override_bailifchanged(orig, repo):
     orig(repo)
     repo.lfstatus = True
@@ -770,10 +772,10 @@ def override_summary(orig, ui, repo, *pats, **opts):
             ui.status(_('largefiles: %d to upload\n') % len(toupload))
 
 def override_addremove(orig, ui, repo, *pats, **opts):
-    # Check if the parent or child has lfiles if they do don't allow it.  If
-    # there is a symlink in the manifest then getting the manifest throws an
-    # exception catch it and let addremove deal with it. This happens in
-    # Mercurial's test test-addremove-symlink
+    # Check if the parent or child has largefiles; if so, disallow
+    # addremove. If there is a symlink in the manifest then getting
+    # the manifest throws an exception: catch it and let addremove
+    # deal with it.
     try:
         manifesttip = set(repo['tip'].manifest())
     except util.Abort:
@@ -791,7 +793,7 @@ def override_addremove(orig, ui, repo, *pats, **opts):
 
     return orig(ui, repo, *pats, **opts)
 
-# Calling purge with --all will cause the lfiles to be deleted.
+# Calling purge with --all will cause the largefiles to be deleted.
 # Override repo.status to prevent this from happening.
 def override_purge(orig, ui, repo, *dirs, **opts):
     oldstatus = repo.status

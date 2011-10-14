@@ -99,8 +99,8 @@ def uisetup(ui):
     wireproto.commands['heads'] = (proto.heads, '')
     wireproto.commands['lheads'] = (wireproto.heads, '')
 
-    # make putlfile behave the same as push and {get,stat}lfile behave the same
-    # as pull w.r.t. permissions checks
+    # make putlfile behave the same as push and {get,stat}lfile behave
+    # the same as pull w.r.t. permissions checks
     hgweb_mod.perms['putlfile'] = 'push'
     hgweb_mod.perms['getlfile'] = 'pull'
     hgweb_mod.perms['statlfile'] = 'pull'
