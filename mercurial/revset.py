@@ -1064,8 +1064,8 @@ def formatspec(expr, *args):
 
     Prefixing the type with 'l' specifies a parenthesized list of that type.
 
-    >>> formatspec('%d:: and %lr', 10, ("this()", "that()"))
-    '10:: and ((this()) or (that()))'
+    >>> formatspec('%r:: and %lr', '10 or 11', ("this()", "that()"))
+    '(10 or 11):: and ((this()) or (that()))'
     >>> formatspec('%d:: and not %d::', 10, 20)
     '10:: and not 20::'
     >>> formatspec('keyword(%s)', 'foo\\xe9')
@@ -1104,7 +1104,7 @@ def formatspec(expr, *args):
             d = expr[pos]
             if d == '%':
                 ret += d
-            elif d in 'dsnb':
+            elif d in 'dsnbr':
                 ret += argtype(d, args[arg])
                 arg += 1
             elif d == 'l':
