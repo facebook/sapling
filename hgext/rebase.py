@@ -174,10 +174,10 @@ def rebase(ui, repo, **opts):
                 dest = repo[destf]
 
             if srcf:
-                revsetargs = ('(%s)::', srcf)
+                revsetargs = ('(%r)::', srcf)
             else:
                 base = basef or '.'
-                revsetargs = ('(children(ancestor(%s, %d)) and ::(%s))::',
+                revsetargs = ('(children(ancestor(%r, %d)) and ::(%r))::',
                              base, dest, base)
 
             rebaseset = [c.rev() for c in repo.set(*revsetargs)]
