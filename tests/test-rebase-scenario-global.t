@@ -269,4 +269,240 @@ C onto A - rebase onto an ancestor:
   |/
   o  0: 'A'
   
+  $ cd ..
 
+Test for revset
+
+We need a bit different graph
+All destination are B
+
+  $ hg init ah
+  $ cd ah
+  $ hg unbundle $TESTDIR/bundles/rebase-revset.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 9 changesets with 9 changes to 9 files (+2 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg tglog
+  o  8: 'I'
+  |
+  o  7: 'H'
+  |
+  o  6: 'G'
+  |
+  | o  5: 'F'
+  | |
+  | o  4: 'E'
+  |/
+  o  3: 'D'
+  |
+  o  2: 'C'
+  |
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  
+  $ cd ..
+
+
+Simple case with keep:
+
+Source on have two descendant heads but ask for one
+
+  $ hg clone -q -u . ah ah1
+  $ cd ah1
+  $ hg rebase -r '2::8' -d 1
+  abort: can't remove original changesets with unrebased descendants
+  (use --keep to keep original changesets)
+  [255]
+  $ hg rebase -r '2::8' -d 1 --keep
+  $ hg tglog
+  @  13: 'I'
+  |
+  o  12: 'H'
+  |
+  o  11: 'G'
+  |
+  o  10: 'D'
+  |
+  o  9: 'C'
+  |
+  | o  8: 'I'
+  | |
+  | o  7: 'H'
+  | |
+  | o  6: 'G'
+  | |
+  | | o  5: 'F'
+  | | |
+  | | o  4: 'E'
+  | |/
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
+  o |  1: 'B'
+  |/
+  o  0: 'A'
+  
+
+  $ cd ..
+
+Base on have one descendant heads we ask for but common ancestor have two
+
+  $ hg clone -q -u . ah ah2
+  $ cd ah2
+  $ hg rebase -r '3::8' -d 1
+  abort: can't remove original changesets with unrebased descendants
+  (use --keep to keep original changesets)
+  [255]
+  $ hg rebase -r '3::8' -d 1 --keep
+  $ hg tglog
+  @  12: 'I'
+  |
+  o  11: 'H'
+  |
+  o  10: 'G'
+  |
+  o    9: 'D'
+  |\
+  | | o  8: 'I'
+  | | |
+  | | o  7: 'H'
+  | | |
+  | | o  6: 'G'
+  | | |
+  | | | o  5: 'F'
+  | | | |
+  | | | o  4: 'E'
+  | | |/
+  | | o  3: 'D'
+  | |/
+  | o  2: 'C'
+  | |
+  o |  1: 'B'
+  |/
+  o  0: 'A'
+  
+
+  $ cd ..
+
+rebase subset
+
+  $ hg clone -q -u . ah ah3
+  $ cd ah3
+  $ hg rebase -r '3::7' -d 1
+  abort: can't remove original changesets with unrebased descendants
+  (use --keep to keep original changesets)
+  [255]
+  $ hg rebase -r '3::7' -d 1 --keep
+  $ hg tglog
+  @  11: 'H'
+  |
+  o  10: 'G'
+  |
+  o    9: 'D'
+  |\
+  | | o  8: 'I'
+  | | |
+  | | o  7: 'H'
+  | | |
+  | | o  6: 'G'
+  | | |
+  | | | o  5: 'F'
+  | | | |
+  | | | o  4: 'E'
+  | | |/
+  | | o  3: 'D'
+  | |/
+  | o  2: 'C'
+  | |
+  o |  1: 'B'
+  |/
+  o  0: 'A'
+  
+
+  $ cd ..
+
+rebase subset with multiple head
+
+  $ hg clone -q -u . ah ah4
+  $ cd ah4
+  $ hg rebase -r '3::(7+5)' -d 1
+  abort: can't remove original changesets with unrebased descendants
+  (use --keep to keep original changesets)
+  [255]
+  $ hg rebase -r '3::(7+5)' -d 1 --keep
+  $ hg tglog
+  @  13: 'H'
+  |
+  o  12: 'G'
+  |
+  | o  11: 'F'
+  | |
+  | o  10: 'E'
+  |/
+  o    9: 'D'
+  |\
+  | | o  8: 'I'
+  | | |
+  | | o  7: 'H'
+  | | |
+  | | o  6: 'G'
+  | | |
+  | | | o  5: 'F'
+  | | | |
+  | | | o  4: 'E'
+  | | |/
+  | | o  3: 'D'
+  | |/
+  | o  2: 'C'
+  | |
+  o |  1: 'B'
+  |/
+  o  0: 'A'
+  
+
+  $ cd ..
+
+More advanced tests
+
+rebase on ancestor with revset
+
+  $ hg clone -q -u . ah ah5
+  $ cd ah5
+  $ hg rebase -r '6::' -d 2
+  saved backup bundle to $TESTTMP/ah5/.hg/strip-backup/3d8a618087a7-backup.hg
+  $ hg tglog
+  @  8: 'I'
+  |
+  o  7: 'H'
+  |
+  o  6: 'G'
+  |
+  | o  5: 'F'
+  | |
+  | o  4: 'E'
+  | |
+  | o  3: 'D'
+  |/
+  o  2: 'C'
+  |
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  
+  $ cd ..
+
+
+rebase with multiple root.
+We rebase E and G on B
+We would expect heads are I, F if it was supported
+
+  $ hg clone -q -u . ah ah6
+  $ cd ah6
+  $ hg rebase -r '(4+6)::' -d 1
+  abort: can't rebase multiple roots
+  [255]
+  $ cd ..

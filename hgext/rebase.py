@@ -15,7 +15,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
-from mercurial import extensions, patch
+from mercurial import extensions, patch, scmutil
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
@@ -33,6 +33,9 @@ command = cmdutil.command(cmdtable)
     ('b', 'base', '',
      _('rebase from the base of the specified changeset '
        '(up to greatest common ancestor of base and dest)'),
+     _('REV')),
+    ('r', 'rev', [],
+     _('rebase these revisions'),
      _('REV')),
     ('d', 'dest', '',
      _('rebase onto the specified changeset'), _('REV')),
@@ -119,6 +122,7 @@ def rebase(ui, repo, **opts):
         destf = opts.get('dest', None)
         srcf = opts.get('source', None)
         basef = opts.get('base', None)
+        revf = opts.get('rev', [])
         contf = opts.get('continue')
         abortf = opts.get('abort')
         collapsef = opts.get('collapse', False)
@@ -156,7 +160,13 @@ def rebase(ui, repo, **opts):
         else:
             if srcf and basef:
                 raise util.Abort(_('cannot specify both a '
+                                   'source and a base'))
+            if revf and basef:
+                raise util.Abort(_('cannot specify both a'
                                    'revision and a base'))
+            if revf and srcf:
+                raise util.Abort(_('cannot specify both a'
+                                   'revision and a source'))
             if detachf:
                 if not srcf:
                     raise util.Abort(
@@ -167,24 +177,39 @@ def rebase(ui, repo, **opts):
             cmdutil.bailifchanged(repo)
 
             if not destf:
-                # Destination defaults to the latest revision in the current branch
+                # Destination defaults to the latest revision in the
+                # current branch
                 branch = repo[None].branch()
                 dest = repo[branch]
             else:
                 dest = repo[destf]
 
+            rebaseset = None
             if srcf:
                 revsetargs = ('(%r)::', srcf)
+            elif revf:
+                rebaseset = scmutil.revrange(repo, revf)
+                if not keepf and rebaseset:
+                    try:
+                        repo.set('children(%ld) - %ld',
+                                 rebaseset, rebaseset).next()
+                    except StopIteration:
+                        pass # empty revset is what we look for
+                    else:
+                        msg = _("can't remove original changesets with"
+                                " unrebased descendants")
+                        hint = _('use --keep to keep original changesets')
+                        raise util.Abort(msg, hint=hint)
             else:
                 base = basef or '.'
                 revsetargs = ('(children(ancestor(%r, %d)) and ::(%r))::',
                              base, dest, base)
-
-            rebaseset = [c.rev() for c in repo.set(*revsetargs)]
+            if rebaseset is None:
+                rebaseset = [c.rev() for c in repo.set(*revsetargs)]
             if rebaseset:
                 result = buildstate(repo, dest, rebaseset, detachf)
             else:
-                repo.ui.debug(_('base is ancestor of destination'))
+                repo.ui.debug('base is ancestor of destination')
                 result = None
             if not result:
                 # Empty state built, nothing to rebase
@@ -545,9 +570,9 @@ def buildstate(repo, dest, rebaseset, detach):
     detachset = set()
     roots = list(repo.set('roots(%ld)', rebaseset))
     if not roots:
-        raise util.Abort( _('no matching revisions'))
+        raise util.Abort(_('no matching revisions'))
     if len(roots) > 1:
-        raise util.Abort( _("can't rebase multiple roots"))
+        raise util.Abort(_("can't rebase multiple roots"))
     root = roots[0]
 
     commonbase = root.ancestor(dest)
