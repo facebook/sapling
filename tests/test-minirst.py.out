@@ -615,15 +615,9 @@ Normal output.
 Verbose output.
 
 ----------------------------------------------------------------------
-['debug', 'debug']
+('<p>\nNormal output.\n</p>\n<p>\nVerbose output.\n</p>\n', ['debug', 'debug'])
 ----------------------------------------------------------------------
-<p>
-Normal output.
-</p>
-<p>
-Verbose output.
-</p>
-
+['debug', 'debug']
 ----------------------------------------------------------------------
 
 containers (debug) formatted to fit within 60 characters:
@@ -633,15 +627,9 @@ Normal output.
 Initial debug output.
 
 ----------------------------------------------------------------------
-['verbose']
+('<p>\nNormal output.\n</p>\n<p>\nInitial debug output.\n</p>\n', ['verbose'])
 ----------------------------------------------------------------------
-<p>
-Normal output.
-</p>
-<p>
-Initial debug output.
-</p>
-
+['verbose']
 ----------------------------------------------------------------------
 
 containers (verbose debug) formatted to fit within 60 characters:
@@ -655,21 +643,9 @@ Verbose output.
 Debug output.
 
 ----------------------------------------------------------------------
-[]
+('<p>\nNormal output.\n</p>\n<p>\nInitial debug output.\n</p>\n<p>\nVerbose output.\n</p>\n<p>\nDebug output.\n</p>\n', [])
 ----------------------------------------------------------------------
-<p>
-Normal output.
-</p>
-<p>
-Initial debug output.
-</p>
-<p>
-Verbose output.
-</p>
-<p>
-Debug output.
-</p>
-
+[]
 ----------------------------------------------------------------------
 
 roles formatted to fit within 60 characters:
