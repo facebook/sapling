@@ -1055,14 +1055,17 @@ def formatspec(expr, *args):
 
     Supported arguments:
 
+    %r = revset expression, parenthesized
     %d = int(arg), no quoting
     %s = string(arg), escaped and single-quoted
     %b = arg.branch(), escaped and single-quoted
     %n = hex(arg), single-quoted
     %% = a literal '%'
 
-    Prefixing the type with 'l' specifies a list of that type.
+    Prefixing the type with 'l' specifies a parenthesized list of that type.
 
+    >>> formatspec('%d:: and %lr', 10, ("this()", "that()"))
+    '10:: and ((this()) or (that()))'
     >>> formatspec('%d:: and not %d::', 10, 20)
     '10:: and not 20::'
     >>> formatspec('keyword(%s)', 'foo\\xe9')
@@ -1083,6 +1086,9 @@ def formatspec(expr, *args):
             return str(int(arg))
         elif c == 's':
             return quote(arg)
+        elif c == 'r':
+            parse(arg) # make sure syntax errors are confined
+            return '(%s)' % arg
         elif c == 'n':
             return quote(node.hex(arg))
         elif c == 'b':
