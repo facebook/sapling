@@ -1,23 +1,29 @@
 from pprint import pprint
 from mercurial import minirst
 
-def debugformat(title, text, width, **kwargs):
-    print "%s formatted to fit within %d characters:" % (title, width)
-    formatted = minirst.format(text, width, **kwargs)
-    html = minirst.format(text, width, style='html', **kwargs)
-    print "-" * 70
-    if type(formatted) == tuple:
-        print formatted[0]
-        print "-" * 70
-        print html
-        print "-" * 70
-        pprint(formatted[1])
+def debugformat(text, form, **kwargs):
+    if form == 'html':
+        print "html format:"
+        out = minirst.format(text, style=form, **kwargs)
     else:
-        print formatted
+        print "%d column format:" % form
+        out = minirst.format(text, width=form, **kwargs)
+
+    print "-" * 70
+    if type(out) == tuple:
+        print out[0][:-1]
         print "-" * 70
-        print html
+        pprint(out[1])
+    else:
+        print out[:-1]
     print "-" * 70
     print
+
+def debugformats(title, text, **kwargs):
+    print "== %s ==" % title
+    debugformat(text, 60, **kwargs)
+    debugformat(text, 30, **kwargs)
+    debugformat(text, 'html', **kwargs)
 
 paragraphs = """
 This is some text in the first paragraph.
@@ -28,9 +34,7 @@ This is some text in the first paragraph.
  \n  \n   \nThe third and final paragraph.
 """
 
-debugformat('paragraphs', paragraphs, 60)
-debugformat('paragraphs', paragraphs, 30)
-
+debugformats('paragraphs', paragraphs)
 
 definitions = """
 A Term
@@ -45,9 +49,7 @@ Another Term
     Definition.
 """
 
-debugformat('definitions', definitions, 60)
-debugformat('definitions', definitions, 30)
-
+debugformats('definitions', definitions)
 
 literals = r"""
 The fully minimized form is the most
@@ -71,9 +73,7 @@ simply ends with space-double-colon. ::
       with '::' disappears in the final output.
 """
 
-debugformat('literals', literals, 60)
-debugformat('literals', literals, 30)
-
+debugformats('literals', literals)
 
 lists = """
 - This is the first list item.
@@ -117,9 +117,7 @@ Line blocks are also a form of list:
 | This is the second line.
 """
 
-debugformat('lists', lists, 60)
-debugformat('lists', lists, 30)
-
+debugformats('lists', lists)
 
 options = """
 There is support for simple option lists,
@@ -145,9 +143,7 @@ marker after the option. It is treated as a normal paragraph:
 --foo bar baz
 """
 
-debugformat('options', options, 60)
-debugformat('options', options, 30)
-
+debugformats('options', options)
 
 fields = """
 :a: First item.
@@ -160,8 +156,7 @@ Next list:
 :much too large: This key is big enough to get its own line.
 """
 
-debugformat('fields', fields, 60)
-debugformat('fields', fields, 30)
+debugformats('fields', fields)
 
 containers = """
 Normal output.
@@ -179,14 +174,14 @@ Normal output.
       Debug output.
 """
 
-debugformat('containers (normal)', containers, 60)
-debugformat('containers (verbose)', containers, 60, keep=['verbose'])
-debugformat('containers (debug)', containers, 60, keep=['debug'])
-debugformat('containers (verbose debug)', containers, 60,
+debugformats('containers (normal)', containers)
+debugformats('containers (verbose)', containers, keep=['verbose'])
+debugformats('containers (debug)', containers, keep=['debug'])
+debugformats('containers (verbose debug)', containers,
             keep=['verbose', 'debug'])
 
 roles = """Please see :hg:`add`."""
-debugformat('roles', roles, 60)
+debugformats('roles', roles)
 
 
 sections = """
@@ -202,7 +197,7 @@ Subsection
 Markup: ``foo`` and :hg:`help`
 ------------------------------
 """
-debugformat('sections', sections, 20)
+debugformats('sections', sections)
 
 
 admonitions = """
@@ -219,7 +214,7 @@ admonitions = """
    This is danger
 """
 
-debugformat('admonitions', admonitions, 30)
+debugformats('admonitions', admonitions)
 
 comments = """
 Some text.
@@ -235,7 +230,7 @@ Some text.
 Empty comment above
 """
 
-debugformat('comments', comments, 30)
+debugformats('comments', comments)
 
 
 data = [['a', 'b', 'c'],
@@ -246,4 +241,4 @@ table = minirst.maketable(data, 2, True)
 
 print table
 
-debugformat('table', table, 30)
+debugformats('table', table)
