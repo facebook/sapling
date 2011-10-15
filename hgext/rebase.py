@@ -15,7 +15,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
-from mercurial import extensions, patch, scmutil
+from mercurial import extensions, patch
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
@@ -184,31 +184,18 @@ def rebase(ui, repo, **opts):
             else:
                 dest = repo[destf]
 
-            rebaseset = None
-            if srcf:
-                revsetargs = ('(%r)::', srcf)
-            elif revf:
-                rebaseset = scmutil.revrange(repo, revf)
-                if not keepf and rebaseset:
-                    try:
-                        repo.set('children(%ld) - %ld',
-                                 rebaseset, rebaseset).next()
-                    except StopIteration:
-                        pass # empty revset is what we look for
-                    else:
-                        msg = _("can't remove original changesets with"
-                                " unrebased descendants")
-                        hint = _('use --keep to keep original changesets')
-                        raise util.Abort(msg, hint=hint)
+            if revf:
+                revgen = repo.set('%lr', revf)
+            elif srcf:
+                revgen = repo.set('(%r)::', srcf)
             else:
                 base = basef or '.'
-                revsetargs = ('(children(ancestor(%r, %d)) and ::(%r))::',
-                             base, dest, base)
-            if rebaseset is None:
-                rebaseset = [c.rev() for c in repo.set(*revsetargs)]
-            if rebaseset:
-                result = buildstate(repo, dest, rebaseset, detachf)
-            else:
+                revgen = repo.set('(children(ancestor(%r, %d)) and ::(%r))::',
+                                  base, dest, base)
+
+            rebaseset = [c.rev() for c in revgen]
+
+            if not rebaseset:
                 repo.ui.debug('base is ancestor of destination')
                 result = None
             if not result:
@@ -581,7 +568,7 @@ def buildstate(repo, dest, rebaseset, detach):
     if commonbase == dest:
         samebranch = root.branch() == dest.branch()
         if samebranch and root in dest.children():
-           repo.ui.debug(_('source is a child of destination'))
+           repo.ui.debug('source is a child of destination')
            return None
         # rebase on ancestor, force detach
         detach = True
