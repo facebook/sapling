@@ -3,14 +3,17 @@ from mercurial import minirst
 
 def debugformat(title, text, width, **kwargs):
     print "%s formatted to fit within %d characters:" % (title, width)
-    print "-" * 70
     formatted = minirst.format(text, width, **kwargs)
+    html = minirst.formathtml(minirst.parse(text, **kwargs)[0])
+    print "-" * 70
     if type(formatted) == tuple:
         print formatted[0]
         print "-" * 70
         pprint(formatted[1])
     else:
         print formatted
+    print "-" * 70
+    print html
     print "-" * 70
     print
 

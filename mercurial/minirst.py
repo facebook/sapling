@@ -497,6 +497,93 @@ def formatblock(block, width):
                      initindent=indent,
                      hangindent=subindent) + '\n'
 
+def formathtml(blocks):
+    """Format RST blocks as HTML"""
+
+    out = []
+    headernest = ''
+    listnest = []
+
+    def openlist(start, level):
+        if not listnest or listnest[-1][0] != start:
+            listnest.append((start, level))
+            out.append('<%s>\n' % start)
+
+    blocks = [b for b in blocks if b['type'] != 'margin']
+
+    for pos, b in enumerate(blocks):
+        btype = b['type']
+        level = b['indent']
+        lines = b['lines']
+
+        if btype == 'admonition':
+            admonition = _admonitiontitles[b['admonitiontitle']]
+            text = ' '.join(map(str.strip, lines))
+            out.append('<p>\n<b>%s</b> %s\n</p>\n' % (admonition, text))
+        elif btype == 'paragraph':
+            out.append('<p>\n%s\n</p>\n' % '\n'.join(lines))
+        elif btype == 'margin':
+            pass
+        elif btype == 'literal':
+            out.append('<pre>\n%s\n</pre>\n' % '\n'.join(lines))
+        elif btype == 'section':
+            i = b['underline']
+            if i not in headernest:
+                headernest += i
+            level = headernest.index(i) + 1
+            out.append('<h%d>%s</h%d>\n' % (level, lines[0], level))
+        elif btype == 'table':
+            table = b['table']
+            t = []
+            for row in table:
+                l = []
+                for v in zip(row):
+                    if not t:
+                        l.append('<th>%s</th>' % v)
+                    else:
+                        l.append('<td>%s</td>' % v)
+                t.append(' <tr>%s</tr>\n' % ''.join(l))
+            out.append('<table>\n%s</table>\n' % ''.join(t))
+        elif btype == 'definition':
+            openlist('dl', level)
+            term = lines[0]
+            text = ' '.join(map(str.strip, lines[1:]))
+            out.append(' <dt>%s\n <dd>%s\n' % (term, text))
+        elif btype == 'bullet':
+            bullet, head = lines[0].split(' ', 1)
+            if bullet == '-':
+                openlist('ul', level)
+            else:
+                openlist('ol', level)
+            out.append(' <li> %s\n' % ' '.join([head] + lines[1:]))
+        elif btype == 'field':
+            openlist('dl', level)
+            key = b['key']
+            text = ' '.join(map(str.strip, lines))
+            out.append(' <dt>%s\n <dd>%s\n' % (key, text))
+        elif btype == 'option':
+            openlist('dl', level)
+            opt = b['optstr']
+            desc = ' '.join(map(str.strip, lines))
+            out.append(' <dt>%s\n <dd>%s\n' % (opt, desc))
+
+        # close lists if indent level of next block is lower
+        if listnest:
+            start, level = listnest[-1]
+            if pos == len(blocks) - 1:
+                out.append('</%s>\n' % start)
+                listnest.pop()
+            else:
+                nb = blocks[pos + 1]
+                ni = nb['indent']
+                if (ni < level or
+                    (ni == level and
+                     nb['type'] not in 'definition bullet field option')):
+                    out.append('</%s>\n' % start)
+                    listnest.pop()
+
+    return ''.join(out)
+
 def parse(text, indent=0, keep=None):
     """Parse text into a list of blocks"""
     pruned = []
