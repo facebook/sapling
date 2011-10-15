@@ -212,8 +212,8 @@ G onto F - rebase onto an ancestor:
   $ cd a7
 
   $ hg rebase -s 6 -d 5
-  abort: source is a child of destination
-  [255]
+  nothing to rebase
+  [1]
 
 F onto G - rebase onto a descendant:
 

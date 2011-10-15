@@ -74,12 +74,12 @@ Rebasing B onto H:
   $ cd ..
 
 
-Rebasing G onto H:
+Rebasing E onto H:
 
   $ hg clone -q -u . a a2
   $ cd a2
 
-  $ hg rebase --base 6 --collapse
+  $ hg rebase --source 4 --collapse
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
@@ -115,7 +115,7 @@ Rebasing G onto H with custom message:
   abort: message can only be specified with collapse
   [255]
 
-  $ hg rebase --base 6 --collapse -m 'custom message'
+  $ hg rebase --source 4 --collapse -m 'custom message'
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog

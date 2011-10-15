@@ -165,7 +165,27 @@ def rebase(ui, repo, **opts):
                     raise util.Abort(_('cannot specify a base with detach'))
 
             cmdutil.bailifchanged(repo)
-            result = buildstate(repo, destf, srcf, basef, detachf)
+
+            if not destf:
+                # Destination defaults to the latest revision in the current branch
+                branch = repo[None].branch()
+                dest = repo[branch]
+            else:
+                dest = repo[destf]
+
+            if srcf:
+                revsetargs = ('(%s)::', srcf)
+            else:
+                base = basef or '.'
+                revsetargs = ('(children(ancestor(%s, %d)) and ::(%s))::',
+                             base, dest, base)
+
+            rebaseset = [c.rev() for c in repo.set(*revsetargs)]
+            if rebaseset:
+                result = buildstate(repo, dest, rebaseset, detachf)
+            else:
+                repo.ui.debug(_('base is ancestor of destination'))
+                result = None
             if not result:
                 # Empty state built, nothing to rebase
                 ui.status(_('nothing to rebase\n'))
@@ -507,71 +527,47 @@ def abort(repo, originalwd, target, state):
         repo.ui.warn(_('rebase aborted\n'))
         return 0
 
-def buildstate(repo, dest, src, base, detach):
-    'Define which revisions are going to be rebased and where'
-    targetancestors = set()
-    detachset = set()
+def buildstate(repo, dest, rebaseset, detach):
+    '''Define which revisions are going to be rebased and where
 
-    if not dest:
-        # Destination defaults to the latest revision in the current branch
-        branch = repo[None].branch()
-        dest = repo[branch].rev()
-    else:
-        dest = repo[dest].rev()
+    repo: repo
+    dest: context
+    rebaseset: set of rev
+    detach: boolean'''
 
     # This check isn't strictly necessary, since mq detects commits over an
     # applied patch. But it prevents messing up the working directory when
     # a partially completed rebase is blocked by mq.
-    if 'qtip' in repo.tags() and (repo[dest].node() in
+    if 'qtip' in repo.tags() and (dest.node() in
                             [s.node for s in repo.mq.applied]):
         raise util.Abort(_('cannot rebase onto an applied mq patch'))
 
-    if src:
-        commonbase = repo[src].ancestor(repo[dest])
-        if commonbase == repo[src]:
-            raise util.Abort(_('source is ancestor of destination'))
-        if commonbase == repo[dest]:
-            samebranch = repo[src].branch() == repo[dest].branch()
-            if samebranch and repo[src] in repo[dest].children():
-                raise util.Abort(_('source is a child of destination'))
-            # rebase on ancestor, force detach
-            detach = True
-        source = repo[src].rev()
-        if detach:
-            # We need to keep track of source's ancestors up to the common base
-            srcancestors = set(repo.changelog.ancestors(source))
-            baseancestors = set(repo.changelog.ancestors(commonbase.rev()))
-            detachset = srcancestors - baseancestors
-            detachset.discard(commonbase.rev())
-    else:
-        if base:
-            cwd = repo[base].rev()
-        else:
-            cwd = repo['.'].rev()
+    detachset = set()
+    roots = list(repo.set('roots(%ld)', rebaseset))
+    if not roots:
+        raise util.Abort( _('no matching revisions'))
+    if len(roots) > 1:
+        raise util.Abort( _("can't rebase multiple roots"))
+    root = roots[0]
 
-        if cwd == dest:
-            repo.ui.debug('source and destination are the same\n')
-            return None
+    commonbase = root.ancestor(dest)
+    if commonbase == root:
+        raise util.Abort(_('source is ancestor of destination'))
+    if commonbase == dest:
+        samebranch = root.branch() == dest.branch()
+        if samebranch and root in dest.children():
+           repo.ui.debug(_('source is a child of destination'))
+           return None
+        # rebase on ancestor, force detach
+        detach = True
+    if detach:
+        detachset = [c.rev() for c in repo.set('::%d - ::%d - %d',
+                                                root, commonbase, root)]
 
-        targetancestors = set(repo.changelog.ancestors(dest))
-        if cwd in targetancestors:
-            repo.ui.debug('source is ancestor of destination\n')
-            return None
-
-        cwdancestors = set(repo.changelog.ancestors(cwd))
-        if dest in cwdancestors:
-            repo.ui.debug('source is descendant of destination\n')
-            return None
-
-        cwdancestors.add(cwd)
-        rebasingbranch = cwdancestors - targetancestors
-        source = min(rebasingbranch)
-
-    repo.ui.debug('rebase onto %d starting from %d\n' % (dest, source))
-    state = dict.fromkeys(repo.changelog.descendants(source), nullrev)
+    repo.ui.debug('rebase onto %d starting from %d\n' % (dest, root))
+    state = dict.fromkeys(rebaseset, nullrev)
     state.update(dict.fromkeys(detachset, nullmerge))
-    state[source] = nullrev
-    return repo['.'].rev(), repo[dest].rev(), state
+    return repo['.'].rev(), dest.rev(), state
 
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
