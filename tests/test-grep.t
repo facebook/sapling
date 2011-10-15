@@ -106,12 +106,8 @@ match in last "line" without newline
   $ python -c 'fp = open("noeol", "wb"); fp.write("no infinite loop"); fp.close();'
   $ hg ci -Amnoeol
   adding noeol
-
-last character omitted in output to avoid infinite loop
-
   $ hg grep loop
-  noeol:4:no infinite loo
-
+  noeol:4:no infinite loop
 
   $ cd ..
 

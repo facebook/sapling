@@ -2660,7 +2660,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             mstart, mend = match.span()
             linenum += body.count('\n', begin, mstart) + 1
             lstart = body.rfind('\n', begin, mstart) + 1 or begin
-            begin = body.find('\n', mend) + 1 or len(body)
+            begin = body.find('\n', mend) + 1 or len(body) + 1
             lend = begin - 1
             yield linenum, mstart - lstart, mend - lstart, body[lstart:lend]
 
