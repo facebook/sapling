@@ -198,6 +198,15 @@ def rebase(ui, repo, **opts):
             if not rebaseset:
                 repo.ui.debug('base is ancestor of destination')
                 result = None
+            elif not keepf and list(repo.set('first(children(%ld) - %ld)',
+                                            rebaseset, rebaseset)):
+                raise util.Abort(
+                    _("can't remove original changesets with"
+                      " unrebased descendants"),
+                    hint=_('use --keep to keep original changesets'))
+            else:
+                result = buildstate(repo, dest, rebaseset, detachf)
+
             if not result:
                 # Empty state built, nothing to rebase
                 ui.status(_('nothing to rebase\n'))
