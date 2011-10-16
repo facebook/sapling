@@ -12,8 +12,7 @@ import types
 import os
 import re
 
-from mercurial import context, error, manifest, match as match_, \
-        node, util
+from mercurial import context, error, manifest, match as match_, node, util
 from mercurial.i18n import _
 
 import lfcommands

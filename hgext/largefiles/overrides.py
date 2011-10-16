@@ -11,17 +11,11 @@
 import os
 import copy
 
-from mercurial import hg, commands, util, cmdutil, match as match_, node, \
-        archival, error, merge
+from mercurial import hg, commands, util, cmdutil, scmutil, match as match_, \
+    node, archival, error, merge
 from mercurial.i18n import _
 from mercurial.node import hex
 from hgext import rebase
-import lfutil
-
-try:
-    from mercurial import scmutil
-except ImportError:
-    pass
 
 import lfutil
 import lfcommands
