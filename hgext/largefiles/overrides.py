@@ -320,14 +320,15 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
     nonormalfiles = False
     nolfiles = False
     try:
-        installnormalfilesmatchfn(repo[None].manifest())
-        result = orig(ui, repo, pats, opts, rename)
-    except util.Abort, e:
-        if str(e) != 'no files to copy':
-            raise e
-        else:
-            nonormalfiles = True
-        result = 0
+        try:
+            installnormalfilesmatchfn(repo[None].manifest())
+            result = orig(ui, repo, pats, opts, rename)
+        except util.Abort, e:
+            if str(e) != 'no files to copy':
+                raise e
+            else:
+                nonormalfiles = True
+            result = 0
     finally:
         restorematchfn()
 
@@ -339,80 +340,81 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
         return result
 
     try:
-        # When we call orig below it creates the standins but we don't add them
-        # to the dir state until later so lock during that time.
-        wlock = repo.wlock()
-
-        manifest = repo[None].manifest()
-        oldmatch = None # for the closure
-        def override_match(repo, pats=[], opts={}, globbed=False,
-                default='relpath'):
-            newpats = []
-            # The patterns were previously mangled to add the standin
-            # directory; we need to remove that now
-            for pat in pats:
-                if match_.patkind(pat) is None and lfutil.shortname in pat:
-                    newpats.append(pat.replace(lfutil.shortname, ''))
-                else:
-                    newpats.append(pat)
-            match = oldmatch(repo, newpats, opts, globbed, default)
-            m = copy.copy(match)
-            lfile = lambda f: lfutil.standin(f) in manifest
-            m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
-            m._fmap = set(m._files)
-            orig_matchfn = m.matchfn
-            m.matchfn = lambda f: (lfutil.isstandin(f) and
-                                   lfile(lfutil.splitstandin(f)) and
-                                   orig_matchfn(lfutil.splitstandin(f)) or
-                                   None)
-            return m
-        oldmatch = installmatchfn(override_match)
-        listpats = []
-        for pat in pats:
-            if match_.patkind(pat) is not None:
-                listpats.append(pat)
-            else:
-                listpats.append(makestandin(pat))
-
         try:
-            origcopyfile = util.copyfile
-            copiedfiles = []
-            def override_copyfile(src, dest):
-                if lfutil.shortname in src and lfutil.shortname in dest:
-                    destlfile = dest.replace(lfutil.shortname, '')
-                    if not opts['force'] and os.path.exists(destlfile):
-                        raise IOError('',
-                            _('destination largefile already exists'))
-                copiedfiles.append((src, dest))
-                origcopyfile(src, dest)
+            # When we call orig below it creates the standins but we don't add them
+            # to the dir state until later so lock during that time.
+            wlock = repo.wlock()
 
-            util.copyfile = override_copyfile
-            result += orig(ui, repo, listpats, opts, rename)
-        finally:
-            util.copyfile = origcopyfile
-
-        lfdirstate = lfutil.openlfdirstate(ui, repo)
-        for (src, dest) in copiedfiles:
-            if lfutil.shortname in src and lfutil.shortname in dest:
-                srclfile = src.replace(lfutil.shortname, '')
-                destlfile = dest.replace(lfutil.shortname, '')
-                destlfiledir = os.path.dirname(destlfile) or '.'
-                if not os.path.isdir(destlfiledir):
-                    os.makedirs(destlfiledir)
-                if rename:
-                    os.rename(srclfile, destlfile)
-                    lfdirstate.remove(os.path.relpath(srclfile,
-                        repo.root))
+            manifest = repo[None].manifest()
+            oldmatch = None # for the closure
+            def override_match(repo, pats=[], opts={}, globbed=False,
+                    default='relpath'):
+                newpats = []
+                # The patterns were previously mangled to add the standin
+                # directory; we need to remove that now
+                for pat in pats:
+                    if match_.patkind(pat) is None and lfutil.shortname in pat:
+                        newpats.append(pat.replace(lfutil.shortname, ''))
+                    else:
+                        newpats.append(pat)
+                match = oldmatch(repo, newpats, opts, globbed, default)
+                m = copy.copy(match)
+                lfile = lambda f: lfutil.standin(f) in manifest
+                m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
+                m._fmap = set(m._files)
+                orig_matchfn = m.matchfn
+                m.matchfn = lambda f: (lfutil.isstandin(f) and
+                                    lfile(lfutil.splitstandin(f)) and
+                                    orig_matchfn(lfutil.splitstandin(f)) or
+                                    None)
+                return m
+            oldmatch = installmatchfn(override_match)
+            listpats = []
+            for pat in pats:
+                if match_.patkind(pat) is not None:
+                    listpats.append(pat)
                 else:
-                    util.copyfile(srclfile, destlfile)
-                lfdirstate.add(os.path.relpath(destlfile,
-                    repo.root))
-        lfdirstate.write()
-    except util.Abort, e:
-        if str(e) != 'no files to copy':
-            raise e
-        else:
-            nolfiles = True
+                    listpats.append(makestandin(pat))
+
+            try:
+                origcopyfile = util.copyfile
+                copiedfiles = []
+                def override_copyfile(src, dest):
+                    if lfutil.shortname in src and lfutil.shortname in dest:
+                        destlfile = dest.replace(lfutil.shortname, '')
+                        if not opts['force'] and os.path.exists(destlfile):
+                            raise IOError('',
+                                _('destination largefile already exists'))
+                    copiedfiles.append((src, dest))
+                    origcopyfile(src, dest)
+
+                util.copyfile = override_copyfile
+                result += orig(ui, repo, listpats, opts, rename)
+            finally:
+                util.copyfile = origcopyfile
+
+            lfdirstate = lfutil.openlfdirstate(ui, repo)
+            for (src, dest) in copiedfiles:
+                if lfutil.shortname in src and lfutil.shortname in dest:
+                    srclfile = src.replace(lfutil.shortname, '')
+                    destlfile = dest.replace(lfutil.shortname, '')
+                    destlfiledir = os.path.dirname(destlfile) or '.'
+                    if not os.path.isdir(destlfiledir):
+                        os.makedirs(destlfiledir)
+                    if rename:
+                        os.rename(srclfile, destlfile)
+                        lfdirstate.remove(os.path.relpath(srclfile,
+                            repo.root))
+                    else:
+                        util.copyfile(srclfile, destlfile)
+                    lfdirstate.add(os.path.relpath(destlfile,
+                        repo.root))
+            lfdirstate.write()
+        except util.Abort, e:
+            if str(e) != 'no files to copy':
+                raise e
+            else:
+                nolfiles = True
     finally:
         restorematchfn()
         wlock.release()
