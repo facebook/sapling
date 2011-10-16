@@ -24,9 +24,9 @@ def installnormalfilesmatchfn(manifest):
     '''overrides scmutil.match so that the matcher it returns will ignore all
     largefiles'''
     oldmatch = None # for the closure
-    def override_match(repo, pats=[], opts={}, globbed=False,
+    def override_match(ctx, pats=[], opts={}, globbed=False,
             default='relpath'):
-        match = oldmatch(repo, pats, opts, globbed, default)
+        match = oldmatch(ctx, pats, opts, globbed, default)
         m = copy.copy(match)
         notlfile = lambda f: not (lfutil.isstandin(f) or lfutil.standin(f) in
                 manifest)
@@ -341,7 +341,7 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
 
             manifest = repo[None].manifest()
             oldmatch = None # for the closure
-            def override_match(repo, pats=[], opts={}, globbed=False,
+            def override_match(ctx, pats=[], opts={}, globbed=False,
                     default='relpath'):
                 newpats = []
                 # The patterns were previously mangled to add the standin
@@ -351,7 +351,7 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
                         newpats.append(pat.replace(lfutil.shortname, ''))
                     else:
                         newpats.append(pat)
-                match = oldmatch(repo, newpats, opts, globbed, default)
+                match = oldmatch(ctx, newpats, opts, globbed, default)
                 m = copy.copy(match)
                 lfile = lambda f: lfutil.standin(f) in manifest
                 m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
@@ -443,16 +443,12 @@ def override_revert(orig, ui, repo, *pats, **opts):
         try:
             ctx = repo[opts.get('rev')]
             oldmatch = None # for the closure
-            def override_match(ctxorrepo, pats=[], opts={}, globbed=False,
+            def override_match(ctx, pats=[], opts={}, globbed=False,
                     default='relpath'):
-                if util.safehasattr(ctxorrepo, 'match'):
-                    ctx0 = ctxorrepo
-                else:
-                    ctx0 = ctxorrepo[None]
-                match = oldmatch(ctxorrepo, pats, opts, globbed, default)
+                match = oldmatch(ctx, pats, opts, globbed, default)
                 m = copy.copy(match)
                 def tostandin(f):
-                    if lfutil.standin(f) in ctx0 or lfutil.standin(f) in ctx:
+                    if lfutil.standin(f) in ctx or lfutil.standin(f) in ctx:
                         return lfutil.standin(f)
                     elif lfutil.standin(f) in repo[None]:
                         return None
