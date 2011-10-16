@@ -3543,43 +3543,44 @@ def import_(ui, repo, patch1, *patches, **opts):
             os.unlink(tmpname)
 
     try:
-        wlock = repo.wlock()
-        lock = repo.lock()
-        tr = repo.transaction('import')
-        parents = repo.parents()
-        for patchurl in patches:
-            if patchurl == '-':
-                ui.status(_('applying patch from stdin\n'))
-                patchfile = ui.fin
-                patchurl = 'stdin'      # for error message
-            else:
-                patchurl = os.path.join(base, patchurl)
-                ui.status(_('applying %s\n') % patchurl)
-                patchfile = url.open(ui, patchurl)
-
-            haspatch = False
-            for hunk in patch.split(patchfile):
-                (msg, node) = tryone(ui, hunk, parents)
-                if msg:
-                    haspatch = True
-                    ui.note(msg + '\n')
-                if update or opts.get('exact'):
-                    parents = repo.parents()
+        try:
+            wlock = repo.wlock()
+            lock = repo.lock()
+            tr = repo.transaction('import')
+            parents = repo.parents()
+            for patchurl in patches:
+                if patchurl == '-':
+                    ui.status(_('applying patch from stdin\n'))
+                    patchfile = ui.fin
+                    patchurl = 'stdin'      # for error message
                 else:
-                    parents = [repo[node]]
+                    patchurl = os.path.join(base, patchurl)
+                    ui.status(_('applying %s\n') % patchurl)
+                    patchfile = url.open(ui, patchurl)
 
-            if not haspatch:
-                raise util.Abort(_('%s: no diffs found') % patchurl)
+                haspatch = False
+                for hunk in patch.split(patchfile):
+                    (msg, node) = tryone(ui, hunk, parents)
+                    if msg:
+                        haspatch = True
+                        ui.note(msg + '\n')
+                    if update or opts.get('exact'):
+                        parents = repo.parents()
+                    else:
+                        parents = [repo[node]]
 
-        tr.close()
-        if msgs:
-            repo.savecommitmessage('\n* * *\n'.join(msgs))
-    except:
-        # wlock.release() indirectly calls dirstate.write(): since
-        # we're crashing, we do not want to change the working dir
-        # parent after all, so make sure it writes nothing
-        repo.dirstate.invalidate()
-        raise
+                if not haspatch:
+                    raise util.Abort(_('%s: no diffs found') % patchurl)
+
+            tr.close()
+            if msgs:
+                repo.savecommitmessage('\n* * *\n'.join(msgs))
+        except:
+            # wlock.release() indirectly calls dirstate.write(): since
+            # we're crashing, we do not want to change the working dir
+            # parent after all, so make sure it writes nothing
+            repo.dirstate.invalidate()
+            raise
     finally:
         if tr:
             tr.release()
