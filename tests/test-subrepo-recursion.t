@@ -349,6 +349,18 @@ Disable progress extension and cleanup:
 
   $ mv $HGRCPATH.no-progress $HGRCPATH
 
+Test archiving when there is a directory in the way for a subrepo
+created by archive:
+
+  $ hg clone -U . ../almost-empty
+  $ cd ../almost-empty
+  $ mkdir foo
+  $ echo f > foo/f
+  $ hg archive --subrepos -r tip archive
+  cloning subrepo foo from $TESTTMP/empty/foo
+  abort: destination '$TESTTMP/almost-empty/foo' is not empty
+  [255]
+
 Clone and test outgoing:
 
   $ cd ..
