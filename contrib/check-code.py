@@ -69,6 +69,7 @@ testpats = [
     (r'ls\s+[^|\n-]+\s+-', "options to 'ls' must come before filenames"),
     (r'[^>\n]>\s*\$HGRCPATH', "don't overwrite $HGRCPATH, append to it"),
     (r'stop\(\)', "don't use 'stop' as a shell function name"),
+    (r'(\[|\btest\b).*-e ', "don't use 'test -e', use 'test -f'"),
   ],
   # warnings
   []

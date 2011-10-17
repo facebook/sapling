@@ -581,5 +581,5 @@ First, create that condition in the repository.
   A    $TESTTMP/rebaserepo/recreated/somethingold
   Checked out revision 10.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ test -e recreated/somethingold
+  $ test -f recreated/somethingold
 
