@@ -161,7 +161,7 @@ def prepush(repo, remote, force, revs, newbranch):
             if len(newhs) > len(oldhs):
                 dhs = list(newhs - oldhs)
                 if error is None:
-                    if branch != 'default':
+                    if branch not in ('default', None):
                         error = _("push creates new remote head %s "
                                   "on branch '%s'!") % (short(dhs[0]), branch)
                     else:
@@ -173,7 +173,8 @@ def prepush(repo, remote, force, revs, newbranch):
                     else:
                         hint = _("did you forget to merge? "
                                  "use push -f to force")
-                repo.ui.note("new remote heads on branch '%s'\n" % branch)
+                if branch is not None:
+                    repo.ui.note("new remote heads on branch '%s'\n" % branch)
                 for h in dhs:
                     repo.ui.note("new remote head %s\n" % short(h))
         if error:
