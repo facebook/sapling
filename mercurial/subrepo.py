@@ -418,6 +418,7 @@ class hgsubrepo(abstractsubrepo):
                                % (inst, subrelpath(self)))
 
     def archive(self, ui, archiver, prefix):
+        self._get(self._state + ('hg',))
         abstractsubrepo.archive(self, ui, archiver, prefix)
 
         rev = self._state[1]
