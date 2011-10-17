@@ -26,6 +26,23 @@
   > # Do not complain about our own definition
   > def any(x):
   >     pass
+  > 
+  > # try/except/finally block does not exist in Python 2.4
+  >     try:
+  >         pass
+  >     except StandardError, inst:
+  >         pass
+  >     finally:
+  >         pass
+  > 
+  > # nested try/finally+try/except is allowed
+  >     try:
+  >         try:
+  >             pass
+  >         except StandardError, inst:
+  >             pass
+  >     finally:
+  >         pass
   > EOF
   $ cat > classstyle.py <<EOF
   > class newstyle_class(object):
@@ -64,6 +81,9 @@
   ./non-py24.py:4:
    >     y = format(x)
    any/all/format not available in Python 2.4
+  ./non-py24.py:11:
+   >     try:
+   no try/except/finally in Py2.4
   ./classstyle.py:4:
    > class oldstyle_class:
    old-style class, use class foo(object)
