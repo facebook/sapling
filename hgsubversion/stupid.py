@@ -46,7 +46,7 @@ class BadPatchApply(Exception):
     pass
 
 
-def print_your_svn_is_old_message(ui): #pragma: no cover
+def print_your_svn_is_old_message(ui): # pragma: no cover
     ui.status("In light of that, I'll fall back and do diffs, but it won't do "
               "as good a job. You should really upgrade your server.\n")
 

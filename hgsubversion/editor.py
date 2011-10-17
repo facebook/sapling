@@ -335,7 +335,7 @@ class HgEditor(svnwrap.Editor):
         self.stream = target
 
         handler = svnwrap.apply_txdelta(base, target)
-        if not callable(handler): #pragma: no cover
+        if not callable(handler): # pragma: no cover
             raise hgutil.Abort('Error in Subversion bindings: '
                                'cannot call handler!')
         def txdelt_window(window):
@@ -346,12 +346,12 @@ class HgEditor(svnwrap.Editor):
                 # window being None means commit this file
                 if not window:
                     self.current.files[self.current.file] = target.getvalue()
-            except svnwrap.SubversionException, e: #pragma: no cover
+            except svnwrap.SubversionException, e: # pragma: no cover
                 if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
                     self.current.missing.add(self.current.file)
-                else: #pragma: no cover
+                else: # pragma: no cover
                     raise hgutil.Abort(*e.args)
-            except: #pragma: no cover
+            except: # pragma: no cover
                 print len(base), self.current.file
                 self._exception_info = sys.exc_info()
                 raise

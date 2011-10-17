@@ -71,7 +71,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
     updateexternals(ui, meta, current)
 
-    if current.exception is not None:  #pragma: no cover
+    if current.exception is not None:  # pragma: no cover
         traceback.print_exception(*current.exception)
         raise ReplayException()
     if current.missing:
@@ -194,7 +194,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
             raise IOError(errno.ENOENT, 'deleting all files')
 
         # True here meant nuke all files, shouldn't happen with branch closing
-        if current.emptybranches[branch]: #pragma: no cover
+        if current.emptybranches[branch]: # pragma: no cover
             raise hgutil.Abort('Empty commit to an open branch attempted. '
                                'Please report this issue.')
 

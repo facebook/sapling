@@ -31,7 +31,7 @@ except ImportError:
 def _versionstr(v):
     return '.'.join(str(d) for d in v)
 
-if subvertpy.__version__ < subvertpy_required: #pragma: no cover
+if subvertpy.__version__ < subvertpy_required: # pragma: no cover
     raise ImportError('Subvertpy %s or later required, '
                       'but %s found'
                       % (_versionstr(subvertpy_required),
@@ -338,7 +338,7 @@ class SubversionRepo(object):
             commit_info.append(args)
         commit_info = []
         revprops = { properties.PROP_REVISION_LOG: message }
-        #revprops.update(props)
+        # revprops.update(props)
         commiteditor = self.remote.get_commit_editor(revprops, commitcb)
 
         paths = set(paths)
@@ -417,7 +417,7 @@ class SubversionRepo(object):
 
         try:
             self.remote.replay(revision, oldestrev, AbstractEditor(editor))
-        except (SubversionException, NotImplementedError), e: #pragma: no cover
+        except (SubversionException, NotImplementedError), e: # pragma: no cover
             # can I depend on this number being constant?
             if (isinstance(e, NotImplementedError) or
                 e.args[1] == subvertpy.ERR_RA_NOT_IMPLEMENTED or

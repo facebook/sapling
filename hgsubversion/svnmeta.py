@@ -24,7 +24,7 @@ def pickle_atomic(data, file_path, dir=None):
         f = os.fdopen(f, 'w')
         pickle.dump(data, f)
         f.close()
-    except: #pragma: no cover
+    except: # pragma: no cover
         raise
     else:
         hgutil.rename(path, file_path)
