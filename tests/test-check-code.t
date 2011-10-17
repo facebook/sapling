@@ -50,8 +50,8 @@
    Python keyword is not a function
   ./wrong.py:3:
    >     return ( 5+6, 9)
-   missing whitespace in expression
    gratuitous whitespace in () or []
+   missing whitespace in expression
   ./quote.py:5:
    > '"""', 42+1, """and
    missing whitespace in expression
