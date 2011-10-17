@@ -61,7 +61,7 @@ the minimum size in megabytes to track as a largefile, or use the
 --lfsize option to the add command (also in megabytes)::
 
   [largefiles]
-  size = 2           XXX wouldn't minsize be a better name?
+  size = 2
 
   $ hg add --lfsize 2
 
