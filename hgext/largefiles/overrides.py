@@ -151,18 +151,18 @@ def override_remove(orig, ui, repo, *pats, **opts):
 
     def warn(files, reason):
         for f in files:
-            ui.warn(_('not removing %s: file %s (use -f to force removal)\n')
+            ui.warn(_('not removing %s: %s (use -f to force removal)\n')
                     % (m.rel(f), reason))
 
     if force:
         remove, forget = modified + deleted + clean, added
     elif after:
         remove, forget = deleted, []
-        warn(modified + added + clean, _('still exists'))
+        warn(modified + added + clean, _('file still exists'))
     else:
         remove, forget = deleted + clean, []
-        warn(modified, _('is modified'))
-        warn(added, _('has been marked for add'))
+        warn(modified, _('file is modified'))
+        warn(added, _('file has been marked for add'))
 
     for f in sorted(remove + forget):
         if ui.verbose or not m.exact(f):
