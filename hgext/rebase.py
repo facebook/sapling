@@ -162,10 +162,10 @@ def rebase(ui, repo, **opts):
                 raise util.Abort(_('cannot specify both a '
                                    'source and a base'))
             if revf and basef:
-                raise util.Abort(_('cannot specify both a'
+                raise util.Abort(_('cannot specify both a '
                                    'revision and a base'))
             if revf and srcf:
-                raise util.Abort(_('cannot specify both a'
+                raise util.Abort(_('cannot specify both a '
                                    'revision and a source'))
             if detachf:
                 if not srcf:
