@@ -342,7 +342,7 @@ Test cloning a largefiles repo.
   large22
 
 Test that old revisions of a clone have correct largefiles content.  This also
-tsts update.
+tests update.
 
   $ hg update -r 1 
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
