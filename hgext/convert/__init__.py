@@ -146,8 +146,8 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         converting from and to Mercurial. Default is False.
 
     :convert.hg.saverev: store original revision ID in changeset
-        (forces target IDs to change). It takes and boolean argument
-        and defaults to False.
+        (forces target IDs to change). It takes a boolean argument and
+        defaults to False.
 
     :convert.hg.startrev: convert start revision and its descendants.
         It takes a hg revision identifier and defaults to 0.
