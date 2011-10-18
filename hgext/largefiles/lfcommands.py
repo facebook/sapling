@@ -291,7 +291,7 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                 # doesn't change after rename or copy
                 renamed = lfutil.standin(renamed[0])
 
-            return context.memfilectx(f, lfiletohash[srcfname], 'l' in
+            return context.memfilectx(f, lfiletohash[srcfname] + '\n', 'l' in
                 fctx.flags(), 'x' in fctx.flags(), renamed)
         else:
             try:

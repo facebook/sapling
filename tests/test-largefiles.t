@@ -683,5 +683,21 @@ Verify that lfconvert adds 'largefiles' to .hg/requires
   fncache
   store
   dotencode
+
+Make sure that lfconvert includes a newline at the end of the standin files.
+  $ cd largefiles-repo
+  $ hg up
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  $ cat .hglf/a-large-file
+  8b0629c630f530cde051aeb42ce561756738fbe7
+  $ dd if=/dev/zero bs=1k count=11k > another-large-file 2> /dev/null
+  $ hg add another-large-file
+  $ hg commit -m "Commit another file that should get automatically added as a largefile"
+  $ cat .hglf/a-large-file .hglf/another-large-file
+  8b0629c630f530cde051aeb42ce561756738fbe7
+  187a0f76e02aac9c24f71c820be1f34ef1c76e76
+  $ cd ..
   $ rm -rf bigfile-repo largefiles-repo
 
