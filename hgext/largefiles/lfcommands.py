@@ -109,6 +109,11 @@ def lfconvert(ui, src, dest, *pats, **opts):
                 except OSError:
                     pass
 
+            # If there were any files converted to largefiles, add largefiles
+            # to the destination repository's requirements.
+            if lfiles:
+                rdst.requirements.add('largefiles')
+                rdst._writerequirements()
         else:
             for ctx in ctxs:
                 ui.progress(_('converting revisions'), ctx.rev(),

@@ -661,3 +661,27 @@ also been very problematic).
   large6-modified
   $ cat sub2/large7
   large7
+  $ cd ..
+
+Verify that lfconvert adds 'largefiles' to .hg/requires
+  $ hg init bigfile-repo
+  $ cd bigfile-repo
+  $ dd if=/dev/zero bs=1k count=23k > a-large-file 2> /dev/null
+  $ hg addremove
+  adding a-large-file
+  a-large-file: up to 72 MB of RAM may be required to manage this file
+  (use 'hg revert a-large-file' to cancel the pending addition)
+  $ hg commit -m "Commit file without making it be a largefile"
+  $ find .hg/largefiles
+  .hg/largefiles
+  $ cd ..
+  $ hg lfconvert --size 10 bigfile-repo largefiles-repo
+  initializing destination largefiles-repo
+  $ cat largefiles-repo/.hg/requires
+  largefiles
+  revlogv1
+  fncache
+  store
+  dotencode
+  $ rm -rf bigfile-repo largefiles-repo
+
