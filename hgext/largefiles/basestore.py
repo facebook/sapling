@@ -199,4 +199,4 @@ def _openstore(repo, remote=None, put=False):
         except lfutil.storeprotonotcapable:
             pass
 
-    raise util.Abort(_('%s does not appear to be a largefile store'), path)
+    raise util.Abort(_('%s does not appear to be a largefile store') % path)
