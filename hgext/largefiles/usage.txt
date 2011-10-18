@@ -48,4 +48,4 @@ space-separated filename patterns (in shell glob syntax) that should always be
 tracked as largefiles:
 
 [largefiles]
-pattens = *.jpg *.{png,bmp} library.zip content/audio/*
+patterns = *.jpg *.{png,bmp} library.zip content/audio/*
