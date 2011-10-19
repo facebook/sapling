@@ -4,7 +4,7 @@
   > purge=
   > rebase=
   > [largefiles]
-  > size=2
+  > minsize=2
   > patterns=glob:**.dat
   > EOF
 

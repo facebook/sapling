@@ -56,12 +56,12 @@ command::
 
 In repositories that already have largefiles in them, any new file
 over 10MB will automatically be added as a largefile. To change this
-threshhold, set ``largefiles.size`` in your Mercurial config file to
-the minimum size in megabytes to track as a largefile, or use the
+threshold, set ``largefiles.minsize`` in your Mercurial config file
+to the minimum size in megabytes to track as a largefile, or use the
 --lfsize option to the add command (also in megabytes)::
 
   [largefiles]
-  size = 2
+  minsize = 2
 
   $ hg add --lfsize 2
 

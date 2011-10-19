@@ -61,7 +61,7 @@ def findoutgoing(repo, remote, force):
 def getminsize(ui, assumelfiles, opt, default=10):
     lfsize = opt
     if not lfsize and assumelfiles:
-        lfsize = ui.config(longname, 'size', default=default)
+        lfsize = ui.config(longname, 'minsize', default=default)
     if lfsize:
         try:
             lfsize = float(lfsize)
