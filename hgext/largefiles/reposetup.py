@@ -402,11 +402,7 @@ def reposetup(ui, repo):
     def checkrequireslfiles(ui, repo, **kwargs):
         if 'largefiles' not in repo.requirements and lfutil.any_(
                 lfutil.shortname+'/' in f[0] for f in repo.store.datafiles()):
-            # workaround bug in Mercurial 1.9 whereby requirements is
-            # a list on newly-cloned repos
-            repo.requirements = set(repo.requirements)
-
-            repo.requirements |= set(['largefiles'])
+            repo.requirements.add('largefiles')
             repo._writerequirements()
 
     checkrequireslfiles(ui, repo)
