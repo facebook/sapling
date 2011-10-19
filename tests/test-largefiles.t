@@ -617,3 +617,47 @@ Test that verify --large actaully verifies largefiles
   10 files, 10 changesets, 28 total revisions
   searching 1 changesets for largefiles
   verified existence of 3 revisions of 3 largefiles
+
+Test that merging does not revert to old versions of largefiles (this has
+also been very problematic).
+
+  $ cd ..
+  $ hg clone -r 7 e f
+  adding changesets
+  adding manifests
+  adding file changes
+  added 8 changesets with 24 changes to 10 files
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  3 largefiles updated, 0 removed
+  $ cd f
+  $ echo "large4-merge-test" > sub/large4
+  $ hg commit -m "Modify large4 to test merge"
+  $ hg pull ../e
+  pulling from ../e
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 4 changes to 4 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg merge
+  merging sub/large4
+  largefile sub/large4 has a merge conflict
+  keep (l)ocal or take (o)ther? l
+  3 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  $ hg commit -m "Merge repos e and f"
+  $ cat normal3
+  normal3-modified
+  $ cat sub/normal4
+  normal4-modified
+  $ cat sub/large4
+  large4-merge-test
+  $ cat sub2/large6
+  large6-modified
+  $ cat sub2/large7
+  large7
