@@ -3537,6 +3537,7 @@ def import_(ui, repo, patch1, *patches, **opts):
                 finally:
                     store.close()
             if n:
+                # i18n: refers to a short changeset id
                 msg = _('created %s') % short(n)
             return (msg, n)
         finally:

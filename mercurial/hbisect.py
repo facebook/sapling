@@ -226,20 +226,27 @@ def label(repo, node, short=False):
 
     # Try explicit sets
     if rev in get(repo, 'good'):
+        # i18n: bisect changeset status
         return _('good')
     if rev in get(repo, 'bad'):
+        # i18n: bisect changeset status
         return _('bad')
     if rev in get(repo, 'skip'):
+        # i18n: bisect changeset status
         return _('skipped')
     if rev in get(repo, 'untested'):
+        # i18n: bisect changeset status
         return _('untested')
     if rev in get(repo, 'ignored'):
+        # i18n: bisect changeset status
         return _('ignored')
 
     # Try implicit sets
     if rev in get(repo, 'goods'):
+        # i18n: bisect changeset status
         return _('good (implicit)')
     if rev in get(repo, 'bads'):
+        # i18n: bisect changeset status
         return _('bad (implicit)')
 
     return None
