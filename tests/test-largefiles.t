@@ -701,3 +701,32 @@ Make sure that lfconvert includes a newline at the end of the standin files.
   $ cd ..
   $ rm -rf bigfile-repo largefiles-repo
 
+Clone a local repository owned by another user
+We have to simulate that here by setting $HOME and removing write permissions
+  $ ORIGHOME="$HOME"
+  $ mkdir alice
+  $ HOME="`pwd`/alice"
+  $ cd alice
+  $ hg init pubrepo
+  $ cd pubrepo
+  $ dd if=/dev/urandom bs=1k count=11k > a-large-file 2> /dev/null
+  $ hg add --large a-large-file
+  $ hg commit -m "Add a large file"
+  $ cd ..
+  $ chmod -R a-w pubrepo
+  $ cd ..
+  $ mkdir bob
+  $ HOME="`pwd`/bob"
+  $ cd bob
+  $ hg clone ../alice/pubrepo pubrepo
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  $ cd ..
+  $ HOME="$ORIGHOME"
