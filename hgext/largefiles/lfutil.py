@@ -436,13 +436,7 @@ def unixpath(path):
 
 def islfilesrepo(repo):
     return ('largefiles' in repo.requirements and
-            any_(shortname + '/' in f[0] for f in repo.store.datafiles()))
-
-def any_(gen):
-    for x in gen:
-        if x:
-            return True
-    return False
+            util.any(shortname + '/' in f[0] for f in repo.store.datafiles()))
 
 class storeprotonotcapable(BaseException):
     def __init__(self, storetypes):

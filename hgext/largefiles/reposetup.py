@@ -346,7 +346,7 @@ def reposetup(ui, repo):
                         fstandin += os.sep
 
                     # prevalidate matching standin directories
-                    if lfutil.any_(st for st in match._files
+                    if util.any(st for st in match._files
                                    if st.startswith(fstandin)):
                         continue
                     actualfiles.append(f)
@@ -400,7 +400,7 @@ def reposetup(ui, repo):
     repo.__class__ = lfiles_repo
 
     def checkrequireslfiles(ui, repo, **kwargs):
-        if 'largefiles' not in repo.requirements and lfutil.any_(
+        if 'largefiles' not in repo.requirements and util.any(
                 lfutil.shortname+'/' in f[0] for f in repo.store.datafiles()):
             repo.requirements.add('largefiles')
             repo._writerequirements()

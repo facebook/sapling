@@ -121,7 +121,7 @@ class basestore(object):
             cctx = self.repo[rev]
             cset = "%d:%s" % (cctx.rev(), node.short(cctx.node()))
 
-            failed = lfutil.any_(self._verifyfile(
+            failed = util.any(self._verifyfile(
                 cctx, cset, contents, standin, verified) for standin in cctx)
 
         num_revs = len(verified)
