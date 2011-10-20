@@ -336,9 +336,7 @@ def _islfile(file, ctx, matcher, size):
 def uploadlfiles(ui, rsrc, rdst, files):
     '''upload largefiles to the central store'''
 
-    # Don't upload locally. All largefiles are in the system wide cache
-    # so the other repo can just get them from there.
-    if not files or rdst.local():
+    if not files:
         return
 
     store = basestore._openstore(rsrc, rdst, put=True)

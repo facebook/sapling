@@ -17,8 +17,8 @@ LARGEFILES_REQUIRED_MSG = ('\nThis repository uses the largefiles extension.'
                            'file.\n')
 
 def putlfile(repo, proto, sha):
-    '''Put a largefile into a repository's local cache and into the
-    system cache.'''
+    '''Put a largefile into a repository's local store and into the
+    user cache.'''
     f = None
     proto.redirect()
     try:

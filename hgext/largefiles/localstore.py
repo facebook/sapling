@@ -17,27 +17,38 @@ import lfutil
 import basestore
 
 class localstore(basestore.basestore):
-    '''Because there is a system-wide cache, the local store always
-    uses that cache. Since the cache is updated elsewhere, we can
-    just read from it here as if it were the store.'''
+    '''localstore first attempts to grab files out of the store in the remote
+    Mercurial repository.  Failling that, it attempts to grab the files from
+    the user cache.'''
 
     def __init__(self, ui, repo, remote):
         url = os.path.join(remote.path, '.hg', lfutil.longname)
         super(localstore, self).__init__(ui, repo, util.expandpath(url))
+        self.remote = remote
 
-    def put(self, source, filename, hash):
-        '''Any file that is put must already be in the system-wide
-        cache so do nothing.'''
-        return
+    def put(self, source, hash):
+        lfutil.createdir(os.path.dirname(lfutil.storepath(self.remote, hash)))
+        if lfutil.instore(self.remote, hash):
+            return
+        lfutil.link(lfutil.storepath(self.repo, hash),
+                lfutil.storepath(self.remote, hash))
 
     def exists(self, hash):
-        return lfutil.inusercache(self.repo.ui, hash)
+        return lfutil.instore(self.remote, hash)
 
     def _getfile(self, tmpfile, filename, hash):
-        if lfutil.inusercache(self.ui, hash):
-            return lfutil.usercachepath(self.ui, hash)
-        raise basestore.StoreError(filename, hash, '',
-            _("Can't get file locally"))
+        if lfutil.instore(self.remote, hash):
+            path = lfutil.storepath(self.remote, hash)
+        elif lfutil.inusercache(self.ui, hash):
+            path = lfutil.usercachepath(self.ui, hash)
+        else:
+            raise basestore.StoreError(filename, hash, '',
+                _("Can't get file locally"))
+        fd = open(path, 'rb')
+        try:
+            return lfutil.copyandhash(fd, tmpfile)
+        finally:
+            fd.close()
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         filename = lfutil.splitstandin(standin)
@@ -50,7 +61,7 @@ class localstore(basestore.basestore):
 
         expecthash = fctx.data()[0:40]
         verified.add(key)
-        if not lfutil.inusercache(self.ui, expecthash):
+        if not lfutil.instore(self.remote, expecthash):
             self.ui.warn(
                 _('changeset %s: %s missing\n'
                   '  (looked for hash %s)\n')
@@ -58,7 +69,7 @@ class localstore(basestore.basestore):
             return True                 # failed
 
         if contents:
-            storepath = lfutil.usercachepath(self.ui, expecthash)
+            storepath = lfutil.storepath(self.remote, expecthash)
             actualhash = lfutil.hashfile(storepath)
             if actualhash != expecthash:
                 self.ui.warn(
