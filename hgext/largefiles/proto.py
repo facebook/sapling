@@ -4,7 +4,6 @@
 # GNU General Public License version 2 or any later version.
 
 import os
-import tempfile
 import urllib2
 
 from mercurial import error, httprepo, util, wireproto
@@ -19,23 +18,25 @@ LARGEFILES_REQUIRED_MSG = ('\nThis repository uses the largefiles extension.'
 def putlfile(repo, proto, sha):
     '''Put a largefile into a repository's local store and into the
     user cache.'''
-    f = None
     proto.redirect()
+
+    fd, tmpname = lfutil.mkstemp(repo, prefix='hg-putlfile')
+    tmpfp = os.fdopen(fd, 'wb+')
     try:
         try:
-            f = tempfile.NamedTemporaryFile(mode='wb+', prefix='hg-putlfile-')
-            proto.getfile(f)
-            f.seek(0)
-            if sha != lfutil.hexsha1(f):
+            proto.getfile(tmpfp)
+            tmpfp.seek(0)
+            if sha != lfutil.hexsha1(tmpfp):
                 return wireproto.pushres(1)
-            lfutil.copytostoreabsolute(repo, f.name, sha)
-        except IOError:
-            repo.ui.warn(
-                _('error: could not put received data into largefile store'))
+            tmpfp.close()
+            lfutil.copytostoreabsolute(repo, tmpname, sha)
+        except IOError, e:
+            repo.ui.warn(_('largefiles: failed to put %s (%s) into store: %s') %
+                         (sha, tmpname, e.strerror))
             return wireproto.pushres(1)
     finally:
-        if f:
-            f.close()
+        tmpfp.close()
+        os.unlink(tmpname)
 
     return wireproto.pushres(0)
 

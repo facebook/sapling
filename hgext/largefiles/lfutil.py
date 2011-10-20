@@ -13,6 +13,7 @@ import errno
 import platform
 import shutil
 import stat
+import tempfile
 
 from mercurial import dirstate, httpconnection, match as match_, util, scmutil
 from mercurial.i18n import _
@@ -437,6 +438,13 @@ def unixpath(path):
 def islfilesrepo(repo):
     return ('largefiles' in repo.requirements and
             util.any(shortname + '/' in f[0] for f in repo.store.datafiles()))
+
+def mkstemp(repo, prefix):
+    '''Returns a file descriptor and a filename corresponding to a temporary
+    file in the repo's largefiles store.'''
+    path = repo.join(longname)
+    util.makedirs(repo.join(path))
+    return tempfile.mkstemp(prefix=prefix, dir=path)
 
 class storeprotonotcapable(Exception):
     def __init__(self, storetypes):
