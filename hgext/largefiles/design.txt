@@ -20,15 +20,16 @@ largefiles stores can take one of two forms:
 
 == The Local Repository ==
 
-The local repository has a largefile cache in .hg/largefiles which holds a
+The local repository has a largefile store in .hg/largefiles which holds a
 subset of the largefiles needed. On a clone only the largefiles at tip are
 downloaded. When largefiles are downloaded from the central store, a copy is
 saved in this store.
 
-== The Global Cache ==
+== The User Cache ==
 
-largefiles in a local repository cache are hardlinked to files in the global
-cache. Before a file is downloaded we check if it is in the global cache.
+largefiles in a local repository store are hardlinked to files in the user
+cache. Before a file is downloaded we check if it is in the global cache,
+hard-linking to the local store if we find it.
 
 == Implementation Details ==
 
