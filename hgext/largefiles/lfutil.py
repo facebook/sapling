@@ -10,6 +10,7 @@
 
 import os
 import errno
+import platform
 import shutil
 import stat
 import hashlib
@@ -88,8 +89,15 @@ def usercachepath(ui, hash):
         if os.name == 'nt':
             appdata = os.getenv('LOCALAPPDATA', os.getenv('APPDATA'))
             path = os.path.join(appdata, longname, hash)
+        elif platform.system() == 'Darwin':
+            path = os.path.join(os.getenv('HOME'), 'Library', 'Caches',
+                                longname, hash)
         elif os.name == 'posix':
-            path = os.path.join(os.getenv('HOME'), '.' + longname, hash)
+            path = os.getenv('XDG_CACHE_HOME')
+            if path:
+                path = os.path.join(path, longname, hash)
+            else:
+                path = os.path.join(os.getenv('HOME'), '.cache', longname, hash)
         else:
             raise util.Abort(_('unknown operating system: %s\n') % os.name)
     return path
