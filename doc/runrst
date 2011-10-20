@@ -20,6 +20,8 @@ try:
 except ImportError:
     sys.stderr.write("abort: couldn't generate documentation: docutils "
                      "module is missing\n")
+    sys.stderr.write("please install python-docutils or see "
+                     "http://docutils.sourceforge.net/\n")
     sys.exit(-1)
 
 def role_hg(name, rawtext, text, lineno, inliner,
