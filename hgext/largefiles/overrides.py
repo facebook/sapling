@@ -298,8 +298,7 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
 
     def makestandin(relpath):
         path = scmutil.canonpath(repo.root, repo.getcwd(), relpath)
-        return os.path.join(os.path.relpath('.', repo.getcwd()),
-            lfutil.standin(path))
+        return os.path.join(repo.wjoin(lfutil.standin(path)))
 
     fullpats = scmutil.expandpats(pats)
     dest = fullpats[-1]
@@ -397,12 +396,10 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
                         os.makedirs(destlfiledir)
                     if rename:
                         os.rename(srclfile, destlfile)
-                        lfdirstate.remove(os.path.relpath(srclfile,
-                            repo.root))
+                        lfdirstate.remove(repo.wjoin(srclfile))
                     else:
                         util.copyfile(srclfile, destlfile)
-                    lfdirstate.add(os.path.relpath(destlfile,
-                        repo.root))
+                    lfdirstate.add(repo.wjoin(destlfile))
             lfdirstate.write()
         except util.Abort, e:
             if str(e) != 'no files to copy':
