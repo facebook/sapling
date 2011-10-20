@@ -228,7 +228,7 @@ def reposetup(ui, repo):
             for filename in ctx.files():
                 if lfutil.isstandin(filename) and filename in ctx.manifest():
                     realfile = lfutil.splitstandin(filename)
-                    lfutil.copytocache(self, ctx.node(), realfile)
+                    lfutil.copytostore(self, ctx.node(), realfile)
 
             return node
 

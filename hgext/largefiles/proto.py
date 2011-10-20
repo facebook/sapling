@@ -28,7 +28,7 @@ def putlfile(repo, proto, sha):
             f.seek(0)
             if sha != lfutil.hexsha1(f):
                 return wireproto.pushres(1)
-            lfutil.copytocacheabsolute(repo, f.name, sha)
+            lfutil.copytostoreabsolute(repo, f.name, sha)
         except IOError:
             repo.ui.warn(
                 _('error: could not put received data into largefile store'))

@@ -80,8 +80,8 @@ def link(src, dest):
         shutil.copyfile(src, dest)
         os.chmod(dest, os.stat(src).st_mode)
 
-def systemcachepath(ui, hash):
-    path = ui.config(longname, 'systemcache', None)
+def usercachepath(ui, hash):
+    path = ui.config(longname, 'usercache', None)
     if path:
         path = os.path.join(path, hash)
     else:
@@ -94,16 +94,16 @@ def systemcachepath(ui, hash):
             raise util.Abort(_('unknown operating system: %s\n') % os.name)
     return path
 
-def insystemcache(ui, hash):
-    return os.path.exists(systemcachepath(ui, hash))
+def inusercache(ui, hash):
+    return os.path.exists(usercachepath(ui, hash))
 
 def findfile(repo, hash):
-    if incache(repo, hash):
-        repo.ui.note(_('Found %s in cache\n') % hash)
-        return cachepath(repo, hash)
-    if insystemcache(repo.ui, hash):
+    if instore(repo, hash):
+        repo.ui.note(_('Found %s in store\n') % hash)
+        return storepath(repo, hash)
+    if inusercache(repo.ui, hash):
         repo.ui.note(_('Found %s in system cache\n') % hash)
-        return systemcachepath(repo.ui, hash)
+        return usercachepath(repo.ui, hash)
     return None
 
 class largefiles_dirstate(dirstate.dirstate):
@@ -188,14 +188,14 @@ def listlfiles(repo, rev=None, matcher=None):
             for f in repo[rev].walk(matcher)
             if rev is not None or repo.dirstate[f] != '?']
 
-def incache(repo, hash):
-    return os.path.exists(cachepath(repo, hash))
+def instore(repo, hash):
+    return os.path.exists(storepath(repo, hash))
 
 def createdir(dir):
     if not os.path.exists(dir):
         os.makedirs(dir)
 
-def cachepath(repo, hash):
+def storepath(repo, hash):
     return repo.join(os.path.join(longname, hash))
 
 def copyfromcache(repo, hash, filename):
@@ -211,24 +211,24 @@ def copyfromcache(repo, hash, filename):
     shutil.copy(path, repo.wjoin(filename))
     return True
 
-def copytocache(repo, rev, file, uploaded=False):
+def copytostore(repo, rev, file, uploaded=False):
     hash = readstandin(repo, file)
-    if incache(repo, hash):
+    if instore(repo, hash):
         return
-    copytocacheabsolute(repo, repo.wjoin(file), hash)
+    copytostoreabsolute(repo, repo.wjoin(file), hash)
 
-def copytocacheabsolute(repo, file, hash):
-    createdir(os.path.dirname(cachepath(repo, hash)))
-    if insystemcache(repo.ui, hash):
-        link(systemcachepath(repo.ui, hash), cachepath(repo, hash))
+def copytostoreabsolute(repo, file, hash):
+    createdir(os.path.dirname(storepath(repo, hash)))
+    if inusercache(repo.ui, hash):
+        link(usercachepath(repo.ui, hash), storepath(repo, hash))
     else:
-        shutil.copyfile(file, cachepath(repo, hash))
-        os.chmod(cachepath(repo, hash), os.stat(file).st_mode)
-        linktosystemcache(repo, hash)
+        shutil.copyfile(file, storepath(repo, hash))
+        os.chmod(storepath(repo, hash), os.stat(file).st_mode)
+        linktousercache(repo, hash)
 
-def linktosystemcache(repo, hash):
-    createdir(os.path.dirname(systemcachepath(repo.ui, hash)))
-    link(cachepath(repo, hash), systemcachepath(repo.ui, hash))
+def linktousercache(repo, hash):
+    createdir(os.path.dirname(usercachepath(repo.ui, hash)))
+    link(storepath(repo, hash), usercachepath(repo.ui, hash))
 
 def getstandinmatcher(repo, pats=[], opts={}):
     '''Return a match object that applies pats to the standin directory'''

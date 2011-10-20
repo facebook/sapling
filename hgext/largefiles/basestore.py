@@ -74,13 +74,13 @@ class basestore(object):
             at += 1
             ui.note(_('getting %s:%s\n') % (filename, hash))
 
-            cachefilename = lfutil.cachepath(self.repo, hash)
-            cachedir = os.path.dirname(cachefilename)
+            storefilename = lfutil.storepath(self.repo, hash)
+            storedir = os.path.dirname(storefilename)
 
             # No need to pass mode='wb' to fdopen(), since mkstemp() already
             # opened the file in binary mode.
             (tmpfd, tmpfilename) = tempfile.mkstemp(
-                dir=cachedir, prefix=os.path.basename(filename))
+                dir=storedir, prefix=os.path.basename(filename))
             tmpfile = os.fdopen(tmpfd, 'w')
 
             try:
@@ -98,10 +98,10 @@ class basestore(object):
                 missing.append(filename)
                 continue
 
-            if os.path.exists(cachefilename): # Windows
-                os.remove(cachefilename)
-            os.rename(tmpfilename, cachefilename)
-            lfutil.linktosystemcache(self.repo, hash)
+            if os.path.exists(storefilename): # Windows
+                os.remove(storefilename)
+            os.rename(tmpfilename, storefilename)
+            lfutil.linktousercache(self.repo, hash)
             success.append((filename, hhash))
 
         ui.progress(_('getting largefiles'), None)
