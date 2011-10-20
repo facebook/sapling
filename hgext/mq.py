@@ -2614,8 +2614,6 @@ def rename(ui, repo, patch, name=None, **opts):
                 r.dirstate.drop(patch)
                 r.dirstate.add(name)
             else:
-                if r.dirstate[name] == 'r':
-                    wctx.undelete([name])
                 wctx.copy(patch, name)
                 wctx.forget([patch])
         finally:

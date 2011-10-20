@@ -76,8 +76,8 @@ Test overlapping renames (issue2388)
   $ hg qrename patchb patchc
   $ hg qrename patcha patchb
   $ hg st --mq
-  M patchb
   M series
+  A patchb
   A patchc
   R patcha
   $ cd ..
@@ -94,3 +94,32 @@ Test renames with mq repo (issue2097)
   nothing changed
   [1]
   $ cd ..
+
+Test renaming to a folded patch (issue3058)
+
+  $ hg init issue3058
+  $ cd issue3058
+  $ hg init --mq
+  $ echo a > a
+  $ hg add a
+  $ hg qnew adda
+  $ echo b >> a
+  $ hg qnew addb
+  $ hg qpop
+  popping addb
+  now at: adda
+  $ hg ci --mq -m "save mq"
+  $ hg qfold addb
+  $ hg qmv addb
+  $ cat .hg/patches/addb
+  # HG changeset patch
+  # Parent 0000000000000000000000000000000000000000
+  
+  diff -r 000000000000 a
+  --- /dev/null	* (glob)
+  +++ b/a	* (glob)
+  @@ -0,0 +1,2 @@
+  +a
+  +b
+  $ cd ..
+
