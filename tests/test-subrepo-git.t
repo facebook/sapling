@@ -103,7 +103,7 @@ clone root, make local change
   $ echo ggg >> s/g
   $ hg status --subrepos
   M s/g
-  $ hg commit -m ggg
+  $ hg commit --subrepos -m ggg
   committing subrepository s
   $ hg debugsub
   path s
@@ -125,7 +125,7 @@ clone root separately, make different local change
 
   $ hg status --subrepos
   A s/f
-  $ hg commit -m f
+  $ hg commit --subrepos -m f
   committing subrepository s
   $ hg debugsub
   path s
@@ -164,7 +164,7 @@ user a pulls, merges, commits
   g
   gg
   ggg
-  $ hg commit -m 'merge'
+  $ hg commit --subrepos -m 'merge'
   committing subrepository s
   $ hg status --subrepos --rev 1:5
   M .hgsubstate
@@ -294,7 +294,7 @@ nested commit
   $ echo ffff >> inner/s/f
   $ hg status --subrepos
   M inner/s/f
-  $ hg commit -m nested
+  $ hg commit --subrepos -m nested
   committing subrepository inner
   committing subrepository inner/s
 
@@ -325,7 +325,7 @@ Don't crash if the subrepo is missing
   $ hg push -q
   abort: subrepo s is missing
   [255]
-  $ hg commit -qm missing
+  $ hg commit --subrepos -qm missing
   abort: subrepo s is missing
   [255]
   $ hg update -C

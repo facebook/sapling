@@ -1,3 +1,8 @@
+Let commit recurse into subrepos by default to match pre-2.0 behavior:
+
+  $ echo "[ui]" >> $HGRCPATH
+  $ echo "commitsubrepos = Yes" >> $HGRCPATH
+
   $ rm -rf sub
   $ mkdir sub
   $ cd sub
@@ -107,6 +112,7 @@ leave sub dirty (and check ui.commitsubrepos=no aborts the commit)
   $ echo c > s/a
   $ hg --config ui.commitsubrepos=no ci -m4
   abort: uncommitted changes in subrepo s
+  (use --subrepos for recursive commit)
   [255]
   $ hg ci -m4
   committing subrepository s

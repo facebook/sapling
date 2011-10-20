@@ -1,3 +1,5 @@
+  $ echo "[ui]" >> $HGRCPATH
+  $ echo "commitsubrepos = Yes" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
   $ echo "record=" >> $HGRCPATH

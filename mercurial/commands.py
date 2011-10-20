@@ -1143,7 +1143,7 @@ def clone(ui, source, dest=None, **opts):
      _('mark new/missing files as added/removed before committing')),
     ('', 'close-branch', None,
      _('mark a branch as closed, hiding it from the branch list')),
-    ] + walkopts + commitopts + commitopts2,
+    ] + walkopts + commitopts + commitopts2 + subrepoopts,
     _('[OPTION]... [FILE]...'))
 def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
@@ -1167,6 +1167,10 @@ def commit(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if nothing changed.
     """
+    if opts.get('subrepos'):
+        # Let --subrepos on the command line overide config setting.
+        ui.setconfig('ui', 'commitsubrepos', True)
+
     extra = {}
     if opts.get('close_branch'):
         if repo['.'].node() not in repo.branchheads():

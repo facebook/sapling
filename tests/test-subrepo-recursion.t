@@ -58,7 +58,14 @@ Test recursive diff without committing anything:
 
 Commits:
 
-  $ hg commit -m 0-0-0
+  $ hg commit -m fails
+  abort: uncommitted changes in subrepo foo
+  (use --subrepos for recursive commit)
+  [255]
+
+The --subrepos flag overwrite the config setting:
+
+  $ hg commit -m 0-0-0 --config ui.commitsubrepos=No --subrepos
   committing subrepository foo
   committing subrepository foo/bar
 
@@ -177,7 +184,7 @@ Status with relative path:
 Cleanup and final commit:
 
   $ rm -r dir
-  $ hg commit -m 2-3-2
+  $ hg commit --subrepos -m 2-3-2
   committing subrepository foo
   committing subrepository foo/bar
 
@@ -394,7 +401,7 @@ Make nested change:
    y2
    y3
   +y4
-  $ hg commit -m 3-4-2
+  $ hg commit --subrepos -m 3-4-2
   committing subrepository foo
   $ hg outgoing -S
   comparing with $TESTTMP/repo

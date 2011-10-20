@@ -77,7 +77,7 @@ debugsub output for main and sub1
 Modifying deeply nested 'sub2'
 
   $ echo modified > cloned/sub1/sub2/sub2
-  $ hg commit -m "deep nested modif should trigger a commit" -R cloned
+  $ hg commit --subrepos -m "deep nested modif should trigger a commit" -R cloned
   committing subrepository sub1
   committing subrepository sub1/sub2
 

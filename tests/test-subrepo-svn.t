@@ -105,7 +105,7 @@ change file in svn and hg, commit
   branch: default
   commit: 1 modified, 1 subrepos
   update: (current)
-  $ hg commit -m 'Message!'
+  $ hg commit --subrepos -m 'Message!'
   committing subrepository s
   Sending*s/alpha (glob)
   Transmitting file data .
@@ -171,7 +171,7 @@ add a commit from svn
 this commit from hg will fail
 
   $ echo zzz >> s/alpha
-  $ hg ci -m 'amend alpha from hg'
+  $ hg ci --subrepos -m 'amend alpha from hg'
   committing subrepository s
   abort: svn: Commit failed (details follow):
   svn: (Out of date)?.*/src/alpha.*(is out of date)? (re)
@@ -182,7 +182,7 @@ this commit fails because of meta changes
 
   $ svn propset svn:mime-type 'text/html' s/alpha
   property 'svn:mime-type' set on 's/alpha'
-  $ hg ci -m 'amend alpha from hg'
+  $ hg ci --subrepos -m 'amend alpha from hg'
   committing subrepository s
   abort: svn: Commit failed (details follow):
   svn: (Out of date)?.*/src/alpha.*(is out of date)? (re)
@@ -192,7 +192,7 @@ this commit fails because of meta changes
 this commit fails because of externals changes
 
   $ echo zzz > s/externals/other
-  $ hg ci -m 'amend externals from hg'
+  $ hg ci --subrepos -m 'amend externals from hg'
   committing subrepository s
   abort: cannot commit svn externals
   [255]
@@ -214,7 +214,7 @@ this commit fails because of externals meta changes
 
   $ svn propset svn:mime-type 'text/html' s/externals/other
   property 'svn:mime-type' set on 's/externals/other'
-  $ hg ci -m 'amend externals from hg'
+  $ hg ci --subrepos -m 'amend externals from hg'
   committing subrepository s
   abort: cannot commit svn externals
   [255]
@@ -523,7 +523,7 @@ This is surprising, but is also correct based on the current code:
 Point to a Subversion branch which has since been deleted and recreated
 First, create that condition in the repository.
 
-  $ hg ci -m cleanup
+  $ hg ci --subrepos -m cleanup
   committing subrepository obstruct
   Sending        obstruct/other
   Transmitting file data .

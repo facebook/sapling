@@ -64,6 +64,7 @@ help record (record)
    -l --logfile FILE        read commit message from file
    -d --date DATE           record the specified date as commit date
    -u --user USER           record the specified user as committer
+   -S --subrepos            recurse into subrepositories
    -w --ignore-all-space    ignore white space when comparing lines
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
