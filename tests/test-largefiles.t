@@ -9,7 +9,7 @@
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
-files (testing that status correctly shows largefiles.
+files, testing that status correctly shows largefiles.
 
   $ hg init a
   $ cd a
@@ -32,9 +32,7 @@ files (testing that status correctly shows largefiles.
   M sub/normal2
   $ hg commit -m "edit files"
 
-Verify that committing new versions of largefiles results in correct
-largefile contents, and also that non-largefiles are not affected
-badly.
+Commit preserved largefile contents.
 
   $ cat normal1
   normal11
@@ -45,14 +43,14 @@ badly.
   $ cat sub/large2
   large22
 
-Verify removing largefiles and normal files works on largefile repos.
+Remove both largefiles and normal files.
  
   $ hg remove normal1 large1
   $ hg commit -m "remove files"
   $ ls
   sub
 
-Test copying largefiles.
+Copy both largefiles and normal files.
 
   $ hg cp sub/normal2 normal1
   $ hg cp sub/large2 large1
@@ -130,8 +128,7 @@ archiving.
   $ cat sub/large4
   large22
 
-Test a separate commit corner case (specifying files to commit) and check
-that the commited files have the right value.
+Commit corner case: specify files to commit.
 
   $ cd ../a
   $ echo normal3 > normal3
@@ -148,8 +145,7 @@ that the commited files have the right value.
   $ cat sub/large4
   large4
 
-Test one more commit corner case that has been known to break (comitting from
-a sub-directory of the repo).
+One more commit corner case: commit from a subdirectory.
 
   $ cd ../a
   $ echo normal33 > normal3
@@ -167,7 +163,7 @@ a sub-directory of the repo).
   $ cat large4
   large44
 
-Check that committing standins is not allowed.
+Committing standins is not allowed.
 
   $ cd ..
   $ echo large3 > large3
@@ -176,7 +172,7 @@ Check that committing standins is not allowed.
   (commit the largefile itself instead)
   [255]
 
-Test some cornercases for adding largefiles.
+Corner cases for adding largefiles.
 
   $ echo large5 > large5
   $ hg add --large large5
@@ -194,7 +190,7 @@ Test some cornercases for adding largefiles.
   A sub2/large6
   A sub2/large7
 
-Test that files get added as largefiles based on .hgrc settings
+Config settings (pattern **.dat, minsize 2 MB) are respected.
 
   $ echo testdata > test.dat
   $ dd bs=3145728 count=1 if=/dev/zero of=reallylarge > /dev/null 2> /dev/null
@@ -203,7 +199,7 @@ Test that files get added as largefiles based on .hgrc settings
   adding test.dat as a largefile
   $ dd bs=1048576 count=1 if=/dev/zero of=reallylarge2 > /dev/null 2> /dev/null
 
-Test that specifying the --lsize command on the comand-line works
+--lfsize option overrides largefiles.minsize.
 
   $ hg add --lfsize 1
   adding reallylarge2 as a largefile
@@ -227,8 +223,8 @@ Test forget on largefiles.
   ? reallylarge2
   ? test.dat
 
-Test purge with largefiles (verify that largefiles get populated in the
-working copy correctly after a purge)
+Purge with largefiles: verify that largefiles are still in the working
+dir after a purge.
 
   $ hg purge --all
   $ cat sub/large4
@@ -238,7 +234,7 @@ working copy correctly after a purge)
   $ cat sub2/large7
   large7
 
-Test cloning a largefiles repo.
+Clone a largefiles repo.
 
   $ cd ..
   $ hg clone a b
@@ -341,8 +337,8 @@ Test cloning a largefiles repo.
   $ cat sub/large2
   large22
 
-Test that old revisions of a clone have correct largefiles content.  This also
-tests update.
+Old revisions of a clone have correct largefiles content (this also
+tests update).
 
   $ hg update -r 1 
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -353,7 +349,7 @@ tests update.
   $ cat sub/large2
   large22
 
-Test that rebasing between two repositories does not revert largefiles to old
+Rebasing between two repositories does not revert largefiles to old
 revisions (this was a very bad bug that took a lot of work to fix).
 
   $ cd ..
@@ -526,7 +522,7 @@ revisions (this was a very bad bug that took a lot of work to fix).
   $ cat sub2/large7
   large7
 
-Test rollback on largefiles
+Rollback on largefiles.
 
   $ echo large4-modified-again > sub/large4 
   $ hg commit -m "Modify large4 again"
@@ -590,7 +586,7 @@ Test rollback on largefiles
   $ cat sub/large4
   large4-modified-again
 
-Test that `update --clean` leaves correct largefiles in working copy.
+"update --clean" leaves correct largefiles in working copy.
 
   $ hg update --clean 
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -607,7 +603,7 @@ Test that `update --clean` leaves correct largefiles in working copy.
   $ cat sub2/large7
   large7
 
-Test that verify --large actaully verifies largefiles
+"verify --large" actaully verifies largefiles
 
   $ hg verify --large
   checking changesets
@@ -618,8 +614,8 @@ Test that verify --large actaully verifies largefiles
   searching 1 changesets for largefiles
   verified existence of 3 revisions of 3 largefiles
 
-Test that merging does not revert to old versions of largefiles (this has
-also been very problematic).
+Merging does not revert to old versions of largefiles (this has also
+been very problematic).
 
   $ cd ..
   $ hg clone -r 7 e f
@@ -663,7 +659,7 @@ also been very problematic).
   large7
   $ cd ..
 
-Verify that lfconvert adds 'largefiles' to .hg/requires
+"lfconvert" works
   $ hg init bigfile-repo
   $ cd bigfile-repo
   $ dd if=/dev/zero bs=1k count=23k > a-large-file 2> /dev/null
@@ -677,6 +673,8 @@ Verify that lfconvert adds 'largefiles' to .hg/requires
   $ cd ..
   $ hg lfconvert --size 10 bigfile-repo largefiles-repo
   initializing destination largefiles-repo
+
+"lfconvert" adds 'largefiles' to .hg/requires.
   $ cat largefiles-repo/.hg/requires
   largefiles
   revlogv1
@@ -684,7 +682,7 @@ Verify that lfconvert adds 'largefiles' to .hg/requires
   store
   dotencode
 
-Make sure that lfconvert includes a newline at the end of the standin files.
+"lfconvert" includes a newline at the end of the standin files.
   $ cd largefiles-repo
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
