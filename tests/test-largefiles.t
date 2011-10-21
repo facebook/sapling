@@ -197,30 +197,45 @@ Config settings (pattern **.dat, minsize 2 MB) are respected.
   $ hg add
   adding reallylarge as a largefile
   adding test.dat as a largefile
-  $ dd bs=1048576 count=1 if=/dev/zero of=reallylarge2 > /dev/null 2> /dev/null
 
---lfsize option overrides largefiles.minsize.
+Test that minsize and --lfsize handle float values;
+also tests that --lfsize overrides largefiles.minsize.
+(0.250 MB = 256 kB = 262144 B)
 
-  $ hg add --lfsize 1
-  adding reallylarge2 as a largefile
+  $ dd if=/dev/zero of=ratherlarge bs=1024 count=256 > /dev/null 2> /dev/null
+  $ dd if=/dev/zero of=medium bs=1024 count=128 > /dev/null 2> /dev/null
+  $ hg --config largefiles.minsize=.25 add
+  adding ratherlarge as a largefile
+  adding medium
+  $ hg forget medium
+  $ hg --config largefiles.minsize=.25 add --lfsize=.125
+  adding medium as a largefile
+  $ dd if=/dev/zero of=notlarge bs=1024 count=127 > /dev/null 2> /dev/null
+  $ hg --config largefiles.minsize=.25 add --lfsize=.125
+  adding notlarge
+  $ hg forget notlarge
 
 Test forget on largefiles.
 
-  $ hg forget large3 large5 test.dat reallylarge reallylarge2
+  $ hg forget large3 large5 test.dat reallylarge ratherlarge medium
   $ hg st
   A sub2/large6
   A sub2/large7
   R large3
   ? large5
+  ? medium
+  ? notlarge
+  ? ratherlarge
   ? reallylarge
-  ? reallylarge2
   ? test.dat
   $ hg commit -m "add/edit more largefiles"
   $ hg st
   ? large3
   ? large5
+  ? medium
+  ? notlarge
+  ? ratherlarge
   ? reallylarge
-  ? reallylarge2
   ? test.dat
 
 Purge with largefiles: verify that largefiles are still in the working
