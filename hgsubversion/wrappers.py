@@ -476,6 +476,8 @@ def clone(orig, ui, source, dest=None, **opts):
 
         data['srcrepo'], data['dstrepo'] = orig(ui, *args, **opts)
 
+        return data['srcrepo'], data['dstrepo']
+
     for opt, (section, name) in optionmap.iteritems():
         if opt in opts and opts[opt]:
             ui.setconfig(section, name, str(opts.pop(opt)))
