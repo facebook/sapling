@@ -446,6 +446,6 @@ def islfilesrepo(repo):
     return ('largefiles' in repo.requirements and
             util.any(shortname + '/' in f[0] for f in repo.store.datafiles()))
 
-class storeprotonotcapable(BaseException):
+class storeprotonotcapable(Exception):
     def __init__(self, storetypes):
         self.storetypes = storetypes
