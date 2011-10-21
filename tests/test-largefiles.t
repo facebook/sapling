@@ -674,6 +674,95 @@ been very problematic).
   large7
   $ cd ..
 
+vanilla clients not locked out from largefiles servers on vanilla repos
+  $ mkdir r1
+  $ cd r1
+  $ hg init
+  $ echo c1 > f1
+  $ hg add f1
+  $ hg com -m "m1"
+  $ cd ..
+  $ hg serve -R r1 -d -p 8001 --pid-file serve.pid
+  $ hg --config extensions.largefiles=! clone http://localhost:8001 r2
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ kill $(cat serve.pid)
+
+largefiles clients still work with vanilla servers
+  $ hg --config extensions.largefiles=! serve -R r1 -d -p 8001 --pid-file serve.pid
+  $ hg clone http://localhost:8001 r3
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ kill $(cat serve.pid)
+
+vanilla clients locked out from largefiles http repos
+  $ mkdir r4
+  $ cd r4
+  $ hg init
+  $ echo c1 > f1
+  $ hg add --large f1
+  $ hg com -m "m1"
+  $ cd ..
+  $ hg serve -R r4 -d -p 8001 --pid-file serve.pid
+  $ hg --config extensions.largefiles=! clone http://localhost:8001 r5
+  abort: remote error:
+  
+  This repository uses the largefiles extension.
+  
+  Please enable it in your Mercurial config file.
+  [255]
+  $ kill $(cat serve.pid)
+
+vanilla clients locked out from largefiles ssh repos
+  $ hg --config extensions.largefiles=! clone -e "python $TESTDIR/dummyssh" ssh://user@dummy/r4 r5
+  abort: remote error:
+  
+  This repository uses the largefiles extension.
+  
+  Please enable it in your Mercurial config file.
+  [255]
+
+largefiles clients refuse to push largefiles repos to vanilla servers
+  $ mkdir r6
+  $ cd r6
+  $ hg init
+  $ echo c1 > f1
+  $ hg add f1
+  $ hg com -m "m1"
+  $ cat >> .hg/hgrc <<!
+  > [web]
+  > push_ssl = false
+  > allow_push = *
+  > !
+  $ cd ..
+  $ hg clone r6 r7
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd r7
+  $ echo c2 > f2
+  $ hg add --large f2
+  $ hg com -m "m2"
+  $ hg --config extensions.largefiles=! -R ../r6 serve -d -p 8001 --pid-file ../serve.pid
+  $ hg push http://localhost:8001
+  pushing to http://localhost:8001/
+  searching for changes
+  abort: http://localhost:8001/ does not appear to be a largefile store
+  [255]
+  $ cd ..
+  $ kill $(cat serve.pid)
+
+  $ cd ..
+
 "lfconvert" works
   $ hg init bigfile-repo
   $ cd bigfile-repo
