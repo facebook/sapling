@@ -3356,7 +3356,7 @@ def identify(ui, repo, source=None, rev=None,
      _('use any branch information in patch (implied by --exact)'))] +
     commitopts + commitopts2 + similarityopts,
     _('[OPTION]... PATCH...'))
-def import_(ui, repo, patch1, *patches, **opts):
+def import_(ui, repo, patch1=None, *patches, **opts):
     """import an ordered set of patches
 
     Import a list of patches and commit them individually (unless
@@ -3418,6 +3418,10 @@ def import_(ui, repo, patch1, *patches, **opts):
 
     Returns 0 on success.
     """
+
+    if not patch1:
+        raise util.Abort(_('need at least one patch to import'))
+
     patches = (patch1,) + patches
 
     date = opts.get('date')

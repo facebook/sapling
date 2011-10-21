@@ -10,6 +10,11 @@
   $ echo line 2 >> a/a
   $ hg --cwd a ci -u someone -d '1 0' -m'second change'
 
+import with no args:
+
+  $ hg --cwd a import
+  abort: need at least one patch to import
+  [255]
 
 generate patches for the test
 
