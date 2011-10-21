@@ -176,6 +176,8 @@ pypats = [
      'hasattr(foo, bar) is broken, use util.safehasattr(foo, bar) instead'),
     (r'opener\([^)]*\).read\(',
      "use opener.read() instead"),
+    (r'BaseException', 'not in Py2.4, use Exception'),
+    (r'os\.path\.relpath', 'os.path.relpath is not in Py2.5'),
     (r'opener\([^)]*\).write\(',
      "use opener.write() instead"),
     (r'[\s\(](open|file)\([^)]*\)\.read\(',
