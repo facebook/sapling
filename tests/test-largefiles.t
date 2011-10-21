@@ -709,9 +709,26 @@ been very problematic).
   $ cat .hglf/a-large-file .hglf/another-large-file
   2e000fa7e85759c7f4c254d4d9c33ef481e459a7
   3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
-  $ cd ..
-  $ rm -rf bigfile-repo largefiles-repo
 
+Convert back to a normal (non-largefiles) repo
+  $ hg lfconvert --tonormal . ../normal-repo
+  initializing destination ../normal-repo
+  $ cd ../normal-repo
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > largefiles = !
+  > EOF
+  $ hg update
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg locate
+  a-large-file
+  another-large-file
+  $ [ -d .hg/largefiles ] && echo fail || echo pass
+  pass
+
+Cleanup
+  $ cd ..
+  $ rm -rf bigfile-repo largefiles-repo normal-repo
 Clone a local repository owned by another user
 We have to simulate that here by setting $HOME and removing write permissions
   $ ORIGHOME="$HOME"
