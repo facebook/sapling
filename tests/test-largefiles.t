@@ -193,7 +193,7 @@ Corner cases for adding largefiles.
 Config settings (pattern **.dat, minsize 2 MB) are respected.
 
   $ echo testdata > test.dat
-  $ dd bs=3145728 count=1 if=/dev/zero of=reallylarge > /dev/null 2> /dev/null
+  $ dd bs=1k count=2k if=/dev/zero of=reallylarge > /dev/null 2> /dev/null
   $ hg add
   adding reallylarge as a largefile
   adding test.dat as a largefile
@@ -677,16 +677,14 @@ been very problematic).
 "lfconvert" works
   $ hg init bigfile-repo
   $ cd bigfile-repo
-  $ dd if=/dev/zero bs=1k count=23k > a-large-file 2> /dev/null
+  $ dd if=/dev/zero bs=1k count=256 > a-large-file 2> /dev/null
   $ hg addremove
   adding a-large-file
-  a-large-file: up to 72 MB of RAM may be required to manage this file
-  (use 'hg revert a-large-file' to cancel the pending addition)
-  $ hg commit -m "Commit file without making it be a largefile"
+  $ hg commit -m "add a-large-file (as a normal file)"
   $ find .hg/largefiles
   .hg/largefiles
   $ cd ..
-  $ hg lfconvert --size 10 bigfile-repo largefiles-repo
+  $ hg lfconvert --size 0.2 bigfile-repo largefiles-repo
   initializing destination largefiles-repo
 
 "lfconvert" adds 'largefiles' to .hg/requires.
@@ -704,13 +702,13 @@ been very problematic).
   getting changed largefiles
   1 largefiles updated, 0 removed
   $ cat .hglf/a-large-file
-  8b0629c630f530cde051aeb42ce561756738fbe7
-  $ dd if=/dev/zero bs=1k count=11k > another-large-file 2> /dev/null
-  $ hg add another-large-file
-  $ hg commit -m "Commit another file that should get automatically added as a largefile"
+  2e000fa7e85759c7f4c254d4d9c33ef481e459a7
+  $ dd if=/dev/zero bs=1k count=1k > another-large-file 2> /dev/null
+  $ hg add --lfsize=1 another-large-file
+  $ hg commit -m "add another-large-file (should be a largefile)"
   $ cat .hglf/a-large-file .hglf/another-large-file
-  8b0629c630f530cde051aeb42ce561756738fbe7
-  187a0f76e02aac9c24f71c820be1f34ef1c76e76
+  2e000fa7e85759c7f4c254d4d9c33ef481e459a7
+  3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
   $ cd ..
   $ rm -rf bigfile-repo largefiles-repo
 
