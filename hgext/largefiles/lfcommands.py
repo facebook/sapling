@@ -35,10 +35,10 @@ def lfconvert(ui, src, dest, *pats, **opts):
     largefiles is enabled anywhere you intend to push the new
     repository.
 
-    Use --tonormal to convert largefiles back to normal files; after
+    Use --to-normal to convert largefiles back to normal files; after
     this, the DEST repository can be used without largefiles at all.'''
 
-    if opts['tonormal']:
+    if opts['to_normal']:
         tolfile = False
     else:
         tolfile = True
@@ -477,7 +477,7 @@ cmdtable = {
                     _('minimum size (MB) for files to be converted '
                       'as largefiles'),
                     'SIZE'),
-                  ('', 'tonormal', False,
+                  ('', 'to-normal', False,
                    _('convert from a largefiles repo to a normal repo')),
                   ],
                   _('hg lfconvert SOURCE DEST [FILE ...]')),

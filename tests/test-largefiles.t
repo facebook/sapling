@@ -711,7 +711,7 @@ been very problematic).
   3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
 
 Convert back to a normal (non-largefiles) repo
-  $ hg lfconvert --tonormal . ../normal-repo
+  $ hg lfconvert --to-normal . ../normal-repo
   initializing destination ../normal-repo
   $ cd ../normal-repo
   $ cat >> .hg/hgrc <<EOF
