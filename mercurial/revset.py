@@ -6,7 +6,8 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import parser, util, error, discovery, hbisect, node
+import parser, util, error, discovery, hbisect
+import node as nodemod
 import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _
@@ -1092,7 +1093,7 @@ def formatspec(expr, *args):
             parse(arg) # make sure syntax errors are confined
             return '(%s)' % arg
         elif c == 'n':
-            return quote(node.hex(arg))
+            return quote(nodemod.hex(arg))
         elif c == 'b':
             return quote(arg.branch())
 
