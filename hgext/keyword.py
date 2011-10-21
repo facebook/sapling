@@ -237,7 +237,7 @@ class kwtemplater(object):
 
     def iskwfile(self, cand, ctx):
         '''Returns subset of candidates which are configured for keyword
-        expansion are not symbolic links.'''
+        expansion but are not symbolic links.'''
         return [f for f in cand if self.match(f) and not 'l' in ctx.flags(f)]
 
     def overwrite(self, ctx, candidates, lookup, expand, rekw=False):
