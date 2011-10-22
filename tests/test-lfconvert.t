@@ -2,6 +2,7 @@
   > [extensions]
   > largefiles =
   > share =
+  > graphlog =
   > [largefiles]
   > minsize = 0.5
   > patterns = **.dat
@@ -71,6 +72,96 @@ add another largefile to the new largefiles repo
   $ cat .hglf/large .hglf/anotherlarge
   2e000fa7e85759c7f4c254d4d9c33ef481e459a7
   3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
+  $ cd ..
+
+add some changesets to rename/remove/merge
+  $ cd bigfile-repo
+  $ hg mv -q sub stuff
+  $ hg commit -m"rename sub/ to stuff/"
+  $ hg update -q 1
+  $ echo blah >> normal3
+  $ echo blah >> sub/normal2
+  $ echo blah >> sub/maybelarge.dat
+  $ sha1sum sub/maybelarge.dat
+  76236b6a2c6102826c61af4297dd738fb3b1de38  sub/maybelarge.dat
+  $ hg commit -A -m"add normal3, modify sub/*"
+  adding normal3
+  created new head
+  $ hg rm large normal3
+  $ hg commit -q -m"remove large, normal3"
+  $ hg merge
+  merging sub/maybelarge.dat and stuff/maybelarge.dat to stuff/maybelarge.dat
+  warning: $TESTTMP/bigfile-repo/stuff/maybelarge.dat looks like a binary file.
+  merging stuff/maybelarge.dat failed!
+  merging sub/normal2 and stuff/normal2 to stuff/normal2
+  0 files updated, 1 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ hg cat -r . sub/maybelarge.dat > stuff/maybelarge.dat
+  $ hg resolve -m stuff/maybelarge.dat
+  $ hg commit -m"merge"
+  $ hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
+  @    5:4884f215abda  merge
+  |\
+  | o  4:7285f817b77e  remove large, normal3
+  | |
+  | o  3:67e3892e3534  add normal3, modify sub/*
+  | |
+  o |  2:c96c8beb5d56  rename sub/ to stuff/
+  |/
+  o  1:020c65d24e11  add sub/*
+  |
+  o  0:117b8328f97a  add large, normal1
+  
+  $ cd ..
+
+lfconvert with rename, merge, and remove
+  $ hg lfconvert --size 0.2 bigfile-repo largefiles2-repo
+  initializing destination largefiles2-repo
+  $ cd largefiles2-repo
+  $ hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
+  o    5:8e05f5f2b77e  merge
+  |\
+  | o  4:a5a02de7a8e4  remove large, normal3
+  | |
+  | o  3:55759520c76f  add normal3, modify sub/*
+  | |
+  o |  2:261ad3f3f037  rename sub/ to stuff/
+  |/
+  o  1:334e5237836d  add sub/*
+  |
+  o  0:d4892ec57ce2  add large, normal1
+  
+  $ hg locate -r 2
+  .hglf/large
+  .hglf/stuff/maybelarge.dat
+  normal1
+  stuff/normal2
+  $ hg locate -r 3
+  .hglf/large
+  .hglf/sub/maybelarge.dat
+  normal1
+  normal3
+  sub/normal2
+  $ hg locate -r 4
+  .hglf/sub/maybelarge.dat
+  normal1
+  sub/normal2
+  $ hg locate -r 5
+  .hglf/stuff/maybelarge.dat
+  normal1
+  stuff/normal2
+  $ hg update
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  $ cat stuff/normal2
+  alsonormal
+  blah
+  $ sha1sum stuff/maybelarge.dat
+  76236b6a2c6102826c61af4297dd738fb3b1de38  stuff/maybelarge.dat
+  $ cat .hglf/stuff/maybelarge.dat
+  76236b6a2c6102826c61af4297dd738fb3b1de38
   $ cd ..
 
 "lfconvert" error cases
