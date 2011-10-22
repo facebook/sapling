@@ -1,6 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > largefiles =
+  > share =
   > [largefiles]
   > minsize = 0.5
   > patterns = **.dat
@@ -41,8 +42,24 @@
   $ cat .hglf/a-large-file .hglf/another-large-file
   2e000fa7e85759c7f4c254d4d9c33ef481e459a7
   3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
+  $ cd ..
+
+"lfconvert" error cases
+  $ hg lfconvert nosuchrepo foo
+  abort: repository nosuchrepo not found!
+  [255]
+  $ hg share -q -U bigfile-repo shared
+  $ echo -n bogus > shared/.hg/sharedpath
+  $ hg lfconvert shared foo
+  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/bogus!
+  [255]
+  $ hg lfconvert bigfile-repo largefiles-repo
+  initializing destination largefiles-repo
+  abort: repository largefiles-repo already exists!
+  [255]
 
 Convert back to a normal (non-largefiles) repo
+  $ cd largefiles-repo
   $ hg lfconvert --to-normal . ../normal-repo
   initializing destination ../normal-repo
   $ cd ../normal-repo
