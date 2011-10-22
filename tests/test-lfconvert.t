@@ -64,14 +64,6 @@
   $ cat .hglf/large .hglf/sub/maybelarge.dat
   2e000fa7e85759c7f4c254d4d9c33ef481e459a7
   34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c
-
-add another largefile to the new largefiles repo
-  $ dd if=/dev/zero bs=1k count=1k > anotherlarge 2> /dev/null
-  $ hg add --lfsize=1 anotherlarge
-  $ hg commit -m "add anotherlarge (should be a largefile)"
-  $ cat .hglf/large .hglf/anotherlarge
-  2e000fa7e85759c7f4c254d4d9c33ef481e459a7
-  3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
   $ cd ..
 
 add some changesets to rename/remove/merge
@@ -116,9 +108,10 @@ add some changesets to rename/remove/merge
   $ cd ..
 
 lfconvert with rename, merge, and remove
-  $ hg lfconvert --size 0.2 bigfile-repo largefiles2-repo
-  initializing destination largefiles2-repo
-  $ cd largefiles2-repo
+  $ rm -rf largefiles-repo
+  $ hg lfconvert --size 0.2 bigfile-repo largefiles-repo
+  initializing destination largefiles-repo
+  $ cd largefiles-repo
   $ hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
   o    5:8e05f5f2b77e  merge
   |\
@@ -184,7 +177,17 @@ lfconvert with rename, merge, and remove
   abort: repository largefiles-repo already exists!
   [255]
 
-Convert back to a normal (non-largefiles) repo
+add another largefile to the new largefiles repo
+  $ cd largefiles-repo
+  $ dd if=/dev/zero bs=1k count=1k > anotherlarge 2> /dev/null
+  $ hg add --lfsize=1 anotherlarge
+  $ hg commit -m "add anotherlarge (should be a largefile)"
+  $ cat .hglf/anotherlarge
+  3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
+  $ cd ..
+
+round-trip: converting back to a normal (non-largefiles) repo with
+"lfconvert --to-normal" should give the same as ../bigfile-repo
   $ cd largefiles-repo
   $ hg lfconvert --to-normal . ../normal-repo
   initializing destination ../normal-repo
@@ -193,13 +196,37 @@ Convert back to a normal (non-largefiles) repo
   > [extensions]
   > largefiles = !
   > EOF
+
+# Hmmm: the changeset ID for rev 5 is different from the original
+# normal repo (../bigfile-repo), because the changelog filelist
+# differs between the two incarnations of rev 5: this repo includes
+# 'large' in the list, but ../bigfile-repo does not. Since rev 5
+# removes 'large' relative to the first parent in both repos, it seems
+# to me that lfconvert is doing a *better* job than
+# "hg remove" + "hg merge" + "hg commit".
+#  $ hg -R ../bigfile-repo debugdata -c 5
+#  $ hg debugdata -c 5
+  $ hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
+  o  6:1635824e6f59  add anotherlarge (should be a largefile)
+  |
+  o    5:7215f8deeaaf  merge
+  |\
+  | o  4:7285f817b77e  remove large, normal3
+  | |
+  | o  3:67e3892e3534  add normal3, modify sub/*
+  | |
+  o |  2:c96c8beb5d56  rename sub/ to stuff/
+  |/
+  o  1:020c65d24e11  add sub/*
+  |
+  o  0:117b8328f97a  add large, normal1
+  
   $ hg update
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg locate
   anotherlarge
-  large
   normal1
-  sub/maybelarge.dat
-  sub/normal2
+  stuff/maybelarge.dat
+  stuff/normal2
   $ [ -d .hg/largefiles ] && echo fail || echo pass
   pass
