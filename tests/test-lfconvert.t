@@ -10,18 +10,49 @@
 "lfconvert" works
   $ hg init bigfile-repo
   $ cd bigfile-repo
-  $ dd if=/dev/zero bs=1k count=256 > a-large-file 2> /dev/null
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > largefiles = !
+  > EOF
+  $ mkdir sub
+  $ dd if=/dev/zero bs=1k count=256 > large 2> /dev/null
+  $ echo normal > normal1
+  $ echo alsonormal > sub/normal2
+  $ dd if=/dev/zero bs=1k count=10 > sub/maybelarge.dat 2> /dev/null
   $ hg addremove
-  adding a-large-file
-  $ hg commit -m "add a-large-file (as a normal file)"
-  $ find .hg/largefiles
-  .hg/largefiles
+  adding large
+  adding normal1
+  adding sub/maybelarge.dat
+  adding sub/normal2
+  $ hg commit -m"add large, normal1" large normal1
+  $ hg commit -m"add sub/*" sub
+  $ [ -d .hg/largefiles ] && echo fail || echo pass
+  pass
   $ cd ..
   $ hg lfconvert --size 0.2 bigfile-repo largefiles-repo
   initializing destination largefiles-repo
 
+"lfconvert" converts content correctly
+  $ cd largefiles-repo
+  $ hg up
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  2 largefiles updated, 0 removed
+  $ hg locate
+  .hglf/large
+  .hglf/sub/maybelarge.dat
+  normal1
+  sub/normal2
+  $ cat normal1
+  normal
+  $ cat sub/normal2
+  alsonormal
+  $ sha1sum large sub/maybelarge.dat
+  2e000fa7e85759c7f4c254d4d9c33ef481e459a7  large
+  34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c  sub/maybelarge.dat
+
 "lfconvert" adds 'largefiles' to .hg/requires.
-  $ cat largefiles-repo/.hg/requires
+  $ cat .hg/requires
   largefiles
   revlogv1
   fncache
@@ -29,17 +60,15 @@
   dotencode
 
 "lfconvert" includes a newline at the end of the standin files.
-  $ cd largefiles-repo
-  $ hg up
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  getting changed largefiles
-  1 largefiles updated, 0 removed
-  $ cat .hglf/a-large-file
+  $ cat .hglf/large .hglf/sub/maybelarge.dat
   2e000fa7e85759c7f4c254d4d9c33ef481e459a7
-  $ dd if=/dev/zero bs=1k count=1k > another-large-file 2> /dev/null
-  $ hg add --lfsize=1 another-large-file
-  $ hg commit -m "add another-large-file (should be a largefile)"
-  $ cat .hglf/a-large-file .hglf/another-large-file
+  34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c
+
+add another largefile to the new largefiles repo
+  $ dd if=/dev/zero bs=1k count=1k > anotherlarge 2> /dev/null
+  $ hg add --lfsize=1 anotherlarge
+  $ hg commit -m "add anotherlarge (should be a largefile)"
+  $ cat .hglf/large .hglf/anotherlarge
   2e000fa7e85759c7f4c254d4d9c33ef481e459a7
   3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
   $ cd ..
@@ -74,13 +103,12 @@ Convert back to a normal (non-largefiles) repo
   > largefiles = !
   > EOF
   $ hg update
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg locate
-  a-large-file
-  another-large-file
+  anotherlarge
+  large
+  normal1
+  sub/maybelarge.dat
+  sub/normal2
   $ [ -d .hg/largefiles ] && echo fail || echo pass
   pass
-
-Cleanup
-  $ cd ..
-  $ rm -rf bigfile-repo largefiles-repo normal-repo
