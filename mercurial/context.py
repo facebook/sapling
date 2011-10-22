@@ -632,6 +632,42 @@ class workingctx(changectx):
     def __contains__(self, key):
         return self._repo.dirstate[key] not in "?r"
 
+    def _buildflagfunc(self):
+        # Create a fallback function for getting file flags when the
+        # filesystem doesn't support them
+
+        copiesget = self._repo.dirstate.copies().get
+
+        if len(self._parents) < 2:
+            # when we have one parent, it's easy: copy from parent
+            man = self._parents[0].manifest()
+            def func(f):
+                f = copiesget(f, f)
+                return man.flags(f)
+        else:
+            # merges are tricky: we try to reconstruct the unstored
+            # result from the merge (issue1802)
+            p1, p2 = self._parents
+            pa = p1.ancestor(p2)
+            m1, m2, ma = p1.manifest(), p2.manifest(), pa.manifest()
+
+            def func(f):
+                f = copiesget(f, f) # may be wrong for merges with copies
+                fl1, fl2, fla = m1.flags(f), m2.flags(f), ma.flags(f)
+                if fl1 == fl2:
+                    return fl1
+                if fl1 == fla:
+                    return fl2
+                if fl2 == fla:
+                    return fl1
+                return '' # punt for conflicts
+
+        return func
+
+    @propertycache
+    def _flagfunc(self):
+        return self._repo.dirstate.flagfunc(self._buildflagfunc)
+
     @propertycache
     def _manifest(self):
         """generate a manifest corresponding to the working directory"""
@@ -640,7 +676,6 @@ class workingctx(changectx):
             self.status(unknown=True)
 
         man = self._parents[0].manifest().copy()
-        copied = self._repo.dirstate.copies()
         if len(self._parents) > 1:
             man2 = self.p2().manifest()
             def getman(f):
@@ -649,10 +684,9 @@ class workingctx(changectx):
                 return man2
         else:
             getman = lambda f: man
-        def cf(f):
-            f = copied.get(f, f)
-            return getman(f).flags(f)
-        ff = self._repo.dirstate.flagfunc(cf)
+
+        copied = self._repo.dirstate.copies()
+        ff = self._flagfunc
         modified, added, removed, deleted = self._status
         unknown = self._unknown
         for i, l in (("a", added), ("m", modified), ("u", unknown)):
@@ -767,23 +801,10 @@ class workingctx(changectx):
             except KeyError:
                 return ''
 
-        orig = self._repo.dirstate.copies().get(path, path)
-
-        def findflag(ctx):
-            mnode = ctx.changeset()[0]
-            node, flag = self._repo.manifest.find(mnode, orig)
-            ff = self._repo.dirstate.flagfunc(lambda x: flag or '')
-            try:
-                return ff(path)
-            except OSError:
-                pass
-
-        flag = findflag(self._parents[0])
-        if flag is None and len(self.parents()) > 1:
-            flag = findflag(self._parents[1])
-        if flag is None or self._repo.dirstate[path] == 'r':
+        try:
+            return self._flagfunc(path)
+        except OSError:
             return ''
-        return flag
 
     def filectx(self, path, filelog=None):
         """get a file context from the working directory"""
