@@ -45,6 +45,12 @@
   $ cd ..
 
 "lfconvert" error cases
+  $ hg lfconvert http://localhost/foo foo
+  abort: http://localhost/foo is not a local Mercurial repo
+  [255]
+  $ hg lfconvert foo ssh://localhost/foo
+  abort: ssh://localhost/foo is not a local Mercurial repo
+  [255]
   $ hg lfconvert nosuchrepo foo
   abort: repository nosuchrepo not found!
   [255]

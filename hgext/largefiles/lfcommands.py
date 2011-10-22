@@ -43,14 +43,15 @@ def lfconvert(ui, src, dest, *pats, **opts):
     else:
         tolfile = True
         size = lfutil.getminsize(ui, True, opts.get('size'), default=None)
-    rsrc = hg.repository(ui, src)
-    if not rsrc.local():
-        raise util.Abort(_('%s is not a local Mercurial repo') % src)
 
+    if not hg.islocal(src):
+        raise util.Abort(_('%s is not a local Mercurial repo') % src)
+    if not hg.islocal(dest):
+        raise util.Abort(_('%s is not a local Mercurial repo') % dest)
+
+    rsrc = hg.repository(ui, src)
     ui.status(_('initializing destination %s\n') % dest)
     rdst = hg.repository(ui, dest, create=True)
-    if not rdst.local():
-        raise util.Abort(_('%s is not a local Mercurial repo') % dest)
 
     success = False
     try:
