@@ -1129,6 +1129,8 @@ def main():
     os.environ['COLUMNS'] = '80'
     os.environ['GREP_OPTIONS'] = ''
     os.environ['http_proxy'] = ''
+    os.environ['no_proxy'] = ''
+    os.environ['NO_PROXY'] = ''
 
     # unset env related to hooks
     for k in os.environ.keys():
