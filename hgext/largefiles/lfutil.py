@@ -81,7 +81,7 @@ def link(src, dest):
         os.chmod(dest, os.stat(src).st_mode)
 
 def usercachepath(ui, hash):
-    path = ui.config(longname, 'usercache', None)
+    path = ui.configpath(longname, 'usercache', None)
     if path:
         path = os.path.join(path, hash)
     else:
