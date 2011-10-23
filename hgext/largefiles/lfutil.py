@@ -13,7 +13,6 @@ import errno
 import platform
 import shutil
 import stat
-import hashlib
 
 from mercurial import dirstate, httpconnection, match as match_, util, scmutil
 from mercurial.i18n import _
@@ -430,7 +429,7 @@ def urljoin(first, second, *arg):
 def hexsha1(data):
     """hexsha1 returns the hex-encoded sha1 sum of the data in the file-like
     object data"""
-    h = hashlib.sha1()
+    h = util.sha1()
     for chunk in util.filechunkiter(data):
         h.update(chunk)
     return h.hexdigest()
