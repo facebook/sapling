@@ -82,12 +82,8 @@ def uisetup(ui):
     extensions.wrapfunction(hg, 'merge', overrides.hg_merge)
 
     extensions.wrapfunction(archival, 'archive', overrides.override_archive)
-    if util.safehasattr(cmdutil, 'bailifchanged'):
-        extensions.wrapfunction(cmdutil, 'bailifchanged',
-            overrides.override_bailifchanged)
-    else:
-        extensions.wrapfunction(cmdutil, 'bail_if_changed',
-            overrides.override_bailifchanged)
+    extensions.wrapfunction(cmdutil, 'bailifchanged',
+                            overrides.override_bailifchanged)
 
     # create the new wireproto commands ...
     wireproto.commands['putlfile'] = (proto.putlfile, 'sha')

@@ -135,11 +135,8 @@ def openlfdirstate(ui, repo):
     '''
     admin = repo.join(longname)
     opener = scmutil.opener(admin)
-    if util.safehasattr(repo.dirstate, '_validate'):
-        lfdirstate = largefiles_dirstate(opener, ui, repo.root,
-            repo.dirstate._validate)
-    else:
-        lfdirstate = largefiles_dirstate(opener, ui, repo.root)
+    lfdirstate = largefiles_dirstate(opener, ui, repo.root,
+                                     repo.dirstate._validate)
 
     # If the largefiles dirstate does not exist, populate and create
     # it. This ensures that we create it on the first meaningful
