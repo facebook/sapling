@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" svn || exit 80
+  $ "$TESTDIR/hghave" svn15 || exit 80
 
   $ fix_path()
   > {

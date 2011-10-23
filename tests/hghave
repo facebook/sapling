@@ -140,6 +140,9 @@ def getsvnversion():
 def has_svn15():
     return getsvnversion() >= (1, 5)
 
+def has_svn13():
+    return getsvnversion() >= (1, 3)
+
 def has_svn():
     return matchoutput('svn --version 2>&1', r'^svn, version') and \
         matchoutput('svnadmin --version 2>&1', r'^svnadmin, version')
@@ -230,6 +233,7 @@ checks = {
     "pygments": (has_pygments, "Pygments source highlighting library"),
     "ssl": (has_ssl, "python >= 2.6 ssl module and python OpenSSL"),
     "svn": (has_svn, "subversion client and admin tools"),
+    "svn13": (has_svn13, "subversion client and admin tools >= 1.3"),
     "svn15": (has_svn15, "subversion client and admin tools >= 1.5"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
