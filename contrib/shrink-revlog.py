@@ -172,7 +172,7 @@ def shrink(ui, repo, **opts):
             raise util.Abort(_('--revlog option must specify the revlog index '
                                'file (*.i), not %s') % opts.get('revlog'))
 
-        indexfn = os.path.realpath(fn)
+        indexfn = util.realpath(fn)
         store = repo.sjoin('')
         if not indexfn.startswith(store):
             raise util.Abort(_('--revlog option must specify a revlog in %s, '

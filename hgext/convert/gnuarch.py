@@ -46,7 +46,7 @@ class gnuarch_source(converter_source, commandline):
 
         commandline.__init__(self, ui, self.execmd)
 
-        self.path = os.path.realpath(path)
+        self.path = util.realpath(path)
         self.tmppath = None
 
         self.treeversion = None

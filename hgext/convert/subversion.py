@@ -976,7 +976,7 @@ class svn_sink(converter_sink, commandline):
         self.wc = None
         self.cwd = os.getcwd()
 
-        path = os.path.realpath(path)
+        path = util.realpath(path)
 
         created = False
         if os.path.isfile(os.path.join(path, '.svn', 'entries')):

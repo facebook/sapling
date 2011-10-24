@@ -1,11 +1,11 @@
 import os
-from mercurial import hg, ui
+from mercurial import hg, ui, util
 from mercurial.hgweb.hgwebdir_mod import hgwebdir
 
 os.mkdir('webdir')
 os.chdir('webdir')
 
-webdir = os.path.realpath('.')
+webdir = util.realpath('.')
 
 u = ui.ui()
 hg.repository(u, 'a', create=1)

@@ -45,7 +45,7 @@ class darcs_source(converter_source, commandline):
         if ElementTree is None:
             raise util.Abort(_("Python ElementTree module is not available"))
 
-        self.path = os.path.realpath(path)
+        self.path = util.realpath(path)
 
         self.lastrev = None
         self.changes = {}

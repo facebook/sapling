@@ -130,7 +130,7 @@ def share(ui, source, dest=None, update=True):
 
     sharedpath = srcrepo.sharedpath # if our source is already sharing
 
-    root = os.path.realpath(dest)
+    root = util.realpath(dest)
     roothg = os.path.join(root, '.hg')
 
     if os.path.exists(roothg):
@@ -301,7 +301,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
         if copy:
             srcrepo.hook('preoutgoing', throw=True, source='clone')
-            hgdir = os.path.realpath(os.path.join(dest, ".hg"))
+            hgdir = util.realpath(os.path.join(dest, ".hg"))
             if not os.path.exists(dest):
                 os.mkdir(dest)
             else:

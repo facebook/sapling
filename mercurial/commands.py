@@ -344,7 +344,7 @@ def archive(ui, repo, dest, **opts):
         raise util.Abort(_('no working directory: please specify a revision'))
     node = ctx.node()
     dest = cmdutil.makefilename(repo, dest, node)
-    if os.path.realpath(dest) == repo.root:
+    if util.realpath(dest) == repo.root:
         raise util.Abort(_('repository root cannot be destination'))
 
     kind = opts.get('type') or archival.guesskind(dest) or 'files'
