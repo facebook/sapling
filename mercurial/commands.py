@@ -2548,7 +2548,7 @@ def graft(ui, repo, *revs, **opts):
         return -1
 
     # check ancestors for earlier grafts
-    ui.debug('scanning for existing transplants')
+    ui.debug('scanning for duplicate grafts\n')
     for ctx in repo.set("::. - ::%ld", revs):
         n = ctx.extra().get('source')
         if n and n in repo:
