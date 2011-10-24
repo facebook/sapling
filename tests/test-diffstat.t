@@ -36,19 +36,21 @@ Narrow diffstat:
   $ hg ci -m appenda
 
   $ printf '\0' > c
-  $ hg add c
+  $ touch d
+  $ hg add c d
 
 Binary diffstat:
 
   $ hg diff --stat
-   c |    0 
+   c |  Bin 
    1 files changed, 0 insertions(+), 0 deletions(-)
 
 Binary git diffstat:
 
   $ hg diff --stat --git
    c |  Bin 
-   1 files changed, 0 insertions(+), 0 deletions(-)
+   d |    0 
+   2 files changed, 0 insertions(+), 0 deletions(-)
 
   $ hg ci -m createb
 
@@ -58,7 +60,7 @@ Binary git diffstat:
 Filename with spaces diffstat:
 
   $ hg diff --stat
-   file with spaces |    0 
+   file with spaces |  Bin 
    1 files changed, 0 insertions(+), 0 deletions(-)
 
 Filename with spaces git diffstat:

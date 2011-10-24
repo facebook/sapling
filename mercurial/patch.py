@@ -1787,18 +1787,17 @@ def diffstatdata(lines):
     diffre = re.compile('^diff .*-r [a-z0-9]+\s(.*)$')
 
     results = []
-    filename, adds, removes = None, 0, 0
+    filename, adds, removes, isbinary = None, 0, 0, False
 
     def addresult():
         if filename:
-            isbinary = adds == 0 and removes == 0
             results.append((filename, adds, removes, isbinary))
 
     for line in lines:
         if line.startswith('diff'):
             addresult()
             # set numbers to 0 anyway when starting new file
-            adds, removes = 0, 0
+            adds, removes, isbinary = 0, 0, False
             if line.startswith('diff --git'):
                 filename = gitre.search(line).group(1)
             elif line.startswith('diff -r'):
@@ -1808,6 +1807,9 @@ def diffstatdata(lines):
             adds += 1
         elif line.startswith('-') and not line.startswith('---'):
             removes += 1
+        elif (line.startswith('GIT binary patch') or
+              line.startswith('Binary file')):
+            isbinary = True
     addresult()
     return results
 
@@ -1832,7 +1834,7 @@ def diffstat(lines, width=80, git=False):
         return max(i * graphwidth // maxtotal, int(bool(i)))
 
     for filename, adds, removes, isbinary in stats:
-        if git and isbinary:
+        if isbinary:
             count = 'Bin'
         else:
             count = adds + removes
