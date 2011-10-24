@@ -514,6 +514,7 @@ def checkwinfilename(path):
     "filename contains '\\\\x07', which is invalid on Windows"
     >>> checkwinfilename("foo/bar/bla ")
     "filename ends with ' ', which is not allowed on Windows"
+    >>> checkwinfilename("../bar")
     '''
     for n in path.replace('\\', '/').split('/'):
         if not n:
@@ -530,7 +531,7 @@ def checkwinfilename(path):
             return _("filename contains '%s', which is reserved "
                      "on Windows") % base
         t = n[-1]
-        if t in '. ':
+        if t in '. ' and n not in '..':
             return _("filename ends with '%s', which is not allowed "
                      "on Windows") % t
 
