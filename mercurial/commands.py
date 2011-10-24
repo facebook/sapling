@@ -2553,8 +2553,9 @@ def graft(ui, repo, *revs, **opts):
         n = ctx.extra().get('source')
         if n and n in repo:
             r = repo[n].rev()
-            ui.warn(_('skipping already grafted revision %s\n') % r)
-            revs.remove(r)
+            if r in revs:
+                ui.warn(_('skipping already grafted revision %s\n') % r)
+                revs.remove(r)
     if not revs:
         return -1
 
