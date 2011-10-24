@@ -199,6 +199,14 @@ if sys.platform == 'darwin':
             return fcntl.fcntl(fd, F_GETPATH, '\0' * 1024).rstrip('\0')
         finally:
             os.close(fd)
+elif sys.version_info < (2, 4, 2, 'final'):
+    # Workaround for http://bugs.python.org/issue1213894 (os.path.realpath
+    # didn't resolve symlinks that were the first component of the path.)
+    def realpath(path):
+        if os.path.isabs(path):
+            return os.path.realpath(path)
+        else:
+            return os.path.realpath('./' + path)
 else:
     # Fallback to the likely inadequate Python builtin function.
     realpath = os.path.realpath
