@@ -601,6 +601,11 @@ Rollback on largefiles.
   $ cat sub/large4
   large4-modified-again
 
+"update --check" refuses to update with uncommitted changes.
+  $ hg update --check 8
+  abort: uncommitted local changes
+  [255]
+
 "update --clean" leaves correct largefiles in working copy.
 
   $ hg update --clean 
@@ -617,6 +622,16 @@ Rollback on largefiles.
   large6-modified
   $ cat sub2/large7
   large7
+
+Now "update check" is happy.
+  $ hg update --check 8
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  $ hg update --check
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  1 largefiles updated, 0 removed
 
 "verify --large" actaully verifies largefiles
 
