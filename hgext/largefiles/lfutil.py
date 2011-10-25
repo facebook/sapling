@@ -196,10 +196,6 @@ def listlfiles(repo, rev=None, matcher=None):
 def instore(repo, hash):
     return os.path.exists(storepath(repo, hash))
 
-def createdir(dir):
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-
 def storepath(repo, hash):
     return repo.join(os.path.join(longname, hash))
 
@@ -223,7 +219,7 @@ def copytostore(repo, rev, file, uploaded=False):
     copytostoreabsolute(repo, repo.wjoin(file), hash)
 
 def copytostoreabsolute(repo, file, hash):
-    createdir(os.path.dirname(storepath(repo, hash)))
+    util.makedirs(os.path.dirname(storepath(repo, hash)))
     if inusercache(repo.ui, hash):
         link(usercachepath(repo.ui, hash), storepath(repo, hash))
     else:
@@ -232,7 +228,7 @@ def copytostoreabsolute(repo, file, hash):
         linktousercache(repo, hash)
 
 def linktousercache(repo, hash):
-    createdir(os.path.dirname(usercachepath(repo.ui, hash)))
+    util.makedirs(os.path.dirname(usercachepath(repo.ui, hash)))
     link(storepath(repo, hash), usercachepath(repo.ui, hash))
 
 def getstandinmatcher(repo, pats=[], opts={}):
