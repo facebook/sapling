@@ -633,6 +633,51 @@ Now "update check" is happy.
   getting changed largefiles
   1 largefiles updated, 0 removed
 
+"revert" works on largefiles (and normal files too).
+  $ echo hack3 >> normal3
+  $ echo hack4 >> sub/normal4
+  $ echo hack4 >> sub/large4
+  $ hg rm sub2/large6
+  $ echo new >> sub2/large8
+  $ hg add --large sub2/large8
+# XXX we don't really want to report that we're reverting the standin;
+# that's just an implementation detail. But I don't see an obvious fix. ;-(
+  $ hg revert sub
+  reverting .hglf/sub/large4
+  reverting sub/normal4
+  $ hg status
+  M normal3
+  A sub2/large8
+  R sub2/large6
+  ? sub/large4.orig
+  ? sub/normal4.orig
+  $ cat sub/normal4
+  normal4-modified
+  $ cat sub/large4
+  large4-modified
+  $ hg revert -a --no-backup
+  undeleting .hglf/sub2/large6
+  forgetting .hglf/sub2/large8
+  reverting normal3
+  $ hg status
+  ? sub/large4.orig
+  ? sub/normal4.orig
+  ? sub2/large8
+  $ cat normal3
+  normal3-modified
+  $ cat sub2/large6
+  large6-modified
+  $ rm sub/*.orig sub2/large8
+
+revert some files to an older revision
+  $ hg revert --no-backup -r 8 sub2
+  reverting .hglf/sub2/large6
+  $ cat sub2/large6
+  large6
+  $ hg revert --no-backup sub2
+  reverting .hglf/sub2/large6
+  $ hg status
+
 "verify --large" actaully verifies largefiles
 
   $ hg verify --large
