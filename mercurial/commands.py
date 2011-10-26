@@ -4756,15 +4756,14 @@ def revert(ui, repo, *pats, **opts):
                     # only need parent manifest in this unlikely case,
                     # so do not read by default
                     pmf = repo[parent].manifest()
-                if abs in pmf:
-                    if mfentry:
-                        # if version of file is same in parent and target
-                        # manifests, do nothing
-                        if (pmf[abs] != mfentry or
-                            pmf.flags(abs) != mf.flags(abs)):
-                            handle(revert, False)
-                    else:
-                        handle(remove, False)
+                if abs in pmf and mfentry:
+                    # if version of file is same in parent and target
+                    # manifests, do nothing
+                    if (pmf[abs] != mfentry or
+                        pmf.flags(abs) != mf.flags(abs)):
+                        handle(revert, False)
+                else:
+                    handle(remove, False)
 
         if not opts.get('dry_run'):
             def checkout(f):
