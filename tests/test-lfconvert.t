@@ -168,7 +168,7 @@ lfconvert with rename, merge, and remove
   abort: repository nosuchrepo not found!
   [255]
   $ hg share -q -U bigfile-repo shared
-  $ echo -n bogus > shared/.hg/sharedpath
+  $ printf 'bogus' > shared/.hg/sharedpath
   $ hg lfconvert shared foo
   abort: .hg/sharedpath points to nonexistent directory $TESTTMP/bogus!
   [255]

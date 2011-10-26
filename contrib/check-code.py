@@ -45,11 +45,11 @@ testpats = [
   [
     (r'(pushd|popd)', "don't use 'pushd' or 'popd', use 'cd'"),
     (r'\W\$?\(\([^\)\n]*\)\)', "don't use (()) or $(()), use 'expr'"),
-    (r'^function', "don't use 'function', use old style"),
+    (r'(^|\n)function', "don't use 'function', use old style"),
     (r'grep.*-q', "don't use 'grep -q', redirect to /dev/null"),
     (r'echo.*\\n', "don't use 'echo \\n', use printf"),
     (r'echo -n', "don't use 'echo -n', use printf"),
-    (r'^diff.*-\w*N', "don't use 'diff -N'"),
+    (r'(^|\n)diff.*-\w*N', "don't use 'diff -N'"),
     (r'(^| )wc[^|\n]*$', "filter wc output"),
     (r'head -c', "don't use 'head -c', use 'dd'"),
     (r'ls.*-\w*R', "don't use 'ls -R', use 'find'"),
@@ -63,10 +63,10 @@ testpats = [
     (r'\$PWD', "don't use $PWD, use `pwd`"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'export.*=', "don't export and assign at once"),
-    ('^([^"\'\n]|("[^"\n]*")|(\'[^\'\n]*\'))*\\^', "^ must be quoted"),
-    (r'^source\b', "don't use 'source', use '.'"),
+    ('(^|\n)([^"\'\n]|("[^"\n]*")|(\'[^\'\n]*\'))*\\^', "^ must be quoted"),
+    (r'(^|\n)source\b', "don't use 'source', use '.'"),
     (r'touch -d', "don't use 'touch -d', use 'touch -t' instead"),
-    (r'ls\s+[^|\n-]+\s+-', "options to 'ls' must come before filenames"),
+    (r'ls +[^|\n-]+ +-', "options to 'ls' must come before filenames"),
     (r'[^>\n]>\s*\$HGRCPATH', "don't overwrite $HGRCPATH, append to it"),
     (r'stop\(\)', "don't use 'stop' as a shell function name"),
     (r'(\[|\btest\b).*-e ', "don't use 'test -e', use 'test -f'"),
@@ -80,11 +80,11 @@ testfilters = [
     (r"<<(\S+)((.|\n)*?\n\1)", rephere),
 ]
 
-uprefix = r"^  \$ "
-uprefixc = r"^  > "
+uprefix = r"(^|\n)  \$\s*"
+uprefixc = r"(^|\n)  > "
 utestpats = [
   [
-    (r'^(\S|  $ ).*(\S[ \t]+|^[ \t]+)\n', "trailing whitespace on non-output"),
+    (r'(^|\n)(\S|  $ ).*(\S[ \t]+|^[ \t]+)\n', "trailing whitespace on non-output"),
     (uprefix + r'.*\|\s*sed', "use regex test output patterns instead of sed"),
     (uprefix + r'(true|exit 0)', "explicit zero exit unnecessary"),
     (uprefix + r'.*\$\?', "explicit exit code checks unnecessary"),
@@ -99,8 +99,8 @@ utestpats = [
 
 for i in [0, 1]:
     for p, m in testpats[i]:
-        if p.startswith('^'):
-            p = uprefix + p[1:]
+        if p.startswith(r'(^|\n)'):
+            p = uprefix + p[6:]
         else:
             p = uprefix + p
         utestpats[i].append((p, m))
