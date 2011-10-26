@@ -852,3 +852,26 @@ We have to simulate that here by setting $HOME and removing write permissions
   1 largefiles updated, 0 removed
   $ cd ..
   $ HOME="$ORIGHOME"
+
+Symlink to a large largefile should behave the same as a symlink to a normal file
+  $ hg init largesymlink
+  $ cd largesymlink
+  $ dd if=/dev/zero bs=1k count=10k of=largefile 2>/dev/null
+  $ hg add --large largefile
+  $ hg commit -m "commit a large file"
+  $ ln -s largefile largelink
+  $ hg add largelink
+  $ hg commit -m "commit a large symlink"
+  $ rm -f largelink
+  $ hg up >/dev/null
+  $ test -e largelink
+  [1]
+  $ test -L largelink
+  [1]
+  $ rm -f largelink # make next part of the test independent of the previous
+  $ hg up -C >/dev/null
+  $ test -e largelink
+  $ test -L largelink
+  $ cd ..
+
+
