@@ -6199,7 +6199,7 @@ msgstr "sto saltando il subrepository mancante: %s\n"
 
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
 msgstr ""
-"HG: Inserisci il messaggio di commit. Le linee che iniziano HG: con 'HG:' "
+"HG: Inserisci il messaggio di commit. Le linee che iniziano con 'HG:' "
 "vengono rimosse."
 
 msgid "HG: Leave message empty to abort commit."
