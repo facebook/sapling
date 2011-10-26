@@ -678,7 +678,7 @@ revert some files to an older revision
   reverting .hglf/sub2/large6
   $ hg status
 
-"verify --large" actaully verifies largefiles
+"verify --large" actually verifies largefiles
 
   $ hg verify --large
   checking changesets
