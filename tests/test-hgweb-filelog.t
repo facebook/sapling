@@ -179,12 +179,12 @@ tip - two revisions
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/01de2d66a28d">second a</a></td>
    </tr>
    <tr class="parity1">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
@@ -280,12 +280,12 @@ second version - two revisions
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/01de2d66a28d">second a</a></td>
    </tr>
    <tr class="parity1">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
@@ -381,7 +381,7 @@ first deleted - one revision
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
@@ -477,7 +477,7 @@ first version - one revision
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
@@ -604,7 +604,7 @@ should show base link, use spartan because it shows it
   
   <table class="logEntry parity0">
    <tr>
-    <th><span class="age">Thu Jan 01 00:00:00 1970 +0000</span>:</th>
+    <th><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
     <th class="firstline"><a href="/rev/b7682196df1c?style=spartan">change c</a></th>
    </tr>
    <tr>
@@ -622,14 +622,14 @@ should show base link, use spartan because it shows it
    </tr>
    <tr>
     <th class="date">date:</th>
-    <td class="date">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="date">Thu, 01 Jan 1970 00:00:00 +0000</td>
    </tr>
   </table>
   
   
   <table class="logEntry parity1">
    <tr>
-    <th><span class="age">Thu Jan 01 00:00:00 1970 +0000</span>:</th>
+    <th><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
     <th class="firstline"><a href="/rev/1a6696706df2?style=spartan">mv b</a></th>
    </tr>
    <tr>
@@ -655,7 +655,7 @@ should show base link, use spartan because it shows it
    </tr>
    <tr>
     <th class="date">date:</th>
-    <td class="date">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="date">Thu, 01 Jan 1970 00:00:00 +0000</td>
    </tr>
   </table>
   

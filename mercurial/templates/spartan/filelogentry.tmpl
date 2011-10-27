@@ -1,6 +1,6 @@
 <table class="logEntry parity{parity}">
  <tr>
-  <th><span class="age">{date|date}</span>:</th>
+  <th><span class="age">{date|rfc822date}</span>:</th>
   <th class="firstline"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{desc|strip|firstline|escape|nonempty}</a></th>
  </tr>
  <tr>
@@ -18,7 +18,7 @@
  </tr>
  <tr>
   <th class="date">date:</th>
-  <td class="date">{date|date}</td>
+  <td class="date">{date|rfc822date}</td>
  </tr>
 </table>
 

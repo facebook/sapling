@@ -40,13 +40,13 @@
 
     <h2 class="no-link no-border">{file|escape}@{node|short} (annotated)</h2>
     <h3 class="changeset">{file|escape}</h3>
-    <p class="changeset-age age">{date|date}</p>
+    <p class="changeset-age age">{date|rfc822date}</p>
 
     <dl class="overview">
         <dt>author</dt>
         <dd>{author|obfuscate}</dd>
         <dt>date</dt>
-        <dd>{date|date}</dd>
+        <dd>{date|rfc822date}</dd>
         {branch%filerevbranch}
         <dt>changeset {rev}</dt>
         <dd><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></dd>

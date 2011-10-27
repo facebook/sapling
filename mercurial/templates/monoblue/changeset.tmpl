@@ -38,13 +38,13 @@
     <h2 class="no-link no-border">changeset</h2>
 
     <h3 class="changeset"><a href="{url}raw-rev/{node|short}">{desc|strip|escape|firstline|nonempty} <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span></a></h3>
-    <p class="changeset-age age">{date|date}</p>
+    <p class="changeset-age age">{date|rfc822date}</p>
 
     <dl class="overview">
         <dt>author</dt>
         <dd>{author|obfuscate}</dd>
         <dt>date</dt>
-        <dd>{date|date}</dd>
+        <dd>{date|rfc822date}</dd>
         {branch%changesetbranch}
         <dt>changeset {rev}</dt>
         <dd>{node|short}</dd>

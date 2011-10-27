@@ -121,7 +121,7 @@ hgweb filerevision, html
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td>
+   <td class="date age">Thu, 01 Jan 1970 00:00:00 +0000</td>
   </tr>
   <tr>
    <th class="author">parents</th>
@@ -251,7 +251,7 @@ hgweb fileannotate, html
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td>
+   <td class="date age">Thu, 01 Jan 1970 00:00:00 +0000</td>
   </tr>
   <tr>
    <th class="author">parents</th>

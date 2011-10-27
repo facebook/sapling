@@ -141,7 +141,7 @@ fileannotatechild = '
 tags = tags.tmpl
 tagentry = '
   <tr class="parity{parity}">
-    <td class="nowrap age">{date|date}</td>
+    <td class="nowrap age">{date|rfc822date}</td>
     <td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{tag|escape}</a></td>
     <td class="nowrap">
       <a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
@@ -152,7 +152,7 @@ tagentry = '
 bookmarks = bookmarks.tmpl
 bookmarkentry = '
   <tr class="parity{parity}">
-    <td class="nowrap date">{date|date}</td>
+    <td class="nowrap date">{date|rfc822date}</td>
     <td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{bookmark|escape}</a></td>
     <td class="nowrap">
       <a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
@@ -163,7 +163,7 @@ bookmarkentry = '
 branches = branches.tmpl
 branchentry = '
   <tr class="parity{parity}">
-    <td class="nowrap age">{date|date}</td>
+    <td class="nowrap age">{date|rfc822date}</td>
     <td><a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
     <td class="{status}">{branch|escape}</td>
     <td class="nowrap">
@@ -196,7 +196,7 @@ inbranchtag = '<span class="inbranchtag" title="{name}">{name}</span> '
 bookmarktag = '<span class="bookmarktag" title="{name}">{name}</span> '
 shortlogentry = '
   <tr class="parity{parity}">
-    <td class="nowrap age">{date|date}</td>
+    <td class="nowrap age">{date|rfc822date}</td>
     <td>{author|person}</td>
     <td>
       <a href="{url}rev/{node|short}{sessionvars%urlparameter}">
@@ -211,7 +211,7 @@ shortlogentry = '
   </tr>'
 filelogentry = '
   <tr class="parity{parity}">
-    <td class="nowrap age">{date|date}</td>
+    <td class="nowrap age">{date|rfc822date}</td>
     <td><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{desc|strip|firstline|escape|nonempty}</a></td>
     <td class="nowrap">
       <a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a>&nbsp;|&nbsp;<a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a>&nbsp;|&nbsp;<a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a>
@@ -224,7 +224,7 @@ indexentry = '
     <td><a href="{url}{sessionvars%urlparameter}">{name|escape}</a></td>
     <td>{description}</td>
     <td>{contact|obfuscate}</td>
-    <td class="age">{lastchange|date}</td>
+    <td class="age">{lastchange|rfc822date}</td>
     <td class="indexlinks">{archives%indexarchiveentry}</td>
     <td>
       <div class="rss_logo">

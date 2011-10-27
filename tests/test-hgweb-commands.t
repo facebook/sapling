@@ -246,17 +246,17 @@ Logs and changes
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/1d22e65f027e">branch</a><span class="branchhead">stable</span> <span class="tag">tip</span> <span class="tag">something</span> </td>
    </tr>
    <tr class="parity1">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> </td>
    </tr>
    <tr class="parity0">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> <span class="tag">anotherthing</span> </td>
    </tr>
@@ -339,7 +339,7 @@ Logs and changes
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td></tr>
+   <td class="date age">Thu, 01 Jan 1970 00:00:00 +0000</td></tr>
   <tr>
    <th class="author">parents</th>
    <td class="author"></td>
@@ -476,7 +476,7 @@ Logs and changes
     <th class="description">description</th>
    </tr>
    <tr class="parity0">
-    <td class="age">Thu Jan 01 00:00:00 1970 +0000</td>
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> <span class="tag">anotherthing</span> </td>
    </tr>
@@ -586,7 +586,7 @@ File-related
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date age">Thu Jan 01 00:00:00 1970 +0000</td>
+   <td class="date age">Thu, 01 Jan 1970 00:00:00 +0000</td>
   </tr>
   <tr>
    <th class="author">parents</th>
@@ -701,7 +701,7 @@ Overviews
   <table cellspacing="0">
   
   <tr class="parity0">
-  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><i>test</i></td>
   <td>
   <a class="list" href="/rev/1d22e65f027e?style=gitweb">
@@ -715,7 +715,7 @@ Overviews
   </td>
   </tr>
   <tr class="parity1">
-  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><i>test</i></td>
   <td>
   <a class="list" href="/rev/a4f92ed23982?style=gitweb">
@@ -729,7 +729,7 @@ Overviews
   </td>
   </tr>
   <tr class="parity0">
-  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><i>test</i></td>
   <td>
   <a class="list" href="/rev/2ef0ac749a14?style=gitweb">
@@ -749,7 +749,7 @@ Overviews
   <table cellspacing="0">
   
   <tr class="parity0">
-  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>1.0</b></a></td>
   <td class="link">
   <a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
@@ -764,7 +764,7 @@ Overviews
   <table cellspacing="0">
   
   <tr class="parity0">
-  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>anotherthing</b></a></td>
   <td class="link">
   <a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
@@ -773,7 +773,7 @@ Overviews
   </td>
   </tr>
   <tr class="parity1">
-  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/rev/1d22e65f027e?style=gitweb"><b>something</b></a></td>
   <td class="link">
   <a href="/rev/1d22e65f027e?style=gitweb">changeset</a> |
@@ -788,7 +788,7 @@ Overviews
   <table cellspacing="0">
   
   <tr class="parity0">
-  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td>
   <td class="">stable</td>
   <td class="link">
@@ -798,7 +798,7 @@ Overviews
   </td>
   </tr>
   <tr class="parity1">
-  <td class="age"><i class="age">Thu Jan 01 00:00:00 1970 +0000</i></td>
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
   <td class="">default</td>
   <td class="link">
