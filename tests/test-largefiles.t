@@ -840,7 +840,7 @@ We have to simulate that here by setting $HOME and removing write permissions
   $ mkdir bob
   $ HOME="`pwd`/bob"
   $ cd bob
-  $ hg clone ../alice/pubrepo pubrepo
+  $ hg clone --pull ../alice/pubrepo pubrepo
   requesting all changes
   adding changesets
   adding manifests
