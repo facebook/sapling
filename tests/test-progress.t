@@ -35,6 +35,7 @@
   > }
   > EOF
 
+  $ cp $HGRCPATH $HGRCPATH.orig
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "progress=" >> $HGRCPATH
   $ echo "loop=`pwd`/loop.py" >> $HGRCPATH
@@ -162,7 +163,8 @@ test delay time estimates
   >     time.time = mocktime(int(os.environ.get('MOCKTIME', '11')))
   > EOF
 
-  $ echo "[extensions]" > $HGRCPATH
+  $ cp $HGRCPATH.orig $HGRCPATH
+  $ echo "[extensions]" >> $HGRCPATH
   $ echo "mocktime=`pwd`/mocktime.py" >> $HGRCPATH
   $ echo "progress=" >> $HGRCPATH
   $ echo "loop=`pwd`/loop.py" >> $HGRCPATH

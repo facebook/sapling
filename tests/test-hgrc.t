@@ -3,13 +3,19 @@ Use hgrc within $TESTTMP
   $ HGRCPATH=`pwd`/hgrc
   $ export HGRCPATH
 
+Use an alternate var for scribbling on hgrc to keep check-code from
+complaining about the important settings we may be overwriting:
+
+  $ HGRC=`pwd`/hgrc
+  $ export HGRC
+
 Basic syntax error
 
-  $ echo "invalid" > $HGRCPATH
+  $ echo "invalid" > $HGRC
   $ hg version
   hg: parse error at $TESTTMP/hgrc:1: invalid
   [255]
-  $ echo "" > $HGRCPATH
+  $ echo "" > $HGRC
 
 Issue1199: Can't use '%' in hgrc (eg url encoded username)
 
@@ -30,21 +36,21 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
 
 issue1829: wrong indentation
 
-  $ echo '[foo]' > $HGRCPATH
-  $ echo '  x = y' >> $HGRCPATH
+  $ echo '[foo]' > $HGRC
+  $ echo '  x = y' >> $HGRC
   $ hg version
   hg: parse error at $TESTTMP/hgrc:2:   x = y
   [255]
 
   $ python -c "print '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n'" \
-  > > $HGRCPATH
+  > > $HGRC
   $ hg showconfig foo
   foo.bar=a\nb\nc\nde\nfg
   foo.baz=bif cb
 
   $ FAKEPATH=/path/to/nowhere
   $ export FAKEPATH
-  $ echo '%include $FAKEPATH/no-such-file' > $HGRCPATH
+  $ echo '%include $FAKEPATH/no-such-file' > $HGRC
   $ hg version
   Mercurial Distributed SCM (version *) (glob)
   (see http://mercurial.selenic.com for more information)
@@ -75,8 +81,8 @@ username expansion
 
   $ FAKEUSER='John Doe'
   $ export FAKEUSER
-  $ echo '[ui]' > $HGRCPATH
-  $ echo 'username = $FAKEUSER' >> $HGRCPATH
+  $ echo '[ui]' > $HGRC
+  $ echo 'username = $FAKEUSER' >> $HGRC
 
   $ hg init usertest
   $ cd usertest
@@ -95,10 +101,10 @@ username expansion
 
 showconfig with multiple arguments
 
-  $ echo "[alias]" > $HGRCPATH
-  $ echo "log = log -g" >> $HGRCPATH
-  $ echo "[defaults]" >> $HGRCPATH
-  $ echo "identify = -n" >> $HGRCPATH
+  $ echo "[alias]" > $HGRC
+  $ echo "log = log -g" >> $HGRC
+  $ echo "[defaults]" >> $HGRC
+  $ echo "identify = -n" >> $HGRC
   $ hg showconfig alias defaults
   alias.log=log -g
   defaults.identify=-n
@@ -113,19 +119,19 @@ HGPLAIN
 
   $ cd ..
   $ p=`pwd`
-  $ echo "[ui]" > $HGRCPATH
-  $ echo "debug=true" >> $HGRCPATH
-  $ echo "fallbackencoding=ASCII" >> $HGRCPATH
-  $ echo "quiet=true" >> $HGRCPATH
-  $ echo "slash=true" >> $HGRCPATH
-  $ echo "traceback=true" >> $HGRCPATH
-  $ echo "verbose=true" >> $HGRCPATH
-  $ echo "style=~/.hgstyle" >> $HGRCPATH
-  $ echo "logtemplate={node}" >> $HGRCPATH
-  $ echo "[defaults]" >> $HGRCPATH
-  $ echo "identify=-n" >> $HGRCPATH
-  $ echo "[alias]" >> $HGRCPATH
-  $ echo "log=log -g" >> $HGRCPATH
+  $ echo "[ui]" > $HGRC
+  $ echo "debug=true" >> $HGRC
+  $ echo "fallbackencoding=ASCII" >> $HGRC
+  $ echo "quiet=true" >> $HGRC
+  $ echo "slash=true" >> $HGRC
+  $ echo "traceback=true" >> $HGRC
+  $ echo "verbose=true" >> $HGRC
+  $ echo "style=~/.hgstyle" >> $HGRC
+  $ echo "logtemplate={node}" >> $HGRC
+  $ echo "[defaults]" >> $HGRC
+  $ echo "identify=-n" >> $HGRC
+  $ echo "[alias]" >> $HGRC
+  $ echo "log=log -g" >> $HGRC
 
 customized hgrc
 
@@ -158,8 +164,8 @@ plain mode with exceptions
   > def uisetup(ui):
   >     ui.write('plain: %r\n' % ui.plain())
   > EOF
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "plain=./plain.py" >> $HGRCPATH
+  $ echo "[extensions]" >> $HGRC
+  $ echo "plain=./plain.py" >> $HGRC
   $ HGPLAINEXCEPT=; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
   plain: True

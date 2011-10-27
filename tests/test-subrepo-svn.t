@@ -496,7 +496,7 @@ test having obstructions when switching branches on checkout:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "obstruct =        [svn]       $SVNREPO/externals" >> .hgsub
   $ svn co -r5 --quiet "$SVNREPO"/externals obstruct
-  $ hg commit -m 'Start making obstructed wc'
+  $ hg commit -m 'Start making obstructed working copy'
   committing subrepository obstruct
   $ hg book other
   $ hg co -r 'p1(tip)'

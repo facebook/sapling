@@ -751,7 +751,7 @@ vanilla clients not locked out from largefiles servers on vanilla repos
   added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ kill $(cat serve.pid)
+  $ kill `cat serve.pid`
 
 largefiles clients still work with vanilla servers
   $ hg --config extensions.largefiles=! serve -R r1 -d -p 8001 --pid-file serve.pid
@@ -763,7 +763,7 @@ largefiles clients still work with vanilla servers
   added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ kill $(cat serve.pid)
+  $ kill `cat serve.pid`
 
 vanilla clients locked out from largefiles http repos
   $ mkdir r4
@@ -781,7 +781,7 @@ vanilla clients locked out from largefiles http repos
   
   Please enable it in your Mercurial config file.
   [255]
-  $ kill $(cat serve.pid)
+  $ kill `cat serve.pid`
 
 vanilla clients locked out from largefiles ssh repos
   $ hg --config extensions.largefiles=! clone -e "python $TESTDIR/dummyssh" ssh://user@dummy/r4 r5
@@ -819,7 +819,7 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   abort: http://localhost:8001/ does not appear to be a largefile store
   [255]
   $ cd ..
-  $ kill $(cat serve.pid)
+  $ kill `cat serve.pid`
 
   $ cd ..
 
@@ -864,13 +864,13 @@ Symlink to a large largefile should behave the same as a symlink to a normal fil
   $ hg commit -m "commit a large symlink"
   $ rm -f largelink
   $ hg up >/dev/null
-  $ test -e largelink
+  $ test -f largelink
   [1]
   $ test -L largelink
   [1]
   $ rm -f largelink # make next part of the test independent of the previous
   $ hg up -C >/dev/null
-  $ test -e largelink
+  $ test -f largelink
   $ test -L largelink
   $ cd ..
 

@@ -45,30 +45,30 @@ testpats = [
   [
     (r'(pushd|popd)', "don't use 'pushd' or 'popd', use 'cd'"),
     (r'\W\$?\(\([^\)\n]*\)\)', "don't use (()) or $(()), use 'expr'"),
-    (r'(^|\n)function', "don't use 'function', use old style"),
+    (r'^function', "don't use 'function', use old style"),
     (r'grep.*-q', "don't use 'grep -q', redirect to /dev/null"),
     (r'echo.*\\n', "don't use 'echo \\n', use printf"),
     (r'echo -n', "don't use 'echo -n', use printf"),
-    (r'(^|\n)diff.*-\w*N', "don't use 'diff -N'"),
-    (r'(^| )wc[^|\n]*$', "filter wc output"),
+    (r'^diff.*-\w*N', "don't use 'diff -N'"),
+    (r'(^| )wc[^|]*$\n(?!.*\(re\))', "filter wc output"),
     (r'head -c', "don't use 'head -c', use 'dd'"),
     (r'ls.*-\w*R', "don't use 'ls -R', use 'find'"),
     (r'printf.*\\\d\d\d', "don't use 'printf \NNN', use Python"),
     (r'printf.*\\x', "don't use printf \\x, use Python"),
     (r'\$\(.*\)', "don't use $(expr), use `expr`"),
     (r'rm -rf \*', "don't use naked rm -rf, target a directory"),
-    (r'(^|\|\s*)grep (-\w\s+)*[^|\n]*[(|]\w',
+    (r'(^|\|\s*)grep (-\w\s+)*[^|]*[(|]\w',
      "use egrep for extended grep syntax"),
     (r'/bin/', "don't use explicit paths for tools"),
     (r'\$PWD', "don't use $PWD, use `pwd`"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'export.*=', "don't export and assign at once"),
-    ('(^|\n)([^"\'\n]|("[^"\n]*")|(\'[^\'\n]*\'))*\\^', "^ must be quoted"),
-    (r'(^|\n)source\b', "don't use 'source', use '.'"),
+    (r'^([^"\'\n]|("[^"\n]*")|(\'[^\'\n]*\'))*\\^', "^ must be quoted"),
+    (r'^source\b', "don't use 'source', use '.'"),
     (r'touch -d', "don't use 'touch -d', use 'touch -t' instead"),
     (r'ls +[^|\n-]+ +-', "options to 'ls' must come before filenames"),
     (r'[^>\n]>\s*\$HGRCPATH', "don't overwrite $HGRCPATH, append to it"),
-    (r'stop\(\)', "don't use 'stop' as a shell function name"),
+    (r'^stop\(\)', "don't use 'stop' as a shell function name"),
     (r'(\[|\btest\b).*-e ', "don't use 'test -e', use 'test -f'"),
   ],
   # warnings
@@ -80,11 +80,11 @@ testfilters = [
     (r"<<(\S+)((.|\n)*?\n\1)", rephere),
 ]
 
-uprefix = r"(^|\n)  \$\s*"
-uprefixc = r"(^|\n)  > "
+uprefix = r"^  \$ "
+uprefixc = r"^  > "
 utestpats = [
   [
-    (r'(^|\n)(\S|  $ ).*(\S[ \t]+|^[ \t]+)\n', "trailing whitespace on non-output"),
+    (r'^(\S|  $ ).*(\S[ \t]+|^[ \t]+)\n', "trailing whitespace on non-output"),
     (uprefix + r'.*\|\s*sed', "use regex test output patterns instead of sed"),
     (uprefix + r'(true|exit 0)', "explicit zero exit unnecessary"),
     (uprefix + r'.*\$\?', "explicit exit code checks unnecessary"),
@@ -99,10 +99,10 @@ utestpats = [
 
 for i in [0, 1]:
     for p, m in testpats[i]:
-        if p.startswith(r'(^|\n)'):
-            p = uprefix + p[6:]
+        if p.startswith(r'^'):
+            p = uprefix + p[1:]
         else:
-            p = uprefix + p
+            p = uprefix + ".*" + p
         utestpats[i].append((p, m))
 
 utestfilters = [
@@ -123,10 +123,10 @@ pypats = [
     (r'\w,\w', "missing whitespace after ,"),
     (r'\w[+/*\-<>]\w', "missing whitespace in expression"),
     (r'^\s+\w+=\w+[^,)\n]$', "missing whitespace in assignment"),
-    (r'(?m)(\s+)try:\n((?:\n|\1\s.*\n)+?)\1except.*?:\n'
+    (r'(\s+)try:\n((?:\n|\1\s.*\n)+?)\1except.*?:\n'
      r'((?:\n|\1\s.*\n)+?)\1finally:', 'no try/except/finally in Py2.4'),
     (r'.{85}', "line too long"),
-    (r'(?m) x+[xo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
+    (r' x+[xo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
     (r'[^\n]\Z', "no trailing newline"),
     (r'(\S[ \t]+|^[ \t]+)\n', "trailing whitespace"),
 #    (r'^\s+[^_ \n][^_. \n]+_[^_\n]+\s*=', "don't use underbars in identifiers"),
@@ -344,9 +344,18 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
         prelines = None
         errors = []
         for p, msg in pats:
+            # fix-up regexes for multiline searches
+            po = p
+            # \s doesn't match \n
+            p = re.sub(r'(?<!\\)\\s', r'[ \\t]', p)
+            # [^...] doesn't match newline
+            p = re.sub(r'(?<!\\)\[\^', r'[^\\n', p)
+
+            #print po, '=>', p
+
             pos = 0
             n = 0
-            for m in re.finditer(p, post):
+            for m in re.finditer(p, post, re.MULTILINE):
                 if prelines is None:
                     prelines = pre.splitlines()
                     postlines = post.splitlines(True)
