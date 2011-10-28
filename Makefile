@@ -18,7 +18,7 @@ help:
 	@echo '  install-home - install with setup.py install --home=HOME ($(HOME))'
 	@echo '  local        - build for inplace usage'
 	@echo '  tests        - run all tests in the automatic test suite'
-	@echo '  test-foo     - run only specified tests (e.g. test-merge1)'
+	@echo '  test-foo     - run only specified tests (e.g. test-merge1.t)'
 	@echo '  dist         - run all tests and create a source tarball in dist/'
 	@echo '  clean        - remove files created by other targets'
 	@echo '                 (except installed files or dist source tarball)'
