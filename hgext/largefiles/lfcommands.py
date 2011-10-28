@@ -227,7 +227,7 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                 if 'l' in fctx.flags():
                     if renamedlfile:
                         raise util.Abort(
-                            _('Renamed/copied largefile %s becomes symlink')
+                            _('renamed/copied largefile %s becomes symlink')
                             % f)
                     islfile = False
             if islfile:
