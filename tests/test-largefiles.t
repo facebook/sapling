@@ -742,7 +742,8 @@ vanilla clients not locked out from largefiles servers on vanilla repos
   $ hg add f1
   $ hg com -m "m1"
   $ cd ..
-  $ hg serve -R r1 -d -p $HGPORT --pid-file serve.pid
+  $ hg serve -R r1 -d -p $HGPORT --pid-file hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
   $ hg --config extensions.largefiles=! clone http://localhost:$HGPORT r2
   requesting all changes
   adding changesets
@@ -751,11 +752,11 @@ vanilla clients not locked out from largefiles servers on vanilla repos
   added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ kill `cat serve.pid`
 
 largefiles clients still work with vanilla servers
-  $ hg --config extensions.largefiles=! serve -R r1 -d -p $HGPORT --pid-file serve.pid
-  $ hg clone http://localhost:$HGPORT r3
+  $ hg --config extensions.largefiles=! serve -R r1 -d -p $HGPORT1 --pid-file hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ hg clone http://localhost:$HGPORT1 r3
   requesting all changes
   adding changesets
   adding manifests
@@ -763,7 +764,6 @@ largefiles clients still work with vanilla servers
   added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ kill `cat serve.pid`
 
 vanilla clients locked out from largefiles http repos
   $ mkdir r4
@@ -773,15 +773,18 @@ vanilla clients locked out from largefiles http repos
   $ hg add --large f1
   $ hg com -m "m1"
   $ cd ..
-  $ hg serve -R r4 -d -p $HGPORT --pid-file serve.pid
-  $ hg --config extensions.largefiles=! clone http://localhost:$HGPORT r5
+  $ hg serve -R r4 -d -p $HGPORT2 --pid-file hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ hg --config extensions.largefiles=! clone http://localhost:$HGPORT2 r5
   abort: remote error:
   
   This repository uses the largefiles extension.
   
   Please enable it in your Mercurial config file.
   [255]
-  $ kill `cat serve.pid`
+
+used all HGPORTs, kill all daemons
+  $ "$TESTDIR/killdaemons.py"
 
 vanilla clients locked out from largefiles ssh repos
   $ hg --config extensions.largefiles=! clone -e "python $TESTDIR/dummyssh" ssh://user@dummy/r4 r5
@@ -812,14 +815,14 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   $ echo c2 > f2
   $ hg add --large f2
   $ hg com -m "m2"
-  $ hg --config extensions.largefiles=! -R ../r6 serve -d -p $HGPORT --pid-file ../serve.pid
+  $ hg --config extensions.largefiles=! -R ../r6 serve -d -p $HGPORT --pid-file ../hg.pid
+  $ cat ../hg.pid >> $DAEMON_PIDS
   $ hg push http://localhost:$HGPORT
   pushing to http://localhost:$HGPORT/
   searching for changes
   abort: http://localhost:$HGPORT/ does not appear to be a largefile store
   [255]
   $ cd ..
-  $ kill `cat serve.pid`
 
   $ cd ..
 
