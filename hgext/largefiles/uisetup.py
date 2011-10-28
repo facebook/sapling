@@ -132,3 +132,6 @@ def uisetup(ui):
         if name == 'rebase':
             extensions.wrapcommand(getattr(module, 'cmdtable'), 'rebase',
                 overrides.override_rebase)
+        if name == 'transplant':
+            extensions.wrapcommand(getattr(module, 'cmdtable'), 'transplant',
+                overrides.override_transplant)

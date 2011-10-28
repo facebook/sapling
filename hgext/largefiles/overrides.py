@@ -817,3 +817,8 @@ def override_rollback(orig, ui, repo, **opts):
             lfdirstate.add(file)
     lfdirstate.write()
     return result
+
+def override_transplant(orig, ui, repo, *revs, **opts):
+    result = orig(ui, repo, *revs, **opts)
+    lfcommands.updatelfiles(repo.ui, repo)
+    return result

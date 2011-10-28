@@ -3,6 +3,7 @@
   > largefiles=
   > purge=
   > rebase=
+  > transplant=
   > [largefiles]
   > minsize=2
   > patterns=glob:**.dat
@@ -740,6 +741,91 @@ coexist.
   $ echo "largeasnormal" > sub2/large7
   $ hg add sub2/large7
   sub2/large7 already a largefile
+
+Test that transplanting a largefile change works correctly.
+
+  $ cd ..
+  $ hg clone -r 8 d g
+  adding changesets
+  adding manifests
+  adding file changes
+  added 9 changesets with 26 changes to 10 files
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  3 largefiles updated, 0 removed
+  $ cd g
+  $ hg transplant -s ../d 598410d3eb9a 
+  searching for changes
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  $ hg log
+  changeset:   9:598410d3eb9a
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     modify normal file largefile in repo d
+  
+  changeset:   8:a381d2c8c80e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     modify normal file and largefile in repo b
+  
+  changeset:   7:daea875e9014
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add/edit more largefiles
+  
+  changeset:   6:4355d653f84f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     edit files yet again
+  
+  changeset:   5:9d5af5072dbd
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     edit files again
+  
+  changeset:   4:74c02385b94c
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     move files
+  
+  changeset:   3:9e8fbc4bce62
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     copy files
+  
+  changeset:   2:51a0ae4d5864
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     remove files
+  
+  changeset:   1:ce8896473775
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     edit files
+  
+  changeset:   0:30d30fe6a5be
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add files
+  
+  $ cat normal3
+  normal3-modified
+  $ cat sub/normal4
+  normal4-modified
+  $ cat sub/large4
+  large4-modified
+  $ cat sub2/large6
+  large6-modified
+  $ cat sub2/large7
+  large7
   $ cd ..
 
 vanilla clients not locked out from largefiles servers on vanilla repos
