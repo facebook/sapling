@@ -742,8 +742,8 @@ vanilla clients not locked out from largefiles servers on vanilla repos
   $ hg add f1
   $ hg com -m "m1"
   $ cd ..
-  $ hg serve -R r1 -d -p 8001 --pid-file serve.pid
-  $ hg --config extensions.largefiles=! clone http://localhost:8001 r2
+  $ hg serve -R r1 -d -p $HGPORT --pid-file serve.pid
+  $ hg --config extensions.largefiles=! clone http://localhost:$HGPORT r2
   requesting all changes
   adding changesets
   adding manifests
@@ -754,8 +754,8 @@ vanilla clients not locked out from largefiles servers on vanilla repos
   $ kill `cat serve.pid`
 
 largefiles clients still work with vanilla servers
-  $ hg --config extensions.largefiles=! serve -R r1 -d -p 8001 --pid-file serve.pid
-  $ hg clone http://localhost:8001 r3
+  $ hg --config extensions.largefiles=! serve -R r1 -d -p $HGPORT --pid-file serve.pid
+  $ hg clone http://localhost:$HGPORT r3
   requesting all changes
   adding changesets
   adding manifests
@@ -773,8 +773,8 @@ vanilla clients locked out from largefiles http repos
   $ hg add --large f1
   $ hg com -m "m1"
   $ cd ..
-  $ hg serve -R r4 -d -p 8001 --pid-file serve.pid
-  $ hg --config extensions.largefiles=! clone http://localhost:8001 r5
+  $ hg serve -R r4 -d -p $HGPORT --pid-file serve.pid
+  $ hg --config extensions.largefiles=! clone http://localhost:$HGPORT r5
   abort: remote error:
   
   This repository uses the largefiles extension.
@@ -812,11 +812,11 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   $ echo c2 > f2
   $ hg add --large f2
   $ hg com -m "m2"
-  $ hg --config extensions.largefiles=! -R ../r6 serve -d -p 8001 --pid-file ../serve.pid
-  $ hg push http://localhost:8001
-  pushing to http://localhost:8001/
+  $ hg --config extensions.largefiles=! -R ../r6 serve -d -p $HGPORT --pid-file ../serve.pid
+  $ hg push http://localhost:$HGPORT
+  pushing to http://localhost:$HGPORT/
   searching for changes
-  abort: http://localhost:8001/ does not appear to be a largefile store
+  abort: http://localhost:$HGPORT/ does not appear to be a largefile store
   [255]
   $ cd ..
   $ kill `cat serve.pid`
