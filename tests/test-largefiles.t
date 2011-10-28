@@ -732,6 +732,14 @@ been very problematic).
   large6-modified
   $ cat sub2/large7
   large7
+
+Test that a normal file and a largefile with the same name and path cannot
+coexist.
+
+  $ rm sub2/large7
+  $ echo "largeasnormal" > sub2/large7
+  $ hg add sub2/large7
+  sub2/large7 already a largefile
   $ cd ..
 
 vanilla clients not locked out from largefiles servers on vanilla repos
