@@ -430,7 +430,7 @@ def simplemerge(ui, local, base, other, **opts):
     except util.Abort:
         return 1
 
-    local = util.realpath(local)
+    local = os.path.realpath(local)
     if not opts.get('print'):
         opener = scmutil.opener(os.path.dirname(local))
         out = opener(os.path.basename(local), "w", atomictemp=True)

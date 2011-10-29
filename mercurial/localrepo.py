@@ -28,7 +28,7 @@ class localrepository(repo.repository):
 
     def __init__(self, baseui, path=None, create=False):
         repo.repository.__init__(self)
-        self.root = util.realpath(util.expandpath(path))
+        self.root = os.path.realpath(util.expandpath(path))
         self.path = os.path.join(self.root, ".hg")
         self.origroot = path
         self.auditor = scmutil.pathauditor(self.root, self._checknested)
@@ -79,7 +79,7 @@ class localrepository(repo.repository):
 
         self.sharedpath = self.path
         try:
-            s = util.realpath(self.opener.read("sharedpath").rstrip('\n'))
+            s = os.path.realpath(self.opener.read("sharedpath").rstrip('\n'))
             if not os.path.exists(s):
                 raise error.RepoError(
                     _('.hg/sharedpath points to nonexistent directory %s') % s)
