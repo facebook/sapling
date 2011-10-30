@@ -11,8 +11,9 @@ from mercurial.node import short
 from mercurial.i18n import _
 import os
 
-def _bundle(repo, cg, node, suffix, compress=True):
+def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
+    cg = repo.changegroupsubset(bases, heads, 'strip')
     backupdir = repo.join("strip-backup")
     if not os.path.isdir(backupdir):
         os.mkdir(backupdir)
@@ -82,9 +83,11 @@ def strip(ui, repo, node, backup="all"):
             saveheads.add(r)
     saveheads = [cl.node(r) for r in saveheads]
 
-    # compute common nodes
-    savecommon = set(cl.node(p) for r in saverevs for p in cl.parentrevs(r)
-                     if p not in saverevs and p not in tostrip)
+    # compute base nodes
+    if saverevs:
+        descendants = set(cl.descendants(*saverevs))
+        saverevs.difference_update(descendants)
+    savebases = [cl.node(r) for r in saverevs]
 
     bm = repo._bookmarks
     updatebm = []
@@ -96,14 +99,12 @@ def strip(ui, repo, node, backup="all"):
     # create a changegroup for all the branches we need to keep
     backupfile = None
     if backup == "all":
-        allnodes=[cl.node(r) for r in xrange(striprev, len(cl))]
-        cg = repo._changegroup(allnodes, 'strip')
-        backupfile = _bundle(repo, cg, node, 'backup')
+        backupfile = _bundle(repo, [node], cl.heads(), node, 'backup')
         repo.ui.status(_("saved backup bundle to %s\n") % backupfile)
-    if saveheads or savecommon:
+    if saveheads or savebases:
         # do not compress partial bundle if we remove it from disk later
-        cg = repo.getbundle('strip', common=savecommon, heads=saveheads)
-        chgrpfile = _bundle(repo, cg, node, 'temp', compress=keeppartialbundle)
+        chgrpfile = _bundle(repo, savebases, saveheads, node, 'temp',
+                            compress=keeppartialbundle)
 
     mfst = repo.manifest
 
@@ -127,7 +128,7 @@ def strip(ui, repo, node, backup="all"):
             tr.abort()
             raise
 
-        if saveheads or savecommon:
+        if saveheads or savebases:
             ui.note(_("adding branch\n"))
             f = open(chgrpfile, "rb")
             gen = changegroup.readbundle(f, chgrpfile)
