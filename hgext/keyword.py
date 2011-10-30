@@ -86,7 +86,7 @@ from mercurial import localrepo, match, patch, templatefilters, templater, util
 from mercurial import scmutil
 from mercurial.hgweb import webcommands
 from mercurial.i18n import _
-import re, shutil, tempfile
+import os, re, shutil, tempfile
 
 commands.optionalrepo += ' kwdemo'
 
@@ -647,7 +647,7 @@ def reposetup(ui, repo):
             source = repo.dirstate.copied(dest)
             if 'l' in wctx.flags(source):
                 source = scmutil.canonpath(repo.root, cwd,
-                                           util.realpath(source))
+                                           os.path.realpath(source))
             return kwt.match(source)
 
         candidates = [f for f in repo.dirstate.copies() if
