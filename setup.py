@@ -133,21 +133,22 @@ def runhg(cmd, env):
 
 version = ''
 
-env = {'HGRCPATH': '', 'LANGUAGE': 'C'}
+# Execute hg out of this directory with a custom environment which
+# includes the pure Python modules in mercurial/pure. We also take
+# care to not use any hgrc files and do no localization.
+pypath = ['mercurial', os.path.join('mercurial', 'pure')]
+env = {'PYTHONPATH': os.pathsep.join(pypath),
+       'HGRCPATH': '',
+       'LANGUAGE': 'C'}
+if 'LD_LIBRARY_PATH' in os.environ:
+    env['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']
+if 'SystemRoot' in os.environ:
+    # Copy SystemRoot into the custom environment for Python 2.6
+    # under Windows. Otherwise, the subprocess will fail with
+    # error 0xc0150004. See: http://bugs.python.org/issue3440
+    env['SystemRoot'] = os.environ['SystemRoot']
 
 if os.path.isdir('.hg'):
-    # Execute hg out of this directory with a custom environment which
-    # includes the pure Python modules in mercurial/pure. We also take
-    # care to not use any hgrc files and do no localization.
-    pypath = ['mercurial', os.path.join('mercurial', 'pure')]
-    env['PYTHONPATH'] = os.pathsep.join(pypath)
-    if 'LD_LIBRARY_PATH' in os.environ:
-        env['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']
-    if 'SystemRoot' in os.environ:
-        # Copy SystemRoot into the custom environment for Python 2.6
-        # under Windows. Otherwise, the subprocess will fail with
-        # error 0xc0150004. See: http://bugs.python.org/issue3440
-        env['SystemRoot'] = os.environ['SystemRoot']
     cmd = [sys.executable, 'hg', 'id', '-i', '-t']
     l = runhg(cmd, env).split()
     while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
