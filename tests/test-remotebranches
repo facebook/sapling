@@ -7,7 +7,7 @@ echo "remotebranches=$(echo $(dirname $(dirname $0)))/hg_remotebranches.py" >> $
 
 FILTERPWD="sed s%$PWD/%%g"
 
-function mkcommit()
+mkcommit()
 {
     echo $1 > $1
     hg add $1

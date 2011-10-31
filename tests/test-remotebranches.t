@@ -4,7 +4,7 @@
 
   > FILTERPWD="sed s%$PWD/%%g"
 
-  > function mkcommit()
+  > mkcommit()
   > {
   >    echo $1 > $1
   >    hg add $1
