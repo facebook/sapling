@@ -4,6 +4,9 @@ if 'TERM' in os.environ:
     del os.environ['TERM']
 import doctest
 
+import mercurial.util
+doctest.testmod(mercurial.util)
+
 import mercurial.changelog
 doctest.testmod(mercurial.changelog)
 
@@ -21,9 +24,6 @@ doctest.testmod(mercurial.ui)
 
 import mercurial.url
 doctest.testmod(mercurial.url)
-
-import mercurial.util
-doctest.testmod(mercurial.util)
 
 import mercurial.encoding
 doctest.testmod(mercurial.encoding)

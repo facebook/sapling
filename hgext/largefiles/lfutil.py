@@ -443,7 +443,7 @@ def mkstemp(repo, prefix):
     '''Returns a file descriptor and a filename corresponding to a temporary
     file in the repo's largefiles store.'''
     path = repo.join(longname)
-    util.makedirs(repo.join(path))
+    util.makedirs(path)
     return tempfile.mkstemp(prefix=prefix, dir=path)
 
 class storeprotonotcapable(Exception):
