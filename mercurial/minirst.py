@@ -23,9 +23,27 @@ import util, encoding
 from i18n import _
 
 def replace(text, substs):
+    '''
+    Apply a list of (find, replace) pairs to a text.
+
+    >>> replace("foo bar", [('f', 'F'), ('b', 'B')])
+    'Foo Bar'
+    >>> encoding.encoding = 'latin1'
+    >>> replace('\\x81\\\\', [('\\\\', '/')])
+    '\\x81/'
+    >>> encoding.encoding = 'shiftjis'
+    >>> replace('\\x81\\\\', [('\\\\', '/')])
+    '\\x81\\\\'
+    '''
+
+    # some character encodings (cp932 for Japanese, at least) use
+    # ASCII characters other than control/alphabet/digit as a part of
+    # multi-bytes characters, so direct replacing with such characters
+    # on strings in local encoding causes invalid byte sequences.
+    utext = text.decode(encoding.encoding)
     for f, t in substs:
-        text = text.replace(f, t)
-    return text
+        utext = utext.replace(f, t)
+    return utext.encode(encoding.encoding)
 
 _blockre = re.compile(r"\n(?:\s*\n)+")
 

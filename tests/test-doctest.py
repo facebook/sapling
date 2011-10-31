@@ -36,3 +36,6 @@ doctest.testmod(hgext.convert.cvsps)
 
 import mercurial.revset
 doctest.testmod(mercurial.revset)
+
+import mercurial.minirst
+doctest.testmod(mercurial.minirst)
