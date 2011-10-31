@@ -48,9 +48,9 @@
   normal
   $ cat sub/normal2
   alsonormal
-  $ sha1sum large sub/maybelarge.dat
-  2e000fa7e85759c7f4c254d4d9c33ef481e459a7  large
-  34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c  sub/maybelarge.dat
+  $ "$TESTDIR/md5sum.py" large sub/maybelarge.dat
+  ec87a838931d4d5d2e94a04644788a55  large
+  1276481102f218c981e0324180bafd9f  sub/maybelarge.dat
 
 "lfconvert" adds 'largefiles' to .hg/requires.
   $ cat .hg/requires
@@ -74,8 +74,8 @@ add some changesets to rename/remove/merge
   $ echo blah >> normal3
   $ echo blah >> sub/normal2
   $ echo blah >> sub/maybelarge.dat
-  $ sha1sum sub/maybelarge.dat
-  76236b6a2c6102826c61af4297dd738fb3b1de38  sub/maybelarge.dat
+  $ "$TESTDIR/md5sum.py" sub/maybelarge.dat
+  1dd0b99ff80e19cff409702a1d3f5e15  sub/maybelarge.dat
   $ hg commit -A -m"add normal3, modify sub/*"
   adding normal3
   created new head
@@ -151,8 +151,8 @@ lfconvert with rename, merge, and remove
   $ cat stuff/normal2
   alsonormal
   blah
-  $ sha1sum stuff/maybelarge.dat
-  76236b6a2c6102826c61af4297dd738fb3b1de38  stuff/maybelarge.dat
+  $ "$TESTDIR/md5sum.py" stuff/maybelarge.dat
+  1dd0b99ff80e19cff409702a1d3f5e15  stuff/maybelarge.dat
   $ cat .hglf/stuff/maybelarge.dat
   76236b6a2c6102826c61af4297dd738fb3b1de38
   $ cd ..
