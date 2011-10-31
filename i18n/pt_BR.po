@@ -4295,8 +4295,8 @@ msgid "converting revisions"
 msgstr "convertendo revisões"
 
 #, python-format
-msgid "Renamed/copied largefile %s becomes symlink"
-msgstr "O largefile %s renomeado/copiado se tornou um link simbólico"
+msgid "renamed/copied largefile %s becomes symlink"
+msgstr "o largefile %s renomeado/copiado se tornou um link simbólico"
 
 #, python-format
 msgid "largefile %s becomes symlink"
