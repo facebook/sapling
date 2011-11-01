@@ -370,9 +370,10 @@ class dirstate(object):
 
     def drop(self, f):
         '''Drop a file from the dirstate'''
-        self._dirty = True
-        self._droppath(f)
-        del self._map[f]
+        if f in self._map:
+            self._dirty = True
+            self._droppath(f)
+            del self._map[f]
 
     def _normalize(self, path, isknown):
         normed = os.path.normcase(path)
