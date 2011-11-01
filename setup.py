@@ -229,6 +229,11 @@ class hgdist(Distribution):
                         "code instead of C extensions"),
                      ]
 
+    def has_ext_modules(self):
+        # self.ext_modules is emptied in hgbuildpy.finalize_options which is
+        # too late for some cases
+        return not self.pure and Distribution.has_ext_modules(self)
+
 class hgbuildext(build_ext):
 
     def build_extension(self, ext):
