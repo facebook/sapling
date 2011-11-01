@@ -1,4 +1,4 @@
-import sys
+import os
 
 def check(a, b):
     if a != b:
@@ -231,5 +231,8 @@ def test_url():
     >>> u.localpath()
     'foo/bar/baz'
     """
+
+if 'TERM' in os.environ:
+    del os.environ['TERM']
 
 doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
