@@ -342,10 +342,13 @@ class HgEditor(svnwrap.Editor):
             try:
                 if not self.meta.is_path_valid(self.current.file):
                     return
+                # Already get and store the value here, because calling
+                # handler(window) seems to close the target in Subversion 1.7.
+                val = target.getvalue()
                 handler(window)
                 # window being None means commit this file
                 if not window:
-                    self.current.files[self.current.file] = target.getvalue()
+                    self.current.files[self.current.file] = val
             except svnwrap.SubversionException, e: # pragma: no cover
                 if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
                     self.current.missing.add(self.current.file)
