@@ -186,6 +186,12 @@ try:
 except ImportError:
     version = 'unknown'
 
+class hgbuild(build):
+    # Insert hgbuildmo first so that files in mercurial/locale/ are found
+    # when build_py is run next.
+    sub_commands = [('build_mo', None),
+                   ] + build.sub_commands
+
 class hgbuildmo(build):
 
     description = "build translations (.mo files)"
@@ -216,10 +222,6 @@ class hgbuildmo(build):
             self.mkpath(join('mercurial', modir))
             self.make_file([pofile], mobuildfile, spawn, (cmd,))
 
-
-# Insert hgbuildmo first so that files in mercurial/locale/ are found
-# when build_py is run next.
-build.sub_commands.insert(0, ('build_mo', None))
 
 class hgdist(Distribution):
     pure = 0
@@ -344,7 +346,8 @@ class hginstallscripts(install_scripts):
             fp.write(data)
             fp.close()
 
-cmdclass = {'build_mo': hgbuildmo,
+cmdclass = {'build': hgbuild,
+            'build_mo': hgbuildmo,
             'build_ext': hgbuildext,
             'build_py': hgbuildpy,
             'build_hgextindex': buildhgextindex,
