@@ -892,7 +892,7 @@ Test behavior of add for explicit path in subrepo:
   $ hg init s
   $ hg ci -m0
   committing subrepository s
-Adding with an explicit path in a subrepo currently fails silently
+Adding with an explicit path in a subrepo adds the file
   $ echo c1 > f1
   $ echo c2 > s/f2
   $ hg st -S
@@ -900,14 +900,13 @@ Adding with an explicit path in a subrepo currently fails silently
   ? s/f2
   $ hg add s/f2
   $ hg st -S
+  A s/f2
   ? f1
-  ? s/f2
-  $ hg ci -R s -Am0
-  adding f2
+  $ hg ci -R s -m0
   $ hg ci -Am1
   adding f1
   committing subrepository s
-Adding with an explicit path in a subrepo with -S adds the file
+Adding with an explicit path in a subrepo with -S has the same behavior
   $ echo c3 > f3
   $ echo c4 > s/f4
   $ hg st -S

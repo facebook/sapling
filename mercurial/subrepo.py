@@ -353,6 +353,12 @@ class abstractsubrepo(object):
                         unit=_('files'), total=total)
         ui.progress(_('archiving (%s)') % relpath, None)
 
+    def walk(self, match):
+        '''
+        walk recursively through the directory tree, finding all files
+        matched by the match function
+        '''
+        pass
 
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
@@ -543,6 +549,9 @@ class hgsubrepo(abstractsubrepo):
         ctx = self._repo[rev]
         return ctx.flags(name)
 
+    def walk(self, match):
+        ctx = self._repo[None]
+        return ctx.walk(match)
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):

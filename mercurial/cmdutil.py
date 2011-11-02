@@ -1165,15 +1165,19 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix):
             if ui.verbose or not exact:
                 ui.status(_('adding %s\n') % match.rel(join(f)))
 
-    if listsubrepos:
-        for subpath in wctx.substate:
-            sub = wctx.sub(subpath)
-            try:
-                submatch = matchmod.narrowmatcher(subpath, match)
+    for subpath in wctx.substate:
+        sub = wctx.sub(subpath)
+        try:
+            submatch = matchmod.narrowmatcher(subpath, match)
+            if listsubrepos:
                 bad.extend(sub.add(ui, submatch, dryrun, prefix))
-            except error.LookupError:
-                ui.status(_("skipping missing subrepository: %s\n")
-                               % join(subpath))
+            else:
+                for f in sub.walk(submatch):
+                    if submatch.exact(f):
+                        bad.extend(sub.add(ui, submatch, dryrun, prefix))
+        except error.LookupError:
+            ui.status(_("skipping missing subrepository: %s\n")
+                           % join(subpath))
 
     if not dryrun:
         rejected = wctx.add(names, prefix)
