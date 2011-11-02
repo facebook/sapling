@@ -220,15 +220,18 @@ class localrepository(repo.repository):
         for i in xrange(len(self)):
             yield i
 
+    def revs(self, expr, *args):
+        '''Return a list of revisions matching the given revset'''
+        expr = revset.formatspec(expr, *args)
+        m = revset.match(None, expr)
+        return [r for r in m(self, range(len(self)))]
+
     def set(self, expr, *args):
         '''
         Yield a context for each matching revision, after doing arg
         replacement via revset.formatspec
         '''
-
-        expr = revset.formatspec(expr, *args)
-        m = revset.match(None, expr)
-        for r in m(self, range(len(self))):
+        for r in self.revs(expr, *args):
             yield self[r]
 
     def url(self):
