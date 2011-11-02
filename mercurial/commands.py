@@ -2534,16 +2534,16 @@ def graft(ui, repo, *revs, **opts):
         revs = scmutil.revrange(repo, revs)
 
     # check for merges
-    for ctx in repo.set('%ld and merge()', revs):
-        ui.warn(_('skipping ungraftable merge revision %s\n') % ctx.rev())
-        revs.remove(ctx.rev())
+    for rev in repo.revs('%ld and merge()', revs):
+        ui.warn(_('skipping ungraftable merge revision %s\n') % rev)
+        revs.remove(rev)
     if not revs:
         return -1
 
     # check for ancestors of dest branch
-    for ctx in repo.set('::. and %ld', revs):
-        ui.warn(_('skipping ancestor revision %s\n') % ctx.rev())
-        revs.remove(ctx.rev())
+    for rev in repo.revs('::. and %ld', revs):
+        ui.warn(_('skipping ancestor revision %s\n') % rev)
+        revs.remove(rev)
     if not revs:
         return -1
 

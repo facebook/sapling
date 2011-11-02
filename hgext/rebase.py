@@ -185,21 +185,19 @@ def rebase(ui, repo, **opts):
                 dest = repo[destf]
 
             if revf:
-                revgen = repo.set('%lr', revf)
+                rebaseset = repo.revs('%lr', revf)
             elif srcf:
-                revgen = repo.set('(%r)::', srcf)
+                rebaseset = repo.revs('(%r)::', srcf)
             else:
                 base = basef or '.'
-                revgen = repo.set('(children(ancestor(%r, %d)) and ::(%r))::',
-                                  base, dest, base)
-
-            rebaseset = [c.rev() for c in revgen]
+                rebaseset = repo.revs('(children(ancestor(%r, %d)) & ::%r)::',
+                    base, dest, base)
 
             if not rebaseset:
                 repo.ui.debug('base is ancestor of destination')
                 result = None
-            elif not keepf and list(repo.set('first(children(%ld) - %ld)',
-                                            rebaseset, rebaseset)):
+            elif not keepf and list(repo.revs('first(children(%ld) - %ld)',
+                                              rebaseset, rebaseset)):
                 raise util.Abort(
                     _("can't remove original changesets with"
                       " unrebased descendants"),
@@ -582,8 +580,7 @@ def buildstate(repo, dest, rebaseset, detach):
         # rebase on ancestor, force detach
         detach = True
     if detach:
-        detachset = [c.rev() for c in repo.set('::%d - ::%d - %d',
-                                                root, commonbase, root)]
+        detachset = repo.revs('::%d - ::%d - %d', root, commonbase, root)
 
     repo.ui.debug('rebase onto %d starting from %d\n' % (dest, root))
     state = dict.fromkeys(rebaseset, nullrev)

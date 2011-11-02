@@ -179,7 +179,7 @@ def get(repo, status):
         # that's because the bisection can go either way
         range = '( bisect(bad)::bisect(good) | bisect(good)::bisect(bad) )'
 
-        _t = [c.rev() for c in repo.set('bisect(good)::bisect(bad)')]
+        _t = repo.revs('bisect(good)::bisect(bad)')
         # The sets of topologically good or bad csets
         if len(_t) == 0:
             # Goods are topologically after bads
@@ -206,18 +206,17 @@ def get(repo, status):
         ignored = '( ( (%s) | (%s) ) - (%s) )' % (iba, iga, range)
 
         if status == 'range':
-            return [c.rev() for c in repo.set(range)]
+            return repo.revs(range)
         elif status == 'pruned':
-            return [c.rev() for c in repo.set(pruned)]
+            return repo.revs(pruned)
         elif status == 'untested':
-            return [c.rev() for c in repo.set(untested)]
+            return repo.revs(untested)
         elif status == 'ignored':
-            return [c.rev() for c in repo.set(ignored)]
+            return repo.revs(ignored)
         elif status == "goods":
-            return [c.rev() for c in repo.set(goods)]
+            return repo.revs(goods)
         elif status == "bads":
-            return [c.rev() for c in repo.set(bads)]
-
+            return repo.revs(bads)
         else:
             raise error.ParseError(_('invalid bisect state'))
 
