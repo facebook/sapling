@@ -79,6 +79,7 @@ class ui(object):
 
         try:
             cfg.read(filename, fp, sections=sections, remap=remap)
+            fp.close()
         except error.ConfigError, inst:
             if trusted:
                 raise
