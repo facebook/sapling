@@ -521,26 +521,6 @@ def escapef(m):
 def stringescape(s):
     return escapesub(escapef, s)
 
-def transformtst(lines):
-    inblock = False
-    for l in lines:
-        if inblock:
-            if l.startswith('  $ ') or not l.startswith('  '):
-                inblock = False
-                yield '  > EOF\n'
-                yield l
-            else:
-                yield '  > ' + l[2:]
-        else:
-            if l.startswith('  >>> '):
-                inblock = True
-                yield '  $ %s -m heredoctest <<EOF\n' % PYTHON
-                yield '  > ' + l[2:]
-            else:
-                yield l
-    if inblock:
-        yield '  > EOF\n'
-
 def tsttest(test, wd, options, replacements):
     t = open(test)
     out = []
@@ -550,10 +530,24 @@ def tsttest(test, wd, options, replacements):
     pos = prepos = -1
     after = {}
     expected = {}
-    for n, l in enumerate(transformtst(t)):
+    inpython = False
+    for n, l in enumerate(t):
         if not l.endswith('\n'):
             l += '\n'
-        if l.startswith('  $ '): # commands
+        if l.startswith('  >>> '):
+            if not inpython:
+                # we've just entered a Python block, add the header
+                inpython = True
+                script.append('echo %s %s $?\n' % (salt, n))
+                script.append('%s -m heredoctest <<EOF\n' % PYTHON)
+                prepos = pos
+                pos = n
+            after.setdefault(prepos, []).append(l)
+            script.append(l[2:])
+        elif l.startswith('  $ '): # commands
+            if inpython:
+                script.append("EOF\n")
+                inpython = False
             after.setdefault(pos, []).append(l)
             prepos = pos
             pos = n
@@ -563,11 +557,21 @@ def tsttest(test, wd, options, replacements):
             after.setdefault(prepos, []).append(l)
             script.append(l[4:])
         elif l.startswith('  '): # results
-            # queue up a list of expected results
-            expected.setdefault(pos, []).append(l[2:])
+            if inpython:
+                script.append(l[2:])
+                after.setdefault(prepos, []).append(l)
+            else:
+                # queue up a list of expected results
+                expected.setdefault(pos, []).append(l[2:])
         else:
+            if inpython:
+                script.append("EOF\n")
+                inpython = False
             # non-command/result - queue up for merged output
             after.setdefault(pos, []).append(l)
+
+    if inpython:
+        script.append("EOF\n")
 
     t.close()
 
@@ -853,7 +857,7 @@ def runone(options, test):
         refout = None                   # to match "out is None"
     elif os.path.exists(ref):
         f = open(ref, "r")
-        refout = list(transformtst(splitnewlines(f.read())))
+        refout = list(splitnewlines(f.read()))
         f.close()
     else:
         refout = []
