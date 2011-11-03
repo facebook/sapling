@@ -800,6 +800,7 @@ class revlog(object):
         readahead = max(65536, length)
         df.seek(offset)
         d = df.read(readahead)
+        df.close()
         self._addchunk(offset, d)
         if readahead > length:
             return d[:length]
