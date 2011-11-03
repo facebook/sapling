@@ -8,7 +8,7 @@
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import repo, changegroup, subrepo, discovery, pushkey
-import changelog, dirstate, filelog, manifest, context, bookmarks
+import changelog, dirstate, filelog, manifest, context, bookmarks, phases
 import lock, transaction, store, encoding
 import scmutil, util, extensions, hook, error, revset
 import match as matchmod
@@ -169,6 +169,10 @@ class localrepository(repo.repository):
 
     def _writebookmarks(self, marks):
       bookmarks.write(self)
+
+    @filecache('phaseroots')
+    def _phaseroots(self):
+        return phases.readroots(self)
 
     @filecache('00changelog.i', True)
     def changelog(self):
