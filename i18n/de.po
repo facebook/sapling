@@ -6436,12 +6436,15 @@ msgstr "&Yes - übernimmt diese Änderung"
 msgid "&No, skip this change"
 msgstr "&No, überspringt diese Änderung"
 
+#, fuzzy
 msgid "&Skip remaining changes to this file"
 msgstr "&Überspringe die restlichen Änderungen an dieser Datei"
 
+#, fuzzy
 msgid "Record remaining changes to this &file"
 msgstr "Zeichne die restlichen Änderungen an dieser &Datei auf"
 
+#, fuzzy
 msgid "&Done, skip remaining changes and files"
 msgstr "&Fertig, überspringe die restlichen Änderungen und Dateien"
 

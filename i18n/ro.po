@@ -5420,12 +5420,14 @@ msgstr ""
 msgid "&No, skip this change"
 msgstr "&Nu, omite această modificare"
 
+#, fuzzy
 msgid "&Skip remaining changes to this file"
 msgstr "&Omite restul modificărilor pentru acest fișier"
 
 msgid "Record remaining changes to this &file"
 msgstr ""
 
+#, fuzzy
 msgid "&Done, skip remaining changes and files"
 msgstr "În&cheiat, omite restul modificărilor și fișierelor"
 
