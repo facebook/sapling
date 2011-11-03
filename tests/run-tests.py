@@ -521,6 +521,33 @@ def escapef(m):
 def stringescape(s):
     return escapesub(escapef, s)
 
+def rematch(el, l):
+    try:
+        # ensure that the regex matches to the end of the string
+        return re.match(el + r'\Z', l)
+    except re.error:
+        # el is an invalid regex
+        return False
+
+def globmatch(el, l):
+    # The only supported special characters are * and ?. Escaping is
+    # supported.
+    i, n = 0, len(el)
+    res = ''
+    while i < n:
+        c = el[i]
+        i += 1
+        if c == '\\' and el[i] in '*?\\':
+            res += el[i - 1:i + 1]
+            i += 1
+        elif c == '*':
+            res += '.*'
+        elif c == '?':
+            res += '.'
+        else:
+            res += re.escape(c)
+    return rematch(res, l)
+
 def tsttest(test, wd, options, replacements):
     t = open(test)
     out = []
@@ -607,33 +634,6 @@ def tsttest(test, wd, options, replacements):
             return exitcode, output
     finally:
         os.remove(name)
-
-    def rematch(el, l):
-        try:
-            # ensure that the regex matches to the end of the string
-            return re.match(el + r'\Z', l)
-        except re.error:
-            # el is an invalid regex
-            return False
-
-    def globmatch(el, l):
-        # The only supported special characters are * and ?. Escaping is
-        # supported.
-        i, n = 0, len(el)
-        res = ''
-        while i < n:
-            c = el[i]
-            i += 1
-            if c == '\\' and el[i] in '*?\\':
-                res += el[i - 1:i + 1]
-                i += 1
-            elif c == '*':
-                res += '.*'
-            elif c == '?':
-                res += '.'
-            else:
-                res += re.escape(c)
-        return rematch(res, l)
 
     # Merge the script output back into a unified test
 
