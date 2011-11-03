@@ -548,6 +548,16 @@ def globmatch(el, l):
             res += re.escape(c)
     return rematch(res, l)
 
+def linematch(el, l):
+    if el == l: # perfect match (fast)
+        return True
+    if (el and
+        (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
+         el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l) or
+         el.endswith(" (esc)\n") and el.decode('string-escape') == l)):
+        return True
+    return False
+
 def tsttest(test, wd, options, replacements):
     t = open(test)
     out = []
@@ -655,14 +665,8 @@ def tsttest(test, wd, options, replacements):
             if pos in expected and expected[pos]:
                 el = expected[pos].pop(0)
 
-            if el == lout: # perfect match (fast)
-                postout.append("  " + lout)
-            elif (el and
-                  (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', lout) or
-                   el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', lout)
-                   or el.endswith(" (esc)\n") and
-                      el.decode('string-escape') == l)):
-                postout.append("  " + el) # fallback regex/glob/esc match
+            if linematch(el, lout):
+                postout.append("  " + el)
             else:
                 if needescape(lout):
                     lout = stringescape(lout.rstrip('\n')) + " (esc)\n"
