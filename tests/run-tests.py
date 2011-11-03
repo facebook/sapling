@@ -525,20 +525,36 @@ def tsttest(test, wd, options, replacements):
     t = open(test)
     out = []
     script = []
-    salt = "SALT" + str(time.time())
 
-    pos = prepos = -1
+    # We generate a shell script which outputs unique markers to line
+    # up script results with our source. These markers include input
+    # line number and the last return code
+    salt = "SALT" + str(time.time())
+    def addsalt(line):
+        script.append('echo %s %s $?\n' % (salt, line))
+
+    # After we run the shell script, we re-unify the script output
+    # with non-active parts of the source, with synchronization by our
+    # SALT line number markers. The after table contains the
+    # non-active components, ordered by line number
     after = {}
+    pos = prepos = -1
+
+    # Expected shellscript output
     expected = {}
+
+    # We keep track of whether or not we're in a Python block so we
+    # can generate the surrounding doctest magic
     inpython = False
+
     for n, l in enumerate(t):
         if not l.endswith('\n'):
             l += '\n'
-        if l.startswith('  >>> '):
+        if l.startswith('  >>> '): # python inlines
             if not inpython:
                 # we've just entered a Python block, add the header
                 inpython = True
-                script.append('echo %s %s $?\n' % (salt, n))
+                addsalt(n)
                 script.append('%s -m heredoctest <<EOF\n' % PYTHON)
                 prepos = pos
                 pos = n
@@ -551,7 +567,7 @@ def tsttest(test, wd, options, replacements):
             after.setdefault(pos, []).append(l)
             prepos = pos
             pos = n
-            script.append('echo %s %s $?\n' % (salt, n))
+            addsalt(n)
             script.append(l[4:])
         elif l.startswith('  > '): # continuations
             after.setdefault(prepos, []).append(l)
@@ -570,15 +586,13 @@ def tsttest(test, wd, options, replacements):
             # non-command/result - queue up for merged output
             after.setdefault(pos, []).append(l)
 
-    if inpython:
-        script.append("EOF\n")
-
     t.close()
 
-    script.append('echo %s %s $?\n' % (salt, n + 1))
+    if inpython:
+        script.append("EOF\n")
+    addsalt(n + 1)
 
     fd, name = tempfile.mkstemp(suffix='hg-tst')
-
     try:
         for l in script:
             os.write(fd, l)
@@ -621,6 +635,8 @@ def tsttest(test, wd, options, replacements):
                 res += re.escape(c)
         return rematch(res, l)
 
+    # Merge the script output back into a unified test
+
     pos = -1
     postout = []
     ret = 0
@@ -631,8 +647,10 @@ def tsttest(test, wd, options, replacements):
 
         if lout:
             if lcmd:
+                # output block had no trailing newline, clean up
                 lout += ' (no-eol)\n'
 
+            # find the expected output at the current position
             el = None
             if pos in expected and expected[pos]:
                 el = expected[pos].pop(0)
@@ -656,6 +674,7 @@ def tsttest(test, wd, options, replacements):
             if ret != 0:
                 postout.append("  [%s]\n" % ret)
             if pos in after:
+                # merge in non-active test bits
                 postout += after.pop(pos)
             pos = int(lcmd.split()[0])
 
