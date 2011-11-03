@@ -559,10 +559,6 @@ def linematch(el, l):
     return False
 
 def tsttest(test, wd, options, replacements):
-    t = open(test)
-    out = []
-    script = []
-
     # We generate a shell script which outputs unique markers to line
     # up script results with our source. These markers include input
     # line number and the last return code
@@ -584,6 +580,11 @@ def tsttest(test, wd, options, replacements):
     # can generate the surrounding doctest magic
     inpython = False
 
+    f = open(test)
+    t = f.readlines()
+    f.close()
+
+    script = []
     for n, l in enumerate(t):
         if not l.endswith('\n'):
             l += '\n'
@@ -623,12 +624,11 @@ def tsttest(test, wd, options, replacements):
             # non-command/result - queue up for merged output
             after.setdefault(pos, []).append(l)
 
-    t.close()
-
     if inpython:
         script.append("EOF\n")
     addsalt(n + 1)
 
+    # Write out the script and execute it
     fd, name = tempfile.mkstemp(suffix='hg-tst')
     try:
         for l in script:
