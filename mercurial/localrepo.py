@@ -174,6 +174,18 @@ class localrepository(repo.repository):
     def _phaseroots(self):
         return phases.readroots(self)
 
+    @propertycache
+    def _phaserev(self):
+        cache = [0] * len(self)
+        for phase in phases.trackedphases:
+            roots = map(self.changelog.rev, self._phaseroots[phase])
+            if roots:
+                for rev in roots:
+                    cache[rev] = phase
+                for rev in self.changelog.descendants(*roots):
+                    cache[rev] = phase
+        return cache
+
     @filecache('00changelog.i', True)
     def changelog(self):
         c = changelog.changelog(self.sopener)
