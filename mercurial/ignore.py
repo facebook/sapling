@@ -78,6 +78,7 @@ def ignore(root, files, warn):
             pats[f] = []
             fp = open(f)
             pats[f], warnings = ignorepats(fp)
+            fp.close()
             for warning in warnings:
                 warn("%s: %s\n" % (f, warning))
         except IOError, inst:
