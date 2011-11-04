@@ -110,7 +110,7 @@ Interaction with Mercurial Commands
 :push: Mercurial will automatically push all subrepositories first
     when the parent repository is being pushed. This ensures new
     subrepository changes are available when referenced by top-level
-    repositories.
+    repositories.  Push is a no-op for Subversion subrepositories.
 
 :status: status does not recurse into subrepositories unless
     -S/--subrepos is specified. Subrepository changes are displayed as
