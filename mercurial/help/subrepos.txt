@@ -73,8 +73,8 @@ Interaction with Mercurial Commands
 -----------------------------------
 
 :add: add does not recurse in subrepos unless -S/--subrepos is
-    specified. Subversion subrepositories are currently silently
-    ignored.
+    specified. Git and Subversion subrepositories are currently
+    silently ignored.
 
 :archive: archive does not recurse in subrepositories unless
     -S/--subrepos is specified.
@@ -90,16 +90,16 @@ Interaction with Mercurial Commands
 
 :diff: diff does not recurse in subrepos unless -S/--subrepos is
     specified. Changes are displayed as usual, on the subrepositories
-    elements. Subversion subrepositories are currently silently
-    ignored.
+    elements. Git and Subversion subrepositories are currently
+    silently ignored.
 
 :incoming: incoming does not recurse in subrepos unless -S/--subrepos
-    is specified. Subversion subrepositories are currently silently
-    ignored.
+    is specified. Git and Subversion subrepositories are currently
+    silently ignored.
 
 :outgoing: outgoing does not recurse in subrepos unless -S/--subrepos
-    is specified. Subversion subrepositories are currently silently
-    ignored.
+    is specified. Git and Subversion subrepositories are currently
+    silently ignored.
 
 :pull: pull is not recursive since it is not clear what to pull prior
     to running :hg:`update`. Listing and retrieving all
