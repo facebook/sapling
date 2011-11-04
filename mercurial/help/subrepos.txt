@@ -80,12 +80,13 @@ Interaction with Mercurial Commands
     -S/--subrepos is specified.
 
 :commit: commit creates a consistent snapshot of the state of the
-    entire project and its subrepositories. It does this by first
-    attempting to commit all modified subrepositories, then recording
-    their state and finally committing it in the parent
-    repository. Mercurial can be made to abort if any subrepository
-    content is modified by setting "ui.commitsubrepos=no" in a
-    configuration file (see :hg:`help config`).
+    entire project and its subrepositories. If any subrepositories
+    have been modified, Mercurial will abort.  Mercurial can be made
+    to instead commit all modified subrepositories by specifying
+    -S/--subrepos, or setting "ui.commitsubrepos=True" in a
+    configuration file (see :hg:`help config`).  After there are no
+    longer any modified subrepositories, it records their state and
+    finally commits it in the parent repository.
 
 :diff: diff does not recurse in subrepos unless -S/--subrepos is
     specified. Changes are displayed as usual, on the subrepositories
