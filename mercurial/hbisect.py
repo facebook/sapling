@@ -220,7 +220,7 @@ def get(repo, status):
         else:
             raise error.ParseError(_('invalid bisect state'))
 
-def label(repo, node, short=False):
+def label(repo, node):
     rev = repo.changelog.rev(node)
 
     # Try explicit sets

@@ -110,7 +110,9 @@ def findfile(repo, hash):
         repo.ui.note(_('Found %s in store\n') % hash)
     elif inusercache(repo.ui, hash):
         repo.ui.note(_('Found %s in system cache\n') % hash)
-        link(usercachepath(repo.ui, hash), storepath(repo, hash))
+        path = storepath(repo, hash)
+        util.makedirs(os.path.dirname(path))
+        link(usercachepath(repo.ui, hash), path)
     else:
         return None
     return storepath(repo, hash)

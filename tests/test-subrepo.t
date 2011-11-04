@@ -883,3 +883,125 @@ Test that removing .hgsub removes .hgsubstate:
   rm2
   
   
+Test behavior of add for explicit path in subrepo:
+  $ cd ..
+  $ hg init addtests
+  $ cd addtests
+  $ echo s = s > .hgsub
+  $ hg add .hgsub
+  $ hg init s
+  $ hg ci -m0
+  committing subrepository s
+Adding with an explicit path in a subrepo adds the file
+  $ echo c1 > f1
+  $ echo c2 > s/f2
+  $ hg st -S
+  ? f1
+  ? s/f2
+  $ hg add s/f2
+  $ hg st -S
+  A s/f2
+  ? f1
+  $ hg ci -R s -m0
+  $ hg ci -Am1
+  adding f1
+  committing subrepository s
+Adding with an explicit path in a subrepo with -S has the same behavior
+  $ echo c3 > f3
+  $ echo c4 > s/f4
+  $ hg st -S
+  ? f3
+  ? s/f4
+  $ hg add -S s/f4
+  $ hg st -S
+  A s/f4
+  ? f3
+  $ hg ci -R s -m1
+  $ hg ci -Ama2
+  adding f3
+  committing subrepository s
+Adding without a path or pattern silently ignores subrepos
+  $ echo c5 > f5
+  $ echo c6 > s/f6
+  $ echo c7 > s/f7
+  $ hg st -S
+  ? f5
+  ? s/f6
+  ? s/f7
+  $ hg add
+  adding f5
+  $ hg st -S
+  A f5
+  ? s/f6
+  ? s/f7
+  $ hg ci -R s -Am2
+  adding f6
+  adding f7
+  $ hg ci -m3
+  committing subrepository s
+Adding without a path or pattern with -S also adds files in subrepos
+  $ echo c8 > f8
+  $ echo c9 > s/f9
+  $ echo c10 > s/f10
+  $ hg st -S
+  ? f8
+  ? s/f10
+  ? s/f9
+  $ hg add -S
+  adding f8
+  adding s/f10
+  adding s/f9
+  $ hg st -S
+  A f8
+  A s/f10
+  A s/f9
+  $ hg ci -R s -m3
+  $ hg ci -m4
+  committing subrepository s
+Adding with a pattern silently ignores subrepos
+  $ echo c11 > fm11
+  $ echo c12 > fn12
+  $ echo c13 > s/fm13
+  $ echo c14 > s/fn14
+  $ hg st -S
+  ? fm11
+  ? fn12
+  ? s/fm13
+  ? s/fn14
+  $ hg add 'glob:**fm*'
+  adding fm11
+  $ hg st -S
+  A fm11
+  ? fn12
+  ? s/fm13
+  ? s/fn14
+  $ hg ci -R s -Am4
+  adding fm13
+  adding fn14
+  $ hg ci -Am5
+  adding fn12
+  committing subrepository s
+Adding with a pattern with -S also adds matches in subrepos
+  $ echo c15 > fm15
+  $ echo c16 > fn16
+  $ echo c17 > s/fm17
+  $ echo c18 > s/fn18
+  $ hg st -S
+  ? fm15
+  ? fn16
+  ? s/fm17
+  ? s/fn18
+  $ hg add -S 'glob:**fm*'
+  adding fm15
+  adding s/fm17
+  $ hg st -S
+  A fm15
+  A s/fm17
+  ? fn16
+  ? s/fn18
+  $ hg ci -R s -Am5
+  adding fn18
+  $ hg ci -Am6
+  adding fn16
+  committing subrepository s
+  $ cd ..
