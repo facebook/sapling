@@ -303,3 +303,41 @@ Rebasing across null as ancestor
   |/
   o  0: 'A'
   
+  $ cd ..
+
+Ensure --continue restores a correct state (issue3046):
+  $ hg clone -q a a6
+  $ cd a6
+  $ hg up -q 3
+  $ echo 'H2' > H
+  $ hg ci -A -m 'H2'
+  adding H
+  $ hg rebase -s 8 -d 7 --detach --config ui.merge=internal:fail
+  merging H
+  warning: conflicts during merge.
+  merging H failed!
+  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [255]
+  $ hg resolve --all -t internal:local
+  $ hg rebase -c
+  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/6215fafa5447-backup.hg
+  $ hg tglog
+  @  8: 'H2'
+  |
+  o  7: 'H'
+  |
+  | o  6: 'G'
+  |/|
+  o |  5: 'F'
+  | |
+  | o  4: 'E'
+  |/
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  
+
