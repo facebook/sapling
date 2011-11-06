@@ -7,6 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import errno
 from node import nullid, bin, hex
 
 allphases = range(2)
@@ -24,8 +25,9 @@ def readroots(repo):
                 roots[int(phase)].add(bin(nh))
         finally:
             f.close()
-    except IOError:
-        pass # default value are enough
+    except IOError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
     return roots
 
 def writeroots(repo):
