@@ -209,6 +209,9 @@ def has_ssl():
     except ImportError:
         return False
 
+def has_windows():
+    return os.name == 'nt'
+
 checks = {
     "baz": (has_baz, "GNU Arch baz client"),
     "bzr": (has_bzr, "Canonical's Bazaar client"),
@@ -239,6 +242,7 @@ checks = {
     "symlink": (has_symlink, "symbolic links"),
     "tla": (has_tla, "GNU Arch tla client"),
     "unix-permissions": (has_unix_permissions, "unix-style permissions"),
+    "windows": (has_windows, "Windows"),
 }
 
 def list_features():

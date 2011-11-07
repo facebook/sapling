@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" no-windows || exit 80
+
   $ hg init t
   $ cd t
   $ mkdir -p beans

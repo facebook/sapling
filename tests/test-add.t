@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" no-windows || exit 80
+
   $ hg init a
   $ cd a
   $ echo a > a

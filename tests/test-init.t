@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" no-windows || exit 80
+
 This test tries to exercise the ssh functionality with a dummy script
 
   $ checknewrepo()

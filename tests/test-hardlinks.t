@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" no-windows || exit 80
+
   $ cat > nlinks.py <<EOF
   > import os, sys
   > for f in sorted(sys.stdin.readlines()):
