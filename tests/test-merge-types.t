@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" symlink || exit 80
+
   $ hg init
 
   $ echo a > a

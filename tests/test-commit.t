@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" symlink || exit 80
+
 commit date test
 
   $ hg init test

@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" symlink || exit 80
+
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > largefiles=

@@ -1,3 +1,4 @@
+  $ "$TESTDIR/hghave" symlink || exit 80
 
   $ . "$TESTDIR/bzr-definitions"
 

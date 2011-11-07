@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" symlink || exit 80
+
   $ hg init
   $ mkdir d1 d1/d11 d2
   $ echo d1/a > d1/a

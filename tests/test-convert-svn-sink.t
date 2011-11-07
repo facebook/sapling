@@ -1,5 +1,4 @@
-
-  $ "$TESTDIR/hghave" svn13 no-outer-repo || exit 80
+  $ "$TESTDIR/hghave" svn13 no-outer-repo symlink || exit 80
 
   $ fixpath()
   > {

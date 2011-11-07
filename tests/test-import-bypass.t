@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" symlink || exit 80
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "purge=" >> $HGRCPATH
   $ echo "graphlog=" >> $HGRCPATH

@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" symlink || exit 80
+
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > keyword =

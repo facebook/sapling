@@ -161,7 +161,7 @@ def has_p4():
     return matchoutput('p4 -V', r'Rev\. P4/') and matchoutput('p4d -V', r'Rev\. P4D/')
 
 def has_symlink():
-    return hasattr(os, "symlink")
+    return hasattr(os, "symlink") # FIXME: should also check file system and os
 
 def has_tla():
     return matchoutput('tla --version 2>&1', r'The GNU Arch Revision')

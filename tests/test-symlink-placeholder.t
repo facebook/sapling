@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" symlink || exit 80
+
 Create extension that can disable symlink support:
 
   $ cat > nolink.py <<EOF
