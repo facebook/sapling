@@ -1,6 +1,6 @@
 Proper https client requires the built-in ssl from Python 2.6.
 
-  $ "$TESTDIR/hghave" ssl || exit 80
+  $ "$TESTDIR/hghave" serve ssl || exit 80
 
 Certificates created with:
  printf '.\n.\n.\n.\n.\nlocalhost\nhg@localhost\n' | \

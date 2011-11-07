@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
 Preparing the subrepository 'sub'
 
   $ hg init sub

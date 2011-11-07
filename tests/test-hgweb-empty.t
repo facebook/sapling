@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
 Some tests for hgweb in an empty repository
 
   $ hg init test

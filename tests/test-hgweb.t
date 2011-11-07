@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
 Some tests for hgweb. Tests static files, plain files and different 404's.
 
   $ hg init test

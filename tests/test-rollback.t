@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
 setup repo
   $ hg init t
   $ cd t

@@ -215,6 +215,9 @@ def has_windows():
 def has_system_sh():
     return os.name != 'nt'
 
+def has_serve():
+    return os.name != 'nt' # gross approximation
+
 checks = {
     "baz": (has_baz, "GNU Arch baz client"),
     "bzr": (has_bzr, "Canonical's Bazaar client"),
@@ -237,6 +240,7 @@ checks = {
     "p4": (has_p4, "Perforce server and client"),
     "pyflakes": (has_pyflakes, "Pyflakes python linter"),
     "pygments": (has_pygments, "Pygments source highlighting library"),
+    "serve": (has_serve, "platform and python can manage 'hg serve -d'"),
     "ssl": (has_ssl, "python >= 2.6 ssl module and python OpenSSL"),
     "svn": (has_svn, "subversion client and admin tools"),
     "svn13": (has_svn13, "subversion client and admin tools >= 1.3"),

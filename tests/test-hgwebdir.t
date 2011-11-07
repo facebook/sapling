@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
 Tests some basic hgwebdir functionality. Tests setting up paths and
 collection, different forms of 404s and the subdirectory support.
 

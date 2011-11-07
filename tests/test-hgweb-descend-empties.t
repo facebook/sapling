@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
 Test chains of near empty directories, terminating 3 different ways:
 - a1: file at level 4 (deepest)
 - b1: two dirs at level 3

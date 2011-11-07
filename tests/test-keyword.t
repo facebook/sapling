@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" symlink unix-permissions || exit 80
+  $ "$TESTDIR/hghave" symlink unix-permissions serve || exit 80
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]

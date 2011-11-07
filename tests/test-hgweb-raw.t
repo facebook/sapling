@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
 Test raw style of hgweb
 
   $ hg init test

@@ -1,3 +1,4 @@
+  $ "$TESTDIR/hghave" serve || exit 80
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]

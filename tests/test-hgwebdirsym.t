@@ -1,6 +1,6 @@
 Tests whether or not hgwebdir properly handles various symlink topologies.
 
-  $ "$TESTDIR/hghave" symlink || exit 80
+  $ "$TESTDIR/hghave" serve symlink || exit 80
   $ hg init a
   $ echo a > a/a
   $ hg --cwd a ci -Ama -d'1 0'

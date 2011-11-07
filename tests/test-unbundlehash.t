@@ -1,3 +1,4 @@
+  $ "$TESTDIR/hghave" serve || exit 80
 
 Test wire protocol unbundle with hashed heads (capability: unbundlehash)
 

@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
   $ hg init test
   $ cd test
 

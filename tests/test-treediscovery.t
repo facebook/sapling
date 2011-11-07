@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
 Tests discovery against servers without getbundle support:
 
   $ CAP=getbundle

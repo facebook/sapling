@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
   $ hg clone http://localhost:$HGPORT/ copy
   abort: error: Connection refused
   [255]

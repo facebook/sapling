@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
+  $ "$TESTDIR/hghave" serve execbit || exit 80
 
 setting up repo
 

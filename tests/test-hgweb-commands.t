@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
 An attempt at more fully testing the hgweb web interface.
 The following things are tested elsewhere and are therefore omitted:
 - archive, tested in test-archive

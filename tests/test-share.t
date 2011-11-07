@@ -1,3 +1,4 @@
+  $ "$TESTDIR/hghave" serve || exit 80
 
   $ echo "[extensions]"      >> $HGRCPATH
   $ echo "share = "          >> $HGRCPATH

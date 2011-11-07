@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" serve || exit 80
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "fetch=" >> $HGRCPATH
 

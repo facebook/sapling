@@ -1,3 +1,4 @@
+  $ "$TESTDIR/hghave" serve || exit 80
 
 = Test the known() protocol function =
 

@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" no-outer-repo || exit 80
+  $ "$TESTDIR/hghave" no-outer-repo serve || exit 80
 
 no repo
 
