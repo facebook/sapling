@@ -643,7 +643,7 @@ def tsttest(test, wd, options, replacements):
             os.write(fd, l)
         os.close(fd)
 
-        cmd = '"%s" "%s"' % (options.shell, name)
+        cmd = '%s "%s"' % (options.shell, name)
         vlog("# Running", cmd)
         exitcode, output = run(cmd, wd, options, replacements)
         # do not merge output if skipped, return hghave message instead
