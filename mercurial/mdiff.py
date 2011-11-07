@@ -100,6 +100,9 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
         return ""
     epoch = util.datestr((0, 0))
 
+    fn1 = util.pconvert(fn1)
+    fn2 = util.pconvert(fn2)
+
     if not opts.text and (util.binary(a) or util.binary(b)):
         if a and b and len(a) == len(b) and a == b:
             return ""
