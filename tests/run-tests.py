@@ -557,7 +557,9 @@ def linematch(el, l):
         (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
          el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l) or
          el.endswith(" (esc)\n") and
-             el[:-7].decode('string-escape') + '\n' == l)):
+             (el[:-7].decode('string-escape') + '\n' == l or
+              el[:-7].decode('string-escape').replace('\r', '') +
+                  '\n' == l and os.name == 'nt'))):
         return True
     return False
 
@@ -867,13 +869,17 @@ def runone(options, test):
     testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
         os.path.join(HGTMP, os.path.basename(test)).replace('\\', '/')
 
-    os.mkdir(testtmp)
-    ret, out = runner(testpath, testtmp, options, [
+    replacements = [
         (re.escape(testtmp), '$TESTTMP'),
         (r':%s\b' % options.port, ':$HGPORT'),
         (r':%s\b' % (options.port + 1), ':$HGPORT1'),
         (r':%s\b' % (options.port + 2), ':$HGPORT2'),
-        ])
+        ]
+    if os.name == 'nt':
+        replacements.append((r'\r\n', '\n'))
+
+    os.mkdir(testtmp)
+    ret, out = runner(testpath, testtmp, options, replacements)
     vlog("# Ret was:", ret)
 
     mark = '.'
