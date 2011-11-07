@@ -118,6 +118,11 @@ class changectx(object):
     def bookmarks(self):
         return self._repo.nodebookmarks(self._node)
     def phase(self):
+        if self._rev == -1:
+            return 0
+        if self._rev >= len(self._repo._phaserev):
+            # outdated cache
+            del self._repo._phaserev
         return self._repo._phaserev[self._rev]
     def hidden(self):
         return self._rev in self._repo.changelog.hiddenrevs
